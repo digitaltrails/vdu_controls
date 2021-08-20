@@ -2,33 +2,41 @@ import sys
 import re
 import subprocess
 
-from PyQt5.QtWidgets import QApplication, QWidget,QPushButton, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel
+from PyQt5.QtWidgets import QApplication, QWidget,QPushButton, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, QSplashScreen
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QIntValidator
+from PyQt5.QtGui import QIntValidator, QPixmap
 
 class DdcUtil():
 
     def detect(self):
         display_list = []
         result = subprocess.run(['ddcutil', 'detect', '--terse'], stdout=subprocess.PIPE)
-        result.stdout.decode('utf-8')
         model_pattern = re.compile('Monitor:[ \t]+([^\n]*)')
         for monitor_str in re.split("^Display |\nDisplay", result.stdout.decode('utf-8'))[1:]:
-            display_id = monitor_str.split('\n')[0].strip()
+            ddc_id = monitor_str.split('\n')[0].strip()
             model_match = model_pattern.search(monitor_str)
             model = model_match.group(1) if model_match else 'Unknown model'
-            display_list.append((display_id, model))
+            display_list.append((ddc_id, model))
+
+
         return display_list
 
-    def get_brightness(self, display_id):
-        result = subprocess.run(['ddcutil', '--brief', '--display', display_id, 'getvcp', '10' ], stdout=subprocess.PIPE)
+    def is_brightness_controllable(self, ddc_id):
+        result = subprocess.run(
+            ['ddcutil', '--display', ddc_id, 'vcpinfo', '10' ],
+            stdout=subprocess.PIPE)
+        attribute_pattern = re.compile("Attributes: Read Write, Continuous")
+        return attribute_pattern.search(result.stdout.decode('utf-8')) != None
+
+    def get_brightness(self, ddc_id):
+        result = subprocess.run(['ddcutil', '--brief', '--display', ddc_id, 'getvcp', '10' ], stdout=subprocess.PIPE)
         items = result.stdout.decode('utf-8').split()
         return int(items[1]),int(items[4]),int(items[3])
 
-    def set_brightness(self, display_id, new_value):
-        low, high, current = self.get_brightness(display_id)
+    def set_brightness(self, ddc_id, new_value):
+        low, high, current = self.get_brightness(ddc_id)
         if new_value != current:
-            result = subprocess.run(['ddcutil', '--display', display_id, 'setvcp', '10', str(new_value) ], stdout=subprocess.PIPE)
+            result = subprocess.run(['ddcutil', '--display', ddc_id, 'setvcp', '10', str(new_value) ], stdout=subprocess.PIPE)
 
 
 
@@ -104,12 +112,16 @@ class DdcMonitorWidget(QWidget):
         self.setLayout(layout)
 
 
-
-
 def main():
 
 
     app = QApplication(sys.argv)
+
+    pixmap = QPixmap(":/splash.png");
+    splash = QSplashScreen(pixmap)
+    splash.resize(800,250)
+    splash.show()
+
 
     w = QWidget()
     #w.resize(250, 150)
@@ -118,21 +130,28 @@ def main():
 
     layout = QVBoxLayout()
 
+    splash.showMessage('Running ddcutil to get a list of monitors...')
     ddcutil = DdcUtil()
 
-    for mid, desc in ddcutil.detect():
-        print(mid + " " + desc)
-        print(ddcutil.get_brightness(mid))
-        minv, maxv, current = ddcutil.get_brightness(mid)
-        layout.addWidget(DdcMonitorWidget(mid, desc, minv, maxv, current))
+    for ddc_id, desc in ddcutil.detect():
+        splash.showMessage('Checking DDC ID ' + ddc_id + ' ' + desc)
+        print(ddc_id + " " + desc)
+        print(ddcutil.get_brightness(ddc_id))
+        if ddcutil.is_brightness_controllable(ddc_id):
+            minv, maxv, current = ddcutil.get_brightness(ddc_id)
+            layout.addWidget(DdcMonitorWidget(ddc_id, desc, minv, maxv, current))
+        else:
+            alert = QMessageBox()
+            #alert.setDetailedText('Ddcutil reports no vcp brightness read/write attribute for this monitor.')
+            alert.setText('Ignoring monitor with DDC ID ' + ddc_id)
+            alert.setInformativeText('Command line ddcutil vcpinfo reports no brightness read/write ability (attribute 10) for '  + desc)
+            alert.setIcon(QMessageBox.Warning)
+            alert.exec()
 
-    #layout.addWidget(DdcMonitorWidget('LG 4K', 10, 90))
-    #layout.addWidget(DdcMonitorWidget('HP ZR24w', 10, 90))
-
-    layout.addWidget(QPushButton('Dismiss'))
+    #layout.addWidget(QPushButton('Dismiss'))
     w.setLayout(layout)
     w.show()
-
+    splash.finish(w)
     sys.exit(app.exec_())
 
 
