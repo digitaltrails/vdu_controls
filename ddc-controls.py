@@ -117,24 +117,21 @@ def main():
 
     app = QApplication(sys.argv)
 
-    pixmap = QPixmap(":/splash.png");
-    splash = QSplashScreen(pixmap)
-    splash.resize(800,250)
+    pixmap = QPixmap("/usr/share/icons/oxygen/base/256x256/apps/preferences-desktop-display-color.png");
+    splash = QSplashScreen(pixmap.scaledToWidth(800).scaledToHeight(400))
+    #splash.resize(800,400)
     splash.show()
 
-
-    w = QWidget()
-    #w.resize(250, 150)
-    #w.move(300, 300)
-    w.setWindowTitle('Simple')
+    main_window = QWidget()
+    main_window.setWindowTitle('Simple')
 
     layout = QVBoxLayout()
 
-    splash.showMessage('Running ddcutil to get a list of monitors...')
-    ddcutil = DdcUtil()
+    splash.showMessage('DDC-Controls\nLooking for DDC monitors...', Qt.AlignVCenter|Qt.AlignHCenter)
 
+    ddcutil = DdcUtil()
     for ddc_id, desc in ddcutil.detect():
-        splash.showMessage('Checking DDC ID ' + ddc_id + ' ' + desc)
+        splash.showMessage('DDC ID ' + ddc_id + '\n' + desc, Qt.AlignVCenter|Qt.AlignHCenter)
         print(ddc_id + " " + desc)
         print(ddcutil.get_brightness(ddc_id))
         if ddcutil.is_brightness_controllable(ddc_id):
@@ -149,9 +146,9 @@ def main():
             alert.exec()
 
     #layout.addWidget(QPushButton('Dismiss'))
-    w.setLayout(layout)
-    w.show()
-    splash.finish(w)
+    main_window.setLayout(layout)
+    main_window.show()
+    splash.finish(main_window)
     sys.exit(app.exec_())
 
 
