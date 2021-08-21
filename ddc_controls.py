@@ -1,4 +1,7 @@
 #!/usr/bin/python3
+#
+# ddc_controls.py
+#
 # Copyright (C) 2021 Michael Hamilton michael@actrix.gen.nz
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -23,8 +26,8 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
 from PyQt5.QtCore import Qt, QCoreApplication
 from PyQt5.QtGui import QIntValidator, QPixmap, QIcon
 
-def tr(sourceText, *args):
-    return QCoreApplication.translate('ddc-control', sourceText)
+def tr(source_text):
+    return QCoreApplication.translate('ddc-control', source_text)
 
 DEFAULT_SPLASH_PNG="/usr/share/icons/oxygen/base/256x256/apps/preferences-desktop-display.png"
 FALLBACK_SPLASH_JPEG_BASE64=b"""
@@ -69,7 +72,7 @@ class DdcUtil():
     def is_brightness_controllable(self, ddc_id):
         result = self.__run__(['ddcutil', '--display', ddc_id, 'vcpinfo', '10' ])
         attribute_pattern = re.compile("Attributes: Read Write, Continuous")
-        return attribute_pattern.search(result.stdout.decode('utf-8')) != None
+        return attribute_pattern.search(result.stdout.decode('utf-8')) is not None
 
     def get_brightness(self, ddc_id):
         result = self.__run__(['ddcutil', '--brief', '--display', ddc_id, 'getvcp', '10' ])
@@ -77,7 +80,7 @@ class DdcUtil():
         return int(items[1]),int(items[4]),int(items[3])
 
     def set_brightness(self, ddc_id, new_value):
-        low, high, current = self.get_brightness(ddc_id)
+        _, _, current = self.get_brightness(ddc_id)
         if new_value != current:
             self.__run__(['ddcutil', '--display', ddc_id, 'setvcp', '10', str(new_value) ])
 
@@ -148,7 +151,6 @@ class DdcMonitorWidget(QWidget):
         self.setLayout(layout)
 
 def exception_handler(etype, evalue, etraceback):
-
     print("ERROR:\n", ''.join(traceback.format_exception(etype, evalue, etraceback)))
     alert = QMessageBox()
     alert.setText(tr('Error: {}').format(''.join(traceback.format_exception_only(etype, evalue))))
