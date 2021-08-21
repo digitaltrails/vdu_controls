@@ -15,6 +15,20 @@
 # You should have received a copy of the GNU General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 #
+#
+
+# Prerequisites - OpenSUSE (similar for other distros)
+#
+# Software:
+#    zypper install python38-QtPy
+#    zypper install ddcutil
+#
+# Kernel Modules:
+#    lsmod | grep i2c_dev
+#
+# Read ddcutil readme concerning config of i2c_dev with nvidia GPU's.
+#
+
 import sys
 import re
 import subprocess
