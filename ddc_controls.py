@@ -184,15 +184,17 @@ def main():
 
     layout = QVBoxLayout()
 
-    splash.showMessage(tr('DDC-Control\nLooking for DDC monitors...\n'), Qt.AlignVCenter|Qt.AlignHCenter)
+    splash.showMessage(tr('DDC Control\nLooking for DDC monitors...\n'), Qt.AlignVCenter|Qt.AlignHCenter)
 
     ddcutil = DdcUtil(debug=True)
+    number_found = 0
     for ddc_id, desc in ddcutil.detect():
-        splash.showMessage(tr('DDC-Control\nDDC ID {}\n{}').format(ddc_id, desc), Qt.AlignVCenter|Qt.AlignHCenter)
+        splash.showMessage(tr('DDC Control\nDDC ID {}\n{}').format(ddc_id, desc), Qt.AlignVCenter|Qt.AlignHCenter)
         print(ddc_id + " " + desc)
         print(ddcutil.get_brightness(ddc_id))
         if ddcutil.is_brightness_controllable(ddc_id):
             layout.addWidget(DdcMonitorWidget(ddcutil, ddc_id, desc))
+            number_found += 1
         else:
             alert = QMessageBox()
             #alert.setDetailedText('Ddcutil reports no vcp brightness read/write attribute for this monitor.')
@@ -200,6 +202,15 @@ def main():
             alert.setInformativeText(tr('No brightness read/write ability (attribute 10) for {}').format(desc))
             alert.setIcon(QMessageBox.Warning)
             alert.exec()
+
+    if number_found != 0:
+        alert = QMessageBox()
+        #alert.setDetailedText('Ddcutil reports no vcp brightness read/write attribute for this monitor.')
+        alert.setText(tr('No controllable monitors found, exiting.'))
+        alert.setInformativeText(tr('Run ddc_control in a console and check for additional messages. Check the requirements for the ddcutil command.'))
+        alert.setIcon(QMessageBox.Critical)
+        alert.exec()
+        sys.exit()
 
     #layout.addWidget(QPushButton('Dismiss'))
     main_window.setLayout(layout)
