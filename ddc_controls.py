@@ -217,7 +217,7 @@ def main():
             alert.setIcon(QMessageBox.Warning)
             alert.exec()
 
-    if number_found != 0:
+    if number_found == 0:
         alert = QMessageBox()
         #alert.setDetailedText('Ddcutil reports no vcp brightness read/write attribute for this monitor.')
         alert.setText(tr('No controllable monitors found, exiting.'))
