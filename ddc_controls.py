@@ -1,6 +1,11 @@
 #!/usr/bin/python3
+"""
 #
 # ddc_controls.py
+# Display Data Channel (DDC) - Virtual Control Panel (VCP)
+#
+# A GUI for retrieving and altering settings of connected monitors (via
+# ddcutil) by issuing DDC commands over HDMI/DVI/USB.
 #
 # Copyright (C) 2021 Michael Hamilton
 # This program is free software: you can redistribute it and/or modify it
@@ -16,7 +21,7 @@
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 # m i c h a e l @ a c t r i x . g e n . n z
-
+#
 # Prerequisites - OpenSUSE (similar for other distros):
 #    Software:
 #        zypper install python38-QtPy
@@ -26,6 +31,7 @@
 #
 # Read ddcutil readme concerning config of i2c_dev with nvidia GPU's.
 #
+"""
 
 import sys
 import re
@@ -217,7 +223,9 @@ class DdcSliderWidget(QWidget):
 
 
 class DdcMonitorWidget(QWidget):
-
+    """
+    Widget to control one monitor.
+    """
     def __init__(self, ddcutil, monitor_id, monitor_name, hide):
         super().__init__()
         layout = QVBoxLayout()
@@ -250,7 +258,6 @@ def exception_handler(etype, evalue, etraceback):
     QApplication.quit()
 
 def main():
-
     parser = argparse.ArgumentParser(description='Display Data Channel - Virtual Control Panel')
     parser.add_argument('--hide', default=[], action='append', choices=[ vcp.name.lower() for vcp in SLIDDER_VCP_COMMANDS ], help='hide/disable a control')
     # Python 3.9 parser.add_argument('--debug',  action=argparse.BooleanOptionalAction, help='enable debugging')
@@ -286,15 +293,17 @@ def main():
     number_found = 0
     for monitor_id, desc in ddcutil.detect():
         splash.showMessage(tr('DDC Control\nDDC ID {}\n{}').format(monitor_id, desc), Qt.AlignVCenter|Qt.AlignHCenter)
-        monitorWidget = DdcMonitorWidget(ddcutil, monitor_id, desc, args.hide)
-        number_found += monitorWidget.number_of_controls
-        if monitorWidget.number_of_controls != 0:
-            layout.addWidget(monitorWidget)
+        monitor_widget = DdcMonitorWidget(ddcutil, monitor_id, desc, args.hide)
+        number_found += monitor_widget.number_of_controls
+        if monitor_widget.number_of_controls != 0:
+            layout.addWidget(monitor_widget)
 
     if number_found == 0:
         alert = QMessageBox()
         alert.setText(tr('No controllable monitors found, exiting.'))
-        alert.setInformativeText(tr('Run ddc_control in a console and check for additional messages. Check the requirements for the ddcutil command.'))
+        alert.setInformativeText(tr(
+            '''Run ddc_control in a console and check for additional messages.\
+            Check the requirements for the ddcutil command.'''))
         alert.setIcon(QMessageBox.Critical)
         alert.exec()
         sys.exit()
