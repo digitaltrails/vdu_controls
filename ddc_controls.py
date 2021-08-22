@@ -33,6 +33,7 @@ import subprocess
 import os
 import base64
 import traceback
+import argparse
 
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, QSplashScreen
 from PyQt5.QtCore import Qt, QCoreApplication
@@ -61,41 +62,37 @@ BRIGHTNESS_SVG = b"""
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24">
   <defs>
     <style id="current-color-scheme" type="text/css">
-            .ColorScheme-Text {
-                color:#232629;
-            }
-        </style>
+        .ColorScheme-Text { color:#232629; }
+    </style>
   </defs>
   <g transform="translate(1,1)">
     <g shape-rendering="auto">
       <path d="m11 7c-2.2032167 0-4 1.7967833-4 4 0 2.203217 1.7967833 4 4 4 2.203217 0 4-1.796783 4-4 0-2.2032167-1.796783-4-4-4zm0 1c1.662777 0 3 1.3372234 3 3 0 1.662777-1.337223 3-3 3-1.6627766 0-3-1.337223-3-3 0-1.6627766 1.3372234-3 3-3z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
-      <path d="m10.5 5v1h1v-1z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
-      <path d="m10.5 16v1h1v-1z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
-      <path d="m5 10.5v1h1v-1z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
-      <path d="m16 10.5v1h1v-1z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
+      <path d="m10.5 3v3h1v-3h-1z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
+      <path d="m10.5 16v3h1v-3h-1z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
+      <path d="m3 10.5v1h3v-1h-3z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
+      <path d="m16 10.5v1h3v-1h-3z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
+      <path d="m14.707031 14-0.707031 0.707031 2.121094 2.121094 0.707031-0.707031-2.121094-2.121094z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
+      <path d="M 5.7070312 5 L 5 5.7070312 L 7.1210938 7.828125 L 7.828125 7.1210938 L 5.7070312 5 z " class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
+      <path d="M 7.1210938 14 L 5 16.121094 L 5.7070312 16.828125 L 7.828125 14.707031 L 7.1210938 14 z " class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
+      <path d="M 16.121094 5 L 14 7.1210938 L 14.707031 7.828125 L 16.828125 5.7070312 L 16.121094 5 z " class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
       <g>
         <path d="m11.000001 7.7500005v6.4999985h2.166665l1.083333-2.166666v-2.1666663l-1.083333-2.1666662z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
         <path d="m10.984375 7.734375v0.015625 6.515625h2.191406l1.089844-2.177734v-2.1757816l-1.089844-2.1777344h-2.191406zm0.03125 0.03125h2.140625l1.078125 2.1542969v2.1601561l-1.078125 2.154297h-2.140625v-6.46875z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
       </g>
-      <path d="m14.807107 14.1-0.707107 0.707107 0.707107 0.707107 0.707107-0.707107z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
-      <path d="m7.207107 14.1-0.707107 0.707107 0.707107 0.707107 0.707107-0.707107z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
-      <path d="m14.807107 6.5-0.707107 0.707107 0.707107 0.707107 0.707107-0.707107z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
-      <path d="M 7.207107,6.5 6.5,7.207107 7.207107,7.914214 7.914214,7.207107 Z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
     </g>
   </g>
 </svg>
 """
 
 CONTRAST_SVG = b"""
-<svg viewBox="0 0 24 24" width="20" height="20" version="1.1" id="svg83" xmlns="http://www.w3.org/2000/svg">
-  <defs id="defs3051">
-    <style
-       type="text/css"
-       id="current-color-scheme">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24">
+  <defs>
+    <style type="text/css" id="current-color-scheme">
       .ColorScheme-Text { color:#232629; }
     </style>
   </defs>
-  <g transform="translate(1,1)" id="g81">
+  <g transform="translate(1,1)">
     <path style="fill:currentColor;fill-opacity:1;stroke:none" transform="translate(-1,-1)" d="m 12,7 c -2.761424,0 -5,2.2386 -5,5 0,2.7614 2.238576,5 5,5 2.761424,0 5,-2.2386 5,-5 0,-2.7614 -2.238576,-5 -5,-5 z m 0,1 v 8 C 9.790861,16 8,14.2091 8,12 8,9.7909 9.790861,8 12,8" class="ColorScheme-Text" id="path79" />
   </g>
 </svg>
@@ -221,7 +218,7 @@ class DdcSliderWidget(QWidget):
 
 class DdcMonitorWidget(QWidget):
 
-    def __init__(self, ddcutil, monitor_id, monitor_name):
+    def __init__(self, ddcutil, monitor_id, monitor_name, hide):
         super().__init__()
         layout = QVBoxLayout()
         label = QLabel()
@@ -230,15 +227,16 @@ class DdcMonitorWidget(QWidget):
         layout.addWidget(label)
         self.number_of_controls = 0
         for vcp_command in SLIDDER_VCP_COMMANDS:
-            if  ddcutil.is_attribute_controllable(monitor_id, vcp_command.code):
-                layout.addWidget(DdcSliderWidget(ddcutil, monitor_id, vcp_command))
-                self.number_of_controls += 1
-            else:
-                alert = QMessageBox()
-                alert.setText(tr('Monitor {} lacks a VCP control for {}.').format(monitor_name, tr(vcp_command.name)))
-                alert.setInformativeText(tr('No read/write ability for vcp_code {}.').format(vcp_command.code))
-                alert.setIcon(QMessageBox.Warning)
-                alert.exec()
+            if vcp_command.name.lower() not in hide:
+                if ddcutil.is_attribute_controllable(monitor_id, vcp_command.code):
+                    layout.addWidget(DdcSliderWidget(ddcutil, monitor_id, vcp_command))
+                    self.number_of_controls += 1
+                else:
+                    alert = QMessageBox()
+                    alert.setText(tr('Monitor {} lacks a VCP control for {}.').format(monitor_name, tr(vcp_command.name)))
+                    alert.setInformativeText(tr('No read/write ability for vcp_code {}.').format(vcp_command.code))
+                    alert.setIcon(QMessageBox.Warning)
+                    alert.exec()
         if self.number_of_controls != 0:
             self.setLayout(layout)
 
@@ -252,6 +250,12 @@ def exception_handler(etype, evalue, etraceback):
     QApplication.quit()
 
 def main():
+
+    parser = argparse.ArgumentParser(description='Display Data Channel - Virtual Control Panel')
+    parser.add_argument('--hide', default=[], action='append', choices=[ vcp.name.lower() for vcp in SLIDDER_VCP_COMMANDS ], help='hide/disable a control')
+    # Python 3.9 parser.add_argument('--debug',  action=argparse.BooleanOptionalAction, help='enable debugging')
+    parser.add_argument('--debug', default=False, action='store_true', help='enable debugging')
+    args = parser.parse_args()
 
     sys.excepthook = exception_handler
 
@@ -278,11 +282,11 @@ def main():
 
     splash.showMessage(tr('DDC Control\nLooking for DDC monitors...\n'), Qt.AlignVCenter|Qt.AlignHCenter)
 
-    ddcutil = DdcUtil(debug=True)
+    ddcutil = DdcUtil(debug=args.debug)
     number_found = 0
     for monitor_id, desc in ddcutil.detect():
         splash.showMessage(tr('DDC Control\nDDC ID {}\n{}').format(monitor_id, desc), Qt.AlignVCenter|Qt.AlignHCenter)
-        monitorWidget = DdcMonitorWidget(ddcutil, monitor_id, desc)
+        monitorWidget = DdcMonitorWidget(ddcutil, monitor_id, desc, args.hide)
         number_found += monitorWidget.number_of_controls
         if monitorWidget.number_of_controls != 0:
             layout.addWidget(monitorWidget)
