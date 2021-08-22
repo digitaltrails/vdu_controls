@@ -2,7 +2,7 @@
 #
 # ddc_controls.py
 #
-# Copyright (C) 2021 Michael Hamilton michael@actrix.gen.nz
+# Copyright (C) 2021 Michael Hamilton
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
 # Free Software Foundation, version 3.
@@ -15,16 +15,14 @@
 # You should have received a copy of the GNU General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 #
-#
+# m i c h a e l @ a c t r i x . g e n . n z
 
-# Prerequisites - OpenSUSE (similar for other distros)
-#
-# Software:
-#    zypper install python38-QtPy
-#    zypper install ddcutil
-#
-# Kernel Modules:
-#    lsmod | grep i2c_dev
+# Prerequisites - OpenSUSE (similar for other distros):
+#    Software:
+#        zypper install python38-QtPy
+#        zypper install ddcutil
+#    Kernel Modules:
+#        lsmod | grep i2c_dev
 #
 # Read ddcutil readme concerning config of i2c_dev with nvidia GPU's.
 #
@@ -39,6 +37,7 @@ import traceback
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, QSplashScreen
 from PyQt5.QtCore import Qt, QCoreApplication
 from PyQt5.QtGui import QIntValidator, QPixmap, QIcon
+from PyQt5.QtSvg import QSvgWidget
 
 def tr(source_text):
     return QCoreApplication.translate('ddc-control', source_text)
@@ -58,9 +57,71 @@ jhUF2aw0PeJjp5vxPeOjk7eQ6SX+VbUdZ3FTzfie8Vmpik4V8Ra3K0zbrUmITqjEwUczachIremy
 U1HjvH1MqFwiy2A9BMSbVUUWNmH3lBto50/wYGg0w3m8R95N9kpsPDdPqJM7aOVP8mTfaqjCwso+
 0CLLhYr6G05CED//2Q=="""
 
+BRIGHTNESS_SVG = b"""
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24">
+  <defs>
+    <style id="current-color-scheme" type="text/css">
+            .ColorScheme-Text {
+                color:#232629;
+            }
+        </style>
+  </defs>
+  <g transform="translate(1,1)">
+    <g shape-rendering="auto">
+      <path d="m11 7c-2.2032167 0-4 1.7967833-4 4 0 2.203217 1.7967833 4 4 4 2.203217 0 4-1.796783 4-4 0-2.2032167-1.796783-4-4-4zm0 1c1.662777 0 3 1.3372234 3 3 0 1.662777-1.337223 3-3 3-1.6627766 0-3-1.337223-3-3 0-1.6627766 1.3372234-3 3-3z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
+      <path d="m10.5 5v1h1v-1z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
+      <path d="m10.5 16v1h1v-1z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
+      <path d="m5 10.5v1h1v-1z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
+      <path d="m16 10.5v1h1v-1z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
+      <g>
+        <path d="m11.000001 7.7500005v6.4999985h2.166665l1.083333-2.166666v-2.1666663l-1.083333-2.1666662z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
+        <path d="m10.984375 7.734375v0.015625 6.515625h2.191406l1.089844-2.177734v-2.1757816l-1.089844-2.1777344h-2.191406zm0.03125 0.03125h2.140625l1.078125 2.1542969v2.1601561l-1.078125 2.154297h-2.140625v-6.46875z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
+      </g>
+      <path d="m14.807107 14.1-0.707107 0.707107 0.707107 0.707107 0.707107-0.707107z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
+      <path d="m7.207107 14.1-0.707107 0.707107 0.707107 0.707107 0.707107-0.707107z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
+      <path d="m14.807107 6.5-0.707107 0.707107 0.707107 0.707107 0.707107-0.707107z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
+      <path d="M 7.207107,6.5 6.5,7.207107 7.207107,7.914214 7.914214,7.207107 Z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
+    </g>
+  </g>
+</svg>
+"""
+
+CONTRAST_SVG = b"""
+<svg viewBox="0 0 24 24" width="20" height="20" version="1.1" id="svg83" xmlns="http://www.w3.org/2000/svg">
+  <defs id="defs3051">
+    <style
+       type="text/css"
+       id="current-color-scheme">
+      .ColorScheme-Text { color:#232629; }
+    </style>
+  </defs>
+  <g transform="translate(1,1)" id="g81">
+    <path style="fill:currentColor;fill-opacity:1;stroke:none" transform="translate(-1,-1)" d="m 12,7 c -2.761424,0 -5,2.2386 -5,5 0,2.7614 2.238576,5 5,5 2.761424,0 5,-2.2386 5,-5 0,-2.7614 -2.238576,-5 -5,-5 z m 0,1 v 8 C 9.790861,16 8,14.2091 8,12 8,9.7909 9.790861,8 12,8" class="ColorScheme-Text" id="path79" />
+  </g>
+</svg>
+"""
+
+DDCUTIL="/usr/bin/ddcutil"
+
+class VcpCommand():
+    """
+    Virtual Control Panel Command for monitors
+    """
+    def __init__(self, name, code, icon):
+        self.name = name
+        self.code = code
+        self.icon = icon
+
+# VCP commands to be made available as Qt sliders
+SLIDDER_VCP_COMMANDS = [
+    VcpCommand('Brightness', '10', BRIGHTNESS_SVG),
+    VcpCommand('Contrast', '12', CONTRAST_SVG),
+    ]
 
 class DdcUtil():
-
+    """
+    Display Data Channel Utility for interacting with monitors
+    """
     def __init__(self, debug=False):
         self.debug = debug
 
@@ -74,7 +135,7 @@ class DdcUtil():
 
     def detect(self):
         display_list = []
-        result = self.__run__(['ddcutil', 'detect', '--terse'])
+        result = self.__run__([DDCUTIL, 'detect', '--terse'])
         model_pattern = re.compile('Monitor:[ \t]+([^\n]*)')
         for monitor_str in re.split("^Display |\nDisplay", result.stdout.decode('utf-8'))[1:]:
             ddc_id = monitor_str.split('\n')[0].strip()
@@ -83,36 +144,44 @@ class DdcUtil():
             display_list.append((ddc_id, model))
         return display_list
 
-    def is_brightness_controllable(self, ddc_id):
-        result = self.__run__(['ddcutil', '--display', ddc_id, 'vcpinfo', '10' ])
+    def is_attribute_controllable(self, ddc_id, vcp_code):
+        result = self.__run__([DDCUTIL, '--display', ddc_id, 'vcpinfo', vcp_code ])
         attribute_pattern = re.compile("Attributes: Read Write, Continuous")
         return attribute_pattern.search(result.stdout.decode('utf-8')) is not None
 
-    def get_brightness(self, ddc_id):
-        result = self.__run__(['ddcutil', '--brief', '--display', ddc_id, 'getvcp', '10' ])
+    def get_attribute(self, ddc_id, vcp_code):
+        result = self.__run__([DDCUTIL, '--brief', '--display', ddc_id, 'getvcp', vcp_code ])
         items = result.stdout.decode('utf-8').split()
         return int(items[1]),int(items[4]),int(items[3])
 
-    def set_brightness(self, ddc_id, new_value):
-        _, _, current = self.get_brightness(ddc_id)
+    def set_attribute(self, ddc_id, vcp_code, new_value):
+        _, _, current = self.get_attribute(ddc_id, vcp_code)
         if new_value != current:
-            self.__run__(['ddcutil', '--display', ddc_id, 'setvcp', '10', str(new_value) ])
+            self.__run__([DDCUTIL, '--display', ddc_id, 'setvcp', vcp_code, str(new_value) ])
 
 
 class DdcSliderWidget(QWidget):
-
-    def __init__(self, ddcutil, monitor_id):
+    """
+    Slider widget for DDC continuously variable attributes
+    """
+    def __init__(self, ddcutil, monitor_id, vcp_command):
         super().__init__()
 
         self.ddcutil = ddcutil
         self.monitor_id = monitor_id
-        low, high, current = ddcutil.get_brightness(monitor_id)
+        self.vcp_command = vcp_command
+        low, high, current = ddcutil.get_attribute(monitor_id, vcp_command.code)
 
         layout = QHBoxLayout()
+        self.setLayout(layout)
+
+        icon = QSvgWidget()
+        icon.load(vcp_command.icon)
+        icon.setFixedSize(50, 50)
+        icon.setToolTip(tr(vcp_command.name))
+        layout.addWidget(icon)
 
         slider = QSlider()
-        textinput = QLineEdit()
-
         slider.setMinimumWidth(200)
         slider.setValue(current)
         slider.setRange(low, high)
@@ -122,36 +191,33 @@ class DdcSliderWidget(QWidget):
         slider.setTickInterval(10)
         slider.setTickPosition(QSlider.TicksBelow)
         slider.setOrientation(Qt.Horizontal)
-        #slider.setToolTip(str(slider.value()))
-        textinput.setText(str(slider.value()))
-        # Don't want to rewrite the ddc value too often - not sure of the implications
+        # Don't ewrite the ddc value too often - not sure of the implications
         slider.setTracking(False)
+        layout.addWidget(slider)
 
+        textinput = QLineEdit()
         textinput.setMaximumWidth(50)
         textinput.setMaxLength(4)
         textvalidator = QIntValidator()
         textvalidator.setRange(low,high)
         textinput.setValidator(textvalidator)
+        textinput.setText(str(slider.value()))
+        layout.addWidget(textinput)
 
         def slider_changed(value):
             textinput.setText(str(value))
-            self.ddcutil.set_brightness(self.monitor_id, value)
-
+            self.ddcutil.set_attribute(self.monitor_id, self.vcp_command.code, value)
         slider.valueChanged.connect(slider_changed)
 
         def slider_moved(value):
             textinput.setText(str(value))
-
         slider.sliderMoved.connect(slider_moved)
 
         def text_changed():
-            slider.setValue(90 if textinput.text() == '' else int(textinput.text()))
-
+            slider.setValue(int(textinput.text()))
         textinput.editingFinished.connect(text_changed)
 
-        layout.addWidget(slider)
-        layout.addWidget(textinput)
-        self.setLayout(layout)
+
 
 class DdcMonitorWidget(QWidget):
 
@@ -159,10 +225,22 @@ class DdcMonitorWidget(QWidget):
         super().__init__()
         layout = QVBoxLayout()
         label = QLabel()
+        #label.setStyleSheet("font-weight: bold");
         label.setText(tr('Monitor {}: {}').format(monitor_id, monitor_name))
         layout.addWidget(label)
-        layout.addWidget(DdcSliderWidget(ddcutil, monitor_id))
-        self.setLayout(layout)
+        self.number_of_controls = 0
+        for vcp_command in SLIDDER_VCP_COMMANDS:
+            if  ddcutil.is_attribute_controllable(monitor_id, vcp_command.code):
+                layout.addWidget(DdcSliderWidget(ddcutil, monitor_id, vcp_command))
+                self.number_of_controls += 1
+            else:
+                alert = QMessageBox()
+                alert.setText(tr('Monitor {} lacks a VCP control for {}.').format(monitor_name, tr(vcp_command.name)))
+                alert.setInformativeText(tr('No read/write ability for vcp_code {}.').format(vcp_command.code))
+                alert.setIcon(QMessageBox.Warning)
+                alert.exec()
+        if self.number_of_controls != 0:
+            self.setLayout(layout)
 
 def exception_handler(etype, evalue, etraceback):
     print("ERROR:\n", ''.join(traceback.format_exception(etype, evalue, etraceback)))
@@ -202,24 +280,15 @@ def main():
 
     ddcutil = DdcUtil(debug=True)
     number_found = 0
-    for ddc_id, desc in ddcutil.detect():
-        splash.showMessage(tr('DDC Control\nDDC ID {}\n{}').format(ddc_id, desc), Qt.AlignVCenter|Qt.AlignHCenter)
-        print(ddc_id + " " + desc)
-        print(ddcutil.get_brightness(ddc_id))
-        if ddcutil.is_brightness_controllable(ddc_id):
-            layout.addWidget(DdcMonitorWidget(ddcutil, ddc_id, desc))
-            number_found += 1
-        else:
-            alert = QMessageBox()
-            #alert.setDetailedText('Ddcutil reports no vcp brightness read/write attribute for this monitor.')
-            alert.setText(tr('Ignoring monitor with DDC ID {}').format(ddc_id))
-            alert.setInformativeText(tr('No brightness read/write ability (attribute 10) for {}').format(desc))
-            alert.setIcon(QMessageBox.Warning)
-            alert.exec()
+    for monitor_id, desc in ddcutil.detect():
+        splash.showMessage(tr('DDC Control\nDDC ID {}\n{}').format(monitor_id, desc), Qt.AlignVCenter|Qt.AlignHCenter)
+        monitorWidget = DdcMonitorWidget(ddcutil, monitor_id, desc)
+        number_found += monitorWidget.number_of_controls
+        if monitorWidget.number_of_controls != 0:
+            layout.addWidget(monitorWidget)
 
     if number_found == 0:
         alert = QMessageBox()
-        #alert.setDetailedText('Ddcutil reports no vcp brightness read/write attribute for this monitor.')
         alert.setText(tr('No controllable monitors found, exiting.'))
         alert.setInformativeText(tr('Run ddc_control in a console and check for additional messages. Check the requirements for the ddcutil command.'))
         alert.setIcon(QMessageBox.Critical)
