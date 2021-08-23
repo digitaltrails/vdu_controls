@@ -140,8 +140,8 @@ class VcpCapability():
         self.icon = icon
         self.values = values
 
-    def __str__(self):
-        return "{}, {}".format(self.vcp_code, self.name)
+    def arg_name(self):
+        return self.name.replace(' ', '-').lower()
 
 # VCP commands to be made available as Qt sliders
 GUI_VCP_COMMANDS = [
@@ -283,7 +283,7 @@ class DdcMonitorWidget(QWidget):
         self.capabilities = ddcutil.query_capabilities(monitor_id)
         self.controls = []
         for vcp_command in GUI_VCP_COMMANDS:
-            if vcp_command.name.lower() not in hide:
+            if vcp_command.arg_name() not in hide:
                 if vcp_command.vcp_code in self.capabilities:
                     control = DdcSliderWidget(ddcutil, monitor_id, vcp_command)
                     layout.addWidget(control)
@@ -349,6 +349,7 @@ class DdcControlWidget(QWidget):
         self.progressBar = QProgressBar(self)
         self.progressBar.setTextVisible(False)
         self.progressBar.setRange(0,1)
+        self.progressBar.setDisabled(True)
         layout.addWidget(self.progressBar, Qt.AlignVCenter|Qt.AlignHCenter)
 
         self.refresh_button = QPushButton(tr("Refresh settings from monitors"))
@@ -359,12 +360,14 @@ class DdcControlWidget(QWidget):
 
     def onStart(self):
         self.refresh_button.setDisabled(True)
+        self.progressBar.setDisabled(False)
         self.progressBar.setRange(0,0)
         self.refreshTask.start()
 
     def onFinished(self):
         # Stop the pulsation
         self.progressBar.setRange(0,1)
+        self.progressBar.setDisabled(True)
         self.refresh_button.setDisabled(False)
         for widget in self.monitor_widgets:
             widget.refresh_view()
@@ -389,7 +392,7 @@ def main():
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     parser = argparse.ArgumentParser(description='Display Data Channel - Virtual Control Panel')
-    parser.add_argument('--hide', default=[], action='append', choices=[ vcp.name.lower() for vcp in GUI_VCP_COMMANDS ], help='hide/disable a control')
+    parser.add_argument('--hide', default=[], action='append', choices=[ vcp.arg_name() for vcp in GUI_VCP_COMMANDS ], help='hide/disable a control')
     # Python 3.9 parser.add_argument('--debug',  action=argparse.BooleanOptionalAction, help='enable debugging')
     parser.add_argument('--debug', default=False, action='store_true', help='enable debugging')
     parser.add_argument('--warnings', default=False, action='store_true', help='enable missing feature warnings')
