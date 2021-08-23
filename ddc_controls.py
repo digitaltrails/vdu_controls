@@ -43,8 +43,8 @@ import argparse
 import signal
 #from enum import StrEnum
 
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, QSplashScreen, QPushButton
-from PyQt5.QtCore import Qt, QCoreApplication
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, QSplashScreen, QPushButton, QProgressBar
+from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal
 from PyQt5.QtGui import QIntValidator, QPixmap, QIcon
 from PyQt5.QtSvg import QSvgWidget
 
@@ -155,6 +155,7 @@ class DdcUtil():
     Display Data Channel Utility for interacting with monitors
     """
     def __init__(self, debug=False):
+        super().__init__()
         self.debug = debug
 
     def __run__(self, args):
@@ -265,6 +266,8 @@ class DdcSliderWidget(QWidget):
         self.slider.setValue(current)
 
 
+
+
 class DdcMonitorWidget(QWidget):
     """
     Widget to control one monitor.feature_match
@@ -300,6 +303,9 @@ class DdcMonitorWidget(QWidget):
     def number_of_controls(self):
         return len(self.controls)
 
+
+
+
 def exception_handler(etype, evalue, etraceback):
     print("ERROR:\n", ''.join(traceback.format_exception(etype, evalue, etraceback)))
     alert = QMessageBox()
@@ -308,6 +314,70 @@ def exception_handler(etype, evalue, etraceback):
     alert.setIcon(QMessageBox.Critical)
     alert.exec()
     QApplication.quit()
+
+class DdcControlWidget(QWidget):
+
+    def __init__(self, args, splash):
+        super().__init__()
+        layout = QVBoxLayout()
+
+        ddcutil = DdcUtil(debug=args.debug)
+        self.monitor_widgets = []
+        for monitor_id, desc in ddcutil.detect():
+            splash.showMessage(tr('DDC Control\nDDC ID {}\n{}').format(monitor_id, desc), Qt.AlignVCenter|Qt.AlignHCenter)
+            monitor_widget = DdcMonitorWidget(ddcutil, monitor_id, desc, args.hide, args.warnings)
+            if monitor_widget.number_of_controls() != 0:
+                self.monitor_widgets.append(monitor_widget)
+                layout.addWidget(monitor_widget)
+
+        if len(self.monitor_widgets) == 0:
+            alert = QMessageBox()
+            alert.setText(tr('No controllable monitors found, exiting.'))
+            alert.setInformativeText(tr(
+                '''Run ddc_control in a console and check for additional messages.\
+                Check the requirements for the ddcutil command.'''))
+            alert.setIcon(QMessageBox.Critical)
+            alert.exec()
+            sys.exit()
+
+        self.refreshTask = RefreshTaskThread(self)
+        self.refreshTask.taskFinished.connect(self.onFinished)
+
+        self.progressBar = QProgressBar(self)
+        self.progressBar.setTextVisible(False)
+        self.progressBar.setRange(0,1)
+        layout.addWidget(self.progressBar, Qt.AlignVCenter|Qt.AlignHCenter)
+
+        self.refresh_button = QPushButton(tr("Refresh settings from monitors"))
+        self.refresh_button.clicked.connect(self.onStart)
+        layout.addWidget(self.refresh_button)
+
+        self.setLayout(layout)
+
+    def onStart(self):
+        self.refresh_button.setDisabled(True)
+        self.progressBar.setRange(0,0)
+        self.refreshTask.start()
+
+    def onFinished(self):
+        # Stop the pulsation
+        self.progressBar.setRange(0,1)
+        self.refresh_button.setDisabled(False)
+
+class RefreshTaskThread(QThread):
+
+    taskFinished = pyqtSignal()
+
+    def __init__(self, ddc_widget):
+        super().__init__()
+        self.ddc_widget = ddc_widget
+
+    def run(self):
+        for widget in self.ddc_widget.monitor_widgets:
+            widget.refresh_data()
+        self.taskFinished.emit()
+
+
 
 def main():
     # Allow control-c to terminate the program
@@ -339,45 +409,11 @@ def main():
     app.setWindowIcon(app_icon)
     app.setApplicationDisplayName(tr('DDC Control'))
 
-    main_window = QWidget()
-
-    layout = QVBoxLayout()
-
     splash.showMessage(tr('DDC Control\nLooking for DDC monitors...\n'), Qt.AlignVCenter|Qt.AlignHCenter)
-
-    ddcutil = DdcUtil(debug=args.debug)
-    monitor_widgets = []
-    for monitor_id, desc in ddcutil.detect():
-        splash.showMessage(tr('DDC Control\nDDC ID {}\n{}').format(monitor_id, desc), Qt.AlignVCenter|Qt.AlignHCenter)
-        monitor_widget = DdcMonitorWidget(ddcutil, monitor_id, desc, args.hide, args.warnings)
-        if monitor_widget.number_of_controls() != 0:
-            monitor_widgets.append(monitor_widget)
-            layout.addWidget(monitor_widget)
-
-    if len(monitor_widgets) == 0:
-        alert = QMessageBox()
-        alert.setText(tr('No controllable monitors found, exiting.'))
-        alert.setInformativeText(tr(
-            '''Run ddc_control in a console and check for additional messages.\
-            Check the requirements for the ddcutil command.'''))
-        alert.setIcon(QMessageBox.Critical)
-        alert.exec()
-        sys.exit()
-
-    def refresh_data():
-        #main_window.setEnabled(False)
-        for widget in monitor_widgets:
-            widget.refresh_data()
-        #main_window.setEnabled(True)
-
-    refresh_button = QPushButton(tr("Query monitors"))
-    refresh_button.clicked.connect(refresh_data)
-    layout.addWidget(refresh_button)
-
-    #layout.addWidget(QPushButton('Dismiss'))
-    main_window.setLayout(layout)
+    main_window = DdcControlWidget(args, splash)
     main_window.show()
     splash.finish(main_window)
+
     sys.exit(app.exec_())
 
 if __name__ == '__main__':
