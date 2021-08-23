@@ -213,7 +213,7 @@ class DdcSliderWidget(QWidget):
         self.ddcutil = ddcutil
         self.monitor_id = monitor_id
         self.vcp_command = vcp_command
-        current, maximum = ddcutil.get_attribute(monitor_id, vcp_command.vcp_code)
+        self.current, self.maximum = ddcutil.get_attribute(monitor_id, vcp_command.vcp_code)
 
         layout = QHBoxLayout()
         self.setLayout(layout)
@@ -226,8 +226,8 @@ class DdcSliderWidget(QWidget):
 
         slider = QSlider()
         slider.setMinimumWidth(200)
-        slider.setValue(current)
-        slider.setRange(0, maximum)
+        slider.setValue(self.current)
+        slider.setRange(0, self.maximum)
         slider.setMinimum(0)
         slider.setSingleStep(1)
         slider.setPageStep(10)
@@ -243,12 +243,13 @@ class DdcSliderWidget(QWidget):
         textinput.setMaximumWidth(50)
         textinput.setMaxLength(4)
         textvalidator = QIntValidator()
-        textvalidator.setRange(0, maximum)
+        textvalidator.setRange(0, self.maximum)
         textinput.setValidator(textvalidator)
         textinput.setText(str(slider.value()))
         layout.addWidget(textinput)
 
         def slider_changed(value):
+            self.current = value
             textinput.setText(str(value))
             self.ddcutil.set_attribute(self.monitor_id, self.vcp_command.vcp_code, value)
         slider.valueChanged.connect(slider_changed)
@@ -262,10 +263,10 @@ class DdcSliderWidget(QWidget):
         textinput.editingFinished.connect(text_changed)
 
     def refresh_data(self):
-        current, _ = self.ddcutil.get_attribute(self.monitor_id, self.vcp_command.vcp_code)
-        self.slider.setValue(current)
+        self.current, _ = self.ddcutil.get_attribute(self.monitor_id, self.vcp_command.vcp_code)
 
-
+    def refresh_view(self):
+        self.slider.setValue(self.current)
 
 
 class DdcMonitorWidget(QWidget):
@@ -300,10 +301,12 @@ class DdcMonitorWidget(QWidget):
         for control in self.controls:
             control.refresh_data()
 
+    def refresh_view(self):
+        for control in self.controls:
+            control.refresh_view()
+
     def number_of_controls(self):
         return len(self.controls)
-
-
 
 
 def exception_handler(etype, evalue, etraceback):
@@ -363,6 +366,8 @@ class DdcControlWidget(QWidget):
         # Stop the pulsation
         self.progressBar.setRange(0,1)
         self.refresh_button.setDisabled(False)
+        for widget in self.monitor_widgets:
+            widget.refresh_view()
 
 class RefreshTaskThread(QThread):
 
