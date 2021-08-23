@@ -40,8 +40,10 @@ import os
 import base64
 import traceback
 import argparse
+import signal
+#from enum import StrEnum
 
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, QSplashScreen
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, QSplashScreen, QPushButton
 from PyQt5.QtCore import Qt, QCoreApplication
 from PyQt5.QtGui import QIntValidator, QPixmap, QIcon
 from PyQt5.QtSvg import QSvgWidget
@@ -104,21 +106,48 @@ CONTRAST_SVG = b"""
 </svg>
 """
 
+VOLUME_SVG = b"""
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-7 -7 40 40" width="24" height="24">
+  <style id="current-color-scheme" type="text/css">
+        .ColorScheme-Text { color:#232629; }
+    </style>
+  <g transform="translate(1,1)">
+    <g class="ColorScheme-Text" fill="currentColor">
+      <path d="m14.324219 7.28125-.539063.8613281a4 4 0 0 1 1.214844 2.8574219 4 4 0 0 1 -1.210938 2.861328l.539063.863281a5 5 0 0 0 1.671875-3.724609 5 5 0 0 0 -1.675781-3.71875z"/>
+      <path d="m13.865234 3.5371094-.24414.9765625a7 7 0 0 1 4.378906 6.4863281 7 7 0 0 1 -4.380859 6.478516l.24414.974609a8 8 0 0 0 5.136719-7.453125 8 8 0 0 0 -5.134766-7.4628906z"/>
+      <path d="m3 8h2v6h-2z" fill-rule="evenodd"/>
+      <path d="m6 14 5 5h1v-16h-1l-5 5z"/>
+    </g>
+  </g>
+</svg>
+"""
+
+
 DDCUTIL="/usr/bin/ddcutil"
 
-class VcpCommand():
+#class VcpType(StrEnum):
+#    CONTINUOUS = 'C'
+#    SIMPLE_NON_CONTINUOUS = 'SNC'
+#    COMPLEX_NON_CONTINUOUS = 'CNC'
+
+class VcpCapability():
     """
     Virtual Control Panel Command for monitors
     """
-    def __init__(self, name, code, icon):
+    def __init__(self, code, name, icon=None, values={}):
         self.name = name
-        self.code = code
+        self.vcp_code = code
         self.icon = icon
+        self.values = values
+
+    def __str__(self):
+        return "{}, {}".format(self.vcp_code, self.name)
 
 # VCP commands to be made available as Qt sliders
-SLIDDER_VCP_COMMANDS = [
-    VcpCommand('Brightness', '10', BRIGHTNESS_SVG),
-    VcpCommand('Contrast', '12', CONTRAST_SVG),
+GUI_VCP_COMMANDS = [
+    VcpCapability('10', 'Brightness',   icon=BRIGHTNESS_SVG),
+    VcpCapability('12', 'Contrast',     icon=CONTRAST_SVG),
+    VcpCapability('62', 'Audio volume', icon=VOLUME_SVG),
     ]
 
 class DdcUtil():
@@ -147,18 +176,28 @@ class DdcUtil():
             display_list.append((ddc_id, model))
         return display_list
 
-    def is_attribute_controllable(self, ddc_id, vcp_code):
-        result = self.__run__([DDCUTIL, '--display', ddc_id, 'vcpinfo', vcp_code ])
-        attribute_pattern = re.compile("Attributes: Read Write, Continuous")
-        return attribute_pattern.search(result.stdout.decode('utf-8')) is not None
+    def query_capabilities(self, ddc_id):
+        feature_pattern = re.compile(r'([0-9A-F]{2})\s+[(]([^)]+)[)]\n(Values:\n)?(.*)?', re.DOTALL)
+        feature_map = {}
+        result = self.__run__([DDCUTIL, '--display', ddc_id, 'capabilities'])
+        for feature_text in result.stdout.decode('utf-8').split(' Feature: '):
+            feature_match = feature_pattern.match(feature_text)
+            if feature_match:
+                feature_id = feature_match.group(1)
+                feature_name = feature_match.group(2)
+                current_feature = VcpCapability(feature_id, feature_name)
+                feature_map[feature_id] = current_feature
+        if self.debug:
+            print("DEBUG: capabilities", feature_map.keys())
+        return feature_map
 
     def get_attribute(self, ddc_id, vcp_code):
         result = self.__run__([DDCUTIL, '--brief', '--display', ddc_id, 'getvcp', vcp_code ])
         items = result.stdout.decode('utf-8').split()
-        return int(items[1]),int(items[4]),int(items[3])
+        return int(items[3]),int(items[4])
 
     def set_attribute(self, ddc_id, vcp_code, new_value):
-        _, _, current = self.get_attribute(ddc_id, vcp_code)
+        current, _ = self.get_attribute(ddc_id, vcp_code)
         if new_value != current:
             self.__run__([DDCUTIL, '--display', ddc_id, 'setvcp', vcp_code, str(new_value) ])
 
@@ -173,7 +212,7 @@ class DdcSliderWidget(QWidget):
         self.ddcutil = ddcutil
         self.monitor_id = monitor_id
         self.vcp_command = vcp_command
-        low, high, current = ddcutil.get_attribute(monitor_id, vcp_command.code)
+        current, maximum = ddcutil.get_attribute(monitor_id, vcp_command.vcp_code)
 
         layout = QHBoxLayout()
         self.setLayout(layout)
@@ -187,8 +226,8 @@ class DdcSliderWidget(QWidget):
         slider = QSlider()
         slider.setMinimumWidth(200)
         slider.setValue(current)
-        slider.setRange(low, high)
-        slider.setMinimum(low)
+        slider.setRange(0, maximum)
+        slider.setMinimum(0)
         slider.setSingleStep(1)
         slider.setPageStep(10)
         slider.setTickInterval(10)
@@ -197,19 +236,20 @@ class DdcSliderWidget(QWidget):
         # Don't ewrite the ddc value too often - not sure of the implications
         slider.setTracking(False)
         layout.addWidget(slider)
+        self.slider = slider
 
         textinput = QLineEdit()
         textinput.setMaximumWidth(50)
         textinput.setMaxLength(4)
         textvalidator = QIntValidator()
-        textvalidator.setRange(low,high)
+        textvalidator.setRange(0, maximum)
         textinput.setValidator(textvalidator)
         textinput.setText(str(slider.value()))
         layout.addWidget(textinput)
 
         def slider_changed(value):
             textinput.setText(str(value))
-            self.ddcutil.set_attribute(self.monitor_id, self.vcp_command.code, value)
+            self.ddcutil.set_attribute(self.monitor_id, self.vcp_command.vcp_code, value)
         slider.valueChanged.connect(slider_changed)
 
         def slider_moved(value):
@@ -220,33 +260,45 @@ class DdcSliderWidget(QWidget):
             slider.setValue(int(textinput.text()))
         textinput.editingFinished.connect(text_changed)
 
+    def refresh_data(self):
+        current, _ = self.ddcutil.get_attribute(self.monitor_id, self.vcp_command.vcp_code)
+        self.slider.setValue(current)
 
 
 class DdcMonitorWidget(QWidget):
     """
-    Widget to control one monitor.
+    Widget to control one monitor.feature_match
     """
-    def __init__(self, ddcutil, monitor_id, monitor_name, hide):
+    def __init__(self, ddcutil, monitor_id, monitor_name, hide, warnings):
         super().__init__()
         layout = QVBoxLayout()
         label = QLabel()
         #label.setStyleSheet("font-weight: bold");
         label.setText(tr('Monitor {}: {}').format(monitor_id, monitor_name))
         layout.addWidget(label)
-        self.number_of_controls = 0
-        for vcp_command in SLIDDER_VCP_COMMANDS:
+        self.capabilities = ddcutil.query_capabilities(monitor_id)
+        self.controls = []
+        for vcp_command in GUI_VCP_COMMANDS:
             if vcp_command.name.lower() not in hide:
-                if ddcutil.is_attribute_controllable(monitor_id, vcp_command.code):
-                    layout.addWidget(DdcSliderWidget(ddcutil, monitor_id, vcp_command))
-                    self.number_of_controls += 1
-                else:
+                if vcp_command.vcp_code in self.capabilities:
+                    control = DdcSliderWidget(ddcutil, monitor_id, vcp_command)
+                    layout.addWidget(control)
+                    self.controls.append(control)
+                elif warnings:
                     alert = QMessageBox()
                     alert.setText(tr('Monitor {} lacks a VCP control for {}.').format(monitor_name, tr(vcp_command.name)))
-                    alert.setInformativeText(tr('No read/write ability for vcp_code {}.').format(vcp_command.code))
+                    alert.setInformativeText(tr('No read/write ability for vcp_code {}.').format(vcp_command.vcp_code))
                     alert.setIcon(QMessageBox.Warning)
                     alert.exec()
-        if self.number_of_controls != 0:
+        if len(self.controls) != 0:
             self.setLayout(layout)
+
+    def refresh_data(self):
+        for control in self.controls:
+            control.refresh_data()
+
+    def number_of_controls(self):
+        return len(self.controls)
 
 def exception_handler(etype, evalue, etraceback):
     print("ERROR:\n", ''.join(traceback.format_exception(etype, evalue, etraceback)))
@@ -258,10 +310,14 @@ def exception_handler(etype, evalue, etraceback):
     QApplication.quit()
 
 def main():
+    # Allow control-c to terminate the program
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+
     parser = argparse.ArgumentParser(description='Display Data Channel - Virtual Control Panel')
-    parser.add_argument('--hide', default=[], action='append', choices=[ vcp.name.lower() for vcp in SLIDDER_VCP_COMMANDS ], help='hide/disable a control')
+    parser.add_argument('--hide', default=[], action='append', choices=[ vcp.name.lower() for vcp in GUI_VCP_COMMANDS ], help='hide/disable a control')
     # Python 3.9 parser.add_argument('--debug',  action=argparse.BooleanOptionalAction, help='enable debugging')
     parser.add_argument('--debug', default=False, action='store_true', help='enable debugging')
+    parser.add_argument('--warnings', default=False, action='store_true', help='enable missing feature warnings')
     args = parser.parse_args()
 
     sys.excepthook = exception_handler
@@ -290,15 +346,15 @@ def main():
     splash.showMessage(tr('DDC Control\nLooking for DDC monitors...\n'), Qt.AlignVCenter|Qt.AlignHCenter)
 
     ddcutil = DdcUtil(debug=args.debug)
-    number_found = 0
+    monitor_widgets = []
     for monitor_id, desc in ddcutil.detect():
         splash.showMessage(tr('DDC Control\nDDC ID {}\n{}').format(monitor_id, desc), Qt.AlignVCenter|Qt.AlignHCenter)
-        monitor_widget = DdcMonitorWidget(ddcutil, monitor_id, desc, args.hide)
-        number_found += monitor_widget.number_of_controls
-        if monitor_widget.number_of_controls != 0:
+        monitor_widget = DdcMonitorWidget(ddcutil, monitor_id, desc, args.hide, args.warnings)
+        if monitor_widget.number_of_controls() != 0:
+            monitor_widgets.append(monitor_widget)
             layout.addWidget(monitor_widget)
 
-    if number_found == 0:
+    if len(monitor_widgets) == 0:
         alert = QMessageBox()
         alert.setText(tr('No controllable monitors found, exiting.'))
         alert.setInformativeText(tr(
@@ -307,6 +363,16 @@ def main():
         alert.setIcon(QMessageBox.Critical)
         alert.exec()
         sys.exit()
+
+    def refresh_data():
+        #main_window.setEnabled(False)
+        for widget in monitor_widgets:
+            widget.refresh_data()
+        #main_window.setEnabled(True)
+
+    refresh_button = QPushButton(tr("Query monitors"))
+    refresh_button.clicked.connect(refresh_data)
+    layout.addWidget(refresh_button)
 
     #layout.addWidget(QPushButton('Dismiss'))
     main_window.setLayout(layout)
