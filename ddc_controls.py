@@ -43,7 +43,6 @@ import base64
 import traceback
 import argparse
 import signal
-# from enum import StrEnum
 
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar
@@ -52,10 +51,10 @@ from PyQt5.QtGui import QIntValidator, QPixmap, QIcon
 from PyQt5.QtSvg import QSvgWidget
 
 
-def tr(source_text):
+def translate(source_text):
     return QCoreApplication.translate('ddc-control', source_text)
 
-
+# Encode some default graphics to make the script self contained
 DEFAULT_SPLASH_PNG = "/usr/share/icons/oxygen/base/256x256/apps/preferences-desktop-display.png"
 FALLBACK_SPLASH_JPEG_BASE64 = b"""
 /9j/4AAQSkZJRgABAQIARgBGAAD/2wBDAFA3PEY8MlBGQUZaVVBfeMiCeG5uePWvuZHI////////
@@ -232,7 +231,7 @@ class DdcSliderWidget(QWidget):
         icon = QSvgWidget()
         icon.load(vcp_capability.icon_source)
         icon.setFixedSize(50, 50)
-        icon.setToolTip(tr(vcp_capability.name))
+        icon.setToolTip(translate(vcp_capability.name))
         layout.addWidget(icon)
 
         slider = QSlider()
@@ -293,7 +292,7 @@ class DdcVduWidget(QWidget):
         layout = QVBoxLayout()
         label = QLabel()
         # label.setStyleSheet("font-weight: bold");
-        label.setText(tr('Monitor {}: {}').format(vdu_id, vdu_name))
+        label.setText(translate('Monitor {}: {}').format(vdu_id, vdu_name))
         layout.addWidget(label)
         self.capabilities = ddcutil.query_capabilities(vdu_id)
         self.vcp_controls = []
@@ -306,8 +305,8 @@ class DdcVduWidget(QWidget):
                 elif warnings:
                     alert = QMessageBox()
                     alert.setText(
-                        tr('Monitor {} lacks a VCP control for {}.').format(vdu_name, tr(capability.name)))
-                    alert.setInformativeText(tr('No read/write ability for vcp_code {}.').format(capability.vcp_code))
+                        translate('Monitor {} lacks a VCP control for {}.').format(vdu_name, translate(capability.name)))
+                    alert.setInformativeText(translate('No read/write ability for vcp_code {}.').format(capability.vcp_code))
                     alert.setIcon(QMessageBox.Warning)
                     alert.exec()
         if len(self.vcp_controls) != 0:
@@ -334,7 +333,7 @@ class DdcMainWidget(QWidget):
         ddcutil = DdcUtil(debug=args.debug)
         self.vdu_widgets = []
         for vdu_id, desc in ddcutil.detect_monitors():
-            splash.showMessage(tr('DDC Control\nDDC ID {}\n{}').format(vdu_id, desc),
+            splash.showMessage(translate('DDC Control\nDDC ID {}\n{}').format(vdu_id, desc),
                                Qt.AlignVCenter | Qt.AlignHCenter)
             vdu_widget = DdcVduWidget(ddcutil, vdu_id, desc, args.hide, args.warnings)
             if vdu_widget.number_of_controls() != 0:
@@ -343,8 +342,8 @@ class DdcMainWidget(QWidget):
 
         if len(self.vdu_widgets) == 0:
             alert = QMessageBox()
-            alert.setText(tr('No controllable monitors found, exiting.'))
-            alert.setInformativeText(tr(
+            alert.setText(translate('No controllable monitors found, exiting.'))
+            alert.setInformativeText(translate(
                 '''Run ddc_control --debug in a console and check for additional messages.\
                 Check the requirements for the ddcutil command.'''))
             alert.setIcon(QMessageBox.Critical)
@@ -378,7 +377,7 @@ class DdcMainWidget(QWidget):
         self.progressBar.setDisabled(True)
         layout.addWidget(self.progressBar, Qt.AlignVCenter)
 
-        self.refresh_button = QPushButton(tr("Refresh settings from monitors"))
+        self.refresh_button = QPushButton(translate("Refresh settings from monitors"))
         self.refresh_button.clicked.connect(start_refresh)
         layout.addWidget(self.refresh_button)
 
@@ -403,8 +402,8 @@ class RefreshFromVduTask(QThread):
 def exception_handler(etype, evalue, etraceback):
     print("ERROR:\n", ''.join(traceback.format_exception(etype, evalue, etraceback)))
     alert = QMessageBox()
-    alert.setText(tr('Error: {}').format(''.join(traceback.format_exception_only(etype, evalue))))
-    alert.setInformativeText(tr('Details: {}').format(''.join(traceback.format_exception(etype, evalue, etraceback))))
+    alert.setText(translate('Error: {}').format(''.join(traceback.format_exception_only(etype, evalue))))
+    alert.setInformativeText(translate('Details: {}').format(''.join(traceback.format_exception(etype, evalue, etraceback))))
     alert.setIcon(QMessageBox.Critical)
     alert.exec()
     QApplication.quit()
@@ -439,9 +438,9 @@ def main():
     app_icon = QIcon()
     app_icon.addPixmap(pixmap)
     app.setWindowIcon(app_icon)
-    app.setApplicationDisplayName(tr('DDC Control'))
+    app.setApplicationDisplayName(translate('DDC Control'))
 
-    splash.showMessage(tr('DDC Control\nLooking for DDC monitors...\n'), Qt.AlignVCenter | Qt.AlignHCenter)
+    splash.showMessage(translate('DDC Control\nLooking for DDC monitors...\n'), Qt.AlignVCenter | Qt.AlignHCenter)
     main_window = DdcMainWidget(args, splash)
     main_window.show()
     splash.finish(main_window)
