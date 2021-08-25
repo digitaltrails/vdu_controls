@@ -40,13 +40,14 @@ import re
 import subprocess
 import os
 import base64
+import time
 import traceback
 import argparse
 import signal
 
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar
-from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal
+from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess
 from PyQt5.QtGui import QIntValidator, QPixmap, QIcon
 from PyQt5.QtSvg import QSvgWidget
 
@@ -129,6 +130,8 @@ VOLUME_SVG = b"""
 
 DDCUTIL = "/usr/bin/ddcutil"
 
+RESTART_FOR_RECONFIG_EXIT_CODE = 1959
+
 
 # class VcpType(StrEnum):
 #    CONTINUOUS = 'C'
@@ -205,9 +208,18 @@ class DdcUtil:
         return feature_map
 
     def get_attribute(self, ddc_id, vcp_code):
-        result = self.__run__('--brief', '--display', ddc_id, 'getvcp', vcp_code)
-        items = result.stdout.decode('utf-8').split()
-        return int(items[3]), int(items[4])
+        value_pattern = re.compile(r'VCP ' + vcp_code + r' [A-Z]+ ([0-9]+) ([0-9]+)\n')
+        # Try a few times in case there is a glitch due to a monitor being turned off/on
+        for i in range(3):
+            result = self.__run__('--brief', '--display', ddc_id, 'getvcp', vcp_code)
+            value_match = value_pattern.match(result.stdout.decode('utf-8'))
+            if value_match is None:
+                print("DEBUG: get_attribute returned garbage, will try two more times.")
+                time.sleep(2)
+                continue
+            else:
+                return int(value_match.group(1)), int(value_match.group(2))
+        return 0, 0
 
     def set_attribute(self, ddc_id, vcp_code, new_value):
         current, _ = self.get_attribute(ddc_id, vcp_code)
@@ -339,7 +351,7 @@ class DdcMainWidget(QWidget):
         self.vdu_widgets = []
         self.enabled_capabilities = enabled_capabilities
         self.warnings = warnings
-        self.detected_vdus =  self.ddcutil.detect_monitors()
+        self.detected_vdus = self.ddcutil.detect_monitors()
         for vdu_id, desc in self.detected_vdus:
             splash.showMessage(translate('DDC Control\nDDC ID {}\n{}').format(vdu_id, desc),
                                Qt.AlignVCenter | Qt.AlignHCenter)
@@ -392,7 +404,7 @@ class DdcMainWidget(QWidget):
 
     def refresh_data(self):
         expected_vdu_ids = [x.vdu_id for x in self.vdu_widgets]
-        self.detected_vdus =  self.ddcutil.detect_monitors()
+        self.detected_vdus = self.ddcutil.detect_monitors()
         for vdu_widget in self.vdu_widgets:
             if (vdu_widget.vdu_id, vdu_widget.vdu_desc) in self.detected_vdus:
                 vdu_widget.refresh_data()
@@ -406,12 +418,16 @@ class DdcMainWidget(QWidget):
             else:
                 self.vdu_widgets.remove(vdu_widget)
                 vdu_widget.deleteLater()
-        for vdu_id, vdu_desc in to_do:
-            vdu_widget = DdcVduWidget(self.ddcutil, vdu_id, vdu_desc, self.enabled_capabilities, self.warnings)
-            self.layout().insertWidget(self.layout().indexOf(self.progressBar),vdu_widget)
-            self.vdu_widgets.append(vdu_widget)
+        if len(to_do) > 0:
+            alert = QMessageBox()
+            alert.setText(translate('The physical monitor configuration has changed. A restart is required.'))
+            alert.setInformativeText(translate('Dismiss this message to restart.'))
+            alert.setIcon(QMessageBox.Critical)
+            alert.exec()
+            QCoreApplication.exit(RESTART_FOR_RECONFIG_EXIT_CODE)
 
-        #for vw in self.vdu_widgets:
+
+        # for vw in self.vdu_widgets:
         #    vw.refresh_view()
 
 
@@ -486,7 +502,10 @@ def main():
     main_window.show()
     splash.finish(main_window)
 
-    sys.exit(app.exec_())
+    rc = app.exec_()
+    if rc == RESTART_FOR_RECONFIG_EXIT_CODE:
+        QProcess.startDetached(app.arguments()[0], app.arguments()[1:])
+    sys.exit(rc)
 
 
 if __name__ == '__main__':
