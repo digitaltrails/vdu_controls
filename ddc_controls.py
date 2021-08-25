@@ -403,7 +403,6 @@ class DdcMainWidget(QWidget):
         self.setLayout(layout)
 
     def refresh_data(self):
-        expected_vdu_ids = [x.vdu_id for x in self.vdu_widgets]
         self.detected_vdus = self.ddcutil.detect_monitors()
         for vdu_widget in self.vdu_widgets:
             if (vdu_widget.vdu_id, vdu_widget.vdu_desc) in self.detected_vdus:
