@@ -131,7 +131,7 @@ VOLUME_SVG = b"""
 
 DDCUTIL = "/usr/bin/ddcutil"
 
-RESTART_FOR_RECONFIG_EXIT_CODE = 1959
+EXIT_CODE_FOR_RESTART = 1959
 
 
 # class VcpType(StrEnum):
@@ -145,12 +145,12 @@ class VcpCapability:
     Representation of a VCP (Virtual Control Panel) capability for a VDU.
     """
 
-    def __init__(self, code, name, icon_source=None, values={}):
+    def __init__(self, code, name, icon_source=None, values=None):
         self.name = name
         self.vcp_code = code
         self.icon_source = icon_source
         # For future use if we want to implement non-continuous types of VCP (VCP types SNC or CNC)
-        self.values = values
+        self.values = [] if values is None else values
 
     def arg_name(self):
         return self.name.replace(' ', '-').lower()
@@ -170,10 +170,10 @@ class DdcUtil:
     Interface to the command line ddcutil Display Data Channel Utility for interacting with VDU's.
     """
 
-    def __init__(self, debug=False, common_args=[]):
+    def __init__(self, debug=False, common_args=None):
         super().__init__()
         self.debug = debug
-        self.common_args = common_args
+        self.common_args = [] if common_args is None else common_args
 
     def __run__(self, *args):
         if self.debug:
@@ -423,7 +423,7 @@ class DdcMainWidget(QWidget):
             alert.setInformativeText(translate('Dismiss this message to automatically restart.'))
             alert.setIcon(QMessageBox.Critical)
             alert.exec()
-            QCoreApplication.exit(RESTART_FOR_RECONFIG_EXIT_CODE)
+            QCoreApplication.exit(EXIT_CODE_FOR_RESTART)
 
 
 class RefreshFromVduTask(QThread):
@@ -466,16 +466,7 @@ def main():
     # Python 3.9 parser.add_argument('--debug',  action=argparse.BooleanOptionalAction, help='enable debugging')
     parser.add_argument('--debug', default=False, action='store_true', help='enable debugging')
     parser.add_argument('--warnings', default=False, action='store_true', help='enable missing feature warnings')
-
-    class Range(object):
-        def __init__(self, start, end):
-            self.start = start
-            self.end = end
-
-        def __eq__(self, other):
-            return self.start <= other <= self.end
-
-    parser.add_argument('--sleep-multiplier',  type=float, choices=[Range(0.0, 10.0)], help='ddcutil sleep multiplier')
+    parser.add_argument('--sleep-multiplier', type=float, default="0.5", help='ddcutil sleep multiplier (>0.0)')
 
     args = parser.parse_args()
 
@@ -509,7 +500,7 @@ def main():
     splash.finish(main_window)
 
     rc = app.exec_()
-    if rc == RESTART_FOR_RECONFIG_EXIT_CODE:
+    if rc == EXIT_CODE_FOR_RESTART:
         QProcess.startDetached(app.arguments()[0], app.arguments()[1:])
     sys.exit(rc)
 
