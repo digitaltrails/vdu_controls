@@ -32,6 +32,7 @@
 #        lsmod | grep i2c_dev
 #
 # Read ddcutil readme concerning config of i2c_dev with nvidia GPU's.
+# Detailed ddcutil info at https://www.ddcutil.com/
 #
 """
 
