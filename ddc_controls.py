@@ -170,14 +170,15 @@ class DdcUtil:
     Interface to the command line ddcutil Display Data Channel Utility for interacting with VDU's.
     """
 
-    def __init__(self, debug=False):
+    def __init__(self, debug=False, common_args=[]):
         super().__init__()
         self.debug = debug
+        self.common_args = common_args
 
     def __run__(self, *args):
         if self.debug:
             print("DEBUG: subprocess run    - ", DDCUTIL, args)
-        result = subprocess.run([DDCUTIL, ] + list(args), stdout=subprocess.PIPE, check=True)
+        result = subprocess.run([DDCUTIL, ] + self.common_args + list(args), stdout=subprocess.PIPE, check=True)
         if self.debug:
             print("DEBUG: subprocess result - ", result)
         return result
@@ -345,11 +346,11 @@ class DdcVduWidget(QWidget):
 
 class DdcMainWidget(QWidget):
 
-    def __init__(self, enabled_capabilities, warnings, debug, splash):
+    def __init__(self, enabled_capabilities, warnings, debug, sleep_multiplier, splash):
         super().__init__()
         layout = QVBoxLayout()
-
-        self.ddcutil = DdcUtil(debug=debug)
+        print(sleep_multiplier)
+        self.ddcutil = DdcUtil(debug=debug, common_args=['--sleep-multiplier', str(sleep_multiplier)])
         self.vdu_widgets = []
         self.enabled_capabilities = enabled_capabilities
         self.warnings = warnings
@@ -465,6 +466,17 @@ def main():
     # Python 3.9 parser.add_argument('--debug',  action=argparse.BooleanOptionalAction, help='enable debugging')
     parser.add_argument('--debug', default=False, action='store_true', help='enable debugging')
     parser.add_argument('--warnings', default=False, action='store_true', help='enable missing feature warnings')
+
+    class Range(object):
+        def __init__(self, start, end):
+            self.start = start
+            self.end = end
+
+        def __eq__(self, other):
+            return self.start <= other <= self.end
+
+    parser.add_argument('--sleep-multiplier',  type=float, choices=[Range(0.0, 10.0)], help='ddcutil sleep multiplier')
+
     args = parser.parse_args()
 
     sys.excepthook = exception_handler
@@ -492,7 +504,7 @@ def main():
         enabled_capabilities = [c for c in SUPPORTED_VCP_CAPABILITIES if c.arg_name() not in args.hide]
 
     splash.showMessage(translate('DDC Control\nLooking for DDC monitors...\n'), Qt.AlignVCenter | Qt.AlignHCenter)
-    main_window = DdcMainWidget(enabled_capabilities, args.warnings, args.debug, splash)
+    main_window = DdcMainWidget(enabled_capabilities, args.warnings, args.debug, args.sleep_multiplier, splash)
     main_window.show()
     splash.finish(main_window)
 
