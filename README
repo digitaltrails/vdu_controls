@@ -2,5 +2,6 @@ Prerequisites:
 
 zypper install python38-QtPy
 zypper install ddcutil
-lsmod | grep i2c_dev
-modprobe i2c_dev
+lsmod | grep i2c-dev
+modprobe i2c-dev
+

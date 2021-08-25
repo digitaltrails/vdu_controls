@@ -54,6 +54,7 @@ from PyQt5.QtSvg import QSvgWidget
 def translate(source_text):
     return QCoreApplication.translate('ddc-control', source_text)
 
+
 # Encode some default graphics to make the script self contained
 DEFAULT_SPLASH_PNG = "/usr/share/icons/oxygen/base/256x256/apps/preferences-desktop-display.png"
 FALLBACK_SPLASH_JPEG_BASE64 = b"""
@@ -128,6 +129,7 @@ VOLUME_SVG = b"""
 
 DDCUTIL = "/usr/bin/ddcutil"
 
+
 # class VcpType(StrEnum):
 #    CONTINUOUS = 'C'
 #    SIMPLE_NON_CONTINUOUS = 'SNC'
@@ -163,6 +165,7 @@ class DdcUtil:
     """
     Interface to the command line ddcutil Display Data Channel Utility for interacting with VDU's.
     """
+
     def __init__(self, debug=False):
         super().__init__()
         self.debug = debug
@@ -223,7 +226,7 @@ class DdcSliderWidget(QWidget):
         self.ddcutil = ddcutil
         self.monitor_id = monitor_id
         self.vcp_capability = vcp_capability
-        self.current_value, self.max_value = ddcutil.get_attribute(monitor_id, vcp_capability.vcp_code)
+        self.current_value, self.max_value = self.ddcutil.get_attribute(self.monitor_id, self.vcp_capability.vcp_code)
 
         layout = QHBoxLayout()
         self.setLayout(layout)
@@ -287,28 +290,30 @@ class DdcVduWidget(QWidget):
     Widget to control one VDU (monitor/display)
     """
 
-    def __init__(self, ddcutil, vdu_id, vdu_name, hide, warnings):
+    def __init__(self, ddcutil, vdu_id, vdu_desc, enabled_capabilities, warnings):
         super().__init__()
         layout = QVBoxLayout()
         label = QLabel()
         # label.setStyleSheet("font-weight: bold");
-        label.setText(translate('Monitor {}: {}').format(vdu_id, vdu_name))
+        label.setText(translate('Monitor {}: {}').format(vdu_id, vdu_desc))
         layout.addWidget(label)
+        self.vdu_id = vdu_id
+        self.vdu_desc = vdu_desc
         self.capabilities = ddcutil.query_capabilities(vdu_id)
         self.vcp_controls = []
-        for capability in SUPPORTED_VCP_CAPABILITIES:
-            if capability.arg_name() not in hide:
-                if capability.vcp_code in self.capabilities:
-                    control = DdcSliderWidget(ddcutil, vdu_id, capability)
-                    layout.addWidget(control)
-                    self.vcp_controls.append(control)
-                elif warnings:
-                    alert = QMessageBox()
-                    alert.setText(
-                        translate('Monitor {} lacks a VCP control for {}.').format(vdu_name, translate(capability.name)))
-                    alert.setInformativeText(translate('No read/write ability for vcp_code {}.').format(capability.vcp_code))
-                    alert.setIcon(QMessageBox.Warning)
-                    alert.exec()
+        for capability in enabled_capabilities:
+            if capability.vcp_code in self.capabilities:
+                control = DdcSliderWidget(ddcutil, vdu_id, capability)
+                layout.addWidget(control)
+                self.vcp_controls.append(control)
+            elif warnings:
+                alert = QMessageBox()
+                alert.setText(
+                    translate('Monitor {} lacks a VCP control for {}.').format(vdu_desc, translate(capability.name)))
+                alert.setInformativeText(
+                    translate('No read/write ability for vcp_code {}.').format(capability.vcp_code))
+                alert.setIcon(QMessageBox.Warning)
+                alert.exec()
         if len(self.vcp_controls) != 0:
             self.setLayout(layout)
 
@@ -326,16 +331,19 @@ class DdcVduWidget(QWidget):
 
 class DdcMainWidget(QWidget):
 
-    def __init__(self, args, splash):
+    def __init__(self, enabled_capabilities, warnings, debug, splash):
         super().__init__()
         layout = QVBoxLayout()
 
-        ddcutil = DdcUtil(debug=args.debug)
+        self.ddcutil = DdcUtil(debug=debug)
         self.vdu_widgets = []
-        for vdu_id, desc in ddcutil.detect_monitors():
+        self.enabled_capabilities = enabled_capabilities
+        self.warnings = warnings
+        self.detected_vdus =  self.ddcutil.detect_monitors()
+        for vdu_id, desc in self.detected_vdus:
             splash.showMessage(translate('DDC Control\nDDC ID {}\n{}').format(vdu_id, desc),
                                Qt.AlignVCenter | Qt.AlignHCenter)
-            vdu_widget = DdcVduWidget(ddcutil, vdu_id, desc, args.hide, args.warnings)
+            vdu_widget = DdcVduWidget(self.ddcutil, vdu_id, desc, enabled_capabilities, warnings)
             if vdu_widget.number_of_controls() != 0:
                 self.vdu_widgets.append(vdu_widget)
                 layout.addWidget(vdu_widget)
@@ -364,8 +372,7 @@ class DdcMainWidget(QWidget):
             self.progressBar.setRange(0, 1)
             self.progressBar.setDisabled(True)
             self.refresh_button.setDisabled(False)
-            for vw in self.vdu_widgets:
-                vw.refresh_view()
+            self.refresh_view()
 
         self.refreshDataTask = RefreshFromVduTask(self)
         self.refreshDataTask.task_finished.connect(finish_refresh)
@@ -383,6 +390,30 @@ class DdcMainWidget(QWidget):
 
         self.setLayout(layout)
 
+    def refresh_data(self):
+        expected_vdu_ids = [x.vdu_id for x in self.vdu_widgets]
+        self.detected_vdus =  self.ddcutil.detect_monitors()
+        for vdu_widget in self.vdu_widgets:
+            if (vdu_widget.vdu_id, vdu_widget.vdu_desc) in self.detected_vdus:
+                vdu_widget.refresh_data()
+
+    def refresh_view(self):
+        to_do = self.detected_vdus.copy()
+        for vdu_widget in self.vdu_widgets:
+            if (vdu_widget.vdu_id, vdu_widget.vdu_desc) in to_do:
+                vdu_widget.refresh_view()
+                to_do.remove((vdu_widget.vdu_id, vdu_widget.vdu_desc))
+            else:
+                self.vdu_widgets.remove(vdu_widget)
+                vdu_widget.deleteLater()
+        for vdu_id, vdu_desc in to_do:
+            vdu_widget = DdcVduWidget(self.ddcutil, vdu_id, vdu_desc, self.enabled_capabilities, self.warnings)
+            self.layout().insertWidget(self.layout().indexOf(self.progressBar),vdu_widget)
+            self.vdu_widgets.append(vdu_widget)
+
+        #for vw in self.vdu_widgets:
+        #    vw.refresh_view()
+
 
 class RefreshFromVduTask(QThread):
     task_finished = pyqtSignal()
@@ -393,8 +424,7 @@ class RefreshFromVduTask(QThread):
 
     def run(self):
         # Running in a task thread, cannot interact with GUI thread, just update the data.
-        for vdu_widget in self.ddc_widget.vdu_widgets:
-            vdu_widget.refresh_data()
+        self.ddc_widget.refresh_data()
         # Tell the GUI-thread the task has finished, the GUI thread will then update the view widgets.
         self.task_finished.emit()
 
@@ -403,7 +433,8 @@ def exception_handler(etype, evalue, etraceback):
     print("ERROR:\n", ''.join(traceback.format_exception(etype, evalue, etraceback)))
     alert = QMessageBox()
     alert.setText(translate('Error: {}').format(''.join(traceback.format_exception_only(etype, evalue))))
-    alert.setInformativeText(translate('Details: {}').format(''.join(traceback.format_exception(etype, evalue, etraceback))))
+    alert.setInformativeText(
+        translate('Details: {}').format(''.join(traceback.format_exception(etype, evalue, etraceback))))
     alert.setIcon(QMessageBox.Critical)
     alert.exec()
     QApplication.quit()
@@ -414,8 +445,13 @@ def main():
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     parser = argparse.ArgumentParser(description='Display Data Channel - Virtual Control Panel')
-    parser.add_argument('--hide', default=[], action='append', choices=[vcp.arg_name() for vcp in SUPPORTED_VCP_CAPABILITIES],
-                        help='hide/disable a control')
+    parser.add_argument('--show',
+                        default=[],
+                        action='append', choices=[vcp.arg_name() for vcp in SUPPORTED_VCP_CAPABILITIES],
+                        help='show specified control only  (defaults is all of them), may be specified multiple times')
+    parser.add_argument('--hide', default=[], action='append',
+                        choices=[vcp.arg_name() for vcp in SUPPORTED_VCP_CAPABILITIES],
+                        help='hide/disable a control (selective exclusion), may be specified multiple times')
     # Python 3.9 parser.add_argument('--debug',  action=argparse.BooleanOptionalAction, help='enable debugging')
     parser.add_argument('--debug', default=False, action='store_true', help='enable debugging')
     parser.add_argument('--warnings', default=False, action='store_true', help='enable missing feature warnings')
@@ -440,8 +476,13 @@ def main():
     app.setWindowIcon(app_icon)
     app.setApplicationDisplayName(translate('DDC Control'))
 
+    if len(args.show) != 0:
+        enabled_capabilities = [c for c in SUPPORTED_VCP_CAPABILITIES if c.arg_name() in args.show]
+    else:
+        enabled_capabilities = [c for c in SUPPORTED_VCP_CAPABILITIES if c.arg_name() not in args.hide]
+
     splash.showMessage(translate('DDC Control\nLooking for DDC monitors...\n'), Qt.AlignVCenter | Qt.AlignHCenter)
-    main_window = DdcMainWidget(args, splash)
+    main_window = DdcMainWidget(enabled_capabilities, args.warnings, args.debug, splash)
     main_window.show()
     splash.finish(main_window)
 
