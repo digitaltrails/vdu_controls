@@ -214,7 +214,8 @@ class DdcUtil:
             result = self.__run__('--brief', '--display', ddc_id, 'getvcp', vcp_code)
             value_match = value_pattern.match(result.stdout.decode('utf-8'))
             if value_match is None:
-                print("DEBUG: get_attribute returned garbage, will try two more times.")
+                if self.debug:
+                    print("DEBUG: get_attribute returned garbage, will try two more times.")
                 time.sleep(2)
                 continue
             else:
