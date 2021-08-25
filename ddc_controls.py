@@ -415,20 +415,13 @@ class DdcMainWidget(QWidget):
             if (vdu_widget.vdu_id, vdu_widget.vdu_desc) in to_do:
                 vdu_widget.refresh_view()
                 to_do.remove((vdu_widget.vdu_id, vdu_widget.vdu_desc))
-            else:
-                self.vdu_widgets.remove(vdu_widget)
-                vdu_widget.deleteLater()
         if len(to_do) > 0:
             alert = QMessageBox()
             alert.setText(translate('The physical monitor configuration has changed. A restart is required.'))
-            alert.setInformativeText(translate('Dismiss this message to restart.'))
+            alert.setInformativeText(translate('Dismiss this message to automatically restart.'))
             alert.setIcon(QMessageBox.Critical)
             alert.exec()
             QCoreApplication.exit(RESTART_FOR_RECONFIG_EXIT_CODE)
-
-
-        # for vw in self.vdu_widgets:
-        #    vw.refresh_view()
 
 
 class RefreshFromVduTask(QThread):
