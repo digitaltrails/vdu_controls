@@ -463,19 +463,22 @@ def main():
     # Allow control-c to terminate the program
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-    parser = argparse.ArgumentParser(description='Display Data Channel - Virtual Control Panel')
+    parser = argparse.ArgumentParser(
+        description='Display Data Channel (DDC): Virtual Control Panel (VCP) (for DVI/DP/HDMI/USB connected displays)')
     parser.add_argument('--show',
                         default=[],
                         action='append', choices=[vcp.arg_name() for vcp in SUPPORTED_VCP_CAPABILITIES],
-                        help='show specified control only  (defaults is all of them), may be specified multiple times')
+                        help='show specified control only (--show may be specified multiple times)')
     parser.add_argument('--hide', default=[], action='append',
                         choices=[vcp.arg_name() for vcp in SUPPORTED_VCP_CAPABILITIES],
-                        help='hide/disable a control (selective exclusion), may be specified multiple times')
+                        help='hide/disable a control (--hide may be specified multiple times)')
     # Python 3.9 parser.add_argument('--debug',  action=argparse.BooleanOptionalAction, help='enable debugging')
-    parser.add_argument('--debug', default=False, action='store_true', help='enable debugging')
-    parser.add_argument('--warnings', default=False, action='store_true', help='enable missing feature warnings')
+    parser.add_argument('--debug', default=False, action='store_true', help='enable debug output to stdout')
+    parser.add_argument('--warnings', default=False, action='store_true',
+                        help='enable warnings when a VDU lacks a control (might be due to a low --sleep-multiplier)')
     parser.add_argument('--no-splash', default=False, action='store_true', help="don't show the splash screen")
-    parser.add_argument('--sleep-multiplier', type=float, default="0.5", help='ddcutil sleep multiplier (>0.0)')
+    parser.add_argument('--sleep-multiplier', type=float, default="0.5",
+                        help='ddcutil protocol reliability sleep time multiplier (fast 0.1 .. 1.0 .. slower)')
 
     args = parser.parse_args()
 
