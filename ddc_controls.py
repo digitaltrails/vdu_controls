@@ -190,7 +190,7 @@ class DdcUtil:
 
     def query_capabilities(self, ddc_id: str) -> Mapping[str, VcpCapability]:
         """Returns a map of vpc capabilities keyed by vcp code."""
-        feature_pattern = re.compile(r'([0-9A-F]{2})\s+[(]([^)]+)[)]\n(Values:\n)?(.*)?', re.DOTALL)
+        feature_pattern = re.compile(r'([0-9A-F]{2})\s+[(]([^)]+)[)]\s(.*)', re.DOTALL|re.MULTILINE)
         feature_map: Mapping[str, VcpCapability] = {}
         result = self.__run__('--display', ddc_id, 'capabilities')
         for feature_text in result.stdout.decode('utf-8').split(' Feature: '):
@@ -198,8 +198,8 @@ class DdcUtil:
             if feature_match:
                 feature_id = feature_match.group(1)
                 feature_name = feature_match.group(2)
-                current_feature = VcpCapability(feature_id, feature_name)
-                feature_map[feature_id] = current_feature
+                capability = VcpCapability(feature_id, feature_name)
+                feature_map[feature_id] = capability
         if self.debug:
             print("DEBUG: capabilities", feature_map.keys())
         return feature_map
