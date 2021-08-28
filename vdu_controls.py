@@ -212,9 +212,9 @@ class DdcUtil:
             print("DEBUG: capabilities", feature_map.keys())
         return feature_map
 
-    def get_attribute(self, ddc_id: str, vcp_code: str) -> Tuple[int, int]:
+    def get_attribute(self, ddc_id: str, vcp_code: str) -> Tuple[str,str]:
         """ Given a VDU id and vcp_code, returns the attributes current and maximum value. """
-        value_pattern = re.compile(r'VCP ' + vcp_code + r' [A-Z]+ ([0-9]+) ([0-9]+)\n')
+        value_pattern = re.compile(r'VCP ' + vcp_code + r' ([A-Z]+) ([0-9]+) ([0-9]+)?\n')
         # Try a few times in case there is a glitch due to a monitor being turned off/on
         for i in range(3):
             result = self.__run__('--brief', '--display', ddc_id, 'getvcp', vcp_code)
@@ -225,13 +225,21 @@ class DdcUtil:
                 time.sleep(2)
                 continue
             else:
-                return int(value_match.group(1)), int(value_match.group(2))
-        return 0, 0
+                type_indicator = value_match.group(1)
+                if type_indicator == 'C':
+                    return value_match.group(2), value_match.group(3)
+                elif type_indicator == 'SNC':
+                    return value_match.group(2), '0'
+                else:
+                    # TODO consider throwing an exception
+                    pass
+        # TODO consider throwing here
+        return "0", "0"
 
     def set_attribute(self, ddc_id: str, vcp_code: str, new_value: str):
         current, _ = self.get_attribute(ddc_id, vcp_code)
         if new_value != current:
-            self.__run__('--display', ddc_id, 'setvcp', vcp_code, str(new_value))
+            self.__run__('--display', ddc_id, 'setvcp', vcp_code, new_value)
 
 
 class DdcVdu:
@@ -281,8 +289,8 @@ class DdcSliderWidget(QWidget):
 
         self.slider = slider = QSlider()
         slider.setMinimumWidth(200)
-        slider.setValue(self.current_value)
-        slider.setRange(0, self.max_value)
+        slider.setValue(int(self.current_value))
+        slider.setRange(0, int(self.max_value))
         slider.setMinimum(0)
         slider.setSingleStep(1)
         slider.setPageStep(10)
@@ -297,15 +305,15 @@ class DdcSliderWidget(QWidget):
         text_input.setMaximumWidth(50)
         text_input.setMaxLength(4)
         text_validator = QIntValidator()
-        text_validator.setRange(0, self.max_value)
+        text_validator.setRange(0, int(self.max_value))
         text_input.setValidator(text_validator)
         text_input.setText(str(slider.value()))
         layout.addWidget(text_input)
 
         def slider_changed(value):
-            self.current_value = value
-            text_input.setText(str(value))
-            self.vdu.ddcutil.set_attribute(self.vdu.id, self.vcp_capability.vcp_code, value)
+            self.current_value = str(value)
+            text_input.setText(self.current_value)
+            self.vdu.ddcutil.set_attribute(self.vdu.id, self.vcp_capability.vcp_code, self.current_value)
 
         slider.valueChanged.connect(slider_changed)
 
@@ -325,7 +333,7 @@ class DdcSliderWidget(QWidget):
 
     def refresh_view(self):
         """Copy the internally cached current value onto the GUI view."""
-        self.slider.setValue(self.current_value)
+        self.slider.setValue(int(self.current_value))
 
 
 class DdcVduWidget(QWidget):
