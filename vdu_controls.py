@@ -1,8 +1,9 @@
 #!/usr/bin/python3
 """
 #
-# ddc_controls.py
-# Display Data Channel (DDC) - Virtual Control Panel (VCP)
+# vdu_controls.py
+# Visual Display Unit Controls
+# via Display Data Channel (DDC) - Virtual Control Panel (VCP)
 #
 # A GUI for retrieving and altering settings of connected VDU's (via
 # ddcutil) by issuing DDC commands over HDMI/DVI/USB.  This code
@@ -44,7 +45,9 @@ import base64
 import time
 import traceback
 import argparse
+import textwrap
 import signal
+from pathlib import Path
 from typing import List, Tuple, Mapping
 
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
@@ -176,24 +179,29 @@ class DdcUtil:
             print("DEBUG: subprocess result - ", result)
         return result
 
-    def detect_monitors(self) -> List[Tuple[str, str]]:
+    def detect_monitors(self) -> List[Tuple[str, str, str, str]]:
         """ Returns a list of (vdu_id, desc) tuples """
         display_list = []
         result = self.__run__('detect', '--terse')
-        model_pattern = re.compile('Monitor:[ \t]+([^\n]*)')
+        monitor_pattern = re.compile('Monitor:[ \t]+([^\n]*)')
         for display_str in re.split("^Display |\nDisplay", result.stdout.decode('utf-8'))[1:]:
             ddc_id = display_str.split('\n')[0].strip()
-            model_match = model_pattern.search(display_str)
-            model_name = model_match.group(1) if model_match else 'Unknown model'
-            display_list.append((ddc_id, model_name))
+            monitor_match = monitor_pattern.search(display_str)
+            manufacturer, model_name, serial_number = \
+                monitor_match.group(1).split(':') if monitor_match else ['', 'Unknown Model', '']
+            display_list.append((ddc_id, manufacturer, model_name, serial_number))
         return display_list
 
-    def query_capabilities(self, ddc_id: str) -> Mapping[str, VcpCapability]:
+    def query_capabilities(self, ddc_id: str, alternate_text=None) -> Mapping[str, VcpCapability]:
         """Returns a map of vpc capabilities keyed by vcp code."""
-        feature_pattern = re.compile(r'([0-9A-F]{2})\s+[(]([^)]+)[)]\s(.*)', re.DOTALL|re.MULTILINE)
+        feature_pattern = re.compile(r'([0-9A-F]{2})\s+[(]([^)]+)[)]\s(.*)', re.DOTALL | re.MULTILINE)
         feature_map: Mapping[str, VcpCapability] = {}
-        result = self.__run__('--display', ddc_id, 'capabilities')
-        for feature_text in result.stdout.decode('utf-8').split(' Feature: '):
+        if alternate_text is None:
+            result = self.__run__('--display', ddc_id, 'capabilities')
+            capability_text = result.stdout.decode('utf-8')
+        else:
+            capability_text = alternate_text
+        for feature_text in capability_text.split(' Feature: '):
             feature_match = feature_pattern.match(feature_text)
             if feature_match:
                 feature_id = feature_match.group(1)
@@ -226,15 +234,41 @@ class DdcUtil:
             self.__run__('--display', ddc_id, 'setvcp', vcp_code, str(new_value))
 
 
+class DdcVdu:
+    def __init__(self, vdu_id, vdu_model, vdu_serial, manufacturer, ddcutil: DdcUtil):
+        self.id = vdu_id
+        self.model = vdu_model
+        self.serial = vdu_serial
+        self.manufacturer = manufacturer
+        self.ddcutil = ddcutil
+        alt_capability_text = None
+        unacceptable_char_pattern = re.compile('[^A-Za-z0-9_-]')
+        serial_config = re.sub(unacceptable_char_pattern, '_', vdu_model.strip() + '_' + vdu_serial.strip() + '.conf')
+        model_config = re.sub(unacceptable_char_pattern, '_', vdu_model.strip() + '.conf')
+        for config_filename in (serial_config, model_config):
+            config_path = Path.home().joinpath('.config').joinpath('vdu_controls').joinpath(config_filename)
+            print("INFO: checking for config file '" + config_path.as_uri() + "'")
+            if os.path.isfile(config_path) and os.access(config_path, os.R_OK):
+                alt_capability_text = Path(config_path).read_text()
+                print("WARNING: using config file '" + config_path.as_uri() + "'")
+                break
+        self.capabilities = ddcutil.query_capabilities(vdu_id, alt_capability_text)
+
+    def get_description(self) -> str:
+        return self.model + ':' + (self.serial if len(self.serial) != 0 else self.id)
+
+    def get_full_id(self) -> Tuple[str, str, str, str]:
+        return self.id, self.manufacturer, self.model, self.serial
+
+
 class DdcSliderWidget(QWidget):
     """ GUI control for a DDC continuously variable attribute. Compound widget with icon, slider and text field."""
-    def __init__(self, ddcutil: DdcUtil, monitor_id: str, vcp_capability: VcpCapability):
+    def __init__(self, vdu: DdcVdu, vcp_capability: VcpCapability):
         super().__init__()
 
-        self.ddcutil = ddcutil
-        self.monitor_id = monitor_id
+        self.vdu = vdu
         self.vcp_capability = vcp_capability
-        self.current_value, self.max_value = self.ddcutil.get_attribute(self.monitor_id, self.vcp_capability.vcp_code)
+        self.current_value, self.max_value = vdu.ddcutil.get_attribute(vdu.id, self.vcp_capability.vcp_code)
 
         layout = QHBoxLayout()
         self.setLayout(layout)
@@ -271,7 +305,7 @@ class DdcSliderWidget(QWidget):
         def slider_changed(value):
             self.current_value = value
             text_input.setText(str(value))
-            self.ddcutil.set_attribute(self.monitor_id, self.vcp_capability.vcp_code, value)
+            self.vdu.ddcutil.set_attribute(self.vdu.id, self.vcp_capability.vcp_code, value)
 
         slider.valueChanged.connect(slider_changed)
 
@@ -287,7 +321,7 @@ class DdcSliderWidget(QWidget):
 
     def refresh_data(self):
         """Query the VDU for a new data value and cache it (may be called from a task thread, so no GUI op's here.)"""
-        self.current_value, _ = self.ddcutil.get_attribute(self.monitor_id, self.vcp_capability.vcp_code)
+        self.current_value, _ = self.vdu.ddcutil.get_attribute(self.vdu.id, self.vcp_capability.vcp_code)
 
     def refresh_view(self):
         """Copy the internally cached current value onto the GUI view."""
@@ -296,27 +330,25 @@ class DdcSliderWidget(QWidget):
 
 class DdcVduWidget(QWidget):
     """ Widget that contains all the controls for a single VDU (monitor/display) """
-    def __init__(self, ddcutil: DdcUtil, vdu_id: str, vdu_desc: str, enabled_capabilities: List[VcpCapability],
-                 warnings: bool):
+    def __init__(self, vdu: DdcVdu, enabled_capabilities: List[VcpCapability], warnings: bool):
         super().__init__()
         layout = QVBoxLayout()
         label = QLabel()
         # label.setStyleSheet("font-weight: bold");
-        label.setText(translate('Monitor {}: {}').format(vdu_id, vdu_desc))
+        label.setText(translate('Monitor {}: {}').format(vdu.id, vdu.get_description()))
         layout.addWidget(label)
-        self.vdu_id = vdu_id
-        self.vdu_desc = vdu_desc
-        self.capabilities = ddcutil.query_capabilities(vdu_id)
+        self.vdu = vdu
         self.vcp_controls = []
         for capability in enabled_capabilities:
-            if capability.vcp_code in self.capabilities:
-                control = DdcSliderWidget(ddcutil, vdu_id, capability)
+            if capability.vcp_code in vdu.capabilities:
+                control = DdcSliderWidget(vdu, capability)
                 layout.addWidget(control)
                 self.vcp_controls.append(control)
             elif warnings:
                 alert = QMessageBox()
                 alert.setText(
-                    translate('Monitor {} lacks a VCP control for {}.').format(vdu_desc, translate(capability.name)))
+                    translate('Monitor {} lacks a VCP control for {}.').format(
+                        vdu.get_description(), translate(capability.description)))
                 alert.setInformativeText(
                     translate('No read/write ability for vcp_code {}.').format(capability.vcp_code))
                 alert.setIcon(QMessageBox.Warning)
@@ -350,16 +382,18 @@ class DdcMainWidget(QWidget):
         self.enabled_capabilities = enabled_capabilities
         self.warnings = warnings
         self.detected_vdus = self.ddcutil.detect_monitors()
-        for vdu_id, desc in self.detected_vdus:
+        for vdu_id, manufacturer, vdu_model, vdu_serial in self.detected_vdus:
+            vdu = DdcVdu(vdu_id, vdu_model, vdu_serial, manufacturer, self.ddcutil)
             if detect_vdu_hook is not None:
-                detect_vdu_hook(vdu_id, desc)
-            vdu_widget = DdcVduWidget(self.ddcutil, vdu_id, desc, enabled_capabilities, warnings)
+                detect_vdu_hook(vdu)
+            vdu_widget = DdcVduWidget(vdu, enabled_capabilities, warnings)
             if vdu_widget.number_of_controls() != 0:
                 self.vdu_widgets.append(vdu_widget)
                 layout.addWidget(vdu_widget)
             elif warnings:
                 alert = QMessageBox()
-                alert.setText(translate('Monitor {} {} lacks any accessible controls.').format(vdu_id, desc))
+                alert.setText(
+                    translate('Monitor {} {} lacks any accessible controls.').format(vdu.id, vdu.get_description()))
                 alert.setInformativeText(translate('The monitor will be omitted from the control panel.'))
                 alert.setIcon(QMessageBox.Warning)
                 alert.exec()
@@ -410,16 +444,17 @@ class DdcMainWidget(QWidget):
         """Called by a non-GUI task to obtain new data from all monitors.  The task thread cannot do any GUI op's"""
         self.detected_vdus = self.ddcutil.detect_monitors()
         for vdu_widget in self.vdu_widgets:
-            if (vdu_widget.vdu_id, vdu_widget.vdu_desc) in self.detected_vdus:
+            if vdu_widget.vdu.get_full_id() in self.detected_vdus:
                 vdu_widget.refresh_data()
 
     def refresh_view(self):
         """Callback when the GUI worker thread completes, the GUI thread and can refresh the GUI views."""
         to_do = self.detected_vdus.copy()
         for vdu_widget in self.vdu_widgets:
-            if (vdu_widget.vdu_id, vdu_widget.vdu_desc) in to_do:
+            full_vdu_id = vdu_widget.vdu.get_full_id()
+            if full_vdu_id in to_do:
                 vdu_widget.refresh_view()
-                to_do.remove((vdu_widget.vdu_id, vdu_widget.vdu_desc))
+                to_do.remove(full_vdu_id)
         if len(to_do) > 0:
             alert = QMessageBox()
             alert.setText(translate('The physical monitor configuration has changed. A restart is required.'))
@@ -464,7 +499,11 @@ def main():
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     parser = argparse.ArgumentParser(
-        description='Display Data Channel (DDC): Virtual Control Panel (VCP) (for DVI/DP/HDMI/USB connected displays)')
+        description=textwrap.dedent("""
+        VDU Controls 
+          Uses ddcutil to issue Display Data Channel (DDC) Virtual Control Panel (VCP) commands. 
+          Controls DVI/DP/HDMI/USB connected monitors (but not builtin laptop displays)."""),
+        formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('--show',
                         default=[],
                         action='append', choices=[vcp.arg_name() for vcp in SUPPORTED_VCP_CAPABILITIES],
@@ -507,9 +546,9 @@ def main():
     if splash is not None:
         splash.showMessage(translate('\n\nDDC Control\nLooking for DDC monitors...\n'), Qt.AlignTop | Qt.AlignHCenter)
 
-    def detect_vdu_hook(vdu_id, desc):
+    def detect_vdu_hook(vdu: DdcVdu):
         if splash is not None:
-            splash.showMessage(translate('\n\nDDC Control\nDDC ID {}\n{}').format(vdu_id, desc),
+            splash.showMessage(translate('\n\nDDC Control\nDDC ID {}\n{}').format(vdu.id, vdu.get_description()),
                                Qt.AlignTop | Qt.AlignHCenter)
 
     main_window = DdcMainWidget(enabled_capabilities, args.warnings, args.debug, args.sleep_multiplier, detect_vdu_hook)
