@@ -1,14 +1,14 @@
 #!/usr/bin/python3
 """
 #
-# vdu_controls.py
+# vdu_controls.py GUI wrapper for ddcutil
 # Visual Display Unit Controls
 # via Display Data Channel (DDC) - Virtual Control Panel (VCP)
 #
 # A GUI for retrieving and altering settings of connected VDU's (via
-# ddcutil) by issuing DDC commands over HDMI/DVI/USB.  This code
-# refers sometimes refers to displays and monitors as VDU's in order
-# to disambiguate the noun/verb duality of "display" and "monitor"
+# ddcutil) by issuing DDC commands over HDMI/DisplayPort/DVI/USB.  This
+# code often refers to displays and monitors as VDU's in order to
+# disambiguate the noun/verb duality of "display" and "monitor"
 #
 # Copyright (C) 2021 Michael Hamilton
 # This program is free software: you can redistribute it and/or modify it
@@ -23,7 +23,7 @@
 # You should have received a copy of the GNU General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 #
-# m i c h a e l @ a c t r i x . g e n . n z
+# m i c h a e l   at   a c t r i x   dot   g e n   dot   n z
 #
 # Prerequisites - OpenSUSE (similar for other distros):
 #    Software:
