@@ -121,8 +121,10 @@ VOLUME_SVG = b"""
 # Encode some default graphics to make the script self contained
 DEFAULT_SPLASH_PNG = "/usr/share/icons/oxygen/base/256x256/apps/preferences-desktop-display.png"
 
+#: Assumed location of ddcutil on a linux system.
 DDCUTIL = "/usr/bin/ddcutil"
 
+#: Internal special exit code used to signal that the exit handler should restart the program.
 EXIT_CODE_FOR_RESTART = 1959
 
 
@@ -135,7 +137,7 @@ def get_splash_image() -> QPixmap:
         pixmap.loadFromData(base64.decodebytes(FALLBACK_SPLASH_JPEG_BASE64), 'JPEG')
     return pixmap
 
-
+#: Could be a str enumeration of VCP types
 CONTINUOUS_TYPE = 'C'
 SIMPLE_NON_CONTINUOUS_TYPE = 'SNC'
 COMPLEX_NON_CONTINUOUS_TYPE = 'CNC'
@@ -143,7 +145,6 @@ COMPLEX_NON_CONTINUOUS_TYPE = 'CNC'
 
 class VcpCapability:
     """ Representation of a VCP (Virtual Control Panel) capability for a VDU. """
-
     def __init__(self, vcp_code: str, vcp_name: str, vcp_type: str, values: List = None, icon_source: bytes = None):
         self.vcp_code = vcp_code
         self.name = vcp_name
@@ -153,8 +154,8 @@ class VcpCapability:
         self.values = [] if values is None else values
 
 
-# VCP capability to be made available as Qt widgets.
 class VcpGuiControlDef:
+    """Defines a VCP capability that is safe to be made available in the GUI by default."""
     def __init__(self, vcp_code, vcp_name, causes_config_change: bool = False, icon_source: bytes = None):
         self.vcp_code = vcp_code
         self.name = vcp_name
@@ -165,7 +166,7 @@ class VcpGuiControlDef:
         return self.name.replace(' ', '-').lower()
 
 
-# Default VCP capabilities to be made available as Qt widgets.
+#: Default "safe" VCP capabilities to be made available as GUI controls.
 SUPPORTED_VCP_CONTROLS = {
     '10': VcpGuiControlDef('10', 'Brightness', icon_source=BRIGHTNESS_SVG),
     '12': VcpGuiControlDef('12', 'Contrast', icon_source=CONTRAST_SVG),
@@ -178,7 +179,6 @@ SUPPORTED_VCP_CONTROLS = {
 
 class DdcUtil:
     """ Interface to the command line ddcutil Display Data Channel Utility for interacting with VDU's. """
-
     def __init__(self, debug: bool = False, common_args: List[str] = None):
         super().__init__()
         self.debug = debug
@@ -217,12 +217,12 @@ class DdcUtil:
                 values_list = [("x" + key, desc) for key, desc in (v.strip().split(": ", 1) for v in lines_list[1:])]
         return values_list
 
-    def query_capabilities(self, ddc_id: str, alternate_text=None) -> Mapping[str, VcpCapability]:
+    def query_capabilities(self, vdu_id: str, alternate_text=None) -> Mapping[str, VcpCapability]:
         """Returns a map of vpc capabilities keyed by vcp code."""
         feature_pattern = re.compile(r'([0-9A-F]{2})\s+[(]([^)]+)[)]\s(.*)', re.DOTALL | re.MULTILINE)
         feature_map: Mapping[str, VcpCapability] = {}
         if alternate_text is None:
-            result = self.__run__('--display', ddc_id, 'capabilities')
+            result = self.__run__('--display', vdu_id, 'capabilities')
             capability_text = result.stdout.decode('utf-8')
         else:
             capability_text = alternate_text
@@ -240,14 +240,18 @@ class DdcUtil:
             print("DEBUG: capabilities", feature_map.keys())
         return feature_map
 
-    def get_attribute(self, ddc_id: str, vcp_code: str) -> Tuple[str, str]:
-        """ Given a VDU id and vcp_code, returns the attributes current and maximum value. """
+    def get_attribute(self, vdu_id: str, vcp_code: str) -> Tuple[str, str]:
+        """
+        Given a VDU id and vcp_code, retrieve the attribute's current value from the VDU. Two values are returned, the
+        monitor reported current value, and the monitor reported maximum value. Only attributes with "Continuous" values
+        have a maximum, for consistency the method will return a zero maximum for "Non-Continuous" attributes..
+        """
         value_pattern = re.compile(r'VCP ' + vcp_code + r' ([A-Z]+) (.+)\n')
         c_pattern = re.compile(r'([0-9]+) ([0-9]+)')
         snc_pattern = re.compile(r'(x[0-9a-f]+)')
         # Try a few times in case there is a glitch due to a monitor being turned off/on
         for i in range(3):
-            result = self.__run__('--brief', '--display', ddc_id, 'getvcp', vcp_code)
+            result = self.__run__('--brief', '--display', vdu_id, 'getvcp', vcp_code)
             value_match = value_pattern.match(result.stdout.decode('utf-8'))
             if value_match is not None:
                 type_indicator = value_match.group(1)
@@ -261,23 +265,31 @@ class DdcUtil:
                         return snc_match.group(1), '0'
                 else:
                     raise TypeError('Unsupported VCP type {} for monitor {} vcp_code {}'.format(
-                        type_indicator, ddc_id, vcp_code))
+                        type_indicator, vdu_id, vcp_code))
             print("WARNING: obtained garbage '" + result.stdout.decode('utf-8') + "' will try again.")
             print("WARNING: ddcutil maybe running too fast for monitor {}, try increasing --sleep-multiplier.".format(
-                ddc_id))
+                vdu_id))
             time.sleep(2)
-        print("ERROR: ddcutil failed all attempts to get value for monitor {} vcp_code {}".format(ddc_id, vcp_code))
+        print("ERROR: ddcutil failed all attempts to get value for monitor {} vcp_code {}".format(vdu_id, vcp_code))
         raise ValueError(
             "ddcutil returned garbage for monitor {} vcp_code {}, try increasing --sleep-multiplier".format(
-                ddc_id, vcp_code))
+                vdu_id, vcp_code))
 
-    def set_attribute(self, ddc_id: str, vcp_code: str, new_value: str):
-        current, _ = self.get_attribute(ddc_id, vcp_code)
+    def set_attribute(self, vdu_id: str, vcp_code: str, new_value: str):
+        """Send a new value to a specific VDU and vcp_code."""
+        current, _ = self.get_attribute(vdu_id, vcp_code)
         if new_value != current:
-            self.__run__('--display', ddc_id, 'setvcp', vcp_code, new_value)
+            self.__run__('--display', vdu_id, 'setvcp', vcp_code, new_value)
 
 
 class DdcVdu:
+    """
+    Holds data specific to an individual VDU including a map of its capabilities.
+    Capabilities are either extracted from ddcutil output or read from a ~/.config/vdu-control/ file.
+    The file option is available so that the output from "ddcutil --display N capabilities" can be corrected because
+    it is sometimes incorrect (due to sloppy implementation by manufacturers). For example, my LG monitor reports
+    two Display-Port inputs and it only has one.
+    """
     def __init__(self, vdu_id, vdu_model, vdu_serial, manufacturer, ddcutil: DdcUtil):
         self.id = vdu_id
         self.model = vdu_model
@@ -305,6 +317,10 @@ class DdcVdu:
 
 
 def restart_due_to_config_change():
+    """
+    Calling this function forces a restart of the application. It is invoked when part of the GUI executes a VCP
+    command that changes the number of connected monitors or when the GUI detects the number of monitors has changes.
+    """
     alert = QMessageBox()
     alert.setText(translate('The physical monitor configuration has changed. A restart is required.'))
     alert.setInformativeText(translate('Dismiss this message to automatically restart.'))
@@ -314,8 +330,10 @@ def restart_due_to_config_change():
 
 
 class DdcSliderWidget(QWidget):
-    """ GUI control for a DDC continuously variable attribute. Compound widget with icon, slider and text field."""
-
+    """
+    GUI control for a DDC continuously variable attribute. Compound widget with icon, slider, and text-field.
+    This is a duck-typed GUI control widget (could inherit from an abstract type if we wanted to get formal about it).
+    """
     def __init__(self, vdu: DdcVdu, vcp_capability: VcpCapability):
         super().__init__()
 
@@ -365,18 +383,17 @@ class DdcSliderWidget(QWidget):
             self.vdu.ddcutil.set_attribute(self.vdu.id, self.vcp_capability.vcp_code, self.current_value)
             if self.vcp_capability.vcp_code in SUPPORTED_VCP_CONTROLS and\
                     SUPPORTED_VCP_CONTROLS[self.vcp_capability.vcp_code].causes_config_change:
+                # The VCP command has turned one off a VDU or changed what it is connected to.
+                # VDU ID's will now be out of whack - restart the GUI.
                 restart_due_to_config_change()
-
         slider.valueChanged.connect(slider_changed)
 
         def slider_moved(value):
             text_input.setText(str(value))
-
         slider.sliderMoved.connect(slider_moved)
 
         def text_changed():
             slider.setValue(int(text_input.text()))
-
         text_input.editingFinished.connect(text_changed)
 
     def refresh_data(self):
@@ -389,8 +406,10 @@ class DdcSliderWidget(QWidget):
 
 
 class DdcComboBox(QWidget):
-    """ GUI control for a DDC continuously variable attribute. Compound widget with icon, slider and text field."""
-
+    """
+    GUI control for a DDC non-continuously variable attribute, one that has a list of choices.
+    This is a duck-typed GUI control widget (could inherit from an abstract type if we wanted to get formal about it).
+    """
     def __init__(self, vdu: DdcVdu, vcp_capability: VcpCapability):
         super().__init__()
 
@@ -432,8 +451,10 @@ class DdcComboBox(QWidget):
 
 
 class DdcVduWidget(QWidget):
-    """ Widget that contains all the controls for a single VDU (monitor/display) """
-
+    """
+    Widget that contains all the controls for a single VDU (monitor/display).  The widget maintains a list of GUI
+    "controls" that are duck-typed and will have refresh_data() and refresh_view() methods.
+    """
     def __init__(self, vdu: DdcVdu, enabled_vcp_codes: List[str], warnings: bool):
         super().__init__()
         layout = QVBoxLayout()
@@ -483,8 +504,7 @@ class DdcVduWidget(QWidget):
 
 
 class DdcMainWidget(QWidget):
-    """ Detects connected VDU's and constructs a window containing a control panel each that is found. """
-
+    """ GUI for detected VDU's, it will construct and contain a control panel for each VDU. """
     def __init__(self, enabled_vcp_codes: List[str], warnings: bool, debug: bool, sleep_multiplier: float,
                  detect_vdu_hook: callable):
         super().__init__()
@@ -521,16 +541,18 @@ class DdcMainWidget(QWidget):
             sys.exit()
 
         def start_refresh():
+            # Refreshes from all values from ddcutil.  May be slow, starts a busy spinner and then
+            # starts the work in a task thread.
             self.refresh_button.setDisabled(True)
             self.progressBar.setDisabled(False)
-            # Setting range to 0,0 cause the progress bar to pulsate - used as a busy spinner.
+            # Setting range to 0,0 cause the progress bar to pulsate left/right - used as a busy spinner.
             self.progressBar.setRange(0, 0)
-            # Start a background task
+            # Start the background task
             self.refreshDataTask.start()
 
         def finish_refresh():
-            # GUI-thread QT signal handler for refresh task completion
-            # Stop the busy-spinner progress bar pulsation
+            # GUI-thread QT signal handler for refresh task completion - execution will be in the GUI thread.
+            # Stop the busy-spinner (progress bar).
             self.progressBar.setRange(0, 1)
             self.progressBar.setDisabled(True)
             self.refresh_button.setDisabled(False)
@@ -553,15 +575,16 @@ class DdcMainWidget(QWidget):
         self.setLayout(layout)
 
     def refresh_data(self):
-        """Called by a non-GUI task to obtain new data from all monitors.  The task thread cannot do any GUI op's"""
+        """Called by a non-GUI task to obtain new data from all VDU's.  Not in the GUI-thread, cannot do any GUI op's"""
         self.detected_vdus = self.ddcutil.detect_monitors()
         for vdu_widget in self.vdu_widgets:
             if vdu_widget.vdu.get_full_id() in self.detected_vdus:
                 vdu_widget.refresh_data()
 
     def refresh_view(self):
-        """Callback when the GUI worker thread completes, the GUI thread and can refresh the GUI views."""
+        """Invoked when the GUI worker thread completes. Runs in the GUI thread and can refresh the GUI views."""
         if len(self.detected_vdus) != len(self.vdu_widgets):
+            # The number of VDU's has changed, vdu_id's will no longer match, throw a wobbly
             restart_due_to_config_change()
         for vdu_widget in self.vdu_widgets:
             vdu_widget.refresh_view()
@@ -582,16 +605,17 @@ class RefreshFromVduTask(QThread):
     def run(self):
         # Running in a task thread, cannot interact with GUI thread, just update the data.
         self.ddc_widget.refresh_data()
-        # Tell the GUI-thread the task has finished, the GUI thread will then update the view widgets.
+        # Tell (qt-signal) the GUI-thread that the task has finished, the GUI thread will then update the view widgets.
         self.task_finished.emit()
 
 
-def exception_handler(etype, evalue, etraceback):
-    print("ERROR:\n", ''.join(traceback.format_exception(etype, evalue, etraceback)))
+def exception_handler(e_type, e_value, e_traceback):
+    """Overarching error handler in case something unexpected happens."""
+    print("ERROR:\n", ''.join(traceback.format_exception(e_type, e_value, e_traceback)))
     alert = QMessageBox()
-    alert.setText(translate('Error: {}').format(''.join(traceback.format_exception_only(etype, evalue))))
+    alert.setText(translate('Error: {}').format(''.join(traceback.format_exception_only(e_type, e_value))))
     alert.setInformativeText(
-        translate('Details: {}').format(''.join(traceback.format_exception(etype, evalue, etraceback))))
+        translate('Details: {}').format(''.join(traceback.format_exception(e_type, e_value, e_traceback))))
     alert.setIcon(QMessageBox.Critical)
     alert.exec()
     QApplication.quit()
@@ -668,7 +692,7 @@ def main():
         QProcess.startDetached(app.arguments()[0], app.arguments()[1:])
     sys.exit(rc)
 
-
+#: A fallback in case the hard coded splash screen PNG doesn't exist (which probably means KDE is not installed).
 FALLBACK_SPLASH_JPEG_BASE64 = b"""
 /9j/4AAQSkZJRgABAQAAAQABAAD/2wBDACAWGBwYFCAcGhwkIiAmMFA0MCwsMGJGSjpQdGZ6eHJmcG6AkLicgIiuim5woNqirr7EztDOfJri8uDI8LjKzs
 b/2wBDASIkJDAqMF40NF7GhHCExsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsb/wgARCAEAAQADASIAAhEBAxEB
