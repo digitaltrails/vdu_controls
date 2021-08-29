@@ -1,13 +1,13 @@
 #!/usr/bin/python3
 """
 #
-# vdu_controls.py GUI wrapper for ddcutil
-# Visual Display Unit Controls
-# via Display Data Channel (DDC) - Virtual Control Panel (VCP)
+# vdu_controls.py - Visual Display Unit Controls
+# A GUI wrapper for ddcutil
 #
 # A GUI for retrieving and altering settings of connected VDU's (via
-# ddcutil) by issuing DDC commands over HDMI/DisplayPort/DVI/USB.  This
-# code often refers to displays and monitors as VDU's in order to
+# ddcutil) by issuing DDC VCP commands over HDMI/DisplayPort/DVI/USB.
+#
+# This code often refers to displays and monitors as VDU's in order to
 # disambiguate the noun/verb duality of "display" and "monitor"
 #
 # Copyright (C) 2021 Michael Hamilton
@@ -641,7 +641,7 @@ def main():
     app_icon = QIcon()
     app_icon.addPixmap(pixmap)
     app.setWindowIcon(app_icon)
-    app.setApplicationDisplayName(translate('DDC Control'))
+    app.setApplicationDisplayName(translate('VDU Control'))
 
     if len(args.show) != 0:
         enabled_vcp_codes = [x.vcp_code for x in SUPPORTED_VCP_CONTROLS.values() if x.arg_name() in args.show]
@@ -651,11 +651,11 @@ def main():
         enabled_vcp_codes.extend(args.enable_vcp_code)
 
     if splash is not None:
-        splash.showMessage(translate('\n\nDDC Control\nLooking for DDC monitors...\n'), Qt.AlignTop | Qt.AlignHCenter)
+        splash.showMessage(translate('\n\nVDU Control\nLooking for DDC monitors...\n'), Qt.AlignTop | Qt.AlignHCenter)
 
     def detect_vdu_hook(vdu: DdcVdu):
         if splash is not None:
-            splash.showMessage(translate('\n\nDDC Control\nDDC ID {}\n{}').format(vdu.id, vdu.get_description()),
+            splash.showMessage(translate('\n\nVDU Control\nDDC ID {}\n{}').format(vdu.id, vdu.get_description()),
                                Qt.AlignTop | Qt.AlignHCenter)
 
     main_window = DdcMainWidget(enabled_vcp_codes, args.warnings, args.debug, args.sleep_multiplier, detect_vdu_hook)
