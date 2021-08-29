@@ -647,8 +647,8 @@ def main():
         enabled_vcp_codes = [x.vcp_code for x in SUPPORTED_VCP_CONTROLS.values() if x.arg_name() in args.show]
     else:
         enabled_vcp_codes = [x.vcp_code for x in SUPPORTED_VCP_CONTROLS.values() if x.arg_name() not in args.hide]
-    if args.allow_id is not None:
-        enabled_vcp_codes.extend(args.allow_id)
+    if args.enable_vcp_code is not None:
+        enabled_vcp_codes.extend(args.enable_vcp_code)
 
     if splash is not None:
         splash.showMessage(translate('\n\nDDC Control\nLooking for DDC monitors...\n'), Qt.AlignTop | Qt.AlignHCenter)
