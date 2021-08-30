@@ -1,40 +1,70 @@
 #!/usr/bin/python3
 """
-#
-# vdu_controls.py - Visual Display Unit Controls
-# A GUI wrapper for ddcutil
-#
-# A GUI for retrieving and altering settings of connected VDU's (via
-# ddcutil) by issuing DDC VCP commands over HDMI/DisplayPort/DVI/USB.
-#
-# This code often refers to displays and monitors as VDU's in order to
-# disambiguate the noun/verb duality of "display" and "monitor"
-#
-# Copyright (C) 2021 Michael Hamilton
-# This program is free software: you can redistribute it and/or modify it
-# under the terms of the GNU General Public License as published by the
-# Free Software Foundation, version 3.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
-# more details.
-#
-# You should have received a copy of the GNU General Public License along
-# with this program. If not, see <https://www.gnu.org/licenses/>.
-#
-# m i c h a e l   at   a c t r i x   dot   g e n   dot   n z
-#
-# Prerequisites - OpenSUSE (similar for other distros):
-#    Software:
-#        zypper install python38-QtPy
-#        zypper install ddcutil
-#    Kernel Modules:
-#        lsmod | grep i2c_dev
-#
-# Read ddcutil readme concerning config of i2c_dev with nvidia GPU's.
-# Detailed ddcutil info at https://www.ddcutil.com/
-#
+vdu_controls.py - Visual Display Unit Controls
+
+A GUI wrapper for ddcutil
+
+A GUI for retrieving and altering settings of connected VDU's (via
+ddcutil) by issuing DDC VCP commands over HDMI/DisplayPort/DVI/USB.
+
+    Usage: vdu_controls.py [-h]
+                           [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
+                           [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
+                           [--enable-vcp-code ENABLE_VCP_CODE] [--debug] [--warnings]
+                           [--no-splash] [--sleep-multiplier SLEEP_MULTIPLIER]
+
+    VDU Controls
+      Uses ddcutil to issue Display Data Channel (DDC) Virtual Control Panel (VCP) commands.
+      Controls DVI/DP/HDMI/USB connected monitors (but not builtin laptop displays).
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      --show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}
+                            show specified control only (--show may be specified multiple times)
+      --hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}
+                            hide/disable a control (--hide may be specified multiple times)
+      --enable-vcp-code ENABLE_VCP_CODE
+                            enable controls for an unsupported vcp-code hex value (may be specified multiple times)
+      --debug               enable debug output to stdout
+      --warnings            enable warnings when a VDU lacks a control
+      --no-splash           don't show the splash screen
+      --sleep-multiplier SLEEP_MULTIPLIER
+                            protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 0.5)
+
+Examples:
+    vdu_controls.py
+    vdu_controls.py --show brightness --show contrast
+    vdu_controls.py --hide contrast
+    vdu_controls.py --enable-vcp-code 70 --warnings --debug
+    vdu_controls.py --sleep-multiplier 0.1
+
+This script often refers to displays and monitors as VDU's in order to
+disambiguate the noun/verb duality of "display" and "monitor"
+
+Copyright (C) 2021 Michael Hamilton
+This program is free software: you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the
+Free Software Foundation, version 3.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+more details.
+
+You should have received a copy of the GNU General Public License along
+with this program. If not, see <https://www.gnu.org/licenses/>.
+
+m i c h a e l   at   a c t r i x   dot   g e n   dot   n z
+
+Prerequisites: described for OpenSUSE, similar for other distros:
+   Software:
+       zypper install python38-QtPy
+       zypper install ddcutil
+   Kernel Modules:
+       lsmod | grep i2c_dev
+
+Read ddcutil readme concerning config of i2c_dev with nvidia GPU's.
+Detailed ddcutil info at https://www.ddcutil.com/
 """
 
 import sys
