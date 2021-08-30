@@ -300,6 +300,7 @@ class DdcUtil:
         value_pattern = re.compile(r'VCP ' + vcp_code + r' ([A-Z]+) (.+)\n')
         c_pattern = re.compile(r'([0-9]+) ([0-9]+)')
         snc_pattern = re.compile(r'(x[0-9a-f]+)')
+        cnc_pattern = re.compile(r'x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+)')
         # Try a few times in case there is a glitch due to a monitor being turned off/on
         for i in range(3):
             result = self.__run__('--brief', '--display', vdu_id, 'getvcp', vcp_code)
@@ -314,6 +315,10 @@ class DdcUtil:
                     snc_match = snc_pattern.match(value_match.group(2))
                     if snc_match is not None:
                         return snc_match.group(1), '0'
+                elif type_indicator == COMPLEX_NON_CONTINUOUS_TYPE:
+                    cnc_match = cnc_pattern.match(value_match.group(2))
+                    if cnc_match is not None:
+                        return hex(int(cnc_match.group(3), 16) << 8 | int(cnc_match.group(4), 16)), '0'
                 else:
                     raise TypeError('Unsupported VCP type {} for monitor {} vcp_code {}'.format(
                         type_indicator, vdu_id, vcp_code))
@@ -504,7 +509,8 @@ class DdcComboBox(QWidget):
         def index_changed(index: int):
             self.current_value = self.combo_box.currentData
             self.vdu.ddcutil.set_attribute(self.vdu.id, self.vcp_capability.vcp_code, self.combo_box.currentData())
-            if SUPPORTED_VCP_CONTROLS[self.vcp_capability.vcp_code].causes_config_change:
+            if self.vcp_capability.vcp_code in SUPPORTED_VCP_CONTROLS and \
+                    SUPPORTED_VCP_CONTROLS[self.vcp_capability.vcp_code].causes_config_change:
                 restart_due_to_config_change()
 
         combo_box.currentIndexChanged.connect(index_changed)
