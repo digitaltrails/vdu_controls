@@ -1,27 +1,30 @@
 #!/usr/bin/python3
 """
 vdu_controls.py - Visual Display Unit Controls.
-
+===============================================
 A GUI wrapper for ddcutil
+-------------------------
 
-A GUI for retrieving and altering settings of connected VDU's (via
-ddcutil) by issuing DDC VCP commands over HDMI/DisplayPort/DVI/USB.
+A GUI for retrieving and altering settings of connected VDU's (via ddcutil) by issuing DDC VCP commands
+over HDMI/DisplayPort/DVI/USB.
 
-    Usage: vdu_controls.py [-h]
-                           [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
-                           [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
-                           [--enable-vcp-code ENABLE_VCP_CODE] [--debug] [--warnings]
-                           [--no-splash] [--sleep-multiplier SLEEP_MULTIPLIER]
+Uses ddcutil to issue Display Data Channel (DDC) Virtual Control Panel (VCP) commands.  Controls DVI/DP/HDMI/USB
+connected monitors (but not builtin laptop displays).
 
-    VDU Controls
-      Uses ddcutil to issue Display Data Channel (DDC) Virtual Control Panel (VCP) commands.
-      Controls DVI/DP/HDMI/USB connected monitors (but not builtin laptop displays).
+Usage::
 
-    optional arguments:
+        vdu_controls.py [-h]
+                       [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
+                       [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
+                       [--enable-vcp-code ENABLE_VCP_CODE] [--debug] [--warnings]
+                       [--no-splash] [--sleep-multiplier SLEEP_MULTIPLIER]
+
+Optional arguments:
+
       -h, --help            show this help message and exit
-      --show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}
+      --show CONTROL_NAME
                             show specified control only (--show may be specified multiple times)
-      --hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}
+      --hide CONTROL_NAME
                             hide/disable a control (--hide may be specified multiple times)
       --enable-vcp-code ENABLE_VCP_CODE
                             enable controls for an unsupported vcp-code hex value (may be specified multiple times)
@@ -31,7 +34,8 @@ ddcutil) by issuing DDC VCP commands over HDMI/DisplayPort/DVI/USB.
       --sleep-multiplier SLEEP_MULTIPLIER
                             protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 0.5)
 
-Examples:
+Examples::
+
     vdu_controls.py
     vdu_controls.py --show brightness --show contrast
     vdu_controls.py --hide contrast
@@ -41,7 +45,25 @@ Examples:
 This script often refers to displays and monitors as VDU's in order to
 disambiguate the noun/verb duality of "display" and "monitor"
 
+Prerequisites
+-------------
+Described for OpenSUSE, similar for other distros:
+
+   + Software::
+
+       zypper install python38-QtPy
+       zypper install ddcutil
+
+   + Kernel Modules::
+
+       lsmod | grep i2c_dev
+
+Read ddcutil readme concerning config of i2c_dev with nvidia GPU's.
+Detailed ddcutil info at https://www.ddcutil.com/
+
+
 Copyright (C) 2021 Michael Hamilton
+-----------------------------------
 This program is free software: you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
 Free Software Foundation, version 3.
@@ -54,17 +76,10 @@ more details.
 You should have received a copy of the GNU General Public License along
 with this program. If not, see <https://www.gnu.org/licenses/>.
 
-m i c h a e l   at   a c t r i x   dot   g e n   dot   n z
+Contact::  m i c h a e l   @   a c t r i x   .   g e n   .   n z
 
-Prerequisites: described for OpenSUSE, similar for other distros:
-   Software:
-       zypper install python38-QtPy
-       zypper install ddcutil
-   Kernel Modules:
-       lsmod | grep i2c_dev
+----------
 
-Read ddcutil readme concerning config of i2c_dev with nvidia GPU's.
-Detailed ddcutil info at https://www.ddcutil.com/
 """
 
 import sys
@@ -747,7 +762,7 @@ def main():
     sys.exit(rc)
 
 
-#: A fallback in case the hard coded splash screen PNG doesn't exist (which probably means KDE is not installed).
+# A fallback in case the hard coded splash screen PNG doesn't exist (which probably means KDE is not installed).
 FALLBACK_SPLASH_JPEG_BASE64 = b"""
 /9j/4AAQSkZJRgABAQAAAQABAAD/2wBDACAWGBwYFCAcGhwkIiAmMFA0MCwsMGJGSjpQdGZ6eHJmcG6AkLicgIiuim5woNqirr7EztDOfJri8uDI8LjKzs
 b/2wBDASIkJDAqMF40NF7GhHCExsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsb/wgARCAEAAQADASIAAhEBAxEB
