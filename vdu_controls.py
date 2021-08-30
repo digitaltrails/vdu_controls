@@ -1,9 +1,7 @@
 #!/usr/bin/python3
 """
-vdu_controls.py - Visual Display Unit Controls.
-===============================================
-A GUI wrapper for ddcutil
--------------------------
+vdu_controls.py: A Qt GUI wrapper for ddcutil
+---------------------------------------------
 
 A GUI for retrieving and altering settings of connected VDU's (via ddcutil) by issuing DDC VCP commands
 over HDMI/DisplayPort/DVI/USB.
