@@ -23,7 +23,7 @@ Optional arguments:
       --hide control_name
                             hide/disable a control (--hide may be specified multiple times)
       --enable-vcp-code vcp_code
-                            enable controls for an unsupported vcp-code hex value (may be specified multiple times)
+                            enable a control for a vcp-code unavailable via hide/show (may be specified multiple times)
       --debug               enable debug output to stdout
       --warnings            popup a warning when a VDU lacks an enabled control
       --no-splash           don't show the splash screen
@@ -37,8 +37,9 @@ Description
 each  DVI/DP/HDMI/USB connected VDU and uses the ``ddcutil`` command line utility to issue *Display Data Channel*
 (*DDC*) *Virtual Control Panel*  (*VCP*) commands to each of them.
 
-By default ``vdu_controls`` supports a range of controls that are typically useful.  The default set of controls is
-less than what ``ddcutil`` provides, but ``vdu_controls`` can be configured to display other controls as necessary.
+By default ``vdu_controls`` supports a range of controls that are generally useful.  The default set of controls is
+less than those that ``ddcutil`` provides, but the ``vdu_controls`` option ``--enable-vcp-code`` can be used to
+display other controls if desired.
 
 Builtin laptop displays normally don't implement DDC and those displays are not supported, but a laptop's
 externally connected VDU's are likely to be controllable.
@@ -87,8 +88,14 @@ LG monitor reports that it has four inputs, but in reality it only has three.  I
         INFO: checking for config file 'file:///home/michael/.config/vdu_controls/LG_HDR_4K.conf'
         WARNING: using config file 'file:///home/michael/.config/vdu_controls/LG_HDR_4K.conf'
 
-In the case where the manufacturers serial number cannot be retrieved, ``vdu_controls`` will use the display number
-instead.
+In the case where the manufacturers serial number cannot be retrieved, ``vdu_controls`` will look for a config file
+containing the display number instead.
+
+The VDU Config files read by ``vdu_controls`` can only be used to alter or correct VCP codes already supported
+by ``ddctutil``.  If the ``ddcutil`` configuration output lists a VCP code as a *manufacturer specific feature*
+then ``ddcutil`` will refuse to set values for that code.  In the future it will be possible to fully enable
+such codes by creating a ``ddcutil`` user definition (``--udef``) file.  The ``ddcutil --udef`` option is still
+work in progress and unavailable at the time at the time of writing.
 
 Responsiveness
 ^^^^^^^^^^^^^^
@@ -341,9 +348,9 @@ class DdcUtil:
                 lines_list = stripped.split('\n')
                 if len(lines_list) == 1:
                     space_separated = lines_list[0].replace('(interpretation unavailable)', '').strip().split(' ')
-                    values_list = [("x" + v, 'unknown ' + v) for v in space_separated[1:]]
+                    values_list = [(v, 'unknown ' + v) for v in space_separated[1:]]
                 else:
-                    values_list = [("x" + key, desc) for key, desc in
+                    values_list = [(key, desc) for key, desc in
                                    (v.strip().split(": ", 1) for v in lines_list[1:])]
             return values_list
 
@@ -378,7 +385,7 @@ class DdcUtil:
         """
         value_pattern = re.compile(r'VCP ' + vcp_code + r' ([A-Z]+) (.+)\n')
         c_pattern = re.compile(r'([0-9]+) ([0-9]+)')
-        snc_pattern = re.compile(r'(x[0-9a-f]+)')
+        snc_pattern = re.compile(r'x([0-9a-f]+)')
         cnc_pattern = re.compile(r'x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+)')
         # Try a few times in case there is a glitch due to a monitor being turned off/on
         for i in range(3):
@@ -397,7 +404,7 @@ class DdcUtil:
                 elif type_indicator == COMPLEX_NON_CONTINUOUS_TYPE:
                     cnc_match = cnc_pattern.match(value_match.group(2))
                     if cnc_match is not None:
-                        return hex(int(cnc_match.group(3), 16) << 8 | int(cnc_match.group(4), 16)), '0'
+                        return '{:x}'.format(int(cnc_match.group(3), 16) << 8 | int(cnc_match.group(4), 16)), '0'
                 else:
                     raise TypeError('Unsupported VCP type {} for monitor {} vcp_code {}'.format(
                         type_indicator, vdu_id, vcp_code))
@@ -583,6 +590,9 @@ class DdcComboBox(QWidget):
             self.keys.append(value)
             combo_box.addItem(desc, value)
 
+        if self.current_value not in self.keys:
+            raise ValueError('VCP_CODE {} value {} is not in allowed list: {}'.format(
+                vcp_capability.vcp_code, self.current_value, self.keys))
         self.combo_box.setCurrentIndex(self.keys.index(self.current_value))
 
         def index_changed(index: int):
