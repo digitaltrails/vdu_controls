@@ -1,3 +1,7 @@
+
+
+python3 -m build
+
 Prerequisites:
 
 zypper install python38-QtPy

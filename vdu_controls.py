@@ -3,42 +3,120 @@
 vdu_controls.py: A Qt GUI wrapper for ddcutil
 ---------------------------------------------
 
-A GUI for retrieving and altering settings of connected VDU's (via ddcutil) by issuing DDC VCP commands
-over HDMI/DisplayPort/DVI/USB.
-
-Uses ddcutil to issue Display Data Channel (DDC) Virtual Control Panel (VCP) commands.  Controls DVI/DP/HDMI/USB
-connected monitors (but not builtin laptop displays).
+A GUI for controlling connected *Visual Display Units* (*VDU*'s) (also known as *displays*, or *monitors*).
 
 Usage::
+-------
 
         vdu_controls.py [-h]
                        [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                        [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
-                       [--enable-vcp-code ENABLE_VCP_CODE] [--debug] [--warnings]
-                       [--no-splash] [--sleep-multiplier SLEEP_MULTIPLIER]
+                       [--enable-vcp-code vcp_code] [--debug] [--warnings]
+                       [--no-splash] [--sleep-multiplier multiplier]
 
 Optional arguments:
+^^^^^^^^^^^^^^^^^^^
 
       -h, --help            show this help message and exit
-      --show CONTROL_NAME
+      --show control_name
                             show specified control only (--show may be specified multiple times)
-      --hide CONTROL_NAME
+      --hide control_name
                             hide/disable a control (--hide may be specified multiple times)
-      --enable-vcp-code ENABLE_VCP_CODE
+      --enable-vcp-code vcp_code
                             enable controls for an unsupported vcp-code hex value (may be specified multiple times)
       --debug               enable debug output to stdout
-      --warnings            enable warnings when a VDU lacks a control
+      --warnings            popup a warning when a VDU lacks an enabled control
       --no-splash           don't show the splash screen
-      --sleep-multiplier SLEEP_MULTIPLIER
+      --sleep-multiplier multiplier
                             protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 0.5)
 
-Examples::
+Description
+-----------
 
-    vdu_controls.py
-    vdu_controls.py --show brightness --show contrast
-    vdu_controls.py --hide contrast
-    vdu_controls.py --enable-vcp-code 70 --warnings --debug
-    vdu_controls.py --sleep-multiplier 0.1
+``vdu_controls`` is a virtual control panel for physically connected VDU's.  It displays a set of controls for
+each  DVI/DP/HDMI/USB connected VDU and uses the ``ddcutil`` command line utility to issue *Display Data Channel*
+(*DDC*) *Virtual Control Panel*  (*VCP*) commands to each of them.
+
+By default ``vdu_controls`` supports a range of controls that are typically useful.  The default set of controls is
+less than what ``ddcutil`` provides, but ``vdu_controls`` can be configured to display other controls as necessary.
+
+Builtin laptop displays normally don't implement DDC and those displays are not supported, but a laptop's
+externally connected VDU's are likely to be controllable.
+
+Some controls change the number of connected devices, for example some VDU's support a power-off command. If
+such controls are used, ``vdu_controls`` will detect the change and will restart itself to reconfigure the controls
+for the new situation (for example, DDC VDU 2 may now be DD VDU 1).  Similarly, if you physically switch off or
+unplug a monitor, the same thing will happen.
+
+Note that some VDU settings may disable or enable other settings. For example, setting a monitor to a specific
+picture-profile might result in the contrast-control being disabled, but ``ddc_controls`` will not be aware of
+the restriction resulting in its contrast-control appearing to do nothing.
+
+Configuration
+-------------
+
+Most configuration is supplied via command line parameters.  There is an optional config file for each VDU
+or VDU-model.
+
+VDU/VDU-model config files
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The VDU config files are provided so that manufacturer supplied meta data when it proves to be inaccurate. These
+config files can be model specific, or model and serial-number specific. For example, a VCP query to my
+LG monitor reports that it has four inputs, but in reality it only has three.  I can correct this as follows:
+
+    1 Run ``vdu_control`` in a console window and not which config files it's looking for::
+
+        % ./vdu_controls.py
+        INFO: checking for config file 'file:///home/michael/.config/vdu_controls/LG_HDR_4K_SN43328.conf'
+        INFO: checking for config file 'file:///home/michael/.config/vdu_controls/LG_HDR_4K.conf'
+
+    2 Run ``ddcutil`` to generate an initial text file of VDU capabilities::
+
+        % ddcutil --display 2 capabilities > /home/michael/.config/vdu_controls/LG_HDR_4K.conf
+
+    3 Edit the config file find the appropriate feature, in this case ``Feature: 60 (Input Source)``::
+
+        # Use a text editor to find the erronious DisplayPort-2 and get rid of it.
+        % vi /home/michael/.config/vdu_controls/LG_HDR_4K.conf
+
+    4 Run ``vdu_control`` and confirm the the config file is being used and the correct number of inputs is shown::
+
+        % ./vdu_controls.py
+        INFO: checking for config file 'file:///home/michael/.config/vdu_controls/LG_HDR_4K_SN43328.conf'
+        INFO: checking for config file 'file:///home/michael/.config/vdu_controls/LG_HDR_4K.conf'
+        WARNING: using config file 'file:///home/michael/.config/vdu_controls/LG_HDR_4K.conf'
+
+In the case where the manufacturers serial number cannot be retrieved, ``vdu_controls`` will use the display number
+instead.
+
+Responsiveness
+^^^^^^^^^^^^^^
+
+In order to support a wide variety of VDU's ``ddcutil`` has to be conservative in respect to how fast it
+communicates with VDU's.  If your VDU's are modern, you may find a smaller ``--sleep-multipler`` works just fine
+and both ``ddctuil`` and ``vdu_controls`` will be much more responsive.
+
+Using VDU config files may speed up the startup by eliminating the need to run ``ddcutil`` to retrieve
+VDU capabilities.
+
+Examples
+--------
+
+    ``vdu_controls.py``
+        All default controls.
+
+    ``vdu_controls.py --show brightness --show contrast``
+        Specified controls only:
+
+    ``vdu_controls.py --hide contrast --hide audio-vulume``
+        All default controls except for those to be hidden.
+
+    ``vdu_controls.py --enable-vcp-code 70 --warnings --debug``
+        All default controls, plus a control for VCP_CODE 70, show any warnings, output debugging info.
+
+    ``vdu_controls.py --sleep-multiplier 0.1``
+        All default controls, speed up or slow down ddcutil by passing a sleep multiplier.
 
 This script often refers to displays and monitors as VDU's in order to
 disambiguate the noun/verb duality of "display" and "monitor"
@@ -47,17 +125,16 @@ Prerequisites
 -------------
 Described for OpenSUSE, similar for other distros:
 
-   + Software::
+Software::
 
-       zypper install python38-QtPy
-       zypper install ddcutil
+    zypper install python38-QtPy
+    zypper install ddcutil
 
-   + Kernel Modules::
+Kernel Modules::
 
-       lsmod | grep i2c_dev
+    lsmod | grep i2c_dev
 
-Read ddcutil readme concerning config of i2c_dev with nvidia GPU's.
-Detailed ddcutil info at https://www.ddcutil.com/
+Read ddcutil readme concerning config of i2c_dev with nvidia GPU's. Detailed ddcutil info at https://www.ddcutil.com/
 
 
 Copyright (C) 2021 Michael Hamilton
@@ -74,7 +151,7 @@ more details.
 You should have received a copy of the GNU General Public License along
 with this program. If not, see <https://www.gnu.org/licenses/>.
 
-Contact::  m i c h a e l   @   a c t r i x   .   g e n   .   n z
+**Contact:**  m i c h a e l   @   a c t r i x   .   g e n   .   n z
 
 ----------
 
@@ -162,7 +239,7 @@ VOLUME_SVG = b"""
 """
 
 # Encode some default graphics to make the script self contained
-DEFAULT_SPLASH_PNG = "/usr/share/icons/oxygen/base/256x256/apps/preferences-desktop-display.png"
+DEFAULT_SPLASH_PNG = "/usr/share/icons/oxygen/base/256x256/apps/preferences-desktop-dxisplay.png"
 
 #: Assumed location of ddcutil on a linux system.
 DDCUTIL = "/usr/bin/ddcutil"
@@ -245,11 +322,13 @@ class DdcUtil:
         result = self.__run__('detect', '--terse')
         monitor_pattern = re.compile('Monitor:[ \t]+([^\n]*)')
         for display_str in re.split("^Display |\nDisplay", result.stdout.decode('utf-8'))[1:]:
-            ddc_id = display_str.split('\n')[0].strip()
+            vdu_id = display_str.split('\n')[0].strip()
             monitor_match = monitor_pattern.search(display_str)
             manufacturer, model_name, serial_number = \
                 monitor_match.group(1).split(':') if monitor_match else ['', 'Unknown Model', '']
-            display_list.append((ddc_id, manufacturer, model_name, serial_number))
+            if serial_number == '':
+                serial_number = 'Display' + vdu_id
+            display_list.append((vdu_id, manufacturer, model_name, serial_number))
         return display_list
 
     def query_capabilities(self, vdu_id: str, alternate_text=None) -> Mapping[str, VcpCapability]:
@@ -355,9 +434,9 @@ class DdcVdu:
         self.manufacturer = manufacturer
         self.ddcutil = ddcutil
         alt_capability_text = None
-        unacceptable_char_pattern = re.compile('[^A-Za-z0-9_-]')
-        serial_config = re.sub(unacceptable_char_pattern, '_', vdu_model.strip() + '_' + vdu_serial.strip() + '.conf')
-        model_config = re.sub(unacceptable_char_pattern, '_', vdu_model.strip() + '.conf')
+        unacceptable_char_pattern = re.compile('[^A-Za-z0-9._-]')
+        serial_config = re.sub(unacceptable_char_pattern, '_', vdu_model.strip() + '_' + vdu_serial.strip()) + '.conf'
+        model_config = re.sub(unacceptable_char_pattern, '_', vdu_model.strip()) + '.conf'
         for config_filename in (serial_config, model_config):
             config_path = Path.home().joinpath('.config').joinpath('vdu_controls').joinpath(config_filename)
             print("INFO: checking for config file '" + config_path.as_uri() + "'")
@@ -725,7 +804,7 @@ def main():
     # Python 3.9 parser.add_argument('--debug',  action=argparse.BooleanOptionalAction, help='enable debugging')
     parser.add_argument('--debug', default=False, action='store_true', help='enable debug output to stdout')
     parser.add_argument('--warnings', default=False, action='store_true',
-                        help='enable warnings when a VDU lacks a control')
+                        help='popup a warning when a VDU lacks an enabled control')
     parser.add_argument('--no-splash', default=False, action='store_true', help="don't show the splash screen")
     parser.add_argument('--sleep-multiplier', type=float, default="0.5",
                         help='protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 0.5)')
