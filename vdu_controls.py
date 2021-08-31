@@ -43,10 +43,10 @@ less than what ``ddcutil`` provides, but ``vdu_controls`` can be configured to d
 Builtin laptop displays normally don't implement DDC and those displays are not supported, but a laptop's
 externally connected VDU's are likely to be controllable.
 
-Some controls change the number of connected devices, for example some VDU's support a power-off command. If
+Some controls change the number of connected devices (for example, some VDU's support a power-off command). If
 such controls are used, ``vdu_controls`` will detect the change and will restart itself to reconfigure the controls
-for the new situation (for example, DDC VDU 2 may now be DD VDU 1).  Similarly, if you physically switch off or
-unplug a monitor, the same thing will happen.
+for the new situation (for example, DDC VDU 2 may now be DD VDU 1).  Similarly, if you physically unplug monitor, the
+same thing will happen.
 
 Note that some VDU settings may disable or enable other settings. For example, setting a monitor to a specific
 picture-profile might result in the contrast-control being disabled, but ``ddc_controls`` will not be aware of
