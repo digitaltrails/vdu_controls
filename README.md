@@ -9,3 +9,5 @@ zypper install ddcutil
 lsmod | grep i2c-dev
 modprobe i2c-dev
 
+cd docs
+make man html

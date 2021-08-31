@@ -239,7 +239,7 @@ VOLUME_SVG = b"""
 """
 
 # Encode some default graphics to make the script self contained
-DEFAULT_SPLASH_PNG = "/usr/share/icons/oxygen/base/256x256/apps/preferences-desktop-dxisplay.png"
+DEFAULT_SPLASH_PNG = "/usr/share/icons/oxygen/base/256x256/apps/preferences-desktop-display.png"
 
 #: Assumed location of ddcutil on a linux system.
 DDCUTIL = "/usr/bin/ddcutil"
