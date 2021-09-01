@@ -67,8 +67,11 @@ Brief help can always be accessed via the command line help option
 % vdu_controls --help
 ```
 
+
+
 Whether run from the desktop application-menu or run from the command line, ``vdu-controls`` behaviour can be altered
-by a number of command line options, see the [man page](https://htmlpreview.github.io/digitaltrails/vdu_controls/docs/_build/man/vdu_controls.1.html) for details.
+by a number of command line options, see the [man page](https://htmlpreview.github.io/?https://raw.githubusercontent.com/digitaltrails/vdu_controls/master/docs/_build/man/vdu_controls.1.html)
+) for details.
 
 Development
 -----------
