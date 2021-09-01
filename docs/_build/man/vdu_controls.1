@@ -30,186 +30,19 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.sp
-# vdu_controls \- a GUI wrapper for ddutil
-.sp
-A GUI for controlling connected \fIVisual Display Units\fP (\fIVDU\fP\(aqs) (also known as \fIdisplays\fP, or \fImonitors\fP).
-.sp
-## Description
-.sp
-\fBvdu_controls\fP is a virtual control panel for physically connected VDU\(aqs.  It displays a set of controls for
-each  DVI/DP/HDMI/USB connected VDU and uses the \fBddcutil\fP command line utility to issue \fIDisplay Data Channel\fP
-(\fIDDC\fP) \fIVirtual Control Panel\fP  (\fIVCP\fP) commands to each of them.
-.sp
-By default \fBvdu_controls\fP offers a subset of the possible controls including brightness, and contrast.  Additional
-controls can be enabled via the \fB\-\-enable\-vcp\-code\fP option.
-.sp
-![Default](screen\-shots/Screenshot_Large\-330.png)  ![Custom](screen\-shots/Screenshot_Small\-227.png)
-.sp
-## Getting Started
-.sp
-### Dependencies
-.sp
-All the following runtime dependencies are likely to be available pre\-packaged on any modern Linux distribution
-(\fBvdu_controls\fP was originally developed on OpenSUSE Tumbleweed).
-.INDENT 0.0
-.IP \(bu 2
-Linux: but may be able to run on any operating system that provides the required dependencies.
-.IP \(bu 2
-ddcutil: the command line utility that interfaces to VDU\(aqs via DDC over i2c\-dev or USB.
-.IP \(bu 2
-i2c\-dev: the i2c\-dev Linux kernel module required by ddutil
-.IP \(bu 2
-python 3.8: \fBvdu_controls\fP is written in python and may depend on some features present only in 3.8 onward.
-.IP \(bu 2
-python 3.8 QtPy: the python GUI library used by \fBvdu_controls\fP\&.
-.UNINDENT
-.sp
-### Installing
-.sp
-The \fBvdu_vontrols.py\fP script is fully self\-contained and is the only component required (beyond the prerequisites).
-.INDENT 0.0
-.IP \(bu 2
-The script can be run without installation by using a python interpreter, for example:  \fB% python3 vdu_controls.py\fP
-.IP \(bu 2
-The script can be self installed as desktop application in the desktop menu as \fISettings\->VDU Controls\fP by running:  \fB% python3 vdu_controls.py \-\-install\fP
-.UNINDENT
-.sp
-If you wish to reverse the \fB\-\-install\fP process, just rerun \fB\-\-install\fP and remove the two files it reports
-as already installed (depending on which desktop you\(aqre running menu changes may require logout before they become
-visible).
-.sp
-### Executing the program
-.INDENT 0.0
-.IP \(bu 2
-If installed  by the \fB\-\-install\fP option, \fBvdu_controls\fP should be in $HOME/bin. Provinding $HOME/bin is on the
-user\(aqs \fBPATH\fP, \fBvdu_controls\fP should be able to be run from the command line, for example:  \fB% vdu_controls \-\-show brightness \-\-show contrast \-\-show audio\-volume\fP
-.IP \(bu 2
-If installed  by the \fB\-\-install\fP option, a menu item named \fBVDU Controls\fP should be able to be located in
-.UNINDENT
-.sp
-the settings menu or by entering part of its name in the application menus search bar.
-* If the script has not been "installed", it can still be run on the command line via the python interpreter,
-.INDENT 0.0
-.INDENT 3.5
-for example:  \fB% python3 vdu_controls.py  \-\-show brightness \-\-show contrast\fP
-.UNINDENT
-.UNINDENT
-.sp
-Whether run from the desktop application\-menu or run from the command line, \fBvdu\-controls\fP behaviour can be altered
-by a number of command line options, see the [man page](docs/_build/man/vdu_controls.1.html) for details.
-.sp
-Command line options can be added to the desktop application\-menu by editing the application menu item
-directly in the desktop (for \fIKDE\-Plasma\fP this can be achieved by right\-mousing on the \fBVDU Controls\fP menu
-item and selecting \fBEdit Application\fP).  Alternatively, it is just as easy to use your preferred text editor to
-edit the desktop definition file \fB$HOME/.local/share/applications/vdu_controls.desktop\fP and add options to
-the \fBExec=\fP line.
-.sp
-## Help
-.sp
-Brief help can always be accessed via the command line help option
-\fB\(ga
-% python3 vdu_controls.py \-\-help
-# or if installed in $HOME/bin
-% vdu_controls \-\-help
-\(ga\fP
-Some controls change the number of connected devices (for example, some VDU\(aqs support a power\-off command). If
-such controls are used, \fBvdu_controls\fP will detect the change and will restart itself to reconfigure the controls
-for the new situation (for example, DDC VDU 2 may now be DD VDU 1).  Similarly, if you physically unplug monitor, the
-same thing will happen.
-.sp
-Note that some VDU settings may disable or enable other settings. For example, setting a monitor to a specific
-picture\-profile might result in the contrast\-control being disabled, but \fBddc_controls\fP will not be aware of
-the restriction resulting in its contrast\-control appearing to do nothing.
-.sp
-Builtin laptop displays normally don\(aqt implement DDC and those displays are not supported, but a laptop\(aqs
-externally connected VDU\(aqs are likely to be controllable.
-.sp
-## Development
-.sp
-I\(aqve set up the \fBvdu_controls\fP source with a typical Python development, but there is only one real source
-file, \fBvdu_controls.py\fP, so the file hierarchy is rather over the top.  A standard python distributable
-can be built by issuing the following commands at the top of the project hierarchy:
-\fB\(ga
-% python3 \-m build
-\&...
-% ls \-1 dist/
-total 268
-vdu_controls_digitaltrails\-1.0.0\-py3\-none\-any.whl
-vdu_controls\-digitaltrails\-1.0.0.tar.gz
-\(ga\fP
-.sp
-A sphinx markup configuration has been proved to extract a manpage or HTML help from \fBvdu_controls.py\fP\&. The following
-commands :
-\fB\(ga
-% cd docs
-% make man
-% make html
-\(ga\fP
-.sp
-My IDE for this project is [PyCharm Community Edition](\fI\%https://www.jetbrains.com/pycharm/\fP)
-.sp
-## Authors
-.sp
-Michael Hamilton\(ga\(gam i c h a e l   @  a c t r i x   .   g e n  . n z\(ga\(ga
-.sp
-## Version History
-.INDENT 0.0
-.IP \(bu 2
-.INDENT 2.0
-.TP
-.B 1.0
-.INDENT 7.0
-.IP \(bu 2
-Initial Release
-.UNINDENT
-.UNINDENT
-.UNINDENT
-.sp
-## License
-.sp
-This project is licensed under the \fBGNU General Public License Version 3\fP \- see the [LICENSE.md](LICENSE.md) file for details
-.sp
-#### vdu_controls Copyright (C) 2021 Michael Hamilton
-.sp
-This program is free software: you can redistribute it and/or modify it
-under the terms of the GNU General Public License as published by the
-Free Software Foundation, version 3.
-.sp
-This program is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
-more details.
-.sp
-You should have received a copy of the GNU General Public License along
-with this program. If not, see <\fI\%https://www.gnu.org/licenses/\fP>.
-.sp
-## Acknowledgments
-.INDENT 0.0
-.IP \(bu 2
-[ddutil](\fI\%https://www.ddcutil.com\fP)
-.IP \(bu 2
-[pyqt](\fI\%https://riverbankcomputing.com/software/pyqt/\fP)
-.IP \(bu 2
-[sphinx markdown](\fI\%https://www.sphinx\-doc.org/en/master/index.html\fP)
-.IP \(bu 2
-[PyCharm Community Edition](\fI\%https://www.jetbrains.com/pycharm/\fP)
-.IP \(bu 2
-[Pandoc](\fI\%https://pandoc.org/\fP)
-.UNINDENT
 .SH VDU_CONTROLS: A QT GUI WRAPPER FOR DDCUTIL
 .sp
-A GUI for controlling connected \fIVisual Display Units\fP (\fIVDU\fP\(aqs) (also known as \fIdisplays\fP, or \fImonitors\fP).
+A GUI for controlling connected \fIVisual Display Units\fP (\fIVDU\fP’s) (also known as \fIdisplays\fP, or \fImonitors\fP).
 .SH USAGE::
 .INDENT 0.0
 .INDENT 3.5
 .INDENT 0.0
 .TP
 .B vdu_controls.py [\-h]
-[\-\-show {brightness,contrast,audio\-volume,input\-source,power\-mode,osd\-language}]
-[\-\-hide {brightness,contrast,audio\-volume,input\-source,power\-mode,osd\-language}]
-[\-\-enable\-vcp\-code vcp_code] [\-\-debug] [\-\-warnings]
-[\-\-no\-splash] [\-\-sleep\-multiplier multiplier]
+[–show {brightness,contrast,audio\-volume,input\-source,power\-mode,osd\-language}]
+[–hide {brightness,contrast,audio\-volume,input\-source,power\-mode,osd\-language}]
+[–enable\-vcp\-code vcp_code] [–debug] [–warnings]
+[–no\-splash] [–sleep\-multiplier multiplier]
 .UNINDENT
 .UNINDENT
 .UNINDENT
@@ -222,10 +55,10 @@ A GUI for controlling connected \fIVisual Display Units\fP (\fIVDU\fP\(aqs) (als
 show this help message and exit
 .TP
 .BI \-\-show \ control_name
-show specified control only (\-\-show may be specified multiple times)
+show specified control only (–show may be specified multiple times)
 .TP
 .BI \-\-hide \ control_name
-hide/disable a control (\-\-hide may be specified multiple times)
+hide/disable a control (–hide may be specified multiple times)
 .TP
 .BI \-\-enable\-vcp\-code \ vcp_code
 enable a control for a vcp\-code unavailable via hide/show (may be specified multiple times)
@@ -237,16 +70,22 @@ enable debug output to stdout
 popup a warning when a VDU lacks an enabled control
 .TP
 .B \-\-no\-splash
-don\(aqt show the splash screen
+don’t show the splash screen
 .TP
 .BI \-\-sleep\-multiplier \ multiplier
 protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 0.5)
+.TP
+.B \-\-install
+installs the vdu_controls in the current user’s path and desktop application menu.
+.TP
+.B \-\-uninstall
+uninstalls the vdu_controls application menu file and script for the current user.
 .UNINDENT
 .UNINDENT
 .UNINDENT
 .SH DESCRIPTION
 .sp
-\fBvdu_controls\fP is a virtual control panel for physically connected VDU\(aqs.  It displays a set of controls for
+\fBvdu_controls\fP is a virtual control panel for physically connected VDU’s.  It displays a set of controls for
 each  DVI/DP/HDMI/USB connected VDU and uses the \fBddcutil\fP command line utility to issue \fIDisplay Data Channel\fP
 (\fIDDC\fP) \fIVirtual Control Panel\fP  (\fIVCP\fP) commands to each of them. The intent is not to provide a comprehensive set
 of controls but rather to provide a simple panel with a selection of essential controls for the desktop.
@@ -254,10 +93,10 @@ of controls but rather to provide a simple panel with a selection of essential c
 By default \fBvdu_controls\fP offers a subset of possible controls including brightness, contrast.  Additional controls
 can be enabled via the \fB\-\-enable\-vcp\-code\fP option.
 .sp
-Builtin laptop displays normally don\(aqt implement DDC and those displays are not supported, but a laptop\(aqs
-externally connected VDU\(aqs are likely to be controllable.
+Builtin laptop displays normally don’t implement DDC and those displays are not supported, but a laptop’s
+externally connected VDU’s are likely to be controllable.
 .sp
-Some controls change the number of connected devices (for example, some VDU\(aqs support a power\-off command). If
+Some controls change the number of connected devices (for example, some VDU’s support a power\-off command). If
 such controls are used, \fBvdu_controls\fP will detect the change and will restart itself to reconfigure the controls
 for the new situation (for example, DDC VDU 2 may now be DD VDU 1).  Similarly, if you physically unplug monitor, the
 same thing will happen.
@@ -267,16 +106,23 @@ picture\-profile might result in the contrast\-control being disabled, but \fBdd
 the restriction resulting in its contrast\-control appearing to do nothing.
 .SH CONFIGURATION
 .sp
-Most configuration is supplied via command line parameters.  There is an optional config file for each VDU
-or VDU\-model.
+Most configuration is supplied via command line parameters.
+.sp
+Command line options can be added to the desktop application\-menu by editing the application menu item
+directly in the desktop (for \fIKDE\-Plasma\fP this can be achieved by right\-mousing on the \fBVDU Controls\fP menu
+item and selecting \fBEdit Application\fP).  Alternatively, it is just as easy to use your preferred text editor to
+edit the desktop definition file \fB$HOME/.local/share/applications/vdu_controls.desktop\fP and add options to
+the \fBExec=\fP line.
 .SS VDU/VDU\-model config files
+.sp
+An optional config file can be setup for each VDU or VDU\-model.
 .sp
 The VDU config files are provided so that manufacturer supplied meta data when it proves to be inaccurate. These
 config files can be model specific, or model and serial\-number specific. For example, a VCP query to my
 LG monitor reports that it has four inputs, but in reality it only has three.  I can correct this as follows:
 .INDENT 0.0
 .INDENT 3.5
-1 Run \fBvdu_control\fP in a console window and not which config files it\(aqs looking for:
+1 Run \fBvdu_control\fP in a console window and not which config files it’s looking for:
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -308,7 +154,7 @@ INFO: checking for config file \(aqfile:///home/michael/.config/vdu_controls/LG_
 .sp
 .nf
 .ft C
-# Use a text editor to find the erronious DisplayPort\-2 and get rid of it.
+# Use a text editor to find the erroneous DisplayPort\-2 and get rid of it.
 % vi /home/michael/.config/vdu_controls/LG_HDR_4K.conf
 .ft P
 .fi
@@ -335,18 +181,19 @@ WARNING: using config file \(aqfile:///home/michael/.config/vdu_controls/LG_HDR_
 In the case where the manufacturers serial number cannot be retrieved, \fBvdu_controls\fP will look for a config file
 containing the display number instead.
 .sp
-The VDU Config files read by \fBvdu_controls\fP can only be used to alter or correct VCP codes already supported
-by \fBddctutil\fP\&.  If the \fBddcutil\fP configuration output lists a VCP code as a \fImanufacturer specific feature\fP
-then \fBddcutil\fP will refuse to set values for that code.  In the future it will be possible to fully enable
-such codes by creating a \fBddcutil\fP user definition (\fB\-\-udef\fP) file.  The \fBddcutil \-\-udef\fP option is still
-work in progress and unavailable at the time at the time of writing.
+The VDU Config files read by \fBvdu_controls\fP can only be used to alter definitions of VCP codes already supported
+by \fBddctutil\fP\&.  If the file lists a VCP code as a \fImanufacturer specific feature\fP then \fBddcutil\fP will refuse to
+set values for that code.  In the future it will be possible to fully enable such codes by creating a \fBddcutil\fP
+user definition (\fB\-\-udef\fP) file.  The \fBddcutil \-\-udef\fP option is still work in progress and unavailable at the
+time at the time of writing.
+.sp
+Possible codes to try might be found in the output of \fBddutils vcpinfo\fP which lists all known codes in the standard.
 .SS Responsiveness
 .sp
-In order to support a wide variety of VDU\(aqs \fBddcutil\fP has to be conservative in respect to how fast it
-communicates with VDU\(aqs.  If your VDU\(aqs are modern, you may find a smaller \fB\-\-sleep\-multipler\fP works just fine
-and both \fBddctuil\fP and \fBvdu_controls\fP will be much more responsive.
+If your VDU’s are modern, you may find a smaller \fB\-\-sleep\-multiplier\fP will speed up the \fBddcutil\fP to VDU protocol
+exchanges making both \fBddctuil\fP and \fBvdu_controls\fP much more responsive.
 .sp
-Using VDU config files may speed up the startup by eliminating the need to run \fBddcutil\fP to retrieve
+Using VDU/VDU\-model config files files may speed up the startup by eliminating the need to run \fBddcutil\fP to retrieve
 VDU capabilities.
 .SH EXAMPLES
 .INDENT 0.0
@@ -359,7 +206,7 @@ All default controls.
 .B \fBvdu_controls.py \-\-show brightness \-\-show contrast\fP
 Specified controls only:
 .TP
-.B \fBvdu_controls.py \-\-hide contrast \-\-hide audio\-vulume\fP
+.B \fBvdu_controls.py \-\-hide contrast \-\-hide audio\-volume\fP
 All default controls except for those to be hidden.
 .TP
 .B \fBvdu_controls.py \-\-enable\-vcp\-code 70 \-\-warnings \-\-debug\fP
@@ -371,8 +218,8 @@ All default controls, speed up or slow down ddcutil by passing a sleep multiplie
 .UNINDENT
 .UNINDENT
 .sp
-This script often refers to displays and monitors as VDU\(aqs in order to
-disambiguate the noun/verb duality of "display" and "monitor"
+This script often refers to displays and monitors as VDU’s in order to
+disambiguate the noun/verb duality of “display” and “monitor”
 .SH PREREQUISITES
 .sp
 Described for OpenSUSE, similar for other distros:
@@ -402,7 +249,7 @@ lsmod | grep i2c_dev
 .UNINDENT
 .UNINDENT
 .sp
-Read ddcutil readme concerning config of i2c_dev with nvidia GPU\(aqs. Detailed ddcutil info at \fI\%https://www.ddcutil.com/\fP
+Read ddcutil readme concerning config of i2c_dev with nvidia GPU’s. Detailed ddcutil info at \fI\%https://www.ddcutil.com/\fP
 .SH VDU_CONTROLS COPYRIGHT (C) 2021 MICHAEL HAMILTON
 .sp
 This program is free software: you can redistribute it and/or modify it
@@ -444,7 +291,7 @@ This is a duck\-typed GUI control widget (could inherit from an abstract type if
 .INDENT 7.0
 .TP
 .B refresh_data()
-Query the VDU for a new data value and cache it (may be called from a task thread, so no GUI op\(aqs here).
+Query the VDU for a new data value and cache it (may be called from a task thread, so no GUI op’s here).
 .UNINDENT
 .INDENT 7.0
 .TP
@@ -455,11 +302,11 @@ Copy the internally cached current value onto the GUI view.
 .INDENT 0.0
 .TP
 .B class vdu_controls.DdcMainWidget(enabled_vcp_codes: List[str], warnings: bool, debug: bool, sleep_multiplier: float, detect_vdu_hook: callable)
-GUI for detected VDU\(aqs, it will construct and contain a control panel for each VDU.
+GUI for detected VDU’s, it will construct and contain a control panel for each VDU.
 .INDENT 7.0
 .TP
 .B refresh_data()
-Refresh data from the VDU\(aqs. Called by a non\-GUI task. Not in the GUI\-thread, cannot do any GUI op\(aqs.
+Refresh data from the VDU’s. Called by a non\-GUI task. Not in the GUI\-thread, cannot do any GUI op’s.
 .UNINDENT
 .INDENT 7.0
 .TP
@@ -477,7 +324,7 @@ from an abstract type if we wanted to get formal about it).
 .INDENT 7.0
 .TP
 .B refresh_data()
-Query the VDU for a new data value and cache it (may be called from a task thread, so no GUI op\(aqs here).
+Query the VDU for a new data value and cache it (may be called from a task thread, so no GUI op’s here).
 .UNINDENT
 .INDENT 7.0
 .TP
@@ -488,7 +335,7 @@ Copy the internally cached current value onto the GUI view.
 .INDENT 0.0
 .TP
 .B class vdu_controls.DdcUtil(debug: bool = False, common_args: Optional[List[str]] = None)
-Interface to the command line ddcutil Display Data Channel Utility for interacting with VDU\(aqs.
+Interface to the command line ddcutil Display Data Channel Utility for interacting with VDU’s.
 .INDENT 7.0
 .TP
 .B detect_monitors() -> List[Tuple[str, str, str, str]]
@@ -497,11 +344,16 @@ Return a list of (vdu_id, desc) tuples.
 .INDENT 7.0
 .TP
 .B get_attribute(vdu_id: str, vcp_code: str) -> Tuple[str, str]
-Given a VDU id and vcp_code, retrieve the attribute\(aqs current value from the VDU.
+Given a VDU id and vcp_code, retrieve the attribute’s current value from the VDU.
 .sp
 Two values are returned, the monitor reported current value, and the monitor reported maximum value. Only
-attributes with "Continuous" values have a maximum, for consistency the method will return a zero maximum
-for "Non\-Continuous" attributes.
+attributes with “Continuous” values have a maximum, for consistency the method will return a zero maximum
+for “Non\-Continuous” attributes.
+.UNINDENT
+.INDENT 7.0
+.TP
+.B get_supported_vcp_codes()
+Returns a map of descriptions keyed by vcp_code, the codes that ddcutil appears to support.
 .UNINDENT
 .INDENT 7.0
 .TP
@@ -513,6 +365,11 @@ Return a map of vpc capabilities keyed by vcp code.
 .B set_attribute(vdu_id: str, vcp_code: str, new_value: str)
 Send a new value to a specific VDU and vcp_code.
 .UNINDENT
+.INDENT 7.0
+.TP
+.B vcp_info()
+Returns info about all codes known to ddcutil, whether supported or not.
+.UNINDENT
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -520,7 +377,7 @@ Send a new value to a specific VDU and vcp_code.
 Holds data specific to an individual VDU including a map of its capabilities.
 .sp
 Capabilities are either extracted from ddcutil output or read from a ~/.config/vdu\-control/ file.
-The file option is available so that the output from "ddcutil \-\-display N capabilities" can be corrected because
+The file option is available so that the output from “ddcutil –display N capabilities” can be corrected because
 it is sometimes incorrect (due to sloppy implementation by manufacturers). For example, my LG monitor reports
 two Display\-Port inputs and it only has one.
 .INDENT 7.0
@@ -539,7 +396,7 @@ Return a tuple that defines this VDU: (vdu_id, manufacturer, model, serial\-numb
 .B class vdu_controls.DdcVduWidget(vdu: \fI\%vdu_controls.DdcVdu\fP, enabled_vcp_codes: List[str], warnings: bool)
 Widget that contains all the controls for a single VDU (monitor/display).
 .sp
-The widget maintains a list of GUI "controls" that are duck\-typed and will have refresh_data() and refresh_view()
+The widget maintains a list of GUI “controls” that are duck\-typed and will have refresh_data() and refresh_view()
 methods.
 .INDENT 7.0
 .TP
@@ -549,7 +406,7 @@ Return the number of VDU controls.  Might be zero if initialization discovered n
 .INDENT 7.0
 .TP
 .B refresh_data()
-Tell the control widgets to get fresh VDU data (may be called from a task thread, so no GUI op\(aqs here).
+Tell the control widgets to get fresh VDU data (may be called from a task thread, so no GUI op’s here).
 .UNINDENT
 .INDENT 7.0
 .TP
@@ -565,9 +422,9 @@ Internal special exit code used to signal that the exit handler should restart t
 .INDENT 0.0
 .TP
 .B class vdu_controls.RefreshVduDataTask(ddc_widget)
-Task to refresh VDU data from the physical VDU\(aqs.
+Task to refresh VDU data from the physical VDU’s.
 .sp
-Runs as a task because it can be quite slow depending on the number of VDU\(aqs, number of controls.  The task runs
+Runs as a task because it can be quite slow depending on the number of VDU’s, number of controls.  The task runs
 outside the GUI thread and no parts of it can only update the GUI data, not the GUI view.
 .INDENT 7.0
 .TP
@@ -582,7 +439,7 @@ Run a task that uses ddcutil to retrieve data for all the visible controls (may 
 .INDENT 0.0
 .TP
 .B vdu_controls.SUPPORTED_VCP_CONTROLS = {\(aq10\(aq: <vdu_controls.VcpGuiControlDef object>, \(aq12\(aq: <vdu_controls.VcpGuiControlDef object>, \(aq60\(aq: <vdu_controls.VcpGuiControlDef object>, \(aq62\(aq: <vdu_controls.VcpGuiControlDef object>, \(aqCC\(aq: <vdu_controls.VcpGuiControlDef object>, \(aqD6\(aq: <vdu_controls.VcpGuiControlDef object>}
-Default "usefull" VCP capabilities to be made available as GUI controls by default.
+Default “useful” VCP capabilities to be made available as GUI controls by default.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -610,8 +467,8 @@ Get the splash pixmap from a KDE oxygen PNG file or, failing that, a small base6
 .UNINDENT
 .INDENT 0.0
 .TP
-.B vdu_controls.install_as_desktop_application()
-Self install this script in the current Linux user\(aqs bin directory and desktop applications\->settings menu.
+.B vdu_controls.install_as_desktop_application(uninstall: bool = False)
+Self install this script in the current Linux user’s bin directory and desktop applications\->settings menu.
 .UNINDENT
 .INDENT 0.0
 .TP

@@ -1,14 +1,14 @@
 <h1>NAME</h1>
 <p>vdu_controls - vdu_controls 1.0</p>
 <h1>VDU_CONTROLS: A QT GUI WRAPPER FOR DDCUTIL</h1>
-<p>A GUI for controlling connected <em>Visual Display Units</em> (<em>VDU</em>'s) (also known as <em>displays</em>, or <em>monitors</em>).</p>
+<p>A GUI for controlling connected <em>Visual Display Units</em> (<em>VDU</em>’s) (also known as <em>displays</em>, or <em>monitors</em>).</p>
 <h1>USAGE::</h1>
 <blockquote>
 <blockquote>
 <blockquote>
 <dl>
 <dt><strong>vdu_controls.py [-h]</strong></dt>
-<dd><p>[--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}] [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}] [--enable-vcp-code vcp_code] [--debug] [--warnings] [--no-splash] [--sleep-multiplier multiplier]</p>
+<dd><p>[–show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}] [–hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}] [–enable-vcp-code vcp_code] [–debug] [–warnings] [–no-splash] [–sleep-multiplier multiplier]</p>
 </dd>
 </dl>
 </blockquote>
@@ -23,10 +23,10 @@
 <dd><p>show this help message and exit</p>
 </dd>
 <dt><strong>--show</strong><em> control_name</em></dt>
-<dd><p>show specified control only (--show may be specified multiple times)</p>
+<dd><p>show specified control only (–show may be specified multiple times)</p>
 </dd>
 <dt><strong>--hide</strong><em> control_name</em></dt>
-<dd><p>hide/disable a control (--hide may be specified multiple times)</p>
+<dd><p>hide/disable a control (–hide may be specified multiple times)</p>
 </dd>
 <dt><strong>--enable-vcp-code</strong><em> vcp_code</em></dt>
 <dd><p>enable a control for a vcp-code unavailable via hide/show (may be specified multiple times)</p>
@@ -38,28 +38,36 @@
 <dd><p>popup a warning when a VDU lacks an enabled control</p>
 </dd>
 <dt><strong>--no-splash</strong></dt>
-<dd><p>don't show the splash screen</p>
+<dd><p>don’t show the splash screen</p>
 </dd>
 <dt><strong>--sleep-multiplier</strong><em> multiplier</em></dt>
 <dd><p>protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 0.5)</p>
+</dd>
+<dt><strong>--install</strong></dt>
+<dd><p>installs the vdu_controls in the current user’s path and desktop application menu.</p>
+</dd>
+<dt><strong>--uninstall</strong></dt>
+<dd><p>uninstalls the vdu_controls application menu file and script for the current user.</p>
 </dd>
 </dl>
 </blockquote>
 </blockquote>
 </blockquote>
 <h1>DESCRIPTION</h1>
-<p><strong>vdu_controls is a virtual control panel for physically connected VDU's. It displays a set of controls for</strong> each DVI/DP/HDMI/USB connected VDU and uses the <strong>ddcutil command line utility to issue </strong><em>Display Data Channel</em> (<em>DDC</em><strong>) </strong><em>Virtual Control Panel</em><strong> (</strong><em>VCP</em><strong>) commands to each of them. The intent is not to provide a comprehensive set</strong> of controls but rather to provide a simple panel with a selection of essential controls for the desktop.</p>
+<p><strong>vdu_controls is a virtual control panel for physically connected VDU’s. It displays a set of controls for</strong> each DVI/DP/HDMI/USB connected VDU and uses the <strong>ddcutil command line utility to issue </strong><em>Display Data Channel</em> (<em>DDC</em><strong>) </strong><em>Virtual Control Panel</em><strong> (</strong><em>VCP</em><strong>) commands to each of them. The intent is not to provide a comprehensive set</strong> of controls but rather to provide a simple panel with a selection of essential controls for the desktop.</p>
 <p>By default <strong>vdu_controls offers a subset of possible controls including brightness, contrast. Additional controls</strong> can be enabled via the <strong>--enable-vcp-code option.</strong></p>
-<p>Builtin laptop displays normally don't implement DDC and those displays are not supported, but a laptop's externally connected VDU's are likely to be controllable.</p>
-<p>Some controls change the number of connected devices (for example, some VDU's support a power-off command). If such controls are used, <strong>vdu_controls will detect the change and will restart itself to reconfigure the controls</strong> for the new situation (for example, DDC VDU 2 may now be DD VDU 1). Similarly, if you physically unplug monitor, the same thing will happen.</p>
+<p>Builtin laptop displays normally don’t implement DDC and those displays are not supported, but a laptop’s externally connected VDU’s are likely to be controllable.</p>
+<p>Some controls change the number of connected devices (for example, some VDU’s support a power-off command). If such controls are used, <strong>vdu_controls will detect the change and will restart itself to reconfigure the controls</strong> for the new situation (for example, DDC VDU 2 may now be DD VDU 1). Similarly, if you physically unplug monitor, the same thing will happen.</p>
 <p>Note that some VDU settings may disable or enable other settings. For example, setting a monitor to a specific picture-profile might result in the contrast-control being disabled, but <strong>ddc_controls will not be aware of</strong> the restriction resulting in its contrast-control appearing to do nothing.</p>
 <h1>CONFIGURATION</h1>
-<p>Most configuration is supplied via command line parameters. There is an optional config file for each VDU or VDU-model.</p>
+<p>Most configuration is supplied via command line parameters.</p>
+<p>Command line options can be added to the desktop application-menu by editing the application menu item directly in the desktop (for <em>KDE-Plasma</em><strong> this can be achieved by right-mousing on the VDU Controls menu</strong> item and selecting <strong>Edit Application). Alternatively, it is just as easy to use your preferred text editor to</strong> edit the desktop definition file <strong>$HOME/.local/share/applications/vdu_controls.desktop and add options to</strong> the <strong>Exec= line.</strong></p>
 <h2>VDU/VDU-model config files</h2>
+<p>An optional config file can be setup for each VDU or VDU-model.</p>
 <p>The VDU config files are provided so that manufacturer supplied meta data when it proves to be inaccurate. These config files can be model specific, or model and serial-number specific. For example, a VCP query to my LG monitor reports that it has four inputs, but in reality it only has three. I can correct this as follows:</p>
 <blockquote>
 <blockquote>
-<p>1 Run <strong>vdu_control in a console window and not which config files it's looking for:</strong></p>
+<p>1 Run <strong>vdu_control in a console window and not which config files it’s looking for:</strong></p>
 <blockquote>
 <blockquote>
 <pre><code>% ./vdu_controls.py
@@ -76,7 +84,7 @@ INFO: checking for config file &#39;file:///home/michael/.config/vdu_controls/LG
 <p>3 Edit the config file find the appropriate feature, in this case <strong>Feature: 60 (Input Source):</strong></p>
 <blockquote>
 <blockquote>
-<pre><code># Use a text editor to find the erronious DisplayPort-2 and get rid of it.
+<pre><code># Use a text editor to find the erroneous DisplayPort-2 and get rid of it.
 % vi /home/michael/.config/vdu_controls/LG_HDR_4K.conf</code></pre>
 </blockquote>
 </blockquote>
@@ -92,10 +100,11 @@ WARNING: using config file &#39;file:///home/michael/.config/vdu_controls/LG_HDR
 </blockquote>
 </blockquote>
 <p>In the case where the manufacturers serial number cannot be retrieved, <strong>vdu_controls will look for a config file</strong> containing the display number instead.</p>
-<p>The VDU Config files read by <strong>vdu_controls can only be used to alter or correct VCP codes already supported</strong> by <strong>ddctutil. If the ddcutil configuration output lists a VCP code as a </strong><em>manufacturer specific feature</em> then <strong>ddcutil will refuse to set values for that code. In the future it will be possible to fully enable</strong> such codes by creating a <strong>ddcutil user definition (--udef) file. The ddcutil --udef option is still</strong> work in progress and unavailable at the time at the time of writing.</p>
+<p>The VDU Config files read by <strong>vdu_controls can only be used to alter definitions of VCP codes already supported</strong> by <strong>ddctutil. If the file lists a VCP code as a </strong><em>manufacturer specific feature</em><strong> then ddcutil will refuse to</strong> set values for that code. In the future it will be possible to fully enable such codes by creating a <strong>ddcutil</strong> user definition (<strong>--udef) file. The ddcutil --udef option is still work in progress and unavailable at the</strong> time at the time of writing.</p>
+<p>Possible codes to try might be found in the output of <strong>ddutils vcpinfo which lists all known codes in the standard.</strong></p>
 <h2>Responsiveness</h2>
-<p>In order to support a wide variety of VDU's <strong>ddcutil has to be conservative in respect to how fast it</strong> communicates with VDU's. If your VDU's are modern, you may find a smaller <strong>--sleep-multipler works just fine</strong> and both <strong>ddctuil and vdu_controls will be much more responsive.</strong></p>
-<p>Using VDU config files may speed up the startup by eliminating the need to run <strong>ddcutil to retrieve</strong> VDU capabilities.</p>
+<p>If your VDU’s are modern, you may find a smaller <strong>--sleep-multiplier will speed up the ddcutil to VDU protocol</strong> exchanges making both <strong>ddctuil and vdu_controls much more responsive.</strong></p>
+<p>Using VDU/VDU-model config files files may speed up the startup by eliminating the need to run <strong>ddcutil to retrieve</strong> VDU capabilities.</p>
 <h1>EXAMPLES</h1>
 <blockquote>
 <blockquote>
@@ -107,7 +116,7 @@ WARNING: using config file &#39;file:///home/michael/.config/vdu_controls/LG_HDR
 <dt><strong><strong>vdu_controls.py</strong> --show brightness --show contrast</strong></dt>
 <dd><p>Specified controls only:</p>
 </dd>
-<dt><strong><strong>vdu_controls.py</strong> --hide contrast --hide audio-vulume</strong></dt>
+<dt><strong><strong>vdu_controls.py</strong> --hide contrast --hide audio-volume</strong></dt>
 <dd><p>All default controls except for those to be hidden.</p>
 </dd>
 <dt><strong><strong>vdu_controls.py</strong> --enable-vcp-code 70 --warnings --debug</strong></dt>
@@ -120,7 +129,7 @@ WARNING: using config file &#39;file:///home/michael/.config/vdu_controls/LG_HDR
 </blockquote>
 </blockquote>
 </blockquote>
-<p>This script often refers to displays and monitors as VDU's in order to disambiguate the noun/verb duality of "display" and "monitor"</p>
+<p>This script often refers to displays and monitors as VDU’s in order to disambiguate the noun/verb duality of “display” and “monitor”</p>
 <h1>PREREQUISITES</h1>
 <p>Described for OpenSUSE, similar for other distros:</p>
 <p>Software:</p>
@@ -136,7 +145,7 @@ zypper install ddcutil</code></pre>
 <pre><code>lsmod | grep i2c_dev</code></pre>
 </blockquote>
 </blockquote>
-<p>Read ddcutil readme concerning config of i2c_dev with nvidia GPU's. Detailed ddcutil info at <em>https://www.ddcutil.com/</em></p>
+<p>Read ddcutil readme concerning config of i2c_dev with nvidia GPU’s. Detailed ddcutil info at <em>https://www.ddcutil.com/</em></p>
 <h1>VDU_CONTROLS COPYRIGHT (C) 2021 MICHAEL HAMILTON</h1>
 <p>This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, version 3.</p>
 <p>This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.</p>
@@ -167,7 +176,7 @@ zypper install ddcutil</code></pre>
 <blockquote>
 <dl>
 <dt><strong>refresh_data()</strong></dt>
-<dd><p>Query the VDU for a new data value and cache it (may be called from a task thread, so no GUI op's here).</p>
+<dd><p>Query the VDU for a new data value and cache it (may be called from a task thread, so no GUI op’s here).</p>
 </dd>
 </dl>
 </blockquote>
@@ -182,10 +191,10 @@ zypper install ddcutil</code></pre>
 <blockquote>
 <dl>
 <dt><strong>class vdu_controls.DdcMainWidget(enabled_vcp_codes: List[str], warnings: bool, debug: bool, sleep_multiplier: float, detect_vdu_hook: callable)</strong></dt>
-<dd><p>GUI for detected VDU's, it will construct and contain a control panel for each VDU.</p>
+<dd><p>GUI for detected VDU’s, it will construct and contain a control panel for each VDU.</p>
 <dl>
 <dt><strong>refresh_data()</strong></dt>
-<dd><p>Refresh data from the VDU's. Called by a non-GUI task. Not in the GUI-thread, cannot do any GUI op's.</p>
+<dd><p>Refresh data from the VDU’s. Called by a non-GUI task. Not in the GUI-thread, cannot do any GUI op’s.</p>
 </dd>
 </dl>
 </dd>
@@ -208,7 +217,7 @@ zypper install ddcutil</code></pre>
 <blockquote>
 <dl>
 <dt><strong>refresh_data()</strong></dt>
-<dd><p>Query the VDU for a new data value and cache it (may be called from a task thread, so no GUI op's here).</p>
+<dd><p>Query the VDU for a new data value and cache it (may be called from a task thread, so no GUI op’s here).</p>
 </dd>
 </dl>
 </blockquote>
@@ -223,7 +232,7 @@ zypper install ddcutil</code></pre>
 <blockquote>
 <dl>
 <dt><strong>class vdu_controls.DdcUtil(debug: bool = False, common_args: Optional[List[str]] = None)</strong></dt>
-<dd><p>Interface to the command line ddcutil Display Data Channel Utility for interacting with VDU's.</p>
+<dd><p>Interface to the command line ddcutil Display Data Channel Utility for interacting with VDU’s.</p>
 <dl>
 <dt><strong>detect_monitors() -&gt; List[Tuple[str, str, str, str]]</strong></dt>
 <dd><p>Return a list of (vdu_id, desc) tuples.</p>
@@ -234,10 +243,17 @@ zypper install ddcutil</code></pre>
 <blockquote>
 <dl>
 <dt><strong>get_attribute(vdu_id: str, vcp_code: str) -&gt; Tuple[str, str]</strong></dt>
-<dd><p>Given a VDU id and vcp_code, retrieve the attribute's current value from the VDU.</p>
+<dd><p>Given a VDU id and vcp_code, retrieve the attribute’s current value from the VDU.</p>
 </dd>
 </dl>
-<p>Two values are returned, the monitor reported current value, and the monitor reported maximum value. Only attributes with "Continuous" values have a maximum, for consistency the method will return a zero maximum for "Non-Continuous" attributes.</p>
+<p>Two values are returned, the monitor reported current value, and the monitor reported maximum value. Only attributes with “Continuous” values have a maximum, for consistency the method will return a zero maximum for “Non-Continuous” attributes.</p>
+</blockquote>
+<blockquote>
+<dl>
+<dt><strong>get_supported_vcp_codes()</strong></dt>
+<dd><p>Returns a map of descriptions keyed by vcp_code, the codes that ddcutil appears to support.</p>
+</dd>
+</dl>
 </blockquote>
 <blockquote>
 <dl>
@@ -253,6 +269,13 @@ zypper install ddcutil</code></pre>
 </dd>
 </dl>
 </blockquote>
+<blockquote>
+<dl>
+<dt><strong>vcp_info()</strong></dt>
+<dd><p>Returns info about all codes known to ddcutil, whether supported or not.</p>
+</dd>
+</dl>
+</blockquote>
 </blockquote>
 <blockquote>
 <dl>
@@ -260,7 +283,7 @@ zypper install ddcutil</code></pre>
 <dd><p>Holds data specific to an individual VDU including a map of its capabilities.</p>
 </dd>
 </dl>
-<p>Capabilities are either extracted from ddcutil output or read from a ~/.config/vdu-control/ file. The file option is available so that the output from "ddcutil --display N capabilities" can be corrected because it is sometimes incorrect (due to sloppy implementation by manufacturers). For example, my LG monitor reports two Display-Port inputs and it only has one.</p>
+<p>Capabilities are either extracted from ddcutil output or read from a ~/.config/vdu-control/ file. The file option is available so that the output from “ddcutil –display N capabilities” can be corrected because it is sometimes incorrect (due to sloppy implementation by manufacturers). For example, my LG monitor reports two Display-Port inputs and it only has one.</p>
 <blockquote>
 <dl>
 <dt><strong>get_description() -&gt; str</strong></dt>
@@ -282,7 +305,7 @@ zypper install ddcutil</code></pre>
 <dd><p>Widget that contains all the controls for a single VDU (monitor/display).</p>
 </dd>
 </dl>
-<p>The widget maintains a list of GUI "controls" that are duck-typed and will have refresh_data() and refresh_view() methods.</p>
+<p>The widget maintains a list of GUI “controls” that are duck-typed and will have refresh_data() and refresh_view() methods.</p>
 <blockquote>
 <dl>
 <dt><strong>number_of_controls() -&gt; int</strong></dt>
@@ -293,7 +316,7 @@ zypper install ddcutil</code></pre>
 <blockquote>
 <dl>
 <dt><strong>refresh_data()</strong></dt>
-<dd><p>Tell the control widgets to get fresh VDU data (may be called from a task thread, so no GUI op's here).</p>
+<dd><p>Tell the control widgets to get fresh VDU data (may be called from a task thread, so no GUI op’s here).</p>
 </dd>
 </dl>
 </blockquote>
@@ -315,10 +338,10 @@ zypper install ddcutil</code></pre>
 <blockquote>
 <dl>
 <dt><strong>class vdu_controls.RefreshVduDataTask(ddc_widget)</strong></dt>
-<dd><p>Task to refresh VDU data from the physical VDU's.</p>
+<dd><p>Task to refresh VDU data from the physical VDU’s.</p>
 </dd>
 </dl>
-<p>Runs as a task because it can be quite slow depending on the number of VDU's, number of controls. The task runs outside the GUI thread and no parts of it can only update the GUI data, not the GUI view.</p>
+<p>Runs as a task because it can be quite slow depending on the number of VDU’s, number of controls. The task runs outside the GUI thread and no parts of it can only update the GUI data, not the GUI view.</p>
 <blockquote>
 <dl>
 <dt><strong>run()</strong></dt>
@@ -337,7 +360,7 @@ zypper install ddcutil</code></pre>
 <blockquote>
 <dl>
 <dt><strong>vdu_controls.SUPPORTED_VCP_CONTROLS = {'10': &lt;vdu_controls.VcpGuiControlDef object&gt;, '12': &lt;vdu_controls.VcpGuiControlDef object&gt;, '60': &lt;vdu_controls.VcpGuiControlDef object&gt;, '62': &lt;vdu_controls.VcpGuiControlDef object&gt;, 'CC': &lt;vdu_controls.VcpGuiControlDef object&gt;, 'D6': &lt;vdu_controls.VcpGuiControlDef object&gt;}</strong></dt>
-<dd><p>Default "usefull" VCP capabilities to be made available as GUI controls by default.</p>
+<dd><p>Default “useful” VCP capabilities to be made available as GUI controls by default.</p>
 </dd>
 </dl>
 </blockquote>
@@ -376,8 +399,8 @@ zypper install ddcutil</code></pre>
 </blockquote>
 <blockquote>
 <dl>
-<dt><strong>vdu_controls.install_as_desktop_application()</strong></dt>
-<dd><p>Self install this script in the current Linux user's bin directory and desktop applications-&gt;settings menu.</p>
+<dt><strong>vdu_controls.install_as_desktop_application(uninstall: bool = False)</strong></dt>
+<dd><p>Self install this script in the current Linux user’s bin directory and desktop applications-&gt;settings menu.</p>
 </dd>
 </dl>
 </blockquote>

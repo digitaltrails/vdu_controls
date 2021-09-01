@@ -100,20 +100,21 @@ LG monitor reports that it has four inputs, but in reality it only has three.  I
 In the case where the manufacturers serial number cannot be retrieved, ``vdu_controls`` will look for a config file
 containing the display number instead.
 
-The VDU Config files read by ``vdu_controls`` can only be used to alter or correct VCP codes already supported
-by ``ddctutil``.  If the ``ddcutil`` configuration output lists a VCP code as a *manufacturer specific feature*
-then ``ddcutil`` will refuse to set values for that code.  In the future it will be possible to fully enable
-such codes by creating a ``ddcutil`` user definition (``--udef``) file.  The ``ddcutil --udef`` option is still
-work in progress and unavailable at the time at the time of writing.
+The VDU Config files read by ``vdu_controls`` can only be used to alter definitions of VCP codes already supported
+by ``ddctutil``.  If the file lists a VCP code as a *manufacturer specific feature* then ``ddcutil`` will refuse to
+set values for that code.  In the future it will be possible to fully enable such codes by creating a ``ddcutil``
+user definition (``--udef``) file.  The ``ddcutil --udef`` option is still work in progress and unavailable at the
+time at the time of writing.
+
+Possible codes to try might be found in the output of ``ddutils vcpinfo`` which lists all known codes in the standard.
 
 Responsiveness
 ^^^^^^^^^^^^^^
 
-In order to support a wide variety of VDU's ``ddcutil`` has to be conservative in respect to how fast it
-communicates with VDU's.  If your VDU's are modern, you may find a smaller ``--sleep-multiplier`` works just fine
-and both ``ddctuil`` and ``vdu_controls`` will be much more responsive.
+If your VDU's are modern, you may find a smaller ``--sleep-multiplier`` will speed up the ``ddcutil`` to VDU protocol
+exchanges making both ``ddctuil`` and ``vdu_controls`` much more responsive.
 
-Using VDU config files may speed up the startup by eliminating the need to run ``ddcutil`` to retrieve
+Using VDU/VDU-model config files files may speed up the startup by eliminating the need to run ``ddcutil`` to retrieve
 VDU capabilities.
 
 Examples
@@ -302,7 +303,7 @@ class VcpGuiControlDef:
         self.icon_source = icon_source
 
     def arg_name(self) -> str:
-        return self.name.replace(' ', '-').lower()
+        return re.sub('[^A-Za-z0-9_-]', '-', self.name).lower()
 
 
 #: Default "useful" VCP capabilities to be made available as GUI controls by default.
@@ -431,6 +432,32 @@ class DdcUtil:
         current, _ = self.get_attribute(vdu_id, vcp_code)
         if new_value != current:
             self.__run__('--display', vdu_id, 'setvcp', vcp_code, new_value)
+
+    def vcp_info(self):
+        """Returns info about all codes known to ddcutil, whether supported or not."""
+        return self.__run__('--verbose', 'vcpinfo').stdout.decode('utf-8')
+
+    def get_supported_vcp_codes(self):
+        """Returns a map of descriptions keyed by vcp_code, the codes that ddcutil appears to support."""
+        if self.supported_codes is not None:
+            return self.supported_codes
+        self.supported_codes = {}
+        info = DdcUtil().vcp_info()
+        code_definitions = info.split("\nVCP code ")
+        for code_def in code_definitions[1:]:
+            print(code_def)
+            lines = code_def.split('\n')
+            vcp_code, vcp_name = lines[0].split(': ', 1)
+            ddutil_feature_subsets = None
+            for line in lines[2:]:
+                line = line.strip()
+                if line.startswith('ddcutil feature subsets:'):
+                    ddutil_feature_subsets = line.split(": ", 1)
+            if ddutil_feature_subsets is not None:
+                vcp_def = VcpGuiControlDef(vcp_code=vcp_code, vcp_name=vcp_name)
+                if vcp_code not in self.supported_codes:
+                    self.supported_codes[vcp_code] = vcp_def
+        return self.supported_codes
 
 
 class DdcVdu:
@@ -858,6 +885,7 @@ def main():
     """vdu_control application main."""
     # Allow control-c to terminate the program
     signal.signal(signal.SIGINT, signal.SIG_DFL)
+
     parser = argparse.ArgumentParser(
         description=textwrap.dedent("""
         VDU Controls 
