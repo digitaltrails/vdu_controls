@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 """
-vdu_controls.py: A Qt GUI wrapper for ddcutil
----------------------------------------------
+vdu_controls: A Qt GUI wrapper for ddcutil
+------------------------------------------
 
 A GUI for controlling connected *Visual Display Units* (*VDU*'s) (also known as *displays*, or *monitors*).
 
