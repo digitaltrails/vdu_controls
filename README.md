@@ -49,8 +49,9 @@ Executing the program
 
 * If installed by running the ``--install`` option, a menu item named **VDU Controls** should be able to be located in 
 the settings menu or by entering part of its name in the application menus search bar.
-* Additionally, if ``--install`` option has been run, a script called ``vdu_controls`` should be in $HOME/bin. Providing $HOME/bin is on the
-  user's ``PATH``, ``vdu_controls`` should be able to be run from the command line, for example:\
+* If ``--install`` option has been run, a script called ``vdu_controls`` should be in $HOME/bin.
+  If ``$HOME/bin`` is on the user's ``PATH``, ``vdu_controls`` will be able to be run from the command
+  line, for example:\
   ``% vdu_controls --show brightness --show contrast --show audio-volume``
 * If the script has not been installed, it can still be run on the command line via the python interpreter, 
   for example:\
@@ -67,7 +68,7 @@ Brief help can always be accessed via the command line help option
 ```
 
 Whether run from the desktop application-menu or run from the command line, ``vdu-controls`` behaviour can be altered
-by a number of command line options, see the [man page](docs/_build/man/vdu_controls.1.html) for details.
+by a number of command line options, see the [man page](https://htmlpreview.github.io/digitaltrails/vdu_controls/docs/_build/man/vdu_controls.1.html) for details.
 
 Development
 -----------
