@@ -35,11 +35,11 @@ Description
 
 ``vdu_controls`` is a virtual control panel for physically connected VDU's.  It displays a set of controls for
 each  DVI/DP/HDMI/USB connected VDU and uses the ``ddcutil`` command line utility to issue *Display Data Channel*
-(*DDC*) *Virtual Control Panel*  (*VCP*) commands to each of them.
+(*DDC*) *Virtual Control Panel*  (*VCP*) commands to each of them. The intent is not to provide a comprehensive set
+of controls but rather to provide a simple panel with a selection of essential controls for the desktop.
 
-By default ``vdu_controls`` supports a range of controls that are generally useful.  The default set of controls is
-less than those that ``ddcutil`` provides, but the ``vdu_controls`` option ``--enable-vcp-code`` can be used to
-display other controls if desired.
+By default ``vdu_controls`` offers a subset of possible controls including brightness, contrast.  Additional controls
+can be enabled via the ``--enable-vcp-code`` option.
 
 Builtin laptop displays normally don't implement DDC and those displays are not supported, but a laptop's
 externally connected VDU's are likely to be controllable.
@@ -163,7 +163,8 @@ with this program. If not, see <https://www.gnu.org/licenses/>.
 ----------
 
 """
-
+import shutil
+import stat
 import sys
 import re
 import subprocess
@@ -176,6 +177,7 @@ import textwrap
 import signal
 from pathlib import Path
 from typing import List, Tuple, Mapping
+from shutil import copyfile
 
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox
@@ -296,7 +298,7 @@ class VcpGuiControlDef:
         return self.name.replace(' ', '-').lower()
 
 
-#: Default "safe" VCP capabilities to be made available as GUI controls by default.
+#: Default "usefull" VCP capabilities to be made available as GUI controls by default.
 SUPPORTED_VCP_CONTROLS = {
     '10': VcpGuiControlDef('10', 'Brightness', icon_source=BRIGHTNESS_SVG),
     '12': VcpGuiControlDef('12', 'Contrast', icon_source=CONTRAST_SVG),
@@ -446,10 +448,10 @@ class DdcVdu:
         model_config = re.sub(unacceptable_char_pattern, '_', vdu_model.strip()) + '.conf'
         for config_filename in (serial_config, model_config):
             config_path = Path.home().joinpath('.config').joinpath('vdu_controls').joinpath(config_filename)
-            print("INFO: checking for config file '" + config_path.as_uri() + "'")
+            print("INFO: checking for config file '" + config_path.as_posix() + "'")
             if os.path.isfile(config_path) and os.access(config_path, os.R_OK):
                 alt_capability_text = Path(config_path).read_text()
-                print("WARNING: using config file '" + config_path.as_uri() + "'")
+                print("WARNING: using config file '" + config_path.as_posix() + "'")
                 break
         self.capabilities = ddcutil.query_capabilities(vdu_id, alt_capability_text)
 
@@ -792,6 +794,47 @@ def exception_handler(e_type, e_value, e_traceback):
     QApplication.quit()
 
 
+def install_as_desktop_application():
+    """Self install this script in the current Linux user's bin directory and desktop applications->settings menu."""
+    desktop_dir = Path.home().joinpath('.local', 'share', 'applications')
+    if not desktop_dir.exists():
+        raise ValueError("Cannot install, user does not appear to be a normal desktop user",
+                         "No desktop directory is present:".format(desktop_dir.as_posix()))
+
+    bin_dir = Path.home().joinpath('bin')
+    bin_dir.mkdir(exist_ok=True)
+
+    installed_script_path = bin_dir.joinpath("vdu_controls")
+    if installed_script_path.exists():
+        print("WARNING: skipping installation of {}, it is already present.".format(installed_script_path.as_posix()))
+    else:
+        source = open(__file__).read()
+        source = source.replace("#!/usr/bin/python3", '#!' + sys.executable)
+        print('INFO: creating {}'.format(installed_script_path.as_posix()))
+        open(installed_script_path, 'w').write(source)
+        print('INFO: chmod u+rwx {}'.format(installed_script_path.as_posix()))
+        os.chmod(installed_script_path, stat.S_IRWXU)
+
+    desktop_definition_path = desktop_dir.joinpath("vdu_controls.desktop")
+    if desktop_definition_path.exists():
+        print("WARNING: skipping installation of {}, it is already present.".format(desktop_definition_path.as_posix()))
+    else:
+        print('INFO: creating {}'.format(desktop_definition_path.as_posix()))
+        desktop_definition=textwrap.dedent("""
+            [Desktop Entry]
+            Type=Application
+            Exec={} --show brightness --show audio-volume
+            Name=VDU Controls
+            GenericName=VDU controls
+            Comment=Virtual Control Panel for externally connected VDU's
+            Icon=preferences-desktop-display-color
+            Categories=Qt;Settings;
+            """).format(installed_script_path.as_posix())
+        open(desktop_definition_path, 'w').write(desktop_definition)
+
+    print('INFO: installation complete. Your desktop->applications->settings should now contain VDU Controls')
+
+
 def main():
     """vdu_control application main."""
     # Allow control-c to terminate the program
@@ -818,7 +861,12 @@ def main():
     parser.add_argument('--no-splash', default=False, action='store_true', help="don't show the splash screen")
     parser.add_argument('--sleep-multiplier', type=float, default="0.5",
                         help='protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 0.5)')
+    parser.add_argument('--install', action='store_true',
+                        help='installs this script as a desktop application for the current user.')
     args = parser.parse_args()
+    if args.install:
+        install_as_desktop_application()
+        sys.exit()
     sys.excepthook = exception_handler
     app = QApplication(sys.argv)
     pixmap = get_splash_image()
