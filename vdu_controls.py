@@ -188,7 +188,7 @@ from PyQt5.QtSvg import QSvgWidget
 
 def translate(source_text: str):
     """For future internationalization - recommended way to do this at this time."""
-    return QCoreApplication.translate('ddc-control', source_text)
+    return QCoreApplication.translate('vdu_contols', source_text)
 
 
 BRIGHTNESS_SVG = b"""
@@ -877,7 +877,7 @@ def main():
     app_icon = QIcon()
     app_icon.addPixmap(pixmap)
     app.setWindowIcon(app_icon)
-    app.setApplicationDisplayName(translate('VDU Control'))
+    app.setApplicationDisplayName(translate('VDU Controls'))
 
     if len(args.show) != 0:
         enabled_vcp_codes = [x.vcp_code for x in SUPPORTED_VCP_CONTROLS.values() if x.arg_name() in args.show]
@@ -886,11 +886,11 @@ def main():
     if args.enable_vcp_code is not None:
         enabled_vcp_codes.extend(args.enable_vcp_code)
     if splash is not None:
-        splash.showMessage(translate('\n\nVDU Control\nLooking for DDC monitors...\n'), Qt.AlignTop | Qt.AlignHCenter)
+        splash.showMessage(translate('\n\nVDU Controls\nLooking for DDC monitors...\n'), Qt.AlignTop | Qt.AlignHCenter)
 
     def detect_vdu_hook(vdu: DdcVdu):
         if splash is not None:
-            splash.showMessage(translate('\n\nVDU Control\nDDC ID {}\n{}').format(vdu.id, vdu.get_description()),
+            splash.showMessage(translate('\n\nVDU Controls\nDDC ID {}\n{}').format(vdu.id, vdu.get_description()),
                                Qt.AlignTop | Qt.AlignHCenter)
 
     main_window = DdcMainWidget(enabled_vcp_codes, args.warnings, args.debug, args.sleep_multiplier, detect_vdu_hook)
