@@ -52,8 +52,7 @@ the settings menu or by entering part of its name in the application menus searc
   
 
 Whether run from the desktop application-menu or run from the command line, ``vdu-controls`` behaviour can be altered
-by a number of command line options, see the [man page](docs/_build/man/vdu_controls.1.html) 
-for details.
+by a number of command line options, see the [man page](docs/_build/man/vdu_controls.1.html) for details.
 
 Command line options can be added to the desktop application-menu by editing the application menu item
 directly in the desktop (for *KDE-Plasma* this can be achieved by right-mousing on the **VDU Controls** menu 
@@ -69,7 +68,6 @@ Brief help can always be accessed via the command line help option
 # or if installed in $HOME/bin
 % vdu_controls --help
 ```
-
 Some controls change the number of connected devices (for example, some VDU's support a power-off command). If
 such controls are used, ``vdu_controls`` will detect the change and will restart itself to reconfigure the controls
 for the new situation (for example, DDC VDU 2 may now be DD VDU 1).  Similarly, if you physically unplug monitor, the
