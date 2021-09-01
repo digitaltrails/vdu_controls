@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "VDU_CONTROLS" "1" "Sep 01, 2021" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Sep 02, 2021" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.0
 .
@@ -30,6 +30,173 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
+.sp
+# vdu_controls \- a GUI wrapper for ddutil
+.sp
+A GUI for controlling connected \fIVisual Display Units\fP (\fIVDU\fP\(aqs) (also known as \fIdisplays\fP, or \fImonitors\fP).
+.sp
+## Description
+.sp
+\fBvdu_controls\fP is a virtual control panel for physically connected VDU\(aqs.  It displays a set of controls for
+each  DVI/DP/HDMI/USB connected VDU and uses the \fBddcutil\fP command line utility to issue \fIDisplay Data Channel\fP
+(\fIDDC\fP) \fIVirtual Control Panel\fP  (\fIVCP\fP) commands to each of them.
+.sp
+By default \fBvdu_controls\fP offers a subset of the possible controls including brightness, and contrast.  Additional
+controls can be enabled via the \fB\-\-enable\-vcp\-code\fP option.
+.sp
+![Default](screen\-shots/Screenshot_Large\-330.png)  ![Custom](screen\-shots/Screenshot_Small\-227.png)
+.sp
+## Getting Started
+.sp
+### Dependencies
+.sp
+All the following runtime dependencies are likely to be available pre\-packaged on any modern Linux distribution
+(\fBvdu_controls\fP was originally developed on OpenSUSE Tumbleweed).
+.INDENT 0.0
+.IP \(bu 2
+Linux: but may be able to run on any operating system that provides the required dependencies.
+.IP \(bu 2
+ddcutil: the command line utility that interfaces to VDU\(aqs via DDC over i2c\-dev or USB.
+.IP \(bu 2
+i2c\-dev: the i2c\-dev Linux kernel module required by ddutil
+.IP \(bu 2
+python 3.8: \fBvdu_controls\fP is written in python and may depend on some features present only in 3.8 onward.
+.IP \(bu 2
+python 3.8 QtPy: the python GUI library used by \fBvdu_controls\fP\&.
+.UNINDENT
+.sp
+### Installing
+.sp
+The \fBvdu_vontrols.py\fP script is fully self\-contained and is the only component required (beyond the prerequisites).
+.INDENT 0.0
+.IP \(bu 2
+The script can be run without installation by using a python interpreter, for example:  \fB% python3 vdu_controls.py\fP
+.IP \(bu 2
+The script can be self installed as desktop application in the desktop menu as \fISettings\->VDU Controls\fP by running:  \fB% python3 vdu_controls.py \-\-install\fP
+.UNINDENT
+.sp
+If you wish to reverse the \fB\-\-install\fP process, just rerun \fB\-\-install\fP and remove the two files it reports
+as already installed (depending on which desktop you\(aqre running menu changes may require logout before they become
+visible).
+.sp
+### Executing the program
+.INDENT 0.0
+.IP \(bu 2
+If installed  by the \fB\-\-install\fP option, \fBvdu_controls\fP should be in $HOME/bin. Provinding $HOME/bin is on the
+user\(aqs \fBPATH\fP, \fBvdu_controls\fP should be able to be run from the command line, for example:  \fB% vdu_controls \-\-show brightness \-\-show contrast \-\-show audio\-volume\fP
+.IP \(bu 2
+If installed  by the \fB\-\-install\fP option, a menu item named \fBVDU Controls\fP should be able to be located in
+.UNINDENT
+.sp
+the settings menu or by entering part of its name in the application menus search bar.
+* If the script has not been "installed", it can still be run on the command line via the python interpreter,
+.INDENT 0.0
+.INDENT 3.5
+for example:  \fB% python3 vdu_controls.py  \-\-show brightness \-\-show contrast\fP
+.UNINDENT
+.UNINDENT
+.sp
+Whether run from the desktop application\-menu or run from the command line, \fBvdu\-controls\fP behaviour can be altered
+by a number of command line options, see the [man page](docs/_build/man/vdu_controls.1.html) for details.
+.sp
+Command line options can be added to the desktop application\-menu by editing the application menu item
+directly in the desktop (for \fIKDE\-Plasma\fP this can be achieved by right\-mousing on the \fBVDU Controls\fP menu
+item and selecting \fBEdit Application\fP).  Alternatively, it is just as easy to use your preferred text editor to
+edit the desktop definition file \fB$HOME/.local/share/applications/vdu_controls.desktop\fP and add options to
+the \fBExec=\fP line.
+.sp
+## Help
+.sp
+Brief help can always be accessed via the command line help option
+\fB\(ga
+% python3 vdu_controls.py \-\-help
+# or if installed in $HOME/bin
+% vdu_controls \-\-help
+\(ga\fP
+Some controls change the number of connected devices (for example, some VDU\(aqs support a power\-off command). If
+such controls are used, \fBvdu_controls\fP will detect the change and will restart itself to reconfigure the controls
+for the new situation (for example, DDC VDU 2 may now be DD VDU 1).  Similarly, if you physically unplug monitor, the
+same thing will happen.
+.sp
+Note that some VDU settings may disable or enable other settings. For example, setting a monitor to a specific
+picture\-profile might result in the contrast\-control being disabled, but \fBddc_controls\fP will not be aware of
+the restriction resulting in its contrast\-control appearing to do nothing.
+.sp
+Builtin laptop displays normally don\(aqt implement DDC and those displays are not supported, but a laptop\(aqs
+externally connected VDU\(aqs are likely to be controllable.
+.sp
+## Development
+.sp
+I\(aqve set up the \fBvdu_controls\fP source with a typical Python development, but there is only one real source
+file, \fBvdu_controls.py\fP, so the file hierarchy is rather over the top.  A standard python distributable
+can be built by issuing the following commands at the top of the project hierarchy:
+\fB\(ga
+% python3 \-m build
+\&...
+% ls \-1 dist/
+total 268
+vdu_controls_digitaltrails\-1.0.0\-py3\-none\-any.whl
+vdu_controls\-digitaltrails\-1.0.0.tar.gz
+\(ga\fP
+.sp
+A sphinx markup configuration has been proved to extract a manpage or HTML help from \fBvdu_controls.py\fP\&. The following
+commands :
+\fB\(ga
+% cd docs
+% make man
+% make html
+\(ga\fP
+.sp
+My IDE for this project is [PyCharm Community Edition](\fI\%https://www.jetbrains.com/pycharm/\fP)
+.sp
+## Authors
+.sp
+Michael Hamilton\(ga\(gam i c h a e l   @  a c t r i x   .   g e n  . n z\(ga\(ga
+.sp
+## Version History
+.INDENT 0.0
+.IP \(bu 2
+.INDENT 2.0
+.TP
+.B 1.0
+.INDENT 7.0
+.IP \(bu 2
+Initial Release
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.sp
+## License
+.sp
+This project is licensed under the \fBGNU General Public License Version 3\fP \- see the [LICENSE.md](LICENSE.md) file for details
+.sp
+#### vdu_controls Copyright (C) 2021 Michael Hamilton
+.sp
+This program is free software: you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the
+Free Software Foundation, version 3.
+.sp
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+more details.
+.sp
+You should have received a copy of the GNU General Public License along
+with this program. If not, see <\fI\%https://www.gnu.org/licenses/\fP>.
+.sp
+## Acknowledgments
+.INDENT 0.0
+.IP \(bu 2
+[ddutil](\fI\%https://www.ddcutil.com\fP)
+.IP \(bu 2
+[pyqt](\fI\%https://riverbankcomputing.com/software/pyqt/\fP)
+.IP \(bu 2
+[sphinx markdown](\fI\%https://www.sphinx\-doc.org/en/master/index.html\fP)
+.IP \(bu 2
+[PyCharm Community Edition](\fI\%https://www.jetbrains.com/pycharm/\fP)
+.IP \(bu 2
+[Pandoc](\fI\%https://pandoc.org/\fP)
+.UNINDENT
 .SH VDU_CONTROLS: A QT GUI WRAPPER FOR DDCUTIL
 .sp
 A GUI for controlling connected \fIVisual Display Units\fP (\fIVDU\fP\(aqs) (also known as \fIdisplays\fP, or \fImonitors\fP).

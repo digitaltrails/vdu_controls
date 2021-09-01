@@ -29,6 +29,8 @@ Optional arguments:
       --no-splash           don't show the splash screen
       --sleep-multiplier multiplier
                             protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 0.5)
+      --install             installs the vdu_controls in the current user's path and desktop application menu.
+      --uninstall           uninstalls the vdu_controls application menu file and script for the current user.
 
 Description
 -----------
@@ -56,11 +58,18 @@ the restriction resulting in its contrast-control appearing to do nothing.
 Configuration
 -------------
 
-Most configuration is supplied via command line parameters.  There is an optional config file for each VDU
-or VDU-model.
+Most configuration is supplied via command line parameters.
+
+Command line options can be added to the desktop application-menu by editing the application menu item
+directly in the desktop (for *KDE-Plasma* this can be achieved by right-mousing on the **VDU Controls** menu
+item and selecting **Edit Application**).  Alternatively, it is just as easy to use your preferred text editor to
+edit the desktop definition file ``$HOME/.local/share/applications/vdu_controls.desktop`` and add options to
+the ``Exec=`` line.
 
 VDU/VDU-model config files
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+An optional config file can be setup for each VDU or VDU-model.
 
 The VDU config files are provided so that manufacturer supplied meta data when it proves to be inaccurate. These
 config files can be model specific, or model and serial-number specific. For example, a VCP query to my
@@ -78,7 +87,7 @@ LG monitor reports that it has four inputs, but in reality it only has three.  I
 
     3 Edit the config file find the appropriate feature, in this case ``Feature: 60 (Input Source)``::
 
-        # Use a text editor to find the erronious DisplayPort-2 and get rid of it.
+        # Use a text editor to find the erroneous DisplayPort-2 and get rid of it.
         % vi /home/michael/.config/vdu_controls/LG_HDR_4K.conf
 
     4 Run ``vdu_control`` and confirm the the config file is being used and the correct number of inputs is shown::
@@ -101,7 +110,7 @@ Responsiveness
 ^^^^^^^^^^^^^^
 
 In order to support a wide variety of VDU's ``ddcutil`` has to be conservative in respect to how fast it
-communicates with VDU's.  If your VDU's are modern, you may find a smaller ``--sleep-multipler`` works just fine
+communicates with VDU's.  If your VDU's are modern, you may find a smaller ``--sleep-multiplier`` works just fine
 and both ``ddctuil`` and ``vdu_controls`` will be much more responsive.
 
 Using VDU config files may speed up the startup by eliminating the need to run ``ddcutil`` to retrieve
@@ -116,7 +125,7 @@ Examples
     ``vdu_controls.py --show brightness --show contrast``
         Specified controls only:
 
-    ``vdu_controls.py --hide contrast --hide audio-vulume``
+    ``vdu_controls.py --hide contrast --hide audio-volume``
         All default controls except for those to be hidden.
 
     ``vdu_controls.py --enable-vcp-code 70 --warnings --debug``
@@ -163,7 +172,6 @@ with this program. If not, see <https://www.gnu.org/licenses/>.
 ----------
 
 """
-import shutil
 import stat
 import sys
 import re
@@ -177,7 +185,6 @@ import textwrap
 import signal
 from pathlib import Path
 from typing import List, Tuple, Mapping
-from shutil import copyfile
 
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox
@@ -188,7 +195,7 @@ from PyQt5.QtSvg import QSvgWidget
 
 def translate(source_text: str):
     """For future internationalization - recommended way to do this at this time."""
-    return QCoreApplication.translate('vdu_contols', source_text)
+    return QCoreApplication.translate('vdu_controls', source_text)
 
 
 BRIGHTNESS_SVG = b"""
@@ -298,7 +305,7 @@ class VcpGuiControlDef:
         return self.name.replace(' ', '-').lower()
 
 
-#: Default "usefull" VCP capabilities to be made available as GUI controls by default.
+#: Default "useful" VCP capabilities to be made available as GUI controls by default.
 SUPPORTED_VCP_CONTROLS = {
     '10': VcpGuiControlDef('10', 'Brightness', icon_source=BRIGHTNESS_SVG),
     '12': VcpGuiControlDef('12', 'Contrast', icon_source=CONTRAST_SVG),
@@ -794,17 +801,30 @@ def exception_handler(e_type, e_value, e_traceback):
     QApplication.quit()
 
 
-def install_as_desktop_application():
+def install_as_desktop_application(uninstall: bool = False):
     """Self install this script in the current Linux user's bin directory and desktop applications->settings menu."""
     desktop_dir = Path.home().joinpath('.local', 'share', 'applications')
     if not desktop_dir.exists():
-        raise ValueError("Cannot install, user does not appear to be a normal desktop user",
-                         "No desktop directory is present:".format(desktop_dir.as_posix()))
+        print("ERROR: No desktop directory is present:{}".format(desktop_dir.as_posix()),
+              "Cannot proceed - is this a non-standard desktop?")
+        return
 
     bin_dir = Path.home().joinpath('bin')
-    bin_dir.mkdir(exist_ok=True)
+    if not bin_dir.is_dir():
+        print("ERROR: No desktop bin directory is present:{}".format(bin_dir.as_posix()),
+              "Cannot proceed - is this a non-standard desktop?")
+        return
 
     installed_script_path = bin_dir.joinpath("vdu_controls")
+    desktop_definition_path = desktop_dir.joinpath("vdu_controls.desktop")
+
+    if uninstall:
+        os.remove(installed_script_path)
+        print('INFO: removed {}'.format(installed_script_path.as_posix()))
+        os.remove(desktop_definition_path)
+        print('INFO: removed {}'.format(desktop_definition_path.as_posix()))
+        return
+
     if installed_script_path.exists():
         print("WARNING: skipping installation of {}, it is already present.".format(installed_script_path.as_posix()))
     else:
@@ -815,12 +835,11 @@ def install_as_desktop_application():
         print('INFO: chmod u+rwx {}'.format(installed_script_path.as_posix()))
         os.chmod(installed_script_path, stat.S_IRWXU)
 
-    desktop_definition_path = desktop_dir.joinpath("vdu_controls.desktop")
     if desktop_definition_path.exists():
         print("WARNING: skipping installation of {}, it is already present.".format(desktop_definition_path.as_posix()))
     else:
         print('INFO: creating {}'.format(desktop_definition_path.as_posix()))
-        desktop_definition=textwrap.dedent("""
+        desktop_definition = textwrap.dedent("""
             [Desktop Entry]
             Type=Application
             Exec={} --show brightness --show audio-volume
@@ -862,11 +881,17 @@ def main():
     parser.add_argument('--sleep-multiplier', type=float, default="0.5",
                         help='protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 0.5)')
     parser.add_argument('--install', action='store_true',
-                        help='installs this script as a desktop application for the current user.')
+                        help="installs the vdu_controls in the current user's path and desktop application menu.")
+    parser.add_argument('--uninstall', action='store_true',
+                        help='uninstalls the vdu_controls application menu file and script for the current user.')
     args = parser.parse_args()
     if args.install:
         install_as_desktop_application()
         sys.exit()
+    if args.uninstall:
+        install_as_desktop_application(uninstall=True)
+        sys.exit()
+
     sys.excepthook = exception_handler
     app = QApplication(sys.argv)
     pixmap = get_splash_image()
