@@ -17,7 +17,7 @@ controls can be enabled via the ``--enable-vcp-code`` option.
 
 ### Dependencies
 
-All the following dependencies are likely to be available pre-packaged on any modern Linux distribution 
+All the following runtime dependencies are likely to be available pre-packaged on any modern Linux distribution 
 (``vdu_controls`` was originally developed on OpenSUSE Tumbleweed).
 
 * Linux: but may be able to run on any operating system that provides the required dependencies.
@@ -52,7 +52,7 @@ the settings menu or by entering part of its name in the application menus searc
   
 
 Whether run from the desktop application-menu or run from the command line, ``vdu-controls`` behaviour can be altered
-by a number of command line options, see the [man page](https://github.com/digitaltrails/vdu_controls/docs/html/index.html) 
+by a number of command line options, see the [man page](docs/_build/man/vdu_controls.1.html) 
 for details.
 
 Command line options can be added to the desktop application-menu by editing the application menu item
@@ -82,6 +82,30 @@ the restriction resulting in its contrast-control appearing to do nothing.
 Builtin laptop displays normally don't implement DDC and those displays are not supported, but a laptop's
 externally connected VDU's are likely to be controllable.
 
+## Development
+
+I've set up the ``vdu_controls`` source with a typical Python development, but there is only one real source
+file, ``vdu_controls.py``, so the file hierarchy is rather over the top.  A standard python distributable 
+can be built by issuing the following commands at the top of the project hierarchy:
+```
+% python3 -m build
+...
+% ls -1 dist/
+total 268
+vdu_controls_digitaltrails-1.0.0-py3-none-any.whl
+vdu_controls-digitaltrails-1.0.0.tar.gz
+```
+
+A sphinx markup configuration has been proved to extract a manpage or HTML help from ``vdu_controls.py``. The following 
+commands :
+```
+% cd docs
+% make man
+% make html
+```
+
+My IDE for this project is [PyCharm Community Edition](https://www.jetbrains.com/pycharm/)
+
 ## Authors
 
 Michael Hamilton\
@@ -95,7 +119,7 @@ Michael Hamilton\
 
 ## License
 
-This project is licensed under the **GNU General Public License Version 3** - see the LICENSE.md file for details
+This project is licensed under the **GNU General Public License Version 3** - see the [LICENSE.md](LICENSE.md) file for details
 
 #### vdu_controls Copyright (C) 2021 Michael Hamilton
 
@@ -113,21 +137,8 @@ with this program. If not, see <https://www.gnu.org/licenses/>.
 
 ## Acknowledgments
 
-Inspiration, code snippets, etc.
-* [awesome-readme](https://github.com/matiassingers/awesome-readme)
-* [PurpleBooth](https://gist.github.com/PurpleBooth/109311bb0361f32d87a2)
-* [dbader](https://github.com/dbader/readme-template)
-* [zenorocha](https://gist.github.com/zenorocha/4526327)
-* [fvcproductions](https://gist.github.com/fvcproductions/1bfc2d4aecb01a834b46)
-
-python3 -m build
-
-Prerequisites:
-
-zypper install python38-QtPy
-zypper install ddcutil
-lsmod | grep i2c-dev
-modprobe i2c-dev
-
-cd docs
-make man html
+* [ddutil](https://www.ddcutil.com)
+* [pyqt](https://riverbankcomputing.com/software/pyqt/)
+* [sphinx markdown](https://www.sphinx-doc.org/en/master/index.html)
+* [PyCharm Community Edition](https://www.jetbrains.com/pycharm/)
+* [Pandoc](https://pandoc.org/)
