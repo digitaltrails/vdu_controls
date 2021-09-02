@@ -93,9 +93,9 @@ LG monitor reports that it has four inputs, but in reality it only has three.  I
     4 Run ``vdu_control`` and confirm the the config file is being used and the correct number of inputs is shown::
 
         % ./vdu_controls.py
-        INFO: checking for config file 'file:///home/michael/.config/vdu_controls/LG_HDR_4K_SN43328.conf'
-        INFO: checking for config file 'file:///home/michael/.config/vdu_controls/LG_HDR_4K.conf'
-        WARNING: using config file 'file:///home/michael/.config/vdu_controls/LG_HDR_4K.conf'
+        INFO: checking for config file '/home/michael/.config/vdu_controls/LG_HDR_4K_SN43328.conf'
+        INFO: checking for config file '/home/michael/.config/vdu_controls/LG_HDR_4K.conf'
+        WARNING: using config file '/home/michael/.config/vdu_controls/LG_HDR_4K.conf'
 
 In the case where the manufacturers serial number cannot be retrieved, ``vdu_controls`` will look for a config file
 containing the display number instead.
