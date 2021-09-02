@@ -1,5 +1,5 @@
-vdu_controls - a GUI wrapper for ddutil
-=======================================
+vdu_controls - a GUI wrapper for ddcutil
+========================================
 
 A GUI for controlling connected *Visual Display Units* (*VDU*'s) (also known as *displays*, or *monitors*).
 
@@ -28,7 +28,7 @@ All the following runtime dependencies are likely to be available pre-packaged o
 (``vdu_controls`` was originally developed on OpenSUSE Tumbleweed).
 
 * ddcutil: the command line utility that interfaces to VDU's via DDC over i2c-dev or USB.
-* i2c-dev: the i2c-dev kernel module normally shipped with all Linux distributions and required by [ddutil](https://www.ddcutil.com)
+* i2c-dev: the i2c-dev kernel module normally shipped with all Linux distributions and required by [ddcutil](https://www.ddcutil.com)
 * python 3.8: ``vdu_controls`` is written in python and may depend on some features present only in 3.8 onward.
 * python 3.8 QtPy: the python GUI library used by ``vdu_controls``.
 
@@ -134,7 +134,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>.
 
 ## Acknowledgments
 
-* [ddutil](https://www.ddcutil.com)
+* [ddcutil](https://www.ddcutil.com)
 * [pyqt](https://riverbankcomputing.com/software/pyqt/)
 * [Sphinx Python Documentation Generator](https://www.sphinx-doc.org/en/master/index.html)
 * [PyCharm Community Edition](https://www.jetbrains.com/pycharm/)

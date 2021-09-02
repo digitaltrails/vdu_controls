@@ -101,18 +101,18 @@ In the case where the manufacturers serial number cannot be retrieved, ``vdu_con
 containing the display number instead.
 
 The VDU Config files read by ``vdu_controls`` can only be used to alter definitions of VCP codes already supported
-by ``ddctutil``.  If the file lists a VCP code as a *manufacturer specific feature* then ``ddcutil`` will refuse to
+by ``ddcutil``.  If the file lists a VCP code as a *manufacturer specific feature* then ``ddcutil`` will refuse to
 set values for that code.  In the future it will be possible to fully enable such codes by creating a ``ddcutil``
 user definition (``--udef``) file.  The ``ddcutil --udef`` option is still work in progress and unavailable at the
 time at the time of writing.
 
-Possible codes to try might be found in the output of ``ddutils vcpinfo`` which lists all known codes in the standard.
+Possible codes to try might be found in the output of ``ddcutil vcpinfo`` which lists all known codes in the standard.
 
 Responsiveness
 ^^^^^^^^^^^^^^
 
 If your VDU's are modern, you may find a smaller ``--sleep-multiplier`` will speed up the ``ddcutil`` to VDU protocol
-exchanges making both ``ddctuil`` and ``vdu_controls`` much more responsive.
+exchanges making both ``ddcutil`` and ``vdu_controls`` much more responsive.
 
 Using VDU/VDU-model config files files may speed up the startup by eliminating the need to run ``ddcutil`` to retrieve
 VDU capabilities.
@@ -306,7 +306,6 @@ class VcpGuiControlDef:
         return re.sub('[^A-Za-z0-9_-]', '-', self.name).lower()
 
 
-#: Default "useful" VCP capabilities to be made available as GUI controls by default.
 SUPPORTED_VCP_CONTROLS = {
     '10': VcpGuiControlDef('10', 'Brightness', icon_source=BRIGHTNESS_SVG),
     '12': VcpGuiControlDef('12', 'Contrast', icon_source=CONTRAST_SVG),
@@ -323,6 +322,7 @@ class DdcUtil:
     def __init__(self, debug: bool = False, common_args: List[str] = None):
         super().__init__()
         self.debug = debug
+        self.supported_codes = None
         self.common_args = [] if common_args is None else common_args
 
     def __run__(self, *args) -> subprocess.CompletedProcess:
@@ -448,12 +448,12 @@ class DdcUtil:
             print(code_def)
             lines = code_def.split('\n')
             vcp_code, vcp_name = lines[0].split(': ', 1)
-            ddutil_feature_subsets = None
+            ddcutil_feature_subsets = None
             for line in lines[2:]:
                 line = line.strip()
                 if line.startswith('ddcutil feature subsets:'):
-                    ddutil_feature_subsets = line.split(": ", 1)
-            if ddutil_feature_subsets is not None:
+                    ddcutil_feature_subsets = line.split(": ", 1)
+            if ddcutil_feature_subsets is not None:
                 vcp_def = VcpGuiControlDef(vcp_code=vcp_code, vcp_name=vcp_name)
                 if vcp_code not in self.supported_codes:
                     self.supported_codes[vcp_code] = vcp_def
