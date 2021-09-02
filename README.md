@@ -134,7 +134,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>.
 
 ## Acknowledgments
 
-* [ddutil](https://www.ddcutil.com)
+* [ddcutil](https://www.ddcutil.com)
 * [pyqt](https://riverbankcomputing.com/software/pyqt/)
 * [Sphinx Python Documentation Generator](https://www.sphinx-doc.org/en/master/index.html)
 * [PyCharm Community Edition](https://www.jetbrains.com/pycharm/)
