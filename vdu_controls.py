@@ -532,7 +532,8 @@ class DdcSliderWidget(QWidget):
         layout = QHBoxLayout()
         self.setLayout(layout)
 
-        if vcp_capability.vcp_code in SUPPORTED_VCP_CONTROLS:
+        if vcp_capability.vcp_code in SUPPORTED_VCP_CONTROLS and \
+                SUPPORTED_VCP_CONTROLS[vcp_capability.vcp_code].icon_source is not None:
             icon = QSvgWidget()
             icon.load(SUPPORTED_VCP_CONTROLS[vcp_capability.vcp_code].icon_source)
             icon.setFixedSize(50, 50)
