@@ -1,8 +1,8 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "VDU_CONTROLS" "1" "Sep 03, 2021" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Sep 05, 2021" "" "vdu_controls"
 .SH NAME
-vdu_controls \- vdu_controls 1.0
+vdu_controls \- vdu_controls 1.1
 .
 .nr rst2man-indent-level 0
 .
@@ -38,10 +38,10 @@ A GUI for controlling connected \fIVisual Display Units\fP (\fIVDU\fP\(aqs) (als
 .INDENT 3.5
 .INDENT 0.0
 .TP
-.B vdu_controls.py [\-h]
+.B vdu_controls [\-h]
 [\-\-show {brightness,contrast,audio\-volume,input\-source,power\-mode,osd\-language}]
 [\-\-hide {brightness,contrast,audio\-volume,input\-source,power\-mode,osd\-language}]
-[\-\-enable\-vcp\-code vcp_code] [\-\-debug] [\-\-warnings]
+[\-\-enable\-vcp\-code vcp_code] [\-\-system\-tray] [\-\-debug] [\-\-warnings]
 [\-\-no\-splash] [\-\-sleep\-multiplier multiplier]
 .UNINDENT
 .UNINDENT
@@ -62,6 +62,9 @@ hide/disable a control (\-\-hide may be specified multiple times)
 .TP
 .BI \-\-enable\-vcp\-code \ vcp_code
 enable a control for a vcp\-code unavailable via hide/show (may be specified multiple times)
+.TP
+.B \-\-system\-tray
+start up as an entry in the system tray
 .TP
 .B \-\-debug
 enable debug output to stdout
@@ -91,7 +94,8 @@ each  DVI/DP/HDMI/USB connected VDU and uses the \fBddcutil\fP command line util
 of controls but rather to provide a simple panel with a selection of essential controls for the desktop.
 .sp
 By default \fBvdu_controls\fP offers a subset of possible controls including brightness, contrast.  Additional controls
-can be enabled via the \fB\-\-enable\-vcp\-code\fP option.
+can be enabled via the \fB\-\-enable\-vcp\-code\fP option. \fBvdu_controls\fP may optionally run as a entry in the system
+tray.
 .sp
 Builtin laptop displays normally don\(aqt implement DDC and those displays are not supported, but a laptop\(aqs
 externally connected VDU\(aqs are likely to be controllable.
@@ -200,19 +204,22 @@ VDU capabilities.
 .INDENT 3.5
 .INDENT 0.0
 .TP
-.B \fBvdu_controls.py\fP
+.B \fBvdu_controls\fP
 All default controls.
 .TP
-.B \fBvdu_controls.py \-\-show brightness \-\-show contrast\fP
+.B \fBvdu_controls \-\-show brightness \-\-show contrast\fP
 Specified controls only:
 .TP
-.B \fBvdu_controls.py \-\-hide contrast \-\-hide audio\-volume\fP
+.B \fBvdu_controls \-\-hide contrast \-\-hide audio\-volume\fP
 All default controls except for those to be hidden.
 .TP
-.B \fBvdu_controls.py \-\-enable\-vcp\-code 70 \-\-warnings \-\-debug\fP
+.B \fBvdu_controls \-\-system\-tray \-\-no\-splash \-\-show brightness \-\-show audio\-volume\fP
+Start as a system tray entry without showing the splash\-screen.
+.TP
+.B \fBvdu_controls \-\-enable\-vcp\-code 70 \-\-warnings \-\-debug\fP
 All default controls, plus a control for VCP_CODE 70, show any warnings, output debugging info.
 .TP
-.B \fBvdu_controls.py \-\-sleep\-multiplier 0.1\fP
+.B \fBvdu_controls \-\-sleep\-multiplier 0.1\fP
 All default controls, speed up or slow down ddcutil by passing a sleep multiplier.
 .UNINDENT
 .UNINDENT

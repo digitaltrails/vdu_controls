@@ -1,5 +1,5 @@
 <h1>NAME</h1>
-<p>vdu_controls - vdu_controls 1.0</p>
+<p>vdu_controls - vdu_controls 1.1</p>
 <h1>VDU_CONTROLS: A QT GUI WRAPPER FOR DDCUTIL</h1>
 <p>A GUI for controlling connected <em>Visual Display Units</em> (<em>VDU</em>'s) (also known as <em>displays</em>, or <em>monitors</em>).</p>
 <h1>USAGE::</h1>
@@ -7,8 +7,8 @@
 <blockquote>
 <blockquote>
 <dl>
-<dt><strong>vdu_controls.py [-h]</strong></dt>
-<dd><p>[--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}] [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}] [--enable-vcp-code vcp_code] [--debug] [--warnings] [--no-splash] [--sleep-multiplier multiplier]</p>
+<dt><strong>vdu_controls [-h]</strong></dt>
+<dd><p>[--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}] [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}] [--enable-vcp-code vcp_code] [--system-tray] [--debug] [--warnings] [--no-splash] [--sleep-multiplier multiplier]</p>
 </dd>
 </dl>
 </blockquote>
@@ -30,6 +30,9 @@
 </dd>
 <dt><strong>--enable-vcp-code</strong><em> vcp_code</em></dt>
 <dd><p>enable a control for a vcp-code unavailable via hide/show (may be specified multiple times)</p>
+</dd>
+<dt><strong>--system-tray</strong></dt>
+<dd><p>start up as an entry in the system tray</p>
 </dd>
 <dt><strong>--debug</strong></dt>
 <dd><p>enable debug output to stdout</p>
@@ -55,7 +58,7 @@
 </blockquote>
 <h1>DESCRIPTION</h1>
 <p><strong>vdu_controls is a virtual control panel for physically connected VDU's. It displays a set of controls for</strong> each DVI/DP/HDMI/USB connected VDU and uses the <strong>ddcutil command line utility to issue </strong><em>Display Data Channel</em> (<em>DDC</em><strong>) </strong><em>Virtual Control Panel</em><strong> (</strong><em>VCP</em><strong>) commands to each of them. The intent is not to provide a comprehensive set</strong> of controls but rather to provide a simple panel with a selection of essential controls for the desktop.</p>
-<p>By default <strong>vdu_controls offers a subset of possible controls including brightness, contrast. Additional controls</strong> can be enabled via the <strong>--enable-vcp-code option.</strong></p>
+<p>By default <strong>vdu_controls offers a subset of possible controls including brightness, contrast. Additional controls</strong> can be enabled via the <strong>--enable-vcp-code option. vdu_controls may optionally run as a entry in the system</strong> tray.</p>
 <p>Builtin laptop displays normally don't implement DDC and those displays are not supported, but a laptop's externally connected VDU's are likely to be controllable.</p>
 <p>Some controls change the number of connected devices (for example, some VDU's support a power-off command). If such controls are used, <strong>vdu_controls will detect the change and will restart itself to reconfigure the controls</strong> for the new situation (for example, DDC VDU 2 may now be DD VDU 1). Similarly, if you physically unplug monitor, the same thing will happen.</p>
 <p>Note that some VDU settings may disable or enable other settings. For example, setting a monitor to a specific picture-profile might result in the contrast-control being disabled, but <strong>ddc_controls will not be aware of</strong> the restriction resulting in its contrast-control appearing to do nothing.</p>
@@ -110,19 +113,22 @@ WARNING: using config file &#39;/home/michael/.config/vdu_controls/LG_HDR_4K.con
 <blockquote>
 <blockquote>
 <dl>
-<dt><strong><strong>vdu_controls.py</strong></strong></dt>
+<dt><strong><strong>vdu_controls</strong></strong></dt>
 <dd><p>All default controls.</p>
 </dd>
-<dt><strong><strong>vdu_controls.py</strong> --show brightness --show contrast</strong></dt>
+<dt><strong><strong>vdu_controls</strong> --show brightness --show contrast</strong></dt>
 <dd><p>Specified controls only:</p>
 </dd>
-<dt><strong><strong>vdu_controls.py</strong> --hide contrast --hide audio-volume</strong></dt>
+<dt><strong><strong>vdu_controls</strong> --hide contrast --hide audio-volume</strong></dt>
 <dd><p>All default controls except for those to be hidden.</p>
 </dd>
-<dt><strong><strong>vdu_controls.py</strong> --enable-vcp-code 70 --warnings --debug</strong></dt>
+<dt><strong><strong>vdu_controls</strong> --system-tray --no-splash --show brightness --show audio-volume</strong></dt>
+<dd><p>Start as a system tray entry without showing the splash-screen.</p>
+</dd>
+<dt><strong><strong>vdu_controls</strong> --enable-vcp-code 70 --warnings --debug</strong></dt>
 <dd><p>All default controls, plus a control for VCP_CODE 70, show any warnings, output debugging info.</p>
 </dd>
-<dt><strong><strong>vdu_controls.py</strong> --sleep-multiplier 0.1</strong></dt>
+<dt><strong><strong>vdu_controls</strong> --sleep-multiplier 0.1</strong></dt>
 <dd><p>All default controls, speed up or slow down ddcutil by passing a sleep multiplier.</p>
 </dd>
 </dl>

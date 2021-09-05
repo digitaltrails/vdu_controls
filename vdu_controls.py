@@ -8,11 +8,11 @@ A GUI for controlling connected *Visual Display Units* (*VDU*'s) (also known as 
 Usage::
 -------
 
-        vdu_controls.py [-h]
-                       [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
-                       [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
-                       [--enable-vcp-code vcp_code] [--debug] [--warnings]
-                       [--no-splash] [--sleep-multiplier multiplier]
+        vdu_controls [-h]
+                     [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
+                     [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
+                     [--enable-vcp-code vcp_code] [--system-tray] [--debug] [--warnings]
+                     [--no-splash] [--sleep-multiplier multiplier]
 
 Optional arguments:
 ^^^^^^^^^^^^^^^^^^^
@@ -24,6 +24,7 @@ Optional arguments:
                             hide/disable a control (--hide may be specified multiple times)
       --enable-vcp-code vcp_code
                             enable a control for a vcp-code unavailable via hide/show (may be specified multiple times)
+      --system-tray         start up as an entry in the system tray
       --debug               enable debug output to stdout
       --warnings            popup a warning when a VDU lacks an enabled control
       --no-splash           don't show the splash screen
@@ -41,7 +42,8 @@ each  DVI/DP/HDMI/USB connected VDU and uses the ``ddcutil`` command line utilit
 of controls but rather to provide a simple panel with a selection of essential controls for the desktop.
 
 By default ``vdu_controls`` offers a subset of possible controls including brightness, contrast.  Additional controls
-can be enabled via the ``--enable-vcp-code`` option.
+can be enabled via the ``--enable-vcp-code`` option. ``vdu_controls`` may optionally run as a entry in the system
+tray.
 
 Builtin laptop displays normally don't implement DDC and those displays are not supported, but a laptop's
 externally connected VDU's are likely to be controllable.
@@ -120,19 +122,22 @@ VDU capabilities.
 Examples
 --------
 
-    ``vdu_controls.py``
+    ``vdu_controls``
         All default controls.
 
-    ``vdu_controls.py --show brightness --show contrast``
+    ``vdu_controls --show brightness --show contrast``
         Specified controls only:
 
-    ``vdu_controls.py --hide contrast --hide audio-volume``
+    ``vdu_controls --hide contrast --hide audio-volume``
         All default controls except for those to be hidden.
 
-    ``vdu_controls.py --enable-vcp-code 70 --warnings --debug``
+    ``vdu_controls --system-tray --no-splash --show brightness --show audio-volume``
+        Start as a system tray entry without showing the splash-screen.
+
+    ``vdu_controls --enable-vcp-code 70 --warnings --debug``
         All default controls, plus a control for VCP_CODE 70, show any warnings, output debugging info.
 
-    ``vdu_controls.py --sleep-multiplier 0.1``
+    ``vdu_controls --sleep-multiplier 0.1``
         All default controls, speed up or slow down ddcutil by passing a sleep multiplier.
 
 This script often refers to displays and monitors as VDU's in order to
@@ -173,25 +178,25 @@ with this program. If not, see <https://www.gnu.org/licenses/>.
 ----------
 
 """
-import stat
-import sys
-import re
-import subprocess
-import os
+import argparse
 import base64
+import os
+import re
+import signal
+import stat
+import subprocess
+import sys
+import textwrap
 import time
 import traceback
-import argparse
-import textwrap
-import signal
 from pathlib import Path
 from typing import List, Tuple, Mapping
 
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
-    QSplashScreen, QPushButton, QProgressBar, QComboBox
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess
-from PyQt5.QtGui import QIntValidator, QPixmap, QIcon
+from PyQt5.QtGui import QIntValidator, QPixmap, QIcon, QCursor, QImage
 from PyQt5.QtSvg import QSvgWidget
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
+    QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QAction
 
 
 def translate(source_text: str):
@@ -254,6 +259,18 @@ VOLUME_SVG = b"""
   </g>
 </svg>
 """
+
+CLOSE_SVG = b"""
+<svg viewBox="0 0 32 32" width="10" height="10" xmlns="http://www.w3.org/2000/svg">
+    <style
+        type="text/css"
+        id="current-color-scheme">
+        .ColorScheme-NegativeText {
+            color:#da4453;
+        }
+    </style>
+    <path d="M16 4A12 12 0 0 0 4 16a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 16 4m-5.293 6L16 15.293 21.293 10s.727.716.707.707L16.707 16 22 21.293s-.701.706-.707.707L16 16.707 10.707 22c.001-.005-.707-.707-.707-.707L15.293 16 10 10.707c.02.001.707-.707.707-.707" class="ColorScheme-NegativeText" fill="currentColor"/>
+</svg>"""
 
 # Encode some default graphics to make the script self contained
 DEFAULT_SPLASH_PNG = "/usr/share/icons/oxygen/base/256x256/apps/preferences-desktop-display.png"
@@ -903,6 +920,8 @@ def main():
     parser.add_argument('--enable-vcp-code', type=str, action='append',
                         help='enable controls for an unsupported vcp-code hex value (may be specified multiple times)')
     # Python 3.9 parser.add_argument('--debug',  action=argparse.BooleanOptionalAction, help='enable debugging')
+    parser.add_argument('--system-tray', default=False, action='store_true',
+                        help='start up as an entry in the system tray')
     parser.add_argument('--debug', default=False, action='store_true', help='enable debug output to stdout')
     parser.add_argument('--warnings', default=False, action='store_true',
                         help='popup a warning when a VDU lacks an enabled control')
@@ -930,6 +949,20 @@ def main():
         splash.show()
     app_icon = QIcon()
     app_icon.addPixmap(pixmap)
+
+    tray = None
+    if args.system_tray:
+        tray = QSystemTrayIcon()
+        tray.setIcon(app_icon)
+        menu = QMenu()
+        action = QAction(QIcon(QPixmap.fromImage(QImage.fromData(CLOSE_SVG))), translate('Quit'))
+        # TODO figure out why the icon doesn't show in the right-mouse tray menu.
+        action.setIconVisibleInMenu(True)
+        action.setShortcutVisibleInContextMenu(True)
+        action.triggered.connect(app.quit)
+        menu.addAction(action)
+        tray.setContextMenu(menu)
+
     app.setWindowIcon(app_icon)
     app.setApplicationDisplayName(translate('VDU Controls'))
 
@@ -948,7 +981,26 @@ def main():
                                Qt.AlignTop | Qt.AlignHCenter)
 
     main_window = DdcMainWidget(enabled_vcp_codes, args.warnings, args.debug, args.sleep_multiplier, detect_vdu_hook)
-    main_window.show()
+
+    if tray is not None:
+        def show_window():
+            if main_window.isVisible():
+                main_window.hide()
+            else:
+                # Use the mouse pos as a guess to where the system tray is.  The Linux Qt x,y geometry returned by
+                # the tray icon is 0,0, so we can't use that.
+                p = QCursor.pos()
+                wg = main_window.geometry()
+                # Try to copy with the tray not being at the bottom right.
+                x = p.x() - wg.width() if p.x() > wg.width() else p.x()
+                y = p.y() - wg.height() if p.y() > wg.height() else p.y()
+                main_window.setGeometry(x, y, wg.width(), wg.height())
+                main_window.show()
+        tray.activated.connect(show_window)
+        tray.setVisible(True)
+    else:
+        main_window.show()
+
     if splash is not None:
         splash.finish(main_window)
     rc = app.exec_()

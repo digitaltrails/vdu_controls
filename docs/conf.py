@@ -16,8 +16,6 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('/home/michael/Projects/vdu_controls'))
-import vdu_controls
-
 
 # -- Project information -----------------------------------------------------
 
@@ -26,7 +24,7 @@ copyright = '2021, Michael Hamilton'
 author = 'Michael Hamilton'
 
 # The full version, including alpha/beta/rc tags
-release = '1.0'
+release = '1.1'
 
 
 # -- General configuration ---------------------------------------------------
