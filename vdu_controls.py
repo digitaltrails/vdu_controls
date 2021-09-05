@@ -991,7 +991,7 @@ def main():
                 # the tray icon is 0,0, so we can't use that.
                 p = QCursor.pos()
                 wg = main_window.geometry()
-                # Try to copy with the tray not being at the bottom right.
+                # Also try to cope with the tray not being at the bottom right of the screen.
                 x = p.x() - wg.width() if p.x() > wg.width() else p.x()
                 y = p.y() - wg.height() if p.y() > wg.height() else p.y()
                 main_window.setGeometry(x, y, wg.width(), wg.height())
