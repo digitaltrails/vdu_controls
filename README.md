@@ -11,7 +11,8 @@ each  DVI/DP/HDMI/USB connected VDU and uses the ``ddcutil`` command line utilit
 (*DDC*) *Virtual Control Panel*  (*VCP*) commands to each of them.
 
 By default ``vdu_controls`` offers a subset of the possible controls including brightness, and contrast.  Additional 
-controls can be enabled via the ``--enable-vcp-code`` option.
+controls can be enabled via the ``--enable-vcp-code`` option.  ``vdu_controls`` may optionally run as a entry in the system
+tray.
 
 ![Default](screen-shots/Screenshot_Large-330.png)  ![Custom](screen-shots/Screenshot_Small-227.png) 
 
