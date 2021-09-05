@@ -947,6 +947,9 @@ def main():
                                                        Qt.WindowStaysOnTopHint)
     if splash is not None:
         splash.show()
+        # Attempt to force it to the top with raise and activate
+        splash.raise_()
+        splash.activateWindow()
     app_icon = QIcon()
     app_icon.addPixmap(pixmap)
 
@@ -996,6 +999,9 @@ def main():
                 y = p.y() - wg.height() if p.y() > wg.height() else p.y()
                 main_window.setGeometry(x, y, wg.width(), wg.height())
                 main_window.show()
+                # Attempt to force it to the top with raise and activate
+                main_window.raise_()
+                main_window.activateWindow()
         tray.activated.connect(show_window)
         tray.setVisible(True)
     else:
