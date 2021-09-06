@@ -15,6 +15,7 @@ controls can be enabled via the ``--enable-vcp-code`` option.  ``vdu_controls`` 
 tray.
 
 ![Default](screen-shots/Screenshot_Large-330.png)  ![Custom](screen-shots/Screenshot_Small-227.png) 
+![Custom](screen-shots/Screenshot_tray-200.png) 
 
 Getting Started
 ---------------
@@ -56,7 +57,7 @@ the settings menu or by entering part of its name in the application menus searc
   ``% vdu_controls --show brightness --show contrast --show audio-volume``
 * If the script has not been installed, it can still be run on the command line via the python interpreter, 
   for example:\
-  ``% python3 vdu_controls.py  --show brightness --show contrast``
+  ``% python3 vdu_controls.py --no-splash --system-tray --show brightness --show contrast``
 
 Help
 ----
@@ -67,8 +68,6 @@ Brief help can always be accessed via the command line help option
 # or if installed in $HOME/bin
 % vdu_controls --help
 ```
-
-
 
 Whether run from the desktop application-menu or run from the command line, ``vdu-controls`` behaviour can be altered
 by a number of command line options, see the [man page](https://htmlpreview.github.io/?https://raw.githubusercontent.com/digitaltrails/vdu_controls/master/docs/_build/man/vdu_controls.1.html)
