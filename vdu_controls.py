@@ -869,7 +869,7 @@ def exception_handler(e_type, e_value, e_traceback):
     QApplication.quit()
 
 
-def create_icon_from_svg_string(svg_str: str):
+def create_icon_from_svg_string(svg_str: bytes):
     """There is no QIcon option for loading SVG from a string, only from a SVG file, so roll our own."""
     renderer = QSvgRenderer(svg_str)
     image = QImage(64, 64, QImage.Format_ARGB32)
