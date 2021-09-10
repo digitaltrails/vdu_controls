@@ -360,15 +360,21 @@ class DdcUtil:
         """Return a list of (vdu_id, desc) tuples."""
         display_list = []
         result = self.__run__('detect', '--terse')
+        display_pattern = re.compile('Display ([0-9]+)')
         monitor_pattern = re.compile('Monitor:[ \t]+([^\n]*)')
-        for display_str in re.split("^Display |\nDisplay", result.stdout.decode('utf-8'))[1:]:
-            vdu_id = display_str.split('\n')[0].strip()
-            monitor_match = monitor_pattern.search(display_str)
-            manufacturer, model_name, serial_number = \
-                monitor_match.group(1).split(':') if monitor_match else ['', 'Unknown Model', '']
-            if serial_number == '':
-                serial_number = 'Display' + vdu_id
-            display_list.append((vdu_id, manufacturer, model_name, serial_number))
+        for display_str in re.split("\n\n", result.stdout.decode('utf-8')):
+            display_match = display_pattern.match(display_str)
+            if display_match is not None:
+                print("INFO: checking {}".format(display_str))
+                vdu_id = display_match.group(1)
+                monitor_match = monitor_pattern.search(display_str)
+                manufacturer, model_name, serial_number = \
+                    monitor_match.group(1).split(':') if monitor_match else ['', 'Unknown Model', '']
+                if serial_number == '':
+                    serial_number = 'Display' + vdu_id
+                display_list.append((vdu_id, manufacturer, model_name, serial_number))
+            elif len(display_str.strip()) != 0:
+                print("WARNING: ignoring {}".format(display_str))
         return display_list
 
     def query_capabilities(self, vdu_id: str, alternate_text=None) -> Mapping[str, VcpCapability]:
@@ -651,8 +657,8 @@ class DdcComboBox(QWidget):
             combo_box.addItem(desc, value)
 
         if self.current_value not in self.keys:
-            raise ValueError('VCP_CODE {} value {} is not in allowed list: {}'.format(
-                vcp_capability.vcp_code, self.current_value, self.keys))
+            raise ValueError(translate('VCP_CODE {} ({}) value {} is not in allowed list: {}').format(
+                vcp_capability.vcp_code, vcp_capability.name, self.current_value, self.keys))
         self.combo_box.setCurrentIndex(self.keys.index(self.current_value))
 
         def index_changed(index: int):
@@ -692,16 +698,27 @@ class DdcVduWidget(QWidget):
         self.vcp_controls = []
         for vcp_code in enabled_vcp_codes:
             if vcp_code in vdu.capabilities:
+                control = None
                 capability = vdu.capabilities[vcp_code]
                 if capability.vcp_type == CONTINUOUS_TYPE:
                     control = DdcSliderWidget(vdu, capability)
                 elif capability.vcp_type == SIMPLE_NON_CONTINUOUS_TYPE:
-                    control = DdcComboBox(vdu, capability)
+                    try:
+                        control = DdcComboBox(vdu, capability)
+                    except ValueError as valueError:
+                        alert = QMessageBox()
+                        alert.setText(valueError.args[0])
+                        alert.setInformativeText(
+                            translate('If you want to extend the set of permitted values, see the man page concerning '
+                                      'VDU/VDU-model config files .').format(capability.vcp_code, capability.name))
+                        alert.setIcon(QMessageBox.Critical)
+                        alert.exec()
                 else:
                     raise TypeError(
                         'No GUI support for VCP type {} for vcp_code {}'.format(capability.vcp_type, vcp_code))
-                layout.addWidget(control)
-                self.vcp_controls.append(control)
+                if control is not None:
+                    layout.addWidget(control)
+                    self.vcp_controls.append(control)
             elif warnings:
                 missing_vcp = SUPPORTED_VCP_CONTROLS[vcp_code].name if vcp_code in SUPPORTED_VCP_CONTROLS else vcp_code
                 alert = QMessageBox()
