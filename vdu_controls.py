@@ -54,7 +54,7 @@ for the new situation (for example, DDC VDU 2 may now be DD VDU 1).  Similarly, 
 same thing will happen.
 
 Note that some VDU settings may disable or enable other settings. For example, setting a monitor to a specific
-picture-profile might result in the contrast-control being disabled, but ``ddc_controls`` will not be aware of
+picture-profile might result in the contrast-control being disabled, but ``vdu_controls`` will not be aware of
 the restriction resulting in its contrast-control appearing to do nothing.
 
 Configuration
@@ -196,13 +196,34 @@ from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess
 from PyQt5.QtGui import QIntValidator, QPixmap, QIcon, QCursor, QImage, QPainter
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
-    QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu
+    QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle
 
 
 def translate(source_text: str):
     """For future internationalization - recommended way to do this at this time."""
     return QCoreApplication.translate('vdu_controls', source_text)
 
+
+ABOUT_TEXT = """
+A virtual control panel for external Visual Display Units.
+
+Run vdu_controls --help in a console for help.
+Visit https://github.com/digitaltrails/vdu_controls for more details.
+
+vdu_controls Copyright (C) 2021 Michael Hamilton
+
+This program is free software: you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the
+Free Software Foundation, version 3.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+more details.
+
+You should have received a copy of the GNU General Public License along
+with this program. If not, see https://www.gnu.org/licenses/ .
+"""
 
 BRIGHTNESS_SVG = b"""
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24">
@@ -257,24 +278,6 @@ VOLUME_SVG = b"""
       <path d="m6 14 5 5h1v-16h-1l-5 5z"/>
     </g>
   </g>
-</svg>
-"""
-
-QUIT_APP_SVG = b"""
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
-  <defs id="defs3051">
-    <style type="text/css" id="current-color-scheme">
-      .ColorScheme-Text { color:#232629; }
-      .ColorScheme-NegativeText { color:#da4453; }
-      </style>
-  </defs>
- <path 
-     style="fill:currentColor;fill-opacity:1;stroke:none" 
-     d="m2 2v12h12v-12h-12m1 2h10v9h-10v-9" class="ColorScheme-Text"/>
- <path 
-     d="m6.2 6l-.707.707 1.793 1.793-1.793 1.793.707.707 1.793-1.793 1.793 1.793.707-.707-1.793-1.793 1.793-1.793-.707-.707-1.793 1.793"
-      style="fill:currentColor;fill-opacity:1;stroke:none" class="ColorScheme-NegativeText"
-    />
 </svg>
 """
 
@@ -778,7 +781,7 @@ class DdcMainWidget(QWidget):
             alert = QMessageBox()
             alert.setText(translate('No controllable monitors found, exiting.'))
             alert.setInformativeText(translate(
-                '''Run ddc_control --debug in a console and check for additional messages.\
+                '''Run vdu_controls --debug in a console and check for additional messages.\
                 Check the requirements for the ddcutil command.'''))
             alert.setIcon(QMessageBox.Critical)
             alert.exec()
@@ -934,7 +937,7 @@ def install_as_desktop_application(uninstall: bool = False):
 
 
 def main():
-    """vdu_control application main."""
+    """vdu_controls application main."""
     # Allow control-c to terminate the program
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
@@ -944,6 +947,8 @@ def main():
           Uses ddcutil to issue Display Data Channel (DDC) Virtual Control Panel (VCP) commands. 
           Controls DVI/DP/HDMI/USB connected monitors (but not builtin laptop displays)."""),
         formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument('--about', default=False, action='store_true',
+                        help='about vdu_controls')
     parser.add_argument('--show',
                         default=[],
                         action='append', choices=[vcp.arg_name() for vcp in SUPPORTED_VCP_CONTROLS.values()],
@@ -979,6 +984,7 @@ def main():
     pixmap = get_splash_image()
     splash = None if args.no_splash else QSplashScreen(pixmap.scaledToWidth(800).scaledToHeight(400),
                                                        Qt.WindowStaysOnTopHint)
+
     if splash is not None:
         splash.show()
         # Attempt to force it to the top with raise and activate
@@ -987,12 +993,25 @@ def main():
     app_icon = QIcon()
     app_icon.addPixmap(pixmap)
 
+    def about_popup():
+        about_message = QMessageBox()
+        about_message.setTextFormat(Qt.AutoText)
+        about_message.setText(translate('About vdu_controls'))
+        about_message.setInformativeText(translate(ABOUT_TEXT))
+        about_message.setIcon(QMessageBox.Information)
+        about_message.exec()
+
+    if args.about:
+        about_popup()
+
     tray = None
     if args.system_tray:
         tray = QSystemTrayIcon()
         tray.setIcon(app_icon)
         menu = QMenu()
-        menu.addAction(create_icon_from_svg_string(QUIT_APP_SVG), translate('Quit'), app.quit)
+        menu.addAction(app.style().standardIcon(QStyle.SP_MessageBoxInformation), translate('About'), about_popup)
+        menu.addSeparator()
+        menu.addAction(app.style().standardIcon(QStyle.SP_DialogCloseButton), translate('Quit'), app.quit)
         tray.setContextMenu(menu)
 
     app.setWindowIcon(app_icon)
@@ -1031,6 +1050,7 @@ def main():
                 # Attempt to force it to the top with raise and activate
                 main_window.raise_()
                 main_window.activateWindow()
+
         tray.activated.connect(show_window)
         tray.setVisible(True)
     else:
