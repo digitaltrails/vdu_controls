@@ -8,7 +8,7 @@
 <blockquote>
 <dl>
 <dt><strong>vdu_controls [-h]</strong></dt>
-<dd><p>[--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}] [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}] [--enable-vcp-code vcp_code] [--system-tray] [--debug] [--warnings] [--no-splash] [--sleep-multiplier multiplier]</p>
+<dd><p>[--about] [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}] [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}] [--enable-vcp-code vcp_code] [--system-tray] [--debug] [--warnings] [--no-splash] [--sleep-multiplier multiplier]</p>
 </dd>
 </dl>
 </blockquote>
@@ -21,6 +21,9 @@
 <dl>
 <dt><strong>-h<em>,</em> --help</strong></dt>
 <dd><p>show this help message and exit</p>
+</dd>
+<dt><strong>--about</strong></dt>
+<dd><p>about vdu_controls</p>
 </dd>
 <dt><strong>--show</strong><em> control_name</em></dt>
 <dd><p>show specified control only (--show may be specified multiple times)</p>
@@ -61,7 +64,7 @@
 <p>By default <strong>vdu_controls offers a subset of possible controls including brightness, contrast. Additional controls</strong> can be enabled via the <strong>--enable-vcp-code option. vdu_controls may optionally run as a entry in the system</strong> tray.</p>
 <p>Builtin laptop displays normally don't implement DDC and those displays are not supported, but a laptop's externally connected VDU's are likely to be controllable.</p>
 <p>Some controls change the number of connected devices (for example, some VDU's support a power-off command). If such controls are used, <strong>vdu_controls will detect the change and will restart itself to reconfigure the controls</strong> for the new situation (for example, DDC VDU 2 may now be DD VDU 1). Similarly, if you physically unplug monitor, the same thing will happen.</p>
-<p>Note that some VDU settings may disable or enable other settings. For example, setting a monitor to a specific picture-profile might result in the contrast-control being disabled, but <strong>ddc_controls will not be aware of</strong> the restriction resulting in its contrast-control appearing to do nothing.</p>
+<p>Note that some VDU settings may disable or enable other settings. For example, setting a monitor to a specific picture-profile might result in the contrast-control being disabled, but <strong>vdu_controls will not be aware of</strong> the restriction resulting in its contrast-control appearing to do nothing.</p>
 <h1>CONFIGURATION</h1>
 <p>Most configuration is supplied via command line parameters.</p>
 <p>Command line options can be added to the desktop application-menu by editing the application menu item directly in the desktop (for <em>KDE-Plasma</em><strong> this can be achieved by right-mousing on the VDU Controls menu</strong> item and selecting <strong>Edit Application). Alternatively, it is just as easy to use your preferred text editor to</strong> edit the desktop definition file <strong>$HOME/.local/share/applications/vdu_controls.desktop and add options to</strong> the <strong>Exec= line.</strong></p>
@@ -384,6 +387,13 @@ zypper install ddcutil</code></pre>
 </blockquote>
 <blockquote>
 <dl>
+<dt><strong>vdu_controls.create_icon_from_svg_string(svg_str: bytes)</strong></dt>
+<dd><p>There is no QIcon option for loading SVG from a string, only from a SVG file, so roll our own.</p>
+</dd>
+</dl>
+</blockquote>
+<blockquote>
+<dl>
 <dt><strong>vdu_controls.exception_handler(e_type, e_value, e_traceback)</strong></dt>
 <dd><p>Overarching error handler in case something unexpected happens.</p>
 </dd>
@@ -392,7 +402,7 @@ zypper install ddcutil</code></pre>
 <blockquote>
 <dl>
 <dt><strong>vdu_controls.get_splash_image() -&gt; PyQt5.QtGui.QPixmap</strong></dt>
-<dd><p>Get the splash pixmap from a KDE oxygen PNG file or, failing that, a small base64 encoded internal JPEG.</p>
+<dd><p>Get the splash pixmap from a KDE oxygen PNG file or, failing that, a small base64 encoded internal PNG.</p>
 </dd>
 </dl>
 </blockquote>
@@ -406,7 +416,7 @@ zypper install ddcutil</code></pre>
 <blockquote>
 <dl>
 <dt><strong>vdu_controls.main()</strong></dt>
-<dd><p>vdu_control application main.</p>
+<dd><p>vdu_controls application main.</p>
 </dd>
 </dl>
 </blockquote>

@@ -9,6 +9,7 @@ Usage::
 -------
 
         vdu_controls [-h]
+                     [--about]
                      [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                      [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                      [--enable-vcp-code vcp_code] [--system-tray] [--debug] [--warnings]
@@ -18,6 +19,7 @@ Optional arguments:
 ^^^^^^^^^^^^^^^^^^^
 
       -h, --help            show this help message and exit
+      --about               about vdu_controls
       --show control_name
                             show specified control only (--show may be specified multiple times)
       --hide control_name

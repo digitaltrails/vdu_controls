@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "VDU_CONTROLS" "1" "Sep 05, 2021" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Sep 12, 2021" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.1
 .
@@ -39,6 +39,7 @@ A GUI for controlling connected \fIVisual Display Units\fP (\fIVDU\fP\(aqs) (als
 .INDENT 0.0
 .TP
 .B vdu_controls [\-h]
+[\-\-about]
 [\-\-show {brightness,contrast,audio\-volume,input\-source,power\-mode,osd\-language}]
 [\-\-hide {brightness,contrast,audio\-volume,input\-source,power\-mode,osd\-language}]
 [\-\-enable\-vcp\-code vcp_code] [\-\-system\-tray] [\-\-debug] [\-\-warnings]
@@ -53,6 +54,9 @@ A GUI for controlling connected \fIVisual Display Units\fP (\fIVDU\fP\(aqs) (als
 .TP
 .B \-h\fP,\fB  \-\-help
 show this help message and exit
+.TP
+.B \-\-about
+about vdu_controls
 .TP
 .BI \-\-show \ control_name
 show specified control only (\-\-show may be specified multiple times)
@@ -106,7 +110,7 @@ for the new situation (for example, DDC VDU 2 may now be DD VDU 1).  Similarly, 
 same thing will happen.
 .sp
 Note that some VDU settings may disable or enable other settings. For example, setting a monitor to a specific
-picture\-profile might result in the contrast\-control being disabled, but \fBddc_controls\fP will not be aware of
+picture\-profile might result in the contrast\-control being disabled, but \fBvdu_controls\fP will not be aware of
 the restriction resulting in its contrast\-control appearing to do nothing.
 .SH CONFIGURATION
 .sp
@@ -459,13 +463,18 @@ Defines a potential VCP GUI control.
 .UNINDENT
 .INDENT 0.0
 .TP
+.B vdu_controls.create_icon_from_svg_string(svg_str: bytes)
+There is no QIcon option for loading SVG from a string, only from a SVG file, so roll our own.
+.UNINDENT
+.INDENT 0.0
+.TP
 .B vdu_controls.exception_handler(e_type, e_value, e_traceback)
 Overarching error handler in case something unexpected happens.
 .UNINDENT
 .INDENT 0.0
 .TP
 .B vdu_controls.get_splash_image() -> PyQt5.QtGui.QPixmap
-Get the splash pixmap from a KDE oxygen PNG file or, failing that, a small base64 encoded internal JPEG.
+Get the splash pixmap from a KDE oxygen PNG file or, failing that, a small base64 encoded internal PNG.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -475,7 +484,7 @@ Self install this script in the current Linux user\(aqs bin directory and deskto
 .INDENT 0.0
 .TP
 .B vdu_controls.main()
-vdu_control application main.
+vdu_controls application main.
 .UNINDENT
 .INDENT 0.0
 .TP
