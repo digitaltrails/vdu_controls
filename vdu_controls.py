@@ -289,7 +289,7 @@ EXIT_CODE_FOR_RESTART = 1959
 
 
 def get_splash_image() -> QPixmap:
-    """Get the splash pixmap from a KDE oxygen PNG file or, failing that, a small base64 encoded internal JPEG."""
+    """Get the splash pixmap from a KDE oxygen PNG file or, failing that, a small base64 encoded internal PNG."""
     pixmap = QPixmap()
     if os.path.isfile(DEFAULT_SPLASH_PNG) and os.access(DEFAULT_SPLASH_PNG, os.R_OK):
         pixmap.load(DEFAULT_SPLASH_PNG)
