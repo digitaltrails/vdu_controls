@@ -108,7 +108,13 @@ Michael Hamilton\
 
 Version History
 ---------------
-
+* 1.2
+    * Better handle out of range values.
+    * Enable audio-mute,audio-treble,audio-bass,audio-mic-volume.
+    * Allow ddcutil to be anywhere on the user's PATH.
+    * Improve parsing to ignore laptop non-MCCS displays when present with external monitors. 
+    * Improve the documentation.
+    * Add an --about command line option and an "about" tray option.
 * 1.0
     * Initial Release
 

@@ -1,8 +1,8 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "VDU_CONTROLS" "1" "Sep 12, 2021" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Sep 13, 2021" "" "vdu_controls"
 .SH NAME
-vdu_controls \- vdu_controls 1.1
+vdu_controls \- vdu_controls 1.2
 .
 .nr rst2man-indent-level 0
 .
@@ -97,9 +97,14 @@ each  DVI/DP/HDMI/USB connected VDU and uses the \fBddcutil\fP command line util
 (\fIDDC\fP) \fIVirtual Control Panel\fP  (\fIVCP\fP) commands to each of them. The intent is not to provide a comprehensive set
 of controls but rather to provide a simple panel with a selection of essential controls for the desktop.
 .sp
-By default \fBvdu_controls\fP offers a subset of possible controls including brightness, contrast.  Additional controls
-can be enabled via the \fB\-\-enable\-vcp\-code\fP option. \fBvdu_controls\fP may optionally run as a entry in the system
-tray.
+\fBvdu_controls\fP may be run as a system\-tray entry by using the \fB\-\-system\-tray\fP option.
+.sp
+By default \fBvdu_controls\fP offers a subset of possible controls including brightness and contrast.  Further controls
+can be added by using the \fB\-\-enable\-vcp\-code\fP option to add any other codes supported by \fBddcutil\fP\&.  The full list
+of VCP codes supported by \fBddcutil\fP can be listed by running \fBddcutil vcpinfo \-\-verbose\fP\&. For example, the
+VCP code 66 is listed as an on/off control for an ambient light sensor, this can be enabled for \fBvdu_controls\fP by
+passing \fB\-\-enable\-vcp\-code 66\fP (the control will only appear in the user interface if the VDU reports that it
+has that capability).
 .sp
 Builtin laptop displays normally don\(aqt implement DDC and those displays are not supported, but a laptop\(aqs
 externally connected VDU\(aqs are likely to be controllable.
@@ -125,12 +130,13 @@ the \fBExec=\fP line.
 .sp
 An optional config file can be setup for each VDU or VDU\-model.
 .sp
-The VDU config files are provided so that manufacturer supplied meta data when it proves to be inaccurate. These
-config files can be model specific, or model and serial\-number specific. For example, a VCP query to my
-LG monitor reports that it has four inputs, but in reality it only has three.  I can correct this as follows:
+The VDU config files are provided so that manufacturer supplied meta data can be corrected when it proves to be
+inaccurate. These config files can be model specific, or model and serial\-number specific. For example, a VCP
+query to my LG monitor reports that it has four inputs, but in reality it only has three.  I can correct this
+as follows:
 .INDENT 0.0
 .INDENT 3.5
-1 Run \fBvdu_control\fP in a console window and not which config files it\(aqs looking for:
+1 Run \fBvdu_controls\fP in a console window and not which config files it\(aqs looking for:
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -169,7 +175,7 @@ INFO: checking for config file \(aqfile:///home/michael/.config/vdu_controls/LG_
 .UNINDENT
 .UNINDENT
 .sp
-4 Run \fBvdu_control\fP and confirm the the config file is being used and the correct number of inputs is shown:
+4 Run \fBvdu_controls\fP and confirm the the config file is being used and the correct number of inputs is shown:
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -190,16 +196,17 @@ In the case where the manufacturers serial number cannot be retrieved, \fBvdu_co
 containing the display number instead.
 .sp
 The VDU Config files read by \fBvdu_controls\fP can only be used to alter definitions of VCP codes already supported
-by \fBddcutil\fP\&.  If the file lists a VCP code as a \fImanufacturer specific feature\fP then \fBddcutil\fP will refuse to
-set values for that code.  In the future it will be possible to fully enable such codes by creating a \fBddcutil\fP
-user definition (\fB\-\-udef\fP) file.  The \fBddcutil \-\-udef\fP option is still work in progress and unavailable at the
-time at the time of writing.
-.sp
-Possible codes to try might be found in the output of \fBddcutil vcpinfo\fP which lists all known codes in the standard.
+by \fBddcutil\fP\&.  If the file lists a VCP code as a \fImanufacturer specific feature\fP then it is not supported.
+Manufacturer specific features should not be experimented with, some may have destructive or irreversible consequences
+that may brick the hardware. It is possible to enable any codes by  creating a  \fBddcutil\fP user definition (\fB\-\-udef\fP)
+file, BUT THIS SHOULD ONLY BE USED WITH EXTREME CAUTION AND CANNOT BE RECOMMENDED.
 .SS Responsiveness
 .sp
-If your VDU\(aqs are modern, you may find a smaller \fB\-\-sleep\-multiplier\fP will speed up the \fBddcutil\fP to VDU protocol
+If your VDU\(aqs are modern, you may find a smaller \fB\-\-sleep\-multiplier\fP will speed up the \fBddcutil\fP/VDU protocol
 exchanges making both \fBddcutil\fP and \fBvdu_controls\fP much more responsive.
+.sp
+Reducing the number of controls by using \fB\-\-show\fP or \fB\-\-hide\fP options will speed up the initialisation and some
+aspects of the interface by reducing the number of requests to \fBddcutil\fP\&.
 .sp
 Using VDU/VDU\-model config files files may speed up the startup by eliminating the need to run \fBddcutil\fP to retrieve
 VDU capabilities.
@@ -220,8 +227,8 @@ All default controls except for those to be hidden.
 .B \fBvdu_controls \-\-system\-tray \-\-no\-splash \-\-show brightness \-\-show audio\-volume\fP
 Start as a system tray entry without showing the splash\-screen.
 .TP
-.B \fBvdu_controls \-\-enable\-vcp\-code 70 \-\-warnings \-\-debug\fP
-All default controls, plus a control for VCP_CODE 70, show any warnings, output debugging info.
+.B \fBvdu_controls \-\-enable\-vcp\-code 63 \-\-enable\-vcp\-code 93 \-\-warnings \-\-debug\fP
+All default controls, plus controls for VCP_CODE 63 and 93, show any warnings, output debugging info.
 .TP
 .B \fBvdu_controls \-\-sleep\-multiplier 0.1\fP
 All default controls, speed up or slow down ddcutil by passing a sleep multiplier.
@@ -290,8 +297,13 @@ Could be a str enumeration of VCP types
 .UNINDENT
 .INDENT 0.0
 .TP
-.B vdu_controls.DDCUTIL = \(aq/usr/bin/ddcutil\(aq
-Assumed location of ddcutil on a linux system.
+.B vdu_controls.DDCUTIL = \(aqddcutil\(aq
+Assuming ddcutil is somewhere on the PATH.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B vdu_controls.DEFAULT_SPLASH_PNG = \(aq/usr/share/icons/oxygen/base/256x256/apps/preferences\-desktop\-display.png\(aq
+A high resolution image, will fallback to an internal PNG if this file isn\(aqt found on the local system
 .UNINDENT
 .INDENT 0.0
 .TP

@@ -43,9 +43,14 @@ each  DVI/DP/HDMI/USB connected VDU and uses the ``ddcutil`` command line utilit
 (*DDC*) *Virtual Control Panel*  (*VCP*) commands to each of them. The intent is not to provide a comprehensive set
 of controls but rather to provide a simple panel with a selection of essential controls for the desktop.
 
-By default ``vdu_controls`` offers a subset of possible controls including brightness, contrast.  Additional controls
-can be enabled via the ``--enable-vcp-code`` option. ``vdu_controls`` may optionally run as a entry in the system
-tray.
+``vdu_controls`` may be run as a system-tray entry by using the ``--system-tray`` option.
+
+By default ``vdu_controls`` offers a subset of possible controls including brightness and contrast.  Further controls
+can be added by using the ``--enable-vcp-code`` option to add any other codes supported by ``ddcutil``.  The full list
+of VCP codes supported by ``ddcutil`` can be listed by running ``ddcutil vcpinfo --verbose``. For example, the
+VCP code 66 is listed as an on/off control for an ambient light sensor, this can be enabled for ``vdu_controls`` by
+passing ``--enable-vcp-code 66`` (the control will only appear in the user interface if the VDU reports that it
+has that capability).
 
 Builtin laptop displays normally don't implement DDC and those displays are not supported, but a laptop's
 externally connected VDU's are likely to be controllable.
@@ -70,16 +75,19 @@ item and selecting **Edit Application**).  Alternatively, it is just as easy to 
 edit the desktop definition file ``$HOME/.local/share/applications/vdu_controls.desktop`` and add options to
 the ``Exec=`` line.
 
+
+
 VDU/VDU-model config files
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 An optional config file can be setup for each VDU or VDU-model.
 
-The VDU config files are provided so that manufacturer supplied meta data when it proves to be inaccurate. These
-config files can be model specific, or model and serial-number specific. For example, a VCP query to my
-LG monitor reports that it has four inputs, but in reality it only has three.  I can correct this as follows:
+The VDU config files are provided so that manufacturer supplied meta data can be corrected when it proves to be
+inaccurate. These config files can be model specific, or model and serial-number specific. For example, a VCP
+query to my LG monitor reports that it has four inputs, but in reality it only has three.  I can correct this
+as follows:
 
-    1 Run ``vdu_control`` in a console window and not which config files it's looking for::
+    1 Run ``vdu_controls`` in a console window and not which config files it's looking for::
 
         % ./vdu_controls.py
         INFO: checking for config file 'file:///home/michael/.config/vdu_controls/LG_HDR_4K_SN43328.conf'
@@ -94,7 +102,7 @@ LG monitor reports that it has four inputs, but in reality it only has three.  I
         # Use a text editor to find the erroneous DisplayPort-2 and get rid of it.
         % vi /home/michael/.config/vdu_controls/LG_HDR_4K.conf
 
-    4 Run ``vdu_control`` and confirm the the config file is being used and the correct number of inputs is shown::
+    4 Run ``vdu_controls`` and confirm the the config file is being used and the correct number of inputs is shown::
 
         % ./vdu_controls.py
         INFO: checking for config file '/home/michael/.config/vdu_controls/LG_HDR_4K_SN43328.conf'
@@ -105,18 +113,19 @@ In the case where the manufacturers serial number cannot be retrieved, ``vdu_con
 containing the display number instead.
 
 The VDU Config files read by ``vdu_controls`` can only be used to alter definitions of VCP codes already supported
-by ``ddcutil``.  If the file lists a VCP code as a *manufacturer specific feature* then ``ddcutil`` will refuse to
-set values for that code.  In the future it will be possible to fully enable such codes by creating a ``ddcutil``
-user definition (``--udef``) file.  The ``ddcutil --udef`` option is still work in progress and unavailable at the
-time at the time of writing.
-
-Possible codes to try might be found in the output of ``ddcutil vcpinfo`` which lists all known codes in the standard.
+by ``ddcutil``.  If the file lists a VCP code as a *manufacturer specific feature* then it is not supported.
+Manufacturer specific features should not be experimented with, some may have destructive or irreversible consequences
+that may brick the hardware. It is possible to enable any codes by  creating a  ``ddcutil`` user definition (``--udef``)
+file, BUT THIS SHOULD ONLY BE USED WITH EXTREME CAUTION AND CANNOT BE RECOMMENDED.
 
 Responsiveness
 ^^^^^^^^^^^^^^
 
-If your VDU's are modern, you may find a smaller ``--sleep-multiplier`` will speed up the ``ddcutil`` to VDU protocol
+If your VDU's are modern, you may find a smaller ``--sleep-multiplier`` will speed up the ``ddcutil``/VDU protocol
 exchanges making both ``ddcutil`` and ``vdu_controls`` much more responsive.
+
+Reducing the number of controls by using ``--show`` or ``--hide`` options will speed up the initialisation and some
+aspects of the interface by reducing the number of requests to ``ddcutil``.
 
 Using VDU/VDU-model config files files may speed up the startup by eliminating the need to run ``ddcutil`` to retrieve
 VDU capabilities.
@@ -136,8 +145,8 @@ Examples
     ``vdu_controls --system-tray --no-splash --show brightness --show audio-volume``
         Start as a system tray entry without showing the splash-screen.
 
-    ``vdu_controls --enable-vcp-code 70 --warnings --debug``
-        All default controls, plus a control for VCP_CODE 70, show any warnings, output debugging info.
+    ``vdu_controls --enable-vcp-code 63 --enable-vcp-code 93 --warnings --debug``
+        All default controls, plus controls for VCP_CODE 63 and 93, show any warnings, output debugging info.
 
     ``vdu_controls --sleep-multiplier 0.1``
         All default controls, speed up or slow down ddcutil by passing a sleep multiplier.
@@ -200,6 +209,7 @@ from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle
 
+VDU_CONTROLS_VERSION = 1.2
 
 def translate(source_text: str):
     """For future internationalization - recommended way to do this at this time."""
@@ -207,25 +217,31 @@ def translate(source_text: str):
 
 
 ABOUT_TEXT = """
-A virtual control panel for external Visual Display Units.
 
+<b>vdu_controls version {}</b>
+<p>
+A virtual control panel for external Visual Display Units. 
+<p>
 Run vdu_controls --help in a console for help.
-Visit https://github.com/digitaltrails/vdu_controls for more details.
+<p>
+Visit <a href="https://github.com/digitaltrails/vdu_controls">https://github.com/digitaltrails/vdu_controls</a> for more details.
+<p><p>
 
-vdu_controls Copyright (C) 2021 Michael Hamilton
-
+<b>vdu_controls Copyright (C) 2021 Michael Hamilton</b>
+<p>
 This program is free software: you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
 Free Software Foundation, version 3.
-
+<p>
 This program is distributed in the hope that it will be useful, but
 WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
 more details.
-
+<p>
 You should have received a copy of the GNU General Public License along
-with this program. If not, see https://www.gnu.org/licenses/ .
-"""
+with this program. If not, see <a href="https://www.gnu.org/licenses/">https://www.gnu.org/licenses/</a>.
+
+""".format(VDU_CONTROLS_VERSION)
 
 BRIGHTNESS_SVG = b"""
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24">
@@ -283,11 +299,11 @@ VOLUME_SVG = b"""
 </svg>
 """
 
-# Encode some default graphics to make the script self contained
+#: A high resolution image, will fallback to an internal PNG if this file isn't found on the local system
 DEFAULT_SPLASH_PNG = "/usr/share/icons/oxygen/base/256x256/apps/preferences-desktop-display.png"
 
-#: Assumed location of ddcutil on a linux system.
-DDCUTIL = "/usr/bin/ddcutil"
+#: Assuming ddcutil is somewhere on the PATH.
+DDCUTIL = "ddcutil"
 
 #: Internal special exit code used to signal that the exit handler should restart the program.
 EXIT_CODE_FOR_RESTART = 1959
@@ -338,6 +354,10 @@ SUPPORTED_VCP_CONTROLS = {
     '10': VcpGuiControlDef('10', 'Brightness', icon_source=BRIGHTNESS_SVG),
     '12': VcpGuiControlDef('12', 'Contrast', icon_source=CONTRAST_SVG),
     '62': VcpGuiControlDef('62', 'Audio volume', icon_source=VOLUME_SVG),
+    '8D': VcpGuiControlDef('8D', 'Audio mute', icon_source=VOLUME_SVG),
+    '8F': VcpGuiControlDef('8F', 'Audio treble', icon_source=VOLUME_SVG),
+    '91': VcpGuiControlDef('91', 'Audio bass', icon_source=VOLUME_SVG),
+    '64': VcpGuiControlDef('91', 'Audio mic volume', icon_source=VOLUME_SVG),
     '60': VcpGuiControlDef('60', 'Input Source', causes_config_change=True),
     'D6': VcpGuiControlDef('D6', 'Power mode', causes_config_change=True),
     'CC': VcpGuiControlDef('CC', 'OSD Language'),
