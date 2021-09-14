@@ -211,6 +211,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
 
 VDU_CONTROLS_VERSION = 1.2
 
+
 def translate(source_text: str):
     """For future internationalization - recommended way to do this at this time."""
     return QCoreApplication.translate('vdu_controls', source_text)
@@ -365,18 +366,35 @@ SUPPORTED_VCP_CONTROLS = {
 
 
 class DdcUtil:
-    """Interface to the command line ddcutil Display Data Channel Utility for interacting with VDU's."""
+    """
+    Interface to the command line ddcutil Display Data Channel Utility for interacting with VDU's.
+    The exception callback can return True if we should retry after errors (after the callback takes
+    corrective action such as increasing the sleep_multiplier).
+    """
 
-    def __init__(self, debug: bool = False, common_args: List[str] = None):
+    def __init__(self, debug: bool = False, common_args=None, sleep_multiplier: float = 0.5, exception_callback=None):
         super().__init__()
         self.debug = debug
         self.supported_codes = None
+        self.sleep_multiplier = sleep_multiplier
+        self.exception_callback = exception_callback
         self.common_args = [] if common_args is None else common_args
 
     def __run__(self, *args) -> subprocess.CompletedProcess:
         if self.debug:
             print("DEBUG: subprocess run    - ", DDCUTIL, args)
-        result = subprocess.run([DDCUTIL, ] + self.common_args + list(args), stdout=subprocess.PIPE, check=True)
+        while True:
+            try:
+                result = subprocess.run(
+                    [DDCUTIL, '--sleep-multiplier', str(self.sleep_multiplier)] + self.common_args + list(args),
+                    stdout=subprocess.PIPE, check=True)
+                break
+            except subprocess.CalledProcessError as e:
+                # An error has occurred see if we should try again...
+                print("ERROR:", e)
+                if self.exception_callback is not None and self.exception_callback(e):
+                    continue
+                raise e from None
         if self.debug:
             print("DEBUG: subprocess result - ", result)
         return result
@@ -778,7 +796,32 @@ class DdcMainWidget(QWidget):
                  detect_vdu_hook: callable):
         super().__init__()
         layout = QVBoxLayout()
-        self.ddcutil = DdcUtil(debug=debug, common_args=['--sleep-multiplier', str(sleep_multiplier)])
+
+        def ddcutil_exception_handler(e):
+            msg = QMessageBox()
+            msg.setText(
+                translate('An error was detected while trying to interact with the monitor.').format(
+                    self.ddcutil.sleep_multiplier))
+            double_multiplier = self.ddcutil.sleep_multiplier * 2.0
+            msg.setInformativeText(
+                translate('Should we try again at a slower communication speed?'))
+            msg.setDetailedText(
+                translate('If the slower speed works, you could pass --sleep-multiplier {} ' 
+                          'on the command line to make the change permanent. You can also '
+                          'experiment to find a workable smaller value.').format(double_multiplier))
+            msg.setIcon(QMessageBox.Critical)
+            msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+            msg.setDefaultButton(QMessageBox.Ok)
+            ret = msg.exec()
+            if ret == QMessageBox.Ok:
+                print("WARNING: increasing sleep-multiplier to {}".format(sleep_multiplier))
+                self.ddcutil.sleep_multiplier = double_multiplier
+                return True
+            return False
+
+        self.ddcutil = DdcUtil(debug=debug, common_args=None, sleep_multiplier=sleep_multiplier,
+                               exception_callback=ddcutil_exception_handler)
+
         self.vdu_widgets = []
         self.enabled_capabilities = enabled_vcp_codes
         self.warnings = warnings
