@@ -248,8 +248,8 @@ zypper install ddcutil</code></pre>
 </blockquote>
 <blockquote>
 <dl>
-<dt><strong>class vdu_controls.DdcUtil(debug: bool = False, common_args: Optional[List[str]] = None)</strong></dt>
-<dd><p>Interface to the command line ddcutil Display Data Channel Utility for interacting with VDU's.</p>
+<dt><strong>class vdu_controls.DdcUtil(debug: bool = False, common_args=None, sleep_multiplier: float = 0.5, exception_callback=None)</strong></dt>
+<dd><p>Interface to the command line ddcutil Display Data Channel Utility for interacting with VDU's. The exception callback can return True if we should retry after errors (after the callback takes corrective action such as increasing the sleep_multiplier).</p>
 <dl>
 <dt><strong>detect_monitors() -&gt; List[Tuple[str, str, str, str]]</strong></dt>
 <dd><p>Return a list of (vdu_id, desc) tuples.</p>

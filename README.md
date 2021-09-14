@@ -108,6 +108,8 @@ Michael Hamilton\
 
 Version History
 ---------------
+* 1.2.1
+    * Catch ddcutil error exit and offer to try a slower --sleep-multiplier
 * 1.2
     * Better handle out of range values.
     * Enable audio-mute,audio-treble,audio-bass,audio-mic-volume.
