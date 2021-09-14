@@ -209,7 +209,7 @@ from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle
 
-VDU_CONTROLS_VERSION = 1.2
+VDU_CONTROLS_VERSION = '1.2.1'
 
 
 def translate(source_text: str):
