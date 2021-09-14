@@ -814,7 +814,7 @@ class DdcMainWidget(QWidget):
             msg.setDefaultButton(QMessageBox.Ok)
             ret = msg.exec()
             if ret == QMessageBox.Ok:
-                print("WARNING: increasing sleep-multiplier to {}".format(sleep_multiplier))
+                print("WARNING: increasing sleep-multiplier to {}".format(double_multiplier))
                 self.ddcutil.sleep_multiplier = double_multiplier
                 return True
             return False
