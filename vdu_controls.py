@@ -209,7 +209,7 @@ from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle
 
-VDU_CONTROLS_VERSION = '1.2.1'
+VDU_CONTROLS_VERSION = '1.2.2'
 
 
 def translate(source_text: str):
@@ -225,7 +225,8 @@ A virtual control panel for external Visual Display Units.
 <p>
 Run vdu_controls --help in a console for help.
 <p>
-Visit <a href="https://github.com/digitaltrails/vdu_controls">https://github.com/digitaltrails/vdu_controls</a> for more details.
+Visit <a href="https://github.com/digitaltrails/vdu_controls">https://github.com/digitaltrails/vdu_controls</a> for 
+more details.
 <p><p>
 
 <b>vdu_controls Copyright (C) 2021 Michael Hamilton</b>
@@ -372,29 +373,19 @@ class DdcUtil:
     corrective action such as increasing the sleep_multiplier).
     """
 
-    def __init__(self, debug: bool = False, common_args=None, sleep_multiplier: float = 0.5, exception_callback=None):
+    def __init__(self, debug: bool = False, common_args=None, sleep_multiplier: float = 1.0):
         super().__init__()
         self.debug = debug
         self.supported_codes = None
         self.sleep_multiplier = sleep_multiplier
-        self.exception_callback = exception_callback
         self.common_args = [] if common_args is None else common_args
 
     def __run__(self, *args) -> subprocess.CompletedProcess:
         if self.debug:
             print("DEBUG: subprocess run    - ", DDCUTIL, args)
-        while True:
-            try:
-                result = subprocess.run(
-                    [DDCUTIL, '--sleep-multiplier', str(self.sleep_multiplier)] + self.common_args + list(args),
-                    stdout=subprocess.PIPE, check=True)
-                break
-            except subprocess.CalledProcessError as e:
-                # An error has occurred see if we should try again...
-                print("ERROR:", e)
-                if self.exception_callback is not None and self.exception_callback(e):
-                    continue
-                raise e from None
+        result = subprocess.run(
+            [DDCUTIL, '--sleep-multiplier', str(self.sleep_multiplier)] + self.common_args + list(args),
+            stdout=subprocess.PIPE, check=True)
         if self.debug:
             print("DEBUG: subprocess result - ", result)
         return result
@@ -641,12 +632,19 @@ class DdcSliderWidget(QWidget):
         def slider_changed(value):
             self.current_value = str(value)
             text_input.setText(self.current_value)
-            self.vdu.ddcutil.set_attribute(self.vdu.id, self.vcp_capability.vcp_code, self.current_value)
-            if self.vcp_capability.vcp_code in SUPPORTED_VCP_CONTROLS and \
-                    SUPPORTED_VCP_CONTROLS[self.vcp_capability.vcp_code].causes_config_change:
-                # The VCP command has turned one off a VDU or changed what it is connected to.
-                # VDU ID's will now be out of whack - restart the GUI.
-                restart_due_to_config_change()
+            try:
+                self.vdu.ddcutil.set_attribute(self.vdu.id, self.vcp_capability.vcp_code, self.current_value)
+                if self.vcp_capability.vcp_code in SUPPORTED_VCP_CONTROLS and \
+                        SUPPORTED_VCP_CONTROLS[self.vcp_capability.vcp_code].causes_config_change:
+                    # The VCP command has turned one off a VDU or changed what it is connected to.
+                    # VDU ID's will now be out of whack - restart the GUI.
+                    restart_due_to_config_change()
+            except subprocess.SubprocessError:
+                msg = QMessageBox()
+                msg.setIcon(QMessageBox.Critical)
+                msg.setText(translate("Failed to communicate with {}").format(self.vdu.get_description()))
+                msg.setInformativeText(translate('Is the monitor switched off?<br>Is --sleep-multiplier set too low?'))
+                msg.exec()
 
         slider.valueChanged.connect(slider_changed)
 
@@ -706,10 +704,17 @@ class DdcComboBox(QWidget):
 
         def index_changed(index: int):
             self.current_value = self.combo_box.currentData
-            self.vdu.ddcutil.set_attribute(self.vdu.id, self.vcp_capability.vcp_code, self.combo_box.currentData())
-            if self.vcp_capability.vcp_code in SUPPORTED_VCP_CONTROLS and \
-                    SUPPORTED_VCP_CONTROLS[self.vcp_capability.vcp_code].causes_config_change:
-                restart_due_to_config_change()
+            try:
+                self.vdu.ddcutil.set_attribute(self.vdu.id, self.vcp_capability.vcp_code, self.combo_box.currentData())
+                if self.vcp_capability.vcp_code in SUPPORTED_VCP_CONTROLS and \
+                        SUPPORTED_VCP_CONTROLS[self.vcp_capability.vcp_code].causes_config_change:
+                    restart_due_to_config_change()
+            except subprocess.SubprocessError:
+                msg = QMessageBox()
+                msg.setIcon(QMessageBox.Critical)
+                msg.setText(translate("Failed to communicate with {}").format(self.vdu.get_description()))
+                msg.setInformativeText(translate('Is the monitor switched off?<br>Is --sleep-multiplier set too low?'))
+                msg.exec()
 
         combo_box.currentIndexChanged.connect(index_changed)
 
@@ -796,32 +801,7 @@ class DdcMainWidget(QWidget):
                  detect_vdu_hook: callable):
         super().__init__()
         layout = QVBoxLayout()
-
-        def ddcutil_exception_handler(e):
-            msg = QMessageBox()
-            msg.setText(
-                translate('An error was detected while trying to interact with the monitor.').format(
-                    self.ddcutil.sleep_multiplier))
-            double_multiplier = self.ddcutil.sleep_multiplier * 2.0
-            msg.setInformativeText(
-                translate('Should we try again at a slower communication speed?'))
-            msg.setDetailedText(
-                translate('If the slower speed works, you could pass --sleep-multiplier {} ' 
-                          'on the command line to make the change permanent. You can also '
-                          'experiment to find a workable smaller value.').format(double_multiplier))
-            msg.setIcon(QMessageBox.Critical)
-            msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
-            msg.setDefaultButton(QMessageBox.Ok)
-            ret = msg.exec()
-            if ret == QMessageBox.Ok:
-                print("WARNING: increasing sleep-multiplier to {}".format(double_multiplier))
-                self.ddcutil.sleep_multiplier = double_multiplier
-                return True
-            return False
-
-        self.ddcutil = DdcUtil(debug=debug, common_args=None, sleep_multiplier=sleep_multiplier,
-                               exception_callback=ddcutil_exception_handler)
-
+        self.ddcutil = DdcUtil(debug=debug, common_args=None, sleep_multiplier=sleep_multiplier)
         self.vdu_widgets = []
         self.enabled_capabilities = enabled_vcp_codes
         self.warnings = warnings
@@ -930,7 +910,9 @@ def exception_handler(e_type, e_value, e_traceback):
     print("ERROR:\n", ''.join(traceback.format_exception(e_type, e_value, e_traceback)))
     alert = QMessageBox()
     alert.setText(translate('Error: {}').format(''.join(traceback.format_exception_only(e_type, e_value))))
-    alert.setInformativeText(
+    alert.setInformativeText(translate('Is --sleep-multiplier set too low?') +
+                             '<br>_______________________________________________________<br>')
+    alert.setDetailedText(
         translate('Details: {}').format(''.join(traceback.format_exception(e_type, e_value, e_traceback))))
     alert.setIcon(QMessageBox.Critical)
     alert.exec()

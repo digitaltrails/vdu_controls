@@ -108,6 +108,8 @@ Michael Hamilton\
 
 Version History
 ---------------
+* 1.2.2
+    * Generalise and simplify the error handling changes initiated in v1.2.1.
 * 1.2.1
     * Catch ddcutil error exit and offer to try a slower --sleep-multiplier
 * 1.2
