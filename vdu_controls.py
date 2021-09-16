@@ -15,10 +15,10 @@ Usage::
                      [--enable-vcp-code vcp_code] [--system-tray] [--debug] [--warnings]
                      [--no-splash] [--sleep-multiplier multiplier]
 
-Optional arguments:
-^^^^^^^^^^^^^^^^^^^
+### Optional arguments:
 
       -h, --help            show this help message and exit
+      --detailed-help           full help in markdown format
       --about               about vdu_controls
       --show control_name
                             show specified control only (--show may be specified multiple times)
@@ -43,7 +43,8 @@ each  DVI/DP/HDMI/USB connected VDU and uses the ``ddcutil`` command line utilit
 (*DDC*) *Virtual Control Panel*  (*VCP*) commands to each of them. The intent is not to provide a comprehensive set
 of controls but rather to provide a simple panel with a selection of essential controls for the desktop.
 
-``vdu_controls`` may be run as a system-tray entry by using the ``--system-tray`` option.
+A context menu containing this help is available by pressing the right-mouse button either in the main user interface
+or on the system-tray icon.  ``vdu_controls`` may be run as a system-tray entry by using the ``--system-tray`` option.
 
 By default ``vdu_controls`` offers a subset of possible controls including brightness and contrast.  Further controls
 can be added by using the ``--enable-vcp-code`` option to add any other codes supported by ``ddcutil``.  The full list
@@ -75,17 +76,20 @@ item and selecting **Edit Application**).  Alternatively, it is just as easy to 
 edit the desktop definition file ``$HOME/.local/share/applications/vdu_controls.desktop`` and add options to
 the ``Exec=`` line.
 
-
-
-VDU/VDU-model config files
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+### VDU/VDU-model config files
 
 An optional config file can be setup for each VDU or VDU-model.
 
-The VDU config files are provided so that manufacturer supplied meta data can be corrected when it proves to be
-inaccurate. These config files can be model specific, or model and serial-number specific. For example, a VCP
-query to my LG monitor reports that it has four inputs, but in reality it only has three.  I can correct this
-as follows:
+The VDU config files are provided so for monitor specific tweaks.  These config files can be model specific, or model
+and serial-number specific.  The feature serves several purposes:
+
+    * Correction of manufacturer built-in meta data.
+    * Customisation of which controls are to be provided.
+    * Performance tweaks for individual VDU's.
+
+A config file can be employed when manufacturer built-in meta data is incorrect or inaccurate. For example, a VCP
+query to my LG monitor reports that it has four inputs, but in reality it only has three. I can correct this as
+follows:
 
     1 Run ``vdu_controls`` in a console window and not which config files it's looking for::
 
@@ -112,23 +116,37 @@ as follows:
 In the case where the manufacturers serial number cannot be retrieved, ``vdu_controls`` will look for a config file
 containing the display number instead.
 
+VDU Config files may be used to further refine ``--show``/``-hide`` settings by removing features for specific
+VDU's.  For example, for a desktop with three VDU's, to show audio-volume for only one of them, create config files
+for the other two, edit each file and remove ``Feature: 62 Audio speaker volume``.
+
+In another multi-monitor scenario a VDU Config file may also be used to specify a custom sleep-multiplier for
+a monitor that is particularly fast or slow at DCC communication.  Add a line to the top section of a VDU's config
+file with the content ``CUSTOM::Sleep_Multiplier:`` followed by a floating point value, for example:
+
+        CUSTOM::Sleep_Multiplier: 0.2
+        Model: XYZZY-42
+        MCCS version: 2.2
+        ...
+
 The VDU Config files read by ``vdu_controls`` can only be used to alter definitions of VCP codes already supported
 by ``ddcutil``.  If the file lists a VCP code as a *manufacturer specific feature* then it is not supported.
 Manufacturer specific features should not be experimented with, some may have destructive or irreversible consequences
 that may brick the hardware. It is possible to enable any codes by  creating a  ``ddcutil`` user definition (``--udef``)
 file, BUT THIS SHOULD ONLY BE USED WITH EXTREME CAUTION AND CANNOT BE RECOMMENDED.
 
-Responsiveness
-^^^^^^^^^^^^^^
+### Responsiveness
 
 If your VDU's are modern, you may find a smaller ``--sleep-multiplier`` will speed up the ``ddcutil``/VDU protocol
-exchanges making both ``ddcutil`` and ``vdu_controls`` much more responsive.
+exchanges making both ``ddcutil`` and ``vdu_controls`` much more responsive.  In the case where a set of VDU's
+have quite different ``--sleep-multiplier`` tolerances, individual  ``CUSTOM::Sleep_Multiplier:`` can be specified
+in VDU/VDU-model config files (see previous section).
+
+Using VDU/VDU-model config files files may speed up startup by eliminating the need to run ``ddcutil`` to retrieve
+VDU capabilities.
 
 Reducing the number of controls by using ``--show`` or ``--hide`` options will speed up the initialisation and some
 aspects of the interface by reducing the number of requests to ``ddcutil``.
-
-Using VDU/VDU-model config files files may speed up the startup by eliminating the need to run ``ddcutil`` to retrieve
-VDU capabilities.
 
 Examples
 --------
@@ -207,9 +225,9 @@ from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess
 from PyQt5.QtGui import QIntValidator, QPixmap, QIcon, QCursor, QImage, QPainter
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
-    QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle
+    QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog
 
-VDU_CONTROLS_VERSION = '1.2.2'
+VDU_CONTROLS_VERSION = '1.3.0'
 
 
 def translate(source_text: str):
@@ -373,18 +391,19 @@ class DdcUtil:
     corrective action such as increasing the sleep_multiplier).
     """
 
-    def __init__(self, debug: bool = False, common_args=None, sleep_multiplier: float = 1.0):
+    def __init__(self, debug: bool = False, common_args=None, default_sleep_multiplier: float = 1.0):
         super().__init__()
         self.debug = debug
         self.supported_codes = None
-        self.sleep_multiplier = sleep_multiplier
+        self.default_sleep_multiplier = default_sleep_multiplier
         self.common_args = [] if common_args is None else common_args
 
-    def __run__(self, *args) -> subprocess.CompletedProcess:
+    def __run__(self, *args, sleep_multiplier: float = None) -> subprocess.CompletedProcess:
         if self.debug:
             print("DEBUG: subprocess run    - ", DDCUTIL, args)
+        multiplier_str = str(self.default_sleep_multiplier if sleep_multiplier is None else sleep_multiplier)
         result = subprocess.run(
-            [DDCUTIL, '--sleep-multiplier', str(self.sleep_multiplier)] + self.common_args + list(args),
+            [DDCUTIL, '--sleep-multiplier', multiplier_str] + self.common_args + list(args),
             stdout=subprocess.PIPE, check=True)
         if self.debug:
             print("DEBUG: subprocess result - ", result)
@@ -440,7 +459,7 @@ class DdcUtil:
                 vcp_code = feature_match.group(1)
                 vcp_name = feature_match.group(2)
                 values = parse_values(feature_match.group(3))
-                # Guess type from existance or not of value list
+                # Guess type from existence or not of value list
                 vcp_type = CONTINUOUS_TYPE if len(values) == 0 else SIMPLE_NON_CONTINUOUS_TYPE
                 capability = VcpCapability(vcp_code, vcp_name, vcp_type=vcp_type, values=values, icon_source=None)
                 feature_map[vcp_code] = capability
@@ -448,7 +467,7 @@ class DdcUtil:
             print("DEBUG: capabilities", feature_map.keys())
         return feature_map
 
-    def get_attribute(self, vdu_id: str, vcp_code: str) -> Tuple[str, str]:
+    def get_attribute(self, vdu_id: str, vcp_code: str, sleep_multiplier: float = None) -> Tuple[str, str]:
         """
         Given a VDU id and vcp_code, retrieve the attribute's current value from the VDU.
 
@@ -462,7 +481,7 @@ class DdcUtil:
         cnc_pattern = re.compile(r'x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+)')
         # Try a few times in case there is a glitch due to a monitor being turned off/on
         for i in range(3):
-            result = self.__run__('--brief', '--display', vdu_id, 'getvcp', vcp_code)
+            result = self.__run__('--brief', '--display', vdu_id, 'getvcp', vcp_code, sleep_multiplier=sleep_multiplier)
             value_match = value_pattern.match(result.stdout.decode('utf-8'))
             if value_match is not None:
                 type_indicator = value_match.group(1)
@@ -490,11 +509,11 @@ class DdcUtil:
             "ddcutil returned garbage for monitor {} vcp_code {}, try increasing --sleep-multiplier".format(
                 vdu_id, vcp_code))
 
-    def set_attribute(self, vdu_id: str, vcp_code: str, new_value: str):
+    def set_attribute(self, vdu_id: str, vcp_code: str, new_value: str, sleep_multiplier: float = None):
         """Send a new value to a specific VDU and vcp_code."""
         current, _ = self.get_attribute(vdu_id, vcp_code)
         if new_value != current:
-            self.__run__('--display', vdu_id, 'setvcp', vcp_code, new_value)
+            self.__run__('--display', vdu_id, 'setvcp', vcp_code, new_value, sleep_multiplier=sleep_multiplier)
 
     def vcp_info(self):
         """Returns info about all codes known to ddcutil, whether supported or not."""
@@ -539,8 +558,10 @@ class DdcVdu:
         self.serial = vdu_serial
         self.manufacturer = manufacturer
         self.ddcutil = ddcutil
+        self.sleep_multiplier = None
         alt_capability_text = None
-        unacceptable_char_pattern = re.compile('[^A-Za-z0-9._-]')
+        sleep_multiplier_pattern = re.compile(r'\bCUSTOM::Sleep_Multiplier:[ \t]*([0-9]*[.]?[0-9]+)', re.IGNORECASE)
+        unacceptable_char_pattern = re.compile(r'[^A-Za-z0-9._-]')
         serial_config = re.sub(unacceptable_char_pattern, '_', vdu_model.strip() + '_' + vdu_serial.strip()) + '.conf'
         model_config = re.sub(unacceptable_char_pattern, '_', vdu_model.strip()) + '.conf'
         for config_filename in (serial_config, model_config):
@@ -549,6 +570,11 @@ class DdcVdu:
             if os.path.isfile(config_path) and os.access(config_path, os.R_OK):
                 alt_capability_text = Path(config_path).read_text()
                 print("WARNING: using config file '" + config_path.as_posix() + "'")
+                custom_multiplier_match = sleep_multiplier_pattern.search(alt_capability_text)
+                if custom_multiplier_match is not None:
+                    self.sleep_multiplier = float(custom_multiplier_match.group(1))
+                    print("WARNING: custom sleep multiplier for {} is {}".format(self.get_description(),
+                                                                                 self.sleep_multiplier))
                 break
         self.capabilities = ddcutil.query_capabilities(vdu_id, alt_capability_text)
 
@@ -559,6 +585,12 @@ class DdcVdu:
     def get_full_id(self) -> Tuple[str, str, str, str]:
         """Return a tuple that defines this VDU: (vdu_id, manufacturer, model, serial-number)."""
         return self.id, self.manufacturer, self.model, self.serial
+
+    def get_attribute(self, vcp_code: str) -> Tuple[str, str]:
+        return self.ddcutil.get_attribute(self.id, vcp_code, sleep_multiplier=self.sleep_multiplier)
+
+    def set_attribute(self, vcp_code: str, value: str):
+        self.ddcutil.set_attribute(self.id, vcp_code, value, sleep_multiplier=self.sleep_multiplier)
 
 
 def restart_due_to_config_change():
@@ -590,7 +622,7 @@ class DdcSliderWidget(QWidget):
 
         self.vdu = vdu
         self.vcp_capability = vcp_capability
-        self.current_value, self.max_value = vdu.ddcutil.get_attribute(vdu.id, self.vcp_capability.vcp_code)
+        self.current_value, self.max_value = vdu.get_attribute(self.vcp_capability.vcp_code)
 
         layout = QHBoxLayout()
         self.setLayout(layout)
@@ -633,7 +665,7 @@ class DdcSliderWidget(QWidget):
             self.current_value = str(value)
             text_input.setText(self.current_value)
             try:
-                self.vdu.ddcutil.set_attribute(self.vdu.id, self.vcp_capability.vcp_code, self.current_value)
+                self.vdu.set_attribute(self.vcp_capability.vcp_code, self.current_value)
                 if self.vcp_capability.vcp_code in SUPPORTED_VCP_CONTROLS and \
                         SUPPORTED_VCP_CONTROLS[self.vcp_capability.vcp_code].causes_config_change:
                     # The VCP command has turned one off a VDU or changed what it is connected to.
@@ -660,7 +692,7 @@ class DdcSliderWidget(QWidget):
 
     def refresh_data(self):
         """Query the VDU for a new data value and cache it (may be called from a task thread, so no GUI op's here)."""
-        self.current_value, _ = self.vdu.ddcutil.get_attribute(self.vdu.id, self.vcp_capability.vcp_code)
+        self.current_value, _ = self.vdu.get_attribute(self.vcp_capability.vcp_code)
 
     def refresh_view(self):
         """Copy the internally cached current value onto the GUI view."""
@@ -680,7 +712,7 @@ class DdcComboBox(QWidget):
 
         self.vdu = vdu
         self.vcp_capability = vcp_capability
-        self.current_value = vdu.ddcutil.get_attribute(vdu.id, vcp_capability.vcp_code)[0]
+        self.current_value = vdu.get_attribute(vcp_capability.vcp_code)[0]
 
         layout = QHBoxLayout()
         self.setLayout(layout)
@@ -705,7 +737,7 @@ class DdcComboBox(QWidget):
         def index_changed(index: int):
             self.current_value = self.combo_box.currentData
             try:
-                self.vdu.ddcutil.set_attribute(self.vdu.id, self.vcp_capability.vcp_code, self.combo_box.currentData())
+                self.vdu.set_attribute(self.vcp_capability.vcp_code, self.combo_box.currentData())
                 if self.vcp_capability.vcp_code in SUPPORTED_VCP_CONTROLS and \
                         SUPPORTED_VCP_CONTROLS[self.vcp_capability.vcp_code].causes_config_change:
                     restart_due_to_config_change()
@@ -720,7 +752,7 @@ class DdcComboBox(QWidget):
 
     def refresh_data(self):
         """Query the VDU for a new data value and cache it (may be called from a task thread, so no GUI op's here)."""
-        self.current_value, _ = self.vdu.ddcutil.get_attribute(self.vdu.id, self.vcp_capability.vcp_code)
+        self.current_value, _ = self.vdu.get_attribute(self.vcp_capability.vcp_code)
 
     def refresh_view(self):
         """Copy the internally cached current value onto the GUI view."""
@@ -801,7 +833,7 @@ class DdcMainWidget(QWidget):
                  detect_vdu_hook: callable):
         super().__init__()
         layout = QVBoxLayout()
-        self.ddcutil = DdcUtil(debug=debug, common_args=None, sleep_multiplier=sleep_multiplier)
+        self.ddcutil = DdcUtil(debug=debug, common_args=None, default_sleep_multiplier=sleep_multiplier)
         self.vdu_widgets = []
         self.enabled_capabilities = enabled_vcp_codes
         self.warnings = warnings
@@ -983,6 +1015,20 @@ def install_as_desktop_application(uninstall: bool = False):
     print('INFO: installation complete. Your desktop->applications->settings should now contain VDU Controls')
 
 
+class HelpWidget(QDialog):
+    """"""
+
+    def __init__(self):
+        super().__init__(None, Qt.Window)
+        layout = QVBoxLayout()
+        mdv = QTextEdit()
+        mdv.setReadOnly(True)
+        mdv.setMarkdown(__doc__)
+        layout.addWidget(QPushButton())
+        layout.addWidget(mdv)
+        self.setLayout(layout)
+
+
 def main():
     """vdu_controls application main."""
     # Allow control-c to terminate the program
@@ -994,8 +1040,14 @@ def main():
           Uses ddcutil to issue Display Data Channel (DDC) Virtual Control Panel (VCP) commands. 
           Controls DVI/DP/HDMI/USB connected monitors (but not builtin laptop displays)."""),
         formatter_class=argparse.RawTextHelpFormatter)
+    parser.epilog = textwrap.dedent("""
+        As well as command line arguments, individual VDU controls and optimisations may be
+        specified in monitor specific configuration files, see the accompanying documentation
+        for details.""")
+    parser.add_argument('--detailed-help', default=False, action='store_true',
+                        help='Detailed help (in markdown format).')
     parser.add_argument('--about', default=False, action='store_true',
-                        help='about vdu_controls')
+                        help='about vdu_controls window')
     parser.add_argument('--show',
                         default=[],
                         action='append', choices=[vcp.arg_name() for vcp in SUPPORTED_VCP_CONTROLS.values()],
@@ -1025,6 +1077,9 @@ def main():
     if args.uninstall:
         install_as_desktop_application(uninstall=True)
         sys.exit()
+    if args.detailed_help:
+        print(__doc__)
+        sys.exit()
 
     sys.excepthook = exception_handler
     app = QApplication(sys.argv)
@@ -1048,18 +1103,35 @@ def main():
         about_message.setIcon(QMessageBox.Information)
         about_message.exec()
 
+    def help_popup():
+        help_dialog = QDialog()
+        help_dialog.setWindowTitle('Help')
+        layout = QVBoxLayout()
+        markdown_view = QTextEdit()
+        markdown_view.setReadOnly(True)
+        markdown_view.setMarkdown(__doc__)
+        layout.addWidget(markdown_view)
+        help_dialog.setLayout(layout)
+        # TODO maybe compute a minimum from the actual screen size
+        help_dialog.setMinimumWidth(1600)
+        help_dialog.setMinimumHeight(1024)
+        help_dialog.exec()
+
     if args.about:
         about_popup()
+
+    app_context_menu = QMenu()
+    app_context_menu.addAction(app.style().standardIcon(QStyle.SP_MessageBoxInformation), translate('About'),
+                               about_popup)
+    app_context_menu.addAction(app.style().standardIcon(QStyle.SP_TitleBarContextHelpButton), translate('Help'), help_popup)
+    app_context_menu.addSeparator()
+    app_context_menu.addAction(app.style().standardIcon(QStyle.SP_DialogCloseButton), translate('Quit'), app.quit)
 
     tray = None
     if args.system_tray:
         tray = QSystemTrayIcon()
         tray.setIcon(app_icon)
-        menu = QMenu()
-        menu.addAction(app.style().standardIcon(QStyle.SP_MessageBoxInformation), translate('About'), about_popup)
-        menu.addSeparator()
-        menu.addAction(app.style().standardIcon(QStyle.SP_DialogCloseButton), translate('Quit'), app.quit)
-        tray.setContextMenu(menu)
+        tray.setContextMenu(app_context_menu)
 
     app.setWindowIcon(app_icon)
     app.setApplicationDisplayName(translate('VDU Controls'))
@@ -1079,6 +1151,13 @@ def main():
                                Qt.AlignTop | Qt.AlignHCenter)
 
     main_window = DdcMainWidget(enabled_vcp_codes, args.warnings, args.debug, args.sleep_multiplier, detect_vdu_hook)
+
+    main_window.setContextMenuPolicy(Qt.CustomContextMenu)
+
+    def open_context_menu(position):
+        app_context_menu.exec(main_window.mapToGlobal(position))
+
+    main_window.customContextMenuRequested.connect(open_context_menu)
 
     if tray is not None:
         def show_window():
