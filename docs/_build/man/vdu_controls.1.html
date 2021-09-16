@@ -1,5 +1,5 @@
 <h1>NAME</h1>
-<p>vdu_controls - vdu_controls 1.2.1</p>
+<p>vdu_controls - vdu_controls 1.3.0</p>
 <h1>VDU_CONTROLS: A QT GUI WRAPPER FOR DDCUTIL</h1>
 <p>A GUI for controlling connected <em>Visual Display Units</em> (<em>VDU</em>'s) (also known as <em>displays</em>, or <em>monitors</em>).</p>
 <h1>USAGE::</h1>
@@ -14,13 +14,16 @@
 </blockquote>
 </blockquote>
 </blockquote>
-<h2>Optional arguments:</h2>
+<p>### Optional arguments:</p>
 <blockquote>
 <blockquote>
 <blockquote>
 <dl>
 <dt><strong>-h<em>,</em> --help</strong></dt>
 <dd><p>show this help message and exit</p>
+</dd>
+<dt><strong>--detailed-help</strong></dt>
+<dd><p>full help in markdown format</p>
 </dd>
 <dt><strong>--about</strong></dt>
 <dd><p>about vdu_controls</p>
@@ -61,7 +64,7 @@
 </blockquote>
 <h1>DESCRIPTION</h1>
 <p><strong>vdu_controls is a virtual control panel for physically connected VDU's. It displays a set of controls for</strong> each DVI/DP/HDMI/USB connected VDU and uses the <strong>ddcutil command line utility to issue </strong><em>Display Data Channel</em> (<em>DDC</em><strong>) </strong><em>Virtual Control Panel</em><strong> (</strong><em>VCP</em><strong>) commands to each of them. The intent is not to provide a comprehensive set</strong> of controls but rather to provide a simple panel with a selection of essential controls for the desktop.</p>
-<p><strong>vdu_controls may be run as a system-tray entry by using the --system-tray option.</strong></p>
+<p>A context menu containing this help is available by pressing the right-mouse button either in the main user interface or on the system-tray icon. <strong>vdu_controls may be run as a system-tray entry by using the --system-tray option.</strong></p>
 <p>By default <strong>vdu_controls offers a subset of possible controls including brightness and contrast. Further controls</strong> can be added by using the <strong>--enable-vcp-code option to add any other codes supported by ddcutil. The full list</strong> of VCP codes supported by <strong>ddcutil can be listed by running ddcutil vcpinfo --verbose. For example, the</strong> VCP code 66 is listed as an on/off control for an ambient light sensor, this can be enabled for <strong>vdu_controls by</strong> passing <strong>--enable-vcp-code 66 (the control will only appear in the user interface if the VDU reports that it</strong> has that capability).</p>
 <p>Builtin laptop displays normally don't implement DDC and those displays are not supported, but a laptop's externally connected VDU's are likely to be controllable.</p>
 <p>Some controls change the number of connected devices (for example, some VDU's support a power-off command). If such controls are used, <strong>vdu_controls will detect the change and will restart itself to reconfigure the controls</strong> for the new situation (for example, DDC VDU 2 may now be DD VDU 1). Similarly, if you physically unplug monitor, the same thing will happen.</p>
@@ -69,17 +72,36 @@
 <h1>CONFIGURATION</h1>
 <p>Most configuration is supplied via command line parameters.</p>
 <p>Command line options can be added to the desktop application-menu by editing the application menu item directly in the desktop (for <em>KDE-Plasma</em><strong> this can be achieved by right-mousing on the VDU Controls menu</strong> item and selecting <strong>Edit Application). Alternatively, it is just as easy to use your preferred text editor to</strong> edit the desktop definition file <strong>$HOME/.local/share/applications/vdu_controls.desktop and add options to</strong> the <strong>Exec= line.</strong></p>
-<h2>VDU/VDU-model config files</h2>
-<p>An optional config file can be setup for each VDU or VDU-model.</p>
-<p>The VDU config files are provided so that manufacturer supplied meta data can be corrected when it proves to be inaccurate. These config files can be model specific, or model and serial-number specific. For example, a VCP query to my LG monitor reports that it has four inputs, but in reality it only has three. I can correct this as follows:</p>
+<p>### VDU/VDU-model config files</p>
+<p>An optional config file can be setup for each VDU or VDU-model to provide for VDU specific tweaks:</p>
+<blockquote>
+<blockquote>
+<blockquote>
+<ul>
+<li><p>Correction of manufacturer built-in meta data.</p></li>
+<li><p>Customisation of which controls are to be provided.</p></li>
+<li><p>DDC communication speed-multiplier specification for individual VDU's.</p></li>
+</ul>
+</blockquote>
+</blockquote>
+</blockquote>
+<p>The last two are particularly useful if a desktop has multiple VDU's that vary in features or DDC-communications speed.</p>
+<p>Config files can be model specific, or model and serial-number specific. In the case where the manufacturers serial number cannot be retrieved, <strong>vdu_controls will look for a config file containing the display number instead.</strong> The following naming convention is checked in the following order order:</p>
+<blockquote>
+<blockquote>
+<p>1 <strong>$HOME/.config/vdu_controls/&lt;model&gt;_&lt;serial|display_num&gt;.conf</strong></p>
+<p>2 <strong>$HOME/.config/vdu_controls/&lt;model&gt;.conf</strong></p>
+</blockquote>
+</blockquote>
+<p>The easiest way to determine the correct config filename is to run <strong>vdu_controls in a console and take note</strong> of the filenames listed by the diagnostics during startup. For example, a VCP query to my LG monitor reports that it has four inputs, but in reality it only has three. I can correct this as follows:</p>
 <blockquote>
 <blockquote>
 <p>1 Run <strong>vdu_controls in a console window and not which config files it's looking for:</strong></p>
 <blockquote>
 <blockquote>
 <pre><code>% ./vdu_controls.py
-INFO: checking for config file &#39;file:///home/michael/.config/vdu_controls/LG_HDR_4K_SN43328.conf&#39;
-INFO: checking for config file &#39;file:///home/michael/.config/vdu_controls/LG_HDR_4K.conf&#39;</code></pre>
+INFO: checking for config file &#39;/home/michael/.config/vdu_controls/LG_HDR_4K_SN43328.conf&#39;
+INFO: checking for config file &#39;/home/michael/.config/vdu_controls/LG_HDR_4K.conf&#39;</code></pre>
 </blockquote>
 </blockquote>
 <p>2 Run <strong>ddcutil to generate an initial text file of VDU capabilities:</strong></p>
@@ -106,12 +128,18 @@ WARNING: using config file &#39;/home/michael/.config/vdu_controls/LG_HDR_4K.con
 </blockquote>
 </blockquote>
 </blockquote>
-<p>In the case where the manufacturers serial number cannot be retrieved, <strong>vdu_controls will look for a config file</strong> containing the display number instead.</p>
+<p>VDU Config files may be used to refine <strong>--show/-hide settings by removing features for specific</strong> VDU's. For example, if a desktop with three VDU's and we want to show audio-volume for only one of them, we can create config files for the other two, edit each file and remove <strong>Feature: 62 Audio speaker volume.</strong></p>
+<p>In another multi-monitor example, we may need a larger <strong>--sleep-multiplier value to accommodate a VDU with</strong> a very slow DDC communications speed, but doing so would slow down the communication for all connected monitors resulting in very slow reaction time for all user interface controls. Instead of a global sleep-multiplier, a config file may be used to specify a custom sleep-multiplier for each monitor. This is achieved by adding a line to the top section of a config file with the content <strong>CUSTOM::Sleep_Multiplier: followed by a floating point value,</strong> for example:</p>
+<blockquote>
+<blockquote>
+<p>CUSTOM::Sleep_Multiplier: 1.5 Model: XYZZY-42 MCCS version: 2.2 ...</p>
+</blockquote>
+</blockquote>
 <p>The VDU Config files read by <strong>vdu_controls can only be used to alter definitions of VCP codes already supported</strong> by <strong>ddcutil. If the file lists a VCP code as a </strong><em>manufacturer specific feature</em><strong> then it is not supported.</strong> Manufacturer specific features should not be experimented with, some may have destructive or irreversible consequences that may brick the hardware. It is possible to enable any codes by creating a <strong>ddcutil user definition (--udef)</strong> file, BUT THIS SHOULD ONLY BE USED WITH EXTREME CAUTION AND CANNOT BE RECOMMENDED.</p>
-<h2>Responsiveness</h2>
-<p>If your VDU's are modern, you may find a smaller <strong>--sleep-multiplier will speed up the ddcutil/VDU protocol</strong> exchanges making both <strong>ddcutil and vdu_controls much more responsive.</strong></p>
-<p>Reducing the number of controls by using <strong>--show or --hide options will speed up the initialisation and some</strong> aspects of the interface by reducing the number of requests to <strong>ddcutil.</strong></p>
-<p>Using VDU/VDU-model config files files may speed up the startup by eliminating the need to run <strong>ddcutil to retrieve</strong> VDU capabilities.</p>
+<p>### Responsiveness</p>
+<p>If your VDU's are modern, you may find a smaller <strong>--sleep-multiplier will speed up the ddcutil/VDU protocol</strong> exchanges making both <strong>ddcutil and vdu_controls much more responsive. In a multi-VDU setup where the VDU's</strong> are quite different, VDU config files can be used to specify individual <strong>CUSTOM::Sleep_Multiplier: values (see</strong> previous section).</p>
+<p>Startup speed may be increased by using VDU config files to eliminating the need to run <strong>ddcutil to retrieve</strong> VDU capabilities.</p>
+<p>Reducing the number of controls by using <strong>--show or --hide will speed up the initialisation and reduce the</strong> refresh time when the refresh button is pressed.</p>
 <h1>EXAMPLES</h1>
 <blockquote>
 <blockquote>
@@ -133,7 +161,7 @@ WARNING: using config file &#39;/home/michael/.config/vdu_controls/LG_HDR_4K.con
 <dd><p>All default controls, plus controls for VCP_CODE 63 and 93, show any warnings, output debugging info.</p>
 </dd>
 <dt><strong><strong>vdu_controls</strong> --sleep-multiplier 0.1</strong></dt>
-<dd><p>All default controls, speed up or slow down ddcutil by passing a sleep multiplier.</p>
+<dd><p>All default controls, speed up ddcutil-VDU interaction by passing a sleep multiplier.</p>
 </dd>
 </dl>
 </blockquote>
@@ -248,7 +276,7 @@ zypper install ddcutil</code></pre>
 </blockquote>
 <blockquote>
 <dl>
-<dt><strong>class vdu_controls.DdcUtil(debug: bool = False, common_args=None, sleep_multiplier: float = 0.5, exception_callback=None)</strong></dt>
+<dt><strong>class vdu_controls.DdcUtil(debug: bool = False, common_args=None, default_sleep_multiplier: float = 1.0)</strong></dt>
 <dd><p>Interface to the command line ddcutil Display Data Channel Utility for interacting with VDU's. The exception callback can return True if we should retry after errors (after the callback takes corrective action such as increasing the sleep_multiplier).</p>
 <dl>
 <dt><strong>detect_monitors() -&gt; List[Tuple[str, str, str, str]]</strong></dt>
@@ -259,7 +287,7 @@ zypper install ddcutil</code></pre>
 </dl>
 <blockquote>
 <dl>
-<dt><strong>get_attribute(vdu_id: str, vcp_code: str) -&gt; Tuple[str, str]</strong></dt>
+<dt><strong>get_attribute(vdu_id: str, vcp_code: str, sleep_multiplier: Optional[float] = None) -&gt; Tuple[str, str]</strong></dt>
 <dd><p>Given a VDU id and vcp_code, retrieve the attribute's current value from the VDU.</p>
 </dd>
 </dl>
@@ -281,7 +309,7 @@ zypper install ddcutil</code></pre>
 </blockquote>
 <blockquote>
 <dl>
-<dt><strong>set_attribute(vdu_id: str, vcp_code: str, new_value: str)</strong></dt>
+<dt><strong>set_attribute(vdu_id: str, vcp_code: str, new_value: str, sleep_multiplier: Optional[float] = None)</strong></dt>
 <dd><p>Send a new value to a specific VDU and vcp_code.</p>
 </dd>
 </dl>
@@ -303,6 +331,13 @@ zypper install ddcutil</code></pre>
 <p>Capabilities are either extracted from ddcutil output or read from a ~/.config/vdu-control/ file. The file option is available so that the output from "ddcutil --display N capabilities" can be corrected because it is sometimes incorrect (due to sloppy implementation by manufacturers). For example, my LG monitor reports two Display-Port inputs and it only has one.</p>
 <blockquote>
 <dl>
+<dt><strong>get_attribute(vcp_code: str) -&gt; Tuple[str, str]</strong></dt>
+<dd>
+</dd>
+</dl>
+</blockquote>
+<blockquote>
+<dl>
 <dt><strong>get_description() -&gt; str</strong></dt>
 <dd><p>Return a unique description using the serial-number (if defined) or vdu_id.</p>
 </dd>
@@ -312,6 +347,13 @@ zypper install ddcutil</code></pre>
 <dl>
 <dt><strong>get_full_id() -&gt; Tuple[str, str, str, str]</strong></dt>
 <dd><p>Return a tuple that defines this VDU: (vdu_id, manufacturer, model, serial-number).</p>
+</dd>
+</dl>
+</blockquote>
+<blockquote>
+<dl>
+<dt><strong>set_attribute(vcp_code: str, value: str)</strong></dt>
+<dd>
 </dd>
 </dl>
 </blockquote>
@@ -349,6 +391,13 @@ zypper install ddcutil</code></pre>
 <dl>
 <dt><strong>vdu_controls.EXIT_CODE_FOR_RESTART = 1959</strong></dt>
 <dd><p>Internal special exit code used to signal that the exit handler should restart the program.</p>
+</dd>
+</dl>
+</blockquote>
+<blockquote>
+<dl>
+<dt><strong>class vdu_controls.HelpWidget</strong></dt>
+<dd>
 </dd>
 </dl>
 </blockquote>

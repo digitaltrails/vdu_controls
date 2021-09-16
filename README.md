@@ -62,16 +62,25 @@ the settings menu or by entering part of its name in the application menus searc
 Help
 ----
 
-Brief help can always be accessed via the command line help option
+Detailed help can be accessed by using the right mouse-button to bring up a context-menu.  Access to the context-menu
+is available in the application-window and in the system-tray icon.
+
+Both brief help and detailed help can also be accessed via the command line:
 ```
 % python3 vdu_controls.py --help
+% python3 vdu_controls.py --detailed-help
 # or if installed in $HOME/bin
 % vdu_controls --help
+% vdu_controls --detailed-help
 ```
 
 Whether run from the desktop application-menu or run from the command line, ``vdu-controls`` behaviour can be altered
-by a number of command line options, see the [man page](https://htmlpreview.github.io/?https://raw.githubusercontent.com/digitaltrails/vdu_controls/master/docs/_build/man/vdu_controls.1.html)
-) for details.
+by a number of command line options, see the context-menu help or the  [man page](https://htmlpreview.github.io/?https://raw.githubusercontent.com/digitaltrails/vdu_controls/master/docs/_build/man/vdu_controls.1.html)
+ for details.
+
+As well as the command line options, controls and optimisations for individual VDU's can be specified in individual 
+VDU config files, see the context-menu help or the [man page](https://htmlpreview.github.io/?https://raw.githubusercontent.com/digitaltrails/vdu_controls/master/docs/_build/man/vdu_controls.1.html)
+ for details.
 
 Development
 -----------
@@ -108,19 +117,25 @@ Michael Hamilton\
 
 Version History
 ---------------
+* 1.3.0
+  * Add a CUSTOM::Sleep_Multiplier VDU config file option to utilise VDU specific sleep multipliers.
+    This can be used to prevent the slowest VDU from dragging down response time for all connected VDU's.
+  * Added a main UI right-mouse action that makes the context menu available in the UI window.
+  * Added a help option to context menu, it displays a formatted version of the ``--detailed-help`` text.
+  * Added a ``--detailed-help`` command line option to extract the markdown help from the script.
 * 1.2.2
-    * Generalise and simplify the error handling changes initiated in v1.2.1.
+  * Generalise and simplify the error handling changes initiated in v1.2.1.
 * 1.2.1
-    * Catch ddcutil error exit and offer to try a slower --sleep-multiplier
+  * Catch ddcutil error exit and offer to try a slower --sleep-multiplier
 * 1.2
-    * Better handle out of range values.
-    * Enable audio-mute,audio-treble,audio-bass,audio-mic-volume.
-    * Allow ddcutil to be anywhere on the user's PATH.
-    * Improve parsing to ignore laptop non-MCCS displays when present with external monitors. 
-    * Improve the documentation.
-    * Add an --about command line option and an "about" tray option.
+  * Better handle out of range values.
+  * Enable audio-mute,audio-treble,audio-bass,audio-mic-volume.
+  * Allow ddcutil to be anywhere on the user's PATH.
+  * Improve parsing to ignore laptop non-MCCS displays when present with external monitors. 
+  * Improve the documentation.
+  * Add an --about command line option and an "about" tray option.
 * 1.0
-    * Initial Release
+  * Initial Release
 
 License
 -------

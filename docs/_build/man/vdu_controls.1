@@ -1,8 +1,8 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "VDU_CONTROLS" "1" "Sep 14, 2021" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Sep 16, 2021" "" "vdu_controls"
 .SH NAME
-vdu_controls \- vdu_controls 1.2.1
+vdu_controls \- vdu_controls 1.3.0
 .
 .nr rst2man-indent-level 0
 .
@@ -47,13 +47,17 @@ A GUI for controlling connected \fIVisual Display Units\fP (\fIVDU\fP\(aqs) (als
 .UNINDENT
 .UNINDENT
 .UNINDENT
-.SS Optional arguments:
+.sp
+### Optional arguments:
 .INDENT 0.0
 .INDENT 3.5
 .INDENT 0.0
 .TP
 .B \-h\fP,\fB  \-\-help
 show this help message and exit
+.TP
+.B \-\-detailed\-help
+full help in markdown format
 .TP
 .B \-\-about
 about vdu_controls
@@ -97,7 +101,8 @@ each  DVI/DP/HDMI/USB connected VDU and uses the \fBddcutil\fP command line util
 (\fIDDC\fP) \fIVirtual Control Panel\fP  (\fIVCP\fP) commands to each of them. The intent is not to provide a comprehensive set
 of controls but rather to provide a simple panel with a selection of essential controls for the desktop.
 .sp
-\fBvdu_controls\fP may be run as a system\-tray entry by using the \fB\-\-system\-tray\fP option.
+A context menu containing this help is available by pressing the right\-mouse button either in the main user interface
+or on the system\-tray icon.  \fBvdu_controls\fP may be run as a system\-tray entry by using the \fB\-\-system\-tray\fP option.
 .sp
 By default \fBvdu_controls\fP offers a subset of possible controls including brightness and contrast.  Further controls
 can be added by using the \fB\-\-enable\-vcp\-code\fP option to add any other codes supported by \fBddcutil\fP\&.  The full list
@@ -126,14 +131,40 @@ directly in the desktop (for \fIKDE\-Plasma\fP this can be achieved by right\-mo
 item and selecting \fBEdit Application\fP).  Alternatively, it is just as easy to use your preferred text editor to
 edit the desktop definition file \fB$HOME/.local/share/applications/vdu_controls.desktop\fP and add options to
 the \fBExec=\fP line.
-.SS VDU/VDU\-model config files
 .sp
-An optional config file can be setup for each VDU or VDU\-model.
+### VDU/VDU\-model config files
 .sp
-The VDU config files are provided so that manufacturer supplied meta data can be corrected when it proves to be
-inaccurate. These config files can be model specific, or model and serial\-number specific. For example, a VCP
-query to my LG monitor reports that it has four inputs, but in reality it only has three.  I can correct this
-as follows:
+An optional config file can be setup for each VDU or VDU\-model to provide for VDU specific tweaks:
+.INDENT 0.0
+.INDENT 3.5
+.INDENT 0.0
+.IP \(bu 2
+Correction of manufacturer built\-in meta data.
+.IP \(bu 2
+Customisation of which controls are to be provided.
+.IP \(bu 2
+DDC communication speed\-multiplier specification for individual VDU\(aqs.
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.sp
+The last two are particularly useful if a desktop has multiple VDU\(aqs that vary in features or DDC\-communications
+speed.
+.sp
+Config files can be model specific, or model and serial\-number specific.  In the case where the manufacturers serial
+number cannot be retrieved, \fBvdu_controls\fP will look for a config file containing the display number instead.
+The following naming convention is checked in the following order order:
+.INDENT 0.0
+.INDENT 3.5
+1 \fB$HOME/.config/vdu_controls/<model>_<serial|display_num>.conf\fP
+.sp
+2 \fB$HOME/.config/vdu_controls/<model>.conf\fP
+.UNINDENT
+.UNINDENT
+.sp
+The easiest way to determine the correct config filename is to run \fBvdu_controls\fP in a console and take note
+of the filenames listed by the diagnostics during startup.  For example, a VCP query to my LG monitor reports that
+it has four inputs, but in reality it only has three. I can correct this as follows:
 .INDENT 0.0
 .INDENT 3.5
 1 Run \fBvdu_controls\fP in a console window and not which config files it\(aqs looking for:
@@ -143,8 +174,8 @@ as follows:
 .nf
 .ft C
 % ./vdu_controls.py
-INFO: checking for config file \(aqfile:///home/michael/.config/vdu_controls/LG_HDR_4K_SN43328.conf\(aq
-INFO: checking for config file \(aqfile:///home/michael/.config/vdu_controls/LG_HDR_4K.conf\(aq
+INFO: checking for config file \(aq/home/michael/.config/vdu_controls/LG_HDR_4K_SN43328.conf\(aq
+INFO: checking for config file \(aq/home/michael/.config/vdu_controls/LG_HDR_4K.conf\(aq
 .ft P
 .fi
 .UNINDENT
@@ -192,24 +223,43 @@ WARNING: using config file \(aq/home/michael/.config/vdu_controls/LG_HDR_4K.conf
 .UNINDENT
 .UNINDENT
 .sp
-In the case where the manufacturers serial number cannot be retrieved, \fBvdu_controls\fP will look for a config file
-containing the display number instead.
+VDU Config files may be used to refine \fB\-\-show\fP/\fB\-hide\fP settings by removing features for specific
+VDU\(aqs.  For example, if a desktop with three VDU\(aqs and we want to show audio\-volume for only one of them, we
+can create config files for the other two, edit each file and remove \fBFeature: 62 Audio speaker volume\fP\&.
+.sp
+In another multi\-monitor example, we may need a larger \fB\-\-sleep\-multiplier\fP value to accommodate a VDU with
+a very slow DDC communications speed, but doing so would slow down the communication for all connected monitors
+resulting in very slow reaction time for all user interface controls. Instead of a global sleep\-multiplier, a config
+file may be used to specify a custom sleep\-multiplier for each monitor. This is achieved by adding a line to the
+top section of a config file with the content \fBCUSTOM::Sleep_Multiplier:\fP followed by a floating point value,
+for example:
+.INDENT 0.0
+.INDENT 3.5
+CUSTOM::Sleep_Multiplier: 1.5
+Model: XYZZY\-42
+MCCS version: 2.2
+\&...
+.UNINDENT
+.UNINDENT
 .sp
 The VDU Config files read by \fBvdu_controls\fP can only be used to alter definitions of VCP codes already supported
 by \fBddcutil\fP\&.  If the file lists a VCP code as a \fImanufacturer specific feature\fP then it is not supported.
 Manufacturer specific features should not be experimented with, some may have destructive or irreversible consequences
 that may brick the hardware. It is possible to enable any codes by  creating a  \fBddcutil\fP user definition (\fB\-\-udef\fP)
 file, BUT THIS SHOULD ONLY BE USED WITH EXTREME CAUTION AND CANNOT BE RECOMMENDED.
-.SS Responsiveness
+.sp
+### Responsiveness
 .sp
 If your VDU\(aqs are modern, you may find a smaller \fB\-\-sleep\-multiplier\fP will speed up the \fBddcutil\fP/VDU protocol
-exchanges making both \fBddcutil\fP and \fBvdu_controls\fP much more responsive.
+exchanges making both \fBddcutil\fP and \fBvdu_controls\fP much more responsive.  In a multi\-VDU setup where the VDU\(aqs
+are quite different, VDU config files can be used to specify individual \fBCUSTOM::Sleep_Multiplier:\fP values (see
+previous section).
 .sp
-Reducing the number of controls by using \fB\-\-show\fP or \fB\-\-hide\fP options will speed up the initialisation and some
-aspects of the interface by reducing the number of requests to \fBddcutil\fP\&.
-.sp
-Using VDU/VDU\-model config files files may speed up the startup by eliminating the need to run \fBddcutil\fP to retrieve
+Startup speed may be increased by using VDU config files to eliminating the need to run \fBddcutil\fP to retrieve
 VDU capabilities.
+.sp
+Reducing the number of controls by using \fB\-\-show\fP or \fB\-\-hide\fP will speed up the initialisation and reduce the
+refresh time when the refresh button is pressed.
 .SH EXAMPLES
 .INDENT 0.0
 .INDENT 3.5
@@ -231,7 +281,7 @@ Start as a system tray entry without showing the splash\-screen.
 All default controls, plus controls for VCP_CODE 63 and 93, show any warnings, output debugging info.
 .TP
 .B \fBvdu_controls \-\-sleep\-multiplier 0.1\fP
-All default controls, speed up or slow down ddcutil by passing a sleep multiplier.
+All default controls, speed up ddcutil\-VDU interaction by passing a sleep multiplier.
 .UNINDENT
 .UNINDENT
 .UNINDENT
@@ -357,7 +407,7 @@ Copy the internally cached current value onto the GUI view.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B class vdu_controls.DdcUtil(debug: bool = False, common_args=None, sleep_multiplier: float = 0.5, exception_callback=None)
+.B class vdu_controls.DdcUtil(debug: bool = False, common_args=None, default_sleep_multiplier: float = 1.0)
 Interface to the command line ddcutil Display Data Channel Utility for interacting with VDU\(aqs.
 The exception callback can return True if we should retry after errors (after the callback takes
 corrective action such as increasing the sleep_multiplier).
@@ -368,7 +418,7 @@ Return a list of (vdu_id, desc) tuples.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B get_attribute(vdu_id: str, vcp_code: str) -> Tuple[str, str]
+.B get_attribute(vdu_id: str, vcp_code: str, sleep_multiplier: Optional[float] = None) -> Tuple[str, str]
 Given a VDU id and vcp_code, retrieve the attribute\(aqs current value from the VDU.
 .sp
 Two values are returned, the monitor reported current value, and the monitor reported maximum value. Only
@@ -387,7 +437,7 @@ Return a map of vpc capabilities keyed by vcp code.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B set_attribute(vdu_id: str, vcp_code: str, new_value: str)
+.B set_attribute(vdu_id: str, vcp_code: str, new_value: str, sleep_multiplier: Optional[float] = None)
 Send a new value to a specific VDU and vcp_code.
 .UNINDENT
 .INDENT 7.0
@@ -407,6 +457,10 @@ it is sometimes incorrect (due to sloppy implementation by manufacturers). For e
 two Display\-Port inputs and it only has one.
 .INDENT 7.0
 .TP
+.B get_attribute(vcp_code: str) -> Tuple[str, str]
+.UNINDENT
+.INDENT 7.0
+.TP
 .B get_description() -> str
 Return a unique description using the serial\-number (if defined) or vdu_id.
 .UNINDENT
@@ -414,6 +468,10 @@ Return a unique description using the serial\-number (if defined) or vdu_id.
 .TP
 .B get_full_id() -> Tuple[str, str, str, str]
 Return a tuple that defines this VDU: (vdu_id, manufacturer, model, serial\-number).
+.UNINDENT
+.INDENT 7.0
+.TP
+.B set_attribute(vcp_code: str, value: str)
 .UNINDENT
 .UNINDENT
 .INDENT 0.0
@@ -443,6 +501,10 @@ Tell the control widgets to refresh their views from their internally cached val
 .TP
 .B vdu_controls.EXIT_CODE_FOR_RESTART = 1959
 Internal special exit code used to signal that the exit handler should restart the program.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B class vdu_controls.HelpWidget
 .UNINDENT
 .INDENT 0.0
 .TP

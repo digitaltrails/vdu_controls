@@ -78,24 +78,32 @@ the ``Exec=`` line.
 
 ### VDU/VDU-model config files
 
-An optional config file can be setup for each VDU or VDU-model.
+An optional config file can be setup for each VDU or VDU-model to provide for VDU specific tweaks:
 
-The VDU config files are provided so for monitor specific tweaks.  These config files can be model specific, or model
-and serial-number specific.  The feature serves several purposes:
+    - Correction of manufacturer built-in meta data.
+    - Customisation of which controls are to be provided.
+    - DDC communication speed-multiplier specification for individual VDU's.
 
-    * Correction of manufacturer built-in meta data.
-    * Customisation of which controls are to be provided.
-    * Performance tweaks for individual VDU's.
+The last two are particularly useful if a desktop has multiple VDU's that vary in features or DDC-communications
+speed.
 
-A config file can be employed when manufacturer built-in meta data is incorrect or inaccurate. For example, a VCP
-query to my LG monitor reports that it has four inputs, but in reality it only has three. I can correct this as
-follows:
+Config files can be model specific, or model and serial-number specific.  In the case where the manufacturers serial
+number cannot be retrieved, ``vdu_controls`` will look for a config file containing the display number instead.
+The following naming convention is checked in the following order order:
+
+    1 ``$HOME/.config/vdu_controls/<model>_<serial|display_num>.conf``
+
+    2 ``$HOME/.config/vdu_controls/<model>.conf``
+
+The easiest way to determine the correct config filename is to run ``vdu_controls`` in a console and take note
+of the filenames listed by the diagnostics during startup.  For example, a VCP query to my LG monitor reports that
+it has four inputs, but in reality it only has three. I can correct this as follows:
 
     1 Run ``vdu_controls`` in a console window and not which config files it's looking for::
 
         % ./vdu_controls.py
-        INFO: checking for config file 'file:///home/michael/.config/vdu_controls/LG_HDR_4K_SN43328.conf'
-        INFO: checking for config file 'file:///home/michael/.config/vdu_controls/LG_HDR_4K.conf'
+        INFO: checking for config file '/home/michael/.config/vdu_controls/LG_HDR_4K_SN43328.conf'
+        INFO: checking for config file '/home/michael/.config/vdu_controls/LG_HDR_4K.conf'
 
     2 Run ``ddcutil`` to generate an initial text file of VDU capabilities::
 
@@ -113,18 +121,18 @@ follows:
         INFO: checking for config file '/home/michael/.config/vdu_controls/LG_HDR_4K.conf'
         WARNING: using config file '/home/michael/.config/vdu_controls/LG_HDR_4K.conf'
 
-In the case where the manufacturers serial number cannot be retrieved, ``vdu_controls`` will look for a config file
-containing the display number instead.
+VDU Config files may be used to refine ``--show``/``-hide`` settings by removing features for specific
+VDU's.  For example, if a desktop with three VDU's and we want to show audio-volume for only one of them, we
+can create config files for the other two, edit each file and remove ``Feature: 62 Audio speaker volume``.
 
-VDU Config files may be used to further refine ``--show``/``-hide`` settings by removing features for specific
-VDU's.  For example, for a desktop with three VDU's, to show audio-volume for only one of them, create config files
-for the other two, edit each file and remove ``Feature: 62 Audio speaker volume``.
+In another multi-monitor example, we may need a larger ``--sleep-multiplier`` value to accommodate a VDU with
+a very slow DDC communications speed, but doing so would slow down the communication for all connected monitors
+resulting in very slow reaction time for all user interface controls. Instead of a global sleep-multiplier, a config
+file may be used to specify a custom sleep-multiplier for each monitor. This is achieved by adding a line to the
+top section of a config file with the content ``CUSTOM::Sleep_Multiplier:`` followed by a floating point value,
+for example:
 
-In another multi-monitor scenario a VDU Config file may also be used to specify a custom sleep-multiplier for
-a monitor that is particularly fast or slow at DCC communication.  Add a line to the top section of a VDU's config
-file with the content ``CUSTOM::Sleep_Multiplier:`` followed by a floating point value, for example:
-
-        CUSTOM::Sleep_Multiplier: 0.2
+        CUSTOM::Sleep_Multiplier: 1.5
         Model: XYZZY-42
         MCCS version: 2.2
         ...
@@ -138,15 +146,15 @@ file, BUT THIS SHOULD ONLY BE USED WITH EXTREME CAUTION AND CANNOT BE RECOMMENDE
 ### Responsiveness
 
 If your VDU's are modern, you may find a smaller ``--sleep-multiplier`` will speed up the ``ddcutil``/VDU protocol
-exchanges making both ``ddcutil`` and ``vdu_controls`` much more responsive.  In the case where a set of VDU's
-have quite different ``--sleep-multiplier`` tolerances, individual  ``CUSTOM::Sleep_Multiplier:`` can be specified
-in VDU/VDU-model config files (see previous section).
+exchanges making both ``ddcutil`` and ``vdu_controls`` much more responsive.  In a multi-VDU setup where the VDU's
+are quite different, VDU config files can be used to specify individual ``CUSTOM::Sleep_Multiplier:`` values (see
+previous section).
 
-Using VDU/VDU-model config files files may speed up startup by eliminating the need to run ``ddcutil`` to retrieve
+Startup speed may be increased by using VDU config files to eliminating the need to run ``ddcutil`` to retrieve
 VDU capabilities.
 
-Reducing the number of controls by using ``--show`` or ``--hide`` options will speed up the initialisation and some
-aspects of the interface by reducing the number of requests to ``ddcutil``.
+Reducing the number of controls by using ``--show`` or ``--hide`` will speed up the initialisation and reduce the
+refresh time when the refresh button is pressed.
 
 Examples
 --------
@@ -167,7 +175,7 @@ Examples
         All default controls, plus controls for VCP_CODE 63 and 93, show any warnings, output debugging info.
 
     ``vdu_controls --sleep-multiplier 0.1``
-        All default controls, speed up or slow down ddcutil by passing a sleep multiplier.
+        All default controls, speed up ddcutil-VDU interaction by passing a sleep multiplier.
 
 This script often refers to displays and monitors as VDU's in order to
 disambiguate the noun/verb duality of "display" and "monitor"
