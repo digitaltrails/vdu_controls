@@ -48,8 +48,7 @@ A GUI for controlling connected \fIVisual Display Units\fP (\fIVDU\fP\(aqs) (als
 .UNINDENT
 .UNINDENT
 .UNINDENT
-.sp
-### Optional arguments:
+.SS Optional arguments:
 .INDENT 0.0
 .INDENT 3.5
 .INDENT 0.0
@@ -132,8 +131,7 @@ directly in the desktop (for \fIKDE\-Plasma\fP this can be achieved by right\-mo
 item and selecting \fBEdit Application\fP).  Alternatively, it is just as easy to use your preferred text editor to
 edit the desktop definition file \fB$HOME/.local/share/applications/vdu_controls.desktop\fP and add options to
 the \fBExec=\fP line.
-.sp
-### VDU/VDU\-model config files
+.SS VDU/VDU\-model config files
 .sp
 An optional config file can be setup for each VDU or VDU\-model to provide for VDU specific tweaks:
 .INDENT 0.0
@@ -236,10 +234,15 @@ top section of a config file with the content \fBCUSTOM::Sleep_Multiplier:\fP fo
 for example:
 .INDENT 0.0
 .INDENT 3.5
+.sp
+.nf
+.ft C
 CUSTOM::Sleep_Multiplier: 1.5
 Model: XYZZY\-42
 MCCS version: 2.2
 \&...
+.ft P
+.fi
 .UNINDENT
 .UNINDENT
 .sp
@@ -248,8 +251,7 @@ by \fBddcutil\fP\&.  If the file lists a VCP code as a \fImanufacturer specific 
 Manufacturer specific features should not be experimented with, some may have destructive or irreversible consequences
 that may brick the hardware. It is possible to enable any codes by  creating a  \fBddcutil\fP user definition (\fB\-\-udef\fP)
 file, BUT THIS SHOULD ONLY BE USED WITH EXTREME CAUTION AND CANNOT BE RECOMMENDED.
-.sp
-### Responsiveness
+.SS Responsiveness
 .sp
 If your VDU\(aqs are modern, you may find a smaller \fB\-\-sleep\-multiplier\fP will speed up the \fBddcutil\fP/VDU protocol
 exchanges making both \fBddcutil\fP and \fBvdu_controls\fP much more responsive.  In a multi\-VDU setup where the VDU\(aqs

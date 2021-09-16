@@ -1,12 +1,12 @@
 #!/usr/bin/python3
 """
 vdu_controls: A Qt GUI wrapper for ddcutil
-------------------------------------------
+==========================================
 
 A GUI for controlling connected *Visual Display Units* (*VDU*'s) (also known as *displays*, or *monitors*).
 
-Usage::
--------
+Usage:
+======
 
         vdu_controls [-h]
                      [--about] [--detailed-help]
@@ -16,7 +16,8 @@ Usage::
                      [--no-splash] [--sleep-multiplier multiplier]
                      [--install] [--uninstall]
 
-### Optional arguments:
+Optional arguments:
+-------------------
 
       -h, --help            show this help message and exit
       --detailed-help       full help in markdown format
@@ -37,7 +38,7 @@ Usage::
       --uninstall           uninstalls the vdu_controls application menu file and script for the current user.
 
 Description
------------
+===========
 
 ``vdu_controls`` is a virtual control panel for physically connected VDU's.  It displays a set of controls for
 each  DVI/DP/HDMI/USB connected VDU and uses the ``ddcutil`` command line utility to issue *Display Data Channel*
@@ -67,7 +68,7 @@ picture-profile might result in the contrast-control being disabled, but ``vdu_c
 the restriction resulting in its contrast-control appearing to do nothing.
 
 Configuration
--------------
+=============
 
 Most configuration is supplied via command line parameters.
 
@@ -77,7 +78,8 @@ item and selecting **Edit Application**).  Alternatively, it is just as easy to 
 edit the desktop definition file ``$HOME/.local/share/applications/vdu_controls.desktop`` and add options to
 the ``Exec=`` line.
 
-### VDU/VDU-model config files
+VDU/VDU-model config files
+--------------------------
 
 An optional config file can be setup for each VDU or VDU-model to provide for VDU specific tweaks:
 
@@ -131,7 +133,7 @@ a very slow DDC communications speed, but doing so would slow down the communica
 resulting in very slow reaction time for all user interface controls. Instead of a global sleep-multiplier, a config
 file may be used to specify a custom sleep-multiplier for each monitor. This is achieved by adding a line to the
 top section of a config file with the content ``CUSTOM::Sleep_Multiplier:`` followed by a floating point value,
-for example:
+for example::
 
         CUSTOM::Sleep_Multiplier: 1.5
         Model: XYZZY-42
@@ -144,7 +146,8 @@ Manufacturer specific features should not be experimented with, some may have de
 that may brick the hardware. It is possible to enable any codes by  creating a  ``ddcutil`` user definition (``--udef``)
 file, BUT THIS SHOULD ONLY BE USED WITH EXTREME CAUTION AND CANNOT BE RECOMMENDED.
 
-### Responsiveness
+Responsiveness
+--------------
 
 If your VDU's are modern, you may find a smaller ``--sleep-multiplier`` will speed up the ``ddcutil``/VDU protocol
 exchanges making both ``ddcutil`` and ``vdu_controls`` much more responsive.  In a multi-VDU setup where the VDU's
@@ -158,7 +161,7 @@ Reducing the number of controls by using ``--show`` or ``--hide`` will speed up 
 refresh time when the refresh button is pressed.
 
 Examples
---------
+========
 
     ``vdu_controls``
         All default controls.
@@ -182,7 +185,8 @@ This script often refers to displays and monitors as VDU's in order to
 disambiguate the noun/verb duality of "display" and "monitor"
 
 Prerequisites
--------------
+=============
+
 Described for OpenSUSE, similar for other distros:
 
 Software::
@@ -198,7 +202,8 @@ Read ddcutil readme concerning config of i2c_dev with nvidia GPU's. Detailed ddc
 
 
 vdu_controls Copyright (C) 2021 Michael Hamilton
--------------------------------------------------
+================================================
+
 This program is free software: you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
 Free Software Foundation, version 3.

@@ -14,7 +14,7 @@
 </blockquote>
 </blockquote>
 </blockquote>
-<p>### Optional arguments:</p>
+<h2>Optional arguments:</h2>
 <blockquote>
 <blockquote>
 <blockquote>
@@ -72,7 +72,7 @@
 <h1>CONFIGURATION</h1>
 <p>Most configuration is supplied via command line parameters.</p>
 <p>Command line options can be added to the desktop application-menu by editing the application menu item directly in the desktop (for <em>KDE-Plasma</em><strong> this can be achieved by right-mousing on the VDU Controls menu</strong> item and selecting <strong>Edit Application). Alternatively, it is just as easy to use your preferred text editor to</strong> edit the desktop definition file <strong>$HOME/.local/share/applications/vdu_controls.desktop and add options to</strong> the <strong>Exec= line.</strong></p>
-<p>### VDU/VDU-model config files</p>
+<h2>VDU/VDU-model config files</h2>
 <p>An optional config file can be setup for each VDU or VDU-model to provide for VDU specific tweaks:</p>
 <blockquote>
 <blockquote>
@@ -132,11 +132,14 @@ WARNING: using config file &#39;/home/michael/.config/vdu_controls/LG_HDR_4K.con
 <p>In another multi-monitor example, we may need a larger <strong>--sleep-multiplier value to accommodate a VDU with</strong> a very slow DDC communications speed, but doing so would slow down the communication for all connected monitors resulting in very slow reaction time for all user interface controls. Instead of a global sleep-multiplier, a config file may be used to specify a custom sleep-multiplier for each monitor. This is achieved by adding a line to the top section of a config file with the content <strong>CUSTOM::Sleep_Multiplier: followed by a floating point value,</strong> for example:</p>
 <blockquote>
 <blockquote>
-<p>CUSTOM::Sleep_Multiplier: 1.5 Model: XYZZY-42 MCCS version: 2.2 ...</p>
+<pre><code>CUSTOM::Sleep_Multiplier: 1.5
+Model: XYZZY-42
+MCCS version: 2.2
+...</code></pre>
 </blockquote>
 </blockquote>
 <p>The VDU Config files read by <strong>vdu_controls can only be used to alter definitions of VCP codes already supported</strong> by <strong>ddcutil. If the file lists a VCP code as a </strong><em>manufacturer specific feature</em><strong> then it is not supported.</strong> Manufacturer specific features should not be experimented with, some may have destructive or irreversible consequences that may brick the hardware. It is possible to enable any codes by creating a <strong>ddcutil user definition (--udef)</strong> file, BUT THIS SHOULD ONLY BE USED WITH EXTREME CAUTION AND CANNOT BE RECOMMENDED.</p>
-<p>### Responsiveness</p>
+<h2>Responsiveness</h2>
 <p>If your VDU's are modern, you may find a smaller <strong>--sleep-multiplier will speed up the ddcutil/VDU protocol</strong> exchanges making both <strong>ddcutil and vdu_controls much more responsive. In a multi-VDU setup where the VDU's</strong> are quite different, VDU config files can be used to specify individual <strong>CUSTOM::Sleep_Multiplier: values (see</strong> previous section).</p>
 <p>Startup speed may be increased by using VDU config files to eliminating the need to run <strong>ddcutil to retrieve</strong> VDU capabilities.</p>
 <p>Reducing the number of controls by using <strong>--show or --hide will speed up the initialisation and reduce the</strong> refresh time when the refresh button is pressed.</p>
