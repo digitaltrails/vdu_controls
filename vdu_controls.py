@@ -9,16 +9,17 @@ Usage::
 -------
 
         vdu_controls [-h]
-                     [--about]
+                     [--about] [--detailed-help]
                      [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                      [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                      [--enable-vcp-code vcp_code] [--system-tray] [--debug] [--warnings]
                      [--no-splash] [--sleep-multiplier multiplier]
+                     [--install] [--uninstall]
 
 ### Optional arguments:
 
       -h, --help            show this help message and exit
-      --detailed-help           full help in markdown format
+      --detailed-help       full help in markdown format
       --about               about vdu_controls
       --show control_name
                             show specified control only (--show may be specified multiple times)
@@ -1050,8 +1051,10 @@ def main():
         formatter_class=argparse.RawTextHelpFormatter)
     parser.epilog = textwrap.dedent("""
         As well as command line arguments, individual VDU controls and optimisations may be
-        specified in monitor specific configuration files, see the accompanying documentation
-        for details.""")
+        specified in monitor specific configuration files, see --detailed-help for details.
+        
+        See the --detailed-help for important licencing information.
+        """)
     parser.add_argument('--detailed-help', default=False, action='store_true',
                         help='Detailed help (in markdown format).')
     parser.add_argument('--about', default=False, action='store_true',
