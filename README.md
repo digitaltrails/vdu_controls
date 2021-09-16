@@ -118,11 +118,11 @@ Michael Hamilton\
 Version History
 ---------------
 * 1.3.0
-  * Add a CUSTOM::Sleep_Multiplier VDU config file option to utilise VDU specific sleep multipliers.
+  * Add a CUSTOM::Sleep_Multiplier VDU config-file option to allow VDU specific sleep multipliers.
     This can be used to prevent the slowest VDU from dragging down response time for all connected VDU's.
   * Added a main UI right-mouse action that makes the context menu available in the UI window.
   * Added a help option to context menu, it displays a formatted version of the ``--detailed-help`` text.
-  * Added a ``--detailed-help`` command line option to extract the markdown help from the script.
+  * Added a ``--detailed-help`` command line option to extract the help from the script (in Markdown format).
 * 1.2.2
   * Generalise and simplify the error handling changes initiated in v1.2.1.
 * 1.2.1
