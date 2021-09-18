@@ -11,8 +11,8 @@ each  DVI/DP/HDMI/USB connected VDU and uses the ``ddcutil`` command line utilit
 (*DDC*) *Virtual Control Panel*  (*VCP*) commands to each of them.
 
 By default ``vdu_controls`` offers a subset of the possible controls including brightness, and contrast.  Additional 
-controls can be enabled via the ``--enable-vcp-code`` option.  ``vdu_controls`` may optionally run as a entry in the system
-tray.
+controls can be enabled via the ``--enable-vcp-code`` option.  ``vdu_controls`` may optionally run as an entry in the 
+system tray.
 
 ![Default](screen-shots/Screenshot_Large-330.png)  ![Custom](screen-shots/Screenshot_Small-227.png) 
 ![Custom](screen-shots/Screenshot_tray-200.png) 
@@ -34,6 +34,28 @@ All the following runtime dependencies are likely to be available pre-packaged o
 * python 3.8: ``vdu_controls`` is written in python and may depend on some features present only in 3.8 onward.
 * python 3.8 QtPy: the python GUI library used by ``vdu_controls``.
 
+It's best confirm that ``ddcutils`` is functioning before using ``vdu_controls``:
+
+* See [https://www.ddcutil.com/config/](https://www.ddcutil.com/config/) for instructions on configuring ``ddcutils``.
+* See [https://www.ddcutil.com/i2c_permissions/](https://www.ddcutil.com/i2c_permissions/) for instructions on setting 
+  and testing the required permissions.  
+
+The steps to obtaining the necessary rw permissions on ``/dev/i2c-[0-9]`` varies from one Linux distribution to 
+another. On some distributions, such as OpenSUSE Tumbleweed, loading the i2c-dev module at boot will automatically 
+result in the correct permissions being set on login (and removed on logout).  On other distributions it may be 
+necessary to follow all the steps described at www.ddcutil.com.  
+
+For the impatient the following steps can be followed to perform an insecure quick test (they grant anyone on the 
+target machine access to the i2c devices):
+
+1. Load i2c-dev: ``sudo modprobe i2c-dev``
+2. Temporarily grant rw to everyone: ``sudo chmod a+rw /dev/i2c-*``
+3. See if ddcutils works in a normal user's account: ``ddcutils detect``
+4. See if vdu_controls now works in a normal user's account: ``python3 vdu_controls.py``
+
+If this works, then following the longer series of steps detailed by the links in the previous comment would be 
+the key to getting permissions set permanently.
+
 Installing
 ----------
 
@@ -45,6 +67,11 @@ two options for "installation":
 * The script can be self installed as desktop application in the desktop menu as *Settings->VDU Controls* by running:\
   ``% python3 vdu_controls.py --install``\
   depending on which desktop you're running menu changes may require logout before they become visible.
+
+Please note that the above steps only install ``vdu-controls`` for the current user. At this time there is no
+automated support for installing ``vdu-controls`` into a shared location, but the script and desktop-file 
+installed for a single user could be modified and copied into /usr or /usr/local hierarchies should you 
+wish to do so.
 
 Executing the program
 ---------------------
