@@ -64,12 +64,12 @@ two options for "installation":
 
 * The script can be run without installation by using a python interpreter, for example:\
   ``% python3 vdu_controls.py`` 
-* The script can be self installed as desktop application in the desktop menu as *Settings->VDU Controls* by running:\
-  ``% python3 vdu_controls.py --install``\
+* The script can be self installed as desktop application in the current user's desktop menu 
+  as *Applications->Settings->VDU Controls* by running: ``% python3 vdu_controls.py --install``\
   depending on which desktop you're running menu changes may require logout before they become visible.
 
-Please note that the above steps only install ``vdu-controls`` for the current user. At this time there is no
-automated support for installing ``vdu-controls`` into a shared location, but the script and desktop-file 
+Please note above options only install ``vdu-controls`` for the current user. At this time there is no
+automated support for installing ``vdu-controls`` into a shared location.  The script and desktop-file 
 installed for a single user could be modified and copied into /usr or /usr/local hierarchies should you 
 wish to do so.
 
