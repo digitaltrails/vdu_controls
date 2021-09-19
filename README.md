@@ -66,7 +66,7 @@ two options for "installation":
   ``% python3 vdu_controls.py`` 
 * The script can be self installed as desktop application in the current user's desktop menu 
   as *Applications->Settings->VDU Controls* by running: ``% python3 vdu_controls.py --install``\
-  depending on which desktop you're running menu changes may require logout before they become visible.
+  Depending on which desktop you're running menu changes may require logout before they become visible.
 
 Please note above options only install ``vdu-controls`` for the current user. At this time there is no
 automated support for installing ``vdu-controls`` into a shared location.  The script and desktop-file 
@@ -124,16 +124,20 @@ vdu_controls_digitaltrails-1.0.0-py3-none-any.whl
 vdu_controls-digitaltrails-1.0.0.tar.gz
 ```
 
-Configuration files for the [Sphinx Python Documentation Generator](https://www.sphinx-doc.org/en/master/index.html) 
-markup configuration has been proved to extract a manpage or HTML help from ``vdu_controls.py``. If Sphinx is
-available, the following commands will extract documentation from ``vdu_controls.py``:
+The source includes configuration files for the 
+[Sphinx Python Documentation Generator](https://www.sphinx-doc.org/en/master/index.html). 
+The following commands will extract documentation from ``vdu_controls.py``:
 ```
 % cd docs
 % make man
 % make html
 ```
 
-My IDE for this project is [PyCharm Community Edition](https://www.jetbrains.com/pycharm/)
+My IDE for this project is [PyCharm Community Edition](https://www.jetbrains.com/pycharm/).
+
+My development Linux desktop is [OpenSUSE Tumbleweed](https://get.opensuse.org/tumbleweed/). The python3
+interpreter and python3 libraries are from the standard OpenSUSE Tumbleweed repositories (Tumbleweed currently
+defaults python3 to [python 3.8](https://www.python.org/downloads/release/python-380/)).
 
 Authors
 -------
