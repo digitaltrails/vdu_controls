@@ -986,9 +986,8 @@ def install_as_desktop_application(uninstall: bool = False):
 
     bin_dir = Path.home().joinpath('bin')
     if not bin_dir.is_dir():
-        print("ERROR: No desktop bin directory is present:{}".format(bin_dir.as_posix()),
-              "Cannot proceed - is this a non-standard desktop?")
-        return
+        print("WARNING: creating:{}".format(bin_dir.as_posix()));
+        os.mkdir(bin_dir)
 
     installed_script_path = bin_dir.joinpath("vdu_controls")
     desktop_definition_path = desktop_dir.joinpath("vdu_controls.desktop")
