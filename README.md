@@ -148,6 +148,8 @@ Michael Hamilton\
 
 Version History
 ---------------
+* 1.3.1
+  * A minor enhancement to ease installation on Ubuntu, create ``$HOME/bin`` if it doesn't exist. 
 * 1.3.0
   * Add a CUSTOM::Sleep_Multiplier VDU config-file option to allow VDU specific sleep multipliers.
     This can be used to prevent the slowest VDU from dragging down response time for all connected VDU's.
