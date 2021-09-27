@@ -14,6 +14,7 @@ Usage:
                      [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                      [--enable-vcp-code vcp_code] [--system-tray] [--debug] [--warnings]
                      [--no-splash] [--sleep-multiplier multiplier]
+                     [--create-config-files]
                      [--install] [--uninstall]
 
 Optional arguments:
@@ -34,6 +35,7 @@ Optional arguments:
       --no-splash           don't show the splash screen
       --sleep-multiplier multiplier
                             protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 0.5)
+      --create-config-files  if they do not exist, create template config INI files in $HOME/.config/vdu_controls/
       --install             installs the vdu_controls in the current user's path and desktop application menu.
       --uninstall           uninstalls the vdu_controls application menu file and script for the current user.
 
@@ -70,95 +72,55 @@ the restriction resulting in its contrast-control appearing to do nothing.
 Configuration
 =============
 
-Most configuration is supplied via command line parameters.
+Configuration is supplied via command line parameters and config-files.  The command line provides an immediate way
+to temporarily alter the behaviour of the application. The config files provide a more comprehensive and permanent
+solution for altering the application's configuration.
 
-Command line options can be added to the desktop application-menu by editing the application menu item
-directly in the desktop (for *KDE-Plasma* this can be achieved by right-mousing on the **VDU Controls** menu
-item and selecting **Edit Application**).  Alternatively, it is just as easy to use your preferred text editor to
-edit the desktop definition file ``$HOME/.local/share/applications/vdu_controls.desktop`` and add options to
-the ``Exec=`` line.
+Config files
+------------
 
-VDU/VDU-model config files
---------------------------
+``vdu_controls`` may use several config files.  There may be a global config file for setting application
+wide defaults.  There may be any number of model or serial-number VDU-specific config files for customising
+``vdu_controls`` for each VDU.  The config files are named as follows:
 
-An optional config file can be setup for each VDU or VDU-model to provide for VDU specific tweaks:
+    - Application wide default config: ``$HOME/.config/vdu_controls/vdu_controls.conf``
+    - VDU model and serial number config: ``$HOME/.config/vdu_controls/<model>_<serial|display_num>.conf``
+    - VDU model only config: ``$HOME/.config/vdu_controls/<model>.conf``
 
-    - Correction of manufacturer built-in meta data.
-    - Customisation of which controls are to be provided.
-    - DDC communication speed-multiplier specification for individual VDU's.
+All config  files are INI-format.  There are two easy ways to create them:
+
+    - Run ``vdu_controls``, use the right mouse to bring up the context-menu, select ``settings``,
+      and then edit and save each of the settings tabs.
+    - Run ``vdu_controls --create-config-files`` to create templates for manual editing.
+
+The VDU-specific config files can be used to:.
+
+    - Correct manufacturer built-in meta data.
+    - Customise which controls are to be provided.
+    - Set a optimal ``ddcutil`` DDC communication speed-multiplier for the VDU.
 
 The last two are particularly useful if a desktop has multiple VDU's that vary in features or DDC-communications
 speed.
 
-Config files can be model specific, or model and serial-number specific.  In the case where the manufacturers serial
-number cannot be retrieved, ``vdu_controls`` will look for a config file containing the display number instead.
-The following naming convention is checked in the following order order:
-
-    1 ``$HOME/.config/vdu_controls/<model>_<serial|display_num>.conf``
-
-    2 ``$HOME/.config/vdu_controls/<model>.conf``
-
-The easiest way to determine the correct config filename is to run ``vdu_controls`` in a console and take note
-of the filenames listed by the diagnostics during startup.  For example, a VCP query to my LG monitor reports that
-it has four inputs, but in reality it only has three. I can correct this as follows:
-
-    1 Run ``vdu_controls`` in a console window and not which config files it's looking for::
-
-        % ./vdu_controls.py
-        INFO: checking for config file '/home/michael/.config/vdu_controls/LG_HDR_4K_SN43328.conf'
-        INFO: checking for config file '/home/michael/.config/vdu_controls/LG_HDR_4K.conf'
-
-    2 Run ``ddcutil`` to generate an initial text file of VDU capabilities::
-
-        % ddcutil --display 2 capabilities > /home/michael/.config/vdu_controls/LG_HDR_4K.conf
-
-    3 Edit the config file find the appropriate feature, in this case ``Feature: 60 (Input Source)``::
-
-        # Use a text editor to find the erroneous DisplayPort-2 and get rid of it.
-        % vi /home/michael/.config/vdu_controls/LG_HDR_4K.conf
-
-    4 Run ``vdu_controls`` and confirm the the config file is being used and the correct number of inputs is shown::
-
-        % ./vdu_controls.py
-        INFO: checking for config file '/home/michael/.config/vdu_controls/LG_HDR_4K_SN43328.conf'
-        INFO: checking for config file '/home/michael/.config/vdu_controls/LG_HDR_4K.conf'
-        WARNING: using config file '/home/michael/.config/vdu_controls/LG_HDR_4K.conf'
-
-VDU Config files may be used to refine ``--show``/``-hide`` settings by removing features for specific
-VDU's.  For example, if a desktop with three VDU's and we want to show audio-volume for only one of them, we
-can create config files for the other two, edit each file and remove ``Feature: 62 Audio speaker volume``.
-
-In another multi-monitor example, we may need a larger ``--sleep-multiplier`` value to accommodate a VDU with
-a very slow DDC communications speed, but doing so would slow down the communication for all connected monitors
-resulting in very slow reaction time for all user interface controls. Instead of a global sleep-multiplier, a config
-file may be used to specify a custom sleep-multiplier for each monitor. This is achieved by adding a line to the
-top section of a config file with the content ``CUSTOM::Sleep_Multiplier:`` followed by a floating point value,
-for example::
-
-        CUSTOM::Sleep_Multiplier: 1.5
-        Model: XYZZY-42
-        MCCS version: 2.2
-        ...
-
-The VDU Config files read by ``vdu_controls`` can only be used to alter definitions of VCP codes already supported
-by ``ddcutil``.  If the file lists a VCP code as a *manufacturer specific feature* then it is not supported.
-Manufacturer specific features should not be experimented with, some may have destructive or irreversible consequences
-that may brick the hardware. It is possible to enable any codes by  creating a  ``ddcutil`` user definition (``--udef``)
-file, BUT THIS SHOULD ONLY BE USED WITH EXTREME CAUTION AND CANNOT BE RECOMMENDED.
+Config files can only be used to alter definitions of VCP codes already supported by ``ddcutil``.  If a VCP code
+is listed as a *manufacturer specific feature* it is not supported. Manufacturer specific features should not be
+experimented with, some may have destructive or irreversible consequences that may brick the hardware. It is
+possible to enable any codes by  creating a  ``ddcutil`` user definition (``--udef``) file, BUT THIS SHOULD ONLY
+BE USED WITH EXTREME CAUTION AND CANNOT BE RECOMMENDED.
 
 Responsiveness
 --------------
 
-If your VDU's are modern, you may find a smaller ``--sleep-multiplier`` will speed up the ``ddcutil``/VDU protocol
+If your VDU's are modern, you may find a smaller sleep-multiplier will speed up the ``ddcutil``/VDU protocol
 exchanges making both ``ddcutil`` and ``vdu_controls`` much more responsive.  In a multi-VDU setup where the VDU's
-are quite different, VDU config files can be used to specify individual ``CUSTOM::Sleep_Multiplier:`` values (see
-previous section).
+are quite different, VDU config files can be used to specify individual multipliers (see previous section).
 
-Startup speed may be increased by using VDU config files to eliminating the need to run ``ddcutil`` to retrieve
-VDU capabilities.
+Startup speed may be increased by creating VDU config files with ``capabilities-override`` preset. Using an
+override eliminates the need to run ``ddcutil`` to retrieve VDU capabilities.  The ``--create-config-files``
+of context-menu settings-editor will pre-populate ``capabilities-override`` for each connected VDU.
 
-Reducing the number of controls by using ``--show`` or ``--hide`` will speed up the initialisation and reduce the
-refresh time when the refresh button is pressed.
+Reducing the number of enabled controls can speed up the initialisation and reduce the time taken when the
+refresh button is pressed.
 
 Examples
 ========
@@ -174,6 +136,9 @@ Examples
 
     ``vdu_controls --system-tray --no-splash --show brightness --show audio-volume``
         Start as a system tray entry without showing the splash-screen.
+
+    ``vdu_controls --create-config-files --system-tray --no-splash --show brightness --show audio-volume``
+        Create template config files in $HOME/.config/vdu_controls/ that include the other settings.
 
     ``vdu_controls --enable-vcp-code 63 --enable-vcp-code 93 --warnings --debug``
         All default controls, plus controls for VCP_CODE 63 and 93, show any warnings, output debugging info.
@@ -223,7 +188,9 @@ with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 import argparse
 import base64
+import configparser
 import os
+import pickle
 import re
 import signal
 import stat
@@ -232,16 +199,20 @@ import sys
 import textwrap
 import time
 import traceback
+import typing
 from pathlib import Path
 from typing import List, Tuple, Mapping
 
-from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess
-from PyQt5.QtGui import QIntValidator, QPixmap, QIcon, QCursor, QImage, QPainter
+from PyQt5 import QtCore
+from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp
+from PyQt5.QtGui import QIntValidator, QPixmap, QIcon, QCursor, QImage, QPainter, QDoubleValidator, QRegExpValidator, \
+    QValidator
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
-    QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog
+    QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
+    QCheckBox, QPlainTextEdit
 
-VDU_CONTROLS_VERSION = '1.3.1'
+VDU_CONTROLS_VERSION = '1.4.0'
 
 
 def translate(source_text: str):
@@ -371,33 +342,6 @@ class VcpCapability:
         self.values = [] if values is None else values
 
 
-class VcpGuiControlDef:
-    """Defines a potential VCP GUI control."""
-
-    def __init__(self, vcp_code, vcp_name, causes_config_change: bool = False, icon_source: bytes = None):
-        self.vcp_code = vcp_code
-        self.name = vcp_name
-        self.causes_config_change = causes_config_change
-        self.icon_source = icon_source
-
-    def arg_name(self) -> str:
-        return re.sub('[^A-Za-z0-9_-]', '-', self.name).lower()
-
-
-SUPPORTED_VCP_CONTROLS = {
-    '10': VcpGuiControlDef('10', 'Brightness', icon_source=BRIGHTNESS_SVG),
-    '12': VcpGuiControlDef('12', 'Contrast', icon_source=CONTRAST_SVG),
-    '62': VcpGuiControlDef('62', 'Audio volume', icon_source=VOLUME_SVG),
-    '8D': VcpGuiControlDef('8D', 'Audio mute', icon_source=VOLUME_SVG),
-    '8F': VcpGuiControlDef('8F', 'Audio treble', icon_source=VOLUME_SVG),
-    '91': VcpGuiControlDef('91', 'Audio bass', icon_source=VOLUME_SVG),
-    '64': VcpGuiControlDef('91', 'Audio mic volume', icon_source=VOLUME_SVG),
-    '60': VcpGuiControlDef('60', 'Input Source', causes_config_change=True),
-    'D6': VcpGuiControlDef('D6', 'Power mode', causes_config_change=True),
-    'CC': VcpGuiControlDef('CC', 'OSD Language'),
-}
-
-
 class DdcUtil:
     """
     Interface to the command line ddcutil Display Data Channel Utility for interacting with VDU's.
@@ -444,42 +388,11 @@ class DdcUtil:
                 print("WARNING: ignoring {}".format(display_str))
         return display_list
 
-    def query_capabilities(self, vdu_id: str, alternate_text=None) -> Mapping[str, VcpCapability]:
-        """Return a map of vpc capabilities keyed by vcp code."""
-
-        def parse_values(values_str: str):
-            stripped = values_str.strip()
-            values_list = []
-            if len(stripped) != 0:
-                lines_list = stripped.split('\n')
-                if len(lines_list) == 1:
-                    space_separated = lines_list[0].replace('(interpretation unavailable)', '').strip().split(' ')
-                    values_list = [(v, 'unknown ' + v) for v in space_separated[1:]]
-                else:
-                    values_list = [(key, desc) for key, desc in
-                                   (v.strip().split(": ", 1) for v in lines_list[1:])]
-            return values_list
-
-        feature_pattern = re.compile(r'([0-9A-F]{2})\s+[(]([^)]+)[)]\s(.*)', re.DOTALL | re.MULTILINE)
-        feature_map: Mapping[str, VcpCapability] = {}
-        if alternate_text is None:
-            result = self.__run__('--display', vdu_id, 'capabilities')
-            capability_text = result.stdout.decode('utf-8')
-        else:
-            capability_text = alternate_text
-        for feature_text in capability_text.split(' Feature: '):
-            feature_match = feature_pattern.match(feature_text)
-            if feature_match:
-                vcp_code = feature_match.group(1)
-                vcp_name = feature_match.group(2)
-                values = parse_values(feature_match.group(3))
-                # Guess type from existence or not of value list
-                vcp_type = CONTINUOUS_TYPE if len(values) == 0 else SIMPLE_NON_CONTINUOUS_TYPE
-                capability = VcpCapability(vcp_code, vcp_name, vcp_type=vcp_type, values=values, icon_source=None)
-                feature_map[vcp_code] = capability
-        if self.debug:
-            print("DEBUG: capabilities", feature_map.keys())
-        return feature_map
+    def query_capabilities(self, vdu_id: str) -> str:
+        """Return a vpc capabilities string."""
+        result = self.__run__('--display', vdu_id, 'capabilities')
+        capability_text = result.stdout.decode('utf-8')
+        return capability_text
 
     def get_attribute(self, vdu_id: str, vcp_code: str, sleep_multiplier: float = None) -> Tuple[str, str]:
         """
@@ -529,11 +442,11 @@ class DdcUtil:
         if new_value != current:
             self.__run__('--display', vdu_id, 'setvcp', vcp_code, new_value, sleep_multiplier=sleep_multiplier)
 
-    def vcp_info(self):
+    def vcp_info(self) -> str:
         """Returns info about all codes known to ddcutil, whether supported or not."""
         return self.__run__('--verbose', 'vcpinfo').stdout.decode('utf-8')
 
-    def get_supported_vcp_codes(self):
+    def get_supported_vcp_codes(self) -> Mapping[str, str]:
         """Returns a map of descriptions keyed by vcp_code, the codes that ddcutil appears to support."""
         if self.supported_codes is not None:
             return self.supported_codes
@@ -550,61 +463,553 @@ class DdcUtil:
                 if line.startswith('ddcutil feature subsets:'):
                     ddcutil_feature_subsets = line.split(": ", 1)
             if ddcutil_feature_subsets is not None:
-                vcp_def = VcpGuiControlDef(vcp_code=vcp_code, vcp_name=vcp_name)
                 if vcp_code not in self.supported_codes:
-                    self.supported_codes[vcp_code] = vcp_def
+                    self.supported_codes[vcp_code] = vcp_name
         return self.supported_codes
 
 
-class DdcVdu:
-    """
-    Holds data specific to an individual VDU including a map of its capabilities.
+class VduGuiControlDef:
+    """Defines the properties of a potential VCP GUI control."""
 
-    Capabilities are either extracted from ddcutil output or read from a ~/.config/vdu-control/ file.
-    The file option is available so that the output from "ddcutil --display N capabilities" can be corrected because
-    it is sometimes incorrect (due to sloppy implementation by manufacturers). For example, my LG monitor reports
+    def __init__(self, vcp_code, vcp_name, causes_config_change: bool = False, icon_source: bytes = None):
+        self.vcp_code = vcp_code
+        self.name = vcp_name
+        self.causes_config_change = causes_config_change
+        self.icon_source = icon_source
+
+    def arg_name(self) -> str:
+        return re.sub('[^A-Za-z0-9_-]', '-', self.name).lower()
+
+
+class VduGuiSupportedControls:
+    """Maps of controls supported by name on the command line and in config files."""
+    by_code = {
+        '10': VduGuiControlDef('10', 'Brightness', icon_source=BRIGHTNESS_SVG),
+        '12': VduGuiControlDef('12', 'Contrast', icon_source=CONTRAST_SVG),
+        '62': VduGuiControlDef('62', 'Audio volume', icon_source=VOLUME_SVG),
+        '8D': VduGuiControlDef('8D', 'Audio mute', icon_source=VOLUME_SVG),
+        '8F': VduGuiControlDef('8F', 'Audio treble', icon_source=VOLUME_SVG),
+        '91': VduGuiControlDef('91', 'Audio bass', icon_source=VOLUME_SVG),
+        '64': VduGuiControlDef('91', 'Audio mic volume', icon_source=VOLUME_SVG),
+        '60': VduGuiControlDef('60', 'Input Source', causes_config_change=True),
+        'D6': VduGuiControlDef('D6', 'Power mode', causes_config_change=True),
+        'CC': VduGuiControlDef('CC', 'OSD Language'),
+    }
+    by_arg_name = {c.arg_name(): c for c in by_code.values()}
+    ddcutil_supported = None
+
+    def __init__(self):
+        pass
+        # if self.ddc_util_supported is None:
+        #     ddcutil = DdcUtil()
+        #     self.ddcutil_supported = ddcutil.get_supported_vcp_codes()
+        #     for code, name in self.ddcutil_supported.items():
+        #         if code not in self.by_code:
+        #             self.by_code[code] = VduGuiControlDef(code, name)
+        #             self.by_arg_name = {c.arg_name(): c for c in self.by_code.values()}
+
+
+VDU_SUPPORTED_CONTROLS = VduGuiSupportedControls()
+
+
+def get_config_path(config_name):
+    return Path.home().joinpath('.config').joinpath('vdu_controls').joinpath(config_name + '.conf')
+
+
+class VduControlsConfig:
+    """A vdu_controls config that can be read or written from INI style files"""
+
+    def __init__(self, config_name: str, default_enabled_vcp_codes: List = None, include_globals: bool = False):
+        self.config_name = config_name
+        self.ini_content = configparser.ConfigParser()
+        # augment the configparser with type-info - for run-time widget selection
+        self.config_type_map = {}
+
+        def boolean_type(name: str):
+            self.config_type_map[name] = 'boolean'
+            return name
+
+        def csv_type(name: str):
+            self.config_type_map[name] = 'csv'
+            return name
+
+        def float_type(name: str):
+            self.config_type_map[name] = 'float'
+            return name
+
+        def text_type(name: str):
+            self.config_type_map[name] = 'text'
+            return name
+
+        if include_globals:
+            self.ini_content['vdu-controls-globals'] = {
+                boolean_type('system-tray-enabled'): 'no',
+                boolean_type('splash-screen-enabled'): 'yes',
+                boolean_type('warnings-enabled'): 'no',
+                boolean_type('debug-enabled'): 'no', }
+        self.ini_content['vdu-controls-widgets'] = {}
+        for vcp_code, item in VDU_SUPPORTED_CONTROLS.by_code.items():
+            self.ini_content['vdu-controls-widgets'][boolean_type(item.arg_name())] = 'no'
+        self.ini_content['vdu-controls-widgets'][csv_type('enable-vcp-codes')] = ''
+        self.ini_content['ddcutil-parameters'] = {}
+        self.ini_content['ddcutil-parameters'][float_type('sleep-multiplier')] = str(0.5)
+        self.ini_content['ddcutil-capabilities'] = {}
+        self.ini_content['ddcutil-capabilities'][text_type('capabilities-override')] = ''
+        if default_enabled_vcp_codes is None:
+            self._enabled_vcp_codes = None
+        else:
+            self.set_enabled_vcp_codes(default_enabled_vcp_codes)
+        self.file_path = None
+
+    def get_config_name(self):
+        return self.config_name
+
+    def is_system_tray_enabled(self):
+        return self.ini_content.getboolean('vdu-controls-globals', 'system-tray-enabled', fallback=False)
+
+    def is_splash_screen_enabled(self):
+        return self.ini_content.getboolean('vdu-controls-globals', 'splash-screen-enabled', fallback=True)
+
+    def are_warnings_enabled(self):
+        return self.ini_content.getboolean('vdu-controls-globals', 'warnings-enabled', fallback=True)
+
+    def is_debug_enabled(self):
+        return self.ini_content.getboolean('vdu-controls-globals', 'debug-enabled', fallback=False)
+
+    def get_sleep_multiplier(self):
+        return self.ini_content.getfloat('ddcutil-parameters', 'sleep-multiplier', fallback=0.5)
+
+    def get_capabilities_alt_text(self):
+        return self.ini_content['ddcutil-capabilities']['capabilities-override']
+
+    def set_capabilities_alt_text(self, alt_text: str):
+        self.ini_content['ddcutil-capabilities']['capabilities-override'] = alt_text
+
+    def get_enabled_vcp_codes(self):
+        if self._enabled_vcp_codes is None:
+            section_name = 'vdu-controls-widgets'
+            self._enabled_vcp_codes = []
+            for control_name, control_def in VDU_SUPPORTED_CONTROLS.by_arg_name.items():
+                if self.ini_content[section_name].getboolean(control_name, fallback=False):
+                    self._enabled_vcp_codes.append(control_def.vcp_code)
+            for vcp_code in self.ini_content[section_name]['enable-vcp-codes'].split(","):
+                if vcp_code.strip() != '':
+                    self._enabled_vcp_codes.append(vcp_code.strip())
+        return self._enabled_vcp_codes
+
+    def set_enabled_vcp_codes(self, vcp_codes: List[str]):
+        csv = ''
+        for vcp_code in vcp_codes:
+            if vcp_code in VDU_SUPPORTED_CONTROLS.by_code:
+                self.ini_content['vdu-controls-widgets'][VDU_SUPPORTED_CONTROLS.by_code[vcp_code].arg_name()] = 'yes'
+            else:
+                csv = csv + ', ' + vcp_code
+        self.ini_content['vdu-controls-widgets']['enable-vcp-codes'] = csv
+        self._enabled_vcp_codes = None
+
+    def parse_file(self, config_path: Path):
+        """Parse config values from file"""
+        self.file_path = config_path
+        basename = os.path.basename(config_path)
+        config_text = Path(config_path).read_text()
+        print("INFO: using config file '" + config_path.as_posix() + "'")
+        if re.search(r'(\[ddcutil-capabilities])|(\[ddcutil-parameters])|(\[vdu-controls-\w])', config_text) is None:
+            print("Info: old style config file {} overrides ddcutils capabilities".format(basename))
+            self.ini_content['ddcutil-capabilities']['capabilities-override'] = config_text
+            return
+        self.ini_content.read_string(config_text)
+        # Manually extract the text preserving meaningful indentation
+        preserve_indents_match = \
+            re.search(r'\[ddcutil-capabilities](?:.|\n)*\ncapabilities-override[ \t]*[:=]((.*)(\n[ \t].+)*)',
+                      config_text)
+        alt_text = preserve_indents_match.group(1) if preserve_indents_match is not None else ''
+        self.ini_content['ddcutil-capabilities']['capabilities-override'] = alt_text
+
+    def debug_dump(self):
+        origin = 'configuration' if self.file_path is None else os.path.basename(self.file_path)
+        for section in self.ini_content.sections():
+            for option in self.ini_content[section]:
+                print("DEBUG: {} [{}] {} = {}".format(origin, section, option, self.ini_content[section][option]))
+
+    def write_file(self, config_path: Path, include_globals: bool = True, overwrite: bool = False):
+        """Write the config to a file.  Used for creating initial template config files."""
+        self.file_path = config_path
+        if config_path.is_file():
+            if not overwrite:
+                print(
+                    "ERROR: cannot overwrite {}, remove the file if you really want to replace it.".format(config_path))
+                return
+        print("WARNING: creating new config file {}", config_path.as_posix())
+        if not config_path.parent.is_dir():
+            os.makedirs(config_path.parent)
+        with open(config_path, 'w') as config_file:
+            self.ini_content.write(config_file)
+
+    def parse_args(self, args=None) -> argparse.Namespace:
+        """Parse command line arguments and integrate the results into this config"""
+        if args is None:
+            args = sys.argv[1:]
+        parser = argparse.ArgumentParser(
+            description=textwrap.dedent("""
+            VDU Controls 
+              Uses ddcutil to issue Display Data Channel (DDC) Virtual Control Panel (VCP) commands. 
+              Controls DVI/DP/HDMI/USB connected monitors (but not builtin laptop displays)."""),
+            formatter_class=argparse.RawTextHelpFormatter)
+        parser.epilog = textwrap.dedent("""
+            As well as command line arguments, individual VDU controls and optimisations may be
+            specified in monitor specific configuration files, see --detailed-help for details.
+
+            See the --detailed-help for important licencing information.
+            """)
+        parser.add_argument('--detailed-help', default=False, action='store_true',
+                            help='Detailed help (in markdown format).')
+        parser.add_argument('--about', default=False, action='store_true',
+                            help='about vdu_controls window')
+        parser.add_argument('--show',
+                            default=[],
+                            action='append',
+                            choices=[vcp.arg_name() for vcp in VDU_SUPPORTED_CONTROLS.by_code.values()],
+                            help='show specified control only (--show may be specified multiple times)')
+        parser.add_argument('--hide', default=[], action='append',
+                            choices=[vcp.arg_name() for vcp in VDU_SUPPORTED_CONTROLS.by_code.values()],
+                            help='hide/disable a control (--hide may be specified multiple times)')
+        parser.add_argument('--enable-vcp-code', type=str, action='append',
+                            help='enable controls for an unsupported vcp-code hex value (may be specified multiple times)')
+        # Python 3.9 parser.add_argument('--debug',  action=argparse.BooleanOptionalAction, help='enable debugging')
+        parser.add_argument('--system-tray', default=False, action='store_true',
+                            help='start up as an entry in the system tray')
+        parser.add_argument('--debug', default=False, action='store_true', help='enable debug output to stdout')
+        parser.add_argument('--warnings', default=False, action='store_true',
+                            help='popup a warning when a VDU lacks an enabled control')
+        parser.add_argument('--no-splash', default=False, action='store_true', help="don't show the splash screen")
+        parser.add_argument('--sleep-multiplier', type=float, default="0.5",
+                            help='protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 0.5)')
+        parser.add_argument('--create-config-files', action='store_true',
+                            help="create template config files, one global file and one for each detected VDU.")
+        parser.add_argument('--install', action='store_true',
+                            help="installs the vdu_controls in the current user's path and desktop application menu.")
+        parser.add_argument('--uninstall', action='store_true',
+                            help='uninstalls the vdu_controls application menu file and script for the current user.')
+        parsed_args = parser.parse_args(args=args)
+        if parsed_args.install:
+            install_as_desktop_application()
+            sys.exit()
+        if parsed_args.uninstall:
+            install_as_desktop_application(uninstall=True)
+            sys.exit()
+        if parsed_args.detailed_help:
+            print(__doc__)
+            sys.exit()
+
+        if parsed_args.no_splash:
+            self.ini_content['vdu-controls-globals']['splash-screen-enabled'] = 'no'
+        if parsed_args.debug:
+            self.ini_content['vdu-controls-globals']['debug-enabled'] = 'yes'
+        if parsed_args.warnings:
+            self.ini_content['vdu-controls-globals']['warnings-enabled'] = 'yes'
+        if parsed_args.system_tray:
+            self.ini_content['vdu-controls-globals']['system-tray-enabled'] = 'yes'
+
+        vcp_code_list = []
+        if len(parsed_args.show) != 0:
+            vcp_code_list.extend(
+                [x.vcp_code for x in VDU_SUPPORTED_CONTROLS.by_code.values() if x.arg_name() in parsed_args.show])
+        elif len(parsed_args.hide) != 0:
+            vcp_code_list.extend(
+                [x.vcp_code for x in VDU_SUPPORTED_CONTROLS.by_code.values() if x.arg_name() not in parsed_args.hide])
+        if parsed_args.enable_vcp_code is not None:
+            vcp_code_list.extend(parsed_args.enable_vcp_code)
+        self.set_enabled_vcp_codes(vcp_code_list)
+        return parsed_args
+
+
+class VduModel:
+    """
+    Holds data specific to an individual VDU including a map of its capabilities. A model object in MVC speak.
+
+    The model configuration can optionally be read from an INI-format config file held in $HOME/.config/vdu-control/
+
+    Capabilities are either extracted from ddcutil output or read from the INI-format files.  File read
+    capabilities are provided so that the output from "ddcutil --display N capabilities" can be corrected (because
+    it is sometimes incorrect due to sloppy implementation by manufacturers). For example, my LG monitor reports
     two Display-Port inputs and it only has one.
     """
 
-    def __init__(self, vdu_id, vdu_model, vdu_serial, manufacturer, ddcutil: DdcUtil):
+    def __init__(self, vdu_id: str, vdu_model_name: str, vdu_serial: str, manufacturer: str,
+                 default_config: VduControlsConfig,
+                 ddcutil: DdcUtil):
         self.id = vdu_id
-        self.model = vdu_model
+        self.model_name = vdu_model_name
         self.serial = vdu_serial
         self.manufacturer = manufacturer
         self.ddcutil = ddcutil
         self.sleep_multiplier = None
-        alt_capability_text = None
-        sleep_multiplier_pattern = re.compile(r'\bCUSTOM::Sleep_Multiplier:[ \t]*([0-9]*[.]?[0-9]+)', re.IGNORECASE)
+        self.enabled_vcp_codes = default_config.get_enabled_vcp_codes()
         unacceptable_char_pattern = re.compile(r'[^A-Za-z0-9._-]')
-        serial_config = re.sub(unacceptable_char_pattern, '_', vdu_model.strip() + '_' + vdu_serial.strip()) + '.conf'
-        model_config = re.sub(unacceptable_char_pattern, '_', vdu_model.strip()) + '.conf'
-        for config_filename in (serial_config, model_config):
-            config_path = Path.home().joinpath('.config').joinpath('vdu_controls').joinpath(config_filename)
+        self.vdu_model_and_serial_id = re.sub(unacceptable_char_pattern, '_',
+                                              vdu_model_name.strip() + '_' + vdu_serial.strip())
+        self.vdu_model_id = re.sub(unacceptable_char_pattern, '_', vdu_model_name.strip())
+        self.capabilities_text = None
+        self.config = None
+        for config_name in (self.vdu_model_and_serial_id, self.vdu_model_id):
+            config_path = get_config_path(config_name)
             print("INFO: checking for config file '" + config_path.as_posix() + "'")
             if os.path.isfile(config_path) and os.access(config_path, os.R_OK):
-                alt_capability_text = Path(config_path).read_text()
-                print("WARNING: using config file '" + config_path.as_posix() + "'")
-                custom_multiplier_match = sleep_multiplier_pattern.search(alt_capability_text)
-                if custom_multiplier_match is not None:
-                    self.sleep_multiplier = float(custom_multiplier_match.group(1))
-                    print("WARNING: custom sleep multiplier for {} is {}".format(self.get_description(),
-                                                                                 self.sleep_multiplier))
+                config = VduControlsConfig(config_name,
+                                           default_enabled_vcp_codes=default_config.get_enabled_vcp_codes())
+                config.parse_file(config_path)
+                if default_config.is_debug_enabled():
+                    config.debug_dump()
+                self.sleep_multiplier = config.get_sleep_multiplier()
+                self.enabled_vcp_codes = config.get_enabled_vcp_codes()
+                self.capabilities_text = config.get_capabilities_alt_text()
+                self.config = config
                 break
-        self.capabilities = ddcutil.query_capabilities(vdu_id, alt_capability_text)
+        if self.capabilities_text is None:
+            self.capabilities_text = ddcutil.query_capabilities(vdu_id)
+        self.capabilities = self._parse_capabilities(self.capabilities_text)
+        if self.config is None:
+            # In memory only config - in case it's needed by a future config editor
+            self.config = VduControlsConfig(self.vdu_model_and_serial_id,
+                                            default_enabled_vcp_codes=self.enabled_vcp_codes)
+            self.config.set_capabilities_alt_text(self.capabilities_text)
+
+    def write_template_config_files(self):
+        """Write template config files to $HOME/.config/vdu_controls/"""
+        for config_name in (self.vdu_model_and_serial_id, self.vdu_model_id):
+            save_config_path = get_config_path(config_name)
+            config = VduControlsConfig(config_name, default_enabled_vcp_codes=self.enabled_vcp_codes)
+            config.set_capabilities_alt_text(self.capabilities_text)
+            config.write_file(save_config_path, include_globals=False)
+            self.config = config
 
     def get_description(self) -> str:
         """Return a unique description using the serial-number (if defined) or vdu_id."""
-        return self.model + ':' + (self.serial if len(self.serial) != 0 else self.id)
+        return self.model_name + ':' + (self.serial if len(self.serial) != 0 else self.id)
 
     def get_full_id(self) -> Tuple[str, str, str, str]:
         """Return a tuple that defines this VDU: (vdu_id, manufacturer, model, serial-number)."""
-        return self.id, self.manufacturer, self.model, self.serial
+        return self.id, self.manufacturer, self.model_name, self.serial
 
     def get_attribute(self, vcp_code: str) -> Tuple[str, str]:
         return self.ddcutil.get_attribute(self.id, vcp_code, sleep_multiplier=self.sleep_multiplier)
 
     def set_attribute(self, vcp_code: str, value: str):
         self.ddcutil.set_attribute(self.id, vcp_code, value, sleep_multiplier=self.sleep_multiplier)
+
+    def _parse_capabilities(self, capabilities_text=None) -> Mapping[str, VcpCapability]:
+        """Return a map of vpc capabilities keyed by vcp code."""
+
+        def parse_values(values_str: str):
+            stripped = values_str.strip()
+            values_list = []
+            if len(stripped) != 0:
+                lines_list = stripped.split('\n')
+                if len(lines_list) == 1:
+                    space_separated = lines_list[0].replace('(interpretation unavailable)', '').strip().split(' ')
+                    values_list = [(v, 'unknown ' + v) for v in space_separated[1:]]
+                else:
+                    values_list = [(key, desc) for key, desc in
+                                   (v.strip().split(": ", 1) for v in lines_list[1:])]
+            return values_list
+
+        feature_pattern = re.compile(r'([0-9A-F]{2})\s+[(]([^)]+)[)]\s(.*)', re.DOTALL | re.MULTILINE)
+        feature_map: Mapping[str, VcpCapability] = {}
+        for feature_text in capabilities_text.split(' Feature: '):
+            feature_match = feature_pattern.match(feature_text)
+            if feature_match:
+                vcp_code = feature_match.group(1)
+                vcp_name = feature_match.group(2)
+                values = parse_values(feature_match.group(3))
+                # Guess type from existence or not of value list
+                vcp_type = CONTINUOUS_TYPE if len(values) == 0 else SIMPLE_NON_CONTINUOUS_TYPE
+                capability = VcpCapability(vcp_code, vcp_name, vcp_type=vcp_type, values=values, icon_source=None)
+                feature_map[vcp_code] = capability
+        return feature_map
+
+
+class ConfigEditor(QDialog):
+
+    def __init__(self, default_config: VduControlsConfig, vdu_model_list: List[VduModel]) -> None:
+        super().__init__()
+        self.setMinimumWidth(1024)
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+        tabs = QTabWidget()
+        layout.addWidget(tabs)
+        self.editors = []
+
+        for vdu_config in [default_config, ] + [m.config for m in vdu_model_list]:
+            tab = self.ConfigEditorTab(self, vdu_config)
+            tabs.addTab(tab, vdu_config.get_config_name())
+            self.editors.append(tab)
+
+    def closeEvent(self, event):
+        something_changed = False
+        for editor in self.editors:
+            editor.save()
+            something_changed = editor.has_made_changes or something_changed
+        if something_changed:
+            restart_message = QMessageBox()
+            restart_message.setText(translate("vdu_controls will now reset and use the new settings."))
+            restart_message.setIcon(QMessageBox.Warning)
+            restart_message.setStandardButtons(QMessageBox.Ok)
+            restart_message.exec()
+            QCoreApplication.exit(EXIT_CODE_FOR_RESTART)
+        event.accept()
+
+    class ConfigEditorTab(QWidget):
+
+        def __init__(self, parent: QWidget, vdu_config: VduControlsConfig):
+            super().__init__()
+            editor_layout = QVBoxLayout()
+            self.has_made_changes = False
+            self.setLayout(editor_layout)
+            self.config_path = get_config_path(vdu_config.config_name)
+            self.ini_before = vdu_config.ini_content
+            copy = pickle.dumps(self.ini_before)
+            self.ini_editable = pickle.loads(copy)
+            for section in self.ini_editable:
+                if section == 'DEFAULT':
+                    continue
+                editor_layout.addWidget(QLabel('<b>' + section.replace('-', ' ') + '</b>'))
+                for option in self.ini_editable[section]:
+                    data_type = vdu_config.config_type_map[option]
+                    if data_type == 'boolean':
+                        option_editor = ConfigEditor.ConfigEditorBooleanWidget(self.ini_editable, option, section)
+                    elif data_type == 'float':
+                        option_editor = ConfigEditor.ConfigEditorFloatWidget(self.ini_editable, option, section)
+                    elif data_type == 'text':
+                        option_editor = ConfigEditor.ConfigEditorTextEditorWidget(self.ini_editable, option, section)
+                    elif data_type == 'csv':
+                        option_editor = ConfigEditor.ConfigEditorCsvWidget(self.ini_editable, option, section)
+                    if option_editor is not None:
+                        editor_layout.addWidget(option_editor)
+
+            def save_clicked():
+                if self.is_unsaved():
+                    self.save(cancel=QMessageBox.Cancel)
+                else:
+                    save_message = QMessageBox()
+                    message = translate('No unsaved changes for {}.'.format(vdu_config.config_name))
+                    save_message.setText(message)
+                    save_message.setIcon(QMessageBox.Critical)
+                    save_message.setStandardButtons(QMessageBox.Ok)
+                    save_message.exec()
+
+            buttons_widget = QWidget()
+            button_layout = QHBoxLayout()
+            buttons_widget.setLayout(button_layout)
+            save_button = QPushButton(translate("Save {}").format(vdu_config.config_name))
+            save_button.clicked.connect(save_clicked)
+            button_layout.addWidget(save_button)
+            quit_button = QPushButton(translate("Close"))
+            quit_button.clicked.connect(parent.close)
+            button_layout.addWidget(quit_button)
+            editor_layout.addWidget(buttons_widget)
+
+        def save(self, cancel: int = QMessageBox.Close):
+            if not self.config_path.parent.is_dir():
+                os.makedirs(self.config_path.parent)
+            if self.is_unsaved():
+                save_message = QMessageBox()
+                message = translate('Overwrite existing {}?' if self.config_path.exists() else "Create new {}"
+                                    ).format(self.config_path.as_posix())
+                save_message.setText(message)
+                save_message.setIcon(QMessageBox.Question)
+                save_message.setStandardButtons(QMessageBox.Save | cancel)
+                rc = save_message.exec()
+                if rc == QMessageBox.Save:
+                    with open(self.config_path, 'w') as config_file:
+                        self.ini_editable.write(config_file)
+                        self.ini_before = self.ini_editable
+                        self.has_made_changes = True
+
+        def is_unsaved(self):
+            return pickle.dumps(self.ini_before) != pickle.dumps(self.ini_editable) \
+                   or not self.config_path.exists()
+
+    class ConfigEditorBooleanWidget(QWidget):
+        def __init__(self, ini_editable, option, section):
+            super().__init__()
+            layout = QHBoxLayout()
+            self.setLayout(layout)
+            checkbox = QCheckBox(option.replace('-', ' '))
+            checkbox.setChecked(ini_editable.getboolean(section, option))
+
+            def toggled(is_checked: bool):
+                print(section, option, is_checked)
+                ini_editable[section][option] = 'yes' if is_checked else 'no'
+
+            checkbox.toggled.connect(toggled)
+            layout.addWidget(checkbox)
+
+    class ConfigEditorFloatWidget(QWidget):
+        def __init__(self, ini_editable, option, section):
+            super().__init__()
+            layout = QVBoxLayout()
+            self.setLayout(layout)
+            text_label = QLabel(option.replace('-', ' '))
+            layout.addWidget(text_label)
+            text_input = QLineEdit()
+            text_input.setMaximumWidth(100)
+            text_input.setMaxLength(4)
+            text_validator = QDoubleValidator()
+            text_validator.setRange(0.1, int(3.0), 4)
+            text_input.setValidator(text_validator)
+            text_input.setText(ini_editable[section][option])
+
+            def editing_finished():
+                print(section, option, text_input.text())
+                ini_editable[section][option] = str(text_input.text())
+
+            text_input.editingFinished.connect(editing_finished)
+            layout.addWidget(text_input)
+
+    class ConfigEditorCsvWidget(QWidget):
+        def __init__(self, ini_editable, option, section):
+            super().__init__()
+            layout = QVBoxLayout()
+            self.setLayout(layout)
+            text_label = QLabel(option.replace('-', ' '))
+            layout.addWidget(text_label)
+            text_input = QLineEdit()
+            text_input.setMaximumWidth(1000)
+            text_input.setMaxLength(500)
+            validator = QRegExpValidator(QRegExp(r"^[0-9a-fA-F]{2}([ \t]*,[ \t]*[0-9a-fA-F]{2})*$"))
+            text_input.setValidator(validator)
+            text_input.setText(ini_editable[section][option])
+
+            def editing_finished():
+                print(section, option, text_input.text())
+                ini_editable[section][option] = str(text_input.text())
+
+            def input_rejected():
+                text_input.setStyleSheet("QLineEdit { color : red; }")
+
+            def text_edited():
+                text_input.setStyleSheet("QLineEdit { color : black; }")
+
+            text_input.editingFinished.connect(editing_finished)
+            text_input.inputRejected.connect(input_rejected)
+            text_input.textEdited.connect(text_edited)
+            layout.addWidget(text_input)
+
+    class ConfigEditorTextEditorWidget(QWidget):
+        def __init__(self, ini_editable, option, section):
+            super().__init__()
+            layout = QVBoxLayout()
+            self.setLayout(layout)
+            text_label = QLabel(option.replace('-', ' '))
+            layout.addWidget(text_label)
+            text_editor = QPlainTextEdit(ini_editable[section][option])
+
+            def text_changed():
+                print(section, option, text_editor.toPlainText())
+                ini_editable[section][option] = text_editor.toPlainText()
+
+            text_editor.textChanged.connect(text_changed)
+            layout.addWidget(text_editor)
 
 
 def restart_due_to_config_change():
@@ -622,7 +1027,7 @@ def restart_due_to_config_change():
     QCoreApplication.exit(EXIT_CODE_FOR_RESTART)
 
 
-class DdcSliderWidget(QWidget):
+class VduSliderControl(QWidget):
     """
     GUI control for a DDC continuously variable attribute.
 
@@ -630,21 +1035,21 @@ class DdcSliderWidget(QWidget):
     from an abstract type if we wanted to get formal about it).
     """
 
-    def __init__(self, vdu: DdcVdu, vcp_capability: VcpCapability):
+    def __init__(self, vdu_model: VduModel, vcp_capability: VcpCapability):
         """Construct the slider control an initialize its values from the VDU."""
         super().__init__()
 
-        self.vdu = vdu
+        self.vdu_model = vdu_model
         self.vcp_capability = vcp_capability
-        self.current_value, self.max_value = vdu.get_attribute(self.vcp_capability.vcp_code)
+        self.current_value, self.max_value = vdu_model.get_attribute(self.vcp_capability.vcp_code)
 
         layout = QHBoxLayout()
         self.setLayout(layout)
 
-        if vcp_capability.vcp_code in SUPPORTED_VCP_CONTROLS and \
-                SUPPORTED_VCP_CONTROLS[vcp_capability.vcp_code].icon_source is not None:
+        if vcp_capability.vcp_code in VDU_SUPPORTED_CONTROLS.by_code and \
+                VDU_SUPPORTED_CONTROLS.by_code[vcp_capability.vcp_code].icon_source is not None:
             svg_icon = QSvgWidget()
-            svg_icon.load(SUPPORTED_VCP_CONTROLS[vcp_capability.vcp_code].icon_source)
+            svg_icon.load(VDU_SUPPORTED_CONTROLS.by_code[vcp_capability.vcp_code].icon_source)
             svg_icon.setFixedSize(50, 50)
             svg_icon.setToolTip(translate(vcp_capability.name))
             layout.addWidget(svg_icon)
@@ -679,16 +1084,16 @@ class DdcSliderWidget(QWidget):
             self.current_value = str(value)
             text_input.setText(self.current_value)
             try:
-                self.vdu.set_attribute(self.vcp_capability.vcp_code, self.current_value)
-                if self.vcp_capability.vcp_code in SUPPORTED_VCP_CONTROLS and \
-                        SUPPORTED_VCP_CONTROLS[self.vcp_capability.vcp_code].causes_config_change:
+                self.vdu_model.set_attribute(self.vcp_capability.vcp_code, self.current_value)
+                if self.vcp_capability.vcp_code in VDU_SUPPORTED_CONTROLS.by_code and \
+                        VDU_SUPPORTED_CONTROLS.by_code[self.vcp_capability.vcp_code].causes_config_change:
                     # The VCP command has turned one off a VDU or changed what it is connected to.
                     # VDU ID's will now be out of whack - restart the GUI.
                     restart_due_to_config_change()
             except subprocess.SubprocessError:
                 msg = QMessageBox()
                 msg.setIcon(QMessageBox.Critical)
-                msg.setText(translate("Failed to communicate with {}").format(self.vdu.get_description()))
+                msg.setText(translate("Failed to communicate with {}").format(self.vdu_model.get_description()))
                 msg.setInformativeText(translate('Is the monitor switched off?<br>Is --sleep-multiplier set too low?'))
                 msg.exec()
 
@@ -706,27 +1111,27 @@ class DdcSliderWidget(QWidget):
 
     def refresh_data(self):
         """Query the VDU for a new data value and cache it (may be called from a task thread, so no GUI op's here)."""
-        self.current_value, _ = self.vdu.get_attribute(self.vcp_capability.vcp_code)
+        self.current_value, _ = self.vdu_model.get_attribute(self.vcp_capability.vcp_code)
 
     def refresh_view(self):
         """Copy the internally cached current value onto the GUI view."""
         self.slider.setValue(int(self.current_value))
 
 
-class DdcComboBox(QWidget):
+class VduComboBoxControl(QWidget):
     """
     GUI control for a DDC non-continuously variable attribute, one that has a list of choices.
 
     This is a duck-typed GUI control widget (could inherit from an abstract type if we wanted to get formal about it).
     """
 
-    def __init__(self, vdu: DdcVdu, vcp_capability: VcpCapability):
+    def __init__(self, vdu_model: VduModel, vcp_capability: VcpCapability):
         """Construct the combobox control an initialize its values from the VDU."""
         super().__init__()
 
-        self.vdu = vdu
+        self.vdu_model = vdu_model
         self.vcp_capability = vcp_capability
-        self.current_value = vdu.get_attribute(vcp_capability.vcp_code)[0]
+        self.current_value = vdu_model.get_attribute(vcp_capability.vcp_code)[0]
 
         layout = QHBoxLayout()
         self.setLayout(layout)
@@ -751,14 +1156,14 @@ class DdcComboBox(QWidget):
         def index_changed(index: int):
             self.current_value = self.combo_box.currentData
             try:
-                self.vdu.set_attribute(self.vcp_capability.vcp_code, self.combo_box.currentData())
-                if self.vcp_capability.vcp_code in SUPPORTED_VCP_CONTROLS and \
-                        SUPPORTED_VCP_CONTROLS[self.vcp_capability.vcp_code].causes_config_change:
+                self.vdu_model.set_attribute(self.vcp_capability.vcp_code, self.combo_box.currentData())
+                if self.vcp_capability.vcp_code in VDU_SUPPORTED_CONTROLS.by_code and \
+                        VDU_SUPPORTED_CONTROLS.by_code[self.vcp_capability.vcp_code].causes_config_change:
                     restart_due_to_config_change()
             except subprocess.SubprocessError:
                 msg = QMessageBox()
                 msg.setIcon(QMessageBox.Critical)
-                msg.setText(translate("Failed to communicate with {}").format(self.vdu.get_description()))
+                msg.setText(translate("Failed to communicate with {}").format(self.vdu_model.get_description()))
                 msg.setInformativeText(translate('Is the monitor switched off?<br>Is --sleep-multiplier set too low?'))
                 msg.exec()
 
@@ -766,14 +1171,14 @@ class DdcComboBox(QWidget):
 
     def refresh_data(self):
         """Query the VDU for a new data value and cache it (may be called from a task thread, so no GUI op's here)."""
-        self.current_value, _ = self.vdu.get_attribute(self.vcp_capability.vcp_code)
+        self.current_value, _ = self.vdu_model.get_attribute(self.vcp_capability.vcp_code)
 
     def refresh_view(self):
         """Copy the internally cached current value onto the GUI view."""
         self.combo_box.setCurrentIndex(self.keys.index(self.current_value))
 
 
-class DdcVduWidget(QWidget):
+class VduControlPanel(QWidget):
     """
     Widget that contains all the controls for a single VDU (monitor/display).
 
@@ -781,24 +1186,24 @@ class DdcVduWidget(QWidget):
     methods.
     """
 
-    def __init__(self, vdu: DdcVdu, enabled_vcp_codes: List[str], warnings: bool):
+    def __init__(self, vdu_model: VduModel, warnings: bool):
         super().__init__()
         layout = QVBoxLayout()
         label = QLabel()
         # label.setStyleSheet("font-weight: bold");
-        label.setText(translate('Monitor {}: {}').format(vdu.id, vdu.get_description()))
+        label.setText(translate('Monitor {}: {}').format(vdu_model.id, vdu_model.get_description()))
         layout.addWidget(label)
-        self.vdu = vdu
+        self.vdu_model = vdu_model
         self.vcp_controls = []
-        for vcp_code in enabled_vcp_codes:
-            if vcp_code in vdu.capabilities:
+        for vcp_code in vdu_model.enabled_vcp_codes:
+            if vcp_code in vdu_model.capabilities:
                 control = None
-                capability = vdu.capabilities[vcp_code]
+                capability = vdu_model.capabilities[vcp_code]
                 if capability.vcp_type == CONTINUOUS_TYPE:
-                    control = DdcSliderWidget(vdu, capability)
+                    control = VduSliderControl(vdu_model, capability)
                 elif capability.vcp_type == SIMPLE_NON_CONTINUOUS_TYPE:
                     try:
-                        control = DdcComboBox(vdu, capability)
+                        control = VduComboBoxControl(vdu_model, capability)
                     except ValueError as valueError:
                         alert = QMessageBox()
                         alert.setText(valueError.args[0])
@@ -814,11 +1219,12 @@ class DdcVduWidget(QWidget):
                     layout.addWidget(control)
                     self.vcp_controls.append(control)
             elif warnings:
-                missing_vcp = SUPPORTED_VCP_CONTROLS[vcp_code].name if vcp_code in SUPPORTED_VCP_CONTROLS else vcp_code
+                missing_vcp = VDU_SUPPORTED_CONTROLS.by_code[
+                    vcp_code].name if vcp_code in VDU_SUPPORTED_CONTROLS.by_code else vcp_code
                 alert = QMessageBox()
                 alert.setText(
                     translate('Monitor {} lacks a VCP control for {}.').format(
-                        vdu.get_description(), translate(missing_vcp)))
+                        vdu_model.get_description(), translate(missing_vcp)))
                 alert.setInformativeText(translate('No read/write ability for vcp_code {}.').format(vcp_code))
                 alert.setIcon(QMessageBox.Warning)
                 alert.exec()
@@ -840,30 +1246,32 @@ class DdcVduWidget(QWidget):
         return len(self.vcp_controls)
 
 
-class DdcMainWidget(QWidget):
+class VduControlsMainWindow(QWidget):
     """GUI for detected VDU's, it will construct and contain a control panel for each VDU."""
 
-    def __init__(self, enabled_vcp_codes: List[str], warnings: bool, debug: bool, sleep_multiplier: float,
-                 detect_vdu_hook: callable):
+    def __init__(self, default_config: VduControlsConfig, detect_vdu_hook: callable):
         super().__init__()
         layout = QVBoxLayout()
-        self.ddcutil = DdcUtil(debug=debug, common_args=None, default_sleep_multiplier=sleep_multiplier)
+        self.ddcutil = DdcUtil(debug=default_config.is_debug_enabled(), common_args=None,
+                               default_sleep_multiplier=default_config.get_sleep_multiplier())
         self.vdu_widgets = []
-        self.enabled_capabilities = enabled_vcp_codes
-        self.warnings = warnings
+        self.warnings = default_config.are_warnings_enabled()
         self.detected_vdus = self.ddcutil.detect_monitors()
-        for vdu_id, manufacturer, vdu_model, vdu_serial in self.detected_vdus:
-            vdu = DdcVdu(vdu_id, vdu_model, vdu_serial, manufacturer, self.ddcutil)
+        self.model_data = []
+        for vdu_id, manufacturer, vdu_model_name, vdu_serial in self.detected_vdus:
+            vdu_model = VduModel(vdu_id, vdu_model_name, vdu_serial, manufacturer, default_config, self.ddcutil)
+            self.model_data.append(vdu_model)
             if detect_vdu_hook is not None:
-                detect_vdu_hook(vdu)
-            vdu_widget = DdcVduWidget(vdu, enabled_vcp_codes, warnings)
-            if vdu_widget.number_of_controls() != 0:
-                self.vdu_widgets.append(vdu_widget)
-                layout.addWidget(vdu_widget)
-            elif warnings:
+                detect_vdu_hook(vdu_model)
+            vdu_control_panel = VduControlPanel(vdu_model, self.warnings)
+            if vdu_control_panel.number_of_controls() != 0:
+                self.vdu_widgets.append(vdu_control_panel)
+                layout.addWidget(vdu_control_panel)
+            elif self.warnings:
                 alert = QMessageBox()
                 alert.setText(
-                    translate('Monitor {} {} lacks any accessible controls.').format(vdu.id, vdu.get_description()))
+                    translate('Monitor {} {} lacks any accessible controls.').format(vdu_model.id,
+                                                                                     vdu_model.get_description()))
                 alert.setInformativeText(translate('The monitor will be omitted from the control panel.'))
                 alert.setIcon(QMessageBox.Warning)
                 alert.exec()
@@ -916,7 +1324,7 @@ class DdcMainWidget(QWidget):
         """Refresh data from the VDU's. Called by a non-GUI task. Not in the GUI-thread, cannot do any GUI op's."""
         self.detected_vdus = self.ddcutil.detect_monitors()
         for vdu_widget in self.vdu_widgets:
-            if vdu_widget.vdu.get_full_id() in self.detected_vdus:
+            if vdu_widget.vdu_model.get_full_id() in self.detected_vdus:
                 vdu_widget.refresh_data()
 
     def refresh_view(self):
@@ -986,7 +1394,7 @@ def install_as_desktop_application(uninstall: bool = False):
 
     bin_dir = Path.home().joinpath('bin')
     if not bin_dir.is_dir():
-        print("WARNING: creating:{}".format(bin_dir.as_posix()));
+        print("WARNING: creating:{}".format(bin_dir.as_posix()))
         os.mkdir(bin_dir)
 
     installed_script_path = bin_dir.joinpath("vdu_controls")
@@ -1016,7 +1424,7 @@ def install_as_desktop_application(uninstall: bool = False):
         desktop_definition = textwrap.dedent("""
             [Desktop Entry]
             Type=Application
-            Exec={} --show brightness --show audio-volume
+            Exec={}
             Name=VDU Controls
             GenericName=VDU controls
             Comment=Virtual Control Panel for externally connected VDU's
@@ -1029,7 +1437,7 @@ def install_as_desktop_application(uninstall: bool = False):
 
 
 class HelpWidget(QDialog):
-    """"""
+    """Extract detailed help from the scripts __doc__ string and display it in a popup window."""
 
     def __init__(self):
         super().__init__(None, Qt.Window)
@@ -1046,46 +1454,18 @@ def main():
     """vdu_controls application main."""
     # Allow control-c to terminate the program
     signal.signal(signal.SIGINT, signal.SIG_DFL)
+    sys.excepthook = exception_handler
 
-    parser = argparse.ArgumentParser(
-        description=textwrap.dedent("""
-        VDU Controls 
-          Uses ddcutil to issue Display Data Channel (DDC) Virtual Control Panel (VCP) commands. 
-          Controls DVI/DP/HDMI/USB connected monitors (but not builtin laptop displays)."""),
-        formatter_class=argparse.RawTextHelpFormatter)
-    parser.epilog = textwrap.dedent("""
-        As well as command line arguments, individual VDU controls and optimisations may be
-        specified in monitor specific configuration files, see --detailed-help for details.
-        
-        See the --detailed-help for important licencing information.
-        """)
-    parser.add_argument('--detailed-help', default=False, action='store_true',
-                        help='Detailed help (in markdown format).')
-    parser.add_argument('--about', default=False, action='store_true',
-                        help='about vdu_controls window')
-    parser.add_argument('--show',
-                        default=[],
-                        action='append', choices=[vcp.arg_name() for vcp in SUPPORTED_VCP_CONTROLS.values()],
-                        help='show specified control only (--show may be specified multiple times)')
-    parser.add_argument('--hide', default=[], action='append',
-                        choices=[vcp.arg_name() for vcp in SUPPORTED_VCP_CONTROLS.values()],
-                        help='hide/disable a control (--hide may be specified multiple times)')
-    parser.add_argument('--enable-vcp-code', type=str, action='append',
-                        help='enable controls for an unsupported vcp-code hex value (may be specified multiple times)')
-    # Python 3.9 parser.add_argument('--debug',  action=argparse.BooleanOptionalAction, help='enable debugging')
-    parser.add_argument('--system-tray', default=False, action='store_true',
-                        help='start up as an entry in the system tray')
-    parser.add_argument('--debug', default=False, action='store_true', help='enable debug output to stdout')
-    parser.add_argument('--warnings', default=False, action='store_true',
-                        help='popup a warning when a VDU lacks an enabled control')
-    parser.add_argument('--no-splash', default=False, action='store_true', help="don't show the splash screen")
-    parser.add_argument('--sleep-multiplier', type=float, default="0.5",
-                        help='protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 0.5)')
-    parser.add_argument('--install', action='store_true',
-                        help="installs the vdu_controls in the current user's path and desktop application menu.")
-    parser.add_argument('--uninstall', action='store_true',
-                        help='uninstalls the vdu_controls application menu file and script for the current user.')
-    args = parser.parse_args()
+    default_config = VduControlsConfig('vdu_controls', include_globals=True)
+    config_path = get_config_path('vdu_controls')
+    print("INFO: checking for config file '" + config_path.as_posix() + "'")
+    if Path.is_file(config_path) and os.access(config_path, os.R_OK):
+        default_config.parse_file(config_path)
+    args = default_config.parse_args()
+    if args.debug:
+        default_config.debug_dump()
+    if args.create_config_files:
+        default_config.write_file(config_path)
     if args.install:
         install_as_desktop_application()
         sys.exit()
@@ -1095,12 +1475,10 @@ def main():
     if args.detailed_help:
         print(__doc__)
         sys.exit()
-
-    sys.excepthook = exception_handler
     app = QApplication(sys.argv)
     pixmap = get_splash_image()
-    splash = None if args.no_splash else QSplashScreen(pixmap.scaledToWidth(800).scaledToHeight(400),
-                                                       Qt.WindowStaysOnTopHint)
+    splash = QSplashScreen(pixmap.scaledToWidth(800).scaledToHeight(400),
+                           Qt.WindowStaysOnTopHint) if default_config.is_splash_screen_enabled() else None
 
     if splash is not None:
         splash.show()
@@ -1135,15 +1513,21 @@ def main():
     if args.about:
         about_popup()
 
+    def edit_config():
+        editor = ConfigEditor(default_config, main_window.model_data)
+        editor.exec()
+
     app_context_menu = QMenu()
+    app_context_menu.addAction(app.style().standardIcon(QStyle.SP_ComputerIcon), translate('Settings'), edit_config)
     app_context_menu.addAction(app.style().standardIcon(QStyle.SP_MessageBoxInformation), translate('About'),
                                about_popup)
-    app_context_menu.addAction(app.style().standardIcon(QStyle.SP_TitleBarContextHelpButton), translate('Help'), help_popup)
+    app_context_menu.addAction(app.style().standardIcon(QStyle.SP_TitleBarContextHelpButton), translate('Help'),
+                               help_popup)
     app_context_menu.addSeparator()
     app_context_menu.addAction(app.style().standardIcon(QStyle.SP_DialogCloseButton), translate('Quit'), app.quit)
 
     tray = None
-    if args.system_tray:
+    if default_config.is_system_tray_enabled():
         tray = QSystemTrayIcon()
         tray.setIcon(app_icon)
         tray.setContextMenu(app_context_menu)
@@ -1151,21 +1535,19 @@ def main():
     app.setWindowIcon(app_icon)
     app.setApplicationDisplayName(translate('VDU Controls'))
 
-    if len(args.show) != 0:
-        enabled_vcp_codes = [x.vcp_code for x in SUPPORTED_VCP_CONTROLS.values() if x.arg_name() in args.show]
-    else:
-        enabled_vcp_codes = [x.vcp_code for x in SUPPORTED_VCP_CONTROLS.values() if x.arg_name() not in args.hide]
-    if args.enable_vcp_code is not None:
-        enabled_vcp_codes.extend(args.enable_vcp_code)
     if splash is not None:
         splash.showMessage(translate('\n\nVDU Controls\nLooking for DDC monitors...\n'), Qt.AlignTop | Qt.AlignHCenter)
 
-    def detect_vdu_hook(vdu: DdcVdu):
+    def detect_vdu_hook(vdu: VduModel):
         if splash is not None:
             splash.showMessage(translate('\n\nVDU Controls\nDDC ID {}\n{}').format(vdu.id, vdu.get_description()),
                                Qt.AlignTop | Qt.AlignHCenter)
 
-    main_window = DdcMainWidget(enabled_vcp_codes, args.warnings, args.debug, args.sleep_multiplier, detect_vdu_hook)
+    main_window = VduControlsMainWindow(default_config, detect_vdu_hook)
+
+    if args.create_config_files:
+        for vdu_model in main_window.model_data:
+            vdu_model.write_template_config_files()
 
     main_window.setContextMenuPolicy(Qt.CustomContextMenu)
 

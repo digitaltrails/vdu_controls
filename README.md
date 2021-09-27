@@ -15,7 +15,7 @@ controls can be enabled via the ``--enable-vcp-code`` option.  ``vdu_controls`` 
 system tray.
 
 ![Default](screen-shots/Screenshot_Large-330.png)  ![Custom](screen-shots/Screenshot_Small-227.png) 
-![Custom](screen-shots/Screenshot_tray-200.png) 
+![Custom](screen-shots/Screenshot_tray-200.png) ![Custom](screen-shots/Screenshot_settings-300.png)
 
 Getting Started
 ---------------
@@ -102,12 +102,16 @@ Both brief help and detailed help can also be accessed via the command line:
 ```
 
 Whether run from the desktop application-menu or run from the command line, ``vdu-controls`` behaviour can be altered
-by a number of command line options, see the context-menu help or the  [man page](https://htmlpreview.github.io/?https://raw.githubusercontent.com/digitaltrails/vdu_controls/master/docs/_build/man/vdu_controls.1.html)
+in a number of ways:
+
+* Command line options.
+* The `Settings` item in the context-menu.
+* Configurations files in `$HOME/.config/vdu_controls/`
+
+See the context-menu or the  [man page](https://htmlpreview.github.io/?https://raw.githubusercontent.com/digitaltrails/vdu_controls/master/docs/_build/man/vdu_controls.1.html)
  for details.
 
-As well as the command line options, controls and optimisations for individual VDU's can be specified in individual 
-VDU config files, see the context-menu help or the [man page](https://htmlpreview.github.io/?https://raw.githubusercontent.com/digitaltrails/vdu_controls/master/docs/_build/man/vdu_controls.1.html)
- for details.
+VDU controls and optimisations can be specified in the global or VDU-specific config-files.
 
 Development
 -----------
@@ -148,6 +152,9 @@ Michael Hamilton\
 
 Version History
 ---------------
+* 1.4.0
+  * Added global and VDU-specific INI style configuration files in `$HOME/.conf/vdu_controls/`.
+  * Added a GUI settings-editor as a `settings` menu-item in the context-menu.
 * 1.3.1
   * A minor enhancement to ease installation on Ubuntu, create ``$HOME/bin`` if it doesn't exist. 
 * 1.3.0

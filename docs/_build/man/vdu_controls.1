@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "VDU_CONTROLS" "1" "Sep 22, 2021" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Sep 27, 2021" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.3.1
 .
@@ -44,6 +44,7 @@ A GUI for controlling connected \fIVisual Display Units\fP (\fIVDU\fP\(aqs) (als
 [\-\-hide {brightness,contrast,audio\-volume,input\-source,power\-mode,osd\-language}]
 [\-\-enable\-vcp\-code vcp_code] [\-\-system\-tray] [\-\-debug] [\-\-warnings]
 [\-\-no\-splash] [\-\-sleep\-multiplier multiplier]
+[\-\-create\-config\-files]
 [\-\-install] [\-\-uninstall]
 .UNINDENT
 .UNINDENT
@@ -86,6 +87,9 @@ don\(aqt show the splash screen
 .BI \-\-sleep\-multiplier \ multiplier
 protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 0.5)
 .TP
+.B \-\-create\-config\-files
+if they do not exist, create template config INI files in $HOME/.config/vdu_controls/
+.TP
 .B \-\-install
 installs the vdu_controls in the current user\(aqs path and desktop application menu.
 .TP
@@ -124,25 +128,50 @@ picture\-profile might result in the contrast\-control being disabled, but \fBvd
 the restriction resulting in its contrast\-control appearing to do nothing.
 .SH CONFIGURATION
 .sp
-Most configuration is supplied via command line parameters.
+Configuration is supplied via command line parameters and config\-files.  The command line provides an immediate way
+to temporarily alter the behaviour of the application. The config files provide a more comprehensive and permanent
+solution for altering the application\(aqs configuration.
+.SS Config files
 .sp
-Command line options can be added to the desktop application\-menu by editing the application menu item
-directly in the desktop (for \fIKDE\-Plasma\fP this can be achieved by right\-mousing on the \fBVDU Controls\fP menu
-item and selecting \fBEdit Application\fP).  Alternatively, it is just as easy to use your preferred text editor to
-edit the desktop definition file \fB$HOME/.local/share/applications/vdu_controls.desktop\fP and add options to
-the \fBExec=\fP line.
-.SS VDU/VDU\-model config files
-.sp
-An optional config file can be setup for each VDU or VDU\-model to provide for VDU specific tweaks:
+\fBvdu_controls\fP may use several config files.  There may be a global config file for setting application
+wide defaults.  There may be any number of model or serial\-number VDU\-specific config files for customising
+\fBvdu_controls\fP for each VDU.  The config files are named as follows:
 .INDENT 0.0
 .INDENT 3.5
 .INDENT 0.0
 .IP \(bu 2
-Correction of manufacturer built\-in meta data.
+Application wide default config: \fB$HOME/.config/vdu_controls/vdu_controls.conf\fP
 .IP \(bu 2
-Customisation of which controls are to be provided.
+VDU model and serial number config: \fB$HOME/.config/vdu_controls/<model>_<serial|display_num>.conf\fP
 .IP \(bu 2
-DDC communication speed\-multiplier specification for individual VDU\(aqs.
+VDU model only config: \fB$HOME/.config/vdu_controls/<model>.conf\fP
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.sp
+All config  files are INI\-format.  There are two easy ways to create them:
+.INDENT 0.0
+.INDENT 3.5
+.INDENT 0.0
+.IP \(bu 2
+Run \fBvdu_controls\fP, use the right mouse to bring up the context\-menu, select \fBsettings\fP,
+and then edit and save each of the settings tabs.
+.IP \(bu 2
+Run \fBvdu_controls \-\-create\-config\-files\fP to create templates for manual editing.
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.sp
+The VDU\-specific config files can be used to:.
+.INDENT 0.0
+.INDENT 3.5
+.INDENT 0.0
+.IP \(bu 2
+Correct manufacturer built\-in meta data.
+.IP \(bu 2
+Customise which controls are to be provided.
+.IP \(bu 2
+Set a optimal \fBddcutil\fP DDC communication speed\-multiplier for the VDU.
 .UNINDENT
 .UNINDENT
 .UNINDENT
@@ -150,119 +179,23 @@ DDC communication speed\-multiplier specification for individual VDU\(aqs.
 The last two are particularly useful if a desktop has multiple VDU\(aqs that vary in features or DDC\-communications
 speed.
 .sp
-Config files can be model specific, or model and serial\-number specific.  In the case where the manufacturers serial
-number cannot be retrieved, \fBvdu_controls\fP will look for a config file containing the display number instead.
-The following naming convention is checked in the following order order:
-.INDENT 0.0
-.INDENT 3.5
-1 \fB$HOME/.config/vdu_controls/<model>_<serial|display_num>.conf\fP
-.sp
-2 \fB$HOME/.config/vdu_controls/<model>.conf\fP
-.UNINDENT
-.UNINDENT
-.sp
-The easiest way to determine the correct config filename is to run \fBvdu_controls\fP in a console and take note
-of the filenames listed by the diagnostics during startup.  For example, a VCP query to my LG monitor reports that
-it has four inputs, but in reality it only has three. I can correct this as follows:
-.INDENT 0.0
-.INDENT 3.5
-1 Run \fBvdu_controls\fP in a console window and not which config files it\(aqs looking for:
-.INDENT 0.0
-.INDENT 3.5
-.sp
-.nf
-.ft C
-% ./vdu_controls.py
-INFO: checking for config file \(aq/home/michael/.config/vdu_controls/LG_HDR_4K_SN43328.conf\(aq
-INFO: checking for config file \(aq/home/michael/.config/vdu_controls/LG_HDR_4K.conf\(aq
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
-.sp
-2 Run \fBddcutil\fP to generate an initial text file of VDU capabilities:
-.INDENT 0.0
-.INDENT 3.5
-.sp
-.nf
-.ft C
-% ddcutil \-\-display 2 capabilities > /home/michael/.config/vdu_controls/LG_HDR_4K.conf
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
-.sp
-3 Edit the config file find the appropriate feature, in this case \fBFeature: 60 (Input Source)\fP:
-.INDENT 0.0
-.INDENT 3.5
-.sp
-.nf
-.ft C
-# Use a text editor to find the erroneous DisplayPort\-2 and get rid of it.
-% vi /home/michael/.config/vdu_controls/LG_HDR_4K.conf
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
-.sp
-4 Run \fBvdu_controls\fP and confirm the the config file is being used and the correct number of inputs is shown:
-.INDENT 0.0
-.INDENT 3.5
-.sp
-.nf
-.ft C
-% ./vdu_controls.py
-INFO: checking for config file \(aq/home/michael/.config/vdu_controls/LG_HDR_4K_SN43328.conf\(aq
-INFO: checking for config file \(aq/home/michael/.config/vdu_controls/LG_HDR_4K.conf\(aq
-WARNING: using config file \(aq/home/michael/.config/vdu_controls/LG_HDR_4K.conf\(aq
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
-.UNINDENT
-.UNINDENT
-.sp
-VDU Config files may be used to refine \fB\-\-show\fP/\fB\-hide\fP settings by removing features for specific
-VDU\(aqs.  For example, if a desktop with three VDU\(aqs and we want to show audio\-volume for only one of them, we
-can create config files for the other two, edit each file and remove \fBFeature: 62 Audio speaker volume\fP\&.
-.sp
-In another multi\-monitor example, we may need a larger \fB\-\-sleep\-multiplier\fP value to accommodate a VDU with
-a very slow DDC communications speed, but doing so would slow down the communication for all connected monitors
-resulting in very slow reaction time for all user interface controls. Instead of a global sleep\-multiplier, a config
-file may be used to specify a custom sleep\-multiplier for each monitor. This is achieved by adding a line to the
-top section of a config file with the content \fBCUSTOM::Sleep_Multiplier:\fP followed by a floating point value,
-for example:
-.INDENT 0.0
-.INDENT 3.5
-.sp
-.nf
-.ft C
-CUSTOM::Sleep_Multiplier: 1.5
-Model: XYZZY\-42
-MCCS version: 2.2
-\&...
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
-.sp
-The VDU Config files read by \fBvdu_controls\fP can only be used to alter definitions of VCP codes already supported
-by \fBddcutil\fP\&.  If the file lists a VCP code as a \fImanufacturer specific feature\fP then it is not supported.
-Manufacturer specific features should not be experimented with, some may have destructive or irreversible consequences
-that may brick the hardware. It is possible to enable any codes by  creating a  \fBddcutil\fP user definition (\fB\-\-udef\fP)
-file, BUT THIS SHOULD ONLY BE USED WITH EXTREME CAUTION AND CANNOT BE RECOMMENDED.
+Config files can only be used to alter definitions of VCP codes already supported by \fBddcutil\fP\&.  If a VCP code
+is listed as a \fImanufacturer specific feature\fP it is not supported. Manufacturer specific features should not be
+experimented with, some may have destructive or irreversible consequences that may brick the hardware. It is
+possible to enable any codes by  creating a  \fBddcutil\fP user definition (\fB\-\-udef\fP) file, BUT THIS SHOULD ONLY
+BE USED WITH EXTREME CAUTION AND CANNOT BE RECOMMENDED.
 .SS Responsiveness
 .sp
-If your VDU\(aqs are modern, you may find a smaller \fB\-\-sleep\-multiplier\fP will speed up the \fBddcutil\fP/VDU protocol
+If your VDU\(aqs are modern, you may find a smaller sleep\-multiplier will speed up the \fBddcutil\fP/VDU protocol
 exchanges making both \fBddcutil\fP and \fBvdu_controls\fP much more responsive.  In a multi\-VDU setup where the VDU\(aqs
-are quite different, VDU config files can be used to specify individual \fBCUSTOM::Sleep_Multiplier:\fP values (see
-previous section).
+are quite different, VDU config files can be used to specify individual multipliers (see previous section).
 .sp
-Startup speed may be increased by using VDU config files to eliminating the need to run \fBddcutil\fP to retrieve
-VDU capabilities.
+Startup speed may be increased by creating VDU config files with \fBcapabilities\-override\fP preset. Using an
+override eliminates the need to run \fBddcutil\fP to retrieve VDU capabilities.  The \fB\-\-create\-config\-files\fP
+of context\-menu settings\-editor will pre\-populate \fBcapabilities\-override\fP for each connected VDU.
 .sp
-Reducing the number of controls by using \fB\-\-show\fP or \fB\-\-hide\fP will speed up the initialisation and reduce the
-refresh time when the refresh button is pressed.
+Reducing the number of enabled controls can speed up the initialisation and reduce the time taken when the
+refresh button is pressed.
 .SH EXAMPLES
 .INDENT 0.0
 .INDENT 3.5
@@ -279,6 +212,9 @@ All default controls except for those to be hidden.
 .TP
 .B \fBvdu_controls \-\-system\-tray \-\-no\-splash \-\-show brightness \-\-show audio\-volume\fP
 Start as a system tray entry without showing the splash\-screen.
+.TP
+.B \fBvdu_controls \-\-create\-config\-files \-\-system\-tray \-\-no\-splash \-\-show brightness \-\-show audio\-volume\fP
+Create template config files in $HOME/.config/vdu_controls/ that include the other settings.
 .TP
 .B \fBvdu_controls \-\-enable\-vcp\-code 63 \-\-enable\-vcp\-code 93 \-\-warnings \-\-debug\fP
 All default controls, plus controls for VCP_CODE 63 and 93, show any warnings, output debugging info.
@@ -350,6 +286,42 @@ Could be a str enumeration of VCP types
 .UNINDENT
 .INDENT 0.0
 .TP
+.B class vdu_controls.ConfigEditor(default_config: \fI\%vdu_controls.VduControlsConfig\fP, vdu_model_list: List[\fI\%vdu_controls.VduModel\fP])
+.INDENT 7.0
+.TP
+.B class ConfigEditorBooleanWidget(ini_editable, option, section)
+.UNINDENT
+.INDENT 7.0
+.TP
+.B class ConfigEditorCsvWidget(ini_editable, option, section)
+.UNINDENT
+.INDENT 7.0
+.TP
+.B class ConfigEditorFloatWidget(ini_editable, option, section)
+.UNINDENT
+.INDENT 7.0
+.TP
+.B class ConfigEditorTab(parent: PyQt5.QtWidgets.QWidget, vdu_config: \fI\%vdu_controls.VduControlsConfig\fP)
+.INDENT 7.0
+.TP
+.B is_unsaved()
+.UNINDENT
+.INDENT 7.0
+.TP
+.B save(cancel: int = 2097152)
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B class ConfigEditorTextEditorWidget(ini_editable, option, section)
+.UNINDENT
+.INDENT 7.0
+.TP
+.B closeEvent(self, QCloseEvent)
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
 .B vdu_controls.DDCUTIL = \(aqddcutil\(aq
 Assuming ddcutil is somewhere on the PATH.
 .UNINDENT
@@ -357,56 +329,6 @@ Assuming ddcutil is somewhere on the PATH.
 .TP
 .B vdu_controls.DEFAULT_SPLASH_PNG = \(aq/usr/share/icons/oxygen/base/256x256/apps/preferences\-desktop\-display.png\(aq
 A high resolution image, will fallback to an internal PNG if this file isn\(aqt found on the local system
-.UNINDENT
-.INDENT 0.0
-.TP
-.B class vdu_controls.DdcComboBox(vdu: \fI\%vdu_controls.DdcVdu\fP, vcp_capability: \fI\%vdu_controls.VcpCapability\fP)
-GUI control for a DDC non\-continuously variable attribute, one that has a list of choices.
-.sp
-This is a duck\-typed GUI control widget (could inherit from an abstract type if we wanted to get formal about it).
-.INDENT 7.0
-.TP
-.B refresh_data()
-Query the VDU for a new data value and cache it (may be called from a task thread, so no GUI op\(aqs here).
-.UNINDENT
-.INDENT 7.0
-.TP
-.B refresh_view()
-Copy the internally cached current value onto the GUI view.
-.UNINDENT
-.UNINDENT
-.INDENT 0.0
-.TP
-.B class vdu_controls.DdcMainWidget(enabled_vcp_codes: List[str], warnings: bool, debug: bool, sleep_multiplier: float, detect_vdu_hook: callable)
-GUI for detected VDU\(aqs, it will construct and contain a control panel for each VDU.
-.INDENT 7.0
-.TP
-.B refresh_data()
-Refresh data from the VDU\(aqs. Called by a non\-GUI task. Not in the GUI\-thread, cannot do any GUI op\(aqs.
-.UNINDENT
-.INDENT 7.0
-.TP
-.B refresh_view()
-Invoke when the GUI worker thread completes. Runs in the GUI thread and can refresh the GUI views.
-.UNINDENT
-.UNINDENT
-.INDENT 0.0
-.TP
-.B class vdu_controls.DdcSliderWidget(vdu: \fI\%vdu_controls.DdcVdu\fP, vcp_capability: \fI\%vdu_controls.VcpCapability\fP)
-GUI control for a DDC continuously variable attribute.
-.sp
-A compound widget with icon, slider, and text\-field.  This is a duck\-typed GUI control widget (could inherit
-from an abstract type if we wanted to get formal about it).
-.INDENT 7.0
-.TP
-.B refresh_data()
-Query the VDU for a new data value and cache it (may be called from a task thread, so no GUI op\(aqs here).
-.UNINDENT
-.INDENT 7.0
-.TP
-.B refresh_view()
-Copy the internally cached current value onto the GUI view.
-.UNINDENT
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -430,13 +352,13 @@ for "Non\-Continuous" attributes.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B get_supported_vcp_codes()
+.B get_supported_vcp_codes() -> Mapping[str, str]
 Returns a map of descriptions keyed by vcp_code, the codes that ddcutil appears to support.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B query_capabilities(vdu_id: str, alternate_text=None) -> Mapping[str, \fI\%vdu_controls.VcpCapability\fP]
-Return a map of vpc capabilities keyed by vcp code.
+.B query_capabilities(vdu_id: str) -> str
+Return a vpc capabilities string.
 .UNINDENT
 .INDENT 7.0
 .TP
@@ -445,59 +367,8 @@ Send a new value to a specific VDU and vcp_code.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B vcp_info()
+.B vcp_info() -> str
 Returns info about all codes known to ddcutil, whether supported or not.
-.UNINDENT
-.UNINDENT
-.INDENT 0.0
-.TP
-.B class vdu_controls.DdcVdu(vdu_id, vdu_model, vdu_serial, manufacturer, ddcutil: \fI\%vdu_controls.DdcUtil\fP)
-Holds data specific to an individual VDU including a map of its capabilities.
-.sp
-Capabilities are either extracted from ddcutil output or read from a ~/.config/vdu\-control/ file.
-The file option is available so that the output from "ddcutil \-\-display N capabilities" can be corrected because
-it is sometimes incorrect (due to sloppy implementation by manufacturers). For example, my LG monitor reports
-two Display\-Port inputs and it only has one.
-.INDENT 7.0
-.TP
-.B get_attribute(vcp_code: str) -> Tuple[str, str]
-.UNINDENT
-.INDENT 7.0
-.TP
-.B get_description() -> str
-Return a unique description using the serial\-number (if defined) or vdu_id.
-.UNINDENT
-.INDENT 7.0
-.TP
-.B get_full_id() -> Tuple[str, str, str, str]
-Return a tuple that defines this VDU: (vdu_id, manufacturer, model, serial\-number).
-.UNINDENT
-.INDENT 7.0
-.TP
-.B set_attribute(vcp_code: str, value: str)
-.UNINDENT
-.UNINDENT
-.INDENT 0.0
-.TP
-.B class vdu_controls.DdcVduWidget(vdu: \fI\%vdu_controls.DdcVdu\fP, enabled_vcp_codes: List[str], warnings: bool)
-Widget that contains all the controls for a single VDU (monitor/display).
-.sp
-The widget maintains a list of GUI "controls" that are duck\-typed and will have refresh_data() and refresh_view()
-methods.
-.INDENT 7.0
-.TP
-.B number_of_controls() -> int
-Return the number of VDU controls.  Might be zero if initialization discovered no controllable attributes.
-.UNINDENT
-.INDENT 7.0
-.TP
-.B refresh_data()
-Tell the control widgets to get fresh VDU data (may be called from a task thread, so no GUI op\(aqs here).
-.UNINDENT
-.INDENT 7.0
-.TP
-.B refresh_view()
-Tell the control widgets to refresh their views from their internally cached values.
 .UNINDENT
 .UNINDENT
 .INDENT 0.0
@@ -508,6 +379,7 @@ Internal special exit code used to signal that the exit handler should restart t
 .INDENT 0.0
 .TP
 .B class vdu_controls.HelpWidget
+Extract detailed help from the scripts __doc__ string and display it in a popup window.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -533,11 +405,200 @@ Representation of a VCP (Virtual Control Panel) capability for a VDU.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B class vdu_controls.VcpGuiControlDef(vcp_code, vcp_name, causes_config_change: bool = False, icon_source: Optional[bytes] = None)
-Defines a potential VCP GUI control.
+.B class vdu_controls.VduComboBoxControl(vdu_model: \fI\%vdu_controls.VduModel\fP, vcp_capability: \fI\%vdu_controls.VcpCapability\fP)
+GUI control for a DDC non\-continuously variable attribute, one that has a list of choices.
+.sp
+This is a duck\-typed GUI control widget (could inherit from an abstract type if we wanted to get formal about it).
+.INDENT 7.0
+.TP
+.B refresh_data()
+Query the VDU for a new data value and cache it (may be called from a task thread, so no GUI op\(aqs here).
+.UNINDENT
+.INDENT 7.0
+.TP
+.B refresh_view()
+Copy the internally cached current value onto the GUI view.
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B class vdu_controls.VduControlPanel(vdu_model: \fI\%vdu_controls.VduModel\fP, warnings: bool)
+Widget that contains all the controls for a single VDU (monitor/display).
+.sp
+The widget maintains a list of GUI "controls" that are duck\-typed and will have refresh_data() and refresh_view()
+methods.
+.INDENT 7.0
+.TP
+.B number_of_controls() -> int
+Return the number of VDU controls.  Might be zero if initialization discovered no controllable attributes.
+.UNINDENT
+.INDENT 7.0
+.TP
+.B refresh_data()
+Tell the control widgets to get fresh VDU data (may be called from a task thread, so no GUI op\(aqs here).
+.UNINDENT
+.INDENT 7.0
+.TP
+.B refresh_view()
+Tell the control widgets to refresh their views from their internally cached values.
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B class vdu_controls.VduControlsConfig(config_name: str, default_enabled_vcp_codes: Optional[List] = None, include_globals: bool = False)
+A vdu_controls config that can be read or written from INI style files
+.INDENT 7.0
+.TP
+.B are_warnings_enabled()
+.UNINDENT
+.INDENT 7.0
+.TP
+.B debug_dump()
+.UNINDENT
+.INDENT 7.0
+.TP
+.B get_capabilities_alt_text()
+.UNINDENT
+.INDENT 7.0
+.TP
+.B get_config_name()
+.UNINDENT
+.INDENT 7.0
+.TP
+.B get_enabled_vcp_codes()
+.UNINDENT
+.INDENT 7.0
+.TP
+.B get_sleep_multiplier()
+.UNINDENT
+.INDENT 7.0
+.TP
+.B is_debug_enabled()
+.UNINDENT
+.INDENT 7.0
+.TP
+.B is_splash_screen_enabled()
+.UNINDENT
+.INDENT 7.0
+.TP
+.B is_system_tray_enabled()
+.UNINDENT
+.INDENT 7.0
+.TP
+.B parse_args(args=None) -> argparse.Namespace
+Parse command line arguments and integrate the results into this config
+.UNINDENT
+.INDENT 7.0
+.TP
+.B parse_file(config_path: pathlib.Path)
+Parse config values from file
+.UNINDENT
+.INDENT 7.0
+.TP
+.B set_capabilities_alt_text(alt_text: str)
+.UNINDENT
+.INDENT 7.0
+.TP
+.B set_enabled_vcp_codes(vcp_codes: List[str])
+.UNINDENT
+.INDENT 7.0
+.TP
+.B write_file(config_path: pathlib.Path, include_globals: bool = True, overwrite: bool = False)
+Write the config to a file.  Used for creating initial template config files.
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B class vdu_controls.VduControlsMainWindow(default_config: \fI\%vdu_controls.VduControlsConfig\fP, detect_vdu_hook: callable)
+GUI for detected VDU\(aqs, it will construct and contain a control panel for each VDU.
+.INDENT 7.0
+.TP
+.B refresh_data()
+Refresh data from the VDU\(aqs. Called by a non\-GUI task. Not in the GUI\-thread, cannot do any GUI op\(aqs.
+.UNINDENT
+.INDENT 7.0
+.TP
+.B refresh_view()
+Invoke when the GUI worker thread completes. Runs in the GUI thread and can refresh the GUI views.
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B class vdu_controls.VduGuiControlDef(vcp_code, vcp_name, causes_config_change: bool = False, icon_source: Optional[bytes] = None)
+Defines the properties of a potential VCP GUI control.
 .INDENT 7.0
 .TP
 .B arg_name() -> str
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B class vdu_controls.VduGuiSupportedControls
+Maps of controls supported by name on the command line and in config files.
+.INDENT 7.0
+.TP
+.B by_arg_name = {\(aqaudio\-bass\(aq: <vdu_controls.VduGuiControlDef object>, \(aqaudio\-mic\-volume\(aq: <vdu_controls.VduGuiControlDef object>, \(aqaudio\-mute\(aq: <vdu_controls.VduGuiControlDef object>, \(aqaudio\-treble\(aq: <vdu_controls.VduGuiControlDef object>, \(aqaudio\-volume\(aq: <vdu_controls.VduGuiControlDef object>, \(aqbrightness\(aq: <vdu_controls.VduGuiControlDef object>, \(aqcontrast\(aq: <vdu_controls.VduGuiControlDef object>, \(aqinput\-source\(aq: <vdu_controls.VduGuiControlDef object>, \(aqosd\-language\(aq: <vdu_controls.VduGuiControlDef object>, \(aqpower\-mode\(aq: <vdu_controls.VduGuiControlDef object>}
+.UNINDENT
+.INDENT 7.0
+.TP
+.B by_code = {\(aq10\(aq: <vdu_controls.VduGuiControlDef object>, \(aq12\(aq: <vdu_controls.VduGuiControlDef object>, \(aq60\(aq: <vdu_controls.VduGuiControlDef object>, \(aq62\(aq: <vdu_controls.VduGuiControlDef object>, \(aq64\(aq: <vdu_controls.VduGuiControlDef object>, \(aq8D\(aq: <vdu_controls.VduGuiControlDef object>, \(aq8F\(aq: <vdu_controls.VduGuiControlDef object>, \(aq91\(aq: <vdu_controls.VduGuiControlDef object>, \(aqCC\(aq: <vdu_controls.VduGuiControlDef object>, \(aqD6\(aq: <vdu_controls.VduGuiControlDef object>}
+.UNINDENT
+.INDENT 7.0
+.TP
+.B ddcutil_supported = None
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B class vdu_controls.VduModel(vdu_id: str, vdu_model_name: str, vdu_serial: str, manufacturer: str, default_config: \fI\%vdu_controls.VduControlsConfig\fP, ddcutil: \fI\%vdu_controls.DdcUtil\fP)
+Holds data specific to an individual VDU including a map of its capabilities. A model object in MVC speak.
+.sp
+The model configuration can optionally be read from an INI\-format config file held in $HOME/.config/vdu\-control/
+.sp
+Capabilities are either extracted from ddcutil output or read from the INI\-format files.  File read
+capabilities are provided so that the output from "ddcutil \-\-display N capabilities" can be corrected (because
+it is sometimes incorrect due to sloppy implementation by manufacturers). For example, my LG monitor reports
+two Display\-Port inputs and it only has one.
+.INDENT 7.0
+.TP
+.B get_attribute(vcp_code: str) -> Tuple[str, str]
+.UNINDENT
+.INDENT 7.0
+.TP
+.B get_description() -> str
+Return a unique description using the serial\-number (if defined) or vdu_id.
+.UNINDENT
+.INDENT 7.0
+.TP
+.B get_full_id() -> Tuple[str, str, str, str]
+Return a tuple that defines this VDU: (vdu_id, manufacturer, model, serial\-number).
+.UNINDENT
+.INDENT 7.0
+.TP
+.B set_attribute(vcp_code: str, value: str)
+.UNINDENT
+.INDENT 7.0
+.TP
+.B write_template_config_files()
+Write template config files to $HOME/.config/vdu_controls/
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B class vdu_controls.VduSliderControl(vdu_model: \fI\%vdu_controls.VduModel\fP, vcp_capability: \fI\%vdu_controls.VcpCapability\fP)
+GUI control for a DDC continuously variable attribute.
+.sp
+A compound widget with icon, slider, and text\-field.  This is a duck\-typed GUI control widget (could inherit
+from an abstract type if we wanted to get formal about it).
+.INDENT 7.0
+.TP
+.B refresh_data()
+Query the VDU for a new data value and cache it (may be called from a task thread, so no GUI op\(aqs here).
+.UNINDENT
+.INDENT 7.0
+.TP
+.B refresh_view()
+Copy the internally cached current value onto the GUI view.
 .UNINDENT
 .UNINDENT
 .INDENT 0.0
@@ -549,6 +610,10 @@ There is no QIcon option for loading SVG from a string, only from a SVG file, so
 .TP
 .B vdu_controls.exception_handler(e_type, e_value, e_traceback)
 Overarching error handler in case something unexpected happens.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B vdu_controls.get_config_path(config_name)
 .UNINDENT
 .INDENT 0.0
 .TP
