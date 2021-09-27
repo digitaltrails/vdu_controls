@@ -212,7 +212,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit
 
-VDU_CONTROLS_VERSION = '1.4.0'
+VDU_CONTROLS_VERSION = '1.4.1'
 
 
 def translate(source_text: str):
@@ -555,10 +555,12 @@ class VduControlsConfig:
         self.ini_content['ddcutil-parameters'][float_type('sleep-multiplier')] = str(0.5)
         self.ini_content['ddcutil-capabilities'] = {}
         self.ini_content['ddcutil-capabilities'][text_type('capabilities-override')] = ''
-        if default_enabled_vcp_codes is None:
-            self._enabled_vcp_codes = None
-        else:
-            self.set_enabled_vcp_codes(default_enabled_vcp_codes)
+        if default_enabled_vcp_codes is not None:
+            for code in default_enabled_vcp_codes:
+                if code in VDU_SUPPORTED_CONTROLS.by_code:
+                    self.enable_supported_vcp_code(code)
+                else:
+                    self.enable_unsupported_vcp_code(code)
         self.file_path = None
 
     def get_config_name(self):
@@ -585,27 +587,37 @@ class VduControlsConfig:
     def set_capabilities_alt_text(self, alt_text: str):
         self.ini_content['ddcutil-capabilities']['capabilities-override'] = alt_text
 
-    def get_enabled_vcp_codes(self):
-        if self._enabled_vcp_codes is None:
-            section_name = 'vdu-controls-widgets'
-            self._enabled_vcp_codes = []
-            for control_name, control_def in VDU_SUPPORTED_CONTROLS.by_arg_name.items():
-                if self.ini_content[section_name].getboolean(control_name, fallback=False):
-                    self._enabled_vcp_codes.append(control_def.vcp_code)
-            for vcp_code in self.ini_content[section_name]['enable-vcp-codes'].split(","):
-                if vcp_code.strip() != '':
-                    self._enabled_vcp_codes.append(vcp_code.strip())
-        return self._enabled_vcp_codes
+    def enable_supported_vcp_code(self, vcp_code: str):
+        self.ini_content['vdu-controls-widgets'][VDU_SUPPORTED_CONTROLS.by_code[vcp_code].arg_name()] = 'yes'
 
-    def set_enabled_vcp_codes(self, vcp_codes: List[str]):
-        csv = ''
-        for vcp_code in vcp_codes:
-            if vcp_code in VDU_SUPPORTED_CONTROLS.by_code:
-                self.ini_content['vdu-controls-widgets'][VDU_SUPPORTED_CONTROLS.by_code[vcp_code].arg_name()] = 'yes'
-            else:
-                csv = csv + ', ' + vcp_code
-        self.ini_content['vdu-controls-widgets']['enable-vcp-codes'] = csv
-        self._enabled_vcp_codes = None
+    def disable_supported_vcp_code(self, vcp_code: str):
+        self.ini_content['vdu-controls-widgets'][VDU_SUPPORTED_CONTROLS.by_code[vcp_code].arg_name()] = 'no'
+
+    def enable_unsupported_vcp_code(self, vcp_code: str):
+
+        if vcp_code in VDU_SUPPORTED_CONTROLS.by_code:
+            print("WARNING: vdu_controls supported VCP_CODE {} ({}) is enabled in the list for unsupported codes.".
+                format(vcp_code, VDU_SUPPORTED_CONTROLS.by_code[vcp_code].arg_name()))
+            self.enable_supported_vcp_code(vcp_code)
+            return
+        # No very efficient
+        csv_list = [] if 'enable-vcp-codes' not in self.ini_content['vdu-controls-widgets'] else \
+            self.ini_content['vdu-controls-widgets']['enable-vcp-codes'].split(',')
+
+        if vcp_code not in csv_list:
+            csv_list.append(vcp_code)
+            self.ini_content['vdu-controls-widgets']['enable-vcp-codes'] = ','.join(csv_list)
+
+    def get_all_enabled_vcp_codes(self):
+        # No very efficient
+        enabled_vcp_codes = []
+        for control_name, control_def in VDU_SUPPORTED_CONTROLS.by_arg_name.items():
+            if self.ini_content['vdu-controls-widgets'].getboolean(control_name, fallback=False):
+                enabled_vcp_codes.append(control_def.vcp_code)
+        for vcp_code in self.ini_content['vdu-controls-widgets']['enable-vcp-codes'].split(","):
+            if vcp_code.strip() != '':
+                enabled_vcp_codes.append(vcp_code.strip())
+        return enabled_vcp_codes
 
     def parse_file(self, config_path: Path):
         """Parse config values from file"""
@@ -710,16 +722,23 @@ class VduControlsConfig:
         if parsed_args.system_tray:
             self.ini_content['vdu-controls-globals']['system-tray-enabled'] = 'yes'
 
-        vcp_code_list = []
         if len(parsed_args.show) != 0:
-            vcp_code_list.extend(
-                [x.vcp_code for x in VDU_SUPPORTED_CONTROLS.by_code.values() if x.arg_name() in parsed_args.show])
-        elif len(parsed_args.hide) != 0:
-            vcp_code_list.extend(
-                [x.vcp_code for x in VDU_SUPPORTED_CONTROLS.by_code.values() if x.arg_name() not in parsed_args.hide])
+            for control_def in VDU_SUPPORTED_CONTROLS.by_arg_name.values():
+                if control_def.arg_name() in parsed_args.show:
+                    self.enable_supported_vcp_code(control_def.vcp_code)
+                else:
+                    self.disable_supported_vcp_code(control_def.vcp_code)
+        else:
+            for control_def in VDU_SUPPORTED_CONTROLS.by_code.values():
+                if control_def.arg_name() in parsed_args.hide:
+                    self.disable_supported_vcp_code(control_def.vcp_code)
+                else:
+                    self.enable_supported_vcp_code(control_def.vcp_code)
+
         if parsed_args.enable_vcp_code is not None:
-            vcp_code_list.extend(parsed_args.enable_vcp_code)
-        self.set_enabled_vcp_codes(vcp_code_list)
+            for code in parsed_args.enable_vcp_code:
+                self.enable_unsupported_vcp_code(code)
+
         return parsed_args
 
 
@@ -744,7 +763,7 @@ class VduModel:
         self.manufacturer = manufacturer
         self.ddcutil = ddcutil
         self.sleep_multiplier = None
-        self.enabled_vcp_codes = default_config.get_enabled_vcp_codes()
+        self.enabled_vcp_codes = default_config.get_all_enabled_vcp_codes()
         unacceptable_char_pattern = re.compile(r'[^A-Za-z0-9._-]')
         self.vdu_model_and_serial_id = re.sub(unacceptable_char_pattern, '_',
                                               vdu_model_name.strip() + '_' + vdu_serial.strip())
@@ -756,12 +775,12 @@ class VduModel:
             print("INFO: checking for config file '" + config_path.as_posix() + "'")
             if os.path.isfile(config_path) and os.access(config_path, os.R_OK):
                 config = VduControlsConfig(config_name,
-                                           default_enabled_vcp_codes=default_config.get_enabled_vcp_codes())
+                                           default_enabled_vcp_codes=default_config.get_all_enabled_vcp_codes())
                 config.parse_file(config_path)
                 if default_config.is_debug_enabled():
                     config.debug_dump()
                 self.sleep_multiplier = config.get_sleep_multiplier()
-                self.enabled_vcp_codes = config.get_enabled_vcp_codes()
+                self.enabled_vcp_codes = config.get_all_enabled_vcp_codes()
                 self.capabilities_text = config.get_capabilities_alt_text()
                 self.config = config
                 break
