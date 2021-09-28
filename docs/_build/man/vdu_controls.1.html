@@ -112,6 +112,15 @@
 </blockquote>
 <p>The last two are particularly useful if a desktop has multiple VDU's that vary in features or DDC-communications speed.</p>
 <p>Config files can only be used to alter definitions of VCP codes already supported by <strong>ddcutil. If a VCP code</strong> is listed as a <em>manufacturer specific feature</em><strong> it is not supported. Manufacturer specific features should not be</strong> experimented with, some may have destructive or irreversible consequences that may brick the hardware. It is possible to enable any codes by creating a <strong>ddcutil user definition (--udef) file, BUT THIS SHOULD ONLY</strong> BE USED WITH EXTREME CAUTION AND CANNOT BE RECOMMENDED.</p>
+<p>All config files have a similar format:</p>
+<blockquote>
+<blockquote>
+<p># The vdu-controls-globals section is only required in $HOME/.config/vdu_controls/vdu_controls.conf [vdu-controls-globals] system-tray-enabled = yes|no splash-screen-enabled = yes|no warnings-enabled = yes|no debug-enabled = yes|no</p>
+<p>[vdu-controls-widgets] # Yes/no for each of the control options that vdu_controls normally provides by default. brightness = yes|no contrast = yes|no audio-volume = yes|no audio-mute = yes|no audio-treble = yes|no audio-bass = yes|no audio-mic-volume = yes|no input-source = yes|no power-mode = yes|no osd-language = yes|no # The enable-vcp-codes option is a list of two-digit hex values in CSV format. # This option enables ddcutil supported codes that are not in the default set provided by vdu_controls. enable-vcp-codes = NN, NN, NN</p>
+<p>[ddcutil-parameters] # Useful values appear to be &gt;=0.1 sleep-multiplier = 0.5</p>
+<p>[ddcutil-capabilities] # The (possibly edited) output from "ddcutil --display N capabilities" with leading spaces retained. capabilities-override =</p>
+</blockquote>
+</blockquote>
 <h2>Responsiveness</h2>
 <p>If your VDU's are modern, you may find a smaller sleep-multiplier will speed up the <strong>ddcutil/VDU protocol</strong> exchanges making both <strong>ddcutil and vdu_controls much more responsive. In a multi-VDU setup where the VDU's</strong> are quite different, VDU config files can be used to specify individual multipliers (see previous section).</p>
 <p>Startup speed may be increased by creating VDU config files with <strong>capabilities-override preset. Using an</strong> override eliminates the need to run <strong>ddcutil to retrieve VDU capabilities. The --create-config-files</strong> of context-menu settings-editor will pre-populate <strong>capabilities-override for each connected VDU.</strong></p>
@@ -409,6 +418,34 @@ zypper install ddcutil</code></pre>
 </blockquote>
 <blockquote>
 <dl>
+<dt><strong>disable_supported_vcp_code(vcp_code: str)</strong></dt>
+<dd>
+</dd>
+</dl>
+</blockquote>
+<blockquote>
+<dl>
+<dt><strong>enable_supported_vcp_code(vcp_code: str)</strong></dt>
+<dd>
+</dd>
+</dl>
+</blockquote>
+<blockquote>
+<dl>
+<dt><strong>enable_unsupported_vcp_code(vcp_code: str)</strong></dt>
+<dd>
+</dd>
+</dl>
+</blockquote>
+<blockquote>
+<dl>
+<dt><strong>get_all_enabled_vcp_codes()</strong></dt>
+<dd>
+</dd>
+</dl>
+</blockquote>
+<blockquote>
+<dl>
 <dt><strong>get_capabilities_alt_text()</strong></dt>
 <dd>
 </dd>
@@ -417,13 +454,6 @@ zypper install ddcutil</code></pre>
 <blockquote>
 <dl>
 <dt><strong>get_config_name()</strong></dt>
-<dd>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>get_enabled_vcp_codes()</strong></dt>
 <dd>
 </dd>
 </dl>
@@ -473,13 +503,6 @@ zypper install ddcutil</code></pre>
 <blockquote>
 <dl>
 <dt><strong>set_capabilities_alt_text(alt_text: str)</strong></dt>
-<dd>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>set_enabled_vcp_codes(vcp_codes: List[str])</strong></dt>
 <dd>
 </dd>
 </dl>

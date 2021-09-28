@@ -108,6 +108,39 @@ experimented with, some may have destructive or irreversible consequences that m
 possible to enable any codes by  creating a  ``ddcutil`` user definition (``--udef``) file, BUT THIS SHOULD ONLY
 BE USED WITH EXTREME CAUTION AND CANNOT BE RECOMMENDED.
 
+All config files have a similar format.
+
+            # The vdu-controls-globals section is only required in $HOME/.config/vdu_controls/vdu_controls.conf
+            [vdu-controls-globals]
+            system-tray-enabled = yes|no
+            splash-screen-enabled = yes|no
+            warnings-enabled = yes|no
+            debug-enabled = yes|no
+
+            [vdu-controls-widgets]
+            # Yes/no for each of the control options that vdu_controls normally provides by default.
+            brightness = yes|no
+            contrast = yes|no
+            audio-volume = yes|no
+            audio-mute = yes|no
+            audio-treble = yes|no
+            audio-bass = yes|no
+            audio-mic-volume = yes|no
+            input-source = yes|no
+            power-mode = yes|no
+            osd-language = yes|no
+            # The enable-vcp-codes option is a list of two-digit hex values in CSV format.
+            # This option enables ddcutil supported codes that are not in the default set provided by vdu_controls.
+            enable-vcp-codes = NN, NN, NN
+
+            [ddcutil-parameters]
+            # Useful values appear to be >=0.1
+            sleep-multiplier = 0.5
+
+            [ddcutil-capabilities]
+            # The (possibly edited) output from "ddcutil --display N capabilities" with leading spaces retained.
+            capabilities-override =
+
 Responsiveness
 --------------
 
@@ -156,12 +189,12 @@ Described for OpenSUSE, similar for other distros:
 
 Software::
 
-    zypper install python38-QtPy
-    zypper install ddcutil
+        zypper install python38-QtPy
+        zypper install ddcutil
 
 Kernel Modules::
 
-    lsmod | grep i2c_dev
+        lsmod | grep i2c_dev
 
 Read ddcutil readme concerning config of i2c_dev with nvidia GPU's. Detailed ddcutil info at https://www.ddcutil.com/
 
@@ -210,7 +243,7 @@ from PyQt5.QtGui import QIntValidator, QPixmap, QIcon, QCursor, QImage, QPainter
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
-    QCheckBox, QPlainTextEdit
+    QCheckBox, QPlainTextEdit, QFileDialog
 
 VDU_CONTROLS_VERSION = '1.4.1'
 
@@ -728,12 +761,10 @@ class VduControlsConfig:
                     self.enable_supported_vcp_code(control_def.vcp_code)
                 else:
                     self.disable_supported_vcp_code(control_def.vcp_code)
-        else:
+        if len(parsed_args.hide) != 0:
             for control_def in VDU_SUPPORTED_CONTROLS.by_code.values():
                 if control_def.arg_name() in parsed_args.hide:
                     self.disable_supported_vcp_code(control_def.vcp_code)
-                else:
-                    self.enable_supported_vcp_code(control_def.vcp_code)
 
         if parsed_args.enable_vcp_code is not None:
             for code in parsed_args.enable_vcp_code:
@@ -1455,20 +1486,6 @@ def install_as_desktop_application(uninstall: bool = False):
     print('INFO: installation complete. Your desktop->applications->settings should now contain VDU Controls')
 
 
-class HelpWidget(QDialog):
-    """Extract detailed help from the scripts __doc__ string and display it in a popup window."""
-
-    def __init__(self):
-        super().__init__(None, Qt.Window)
-        layout = QVBoxLayout()
-        mdv = QTextEdit()
-        mdv.setReadOnly(True)
-        mdv.setMarkdown(__doc__)
-        layout.addWidget(QPushButton())
-        layout.addWidget(mdv)
-        self.setLayout(layout)
-
-
 def main():
     """vdu_controls application main."""
     # Allow control-c to terminate the program
@@ -1527,6 +1544,17 @@ def main():
         # TODO maybe compute a minimum from the actual screen size
         help_dialog.setMinimumWidth(1600)
         help_dialog.setMinimumHeight(1024)
+        save = QPushButton(translate('Save as HTML'))
+        layout.addWidget(save)
+
+        def save_html():
+            filename, _ = QFileDialog.getSaveFileName(help_dialog, translate("Save as HTML?"))
+            print(filename)
+            if filename != '':
+                with open(filename, "w") as html_file:
+                    html_file.write(markdown_view.toHtml())
+
+        save.clicked.connect(save_html)
         help_dialog.exec()
 
     if args.about:
