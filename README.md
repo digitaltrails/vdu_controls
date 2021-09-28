@@ -96,9 +96,11 @@ Both brief help and detailed help can also be accessed via the command line:
 ```
 % python3 vdu_controls.py --help
 % python3 vdu_controls.py --detailed-help
+% python3 vdu_controls.py --detailed-help | pandoc --from markdown --to html > vdu_controls_help.html
 # or if installed in $HOME/bin
 % vdu_controls --help
 % vdu_controls --detailed-help
+% vdu_controls --detailed-help --detailed-help | pandoc --from markdown --to html > vdu_controls_help.html
 ```
 
 Whether run from the desktop application-menu or run from the command line, ``vdu-controls`` behaviour can be altered

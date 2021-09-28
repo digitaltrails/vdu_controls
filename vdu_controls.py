@@ -158,25 +158,25 @@ refresh button is pressed.
 Examples
 ========
 
-    ``vdu_controls``
+    vdu_controls
         All default controls.
 
-    ``vdu_controls --show brightness --show contrast``
+    vdu_controls --show brightness --show contrast
         Specified controls only:
 
-    ``vdu_controls --hide contrast --hide audio-volume``
+    vdu_controls --hide contrast --hide audio-volume
         All default controls except for those to be hidden.
 
-    ``vdu_controls --system-tray --no-splash --show brightness --show audio-volume``
+    vdu_controls --system-tray --no-splash --show brightness --show audio-volume
         Start as a system tray entry without showing the splash-screen.
 
-    ``vdu_controls --create-config-files --system-tray --no-splash --show brightness --show audio-volume``
+    vdu_controls --create-config-files --system-tray --no-splash --show brightness --show audio-volume
         Create template config files in $HOME/.config/vdu_controls/ that include the other settings.
 
-    ``vdu_controls --enable-vcp-code 63 --enable-vcp-code 93 --warnings --debug``
+    vdu_controls --enable-vcp-code 63 --enable-vcp-code 93 --warnings --debug
         All default controls, plus controls for VCP_CODE 63 and 93, show any warnings, output debugging info.
 
-    ``vdu_controls --sleep-multiplier 0.1``
+    vdu_controls --sleep-multiplier 0.1
         All default controls, speed up ddcutil-VDU interaction by passing a sleep multiplier.
 
 This script often refers to displays and monitors as VDU's in order to
@@ -1544,17 +1544,6 @@ def main():
         # TODO maybe compute a minimum from the actual screen size
         help_dialog.setMinimumWidth(1600)
         help_dialog.setMinimumHeight(1024)
-        save = QPushButton(translate('Save as HTML'))
-        layout.addWidget(save)
-
-        def save_html():
-            filename, _ = QFileDialog.getSaveFileName(help_dialog, translate("Save as HTML?"))
-            print(filename)
-            if filename != '':
-                with open(filename, "w") as html_file:
-                    html_file.write(markdown_view.toHtml())
-
-        save.clicked.connect(save_html)
         help_dialog.exec()
 
     if args.about:
