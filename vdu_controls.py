@@ -76,70 +76,72 @@ Configuration is supplied via command line parameters and config-files.  The com
 to temporarily alter the behaviour of the application. The config files provide a more comprehensive and permanent
 solution for altering the application's configuration.
 
-Config files
-------------
+Settings Menu and Config files
+------------------------------
 
-``vdu_controls`` may use several config files.  There may be a global config file for setting application
-wide defaults.  There may be any number of model or serial-number VDU-specific config files for customising
-``vdu_controls`` for each VDU.  The config files are named as follows:
+The right-mouse context-menu ``Settings`` item can be used to customise the application by writing to a set of config
+files.  The ``Settings`` item will feature a tab for editing each config file.  The config files are named according
+to the following scheme:
 
     - Application wide default config: ``$HOME/.config/vdu_controls/vdu_controls.conf``
     - VDU model and serial number config: ``$HOME/.config/vdu_controls/<model>_<serial|display_num>.conf``
     - VDU model only config: ``$HOME/.config/vdu_controls/<model>.conf``
 
-All config  files are INI-format.  There are two easy ways to create them:
+The application wide default file can be used to alter application settings and the set of default VDU controls.
 
-    - Run ``vdu_controls``, use the right mouse to bring up the context-menu, select ``settings``,
-      and then edit and save each of the settings tabs.
-    - Run ``vdu_controls --create-config-files`` to create templates for manual editing.
-
-The VDU-specific config files can be used to:.
+The VDU-specific config files can be used to:
 
     - Correct manufacturer built-in meta data.
-    - Customise which controls are to be provided.
-    - Set a optimal ``ddcutil`` DDC communication speed-multiplier for the VDU.
+    - Customise which controls are to be provided for each VDU.
+    - Set a optimal ``ddcutil`` DDC communication speed-multiplier for each VDU.
 
-The last two are particularly useful if a desktop has multiple VDU's that vary in features or DDC-communications
-speed.
+It should be noted that config files can only be used to alter definitions of VCP codes already supported
+by ``ddcutil``.  If a VCP code is listed as a *manufacturer specific feature* it is not supported. Manufacturer
+specific features should not be experimented with, some may have destructive or irreversible consequences that
+may brick the hardware. It is possible to enable any codes by  creating a  ``ddcutil`` user
+definition (``--udef``) file, BUT THIS SHOULD ONLY BE USED WITH EXTREME CAUTION AND CANNOT BE RECOMMENDED.
 
-Config files can only be used to alter definitions of VCP codes already supported by ``ddcutil``.  If a VCP code
-is listed as a *manufacturer specific feature* it is not supported. Manufacturer specific features should not be
-experimented with, some may have destructive or irreversible consequences that may brick the hardware. It is
-possible to enable any codes by  creating a  ``ddcutil`` user definition (``--udef``) file, BUT THIS SHOULD ONLY
-BE USED WITH EXTREME CAUTION AND CANNOT BE RECOMMENDED.
+The config files are in INI-format divided into a number of sections as outlined below:
 
-All config files have a similar format.
+        # The vdu-controls-globals section is only required in $HOME/.config/vdu_controls/vdu_controls.conf
+        [vdu-controls-globals]
+        system-tray-enabled = yes|no
+        splash-screen-enabled = yes|no
+        warnings-enabled = yes|no
+        debug-enabled = yes|no
 
-            # The vdu-controls-globals section is only required in $HOME/.config/vdu_controls/vdu_controls.conf
-            [vdu-controls-globals]
-            system-tray-enabled = yes|no
-            splash-screen-enabled = yes|no
-            warnings-enabled = yes|no
-            debug-enabled = yes|no
+        [vdu-controls-widgets]
+        # Yes/no for each of the control options that vdu_controls normally provides by default.
+        brightness = yes|no
+        contrast = yes|no
+        audio-volume = yes|no
+        audio-mute = yes|no
+        audio-treble = yes|no
+        audio-bass = yes|no
+        audio-mic-volume = yes|no
+        input-source = yes|no
+        power-mode = yes|no
+        osd-language = yes|no
+        # The enable-vcp-codes option is a list of two-digit hex values in CSV format.
+        # This option enables ddcutil supported codes that are not in the default set provided by vdu_controls.
+        enable-vcp-codes = NN, NN, NN
 
-            [vdu-controls-widgets]
-            # Yes/no for each of the control options that vdu_controls normally provides by default.
-            brightness = yes|no
-            contrast = yes|no
-            audio-volume = yes|no
-            audio-mute = yes|no
-            audio-treble = yes|no
-            audio-bass = yes|no
-            audio-mic-volume = yes|no
-            input-source = yes|no
-            power-mode = yes|no
-            osd-language = yes|no
-            # The enable-vcp-codes option is a list of two-digit hex values in CSV format.
-            # This option enables ddcutil supported codes that are not in the default set provided by vdu_controls.
-            enable-vcp-codes = NN, NN, NN
+        [ddcutil-parameters]
+        # Useful values appear to be >=0.1
+        sleep-multiplier = 0.5
 
-            [ddcutil-parameters]
-            # Useful values appear to be >=0.1
-            sleep-multiplier = 0.5
+        [ddcutil-capabilities]
+        # The (possibly edited) output from "ddcutil --display N capabilities" with leading spaces retained.
+        capabilities-override =
 
-            [ddcutil-capabilities]
-            # The (possibly edited) output from "ddcutil --display N capabilities" with leading spaces retained.
-            capabilities-override =
+As well as using the ``Settings``, config files may also be created by the command line option
+
+        vdu_controls --create-config-files
+
+which will create initial templates based on the currently connected VDU's.
+
+The config files are completely optional, they need not be used if the existing command line options are found to be
+adequate to the task at hand.
 
 Responsiveness
 --------------
@@ -232,18 +234,15 @@ import sys
 import textwrap
 import time
 import traceback
-import typing
 from pathlib import Path
 from typing import List, Tuple, Mapping
 
-from PyQt5 import QtCore
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp
-from PyQt5.QtGui import QIntValidator, QPixmap, QIcon, QCursor, QImage, QPainter, QDoubleValidator, QRegExpValidator, \
-    QValidator
+from PyQt5.QtGui import QIntValidator, QPixmap, QIcon, QCursor, QImage, QPainter, QDoubleValidator, QRegExpValidator
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
-    QCheckBox, QPlainTextEdit, QFileDialog
+    QCheckBox, QPlainTextEdit
 
 VDU_CONTROLS_VERSION = '1.4.1'
 
@@ -923,6 +922,7 @@ class ConfigEditor(QDialog):
                 if section == 'DEFAULT':
                     continue
                 editor_layout.addWidget(QLabel('<b>' + section.replace('-', ' ') + '</b>'))
+                option_editor = None
                 for option in self.ini_editable[section]:
                     data_type = vdu_config.config_type_map[option]
                     if data_type == 'boolean':
