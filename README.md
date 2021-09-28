@@ -156,6 +156,7 @@ Version History
 ---------------
 * 1.4.1
   * Internal code cleanups after switching to INI config files (no functional changes).
+  * Updated the help.
 * 1.4.0
   * Added global and VDU-specific INI style configuration files in `$HOME/.conf/vdu_controls/`.
   * Added a GUI settings-editor as a `settings` menu-item in the context-menu.

@@ -1,708 +1,126 @@
-<h1>NAME</h1>
-<p>vdu_controls - vdu_controls 1.3.1</p>
-<h1>VDU_CONTROLS: A QT GUI WRAPPER FOR DDCUTIL</h1>
-<p>A GUI for controlling connected <em>Visual Display Units</em> (<em>VDU</em>'s) (also known as <em>displays</em>, or <em>monitors</em>).</p>
-<h1>USAGE:</h1>
-<blockquote>
-<blockquote>
-<blockquote>
-<dl>
-<dt><strong>vdu_controls [-h]</strong></dt>
-<dd><p>[--about] [--detailed-help] [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}] [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}] [--enable-vcp-code vcp_code] [--system-tray] [--debug] [--warnings] [--no-splash] [--sleep-multiplier multiplier] [--create-config-files] [--install] [--uninstall]</p>
-</dd>
-</dl>
-</blockquote>
-</blockquote>
-</blockquote>
-<h2>Optional arguments:</h2>
-<blockquote>
-<blockquote>
-<blockquote>
-<dl>
-<dt><strong>-h<em>,</em> --help</strong></dt>
-<dd><p>show this help message and exit</p>
-</dd>
-<dt><strong>--detailed-help</strong></dt>
-<dd><p>full help in markdown format</p>
-</dd>
-<dt><strong>--about</strong></dt>
-<dd><p>about vdu_controls</p>
-</dd>
-<dt><strong>--show</strong><em> control_name</em></dt>
-<dd><p>show specified control only (--show may be specified multiple times)</p>
-</dd>
-<dt><strong>--hide</strong><em> control_name</em></dt>
-<dd><p>hide/disable a control (--hide may be specified multiple times)</p>
-</dd>
-<dt><strong>--enable-vcp-code</strong><em> vcp_code</em></dt>
-<dd><p>enable a control for a vcp-code unavailable via hide/show (may be specified multiple times)</p>
-</dd>
-<dt><strong>--system-tray</strong></dt>
-<dd><p>start up as an entry in the system tray</p>
-</dd>
-<dt><strong>--debug</strong></dt>
-<dd><p>enable debug output to stdout</p>
-</dd>
-<dt><strong>--warnings</strong></dt>
-<dd><p>popup a warning when a VDU lacks an enabled control</p>
-</dd>
-<dt><strong>--no-splash</strong></dt>
-<dd><p>don't show the splash screen</p>
-</dd>
-<dt><strong>--sleep-multiplier</strong><em> multiplier</em></dt>
-<dd><p>protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 0.5)</p>
-</dd>
-<dt><strong>--create-config-files</strong></dt>
-<dd><p>if they do not exist, create template config INI files in $HOME/.config/vdu_controls/</p>
-</dd>
-<dt><strong>--install</strong></dt>
-<dd><p>installs the vdu_controls in the current user's path and desktop application menu.</p>
-</dd>
-<dt><strong>--uninstall</strong></dt>
-<dd><p>uninstalls the vdu_controls application menu file and script for the current user.</p>
-</dd>
-</dl>
-</blockquote>
-</blockquote>
-</blockquote>
-<h1>DESCRIPTION</h1>
-<p><strong>vdu_controls is a virtual control panel for physically connected VDU's. It displays a set of controls for</strong> each DVI/DP/HDMI/USB connected VDU and uses the <strong>ddcutil command line utility to issue </strong><em>Display Data Channel</em> (<em>DDC</em><strong>) </strong><em>Virtual Control Panel</em><strong> (</strong><em>VCP</em><strong>) commands to each of them. The intent is not to provide a comprehensive set</strong> of controls but rather to provide a simple panel with a selection of essential controls for the desktop.</p>
-<p>A context menu containing this help is available by pressing the right-mouse button either in the main user interface or on the system-tray icon. <strong>vdu_controls may be run as a system-tray entry by using the --system-tray option.</strong></p>
-<p>By default <strong>vdu_controls offers a subset of possible controls including brightness and contrast. Further controls</strong> can be added by using the <strong>--enable-vcp-code option to add any other codes supported by ddcutil. The full list</strong> of VCP codes supported by <strong>ddcutil can be listed by running ddcutil vcpinfo --verbose. For example, the</strong> VCP code 66 is listed as an on/off control for an ambient light sensor, this can be enabled for <strong>vdu_controls by</strong> passing <strong>--enable-vcp-code 66 (the control will only appear in the user interface if the VDU reports that it</strong> has that capability).</p>
-<p>Builtin laptop displays normally don't implement DDC and those displays are not supported, but a laptop's externally connected VDU's are likely to be controllable.</p>
-<p>Some controls change the number of connected devices (for example, some VDU's support a power-off command). If such controls are used, <strong>vdu_controls will detect the change and will restart itself to reconfigure the controls</strong> for the new situation (for example, DDC VDU 2 may now be DD VDU 1). Similarly, if you physically unplug monitor, the same thing will happen.</p>
-<p>Note that some VDU settings may disable or enable other settings. For example, setting a monitor to a specific picture-profile might result in the contrast-control being disabled, but <strong>vdu_controls will not be aware of</strong> the restriction resulting in its contrast-control appearing to do nothing.</p>
-<h1>CONFIGURATION</h1>
-<p>Configuration is supplied via command line parameters and config-files. The command line provides an immediate way to temporarily alter the behaviour of the application. The config files provide a more comprehensive and permanent solution for altering the application's configuration.</p>
-<h2>Config files</h2>
-<p><strong>vdu_controls may use several config files. There may be a global config file for setting application</strong> wide defaults. There may be any number of model or serial-number VDU-specific config files for customising <strong>vdu_controls for each VDU. The config files are named as follows:</strong></p>
-<blockquote>
-<blockquote>
-<blockquote>
-<ul>
-<li><p>Application wide default config: <strong>$HOME/.config/vdu_controls/vdu_controls.conf</strong></p></li>
-<li><p>VDU model and serial number config: <strong>$HOME/.config/vdu_controls/&lt;model&gt;_&lt;serial|display_num&gt;.conf</strong></p></li>
-<li><p>VDU model only config: <strong>$HOME/.config/vdu_controls/&lt;model&gt;.conf</strong></p></li>
-</ul>
-</blockquote>
-</blockquote>
-</blockquote>
+<p>INFO: checking for config file ‘/home/michael/.config/vdu_controls/vdu_controls.conf’ INFO: using config file ‘/home/michael/.config/vdu_controls/vdu_controls.conf’</p>
+<h1 id="vdu_controls-a-qt-gui-wrapper-for-ddcutil">vdu_controls: A Qt GUI wrapper for ddcutil</h1>
+<p>A GUI for controlling connected <em>Visual Display Units</em> (<em>VDU</em>’s) (also known as <em>displays</em>, or <em>monitors</em>).</p>
+<h1 id="usage">Usage:</h1>
+<pre><code>    vdu_controls [-h]
+                 [--about] [--detailed-help]
+                 [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
+                 [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
+                 [--enable-vcp-code vcp_code] [--system-tray] [--debug] [--warnings]
+                 [--no-splash] [--sleep-multiplier multiplier]
+                 [--create-config-files]
+                 [--install] [--uninstall]</code></pre>
+<h2 id="optional-arguments">Optional arguments:</h2>
+<pre><code>  -h, --help            show this help message and exit
+  --detailed-help       full help in markdown format
+  --about               about vdu_controls
+  --show control_name
+                        show specified control only (--show may be specified multiple times)
+  --hide control_name
+                        hide/disable a control (--hide may be specified multiple times)
+  --enable-vcp-code vcp_code
+                        enable a control for a vcp-code unavailable via hide/show (may be specified multiple times)
+  --system-tray         start up as an entry in the system tray
+  --debug               enable debug output to stdout
+  --warnings            popup a warning when a VDU lacks an enabled control
+  --no-splash           don&#39;t show the splash screen
+  --sleep-multiplier multiplier
+                        protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 0.5)
+  --create-config-files  if they do not exist, create template config INI files in $HOME/.config/vdu_controls/
+  --install             installs the vdu_controls in the current user&#39;s path and desktop application menu.
+  --uninstall           uninstalls the vdu_controls application menu file and script for the current user.</code></pre>
+<h1 id="description">Description</h1>
+<p><code>vdu_controls</code> is a virtual control panel for physically connected VDU’s. It displays a set of controls for each DVI/DP/HDMI/USB connected VDU and uses the <code>ddcutil</code> command line utility to issue <em>Display Data Channel</em> (<em>DDC</em>) <em>Virtual Control Panel</em> (<em>VCP</em>) commands to each of them. The intent is not to provide a comprehensive set of controls but rather to provide a simple panel with a selection of essential controls for the desktop.</p>
+<p>A context menu containing this help is available by pressing the right-mouse button either in the main user interface or on the system-tray icon. <code>vdu_controls</code> may be run as a system-tray entry by using the <code>--system-tray</code> option.</p>
+<p>By default <code>vdu_controls</code> offers a subset of possible controls including brightness and contrast. Further controls can be added by using the <code>--enable-vcp-code</code> option to add any other codes supported by <code>ddcutil</code>. The full list of VCP codes supported by <code>ddcutil</code> can be listed by running <code>ddcutil vcpinfo --verbose</code>. For example, the VCP code 66 is listed as an on/off control for an ambient light sensor, this can be enabled for <code>vdu_controls</code> by passing <code>--enable-vcp-code 66</code> (the control will only appear in the user interface if the VDU reports that it has that capability).</p>
+<p>Builtin laptop displays normally don’t implement DDC and those displays are not supported, but a laptop’s externally connected VDU’s are likely to be controllable.</p>
+<p>Some controls change the number of connected devices (for example, some VDU’s support a power-off command). If such controls are used, <code>vdu_controls</code> will detect the change and will restart itself to reconfigure the controls for the new situation (for example, DDC VDU 2 may now be DD VDU 1). Similarly, if you physically unplug monitor, the same thing will happen.</p>
+<p>Note that some VDU settings may disable or enable other settings. For example, setting a monitor to a specific picture-profile might result in the contrast-control being disabled, but <code>vdu_controls</code> will not be aware of the restriction resulting in its contrast-control appearing to do nothing.</p>
+<h1 id="configuration">Configuration</h1>
+<p>Configuration is supplied via command line parameters and config-files. The command line provides an immediate way to temporarily alter the behaviour of the application. The config files provide a more comprehensive and permanent solution for altering the application’s configuration.</p>
+<h2 id="config-files">Config files</h2>
+<p><code>vdu_controls</code> may use several config files. There may be a global config file for setting application wide defaults. There may be any number of model or serial-number VDU-specific config files for customising <code>vdu_controls</code> for each VDU. The config files are named as follows:</p>
+<pre><code>- Application wide default config: ``$HOME/.config/vdu_controls/vdu_controls.conf``
+- VDU model and serial number config: ``$HOME/.config/vdu_controls/&lt;model&gt;_&lt;serial|display_num&gt;.conf``
+- VDU model only config: ``$HOME/.config/vdu_controls/&lt;model&gt;.conf``</code></pre>
 <p>All config files are INI-format. There are two easy ways to create them:</p>
-<blockquote>
-<blockquote>
-<blockquote>
-<ul>
-<li><p>Run <strong>vdu_controls, use the right mouse to bring up the context-menu, select settings,</strong> and then edit and save each of the settings tabs.</p></li>
-<li><p>Run <strong>vdu_controls --create-config-files to create templates for manual editing.</strong></p></li>
-</ul>
-</blockquote>
-</blockquote>
-</blockquote>
+<pre><code>- Run ``vdu_controls``, use the right mouse to bring up the context-menu, select ``settings``,
+  and then edit and save each of the settings tabs.
+- Run ``vdu_controls --create-config-files`` to create templates for manual editing.</code></pre>
 <p>The VDU-specific config files can be used to:.</p>
-<blockquote>
-<blockquote>
-<blockquote>
-<ul>
-<li><p>Correct manufacturer built-in meta data.</p></li>
-<li><p>Customise which controls are to be provided.</p></li>
-<li><p>Set a optimal <strong>ddcutil DDC communication speed-multiplier for the VDU.</strong></p></li>
-</ul>
-</blockquote>
-</blockquote>
-</blockquote>
-<p>The last two are particularly useful if a desktop has multiple VDU's that vary in features or DDC-communications speed.</p>
-<p>Config files can only be used to alter definitions of VCP codes already supported by <strong>ddcutil. If a VCP code</strong> is listed as a <em>manufacturer specific feature</em><strong> it is not supported. Manufacturer specific features should not be</strong> experimented with, some may have destructive or irreversible consequences that may brick the hardware. It is possible to enable any codes by creating a <strong>ddcutil user definition (--udef) file, BUT THIS SHOULD ONLY</strong> BE USED WITH EXTREME CAUTION AND CANNOT BE RECOMMENDED.</p>
-<p>All config files have a similar format:</p>
-<blockquote>
-<blockquote>
-<p># The vdu-controls-globals section is only required in $HOME/.config/vdu_controls/vdu_controls.conf [vdu-controls-globals] system-tray-enabled = yes|no splash-screen-enabled = yes|no warnings-enabled = yes|no debug-enabled = yes|no</p>
-<p>[vdu-controls-widgets] # Yes/no for each of the control options that vdu_controls normally provides by default. brightness = yes|no contrast = yes|no audio-volume = yes|no audio-mute = yes|no audio-treble = yes|no audio-bass = yes|no audio-mic-volume = yes|no input-source = yes|no power-mode = yes|no osd-language = yes|no # The enable-vcp-codes option is a list of two-digit hex values in CSV format. # This option enables ddcutil supported codes that are not in the default set provided by vdu_controls. enable-vcp-codes = NN, NN, NN</p>
-<p>[ddcutil-parameters] # Useful values appear to be &gt;=0.1 sleep-multiplier = 0.5</p>
-<p>[ddcutil-capabilities] # The (possibly edited) output from "ddcutil --display N capabilities" with leading spaces retained. capabilities-override =</p>
-</blockquote>
-</blockquote>
-<h2>Responsiveness</h2>
-<p>If your VDU's are modern, you may find a smaller sleep-multiplier will speed up the <strong>ddcutil/VDU protocol</strong> exchanges making both <strong>ddcutil and vdu_controls much more responsive. In a multi-VDU setup where the VDU's</strong> are quite different, VDU config files can be used to specify individual multipliers (see previous section).</p>
-<p>Startup speed may be increased by creating VDU config files with <strong>capabilities-override preset. Using an</strong> override eliminates the need to run <strong>ddcutil to retrieve VDU capabilities. The --create-config-files</strong> of context-menu settings-editor will pre-populate <strong>capabilities-override for each connected VDU.</strong></p>
+<pre><code>- Correct manufacturer built-in meta data.
+- Customise which controls are to be provided.
+- Set a optimal ``ddcutil`` DDC communication speed-multiplier for the VDU.</code></pre>
+<p>The last two are particularly useful if a desktop has multiple VDU’s that vary in features or DDC-communications speed.</p>
+<p>Config files can only be used to alter definitions of VCP codes already supported by <code>ddcutil</code>. If a VCP code is listed as a <em>manufacturer specific feature</em> it is not supported. Manufacturer specific features should not be experimented with, some may have destructive or irreversible consequences that may brick the hardware. It is possible to enable any codes by creating a <code>ddcutil</code> user definition (<code>--udef</code>) file, BUT THIS SHOULD ONLY BE USED WITH EXTREME CAUTION AND CANNOT BE RECOMMENDED.</p>
+<p>All config files have a similar format.</p>
+<pre><code>        # The vdu-controls-globals section is only required in $HOME/.config/vdu_controls/vdu_controls.conf
+        [vdu-controls-globals]
+        system-tray-enabled = yes|no
+        splash-screen-enabled = yes|no
+        warnings-enabled = yes|no
+        debug-enabled = yes|no
+
+        [vdu-controls-widgets]
+        # Yes/no for each of the control options that vdu_controls normally provides by default.
+        brightness = yes|no
+        contrast = yes|no
+        audio-volume = yes|no
+        audio-mute = yes|no
+        audio-treble = yes|no
+        audio-bass = yes|no
+        audio-mic-volume = yes|no
+        input-source = yes|no
+        power-mode = yes|no
+        osd-language = yes|no
+        # The enable-vcp-codes option is a list of two-digit hex values in CSV format.
+        # This option enables ddcutil supported codes that are not in the default set provided by vdu_controls.
+        enable-vcp-codes = NN, NN, NN
+
+        [ddcutil-parameters]
+        # Useful values appear to be &gt;=0.1
+        sleep-multiplier = 0.5
+
+        [ddcutil-capabilities]
+        # The (possibly edited) output from &quot;ddcutil --display N capabilities&quot; with leading spaces retained.
+        capabilities-override =</code></pre>
+<h2 id="responsiveness">Responsiveness</h2>
+<p>If your VDU’s are modern, you may find a smaller sleep-multiplier will speed up the <code>ddcutil</code>/VDU protocol exchanges making both <code>ddcutil</code> and <code>vdu_controls</code> much more responsive. In a multi-VDU setup where the VDU’s are quite different, VDU config files can be used to specify individual multipliers (see previous section).</p>
+<p>Startup speed may be increased by creating VDU config files with <code>capabilities-override</code> preset. Using an override eliminates the need to run <code>ddcutil</code> to retrieve VDU capabilities. The <code>--create-config-files</code> of context-menu settings-editor will pre-populate <code>capabilities-override</code> for each connected VDU.</p>
 <p>Reducing the number of enabled controls can speed up the initialisation and reduce the time taken when the refresh button is pressed.</p>
-<h1>EXAMPLES</h1>
-<blockquote>
-<blockquote>
-<blockquote>
-<dl>
-<dt><strong><strong>vdu_controls</strong></strong></dt>
-<dd><p>All default controls.</p>
-</dd>
-<dt><strong><strong>vdu_controls</strong> --show brightness --show contrast</strong></dt>
-<dd><p>Specified controls only:</p>
-</dd>
-<dt><strong><strong>vdu_controls</strong> --hide contrast --hide audio-volume</strong></dt>
-<dd><p>All default controls except for those to be hidden.</p>
-</dd>
-<dt><strong><strong>vdu_controls</strong> --system-tray --no-splash --show brightness --show audio-volume</strong></dt>
-<dd><p>Start as a system tray entry without showing the splash-screen.</p>
-</dd>
-<dt><strong><strong>vdu_controls</strong> --create-config-files --system-tray --no-splash --show brightness --show audio-volume</strong></dt>
-<dd><p>Create template config files in $HOME/.config/vdu_controls/ that include the other settings.</p>
-</dd>
-<dt><strong><strong>vdu_controls</strong> --enable-vcp-code 63 --enable-vcp-code 93 --warnings --debug</strong></dt>
-<dd><p>All default controls, plus controls for VCP_CODE 63 and 93, show any warnings, output debugging info.</p>
-</dd>
-<dt><strong><strong>vdu_controls</strong> --sleep-multiplier 0.1</strong></dt>
-<dd><p>All default controls, speed up ddcutil-VDU interaction by passing a sleep multiplier.</p>
-</dd>
-</dl>
-</blockquote>
-</blockquote>
-</blockquote>
-<p>This script often refers to displays and monitors as VDU's in order to disambiguate the noun/verb duality of "display" and "monitor"</p>
-<h1>PREREQUISITES</h1>
+<h1 id="examples">Examples</h1>
+<pre><code>vdu_controls
+    All default controls.
+
+vdu_controls --show brightness --show contrast
+    Specified controls only:
+
+vdu_controls --hide contrast --hide audio-volume
+    All default controls except for those to be hidden.
+
+vdu_controls --system-tray --no-splash --show brightness --show audio-volume
+    Start as a system tray entry without showing the splash-screen.
+
+vdu_controls --create-config-files --system-tray --no-splash --show brightness --show audio-volume
+    Create template config files in $HOME/.config/vdu_controls/ that include the other settings.
+
+vdu_controls --enable-vcp-code 63 --enable-vcp-code 93 --warnings --debug
+    All default controls, plus controls for VCP_CODE 63 and 93, show any warnings, output debugging info.
+
+vdu_controls --sleep-multiplier 0.1
+    All default controls, speed up ddcutil-VDU interaction by passing a sleep multiplier.</code></pre>
+<p>This script often refers to displays and monitors as VDU’s in order to disambiguate the noun/verb duality of “display” and “monitor”</p>
+<h1 id="prerequisites">Prerequisites</h1>
 <p>Described for OpenSUSE, similar for other distros:</p>
-<p>Software:</p>
-<blockquote>
-<blockquote>
-<pre><code>zypper install python38-QtPy
-zypper install ddcutil</code></pre>
-</blockquote>
-</blockquote>
-<p>Kernel Modules:</p>
-<blockquote>
-<blockquote>
-<pre><code>lsmod | grep i2c_dev</code></pre>
-</blockquote>
-</blockquote>
-<p>Read ddcutil readme concerning config of i2c_dev with nvidia GPU's. Detailed ddcutil info at <em>https://www.ddcutil.com/</em></p>
-<h1>VDU_CONTROLS COPYRIGHT (C) 2021 MICHAEL HAMILTON</h1>
+<p>Software::</p>
+<pre><code>    zypper install python38-QtPy
+    zypper install ddcutil</code></pre>
+<p>Kernel Modules::</p>
+<pre><code>    lsmod | grep i2c_dev</code></pre>
+<p>Read ddcutil readme concerning config of i2c_dev with nvidia GPU’s. Detailed ddcutil info at https://www.ddcutil.com/</p>
+<h1 id="vdu_controls-copyright-c-2021-michael-hamilton">vdu_controls Copyright (C) 2021 Michael Hamilton</h1>
 <p>This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, version 3.</p>
 <p>This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.</p>
-<p>You should have received a copy of the GNU General Public License along with this program. If not, see &lt;<em>https://www.gnu.org/licenses/</em><strong>&gt;.</strong></p>
-<p><strong>Contact: m i c h a e l @ a c t r i x . g e n . n z</strong></p>
-<p>----</p>
-<blockquote>
-<dl>
-<dt><strong>vdu_controls.CONTINUOUS_TYPE = 'C'</strong></dt>
-<dd><p>Could be a str enumeration of VCP types</p>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>class vdu_controls.ConfigEditor(default_config: <em>vdu_controls.VduControlsConfig</em><strong>,</strong> vdu_model_list: List[<em>vdu_controls.VduModel</em><strong>])</strong></strong></dt>
-<dd><dl>
-<dt><strong>class ConfigEditorBooleanWidget(ini_editable, option, section)</strong></dt>
-<dd>
-</dd>
-</dl>
-</dd>
-</dl>
-<blockquote>
-<dl>
-<dt><strong>class ConfigEditorCsvWidget(ini_editable, option, section)</strong></dt>
-<dd>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>class ConfigEditorFloatWidget(ini_editable, option, section)</strong></dt>
-<dd>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>class ConfigEditorTab(parent: PyQt5.QtWidgets.QWidget, vdu_config: <em>vdu_controls.VduControlsConfig</em><strong>)</strong></strong></dt>
-<dd><dl>
-<dt><strong>is_unsaved()</strong></dt>
-<dd>
-</dd>
-</dl>
-</dd>
-</dl>
-<blockquote>
-<dl>
-<dt><strong>save(cancel: int = 2097152)</strong></dt>
-<dd>
-</dd>
-</dl>
-</blockquote>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>class ConfigEditorTextEditorWidget(ini_editable, option, section)</strong></dt>
-<dd>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>closeEvent(self, QCloseEvent)</strong></dt>
-<dd>
-</dd>
-</dl>
-</blockquote>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>vdu_controls.DDCUTIL = 'ddcutil'</strong></dt>
-<dd><p>Assuming ddcutil is somewhere on the PATH.</p>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>vdu_controls.DEFAULT_SPLASH_PNG = '/usr/share/icons/oxygen/base/256x256/apps/preferences-desktop-display.png'</strong></dt>
-<dd><p>A high resolution image, will fallback to an internal PNG if this file isn't found on the local system</p>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>class vdu_controls.DdcUtil(debug: bool = False, common_args=None, default_sleep_multiplier: float = 1.0)</strong></dt>
-<dd><p>Interface to the command line ddcutil Display Data Channel Utility for interacting with VDU's. The exception callback can return True if we should retry after errors (after the callback takes corrective action such as increasing the sleep_multiplier).</p>
-<dl>
-<dt><strong>detect_monitors() -&gt; List[Tuple[str, str, str, str]]</strong></dt>
-<dd><p>Return a list of (vdu_id, desc) tuples.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-<blockquote>
-<dl>
-<dt><strong>get_attribute(vdu_id: str, vcp_code: str, sleep_multiplier: Optional[float] = None) -&gt; Tuple[str, str]</strong></dt>
-<dd><p>Given a VDU id and vcp_code, retrieve the attribute's current value from the VDU.</p>
-</dd>
-</dl>
-<p>Two values are returned, the monitor reported current value, and the monitor reported maximum value. Only attributes with "Continuous" values have a maximum, for consistency the method will return a zero maximum for "Non-Continuous" attributes.</p>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>get_supported_vcp_codes() -&gt; Mapping[str, str]</strong></dt>
-<dd><p>Returns a map of descriptions keyed by vcp_code, the codes that ddcutil appears to support.</p>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>query_capabilities(vdu_id: str) -&gt; str</strong></dt>
-<dd><p>Return a vpc capabilities string.</p>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>set_attribute(vdu_id: str, vcp_code: str, new_value: str, sleep_multiplier: Optional[float] = None)</strong></dt>
-<dd><p>Send a new value to a specific VDU and vcp_code.</p>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>vcp_info() -&gt; str</strong></dt>
-<dd><p>Returns info about all codes known to ddcutil, whether supported or not.</p>
-</dd>
-</dl>
-</blockquote>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>vdu_controls.EXIT_CODE_FOR_RESTART = 1959</strong></dt>
-<dd><p>Internal special exit code used to signal that the exit handler should restart the program.</p>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>class vdu_controls.HelpWidget</strong></dt>
-<dd><p>Extract detailed help from the scripts __doc__ string and display it in a popup window.</p>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>class vdu_controls.RefreshVduDataTask(ddc_widget)</strong></dt>
-<dd><p>Task to refresh VDU data from the physical VDU's.</p>
-</dd>
-</dl>
-<p>Runs as a task because it can be quite slow depending on the number of VDU's, number of controls. The task runs outside the GUI thread and no parts of it can only update the GUI data, not the GUI view.</p>
-<blockquote>
-<dl>
-<dt><strong>run()</strong></dt>
-<dd><p>Run a task that uses ddcutil to retrieve data for all the visible controls (may be slow).</p>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>task_finished</strong></dt>
-<dd>
-</dd>
-</dl>
-</blockquote>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>class vdu_controls.VcpCapability(vcp_code: str, vcp_name: str, vcp_type: str, values: Optional[List] = None, icon_source: Optional[bytes] = None)</strong></dt>
-<dd><p>Representation of a VCP (Virtual Control Panel) capability for a VDU.</p>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>class vdu_controls.VduComboBoxControl(vdu_model: <em>vdu_controls.VduModel</em><strong>,</strong> vcp_capability: <em>vdu_controls.VcpCapability</em><strong>)</strong></strong></dt>
-<dd><p>GUI control for a DDC non-continuously variable attribute, one that has a list of choices.</p>
-</dd>
-</dl>
-<p>This is a duck-typed GUI control widget (could inherit from an abstract type if we wanted to get formal about it).</p>
-<blockquote>
-<dl>
-<dt><strong>refresh_data()</strong></dt>
-<dd><p>Query the VDU for a new data value and cache it (may be called from a task thread, so no GUI op's here).</p>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>refresh_view()</strong></dt>
-<dd><p>Copy the internally cached current value onto the GUI view.</p>
-</dd>
-</dl>
-</blockquote>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>class vdu_controls.VduControlPanel(vdu_model: <em>vdu_controls.VduModel</em><strong>,</strong> warnings: bool)</strong></dt>
-<dd><p>Widget that contains all the controls for a single VDU (monitor/display).</p>
-</dd>
-</dl>
-<p>The widget maintains a list of GUI "controls" that are duck-typed and will have refresh_data() and refresh_view() methods.</p>
-<blockquote>
-<dl>
-<dt><strong>number_of_controls() -&gt; int</strong></dt>
-<dd><p>Return the number of VDU controls. Might be zero if initialization discovered no controllable attributes.</p>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>refresh_data()</strong></dt>
-<dd><p>Tell the control widgets to get fresh VDU data (may be called from a task thread, so no GUI op's here).</p>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>refresh_view()</strong></dt>
-<dd><p>Tell the control widgets to refresh their views from their internally cached values.</p>
-</dd>
-</dl>
-</blockquote>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>class vdu_controls.VduControlsConfig(config_name: str, default_enabled_vcp_codes: Optional[List] = None, include_globals: bool = False)</strong></dt>
-<dd><p>A vdu_controls config that can be read or written from INI style files</p>
-<dl>
-<dt><strong>are_warnings_enabled()</strong></dt>
-<dd>
-</dd>
-</dl>
-</dd>
-</dl>
-<blockquote>
-<dl>
-<dt><strong>debug_dump()</strong></dt>
-<dd>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>disable_supported_vcp_code(vcp_code: str)</strong></dt>
-<dd>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>enable_supported_vcp_code(vcp_code: str)</strong></dt>
-<dd>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>enable_unsupported_vcp_code(vcp_code: str)</strong></dt>
-<dd>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>get_all_enabled_vcp_codes()</strong></dt>
-<dd>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>get_capabilities_alt_text()</strong></dt>
-<dd>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>get_config_name()</strong></dt>
-<dd>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>get_sleep_multiplier()</strong></dt>
-<dd>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>is_debug_enabled()</strong></dt>
-<dd>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>is_splash_screen_enabled()</strong></dt>
-<dd>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>is_system_tray_enabled()</strong></dt>
-<dd>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>parse_args(args=None) -&gt; argparse.Namespace</strong></dt>
-<dd><p>Parse command line arguments and integrate the results into this config</p>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>parse_file(config_path: pathlib.Path)</strong></dt>
-<dd><p>Parse config values from file</p>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>set_capabilities_alt_text(alt_text: str)</strong></dt>
-<dd>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>write_file(config_path: pathlib.Path, include_globals: bool = True, overwrite: bool = False)</strong></dt>
-<dd><p>Write the config to a file. Used for creating initial template config files.</p>
-</dd>
-</dl>
-</blockquote>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>class vdu_controls.VduControlsMainWindow(default_config: <em>vdu_controls.VduControlsConfig</em><strong>,</strong> detect_vdu_hook: callable)</strong></dt>
-<dd><p>GUI for detected VDU's, it will construct and contain a control panel for each VDU.</p>
-<dl>
-<dt><strong>refresh_data()</strong></dt>
-<dd><p>Refresh data from the VDU's. Called by a non-GUI task. Not in the GUI-thread, cannot do any GUI op's.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-<blockquote>
-<dl>
-<dt><strong>refresh_view()</strong></dt>
-<dd><p>Invoke when the GUI worker thread completes. Runs in the GUI thread and can refresh the GUI views.</p>
-</dd>
-</dl>
-</blockquote>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>class vdu_controls.VduGuiControlDef(vcp_code, vcp_name, causes_config_change: bool = False, icon_source: Optional[bytes] = None)</strong></dt>
-<dd><p>Defines the properties of a potential VCP GUI control.</p>
-<dl>
-<dt><strong>arg_name() -&gt; str</strong></dt>
-<dd>
-</dd>
-</dl>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>class vdu_controls.VduGuiSupportedControls</strong></dt>
-<dd><p>Maps of controls supported by name on the command line and in config files.</p>
-<dl>
-<dt><strong>by_arg_name = {'audio-bass': &lt;vdu_controls.VduGuiControlDef object&gt;, 'audio-mic-volume': &lt;vdu_controls.VduGuiControlDef object&gt;, 'audio-mute': &lt;vdu_controls.VduGuiControlDef object&gt;, 'audio-treble': &lt;vdu_controls.VduGuiControlDef object&gt;, 'audio-volume': &lt;vdu_controls.VduGuiControlDef object&gt;, 'brightness': &lt;vdu_controls.VduGuiControlDef object&gt;, 'contrast': &lt;vdu_controls.VduGuiControlDef object&gt;, 'input-source': &lt;vdu_controls.VduGuiControlDef object&gt;, 'osd-language': &lt;vdu_controls.VduGuiControlDef object&gt;, 'power-mode': &lt;vdu_controls.VduGuiControlDef object&gt;}</strong></dt>
-<dd>
-</dd>
-</dl>
-</dd>
-</dl>
-<blockquote>
-<dl>
-<dt><strong>by_code = {'10': &lt;vdu_controls.VduGuiControlDef object&gt;, '12': &lt;vdu_controls.VduGuiControlDef object&gt;, '60': &lt;vdu_controls.VduGuiControlDef object&gt;, '62': &lt;vdu_controls.VduGuiControlDef object&gt;, '64': &lt;vdu_controls.VduGuiControlDef object&gt;, '8D': &lt;vdu_controls.VduGuiControlDef object&gt;, '8F': &lt;vdu_controls.VduGuiControlDef object&gt;, '91': &lt;vdu_controls.VduGuiControlDef object&gt;, 'CC': &lt;vdu_controls.VduGuiControlDef object&gt;, 'D6': &lt;vdu_controls.VduGuiControlDef object&gt;}</strong></dt>
-<dd>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>ddcutil_supported = None</strong></dt>
-<dd>
-</dd>
-</dl>
-</blockquote>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>class vdu_controls.VduModel(vdu_id: str, vdu_model_name: str, vdu_serial: str, manufacturer: str, default_config: <em>vdu_controls.VduControlsConfig</em><strong>,</strong> ddcutil: <em>vdu_controls.DdcUtil</em><strong>)</strong></strong></dt>
-<dd><p>Holds data specific to an individual VDU including a map of its capabilities. A model object in MVC speak.</p>
-</dd>
-</dl>
-<p>The model configuration can optionally be read from an INI-format config file held in $HOME/.config/vdu-control/</p>
-<p>Capabilities are either extracted from ddcutil output or read from the INI-format files. File read capabilities are provided so that the output from "ddcutil --display N capabilities" can be corrected (because it is sometimes incorrect due to sloppy implementation by manufacturers). For example, my LG monitor reports two Display-Port inputs and it only has one.</p>
-<blockquote>
-<dl>
-<dt><strong>get_attribute(vcp_code: str) -&gt; Tuple[str, str]</strong></dt>
-<dd>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>get_description() -&gt; str</strong></dt>
-<dd><p>Return a unique description using the serial-number (if defined) or vdu_id.</p>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>get_full_id() -&gt; Tuple[str, str, str, str]</strong></dt>
-<dd><p>Return a tuple that defines this VDU: (vdu_id, manufacturer, model, serial-number).</p>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>set_attribute(vcp_code: str, value: str)</strong></dt>
-<dd>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>write_template_config_files()</strong></dt>
-<dd><p>Write template config files to $HOME/.config/vdu_controls/</p>
-</dd>
-</dl>
-</blockquote>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>class vdu_controls.VduSliderControl(vdu_model: <em>vdu_controls.VduModel</em><strong>,</strong> vcp_capability: <em>vdu_controls.VcpCapability</em><strong>)</strong></strong></dt>
-<dd><p>GUI control for a DDC continuously variable attribute.</p>
-</dd>
-</dl>
-<p>A compound widget with icon, slider, and text-field. This is a duck-typed GUI control widget (could inherit from an abstract type if we wanted to get formal about it).</p>
-<blockquote>
-<dl>
-<dt><strong>refresh_data()</strong></dt>
-<dd><p>Query the VDU for a new data value and cache it (may be called from a task thread, so no GUI op's here).</p>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>refresh_view()</strong></dt>
-<dd><p>Copy the internally cached current value onto the GUI view.</p>
-</dd>
-</dl>
-</blockquote>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>vdu_controls.create_icon_from_svg_string(svg_str: bytes)</strong></dt>
-<dd><p>There is no QIcon option for loading SVG from a string, only from a SVG file, so roll our own.</p>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>vdu_controls.exception_handler(e_type, e_value, e_traceback)</strong></dt>
-<dd><p>Overarching error handler in case something unexpected happens.</p>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>vdu_controls.get_config_path(config_name)</strong></dt>
-<dd>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>vdu_controls.get_splash_image() -&gt; PyQt5.QtGui.QPixmap</strong></dt>
-<dd><p>Get the splash pixmap from a KDE oxygen PNG file or, failing that, a small base64 encoded internal PNG.</p>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>vdu_controls.install_as_desktop_application(uninstall: bool = False)</strong></dt>
-<dd><p>Self install this script in the current Linux user's bin directory and desktop applications-&gt;settings menu.</p>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>vdu_controls.main()</strong></dt>
-<dd><p>vdu_controls application main.</p>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>vdu_controls.restart_due_to_config_change()</strong></dt>
-<dd><p>Force a restart of the application.</p>
-</dd>
-</dl>
-<p>To be invoked when part of the GUI executes a VCP command that changes the number of connected monitors or when the GUI detects the number of monitors has changes.</p>
-</blockquote>
-<blockquote>
-<dl>
-<dt><strong>vdu_controls.translate(source_text: str)</strong></dt>
-<dd><p>For future internationalization - recommended way to do this at this time.</p>
-</dd>
-</dl>
-</blockquote>
-<blockquote>
-<ul>
-<li><p>genindex</p></li>
-<li><p>modindex</p></li>
-<li><p>search</p></li>
-</ul>
-</blockquote>
-<h1>AUTHOR</h1>
-<p>Michael Hamilton</p>
-<h1>COPYRIGHT</h1>
-<p>2021, Michael Hamilton</p>
+<p>You should have received a copy of the GNU General Public License along with this program. If not, see <a href="https://www.gnu.org/licenses/" class="uri">https://www.gnu.org/licenses/</a>.</p>
+<p><strong>Contact:</strong> m i c h a e l @ a c t r i x . g e n . n z</p>
+<hr />
