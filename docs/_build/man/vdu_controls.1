@@ -131,11 +131,11 @@ the restriction resulting in its contrast\-control appearing to do nothing.
 Configuration is supplied via command line parameters and config\-files.  The command line provides an immediate way
 to temporarily alter the behaviour of the application. The config files provide a more comprehensive and permanent
 solution for altering the application\(aqs configuration.
-.SS Config files
+.SS Settings Menu and Config files
 .sp
-\fBvdu_controls\fP may use several config files.  There may be a global config file for setting application
-wide defaults.  There may be any number of model or serial\-number VDU\-specific config files for customising
-\fBvdu_controls\fP for each VDU.  The config files are named as follows:
+The right\-mouse context\-menu \fBSettings\fP item can be used to customise the application by writing to a set of config
+files.  The \fBSettings\fP item will feature a tab for editing each config file.  The config files are named according
+to the following scheme:
 .INDENT 0.0
 .INDENT 3.5
 .INDENT 0.0
@@ -149,43 +149,29 @@ VDU model only config: \fB$HOME/.config/vdu_controls/<model>.conf\fP
 .UNINDENT
 .UNINDENT
 .sp
-All config  files are INI\-format.  There are two easy ways to create them:
-.INDENT 0.0
-.INDENT 3.5
-.INDENT 0.0
-.IP \(bu 2
-Run \fBvdu_controls\fP, use the right mouse to bring up the context\-menu, select \fBsettings\fP,
-and then edit and save each of the settings tabs.
-.IP \(bu 2
-Run \fBvdu_controls \-\-create\-config\-files\fP to create templates for manual editing.
-.UNINDENT
-.UNINDENT
-.UNINDENT
+The application wide default file can be used to alter application settings and the set of default VDU controls.
 .sp
-The VDU\-specific config files can be used to:.
+The VDU\-specific config files can be used to:
 .INDENT 0.0
 .INDENT 3.5
 .INDENT 0.0
 .IP \(bu 2
 Correct manufacturer built\-in meta data.
 .IP \(bu 2
-Customise which controls are to be provided.
+Customise which controls are to be provided for each VDU.
 .IP \(bu 2
-Set a optimal \fBddcutil\fP DDC communication speed\-multiplier for the VDU.
+Set a optimal \fBddcutil\fP DDC communication speed\-multiplier for each VDU.
 .UNINDENT
 .UNINDENT
 .UNINDENT
 .sp
-The last two are particularly useful if a desktop has multiple VDU\(aqs that vary in features or DDC\-communications
-speed.
+It should be noted that config files can only be used to alter definitions of VCP codes already supported
+by \fBddcutil\fP\&.  If a VCP code is listed as a \fImanufacturer specific feature\fP it is not supported. Manufacturer
+specific features should not be experimented with, some may have destructive or irreversible consequences that
+may brick the hardware. It is possible to enable any codes by  creating a  \fBddcutil\fP user
+definition (\fB\-\-udef\fP) file, BUT THIS SHOULD ONLY BE USED WITH EXTREME CAUTION AND CANNOT BE RECOMMENDED.
 .sp
-Config files can only be used to alter definitions of VCP codes already supported by \fBddcutil\fP\&.  If a VCP code
-is listed as a \fImanufacturer specific feature\fP it is not supported. Manufacturer specific features should not be
-experimented with, some may have destructive or irreversible consequences that may brick the hardware. It is
-possible to enable any codes by  creating a  \fBddcutil\fP user definition (\fB\-\-udef\fP) file, BUT THIS SHOULD ONLY
-BE USED WITH EXTREME CAUTION AND CANNOT BE RECOMMENDED.
-.sp
-All config files have a similar format.
+The config files are in INI\-format divided into a number of sections as outlined below:
 .INDENT 0.0
 .INDENT 3.5
 # The vdu\-controls\-globals section is only required in $HOME/.config/vdu_controls/vdu_controls.conf
@@ -220,6 +206,18 @@ sleep\-multiplier = 0.5
 capabilities\-override =
 .UNINDENT
 .UNINDENT
+.sp
+As well as using the \fBSettings\fP, config files may also be created by the command line option
+.INDENT 0.0
+.INDENT 3.5
+vdu_controls \-\-create\-config\-files
+.UNINDENT
+.UNINDENT
+.sp
+which will create initial templates based on the currently connected VDU\(aqs.
+.sp
+The config files are completely optional, they need not be used if the existing command line options are found to be
+adequate to the task at hand.
 .SS Responsiveness
 .sp
 If your VDU\(aqs are modern, you may find a smaller sleep\-multiplier will speed up the \fBddcutil\fP/VDU protocol
