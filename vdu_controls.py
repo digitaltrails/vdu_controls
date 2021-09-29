@@ -224,6 +224,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>.
 import argparse
 import base64
 import configparser
+import inspect
 import os
 import pickle
 import re
@@ -244,7 +245,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit
 
-VDU_CONTROLS_VERSION = '1.4.1'
+VDU_CONTROLS_VERSION = '1.4.2'
 
 
 def translate(source_text: str):
@@ -532,7 +533,7 @@ class VduGuiSupportedControls:
 
     def __init__(self):
         pass
-        # if self.ddc_util_supported is None:
+        # if self.ddcutil_supported is None:
         #     ddcutil = DdcUtil()
         #     self.ddcutil_supported = ddcutil.get_supported_vcp_codes()
         #     for code, name in self.ddcutil_supported.items():
@@ -554,39 +555,30 @@ class VduControlsConfig:
     def __init__(self, config_name: str, default_enabled_vcp_codes: List = None, include_globals: bool = False):
         self.config_name = config_name
         self.ini_content = configparser.ConfigParser()
-        # augment the configparser with type-info - for run-time widget selection
-        self.config_type_map = {}
-
-        def boolean_type(name: str):
-            self.config_type_map[name] = 'boolean'
-            return name
-
-        def csv_type(name: str):
-            self.config_type_map[name] = 'csv'
-            return name
-
-        def float_type(name: str):
-            self.config_type_map[name] = 'float'
-            return name
-
-        def text_type(name: str):
-            self.config_type_map[name] = 'text'
-            return name
+        # augment the configparser with type-info for run-time widget selection (default type is 'boolean')
+        self.config_type_map = {
+            'enable-vcp-codes': 'csv', 'sleep-multiplier': 'float', 'capabilities-override': 'text'}
 
         if include_globals:
             self.ini_content['vdu-controls-globals'] = {
-                boolean_type('system-tray-enabled'): 'no',
-                boolean_type('splash-screen-enabled'): 'yes',
-                boolean_type('warnings-enabled'): 'no',
-                boolean_type('debug-enabled'): 'no', }
+                'system-tray-enabled': 'no',
+                'splash-screen-enabled': 'yes',
+                'warnings-enabled': 'no',
+                'debug-enabled': 'no', }
+
         self.ini_content['vdu-controls-widgets'] = {}
-        for vcp_code, item in VDU_SUPPORTED_CONTROLS.by_code.items():
-            self.ini_content['vdu-controls-widgets'][boolean_type(item.arg_name())] = 'no'
-        self.ini_content['vdu-controls-widgets'][csv_type('enable-vcp-codes')] = ''
         self.ini_content['ddcutil-parameters'] = {}
-        self.ini_content['ddcutil-parameters'][float_type('sleep-multiplier')] = str(0.5)
         self.ini_content['ddcutil-capabilities'] = {}
-        self.ini_content['ddcutil-capabilities'][text_type('capabilities-override')] = ''
+
+        for vcp_code, item in VDU_SUPPORTED_CONTROLS.by_code.items():
+            self.ini_content['vdu-controls-widgets'][item.arg_name()] = 'no'
+
+        self.ini_content['vdu-controls-widgets']['enable-vcp-codes'] = ''
+
+        self.ini_content['ddcutil-parameters']['sleep-multiplier'] = str(0.5)
+
+        self.ini_content['ddcutil-capabilities']['capabilities-override'] = ''
+
         if default_enabled_vcp_codes is not None:
             for code in default_enabled_vcp_codes:
                 if code in VDU_SUPPORTED_CONTROLS.by_code:
@@ -594,6 +586,17 @@ class VduControlsConfig:
                 else:
                     self.enable_unsupported_vcp_code(code)
         self.file_path = None
+
+    def get_config_type(self, section, option):
+        if option in self.config_type_map:
+            return self.config_type_map[option]
+        return 'boolean'
+
+    def restrict_to_actual_capabilities(self, vdu_capabilities: Mapping[str, VcpCapability]):
+        for option in self.ini_content['vdu-controls-widgets']:
+            if self.get_config_type('vdu-controls-widgets', option) == 'boolean' \
+                    and VDU_SUPPORTED_CONTROLS.by_arg_name[option].vcp_code not in vdu_capabilities:
+                del self.ini_content['vdu-controls-widgets'][option]
 
     def get_config_name(self):
         return self.config_name
@@ -629,7 +632,7 @@ class VduControlsConfig:
 
         if vcp_code in VDU_SUPPORTED_CONTROLS.by_code:
             print("WARNING: vdu_controls supported VCP_CODE {} ({}) is enabled in the list for unsupported codes.".
-                format(vcp_code, VDU_SUPPORTED_CONTROLS.by_code[vcp_code].arg_name()))
+                  format(vcp_code, VDU_SUPPORTED_CONTROLS.by_code[vcp_code].arg_name()))
             self.enable_supported_vcp_code(vcp_code)
             return
         # No very efficient
@@ -667,6 +670,8 @@ class VduControlsConfig:
             re.search(r'\[ddcutil-capabilities](?:.|\n)*\ncapabilities-override[ \t]*[:=]((.*)(\n[ \t].+)*)',
                       config_text)
         alt_text = preserve_indents_match.group(1) if preserve_indents_match is not None else ''
+        # Remove excess indentation while preserving the minimum existing indentation.
+        alt_text = inspect.cleandoc(alt_text)
         self.ini_content['ddcutil-capabilities']['capabilities-override'] = alt_text
 
     def debug_dump(self):
@@ -817,6 +822,7 @@ class VduModel:
         if self.capabilities_text is None:
             self.capabilities_text = ddcutil.query_capabilities(vdu_id)
         self.capabilities = self._parse_capabilities(self.capabilities_text)
+        self.config.restrict_to_actual_capabilities(self.capabilities)
         if self.config is None:
             # In memory only config - in case it's needed by a future config editor
             self.config = VduControlsConfig(self.vdu_model_and_serial_id,
@@ -924,7 +930,7 @@ class ConfigEditor(QDialog):
                 editor_layout.addWidget(QLabel('<b>' + section.replace('-', ' ') + '</b>'))
                 option_editor = None
                 for option in self.ini_editable[section]:
-                    data_type = vdu_config.config_type_map[option]
+                    data_type = vdu_config.get_config_type(section, option)
                     if data_type == 'boolean':
                         option_editor = ConfigEditor.ConfigEditorBooleanWidget(self.ini_editable, option, section)
                     elif data_type == 'float':
@@ -972,7 +978,8 @@ class ConfigEditor(QDialog):
                 if rc == QMessageBox.Save:
                     with open(self.config_path, 'w') as config_file:
                         self.ini_editable.write(config_file)
-                        self.ini_before = self.ini_editable
+                        copy = pickle.dumps(self.ini_editable)
+                        self.ini_before = pickle.loads(copy)
                         self.has_made_changes = True
 
         def is_unsaved(self):
