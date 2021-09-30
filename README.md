@@ -156,7 +156,7 @@ Version History
 ---------------
 * 1.4.2
   * Fix increasing indentation of multiline capabilities text on each config file save.
-  * Prune the settings editor VDU tab list of controls to those actually supported by the VDU.
+  * Prune the VDU settings-editor control-list to only show controls supported by the VDU.
   * Use grid layout in the ``settings`` editor.
 * 1.4.1
   * Internal code cleanups after switching to INI config files (no functional changes).
