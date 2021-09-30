@@ -243,7 +243,7 @@ from PyQt5.QtGui import QIntValidator, QPixmap, QIcon, QCursor, QImage, QPainter
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
-    QCheckBox, QPlainTextEdit
+    QCheckBox, QPlainTextEdit, QGridLayout
 
 VDU_CONTROLS_VERSION = '1.4.2'
 
@@ -928,19 +928,26 @@ class ConfigEditor(QDialog):
                 if section == 'DEFAULT':
                     continue
                 editor_layout.addWidget(QLabel('<b>' + section.replace('-', ' ') + '</b>'))
-                option_editor = None
+                booleans_panel = QWidget()
+                booleans_grid = QGridLayout()
+                booleans_panel.setLayout(booleans_grid)
+                editor_layout.addWidget(booleans_panel)
+                n = 0
                 for option in self.ini_editable[section]:
                     data_type = vdu_config.get_config_type(section, option)
                     if data_type == 'boolean':
-                        option_editor = ConfigEditor.ConfigEditorBooleanWidget(self.ini_editable, option, section)
+                        booleans_grid.addWidget(
+                            ConfigEditor.ConfigEditorBooleanWidget(self.ini_editable, option, section), n // 3, n % 3)
+                        n += 1
                     elif data_type == 'float':
-                        option_editor = ConfigEditor.ConfigEditorFloatWidget(self.ini_editable, option, section)
+                        editor_layout.addWidget(
+                            ConfigEditor.ConfigEditorFloatWidget(self.ini_editable, option, section))
                     elif data_type == 'text':
-                        option_editor = ConfigEditor.ConfigEditorTextEditorWidget(self.ini_editable, option, section)
+                        editor_layout.addWidget(
+                            ConfigEditor.ConfigEditorTextEditorWidget(self.ini_editable, option, section))
                     elif data_type == 'csv':
-                        option_editor = ConfigEditor.ConfigEditorCsvWidget(self.ini_editable, option, section)
-                    if option_editor is not None:
-                        editor_layout.addWidget(option_editor)
+                        editor_layout.addWidget(
+                            ConfigEditor.ConfigEditorCsvWidget(self.ini_editable, option, section))
 
             def save_clicked():
                 if self.is_unsaved():
