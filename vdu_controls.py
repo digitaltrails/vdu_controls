@@ -224,6 +224,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>.
 import argparse
 import base64
 import configparser
+import glob
 import inspect
 import os
 import pickle
@@ -544,9 +545,10 @@ class VduGuiSupportedControls:
 
 VDU_SUPPORTED_CONTROLS = VduGuiSupportedControls()
 
+CONFIG_DIR_PATH = Path.home().joinpath('.config').joinpath('vdu_controls')
 
 def get_config_path(config_name):
-    return Path.home().joinpath('.config').joinpath('vdu_controls').joinpath(config_name + '.conf')
+    return CONFIG_DIR_PATH.joinpath(config_name + '.conf')
 
 
 class VduControlsConfig:
@@ -1075,7 +1077,6 @@ class ConfigEditor(QDialog):
             text_editor.textChanged.connect(text_changed)
             layout.addWidget(text_editor)
 
-
 def restart_due_to_config_change():
     """
     Force a restart of the application.
@@ -1309,6 +1310,19 @@ class VduControlPanel(QWidget):
         """Return the number of VDU controls.  Might be zero if initialization discovered no controllable attributes."""
         return len(self.vcp_controls)
 
+    def save_state(self, preset_ini: configparser.ConfigParser):
+        vdu_section = self.vdu_model.vdu_model_and_serial_id
+        preset_ini[vdu_section] = {}
+        for control in self.vcp_controls:
+            preset_ini[vdu_section][control.vcp_capability.name] = control.current_value
+
+    def restore_state(self, preset_ini: configparser.ConfigParser):
+        vdu_section = self.vdu_model.vdu_model_and_serial_id
+        for control in self.vcp_controls:
+            if control.vcp_capability.name in preset_ini[vdu_section]:
+                control.current_value = preset_ini[vdu_section][control.vcp_capability.name]
+        self.refresh_view()
+
 
 class VduControlsMainWindow(QWidget):
     """GUI for detected VDU's, it will construct and contain a control panel for each VDU."""
@@ -1318,7 +1332,7 @@ class VduControlsMainWindow(QWidget):
         layout = QVBoxLayout()
         self.ddcutil = DdcUtil(debug=default_config.is_debug_enabled(), common_args=None,
                                default_sleep_multiplier=default_config.get_sleep_multiplier())
-        self.vdu_widgets = []
+        self.vdu_control_panels = []
         self.warnings = default_config.are_warnings_enabled()
         self.detected_vdus = self.ddcutil.detect_monitors()
         self.model_data = []
@@ -1329,7 +1343,7 @@ class VduControlsMainWindow(QWidget):
                 detect_vdu_hook(vdu_model)
             vdu_control_panel = VduControlPanel(vdu_model, self.warnings)
             if vdu_control_panel.number_of_controls() != 0:
-                self.vdu_widgets.append(vdu_control_panel)
+                self.vdu_control_panels.append(vdu_control_panel)
                 layout.addWidget(vdu_control_panel)
             elif self.warnings:
                 alert = QMessageBox()
@@ -1340,7 +1354,7 @@ class VduControlsMainWindow(QWidget):
                 alert.setIcon(QMessageBox.Warning)
                 alert.exec()
 
-        if len(self.vdu_widgets) == 0:
+        if len(self.vdu_control_panels) == 0:
             alert = QMessageBox()
             alert.setText(translate('No controllable monitors found, exiting.'))
             alert.setInformativeText(translate(
@@ -1387,18 +1401,48 @@ class VduControlsMainWindow(QWidget):
     def refresh_data(self):
         """Refresh data from the VDU's. Called by a non-GUI task. Not in the GUI-thread, cannot do any GUI op's."""
         self.detected_vdus = self.ddcutil.detect_monitors()
-        for vdu_widget in self.vdu_widgets:
-            if vdu_widget.vdu_model.get_full_id() in self.detected_vdus:
-                vdu_widget.refresh_data()
+        for control_panel in self.vdu_control_panels:
+            if control_panel.vdu_model.get_full_id() in self.detected_vdus:
+                control_panel.refresh_data()
 
     def refresh_view(self):
         """Invoke when the GUI worker thread completes. Runs in the GUI thread and can refresh the GUI views."""
-        if len(self.detected_vdus) != len(self.vdu_widgets):
+        if len(self.detected_vdus) != len(self.vdu_control_panels):
             # The number of VDU's has changed, vdu_id's will no longer match, throw a wobbly
             restart_due_to_config_change()
-        for vdu_widget in self.vdu_widgets:
-            vdu_widget.refresh_view()
+        for control_panel in self.vdu_control_panels:
+            control_panel.refresh_view()
 
+    def save_preset(self, preset_name: str):
+        preset_ini = configparser.ConfigParser()
+        preset_path = get_config_path('Preset_' + preset_name)
+        for control_panel in self.vdu_control_panels:
+            control_panel.save_state(preset_ini)
+        # TODO finish
+        if not preset_path.parent.is_dir():
+            os.makedirs(preset_path.parent)
+        print("INFO: writing preset file '" + preset_path.as_posix() + "'")
+        with open(preset_path, 'w') as preset_file:
+            preset_ini.write(preset_file)
+
+    def restore_preset(self, preset_name: str):
+        preset_path = get_config_path('Preset_' + preset_name)
+        print("INFO: reading preset file '" + preset_path.as_posix() + "'")
+        preset_text = Path(preset_path).read_text()
+        preset_ini = configparser.ConfigParser()
+        preset_ini.read_string(preset_text)
+        for section in preset_ini:
+            for control_panel in self.vdu_control_panels:
+                if section == control_panel.vdu_model.vdu_model_and_serial_id:
+                    control_panel.restore_state(preset_ini)
+
+    def rename_preset(self, old_preset_name: str, new_preset_name: str):
+        # TODO implement
+        pass
+
+    def delete_preset(self, preset_name: str):
+        # TODO implement
+        pass
 
 class RefreshVduDataTask(QThread):
     """
@@ -1421,6 +1465,108 @@ class RefreshVduDataTask(QThread):
         self.ddc_widget.refresh_data()
         # Tell (qt-signal) the GUI-thread that the task has finished, the GUI thread will then update the view widgets.
         self.task_finished.emit()
+
+
+def find_presets():
+    presets = {}
+    for path_str in glob.glob(CONFIG_DIR_PATH.joinpath("Preset_*.conf").as_posix()):
+        preset_name = os.path.splitext(os.path.basename(path_str))[0].replace('Preset_', '').replace('_',' ')
+        presets[preset_name] = path_str
+    return presets
+
+
+class PresetsEditor(QDialog):
+
+    def __init__(self, main_window: VduControlsMainWindow) -> None:
+        super().__init__()
+        self.setMinimumWidth(1024)
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+        rows = []
+        row_widget = QWidget()
+        row_layout = QVBoxLayout()
+        row_widget.setLayout(row_layout)
+        layout.addWidget(row_widget)
+        presets = find_presets()
+        for name in presets.keys():
+            row = self.PresetRow(name)
+            rows.append(row)
+            row_layout.addWidget(row)
+        button_box = QWidget()
+        button_layout = QHBoxLayout()
+        button_box.setLayout(button_layout)
+
+        def rename_action():
+            for preset_row in rows:
+                if preset_row.is_selected():
+                    main_window.rename_preset(preset_row.get_name())
+                    preset_row.set_selected(False)
+
+        rename_button = QPushButton(translate('Rename Preset'))
+        rename_button.clicked.connect(rename_action)
+        button_layout.addWidget(rename_button)
+
+        def save_action():
+            for preset_row in rows:
+                if preset_row.is_selected():
+                    main_window.save_preset(preset_row.get_name())
+                    preset_row.set_selected(False)
+
+        save_button = QPushButton(translate('Save Settings'))
+        save_button.clicked.connect(save_action)
+        button_layout.addWidget(save_button)
+
+        def add_action():
+            new_row = self.PresetRow('New')
+            row_layout.addWidget(new_row)
+            new_row.set_selected(True)
+
+        add_button = QPushButton(translate('New Preset'))
+        add_button.clicked.connect(add_action)
+        button_layout.addWidget(add_button)
+
+        def delete_action():
+            for preset_row in rows:
+                if preset_row.is_selected():
+                    main_window.delete_preset(preset_row.get_name())
+                    row_layout.removeItem(preset_row)
+
+        delete_button = QPushButton(translate('delete'))
+        delete_button.clicked.connect(delete_action)
+        button_layout.addWidget(delete_button)
+
+        close_button = QPushButton(translate('quit'))
+        close_button.clicked.connect(self.close)
+        button_layout.addWidget(close_button)
+
+        layout.addWidget(button_box)
+
+
+    class PresetRow(QWidget):
+
+        def __init__(self, name):
+            super().__init__()
+            line_layout = QHBoxLayout()
+            self.setLayout(line_layout)
+            self.select_button = QCheckBox()
+            self.name_edit = QLineEdit()
+            self.name_edit.setText(name)
+            line_layout.addWidget(self.select_button)
+            line_layout.addWidget(self.name_edit)
+            def self_check():
+                self.select_button.setChecked(True)
+            self.name_edit.textEdited.connect(self_check)
+
+        def get_name(self):
+            return self.name_edit.text()
+
+        def is_selected(self):
+            return self.select_button.isChecked()
+
+        def set_selected(self, value):
+            self.select_button.setChecked(value)
+
+
 
 
 def exception_handler(e_type, e_value, e_traceback):
@@ -1563,11 +1709,23 @@ def main():
     if args.about:
         about_popup()
 
+    def edit_presets():
+        editor = PresetsEditor(main_window)
+        editor.exec()
+
+    def save_preset():
+        main_window.restore_preset("Preset_1")
+
+    app_context_menu = QMenu()
+    app_context_menu.addAction(app.style().standardIcon(QStyle.SP_CommandLink), translate('Presets'), edit_presets)
+    app_context_menu.addAction(app.style().standardIcon(QStyle.SP_CommandLink), translate('Preset 1'), save_preset)
+    app_context_menu.addAction(app.style().standardIcon(QStyle.SP_CommandLink), translate('Preset 2'), save_preset)
+    app_context_menu.addSeparator()
+
     def edit_config():
         editor = ConfigEditor(default_config, main_window.model_data)
         editor.exec()
 
-    app_context_menu = QMenu()
     app_context_menu.addAction(app.style().standardIcon(QStyle.SP_ComputerIcon), translate('Settings'), edit_config)
     app_context_menu.addAction(app.style().standardIcon(QStyle.SP_MessageBoxInformation), translate('About'),
                                about_popup)
