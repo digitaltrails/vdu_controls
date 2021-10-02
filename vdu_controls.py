@@ -1548,10 +1548,18 @@ class VduPresetController:
     def save_preset(self, preset_name: str, main_window: VduControlsMainWindow, context_menu: VduContextMenu):
         preset_ini = configparser.ConfigParser()
         preset_path = get_config_path(proper_name('Preset', preset_name))
+        if preset_path.exists():
+            save_message = QMessageBox()
+            message = translate('Overwrite existing {}?').format(preset_path.as_posix())
+            save_message.setText(message)
+            save_message.setIcon(QMessageBox.Question)
+            save_message.setStandardButtons(QMessageBox.Save | QMessageBox.Cancel)
+            rc = save_message.exec()
+            if rc == QMessageBox.Cancel:
+                return
         print("INFO: saving preset file '{}'".format(preset_path.as_posix()))
         for control_panel in main_window.vdu_control_panels:
             control_panel.save_state(preset_ini)
-        # TODO finish
         if not preset_path.parent.is_dir():
             os.makedirs(preset_path.parent)
         print("INFO: writing preset file '" + preset_path.as_posix() + "'")
@@ -1574,11 +1582,8 @@ class VduPresetController:
     def delete_preset(self, preset_name: str, context_menu: VduContextMenu):
         preset_path = get_config_path(proper_name('Preset', preset_name))
         print("INFO: deleting preset file '{}'".format(preset_path.as_posix()))
-        if not preset_path.exists():
-            # TODO error
-            print("delete no file:", preset_path.as_posix())
-            return
-        os.remove(preset_path.as_posix())
+        if preset_path.exists():
+            os.remove(preset_path.as_posix())
         if context_menu.has_preset(preset_name):
             context_menu.removeAction(context_menu.get_preset(preset_name))
 
@@ -1626,19 +1631,26 @@ class PresetsEditor(QDialog):
         add_preset_layout = QHBoxLayout()
         add_preset_widget.setLayout(add_preset_layout)
         add_preset_name_edit = QLineEdit()
+        add_preset_name_edit.setToolTip(translate('Enter a new preset name.'))
         add_preset_layout.addWidget(add_preset_name_edit)
 
-        save_button = QPushButton(translate('Add'))
-        save_button.setIcon(self.style().standardIcon(QStyle.SP_DriveFDIcon))
-        save_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
-        save_button.setStyleSheet('QPushButton { border: none; margin: 0px; padding: 0px;}')
-        add_preset_layout.addWidget(save_button)
+        add_button = QPushButton(translate('Add'))
+        add_button.setIcon(self.style().standardIcon(QStyle.SP_DriveFDIcon))
+        add_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
+        add_button.setStyleSheet('QPushButton { border: none; margin: 0px; padding: 0px;}')
+        add_button.setToolTip(translate('Save current VDU settings to a new preset.'))
+        add_preset_layout.addWidget(add_button)
 
         def add_action():
             new_name = add_preset_name_edit.text()
             if self.has_preset(new_name):
-                # TODO error handling
-                print("Already exists")
+                print("INFO: Already exists {}".format(new_name))
+                save_message = QMessageBox()
+                message = translate("Preset called '{}' already exists.").format(new_name)
+                save_message.setText(message)
+                save_message.setIcon(QMessageBox.Critical)
+                save_message.setStandardButtons(QMessageBox.Close)
+                save_message.exec()
                 return
             self.preset_controller.save_preset(new_name, main_window, context_menu)
             new_preset_widget = self.create_preset_widget(
@@ -1649,7 +1661,7 @@ class PresetsEditor(QDialog):
             presets_layout.addWidget(new_preset_widget)
             add_preset_name_edit.setText('')
 
-        save_button.clicked.connect(add_action)
+        add_button.clicked.connect(add_action)
 
         layout.addWidget(add_preset_widget)
 
@@ -1674,6 +1686,7 @@ class PresetsEditor(QDialog):
         preset_name_button = QPushButton(name)
         #self.preset_name_button.setSizePolicy(QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum))
         preset_name_button.setStyleSheet('QPushButton { text-align: left; }')
+        preset_name_button.setToolTip('Activate this preset.')
         line_layout.addWidget(preset_name_button)
         preset_name_button.clicked.connect(partial(restore_action, preset_name=name))
 
@@ -1681,6 +1694,7 @@ class PresetsEditor(QDialog):
         save_button.setIcon(self.style().standardIcon(QStyle.SP_DriveFDIcon))
         save_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
         save_button.setStyleSheet('QPushButton { border: none; margin: 0px; padding: 0px;}')
+        save_button.setToolTip(translate('Save the current VDU settings to this preset.'))
         line_layout.addWidget(save_button)
         save_button.clicked.connect(partial(save_action, preset_name=name))
 
@@ -1688,6 +1702,7 @@ class PresetsEditor(QDialog):
         delete_button.setIcon(self.style().standardIcon(QStyle.SP_DialogCloseButton))
         delete_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
         delete_button.setStyleSheet('QPushButton { border: none; margin: 0px; padding: 0px;}')
+        delete_button.setToolTip('Delete this preset.')
         line_layout.addWidget(delete_button)
         delete_button.clicked.connect(partial(delete_action, preset_name=name, preset_widget=preset_widget))
 
@@ -1696,7 +1711,7 @@ class PresetsEditor(QDialog):
     class PresetWidget(QWidget):
         def __init__(self, name: str):
             super().__init__()
-            self.name = name;
+            self.name = name
 
 def exception_handler(e_type, e_value, e_traceback):
     """Overarching error handler in case something unexpected happens."""
