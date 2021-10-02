@@ -247,7 +247,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QAction, QSizePolicy
 
-VDU_CONTROLS_VERSION = '1.4.2'
+VDU_CONTROLS_VERSION = '1.5.0'
 
 
 def proper_name(*args):
