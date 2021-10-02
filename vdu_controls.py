@@ -1338,7 +1338,7 @@ class VduContextMenu(QMenu):
         super().__init__()
         self.main_window = None
         self.preset_controller = VduPresetController()
-        self.addAction(self.style().standardIcon(QStyle.SP_CommandLink),
+        self.addAction(self.style().standardIcon(QStyle.SP_ComputerIcon),
                        translate('Presets'),
                        presets_action)
         self.presets_separator = self.addSeparator()
@@ -1518,8 +1518,6 @@ class RefreshVduDataTask(QThread):
         self.task_finished.emit()
 
 
-
-
 class VduPresetController:
     def __init__(self):
         pass
@@ -1580,6 +1578,7 @@ class PresetsEditor(QDialog):
         layout = QVBoxLayout()
         self.setLayout(layout)
         presets_panel = QWidget()
+        self.presets_panel = presets_panel
         presets_layout = QVBoxLayout()
         presets_panel.setLayout(presets_layout)
         layout.addWidget(presets_panel)
@@ -1621,12 +1620,16 @@ class PresetsEditor(QDialog):
 
         def add_action():
             new_name = add_preset_name_edit.text()
+            if self.has_preset(new_name):
+                # TODO error handling
+                print("Already exists")
+                return
+            self.preset_controller.save_preset(new_name, main_window, context_menu)
             new_preset_widget = self.create_preset_widget(
                 new_name,
                 restore_action=restore_preset,
                 save_action=save_preset,
                 delete_action=delete_preset)
-            self.preset_controller.save_preset(new_name, main_window, context_menu)
             presets_layout.addWidget(new_preset_widget)
             add_preset_name_edit.setText('')
 
@@ -1640,9 +1643,15 @@ class PresetsEditor(QDialog):
 
         layout.addWidget(button_box)
 
-    def create_preset_widget(self, name, restore_action=None, save_action=None, delete_action=None):
+    def has_preset(self, name) -> bool:
+        for w in self.presets_panel.children():
+            if isinstance(w, self.PresetWidget):
+                if w.name == name:
+                    return True
+        return False
 
-        preset_widget = QWidget()
+    def create_preset_widget(self, name, restore_action=None, save_action=None, delete_action=None):
+        preset_widget = self.PresetWidget(name)
         line_layout = QHBoxLayout()
         preset_widget.setLayout(line_layout)
 
@@ -1668,6 +1677,10 @@ class PresetsEditor(QDialog):
 
         return preset_widget
 
+    class PresetWidget(QWidget):
+        def __init__(self, name: str):
+            super().__init__()
+            self.name = name;
 
 def exception_handler(e_type, e_value, e_traceback):
     """Overarching error handler in case something unexpected happens."""
