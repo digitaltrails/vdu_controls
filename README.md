@@ -155,12 +155,11 @@ Michael Hamilton\
 Version History
 ---------------
 * 1.5.0
-  * New presets feature: easily switch between named presets such as **Night**, **Sunny**, **Overcast**.
-    * New ``Presets`` context-menu item for access to the new ``preset management widget``.
-      * Add new named presets.
-      * Activate, update, delete existing presets.
-    * New context menu short-cuts for quick access to existing presets.
-    * INI preset file format for ease of editing.
+  * New presets feature: easily switch between named presets such as *Night*, *Day*, *Overcast*, *Sunny*, 
+    *Photography*, and *Video*.
+  * ``Presets`` context-menu item for access to the new ``preset management widget``.
+  * Context menu shortcuts for quickly accessing presets.
+  * INI preset file format for ease of editing.
 * 1.4.2
   * Fix increasing indentation of multiline capabilities text on each config file save.
   * Prune the VDU settings-editor control-list to only show controls supported by the VDU.

@@ -143,6 +143,22 @@ which will create initial templates based on the currently connected VDU's.
 The config files are completely optional, they need not be used if the existing command line options are found to be
 adequate to the task at hand.
 
+Presets
+-------
+
+Presets can be used to quickly switch one or more VDU's between previously saved configurations, for example,
+*Night*, *Day*, *Overcast*, *Sunny*, *Photography*, and *Video*.
+
+The ``Presets`` item in right-mouse ``context-menu`` will bring up a dialog for managing and applying presets.
+The ``context-menu`` also includes shortcuts for quickly applying any existing presets.
+
+Presets are saved in INI-file format for ease of editing.  The preset files are named as follows:
+
+    ``$HOME/.config/vdu_controls/Preset_<preset_name>.conf``
+
+The preset files can be externally created or edited, but ``vdu_controls`` will need a restart to pick up any
+changes.
+
 Responsiveness
 --------------
 
