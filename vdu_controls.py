@@ -236,6 +236,7 @@ import sys
 import textwrap
 import time
 import traceback
+from functools import partial
 from pathlib import Path
 from typing import List, Tuple, Mapping
 
@@ -244,9 +245,13 @@ from PyQt5.QtGui import QIntValidator, QPixmap, QIcon, QCursor, QImage, QPainter
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
-    QCheckBox, QPlainTextEdit, QGridLayout
+    QCheckBox, QPlainTextEdit, QGridLayout, QAction, QSizePolicy
 
 VDU_CONTROLS_VERSION = '1.4.2'
+
+
+def proper_name(*args):
+    return re.sub(r'[^A-Za-z0-9._-]', '_', '_'.join([arg.strip() for arg in args]))
 
 
 def translate(source_text: str):
@@ -547,6 +552,7 @@ VDU_SUPPORTED_CONTROLS = VduGuiSupportedControls()
 
 CONFIG_DIR_PATH = Path.home().joinpath('.config').joinpath('vdu_controls')
 
+
 def get_config_path(config_name):
     return CONFIG_DIR_PATH.joinpath(config_name + '.conf')
 
@@ -779,9 +785,9 @@ class VduControlsConfig:
         return parsed_args
 
 
-class VduModel:
+class VduController:
     """
-    Holds data specific to an individual VDU including a map of its capabilities. A model object in MVC speak.
+    Holds model+controller specific to an individual VDU including a map of its capabilities. A model object in MVC speak.
 
     The model configuration can optionally be read from an INI-format config file held in $HOME/.config/vdu-control/
 
@@ -794,7 +800,7 @@ class VduModel:
     def __init__(self, vdu_id: str, vdu_model_name: str, vdu_serial: str, manufacturer: str,
                  default_config: VduControlsConfig,
                  ddcutil: DdcUtil):
-        self.id = vdu_id
+        self.vdu_id = vdu_id
         self.model_name = vdu_model_name
         self.serial = vdu_serial
         self.manufacturer = manufacturer
@@ -802,9 +808,8 @@ class VduModel:
         self.sleep_multiplier = None
         self.enabled_vcp_codes = default_config.get_all_enabled_vcp_codes()
         unacceptable_char_pattern = re.compile(r'[^A-Za-z0-9._-]')
-        self.vdu_model_and_serial_id = re.sub(unacceptable_char_pattern, '_',
-                                              vdu_model_name.strip() + '_' + vdu_serial.strip())
-        self.vdu_model_id = re.sub(unacceptable_char_pattern, '_', vdu_model_name.strip())
+        self.vdu_model_and_serial_id = proper_name(vdu_model_name.strip(), vdu_serial.strip())
+        self.vdu_model_id = proper_name(vdu_model_name.strip())
         self.capabilities_text = None
         self.config = None
         for config_name in (self.vdu_model_and_serial_id, self.vdu_model_id):
@@ -840,19 +845,19 @@ class VduModel:
             config.write_file(save_config_path, include_globals=False)
             self.config = config
 
-    def get_description(self) -> str:
+    def get_vdu_description(self) -> str:
         """Return a unique description using the serial-number (if defined) or vdu_id."""
-        return self.model_name + ':' + (self.serial if len(self.serial) != 0 else self.id)
+        return self.model_name + ':' + (self.serial if len(self.serial) != 0 else self.vdu_id)
 
     def get_full_id(self) -> Tuple[str, str, str, str]:
         """Return a tuple that defines this VDU: (vdu_id, manufacturer, model, serial-number)."""
-        return self.id, self.manufacturer, self.model_name, self.serial
+        return self.vdu_id, self.manufacturer, self.model_name, self.serial
 
     def get_attribute(self, vcp_code: str) -> Tuple[str, str]:
-        return self.ddcutil.get_attribute(self.id, vcp_code, sleep_multiplier=self.sleep_multiplier)
+        return self.ddcutil.get_attribute(self.vdu_id, vcp_code, sleep_multiplier=self.sleep_multiplier)
 
     def set_attribute(self, vcp_code: str, value: str):
-        self.ddcutil.set_attribute(self.id, vcp_code, value, sleep_multiplier=self.sleep_multiplier)
+        self.ddcutil.set_attribute(self.vdu_id, vcp_code, value, sleep_multiplier=self.sleep_multiplier)
 
     def _parse_capabilities(self, capabilities_text=None) -> Mapping[str, VcpCapability]:
         """Return a map of vpc capabilities keyed by vcp code."""
@@ -887,7 +892,7 @@ class VduModel:
 
 class ConfigEditor(QDialog):
 
-    def __init__(self, default_config: VduControlsConfig, vdu_model_list: List[VduModel]) -> None:
+    def __init__(self, default_config: VduControlsConfig, vdu_model_list: List[VduController]) -> None:
         super().__init__()
         self.setMinimumWidth(1024)
         layout = QVBoxLayout()
@@ -1077,6 +1082,7 @@ class ConfigEditor(QDialog):
             text_editor.textChanged.connect(text_changed)
             layout.addWidget(text_editor)
 
+
 def restart_due_to_config_change():
     """
     Force a restart of the application.
@@ -1100,7 +1106,7 @@ class VduSliderControl(QWidget):
     from an abstract type if we wanted to get formal about it).
     """
 
-    def __init__(self, vdu_model: VduModel, vcp_capability: VcpCapability):
+    def __init__(self, vdu_model: VduController, vcp_capability: VcpCapability):
         """Construct the slider control an initialize its values from the VDU."""
         super().__init__()
 
@@ -1158,7 +1164,7 @@ class VduSliderControl(QWidget):
             except subprocess.SubprocessError:
                 msg = QMessageBox()
                 msg.setIcon(QMessageBox.Critical)
-                msg.setText(translate("Failed to communicate with {}").format(self.vdu_model.get_description()))
+                msg.setText(translate("Failed to communicate with {}").format(self.vdu_model.get_vdu_description()))
                 msg.setInformativeText(translate('Is the monitor switched off?<br>Is --sleep-multiplier set too low?'))
                 msg.exec()
 
@@ -1190,7 +1196,7 @@ class VduComboBoxControl(QWidget):
     This is a duck-typed GUI control widget (could inherit from an abstract type if we wanted to get formal about it).
     """
 
-    def __init__(self, vdu_model: VduModel, vcp_capability: VcpCapability):
+    def __init__(self, vdu_model: VduController, vcp_capability: VcpCapability):
         """Construct the combobox control an initialize its values from the VDU."""
         super().__init__()
 
@@ -1228,7 +1234,7 @@ class VduComboBoxControl(QWidget):
             except subprocess.SubprocessError:
                 msg = QMessageBox()
                 msg.setIcon(QMessageBox.Critical)
-                msg.setText(translate("Failed to communicate with {}").format(self.vdu_model.get_description()))
+                msg.setText(translate("Failed to communicate with {}").format(self.vdu_model.get_vdu_description()))
                 msg.setInformativeText(translate('Is the monitor switched off?<br>Is --sleep-multiplier set too low?'))
                 msg.exec()
 
@@ -1251,12 +1257,12 @@ class VduControlPanel(QWidget):
     methods.
     """
 
-    def __init__(self, vdu_model: VduModel, warnings: bool):
+    def __init__(self, vdu_model: VduController, warnings: bool):
         super().__init__()
         layout = QVBoxLayout()
         label = QLabel()
         # label.setStyleSheet("font-weight: bold");
-        label.setText(translate('Monitor {}: {}').format(vdu_model.id, vdu_model.get_description()))
+        label.setText(translate('Monitor {}: {}').format(vdu_model.vdu_id, vdu_model.get_vdu_description()))
         layout.addWidget(label)
         self.vdu_model = vdu_model
         self.vcp_controls = []
@@ -1289,7 +1295,7 @@ class VduControlPanel(QWidget):
                 alert = QMessageBox()
                 alert.setText(
                     translate('Monitor {} lacks a VCP control for {}.').format(
-                        vdu_model.get_description(), translate(missing_vcp)))
+                        vdu_model.get_vdu_description(), translate(missing_vcp)))
                 alert.setInformativeText(translate('No read/write ability for vcp_code {}.').format(vcp_code))
                 alert.setIcon(QMessageBox.Warning)
                 alert.exec()
@@ -1324,10 +1330,74 @@ class VduControlPanel(QWidget):
         self.refresh_view()
 
 
+class VduContextMenu(QMenu):
+
+    def __init__(self,
+                 about_action=None, help_action=None, settings_action=None, presets_action=None,
+                 quit_action=None):
+        super().__init__()
+        self.main_window = None
+        self.preset_controller = VduPresetController()
+        self.addAction(self.style().standardIcon(QStyle.SP_CommandLink),
+                       translate('Presets'),
+                       presets_action)
+        self.presets_separator = self.addSeparator()
+
+        self.addAction(self.style().standardIcon(QStyle.SP_ComputerIcon),
+                       translate('Settings'),
+                       settings_action)
+        self.addAction(self.style().standardIcon(QStyle.SP_MessageBoxInformation),
+                       translate('About'),
+                       about_action)
+        self.addAction(self.style().standardIcon(QStyle.SP_TitleBarContextHelpButton),
+                       translate('Help'),
+                       help_action)
+        self.addSeparator()
+        self.addAction(self.style().standardIcon(QStyle.SP_DialogCloseButton),
+                       translate('Quit'),
+                       quit_action)
+
+    def set_vdu_controls_main_window(self, main_window):
+        self.vdu_controls_main_window = main_window
+
+    def insert_preset(self, name: str):
+        # Have to add it first and then move it (otherwise it won't appear - weird).
+
+        def restore_preset():
+            self.preset_controller.restore_preset(self.sender().text(), self.vdu_controls_main_window)
+
+        action = self.addAction(self.style().standardIcon(QStyle.SP_CommandLink), name, restore_preset)
+        self.insertAction(self.presets_separator, action)
+        print(self.actions())
+        self.update()
+
+    def refresh_preset_menu(self):
+        for name, path_str in self.preset_controller.find_presets().items():
+            if not self.has_preset(name):
+                self.insert_preset(name)
+
+    def has_preset(self, name: str):
+        for action in self.actions():
+            if action == self.presets_separator:
+                break
+            if action.text() == name:
+                print('Found', name)
+                return True
+        return False
+
+    def get_preset(self, name: str):
+        for action in self.actions():
+            if action == self.presets_separator:
+                break
+            if action.text() == name:
+                return action
+        return None
+
+
 class VduControlsMainWindow(QWidget):
     """GUI for detected VDU's, it will construct and contain a control panel for each VDU."""
 
-    def __init__(self, default_config: VduControlsConfig, detect_vdu_hook: callable):
+    def __init__(self, default_config: VduControlsConfig, detect_vdu_hook: callable, app_context_menu: VduContextMenu):
         super().__init__()
         layout = QVBoxLayout()
         self.ddcutil = DdcUtil(debug=default_config.is_debug_enabled(), common_args=None,
@@ -1335,21 +1405,25 @@ class VduControlsMainWindow(QWidget):
         self.vdu_control_panels = []
         self.warnings = default_config.are_warnings_enabled()
         self.detected_vdus = self.ddcutil.detect_monitors()
-        self.model_data = []
+        self.context_menu = app_context_menu
+        self.context_menu.set_vdu_controls_main_window(self)
+        app_context_menu.refresh_preset_menu()
+
+        self.vdu_controllers = []
         for vdu_id, manufacturer, vdu_model_name, vdu_serial in self.detected_vdus:
-            vdu_model = VduModel(vdu_id, vdu_model_name, vdu_serial, manufacturer, default_config, self.ddcutil)
-            self.model_data.append(vdu_model)
+            controller = VduController(vdu_id, vdu_model_name, vdu_serial, manufacturer, default_config, self.ddcutil)
+            self.vdu_controllers.append(controller)
             if detect_vdu_hook is not None:
-                detect_vdu_hook(vdu_model)
-            vdu_control_panel = VduControlPanel(vdu_model, self.warnings)
+                detect_vdu_hook(controller)
+            vdu_control_panel = VduControlPanel(controller, self.warnings)
             if vdu_control_panel.number_of_controls() != 0:
                 self.vdu_control_panels.append(vdu_control_panel)
                 layout.addWidget(vdu_control_panel)
             elif self.warnings:
                 alert = QMessageBox()
                 alert.setText(
-                    translate('Monitor {} {} lacks any accessible controls.').format(vdu_model.id,
-                                                                                     vdu_model.get_description()))
+                    translate('Monitor {} {} lacks any accessible controls.').format(controller.vdu_id,
+                                                                                     controller.get_vdu_description()))
                 alert.setInformativeText(translate('The monitor will be omitted from the control panel.'))
                 alert.setIcon(QMessageBox.Warning)
                 alert.exec()
@@ -1396,6 +1470,13 @@ class VduControlsMainWindow(QWidget):
         self.refresh_button.clicked.connect(start_refresh)
         layout.addWidget(self.refresh_button)
 
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+
+        def open_context_menu(position):
+            self.context_menu.exec(self.mapToGlobal(position))
+
+        self.customContextMenuRequested.connect(open_context_menu)
+
         self.setLayout(layout)
 
     def refresh_data(self):
@@ -1413,36 +1494,6 @@ class VduControlsMainWindow(QWidget):
         for control_panel in self.vdu_control_panels:
             control_panel.refresh_view()
 
-    def save_preset(self, preset_name: str):
-        preset_ini = configparser.ConfigParser()
-        preset_path = get_config_path('Preset_' + preset_name)
-        for control_panel in self.vdu_control_panels:
-            control_panel.save_state(preset_ini)
-        # TODO finish
-        if not preset_path.parent.is_dir():
-            os.makedirs(preset_path.parent)
-        print("INFO: writing preset file '" + preset_path.as_posix() + "'")
-        with open(preset_path, 'w') as preset_file:
-            preset_ini.write(preset_file)
-
-    def restore_preset(self, preset_name: str):
-        preset_path = get_config_path('Preset_' + preset_name)
-        print("INFO: reading preset file '" + preset_path.as_posix() + "'")
-        preset_text = Path(preset_path).read_text()
-        preset_ini = configparser.ConfigParser()
-        preset_ini.read_string(preset_text)
-        for section in preset_ini:
-            for control_panel in self.vdu_control_panels:
-                if section == control_panel.vdu_model.vdu_model_and_serial_id:
-                    control_panel.restore_state(preset_ini)
-
-    def rename_preset(self, old_preset_name: str, new_preset_name: str):
-        # TODO implement
-        pass
-
-    def delete_preset(self, preset_name: str):
-        # TODO implement
-        pass
 
 class RefreshVduDataTask(QThread):
     """
@@ -1467,106 +1518,155 @@ class RefreshVduDataTask(QThread):
         self.task_finished.emit()
 
 
-def find_presets():
-    presets = {}
-    for path_str in glob.glob(CONFIG_DIR_PATH.joinpath("Preset_*.conf").as_posix()):
-        preset_name = os.path.splitext(os.path.basename(path_str))[0].replace('Preset_', '').replace('_',' ')
-        presets[preset_name] = path_str
-    return presets
+
+
+class VduPresetController:
+    def __init__(self):
+        pass
+
+    def find_presets(self) -> Mapping[str, str]:
+        presets = {}
+        for path_str in glob.glob(CONFIG_DIR_PATH.joinpath("Preset_*.conf").as_posix()):
+            preset_name = os.path.splitext(os.path.basename(path_str))[0].replace('Preset_', '').replace('_', ' ')
+            presets[preset_name] = path_str
+        return presets
+
+    def save_preset(self, preset_name: str, main_window: VduControlsMainWindow, context_menu: VduContextMenu):
+        preset_ini = configparser.ConfigParser()
+        preset_path = get_config_path(proper_name('Preset', preset_name))
+        print("INFO: saving preset file '{}'".format(preset_path.as_posix()))
+        for control_panel in main_window.vdu_control_panels:
+            control_panel.save_state(preset_ini)
+        # TODO finish
+        if not preset_path.parent.is_dir():
+            os.makedirs(preset_path.parent)
+        print("INFO: writing preset file '" + preset_path.as_posix() + "'")
+        with open(preset_path, 'w') as preset_file:
+            preset_ini.write(preset_file)
+        if not context_menu.has_preset(preset_name):
+            context_menu.insert_preset(preset_name)
+
+    def restore_preset(self, preset_name: str, main_window: VduControlsMainWindow):
+        preset_path = get_config_path(proper_name('Preset', preset_name))
+        print("INFO: reading preset file '{}'".format(preset_path.as_posix()))
+        preset_text = Path(preset_path).read_text()
+        preset_ini = configparser.ConfigParser()
+        preset_ini.read_string(preset_text)
+        for section in preset_ini:
+            for control_panel in main_window.vdu_control_panels:
+                if section == control_panel.vdu_model.vdu_model_and_serial_id:
+                    control_panel.restore_state(preset_ini)
+
+    def delete_preset(self, preset_name: str, context_menu: VduContextMenu):
+        preset_path = get_config_path(proper_name('Preset', preset_name))
+        print("INFO: deleting preset file '{}'".format(preset_path.as_posix()))
+        if not preset_path.exists():
+            # TODO error
+            print("delete no file:", preset_path.as_posix())
+            return
+        os.remove(preset_path.as_posix())
+        if context_menu.has_preset(preset_name):
+            context_menu.removeAction(context_menu.get_preset(preset_name))
 
 
 class PresetsEditor(QDialog):
 
-    def __init__(self, main_window: VduControlsMainWindow) -> None:
+    def __init__(self, main_window: VduControlsMainWindow, context_menu: VduContextMenu) -> None:
         super().__init__()
-        self.setMinimumWidth(1024)
+        self.main_window = main_window
+        self.context_menu = context_menu
+        self.preset_controller = VduPresetController()
+        self.setMinimumWidth(512)
         layout = QVBoxLayout()
         self.setLayout(layout)
-        rows = []
-        row_widget = QWidget()
-        row_layout = QVBoxLayout()
-        row_widget.setLayout(row_layout)
-        layout.addWidget(row_widget)
-        presets = find_presets()
-        for name in presets.keys():
-            row = self.PresetRow(name)
-            rows.append(row)
-            row_layout.addWidget(row)
+        presets_panel = QWidget()
+        presets_layout = QVBoxLayout()
+        presets_panel.setLayout(presets_layout)
+        layout.addWidget(presets_panel)
         button_box = QWidget()
         button_layout = QHBoxLayout()
         button_box.setLayout(button_layout)
+        context_menu.refresh_preset_menu()
 
-        def rename_action():
-            for preset_row in rows:
-                if preset_row.is_selected():
-                    main_window.rename_preset(preset_row.get_name())
-                    preset_row.set_selected(False)
+        def restore_preset(preset_name: str = None):
+            self.preset_controller.restore_preset(preset_name, self.main_window)
 
-        rename_button = QPushButton(translate('Rename Preset'))
-        rename_button.clicked.connect(rename_action)
-        button_layout.addWidget(rename_button)
+        def save_preset(preset_name: str = None):
+            self.preset_controller.save_preset(preset_name, self.main_window, self.context_menu)
 
-        def save_action():
-            for preset_row in rows:
-                if preset_row.is_selected():
-                    main_window.save_preset(preset_row.get_name())
-                    preset_row.set_selected(False)
+        def delete_preset(preset_name: str = None, preset_widget: QWidget = None):
+            print("delete", preset_name)
+            self.preset_controller.delete_preset(preset_name, self.context_menu)
+            presets_layout.removeWidget(preset_widget)
 
-        save_button = QPushButton(translate('Save Settings'))
-        save_button.clicked.connect(save_action)
-        button_layout.addWidget(save_button)
+        for name in self.preset_controller.find_presets().keys():
+            preset_widget = self.create_preset_widget(
+                name,
+                restore_action=restore_preset,
+                save_action=save_preset,
+                delete_action=delete_preset)
+            presets_layout.addWidget(preset_widget)
+
+        add_preset_widget = QWidget()
+        add_preset_layout = QHBoxLayout()
+        add_preset_widget.setLayout(add_preset_layout)
+        add_preset_name_edit = QLineEdit()
+        add_preset_layout.addWidget(add_preset_name_edit)
+
+        save_button = QPushButton(translate('Add'))
+        save_button.setIcon(self.style().standardIcon(QStyle.SP_DriveFDIcon))
+        save_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
+        save_button.setStyleSheet('QPushButton { border: none; margin: 0px; padding: 0px;}')
+        add_preset_layout.addWidget(save_button)
 
         def add_action():
-            new_row = self.PresetRow('New')
-            row_layout.addWidget(new_row)
-            new_row.set_selected(True)
+            new_name = add_preset_name_edit.text()
+            new_preset_widget = self.create_preset_widget(
+                new_name,
+                restore_action=restore_preset,
+                save_action=save_preset,
+                delete_action=delete_preset)
+            self.preset_controller.save_preset(new_name, main_window, context_menu)
+            presets_layout.addWidget(new_preset_widget)
+            add_preset_name_edit.setText('')
 
-        add_button = QPushButton(translate('New Preset'))
-        add_button.clicked.connect(add_action)
-        button_layout.addWidget(add_button)
+        save_button.clicked.connect(add_action)
 
-        def delete_action():
-            for preset_row in rows:
-                if preset_row.is_selected():
-                    main_window.delete_preset(preset_row.get_name())
-                    row_layout.removeItem(preset_row)
+        layout.addWidget(add_preset_widget)
 
-        delete_button = QPushButton(translate('delete'))
-        delete_button.clicked.connect(delete_action)
-        button_layout.addWidget(delete_button)
-
-        close_button = QPushButton(translate('quit'))
+        close_button = QPushButton(translate('close'))
         close_button.clicked.connect(self.close)
         button_layout.addWidget(close_button)
 
         layout.addWidget(button_box)
 
+    def create_preset_widget(self, name, restore_action=None, save_action=None, delete_action=None):
 
-    class PresetRow(QWidget):
+        preset_widget = QWidget()
+        line_layout = QHBoxLayout()
+        preset_widget.setLayout(line_layout)
 
-        def __init__(self, name):
-            super().__init__()
-            line_layout = QHBoxLayout()
-            self.setLayout(line_layout)
-            self.select_button = QCheckBox()
-            self.name_edit = QLineEdit()
-            self.name_edit.setText(name)
-            line_layout.addWidget(self.select_button)
-            line_layout.addWidget(self.name_edit)
-            def self_check():
-                self.select_button.setChecked(True)
-            self.name_edit.textEdited.connect(self_check)
+        preset_name_button = QPushButton(name)
+        #self.preset_name_button.setSizePolicy(QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum))
+        preset_name_button.setStyleSheet('QPushButton { text-align: left; }')
+        line_layout.addWidget(preset_name_button)
+        preset_name_button.clicked.connect(partial(restore_action, preset_name=name))
 
-        def get_name(self):
-            return self.name_edit.text()
+        save_button = QPushButton()
+        save_button.setIcon(self.style().standardIcon(QStyle.SP_DriveFDIcon))
+        save_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
+        save_button.setStyleSheet('QPushButton { border: none; margin: 0px; padding: 0px;}')
+        line_layout.addWidget(save_button)
+        save_button.clicked.connect(partial(save_action, preset_name=name))
 
-        def is_selected(self):
-            return self.select_button.isChecked()
+        delete_button = QPushButton()
+        delete_button.setIcon(self.style().standardIcon(QStyle.SP_DialogCloseButton))
+        delete_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
+        delete_button.setStyleSheet('QPushButton { border: none; margin: 0px; padding: 0px;}')
+        line_layout.addWidget(delete_button)
+        delete_button.clicked.connect(partial(delete_action, preset_name=name, preset_widget=preset_widget))
 
-        def set_selected(self, value):
-            self.select_button.setChecked(value)
-
-
+        return preset_widget
 
 
 def exception_handler(e_type, e_value, e_traceback):
@@ -1672,17 +1772,6 @@ def main():
         print(__doc__)
         sys.exit()
     app = QApplication(sys.argv)
-    pixmap = get_splash_image()
-    splash = QSplashScreen(pixmap.scaledToWidth(800).scaledToHeight(400),
-                           Qt.WindowStaysOnTopHint) if default_config.is_splash_screen_enabled() else None
-
-    if splash is not None:
-        splash.show()
-        # Attempt to force it to the top with raise and activate
-        splash.raise_()
-        splash.activateWindow()
-    app_icon = QIcon()
-    app_icon.addPixmap(pixmap)
 
     def about_popup():
         about_message = QMessageBox()
@@ -1709,30 +1798,31 @@ def main():
     if args.about:
         about_popup()
 
-    def edit_presets():
-        editor = PresetsEditor(main_window)
-        editor.exec()
-
-    def save_preset():
-        main_window.restore_preset("Preset_1")
-
-    app_context_menu = QMenu()
-    app_context_menu.addAction(app.style().standardIcon(QStyle.SP_CommandLink), translate('Presets'), edit_presets)
-    app_context_menu.addAction(app.style().standardIcon(QStyle.SP_CommandLink), translate('Preset 1'), save_preset)
-    app_context_menu.addAction(app.style().standardIcon(QStyle.SP_CommandLink), translate('Preset 2'), save_preset)
-    app_context_menu.addSeparator()
-
     def edit_config():
-        editor = ConfigEditor(default_config, main_window.model_data)
+        editor = ConfigEditor(default_config, main_window.vdu_controllers)
         editor.exec()
 
-    app_context_menu.addAction(app.style().standardIcon(QStyle.SP_ComputerIcon), translate('Settings'), edit_config)
-    app_context_menu.addAction(app.style().standardIcon(QStyle.SP_MessageBoxInformation), translate('About'),
-                               about_popup)
-    app_context_menu.addAction(app.style().standardIcon(QStyle.SP_TitleBarContextHelpButton), translate('Help'),
-                               help_popup)
-    app_context_menu.addSeparator()
-    app_context_menu.addAction(app.style().standardIcon(QStyle.SP_DialogCloseButton), translate('Quit'), app.quit)
+    def edit_presets():
+        preset_editor = PresetsEditor(main_window, app_context_menu)
+        preset_editor.exec()
+
+    app_context_menu = VduContextMenu(about_action=about_popup,
+                                      help_action=help_popup,
+                                      settings_action=edit_config,
+                                      presets_action=edit_presets,
+                                      quit_action=app.quit)
+
+    pixmap = get_splash_image()
+    splash = QSplashScreen(pixmap.scaledToWidth(800).scaledToHeight(400),
+                           Qt.WindowStaysOnTopHint) if default_config.is_splash_screen_enabled() else None
+
+    if splash is not None:
+        splash.show()
+        # Attempt to force it to the top with raise and activate
+        splash.raise_()
+        splash.activateWindow()
+    app_icon = QIcon()
+    app_icon.addPixmap(pixmap)
 
     tray = None
     if default_config.is_system_tray_enabled():
@@ -1746,23 +1836,17 @@ def main():
     if splash is not None:
         splash.showMessage(translate('\n\nVDU Controls\nLooking for DDC monitors...\n'), Qt.AlignTop | Qt.AlignHCenter)
 
-    def detect_vdu_hook(vdu: VduModel):
+    def detect_vdu_hook(vdu: VduController):
         if splash is not None:
-            splash.showMessage(translate('\n\nVDU Controls\nDDC ID {}\n{}').format(vdu.id, vdu.get_description()),
-                               Qt.AlignTop | Qt.AlignHCenter)
+            splash.showMessage(
+                translate('\n\nVDU Controls\nDDC ID {}\n{}').format(vdu.vdu_id, vdu.get_vdu_description()),
+                Qt.AlignTop | Qt.AlignHCenter)
 
-    main_window = VduControlsMainWindow(default_config, detect_vdu_hook)
+    main_window = VduControlsMainWindow(default_config, detect_vdu_hook, app_context_menu)
 
     if args.create_config_files:
-        for vdu_model in main_window.model_data:
+        for vdu_model in main_window.vdu_controllers:
             vdu_model.write_template_config_files()
-
-    main_window.setContextMenuPolicy(Qt.CustomContextMenu)
-
-    def open_context_menu(position):
-        app_context_menu.exec(main_window.mapToGlobal(position))
-
-    main_window.customContextMenuRequested.connect(open_context_menu)
 
     if tray is not None:
         def show_window():
