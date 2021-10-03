@@ -146,18 +146,32 @@ adequate to the task at hand.
 Presets
 -------
 
-Presets can be used to quickly switch one or more VDU's between previously saved configurations, for example,
-*Night*, *Day*, *Overcast*, *Sunny*, *Photography*, and *Video*.
+A custom named preset can be used to save the current VDU settings for later recall. Any number of presets can be
+created to suit different lighting conditions or different applications, for example: *Night*, *Day*, *Overcast*,
+*Sunny*, *Photography*, and *Video*.
 
 The ``Presets`` item in right-mouse ``context-menu`` will bring up a dialog for managing and applying presets.
-The ``context-menu`` also includes shortcuts for quickly applying any existing presets.
+The ``context-menu`` also includes a shortcut for applying each existing presets.
 
-Presets are saved in INI-file format for ease of editing.  The preset files are named as follows:
+The preset files are named as follows:
 
     ``$HOME/.config/vdu_controls/Preset_<preset_name>.conf``
 
-The preset files can be externally created or edited, but ``vdu_controls`` will need a restart to pick up any
-changes.
+Presets are saved in INI-file format for ease of editing.  Each preset file contains a section for each connected
+VDU, something similar to the following example:
+
+        [HP_ZR24w_CNT008]
+        brightness = 50
+        osd-language = 02
+
+        [LG_HDR_4K_Display2]
+        brightness = 13
+        audio-speaker-volume = 16
+        input-source = 0f
+
+Whe the GUI is used to create a preset file it saves a value for every VDU and every visible control.  A preset
+file need not include all VDu's or settings, it can be manually edited to remove VDU's and settings that aren't
+desired.
 
 Responsiveness
 --------------

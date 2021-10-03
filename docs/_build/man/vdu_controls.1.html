@@ -83,6 +83,21 @@
 <pre><code>    vdu_controls --create-config-files</code></pre>
 <p>which will create initial templates based on the currently connected VDU’s.</p>
 <p>The config files are completely optional, they need not be used if the existing command line options are found to be adequate to the task at hand.</p>
+<h2 id="presets">Presets</h2>
+<p>A custom named preset can be used to save the current VDU settings for later recall. Any number of presets can be created to suit different lighting conditions or different applications, for example: <em>Night</em>, <em>Day</em>, <em>Overcast</em>, <em>Sunny</em>, <em>Photography</em>, and <em>Video</em>.</p>
+<p>The <code>Presets</code> item in right-mouse <code>context-menu</code> will bring up a dialog for managing and applying presets. The <code>context-menu</code> also includes a shortcut for applying each existing presets.</p>
+<p>The preset files are named as follows:</p>
+<pre><code>``$HOME/.config/vdu_controls/Preset_&lt;preset_name&gt;.conf``</code></pre>
+<p>Presets are saved in INI-file format for ease of editing. Each preset file contains a section for each connected VDU, something similar to the following example:</p>
+<pre><code>    [HP_ZR24w_CNT008]
+    brightness = 50
+    osd-language = 02
+
+    [LG_HDR_4K_Display2]
+    brightness = 13
+    audio-speaker-volume = 16
+    input-source = 0f</code></pre>
+<p>Whe the GUI is used to create a preset file it saves a value for every VDU and every visible control. A preset file need not include all VDu’s or settings, it can be manually edited to remove VDU’s and settings that aren’t desired.</p>
 <h2 id="responsiveness">Responsiveness</h2>
 <p>If your VDU’s are modern, you may find a smaller sleep-multiplier will speed up the <code>ddcutil</code>/VDU protocol exchanges making both <code>ddcutil</code> and <code>vdu_controls</code> much more responsive. In a multi-VDU setup where the VDU’s are quite different, VDU config files can be used to specify individual multipliers (see previous section).</p>
 <p>Startup speed may be increased by creating VDU config files with <code>capabilities-override</code> preset. Using an override eliminates the need to run <code>ddcutil</code> to retrieve VDU capabilities. The <code>--create-config-files</code> of context-menu settings-editor will pre-populate <code>capabilities-override</code> for each connected VDU.</p>
