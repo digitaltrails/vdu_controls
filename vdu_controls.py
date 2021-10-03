@@ -388,13 +388,17 @@ COMPLEX_NON_CONTINUOUS_TYPE = 'CNC'
 class VcpCapability:
     """Representation of a VCP (Virtual Control Panel) capability for a VDU."""
 
-    def __init__(self, vcp_code: str, vcp_name: str, vcp_type: str, values: List = None, icon_source: bytes = None):
+    def __init__(self, vcp_code: str, vcp_name: str, vcp_type: str, values: List = None, causes_config_change: bool = False, icon_source: bytes = None):
         self.vcp_code = vcp_code
         self.name = vcp_name
         self.vcp_type = vcp_type
         self.icon_source = icon_source
+        self.causes_config_change = causes_config_change
         # For future use if we want to implement non-continuous types of VCP (VCP types SNC or CNC)
         self.values = [] if values is None else values
+
+    def property_name(self) -> str:
+        return re.sub('[^A-Za-z0-9_-]', '-', self.name).lower()
 
 
 class DdcUtil:
@@ -523,34 +527,21 @@ class DdcUtil:
         return self.supported_codes
 
 
-class VduGuiControlDef:
-    """Defines the properties of a potential VCP GUI control."""
-
-    def __init__(self, vcp_code, vcp_name, causes_config_change: bool = False, icon_source: bytes = None):
-        self.vcp_code = vcp_code
-        self.name = vcp_name
-        self.causes_config_change = causes_config_change
-        self.icon_source = icon_source
-
-    def arg_name(self) -> str:
-        return re.sub('[^A-Za-z0-9_-]', '-', self.name).lower()
-
-
 class VduGuiSupportedControls:
     """Maps of controls supported by name on the command line and in config files."""
     by_code = {
-        '10': VduGuiControlDef('10', 'Brightness', icon_source=BRIGHTNESS_SVG),
-        '12': VduGuiControlDef('12', 'Contrast', icon_source=CONTRAST_SVG),
-        '62': VduGuiControlDef('62', 'Audio volume', icon_source=VOLUME_SVG),
-        '8D': VduGuiControlDef('8D', 'Audio mute', icon_source=VOLUME_SVG),
-        '8F': VduGuiControlDef('8F', 'Audio treble', icon_source=VOLUME_SVG),
-        '91': VduGuiControlDef('91', 'Audio bass', icon_source=VOLUME_SVG),
-        '64': VduGuiControlDef('91', 'Audio mic volume', icon_source=VOLUME_SVG),
-        '60': VduGuiControlDef('60', 'Input Source', causes_config_change=True),
-        'D6': VduGuiControlDef('D6', 'Power mode', causes_config_change=True),
-        'CC': VduGuiControlDef('CC', 'OSD Language'),
+        '10': VcpCapability('10', 'Brightness', 'C', icon_source=BRIGHTNESS_SVG),
+        '12': VcpCapability('12', 'Contrast', 'C', icon_source=CONTRAST_SVG),
+        '62': VcpCapability('62', 'Audio volume', 'C', icon_source=VOLUME_SVG),
+        '8D': VcpCapability('8D', 'Audio mute', 'SNC', icon_source=VOLUME_SVG),
+        '8F': VcpCapability('8F', 'Audio treble', 'C', icon_source=VOLUME_SVG),
+        '91': VcpCapability('91', 'Audio bass', 'C', icon_source=VOLUME_SVG),
+        '64': VcpCapability('91', 'Audio mic volume', 'C', icon_source=VOLUME_SVG),
+        '60': VcpCapability('60', 'Input Source', 'SNC', causes_config_change=True),
+        'D6': VcpCapability('D6', 'Power mode', 'SNC', causes_config_change=True),
+        'CC': VcpCapability('CC', 'OSD Language', 'SNC'),
     }
-    by_arg_name = {c.arg_name(): c for c in by_code.values()}
+    by_arg_name = {c.property_name(): c for c in by_code.values()}
     ddcutil_supported = None
 
     def __init__(self):
@@ -595,7 +586,7 @@ class VduControlsConfig:
         self.ini_content['ddcutil-capabilities'] = {}
 
         for vcp_code, item in VDU_SUPPORTED_CONTROLS.by_code.items():
-            self.ini_content['vdu-controls-widgets'][item.arg_name()] = 'no'
+            self.ini_content['vdu-controls-widgets'][item.property_name()] = 'no'
 
         self.ini_content['vdu-controls-widgets']['enable-vcp-codes'] = ''
 
@@ -647,16 +638,16 @@ class VduControlsConfig:
         self.ini_content['ddcutil-capabilities']['capabilities-override'] = alt_text
 
     def enable_supported_vcp_code(self, vcp_code: str):
-        self.ini_content['vdu-controls-widgets'][VDU_SUPPORTED_CONTROLS.by_code[vcp_code].arg_name()] = 'yes'
+        self.ini_content['vdu-controls-widgets'][VDU_SUPPORTED_CONTROLS.by_code[vcp_code].property_name()] = 'yes'
 
     def disable_supported_vcp_code(self, vcp_code: str):
-        self.ini_content['vdu-controls-widgets'][VDU_SUPPORTED_CONTROLS.by_code[vcp_code].arg_name()] = 'no'
+        self.ini_content['vdu-controls-widgets'][VDU_SUPPORTED_CONTROLS.by_code[vcp_code].property_name()] = 'no'
 
     def enable_unsupported_vcp_code(self, vcp_code: str):
 
         if vcp_code in VDU_SUPPORTED_CONTROLS.by_code:
             print("WARNING: vdu_controls supported VCP_CODE {} ({}) is enabled in the list for unsupported codes.".
-                  format(vcp_code, VDU_SUPPORTED_CONTROLS.by_code[vcp_code].arg_name()))
+                  format(vcp_code, VDU_SUPPORTED_CONTROLS.by_code[vcp_code].property_name()))
             self.enable_supported_vcp_code(vcp_code)
             return
         # No very efficient
@@ -741,10 +732,10 @@ class VduControlsConfig:
         parser.add_argument('--show',
                             default=[],
                             action='append',
-                            choices=[vcp.arg_name() for vcp in VDU_SUPPORTED_CONTROLS.by_code.values()],
+                            choices=[vcp.property_name() for vcp in VDU_SUPPORTED_CONTROLS.by_code.values()],
                             help='show specified control only (--show may be specified multiple times)')
         parser.add_argument('--hide', default=[], action='append',
-                            choices=[vcp.arg_name() for vcp in VDU_SUPPORTED_CONTROLS.by_code.values()],
+                            choices=[vcp.property_name() for vcp in VDU_SUPPORTED_CONTROLS.by_code.values()],
                             help='hide/disable a control (--hide may be specified multiple times)')
         parser.add_argument('--enable-vcp-code', type=str, action='append',
                             help='enable controls for an unsupported vcp-code hex value (may be specified multiple times)')
@@ -785,13 +776,13 @@ class VduControlsConfig:
 
         if len(parsed_args.show) != 0:
             for control_def in VDU_SUPPORTED_CONTROLS.by_arg_name.values():
-                if control_def.arg_name() in parsed_args.show:
+                if control_def.property_name() in parsed_args.show:
                     self.enable_supported_vcp_code(control_def.vcp_code)
                 else:
                     self.disable_supported_vcp_code(control_def.vcp_code)
         if len(parsed_args.hide) != 0:
             for control_def in VDU_SUPPORTED_CONTROLS.by_code.values():
-                if control_def.arg_name() in parsed_args.hide:
+                if control_def.property_name() in parsed_args.hide:
                     self.disable_supported_vcp_code(control_def.vcp_code)
 
         if parsed_args.enable_vcp_code is not None:
@@ -1114,7 +1105,7 @@ def restart_due_to_config_change():
     QCoreApplication.exit(EXIT_CODE_FOR_RESTART)
 
 
-class VduSliderControl(QWidget):
+class VduControlSlider(QWidget):
     """
     GUI control for a DDC continuously variable attribute.
 
@@ -1205,7 +1196,7 @@ class VduSliderControl(QWidget):
         self.slider.setValue(int(self.current_value))
 
 
-class VduComboBoxControl(QWidget):
+class VduControlComboBox(QWidget):
     """
     GUI control for a DDC non-continuously variable attribute, one that has a list of choices.
 
@@ -1287,10 +1278,10 @@ class VduControlPanel(QWidget):
                 control = None
                 capability = vdu_model.capabilities[vcp_code]
                 if capability.vcp_type == CONTINUOUS_TYPE:
-                    control = VduSliderControl(vdu_model, capability)
+                    control = VduControlSlider(vdu_model, capability)
                 elif capability.vcp_type == SIMPLE_NON_CONTINUOUS_TYPE:
                     try:
-                        control = VduComboBoxControl(vdu_model, capability)
+                        control = VduControlComboBox(vdu_model, capability)
                     except ValueError as valueError:
                         alert = QMessageBox()
                         alert.setText(valueError.args[0])
@@ -1336,24 +1327,24 @@ class VduControlPanel(QWidget):
         vdu_section = self.vdu_model.vdu_model_and_serial_id
         preset_ini[vdu_section] = {}
         for control in self.vcp_controls:
-            preset_ini[vdu_section][control.vcp_capability.name] = control.current_value
+            preset_ini[vdu_section][control.vcp_capability.property_name()] = control.current_value
 
     def restore_state(self, preset_ini: configparser.ConfigParser):
         vdu_section = self.vdu_model.vdu_model_and_serial_id
         for control in self.vcp_controls:
-            if control.vcp_capability.name in preset_ini[vdu_section]:
-                control.current_value = preset_ini[vdu_section][control.vcp_capability.name]
+            if control.vcp_capability.property_name() in preset_ini[vdu_section]:
+                control.current_value = preset_ini[vdu_section][control.vcp_capability.property_name()]
         self.refresh_view()
 
 
-class VduContextMenu(QMenu):
+class ContextMenu(QMenu):
 
     def __init__(self,
                  about_action=None, help_action=None, settings_action=None, presets_action=None,
                  quit_action=None):
         super().__init__()
         self.main_window = None
-        self.preset_controller = VduPresetController()
+        self.preset_controller = PresetController()
         self.addAction(self.style().standardIcon(QStyle.SP_ComputerIcon),
                        translate('Presets'),
                        presets_action)
@@ -1388,7 +1379,7 @@ class VduContextMenu(QMenu):
         self.update()
 
     def refresh_preset_menu(self):
-        for name, path_str in self.preset_controller.find_presets().items():
+        for name, path_str in self.preset_controller.find_preset_paths().items():
             if not self.has_preset(name):
                 self.insert_preset(name)
 
@@ -1413,7 +1404,7 @@ class VduContextMenu(QMenu):
 class VduControlsMainWindow(QWidget):
     """GUI for detected VDU's, it will construct and contain a control panel for each VDU."""
 
-    def __init__(self, default_config: VduControlsConfig, detect_vdu_hook: callable, app_context_menu: VduContextMenu):
+    def __init__(self, default_config: VduControlsConfig, detect_vdu_hook: callable, app_context_menu: ContextMenu):
         super().__init__()
         layout = QVBoxLayout()
         self.ddcutil = DdcUtil(debug=default_config.is_debug_enabled(), common_args=None,
@@ -1534,18 +1525,18 @@ class RefreshVduDataTask(QThread):
         self.task_finished.emit()
 
 
-class VduPresetController:
+class PresetController:
     def __init__(self):
         pass
 
-    def find_presets(self) -> Mapping[str, str]:
-        presets = {}
+    def find_preset_paths(self) -> Mapping[str, str]:
+        preset_paths = {}
         for path_str in glob.glob(CONFIG_DIR_PATH.joinpath("Preset_*.conf").as_posix()):
             preset_name = os.path.splitext(os.path.basename(path_str))[0].replace('Preset_', '').replace('_', ' ')
-            presets[preset_name] = path_str
-        return presets
+            preset_paths[preset_name] = path_str
+        return preset_paths
 
-    def save_preset(self, preset_name: str, main_window: VduControlsMainWindow, context_menu: VduContextMenu):
+    def save_preset(self, preset_name: str, main_window: VduControlsMainWindow, context_menu: ContextMenu):
         preset_ini = configparser.ConfigParser()
         preset_path = get_config_path(proper_name('Preset', preset_name))
         if preset_path.exists():
@@ -1579,7 +1570,7 @@ class VduPresetController:
                 if section == control_panel.vdu_model.vdu_model_and_serial_id:
                     control_panel.restore_state(preset_ini)
 
-    def delete_preset(self, preset_name: str, context_menu: VduContextMenu):
+    def delete_preset(self, preset_name: str, context_menu: ContextMenu):
         preset_path = get_config_path(proper_name('Preset', preset_name))
         print("INFO: deleting preset file '{}'".format(preset_path.as_posix()))
         if preset_path.exists():
@@ -1588,13 +1579,14 @@ class VduPresetController:
             context_menu.removeAction(context_menu.get_preset(preset_name))
 
 
-class PresetsEditor(QDialog):
+class PresetsDialog(QDialog):
+    """A dialog for creating/updating/removing presets."""
 
-    def __init__(self, main_window: VduControlsMainWindow, context_menu: VduContextMenu) -> None:
+    def __init__(self, main_window: VduControlsMainWindow, context_menu: ContextMenu) -> None:
         super().__init__()
         self.main_window = main_window
         self.context_menu = context_menu
-        self.preset_controller = VduPresetController()
+        self.preset_controller = PresetController()
         self.setMinimumWidth(512)
         layout = QVBoxLayout()
         self.setLayout(layout)
@@ -1614,12 +1606,15 @@ class PresetsEditor(QDialog):
         def save_preset(preset_name: str = None):
             self.preset_controller.save_preset(preset_name, self.main_window, self.context_menu)
 
-        def delete_preset(preset_name: str = None, preset_widget: QWidget = None):
+        def delete_preset(preset_name: str = None, target_widget: QWidget = None):
             print("delete", preset_name)
             self.preset_controller.delete_preset(preset_name, self.context_menu)
-            presets_layout.removeWidget(preset_widget)
+            print(target_widget)
+            presets_layout.removeWidget(target_widget)
+            target_widget.deleteLater()
+            presets_panel.repaint()
 
-        for name in self.preset_controller.find_presets().keys():
+        for name in self.preset_controller.find_preset_paths().keys():
             preset_widget = self.create_preset_widget(
                 name,
                 restore_action=restore_preset,
@@ -1642,7 +1637,9 @@ class PresetsEditor(QDialog):
         add_preset_layout.addWidget(add_button)
 
         def add_action():
-            new_name = add_preset_name_edit.text()
+            new_name = add_preset_name_edit.text().strip()
+            if new_name == '':
+                return
             if self.has_preset(new_name):
                 print("INFO: Already exists {}".format(new_name))
                 save_message = QMessageBox()
@@ -1671,6 +1668,9 @@ class PresetsEditor(QDialog):
 
         layout.addWidget(button_box)
 
+    def accept(self) -> None:
+        pass
+
     def has_preset(self, name) -> bool:
         for w in self.presets_panel.children():
             if isinstance(w, self.PresetWidget):
@@ -1689,6 +1689,7 @@ class PresetsEditor(QDialog):
         preset_name_button.setToolTip('Activate this preset.')
         line_layout.addWidget(preset_name_button)
         preset_name_button.clicked.connect(partial(restore_action, preset_name=name))
+        preset_name_button.setAutoDefault(False)
 
         save_button = QPushButton()
         save_button.setIcon(self.style().standardIcon(QStyle.SP_DriveFDIcon))
@@ -1697,6 +1698,7 @@ class PresetsEditor(QDialog):
         save_button.setToolTip(translate('Save the current VDU settings to this preset.'))
         line_layout.addWidget(save_button)
         save_button.clicked.connect(partial(save_action, preset_name=name))
+        save_button.setAutoDefault(False)
 
         delete_button = QPushButton()
         delete_button.setIcon(self.style().standardIcon(QStyle.SP_DialogCloseButton))
@@ -1704,7 +1706,8 @@ class PresetsEditor(QDialog):
         delete_button.setStyleSheet('QPushButton { border: none; margin: 0px; padding: 0px;}')
         delete_button.setToolTip('Delete this preset.')
         line_layout.addWidget(delete_button)
-        delete_button.clicked.connect(partial(delete_action, preset_name=name, preset_widget=preset_widget))
+        delete_button.clicked.connect(partial(delete_action, preset_name=name, target_widget=preset_widget))
+        delete_button.setAutoDefault(False)
 
         return preset_widget
 
@@ -1712,6 +1715,7 @@ class PresetsEditor(QDialog):
         def __init__(self, name: str):
             super().__init__()
             self.name = name
+
 
 def exception_handler(e_type, e_value, e_traceback):
     """Overarching error handler in case something unexpected happens."""
@@ -1847,14 +1851,14 @@ def main():
         editor.exec()
 
     def edit_presets():
-        preset_editor = PresetsEditor(main_window, app_context_menu)
+        preset_editor = PresetsDialog(main_window, app_context_menu)
         preset_editor.exec()
 
-    app_context_menu = VduContextMenu(about_action=about_popup,
-                                      help_action=help_popup,
-                                      settings_action=edit_config,
-                                      presets_action=edit_presets,
-                                      quit_action=app.quit)
+    app_context_menu = ContextMenu(about_action=about_popup,
+                                   help_action=help_popup,
+                                   settings_action=edit_config,
+                                   presets_action=edit_presets,
+                                   quit_action=app.quit)
 
     pixmap = get_splash_image()
     splash = QSplashScreen(pixmap.scaledToWidth(800).scaledToHeight(400),
