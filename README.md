@@ -62,10 +62,8 @@ the key to getting permissions set permanently.
 Installing
 ----------
 
-As previously stated, the ``vdu_vontrols.py`` script is only file required beyond the prerequisites, plus there
-are also rpm's available for system-wide installation at:
-
-[https://software.opensuse.org/package/vdu_controls](https://software.opensuse.org/package/vdu_controls)
+As previously stated, the ``vdu_vontrols.py`` script is only file required beyond the prerequisites. There
+are also **OpenSUSE** and **Fedora** rpm's available at: [https://software.opensuse.org/package/vdu_controls](https://software.opensuse.org/package/vdu_controls)
 
 That makes three options for "installation": 
 
