@@ -21,7 +21,10 @@ Getting Started
 ---------------
 
 To get started with ``vdu_controls``, you only need to download the ``vdu_controls.py`` python script and
-check that the dependencies described below are in place.
+check that the dependencies described below are in place.  Alternatively, should you wish to install ``vdu_controls`` 
+for all users, rpm's are available for **OpenSUSE** and **Fedora**, see the *Install* section below. 
+
+
 
 Dependencies
 ------------
@@ -59,29 +62,53 @@ the key to getting permissions set permanently.
 Installing
 ----------
 
-As previously stated, the ``vdu_vontrols.py`` script is only file required beyond the prerequisites. There are
-two options for "installation": 
+As previously stated, the ``vdu_vontrols.py`` script is only file required beyond the prerequisites, plus there
+are also rpm's available for system-wide installation at:
 
-* The script can be run without installation by using a python interpreter, for example:\
-  ``% python3 vdu_controls.py`` 
-* The script can be self installed as desktop application in the current user's desktop menu 
-  as *Applications->Settings->VDU Controls* by running: ``% python3 vdu_controls.py --install``\
-  Depending on which desktop you're running menu changes may require logout before they become visible.
+[https://software.opensuse.org/package/vdu_controls](https://software.opensuse.org/package/vdu_controls)
 
-Please note above options only install ``vdu-controls`` for the current user. At this time there is no
-automated support for installing ``vdu-controls`` into a shared location.  The script and desktop-file 
+That makes three options for "installation": 
+
+1. The script can be run without installation by using a python interpreter, for example:
+   ```
+   % python3 vdu_controls.py
+   ```
+2. The script can be self installed as desktop application in the current user's desktop menu 
+   as *Applications->Settings->VDU Controls* by running:
+   ```
+    % python3 vdu_controls.py --install
+   ```
+      Depending on which desktop you're running menu changes may require logout before they become visible.
+3. A system-wide installation:
+   ```
+   sudo rpm --install vdu_controls-1.5.0-17.1.noarch.rpm
+   ```
+   The rpm will install the following files:
+   ```
+   /usr/bin/vdu_controls
+   /usr/share/applications/vdu_controls.desktop
+   /usr/share/licenses/vdu_controls
+   /usr/share/licenses/vdu_controls/LICENSE.md
+   /usr/share/man/man1/vdu_controls.1.gz
+   ```
+
+Please note the first two options only install ``vdu-controls`` for the current user.  The script and desktop-file 
 installed for a single user could be modified and copied into /usr or /usr/local hierarchies should you 
 wish to do so.
 
 Executing the program
 ---------------------
 
-* If installed by running the ``--install`` option, a menu item named **VDU Controls** should be able to be located in 
-the settings menu or by entering part of its name in the application menus search bar.
-* If ``--install`` option has been run, a script called ``vdu_controls`` should be in $HOME/bin.
-  If ``$HOME/bin`` is on the user's ``PATH``, ``vdu_controls`` will be able to be run from the command
-  line, for example:\
-  ``% vdu_controls --show brightness --show contrast --show audio-volume``
+* If installed from rpm, **VDU Controls** should be in everyone's application menu under **Settings**. 
+  The ``vdu_controls`` command will also be in everyone's ``PATH`` and will be able to be run from the command
+  line, for example:
+     ```
+     % vdu_controls --show brightness --show contrast --show audio-volume
+     ```
+* If installed by the current user via the ``--install`` option, **VDU Controls** should be in
+  the current user's application menu under **Settings**. The ``vdu_controls`` command will be in ``$HOME/bin``.
+  If ``$HOME/bin`` is on the user's ``PATH``, ``vdu_controls`` will be also able to be run from the command
+  line in the same manner as above.
 * If the script has not been installed, it can still be run on the command line via the python interpreter, 
   for example:\
   ``% python3 vdu_controls.py --no-splash --system-tray --show brightness --show contrast``

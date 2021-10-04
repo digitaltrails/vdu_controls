@@ -79,4 +79,5 @@ gzip -c docs/_build/man/vdu_controls.1 > %{buildroot}/%{_datadir}/man/man1/%{nam
 
 %changelog
 
-
+* Mon Oct 04 2021 Michael Hamilton <michael@actrix.gen.nz>
+- Packaged for rpm
