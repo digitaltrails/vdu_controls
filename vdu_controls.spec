@@ -25,12 +25,16 @@ URL: https://github.com/digitaltrails/vdu_controls
 Group: System/GUI/Other
 Summary: Visual Display Unit virtual control panel
 Source0:        %{name}-%{version}.tar.gz
+
+%if 0%{?suse_version} || 0%{?fedora_version}
 Requires: ddcutil python38 python38-qt5
-BuildRequires: python3
+%endif
+
 BuildRequires: coreutils
 %if 0%{?suse_version}
 BuildRequires: update-desktop-files
 %endif
+
 BuildRoot: %{_tmppath}/%{name}-%{version}-build
 %description
 vdu_controls is a virtual control panel for externally connected
@@ -64,11 +68,13 @@ Icon=preferences-desktop-display-color
 Categories=Settings
 EOF
 
+gzip -c docs/_build/man/vdu_controls.1 > %{buildroot}/%{_datadir}/man/man1/%{name}.1.gz
+
+%post
+
 %if 0%{?suse_version}
 %suse_update_desktop_file %{name} Settings
 %endif
-
-gzip -c docs/_build/man/vdu_controls.1 > %{buildroot}/%{_datadir}/man/man1/%{name}.1.gz
 
 %files
 %license LICENSE.md
