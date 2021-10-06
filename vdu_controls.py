@@ -1890,7 +1890,7 @@ def install_as_desktop_application(uninstall: bool = False):
 
     print('INFO: installation complete. Your desktop->applications->settings should now contain VDU Controls')
 
-
+# TODO consider changing to a non-modal QDialog which would also remove the need for a multiple inheritance
 class AboutDialog(QMessageBox, DialogSingletonMixin):
 
     @staticmethod
@@ -1907,8 +1907,7 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
         about_message.setText(translate('About vdu_controls'))
         about_message.setInformativeText(translate(ABOUT_TEXT))
         about_message.setIcon(QMessageBox.Information)
-        # .show() is non-modal, .exec() is modal
-        about_message.show()
+        about_message.exec()
 
 
 class HelpDialog(QDialog, DialogSingletonMixin):
