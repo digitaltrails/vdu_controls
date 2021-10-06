@@ -451,7 +451,7 @@ class DdcUtil:
         for display_str in re.split("\n\n", result.stdout.decode('utf-8')):
             display_match = display_pattern.match(display_str)
             if display_match is not None:
-                print("INFO: checking {}".format(display_str))
+                print(f"INFO: checking {display_str}")
                 vdu_id = display_match.group(1)
                 monitor_match = monitor_pattern.search(display_str)
                 manufacturer, model_name, serial_number = \
@@ -460,7 +460,7 @@ class DdcUtil:
                     serial_number = 'Display' + vdu_id
                 display_list.append((vdu_id, manufacturer, model_name, serial_number))
             elif len(display_str.strip()) != 0:
-                print("WARNING: ignoring {}".format(display_str))
+                print(f"WARNING: ignoring {display_str}")
         return display_list
 
     def query_capabilities(self, vdu_id: str) -> str:
@@ -500,16 +500,13 @@ class DdcUtil:
                     if cnc_match is not None:
                         return '{:x}'.format(int(cnc_match.group(3), 16) << 8 | int(cnc_match.group(4), 16)), '0'
                 else:
-                    raise TypeError('Unsupported VCP type {} for monitor {} vcp_code {}'.format(
-                        type_indicator, vdu_id, vcp_code))
-            print("WARNING: obtained garbage '" + result.stdout.decode('utf-8') + "' will try again.")
-            print("WARNING: ddcutil maybe running too fast for monitor {}, try increasing --sleep-multiplier.".format(
-                vdu_id))
+                    raise TypeError(f'Unsupported VCP type {type_indicator} for monitor {vdu_id} vcp_code {vcp_code}')
+            print(f"WARNING: obtained garbage '{result.stdout.decode('utf-8')}' will try again.")
+            print(f"WARNING: ddcutil maybe running too fast for monitor {vdu_id}, try increasing --sleep-multiplier.")
             time.sleep(2)
-        print("ERROR: ddcutil failed all attempts to get value for monitor {} vcp_code {}".format(vdu_id, vcp_code))
+        print(f"ERROR: ddcutil failed all attempts to get value for monitor {vdu_id} vcp_code {vcp_code}")
         raise ValueError(
-            "ddcutil returned garbage for monitor {} vcp_code {}, try increasing --sleep-multiplier".format(
-                vdu_id, vcp_code))
+            f"ddcutil returned garbage for monitor {vdu_id} vcp_code {vcp_code}, try increasing --sleep-multiplier")
 
     def set_attribute(self, vdu_id: str, vcp_code: str, new_value: str, sleep_multiplier: float = None) -> None:
         """Send a new value to a specific VDU and vcp_code."""
@@ -546,10 +543,12 @@ class DdcUtil:
 class DialogSingletonMixin():
     """
     A mixin that can augment a QDialog or QMessageBox with code to enforce a singleton UI.
+    For example, it is used so that only ones settings editor can be active at a time.
     """
     _dialogs_map = {}
 
     def __init__(self) -> None:
+        """Registers the concrete class as a singleton so it can be reused later."""
         super().__init__()
         class_name = self.__class__.__name__
         if class_name in DialogSingletonMixin._dialogs_map:
@@ -558,18 +557,24 @@ class DialogSingletonMixin():
         DialogSingletonMixin._dialogs_map[class_name] = self
 
     def closeEvent(self, event) -> None:
+        """Subclasses that implement their own closeEvent must call this closeEvent to deregister the singleton"""
         class_name = self.__class__.__name__
         print(f'DEBUG: SingletonDialog remove {class_name}')
         del DialogSingletonMixin._dialogs_map[class_name]
         event.accept()
 
     def make_visible(self):
+        """
+        If the dialog exists(), call this to make it visible by raising it.
+        Internal used by the class method show_existing_dialog()
+        """
         self.show()
         self.raise_()
         self.activateWindow()
 
     @classmethod
     def show_existing_dialog(cls: Type):
+        """If the dialog exists(), call this to make it visible by raising it."""
         class_name = cls.__name__
         print(f'DEBUG: SingletonDialog show existing {class_name}')
         instance = DialogSingletonMixin._dialogs_map[class_name]
@@ -577,6 +582,7 @@ class DialogSingletonMixin():
 
     @classmethod
     def exists(cls: Type) -> bool:
+        """Returns true if the dialog has already been created."""
         class_name = cls.__name__
         print(f'DEBUG: SingletonDialog exists {class_name} {class_name in DialogSingletonMixin._dialogs_map}')
         return class_name in DialogSingletonMixin._dialogs_map
@@ -701,8 +707,9 @@ class VduControlsConfig:
     def enable_unsupported_vcp_code(self, vcp_code: str) -> None:
 
         if vcp_code in VDU_SUPPORTED_CONTROLS.by_code:
-            print("WARNING: vdu_controls supported VCP_CODE {} ({}) is enabled in the list for unsupported codes.".
-                  format(vcp_code, VDU_SUPPORTED_CONTROLS.by_code[vcp_code].property_name()))
+            print(f"WARNING: vdu_controls supported VCP_CODE {vcp_code} "
+                  f" ({VDU_SUPPORTED_CONTROLS.by_code[vcp_code].property_name()})"
+                  f" is enabled in the list for unsupported codes.")
             self.enable_supported_vcp_code(vcp_code)
             return
         # No very efficient
@@ -731,7 +738,7 @@ class VduControlsConfig:
         config_text = Path(config_path).read_text()
         print("INFO: using config file '" + config_path.as_posix() + "'")
         if re.search(r'(\[ddcutil-capabilities])|(\[ddcutil-parameters])|(\[vdu-controls-\w])', config_text) is None:
-            print("Info: old style config file {} overrides ddcutils capabilities".format(basename))
+            print(f"Info: old style config file {basename} overrides ddcutils capabilities")
             self.ini_content['ddcutil-capabilities']['capabilities-override'] = config_text
             return
         self.ini_content.read_string(config_text)
@@ -748,17 +755,16 @@ class VduControlsConfig:
         origin = 'configuration' if self.file_path is None else os.path.basename(self.file_path)
         for section in self.ini_content.sections():
             for option in self.ini_content[section]:
-                print("DEBUG: {} [{}] {} = {}".format(origin, section, option, self.ini_content[section][option]))
+                print(f"DEBUG: {origin} [{section}] {option} = {self.ini_content[section][option]}")
 
     def write_file(self, config_path: Path, include_globals: bool = True, overwrite: bool = False) -> None:
         """Write the config to a file.  Used for creating initial template config files."""
         self.file_path = config_path
         if config_path.is_file():
             if not overwrite:
-                print(
-                    "ERROR: cannot overwrite {}, remove the file if you really want to replace it.".format(config_path))
+                print(f"ERROR: {config_path.as_posix()} exists, remove the file if you really want to replace it.")
                 return
-        print("WARNING: creating new config file {}", config_path.as_posix())
+        print(f"WARNING: creating new config file {config_path.as_posix()}")
         if not config_path.parent.is_dir():
             os.makedirs(config_path.parent)
         with open(config_path, 'w') as config_file:
@@ -982,6 +988,7 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
         for editor in self.editors:
             editor.save()
             something_changed = editor.has_made_changes or something_changed
+        # if one of the edits has saved some changes, we need to restart to pick them up - crude, but effective.
         if something_changed:
             restart_message = QMessageBox()
             restart_message.setText(translate("vdu_controls will now reset and use the new settings."))
@@ -989,6 +996,7 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
             restart_message.setStandardButtons(QMessageBox.Ok)
             restart_message.exec()
             QCoreApplication.exit(EXIT_CODE_FOR_RESTART)
+        # Must call the super closeEvent to ensure we unregister as a singleton dialog.
         super().closeEvent(event)
 
     class SettingsEditorTab(QWidget):
@@ -1033,7 +1041,7 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
                     self.save(cancel=QMessageBox.Cancel)
                 else:
                     save_message = QMessageBox()
-                    message = translate('No unsaved changes for {}.'.format(vdu_config.config_name))
+                    message = translate('No unsaved changes for {}.').format(vdu_config.config_name)
                     save_message.setText(message)
                     save_message.setIcon(QMessageBox.Critical)
                     save_message.setStandardButtons(QMessageBox.Ok)
@@ -1081,7 +1089,7 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
             checkbox.setChecked(ini_editable.getboolean(section, option))
 
             def toggled(is_checked: bool) -> None:
-                print(section, option, is_checked)
+                # print(section, option, is_checked)
                 ini_editable[section][option] = 'yes' if is_checked else 'no'
 
             checkbox.toggled.connect(toggled)
@@ -1103,7 +1111,7 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
             text_input.setText(ini_editable[section][option])
 
             def editing_finished() -> None:
-                print(section, option, text_input.text())
+                # print(section, option, text_input.text())
                 ini_editable[section][option] = str(text_input.text())
 
             text_input.editingFinished.connect(editing_finished)
@@ -1119,12 +1127,14 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
             text_input = QLineEdit()
             text_input.setMaximumWidth(1000)
             text_input.setMaxLength(500)
+            # CSV of hex numbers
+            # TODO - should probably also allow spaces as well as commas?
             validator = QRegExpValidator(QRegExp(r"^[0-9a-fA-F]{2}([ \t]*,[ \t]*[0-9a-fA-F]{2})*$"))
             text_input.setValidator(validator)
             text_input.setText(ini_editable[section][option])
 
             def editing_finished() -> None:
-                print(section, option, text_input.text())
+                # print(section, option, text_input.text())
                 ini_editable[section][option] = str(text_input.text())
 
             def input_rejected() -> None:
@@ -1148,7 +1158,7 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
             text_editor = QPlainTextEdit(ini_editable[section][option])
 
             def text_changed() -> None:
-                print(section, option, text_editor.toPlainText())
+                # print(section, option, text_editor.toPlainText())
                 ini_editable[section][option] = text_editor.toPlainText()
 
             text_editor.textChanged.connect(text_changed)
@@ -1356,8 +1366,7 @@ class VduControlPanel(QWidget):
                         alert.setIcon(QMessageBox.Critical)
                         alert.exec()
                 else:
-                    raise TypeError(
-                        'No GUI support for VCP type {} for vcp_code {}'.format(capability.vcp_type, vcp_code))
+                    raise TypeError(f'No GUI support for VCP type {capability.vcp_type} for vcp_code {vcp_code}')
                 if control is not None:
                     layout.addWidget(control)
                     self.vcp_controls.append(control)
@@ -1440,7 +1449,7 @@ class ContextMenu(QMenu):
 
         action = self.addAction(self.style().standardIcon(QStyle.SP_CommandLink), name, restore_preset)
         self.insertAction(self.presets_separator, action)
-        print(self.actions())
+        #print(self.actions())
         self.update()
 
     def refresh_preset_menu(self) -> None:
@@ -1453,7 +1462,6 @@ class ContextMenu(QMenu):
             if action == self.presets_separator:
                 break
             if action.text() == name:
-                print(f'INFO: Found preset {name}')
                 return True
         return False
 
@@ -1616,12 +1624,11 @@ class PresetController:
             rc = save_message.exec()
             if rc == QMessageBox.Cancel:
                 return
-        print("INFO: saving preset file '{}'".format(preset_path.as_posix()))
+        print(f"INFO: saving preset file '{preset_path.as_posix()}'")
         for control_panel in main_window.vdu_control_panels:
             control_panel.save_state(preset_ini)
         if not preset_path.parent.is_dir():
             os.makedirs(preset_path.parent)
-        print("INFO: writing preset file '" + preset_path.as_posix() + "'")
         with open(preset_path, 'w') as preset_file:
             preset_ini.write(preset_file)
         if not context_menu.has_preset(preset_name):
@@ -1629,7 +1636,7 @@ class PresetController:
 
     def restore_preset(self, preset_name: str, main_window: VduControlsMainWindow) -> None:
         preset_path = get_config_path(proper_name('Preset', preset_name))
-        print("INFO: reading preset file '{}'".format(preset_path.as_posix()))
+        print(f"INFO: reading preset file '{preset_path.as_posix()}'")
         preset_text = Path(preset_path).read_text()
         preset_ini = configparser.ConfigParser()
         preset_ini.read_string(preset_text)
@@ -1640,7 +1647,7 @@ class PresetController:
 
     def delete_preset(self, preset_name: str, context_menu: ContextMenu) -> None:
         preset_path = get_config_path(proper_name('Preset', preset_name))
-        print("INFO: deleting preset file '{}'".format(preset_path.as_posix()))
+        print(f"INFO: deleting preset file '{preset_path.as_posix()}'")
         if preset_path.exists():
             os.remove(preset_path.as_posix())
         if context_menu.has_preset(preset_name):
@@ -1682,9 +1689,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             self.preset_controller.save_preset(preset_name, self.main_window, self.context_menu)
 
         def delete_preset(preset_name: str = None, target_widget: QWidget = None) -> None:
-            print("delete", preset_name)
+            print(f"INFO: delete preset {preset_name}")
             self.preset_controller.delete_preset(preset_name, self.context_menu)
-            print(target_widget)
             presets_layout.removeWidget(target_widget)
             target_widget.deleteLater()
             presets_panel.repaint()
@@ -1716,7 +1722,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             if new_name == '':
                 return
             if self.has_preset(new_name):
-                print("INFO: Already exists {}".format(new_name))
+                print(f"INFO: Already exists {new_name}")
                 save_message = QMessageBox()
                 message = translate("Preset called '{}' already exists.").format(new_name)
                 save_message.setText(message)
@@ -1743,9 +1749,6 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
 
         layout.addWidget(button_box)
         self.exec()
-
-    def closeEvent(self, event) -> None:
-        super().closeEvent(event)
 
     def has_preset(self, name) -> bool:
         for w in self.presets_panel.children():
@@ -1822,13 +1825,13 @@ def install_as_desktop_application(uninstall: bool = False):
     """Self install this script in the current Linux user's bin directory and desktop applications->settings menu."""
     desktop_dir = Path.home().joinpath('.local', 'share', 'applications')
     if not desktop_dir.exists():
-        print("ERROR: No desktop directory is present:{}".format(desktop_dir.as_posix()),
-              "Cannot proceed - is this a non-standard desktop?")
+        print(f"ERROR: No desktop directory is present:{desktop_dir.as_posix()}"
+              " Cannot proceed - is this a non-standard desktop?")
         return
 
     bin_dir = Path.home().joinpath('bin')
     if not bin_dir.is_dir():
-        print("WARNING: creating:{}".format(bin_dir.as_posix()))
+        print(f"WARNING: creating:{bin_dir.as_posix()}")
         os.mkdir(bin_dir)
 
     installed_script_path = bin_dir.joinpath("vdu_controls")
@@ -1836,35 +1839,35 @@ def install_as_desktop_application(uninstall: bool = False):
 
     if uninstall:
         os.remove(installed_script_path)
-        print('INFO: removed {}'.format(installed_script_path.as_posix()))
+        print(f'INFO: removed {installed_script_path.as_posix()}')
         os.remove(desktop_definition_path)
-        print('INFO: removed {}'.format(desktop_definition_path.as_posix()))
+        print(f'INFO: removed {desktop_definition_path.as_posix()}')
         return
 
     if installed_script_path.exists():
-        print("WARNING: skipping installation of {}, it is already present.".format(installed_script_path.as_posix()))
+        print(f"WARNING: skipping installation of {installed_script_path.as_posix()}, it is already present.")
     else:
         source = open(__file__).read()
         source = source.replace("#!/usr/bin/python3", '#!' + sys.executable)
-        print('INFO: creating {}'.format(installed_script_path.as_posix()))
+        print(f'INFO: creating {installed_script_path.as_posix()}')
         open(installed_script_path, 'w').write(source)
-        print('INFO: chmod u+rwx {}'.format(installed_script_path.as_posix()))
+        print(f'INFO: chmod u+rwx {installed_script_path.as_posix()}')
         os.chmod(installed_script_path, stat.S_IRWXU)
 
     if desktop_definition_path.exists():
-        print("WARNING: skipping installation of {}, it is already present.".format(desktop_definition_path.as_posix()))
+        print(f"WARNING: skipping installation of {desktop_definition_path.as_posix()}, it is already present.")
     else:
-        print('INFO: creating {}'.format(desktop_definition_path.as_posix()))
-        desktop_definition = textwrap.dedent("""
+        print(f'INFO: creating {desktop_definition_path.as_posix()}')
+        desktop_definition = textwrap.dedent(f"""
             [Desktop Entry]
             Type=Application
-            Exec={}
+            Exec={installed_script_path.as_posix()}
             Name=VDU Controls
             GenericName=VDU controls
             Comment=Virtual Control Panel for externally connected VDU's
             Icon=preferences-desktop-display-color
             Categories=Qt;Settings;
-            """).format(installed_script_path.as_posix())
+            """)
         open(desktop_definition_path, 'w').write(desktop_definition)
 
     print('INFO: installation complete. Your desktop->applications->settings should now contain VDU Controls')
