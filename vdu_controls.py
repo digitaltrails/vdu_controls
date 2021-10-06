@@ -996,7 +996,8 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
             tab = self.SettingsEditorTab(self, vdu_config)
             tabs.addTab(tab, vdu_config.get_config_name())
             self.editors.append(tab)
-        self.exec()
+        # .show() is non-modal, .exec() is modal
+        self.show()
 
     def closeEvent(self, event) -> None:
         something_changed = False
@@ -1764,7 +1765,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         button_layout.addWidget(close_button)
 
         layout.addWidget(button_box)
-        self.exec()
+        # .show() is non-modal, .exec() is modal
+        self.show()
 
     def has_preset(self, name) -> bool:
         for w in self.presets_panel.children():
@@ -1905,7 +1907,8 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
         about_message.setText(translate('About vdu_controls'))
         about_message.setInformativeText(translate(ABOUT_TEXT))
         about_message.setIcon(QMessageBox.Information)
-        about_message.exec()
+        # .show() is non-modal, .exec() is modal
+        about_message.show()
 
 
 class HelpDialog(QDialog, DialogSingletonMixin):
@@ -1930,7 +1933,8 @@ class HelpDialog(QDialog, DialogSingletonMixin):
         # TODO maybe compute a minimum from the actual screen size
         help_dialog.setMinimumWidth(1600)
         help_dialog.setMinimumHeight(1024)
-        help_dialog.exec()
+        # .show() is non-modal, .exec() is modal
+        help_dialog.show()
 
 
 def main():
