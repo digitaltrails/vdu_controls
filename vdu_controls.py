@@ -569,7 +569,7 @@ class DialogSingletonMixin():
     def make_visible(self):
         """
         If the dialog exists(), call this to make it visible by raising it.
-        Internal used by the class method show_existing_dialog()
+        Internal, used by the class method show_existing_dialog()
         """
         self.show()
         self.raise_()
@@ -612,6 +612,10 @@ class VduGuiSupportedControls:
 
     def __init__(self) -> None:
         pass
+        # Uncommenting this would enable anything supported by ddcutil - but is that safe for the
+        # hardware given some of the weird settings that appear to be available and the sometimes dodgy
+        # VDU-vendor DDC implementations.
+        #
         # if self.ddcutil_supported is None:
         #     ddcutil = DdcUtil()
         #     self.ddcutil_supported = ddcutil.get_supported_vcp_codes()
@@ -631,7 +635,10 @@ def get_config_path(config_name: str) -> Path:
 
 
 class VduControlsConfig:
-    """A vdu_controls config that can be read or written from INI style files"""
+    """
+    A vdu_controls config that can be read or written from INI style files by the standard configparser package.
+    Includes a method that can fold in values from command line arguments parsed by the standard argparse package.
+    """
 
     def __init__(self, config_name: str, default_enabled_vcp_codes: List = None, include_globals: bool = False) -> None:
         self.config_name = config_name
@@ -965,16 +972,19 @@ class VduController:
 
 class SettingsEditor(QDialog, DialogSingletonMixin):
     """
-    Application Settings Editor
+    Application Settings Editor, edits a default global settings file, and a settings file for each VDU.
+    The files are in INI format.  Internally the settings are VduControlsConfig wrappers around
+    the standard class configparser.ConfigParser.
     """
+
     @staticmethod
-    def invoke(default_config: VduControlsConfig, vdu_model_list: List[VduController]) -> None:
+    def invoke(default_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig]) -> None:
         if SettingsEditor.exists():
             SettingsEditor.show_existing_dialog()
         else:
-            SettingsEditor(default_config, vdu_model_list)
+            SettingsEditor(default_config, vdu_config_list)
 
-    def __init__(self, default_config: VduControlsConfig, vdu_model_list: List[VduController]) -> None:
+    def __init__(self, default_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig]) -> None:
         super().__init__()
         self.setMinimumWidth(1024)
         layout = QVBoxLayout()
@@ -982,7 +992,7 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
         tabs = QTabWidget()
         layout.addWidget(tabs)
         self.editors = []
-        for vdu_config in [default_config, ] + [m.config for m in vdu_model_list]:
+        for vdu_config in [default_config, ] + vdu_config_list:
             tab = self.SettingsEditorTab(self, vdu_config)
             tabs.addTab(tab, vdu_config.get_config_name())
             self.editors.append(tab)
@@ -1005,6 +1015,7 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
         super().closeEvent(event)
 
     class SettingsEditorTab(QWidget):
+        """A tab corresponding to a settings file, generates UI widgets for each tab based on what's in the config. """
 
         def __init__(self, parent: QWidget, vdu_config: VduControlsConfig) -> None:
             super().__init__()
@@ -1028,8 +1039,8 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
                     data_type = vdu_config.get_config_type(section, option)
                     if data_type == 'boolean':
                         booleans_grid.addWidget(
-                            SettingsEditor.SettingsEditorBooleanWidget(self.ini_editable, option, section), n // 3,
-                                                                                                            n % 3)
+                            SettingsEditor.SettingsEditorBooleanWidget(
+                                self.ini_editable, option, section), n // 3, n % 3)
                         n += 1
                     elif data_type == 'float':
                         editor_layout.addWidget(
@@ -1132,9 +1143,9 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
             text_input = QLineEdit()
             text_input.setMaximumWidth(1000)
             text_input.setMaxLength(500)
-            # CSV of hex numbers
-            # TODO - should probably also allow spaces as well as commas?
-            validator = QRegExpValidator(QRegExp(r"^[0-9a-fA-F]{2}([ \t]*,[ \t]*[0-9a-fA-F]{2})*$"))
+            # TODO - should probably also allow spaces as well as commas, but the rexexp is getting a bit tricky?
+            # Validator matches CSV of two digit hex or the empty string.
+            validator = QRegExpValidator(QRegExp(r"^([0-9a-fA-F]{2}([ \t]*,[ \t]*[0-9a-fA-F]{2})*)|$"))
             text_input.setValidator(validator)
             text_input.setText(ini_editable[section][option])
 
@@ -1454,7 +1465,7 @@ class ContextMenu(QMenu):
 
         action = self.addAction(self.style().standardIcon(QStyle.SP_CommandLink), name, restore_preset)
         self.insertAction(self.presets_separator, action)
-        #print(self.actions())
+        # print(self.actions())
         self.update()
 
     def refresh_preset_menu(self) -> None:
@@ -1953,7 +1964,7 @@ def main():
         AboutDialog.invoke()
 
     def edit_config() -> None:
-        SettingsEditor.invoke(default_config, main_window.vdu_controllers)
+        SettingsEditor.invoke(default_config, [vdu.config for vdu in main_window.vdu_controllers])
 
     def edit_presets() -> None:
         PresetsDialog.invoke(main_window, app_context_menu)
