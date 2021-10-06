@@ -546,6 +546,7 @@ class DialogSingletonMixin():
     For example, it is used so that only ones settings editor can be active at a time.
     """
     _dialogs_map = {}
+    debug = False
 
     def __init__(self) -> None:
         """Registers the concrete class as a singleton so it can be reused later."""
@@ -553,13 +554,15 @@ class DialogSingletonMixin():
         class_name = self.__class__.__name__
         if class_name in DialogSingletonMixin._dialogs_map:
             raise TypeError(f"ERROR: More than one instance of {class_name} cannot exist.")
-        print(f'DEBUG: SingletonDialog created for {class_name}')
+        if DialogSingletonMixin.debug:
+            print(f'DEBUG: SingletonDialog created for {class_name}')
         DialogSingletonMixin._dialogs_map[class_name] = self
 
     def closeEvent(self, event) -> None:
         """Subclasses that implement their own closeEvent must call this closeEvent to deregister the singleton"""
         class_name = self.__class__.__name__
-        print(f'DEBUG: SingletonDialog remove {class_name}')
+        if DialogSingletonMixin.debug:
+            print(f'DEBUG: SingletonDialog remove {class_name}')
         del DialogSingletonMixin._dialogs_map[class_name]
         event.accept()
 
@@ -576,7 +579,8 @@ class DialogSingletonMixin():
     def show_existing_dialog(cls: Type):
         """If the dialog exists(), call this to make it visible by raising it."""
         class_name = cls.__name__
-        print(f'DEBUG: SingletonDialog show existing {class_name}')
+        if DialogSingletonMixin.debug:
+            print(f'DEBUG: SingletonDialog show existing {class_name}')
         instance = DialogSingletonMixin._dialogs_map[class_name]
         instance.make_visible()
 
@@ -584,7 +588,8 @@ class DialogSingletonMixin():
     def exists(cls: Type) -> bool:
         """Returns true if the dialog has already been created."""
         class_name = cls.__name__
-        print(f'DEBUG: SingletonDialog exists {class_name} {class_name in DialogSingletonMixin._dialogs_map}')
+        if DialogSingletonMixin.debug:
+            print(f'DEBUG: SingletonDialog exists {class_name} {class_name in DialogSingletonMixin._dialogs_map}')
         return class_name in DialogSingletonMixin._dialogs_map
 
 
