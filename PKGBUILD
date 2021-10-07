@@ -18,7 +18,7 @@ install=
 changelog=
 source=($pkgname-$pkgver.tar.gz)
 noextract=()
-md5sums=(6959aa9b3e9676d50bc39604bafa1ce6) #generate with 'makepkg -g'
+md5sums=(a9a636ef9846a33bc234bd80a478d1d5) #generate with 'makepkg -g'
 
 build() {
     exit 0
