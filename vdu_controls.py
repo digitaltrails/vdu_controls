@@ -374,6 +374,21 @@ VOLUME_SVG = b"""
 </svg>
 """
 
+'''Creates a SVG of grey rectangles typical of the sort used for VDU calibration.'''
+GREY_SCALE_SVG = f'''
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1"  width="256" height="152" viewBox="0 0 256 152">
+    <rect width="256" height="152" x="0" y="0" style="fill:rgb(128,128,128);stroke-width:0;" />
+    {"".join( 
+         [f'<rect width="16" height="32" x="{x}" y="38" style="fill:rgb({v},{v},{v});stroke-width:0;" />'
+            for x, v in list(zip([ x + 48 for x in range(0,160,16) ], [ v for v in range(0,120,12) ]))] 
+    )}
+    {"".join( 
+         [f'<rect width="16" height="32" x="{x}" y="80" style="fill:rgb({v},{v},{v});stroke-width:0;" />'
+            for x, v in list(zip([ x + 48 for x in range(0,160,16) ], [ v for v in range(147,256,12) ]))] 
+    )}
+</svg>
+'''.encode()
+
 #: A high resolution image, will fallback to an internal PNG if this file isn't found on the local system
 DEFAULT_SPLASH_PNG = "/usr/share/icons/oxygen/base/256x256/apps/preferences-desktop-display.png"
 
@@ -540,7 +555,7 @@ class DdcUtil:
         return self.supported_codes
 
 
-class DialogSingletonMixin():
+class DialogSingletonMixin:
     """
     A mixin that can augment a QDialog or QMessageBox with code to enforce a singleton UI.
     For example, it is used so that only ones settings editor can be active at a time.
@@ -769,7 +784,7 @@ class VduControlsConfig:
             for option in self.ini_content[section]:
                 print(f"DEBUG: {origin} [{section}] {option} = {self.ini_content[section][option]}")
 
-    def write_file(self, config_path: Path, include_globals: bool = True, overwrite: bool = False) -> None:
+    def write_file(self, config_path: Path, overwrite: bool = False) -> None:
         """Write the config to a file.  Used for creating initial template config files."""
         self.file_path = config_path
         if config_path.is_file():
@@ -867,7 +882,8 @@ class VduControlsConfig:
 
 class VduController:
     """
-    Holds model+controller specific to an individual VDU including a map of its capabilities. A model object in MVC speak.
+    Holds model+controller specific to an individual VDU including a map of its capabilities. A model object in
+    MVC speak.
 
     The model configuration can optionally be read from an INI-format config file held in $HOME/.config/vdu-control/
 
@@ -887,7 +903,6 @@ class VduController:
         self.ddcutil = ddcutil
         self.sleep_multiplier = None
         self.enabled_vcp_codes = default_config.get_all_enabled_vcp_codes()
-        unacceptable_char_pattern = re.compile(r'[^A-Za-z0-9._-]')
         self.vdu_model_and_serial_id = proper_name(vdu_model_name.strip(), vdu_serial.strip())
         self.vdu_model_id = proper_name(vdu_model_name.strip())
         self.capabilities_text = None
@@ -922,7 +937,7 @@ class VduController:
             save_config_path = get_config_path(config_name)
             config = VduControlsConfig(config_name, default_enabled_vcp_codes=self.enabled_vcp_codes)
             config.set_capabilities_alt_text(self.capabilities_text)
-            config.write_file(save_config_path, include_globals=False)
+            config.write_file(save_config_path)
             self.config = config
 
     def get_vdu_description(self) -> str:
@@ -986,6 +1001,7 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
 
     def __init__(self, default_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig]) -> None:
         super().__init__()
+        self.setWindowTitle(translate('Settings'))
         self.setMinimumWidth(1024)
         layout = QVBoxLayout()
         self.setLayout(layout)
@@ -1431,7 +1447,7 @@ class VduControlPanel(QWidget):
 class ContextMenu(QMenu):
 
     def __init__(self,
-                 about_action=None, help_action=None, settings_action=None, presets_action=None,
+                 about_action=None, help_action=None, chart_action=None, settings_action=None, presets_action=None,
                  quit_action=None) -> None:
         super().__init__()
         self.vdu_controls_main_window = None
@@ -1441,6 +1457,9 @@ class ContextMenu(QMenu):
                        presets_action)
         self.presets_separator = self.addSeparator()
 
+        self.addAction(self.style().standardIcon(QStyle.SP_ComputerIcon),
+                       translate('Grey scale'),
+                       chart_action)
         self.addAction(self.style().standardIcon(QStyle.SP_ComputerIcon),
                        translate('Settings'),
                        settings_action)
@@ -1683,6 +1702,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
 
     def __init__(self, main_window: VduControlsMainWindow, context_menu: ContextMenu) -> None:
         super().__init__()
+        self.setWindowTitle(translate('Presets'))
         self.main_window = main_window
         self.context_menu = context_menu
         self.preset_controller = PresetController()
@@ -1890,6 +1910,40 @@ def install_as_desktop_application(uninstall: bool = False):
 
     print('INFO: installation complete. Your desktop->applications->settings should now contain VDU Controls')
 
+
+class GreyScaleDialog(QDialog):
+    """Creates a dialog with a grey scale VDU calibration image.  Non-model. Have as many as you like - one per VDU."""
+
+    # This stops garbage collection of independent instances of this dialog until the user closes them.
+    # If you don't do this the dialog will disappear before it becomes visible.  Could also pass a parent
+    # which would achieve the same thing - but would alter where the dialog appears.
+    _active_list = []
+
+    def __init__(self):
+        super().__init__()
+        GreyScaleDialog._active_list.append(self)
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+        self.setWindowTitle(translate('Grey Scale Reference'))
+        self.setModal(False)
+        svg_widget = QSvgWidget()
+        svg_widget.renderer().load(GREY_SCALE_SVG)
+        svg_widget.setMinimumWidth(600)
+        svg_widget.setMinimumHeight(400)
+        svg_widget.setToolTip(translate(
+            'Grey Scale Reference for VDU adjustment.\n\n'
+            'Set contrast to the maximum and adjust brightness until\n'
+            'as many rectangles as possible can be perceived.\n\n'
+            'Use the content-menu to create additional charts and\n' 
+            'drag them onto each display.\n\nThis chart is resizable. '))
+        layout.addWidget(svg_widget)
+        self.show()
+
+    def closeEvent(self, event) -> None:
+        GreyScaleDialog._active_list.remove(self)
+        event.accept()
+
+
 # TODO consider changing to a non-modal QDialog which would also remove the need for a multiple inheritance
 class AboutDialog(QMessageBox, DialogSingletonMixin):
 
@@ -1902,12 +1956,12 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
 
     def __init__(self):
         super().__init__()
-        about_message = self
-        about_message.setTextFormat(Qt.AutoText)
-        about_message.setText(translate('About vdu_controls'))
-        about_message.setInformativeText(translate(ABOUT_TEXT))
-        about_message.setIcon(QMessageBox.Information)
-        about_message.exec()
+        self.setWindowTitle(translate('About'))
+        self.setTextFormat(Qt.AutoText)
+        self.setText(translate('About vdu_controls'))
+        self.setInformativeText(translate(ABOUT_TEXT))
+        self.setIcon(QMessageBox.Information)
+        self.exec()
 
 
 class HelpDialog(QDialog, DialogSingletonMixin):
@@ -1921,19 +1975,18 @@ class HelpDialog(QDialog, DialogSingletonMixin):
 
     def __init__(self):
         super().__init__()
-        help_dialog = self
-        help_dialog.setWindowTitle('Help')
+        self.setWindowTitle(translate('Help'))
         layout = QVBoxLayout()
         markdown_view = QTextEdit()
         markdown_view.setReadOnly(True)
         markdown_view.setMarkdown(__doc__)
         layout.addWidget(markdown_view)
-        help_dialog.setLayout(layout)
+        self.setLayout(layout)
         # TODO maybe compute a minimum from the actual screen size
-        help_dialog.setMinimumWidth(1600)
-        help_dialog.setMinimumHeight(1024)
+        self.setMinimumWidth(1600)
+        self.setMinimumHeight(1024)
         # .show() is non-modal, .exec() is modal
-        help_dialog.show()
+        self.show()
 
 
 def main():
@@ -1943,15 +1996,15 @@ def main():
     sys.excepthook = exception_handler
 
     default_config = VduControlsConfig('vdu_controls', include_globals=True)
-    config_path = get_config_path('vdu_controls')
-    print("INFO: checking for config file '" + config_path.as_posix() + "'")
-    if Path.is_file(config_path) and os.access(config_path, os.R_OK):
-        default_config.parse_file(config_path)
+    default_config_path = get_config_path('vdu_controls')
+    print("INFO: checking for config file '" + default_config_path.as_posix() + "'")
+    if Path.is_file(default_config_path) and os.access(default_config_path, os.R_OK):
+        default_config.parse_file(default_config_path)
     args = default_config.parse_args()
     if args.debug:
         default_config.debug_dump()
     if args.create_config_files:
-        default_config.write_file(config_path)
+        default_config.write_file(default_config_path)
     if args.install:
         install_as_desktop_application()
         sys.exit()
@@ -1962,6 +2015,7 @@ def main():
         print(__doc__)
         sys.exit()
     app = QApplication(sys.argv)
+    print(f'INFO: application style is {app.style().objectName()}')
 
     if args.about:
         AboutDialog.invoke()
@@ -1969,11 +2023,15 @@ def main():
     def edit_config() -> None:
         SettingsEditor.invoke(default_config, [vdu.config for vdu in main_window.vdu_controllers])
 
+    def grey_scale() -> None:
+        GreyScaleDialog()
+
     def edit_presets() -> None:
         PresetsDialog.invoke(main_window, app_context_menu)
 
     app_context_menu = ContextMenu(about_action=AboutDialog.invoke,
                                    help_action=HelpDialog.invoke,
+                                   chart_action=grey_scale,
                                    settings_action=edit_config,
                                    presets_action=edit_presets,
                                    quit_action=app.quit)

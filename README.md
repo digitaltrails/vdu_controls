@@ -179,6 +179,9 @@ Michael Hamilton\
 
 Version History
 ---------------
+* 1.5.1
+  * New grey-scale reference chart for assistance with brightness and contrast adjustment.
+  * About/help/settings/presets dialogs are now singletons, only one of each can be visible.
 * 1.5.0
   * New presets feature: easily switch between named presets such as *Night*, *Day*, *Overcast*, *Sunny*, 
     *Photography*, and *Video*.
