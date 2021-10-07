@@ -278,7 +278,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction
 
-VDU_CONTROLS_VERSION = '1.5.1'
+VDU_CONTROLS_VERSION = '1.5.2'
 
 
 def proper_name(*args):
@@ -1013,7 +1013,7 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
             tabs.addTab(tab, vdu_config.get_config_name())
             self.editors.append(tab)
         # .show() is non-modal, .exec() is modal
-        self.show()
+        self.make_visible()
 
     def closeEvent(self, event) -> None:
         something_changed = False
@@ -1786,7 +1786,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
 
         layout.addWidget(button_box)
         # .show() is non-modal, .exec() is modal
-        self.show()
+        self.make_visible()
 
     def has_preset(self, name) -> bool:
         for w in self.presets_panel.children():
@@ -1938,6 +1938,9 @@ class GreyScaleDialog(QDialog):
             'drag them onto each display.\n\nThis chart is resizable. '))
         layout.addWidget(svg_widget)
         self.show()
+        self.raise_()
+        self.activateWindow()
+
 
     def closeEvent(self, event) -> None:
         GreyScaleDialog._active_list.remove(self)
@@ -1986,7 +1989,7 @@ class HelpDialog(QDialog, DialogSingletonMixin):
         self.setMinimumWidth(1600)
         self.setMinimumHeight(1024)
         # .show() is non-modal, .exec() is modal
-        self.show()
+        self.make_visible()
 
 
 def main():
