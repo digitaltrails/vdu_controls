@@ -17,7 +17,7 @@
 #
 
 Name: vdu_controls
-Version: 1.5.1
+Version: 1.5.2
 Release: 0
 License: GPL-3.0-or-later
 BuildArch: noarch
