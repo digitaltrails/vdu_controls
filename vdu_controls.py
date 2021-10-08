@@ -1933,7 +1933,7 @@ class GreyScaleDialog(QDialog):
         svg_widget.setToolTip(translate(
             'Grey Scale Reference for VDU adjustment.\n\n'
             'Set contrast toward the maximum (for HDR monitors\n'
-            'try something lower such as 70%) and adjust brightness '
+            'try something lower such as 70%) and adjust brightness\n'
             'until as many rectangles as possible can be perceived.\n\n'
             'Use the content-menu to create additional charts and\n' 
             'drag them onto each display.\n\nThis chart is resizable. '))
