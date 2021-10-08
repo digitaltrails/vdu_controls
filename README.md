@@ -179,6 +179,10 @@ Michael Hamilton\
 
 Version History
 ---------------
+* 1.5.2
+  * ``vdu-controls`` is now feature complete in respect to my own requirements.
+  * Raise popup dialogs to the top (in case Qt renders them behind existing windows).
+  * Documentation tweaks.
 * 1.5.1
   * New grey-scale reference chart for assistance with brightness and contrast adjustment.
   * About/help/settings/presets dialogs are now singletons, only one of each can be visible.
