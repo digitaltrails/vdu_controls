@@ -67,7 +67,7 @@ same thing will happen.
 
 Note that some VDU settings may disable or enable other settings. For example, setting a monitor to a specific
 picture-profile might result in the contrast-control being disabled, but ``vdu_controls`` will not be aware of
-the restriction resulting in its contrast-control appearing to do nothing.
+the restriction resulting in its contrast-control erring or appearing to do nothing.
 
 Configuration
 =============
@@ -1932,8 +1932,9 @@ class GreyScaleDialog(QDialog):
         svg_widget.setMinimumHeight(400)
         svg_widget.setToolTip(translate(
             'Grey Scale Reference for VDU adjustment.\n\n'
-            'Set contrast to the maximum and adjust brightness until\n'
-            'as many rectangles as possible can be perceived.\n\n'
+            'Set contrast toward the maximum (for HDR monitors\n'
+            'try something lower such as 70%) and adjust brightness '
+            'until as many rectangles as possible can be perceived.\n\n'
             'Use the content-menu to create additional charts and\n' 
             'drag them onto each display.\n\nThis chart is resizable. '))
         layout.addWidget(svg_widget)
