@@ -31,9 +31,6 @@ Requires: ddcutil python38 python38-qt5
 %endif
 
 BuildRequires: coreutils
-%if 0%{?suse_version}
-BuildRequires: update-desktop-files
-%endif
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-build
 %description
@@ -72,9 +69,6 @@ gzip -c docs/_build/man/vdu_controls.1 > %{buildroot}/%{_datadir}/man/man1/%{nam
 
 %post
 
-%if 0%{?suse_version}
-%suse_update_desktop_file %{name} Settings
-%endif
 
 %files
 %license LICENSE.md

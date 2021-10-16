@@ -29,7 +29,7 @@ for all users, rpm's are available for **OpenSUSE** and **Fedora**, see the *Ins
 Dependencies
 ------------
 
-All the following runtime dependencies are likely to be available pre-packaged on any modern Linux distribution 
+All the following runtime dependencies are likely to be pre-packaged on any modern Linux distribution 
 (``vdu_controls`` was originally developed on OpenSUSE Tumbleweed).
 
 * ddcutil: the command line utility that interfaces to VDU's via DDC over i2c-dev or USB.
