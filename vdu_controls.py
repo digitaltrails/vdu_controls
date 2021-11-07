@@ -1321,8 +1321,8 @@ class VduControlSlider(QWidget):
         """Copy the internally cached current value onto the GUI view."""
         self.slider.setValue(int(self.current_value))
 
-    def eventFilter(self, target: QObject, event: QEvent) -> bool:
-        super().eventFilter(target, event)
+    def event(self, event: QEvent) -> bool:
+        super().event(event)
         # PalletChange happens after the new style sheet is in use.
         if event.type() == QEvent.PaletteChange:
             self.svg_icon.load(handle_theme(VDU_SUPPORTED_CONTROLS.by_code[self.vcp_capability.vcp_code].icon_source))
