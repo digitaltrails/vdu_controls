@@ -271,8 +271,9 @@ from functools import partial
 from pathlib import Path
 from typing import List, Tuple, Mapping, Type
 
-from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint
-from PyQt5.QtGui import QIntValidator, QPixmap, QIcon, QCursor, QImage, QPainter, QDoubleValidator, QRegExpValidator
+from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent
+from PyQt5.QtGui import QIntValidator, QPixmap, QIcon, QCursor, QImage, QPainter, QDoubleValidator, QRegExpValidator, \
+    QPalette
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
@@ -317,6 +318,9 @@ You should have received a copy of the GNU General Public License along
 with this program. If not, see <a href="https://www.gnu.org/licenses/">https://www.gnu.org/licenses/</a>.
 
 """
+
+SVG_LIGHT_THEME_COLOR = b"#232629"
+SVG_DARK_THEME_COLOR = b"#f3f3f3"
 
 BRIGHTNESS_SVG = b"""
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24">
@@ -398,6 +402,16 @@ DDCUTIL = "ddcutil"
 #: Internal special exit code used to signal that the exit handler should restart the program.
 EXIT_CODE_FOR_RESTART = 1959
 
+def is_dark_theme():
+    # Heuristic for checking for a dark theme.
+    # Is the sample text lighter than the background?
+    label = QLabel("am I in the dark?")
+    text_hsv_value = label.palette().color(QPalette.WindowText).value()
+    bg_hsv_value = label.palette().color(QPalette.Background).value()
+    dark_theme_found = text_hsv_value > bg_hsv_value
+    # debug(f"is_dark_them text={text_hsv_value} bg={bg_hsv_value} is_dark={dark_theme_found}") if debugging else None
+    return dark_theme_found
+
 
 def get_splash_image() -> QPixmap:
     """Get the splash pixmap from a KDE oxygen PNG file or, failing that, a small base64 encoded internal PNG."""
@@ -407,6 +421,8 @@ def get_splash_image() -> QPixmap:
     else:
         pixmap.loadFromData(base64.decodebytes(FALLBACK_SPLASH_PNG_BASE64), 'PNG')
     return pixmap
+
+
 
 
 #: Could be a str enumeration of VCP types
@@ -1231,13 +1247,15 @@ class VduControlSlider(QWidget):
 
         layout = QHBoxLayout()
         self.setLayout(layout)
+        self.svg_icon = None
 
         if vcp_capability.vcp_code in VDU_SUPPORTED_CONTROLS.by_code and \
                 VDU_SUPPORTED_CONTROLS.by_code[vcp_capability.vcp_code].icon_source is not None:
             svg_icon = QSvgWidget()
-            svg_icon.load(VDU_SUPPORTED_CONTROLS.by_code[vcp_capability.vcp_code].icon_source)
+            svg_icon.load(handle_theme(VDU_SUPPORTED_CONTROLS.by_code[vcp_capability.vcp_code].icon_source))
             svg_icon.setFixedSize(50, 50)
             svg_icon.setToolTip(translate(vcp_capability.name))
+            self.svg_icon = svg_icon
             layout.addWidget(svg_icon)
         else:
             label = QLabel()
@@ -1302,6 +1320,14 @@ class VduControlSlider(QWidget):
     def refresh_view(self) -> None:
         """Copy the internally cached current value onto the GUI view."""
         self.slider.setValue(int(self.current_value))
+
+    def eventFilter(self, target: QObject, event: QEvent) -> bool:
+        super().eventFilter(target, event)
+        # PalletChange happens after the new style sheet is in use.
+        if event.type() == QEvent.PaletteChange:
+            self.svg_icon.load(handle_theme(VDU_SUPPORTED_CONTROLS.by_code[self.vcp_capability.vcp_code].icon_source))
+        event.accept()
+        return True
 
 
 class VduControlComboBox(QWidget):
@@ -1848,9 +1874,15 @@ def exception_handler(e_type, e_value, e_traceback):
     QApplication.quit()
 
 
+def handle_theme(svg_str: bytes) -> bytes:
+    if is_dark_theme():
+        svg_str = svg_str.replace(SVG_LIGHT_THEME_COLOR, SVG_DARK_THEME_COLOR)
+    return svg_str
+
+
 def create_icon_from_svg_string(svg_str: bytes):
     """There is no QIcon option for loading SVG from a string, only from a SVG file, so roll our own."""
-    renderer = QSvgRenderer(svg_str)
+    renderer = QSvgRenderer(handle_theme(svg_str))
     image = QImage(64, 64, QImage.Format_ARGB32)
     image.fill(0x0)
     painter = QPainter(image)
