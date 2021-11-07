@@ -1,5 +1,5 @@
 pkgname=vdu_controls
-pkgver=1.5.2
+pkgver=1.5.3
 pkgrel=1
 pkgdesc="Visual Display Unit virtual control panel"
 arch=('i686' 'x86_64')
@@ -18,7 +18,7 @@ install=
 changelog=
 source=($pkgname-$pkgver.tar.gz)
 noextract=()
-md5sums=(f902fe85dbdb8d80a719d7e4c79c630b) #generate with 'makepkg -g'
+md5sums=(5583d1494189f9a2d0e9a57eba8a9727) #generate with 'makepkg -g'
 
 build() {
     exit 0

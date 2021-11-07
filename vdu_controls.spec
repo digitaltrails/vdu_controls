@@ -80,6 +80,6 @@ gzip -c docs/_build/man/vdu_controls.1 > %{buildroot}/%{_datadir}/man/man1/%{nam
 %changelog
 
 * Thu Nov 08 2021 Michael Hamilton <michael@actrix.gen.nz>
-- Detect and handle light/dark theme changes.
+- Detect and handle light/dark theme changes: vdu_controls v1.5.3
 * Mon Oct 04 2021 Michael Hamilton <michael@actrix.gen.nz>
-- Packaged for rpm
+- Packaged for rpm vdu_controls: v1.5.2
