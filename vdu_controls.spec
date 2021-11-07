@@ -17,7 +17,7 @@
 #
 
 Name: vdu_controls
-Version: 1.5.2
+Version: 1.5.3
 Release: 0
 License: GPL-3.0-or-later
 BuildArch: noarch
@@ -79,5 +79,7 @@ gzip -c docs/_build/man/vdu_controls.1 > %{buildroot}/%{_datadir}/man/man1/%{nam
 
 %changelog
 
+* Thu Nov 08 2021 Michael Hamilton <michael@actrix.gen.nz>
+- Detect and handle light/dark theme changes.
 * Mon Oct 04 2021 Michael Hamilton <michael@actrix.gen.nz>
 - Packaged for rpm
