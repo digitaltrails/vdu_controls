@@ -940,12 +940,12 @@ class VduController:
         if self.capabilities_text is None:
             self.capabilities_text = ddcutil.query_capabilities(vdu_id)
         self.capabilities = self._parse_capabilities(self.capabilities_text)
-        self.config.restrict_to_actual_capabilities(self.capabilities)
         if self.config is None:
             # In memory only config - in case it's needed by a future config editor
             self.config = VduControlsConfig(self.vdu_model_and_serial_id,
                                             default_enabled_vcp_codes=self.enabled_vcp_codes)
             self.config.set_capabilities_alt_text(self.capabilities_text)
+        self.config.restrict_to_actual_capabilities(self.capabilities)
 
     def write_template_config_files(self) -> None:
         """Write template config files to $HOME/.config/vdu_controls/"""
