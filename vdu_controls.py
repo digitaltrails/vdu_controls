@@ -690,7 +690,7 @@ class VduControlsConfig:
         self.ini_content['ddcutil-capabilities'] = {}
 
         for vcp_code, item in VDU_SUPPORTED_CONTROLS.by_code.items():
-            self.ini_content['vdu-controls-widgets'][item.property_name()] = 'no'
+            self.ini_content['vdu-controls-widgets'][item.property_name()] = 'yes'
 
         self.ini_content['vdu-controls-widgets']['enable-vcp-codes'] = ''
 
