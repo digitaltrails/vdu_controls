@@ -279,7 +279,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction
 
-VDU_CONTROLS_VERSION = '1.5.4'
+VDU_CONTROLS_VERSION = '1.5.5'
 
 
 def proper_name(*args):
@@ -1542,7 +1542,8 @@ class VduControlsMainWindow(QWidget):
     def __init__(self,
                  default_config: VduControlsConfig,
                  detect_vdu_hook: callable,
-                 app_context_menu: ContextMenu) -> None:
+                 app_context_menu: ContextMenu,
+                 hide_on_close = False) -> None:
         super().__init__()
         layout = QVBoxLayout()
         self.ddcutil = DdcUtil(debug=default_config.is_debug_enabled(), common_args=None,
@@ -1553,6 +1554,7 @@ class VduControlsMainWindow(QWidget):
         self.context_menu = app_context_menu
         self.context_menu.set_vdu_controls_main_window(self)
         app_context_menu.refresh_preset_menu()
+        self.hide_on_close = hide_on_close
 
         self.vdu_controllers = []
         for vdu_id, manufacturer, vdu_model_name, vdu_serial in self.detected_vdus:
@@ -1638,7 +1640,14 @@ class VduControlsMainWindow(QWidget):
             restart_due_to_config_change()
         for control_panel in self.vdu_control_panels:
             control_panel.refresh_view()
-
+            
+    def closeEvent(self, event):
+        if not self.hide_on_close:
+            event.accept() # let the window close
+        else:
+            self.hide()
+            event.ignore() # hide the window
+              
 
 class RefreshVduDataTask(QThread):
     """
@@ -2102,7 +2111,8 @@ def main():
                 translate('\n\nVDU Controls\nDDC ID {}\n{}').format(vdu.vdu_id, vdu.get_vdu_description()),
                 Qt.AlignTop | Qt.AlignHCenter)
 
-    main_window = VduControlsMainWindow(default_config, detect_vdu_hook, app_context_menu)
+    hide_on_close = tray is not None
+    main_window = VduControlsMainWindow(default_config, detect_vdu_hook, app_context_menu, hide_on_close )
 
     if args.create_config_files:
         for vdu_model in main_window.vdu_controllers:
