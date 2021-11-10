@@ -429,6 +429,8 @@ def get_splash_image() -> QPixmap:
 CONTINUOUS_TYPE = 'C'
 SIMPLE_NON_CONTINUOUS_TYPE = 'SNC'
 COMPLEX_NON_CONTINUOUS_TYPE = 'CNC'
+# The GUI treats SNC and CNC the same - only DdcUtil needs to distinguish them.
+GUI_NON_CONTINUOUS_TYPE = SIMPLE_NON_CONTINUOUS_TYPE
 
 
 class VcpCapability:
@@ -461,6 +463,7 @@ class DdcUtil:
         self.supported_codes = None
         self.default_sleep_multiplier = default_sleep_multiplier
         self.common_args = [] if common_args is None else common_args
+        self.vcp_type_map = {}
 
     def __run__(self, *args, sleep_multiplier: float = None) -> subprocess.CompletedProcess:
         if self.debug:
@@ -500,6 +503,9 @@ class DdcUtil:
         capability_text = result.stdout.decode('utf-8')
         return capability_text
 
+    def get_type(self, vcp_code):
+        return self.vcp_type_map[vcp_code] if vcp_code in self.vcp_type_map else None
+
     def get_attribute(self, vdu_id: str, vcp_code: str, sleep_multiplier: float = None) -> Tuple[str, str]:
         """
         Given a VDU id and vcp_code, retrieve the attribute's current value from the VDU.
@@ -518,6 +524,7 @@ class DdcUtil:
             value_match = value_pattern.match(result.stdout.decode('utf-8'))
             if value_match is not None:
                 type_indicator = value_match.group(1)
+                self.vcp_type_map[vcp_code] = type_indicator
                 if type_indicator == CONTINUOUS_TYPE:
                     c_match = c_pattern.match(value_match.group(2))
                     if c_match is not None:
@@ -529,7 +536,7 @@ class DdcUtil:
                 elif type_indicator == COMPLEX_NON_CONTINUOUS_TYPE:
                     cnc_match = cnc_pattern.match(value_match.group(2))
                     if cnc_match is not None:
-                        return '{:x}'.format(int(cnc_match.group(3), 16) << 8 | int(cnc_match.group(4), 16)), '0'
+                        return '{:02x}'.format(int(cnc_match.group(3), 16) << 8 | int(cnc_match.group(4), 16)), '0'
                 else:
                     raise TypeError(f'Unsupported VCP type {type_indicator} for monitor {vdu_id} vcp_code {vcp_code}')
             print(f"WARNING: obtained garbage '{result.stdout.decode('utf-8')}' will try again.")
@@ -541,6 +548,8 @@ class DdcUtil:
 
     def set_attribute(self, vdu_id: str, vcp_code: str, new_value: str, sleep_multiplier: float = None) -> None:
         """Send a new value to a specific VDU and vcp_code."""
+        if self.get_type(vcp_code) == COMPLEX_NON_CONTINUOUS_TYPE:
+            new_value = 'x' + new_value
         current, _ = self.get_attribute(vdu_id, vcp_code)
         if new_value != current:
             self.__run__('--display', vdu_id, 'setvcp', vcp_code, new_value, sleep_multiplier=sleep_multiplier)
@@ -995,7 +1004,7 @@ class VduController:
                 vcp_name = feature_match.group(2)
                 values = parse_values(feature_match.group(3))
                 # Guess type from existence or not of value list
-                vcp_type = CONTINUOUS_TYPE if len(values) == 0 else SIMPLE_NON_CONTINUOUS_TYPE
+                vcp_type = CONTINUOUS_TYPE if len(values) == 0 else GUI_NON_CONTINUOUS_TYPE
                 capability = VcpCapability(vcp_code, vcp_name, vcp_type=vcp_type, values=values, icon_source=None)
                 feature_map[vcp_code] = capability
         return feature_map
@@ -1413,7 +1422,7 @@ class VduControlPanel(QWidget):
                 capability = vdu_model.capabilities[vcp_code]
                 if capability.vcp_type == CONTINUOUS_TYPE:
                     control = VduControlSlider(vdu_model, capability)
-                elif capability.vcp_type == SIMPLE_NON_CONTINUOUS_TYPE:
+                elif capability.vcp_type == GUI_NON_CONTINUOUS_TYPE:
                     try:
                         control = VduControlComboBox(vdu_model, capability)
                     except ValueError as valueError:
