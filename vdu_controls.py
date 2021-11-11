@@ -437,12 +437,14 @@ class VcpCapability:
     """Representation of a VCP (Virtual Control Panel) capability for a VDU."""
 
     def __init__(self, vcp_code: str, vcp_name: str, vcp_type: str, values: List = None,
-                 causes_config_change: bool = False, icon_source: bytes = None):
+                 causes_config_change: bool = False, icon_source: bytes = None, enabled: bool = True):
         self.vcp_code = vcp_code
         self.name = vcp_name
         self.vcp_type = vcp_type
         self.icon_source = icon_source
         self.causes_config_change = causes_config_change
+        # Default config enablement
+        self.enabled = enabled
         # For future use if we want to implement non-continuous types of VCP (VCP types SNC or CNC)
         self.values = [] if values is None else values
 
@@ -636,8 +638,8 @@ class DialogSingletonMixin:
 class VduGuiSupportedControls:
     """Maps of controls supported by name on the command line and in config files."""
     by_code = {
-        '10': VcpCapability('10', 'Brightness', 'C', icon_source=BRIGHTNESS_SVG),
-        '12': VcpCapability('12', 'Contrast', 'C', icon_source=CONTRAST_SVG),
+        '10': VcpCapability('10', 'Brightness', 'C', icon_source=BRIGHTNESS_SVG, enabled=True),
+        '12': VcpCapability('12', 'Contrast', 'C', icon_source=CONTRAST_SVG, enabled=True),
         '62': VcpCapability('62', 'Audio volume', 'C', icon_source=VOLUME_SVG),
         '8D': VcpCapability('8D', 'Audio mute', 'SNC', icon_source=VOLUME_SVG),
         '8F': VcpCapability('8F', 'Audio treble', 'C', icon_source=VOLUME_SVG),
@@ -1369,15 +1371,14 @@ class VduControlComboBox(QWidget):
             self.keys.append(value)
             combo_box.addItem(desc, value)
 
-        if self.current_value not in self.keys:
-            raise ValueError(translate('VCP_CODE {} ({}) value {} is not in allowed list: {}').format(
-                vcp_capability.vcp_code, vcp_capability.name, self.current_value, self.keys))
+        self.validate_value()
         self.combo_box.setCurrentIndex(self.keys.index(self.current_value))
 
         def index_changed(index: int) -> None:
-            self.current_value = self.combo_box.currentData
+            self.current_value = self.combo_box.currentData()
+            self.validate_value()
             try:
-                self.vdu_model.set_attribute(self.vcp_capability.vcp_code, self.combo_box.currentData())
+                self.vdu_model.set_attribute(self.vcp_capability.vcp_code, self.current_value)
                 if self.vcp_capability.vcp_code in VDU_SUPPORTED_CONTROLS.by_code and \
                         VDU_SUPPORTED_CONTROLS.by_code[self.vcp_capability.vcp_code].causes_config_change:
                     restart_due_to_config_change()
@@ -1398,6 +1399,27 @@ class VduControlComboBox(QWidget):
         """Copy the internally cached current value onto the GUI view."""
         self.combo_box.setCurrentIndex(self.keys.index(self.current_value))
 
+    def validate_value(self):
+        if self.current_value not in self.keys:
+            self.keys.append(self.current_value)
+            self.combo_box.addItem('UNKNOWN-' + str(self.current_value), self.current_value)
+            self.combo_box.model().item(self.combo_box.count() - 1).setEnabled(False)
+            alert = QMessageBox()
+            alert.setText(
+                translate("Display {vnum} {vdesc} feature {code} '({cdesc})' has an undefined value '{value}'. "
+                          "Valid values are {valid}.").format(
+                    vdesc=self.vdu_model.get_vdu_description(),
+                    vnum=self.vdu_model.vdu_id,
+                    code=self.vcp_capability.vcp_code,
+                    cdesc=self.vcp_capability.name,
+                    value=self.current_value,
+                    valid=self.keys))
+            alert.setInformativeText(
+                translate('If you want to extend the set of permitted values, you can edit the metadata '
+                          'for {} in the settings panel.  For more details see the man page concerning '
+                          'VDU/VDU-model config files.').format(self.vdu_model.get_vdu_description()))
+            alert.setIcon(QMessageBox.Critical)
+            alert.exec()
 
 class VduControlPanel(QWidget):
     """
