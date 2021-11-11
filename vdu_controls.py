@@ -437,7 +437,7 @@ class VcpCapability:
     """Representation of a VCP (Virtual Control Panel) capability for a VDU."""
 
     def __init__(self, vcp_code: str, vcp_name: str, vcp_type: str, values: List = None,
-                 causes_config_change: bool = False, icon_source: bytes = None, enabled: bool = True):
+                 causes_config_change: bool = False, icon_source: bytes = None, enabled: bool = False):
         self.vcp_code = vcp_code
         self.name = vcp_name
         self.vcp_type = vcp_type
@@ -701,7 +701,7 @@ class VduControlsConfig:
         self.ini_content['ddcutil-capabilities'] = {}
 
         for vcp_code, item in VDU_SUPPORTED_CONTROLS.by_code.items():
-            self.ini_content['vdu-controls-widgets'][item.property_name()] = 'yes'
+            self.ini_content['vdu-controls-widgets'][item.property_name()] = 'yes' if item.enabled else 'no'
 
         self.ini_content['vdu-controls-widgets']['enable-vcp-codes'] = ''
 
