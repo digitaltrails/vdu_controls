@@ -1397,6 +1397,7 @@ class VduControlComboBox(QWidget):
 
     def refresh_view(self) -> None:
         """Copy the internally cached current value onto the GUI view."""
+        self.validate_value()
         self.combo_box.setCurrentIndex(self.keys.index(self.current_value))
 
     def validate_value(self):
