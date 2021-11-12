@@ -2116,6 +2116,7 @@ class MainWindow(QMainWindow):
             PresetsDialog.invoke(self.main_control_panel, app_context_menu)
 
         def quit_app() -> None:
+            self.app_save_state()
             app.quit()
 
         app_context_menu = ContextMenu(about_action=AboutDialog.invoke,
@@ -2159,24 +2160,28 @@ class MainWindow(QMainWindow):
 
         self.setCentralWidget(self.main_control_panel)
 
+        self.app_restore_state()
+
         if self.tray is not None:
             def show_window():
                 if self.isVisible():
                     self.hide()
                 else:
-                    # Use the mouse pos as a guess to where the system tray is.  The Linux Qt x,y geometry returned by
-                    # the tray icon is 0,0, so we can't use that.
-                    p = QCursor.pos()
-                    wg = self.geometry()
-                    # Also try to cope with the tray not being at the bottom right of the screen.
-                    x = p.x() - wg.width() if p.x() > wg.width() else p.x()
-                    y = p.y() - wg.height() if p.y() > wg.height() else p.y()
-                    self.setGeometry(x, y, wg.width(), wg.height())
+                    if len(self.settings.allKeys()) == 0:
+                        # No previous state - guess a position near the tray.
+                        # Use the mouse pos as a guess to where the system tray is.  The Linux Qt x,y geometry returned by
+                        # the tray icon is 0,0, so we can't use that.
+                        p = QCursor.pos()
+                        wg = self.geometry()
+                        # Also try to cope with the tray not being at the bottom right of the screen.
+                        x = p.x() - wg.width() if p.x() > wg.width() else p.x()
+                        y = p.y() - wg.height() if p.y() > wg.height() else p.y()
+                        self.setGeometry(x, y, wg.width(), wg.height())
                     self.show()
                     # Attempt to force it to the top with raise and activate
                     self.raise_()
                     self.activateWindow()
-
+            self.hide()
             self.tray.activated.connect(show_window)
             self.tray.setVisible(True)
         else:
@@ -2190,11 +2195,23 @@ class MainWindow(QMainWindow):
             self.hide()
             event.ignore()  # hide the window
         else:
+            self.app_save_state()
             event.accept()  # let the window close
 
     def create_config_files(self):
         for vdu_model in self.main_control_panel.vdu_controllers:
             vdu_model.write_template_config_files()
+
+    def app_save_state(self):
+        self.settings.setValue(self.geometry_key, self.saveGeometry())
+        self.settings.setValue(self.state_key, self.saveState())
+
+    def app_restore_state(self):
+        geometry = self.settings.value(self.geometry_key, None)
+        if geometry is not None:
+            self.restoreGeometry(geometry)
+            window_state = self.settings.value(self.state_key, None)
+            self.restoreState(window_state)
 
 
 def main():
