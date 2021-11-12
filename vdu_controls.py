@@ -779,7 +779,7 @@ class VduControlsConfig:
         self.ini_content['vdu-controls-widgets'][VDU_SUPPORTED_CONTROLS.by_code[vcp_code].property_name()] = 'no'
 
     def enable_unsupported_vcp_code(self, vcp_code: str) -> None:
-
+        # TODO suspect this code isn't call anymore - obsolete?
         if vcp_code in VDU_SUPPORTED_CONTROLS.by_code:
             print(f"WARNING: vdu_controls supported VCP_CODE {vcp_code} "
                   f" ({VDU_SUPPORTED_CONTROLS.by_code[vcp_code].property_name()})"
