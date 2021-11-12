@@ -271,13 +271,14 @@ from functools import partial
 from pathlib import Path
 from typing import List, Tuple, Mapping, Type
 
-from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent
+from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
+    QSettings
 from PyQt5.QtGui import QIntValidator, QPixmap, QIcon, QCursor, QImage, QPainter, QDoubleValidator, QRegExpValidator, \
     QPalette
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
-    QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction
+    QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow
 
 VDU_CONTROLS_VERSION = '1.5.5'
 
@@ -1589,15 +1590,15 @@ class ContextMenu(QMenu):
         return None
 
 
-class VduControlsMainWindow(QWidget):
+class VduControlsMainPanel(QWidget):
     """GUI for detected VDU's, it will construct and contain a control panel for each VDU."""
 
     def __init__(self,
                  default_config: VduControlsConfig,
                  detect_vdu_hook: callable,
-                 app_context_menu: ContextMenu,
-                 hide_on_close=False) -> None:
+                 app_context_menu: ContextMenu) -> None:
         super().__init__()
+        self.setObjectName("vdu_controls_main_panel")
         layout = QVBoxLayout()
         self.non_standard_enabled = None
         ddcutil_common_args = ['--force', ] if self.is_non_standard_enabled() else []
@@ -1609,7 +1610,6 @@ class VduControlsMainWindow(QWidget):
         self.context_menu = app_context_menu
         self.context_menu.set_vdu_controls_main_window(self)
         app_context_menu.refresh_preset_menu()
-        self.hide_on_close = hide_on_close
 
         self.vdu_controllers = []
         for vdu_id, manufacturer, vdu_model_name, vdu_serial in self.detected_vdus:
@@ -1696,13 +1696,6 @@ class VduControlsMainWindow(QWidget):
         for control_panel in self.vdu_control_panels:
             control_panel.refresh_view()
 
-    def closeEvent(self, event):
-        if not self.hide_on_close:
-            event.accept()  # let the window close
-        else:
-            self.hide()
-            event.ignore()  # hide the window
-
     def is_non_standard_enabled(self) -> bool:
         if self.non_standard_enabled is None:
             self.non_standard_enabled = False
@@ -1730,7 +1723,7 @@ class RefreshVduDataTask(QThread):
 
     task_finished = pyqtSignal()
 
-    def __init__(self, main_widget: VduControlsMainWindow) -> None:
+    def __init__(self, main_widget: VduControlsMainPanel) -> None:
         """Initialise the task that will run in a non-GUI thread to update all the widget's data."""
         super().__init__()
         self.main_widget = main_widget
@@ -1754,7 +1747,7 @@ class PresetController:
             preset_paths[preset_name] = path_str
         return preset_paths
 
-    def save_preset(self, preset_name: str, main_window: VduControlsMainWindow, context_menu: ContextMenu) -> None:
+    def save_preset(self, preset_name: str, main_window: VduControlsMainPanel, context_menu: ContextMenu) -> None:
         preset_ini = configparser.ConfigParser()
         preset_path = get_config_path(proper_name('Preset', preset_name))
         if preset_path.exists():
@@ -1776,7 +1769,7 @@ class PresetController:
         if not context_menu.has_preset(preset_name):
             context_menu.insert_preset(preset_name)
 
-    def restore_preset(self, preset_name: str, main_window: VduControlsMainWindow) -> None:
+    def restore_preset(self, preset_name: str, main_window: VduControlsMainPanel) -> None:
         preset_path = get_config_path(proper_name('Preset', preset_name))
         print(f"INFO: reading preset file '{preset_path.as_posix()}'")
         preset_text = Path(preset_path).read_text()
@@ -1800,13 +1793,13 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
     """A dialog for creating/updating/removing presets."""
 
     @staticmethod
-    def invoke(main_window: VduControlsMainWindow, context_menu: ContextMenu) -> None:
+    def invoke(main_window: VduControlsMainPanel, context_menu: ContextMenu) -> None:
         if PresetsDialog.exists():
             PresetsDialog.show_existing_dialog()
         else:
             PresetsDialog(main_window, context_menu)
 
-    def __init__(self, main_window: VduControlsMainWindow, context_menu: ContextMenu) -> None:
+    def __init__(self, main_window: VduControlsMainPanel, context_menu: ContextMenu) -> None:
         super().__init__()
         self.setWindowTitle(translate('Presets'))
         self.main_window = main_window
@@ -2104,22 +2097,125 @@ class HelpDialog(QDialog, DialogSingletonMixin):
         self.make_visible()
 
 
+class MainWindow(QMainWindow):
+
+    def __init__(self, main_config: VduControlsConfig, app: QApplication):
+        super().__init__()
+        self.setObjectName('main_window')
+        self.geometry_key = self.objectName() + "_geometry"
+        self.state_key = self.objectName() + "_window_state"
+        self.settings = QSettings('vdu_controls.qt.state', 'vdu_controls')
+
+        def edit_config() -> None:
+            SettingsEditor.invoke(main_config, [vdu.config for vdu in self.main_control_panel.vdu_controllers])
+
+        def grey_scale() -> None:
+            GreyScaleDialog()
+
+        def edit_presets() -> None:
+            PresetsDialog.invoke(self.main_control_panel, app_context_menu)
+
+        def quit_app() -> None:
+            app.quit()
+
+        app_context_menu = ContextMenu(about_action=AboutDialog.invoke,
+                                       help_action=HelpDialog.invoke,
+                                       chart_action=grey_scale,
+                                       settings_action=edit_config,
+                                       presets_action=edit_presets,
+                                       quit_action=quit_app)
+
+        pixmap = get_splash_image()
+        splash = QSplashScreen(pixmap.scaledToWidth(800).scaledToHeight(400),
+                               Qt.WindowStaysOnTopHint) if main_config.is_splash_screen_enabled() else None
+
+        if splash is not None:
+            splash.show()
+            # Attempt to force it to the top with raise and activate
+            splash.raise_()
+            splash.activateWindow()
+        app_icon = QIcon()
+        app_icon.addPixmap(pixmap)
+
+        self.tray = None
+        if main_config.is_system_tray_enabled():
+            self.tray = QSystemTrayIcon()
+            self.tray.setIcon(app_icon)
+            self.tray.setContextMenu(app_context_menu)
+
+        app.setWindowIcon(app_icon)
+        app.setApplicationDisplayName(translate('VDU Controls'))
+
+        if splash is not None:
+            splash.showMessage(translate('\n\nVDU Controls\nLooking for DDC monitors...\n'), Qt.AlignTop | Qt.AlignHCenter)
+
+        def detect_vdu_hook(vdu: VduController) -> None:
+            if splash is not None:
+                splash.showMessage(
+                    translate('\n\nVDU Controls\nDDC ID {}\n{}').format(vdu.vdu_id, vdu.get_vdu_description()),
+                    Qt.AlignTop | Qt.AlignHCenter)
+
+        self.main_control_panel = VduControlsMainPanel(main_config, detect_vdu_hook, app_context_menu)
+
+        self.setCentralWidget(self.main_control_panel)
+
+        if self.tray is not None:
+            def show_window():
+                if self.isVisible():
+                    self.hide()
+                else:
+                    # Use the mouse pos as a guess to where the system tray is.  The Linux Qt x,y geometry returned by
+                    # the tray icon is 0,0, so we can't use that.
+                    p = QCursor.pos()
+                    wg = self.geometry()
+                    # Also try to cope with the tray not being at the bottom right of the screen.
+                    x = p.x() - wg.width() if p.x() > wg.width() else p.x()
+                    y = p.y() - wg.height() if p.y() > wg.height() else p.y()
+                    self.setGeometry(x, y, wg.width(), wg.height())
+                    self.show()
+                    # Attempt to force it to the top with raise and activate
+                    self.raise_()
+                    self.activateWindow()
+
+            self.tray.activated.connect(show_window)
+            self.tray.setVisible(True)
+        else:
+            self.show()
+
+        if splash is not None:
+            splash.finish(self)
+
+    def closeEvent(self, event):
+        if self.tray is not None:
+            self.hide()
+            event.ignore()  # hide the window
+        else:
+            event.accept()  # let the window close
+
+    def create_config_files(self):
+        for vdu_model in self.main_control_panel.vdu_controllers:
+            vdu_model.write_template_config_files()
+
+
 def main():
     """vdu_controls application main."""
     # Allow control-c to terminate the program
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     sys.excepthook = exception_handler
 
-    default_config = VduControlsConfig('vdu_controls', include_globals=True)
+    # Call QApplication before parsing arguments, it will parse and remove Qt session restoration arguments.
+    app = QApplication(sys.argv)
+
+    main_config = VduControlsConfig('vdu_controls', include_globals=True)
     default_config_path = get_config_path('vdu_controls')
     print("INFO: checking for config file '" + default_config_path.as_posix() + "'")
     if Path.is_file(default_config_path) and os.access(default_config_path, os.R_OK):
-        default_config.parse_file(default_config_path)
-    args = default_config.parse_args()
+        main_config.parse_file(default_config_path)
+    args = main_config.parse_args()
     if args.debug:
-        default_config.debug_dump()
+        main_config.debug_dump()
     if args.create_config_files:
-        default_config.write_file(default_config_path)
+        main_config.write_file(default_config_path)
     if args.install:
         install_as_desktop_application()
         sys.exit()
@@ -2129,90 +2225,17 @@ def main():
     if args.detailed_help:
         print(__doc__)
         sys.exit()
-    app = QApplication(sys.argv)
+
     print(f'INFO: application style is {app.style().objectName()}')
 
     if args.about:
         AboutDialog.invoke()
 
-    def edit_config() -> None:
-        SettingsEditor.invoke(default_config, [vdu.config for vdu in main_window.vdu_controllers])
-
-    def grey_scale() -> None:
-        GreyScaleDialog()
-
-    def edit_presets() -> None:
-        PresetsDialog.invoke(main_window, app_context_menu)
-
-    app_context_menu = ContextMenu(about_action=AboutDialog.invoke,
-                                   help_action=HelpDialog.invoke,
-                                   chart_action=grey_scale,
-                                   settings_action=edit_config,
-                                   presets_action=edit_presets,
-                                   quit_action=app.quit)
-
-    pixmap = get_splash_image()
-    splash = QSplashScreen(pixmap.scaledToWidth(800).scaledToHeight(400),
-                           Qt.WindowStaysOnTopHint) if default_config.is_splash_screen_enabled() else None
-
-    if splash is not None:
-        splash.show()
-        # Attempt to force it to the top with raise and activate
-        splash.raise_()
-        splash.activateWindow()
-    app_icon = QIcon()
-    app_icon.addPixmap(pixmap)
-
-    tray = None
-    if default_config.is_system_tray_enabled():
-        tray = QSystemTrayIcon()
-        tray.setIcon(app_icon)
-        tray.setContextMenu(app_context_menu)
-
-    app.setWindowIcon(app_icon)
-    app.setApplicationDisplayName(translate('VDU Controls'))
-
-    if splash is not None:
-        splash.showMessage(translate('\n\nVDU Controls\nLooking for DDC monitors...\n'), Qt.AlignTop | Qt.AlignHCenter)
-
-    def detect_vdu_hook(vdu: VduController) -> None:
-        if splash is not None:
-            splash.showMessage(
-                translate('\n\nVDU Controls\nDDC ID {}\n{}').format(vdu.vdu_id, vdu.get_vdu_description()),
-                Qt.AlignTop | Qt.AlignHCenter)
-
-    hide_on_close = tray is not None
-    main_window = VduControlsMainWindow(default_config, detect_vdu_hook, app_context_menu, hide_on_close)
+    main_window = MainWindow(main_config, app)
 
     if args.create_config_files:
-        for vdu_model in main_window.vdu_controllers:
-            vdu_model.write_template_config_files()
+        main_window.create_config_files()
 
-    if tray is not None:
-        def show_window():
-            if main_window.isVisible():
-                main_window.hide()
-            else:
-                # Use the mouse pos as a guess to where the system tray is.  The Linux Qt x,y geometry returned by
-                # the tray icon is 0,0, so we can't use that.
-                p = QCursor.pos()
-                wg = main_window.geometry()
-                # Also try to cope with the tray not being at the bottom right of the screen.
-                x = p.x() - wg.width() if p.x() > wg.width() else p.x()
-                y = p.y() - wg.height() if p.y() > wg.height() else p.y()
-                main_window.setGeometry(x, y, wg.width(), wg.height())
-                main_window.show()
-                # Attempt to force it to the top with raise and activate
-                main_window.raise_()
-                main_window.activateWindow()
-
-        tray.activated.connect(show_window)
-        tray.setVisible(True)
-    else:
-        main_window.show()
-
-    if splash is not None:
-        splash.finish(main_window)
     rc = app.exec_()
     if rc == EXIT_CODE_FOR_RESTART:
         QProcess.startDetached(app.arguments()[0], app.arguments()[1:])
