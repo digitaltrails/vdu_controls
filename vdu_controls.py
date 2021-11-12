@@ -402,6 +402,28 @@ DDCUTIL = "ddcutil"
 #: Internal special exit code used to signal that the exit handler should restart the program.
 EXIT_CODE_FOR_RESTART = 1959
 
+DANGER_AGREEMENT_NON_STANDARD_VCP_CODES = """
+If you are attempting to enable non-standard VCP-codes for write, you must read and
+consider this notice before proceeding any further.
+
+Enabling ddcutil for VCP-codes not in the Display Data Channel (DDC) Virtual Control 
+Panel (VCP) standard may result in irreversible damage to any connected monitors and 
+any devices they are connected to (including the driving PC).  Before enabling 
+non-standard codes one should consider that these codes may need to be operated 
+in conjunction with other settings or codes. One should also be mindful that some 
+settings or combinations of settings may cause physical effects including and not 
+limited to overheating, screen-burn-in, shortened backlight lifetime, and cease 
+of function (bricking).
+
+It is your responsibility to assess and ensure the safety and wisdom of enabling 
+unsupported VCP codes and your responsibility for dealing with the consequences.
+
+Note that this software is licenced under the GPL Version 3 WITHOUT ANY WARRANTY; 
+without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+PURPOSE.  
+"""
+
+
 def is_dark_theme():
     # Heuristic for checking for a dark theme.
     # Is the sample text lighter than the background?
@@ -421,8 +443,6 @@ def get_splash_image() -> QPixmap:
     else:
         pixmap.loadFromData(base64.decodebytes(FALLBACK_SPLASH_PNG_BASE64), 'PNG')
     return pixmap
-
-
 
 
 #: Could be a str enumeration of VCP types
@@ -1422,6 +1442,7 @@ class VduControlComboBox(QWidget):
             alert.setIcon(QMessageBox.Critical)
             alert.exec()
 
+
 class VduControlPanel(QWidget):
     """
     Widget that contains all the controls for a single VDU (monitor/display).
@@ -1575,10 +1596,12 @@ class VduControlsMainWindow(QWidget):
                  default_config: VduControlsConfig,
                  detect_vdu_hook: callable,
                  app_context_menu: ContextMenu,
-                 hide_on_close = False) -> None:
+                 hide_on_close=False) -> None:
         super().__init__()
         layout = QVBoxLayout()
-        self.ddcutil = DdcUtil(debug=default_config.is_debug_enabled(), common_args=None,
+        self.non_standard_enabled = None
+        ddcutil_common_args = ['--force', ] if self.is_non_standard_enabled() else []
+        self.ddcutil = DdcUtil(debug=default_config.is_debug_enabled(), common_args=ddcutil_common_args,
                                default_sleep_multiplier=default_config.get_sleep_multiplier())
         self.vdu_control_panels = []
         self.warnings = default_config.are_warnings_enabled()
@@ -1672,14 +1695,30 @@ class VduControlsMainWindow(QWidget):
             restart_due_to_config_change()
         for control_panel in self.vdu_control_panels:
             control_panel.refresh_view()
-            
+
     def closeEvent(self, event):
         if not self.hide_on_close:
-            event.accept() # let the window close
+            event.accept()  # let the window close
         else:
             self.hide()
-            event.ignore() # hide the window
-              
+            event.ignore()  # hide the window
+
+    def is_non_standard_enabled(self) -> bool:
+        if self.non_standard_enabled is None:
+            self.non_standard_enabled = False
+            path = get_config_path("danger")
+            if path.exists():
+                with open(path, 'r') as f:
+                    text = f.read()
+                    if text == DANGER_AGREEMENT_NON_STANDARD_VCP_CODES:
+                        print("\n"
+                              "WARNING: Non standard features may be enabled for write.\n"
+                              "ENABLING NON_STANDARD FEATURES COULD DAMAGE YOUR HARDWARE.\n"
+                              "To disable non-standard features delete the file {}.\n"
+                              "{}".format(path, DANGER_AGREEMENT_NON_STANDARD_VCP_CODES))
+                        self.non_standard_enabled = True
+        return self.non_standard_enabled
+
 
 class RefreshVduDataTask(QThread):
     """
@@ -2008,13 +2047,12 @@ class GreyScaleDialog(QDialog):
             'Set contrast toward the maximum (for HDR monitors\n'
             'try something lower such as 70%) and adjust brightness\n'
             'until as many rectangles as possible can be perceived.\n\n'
-            'Use the content-menu to create additional charts and\n' 
+            'Use the content-menu to create additional charts and\n'
             'drag them onto each display.\n\nThis chart is resizable. '))
         layout.addWidget(svg_widget)
         self.show()
         self.raise_()
         self.activateWindow()
-
 
     def closeEvent(self, event) -> None:
         GreyScaleDialog._active_list.remove(self)
@@ -2144,7 +2182,7 @@ def main():
                 Qt.AlignTop | Qt.AlignHCenter)
 
     hide_on_close = tray is not None
-    main_window = VduControlsMainWindow(default_config, detect_vdu_hook, app_context_menu, hide_on_close )
+    main_window = VduControlsMainWindow(default_config, detect_vdu_hook, app_context_menu, hide_on_close)
 
     if args.create_config_files:
         for vdu_model in main_window.vdu_controllers:
