@@ -280,7 +280,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow
 
-VDU_CONTROLS_VERSION = '1.5.5'
+VDU_CONTROLS_VERSION = '1.5.6'
 
 
 def proper_name(*args):
@@ -771,7 +771,7 @@ class VduControlsConfig:
         return self.ini_content['ddcutil-capabilities']['capabilities-override']
 
     def set_capabilities_alt_text(self, alt_text: str) -> None:
-        self.ini_content['ddcutil-capabilities']['capabilities-override'] = alt_text
+        self.ini_content['ddcutil-capabilities']['capabilities-override'] = alt_text.replace("%", "%%")
 
     def enable_supported_vcp_code(self, vcp_code: str) -> None:
         self.ini_content['vdu-controls-widgets'][VDU_SUPPORTED_CONTROLS.by_code[vcp_code].property_name()] = 'yes'
@@ -1240,7 +1240,7 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
 
             def text_changed() -> None:
                 # print(section, option, text_editor.toPlainText())
-                ini_editable[section][option] = text_editor.toPlainText()
+                ini_editable[section][option] = text_editor.toPlainText().replace("%","%%")
 
             text_editor.textChanged.connect(text_changed)
             layout.addWidget(text_editor)
