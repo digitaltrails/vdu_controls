@@ -280,7 +280,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow
 
-VDU_CONTROLS_VERSION = '1.5.6'
+VDU_CONTROLS_VERSION = '1.5.7'
 
 
 def proper_name(*args):
@@ -2140,9 +2140,10 @@ class MainWindow(QMainWindow):
 
         self.tray = None
         if main_config.is_system_tray_enabled():
-            self.tray = QSystemTrayIcon()
-            self.tray.setIcon(app_icon)
-            self.tray.setContextMenu(app_context_menu)
+            if QSystemTrayIcon.isSystemTrayAvailable():
+                self.tray = QSystemTrayIcon()
+                self.tray.setIcon(app_icon)
+                self.tray.setContextMenu(app_context_menu)
 
         app.setWindowIcon(app_icon)
         app.setApplicationDisplayName(translate('VDU Controls'))
