@@ -280,7 +280,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow
 
-VDU_CONTROLS_VERSION = '1.5.7'
+VDU_CONTROLS_VERSION = '1.5.8'
 
 
 def proper_name(*args):
@@ -383,14 +383,14 @@ VOLUME_SVG = b"""
 GREY_SCALE_SVG = f'''
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1"  width="256" height="152" viewBox="0 0 256 152">
     <rect width="256" height="152" x="0" y="0" style="fill:rgb(128,128,128);stroke-width:0;" />
-    {"".join( 
-         [f'<rect width="16" height="32" x="{x}" y="38" style="fill:rgb({v},{v},{v});stroke-width:0;" />'
-            for x, v in list(zip([ x + 48 for x in range(0,160,16) ], [ v for v in range(0,120,12) ]))] 
-    )}
-    {"".join( 
-         [f'<rect width="16" height="32" x="{x}" y="80" style="fill:rgb({v},{v},{v});stroke-width:0;" />'
-            for x, v in list(zip([ x + 48 for x in range(0,160,16) ], [ v for v in range(147,256,12) ]))] 
-    )}
+    {"".join(
+    [f'<rect width="16" height="32" x="{x}" y="38" style="fill:rgb({v},{v},{v});stroke-width:0;" />'
+     for x, v in list(zip([x + 48 for x in range(0, 160, 16)], [v for v in range(0, 120, 12)]))]
+)}
+    {"".join(
+    [f'<rect width="16" height="32" x="{x}" y="80" style="fill:rgb({v},{v},{v});stroke-width:0;" />'
+     for x, v in list(zip([x + 48 for x in range(0, 160, 16)], [v for v in range(147, 256, 12)]))]
+)}
 </svg>
 '''.encode()
 
@@ -423,6 +423,18 @@ Note that this software is licenced under the GPL Version 3 WITHOUT ANY WARRANTY
 without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 PURPOSE.  
 """
+
+ASSUMED_CONTROLS_CONFIG_TEXT = ('\n'
+                                'capabilities-override = Model: unknown\n'
+                                '	MCCS version: 2.2\n'
+                                '	Commands:\n'
+                                '       Command: 01 (VCP Request)\n'
+                                '       Command: 02 (VCP Response)\n'
+                                '       Command: 03 (VCP Set)\n'
+                                '	VCP Features:\n'
+                                '	   Feature: 10 (Brightness)\n'
+                                '	   Feature: 12 (Contrast)\n'
+                                '	   Feature: 60 (Input Source)')
 
 
 def is_dark_theme():
@@ -518,6 +530,8 @@ class DdcUtil:
                 display_list.append((vdu_id, manufacturer, model_name, serial_number))
             elif len(display_str.strip()) != 0:
                 print(f"WARNING: ignoring {display_str}")
+        # For testing bad VDU's:
+        # display_list.append(("3", "maker_y", "model_z", "1234"))
         return display_list
 
     def query_capabilities(self, vdu_id: str) -> str:
@@ -943,7 +957,8 @@ class VduController:
 
     def __init__(self, vdu_id: str, vdu_model_name: str, vdu_serial: str, manufacturer: str,
                  default_config: VduControlsConfig,
-                 ddcutil: DdcUtil) -> None:
+                 ddcutil: DdcUtil,
+                 ignore_monitor: bool = False, assume_standard_controls: bool = False) -> None:
         self.vdu_id = vdu_id
         self.model_name = vdu_model_name
         self.serial = vdu_serial
@@ -970,7 +985,12 @@ class VduController:
                 self.config = config
                 break
         if self.capabilities_text is None:
-            self.capabilities_text = ddcutil.query_capabilities(vdu_id)
+            if ignore_monitor:
+                self.capabilities_text = ''
+            elif assume_standard_controls:
+                self.capabilities_text = ASSUMED_CONTROLS_CONFIG_TEXT
+            else:
+                self.capabilities_text = ddcutil.query_capabilities(vdu_id)
         self.capabilities = self._parse_capabilities(self.capabilities_text)
         if self.config is None:
             # In memory only config - in case it's needed by a future config editor
@@ -997,7 +1017,16 @@ class VduController:
         return self.vdu_id, self.manufacturer, self.model_name, self.serial
 
     def get_attribute(self, vcp_code: str) -> Tuple[str, str]:
-        return self.ddcutil.get_attribute(self.vdu_id, vcp_code, sleep_multiplier=self.sleep_multiplier)
+        try:
+            return self.ddcutil.get_attribute(self.vdu_id, vcp_code, sleep_multiplier=self.sleep_multiplier)
+        except subprocess.CalledProcessError as e:
+            alert = QMessageBox()
+            alert.setText(translate("Failed to obtain monitor {} vcp_code {}").format(self.vdu_id, vcp_code))
+            alert.setInformativeText(
+                "Problem communicating with monitor {} {}. Controls may be incorrect.".format(self.vdu_id, str(e)))
+            alert.setIcon(QMessageBox.Critical)
+            alert.exec()
+            return ['0', '0']
 
     def set_attribute(self, vcp_code: str, value: str) -> None:
         self.ddcutil.set_attribute(self.vdu_id, vcp_code, value, sleep_multiplier=self.sleep_multiplier)
@@ -1240,7 +1269,7 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
 
             def text_changed() -> None:
                 # print(section, option, text_editor.toPlainText())
-                ini_editable[section][option] = text_editor.toPlainText().replace("%","%%")
+                ini_editable[section][option] = text_editor.toPlainText().replace("%", "%%")
 
             text_editor.textChanged.connect(text_changed)
             layout.addWidget(text_editor)
@@ -1607,28 +1636,75 @@ class VduControlsMainPanel(QWidget):
         self.vdu_control_panels = []
         self.warnings = default_config.are_warnings_enabled()
         self.detected_vdus = self.ddcutil.detect_monitors()
+        self.previously_detected_vdus = self.detected_vdus
         self.context_menu = app_context_menu
         self.context_menu.set_vdu_controls_main_window(self)
         app_context_menu.refresh_preset_menu()
 
         self.vdu_controllers = []
         for vdu_id, manufacturer, vdu_model_name, vdu_serial in self.detected_vdus:
-            controller = VduController(vdu_id, vdu_model_name, vdu_serial, manufacturer, default_config, self.ddcutil)
-            self.vdu_controllers.append(controller)
-            if detect_vdu_hook is not None:
-                detect_vdu_hook(controller)
-            vdu_control_panel = VduControlPanel(controller, self.warnings)
-            if vdu_control_panel.number_of_controls() != 0:
-                self.vdu_control_panels.append(vdu_control_panel)
-                layout.addWidget(vdu_control_panel)
-            elif self.warnings:
-                alert = QMessageBox()
-                alert.setText(
-                    translate('Monitor {} {} lacks any accessible controls.').format(controller.vdu_id,
-                                                                                     controller.get_vdu_description()))
-                alert.setInformativeText(translate('The monitor will be omitted from the control panel.'))
-                alert.setIcon(QMessageBox.Warning)
-                alert.exec()
+            while True:
+                try:
+                    controller = VduController(vdu_id, vdu_model_name, vdu_serial, manufacturer, default_config,
+                                               self.ddcutil)
+                except subprocess.CalledProcessError as e:
+                    alert = QMessageBox()
+                    alert.setText(
+                        translate('Failed to obtain capabilities for monitor {} {} {}.').format(vdu_id,
+                                                                                                vdu_model_name,
+                                                                                                vdu_serial))
+                    alert.setInformativeText(translate(
+                        'Cannot automatically configure this monitor.'
+                        '\n You can choose to:'
+                        '\n 1: Retry obtaining the capabilities.'
+                        '\n 2: Ignore this monitor.'
+                        '\n 3: Apply standard brightness and contrast controls.'))
+                    alert.setIcon(QMessageBox.Critical)
+                    alert.setStandardButtons(QMessageBox.Ignore | QMessageBox.Apply | QMessageBox.Retry)
+                    choice = alert.exec()
+                    if choice == QMessageBox.Ignore:
+                        controller = VduController(vdu_id, vdu_model_name, vdu_serial, manufacturer, default_config,
+                                                   self.ddcutil, ignore_monitor=True)
+                        controller.write_template_config_files()
+                        warn = QMessageBox()
+                        warn.setIcon(QMessageBox.Warning)
+                        warn.setText(translate('Ignoring {} monitor.').format(vdu_model_name))
+                        warn.setInformativeText(
+                            translate('Wrote {} config files to {}.').format(vdu_model_name, CONFIG_DIR_PATH))
+                        warn.exec()
+                    if choice == QMessageBox.Apply:
+                        controller = VduController(vdu_id, vdu_model_name, vdu_serial, manufacturer, default_config,
+                                                   self.ddcutil, assume_standard_controls=True)
+                        controller.write_template_config_files()
+                        warn = QMessageBox()
+                        warn.setIcon(QMessageBox.Warning)
+                        warn.setText(
+                            translate('Assuming {} has brightness and contrast controls.').format(vdu_model_name,
+                                                                                                  CONFIG_DIR_PATH))
+                        warn.setInformativeText(
+                            translate('Wrote {} config files to {}.').format(vdu_model_name, CONFIG_DIR_PATH) +
+                            translate('\nPlease check these files and edit or remove them if they '
+                                      'cause further issues.'))
+                        warn.exec()
+                    if choice == QMessageBox.Retry:
+                        continue
+                break
+            if controller is not None:
+                self.vdu_controllers.append(controller)
+                if detect_vdu_hook is not None:
+                    detect_vdu_hook(controller)
+                vdu_control_panel = VduControlPanel(controller, self.warnings)
+                if vdu_control_panel.number_of_controls() != 0:
+                    self.vdu_control_panels.append(vdu_control_panel)
+                    layout.addWidget(vdu_control_panel)
+                elif self.warnings:
+                    alert = QMessageBox()
+                    alert.setText(
+                        translate('Monitor {} {} lacks any accessible controls.').format(controller.vdu_id,
+                                                                                         controller.get_vdu_description()))
+                    alert.setInformativeText(translate('The monitor will be omitted from the control panel.'))
+                    alert.setIcon(QMessageBox.Warning)
+                    alert.exec()
 
         if len(self.vdu_control_panels) == 0:
             alert = QMessageBox()
@@ -1690,9 +1766,10 @@ class VduControlsMainPanel(QWidget):
 
     def refresh_view(self) -> None:
         """Invoke when the GUI worker thread completes. Runs in the GUI thread and can refresh the GUI views."""
-        if len(self.detected_vdus) != len(self.vdu_control_panels):
+        if self.detected_vdus != self.previously_detected_vdus:
             # The number of VDU's has changed, vdu_id's will no longer match, throw a wobbly
             restart_due_to_config_change()
+            self.previously_detected_vdus = self.detected_vdus
         for control_panel in self.vdu_control_panels:
             control_panel.refresh_view()
 
@@ -2149,7 +2226,8 @@ class MainWindow(QMainWindow):
         app.setApplicationDisplayName(translate('VDU Controls'))
 
         if splash is not None:
-            splash.showMessage(translate('\n\nVDU Controls\nLooking for DDC monitors...\n'), Qt.AlignTop | Qt.AlignHCenter)
+            splash.showMessage(translate('\n\nVDU Controls\nLooking for DDC monitors...\n'),
+                               Qt.AlignTop | Qt.AlignHCenter)
 
         def detect_vdu_hook(vdu: VduController) -> None:
             if splash is not None:
@@ -2182,6 +2260,7 @@ class MainWindow(QMainWindow):
                     # Attempt to force it to the top with raise and activate
                     self.raise_()
                     self.activateWindow()
+
             self.hide()
             self.tray.activated.connect(show_window)
             self.tray.setVisible(True)
