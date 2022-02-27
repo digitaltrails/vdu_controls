@@ -37,9 +37,9 @@ All the following runtime dependencies are likely to be pre-packaged on any mode
 * python 3.8: ``vdu_controls`` is written in python and may depend on some features present only in 3.8 onward.
 * python 3.8 QtPy: the python GUI library used by ``vdu_controls``.
 
-It's best confirm that ``ddcutils`` is functioning before using ``vdu_controls``:
+It's best confirm that ``ddcutil`` is functioning before using ``vdu_controls``:
 
-* See [https://www.ddcutil.com/config/](https://www.ddcutil.com/config/) for instructions on configuring ``ddcutils``.
+* See [https://www.ddcutil.com/config/](https://www.ddcutil.com/config/) for instructions on configuring ``ddcutil``.
 * See [https://www.ddcutil.com/i2c_permissions/](https://www.ddcutil.com/i2c_permissions/) for instructions on setting 
   and testing the required permissions.  
 
@@ -53,7 +53,7 @@ target machine access to the i2c devices):
 
 1. Load i2c-dev: ``sudo modprobe i2c-dev``
 2. Temporarily grant rw to everyone: ``sudo chmod a+rw /dev/i2c-*``
-3. See if ddcutils works in a normal user's account: ``ddcutils detect``
+3. See if ddcutil works in a normal user's account: ``ddcutil detect``
 4. See if vdu_controls now works in a normal user's account: ``python3 vdu_controls.py``
 
 If this works, then following the longer series of steps detailed by the links in the previous comment would be 
