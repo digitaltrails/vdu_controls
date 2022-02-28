@@ -793,31 +793,20 @@ class VduControlsConfig:
     def disable_supported_vcp_code(self, vcp_code: str) -> None:
         self.ini_content['vdu-controls-widgets'][VDU_SUPPORTED_CONTROLS.by_code[vcp_code].property_name()] = 'no'
 
-    def enable_unsupported_vcp_code(self, vcp_code: str) -> None:
-        # TODO suspect this code isn't call anymore - obsolete?
-        if vcp_code in VDU_SUPPORTED_CONTROLS.by_code:
-            print(f"WARNING: vdu_controls supported VCP_CODE {vcp_code} "
-                  f" ({VDU_SUPPORTED_CONTROLS.by_code[vcp_code].property_name()})"
-                  f" is enabled in the list for unsupported codes.")
-            self.enable_supported_vcp_code(vcp_code)
-            return
-        # No very efficient
-        csv_list = [] if 'enable-vcp-codes' not in self.ini_content['vdu-controls-widgets'] else \
-            self.ini_content['vdu-controls-widgets']['enable-vcp-codes'].split(',')
-
-        if vcp_code not in csv_list:
-            csv_list.append(vcp_code)
-            self.ini_content['vdu-controls-widgets']['enable-vcp-codes'] = ','.join(csv_list)
-
     def get_all_enabled_vcp_codes(self) -> List[str]:
         # No very efficient
         enabled_vcp_codes = []
         for control_name, control_def in VDU_SUPPORTED_CONTROLS.by_arg_name.items():
             if self.ini_content['vdu-controls-widgets'].getboolean(control_name, fallback=False):
                 enabled_vcp_codes.append(control_def.vcp_code)
-        for vcp_code in self.ini_content['vdu-controls-widgets']['enable-vcp-codes'].split(","):
-            if vcp_code.strip() != '':
-                enabled_vcp_codes.append(vcp_code.strip())
+        enable_codes_str = self.ini_content['vdu-controls-widgets']['enable-vcp-codes']
+        for vcp_code in enable_codes_str.split(","):
+            code = vcp_code.strip()
+            if code != '':
+                if code not in enabled_vcp_codes:
+                    enabled_vcp_codes.append(code)
+                else:
+                    print(f"WARNING: supported enabled vcp_code {code} is redundantly listed in enabled_vcp_codes ({enable_codes_str})")
         return enabled_vcp_codes
 
     def parse_file(self, config_path: Path) -> None:
