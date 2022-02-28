@@ -17,7 +17,7 @@
 #
 
 Name: vdu_controls
-Version: 1.5.8
+Version: 1.5.9
 Release: 0
 License: GPL-3.0-or-later
 BuildArch: noarch
@@ -79,7 +79,7 @@ gzip -c docs/_build/man/vdu_controls.1 > %{buildroot}/%{_datadir}/man/man1/%{nam
 
 %changelog
 * Sun Feb 27 2022 Michael Hamilton <michael@actrix.gen.nz>
-- Cleanly handle monitors that do not respond to ddctuil commands: vdu_controls 1.5.8
+- Cleanly handle monitors that do not respond to ddctuil commands: vdu_controls 1.5.9
 * Sat Dec 04 2021 Michael Hamilton <michael@actrix.gen.nz>
 - Check if a system tray is available before applying system_tray_enabled: vdu_controls 1.5.7
 * Sat Nov 13 2021 Michael Hamilton <michael@actrix.gen.nz>
