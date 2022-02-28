@@ -1643,6 +1643,7 @@ class VduControlsMainPanel(QWidget):
 
         self.vdu_controllers = []
         for vdu_id, manufacturer, vdu_model_name, vdu_serial in self.detected_vdus:
+            controller = None
             while True:
                 try:
                     controller = VduController(vdu_id, vdu_model_name, vdu_serial, manufacturer, default_config,
