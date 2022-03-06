@@ -21,7 +21,7 @@ Optional arguments:
 -------------------
 
       -h, --help            show this help message and exit
-      --detailed-help       full help in markdown format
+      --detailed-help       full help in Markdown format
       --about               about vdu_controls
       --show control_name
                             show specified control only (--show may be specified multiple times)
@@ -173,6 +173,20 @@ Whe the GUI is used to create a preset file it saves a value for every VDU and e
 file need not include all VDu's or settings, it can be manually edited to remove VDU's and settings that aren't
 desired.
 
+A preset change can be initiated by using UNIX/Linux signals to communicate with a running ``vdu_controls.``
+Signals in the range 40 to 55 correspond to first to last presets (if any are defined).  Additionally, SIGHUP can
+be used to initiate "Refresh settings from monitors".  For example:
+
+        # Identify the running vdu_controls (assuming it is installed as /usr/bin/vdu_controls):
+        ps axwww | grep '[/]usr/bin/vdu_controls'
+        # Combine this with kill to trigger a preset change:
+        kill -40 $(ps axwww | grep '[/]usr/bin/vdu_controls' | awk '{print $1}')
+        kill -41 $(ps axwww | grep '[/]usr/bin/vdu_controls' | awk '{print $1}')
+        # Or if some other process has changed a monitors settings, trigger vdu_controls to update it's UI:
+        kill -HUP $(ps axwww | grep '[/]usr/bin/vdu_controls' | awk '{print $1}')
+
+Any other signals will be handled normally (in many cases they will result in process termination).
+
 Responsiveness
 --------------
 
@@ -261,6 +275,7 @@ import os
 import pickle
 import re
 import signal
+import socket
 import stat
 import subprocess
 import sys
@@ -271,16 +286,20 @@ from functools import partial
 from pathlib import Path
 from typing import List, Tuple, Mapping, Type
 
+from PyQt5 import QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
-    QSettings
+    QSettings, QTimer
 from PyQt5.QtGui import QIntValidator, QPixmap, QIcon, QCursor, QImage, QPainter, QDoubleValidator, QRegExpValidator, \
     QPalette
+from PyQt5.QtMultimedia import QCameraInfo, QCameraImageCapture, QCamera
+from PyQt5.QtMultimediaWidgets import QCameraViewfinder
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow
 
-VDU_CONTROLS_VERSION = '1.5.9'
+
+VDU_CONTROLS_VERSION = '1.6.0'
 
 
 def proper_name(*args):
@@ -319,6 +338,13 @@ You should have received a copy of the GNU General Public License along
 with this program. If not, see <a href="https://www.gnu.org/licenses/">https://www.gnu.org/licenses/</a>.
 
 """
+
+# Use Linux/UNIX signals for interprocess communication to trigger preset changes - 16 presets should be enough
+# for anyone.
+PRESET_SIGNAL_MIN = 40
+PRESET_SIGNAL_MAX = 55
+
+signal_wakeup_handler = None
 
 SVG_LIGHT_THEME_COLOR = b"#232629"
 SVG_DARK_THEME_COLOR = b"#f3f3f3"
@@ -1727,6 +1753,20 @@ class VduControlsMainPanel(QWidget):
         self.refreshDataTask = RefreshVduDataTask(self)
         self.refreshDataTask.task_finished.connect(finish_refresh)
 
+        def respond_to_signal(signal_number: int):
+            if signal_number == signal.SIGHUP:
+                start_refresh()
+            elif PRESET_SIGNAL_MIN <= signal_number <= PRESET_SIGNAL_MAX:
+                preset_name = self.context_menu.preset_controller.get_preset_name(signal_number - PRESET_SIGNAL_MIN)
+                if preset_name is not None:
+                    self.context_menu.preset_controller.restore_preset(preset_name, self)
+                else:
+                    # Cannot raise a Qt alert inside the signal handler in case another signal comes in.
+                    print(f"WARNING: ignoring signal {signal_number}, no preset associated with that signal number.")
+
+        global signal_wakeup_handler
+        signal_wakeup_handler.signalReceived.connect(respond_to_signal)
+
         self.progressBar = QProgressBar(self)
         # Disable text percentage label on the spinner progress-bar
         self.progressBar.setTextVisible(False)
@@ -1746,6 +1786,42 @@ class VduControlsMainPanel(QWidget):
         self.customContextMenuRequested.connect(open_context_menu)
 
         self.setLayout(layout)
+
+        # if len(QCameraInfo().availableCameras()) > 0:
+        #
+        #     def check_light_level_func():
+        #         camera_info = QCameraInfo()
+        #         print("cams=", camera_info.availableCameras())
+        #         if len(camera_info.availableCameras()) > 0:
+        #             camera = QCamera(camera_info.availableCameras()[0])
+        #             image_capture = QCameraImageCapture(camera)
+        #             if image_capture.isCaptureDestinationSupported(QCameraImageCapture.CaptureToBuffer):
+        #                 image_capture.setCaptureDestination(QCameraImageCapture.CaptureToBuffer)
+        #
+        #
+        #                 def capture_func(i, image):
+        #                     print(i, image)
+        #
+        #                 image_capture.imageAvailable.connect(capture_func)
+        #
+        #                 def capture_error(err,strerr):
+        #                     print("error", err, strerr)
+        #
+        #                 image_capture.error.connect(capture_error)
+        #
+        #                 viewfinder = QCameraViewfinder()
+        #                 viewfinder.show()
+        #
+        #                 camera.setViewfinder(viewfinder)
+        #                 camera.setCaptureMode(QCamera.CaptureStillImage)
+        #                 camera.start()
+        #                 camera.searchAndLock()
+        #                 image_capture.capture()
+        #                 camera.unlock()
+        #
+        #     self.timer = QTimer(self)
+        #     self.timer.timeout.connect(check_light_level_func)
+        #     self.timer.start(10000);
 
     def refresh_data(self) -> None:
         """Refresh data from the VDU's. Called by a non-GUI task. Not in the GUI-thread, cannot do any GUI op's."""
@@ -1854,6 +1930,12 @@ class PresetController:
             os.remove(preset_path.as_posix())
         if context_menu.has_preset(preset_name):
             context_menu.removeAction(context_menu.get_preset(preset_name))
+
+    def get_preset_name(self, preset_number: int):
+        keys_list = [* self.find_preset_paths()]
+        if preset_number < len(keys_list):
+            return keys_list[preset_number]
+        return None
 
 
 class PresetsDialog(QDialog, DialogSingletonMixin):
@@ -2284,14 +2366,78 @@ class MainWindow(QMainWindow):
             self.restoreState(window_state)
 
 
+class SignalWakeupHandler(QtNetwork.QAbstractSocket):
+    # https://stackoverflow.com/a/37229299/609575
+    # '''
+    # Quoted here: The Qt event loop is implemented in C(++). That means, that while it runs and no Python code is
+    # called (eg. by a Qt signal connected to a Python slot), the signals are noted, but the Python signal handlers
+    # aren't called.
+    #
+    # But, since Python 2.6 and in Python 3 you can cause Qt to run a Python function when a signal with a handler is
+    # received using signal.set_wakeup_fd().
+    #
+    # This is possible, because, contrary to the documentation, the low-level signal handler doesn't only set a flag
+    # for the virtual machine, but it may also write a byte into the file descriptor set by set_wakeup_fd(). Python 2
+    # writes a NUL byte, Python 3 writes the signal number.
+    #
+    # So by subclassing a Qt class that takes a file descriptor and provides a readReady() signal, like e.g.
+    # QAbstractSocket, the event loop will execute a Python function every time a signal (with a handler) is received
+    # causing the signal handler to execute nearly instantaneous without need for timers:
+    # '''
+
+    signalReceived = pyqtSignal(int)
+
+    def __init__(self, parent=None):
+        super().__init__(QtNetwork.QAbstractSocket.UdpSocket, parent)
+        self.old_fd = None
+        # Create a socket pair
+        self.wsock, self.rsock = socket.socketpair(type=socket.SOCK_DGRAM)
+        # Let Qt listen on the one end
+        self.setSocketDescriptor(self.rsock.fileno())
+        # And let Python write on the other end
+        self.wsock.setblocking(False)
+        self.old_fd = signal.set_wakeup_fd(self.wsock.fileno())
+        # First Python code executed gets any exception from
+        # the signal handler, so add a dummy handler first
+        self.readyRead.connect(lambda: None)
+        # Second handler does the real handling
+        self.readyRead.connect(self._readSignal)
+
+    def __del__(self):
+        # Restore any old handler on deletion
+        if self.old_fd is not None and signal and signal.set_wakeup_fd:
+            signal.set_wakeup_fd(self.old_fd)
+
+    def _readSignal(self):
+        # Read the written byte.
+        # Note: readyRead is blocked from occurring again until readData()
+        # was called, so call it, even if you don't need the value.
+        data = self.readData(1)
+        # Emit a Qt signal for convenience
+        signal_number = int(data[0])
+        print("INFO: SignalWakeupHandler", signal_number)
+        self.signalReceived.emit(signal_number)
+
+
 def main():
     """vdu_controls application main."""
     # Allow control-c to terminate the program
     signal.signal(signal.SIGINT, signal.SIG_DFL)
+
+    def signal_handler(x, y):
+        print("INFO: signal received", x, y)
+
+    signal.signal(signal.SIGHUP, signal_handler)
+    for i in range(PRESET_SIGNAL_MIN, PRESET_SIGNAL_MAX):
+        signal.signal(i, signal_handler)
+
     sys.excepthook = exception_handler
 
     # Call QApplication before parsing arguments, it will parse and remove Qt session restoration arguments.
     app = QApplication(sys.argv)
+
+    global signal_wakeup_handler
+    signal_wakeup_handler = SignalWakeupHandler(app)
 
     main_config = VduControlsConfig('vdu_controls', include_globals=True)
     default_config_path = get_config_path('vdu_controls')

@@ -179,6 +179,8 @@ Michael Hamilton\
 
 Version History
 ---------------
+* 1.6.0
+  * Let other processes trigger vdu_controls preset changes and settings refreshes via UNIX/Linux signals.
 * 1.5.2
   * ``vdu-controls`` is now feature complete in respect to my own requirements.
   * Raise popup dialogs to the top (in case Qt renders them behind existing windows).

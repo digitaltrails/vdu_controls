@@ -17,7 +17,7 @@
 #
 
 Name: vdu_controls
-Version: 1.5.9
+Version: 1.6.0
 Release: 0
 License: GPL-3.0-or-later
 BuildArch: noarch
@@ -78,6 +78,8 @@ gzip -c docs/_build/man/vdu_controls.1 > %{buildroot}/%{_datadir}/man/man1/%{nam
 %{_datadir}/man/man1/%{name}.1.gz
 
 %changelog
+* Mon Mar 07 2022 Michael Hamilton <michael@actrix.gen.nz>
+- Let other processes trigger preset changes and settings refreshes via UNIX/Linux signals: : vdu_controls 1.6.0
 * Sun Feb 27 2022 Michael Hamilton <michael@actrix.gen.nz>
 - Cleanly handle monitors that do not respond to ddctuil commands: vdu_controls 1.5.9
 * Sat Dec 04 2021 Michael Hamilton <michael@actrix.gen.nz>
