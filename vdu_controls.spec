@@ -17,7 +17,7 @@
 #
 
 Name: vdu_controls
-Version: 1.6.0
+Version: 1.6.1
 Release: 0
 License: GPL-3.0-or-later
 BuildArch: noarch
@@ -50,8 +50,10 @@ exit 0
 %install
 mkdir -p %{buildroot}/%{_bindir}
 mkdir -p %{buildroot}/%{_datadir}/applications
+mkdir -p %{buildroot}/%{_datadir}/icons/hicolor/256x256/apps
 mkdir -p %{buildroot}/%{_datadir}/man/man1
 install vdu_controls.py  %{buildroot}/%{_bindir}/%{name}
+install -m644 %{name}.png %{buildroot}/%{_datadir}/icons/hicolor/256x256/apps
 
 cat > %{buildroot}/%{_datadir}/applications/%{name}.desktop <<'EOF'
 [Desktop Entry]
@@ -61,7 +63,7 @@ Exec=%{_bindir}/%{name}
 Name=VDU Controls
 GenericName=VDU controls
 Comment=Virtual Control Panel for externally connected VDU's
-Icon=preferences-desktop-display-color
+Icon=vdu_controls
 Categories=Settings
 EOF
 
@@ -71,13 +73,19 @@ gzip -c docs/_build/man/vdu_controls.1 > %{buildroot}/%{_datadir}/man/man1/%{nam
 
 
 %files
+%dir %{_datadir}/icons/hicolor
+%dir %{_datadir}/icons/hicolor/*
+%dir %{_datadir}/icons/hicolor/*/apps
 %license LICENSE.md
 %defattr(-,root,root)
 %{_bindir}/%{name}
 %{_datadir}/applications/%{name}.desktop
+%{_datadir}/icons/hicolor/256x256/apps/%{name}.png
 %{_datadir}/man/man1/%{name}.1.gz
 
 %changelog
+* Mon Mar 14 2022 Michael Hamilton <michael@actrix.gen.nz>
+- Wayland fixes : vdu_controls 1.6.1
 * Mon Mar 07 2022 Michael Hamilton <michael@actrix.gen.nz>
 - Let other processes trigger preset changes and settings refreshes via UNIX/Linux signals: : vdu_controls 1.6.0
 * Sun Feb 27 2022 Michael Hamilton <michael@actrix.gen.nz>

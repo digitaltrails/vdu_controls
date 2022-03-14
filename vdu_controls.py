@@ -290,7 +290,7 @@ from PyQt5 import QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
     QSettings, QTimer
 from PyQt5.QtGui import QIntValidator, QPixmap, QIcon, QCursor, QImage, QPainter, QDoubleValidator, QRegExpValidator, \
-    QPalette
+    QPalette, QGuiApplication
 from PyQt5.QtMultimedia import QCameraInfo, QCameraImageCapture, QCamera
 from PyQt5.QtMultimediaWidgets import QCameraViewfinder
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
@@ -298,8 +298,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow
 
-
-VDU_CONTROLS_VERSION = '1.6.0'
+VDU_CONTROLS_VERSION = '1.6.1'
 
 
 def proper_name(*args):
@@ -420,8 +419,8 @@ GREY_SCALE_SVG = f'''
 </svg>
 '''.encode()
 
-#: A high resolution image, will fallback to an internal PNG if this file isn't found on the local system
-DEFAULT_SPLASH_PNG = "/usr/share/icons/oxygen/base/256x256/apps/preferences-desktop-display.png"
+#: A high resolution image, will fallback to an internal SVG if this file isn't found on the local system
+DEFAULT_SPLASH_PNG = "/usr/share/icons/hicolor/256x256/apps/vdu_controls.png"
 
 #: Assuming ddcutil is somewhere on the PATH.
 DDCUTIL = "ddcutil"
@@ -475,7 +474,7 @@ def is_dark_theme():
 
 
 def get_splash_image() -> QPixmap:
-    """Get the splash pixmap from a KDE oxygen PNG file or, failing that, a small base64 encoded internal PNG."""
+    """Get the splash pixmap from the installed png, failing that, the internal splash png."""
     pixmap = QPixmap()
     if os.path.isfile(DEFAULT_SPLASH_PNG) and os.access(DEFAULT_SPLASH_PNG, os.R_OK):
         pixmap.load(DEFAULT_SPLASH_PNG)
@@ -832,7 +831,8 @@ class VduControlsConfig:
                 if code not in enabled_vcp_codes:
                     enabled_vcp_codes.append(code)
                 else:
-                    print(f"WARNING: supported enabled vcp_code {code} is redundantly listed in enabled_vcp_codes ({enable_codes_str})")
+                    print(
+                        f"WARNING: supported enabled vcp_code {code} is redundantly listed in enabled_vcp_codes ({enable_codes_str})")
         return enabled_vcp_codes
 
     def parse_file(self, config_path: Path) -> None:
@@ -1932,7 +1932,7 @@ class PresetController:
             context_menu.removeAction(context_menu.get_preset(preset_name))
 
     def get_preset_name(self, preset_number: int):
-        keys_list = [* self.find_preset_paths()]
+        keys_list = [*self.find_preset_paths()]
         if preset_number < len(keys_list):
             return keys_list[preset_number]
         return None
@@ -2116,6 +2116,8 @@ def create_icon_from_svg_string(svg_str: bytes):
 def install_as_desktop_application(uninstall: bool = False):
     """Self install this script in the current Linux user's bin directory and desktop applications->settings menu."""
     desktop_dir = Path.home().joinpath('.local', 'share', 'applications')
+    icon_dir = Path.home().joinpath('.local', 'share', 'icons')
+
     if not desktop_dir.exists():
         print(f"ERROR: No desktop directory is present:{desktop_dir.as_posix()}"
               " Cannot proceed - is this a non-standard desktop?")
@@ -2126,14 +2128,21 @@ def install_as_desktop_application(uninstall: bool = False):
         print(f"WARNING: creating:{bin_dir.as_posix()}")
         os.mkdir(bin_dir)
 
+    if not icon_dir.is_dir():
+        print("WARNING: creating:{icon_dir.as_posix()}")
+        os.mkdir(icon_dir)
+
     installed_script_path = bin_dir.joinpath("vdu_controls")
     desktop_definition_path = desktop_dir.joinpath("vdu_controls.desktop")
+    icon_path = icon_dir.joinpath("vdu_controls.png")
 
     if uninstall:
         os.remove(installed_script_path)
         print(f'INFO: removed {installed_script_path.as_posix()}')
         os.remove(desktop_definition_path)
         print(f'INFO: removed {desktop_definition_path.as_posix()}')
+        os.remove(icon_path)
+        print(f'INFO: removed {icon_path.as_posix()}')
         return
 
     if installed_script_path.exists():
@@ -2157,10 +2166,16 @@ def install_as_desktop_application(uninstall: bool = False):
             Name=VDU Controls
             GenericName=VDU controls
             Comment=Virtual Control Panel for externally connected VDU's
-            Icon=preferences-desktop-display-color
+            Icon={icon_path.as_posix()}
             Categories=Qt;Settings;
             """)
         open(desktop_definition_path, 'w').write(desktop_definition)
+
+    if icon_path.exists():
+        print(f"WARNING: skipping installation of {icon_path.as_posix()}, it is already present.")
+    else:
+        print(f'INFO: creating {icon_path.as_posix()}')
+        get_splash_image().save(icon_path.as_posix())
 
     print('INFO: installation complete. Your desktop->applications->settings should now contain VDU Controls')
 
@@ -2250,6 +2265,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self, main_config: VduControlsConfig, app: QApplication):
         super().__init__()
+
         self.setObjectName('main_window')
         self.geometry_key = self.objectName() + "_geometry"
         self.state_key = self.objectName() + "_window_state"
@@ -2435,6 +2451,9 @@ def main():
 
     # Call QApplication before parsing arguments, it will parse and remove Qt session restoration arguments.
     app = QApplication(sys.argv)
+
+    # Wayland needs this set in order to find/use the app's desktop icon.
+    QGuiApplication.setDesktopFileName("vdu_controls")
 
     global signal_wakeup_handler
     signal_wakeup_handler = SignalWakeupHandler(app)

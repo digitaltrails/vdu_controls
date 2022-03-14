@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "VDU_CONTROLS" "1" "Oct 09, 2021" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Mar 14, 2022" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.3.1
 .
@@ -58,7 +58,7 @@ A GUI for controlling connected \fIVisual Display Units\fP (\fIVDU\fP\(aqs) (als
 show this help message and exit
 .TP
 .B \-\-detailed\-help
-full help in markdown format
+full help in Markdown format
 .TP
 .B \-\-about
 about vdu_controls
@@ -252,6 +252,23 @@ input\-source = 0f
 Whe the GUI is used to create a preset file it saves a value for every VDU and every visible control.  A preset
 file need not include all VDu\(aqs or settings, it can be manually edited to remove VDU\(aqs and settings that aren\(aqt
 desired.
+.sp
+A preset change can be initiated by using UNIX/Linux signals to communicate with a running \fBvdu_controls.\fP
+Signals in the range 40 to 55 correspond to first to last presets (if any are defined).  Additionally, SIGHUP can
+be used to initiate "Refresh settings from monitors".  For example:
+.INDENT 0.0
+.INDENT 3.5
+# Identify the running vdu_controls (assuming it is installed as /usr/bin/vdu_controls):
+ps axwww | grep \(aq[/]usr/bin/vdu_controls\(aq
+# Combine this with kill to trigger a preset change:
+kill \-40 $(ps axwww | grep \(aq[/]usr/bin/vdu_controls\(aq | awk \(aq{print $1}\(aq)
+kill \-41 $(ps axwww | grep \(aq[/]usr/bin/vdu_controls\(aq | awk \(aq{print $1}\(aq)
+# Or if some other process has changed a monitors settings, trigger vdu_controls to update it\(aqs UI:
+kill \-HUP $(ps axwww | grep \(aq[/]usr/bin/vdu_controls\(aq | awk \(aq{print $1}\(aq)
+.UNINDENT
+.UNINDENT
+.sp
+Any other signals will be handled normally (in many cases they will result in process termination).
 .SS Responsiveness
 .sp
 If your VDU\(aqs are modern, you may find a smaller sleep\-multiplier will speed up the \fBddcutil\fP/VDU protocol
@@ -349,31 +366,31 @@ with this program. If not, see <\fI\%https://www.gnu.org/licenses/\fP>.
 .sp
 .INDENT 0.0
 .TP
-.B class vdu_controls.AboutDialog
+.B class  vdu_controls.AboutDialog
 .INDENT 7.0
 .TP
-.B static invoke()
+.B static  invoke()
 .UNINDENT
 .UNINDENT
 .INDENT 0.0
 .TP
-.B vdu_controls.CONTINUOUS_TYPE = \(aqC\(aq
+.B vdu_controls.CONTINUOUS_TYPE  =  \(aqC\(aq
 Could be a str enumeration of VCP types
 .UNINDENT
 .INDENT 0.0
 .TP
-.B class vdu_controls.ContextMenu(about_action=None, help_action=None, chart_action=None, settings_action=None, presets_action=None, quit_action=None)
+.B class  vdu_controls.ContextMenu(about_action=None, help_action=None, chart_action=None, settings_action=None, presets_action=None, quit_action=None)
 .INDENT 7.0
 .TP
-.B get_preset(name: str) -> PyQt5.QtWidgets.QAction
+.B get_preset(name:  str) -> PyQt5.QtWidgets.QAction
 .UNINDENT
 .INDENT 7.0
 .TP
-.B has_preset(name: str) -> bool
+.B has_preset(name:  str) -> bool
 .UNINDENT
 .INDENT 7.0
 .TP
-.B insert_preset(name: str) -> None
+.B insert_preset(name:  str) -> None
 .UNINDENT
 .INDENT 7.0
 .TP
@@ -386,28 +403,28 @@ Could be a str enumeration of VCP types
 .UNINDENT
 .INDENT 0.0
 .TP
-.B vdu_controls.DDCUTIL = \(aqddcutil\(aq
+.B vdu_controls.DDCUTIL  =  \(aqddcutil\(aq
 Assuming ddcutil is somewhere on the PATH.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B vdu_controls.DEFAULT_SPLASH_PNG = \(aq/usr/share/icons/oxygen/base/256x256/apps/preferences\-desktop\-display.png\(aq
-A high resolution image, will fallback to an internal PNG if this file isn\(aqt found on the local system
+.B vdu_controls.DEFAULT_SPLASH_PNG  =  \(aq/usr/share/icons/hicolor/256x256/apps/vdu_controls.png\(aq
+A high resolution image, will fallback to an internal SVG if this file isn\(aqt found on the local system
 .UNINDENT
 .INDENT 0.0
 .TP
-.B class vdu_controls.DdcUtil(debug: bool = False, common_args=None, default_sleep_multiplier: float = 1.0)
+.B class  vdu_controls.DdcUtil(debug:  bool  =  False, common_args=None, default_sleep_multiplier:  float  =  1.0)
 Interface to the command line ddcutil Display Data Channel Utility for interacting with VDU\(aqs.
 The exception callback can return True if we should retry after errors (after the callback takes
 corrective action such as increasing the sleep_multiplier).
 .INDENT 7.0
 .TP
-.B detect_monitors() -> List[Tuple[str, str, str, str]]
+.B detect_monitors() -> List[Tuple[str,  str,  str,  str]]
 Return a list of (vdu_id, desc) tuples.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B get_attribute(vdu_id: str, vcp_code: str, sleep_multiplier: Optional[float] = None) -> Tuple[str, str]
+.B get_attribute(vdu_id:  str, vcp_code:  str, sleep_multiplier:  Optional[float]  =  None) -> Tuple[str,  str]
 Given a VDU id and vcp_code, retrieve the attribute\(aqs current value from the VDU.
 .sp
 Two values are returned, the monitor reported current value, and the monitor reported maximum value. Only
@@ -416,17 +433,21 @@ for "Non\-Continuous" attributes.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B get_supported_vcp_codes() -> Mapping[str, str]
+.B get_supported_vcp_codes() -> Mapping[str,  str]
 Returns a map of descriptions keyed by vcp_code, the codes that ddcutil appears to support.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B query_capabilities(vdu_id: str) -> str
+.B get_type(vcp_code)
+.UNINDENT
+.INDENT 7.0
+.TP
+.B query_capabilities(vdu_id:  str) -> str
 Return a vpc capabilities string.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B set_attribute(vdu_id: str, vcp_code: str, new_value: str, sleep_multiplier: Optional[float] = None) -> None
+.B set_attribute(vdu_id:  str, vcp_code:  str, new_value:  str, sleep_multiplier:  Optional[float]  =  None) -> None
 Send a new value to a specific VDU and vcp_code.
 .UNINDENT
 .INDENT 7.0
@@ -437,7 +458,7 @@ Returns info about all codes known to ddcutil, whether supported or not.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B class vdu_controls.DialogSingletonMixin
+.B class  vdu_controls.DialogSingletonMixin
 A mixin that can augment a QDialog or QMessageBox with code to enforce a singleton UI.
 For example, it is used so that only ones settings editor can be active at a time.
 .INDENT 7.0
@@ -447,11 +468,11 @@ Subclasses that implement their own closeEvent must call this closeEvent to dere
 .UNINDENT
 .INDENT 7.0
 .TP
-.B debug = False
+.B debug  =  False
 .UNINDENT
 .INDENT 7.0
 .TP
-.B classmethod exists() -> bool
+.B classmethod  exists() -> bool
 Returns true if the dialog has already been created.
 .UNINDENT
 .INDENT 7.0
@@ -462,18 +483,18 @@ Internal, used by the class method show_existing_dialog()
 .UNINDENT
 .INDENT 7.0
 .TP
-.B classmethod show_existing_dialog()
+.B classmethod  show_existing_dialog()
 If the dialog exists(), call this to make it visible by raising it.
 .UNINDENT
 .UNINDENT
 .INDENT 0.0
 .TP
-.B vdu_controls.EXIT_CODE_FOR_RESTART = 1959
+.B vdu_controls.EXIT_CODE_FOR_RESTART  =  1959
 Internal special exit code used to signal that the exit handler should restart the program.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B class vdu_controls.GreyScaleDialog
+.B class  vdu_controls.GreyScaleDialog
 Creates a dialog with a grey scale VDU calibration image.  Non\-model. Have as many as you like \- one per VDU.
 .INDENT 7.0
 .TP
@@ -482,39 +503,63 @@ Creates a dialog with a grey scale VDU calibration image.  Non\-model. Have as m
 .UNINDENT
 .INDENT 0.0
 .TP
-.B class vdu_controls.HelpDialog
+.B class  vdu_controls.HelpDialog
 .INDENT 7.0
 .TP
-.B static invoke()
+.B static  invoke()
 .UNINDENT
 .UNINDENT
 .INDENT 0.0
 .TP
-.B class vdu_controls.PresetController
+.B class  vdu_controls.MainWindow(main_config:  \fI\%vdu_controls.VduControlsConfig\fP, app:  PyQt5.QtWidgets.QApplication)
 .INDENT 7.0
 .TP
-.B delete_preset(preset_name: str, context_menu: \fI\%vdu_controls.ContextMenu\fP) -> None
+.B app_restore_state()
 .UNINDENT
 .INDENT 7.0
 .TP
-.B find_preset_paths() -> Mapping[str, str]
+.B app_save_state()
 .UNINDENT
 .INDENT 7.0
 .TP
-.B restore_preset(preset_name: str, main_window: \fI\%vdu_controls.VduControlsMainWindow\fP) -> None
+.B closeEvent(self, QCloseEvent)
 .UNINDENT
 .INDENT 7.0
 .TP
-.B save_preset(preset_name: str, main_window: \fI\%vdu_controls.VduControlsMainWindow\fP, context_menu: \fI\%vdu_controls.ContextMenu\fP) -> None
+.B create_config_files()
 .UNINDENT
 .UNINDENT
 .INDENT 0.0
 .TP
-.B class vdu_controls.PresetsDialog(main_window: \fI\%vdu_controls.VduControlsMainWindow\fP, context_menu: \fI\%vdu_controls.ContextMenu\fP)
+.B class  vdu_controls.PresetController
+.INDENT 7.0
+.TP
+.B delete_preset(preset_name:  str, context_menu:  \fI\%vdu_controls.ContextMenu\fP) -> None
+.UNINDENT
+.INDENT 7.0
+.TP
+.B find_preset_paths() -> Mapping[str,  str]
+.UNINDENT
+.INDENT 7.0
+.TP
+.B get_preset_name(preset_number:  int)
+.UNINDENT
+.INDENT 7.0
+.TP
+.B restore_preset(preset_name:  str, main_window:  \fI\%vdu_controls.VduControlsMainPanel\fP) -> None
+.UNINDENT
+.INDENT 7.0
+.TP
+.B save_preset(preset_name:  str, main_window:  \fI\%vdu_controls.VduControlsMainPanel\fP, context_menu:  \fI\%vdu_controls.ContextMenu\fP) -> None
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B class  vdu_controls.PresetsDialog(main_window:  \fI\%vdu_controls.VduControlsMainPanel\fP, context_menu:  \fI\%vdu_controls.ContextMenu\fP)
 A dialog for creating/updating/removing presets.
 .INDENT 7.0
 .TP
-.B class PresetWidget(name: str)
+.B class  PresetWidget(name:  str)
 .UNINDENT
 .INDENT 7.0
 .TP
@@ -526,12 +571,12 @@ A dialog for creating/updating/removing presets.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static invoke(main_window: \fI\%vdu_controls.VduControlsMainWindow\fP, context_menu: \fI\%vdu_controls.ContextMenu\fP) -> None
+.B static  invoke(main_window:  \fI\%vdu_controls.VduControlsMainPanel\fP, context_menu:  \fI\%vdu_controls.ContextMenu\fP) -> None
 .UNINDENT
 .UNINDENT
 .INDENT 0.0
 .TP
-.B class vdu_controls.RefreshVduDataTask(main_widget: \fI\%vdu_controls.VduControlsMainWindow\fP)
+.B class  vdu_controls.RefreshVduDataTask(main_widget:  \fI\%vdu_controls.VduControlsMainPanel\fP)
 Task to refresh VDU data from the physical VDU\(aqs.
 .sp
 Runs as a task because it can be quite slow depending on the number of VDU\(aqs, number of controls.  The task runs
@@ -548,25 +593,25 @@ Run a task that uses ddcutil to retrieve data for all the visible controls (may 
 .UNINDENT
 .INDENT 0.0
 .TP
-.B class vdu_controls.SettingsEditor(default_config: \fI\%vdu_controls.VduControlsConfig\fP, vdu_config_list: List[\fI\%vdu_controls.VduControlsConfig\fP])
+.B class  vdu_controls.SettingsEditor(default_config:  \fI\%vdu_controls.VduControlsConfig\fP, vdu_config_list:  List[\fI\%vdu_controls.VduControlsConfig\fP])
 Application Settings Editor, edits a default global settings file, and a settings file for each VDU.
 The files are in INI format.  Internally the settings are VduControlsConfig wrappers around
 the standard class configparser.ConfigParser.
 .INDENT 7.0
 .TP
-.B class SettingsEditorBooleanWidget(ini_editable: configparser.ConfigParser, option: str, section: str)
+.B class  SettingsEditorBooleanWidget(ini_editable:  configparser.ConfigParser, option:  str, section:  str)
 .UNINDENT
 .INDENT 7.0
 .TP
-.B class SettingsEditorCsvWidget(ini_editable: configparser.ConfigParser, option: str, section: str)
+.B class  SettingsEditorCsvWidget(ini_editable:  configparser.ConfigParser, option:  str, section:  str)
 .UNINDENT
 .INDENT 7.0
 .TP
-.B class SettingsEditorFloatWidget(ini_editable: configparser.ConfigParser, option: str, section: str)
+.B class  SettingsEditorFloatWidget(ini_editable:  configparser.ConfigParser, option:  str, section:  str)
 .UNINDENT
 .INDENT 7.0
 .TP
-.B class SettingsEditorTab(parent: PyQt5.QtWidgets.QWidget, vdu_config: \fI\%vdu_controls.VduControlsConfig\fP)
+.B class  SettingsEditorTab(parent:  PyQt5.QtWidgets.QWidget, vdu_config:  \fI\%vdu_controls.VduControlsConfig\fP)
 A tab corresponding to a settings file, generates UI widgets for each tab based on what\(aqs in the config.
 .INDENT 7.0
 .TP
@@ -574,12 +619,12 @@ A tab corresponding to a settings file, generates UI widgets for each tab based 
 .UNINDENT
 .INDENT 7.0
 .TP
-.B save(cancel: int = 2097152) -> None
+.B save(cancel:  int  =  2097152) -> None
 .UNINDENT
 .UNINDENT
 .INDENT 7.0
 .TP
-.B class SettingsEditorTextEditorWidget(ini_editable: configparser.ConfigParser, option: str, section: str)
+.B class  SettingsEditorTextEditorWidget(ini_editable:  configparser.ConfigParser, option:  str, section:  str)
 .UNINDENT
 .INDENT 7.0
 .TP
@@ -587,17 +632,25 @@ A tab corresponding to a settings file, generates UI widgets for each tab based 
 .UNINDENT
 .INDENT 7.0
 .TP
-.B static invoke(default_config: \fI\%vdu_controls.VduControlsConfig\fP, vdu_config_list: List[\fI\%vdu_controls.VduControlsConfig\fP]) -> None
+.B static  invoke(default_config:  \fI\%vdu_controls.VduControlsConfig\fP, vdu_config_list:  List[\fI\%vdu_controls.VduControlsConfig\fP]) -> None
 .UNINDENT
 .UNINDENT
 .INDENT 0.0
 .TP
-.B vdu_controls.VOLUME_SVG = b\(aq\en<svg xmlns="http://www.w3.org/2000/svg" viewBox="\-7 \-7 40 40" width="24" height="24">\en  <style id="current\-color\-scheme" type="text/css">\en        .ColorScheme\-Text { color:#232629; }\en    </style>\en  <g transform="translate(1,1)">\en    <g class="ColorScheme\-Text" fill="currentColor">\en      <path d="m14.324219 7.28125\-.539063.8613281a4 4 0 0 1 1.214844 2.8574219 4 4 0 0 1 \-1.210938 2.861328l.539063.863281a5 5 0 0 0 1.671875\-3.724609 5 5 0 0 0 \-1.675781\-3.71875z"/>\en      <path d="m13.865234 3.5371094\-.24414.9765625a7 7 0 0 1 4.378906 6.4863281 7 7 0 0 1 \-4.380859 6.478516l.24414.974609a8 8 0 0 0 5.136719\-7.453125 8 8 0 0 0 \-5.134766\-7.4628906z"/>\en      <path d="m3 8h2v6h\-2z" fill\-rule="evenodd"/>\en      <path d="m6 14 5 5h1v\-16h\-1l\-5 5z"/>\en    </g>\en  </g>\en</svg>\en\(aq
+.B class  vdu_controls.SignalWakeupHandler(parent=None)
+.INDENT 7.0
+.TP
+.B signalReceived
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B vdu_controls.VOLUME_SVG  =  b\(aq\en<svg xmlns="http://www.w3.org/2000/svg" viewBox="\-7 \-7 40 40" width="24" height="24">\en  <style id="current\-color\-scheme" type="text/css">\en        .ColorScheme\-Text { color:#232629; }\en    </style>\en  <g transform="translate(1,1)">\en    <g class="ColorScheme\-Text" fill="currentColor">\en      <path d="m14.324219 7.28125\-.539063.8613281a4 4 0 0 1 1.214844 2.8574219 4 4 0 0 1 \-1.210938 2.861328l.539063.863281a5 5 0 0 0 1.671875\-3.724609 5 5 0 0 0 \-1.675781\-3.71875z"/>\en      <path d="m13.865234 3.5371094\-.24414.9765625a7 7 0 0 1 4.378906 6.4863281 7 7 0 0 1 \-4.380859 6.478516l.24414.974609a8 8 0 0 0 5.136719\-7.453125 8 8 0 0 0 \-5.134766\-7.4628906z"/>\en      <path d="m3 8h2v6h\-2z" fill\-rule="evenodd"/>\en      <path d="m6 14 5 5h1v\-16h\-1l\-5 5z"/>\en    </g>\en  </g>\en</svg>\en\(aq
 Creates a SVG of grey rectangles typical of the sort used for VDU calibration.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B class vdu_controls.VcpCapability(vcp_code: str, vcp_name: str, vcp_type: str, values: Optional[List] = None, causes_config_change: bool = False, icon_source: Optional[bytes] = None)
+.B class  vdu_controls.VcpCapability(vcp_code:  str, vcp_name:  str, vcp_type:  str, values:  Optional[List]  =  None, causes_config_change:  bool  =  False, icon_source:  Optional[bytes]  =  None, enabled:  bool  =  False)
 Representation of a VCP (Virtual Control Panel) capability for a VDU.
 .INDENT 7.0
 .TP
@@ -606,7 +659,7 @@ Representation of a VCP (Virtual Control Panel) capability for a VDU.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B class vdu_controls.VduControlComboBox(vdu_model: \fI\%vdu_controls.VduController\fP, vcp_capability: \fI\%vdu_controls.VcpCapability\fP)
+.B class  vdu_controls.VduControlComboBox(vdu_model:  \fI\%vdu_controls.VduController\fP, vcp_capability:  \fI\%vdu_controls.VcpCapability\fP)
 GUI control for a DDC non\-continuously variable attribute, one that has a list of choices.
 .sp
 This is a duck\-typed GUI control widget (could inherit from an abstract type if we wanted to get formal about it).
@@ -620,10 +673,14 @@ Query the VDU for a new data value and cache it (may be called from a task threa
 .B refresh_view() -> None
 Copy the internally cached current value onto the GUI view.
 .UNINDENT
+.INDENT 7.0
+.TP
+.B validate_value()
+.UNINDENT
 .UNINDENT
 .INDENT 0.0
 .TP
-.B class vdu_controls.VduControlPanel(vdu_model: \fI\%vdu_controls.VduController\fP, warnings: bool)
+.B class  vdu_controls.VduControlPanel(vdu_model:  \fI\%vdu_controls.VduController\fP, warnings:  bool)
 Widget that contains all the controls for a single VDU (monitor/display).
 .sp
 The widget maintains a list of GUI "controls" that are duck\-typed and will have refresh_data() and refresh_view()
@@ -645,20 +702,24 @@ Tell the control widgets to refresh their views from their internally cached val
 .UNINDENT
 .INDENT 7.0
 .TP
-.B restore_state(preset_ini: configparser.ConfigParser) -> None
+.B restore_state(preset_ini:  configparser.ConfigParser) -> None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B save_state(preset_ini: configparser.ConfigParser) -> None
+.B save_state(preset_ini:  configparser.ConfigParser) -> None
 .UNINDENT
 .UNINDENT
 .INDENT 0.0
 .TP
-.B class vdu_controls.VduControlSlider(vdu_model: \fI\%vdu_controls.VduController\fP, vcp_capability: \fI\%vdu_controls.VcpCapability\fP)
+.B class  vdu_controls.VduControlSlider(vdu_model:  \fI\%vdu_controls.VduController\fP, vcp_capability:  \fI\%vdu_controls.VcpCapability\fP)
 GUI control for a DDC continuously variable attribute.
 .sp
 A compound widget with icon, slider, and text\-field.  This is a duck\-typed GUI control widget (could inherit
 from an abstract type if we wanted to get formal about it).
+.INDENT 7.0
+.TP
+.B event(self, QEvent) -> bool
+.UNINDENT
 .INDENT 7.0
 .TP
 .B refresh_data() -> None
@@ -672,7 +733,7 @@ Copy the internally cached current value onto the GUI view.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B class vdu_controls.VduController(vdu_id: str, vdu_model_name: str, vdu_serial: str, manufacturer: str, default_config: \fI\%vdu_controls.VduControlsConfig\fP, ddcutil: \fI\%vdu_controls.DdcUtil\fP)
+.B class  vdu_controls.VduController(vdu_id:  str, vdu_model_name:  str, vdu_serial:  str, manufacturer:  str, default_config:  \fI\%vdu_controls.VduControlsConfig\fP, ddcutil:  \fI\%vdu_controls.DdcUtil\fP, ignore_monitor:  bool  =  False, assume_standard_controls:  bool  =  False)
 Holds model+controller specific to an individual VDU including a map of its capabilities. A model object in
 MVC speak.
 .sp
@@ -684,11 +745,11 @@ it is sometimes incorrect due to sloppy implementation by manufacturers). For ex
 two Display\-Port inputs and it only has one.
 .INDENT 7.0
 .TP
-.B get_attribute(vcp_code: str) -> Tuple[str, str]
+.B get_attribute(vcp_code:  str) -> Tuple[str,  str]
 .UNINDENT
 .INDENT 7.0
 .TP
-.B get_full_id() -> Tuple[str, str, str, str]
+.B get_full_id() -> Tuple[str,  str,  str,  str]
 Return a tuple that defines this VDU: (vdu_id, manufacturer, model, serial\-number).
 .UNINDENT
 .INDENT 7.0
@@ -698,7 +759,7 @@ Return a unique description using the serial\-number (if defined) or vdu_id.
 .UNINDENT
 .INDENT 7.0
 .TP
-.B set_attribute(vcp_code: str, value: str) -> None
+.B set_attribute(vcp_code:  str, value:  str) -> None
 .UNINDENT
 .INDENT 7.0
 .TP
@@ -708,7 +769,7 @@ Write template config files to $HOME/.config/vdu_controls/
 .UNINDENT
 .INDENT 0.0
 .TP
-.B class vdu_controls.VduControlsConfig(config_name: str, default_enabled_vcp_codes: Optional[List] = None, include_globals: bool = False)
+.B class  vdu_controls.VduControlsConfig(config_name:  str, default_enabled_vcp_codes:  Optional[List]  =  None, include_globals:  bool  =  False)
 A vdu_controls config that can be read or written from INI style files by the standard configparser package.
 Includes a method that can fold in values from command line arguments parsed by the standard argparse package.
 .INDENT 7.0
@@ -721,15 +782,11 @@ Includes a method that can fold in values from command line arguments parsed by 
 .UNINDENT
 .INDENT 7.0
 .TP
-.B disable_supported_vcp_code(vcp_code: str) -> None
+.B disable_supported_vcp_code(vcp_code:  str) -> None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B enable_supported_vcp_code(vcp_code: str) -> None
-.UNINDENT
-.INDENT 7.0
-.TP
-.B enable_unsupported_vcp_code(vcp_code: str) -> None
+.B enable_supported_vcp_code(vcp_code:  str) -> None
 .UNINDENT
 .INDENT 7.0
 .TP
@@ -745,7 +802,7 @@ Includes a method that can fold in values from command line arguments parsed by 
 .UNINDENT
 .INDENT 7.0
 .TP
-.B get_config_type(section: str, option: str) -> str
+.B get_config_type(section:  str, option:  str) -> str
 .UNINDENT
 .INDENT 7.0
 .TP
@@ -770,27 +827,31 @@ Parse command line arguments and integrate the results into this config
 .UNINDENT
 .INDENT 7.0
 .TP
-.B parse_file(config_path: pathlib.Path) -> None
+.B parse_file(config_path:  pathlib.Path) -> None
 Parse config values from file
 .UNINDENT
 .INDENT 7.0
 .TP
-.B restrict_to_actual_capabilities(vdu_capabilities: Mapping[str, \fI\%vdu_controls.VcpCapability\fP]) -> None
+.B restrict_to_actual_capabilities(vdu_capabilities:  Mapping[str,  \fI\%vdu_controls.VcpCapability\fP]) -> None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B set_capabilities_alt_text(alt_text: str) -> None
+.B set_capabilities_alt_text(alt_text:  str) -> None
 .UNINDENT
 .INDENT 7.0
 .TP
-.B write_file(config_path: pathlib.Path, overwrite: bool = False) -> None
+.B write_file(config_path:  pathlib.Path, overwrite:  bool  =  False) -> None
 Write the config to a file.  Used for creating initial template config files.
 .UNINDENT
 .UNINDENT
 .INDENT 0.0
 .TP
-.B class vdu_controls.VduControlsMainWindow(default_config: \fI\%vdu_controls.VduControlsConfig\fP, detect_vdu_hook: callable, app_context_menu: \fI\%vdu_controls.ContextMenu\fP)
+.B class  vdu_controls.VduControlsMainPanel(default_config:  \fI\%vdu_controls.VduControlsConfig\fP, detect_vdu_hook:  callable, app_context_menu:  \fI\%vdu_controls.ContextMenu\fP)
 GUI for detected VDU\(aqs, it will construct and contain a control panel for each VDU.
+.INDENT 7.0
+.TP
+.B is_non_standard_enabled() -> bool
+.UNINDENT
 .INDENT 7.0
 .TP
 .B refresh_data() -> None
@@ -804,25 +865,33 @@ Invoke when the GUI worker thread completes. Runs in the GUI thread and can refr
 .UNINDENT
 .INDENT 0.0
 .TP
-.B class vdu_controls.VduGuiSupportedControls
+.B class  vdu_controls.VduGuiSupportedControls
 Maps of controls supported by name on the command line and in config files.
 .INDENT 7.0
 .TP
-.B by_arg_name = {\(aqaudio\-bass\(aq: <vdu_controls.VcpCapability object>, \(aqaudio\-mic\-volume\(aq: <vdu_controls.VcpCapability object>, \(aqaudio\-mute\(aq: <vdu_controls.VcpCapability object>, \(aqaudio\-treble\(aq: <vdu_controls.VcpCapability object>, \(aqaudio\-volume\(aq: <vdu_controls.VcpCapability object>, \(aqbrightness\(aq: <vdu_controls.VcpCapability object>, \(aqcontrast\(aq: <vdu_controls.VcpCapability object>, \(aqinput\-source\(aq: <vdu_controls.VcpCapability object>, \(aqosd\-language\(aq: <vdu_controls.VcpCapability object>, \(aqpower\-mode\(aq: <vdu_controls.VcpCapability object>}
+.B by_arg_name  =  {\(aqaudio\-bass\(aq: <vdu_controls.VcpCapability object>, \(aqaudio\-mic\-volume\(aq: <vdu_controls.VcpCapability object>, \(aqaudio\-mute\(aq: <vdu_controls.VcpCapability object>, \(aqaudio\-treble\(aq: <vdu_controls.VcpCapability object>, \(aqaudio\-volume\(aq: <vdu_controls.VcpCapability object>, \(aqbrightness\(aq: <vdu_controls.VcpCapability object>, \(aqcontrast\(aq: <vdu_controls.VcpCapability object>, \(aqinput\-source\(aq: <vdu_controls.VcpCapability object>, \(aqosd\-language\(aq: <vdu_controls.VcpCapability object>, \(aqpower\-mode\(aq: <vdu_controls.VcpCapability object>}
 .UNINDENT
 .INDENT 7.0
 .TP
-.B by_code = {\(aq10\(aq: <vdu_controls.VcpCapability object>, \(aq12\(aq: <vdu_controls.VcpCapability object>, \(aq60\(aq: <vdu_controls.VcpCapability object>, \(aq62\(aq: <vdu_controls.VcpCapability object>, \(aq64\(aq: <vdu_controls.VcpCapability object>, \(aq8D\(aq: <vdu_controls.VcpCapability object>, \(aq8F\(aq: <vdu_controls.VcpCapability object>, \(aq91\(aq: <vdu_controls.VcpCapability object>, \(aqCC\(aq: <vdu_controls.VcpCapability object>, \(aqD6\(aq: <vdu_controls.VcpCapability object>}
+.B by_code  =  {\(aq10\(aq: <vdu_controls.VcpCapability object>, \(aq12\(aq: <vdu_controls.VcpCapability object>, \(aq60\(aq: <vdu_controls.VcpCapability object>, \(aq62\(aq: <vdu_controls.VcpCapability object>, \(aq64\(aq: <vdu_controls.VcpCapability object>, \(aq8D\(aq: <vdu_controls.VcpCapability object>, \(aq8F\(aq: <vdu_controls.VcpCapability object>, \(aq91\(aq: <vdu_controls.VcpCapability object>, \(aqCC\(aq: <vdu_controls.VcpCapability object>, \(aqD6\(aq: <vdu_controls.VcpCapability object>}
 .UNINDENT
 .INDENT 7.0
 .TP
-.B ddcutil_supported = None
+.B ddcutil_supported  =  None
 .UNINDENT
 .UNINDENT
 .INDENT 0.0
 .TP
-.B vdu_controls.create_icon_from_svg_string(svg_str: bytes)
-There is no QIcon option for loading SVG from a string, only from a SVG file, so roll our own.
+.B vdu_controls.create_icon_from_svg_string(svg_str:  bytes)
+.UNINDENT
+.INDENT 0.0
+.TP
+.B vdu_controls.create_image_from_svg_bytes(svg_str:  bytes) -> PyQt5.QtGui.QImage
+There is no QIcon option for loading QImage from a string, only from a SVG file, so roll our own.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B vdu_controls.create_pixmap_from_svg_bytes(svg_str:  bytes) -> PyQt5.QtGui.QPixmap
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -831,17 +900,25 @@ Overarching error handler in case something unexpected happens.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B vdu_controls.get_config_path(config_name: str) -> pathlib.Path
+.B vdu_controls.get_config_path(config_name:  str) -> pathlib.Path
 .UNINDENT
 .INDENT 0.0
 .TP
 .B vdu_controls.get_splash_image() -> PyQt5.QtGui.QPixmap
-Get the splash pixmap from a KDE oxygen PNG file or, failing that, a small base64 encoded internal PNG.
+Get the splash pixmap from the installed png, or a KDE oxygen PNG file or, failing that, the icon svg.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B vdu_controls.install_as_desktop_application(uninstall: bool = False)
+.B vdu_controls.handle_theme(svg_str:  bytes) -> bytes
+.UNINDENT
+.INDENT 0.0
+.TP
+.B vdu_controls.install_as_desktop_application(uninstall:  bool  =  False)
 Self install this script in the current Linux user\(aqs bin directory and desktop applications\->settings menu.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B vdu_controls.is_dark_theme()
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -862,7 +939,7 @@ when the GUI detects the number of monitors has changes.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B vdu_controls.translate(source_text: str)
+.B vdu_controls.translate(source_text:  str)
 For future internationalization \- recommended way to do this at this time.
 .UNINDENT
 .INDENT 0.0
