@@ -1055,8 +1055,13 @@ class VduController:
             if len(stripped) != 0:
                 lines_list = stripped.split('\n')
                 if len(lines_list) == 1:
-                    space_separated = lines_list[0].replace('(interpretation unavailable)', '').strip().split(' ')
-                    values_list = [(v, 'unknown ' + v) for v in space_separated[1:]]
+                    range_pattern = re.compile('Values:\s+([0-9]+)..([0-9]+)')
+                    range_match = range_pattern.match(lines_list[0])
+                    if range_match:
+                        values_list = [ "%%Range%%", range_match.group(1), range_match.group(2) ]
+                    else:
+                        space_separated = lines_list[0].replace('(interpretation unavailable)', '').strip().split(' ')
+                        values_list = [(v, 'unknown ' + v) for v in space_separated[1:]]
                 else:
                     values_list = [(key, desc) for key, desc in
                                    (v.strip().split(": ", 1) for v in lines_list[1:])]
@@ -1071,7 +1076,7 @@ class VduController:
                 vcp_name = feature_match.group(2)
                 values = parse_values(feature_match.group(3))
                 # Guess type from existence or not of value list
-                vcp_type = CONTINUOUS_TYPE if len(values) == 0 else GUI_NON_CONTINUOUS_TYPE
+                vcp_type = CONTINUOUS_TYPE if len(values) == 0 or values[0] == "%%Range%%" else GUI_NON_CONTINUOUS_TYPE
                 capability = VcpCapability(vcp_code, vcp_name, vcp_type=vcp_type, values=values, icon_source=None)
                 feature_map[vcp_code] = capability
         return feature_map
@@ -1340,7 +1345,10 @@ class VduControlSlider(QWidget):
 
         self.slider = slider = QSlider()
         slider.setMinimumWidth(200)
-        slider.setRange(0, int(self.max_value))
+        if len(vcp_capability.values) != 0:
+            slider.setRange(int(vcp_capability.values[1]), int(vcp_capability.values[2]))
+        else:
+            slider.setRange(0, int(self.max_value))
         slider.setValue(int(self.current_value))
         slider.setSingleStep(1)
         slider.setPageStep(10)
