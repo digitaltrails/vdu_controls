@@ -79,15 +79,23 @@ files</h2>
 to customise the application by writing to a set of config files. The
 <code>Settings</code> item will feature a tab for editing each config
 file. The config files are named according to the following scheme:</p>
-<pre><code>- Application wide default config: ``$HOME/.config/vdu_controls/vdu_controls.conf``
-- VDU model and serial number config: ``$HOME/.config/vdu_controls/&lt;model&gt;_&lt;serial|display_num&gt;.conf``
-- VDU model only config: ``$HOME/.config/vdu_controls/&lt;model&gt;.conf``</code></pre>
+<ul>
+<li>Application wide default config:
+<code>$HOME/.config/vdu_controls/vdu_controls.conf</code></li>
+<li>VDU model and serial number config:
+<code>$HOME/.config/vdu_controls/&lt;model&gt;_&lt;serial|display_num&gt;.conf</code></li>
+<li>VDU model only config:
+<code>$HOME/.config/vdu_controls/&lt;model&gt;.conf</code></li>
+</ul>
 <p>The application wide default file can be used to alter application
 settings and the set of default VDU controls.</p>
 <p>The VDU-specific config files can be used to:</p>
-<pre><code>- Correct manufacturer built-in meta data.
-- Customise which controls are to be provided for each VDU.
-- Set a optimal ``ddcutil`` DDC communication speed-multiplier for each VDU.</code></pre>
+<ul>
+<li>Correct manufacturer built-in meta data.</li>
+<li>Customise which controls are to be provided for each VDU.</li>
+<li>Set a optimal <code>ddcutil</code> DDC communication
+speed-multiplier for each VDU.</li>
+</ul>
 <p>It should be noted that config files can only be used to alter
 definitions of VCP codes already supported by <code>ddcutil</code>. If a
 VCP code is listed as a <em>manufacturer specific feature</em> it is not
@@ -137,6 +145,26 @@ VDU’s.</p>
 <p>The config files are completely optional, they need not be used if
 the existing command line options are found to be adequate to the task
 at hand.</p>
+<h2 id="adding-value-restrictions-to-the-config-file">Adding value
+restrictions to the config file</h2>
+<p>If a VDU’s DDC reported feature minimum and maximum values are
+incorrect, the vdu_controls user interface can be restricted to the
+correct range. For example, say a VDU reports it supports a brightness
+range of 0 to 100, but in fact only practically supports 20 to 90. In
+such cases, this can be corrected by bringing up the vdu_controls
+settings and editing that VDU’s <strong>capabilities
+override</strong>:</p>
+<ol type="1">
+<li>locate the feature, in this example the brightness,</li>
+<li>add a <strong>Values:</strong> <strong><em>min..max</em></strong>
+specification to line the following the feature definition,</li>
+<li>save the changes.</li>
+</ol>
+<p>For the brightness example the completed edit would look like:</p>
+<pre><code>    Feature: 10 (Brightness)
+       Values: 20..80</code></pre>
+<p>The vdu_controls slider for that value will now be restricted to the
+specified range.</p>
 <h2 id="presets">Presets</h2>
 <p>A custom named preset can be used to save the current VDU settings
 for later recall. Any number of presets can be created to suit different
@@ -147,8 +175,8 @@ lighting conditions or different applications, for example:
 <code>context-menu</code> will bring up a dialog for managing and
 applying presets. The <code>context-menu</code> also includes a shortcut
 for applying each existing presets.</p>
-<p>The preset files are named as follows:</p>
-<pre><code>``$HOME/.config/vdu_controls/Preset_&lt;preset_name&gt;.conf``</code></pre>
+<p>The preset files are named as follows:
+<code>$HOME/.config/vdu_controls/Preset_&lt;preset_name&gt;.conf</code></p>
 <p>Presets are saved in INI-file format for ease of editing. Each preset
 file contains a section for each connected VDU, something similar to the
 following example:</p>

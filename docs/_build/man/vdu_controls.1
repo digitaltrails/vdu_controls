@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "VDU_CONTROLS" "1" "Mar 14, 2022" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Apr 09, 2022" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.3.1
 .
@@ -218,6 +218,38 @@ which will create initial templates based on the currently connected VDU\(aqs.
 .sp
 The config files are completely optional, they need not be used if the existing command line options are found to be
 adequate to the task at hand.
+.SS Adding value restrictions to the config file
+.sp
+If a VDU\(aqs DDC reported feature minimum and maximum values are incorrect,
+the vdu_controls user interface can be restricted to the correct range. For example,
+say a VDU reports it supports a brightness range of 0 to 100, but in fact only
+practically supports 20 to 90. In such cases, this can be corrected by bringing up
+the vdu_controls settings and editing that VDU\(aqs \fBcapabilities override\fP:
+.INDENT 0.0
+.INDENT 3.5
+.INDENT 0.0
+.IP 1. 3
+locate the feature, in this example the brightness,
+.IP 2. 3
+add a __Values:__ \fB*min..max*\fP specification to line the following the feature definition,
+.IP 3. 3
+save the changes.
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.sp
+For the brightness example the completed edit would look like:
+.INDENT 0.0
+.INDENT 3.5
+.INDENT 0.0
+.TP
+.B Feature: 10 (Brightness)
+Values: 20..80
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.sp
+The vdu_controls slider for that value will now be restricted to the specified range.
 .SS Presets
 .sp
 A custom named preset can be used to save the current VDU settings for later recall. Any number of presets can be
@@ -227,12 +259,7 @@ created to suit different lighting conditions or different applications, for exa
 The \fBPresets\fP item in right\-mouse \fBcontext\-menu\fP will bring up a dialog for managing and applying presets.
 The \fBcontext\-menu\fP also includes a shortcut for applying each existing presets.
 .sp
-The preset files are named as follows:
-.INDENT 0.0
-.INDENT 3.5
-\fB$HOME/.config/vdu_controls/Preset_<preset_name>.conf\fP
-.UNINDENT
-.UNINDENT
+The preset files are named as follows: \fB$HOME/.config/vdu_controls/Preset_<preset_name>.conf\fP
 .sp
 Presets are saved in INI\-file format for ease of editing.  Each preset file contains a section for each connected
 VDU, something similar to the following example:
@@ -883,15 +910,7 @@ Maps of controls supported by name on the command line and in config files.
 .INDENT 0.0
 .TP
 .B vdu_controls.create_icon_from_svg_string(svg_str:  bytes)
-.UNINDENT
-.INDENT 0.0
-.TP
-.B vdu_controls.create_image_from_svg_bytes(svg_str:  bytes) -> PyQt5.QtGui.QImage
-There is no QIcon option for loading QImage from a string, only from a SVG file, so roll our own.
-.UNINDENT
-.INDENT 0.0
-.TP
-.B vdu_controls.create_pixmap_from_svg_bytes(svg_str:  bytes) -> PyQt5.QtGui.QPixmap
+There is no QIcon option for loading SVG from a string, only from a SVG file, so roll our own.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -905,7 +924,7 @@ Overarching error handler in case something unexpected happens.
 .INDENT 0.0
 .TP
 .B vdu_controls.get_splash_image() -> PyQt5.QtGui.QPixmap
-Get the splash pixmap from the installed png, or a KDE oxygen PNG file or, failing that, the icon svg.
+Get the splash pixmap from the installed png, failing that, the internal splash png.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -944,11 +963,11 @@ For future internationalization \- recommended way to do this at this time.
 .UNINDENT
 .INDENT 0.0
 .IP \(bu 2
-genindex
+\fI\%Index\fP
 .IP \(bu 2
-modindex
+\fI\%Module Index\fP
 .IP \(bu 2
-search
+\fI\%Search Page\fP
 .UNINDENT
 .SH AUTHOR
 Michael Hamilton
