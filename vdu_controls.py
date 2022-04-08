@@ -83,17 +83,17 @@ The right-mouse context-menu ``Settings`` item can be used to customise the appl
 files.  The ``Settings`` item will feature a tab for editing each config file.  The config files are named according
 to the following scheme:
 
-    - Application wide default config: ``$HOME/.config/vdu_controls/vdu_controls.conf``
-    - VDU model and serial number config: ``$HOME/.config/vdu_controls/<model>_<serial|display_num>.conf``
-    - VDU model only config: ``$HOME/.config/vdu_controls/<model>.conf``
+ - Application wide default config: ``$HOME/.config/vdu_controls/vdu_controls.conf``
+ - VDU model and serial number config: ``$HOME/.config/vdu_controls/<model>_<serial|display_num>.conf``
+ - VDU model only config: ``$HOME/.config/vdu_controls/<model>.conf``
 
 The application wide default file can be used to alter application settings and the set of default VDU controls.
 
 The VDU-specific config files can be used to:
 
-    - Correct manufacturer built-in meta data.
-    - Customise which controls are to be provided for each VDU.
-    - Set a optimal ``ddcutil`` DDC communication speed-multiplier for each VDU.
+ - Correct manufacturer built-in meta data.
+ - Customise which controls are to be provided for each VDU.
+ - Set a optimal ``ddcutil`` DDC communication speed-multiplier for each VDU.
 
 It should be noted that config files can only be used to alter definitions of VCP codes already supported
 by ``ddcutil``.  If a VCP code is listed as a *manufacturer specific feature* it is not supported. Manufacturer
@@ -143,6 +143,27 @@ which will create initial templates based on the currently connected VDU's.
 The config files are completely optional, they need not be used if the existing command line options are found to be
 adequate to the task at hand.
 
+Adding value restrictions to the config file
+--------------------------------------------
+
+If a VDU's DDC reported feature minimum and maximum values are incorrect,
+the vdu_controls user interface can be restricted to the correct range. For example,
+say a VDU reports it supports a brightness range of 0 to 100, but in fact only
+practically supports 20 to 90. In such cases, this can be corrected by bringing up
+the vdu_controls settings and editing that VDU's **capabilities override**:
+
+ 1. locate the feature, in this example the brightness,
+ 2. add a __Values:__ ***min..max*** specification to line the following the feature definition,
+ 3. save the changes.
+
+For the brightness example the completed edit would look like:
+
+        Feature: 10 (Brightness)
+           Values: 20..80
+
+
+The vdu_controls slider for that value will now be restricted to the specified range.
+
 Presets
 -------
 
@@ -153,9 +174,7 @@ created to suit different lighting conditions or different applications, for exa
 The ``Presets`` item in right-mouse ``context-menu`` will bring up a dialog for managing and applying presets.
 The ``context-menu`` also includes a shortcut for applying each existing presets.
 
-The preset files are named as follows:
-
-    ``$HOME/.config/vdu_controls/Preset_<preset_name>.conf``
+The preset files are named as follows: ``$HOME/.config/vdu_controls/Preset_<preset_name>.conf``
 
 Presets are saved in INI-file format for ease of editing.  Each preset file contains a section for each connected
 VDU, something similar to the following example:
@@ -298,7 +317,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow
 
-VDU_CONTROLS_VERSION = '1.6.1'
+VDU_CONTROLS_VERSION = '1.6.2'
 
 
 def proper_name(*args):

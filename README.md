@@ -179,6 +179,10 @@ Michael Hamilton\
 
 Version History
 ---------------
+* 1.6.1
+  * Added a Feature Values: min..max override to optionally restrict brightness and other sliders.
+* 1.6.1
+  * Alterations for Wayland compatibility (cosmetic)
 * 1.6.0
   * Let other processes trigger vdu_controls preset changes and settings refreshes via UNIX/Linux signals.
 * 1.5.2
