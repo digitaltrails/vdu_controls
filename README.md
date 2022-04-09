@@ -179,7 +179,10 @@ Michael Hamilton\
 
 Version History
 ---------------
-* 1.6.1
+* 1.6.3
+  * Added a hamburger menu as an obvious alternate path to the context menu.
+  * Minor cosmetic UI changes.
+* 1.6.2
   * Added a Feature Values: min..max override to optionally restrict brightness and other sliders.
 * 1.6.1
   * Alterations for Wayland compatibility (cosmetic)

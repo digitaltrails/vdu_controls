@@ -17,7 +17,7 @@
 #
 
 Name: vdu_controls
-Version: 1.6.2
+Version: 1.6.3
 Release: 0
 License: GPL-3.0-or-later
 BuildArch: noarch
@@ -84,6 +84,8 @@ gzip -c docs/_build/man/vdu_controls.1 > %{buildroot}/%{_datadir}/man/man1/%{nam
 %{_datadir}/man/man1/%{name}.1.gz
 
 %changelog
+* Sun Apr 10 2022 Michael Hamilton <michael@actrix.gen.nz>
+- Added a hamburger menu to provide alternate access to the context menu : vdu_controls 1.6.3
 * Sat Apr 09 2022 Michael Hamilton <michael@actrix.gen.nz>
 - Add a feature Values: min..max override : vdu_controls 1.6.2
 * Mon Mar 14 2022 Michael Hamilton <michael@actrix.gen.nz>

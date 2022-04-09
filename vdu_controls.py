@@ -307,7 +307,7 @@ from typing import List, Tuple, Mapping, Type
 
 from PyQt5 import QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
-    QSettings, QTimer
+    QSettings, QTimer, QSize
 from PyQt5.QtGui import QIntValidator, QPixmap, QIcon, QCursor, QImage, QPainter, QDoubleValidator, QRegExpValidator, \
     QPalette, QGuiApplication
 from PyQt5.QtMultimedia import QCameraInfo, QCameraImageCapture, QCamera
@@ -315,9 +315,9 @@ from PyQt5.QtMultimediaWidgets import QCameraViewfinder
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
-    QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow
+    QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton
 
-VDU_CONTROLS_VERSION = '1.6.2'
+VDU_CONTROLS_VERSION = '1.6.3'
 
 
 def proper_name(*args):
@@ -419,6 +419,34 @@ VOLUME_SVG = b"""
       <path d="m3 8h2v6h-2z" fill-rule="evenodd"/>
       <path d="m6 14 5 5h1v-16h-1l-5 5z"/>
     </g>
+  </g>
+</svg>
+"""
+
+MENU_ICON_SOURCE = b"""
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <defs id="defs3051">
+    <style type="text/css" id="current-color-scheme">
+      .ColorScheme-Text {
+        color:#232629;
+      }
+      </style>
+  </defs>
+  <g transform="translate(1,1)">
+    <path style="fill:currentColor;fill-opacity:1;stroke:none" d="m3 5v2h16v-2h-16m0 5v2h16v-2h-16m0 5v2h16v-2h-16" class="ColorScheme-Text"/>
+  </g>
+</svg>
+"""
+
+REFRESH_ICON_SOURCE = b"""
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24">
+  <defs>
+    <style type="text/css" id="current-color-scheme">.ColorScheme-Text {
+        color:#232629;
+      }</style>
+  </defs>
+  <g transform="translate(1,1)">
+    <path class="ColorScheme-Text" fill="currentColor" d="m 19,11 c 0,1.441714 -0.382922,2.789289 -1.044922,3.955078 l -0.738281,-0.738281 c 0,0 0.002,-0.0019 0.002,-0.0019 l -2.777344,-2.779297 0.707032,-0.707031 2.480468,2.482422 C 17.861583,12.515315 18,11.776088 18,11 18,7.12203 14.878,4 11,4 9.8375,4 8.746103,4.285828 7.783203,4.783203 L 7.044922,4.044922 C 8.210722,3.382871 9.5583,3 11,3 c 4.432,0 8,3.568034 8,8 z m -4.044922,6.955078 C 13.789278,18.617129 12.4417,19 11,19 6.568,19 3,15.431966 3,11 3,9.558286 3.382922,8.210711 4.044922,7.044922 l 0.683594,0.683594 0.002,-0.002 2.828125,2.828126 L 6.851609,11.261673 4.373094,8.783157 C 4.139126,9.480503 4,10.221736 4,11 c 0,3.87797 3.122,7 7,7 1.1625,0 2.253897,-0.285829 3.216797,-0.783203 z"/>
   </g>
 </svg>
 """
@@ -1661,6 +1689,49 @@ class ContextMenu(QMenu):
         return None
 
 
+class BottomToolBar(QToolBar):
+
+    def __init__(self, start_refresh_func, app_context_menu, parent):
+        super().__init__(parent=parent)
+        self.refresh_action = self.addAction(
+            create_icon_from_svg_string(REFRESH_ICON_SOURCE), "Refresh settings from monitors", start_refresh_func)
+        self.setIconSize(QSize(32,32))
+        self.menu_button = QToolButton(self)
+        self.menu_button.setIcon(create_icon_from_svg_string(MENU_ICON_SOURCE))
+        self.progress_bar = QProgressBar(self)
+        # Disable text percentage label on the spinner progress-bar
+        self.progress_bar.setTextVisible(False)
+        self.progress_bar.setRange(0, 1)
+        self.progress_bar.setDisabled(True)
+        self.addWidget(self.progress_bar)
+        self.menu_button.setMenu(app_context_menu)
+        self.menu_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.addWidget(self.menu_button)
+        self.installEventFilter(self)
+
+    def eventFilter(self, target: QObject, event: QEvent) -> bool:
+        super().eventFilter(target, event)
+        # PalletChange happens after the new style sheet is in use.
+        if event.type() == QEvent.PaletteChange:
+            self.refresh_action.setIcon(create_icon_from_svg_string(REFRESH_ICON_SOURCE))
+            self.menu_button.setIcon(create_icon_from_svg_string(MENU_ICON_SOURCE))
+        event.accept()
+        return True
+
+    def indicate_refresh_in_progress(self):
+        self.refresh_action.setDisabled(True)
+        self.menu_button.setDisabled(True)
+        self.progress_bar.setDisabled(False)
+        # Setting range to 0,0 cause the progress bar to pulsate left/right - used as a busy spinner.
+        self.progress_bar.setRange(0, 0)
+
+    def indicate_refresh_complete(self):
+        self.progress_bar.setRange(0, 1)
+        self.progress_bar.setDisabled(True)
+        self.refresh_action.setDisabled(False)
+        self.menu_button.setDisabled(False)
+
+
 class VduControlsMainPanel(QWidget):
     """GUI for detected VDU's, it will construct and contain a control panel for each VDU."""
 
@@ -1762,19 +1833,14 @@ class VduControlsMainPanel(QWidget):
         def start_refresh() -> None:
             # Refreshes from all values from ddcutil.  May be slow, starts a busy spinner and then
             # starts the work in a task thread.
-            self.refresh_button.setDisabled(True)
-            self.progressBar.setDisabled(False)
-            # Setting range to 0,0 cause the progress bar to pulsate left/right - used as a busy spinner.
-            self.progressBar.setRange(0, 0)
+            self.bottom_toolbar.indicate_refresh_in_progress()
             # Start the background task
             self.refreshDataTask.start()
 
         def finish_refresh() -> None:
             # GUI-thread QT signal handler for refresh task completion - execution will be in the GUI thread.
             # Stop the busy-spinner (progress bar).
-            self.progressBar.setRange(0, 1)
-            self.progressBar.setDisabled(True)
-            self.refresh_button.setDisabled(False)
+            self.bottom_toolbar.indicate_refresh_complete()
             self.refresh_view()
 
         self.refreshDataTask = RefreshVduDataTask(self)
@@ -1794,16 +1860,10 @@ class VduControlsMainPanel(QWidget):
         global signal_wakeup_handler
         signal_wakeup_handler.signalReceived.connect(respond_to_signal)
 
-        self.progressBar = QProgressBar(self)
-        # Disable text percentage label on the spinner progress-bar
-        self.progressBar.setTextVisible(False)
-        self.progressBar.setRange(0, 1)
-        self.progressBar.setDisabled(True)
-        layout.addWidget(self.progressBar, Qt.AlignVCenter)
+        self.bottom_toolbar = \
+            BottomToolBar(start_refresh_func=start_refresh, app_context_menu=app_context_menu, parent=self)
 
-        self.refresh_button = QPushButton(translate("Refresh settings from monitors"))
-        self.refresh_button.clicked.connect(start_refresh)
-        layout.addWidget(self.refresh_button)
+        layout.addWidget(self.bottom_toolbar)
 
         self.setContextMenuPolicy(Qt.CustomContextMenu)
 
@@ -2353,6 +2413,9 @@ class MainWindow(QMainWindow):
         self.main_control_panel = VduControlsMainPanel(main_config, detect_vdu_hook, app_context_menu)
 
         self.setCentralWidget(self.main_control_panel)
+
+        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        self.adjustSize()
 
         self.app_restore_state()
 
