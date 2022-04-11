@@ -2399,6 +2399,8 @@ class MainWindow(QMainWindow):
 
         app.setWindowIcon(app_icon)
         app.setApplicationDisplayName(translate('VDU Controls'))
+        # Make sure all icons use HiDPI - toolbars don't by default, so force it.
+        app.setAttribute(Qt.AA_UseHighDpiPixmaps)
 
         if splash is not None:
             splash.showMessage(translate('\n\nVDU Controls\nLooking for DDC monitors...\n'),
