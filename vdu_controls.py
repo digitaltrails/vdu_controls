@@ -317,7 +317,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton
 
-VDU_CONTROLS_VERSION = '1.6.3'
+VDU_CONTROLS_VERSION = '1.6.4'
 
 
 def proper_name(*args):
@@ -363,6 +363,9 @@ PRESET_SIGNAL_MIN = 40
 PRESET_SIGNAL_MAX = 55
 
 signal_wakeup_handler = None
+
+# On Plasma Wayland the system tray may not be immediately available at login - so keep trying for...
+SYSTEM_TRAY_WAIT_SECONDS = 20
 
 SVG_LIGHT_THEME_COLOR = b"#232629"
 SVG_DARK_THEME_COLOR = b"#f3f3f3"
@@ -2392,10 +2395,19 @@ class MainWindow(QMainWindow):
 
         self.tray = None
         if main_config.is_system_tray_enabled():
+            if not QSystemTrayIcon.isSystemTrayAvailable():
+                print("WARNING: no system tray, waiting to see if one becomes available.")
+                for i in range(0,SYSTEM_TRAY_WAIT_SECONDS):
+                    if QSystemTrayIcon.isSystemTrayAvailable():
+                        break
+                    time.sleep(1)
             if QSystemTrayIcon.isSystemTrayAvailable():
+                print("INFO: using system tray.")
                 self.tray = QSystemTrayIcon()
                 self.tray.setIcon(app_icon)
                 self.tray.setContextMenu(app_context_menu)
+            else:
+                print("ERROR: no system tray - cannot run in system tray.")
 
         app.setWindowIcon(app_icon)
         app.setApplicationDisplayName(translate('VDU Controls'))

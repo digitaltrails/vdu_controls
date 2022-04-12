@@ -17,7 +17,7 @@
 #
 
 Name: vdu_controls
-Version: 1.6.3
+Version: 1.6.4
 Release: 0
 License: GPL-3.0-or-later
 BuildArch: noarch
@@ -84,6 +84,8 @@ gzip -c docs/_build/man/vdu_controls.1 > %{buildroot}/%{_datadir}/man/man1/%{nam
 %{_datadir}/man/man1/%{name}.1.gz
 
 %changelog
+* Wed Apr 13 2022 Michael Hamilton <michael@actrix.gen.nz>
+- Wayland wait for system tray at login. Enable HiDPI icons : vdu_controls 1.6.4
 * Sun Apr 10 2022 Michael Hamilton <michael@actrix.gen.nz>
 - Added a hamburger menu to provide alternate access to the context menu : vdu_controls 1.6.3
 * Sat Apr 09 2022 Michael Hamilton <michael@actrix.gen.nz>
