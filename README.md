@@ -179,6 +179,8 @@ Michael Hamilton\
 
 Version History
 ---------------
+* 1.6.5
+  * Widen handling of pare exceptions for VDU capabilities - catch more exceptions.
 * 1.6.4
   * Wait for system tray to become available (for autostart Plasma Wayland).
   * Enable HiDPI icons (for the bottom toolbar) - fix blurred toolbar icons on up-scaled desktops.

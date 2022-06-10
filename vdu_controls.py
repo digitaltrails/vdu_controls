@@ -317,7 +317,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton
 
-VDU_CONTROLS_VERSION = '1.6.4'
+VDU_CONTROLS_VERSION = '1.6.5'
 
 
 def proper_name(*args):
@@ -498,7 +498,7 @@ Note that this software is licenced under the GPL Version 3 WITHOUT ANY WARRANTY
 without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 PURPOSE.  
 """
-
+ASSUMED_CONTROLS_CONFIG_VCP_CODES = ['10', '12']
 ASSUMED_CONTROLS_CONFIG_TEXT = ('\n'
                                 'capabilities-override = Model: unknown\n'
                                 '	MCCS version: 2.2\n'
@@ -1053,6 +1053,7 @@ class VduController:
             if ignore_monitor:
                 self.capabilities_text = ''
             elif assume_standard_controls:
+                self.enabled_vcp_codes = ASSUMED_CONTROLS_CONFIG_VCP_CODES
                 self.capabilities_text = ASSUMED_CONTROLS_CONFIG_TEXT
             else:
                 self.capabilities_text = ddcutil.query_capabilities(vdu_id)
