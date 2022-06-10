@@ -1764,7 +1764,8 @@ class VduControlsMainPanel(QWidget):
                 try:
                     controller = VduController(vdu_id, vdu_model_name, vdu_serial, manufacturer, default_config,
                                                self.ddcutil)
-                except subprocess.CalledProcessError as e:
+                except Exception as e:
+                    # Catch any kind of parse related error
                     alert = QMessageBox()
                     alert.setText(
                         translate('Failed to obtain capabilities for monitor {} {} {}.').format(vdu_id,
