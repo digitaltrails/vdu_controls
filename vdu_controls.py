@@ -606,7 +606,7 @@ class DdcUtil:
             elif len(display_str.strip()) != 0:
                 print(f"WARNING: ignoring {display_str}")
         # For testing bad VDU's:
-        display_list.append(("3", "maker_y", "model_z", "1234"))
+        #display_list.append(("3", "maker_y", "model_z", "1234"))
         return display_list
 
     def query_capabilities(self, vdu_id: str) -> str:
