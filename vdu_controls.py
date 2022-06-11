@@ -317,7 +317,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton
 
-VDU_CONTROLS_VERSION = '1.6.5'
+VDU_CONTROLS_VERSION = '1.6.6'
 
 
 def proper_name(*args):
@@ -606,7 +606,7 @@ class DdcUtil:
             elif len(display_str.strip()) != 0:
                 print(f"WARNING: ignoring {display_str}")
         # For testing bad VDU's:
-        # display_list.append(("3", "maker_y", "model_z", "1234"))
+        display_list.append(("3", "maker_y", "model_z", "1234"))
         return display_list
 
     def query_capabilities(self, vdu_id: str) -> str:
@@ -714,8 +714,10 @@ class DialogSingletonMixin:
         """Subclasses that implement their own closeEvent must call this closeEvent to deregister the singleton"""
         class_name = self.__class__.__name__
         if DialogSingletonMixin.debug:
-            print(f'DEBUG: SingletonDialog remove {class_name}')
-        del DialogSingletonMixin._dialogs_map[class_name]
+            print(
+                f'DEBUG: SingletonDialog remove {class_name} registered={class_name in DialogSingletonMixin._dialogs_map}')
+        if class_name in DialogSingletonMixin._dialogs_map:
+            del DialogSingletonMixin._dialogs_map[class_name]
         event.accept()
 
     def make_visible(self):
@@ -1109,7 +1111,7 @@ class VduController:
                     range_pattern = re.compile('Values:\s+([0-9]+)..([0-9]+)')
                     range_match = range_pattern.match(lines_list[0])
                     if range_match:
-                        values_list = [ "%%Range%%", range_match.group(1), range_match.group(2) ]
+                        values_list = ["%%Range%%", range_match.group(1), range_match.group(2)]
                     else:
                         space_separated = lines_list[0].replace('(interpretation unavailable)', '').strip().split(' ')
                         values_list = [(v, 'unknown ' + v) for v in space_separated[1:]]
@@ -1630,18 +1632,23 @@ class VduControlPanel(QWidget):
 class ContextMenu(QMenu):
 
     def __init__(self,
-                 about_action=None, help_action=None, chart_action=None, settings_action=None, presets_action=None,
-                 quit_action=None) -> None:
+                 main_window,
+                 main_window_action,
+                 about_action, help_action, chart_action, settings_action, presets_action, quit_action) -> None:
         super().__init__()
-        self.vdu_controls_main_window = None
-        self.preset_controller = PresetController()
+        self.main_window = main_window
+        if main_window_action is not None:
+            self.addAction(self.style().standardIcon(QStyle.SP_ComputerIcon),
+                           translate('Control Panel'),
+                           main_window_action)
+            self.addSeparator()
         self.addAction(self.style().standardIcon(QStyle.SP_ComputerIcon),
                        translate('Presets'),
                        presets_action)
         self.presets_separator = self.addSeparator()
 
         self.addAction(self.style().standardIcon(QStyle.SP_ComputerIcon),
-                       translate('Grey scale'),
+                       translate('Grey Scale'),
                        chart_action)
         self.addAction(self.style().standardIcon(QStyle.SP_ComputerIcon),
                        translate('Settings'),
@@ -1657,14 +1664,11 @@ class ContextMenu(QMenu):
                        translate('Quit'),
                        quit_action)
 
-    def set_vdu_controls_main_window(self, main_window) -> None:
-        self.vdu_controls_main_window = main_window
-
     def insert_preset(self, name: str) -> None:
         # Have to add it first and then move it (otherwise it won't appear - weird).
 
         def restore_preset() -> None:
-            self.preset_controller.restore_preset(self.sender().text(), self.vdu_controls_main_window)
+            self.main_window.preset_controller.restore_preset(self.sender().text(), self.main_window)
 
         action = self.addAction(self.style().standardIcon(QStyle.SP_CommandLink), name, restore_preset)
         self.insertAction(self.presets_separator, action)
@@ -1672,7 +1676,7 @@ class ContextMenu(QMenu):
         self.update()
 
     def refresh_preset_menu(self) -> None:
-        for name, path_str in self.preset_controller.find_preset_paths().items():
+        for name, path_str in self.main_window.preset_controller.find_preset_paths().items():
             if not self.has_preset(name):
                 self.insert_preset(name)
 
@@ -1699,7 +1703,7 @@ class BottomToolBar(QToolBar):
         super().__init__(parent=parent)
         self.refresh_action = self.addAction(
             create_icon_from_svg_string(REFRESH_ICON_SOURCE), "Refresh settings from monitors", start_refresh_func)
-        self.setIconSize(QSize(32,32))
+        self.setIconSize(QSize(32, 32))
         self.menu_button = QToolButton(self)
         self.menu_button.setIcon(create_icon_from_svg_string(MENU_ICON_SOURCE))
         self.progress_bar = QProgressBar(self)
@@ -1755,7 +1759,6 @@ class VduControlsMainPanel(QWidget):
         self.detected_vdus = self.ddcutil.detect_monitors()
         self.previously_detected_vdus = self.detected_vdus
         self.context_menu = app_context_menu
-        self.context_menu.set_vdu_controls_main_window(self)
         app_context_menu.refresh_preset_menu()
 
         self.vdu_controllers = []
@@ -2363,6 +2366,19 @@ class MainWindow(QMainWindow):
         self.state_key = self.objectName() + "_window_state"
         self.settings = QSettings('vdu_controls.qt.state', 'vdu_controls')
 
+        gnome_tray_behaviour = main_config.is_system_tray_enabled() and \
+                          os.environ.get('XDG_CURRENT_DESKTOP') is not None \
+                          and 'gnome' in os.environ['XDG_CURRENT_DESKTOP'].lower()
+
+        if gnome_tray_behaviour:
+            # Gnome tray doesn't normally provide a way to bring up the main app.
+            def main_window_action() -> None:
+                self.show()
+                self.raise_()
+                self.activateWindow()
+        else:
+            main_window_action = None
+
         def edit_config() -> None:
             SettingsEditor.invoke(main_config, [vdu.config for vdu in self.main_control_panel.vdu_controllers])
 
@@ -2376,11 +2392,21 @@ class MainWindow(QMainWindow):
             self.app_save_state()
             app.quit()
 
-        app_context_menu = ContextMenu(about_action=AboutDialog.invoke,
-                                       help_action=HelpDialog.invoke,
-                                       chart_action=grey_scale,
-                                       settings_action=edit_config,
-                                       presets_action=edit_presets,
+        def wrap_invoke(callable):
+            if gnome_tray_behaviour:
+                # Must show main app or tray will shutdown app when popups are closed.
+                self.show()
+            callable()
+
+        self.preset_controller = PresetController()
+
+        app_context_menu = ContextMenu(main_window=self,
+                                       main_window_action=main_window_action,
+                                       about_action=partial(wrap_invoke, AboutDialog.invoke),
+                                       help_action=partial(wrap_invoke, HelpDialog.invoke),
+                                       chart_action=partial(wrap_invoke, grey_scale),
+                                       settings_action=partial(wrap_invoke, edit_config),
+                                       presets_action=partial(wrap_invoke, edit_presets),
                                        quit_action=quit_app)
 
         pixmap = get_splash_image()
@@ -2399,7 +2425,7 @@ class MainWindow(QMainWindow):
         if main_config.is_system_tray_enabled():
             if not QSystemTrayIcon.isSystemTrayAvailable():
                 print("WARNING: no system tray, waiting to see if one becomes available.")
-                for i in range(0,SYSTEM_TRAY_WAIT_SECONDS):
+                for i in range(0, SYSTEM_TRAY_WAIT_SECONDS):
                     if QSystemTrayIcon.isSystemTrayAvailable():
                         break
                     time.sleep(1)
@@ -2423,7 +2449,8 @@ class MainWindow(QMainWindow):
         def detect_vdu_hook(vdu: VduController) -> None:
             if splash is not None:
                 splash.showMessage(
-                    translate('\n\nVDU Controls\nDDC ID {}\n{}').format(vdu.vdu_id, vdu.get_vdu_description()),
+                    translate('\n\nVDU Controls {}\nDDC ID {}\n{}').format(VDU_CONTROLS_VERSION,
+                                                                           vdu.vdu_id, vdu.get_vdu_description()),
                     Qt.AlignTop | Qt.AlignHCenter)
 
         self.main_control_panel = VduControlsMainPanel(main_config, detect_vdu_hook, app_context_menu)

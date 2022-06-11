@@ -179,6 +179,8 @@ Michael Hamilton\
 
 Version History
 ---------------
+* 1.6.6
+  * Gnome system tray behaviour made consistent with gnome - when in gnome do as the gnomens do.
 * 1.6.5
   * Widen handling of pare exceptions for VDU capabilities - catch more exceptions.
 * 1.6.4
