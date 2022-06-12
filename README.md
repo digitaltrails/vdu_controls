@@ -179,6 +179,8 @@ Michael Hamilton\
 
 Version History
 ---------------
+* 1.6.8
+  * Fix preset restore/save bug introduced in 1.6.7
 * 1.6.7
   * Gnome system tray behaviour made consistent with gnome - when in gnome do as the gnomens do.
 * 1.6.5
