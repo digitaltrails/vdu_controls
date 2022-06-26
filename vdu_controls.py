@@ -317,7 +317,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton
 
-VDU_CONTROLS_VERSION = '1.6.8'
+VDU_CONTROLS_VERSION = '1.6.9'
 
 
 def proper_name(*args):
@@ -1377,7 +1377,8 @@ class VduControlSlider(QWidget):
 
         self.vdu_model = vdu_model
         self.vcp_capability = vcp_capability
-        self.current_value, self.max_value = vdu_model.get_attribute(self.vcp_capability.vcp_code)
+        self.current_value = self.max_value = None
+        self.refresh_data()
 
         layout = QHBoxLayout()
         self.setLayout(layout)
@@ -1451,8 +1452,28 @@ class VduControlSlider(QWidget):
         text_input.editingFinished.connect(text_changed)
 
     def refresh_data(self) -> None:
-        """Query the VDU for a new data value and cache it (may be called from a task thread, so no GUI op's here)."""
-        self.current_value, _ = self.vdu_model.get_attribute(self.vcp_capability.vcp_code)
+        """Query the VDU for a new data value and cache it (maybe called from a task thread, so no GUI op's here)."""
+        for i in range(3):
+            try:
+                new_value, max_value = self.vdu_model.get_attribute(self.vcp_capability.vcp_code)
+                if self.max_value is None:
+                    # Validate as integer
+                    int(new_value)
+                    int(max_value)
+                    self.current_value, self.max_value = new_value, max_value
+                else:
+                    int(new_value)
+                    self.current_value = new_value
+                return
+            except ValueError as ve:
+                # Might be initializing at login - can cause transient errors due to X11 talking to
+                # the monitor.
+                print(f"WARNING: Non integer values for slider {self.vdu_model.vdu_model_and_serial_id} {self.vcp_capability.name} = {new_value} (max={max_value})")
+                print("WARNING: have to repeat vdu_model.get_attribute - maybe --sleep-multiplier is set too low?")
+                time.sleep(1.0)
+                continue
+        # Something is wrong with ddcutils - pass the buck
+        raise ValueError(f"Non integer values for slider {self.vdu_model.vdu_model_and_serial_id} {self.vcp_capability.name} = {new_value} (max={max_value})")
 
     def refresh_view(self) -> None:
         """Copy the internally cached current value onto the GUI view."""

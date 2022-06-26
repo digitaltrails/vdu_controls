@@ -179,6 +179,8 @@ Michael Hamilton\
 
 Version History
 ---------------
+* 1.6.9
+  * Cope better with invalid slider values caused by a monitor being too slow/busy when responding.
 * 1.6.8
   * Fix preset restore/save bug introduced in 1.6.7
 * 1.6.7
