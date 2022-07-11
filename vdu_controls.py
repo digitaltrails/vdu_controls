@@ -301,6 +301,7 @@ import sys
 import textwrap
 import time
 import traceback
+from datetime import datetime, timedelta
 from functools import partial
 from pathlib import Path
 from typing import List, Tuple, Mapping, Type
@@ -539,6 +540,17 @@ SIMPLE_NON_CONTINUOUS_TYPE = 'SNC'
 COMPLEX_NON_CONTINUOUS_TYPE = 'CNC'
 # The GUI treats SNC and CNC the same - only DdcUtil needs to distinguish them.
 GUI_NON_CONTINUOUS_TYPE = SIMPLE_NON_CONTINUOUS_TYPE
+
+
+def is_logging_in():
+    # If the time is near the login time, maybe the user is logging in
+    try:
+        last_login_cmd = ["last", "--time-format=iso", f"{os.getlogin()}", "-1"]
+        login_datetime = datetime.fromisoformat(subprocess.check_output(last_login_cmd).split()[3].decode("ascii"))
+        return datetime.now(login_datetime.tzinfo) - login_datetime <= timedelta(seconds=30)
+    except (subprocess.SubprocessError, FileNotFoundError, ValueError, IndexError) as e:
+        print(f"ERROR: non critical error, cannot determine is_logging_in: {last_login_cmd} {e}")
+        return False
 
 
 class VcpCapability:
@@ -1453,7 +1465,7 @@ class VduControlSlider(QWidget):
 
     def refresh_data(self) -> None:
         """Query the VDU for a new data value and cache it (maybe called from a task thread, so no GUI op's here)."""
-        for i in range(3):
+        for i in range(4):
             try:
                 new_value, max_value = self.vdu_model.get_attribute(self.vcp_capability.vcp_code)
                 if self.max_value is None:
@@ -1468,9 +1480,13 @@ class VduControlSlider(QWidget):
             except ValueError as ve:
                 # Might be initializing at login - can cause transient errors due to X11 talking to
                 # the monitor.
-                print(f"WARNING: Non integer values for slider {self.vdu_model.vdu_model_and_serial_id} {self.vcp_capability.name} = {new_value} (max={max_value})")
+                print(f"WARNING: Non integer values for slider {self.vdu_model.vdu_model_and_serial_id} " 
+                      f"{self.vcp_capability.name} = {new_value} (max={max_value})")
                 print("WARNING: have to repeat vdu_model.get_attribute - maybe --sleep-multiplier is set too low?")
-                time.sleep(1.0)
+                sleep_secs = 3.0
+                print(f"WARNING: will try again in {sleep_secs} seconds in case this a transient error due to session "
+                      f"initialisation.")
+                time.sleep(sleep_secs)
                 continue
         # Something is wrong with ddcutils - pass the buck
         raise ValueError(f"Non integer values for slider {self.vdu_model.vdu_model_and_serial_id} {self.vcp_capability.name} = {new_value} (max={max_value})")
@@ -1768,7 +1784,8 @@ class VduControlsMainPanel(QWidget):
     def __init__(self,
                  default_config: VduControlsConfig,
                  detect_vdu_hook: callable,
-                 app_context_menu: ContextMenu) -> None:
+                 app_context_menu: ContextMenu,
+                 session_startup: bool) -> None:
         super().__init__()
         self.setObjectName("vdu_controls_main_panel")
         layout = QVBoxLayout()
@@ -1778,7 +1795,17 @@ class VduControlsMainPanel(QWidget):
                                default_sleep_multiplier=default_config.get_sleep_multiplier())
         self.vdu_control_panels = []
         self.warnings = default_config.are_warnings_enabled()
+        self.previously_detected_vdus = []
         self.detected_vdus = self.ddcutil.detect_monitors()
+        if session_startup:
+            # Loop in case the session is initialising/restoring which can make detection unreliable.
+            while True:
+                print("INFO: session appears to be initialising, delaying and looping detection until it stabilises.")
+                time.sleep(1.5)
+                prev_num = len(self.detected_vdus)
+                self.detected_vdus = self.ddcutil.detect_monitors()
+                if prev_num == len(self.detected_vdus):
+                    break
         self.previously_detected_vdus = self.detected_vdus
         self.context_menu = app_context_menu
         app_context_menu.refresh_preset_menu()
@@ -2380,7 +2407,7 @@ class HelpDialog(QDialog, DialogSingletonMixin):
 
 class MainWindow(QMainWindow):
 
-    def __init__(self, main_config: VduControlsConfig, app: QApplication):
+    def __init__(self, main_config: VduControlsConfig, app: QApplication, session_startup: bool):
         super().__init__()
 
         self.setObjectName('main_window')
@@ -2475,7 +2502,7 @@ class MainWindow(QMainWindow):
                                                                            vdu.vdu_id, vdu.get_vdu_description()),
                     Qt.AlignTop | Qt.AlignHCenter)
 
-        self.main_control_panel = VduControlsMainPanel(main_config, detect_vdu_hook, app_context_menu)
+        self.main_control_panel = VduControlsMainPanel(main_config, detect_vdu_hook, app_context_menu, session_startup)
 
         self.setCentralWidget(self.main_control_panel)
 
@@ -2638,7 +2665,7 @@ def main():
     if args.about:
         AboutDialog.invoke()
 
-    main_window = MainWindow(main_config, app)
+    main_window = MainWindow(main_config, app, session_startup=is_logging_in())
 
     if args.create_config_files:
         main_window.create_config_files()

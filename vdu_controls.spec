@@ -84,8 +84,8 @@ gzip -c docs/_build/man/vdu_controls.1 > %{buildroot}/%{_datadir}/man/man1/%{nam
 %{_datadir}/man/man1/%{name}.1.gz
 
 %changelog
-* Mon Jun 27 2022 Michael Hamilton <michael@actrix.gen.nz>
-- Cope better with invalid slider values caused by a monitor being too slow/busy when responding
+* Tue Jul 12 2022 Michael Hamilton <michael@actrix.gen.nz>
+- Cope better with transient slider values, cope better with session startup delays to detection: vdu_controls 1.6.9
 * Mon Jun 13 2022 Michael Hamilton <michael@actrix.gen.nz>
 - Fix preset save/restore bug introduced in 1.6.7 : vdu_controls 1.6.8
 * Sun Jun 12 2022 Michael Hamilton <michael@actrix.gen.nz>
