@@ -12,7 +12,7 @@ Usage:
                      [--about] [--detailed-help]
                      [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                      [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
-                     [--enable-vcp-code vcp_code] [--system-tray] [--debug] [--warnings]
+                     [--enable-vcp-code vcp_code] [--system-tray] [--debug] [--warnings] [--syslog]
                      [--no-splash] [--sleep-multiplier multiplier]
                      [--create-config-files]
                      [--install] [--uninstall]
@@ -32,6 +32,7 @@ Optional arguments:
       --system-tray         start up as an entry in the system tray
       --debug               enable debug output to stdout
       --warnings            popup a warning when a VDU lacks an enabled control
+      --syslog              repeat diagnostic output to the syslog (journald)
       --no-splash           don't show the splash screen
       --sleep-multiplier multiplier
                             protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 0.5)
@@ -109,6 +110,7 @@ The config files are in INI-format divided into a number of sections as outlined
         splash-screen-enabled = yes|no
         warnings-enabled = yes|no
         debug-enabled = yes|no
+        syslog-enabled = yes|no
 
         [vdu-controls-widgets]
         # Yes/no for each of the control options that vdu_controls normally provides by default.
@@ -298,6 +300,7 @@ import socket
 import stat
 import subprocess
 import sys
+import syslog
 import textwrap
 import time
 import traceback
@@ -541,6 +544,28 @@ COMPLEX_NON_CONTINUOUS_TYPE = 'CNC'
 # The GUI treats SNC and CNC the same - only DdcUtil needs to distinguish them.
 GUI_NON_CONTINUOUS_TYPE = SIMPLE_NON_CONTINUOUS_TYPE
 
+log_to_syslog = False
+
+
+def log_debug(str):
+    print("DEBUG", str)
+    syslog.syslog(syslog.LOG_DEBUG, "DEBUG: " + str) if log_to_syslog else None
+
+
+def log_info(str):
+    print("INFO", str)
+    syslog.syslog(syslog.LOG_INFO, str) if log_to_syslog else None
+
+
+def log_warning(str):
+    print("WARNING", str)
+    syslog.syslog(syslog.LOG_WARNING, str) if log_to_syslog else None
+
+
+def log_error(str):
+    print("ERROR", str)
+    syslog.syslog(syslog.LOG_ERROR, str) if log_to_syslog else None
+
 
 def is_logging_in():
     # If the time is near the login time, maybe the user is logging in
@@ -549,7 +574,7 @@ def is_logging_in():
         login_datetime = datetime.fromisoformat(subprocess.check_output(last_login_cmd).split()[3].decode("ascii"))
         return datetime.now(login_datetime.tzinfo) - login_datetime <= timedelta(seconds=30)
     except (subprocess.SubprocessError, FileNotFoundError, ValueError, IndexError) as e:
-        print(f"ERROR: non critical error, cannot determine is_logging_in: {last_login_cmd} {e}")
+        log_error(f"Non critical error, cannot determine is_logging_in: {last_login_cmd} {e}")
         return False
 
 
@@ -589,13 +614,13 @@ class DdcUtil:
 
     def __run__(self, *args, sleep_multiplier: float = None) -> subprocess.CompletedProcess:
         if self.debug:
-            print("DEBUG: subprocess run    - ", DDCUTIL, args)
+            log_debug("subprocess run    - ", DDCUTIL, args)
         multiplier_str = str(self.default_sleep_multiplier if sleep_multiplier is None else sleep_multiplier)
         result = subprocess.run(
             [DDCUTIL, '--sleep-multiplier', multiplier_str] + self.common_args + list(args),
             stdout=subprocess.PIPE, check=True)
         if self.debug:
-            print("DEBUG: subprocess result - ", result)
+            log_debug("subprocess result - ", result)
         return result
 
     def detect_monitors(self) -> List[Tuple[str, str, str, str]]:
@@ -607,7 +632,7 @@ class DdcUtil:
         for display_str in re.split("\n\n", result.stdout.decode('utf-8')):
             display_match = display_pattern.match(display_str)
             if display_match is not None:
-                print(f"INFO: checking {display_str}")
+                log_info(f"checking {display_str}")
                 vdu_id = display_match.group(1)
                 monitor_match = monitor_pattern.search(display_str)
                 manufacturer, model_name, serial_number = \
@@ -616,9 +641,9 @@ class DdcUtil:
                     serial_number = 'Display' + vdu_id
                 display_list.append((vdu_id, manufacturer, model_name, serial_number))
             elif len(display_str.strip()) != 0:
-                print(f"WARNING: ignoring {display_str}")
+                log_warning(f"ignoring {display_str}")
         # For testing bad VDU's:
-        #display_list.append(("3", "maker_y", "model_z", "1234"))
+        # display_list.append(("3", "maker_y", "model_z", "1234"))
         return display_list
 
     def query_capabilities(self, vdu_id: str) -> str:
@@ -663,10 +688,10 @@ class DdcUtil:
                         return '{:02x}'.format(int(cnc_match.group(3), 16) << 8 | int(cnc_match.group(4), 16)), '0'
                 else:
                     raise TypeError(f'Unsupported VCP type {type_indicator} for monitor {vdu_id} vcp_code {vcp_code}')
-            print(f"WARNING: obtained garbage '{result.stdout.decode('utf-8')}' will try again.")
-            print(f"WARNING: ddcutil maybe running too fast for monitor {vdu_id}, try increasing --sleep-multiplier.")
+            log_warning(f"obtained garbage '{result.stdout.decode('utf-8')}' will try again.")
+            log_warning(f"ddcutil maybe running too fast for monitor {vdu_id}, try increasing --sleep-multiplier.")
             time.sleep(2)
-        print(f"ERROR: ddcutil failed all attempts to get value for monitor {vdu_id} vcp_code {vcp_code}")
+        log_error(f"ddcutil failed all attempts to get value for monitor {vdu_id} vcp_code {vcp_code}")
         raise ValueError(
             f"ddcutil returned garbage for monitor {vdu_id} vcp_code {vcp_code}, try increasing --sleep-multiplier")
 
@@ -690,7 +715,7 @@ class DdcUtil:
         info = DdcUtil().vcp_info()
         code_definitions = info.split("\nVCP code ")
         for code_def in code_definitions[1:]:
-            print(code_def)
+            # print(code_def)
             lines = code_def.split('\n')
             vcp_code, vcp_name = lines[0].split(': ', 1)
             ddcutil_feature_subsets = None
@@ -719,15 +744,15 @@ class DialogSingletonMixin:
         if class_name in DialogSingletonMixin._dialogs_map:
             raise TypeError(f"ERROR: More than one instance of {class_name} cannot exist.")
         if DialogSingletonMixin.debug:
-            print(f'DEBUG: SingletonDialog created for {class_name}')
+            log_debug(f'SingletonDialog created for {class_name}')
         DialogSingletonMixin._dialogs_map[class_name] = self
 
     def closeEvent(self, event) -> None:
         """Subclasses that implement their own closeEvent must call this closeEvent to deregister the singleton"""
         class_name = self.__class__.__name__
         if DialogSingletonMixin.debug:
-            print(
-                f'DEBUG: SingletonDialog remove {class_name} registered={class_name in DialogSingletonMixin._dialogs_map}')
+            log_debug(f'SingletonDialog remove {class_name} '
+                      f'registered={class_name in DialogSingletonMixin._dialogs_map}')
         if class_name in DialogSingletonMixin._dialogs_map:
             del DialogSingletonMixin._dialogs_map[class_name]
         event.accept()
@@ -746,7 +771,7 @@ class DialogSingletonMixin:
         """If the dialog exists(), call this to make it visible by raising it."""
         class_name = cls.__name__
         if DialogSingletonMixin.debug:
-            print(f'DEBUG: SingletonDialog show existing {class_name}')
+            log_debug(f'SingletonDialog show existing {class_name}')
         instance = DialogSingletonMixin._dialogs_map[class_name]
         instance.make_visible()
 
@@ -755,7 +780,7 @@ class DialogSingletonMixin:
         """Returns true if the dialog has already been created."""
         class_name = cls.__name__
         if DialogSingletonMixin.debug:
-            print(f'DEBUG: SingletonDialog exists {class_name} {class_name in DialogSingletonMixin._dialogs_map}')
+            log_debug(f'SingletonDialog exists {class_name} {class_name in DialogSingletonMixin._dialogs_map}')
         return class_name in DialogSingletonMixin._dialogs_map
 
 
@@ -818,7 +843,8 @@ class VduControlsConfig:
                 'system-tray-enabled': 'no',
                 'splash-screen-enabled': 'yes',
                 'warnings-enabled': 'no',
-                'debug-enabled': 'no', }
+                'debug-enabled': 'no',
+                'syslog-enabled': 'no', }
 
         self.ini_content['vdu-controls-widgets'] = {}
         self.ini_content['ddcutil-parameters'] = {}
@@ -867,6 +893,9 @@ class VduControlsConfig:
     def is_debug_enabled(self) -> bool:
         return self.ini_content.getboolean('vdu-controls-globals', 'debug-enabled', fallback=False)
 
+    def is_syslog_enabled(self) -> bool:
+        return self.ini_content.getboolean('vdu-controls-globals', 'syslog-enabled', fallback=False)
+
     def get_sleep_multiplier(self) -> float:
         return self.ini_content.getfloat('ddcutil-parameters', 'sleep-multiplier', fallback=0.5)
 
@@ -895,8 +924,8 @@ class VduControlsConfig:
                 if code not in enabled_vcp_codes:
                     enabled_vcp_codes.append(code)
                 else:
-                    print(
-                        f"WARNING: supported enabled vcp_code {code} is redundantly listed in enabled_vcp_codes ({enable_codes_str})")
+                    log_warning(f"supported enabled vcp_code {code} is redundantly listed "
+                                f"in enabled_vcp_codes ({enable_codes_str})")
         return enabled_vcp_codes
 
     def parse_file(self, config_path: Path) -> None:
@@ -904,9 +933,9 @@ class VduControlsConfig:
         self.file_path = config_path
         basename = os.path.basename(config_path)
         config_text = Path(config_path).read_text()
-        print("INFO: using config file '" + config_path.as_posix() + "'")
+        log_info("using config file '" + config_path.as_posix() + "'")
         if re.search(r'(\[ddcutil-capabilities])|(\[ddcutil-parameters])|(\[vdu-controls-\w])', config_text) is None:
-            print(f"Info: old style config file {basename} overrides ddcutils capabilities")
+            log_info(f"old style config file {basename} overrides ddcutils capabilities")
             self.ini_content['ddcutil-capabilities']['capabilities-override'] = config_text
             return
         self.ini_content.read_string(config_text)
@@ -923,16 +952,16 @@ class VduControlsConfig:
         origin = 'configuration' if self.file_path is None else os.path.basename(self.file_path)
         for section in self.ini_content.sections():
             for option in self.ini_content[section]:
-                print(f"DEBUG: {origin} [{section}] {option} = {self.ini_content[section][option]}")
+                log_debug(f"config: {origin} [{section}] {option} = {self.ini_content[section][option]}")
 
     def write_file(self, config_path: Path, overwrite: bool = False) -> None:
         """Write the config to a file.  Used for creating initial template config files."""
         self.file_path = config_path
         if config_path.is_file():
             if not overwrite:
-                print(f"ERROR: {config_path.as_posix()} exists, remove the file if you really want to replace it.")
+                log_error(f"{config_path.as_posix()} exists, remove the file if you really want to replace it.")
                 return
-        print(f"WARNING: creating new config file {config_path.as_posix()}")
+        log_warning(f"creating new config file {config_path.as_posix()}")
         if not config_path.parent.is_dir():
             os.makedirs(config_path.parent)
         with open(config_path, 'w') as config_file:
@@ -974,6 +1003,7 @@ class VduControlsConfig:
         parser.add_argument('--debug', default=False, action='store_true', help='enable debug output to stdout')
         parser.add_argument('--warnings', default=False, action='store_true',
                             help='popup a warning when a VDU lacks an enabled control')
+        parser.add_argument('--syslog', default=False, action='store_true', help='enable diagnostic output to syslog')
         parser.add_argument('--no-splash', default=False, action='store_true', help="don't show the splash screen")
         parser.add_argument('--sleep-multiplier', type=float, default="0.5",
                             help='protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 0.5)')
@@ -1000,6 +1030,8 @@ class VduControlsConfig:
             self.ini_content['vdu-controls-globals']['debug-enabled'] = 'yes'
         if parsed_args.warnings:
             self.ini_content['vdu-controls-globals']['warnings-enabled'] = 'yes'
+        if parsed_args.syslog:
+            self.ini_content['vdu-controls-globals']['syslog-enabled'] = 'yes'
         if parsed_args.system_tray:
             self.ini_content['vdu-controls-globals']['system-tray-enabled'] = 'yes'
 
@@ -1051,7 +1083,7 @@ class VduController:
         self.config = None
         for config_name in (self.vdu_model_and_serial_id, self.vdu_model_id):
             config_path = get_config_path(config_name)
-            print("INFO: checking for config file '" + config_path.as_posix() + "'")
+            log_info("checking for config file '" + config_path.as_posix() + "'")
             if os.path.isfile(config_path) and os.access(config_path, os.R_OK):
                 config = VduControlsConfig(config_name,
                                            default_enabled_vcp_codes=default_config.get_all_enabled_vcp_codes())
@@ -1480,16 +1512,17 @@ class VduControlSlider(QWidget):
             except ValueError as ve:
                 # Might be initializing at login - can cause transient errors due to X11 talking to
                 # the monitor.
-                print(f"WARNING: Non integer values for slider {self.vdu_model.vdu_model_and_serial_id} " 
-                      f"{self.vcp_capability.name} = {new_value} (max={max_value})")
-                print("WARNING: have to repeat vdu_model.get_attribute - maybe --sleep-multiplier is set too low?")
+                log_warning(f"Non integer values for slider {self.vdu_model.vdu_model_and_serial_id} "
+                            f"{self.vcp_capability.name} = {new_value} (max={max_value})")
+                log_warning("have to repeat vdu_model.get_attribute - maybe --sleep-multiplier is set too low?")
                 sleep_secs = 3.0
-                print(f"WARNING: will try again in {sleep_secs} seconds in case this a transient error due to session "
-                      f"initialisation.")
+                log_warning(f"will try again in {sleep_secs} seconds in case this a transient error due to session "
+                            f"initialisation.")
                 time.sleep(sleep_secs)
                 continue
         # Something is wrong with ddcutils - pass the buck
-        raise ValueError(f"Non integer values for slider {self.vdu_model.vdu_model_and_serial_id} {self.vcp_capability.name} = {new_value} (max={max_value})")
+        raise ValueError(
+            f"Non integer values for slider {self.vdu_model.vdu_model_and_serial_id} {self.vcp_capability.name} = {new_value} (max={max_value})")
 
     def refresh_view(self) -> None:
         """Copy the internally cached current value onto the GUI view."""
@@ -1800,12 +1833,14 @@ class VduControlsMainPanel(QWidget):
         if session_startup:
             # Loop in case the session is initialising/restoring which can make detection unreliable.
             while True:
-                print("INFO: session appears to be initialising, delaying and looping detection until it stabilises.")
+                log_info("Session appears to be initialising, delaying and looping detection until it stabilises.")
                 time.sleep(1.5)
                 prev_num = len(self.detected_vdus)
                 self.detected_vdus = self.ddcutil.detect_monitors()
                 if prev_num == len(self.detected_vdus):
+                    log_info(f"Number of detected monitors is stable at {len(self.detected_vdus)}")
                     break
+                log_info(f"Number of detected monitors changed from {prev_num} to {len(self.detected_vdus)}")
         self.previously_detected_vdus = self.detected_vdus
         self.context_menu = app_context_menu
         app_context_menu.refresh_preset_menu()
@@ -1912,7 +1947,7 @@ class VduControlsMainPanel(QWidget):
                     self.context_menu.preset_controller.restore_preset(preset_name, self)
                 else:
                     # Cannot raise a Qt alert inside the signal handler in case another signal comes in.
-                    print(f"WARNING: ignoring signal {signal_number}, no preset associated with that signal number.")
+                    log_warning(f"ignoring signal {signal_number}, no preset associated with that signal number.")
 
         global signal_wakeup_handler
         signal_wakeup_handler.signalReceived.connect(respond_to_signal)
@@ -1991,11 +2026,11 @@ class VduControlsMainPanel(QWidget):
                 with open(path, 'r') as f:
                     text = f.read()
                     if text == DANGER_AGREEMENT_NON_STANDARD_VCP_CODES:
-                        print("\n"
-                              "WARNING: Non standard features may be enabled for write.\n"
-                              "ENABLING NON_STANDARD FEATURES COULD DAMAGE YOUR HARDWARE.\n"
-                              "To disable non-standard features delete the file {}.\n"
-                              "{}".format(path, DANGER_AGREEMENT_NON_STANDARD_VCP_CODES))
+                        log_warning("\n"
+                                    "Non standard features may be enabled for write.\n"
+                                    "ENABLING NON_STANDARD FEATURES COULD DAMAGE YOUR HARDWARE.\n"
+                                    "To disable non-standard features delete the file {}.\n"
+                                    "{}".format(path, DANGER_AGREEMENT_NON_STANDARD_VCP_CODES))
                         self.non_standard_enabled = True
         return self.non_standard_enabled
 
@@ -2046,7 +2081,7 @@ class PresetController:
             rc = save_message.exec()
             if rc == QMessageBox.Cancel:
                 return
-        print(f"INFO: saving preset file '{preset_path.as_posix()}'")
+        log_info(f"saving preset file '{preset_path.as_posix()}'")
         for control_panel in main_panel.vdu_control_panels:
             control_panel.save_state(preset_ini)
         if not preset_path.parent.is_dir():
@@ -2058,7 +2093,7 @@ class PresetController:
 
     def restore_preset(self, preset_name: str, main_panel: VduControlsMainPanel) -> None:
         preset_path = get_config_path(proper_name('Preset', preset_name))
-        print(f"INFO: reading preset file '{preset_path.as_posix()}'")
+        log_info(f"reading preset file '{preset_path.as_posix()}'")
         preset_text = Path(preset_path).read_text()
         preset_ini = configparser.ConfigParser()
         preset_ini.read_string(preset_text)
@@ -2069,7 +2104,7 @@ class PresetController:
 
     def delete_preset(self, preset_name: str, context_menu: ContextMenu) -> None:
         preset_path = get_config_path(proper_name('Preset', preset_name))
-        print(f"INFO: deleting preset file '{preset_path.as_posix()}'")
+        log_info(f"deleting preset file '{preset_path.as_posix()}'")
         if preset_path.exists():
             os.remove(preset_path.as_posix())
         if context_menu.has_preset(preset_name):
@@ -2118,7 +2153,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             self.preset_controller.save_preset(preset_name, self.main_panel, self.context_menu)
 
         def delete_preset(preset_name: str = None, target_widget: QWidget = None) -> None:
-            print(f"INFO: delete preset {preset_name}")
+            log_info(f"delete preset {preset_name}")
             self.preset_controller.delete_preset(preset_name, self.context_menu)
             presets_layout.removeWidget(target_widget)
             target_widget.deleteLater()
@@ -2151,7 +2186,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             if new_name == '':
                 return
             if self.has_preset(new_name):
-                print(f"INFO: Already exists {new_name}")
+                log_info(f"Already exists {new_name}")
                 save_message = QMessageBox()
                 message = translate("Preset called '{}' already exists.").format(new_name)
                 save_message.setText(message)
@@ -2228,7 +2263,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
 
 def exception_handler(e_type, e_value, e_traceback):
     """Overarching error handler in case something unexpected happens."""
-    print("ERROR:\n", ''.join(traceback.format_exception(e_type, e_value, e_traceback)))
+    log_error("\n" + ''.join(traceback.format_exception(e_type, e_value, e_traceback)))
     alert = QMessageBox()
     alert.setText(translate('Error: {}').format(''.join(traceback.format_exception_only(e_type, e_value))))
     alert.setInformativeText(translate('Is --sleep-multiplier set too low?') +
@@ -2263,17 +2298,17 @@ def install_as_desktop_application(uninstall: bool = False):
     icon_dir = Path.home().joinpath('.local', 'share', 'icons')
 
     if not desktop_dir.exists():
-        print(f"ERROR: No desktop directory is present:{desktop_dir.as_posix()}"
-              " Cannot proceed - is this a non-standard desktop?")
+        log_error(f"No desktop directory is present:{desktop_dir.as_posix()}"
+                  " Cannot proceed - is this a non-standard desktop?")
         return
 
     bin_dir = Path.home().joinpath('bin')
     if not bin_dir.is_dir():
-        print(f"WARNING: creating:{bin_dir.as_posix()}")
+        log_warning(f"creating:{bin_dir.as_posix()}")
         os.mkdir(bin_dir)
 
     if not icon_dir.is_dir():
-        print("WARNING: creating:{icon_dir.as_posix()}")
+        log_warning("creating:{icon_dir.as_posix()}")
         os.mkdir(icon_dir)
 
     installed_script_path = bin_dir.joinpath("vdu_controls")
@@ -2282,27 +2317,27 @@ def install_as_desktop_application(uninstall: bool = False):
 
     if uninstall:
         os.remove(installed_script_path)
-        print(f'INFO: removed {installed_script_path.as_posix()}')
+        log_info(f"removed {installed_script_path.as_posix()}")
         os.remove(desktop_definition_path)
-        print(f'INFO: removed {desktop_definition_path.as_posix()}')
+        log_info(f"removed {desktop_definition_path.as_posix()}")
         os.remove(icon_path)
-        print(f'INFO: removed {icon_path.as_posix()}')
+        log_info(f"removed {icon_path.as_posix()}")
         return
 
     if installed_script_path.exists():
-        print(f"WARNING: skipping installation of {installed_script_path.as_posix()}, it is already present.")
+        log_warning(f"skipping installation of {installed_script_path.as_posix()}, it is already present.")
     else:
         source = open(__file__).read()
         source = source.replace("#!/usr/bin/python3", '#!' + sys.executable)
-        print(f'INFO: creating {installed_script_path.as_posix()}')
+        log_info(f"creating {installed_script_path.as_posix()}")
         open(installed_script_path, 'w').write(source)
-        print(f'INFO: chmod u+rwx {installed_script_path.as_posix()}')
+        log_info(f"chmod u+rwx {installed_script_path.as_posix()}")
         os.chmod(installed_script_path, stat.S_IRWXU)
 
     if desktop_definition_path.exists():
-        print(f"WARNING: skipping installation of {desktop_definition_path.as_posix()}, it is already present.")
+        log_warning(f"skipping installation of {desktop_definition_path.as_posix()}, it is already present.")
     else:
-        print(f'INFO: creating {desktop_definition_path.as_posix()}')
+        log_info(f"creating {desktop_definition_path.as_posix()}")
         desktop_definition = textwrap.dedent(f"""
             [Desktop Entry]
             Type=Application
@@ -2316,12 +2351,12 @@ def install_as_desktop_application(uninstall: bool = False):
         open(desktop_definition_path, 'w').write(desktop_definition)
 
     if icon_path.exists():
-        print(f"WARNING: skipping installation of {icon_path.as_posix()}, it is already present.")
+        log_warning(f"skipping installation of {icon_path.as_posix()}, it is already present.")
     else:
-        print(f'INFO: creating {icon_path.as_posix()}')
+        log_info(f"creating {icon_path.as_posix()}")
         get_splash_image().save(icon_path.as_posix())
 
-    print('INFO: installation complete. Your desktop->applications->settings should now contain VDU Controls')
+    log_info('INFO: installation complete. Your desktop->applications->settings should now contain VDU Controls')
 
 
 class GreyScaleDialog(QDialog):
@@ -2416,8 +2451,8 @@ class MainWindow(QMainWindow):
         self.settings = QSettings('vdu_controls.qt.state', 'vdu_controls')
 
         gnome_tray_behaviour = main_config.is_system_tray_enabled() and \
-                          os.environ.get('XDG_CURRENT_DESKTOP') is not None \
-                          and 'gnome' in os.environ['XDG_CURRENT_DESKTOP'].lower()
+                               os.environ.get('XDG_CURRENT_DESKTOP') is not None \
+                               and 'gnome' in os.environ['XDG_CURRENT_DESKTOP'].lower()
 
         if gnome_tray_behaviour:
             # Gnome tray doesn't normally provide a way to bring up the main app.
@@ -2473,18 +2508,18 @@ class MainWindow(QMainWindow):
         self.tray = None
         if main_config.is_system_tray_enabled():
             if not QSystemTrayIcon.isSystemTrayAvailable():
-                print("WARNING: no system tray, waiting to see if one becomes available.")
+                log_warning("no system tray, waiting to see if one becomes available.")
                 for i in range(0, SYSTEM_TRAY_WAIT_SECONDS):
                     if QSystemTrayIcon.isSystemTrayAvailable():
                         break
                     time.sleep(1)
             if QSystemTrayIcon.isSystemTrayAvailable():
-                print("INFO: using system tray.")
+                log_info("using system tray.")
                 self.tray = QSystemTrayIcon()
                 self.tray.setIcon(app_icon)
                 self.tray.setContextMenu(app_context_menu)
             else:
-                print("ERROR: no system tray - cannot run in system tray.")
+                log_error("no system tray - cannot run in system tray.")
 
         app.setWindowIcon(app_icon)
         app.setApplicationDisplayName(translate('VDU Controls'))
@@ -2613,7 +2648,7 @@ class SignalWakeupHandler(QtNetwork.QAbstractSocket):
         data = self.readData(1)
         # Emit a Qt signal for convenience
         signal_number = int(data[0])
-        print("INFO: SignalWakeupHandler", signal_number)
+        log_info("SignalWakeupHandler", signal_number)
         self.signalReceived.emit(signal_number)
 
 
@@ -2623,7 +2658,7 @@ def main():
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     def signal_handler(x, y):
-        print("INFO: signal received", x, y)
+        log_info("signal received", x, y)
 
     signal.signal(signal.SIGHUP, signal_handler)
     for i in range(PRESET_SIGNAL_MIN, PRESET_SIGNAL_MAX):
@@ -2642,10 +2677,14 @@ def main():
 
     main_config = VduControlsConfig('vdu_controls', include_globals=True)
     default_config_path = get_config_path('vdu_controls')
-    print("INFO: checking for config file '" + default_config_path.as_posix() + "'")
+    log_info("checking for config file '" + default_config_path.as_posix() + "'")
     if Path.is_file(default_config_path) and os.access(default_config_path, os.R_OK):
         main_config.parse_file(default_config_path)
     args = main_config.parse_args()
+    global log_to_syslog
+    log_to_syslog = main_config.is_syslog_enabled()
+    if args.syslog:
+        log_to_syslog = True
     if args.debug:
         main_config.debug_dump()
     if args.create_config_files:
@@ -2660,7 +2699,7 @@ def main():
         print(__doc__)
         sys.exit()
 
-    print(f'INFO: application style is {app.style().objectName()}')
+    log_info(f"application style is {app.style().objectName()}")
 
     if args.about:
         AboutDialog.invoke()

@@ -22,8 +22,8 @@ Getting Started
 
 To get started with ``vdu_controls``, you only need to download the ``vdu_controls.py`` python script and
 check that the dependencies described below are in place.  Alternatively, should you wish to install ``vdu_controls`` 
-for all users, rpm's are available for **OpenSUSE** and **Fedora**, see the *Install* section below. 
-
+for all users, rpm's are available for **OpenSUSE**, **Fedora**, and there is an  **archlinux** AUR package
+which also works in **Manjaro**.  See the *Install* section below. 
 
 
 Dependencies
@@ -34,10 +34,10 @@ All the following runtime dependencies are likely to be pre-packaged on any mode
 
 * ddcutil: the command line utility that interfaces to VDU's via DDC over i2c-dev or USB.
 * i2c-dev: the i2c-dev kernel module normally shipped with all Linux distributions and required by [ddcutil](https://www.ddcutil.com)
-* python 3.8: ``vdu_controls`` is written in python and may depend on some features present only in 3.8 onward.
-* python 3.8 QtPy: the python GUI library used by ``vdu_controls``.
+* python >=3.8: ``vdu_controls`` is written in python and may depend on some features present only in 3.8 onward.
+* python >=3.8 QtPy: the python GUI library used by ``vdu_controls``.
 
-It's best confirm that ``ddcutil`` is functioning before using ``vdu_controls``:
+It's best to confirm that ``ddcutil`` is functioning before using ``vdu_controls``:
 
 * See [https://www.ddcutil.com/config/](https://www.ddcutil.com/config/) for instructions on configuring ``ddcutil``.
 * See [https://www.ddcutil.com/i2c_permissions/](https://www.ddcutil.com/i2c_permissions/) for instructions on setting 
@@ -64,6 +64,8 @@ Installing
 
 As previously stated, the ``vdu_vontrols.py`` script is only file required beyond the prerequisites. There
 are also **OpenSUSE** and **Fedora** rpm's available at: [https://software.opensuse.org/package/vdu_controls](https://software.opensuse.org/package/vdu_controls)
+and an **archlinux** (**manjaro** compatible) **AUR** package at: [https://aur.archlinux.org/packages/vdu_controls](https://aur.archlinux.org/packages/vdu_controls)
+
 
 That makes three options for "installation": 
 
