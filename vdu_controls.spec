@@ -17,7 +17,7 @@
 #
 
 Name: vdu_controls
-Version: 1.6.9
+Version: 1.6.10
 Release: 0
 License: GPL-3.0-or-later
 BuildArch: noarch
@@ -85,7 +85,7 @@ gzip -c docs/_build/man/vdu_controls.1 > %{buildroot}/%{_datadir}/man/man1/%{nam
 
 %changelog
 * Tue Jul 12 2022 Michael Hamilton <michael@actrix.gen.nz>
-- Cope better with transient slider values, cope better with session startup delays to detection: vdu_controls 1.6.9
+- Cope better with transient slider values, cope better with session startup delays to detection: vdu_controls 1.6.10
 * Mon Jun 13 2022 Michael Hamilton <michael@actrix.gen.nz>
 - Fix preset save/restore bug introduced in 1.6.7 : vdu_controls 1.6.8
 * Sun Jun 12 2022 Michael Hamilton <michael@actrix.gen.nz>

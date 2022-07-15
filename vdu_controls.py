@@ -292,6 +292,7 @@ import base64
 import configparser
 import glob
 import inspect
+import io
 import os
 import pickle
 import re
@@ -321,7 +322,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton
 
-VDU_CONTROLS_VERSION = '1.6.9'
+VDU_CONTROLS_VERSION = '1.6.10'
 
 
 def proper_name(*args):
@@ -547,25 +548,31 @@ GUI_NON_CONTINUOUS_TYPE = SIMPLE_NON_CONTINUOUS_TYPE
 log_to_syslog = False
 
 
-def log_debug(str):
-    print("DEBUG", str)
-    syslog.syslog(syslog.LOG_DEBUG, "DEBUG: " + str) if log_to_syslog else None
+def log_wrapper(severity, *args):
+    prefix = {syslog.LOG_INFO: "INFO:", syslog.LOG_ERR: "ERROR:",
+              syslog.LOG_WARNING: "WARNING:", syslog.LOG_DEBUG: "DEBUG:"}[severity]
+    with io.StringIO() as output:
+        print(*args, file=output, end='')
+        message = output.getvalue()
+        print(prefix, message)
+        syslog_message = prefix + " " + message if severity == syslog.LOG_DEBUG else message
+        syslog.syslog(severity, syslog_message) if log_to_syslog else None
 
 
-def log_info(str):
-    print("INFO", str)
-    syslog.syslog(syslog.LOG_INFO, str) if log_to_syslog else None
+def log_debug(*args):
+    log_wrapper(syslog.LOG_DEBUG, *args)
 
 
-def log_warning(str):
-    print("WARNING", str)
-    syslog.syslog(syslog.LOG_WARNING, str) if log_to_syslog else None
+def log_info(*args):
+    log_wrapper(syslog.LOG_INFO, *args)
 
 
-def log_error(str):
-    print("ERROR", str)
-    syslog.syslog(syslog.LOG_ERROR, str) if log_to_syslog else None
+def log_warning(*args):
+    log_wrapper(syslog.LOG_WARNING, *args)
 
+
+def log_error(*args):
+    log_wrapper(syslog.LOG_ERR, *args)
 
 def is_logging_in():
     # If the time is near the login time, maybe the user is logging in
