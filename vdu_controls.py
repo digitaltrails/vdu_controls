@@ -555,8 +555,9 @@ def log_wrapper(severity, *args):
         print(*args, file=output, end='')
         message = output.getvalue()
         print(prefix, message)
-        syslog_message = prefix + " " + message if severity == syslog.LOG_DEBUG else message
-        syslog.syslog(severity, syslog_message) if log_to_syslog else None
+        if log_to_syslog:
+            syslog_message = prefix + " " + message if severity == syslog.LOG_DEBUG else message
+            syslog.syslog(severity, syslog_message)
 
 
 def log_debug(*args):
