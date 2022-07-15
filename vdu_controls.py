@@ -1832,7 +1832,8 @@ class VduControlsMainPanel(QWidget):
         self.detected_vdus = self.ddcutil.detect_monitors()
         if session_startup:
             # Loop in case the session is initialising/restoring which can make detection unreliable.
-            while True:
+            # Limit to a reasonable number of iterations.
+            for i in range(10):
                 log_info("Session appears to be initialising, delaying and looping detection until it stabilises.")
                 time.sleep(1.5)
                 prev_num = len(self.detected_vdus)
