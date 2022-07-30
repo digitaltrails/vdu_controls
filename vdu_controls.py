@@ -102,43 +102,43 @@ specific features should not be experimented with, some may have destructive or 
 may brick the hardware. It is possible to enable any codes by  creating a  ``ddcutil`` user
 definition (``--udef``) file, BUT THIS SHOULD ONLY BE USED WITH EXTREME CAUTION AND CANNOT BE RECOMMENDED.
 
-The config files are in INI-format divided into a number of sections as outlined below:
+The config files are in INI-format divided into a number of sections as outlined below::
 
-        # The vdu-controls-globals section is only required in $HOME/.config/vdu_controls/vdu_controls.conf
-        [vdu-controls-globals]
-        system-tray-enabled = yes|no
-        splash-screen-enabled = yes|no
-        warnings-enabled = yes|no
-        debug-enabled = yes|no
-        syslog-enabled = yes|no
+    [vdu-controls-globals]
+    # The vdu-controls-globals section is only required in $HOME/.config/vdu_controls/vdu_controls.conf
+    system-tray-enabled = yes|no
+    splash-screen-enabled = yes|no
+    warnings-enabled = yes|no
+    debug-enabled = yes|no
+    syslog-enabled = yes|no
 
-        [vdu-controls-widgets]
-        # Yes/no for each of the control options that vdu_controls normally provides by default.
-        brightness = yes|no
-        contrast = yes|no
-        audio-volume = yes|no
-        audio-mute = yes|no
-        audio-treble = yes|no
-        audio-bass = yes|no
-        audio-mic-volume = yes|no
-        input-source = yes|no
-        power-mode = yes|no
-        osd-language = yes|no
-        # The enable-vcp-codes option is a list of two-digit hex values in CSV format.
-        # This option enables ddcutil supported codes that are not in the default set provided by vdu_controls.
-        enable-vcp-codes = NN, NN, NN
+    [vdu-controls-widgets]
+    # Yes/no for each of the control options that vdu_controls normally provides by default.
+    brightness = yes|no
+    contrast = yes|no
+    audio-volume = yes|no
+    audio-mute = yes|no
+    audio-treble = yes|no
+    audio-bass = yes|no
+    audio-mic-volume = yes|no
+    input-source = yes|no
+    power-mode = yes|no
+    osd-language = yes|no
 
-        [ddcutil-parameters]
-        # Useful values appear to be >=0.1
-        sleep-multiplier = 0.5
+    # Enable ddcutil supported codes not enabled in vdu_controls by default, CSV list of two-digit hex values.
+    enable-vcp-codes = NN, NN, NN
 
-        [ddcutil-capabilities]
-        # The (possibly edited) output from "ddcutil --display N capabilities" with leading spaces retained.
-        capabilities-override =
+    [ddcutil-parameters]
+    # Useful values appear to be >=0.1
+    sleep-multiplier = 0.5
 
-As well as using the ``Settings``, config files may also be created by the command line option
+    [ddcutil-capabilities]
+    # The (possibly edited) output from "ddcutil --display N capabilities" with leading spaces retained.
+    capabilities-override =
 
-        vdu_controls --create-config-files
+As well as using the ``Settings``, config files may also be created by the command line option::
+
+    vdu_controls --create-config-files
 
 which will create initial templates based on the currently connected VDU's.
 
@@ -158,10 +158,10 @@ the vdu_controls settings and editing that VDU's **capabilities override**:
  2. add a __Values:__ ***min..max*** specification to line the following the feature definition,
  3. save the changes.
 
-For the brightness example the completed edit would look like:
+For the brightness example the completed edit would look like::
 
-        Feature: 10 (Brightness)
-           Values: 20..80
+    Feature: 10 (Brightness)
+        Values: 20..80
 
 
 The vdu_controls slider for that value will now be restricted to the specified range.
@@ -179,34 +179,62 @@ The ``context-menu`` also includes a shortcut for applying each existing presets
 The preset files are named as follows: ``$HOME/.config/vdu_controls/Preset_<preset_name>.conf``
 
 Presets are saved in INI-file format for ease of editing.  Each preset file contains a section for each connected
-VDU, something similar to the following example:
+VDU, something similar to the following example::
 
-        [HP_ZR24w_CNT008]
-        brightness = 50
-        osd-language = 02
+    [HP_ZR24w_CNT008]
+    brightness = 50
+    osd-language = 02
 
-        [LG_HDR_4K_Display2]
-        brightness = 13
-        audio-speaker-volume = 16
-        input-source = 0f
+    [LG_HDR_4K_Display2]
+    brightness = 13
+    audio-speaker-volume = 16
+    input-source = 0f
 
 Whe the GUI is used to create a preset file it saves a value for every VDU and every visible control.  A preset
 file need not include all VDu's or settings, it can be manually edited to remove VDU's and settings that aren't
 desired.
 
-A preset change can be initiated by using UNIX/Linux signals to communicate with a running ``vdu_controls.``
+Presets - remote control
+------------------------
+
+UNIX/Linux signals may be used to instruct a running ``vdu_controls`` to invoke a preset.  This feature is
+provided so that scripts, cron or systemd-timer might be used to change the preset based on some measured
+condition appropriate for local circumstances.
+
 Signals in the range 40 to 55 correspond to first to last presets (if any are defined).  Additionally, SIGHUP can
 be used to initiate "Refresh settings from monitors".  For example:
 
-        # Identify the running vdu_controls (assuming it is installed as /usr/bin/vdu_controls):
+    Identify the running vdu_controls (assuming it is installed as /usr/bin/vdu_controls)::
+
         ps axwww | grep '[/]usr/bin/vdu_controls'
-        # Combine this with kill to trigger a preset change:
+
+    Combine this with kill to trigger a preset change::
+
         kill -40 $(ps axwww | grep '[/]usr/bin/vdu_controls' | awk '{print $1}')
         kill -41 $(ps axwww | grep '[/]usr/bin/vdu_controls' | awk '{print $1}')
-        # Or if some other process has changed a monitors settings, trigger vdu_controls to update it's UI:
+
+    Or if some other process has changed a monitors settings, trigger vdu_controls to update it's UI::
+
         kill -HUP $(ps axwww | grep '[/]usr/bin/vdu_controls' | awk '{print $1}')
 
 Any other signals will be handled normally (in many cases they will result in process termination).
+
+Triggers that might be considered include the time of day, the ambient light level, or the prevailing
+cloud conditions. For example:
+
+    * Ambient light level as measured by a webcam::
+
+        ffmpeg -y -s 1024x768 -i /dev/video0 -frames 1 $HOME/tmp/out.jpg 1>&2
+        ambient=$(convert $HOME/tmp/out.jpg -colorspace gray -resize 1x1 -evaluate-sequence Max -format "%[fx:100*mean]" info:)
+        echo $ambient
+
+    * Local cloud conditions from https://github.com/chubin/wttr.in::
+
+        curl 'wttr.in?format=%C'
+
+    * Local time/sunrise/sunset again from wttr.in::
+
+        curl 'wttr.in?format="dawn=%D,dusk=%d,weather=%C"'
 
 Responsiveness
 --------------
@@ -322,7 +350,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton
 
-VDU_CONTROLS_VERSION = '1.6.10'
+VDU_CONTROLS_VERSION = '1.6.11'
 
 
 def proper_name(*args):

@@ -8,7 +8,7 @@ GUI wrapper for ddcutil</h1>
                  [--about] [--detailed-help]
                  [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                  [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
-                 [--enable-vcp-code vcp_code] [--system-tray] [--debug] [--warnings]
+                 [--enable-vcp-code vcp_code] [--system-tray] [--debug] [--warnings] [--syslog]
                  [--no-splash] [--sleep-multiplier multiplier]
                  [--create-config-files]
                  [--install] [--uninstall]</code></pre>
@@ -25,6 +25,7 @@ GUI wrapper for ddcutil</h1>
   --system-tray         start up as an entry in the system tray
   --debug               enable debug output to stdout
   --warnings            popup a warning when a VDU lacks an enabled control
+  --syslog              repeat diagnostic output to the syslog (journald)
   --no-splash           don&#39;t show the splash screen
   --sleep-multiplier multiplier
                         protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 0.5)
@@ -106,40 +107,41 @@ brick the hardware. It is possible to enable any codes by creating a
 THIS SHOULD ONLY BE USED WITH EXTREME CAUTION AND CANNOT BE
 RECOMMENDED.</p>
 <p>The config files are in INI-format divided into a number of sections
-as outlined below:</p>
-<pre><code>    # The vdu-controls-globals section is only required in $HOME/.config/vdu_controls/vdu_controls.conf
-    [vdu-controls-globals]
-    system-tray-enabled = yes|no
-    splash-screen-enabled = yes|no
-    warnings-enabled = yes|no
-    debug-enabled = yes|no
+as outlined below::</p>
+<pre><code>[vdu-controls-globals]
+# The vdu-controls-globals section is only required in $HOME/.config/vdu_controls/vdu_controls.conf
+system-tray-enabled = yes|no
+splash-screen-enabled = yes|no
+warnings-enabled = yes|no
+debug-enabled = yes|no
+syslog-enabled = yes|no
 
-    [vdu-controls-widgets]
-    # Yes/no for each of the control options that vdu_controls normally provides by default.
-    brightness = yes|no
-    contrast = yes|no
-    audio-volume = yes|no
-    audio-mute = yes|no
-    audio-treble = yes|no
-    audio-bass = yes|no
-    audio-mic-volume = yes|no
-    input-source = yes|no
-    power-mode = yes|no
-    osd-language = yes|no
-    # The enable-vcp-codes option is a list of two-digit hex values in CSV format.
-    # This option enables ddcutil supported codes that are not in the default set provided by vdu_controls.
-    enable-vcp-codes = NN, NN, NN
+[vdu-controls-widgets]
+# Yes/no for each of the control options that vdu_controls normally provides by default.
+brightness = yes|no
+contrast = yes|no
+audio-volume = yes|no
+audio-mute = yes|no
+audio-treble = yes|no
+audio-bass = yes|no
+audio-mic-volume = yes|no
+input-source = yes|no
+power-mode = yes|no
+osd-language = yes|no
 
-    [ddcutil-parameters]
-    # Useful values appear to be &gt;=0.1
-    sleep-multiplier = 0.5
+# Enable ddcutil supported codes not enabled in vdu_controls by default, CSV list of two-digit hex values.
+enable-vcp-codes = NN, NN, NN
 
-    [ddcutil-capabilities]
-    # The (possibly edited) output from &quot;ddcutil --display N capabilities&quot; with leading spaces retained.
-    capabilities-override =</code></pre>
+[ddcutil-parameters]
+# Useful values appear to be &gt;=0.1
+sleep-multiplier = 0.5
+
+[ddcutil-capabilities]
+# The (possibly edited) output from &quot;ddcutil --display N capabilities&quot; with leading spaces retained.
+capabilities-override =</code></pre>
 <p>As well as using the <code>Settings</code>, config files may also be
-created by the command line option</p>
-<pre><code>    vdu_controls --create-config-files</code></pre>
+created by the command line option::</p>
+<pre><code>vdu_controls --create-config-files</code></pre>
 <p>which will create initial templates based on the currently connected
 VDU’s.</p>
 <p>The config files are completely optional, they need not be used if
@@ -160,9 +162,9 @@ override</strong>:</p>
 specification to line the following the feature definition,</li>
 <li>save the changes.</li>
 </ol>
-<p>For the brightness example the completed edit would look like:</p>
-<pre><code>    Feature: 10 (Brightness)
-       Values: 20..80</code></pre>
+<p>For the brightness example the completed edit would look like::</p>
+<pre><code>Feature: 10 (Brightness)
+    Values: 20..80</code></pre>
 <p>The vdu_controls slider for that value will now be restricted to the
 specified range.</p>
 <h2 id="presets">Presets</h2>
@@ -179,33 +181,58 @@ for applying each existing presets.</p>
 <code>$HOME/.config/vdu_controls/Preset_&lt;preset_name&gt;.conf</code></p>
 <p>Presets are saved in INI-file format for ease of editing. Each preset
 file contains a section for each connected VDU, something similar to the
-following example:</p>
-<pre><code>    [HP_ZR24w_CNT008]
-    brightness = 50
-    osd-language = 02
+following example::</p>
+<pre><code>[HP_ZR24w_CNT008]
+brightness = 50
+osd-language = 02
 
-    [LG_HDR_4K_Display2]
-    brightness = 13
-    audio-speaker-volume = 16
-    input-source = 0f</code></pre>
+[LG_HDR_4K_Display2]
+brightness = 13
+audio-speaker-volume = 16
+input-source = 0f</code></pre>
 <p>Whe the GUI is used to create a preset file it saves a value for
 every VDU and every visible control. A preset file need not include all
 VDu’s or settings, it can be manually edited to remove VDU’s and
 settings that aren’t desired.</p>
-<p>A preset change can be initiated by using UNIX/Linux signals to
-communicate with a running <code>vdu_controls.</code> Signals in the
-range 40 to 55 correspond to first to last presets (if any are defined).
-Additionally, SIGHUP can be used to initiate “Refresh settings from
-monitors”. For example:</p>
-<pre><code>    # Identify the running vdu_controls (assuming it is installed as /usr/bin/vdu_controls):
+<h2 id="presets---remote-control">Presets - remote control</h2>
+<p>UNIX/Linux signals may be used to instruct a running
+<code>vdu_controls</code> to invoke a preset. This feature is provided
+so that scripts, cron or systemd-timer might be used to change the
+preset based on some measured condition appropriate for local
+circumstances.</p>
+<p>Signals in the range 40 to 55 correspond to first to last presets (if
+any are defined). Additionally, SIGHUP can be used to initiate “Refresh
+settings from monitors”. For example:</p>
+<pre><code>Identify the running vdu_controls (assuming it is installed as /usr/bin/vdu_controls)::
+
     ps axwww | grep &#39;[/]usr/bin/vdu_controls&#39;
-    # Combine this with kill to trigger a preset change:
+
+Combine this with kill to trigger a preset change::
+
     kill -40 $(ps axwww | grep &#39;[/]usr/bin/vdu_controls&#39; | awk &#39;{print $1}&#39;)
     kill -41 $(ps axwww | grep &#39;[/]usr/bin/vdu_controls&#39; | awk &#39;{print $1}&#39;)
-    # Or if some other process has changed a monitors settings, trigger vdu_controls to update it&#39;s UI:
+
+Or if some other process has changed a monitors settings, trigger vdu_controls to update it&#39;s UI::
+
     kill -HUP $(ps axwww | grep &#39;[/]usr/bin/vdu_controls&#39; | awk &#39;{print $1}&#39;)</code></pre>
 <p>Any other signals will be handled normally (in many cases they will
 result in process termination).</p>
+<p>Triggers that might be considered include the time of day, the
+ambient light level, or the prevailing cloud conditions. For
+example:</p>
+<pre><code>* Ambient light level as measured by a webcam::
+
+    ffmpeg -y -s 1024x768 -i /dev/video0 -frames 1 $HOME/tmp/out.jpg 1&gt;&amp;2
+    ambient=$(convert $HOME/tmp/out.jpg -colorspace gray -resize 1x1 -evaluate-sequence Max -format &quot;%[fx:100*mean]&quot; info:)
+    echo $ambient
+
+* Local cloud conditions from https://github.com/chubin/wttr.in::
+
+    curl &#39;wttr.in?format=%C&#39;
+
+* Local time/sunrise/sunset again from wttr.in::
+
+    curl &#39;wttr.in?format=&quot;dawn=%D,dusk=%d,weather=%C&quot;&#39;</code></pre>
 <h2 id="responsiveness">Responsiveness</h2>
 <p>If your VDU’s are modern, you may find a smaller sleep-multiplier
 will speed up the <code>ddcutil</code>/VDU protocol exchanges making

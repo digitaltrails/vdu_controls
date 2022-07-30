@@ -11,14 +11,8 @@ Welcome to vdu_control's documentation!
    :caption: Contents:
 
 .. automodule:: vdu_controls
-   :members:
-   :undoc-members:
 
 
 Indices and tables
 ==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
 
