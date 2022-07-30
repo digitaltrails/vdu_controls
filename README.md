@@ -12,7 +12,13 @@ each  DVI/DP/HDMI/USB connected VDU and uses the ``ddcutil`` command line utilit
 
 By default ``vdu_controls`` offers a subset of the possible controls including brightness, and contrast.  Additional 
 controls can be enabled via the ``--enable-vcp-code`` option.  ``vdu_controls`` may optionally run as an entry in the 
-system tray.
+system tray.  
+
+User named ``Preset`` configurations can be saved and recalled, for example, a user could create
+presets for night, day, sunny and so forth.
+
+The UI's look and feel dynamically adjusts to the desktop environment (KDE, Deepin, GNOME, ...) and 
+changes to the desktop theme (light/dark).
 
 ![Default](screen-shots/Screenshot_Large-330.png)  ![Custom](screen-shots/Screenshot_Small-227.png) 
 ![Custom](screen-shots/Screenshot_tray-200.png) ![Custom](screen-shots/Screenshot_settings-300.png)
@@ -181,6 +187,8 @@ Michael Hamilton\
 
 Version History
 ---------------
+* 1.6.11
+  * Cleanup the help and man page.
 * 1.6.10, 1.6.9
   * Cope better with invalid slider values caused by a monitor being too slow/busy when responding.
   * Wait for monitor detection to stabilise at session restoration (at login time).
