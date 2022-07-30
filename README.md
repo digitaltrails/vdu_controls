@@ -17,8 +17,8 @@ system tray.
 User named ``Preset`` configurations can be saved and recalled, for example, a user could create
 presets for night, day, sunny and so forth.
 
-The UI's look and feel dynamically adjusts to the desktop environment (KDE, Deepin, GNOME, ...) and 
-changes to the desktop theme (light/dark).
+The UI's look-and-feel dynamically adjusts to the desktop theme and desktop environment (light-theme, dark-theme, 
+KDE, Deepin, GNOME, ...).
 
 ![Default](screen-shots/Screenshot_Large-330.png)  ![Custom](screen-shots/Screenshot_Small-227.png) 
 ![Custom](screen-shots/Screenshot_tray-200.png) ![Custom](screen-shots/Screenshot_settings-300.png)
