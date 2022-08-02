@@ -1790,7 +1790,7 @@ class ContextMenu(QMenu):
         self.update()
 
     def refresh_preset_menu(self) -> None:
-        for name, path_str in self.main_window.preset_controller.find_preset_paths().items():
+        for name in self.main_window.preset_controller.find_presets().keys():
             if not self.has_preset_menu_item(name):
                 self.insert_preset_menu_item(name)
 
@@ -2088,16 +2088,68 @@ class RefreshVduDataTask(QThread):
         self.task_finished.emit()
 
 
+class Preset:
+    """
+    A config/ini file of user-created settings presets - such as Sunny, Cloudy, Night, etc.
+    """
+
+    def __init__(self, name):
+        self.name = name
+        self.path = get_config_path(proper_name('Preset', name))
+        self.preset_ini = self.load()
+
+    def get_icon_name(self):
+        # TODO maybe add a preset icon - need to see if gnome tray can show changes.
+        if self.preset_ini.has_section("preset"):
+            return self.preset_ini.get("preset", "icon", fallback=None)
+
+    def set_icon_name(self, icon_name: str):
+        # TODO maybe add a preset icon - need to see if gnome tray can show changes.
+        if not self.preset_ini.has_section("preset"):
+            self.preset_ini.add_section("preset")
+        self.preset_ini.set("preset", "icon", icon_name)
+
+    def load(self) -> configparser.ConfigParser:
+        if self.path.exists():
+            log_info(f"reading preset file '{self.path.as_posix()}'")
+            preset_text = Path(self.path).read_text()
+            preset_ini = configparser.ConfigParser()
+            preset_ini.read_string(preset_text)
+        else:
+            preset_ini = configparser.ConfigParser()
+        self.preset_ini = preset_ini
+        return self.preset_ini
+
+    def save(self, config: configparser.ConfigParser):
+        log_info(f"saving preset file '{self.path.as_posix()}'")
+        self.preset_ini = config
+        if not self.path.parent.is_dir():
+            os.makedirs(self.path.parent)
+        with open(self.path, 'w') as preset_file:
+            self.preset_ini.write(preset_file)
+
+    def remove(self):
+        log_info(f"deleting preset file '{self.path.as_posix()}'")
+        if self.path.exists():
+            os.remove(self.path.as_posix())
+
+
 class PresetController:
     def __init__(self):
+        self.presets = {}
         pass
 
-    def find_preset_paths(self) -> Mapping[str, str]:
-        preset_paths = {}
+    def find_presets(self) -> Mapping[str, Preset]:
+        presets_still_present = []
         for path_str in glob.glob(CONFIG_DIR_PATH.joinpath("Preset_*.conf").as_posix()):
             preset_name = os.path.splitext(os.path.basename(path_str))[0].replace('Preset_', '').replace('_', ' ')
-            preset_paths[preset_name] = path_str
-        return preset_paths
+            if preset_name not in self.presets:
+                self.presets[preset_name] = Preset(preset_name)
+            presets_still_present.append(preset_name)
+        for preset_name in self.presets.keys():
+            if preset_name not in presets_still_present:
+                del self.presets[preset_name]
+        return self.presets
 
     def save_preset(self, preset_name: str, main_panel: VduControlsMainPanel, context_menu: ContextMenu) -> None:
         preset_ini = configparser.ConfigParser()
@@ -2114,53 +2166,48 @@ class PresetController:
         log_info(f"saving preset file '{preset_path.as_posix()}'")
         for control_panel in main_panel.vdu_control_panels:
             control_panel.save_state(preset_ini)
-        if not preset_path.parent.is_dir():
-            os.makedirs(preset_path.parent)
-        with open(preset_path, 'w') as preset_file:
-            preset_ini.write(preset_file)
+        if preset_name in self.presets:
+            preset = self.presets[preset_name]
+        else:
+            preset = Preset(preset_name)
+            self.presets[preset_name] = preset
+        preset.save(preset_ini)
         if not context_menu.has_preset_menu_item(preset_name):
             context_menu.insert_preset_menu_item(preset_name)
 
     def which_preset_is_active(self, main_panel: VduControlsMainPanel) -> str:
-        for name, path in self.find_preset_paths().items():
-            if self.is_preset_active(name, main_panel):
+        for name, preset in self.find_presets().items():
+            if self.is_preset_active(preset, main_panel):
                 return name
         return None
 
-    def load_ini(self, preset_name) -> configparser.ConfigParser:
-        preset_path = get_config_path(proper_name('Preset', preset_name))
-        log_info(f"reading preset file '{preset_path.as_posix()}'")
-        preset_text = Path(preset_path).read_text()
-        preset_ini = configparser.ConfigParser()
-        preset_ini.read_string(preset_text)
-        return preset_ini
-
-    def is_preset_active(self, preset_name: str, main_panel: VduControlsMainPanel) -> bool:
-        preset_ini = self.load_ini(preset_name)
-        for section in preset_ini:
-            for control_panel in main_panel.vdu_control_panels:
-                if section == control_panel.vdu_model.vdu_model_and_serial_id:
-                    if not control_panel.is_preset_active(preset_ini):
-                        return False
+    def is_preset_active(self, preset: Preset, main_panel: VduControlsMainPanel) -> bool:
+        for section in preset.preset_ini:
+            if section != 'vdu_controls':
+                for control_panel in main_panel.vdu_control_panels:
+                    if section == control_panel.vdu_model.vdu_model_and_serial_id:
+                        if not control_panel.is_preset_active(preset.preset_ini):
+                            return False
         return True
 
     def restore_preset(self, preset_name: str, main_panel: VduControlsMainPanel) -> None:
-        preset_ini = self.load_ini(preset_name)
-        for section in preset_ini:
+        preset = self.presets[preset_name]
+        # Refresh from file, just in case
+        preset.load()
+        for section in preset.preset_ini:
             for control_panel in main_panel.vdu_control_panels:
                 if section == control_panel.vdu_model.vdu_model_and_serial_id:
-                    control_panel.restore_state(preset_ini)
+                    control_panel.restore_state(preset.preset_ini)
 
     def delete_preset(self, preset_name: str, context_menu: ContextMenu) -> None:
-        preset_path = get_config_path(proper_name('Preset', preset_name))
-        log_info(f"deleting preset file '{preset_path.as_posix()}'")
-        if preset_path.exists():
-            os.remove(preset_path.as_posix())
+        preset = self.presets[preset_name]
+        preset.remove()
+        del self.presets[preset_name]
         if context_menu.has_preset_menu_item(preset_name):
             context_menu.removeAction(context_menu.get_preset_menu_item(preset_name))
 
     def get_preset_name(self, preset_number: int):
-        keys_list = [*self.find_preset_paths()]
+        keys_list = [*self.find_presets()]
         if preset_number < len(keys_list):
             return keys_list[preset_number]
         return None
@@ -2206,7 +2253,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             target_widget.deleteLater()
             presets_panel.repaint()
 
-        for name in self.main_window.preset_controller.find_preset_paths().keys():
+        for name in self.main_window.preset_controller.find_presets().keys():
             preset_widget = self.create_preset_widget(
                 name,
                 restore_action=restore_preset,
@@ -2217,6 +2264,15 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         add_preset_widget = QWidget()
         add_preset_layout = QHBoxLayout()
         add_preset_widget.setLayout(add_preset_layout)
+
+        if False:
+            # TODO - icon chooser
+            add_preset_icon_button = QPushButton()
+            add_preset_icon_button.setIcon(self.style().standardIcon(QStyle.SP_CommandLink))
+            add_preset_icon_button.setToolTip(translate('Choose a preset icon.'))
+            add_preset_icon_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
+            add_preset_layout.addWidget(add_preset_icon_button)
+
         add_preset_name_edit = QLineEdit()
         add_preset_name_edit.setToolTip(translate('Enter a new preset name.'))
         add_preset_layout.addWidget(add_preset_name_edit)
@@ -2273,6 +2329,14 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         preset_widget = self.PresetWidget(name)
         line_layout = QHBoxLayout()
         preset_widget.setLayout(line_layout)
+
+        if False:
+            # TODO - icon chooser
+            preset_icon_button = QPushButton()
+            preset_icon_button.setIcon(self.style().standardIcon(QStyle.SP_CommandLink))
+            preset_icon_button.setToolTip(translate('Choose a preset icon.'))
+            preset_icon_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
+            line_layout.addWidget(preset_icon_button)
 
         preset_name_button = QPushButton(name)
         # self.preset_name_button.setSizePolicy(QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum))
@@ -2644,8 +2708,8 @@ class MainWindow(QMainWindow):
             splash.finish(self)
 
     def restore_preset(self, preset_name: str):
-        self.preset_controller.restore_preset(preset_name, self.main_control_panel)
         log_info(f"Preset changing to {preset_name}")
+        self.preset_controller.restore_preset(preset_name, self.main_control_panel)
         self.display_preset_name(preset_name)
 
     def save_preset(self, preset_name: str = None) -> None:
