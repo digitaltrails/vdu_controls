@@ -188,7 +188,7 @@ Michael Hamilton\
 Version History
 ---------------
 * 1.6.11
-  * Cleanup the help and man page.
+  * Display current preset in window and tray title and detect if a preset is in use at startup.
 * 1.6.10, 1.6.9
   * Cope better with invalid slider values caused by a monitor being too slow/busy when responding.
   * Wait for monitor detection to stabilise at session restoration (at login time).

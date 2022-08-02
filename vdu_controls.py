@@ -350,7 +350,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton
 
-VDU_CONTROLS_VERSION = '1.6.11'
+VDU_CONTROLS_VERSION = '1.6.12'
 
 
 def proper_name(*args):
@@ -1734,6 +1734,14 @@ class VduControlPanel(QWidget):
                 control.current_value = preset_ini[vdu_section][control.vcp_capability.property_name()]
         self.refresh_view()
 
+    def is_preset_active(self, preset_ini: configparser.ConfigParser) -> None:
+        vdu_section = self.vdu_model.vdu_model_and_serial_id
+        for control in self.vcp_controls:
+            if control.vcp_capability.property_name() in preset_ini[vdu_section]:
+                if control.current_value != preset_ini[vdu_section][control.vcp_capability.property_name()]:
+                    return False
+        return True
+
 
 class ContextMenu(QMenu):
 
@@ -1770,12 +1778,11 @@ class ContextMenu(QMenu):
                        translate('Quit'),
                        quit_action)
 
-    def insert_preset(self, name: str) -> None:
+    def insert_preset_menu_item(self, name: str) -> None:
         # Have to add it first and then move it (otherwise it won't appear - weird).
 
         def restore_preset() -> None:
-            control_panel = self.main_window.main_control_panel
-            self.main_window.preset_controller.restore_preset(self.sender().text(), control_panel)
+            self.main_window.restore_preset(self.sender().text())
 
         action = self.addAction(self.style().standardIcon(QStyle.SP_CommandLink), name, restore_preset)
         self.insertAction(self.presets_separator, action)
@@ -1784,10 +1791,10 @@ class ContextMenu(QMenu):
 
     def refresh_preset_menu(self) -> None:
         for name, path_str in self.main_window.preset_controller.find_preset_paths().items():
-            if not self.has_preset(name):
-                self.insert_preset(name)
+            if not self.has_preset_menu_item(name):
+                self.insert_preset_menu_item(name)
 
-    def has_preset(self, name: str) -> bool:
+    def has_preset_menu_item(self, name: str) -> bool:
         for action in self.actions():
             if action == self.presets_separator:
                 break
@@ -1795,7 +1802,7 @@ class ContextMenu(QMenu):
                 return True
         return False
 
-    def get_preset(self, name: str) -> QAction:
+    def get_preset_menu_item(self, name: str) -> QAction:
         for action in self.actions():
             if action == self.presets_separator:
                 break
@@ -1975,20 +1982,6 @@ class VduControlsMainPanel(QWidget):
         self.refreshDataTask = RefreshVduDataTask(self)
         self.refreshDataTask.task_finished.connect(finish_refresh)
 
-        def respond_to_signal(signal_number: int):
-            if signal_number == signal.SIGHUP:
-                start_refresh()
-            elif PRESET_SIGNAL_MIN <= signal_number <= PRESET_SIGNAL_MAX:
-                preset_name = self.context_menu.preset_controller.get_preset_name(signal_number - PRESET_SIGNAL_MIN)
-                if preset_name is not None:
-                    self.context_menu.preset_controller.restore_preset(preset_name, self)
-                else:
-                    # Cannot raise a Qt alert inside the signal handler in case another signal comes in.
-                    log_warning(f"ignoring signal {signal_number}, no preset associated with that signal number.")
-
-        global signal_wakeup_handler
-        signal_wakeup_handler.signalReceived.connect(respond_to_signal)
-
         self.bottom_toolbar = \
             BottomToolBar(start_refresh_func=start_refresh, app_context_menu=app_context_menu, parent=self)
 
@@ -2125,15 +2118,34 @@ class PresetController:
             os.makedirs(preset_path.parent)
         with open(preset_path, 'w') as preset_file:
             preset_ini.write(preset_file)
-        if not context_menu.has_preset(preset_name):
-            context_menu.insert_preset(preset_name)
+        if not context_menu.has_preset_menu_item(preset_name):
+            context_menu.insert_preset_menu_item(preset_name)
 
-    def restore_preset(self, preset_name: str, main_panel: VduControlsMainPanel) -> None:
+    def which_preset_is_active(self, main_panel: VduControlsMainPanel) -> str:
+        for name, path in self.find_preset_paths().items():
+            if self.is_preset_active(name, main_panel):
+                return name
+        return None
+
+    def load_ini(self, preset_name) -> configparser.ConfigParser:
         preset_path = get_config_path(proper_name('Preset', preset_name))
         log_info(f"reading preset file '{preset_path.as_posix()}'")
         preset_text = Path(preset_path).read_text()
         preset_ini = configparser.ConfigParser()
         preset_ini.read_string(preset_text)
+        return preset_ini
+
+    def is_preset_active(self, preset_name: str, main_panel: VduControlsMainPanel) -> bool:
+        preset_ini = self.load_ini(preset_name)
+        for section in preset_ini:
+            for control_panel in main_panel.vdu_control_panels:
+                if section == control_panel.vdu_model.vdu_model_and_serial_id:
+                    if not control_panel.is_preset_active(preset_ini):
+                        return False
+        return True
+
+    def restore_preset(self, preset_name: str, main_panel: VduControlsMainPanel) -> None:
+        preset_ini = self.load_ini(preset_name)
         for section in preset_ini:
             for control_panel in main_panel.vdu_control_panels:
                 if section == control_panel.vdu_model.vdu_model_and_serial_id:
@@ -2144,8 +2156,8 @@ class PresetController:
         log_info(f"deleting preset file '{preset_path.as_posix()}'")
         if preset_path.exists():
             os.remove(preset_path.as_posix())
-        if context_menu.has_preset(preset_name):
-            context_menu.removeAction(context_menu.get_preset(preset_name))
+        if context_menu.has_preset_menu_item(preset_name):
+            context_menu.removeAction(context_menu.get_preset_menu_item(preset_name))
 
     def get_preset_name(self, preset_number: int):
         keys_list = [*self.find_preset_paths()]
@@ -2158,18 +2170,16 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
     """A dialog for creating/updating/removing presets."""
 
     @staticmethod
-    def invoke(main_panel: VduControlsMainPanel, context_menu: ContextMenu) -> None:
+    def invoke(main_window: 'MainWindow') -> None:
         if PresetsDialog.exists():
             PresetsDialog.show_existing_dialog()
         else:
-            PresetsDialog(main_panel, context_menu)
+            PresetsDialog(main_window)
 
-    def __init__(self, main_panel: VduControlsMainPanel, context_menu: ContextMenu) -> None:
+    def __init__(self, main_window: 'MainWindow') -> None:
         super().__init__()
         self.setWindowTitle(translate('Presets'))
-        self.main_panel = main_panel
-        self.context_menu = context_menu
-        self.preset_controller = PresetController()
+        self.main_window = main_window
         self.setMinimumWidth(512)
         layout = QVBoxLayout()
         self.setLayout(layout)
@@ -2181,22 +2191,22 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         button_box = QWidget()
         button_layout = QHBoxLayout()
         button_box.setLayout(button_layout)
-        context_menu.refresh_preset_menu()
+        main_window.app_context_menu.refresh_preset_menu()
 
         def restore_preset(preset_name: str = None) -> None:
-            self.preset_controller.restore_preset(preset_name, self.main_panel)
+            self.main_window.restore_preset(preset_name)
 
         def save_preset(preset_name: str = None) -> None:
-            self.preset_controller.save_preset(preset_name, self.main_panel, self.context_menu)
+            self.main_window.save_preset(preset_name)
 
         def delete_preset(preset_name: str = None, target_widget: QWidget = None) -> None:
             log_info(f"delete preset {preset_name}")
-            self.preset_controller.delete_preset(preset_name, self.context_menu)
+            self.main_window.delete_preset(preset_name)
             presets_layout.removeWidget(target_widget)
             target_widget.deleteLater()
             presets_panel.repaint()
 
-        for name in self.preset_controller.find_preset_paths().keys():
+        for name in self.main_window.preset_controller.find_preset_paths().keys():
             preset_widget = self.create_preset_widget(
                 name,
                 restore_action=restore_preset,
@@ -2231,7 +2241,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 save_message.setStandardButtons(QMessageBox.Close)
                 save_message.exec()
                 return
-            self.preset_controller.save_preset(new_name, main_panel, context_menu)
+            self.main_window.save_preset(new_name)
             new_preset_widget = self.create_preset_widget(
                 new_name,
                 restore_action=restore_preset,
@@ -2482,6 +2492,8 @@ class MainWindow(QMainWindow):
     def __init__(self, main_config: VduControlsConfig, app: QApplication, session_startup: bool):
         super().__init__()
 
+        self.app = app
+        self.displayed_preset_name = None
         self.setObjectName('main_window')
         self.geometry_key = self.objectName() + "_geometry"
         self.state_key = self.objectName() + "_window_state"
@@ -2507,7 +2519,7 @@ class MainWindow(QMainWindow):
             GreyScaleDialog()
 
         def edit_presets() -> None:
-            PresetsDialog.invoke(self.main_control_panel, app_context_menu)
+            PresetsDialog.invoke(self)
 
         def quit_app() -> None:
             self.app_save_state()
@@ -2521,14 +2533,14 @@ class MainWindow(QMainWindow):
 
         self.preset_controller = PresetController()
 
-        app_context_menu = ContextMenu(main_window=self,
-                                       main_window_action=main_window_action,
-                                       about_action=partial(wrap_invoke, AboutDialog.invoke),
-                                       help_action=partial(wrap_invoke, HelpDialog.invoke),
-                                       chart_action=partial(wrap_invoke, grey_scale),
-                                       settings_action=partial(wrap_invoke, edit_config),
-                                       presets_action=partial(wrap_invoke, edit_presets),
-                                       quit_action=quit_app)
+        self.app_context_menu = ContextMenu(main_window=self,
+                                            main_window_action=main_window_action,
+                                            about_action=partial(wrap_invoke, AboutDialog.invoke),
+                                            help_action=partial(wrap_invoke, HelpDialog.invoke),
+                                            chart_action=partial(wrap_invoke, grey_scale),
+                                            settings_action=partial(wrap_invoke, edit_config),
+                                            presets_action=partial(wrap_invoke, edit_presets),
+                                            quit_action=quit_app)
 
         pixmap = get_splash_image()
         splash = QSplashScreen(pixmap.scaledToWidth(800).scaledToHeight(400),
@@ -2554,12 +2566,13 @@ class MainWindow(QMainWindow):
                 log_info("using system tray.")
                 self.tray = QSystemTrayIcon()
                 self.tray.setIcon(app_icon)
-                self.tray.setContextMenu(app_context_menu)
+                self.tray.setContextMenu(self.app_context_menu)
             else:
                 log_error("no system tray - cannot run in system tray.")
 
         app.setWindowIcon(app_icon)
-        app.setApplicationDisplayName(translate('VDU Controls'))
+        self.app_name = "VDU Controls"
+        app.setApplicationDisplayName(self.app_name)
         # Make sure all icons use HiDPI - toolbars don't by default, so force it.
         app.setAttribute(Qt.AA_UseHighDpiPixmaps)
 
@@ -2574,12 +2587,30 @@ class MainWindow(QMainWindow):
                                                                            vdu.vdu_id, vdu.get_vdu_description()),
                     Qt.AlignTop | Qt.AlignHCenter)
 
-        self.main_control_panel = VduControlsMainPanel(main_config, detect_vdu_hook, app_context_menu, session_startup)
+        def respond_to_signal(signal_number: int):
+            if signal_number == signal.SIGHUP:
+                self.main_control_panel.start_refresh()
+            elif PRESET_SIGNAL_MIN <= signal_number <= PRESET_SIGNAL_MAX:
+                new_preset_name = self.preset_controller.get_preset_name(signal_number - PRESET_SIGNAL_MIN)
+                if new_preset_name is not None:
+                    self.restore_preset(new_preset_name)
+                else:
+                    # Cannot raise a Qt alert inside the signal handler in case another signal comes in.
+                    log_warning(f"ignoring signal {signal_number}, no preset associated with that signal number.")
+
+        global signal_wakeup_handler
+        signal_wakeup_handler.signalReceived.connect(respond_to_signal)
+
+        self.main_control_panel = VduControlsMainPanel(main_config, detect_vdu_hook, self.app_context_menu, session_startup)
 
         self.setCentralWidget(self.main_control_panel)
 
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         self.adjustSize()
+
+        preset_name = self.preset_controller.which_preset_is_active(self.main_control_panel)
+        if preset_name:
+            self.display_preset_name(preset_name)
 
         self.app_restore_state()
 
@@ -2611,6 +2642,31 @@ class MainWindow(QMainWindow):
 
         if splash is not None:
             splash.finish(self)
+
+    def restore_preset(self, preset_name: str):
+        self.preset_controller.restore_preset(preset_name, self.main_control_panel)
+        log_info(f"Preset changing to {preset_name}")
+        self.display_preset_name(preset_name)
+
+    def save_preset(self, preset_name: str = None) -> None:
+        self.preset_controller.save_preset(preset_name, self.main_control_panel, self.app_context_menu)
+        self.display_preset_name(preset_name)
+
+    def delete_preset(self, preset_name: str = None, target_widget: QWidget = None) -> None:
+        self.preset_controller.delete_preset(preset_name, self.app_context_menu)
+        if self.displayed_preset_name == preset_name:
+            self.display_preset_name(None)
+
+    def display_preset_name(self, preset_name: str):
+        if preset_name:
+            self.setWindowTitle(preset_name)
+            if self.tray:
+                self.tray.setToolTip(f"{preset_name} \u2014 {self.app_name}")
+        else:
+            self.setWindowTitle("")
+            if self.tray:
+                self.tray.setToolTip(f"{self.app_name}")
+        self.displayed_preset_name = preset_name
 
     def closeEvent(self, event):
         if self.tray is not None:
