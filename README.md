@@ -187,6 +187,9 @@ Michael Hamilton\
 
 Version History
 ---------------
+* 1.7.0
+  * Presets can now optionally have icons which display in the menu and overlay the tray icon.
+  * The Preset-management dialog now includes an icon selection button.
 * 1.6.11
   * Display current preset in window and tray title and detect if a preset is in use at startup.
 * 1.6.10, 1.6.9

@@ -17,7 +17,7 @@
 #
 
 Name: vdu_controls
-Version: 1.6.12
+Version: 1.7.0
 Release: 0
 License: GPL-3.0-or-later
 BuildArch: noarch
@@ -84,8 +84,8 @@ gzip -c docs/_build/man/vdu_controls.1 > %{buildroot}/%{_datadir}/man/man1/%{nam
 %{_datadir}/man/man1/%{name}.1.gz
 
 %changelog
-* Tue Aug 2 2022 Michael Hamilton <michael@actrix.gen.nz>
-- Display current preset in window and tray title: vdu_controls 1.6.12
+* Thu Aug 4 2022 Michael Hamilton <michael@actrix.gen.nz>
+- Display current preset in window and tray title, preset icons: vdu_controls 1.7.0
 * Sun Jul 31 2022 Michael Hamilton <michael@actrix.gen.nz>
 - Cleaning up the help and Linux man page: vdu_controls 1.6.11
 * Tue Jul 12 2022 Michael Hamilton <michael@actrix.gen.nz>
