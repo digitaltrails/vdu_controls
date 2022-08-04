@@ -7,6 +7,13 @@ ddcutil_simulator
 
 For testing vdu_controls UI in different desktops in virtual environments.
 
+The procedure for use would be similar to the following
+
+   export PATH=~/bin:$PATH
+   chmod u+x ~/script_location/ddcutil_simulator.py 
+   ln -s ~/script_location/ddcutil_simulator.py ~/bin/ddcutil
+   vdu_controls
+
 ddcutil_simulator Copyright (C) 2022 Michael Hamilton
 =====================================================
 
