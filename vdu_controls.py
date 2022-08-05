@@ -333,10 +333,11 @@ import syslog
 import textwrap
 import time
 import traceback
+import weakref
 from datetime import datetime, timedelta
 from functools import partial
 from pathlib import Path
-from typing import List, Tuple, Mapping, Type
+from typing import List, Tuple, Mapping, Type, Union
 
 from PyQt5 import QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
@@ -541,17 +542,6 @@ ASSUMED_CONTROLS_CONFIG_TEXT = ('\n'
                                 '	   Feature: 10 (Brightness)\n'
                                 '	   Feature: 12 (Contrast)\n'
                                 '	   Feature: 60 (Input Source)')
-
-
-def is_dark_theme():
-    # Heuristic for checking for a dark theme.
-    # Is the sample text lighter than the background?
-    label = QLabel("am I in the dark?")
-    text_hsv_value = label.palette().color(QPalette.WindowText).value()
-    bg_hsv_value = label.palette().color(QPalette.Background).value()
-    dark_theme_found = text_hsv_value > bg_hsv_value
-    # debug(f"is_dark_them text={text_hsv_value} bg={bg_hsv_value} is_dark={dark_theme_found}") if debugging else None
-    return dark_theme_found
 
 
 def get_splash_image() -> QPixmap:
@@ -1723,7 +1713,7 @@ class VduControlPanel(QWidget):
         """Return the number of VDU controls.  Might be zero if initialization discovered no controllable attributes."""
         return len(self.vcp_controls)
 
-    def save_state(self, preset_ini: configparser.ConfigParser) -> None:
+    def copy_state(self, preset_ini: configparser.ConfigParser) -> None:
         vdu_section = self.vdu_model.vdu_model_and_serial_id
         preset_ini[vdu_section] = {}
         for control in self.vcp_controls:
@@ -1753,11 +1743,17 @@ class Preset:
     def __init__(self, name):
         self.name = name
         self.path = get_config_path(proper_name('Preset', name))
-        self.preset_ini = self.load()
+        self.preset_ini = configparser.ConfigParser()
 
     def get_icon_path(self) -> Path:
         if self.preset_ini.has_section("preset"):
             return Path(self.preset_ini.get("preset", "icon", fallback=None))
+
+    def set_icon_path(self, icon_path: Path):
+        if icon_path:
+            if not self.preset_ini.has_section("preset"):
+                self.preset_ini.add_section("preset")
+            self.preset_ini.set("preset", "icon", icon_path.as_posix())
 
     def load(self) -> configparser.ConfigParser:
         if self.path.exists():
@@ -1770,31 +1766,26 @@ class Preset:
         self.preset_ini = preset_ini
         return self.preset_ini
 
-    def save(self, config: configparser.ConfigParser):
+    def save(self):
         log_info(f"saving preset file '{self.path.as_posix()}'")
-        self.preset_ini = config
         if not self.path.parent.is_dir():
             os.makedirs(self.path.parent)
         with open(self.path, 'w') as preset_file:
             self.preset_ini.write(preset_file)
 
-    def remove(self):
+    def delete(self):
         log_info(f"deleting preset file '{self.path.as_posix()}'")
         if self.path.exists():
             os.remove(self.path.as_posix())
 
-    @staticmethod
-    def set_icon_path(icon_path: Path, preset_ini: configparser.ConfigParser):
-        if not preset_ini.has_section("preset"):
-            preset_ini.add_section("preset")
-        preset_ini.set("preset", "icon", icon_path.as_posix())
 
 class ContextMenu(QMenu):
 
     def __init__(self,
                  main_window,
                  main_window_action,
-                 about_action, help_action, chart_action, settings_action, presets_action, quit_action) -> None:
+                 about_action, help_action, chart_action, settings_action,
+                 presets_action, refresh_action, quit_action) -> None:
         super().__init__()
         self.main_window = main_window
         if main_window_action is not None:
@@ -1813,6 +1804,9 @@ class ContextMenu(QMenu):
         self.addAction(self.style().standardIcon(QStyle.SP_ComputerIcon),
                        translate('Settings'),
                        settings_action)
+        self.addAction(self.style().standardIcon(QStyle.SP_BrowserReload),
+                       translate('Refresh'),
+                       refresh_action)
         self.addAction(self.style().standardIcon(QStyle.SP_MessageBoxInformation),
                        translate('About'),
                        about_action)
@@ -1828,7 +1822,7 @@ class ContextMenu(QMenu):
         # Have to add it first and then move it (otherwise it won't appear - weird).
 
         def restore_preset() -> None:
-            self.main_window.restore_preset(self.sender().text())
+            self.main_window.restore_named_preset(self.sender().text())
 
         icon = create_icon_from_svg_path(preset.get_icon_path()) \
             if preset.get_icon_path() else self.style().standardIcon(QStyle.SP_CommandLink)
@@ -1865,10 +1859,10 @@ class BottomToolBar(QToolBar):
     def __init__(self, start_refresh_func, app_context_menu, parent):
         super().__init__(parent=parent)
         self.refresh_action = self.addAction(
-            create_icon_from_svg_string(REFRESH_ICON_SOURCE), "Refresh settings from monitors", start_refresh_func)
+            create_icon_from_svg_bytes(REFRESH_ICON_SOURCE), "Refresh settings from monitors", start_refresh_func)
         self.setIconSize(QSize(32, 32))
         self.menu_button = QToolButton(self)
-        self.menu_button.setIcon(create_icon_from_svg_string(MENU_ICON_SOURCE))
+        self.menu_button.setIcon(create_icon_from_svg_bytes(MENU_ICON_SOURCE))
         self.progress_bar = QProgressBar(self)
         # Disable text percentage label on the spinner progress-bar
         self.progress_bar.setTextVisible(False)
@@ -1884,8 +1878,8 @@ class BottomToolBar(QToolBar):
         super().eventFilter(target, event)
         # PalletChange happens after the new style sheet is in use.
         if event.type() == QEvent.PaletteChange:
-            self.refresh_action.setIcon(create_icon_from_svg_string(REFRESH_ICON_SOURCE))
-            self.menu_button.setIcon(create_icon_from_svg_string(MENU_ICON_SOURCE))
+            self.refresh_action.setIcon(create_icon_from_svg_bytes(REFRESH_ICON_SOURCE))
+            self.menu_button.setIcon(create_icon_from_svg_bytes(MENU_ICON_SOURCE))
         event.accept()
         return True
 
@@ -1905,6 +1899,7 @@ class BottomToolBar(QToolBar):
 
 class VduControlsMainPanel(QWidget):
     """GUI for detected VDU's, it will construct and contain a control panel for each VDU."""
+    refresh_finished = pyqtSignal()
 
     def __init__(self,
                  default_config: VduControlsConfig,
@@ -2015,24 +2010,18 @@ class VduControlsMainPanel(QWidget):
             alert.exec()
             sys.exit()
 
-        def start_refresh() -> None:
-            # Refreshes from all values from ddcutil.  May be slow, starts a busy spinner and then
-            # starts the work in a task thread.
-            self.bottom_toolbar.indicate_refresh_in_progress()
-            # Start the background task
-            self.refreshDataTask.start()
-
         def finish_refresh() -> None:
             # GUI-thread QT signal handler for refresh task completion - execution will be in the GUI thread.
             # Stop the busy-spinner (progress bar).
             self.bottom_toolbar.indicate_refresh_complete()
             self.refresh_view()
+            self.refresh_finished.emit()
 
         self.refreshDataTask = RefreshVduDataTask(self)
         self.refreshDataTask.task_finished.connect(finish_refresh)
 
         self.bottom_toolbar = \
-            BottomToolBar(start_refresh_func=start_refresh, app_context_menu=app_context_menu, parent=self)
+            BottomToolBar(start_refresh_func=self.start_refresh, app_context_menu=app_context_menu, parent=self)
 
         layout.addWidget(self.bottom_toolbar)
 
@@ -2080,6 +2069,13 @@ class VduControlsMainPanel(QWidget):
         #     self.timer = QTimer(self)
         #     self.timer.timeout.connect(check_light_level_func)
         #     self.timer.start(10000);
+
+    def start_refresh(self) -> None:
+        # Refreshes from all values from ddcutil.  May be slow, starts a busy spinner and then
+        # starts the work in a task thread.
+        self.bottom_toolbar.indicate_refresh_in_progress()
+        # Start the background task
+        self.refreshDataTask.start()
 
     def refresh_data(self) -> None:
         """Refresh data from the VDU's. Called by a non-GUI task. Not in the GUI-thread, cannot do any GUI op's."""
@@ -2147,27 +2143,19 @@ class PresetController:
         for path_str in glob.glob(CONFIG_DIR_PATH.joinpath("Preset_*.conf").as_posix()):
             preset_name = os.path.splitext(os.path.basename(path_str))[0].replace('Preset_', '').replace('_', ' ')
             if preset_name not in self.presets:
-                self.presets[preset_name] = Preset(preset_name)
+                preset = Preset(preset_name)
+                preset.load()
+                self.presets[preset_name] = preset
             presets_still_present.append(preset_name)
         for preset_name in self.presets.keys():
             if preset_name not in presets_still_present:
                 del self.presets[preset_name]
         return self.presets
 
-    def save_preset(self, preset_name: str, icon_path: Path, main_panel: VduControlsMainPanel, context_menu: ContextMenu) -> Preset:
-        preset_ini = configparser.ConfigParser()
-        if icon_path:
-            Preset.set_icon_path(icon_path, preset_ini)
-        for control_panel in main_panel.vdu_control_panels:
-            control_panel.save_state(preset_ini)
-        if preset_name in self.presets:
-            preset = self.presets[preset_name]
-        else:
-            preset = Preset(preset_name)
-            self.presets[preset_name] = preset
-        preset.save(preset_ini)
-        if not context_menu.has_preset_menu_item(preset_name):
-            context_menu.insert_preset_menu_item(preset)
+    def save_preset(self, preset: Preset) -> Preset:
+        preset.save()
+        if preset.name not in self.presets:
+            self.presets[preset.name] = preset
         return preset
 
     def which_preset_is_active(self, main_panel: VduControlsMainPanel) -> Preset | None:
@@ -2185,28 +2173,21 @@ class PresetController:
                             return False
         return True
 
-    def restore_preset(self, preset_name: str, main_panel: VduControlsMainPanel) -> Preset:
-        preset = self.presets[preset_name]
-        # Refresh from file, just in case
-        preset.load()
-        for section in preset.preset_ini:
-            for control_panel in main_panel.vdu_control_panels:
-                if section == control_panel.vdu_model.vdu_model_and_serial_id:
-                    control_panel.restore_state(preset.preset_ini)
-        return preset
+    def delete_preset(self, preset: Preset) -> None:
+        preset.delete()
+        del self.presets[preset.name]
 
-    def delete_preset(self, preset_name: str, context_menu: ContextMenu) -> None:
-        preset = self.presets[preset_name]
-        preset.remove()
-        del self.presets[preset_name]
-        if context_menu.has_preset_menu_item(preset_name):
-            context_menu.removeAction(context_menu.get_preset_menu_item(preset_name))
-
-    def get_preset_name(self, preset_number: int):
-        keys_list = [*self.find_presets()]
-        if preset_number < len(keys_list):
-            return keys_list[preset_number]
+    def get_preset(self, preset_number: int) -> Preset | None:
+        presets = self.find_presets()
+        if preset_number < len(presets):
+            return presets.values()[preset_number]
         return None
+
+
+class PresetWidget(QWidget):
+    def __init__(self, name: str):
+        super().__init__()
+        self.name = name
 
 
 class PresetsDialog(QDialog, DialogSingletonMixin):
@@ -2236,11 +2217,11 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         button_box.setLayout(button_layout)
         main_window.app_context_menu.refresh_preset_menu()
 
-        def restore_preset(preset_name: str = None) -> None:
-            self.main_window.restore_preset(preset_name)
+        def restore_preset(preset: Preset) -> None:
+            self.main_window.restore_preset(preset)
 
-        def save_preset(preset_name: str = None) -> None:
-            preset_path = get_config_path(proper_name('Preset', preset_name))
+        def save_preset(preset: Preset) -> None:
+            preset_path = get_config_path(proper_name('Preset', preset.name))
             if preset_path.exists():
                 save_message = QMessageBox()
                 message = translate('Overwrite existing {}?').format(preset_path.as_posix())
@@ -2250,46 +2231,60 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 rc = save_message.exec()
                 if rc == QMessageBox.Cancel:
                     return
-            self.main_window.save_preset(preset_name)
+            self.main_window.save_preset(preset)
 
-        def delete_preset(preset_name: str = None, target_widget: QWidget = None) -> None:
-            log_info(f"delete preset {preset_name}")
+        def delete_preset(preset: Preset, target_widget: QWidget = None) -> None:
+            log_info(f"delete preset {preset.name}")
             delete_confirmation = QMessageBox()
-            message = translate('Delete {}?').format(preset_name)
+            message = translate('Delete {}?').format(preset.name)
             delete_confirmation.setText(message)
             delete_confirmation.setIcon(QMessageBox.Question)
             delete_confirmation.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
             rc = delete_confirmation.exec()
             if rc == QMessageBox.Cancel:
                 return
-            self.main_window.delete_preset(preset_name)
+            self.main_window.delete_preset(preset)
             presets_layout.removeWidget(target_widget)
             target_widget.deleteLater()
             presets_panel.adjustSize()
             presets_panel.repaint()
+
+        def edit_preset(preset: Preset) -> None:
+            self.main_window.restore_preset(preset)
+            add_preset_name_edit.setText(preset.name)
+            icon_path = preset.get_icon_path()
+            if icon_path:
+                add_preset_icon_button.setIcon(create_icon_from_svg_path(icon_path))
+                self.last_selected_icon_dir = icon_path.parent
+                self.last_selected_icon_path = icon_path
 
         for preset in self.main_window.preset_controller.find_presets().values():
             preset_widget = self.create_preset_widget(
                 preset,
                 restore_action=restore_preset,
                 save_action=save_preset,
-                delete_action=delete_preset)
+                delete_action=delete_preset,
+                edit_action=edit_preset)
             presets_layout.addWidget(preset_widget)
 
         add_preset_widget = QWidget()
         add_preset_layout = QHBoxLayout()
         add_preset_widget.setLayout(add_preset_layout)
+        add_preset_widget.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
 
         add_preset_icon_button = QPushButton()
         add_preset_icon_button.setIcon(self.style().standardIcon(QStyle.SP_CommandLink))
         add_preset_icon_button.setToolTip(translate('Choose a preset icon.'))
         add_preset_icon_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
+        add_preset_icon_button.setAutoDefault(False)
         add_preset_layout.addWidget(add_preset_icon_button)
 
+        self.last_selected_icon_dir = Path("/usr/share/icons")
         self.last_selected_icon_path = None
 
         def choose_preset_icon_action() -> None:
-            icon_file = QFileDialog.getOpenFileName(self, translate('Icon SVG file'), '/usr/share/icons',
+            icon_file = QFileDialog.getOpenFileName(self, translate('Icon SVG file'),
+                                                    self.last_selected_icon_dir.as_posix(),
                                                     translate('SVG icon files (*.svg)'))
             if icon_file[0] != '':
                 self.last_selected_icon_path = Path(icon_file[0])
@@ -2301,12 +2296,14 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
 
         add_preset_name_edit = QLineEdit()
         add_preset_name_edit.setToolTip(translate('Enter a new preset name.'))
+        add_preset_name_edit.setClearButtonEnabled(True)
         add_preset_layout.addWidget(add_preset_name_edit)
 
-        add_button = QPushButton(translate('Add'))  # QPushButton(' \u2003')
+        add_button = QPushButton()  # translate('Add'))  # QPushButton(' \u2003')
         add_button.setIcon(self.style().standardIcon(QStyle.SP_DriveFDIcon))
         add_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
-        add_button.setStyleSheet('QPushButton { border: none; margin: 0px; padding: 0px;}')
+        #add_button.setStyleSheet('QPushButton { border: none; margin: 0px; padding: 0px;}')
+        add_button.setFlat(True)
         add_button.setToolTip(translate('Save current VDU settings to a new preset.'))
         add_preset_layout.addWidget(add_button)
 
@@ -2314,22 +2311,30 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             new_name = add_preset_name_edit.text().strip()
             if new_name == '':
                 return
-            if self.has_preset(new_name):
+            existing_preset_widget = self.find_preset_widget(new_name)
+            if existing_preset_widget:
                 log_info(f"Already exists {new_name}")
                 save_message = QMessageBox()
-                message = translate("Preset called '{}' already exists.").format(new_name)
+                message = translate("Replace existing '{}' preset?").format(new_name)
                 save_message.setText(message)
-                save_message.setIcon(QMessageBox.Critical)
-                save_message.setStandardButtons(QMessageBox.Close)
-                save_message.exec()
-                return
-            new_preset = self.main_window.save_preset(new_name, self.last_selected_icon_path)
+                save_message.setIcon(QMessageBox.Question)
+                save_message.setStandardButtons(QMessageBox.Save | QMessageBox.Cancel)
+                if save_message.exec() == QMessageBox.Cancel:
+                    return
+            new_preset = Preset(new_name)
+            new_preset.set_icon_path(self.last_selected_icon_path)
+            self.main_window.save_preset(new_preset)
             new_preset_widget = self.create_preset_widget(
                 new_preset,
                 restore_action=restore_preset,
                 save_action=save_preset,
-                delete_action=delete_preset)
-            presets_layout.addWidget(new_preset_widget)
+                delete_action=delete_preset,
+                edit_action=edit_preset)
+            if existing_preset_widget:
+                presets_layout.replaceWidget(existing_preset_widget, new_preset_widget, options=Qt.FindChildrenRecursively)
+                self.make_visible()
+            else:
+                presets_layout.addWidget(new_preset_widget)
             add_preset_name_edit.setText('')
             add_preset_icon_button.setIcon(self.style().standardIcon(QStyle.SP_CommandLink))
 
@@ -2345,20 +2350,21 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         # .show() is non-modal, .exec() is modal
         self.make_visible()
 
-    def has_preset(self, name) -> bool:
+    def find_preset_widget(self, name) -> PresetWidget | None:
         for w in self.presets_panel.children():
-            if isinstance(w, self.PresetWidget):
+            if isinstance(w, PresetWidget):
                 if w.name == name:
-                    return True
-        return False
+                    return w
+        return None
 
-    def create_preset_widget(self, preset: Preset, restore_action=None, save_action=None, delete_action=None):
-        preset_widget = self.PresetWidget(preset.name)
+    def create_preset_widget(self, preset: Preset, restore_action=None, save_action=None, delete_action=None,
+                             edit_action=None) -> Preset:
+        preset_widget = PresetWidget(preset.name)
         line_layout = QHBoxLayout()
+        line_layout.setSpacing(0)
         preset_widget.setLayout(line_layout)
 
         preset_name_button = QPushButton(preset.name)
-        preset_name_button.setStyleSheet('QPushButton { text-align: left; }')
         preset_name_button.setToolTip('Activate this preset.')
         preset_name_button.setIcon(self.style().standardIcon(QStyle.SP_DriveFDIcon))
         if preset.get_icon_path():
@@ -2366,33 +2372,38 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         else:
             preset_name_button.setIcon(self.style().standardIcon(QStyle.SP_CommandLink))
         line_layout.addWidget(preset_name_button)
-        preset_name_button.clicked.connect(partial(restore_action, preset_name=preset.name))
+        preset_name_button.clicked.connect(partial(restore_action, preset=preset))
         preset_name_button.setAutoDefault(False)
+
+        edit_button = QPushButton()
+        edit_button.setIcon(self.style().standardIcon(QStyle.SP_FileIcon))
+        edit_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
+        edit_button.setFlat(True)
+        edit_button.setToolTip(translate('Edit the preset name and icon.'))
+        line_layout.addWidget(edit_button)
+        edit_button.clicked.connect(partial(edit_action, preset=preset))
+        edit_button.setAutoDefault(False)
 
         save_button = QPushButton()
         save_button.setIcon(self.style().standardIcon(QStyle.SP_DriveFDIcon))
         save_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
-        save_button.setStyleSheet('QPushButton { border: none; margin: 0px; padding: 0px;}')
+        save_button.setFlat(True)
+        save_button.setContentsMargins(0, 0, 0, 0)
         save_button.setToolTip(translate('Save the current VDU settings to this preset.'))
         line_layout.addWidget(save_button)
-        save_button.clicked.connect(partial(save_action, preset_name=preset.name))
+        save_button.clicked.connect(partial(save_action, preset=preset))
         save_button.setAutoDefault(False)
 
         delete_button = QPushButton()
         delete_button.setIcon(self.style().standardIcon(QStyle.SP_DialogCloseButton))
         delete_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
-        delete_button.setStyleSheet('QPushButton { border: none; margin: 0px; padding: 0px;}')
+        delete_button.setFlat(True)
         delete_button.setToolTip('Delete this preset.')
         line_layout.addWidget(delete_button)
-        delete_button.clicked.connect(partial(delete_action, preset_name=preset.name, target_widget=preset_widget))
+        delete_button.clicked.connect(partial(delete_action, preset=preset, target_widget=preset_widget))
         delete_button.setAutoDefault(False)
 
         return preset_widget
-
-    class PresetWidget(QWidget):
-        def __init__(self, name: str):
-            super().__init__()
-            self.name = name
 
 
 def exception_handler(e_type, e_value, e_traceback):
@@ -2426,7 +2437,7 @@ def create_pixmap_from_svg_string(svg_str: bytes):
     return QPixmap.fromImage(image)
 
 
-def create_icon_from_svg_string(svg_str: bytes):
+def create_icon_from_svg_bytes(svg_str: bytes):
     """There is no QIcon option for loading SVG from a string, only from a SVG file, so roll our own."""
     return QIcon(create_pixmap_from_svg_string(svg_str))
 
@@ -2434,23 +2445,62 @@ def create_icon_from_svg_string(svg_str: bytes):
 def create_icon_from_svg_path(path: Path):
     with open(path, 'rb') as icon_file:
         bytes = icon_file.read()
-        return create_icon_from_svg_string(bytes)
+        return create_icon_from_svg_bytes(bytes)
 
 
 def create_merged_icon(base_icon: QIcon, overlay_icon: QIcon) -> QIcon:
     """Non-destructively overlay overlay_icon in the middle of base_icon."""
-    base_pixmap = base_icon.pixmap(QSize(64,64), QIcon.Mode.Normal, QIcon.State.On)
+    base_pixmap = base_icon.pixmap(QSize(64, 64), QIcon.Mode.Normal, QIcon.State.On)
     base_size = base_pixmap.size()
     combined_pixmap = QPixmap(base_pixmap)
     overlay_pixmap = overlay_icon.pixmap(base_size, QIcon.Mode.Normal, QIcon.State.On)
     painter = QPainter(combined_pixmap)
     painter.drawPixmap(0, 0, base_pixmap)
-    painter.drawPixmap(base_size.width()//4, base_size.height()//8, base_size.width()//2, base_size.height()//2,
+    painter.drawPixmap(base_size.width() // 4, base_size.height() // 8, base_size.width() // 2, base_size.height() // 2,
                        overlay_pixmap)
     painter.end()
     overlay_icon = QIcon()
     overlay_icon.addPixmap(combined_pixmap)
     return overlay_icon
+
+managed_svg_icon_source: Mapping[QObject, str] = weakref.WeakKeyDictionary()
+themed_icon_cache: Mapping[Union[str, bytes], QIcon] = {}
+
+def get_themed_icon(source) -> QIcon:
+    if source in themed_icon_cache:
+        return themed_icon_cache[source]
+    if isinstance(source, str):
+        return QIcon.fromTheme(source)
+    if isinstance(source, bytes):
+        return create_icon_from_svg_bytes(source)
+    if isinstance(source, Path):
+        return create_icon_from_svg_path(source)
+    raise ValueError(f"get_icon parameter has unsupported type {type(source)} = {str(source)}")
+
+def is_dark_theme():
+    # Heuristic for checking for a dark theme.
+    # Is the sample text lighter than the background?
+    label = QLabel("am I in the dark?")
+    text_hsv_value = label.palette().color(QPalette.WindowText).value()
+    bg_hsv_value = label.palette().color(QPalette.Background).value()
+    dark_theme_found = text_hsv_value > bg_hsv_value
+    # debug(f"is_dark_them text={text_hsv_value} bg={bg_hsv_value} is_dark={dark_theme_found}") if debugging else None
+    return dark_theme_found
+
+def manage_icon(q_object: QObject, source: Union[str, bytes]):
+    # Hold a weak reference to any item that might need an icon reload on a theme change
+    # At the moment this is only applicable to our internal SVG sourced icons.
+    icon = get_themed_icon(source)
+    managed_svg_icon_source[q_object] = source
+    q_object.setIcon(icon)
+    return q_object
+
+
+def apply_icon_theme_change():
+    themed_icon_cache.clear()
+    for q_object, svg_source in managed_svg_icon_source.items():
+        print(q_object.objectName())
+        manage_icon(q_object, svg_source)
 
 
 def install_as_desktop_application(uninstall: bool = False):
@@ -2629,6 +2679,9 @@ class MainWindow(QMainWindow):
         def edit_config() -> None:
             SettingsEditor.invoke(main_config, [vdu.config for vdu in self.main_control_panel.vdu_controllers])
 
+        def refresh_from_vdus() -> None:
+            self.main_control_panel.start_refresh()
+
         def grey_scale() -> None:
             GreyScaleDialog()
 
@@ -2654,6 +2707,7 @@ class MainWindow(QMainWindow):
                                             chart_action=partial(wrap_invoke, grey_scale),
                                             settings_action=partial(wrap_invoke, edit_config),
                                             presets_action=partial(wrap_invoke, edit_presets),
+                                            refresh_action=refresh_from_vdus,
                                             quit_action=quit_app)
 
         splash_pixmap = get_splash_image()
@@ -2706,9 +2760,9 @@ class MainWindow(QMainWindow):
             if signal_number == signal.SIGHUP:
                 self.main_control_panel.refresh_data()
             elif PRESET_SIGNAL_MIN <= signal_number <= PRESET_SIGNAL_MAX:
-                restore_preset_name = self.preset_controller.get_preset_name(signal_number - PRESET_SIGNAL_MIN)
-                if restore_preset_name is not None:
-                    self.restore_preset(restore_preset_name)
+                restore_preset = self.preset_controller.get_preset_name(signal_number - PRESET_SIGNAL_MIN)
+                if restore_preset is not None:
+                    self.restore_preset(restore_preset)
                 else:
                     # Cannot raise a Qt alert inside the signal handler in case another signal comes in.
                     log_warning(f"ignoring signal {signal_number}, no preset associated with that signal number.")
@@ -2719,14 +2773,17 @@ class MainWindow(QMainWindow):
         self.main_control_panel = VduControlsMainPanel(main_config, detect_vdu_hook, self.app_context_menu,
                                                        session_startup)
 
+        def refresh_finished():
+            self.display_active_preset_info(None)
+
+        self.main_control_panel.refresh_finished.connect(refresh_finished)
+
         self.setCentralWidget(self.main_control_panel)
 
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         self.adjustSize()
 
-        preset = self.preset_controller.which_preset_is_active(self.main_control_panel)
-        if preset:
-            self.display_active_preset_info(preset)
+        self.display_active_preset_info(None)
 
         self.app_restore_state()
 
@@ -2759,27 +2816,42 @@ class MainWindow(QMainWindow):
         if splash is not None:
             splash.finish(self)
 
-    def restore_preset(self, preset_name: str) -> Preset:
-        log_info(f"Preset changing to {preset_name}")
-        preset = self.preset_controller.restore_preset(preset_name, self.main_control_panel)
+    def restore_preset(self, preset: Preset) -> Preset:
+        log_info(f"Preset changing to {preset.name}")
+        preset.load()
+        for section in preset.preset_ini:
+            for control_panel in self.main_control_panel.vdu_control_panels:
+                if section == control_panel.vdu_model.vdu_model_and_serial_id:
+                    control_panel.restore_state(preset.preset_ini)
         self.display_active_preset_info(preset)
         return preset
 
-    def save_preset(self, preset_name: str = None, icon_path: Path = None) -> Preset:
-        preset = self.preset_controller.save_preset(preset_name, icon_path, self.main_control_panel, self.app_context_menu)
-        if preset:
-            self.display_active_preset_info(preset)
-        return preset
+    def restore_named_preset(self, preset_name: str) -> None:
+        presets = self.preset_controller.find_presets()
+        if preset_name in presets:
+            self.restore_preset(presets[preset_name])
 
-    def delete_preset(self, preset_name: str = None, target_widget: QWidget = None) -> None:
-        self.preset_controller.delete_preset(preset_name, self.app_context_menu)
-        if self.displayed_preset_name == preset_name:
+    def save_preset(self, preset: Preset) -> None:
+        for control_panel in self.main_control_panel.vdu_control_panels:
+            control_panel.copy_state(preset.preset_ini)
+        preset.save()
+        preset = self.preset_controller.save_preset(preset)
+        if not self.app_context_menu.has_preset_menu_item(preset.name):
+            self.app_context_menu.insert_preset_menu_item(preset)
+            self.display_active_preset_info(preset)
+
+    def delete_preset(self, preset: Preset) -> None:
+        self.preset_controller.delete_preset(preset)
+        if self.app_context_menu.has_preset_menu_item(preset.name):
+            self.app_context_menu.removeAction(self.app_context_menu.get_preset_menu_item(preset.name))
+        if self.displayed_preset_name == preset.name:
             self.display_active_preset_info(None)
 
-    def display_active_preset_info(self, preset: Preset):
+    def display_active_preset_info(self, preset: Preset) -> None:
+        if preset is None:
+            preset = self.preset_controller.which_preset_is_active(self.main_control_panel)
         if preset:
             icon = None
-            print(preset)
             self.setWindowTitle(preset.name)
             if preset.get_icon_path():
                 icon = create_merged_icon(self.app_icon, create_icon_from_svg_path(preset.get_icon_path()))
