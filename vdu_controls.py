@@ -1820,7 +1820,7 @@ class ContextMenu(QMenu):
         self.addAction(self.style().standardIcon(QStyle.SP_MessageBoxInformation),
                        translate('About'),
                        about_action)
-        self.addAction(self.style().standardIcon(QStyle.SP_TitleBarContextHelpButton),
+        self.addAction(self.style().standardIcon(QStyle.SP_DialogHelpButton),
                        translate('Help'),
                        help_action)
         self.addSeparator()
