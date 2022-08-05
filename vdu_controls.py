@@ -1834,7 +1834,7 @@ class ContextMenu(QMenu):
         def restore_preset() -> None:
             self.main_window.restore_named_preset(self.sender().text())
 
-        icon = create_icon_from_svg_path(preset.get_icon_path()) \
+        icon = create_icon_from_path(preset.get_icon_path()) \
             if preset.get_icon_path() else self.style().standardIcon(PresetsDialog.no_icon_icon_number)
 
         action = self.addAction(icon, preset.name, restore_preset)
@@ -2301,13 +2301,12 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         add_preset_icon_button.setAutoDefault(False)
         add_preset_layout.addWidget(add_preset_icon_button)
 
-
         self.last_selected_icon_path = None
 
         def choose_preset_icon_action() -> None:
-            icon_file = QFileDialog.getOpenFileName(self, translate('Icon SVG file'),
+            icon_file = QFileDialog.getOpenFileName(self, translate('Icon SVG or PNG file'),
                                                     PresetsDialog.last_selected_icon_dir.as_posix(),
-                                                    translate('SVG icon files (*.svg)'))
+                                                    translate('SVG or PNG (*.svg *.png)'))
             if icon_file[0] != '':
                 self.last_selected_icon_path = Path(icon_file[0])
                 add_preset_icon_button.set_themed_icon(self.last_selected_icon_path)
@@ -2462,9 +2461,9 @@ def handle_theme(svg_str: bytes) -> bytes:
     return svg_str
 
 
-def create_pixmap_from_svg_string(svg_str: bytes):
+def create_pixmap_from_svg_bytes(svg_bytes: bytes):
     """There is no QIcon option for loading SVG from a string, only from a SVG file, so roll our own."""
-    renderer = QSvgRenderer(handle_theme(svg_str))
+    renderer = QSvgRenderer(handle_theme(svg_bytes))
     image = QImage(64, 64, QImage.Format_ARGB32)
     image.fill(0x0)
     painter = QPainter(image)
@@ -2473,15 +2472,19 @@ def create_pixmap_from_svg_string(svg_str: bytes):
     return QPixmap.fromImage(image)
 
 
-def create_icon_from_svg_bytes(svg_str: bytes):
+def create_icon_from_svg_bytes(svg_bytes: bytes):
     """There is no QIcon option for loading SVG from a string, only from a SVG file, so roll our own."""
-    return QIcon(create_pixmap_from_svg_string(svg_str))
+    return QIcon(create_pixmap_from_svg_bytes(svg_bytes))
 
 
-def create_icon_from_svg_path(path: Path):
-    with open(path, 'rb') as icon_file:
-        bytes = icon_file.read()
-        return create_icon_from_svg_bytes(bytes)
+def create_icon_from_path(path: Path):
+    if path.suffix == '.svg':
+        with open(path, 'rb') as icon_file:
+            bytes = icon_file.read()
+            return create_icon_from_svg_bytes(bytes)
+    if path.suffix == '.png':
+        return QIcon(path.as_posix())
+    return None
 
 
 def create_merged_icon(base_icon: QIcon, overlay_icon: QIcon) -> QIcon:
@@ -2512,7 +2515,7 @@ class ThemedObject:
         if isinstance(source, bytes):
             icon = create_icon_from_svg_bytes(bytes)
         elif isinstance(source, Path):
-            icon = create_icon_from_svg_path(source)
+            icon = create_icon_from_path(source)
         elif isinstance(source, int):
             icon = self.style().standardIcon(source)
         return icon
@@ -2895,7 +2898,7 @@ class MainWindow(QMainWindow):
             icon = None
             self.setWindowTitle(preset.name)
             if preset.get_icon_path():
-                icon = create_merged_icon(self.app_icon, create_icon_from_svg_path(preset.get_icon_path()))
+                icon = create_merged_icon(self.app_icon, create_icon_from_path(preset.get_icon_path()))
                 self.app.setWindowIcon(icon)
             elif self.windowIcon() != self.app_icon:
                 self.app.setWindowIcon(self.app_icon)
