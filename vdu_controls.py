@@ -1835,7 +1835,7 @@ class ContextMenu(QMenu):
             self.main_window.restore_named_preset(self.sender().text())
 
         icon = create_icon_from_svg_path(preset.get_icon_path()) \
-            if preset.get_icon_path() else self.style().standardIcon(QStyle.SP_CommandLink)
+            if preset.get_icon_path() else self.style().standardIcon(PresetsDialog.no_icon_icon_number)
 
         action = self.addAction(icon, preset.name, restore_preset)
         self.insertAction(self.presets_separator, action)
@@ -2209,6 +2209,9 @@ class PresetWidget(QWidget):
 class PresetsDialog(QDialog, DialogSingletonMixin):
     """A dialog for creating/updating/removing presets."""
 
+    no_icon_icon_number = QStyle.SP_ComputerIcon
+    last_selected_icon_dir = Path("/usr/share/icons")
+
     @staticmethod
     def invoke(main_window: 'MainWindow') -> None:
         if PresetsDialog.exists():
@@ -2271,8 +2274,11 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             icon_path = preset.get_icon_path()
             if icon_path:
                 add_preset_icon_button.set_themed_icon(icon_path)
-                self.last_selected_icon_dir = icon_path.parent
+                PresetsDialog.last_selected_icon_dir = icon_path.parent
                 self.last_selected_icon_path = icon_path
+            else:
+                add_preset_icon_button.set_themed_icon(PresetsDialog.no_icon_icon_number)
+                self.last_selected_icon_path = None
 
         for preset in self.main_window.preset_controller.find_presets().values():
             preset_widget = self.create_preset_widget(
@@ -2289,24 +2295,24 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         add_preset_widget.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
 
         add_preset_icon_button = ThemedButton()
-        add_preset_icon_button.set_themed_icon(QStyle.SP_CommandLink)
+        add_preset_icon_button.set_themed_icon(PresetsDialog.no_icon_icon_number)
         add_preset_icon_button.setToolTip(translate('Choose a preset icon.'))
         add_preset_icon_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
         add_preset_icon_button.setAutoDefault(False)
         add_preset_layout.addWidget(add_preset_icon_button)
 
-        self.last_selected_icon_dir = Path("/usr/share/icons")
+
         self.last_selected_icon_path = None
 
         def choose_preset_icon_action() -> None:
             icon_file = QFileDialog.getOpenFileName(self, translate('Icon SVG file'),
-                                                    self.last_selected_icon_dir.as_posix(),
+                                                    PresetsDialog.last_selected_icon_dir.as_posix(),
                                                     translate('SVG icon files (*.svg)'))
             if icon_file[0] != '':
                 self.last_selected_icon_path = Path(icon_file[0])
                 add_preset_icon_button.set_themed_icon(self.last_selected_icon_path)
             else:
-                add_preset_icon_button.set_themed_icon(QStyle.SP_CommandLink)
+                add_preset_icon_button.set_themed_icon(PresetsDialog.no_icon_icon_number)
 
         add_preset_icon_button.clicked.connect(choose_preset_icon_action)
 
@@ -2329,9 +2335,16 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 return
             existing_preset_widget = self.find_preset_widget(new_name)
             if existing_preset_widget:
-                log_info(f"Already exists {new_name}")
                 save_message = QMessageBox()
                 message = translate("Replace existing '{}' preset?").format(new_name)
+                save_message.setText(message)
+                save_message.setIcon(QMessageBox.Question)
+                save_message.setStandardButtons(QMessageBox.Save | QMessageBox.Cancel)
+                if save_message.exec() == QMessageBox.Cancel:
+                    return
+            if self.last_selected_icon_path is None:
+                save_message = QMessageBox()
+                message = translate("No icon has been selected for '{}' preset?").format(new_name)
                 save_message.setText(message)
                 save_message.setIcon(QMessageBox.Question)
                 save_message.setStandardButtons(QMessageBox.Save | QMessageBox.Cancel)
@@ -2347,12 +2360,13 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 delete_action=delete_preset,
                 edit_action=edit_preset)
             if existing_preset_widget:
-                presets_layout.replaceWidget(existing_preset_widget, new_preset_widget, options=Qt.FindChildrenRecursively)
+                presets_layout.replaceWidget(existing_preset_widget, new_preset_widget)
                 self.make_visible()
             else:
                 presets_layout.addWidget(new_preset_widget)
             add_preset_name_edit.setText('')
-            add_preset_icon_button.set_themed_icon(QStyle.SP_CommandLink)
+            add_preset_icon_button.set_themed_icon(PresetsDialog.no_icon_icon_number)
+            self.last_selected_icon_path = None
 
         add_button.clicked.connect(add_preset)
 
@@ -2384,8 +2398,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         preset_name_button.setToolTip('Activate this preset.')
         if preset.get_icon_path():
             preset_name_button.set_themed_icon(preset.get_icon_path())
-        else:
-            preset_name_button.set_themed_icon(QStyle.SP_CommandLink)
+
         line_layout.addWidget(preset_name_button)
         preset_name_button.clicked.connect(partial(restore_action, preset=preset))
         preset_name_button.setAutoDefault(False)
@@ -2427,6 +2440,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             self.repaint()
         event.accept()
         return True
+
 
 def exception_handler(e_type, e_value, e_traceback):
     """Overarching error handler in case something unexpected happens."""
