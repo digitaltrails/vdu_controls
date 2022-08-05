@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Jul 31, 2022" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Aug 05, 2022" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.3.1
 .SH VDU_CONTROLS: A QT GUI WRAPPER FOR DDCUTIL
@@ -272,8 +272,12 @@ A custom named preset can be used to save the current VDU settings for later rec
 created to suit different lighting conditions or different applications, for example: \fINight\fP, \fIDay\fP, \fIOvercast\fP,
 \fISunny\fP, \fIPhotography\fP, and \fIVideo\fP\&.
 .sp
+Presets can be assigned a name and icon.  If the current monitor settings match a preset, the preset\(aqs name will show
+in the window\-title and tray tooltip, the preset\(aqs icon will overlay the normal tray icon.
+.sp
 The \fBPresets\fP item in right\-mouse \fBcontext\-menu\fP will bring up a dialog for managing and applying presets.
-The \fBcontext\-menu\fP also includes a shortcut for applying each existing presets.
+The \fBcontext\-menu\fP also includes a shortcut for applying each existing presets. Any small SVG or PNG can be
+selected as a preset\(aqs icon.
 .sp
 The preset files are named as follows: \fB$HOME/.config/vdu_controls/Preset_<preset_name>.conf\fP
 .sp
@@ -284,6 +288,9 @@ VDU, something similar to the following example:
 .sp
 .nf
 .ft C
+[preset]
+icon = /usr/share/icons/breeze/status/16/cloudstatus.svg
+
 [HP_ZR24w_CNT008]
 brightness = 50
 osd\-language = 02

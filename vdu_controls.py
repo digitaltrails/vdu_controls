@@ -173,13 +173,21 @@ A custom named preset can be used to save the current VDU settings for later rec
 created to suit different lighting conditions or different applications, for example: *Night*, *Day*, *Overcast*,
 *Sunny*, *Photography*, and *Video*.
 
+
+Presets can be assigned a name and icon.  If the current monitor settings match a preset, the preset's name will show
+in the window-title and tray tooltip, the preset's icon will overlay the normal tray icon.
+
 The ``Presets`` item in right-mouse ``context-menu`` will bring up a dialog for managing and applying presets.
-The ``context-menu`` also includes a shortcut for applying each existing presets.
+The ``context-menu`` also includes a shortcut for applying each existing presets. Any small SVG or PNG can be
+selected as a preset's icon.
 
 The preset files are named as follows: ``$HOME/.config/vdu_controls/Preset_<preset_name>.conf``
 
 Presets are saved in INI-file format for ease of editing.  Each preset file contains a section for each connected
 VDU, something similar to the following example::
+
+    [preset]
+    icon = /usr/share/icons/breeze/status/16/cloudstatus.svg
 
     [HP_ZR24w_CNT008]
     brightness = 50
