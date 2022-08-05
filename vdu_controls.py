@@ -179,7 +179,8 @@ in the window-title and tray tooltip, the preset's icon will overlay the normal 
 
 The ``Presets`` item in right-mouse ``context-menu`` will bring up a dialog for managing and applying presets.
 The ``context-menu`` also includes a shortcut for applying each existing presets. Any small SVG or PNG can be
-selected as a preset's icon.
+selected as a preset's icon.  Monochrome SVG icons that conform to the Plasma color conventions will be automatically
+inverted if the desktop them is changed from dark to light.
 
 The preset files are named as follows: ``$HOME/.config/vdu_controls/Preset_<preset_name>.conf``
 
