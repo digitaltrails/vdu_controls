@@ -1842,7 +1842,13 @@ class ContextMenu(QMenu):
         # print(self.actions())
         self.update()
 
-    def refresh_preset_menu(self) -> None:
+    def remove_preset_menu_item(self, preset: Preset):
+        self.removeAction(self.get_preset_menu_item(preset.name))
+
+    def refresh_preset_menu(self, reload: bool = False) -> None:
+        if reload:
+            for name, preset in self.main_window.preset_controller.find_presets().items():
+                self.remove_preset_menu_item(preset)
         for name, preset in self.main_window.preset_controller.find_presets().items():
             if not self.has_preset_menu_item(name):
                 self.insert_preset_menu_item(preset)
@@ -2264,7 +2270,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             add_preset_name_edit.setText(preset.name)
             icon_path = preset.get_icon_path()
             if icon_path:
-                add_preset_icon_button.setIcon(create_icon_from_svg_path(icon_path))
+                add_preset_icon_button.set_themed_icon(icon_path)
                 self.last_selected_icon_dir = icon_path.parent
                 self.last_selected_icon_path = icon_path
 
@@ -2298,9 +2304,9 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                                                     translate('SVG icon files (*.svg)'))
             if icon_file[0] != '':
                 self.last_selected_icon_path = Path(icon_file[0])
-                add_preset_icon_button.setIcon(create_icon_from_svg_path(self.last_selected_icon_path))
+                add_preset_icon_button.set_themed_icon(self.last_selected_icon_path)
             else:
-                add_preset_icon_button.setIcon(self.style().standardIcon(QStyle.SP_CommandLink))
+                add_preset_icon_button.set_themed_icon(QStyle.SP_CommandLink)
 
         add_preset_icon_button.clicked.connect(choose_preset_icon_action)
 
@@ -2346,7 +2352,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             else:
                 presets_layout.addWidget(new_preset_widget)
             add_preset_name_edit.setText('')
-            add_preset_icon_button.setIcon(self.style().standardIcon(QStyle.SP_CommandLink))
+            add_preset_icon_button.set_themed_icon(QStyle.SP_CommandLink)
 
         add_button.clicked.connect(add_preset)
 
@@ -2479,10 +2485,9 @@ def create_merged_icon(base_icon: QIcon, overlay_icon: QIcon) -> QIcon:
     overlay_icon.addPixmap(combined_pixmap)
     return overlay_icon
 
-class ThemedButton(QPushButton):
 
+class ThemedObject:
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
         self.icon_source = None
 
     def set_themed_icon(self, source: Union[Path, bytes, int]):
@@ -2498,13 +2503,32 @@ class ThemedButton(QPushButton):
             icon = self.style().standardIcon(source)
         return icon
 
-    def event(self, event: QEvent) -> bool:
-        super().event(event)
+    def check_event(self, event: QEvent):
         # PalletChange happens after the new style sheet is in use.
         if event.type() == QEvent.PaletteChange:
             self.setIcon(self.create_icon(self.icon_source))
         event.accept()
         return True
+
+class ThemedButton(QPushButton, ThemedObject):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def event(self, event: QEvent) -> bool:
+        super().event(event)
+        return self.check_event(event)
+
+
+class ThemedAction(QAction, ThemedObject):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def event(self, event: QEvent) -> bool:
+        super().event(event)
+        return self.check_event(event)
+
 
 def install_as_desktop_application(uninstall: bool = False):
     """Self install this script in the current Linux user's bin directory and desktop applications->settings menu."""
@@ -2846,7 +2870,7 @@ class MainWindow(QMainWindow):
     def delete_preset(self, preset: Preset) -> None:
         self.preset_controller.delete_preset(preset)
         if self.app_context_menu.has_preset_menu_item(preset.name):
-            self.app_context_menu.removeAction(self.app_context_menu.get_preset_menu_item(preset.name))
+            self.app_context_menu.remove_preset_menu_item(preset)
         if self.displayed_preset_name == preset.name:
             self.display_active_preset_info(None)
 
@@ -2903,6 +2927,7 @@ class MainWindow(QMainWindow):
         # PalletChange happens after the new style sheet is in use.
         if event.type() == QEvent.PaletteChange:
             self.display_active_preset_info(None)
+            self.app_context_menu.refresh_preset_menu(reload=True)
         event.accept()
         return True
 
