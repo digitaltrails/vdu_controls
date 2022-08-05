@@ -28,7 +28,7 @@ Optional arguments:
       --hide control_name
                             hide/disable a control (--hide may be specified multiple times)
       --enable-vcp-code vcp_code
-                            enable a control for a vcp-code unavailable via hide/show (may be specified multiple times)
+                            enable a control for a vcp-code unavailable via hide/show (maybe specified multiple times)
       --system-tray         start up as an entry in the system tray
       --debug               enable debug output to stdout
       --warnings            popup a warning when a VDU lacks an enabled control
@@ -51,7 +51,7 @@ of controls but rather to provide a simple panel with a selection of essential c
 A context menu containing this help is available by pressing the right-mouse button either in the main user interface
 or on the system-tray icon.  ``vdu_controls`` may be run as a system-tray entry by using the ``--system-tray`` option.
 
-By default ``vdu_controls`` offers a subset of possible controls including brightness and contrast.  Further controls
+By default, ``vdu_controls`` offers a subset of possible controls including brightness and contrast.  Additional controls
 can be added by using the ``--enable-vcp-code`` option to add any other codes supported by ``ddcutil``.  The full list
 of VCP codes supported by ``ddcutil`` can be listed by running ``ddcutil vcpinfo --verbose``. For example, the
 VCP code 66 is listed as an on/off control for an ambient light sensor, this can be enabled for ``vdu_controls`` by
@@ -92,9 +92,9 @@ The application wide default file can be used to alter application settings and 
 
 The VDU-specific config files can be used to:
 
- - Correct manufacturer built-in meta data.
+ - Correct manufacturer built-in metadata.
  - Customise which controls are to be provided for each VDU.
- - Set a optimal ``ddcutil`` DDC communication speed-multiplier for each VDU.
+ - Set an optimal ``ddcutil`` DDC communication speed-multiplier for each VDU.
 
 It should be noted that config files can only be used to alter definitions of VCP codes already supported
 by ``ddcutil``.  If a VCP code is listed as a *manufacturer specific feature* it is not supported. Manufacturer
@@ -323,6 +323,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>.
 ----------
 
 """
+from __future__ import annotations
 
 import argparse
 import base64
@@ -345,13 +346,13 @@ import traceback
 from datetime import datetime, timedelta
 from functools import partial
 from pathlib import Path
-from typing import List, Tuple, Mapping, Type, Union
+from typing import List, Tuple, Mapping, Type
 
 from PyQt5 import QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
     QSettings, QSize
 from PyQt5.QtGui import QIntValidator, QPixmap, QIcon, QCursor, QImage, QPainter, QDoubleValidator, QRegExpValidator, \
-    QPalette, QGuiApplication
+    QPalette, QGuiApplication, QColor
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
@@ -509,7 +510,7 @@ GREY_SCALE_SVG = f'''
 </svg>
 '''.encode()
 
-#: A high resolution image, will fallback to an internal SVG if this file isn't found on the local system
+#: A high resolution image, will fall back to an internal SVG if this file isn't found on the local system
 DEFAULT_SPLASH_PNG = "/usr/share/icons/hicolor/256x256/apps/vdu_controls.png"
 
 #: Assuming ddcutil is somewhere on the PATH.
@@ -848,7 +849,7 @@ class VduGuiSupportedControls:
     def __init__(self) -> None:
         pass
         # Uncommenting this would enable anything supported by ddcutil - but is that safe for the
-        # hardware given some of the weird settings that appear to be available and the sometimes dodgy
+        # hardware given the weird settings that appear to be available and the sometimes dodgy
         # VDU-vendor DDC implementations.
         #
         # if self.ddcutil_supported is None:
@@ -1185,7 +1186,7 @@ class VduController:
                 "Problem communicating with monitor {} {}. Controls may be incorrect.".format(self.vdu_id, str(e)))
             alert.setIcon(QMessageBox.Critical)
             alert.exec()
-            return ('0', '0')
+            return '0', '0'
 
     def set_attribute(self, vcp_code: str, value: str) -> None:
         self.ddcutil.set_attribute(self.vdu_id, vcp_code, value, sleep_multiplier=self.sleep_multiplier)
@@ -1401,7 +1402,7 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
             text_input = QLineEdit()
             text_input.setMaximumWidth(1000)
             text_input.setMaxLength(500)
-            # TODO - should probably also allow spaces as well as commas, but the rexexp is getting a bit tricky?
+            # TODO - should probably also allow spaces as well as commas, but the regexp is getting a bit tricky?
             # Validator matches CSV of two digit hex or the empty string.
             validator = QRegExpValidator(QRegExp(r"^([0-9a-fA-F]{2}([ \t]*,[ \t]*[0-9a-fA-F]{2})*)|$"))
             text_input.setValidator(validator)
@@ -1463,7 +1464,7 @@ class VduControlSlider(QWidget):
     """
 
     def __init__(self, vdu_model: VduController, vcp_capability: VcpCapability) -> None:
-        """Construct the slider control an initialize its values from the VDU."""
+        """Construct the slider control and initialize its values from the VDU."""
         super().__init__()
 
         self.vdu_model = vdu_model
@@ -1592,7 +1593,7 @@ class VduControlComboBox(QWidget):
     """
 
     def __init__(self, vdu_model: VduController, vcp_capability: VcpCapability) -> None:
-        """Construct the combobox control an initialize its values from the VDU."""
+        """Construct the combobox control and initialize its values from the VDU."""
         super().__init__()
 
         self.vdu_model = vdu_model
@@ -1635,7 +1636,7 @@ class VduControlComboBox(QWidget):
         combo_box.currentIndexChanged.connect(index_changed)
 
     def refresh_data(self) -> None:
-        """Query the VDU for a new data value and cache it (may be called from a task thread, so no GUI op's here)."""
+        """Query the VDU for a new data value and cache it (maybe called from a task thread, so no GUI op's here)."""
         self.current_value, _ = self.vdu_model.get_attribute(self.vcp_capability.vcp_code)
 
     def refresh_view(self) -> None:
@@ -1719,7 +1720,7 @@ class VduControlPanel(QWidget):
             self.setLayout(layout)
 
     def refresh_data(self) -> None:
-        """Tell the control widgets to get fresh VDU data (may be called from a task thread, so no GUI op's here)."""
+        """Tell the control widgets to get fresh VDU data (maybe called from a task thread, so no GUI op's here)."""
         for control in self.vcp_controls:
             control.refresh_data()
 
@@ -1745,7 +1746,7 @@ class VduControlPanel(QWidget):
                 control.current_value = preset_ini[vdu_section][control.vcp_capability.property_name()]
         self.refresh_view()
 
-    def is_preset_active(self, preset_ini: configparser.ConfigParser) -> None:
+    def is_preset_active(self, preset_ini: configparser.ConfigParser) -> bool:
         vdu_section = self.vdu_model.vdu_model_and_serial_id
         for control in self.vcp_controls:
             if control.vcp_capability.property_name() in preset_ini[vdu_section]:
@@ -1773,6 +1774,15 @@ class Preset:
             if not self.preset_ini.has_section("preset"):
                 self.preset_ini.add_section("preset")
             self.preset_ini.set("preset", "icon", icon_path.as_posix())
+
+    def create_icon(self) -> QIcon:
+        # icon = create_icon_from_path(self.get_icon_path()) \
+        #    if self.get_icon_path() else self.style().standardIcon(PresetsDialog.no_icon_icon_number)
+        icon_path = self.get_icon_path()
+        if icon_path and icon_path.exists():
+            return create_icon_from_path(icon_path)
+        else:
+            return create_icon_from_text(f"({self.name[0]})")
 
     def load(self) -> configparser.ConfigParser:
         if self.path.exists():
@@ -1843,10 +1853,7 @@ class ContextMenu(QMenu):
         def restore_preset() -> None:
             self.main_window.restore_named_preset(self.sender().text())
 
-        icon = create_icon_from_path(preset.get_icon_path()) \
-            if preset.get_icon_path() else self.style().standardIcon(PresetsDialog.no_icon_icon_number)
-
-        action = self.addAction(icon, preset.name, restore_preset)
+        action = self.addAction(preset.create_icon(), preset.name, restore_preset)
         self.insertAction(self.presets_separator, action)
         # print(self.actions())
         self.update()
@@ -2151,7 +2158,7 @@ class RefreshVduDataTask(QThread):
         self.main_widget = main_widget
 
     def run(self) -> None:
-        """Run a task that uses ddcutil to retrieve data for all the visible controls (may be slow)."""
+        """Run a task that uses ddcutil to retrieve data for all the visible controls (maybe slow)."""
         # Running in a task thread, cannot interact with GUI thread, just update the data.
         self.main_widget.refresh_data()
         # Tell (qt-signal) the GUI-thread that the task has finished, the GUI thread will then update the view widgets.
@@ -2213,11 +2220,73 @@ class PresetWidget(QWidget):
         self.name = name
 
 
+class PresetActivationButton(QPushButton):
+    def __init__(self, preset: Preset):
+        super().__init__()
+        self.preset = preset
+        self.setIcon(preset.create_icon())
+        self.setText(preset.name)
+        self.setToolTip('Activate this preset.')
+
+    def event(self, event: QEvent) -> bool:
+        super().event(event)
+        # PalletChange happens after the new style sheet is in use.
+        if event.type() == QEvent.PaletteChange:
+            self.setIcon(self.preset.create_icon())
+        event.accept()
+        return True
+
+
+class PresetChooseIconButton(QPushButton):
+
+    def __init__(self):
+        super().__init__()
+        self.setIcon(self.style().standardIcon(PresetsDialog.no_icon_icon_number))
+        self.setToolTip(translate('Choose a preset icon.'))
+        self.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
+        self.setAutoDefault(False)
+        self.last_selected_icon_path = None
+        self.last_icon_dir = Path("/usr/share/icons")
+        if not self.last_icon_dir.exists():
+            self.last_icon_dir = Path.home()
+        self.preset = None
+        self.clicked.connect(self.choose_preset_icon_action)
+
+    def set_preset(self, preset: Preset|None):
+        self.preset = preset
+        self.last_selected_icon_path = self.preset.get_icon_path() if preset else None
+        if self.last_selected_icon_path:
+            self.last_icon_dir = self.last_selected_icon_path.parent
+        self.update_icon()
+
+    def choose_preset_icon_action(self) -> None:
+        icon_file = QFileDialog.getOpenFileName(self, translate('Icon SVG or PNG file'),
+                                                self.last_icon_dir.as_posix(),
+                                                translate('SVG or PNG (*.svg *.png)'))
+        self.last_selected_icon_path = Path(icon_file[0]) if icon_file[0] != '' else None
+        self.update_icon()
+
+    def update_icon(self):
+        if self.last_selected_icon_path:
+            self.setIcon(create_icon_from_path(self.last_selected_icon_path))
+        elif self.preset:
+            self.setIcon(self.preset.create_icon())
+        else:
+            self.setIcon(self.style().standardIcon(PresetsDialog.no_icon_icon_number))
+
+    def event(self, event: QEvent) -> bool:
+        super().event(event)
+        # PalletChange happens after the new style sheet is in use.
+        if event.type() == QEvent.PaletteChange:
+            self.update_icon()
+        event.accept()
+        return True
+
+
 class PresetsDialog(QDialog, DialogSingletonMixin):
     """A dialog for creating/updating/removing presets."""
 
     no_icon_icon_number = QStyle.SP_ComputerIcon
-    last_selected_icon_dir = Path("/usr/share/icons")
 
     @staticmethod
     def invoke(main_window: 'MainWindow') -> None:
@@ -2278,18 +2347,12 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         def edit_preset(preset: Preset) -> None:
             self.main_window.restore_preset(preset)
             add_preset_name_edit.setText(preset.name)
+            choose_icon_button.set_preset(preset)
             icon_path = preset.get_icon_path()
-            if icon_path:
-                add_preset_icon_button.set_themed_icon(icon_path)
-                PresetsDialog.last_selected_icon_dir = icon_path.parent
-                self.last_selected_icon_path = icon_path
-            else:
-                add_preset_icon_button.set_themed_icon(PresetsDialog.no_icon_icon_number)
-                self.last_selected_icon_path = None
 
-        for preset in self.main_window.preset_controller.find_presets().values():
+        for preset_def in self.main_window.preset_controller.find_presets().values():
             preset_widget = self.create_preset_widget(
-                preset,
+                preset_def,
                 restore_action=restore_preset,
                 save_action=save_preset,
                 delete_action=delete_preset,
@@ -2301,26 +2364,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         add_preset_widget.setLayout(add_preset_layout)
         add_preset_widget.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
 
-        add_preset_icon_button = ThemedButton()
-        add_preset_icon_button.set_themed_icon(PresetsDialog.no_icon_icon_number)
-        add_preset_icon_button.setToolTip(translate('Choose a preset icon.'))
-        add_preset_icon_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
-        add_preset_icon_button.setAutoDefault(False)
-        add_preset_layout.addWidget(add_preset_icon_button)
-
-        self.last_selected_icon_path = None
-
-        def choose_preset_icon_action() -> None:
-            icon_file = QFileDialog.getOpenFileName(self, translate('Icon SVG or PNG file'),
-                                                    PresetsDialog.last_selected_icon_dir.as_posix(),
-                                                    translate('SVG or PNG (*.svg *.png)'))
-            if icon_file[0] != '':
-                self.last_selected_icon_path = Path(icon_file[0])
-                add_preset_icon_button.set_themed_icon(self.last_selected_icon_path)
-            else:
-                add_preset_icon_button.set_themed_icon(PresetsDialog.no_icon_icon_number)
-
-        add_preset_icon_button.clicked.connect(choose_preset_icon_action)
+        choose_icon_button = PresetChooseIconButton()
+        add_preset_layout.addWidget(choose_icon_button)
 
         add_preset_name_edit = QLineEdit()
         add_preset_name_edit.setToolTip(translate('Enter a new preset name.'))
@@ -2330,7 +2375,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         add_button = QPushButton()  # translate('Add'))  # QPushButton(' \u2003')
         add_button.setIcon(self.style().standardIcon(QStyle.SP_DriveFDIcon))
         add_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
-        #add_button.setStyleSheet('QPushButton { border: none; margin: 0px; padding: 0px;}')
+        # add_button.setStyleSheet('QPushButton { border: none; margin: 0px; padding: 0px;}')
         add_button.setFlat(True)
         add_button.setToolTip(translate('Save current VDU settings to a new preset.'))
         add_preset_layout.addWidget(add_button)
@@ -2348,7 +2393,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 save_message.setStandardButtons(QMessageBox.Save | QMessageBox.Cancel)
                 if save_message.exec() == QMessageBox.Cancel:
                     return
-            if self.last_selected_icon_path is None:
+            if choose_icon_button.last_selected_icon_path is None:
                 save_message = QMessageBox()
                 message = translate("No icon has been selected for '{}' preset?").format(new_name)
                 save_message.setText(message)
@@ -2357,7 +2402,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 if save_message.exec() == QMessageBox.Cancel:
                     return
             new_preset = Preset(new_name)
-            new_preset.set_icon_path(self.last_selected_icon_path)
+            new_preset.set_icon_path(choose_icon_button.last_selected_icon_path)
             self.main_window.save_preset(new_preset)
             new_preset_widget = self.create_preset_widget(
                 new_preset,
@@ -2373,8 +2418,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             else:
                 presets_layout.addWidget(new_preset_widget)
             add_preset_name_edit.setText('')
-            add_preset_icon_button.set_themed_icon(PresetsDialog.no_icon_icon_number)
-            self.last_selected_icon_path = None
+            choose_icon_button.set_preset(None)
             main_window.display_active_preset_info(None)
 
         add_button.clicked.connect(add_preset)
@@ -2397,16 +2441,13 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         return None
 
     def create_preset_widget(self, preset: Preset, restore_action=None, save_action=None, delete_action=None,
-                             edit_action=None) -> Preset:
+                             edit_action=None) -> PresetWidget:
         preset_widget = PresetWidget(preset.name)
         line_layout = QHBoxLayout()
         line_layout.setSpacing(0)
         preset_widget.setLayout(line_layout)
 
-        preset_name_button = ThemedButton(preset.name)
-        preset_name_button.setToolTip('Activate this preset.')
-        if preset.get_icon_path():
-            preset_name_button.set_themed_icon(preset.get_icon_path())
+        preset_name_button = PresetActivationButton(preset)
 
         line_layout.addWidget(preset_name_button)
         preset_name_button.clicked.connect(partial(restore_action, preset=preset))
@@ -2488,13 +2529,29 @@ def create_icon_from_svg_bytes(svg_bytes: bytes):
 
 
 def create_icon_from_path(path: Path):
-    if path.suffix == '.svg':
-        with open(path, 'rb') as icon_file:
-            bytes = icon_file.read()
-            return create_icon_from_svg_bytes(bytes)
-    if path.suffix == '.png':
-        return QIcon(path.as_posix())
+    if path.exists():
+        if path.suffix == '.svg':
+            with open(path, 'rb') as icon_file:
+                icon_bytes = icon_file.read()
+                return create_icon_from_svg_bytes(icon_bytes)
+        if path.suffix == '.png':
+            return QIcon(path.as_posix())
+    else:
+        # Copes with the case where the path has been deleted.
+        return QStyle.standardIcon(QStyle.SP_MessageBoxQuestion)
     return None
+
+
+def create_icon_from_text(text: str) -> QIcon:
+    pixmap = QPixmap(32, 32)
+    pixmap.fill(Qt.transparent)
+    painter = QPainter(pixmap)
+    painter.setFont(QApplication.font())
+    painter.setOpacity(1.0)
+    painter.setPen(QColor((SVG_DARK_THEME_COLOR if is_dark_theme() else SVG_LIGHT_THEME_COLOR).decode("utf-8")))
+    painter.drawText(pixmap.rect(), Qt.AlignCenter, text)
+    painter.end()
+    return QIcon(pixmap)
 
 
 def create_merged_icon(base_icon: QIcon, overlay_icon: QIcon) -> QIcon:
@@ -2511,50 +2568,6 @@ def create_merged_icon(base_icon: QIcon, overlay_icon: QIcon) -> QIcon:
     overlay_icon = QIcon()
     overlay_icon.addPixmap(combined_pixmap)
     return overlay_icon
-
-
-class ThemedObject:
-    def __init__(self, *args, **kwargs):
-        self.icon_source = None
-
-    def set_themed_icon(self, source: Union[Path, bytes, int]):
-        self.icon_source = source
-        self.setIcon(self.create_icon(source))
-
-    def create_icon(self, source: Union[Path, bytes, int]) -> QIcon:
-        if isinstance(source, bytes):
-            icon = create_icon_from_svg_bytes(bytes)
-        elif isinstance(source, Path):
-            icon = create_icon_from_path(source)
-        elif isinstance(source, int):
-            icon = self.style().standardIcon(source)
-        return icon
-
-    def check_event(self, event: QEvent):
-        # PalletChange happens after the new style sheet is in use.
-        if event.type() == QEvent.PaletteChange:
-            self.setIcon(self.create_icon(self.icon_source))
-        event.accept()
-        return True
-
-class ThemedButton(QPushButton, ThemedObject):
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def event(self, event: QEvent) -> bool:
-        super().event(event)
-        return self.check_event(event)
-
-
-class ThemedAction(QAction, ThemedObject):
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def event(self, event: QEvent) -> bool:
-        super().event(event)
-        return self.check_event(event)
 
 
 def install_as_desktop_application(uninstall: bool = False):
@@ -2746,11 +2759,11 @@ class MainWindow(QMainWindow):
             self.app_save_state()
             app.quit()
 
-        def wrap_invoke(callable):
+        def wrap_invoke(callable_function):
             if gnome_tray_behaviour:
                 # Must show main app or tray will shutdown app when popups are closed.
                 self.show()
-            callable()
+            callable_function()
 
         self.preset_controller = PresetController()
 
@@ -2900,23 +2913,16 @@ class MainWindow(QMainWindow):
         if self.displayed_preset_name == preset.name:
             self.display_active_preset_info(None)
 
-    def display_active_preset_info(self, preset: Preset) -> None:
+    def display_active_preset_info(self, preset: Preset|None) -> None:
         if preset is None:
             preset = self.preset_controller.which_preset_is_active(self.main_control_panel)
         if preset:
-            icon = None
             self.setWindowTitle(preset.name)
-            if preset.get_icon_path():
-                icon = create_merged_icon(self.app_icon, create_icon_from_path(preset.get_icon_path()))
-                self.app.setWindowIcon(icon)
-            elif self.windowIcon() != self.app_icon:
-                self.app.setWindowIcon(self.app_icon)
+            icon = create_merged_icon(self.app_icon, preset.create_icon())
+            self.app.setWindowIcon(icon)
             if self.tray:
                 self.tray.setToolTip(f"{preset.name} \u2014 {self.app_name}")
-                if icon:
-                    self.tray.setIcon(icon)
-                elif self.tray.icon() != self.app_icon:
-                    self.tray.setIcon(self.app_icon)
+                self.tray.setIcon(icon)
         else:
             self.setWindowTitle("")
             self.setWindowIcon(self.app_icon)
@@ -2924,6 +2930,7 @@ class MainWindow(QMainWindow):
                 self.tray.setToolTip(f"{self.app_name}")
                 self.tray.setIcon(self.app_icon)
         self.displayed_preset_name = preset.name if preset else None
+        self.app_context_menu.refresh_preset_menu(reload=True)
 
     def closeEvent(self, event):
         if self.tray is not None:

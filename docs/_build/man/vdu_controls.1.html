@@ -21,7 +21,7 @@ GUI wrapper for ddcutil</h1>
   --hide control_name
                         hide/disable a control (--hide may be specified multiple times)
   --enable-vcp-code vcp_code
-                        enable a control for a vcp-code unavailable via hide/show (may be specified multiple times)
+                        enable a control for a vcp-code unavailable via hide/show (maybe specified multiple times)
   --system-tray         start up as an entry in the system tray
   --debug               enable debug output to stdout
   --warnings            popup a warning when a VDU lacks an enabled control
@@ -44,8 +44,8 @@ panel with a selection of essential controls for the desktop.</p>
 right-mouse button either in the main user interface or on the
 system-tray icon. <code>vdu_controls</code> may be run as a system-tray
 entry by using the <code>--system-tray</code> option.</p>
-<p>By default <code>vdu_controls</code> offers a subset of possible
-controls including brightness and contrast. Further controls can be
+<p>By default, <code>vdu_controls</code> offers a subset of possible
+controls including brightness and contrast. Additional controls can be
 added by using the <code>--enable-vcp-code</code> option to add any
 other codes supported by <code>ddcutil</code>. The full list of VCP
 codes supported by <code>ddcutil</code> can be listed by running
@@ -92,9 +92,9 @@ file. The config files are named according to the following scheme:</p>
 settings and the set of default VDU controls.</p>
 <p>The VDU-specific config files can be used to:</p>
 <ul>
-<li>Correct manufacturer built-in meta data.</li>
+<li>Correct manufacturer built-in metadata.</li>
 <li>Customise which controls are to be provided for each VDU.</li>
-<li>Set a optimal <code>ddcutil</code> DDC communication
+<li>Set an optimal <code>ddcutil</code> DDC communication
 speed-multiplier for each VDU.</li>
 </ul>
 <p>It should be noted that config files can only be used to alter
