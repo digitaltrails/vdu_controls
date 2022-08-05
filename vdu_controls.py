@@ -2463,45 +2463,6 @@ def create_merged_icon(base_icon: QIcon, overlay_icon: QIcon) -> QIcon:
     overlay_icon.addPixmap(combined_pixmap)
     return overlay_icon
 
-managed_svg_icon_source: Mapping[QObject, str] = weakref.WeakKeyDictionary()
-themed_icon_cache: Mapping[Union[str, bytes], QIcon] = {}
-
-def get_themed_icon(source) -> QIcon:
-    if source in themed_icon_cache:
-        return themed_icon_cache[source]
-    if isinstance(source, str):
-        return QIcon.fromTheme(source)
-    if isinstance(source, bytes):
-        return create_icon_from_svg_bytes(source)
-    if isinstance(source, Path):
-        return create_icon_from_svg_path(source)
-    raise ValueError(f"get_icon parameter has unsupported type {type(source)} = {str(source)}")
-
-def is_dark_theme():
-    # Heuristic for checking for a dark theme.
-    # Is the sample text lighter than the background?
-    label = QLabel("am I in the dark?")
-    text_hsv_value = label.palette().color(QPalette.WindowText).value()
-    bg_hsv_value = label.palette().color(QPalette.Background).value()
-    dark_theme_found = text_hsv_value > bg_hsv_value
-    # debug(f"is_dark_them text={text_hsv_value} bg={bg_hsv_value} is_dark={dark_theme_found}") if debugging else None
-    return dark_theme_found
-
-def manage_icon(q_object: QObject, source: Union[str, bytes]):
-    # Hold a weak reference to any item that might need an icon reload on a theme change
-    # At the moment this is only applicable to our internal SVG sourced icons.
-    icon = get_themed_icon(source)
-    managed_svg_icon_source[q_object] = source
-    q_object.setIcon(icon)
-    return q_object
-
-
-def apply_icon_theme_change():
-    themed_icon_cache.clear()
-    for q_object, svg_source in managed_svg_icon_source.items():
-        print(q_object.objectName())
-        manage_icon(q_object, svg_source)
-
 
 def install_as_desktop_application(uninstall: bool = False):
     """Self install this script in the current Linux user's bin directory and desktop applications->settings menu."""
