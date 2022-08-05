@@ -333,7 +333,6 @@ import syslog
 import textwrap
 import time
 import traceback
-import weakref
 from datetime import datetime, timedelta
 from functools import partial
 from pathlib import Path
@@ -542,6 +541,17 @@ ASSUMED_CONTROLS_CONFIG_TEXT = ('\n'
                                 '	   Feature: 10 (Brightness)\n'
                                 '	   Feature: 12 (Contrast)\n'
                                 '	   Feature: 60 (Input Source)')
+
+
+def is_dark_theme():
+    # Heuristic for checking for a dark theme.
+    # Is the sample text lighter than the background?
+    label = QLabel("am I in the dark?")
+    text_hsv_value = label.palette().color(QPalette.WindowText).value()
+    bg_hsv_value = label.palette().color(QPalette.Background).value()
+    dark_theme_found = text_hsv_value > bg_hsv_value
+    # debug(f"is_dark_them text={text_hsv_value} bg={bg_hsv_value} is_dark={dark_theme_found}") if debugging else None
+    return dark_theme_found
 
 
 def get_splash_image() -> QPixmap:
@@ -2272,8 +2282,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         add_preset_widget.setLayout(add_preset_layout)
         add_preset_widget.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
 
-        add_preset_icon_button = QPushButton()
-        add_preset_icon_button.setIcon(self.style().standardIcon(QStyle.SP_CommandLink))
+        add_preset_icon_button = ThemedButton()
+        add_preset_icon_button.set_themed_icon(QStyle.SP_CommandLink)
         add_preset_icon_button.setToolTip(translate('Choose a preset icon.'))
         add_preset_icon_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
         add_preset_icon_button.setAutoDefault(False)
@@ -2364,13 +2374,12 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         line_layout.setSpacing(0)
         preset_widget.setLayout(line_layout)
 
-        preset_name_button = QPushButton(preset.name)
+        preset_name_button = ThemedButton(preset.name)
         preset_name_button.setToolTip('Activate this preset.')
-        preset_name_button.setIcon(self.style().standardIcon(QStyle.SP_DriveFDIcon))
         if preset.get_icon_path():
-            preset_name_button.setIcon(create_icon_from_svg_path(preset.get_icon_path()))
+            preset_name_button.set_themed_icon(preset.get_icon_path())
         else:
-            preset_name_button.setIcon(self.style().standardIcon(QStyle.SP_CommandLink))
+            preset_name_button.set_themed_icon(QStyle.SP_CommandLink)
         line_layout.addWidget(preset_name_button)
         preset_name_button.clicked.connect(partial(restore_action, preset=preset))
         preset_name_button.setAutoDefault(False)
@@ -2405,6 +2414,13 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
 
         return preset_widget
 
+    def event(self, event: QEvent) -> bool:
+        super().event(event)
+        # PalletChange happens after the new style sheet is in use.
+        if event.type() == QEvent.PaletteChange:
+            self.repaint()
+        event.accept()
+        return True
 
 def exception_handler(e_type, e_value, e_traceback):
     """Overarching error handler in case something unexpected happens."""
@@ -2463,6 +2479,32 @@ def create_merged_icon(base_icon: QIcon, overlay_icon: QIcon) -> QIcon:
     overlay_icon.addPixmap(combined_pixmap)
     return overlay_icon
 
+class ThemedButton(QPushButton):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.icon_source = None
+
+    def set_themed_icon(self, source: Union[Path, bytes, int]):
+        self.icon_source = source
+        self.setIcon(self.create_icon(source))
+
+    def create_icon(self, source: Union[Path, bytes, int]) -> QIcon:
+        if isinstance(source, bytes):
+            icon = create_icon_from_svg_bytes(bytes)
+        elif isinstance(source, Path):
+            icon = create_icon_from_svg_path(source)
+        elif isinstance(source, int):
+            icon = self.style().standardIcon(source)
+        return icon
+
+    def event(self, event: QEvent) -> bool:
+        super().event(event)
+        # PalletChange happens after the new style sheet is in use.
+        if event.type() == QEvent.PaletteChange:
+            self.setIcon(self.create_icon(self.icon_source))
+        event.accept()
+        return True
 
 def install_as_desktop_application(uninstall: bool = False):
     """Self install this script in the current Linux user's bin directory and desktop applications->settings menu."""
@@ -2855,6 +2897,14 @@ class MainWindow(QMainWindow):
             self.restoreGeometry(geometry)
             window_state = self.settings.value(self.state_key, None)
             self.restoreState(window_state)
+
+    def event(self, event: QEvent) -> bool:
+        super().event(event)
+        # PalletChange happens after the new style sheet is in use.
+        if event.type() == QEvent.PaletteChange:
+            self.display_active_preset_info(None)
+        event.accept()
+        return True
 
 
 class SignalWakeupHandler(QtNetwork.QAbstractSocket):
