@@ -2177,11 +2177,9 @@ class PresetController:
                 del self.presets[preset_name]
         return self.presets
 
-    def save_preset(self, preset: Preset) -> Preset:
+    def save_preset(self, preset: Preset) -> None:
         preset.save()
-        if preset.name not in self.presets:
-            self.presets[preset.name] = preset
-        return preset
+        self.presets[preset.name] = preset
 
     def which_preset_is_active(self, main_panel: VduControlsMainPanel) -> Preset | None:
         for name, preset in self.find_presets().items():
@@ -2377,6 +2375,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             add_preset_name_edit.setText('')
             add_preset_icon_button.set_themed_icon(PresetsDialog.no_icon_icon_number)
             self.last_selected_icon_path = None
+            main_window.display_active_preset_info(None)
 
         add_button.clicked.connect(add_preset)
 
@@ -2889,8 +2888,7 @@ class MainWindow(QMainWindow):
     def save_preset(self, preset: Preset) -> None:
         for control_panel in self.main_control_panel.vdu_control_panels:
             control_panel.copy_state(preset.preset_ini)
-        preset.save()
-        preset = self.preset_controller.save_preset(preset)
+        self.preset_controller.save_preset(preset)
         if not self.app_context_menu.has_preset_menu_item(preset.name):
             self.app_context_menu.insert_preset_menu_item(preset)
             self.display_active_preset_info(preset)
