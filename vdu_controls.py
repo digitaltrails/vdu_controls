@@ -2369,6 +2369,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 edit_action=edit_preset)
             if existing_preset_widget:
                 presets_layout.replaceWidget(existing_preset_widget, new_preset_widget)
+                # The deleteLater removes the widget from the tree so that it is no longer findable and can be freed.
+                existing_preset_widget.deleteLater()
                 self.make_visible()
             else:
                 presets_layout.addWidget(new_preset_widget)
