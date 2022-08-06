@@ -668,7 +668,7 @@ class DdcUtil:
             log_debug("subprocess result - ", result)
         return result
 
-    def detect_monitors(self) -> List[Tuple[str, str, str, str]]:
+    def old_detect_monitors(self) -> List[Tuple[str, str, str, str]]:
         """Return a list of (vdu_id, desc) tuples."""
         display_list = []
         result = self.__run__('detect', '--terse')
@@ -684,6 +684,50 @@ class DdcUtil:
                     monitor_match.group(1).split(':') if monitor_match else ['', 'Unknown Model', '']
                 if serial_number == '':
                     serial_number = 'Display' + vdu_id
+                display_list.append((vdu_id, manufacturer, model_name, serial_number))
+            elif len(display_str.strip()) != 0:
+                log_warning(f"ignoring {display_str}")
+        # For testing bad VDU's:
+        # display_list.append(("3", "maker_y", "model_z", "1234"))
+        return display_list
+
+
+    def detect_monitors(self) -> List[Tuple[str, str, str, str]]:
+        """Return a list of (vdu_id, desc) tuples."""
+        display_list = []
+        unique = {}
+        result = self.__run__('detect')
+        display_pattern = re.compile('Display ([0-9]+)')
+        maker_pattern = re.compile('Mfg id:[ \t]+([^\n]*)')
+        model_pattern = re.compile('Model:[ \t]+([^\n]*)')
+        serial_num_pattern = re.compile('Serial number:[ \t]+([^\n]*)')
+        bin_serial_num_pattern = re.compile('Binary serial number:[ \t]+([^(\n]*)')
+        man_date_pattern = re.compile('Manufacture year:[ \t]+([^\n]*)\n')
+        for display_str in re.split("\n\n", result.stdout.decode('utf-8')):
+            display_match = display_pattern.search(display_str)
+            if display_match is not None:
+                log_info(f"checking {display_str}")
+                vdu_id = display_match.group(1)
+                model_match = model_pattern.search(display_str)
+                if model_match:
+                    model_name = model_match.group(1).strip()
+                maker_match = maker_pattern.search(display_str)
+                if maker_match:
+                    manufacturer = maker_match.group(1).strip()
+                serial_num_match = serial_num_pattern.search(display_str)
+                if serial_num_match:
+                    serial_number = serial_num_match.group(1).strip()
+                    if serial_number == '' or f"{model_name}:{serial_number}" in unique:
+                        bin_serial_match = bin_serial_num_pattern.search(display_str)
+                        if bin_serial_match:
+                            serial_number = bin_serial_match.group(1).strip()
+                            if serial_number == '' or model_name + serial_number in unique:
+                                man_date_match = man_date_pattern.search(display_str)
+                                if man_date_match:
+                                    serial_number += "_" + re.sub("[ :,\n]+", "_", man_date_match.group(1))
+                if f"{model_name}:{serial_number}" in unique:
+                    serial_number = f"DisplayNum{vdu_id}"
+                unique[f"{model_name}:{serial_number}"] = vdu_id
                 display_list.append((vdu_id, manufacturer, model_name, serial_number))
             elif len(display_str.strip()) != 0:
                 log_warning(f"ignoring {display_str}")
@@ -1126,6 +1170,10 @@ class VduController:
         self.sleep_multiplier = None
         self.enabled_vcp_codes = default_config.get_all_enabled_vcp_codes()
         self.vdu_model_and_serial_id = proper_name(vdu_model_name.strip(), vdu_serial.strip())
+        # Provides backward compatibility for pre 1.7 presets where DisplayN was used in the section name.
+        # In older versions sometimes DisplayN was used as part of the ID, that gets messy if a monitor is turned off
+        # because the numbering changes.
+        self.pre17_vdu_model_and_serial_id = proper_name(vdu_model_name.strip(), f"Display{vdu_id}")
         self.vdu_model_id = proper_name(vdu_model_name.strip())
         self.capabilities_text = None
         self.config = None
@@ -1740,7 +1788,15 @@ class VduControlPanel(QWidget):
             preset_ini[vdu_section][control.vcp_capability.property_name()] = control.current_value
 
     def restore_state(self, preset_ini: configparser.ConfigParser) -> None:
-        vdu_section = self.vdu_model.vdu_model_and_serial_id
+        self.restore_state_specific_section_name(preset_ini, self.vdu_model.vdu_model_and_serial_id)
+
+    def restore_state_pre17(self, preset_ini: configparser.ConfigParser):
+        # Provides backward compatibility for pre 1.7 presets where DisplayN was used in the section name.
+        self.restore_state_specific_section_name(preset_ini, self.vdu_model.pre17_vdu_model_and_serial_id)
+
+    def restore_state_specific_section_name(self, preset_ini: configparser.ConfigParser, vdu_section: str) -> None:
+        # Provides backward compatibility for pre 1.7 presets where DisplayN was used in the section name.
+        log_info(f"Preset restoring {vdu_section}")
         for control in self.vcp_controls:
             if control.vcp_capability.property_name() in preset_ini[vdu_section]:
                 control.current_value = preset_ini[vdu_section][control.vcp_capability.property_name()]
@@ -2886,10 +2942,16 @@ class MainWindow(QMainWindow):
     def restore_preset(self, preset: Preset) -> Preset:
         log_info(f"Preset changing to {preset.name}")
         preset.load()
+        restored_list = []
         for section in preset.preset_ini:
             for control_panel in self.main_control_panel.vdu_control_panels:
                 if section == control_panel.vdu_model.vdu_model_and_serial_id:
                     control_panel.restore_state(preset.preset_ini)
+                    restored_list.append(control_panel)
+        for section in preset.preset_ini:
+            for control_panel in self.main_control_panel.vdu_control_panels:
+                if control_panel not in restored_list and section == control_panel.vdu_model.pre17_vdu_model_and_serial_id:
+                    control_panel.restore_state_pre17(preset.preset_ini)
         self.display_active_preset_info(preset)
         return preset
 

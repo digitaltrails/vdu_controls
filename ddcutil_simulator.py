@@ -34,12 +34,26 @@ with this program. If not, see <https://www.gnu.org/licenses/>.
 
 DETECT_RESULT = """Display 1
    I2C bus:  /dev/i2c-0
-   Monitor:             HWP:HP ZR24w:CNT0000001
+   EDID synopsis:
+      Mfg id:               HWP
+      Model:                HP ZR24w
+      Product code:         10346
+      Serial number:        CNT00811J6
+      Binary serial number: 12345009 (0x00BC5EB1)
+      Manufacture year:     2010,  Week: 8
+   VCP version:         2.2
 
 Display 2
    I2C bus:  /dev/i2c-3
-   Monitor:             GSM:LG HDR 4K:
-
+   EDID synopsis:
+      Mfg id:               GSM
+      Model:                LG HDR 4K
+      Product code:         30471
+      Serial number:        
+      Binary serial number: 12345 (0xBC5EB1)
+      Manufacture year:     2019,  Week: 4
+   VCP version:         2.1
+   
 """
 
 CAPABILITIES_RESULTS = {
