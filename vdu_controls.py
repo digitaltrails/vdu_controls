@@ -678,14 +678,14 @@ class DdcUtil:
             if display_match is not None:
                 vdu_id = display_match.group(1)
                 log_info(f"checking display {vdu_id}")
-                fields = {m.group(1).strip(): m.group(2).strip() for m in re.finditer('[ \t]*([^:]+):[ \t]+([^\n]*)',
+                fields = {m.group(1).strip(): m.group(2).strip() for m in re.finditer('[ \t]*([^:\n]+):[ \t]+([^\n]*)',
                                                                                       display_str)}
                 model_name = fields.get('Model', 'unknown_model')
                 manufacturer = fields.get('Mfg id', 'unknown_mfg')
                 serial_number = fields.get('Serial number', '')
                 bin_serial_number = fields.get('Binary serial number', '').split('(')[0].strip()
                 man_date = re.sub('[ :,\n]+', '_', fields.get('Manufacture year', ''))
-                i2c_bus_id = fields.get('I2C bus', '')
+                i2c_bus_id = fields.get('I2C bus', '').replace('/', '_')
                 # Try and pin down a unique id that won't change even if other monitors are turned off.
                 # If that fails, fall back to the display number (which can change if monitors are turned off).
                 main_id = 'unknown'
