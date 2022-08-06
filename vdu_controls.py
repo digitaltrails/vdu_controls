@@ -668,67 +668,34 @@ class DdcUtil:
             log_debug("subprocess result - ", result)
         return result
 
-    def old_detect_monitors(self) -> List[Tuple[str, str, str, str]]:
-        """Return a list of (vdu_id, desc) tuples."""
-        display_list = []
-        result = self.__run__('detect', '--terse')
-        display_pattern = re.compile('Display ([0-9]+)')
-        monitor_pattern = re.compile('Monitor:[ \t]+([^\n]*)')
-        for display_str in re.split("\n\n", result.stdout.decode('utf-8')):
-            display_match = display_pattern.match(display_str)
-            if display_match is not None:
-                log_info(f"checking {display_str}")
-                vdu_id = display_match.group(1)
-                monitor_match = monitor_pattern.search(display_str)
-                manufacturer, model_name, serial_number = \
-                    monitor_match.group(1).split(':') if monitor_match else ['', 'Unknown Model', '']
-                if serial_number == '':
-                    serial_number = 'Display' + vdu_id
-                display_list.append((vdu_id, manufacturer, model_name, serial_number))
-            elif len(display_str.strip()) != 0:
-                log_warning(f"ignoring {display_str}")
-        # For testing bad VDU's:
-        # display_list.append(("3", "maker_y", "model_z", "1234"))
-        return display_list
-
-
     def detect_monitors(self) -> List[Tuple[str, str, str, str]]:
         """Return a list of (vdu_id, desc) tuples."""
         display_list = []
-        unique = {}
         result = self.__run__('detect')
-        display_pattern = re.compile('Display ([0-9]+)')
-        maker_pattern = re.compile('Mfg id:[ \t]+([^\n]*)')
-        model_pattern = re.compile('Model:[ \t]+([^\n]*)')
-        serial_num_pattern = re.compile('Serial number:[ \t]+([^\n]*)')
-        bin_serial_num_pattern = re.compile('Binary serial number:[ \t]+([^(\n]*)')
-        man_date_pattern = re.compile('Manufacture year:[ \t]+([^\n]*)\n')
+        id_list = []
         for display_str in re.split("\n\n", result.stdout.decode('utf-8')):
-            display_match = display_pattern.search(display_str)
+            display_match = re.search('Display ([0-9]+)', display_str)
             if display_match is not None:
-                log_info(f"checking {display_str}")
                 vdu_id = display_match.group(1)
-                model_match = model_pattern.search(display_str)
-                if model_match:
-                    model_name = model_match.group(1).strip()
-                maker_match = maker_pattern.search(display_str)
-                if maker_match:
-                    manufacturer = maker_match.group(1).strip()
-                serial_num_match = serial_num_pattern.search(display_str)
-                if serial_num_match:
-                    serial_number = serial_num_match.group(1).strip()
-                    if serial_number == '' or f"{model_name}:{serial_number}" in unique:
-                        bin_serial_match = bin_serial_num_pattern.search(display_str)
-                        if bin_serial_match:
-                            serial_number = bin_serial_match.group(1).strip()
-                            if serial_number == '' or model_name + serial_number in unique:
-                                man_date_match = man_date_pattern.search(display_str)
-                                if man_date_match:
-                                    serial_number += "_" + re.sub("[ :,\n]+", "_", man_date_match.group(1))
-                if f"{model_name}:{serial_number}" in unique:
-                    serial_number = f"DisplayNum{vdu_id}"
-                unique[f"{model_name}:{serial_number}"] = vdu_id
-                display_list.append((vdu_id, manufacturer, model_name, serial_number))
+                log_info(f"checking display {vdu_id}")
+                fields = {m.group(1).strip(): m.group(2).strip() for m in re.finditer('[ \t]*([^:]+):[ \t]+([^\n]*)',
+                                                                                      display_str)}
+                model_name = fields.get('Model', 'unknown_model')
+                manufacturer = fields.get('Mfg id', 'unknown_mfg')
+                serial_number = fields.get('Serial number', '')
+                bin_serial_number = fields.get('Binary serial number', '').split('(')[0].strip()
+                man_date = re.sub('[ :,\n]+', '_', fields.get('Manufacture year', ''))
+                i2c_bus_id = fields.get('I2C bus', '')
+                # Try and pin down a unique id that won't change even if other monitors are turned off.
+                # If that fails, fall back to the display number (which can change if monitors are turned off).
+                main_id = 'unknown'
+                for value in (serial_number, bin_serial_number, man_date, i2c_bus_id, f"DisplayNum{vdu_id}"):
+                    if value != "" and (model_name, value) not in id_list:
+                        id_list.append((model_name, value))
+                        main_id = value
+                        break
+                log_info(f"display={vdu_id} mfg={manufacturer} model={model_name} main_id={main_id}")
+                display_list.append((vdu_id, manufacturer, model_name, main_id))
             elif len(display_str.strip()) != 0:
                 log_warning(f"ignoring {display_str}")
         # For testing bad VDU's:
@@ -2308,7 +2275,7 @@ class PresetChooseIconButton(QPushButton):
         self.preset = None
         self.clicked.connect(self.choose_preset_icon_action)
 
-    def set_preset(self, preset: Preset|None):
+    def set_preset(self, preset: Preset | None):
         self.preset = preset
         self.last_selected_icon_path = self.preset.get_icon_path() if preset else None
         if self.last_selected_icon_path:
@@ -2975,7 +2942,7 @@ class MainWindow(QMainWindow):
         if self.displayed_preset_name == preset.name:
             self.display_active_preset_info(None)
 
-    def display_active_preset_info(self, preset: Preset|None) -> None:
+    def display_active_preset_info(self, preset: Preset | None) -> None:
         if preset is None:
             preset = self.preset_controller.which_preset_is_active(self.main_control_panel)
         if preset:
