@@ -1144,7 +1144,7 @@ class VduController:
         self.vdu_model_id = proper_name(vdu_model_name.strip())
         self.capabilities_text = None
         self.config = None
-        for config_name in (self.vdu_model_and_serial_id, self.vdu_model_id):
+        for config_name in (self.vdu_model_and_serial_id, self.pre17_vdu_model_and_serial_id, self.vdu_model_id):
             config_path = get_config_path(config_name)
             log_info("checking for config file '" + config_path.as_posix() + "'")
             if os.path.isfile(config_path) and os.access(config_path, os.R_OK):
@@ -2860,14 +2860,12 @@ class MainWindow(QMainWindow):
         global signal_wakeup_handler
         signal_wakeup_handler.signalReceived.connect(respond_to_signal)
 
-        self.main_control_panel = VduControlsMainPanel(main_config, detect_vdu_hook, self.app_context_menu,
-                                                       session_startup)
-
         def refresh_finished():
             self.display_active_preset_info(None)
 
+        self.main_control_panel = VduControlsMainPanel(main_config, detect_vdu_hook, self.app_context_menu,
+                                                       session_startup)
         self.main_control_panel.refresh_finished.connect(refresh_finished)
-
         self.setCentralWidget(self.main_control_panel)
 
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
