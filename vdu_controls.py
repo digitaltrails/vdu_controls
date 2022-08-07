@@ -690,7 +690,7 @@ class DdcUtil:
                 # If that fails, fall back to the display number (which can change if monitors are turned off).
                 main_id = 'unknown'
                 for value in (serial_number, bin_serial_number, man_date, i2c_bus_id, f"DisplayNum{vdu_id}"):
-                    if value != "" and (model_name, value) not in id_list:
+                    if value != '' and (model_name, value) not in id_list:
                         id_list.append((model_name, value))
                         main_id = value
                         break
@@ -1799,13 +1799,14 @@ class Preset:
             self.preset_ini.set("preset", "icon", icon_path.as_posix())
 
     def create_icon(self) -> QIcon:
-        # icon = create_icon_from_path(self.get_icon_path()) \
-        #    if self.get_icon_path() else self.style().standardIcon(PresetsDialog.no_icon_icon_number)
         icon_path = self.get_icon_path()
         if icon_path and icon_path.exists():
             return create_icon_from_path(icon_path)
         else:
-            return create_icon_from_text(f"({self.name[0]})")
+            # Only room for two letters at most - use first and last if more than one word.
+            full_acronym = [word[0] for word in re.split(r"[ _-]", self.name) if word != '']
+            abbreviation = full_acronym[0] if len(full_acronym) == 1 else full_acronym[0] + full_acronym[-1]
+            return create_icon_from_text(abbreviation)
 
     def load(self) -> configparser.ConfigParser:
         if self.path.exists():
@@ -2202,7 +2203,7 @@ class PresetController:
                 preset.load()
                 self.presets[preset_name] = preset
             presets_still_present.append(preset_name)
-        for preset_name in self.presets.keys():
+        for preset_name in list(self.presets.keys()):
             if preset_name not in presets_still_present:
                 del self.presets[preset_name]
         return self.presets
