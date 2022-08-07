@@ -686,7 +686,7 @@ class DdcUtil:
                 serial_number = fields.get('Serial number', '')
                 bin_serial_number = fields.get('Binary serial number', '').split('(')[0].strip()
                 man_date = re.sub('[ :,\n]+', '_', fields.get('Manufacture year', ''))
-                i2c_bus_id = fields.get('I2C bus', '').replace('/', '_')
+                i2c_bus_id = fields.get('I2C bus', '').replace("/dev/", '')
                 # Try and pin down a unique id that won't change even if other monitors are turned off.
                 # If that fails, fall back to the display number (which can change if monitors are turned off).
                 main_id = 'unknown'
@@ -1137,7 +1137,7 @@ class VduController:
         self.ddcutil = ddcutil
         self.sleep_multiplier = None
         self.enabled_vcp_codes = default_config.get_all_enabled_vcp_codes()
-        self.vdu_model_and_serial_id = proper_name(vdu_model_name.strip(), vdu_serial.strip())
+        self.vdu_model_and_serial_id = proper_name(vdu_model_name, vdu_serial)
         # Provides backward compatibility for pre 1.7 presets where DisplayN was used in the section name.
         # In older versions sometimes DisplayN was used as part of the ID, that gets messy if a monitor is turned off
         # because the numbering changes.
@@ -1367,7 +1367,7 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
                                     ).format(self.config_path.as_posix())
                 save_message.setText(message)
                 save_message.setIcon(QMessageBox.Question)
-                save_message.setStandardButtons(QMessageBox.Save | cancel)
+                save_message.setStandardButtons(QMessageBox.Save | QMessageBox.Cancel)
                 rc = save_message.exec()
                 if rc == QMessageBox.Save:
                     with open(self.config_path, 'w') as config_file:
@@ -2811,21 +2811,15 @@ class MainWindow(QMainWindow):
             self.app_save_state()
             app.quit()
 
-        def wrap_invoke(callable_function):
-            if gnome_tray_behaviour:
-                # Must show main app or tray will shutdown app when popups are closed.
-                self.show()
-            callable_function()
-
         self.preset_controller = PresetController()
 
         self.app_context_menu = ContextMenu(main_window=self,
                                             main_window_action=main_window_action,
-                                            about_action=partial(wrap_invoke, AboutDialog.invoke),
-                                            help_action=partial(wrap_invoke, HelpDialog.invoke),
-                                            chart_action=partial(wrap_invoke, grey_scale),
-                                            settings_action=partial(wrap_invoke, edit_config),
-                                            presets_action=partial(wrap_invoke, edit_presets),
+                                            about_action=AboutDialog.invoke,
+                                            help_action=HelpDialog.invoke,
+                                            chart_action=grey_scale,
+                                            settings_action=edit_config,
+                                            presets_action=edit_presets,
                                             refresh_action=refresh_from_vdus,
                                             quit_action=quit_app)
 
@@ -2851,6 +2845,8 @@ class MainWindow(QMainWindow):
                     time.sleep(1)
             if QSystemTrayIcon.isSystemTrayAvailable():
                 log_info("using system tray.")
+                # This next call appears to be automatic on KDE, but not on gnome.
+                app.setQuitOnLastWindowClosed(False)
                 self.tray = QSystemTrayIcon()
                 # icon = create_merged_icon(app_icon, create_icon_from_svg_string(MENU_ICON_SOURCE))
                 self.tray.setIcon(self.app_icon)
