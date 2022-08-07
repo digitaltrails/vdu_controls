@@ -59,15 +59,24 @@ Display 2
 CAPABILITIES_RESULTS = {
     "1": """Model: ZR24w
 MCCS version: 2.2
+Commands:
+   Op Code: 01 (VCP Request)
+   Op Code: 02 (VCP Response)
+   Op Code: 03 (VCP Set)
+   Op Code: 07 (Timing Request)
+   Op Code: 0C (Save Settings)
+   Op Code: F3 (Capabilities Request)
 VCP Features:
    Feature: 10 (Brightness)
    Feature: 12 (Contrast)
+   Feature: FF (Manufacturer specific feature)
 """,
     "2": """Model: Not specified
 MCCS version: 2.1
 VCP Features:
    Feature: 10 (Brightness)
    Feature: 12 (Contrast)
+   Feature: FF (Manufacturer specific feature)
 """
 }
 
