@@ -1257,13 +1257,15 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
     """
 
     @staticmethod
-    def invoke(default_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig], change_callback: callable) -> None:
+    def invoke(default_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig],
+               change_callback: callable) -> None:
         if SettingsEditor.exists():
             SettingsEditor.show_existing_dialog()
         else:
             SettingsEditor(default_config, vdu_config_list, change_callback)
 
-    def __init__(self, default_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig], change_callback) -> None:
+    def __init__(self, default_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig],
+                 change_callback) -> None:
         super().__init__()
         self.setWindowTitle(translate('Settings'))
         self.setMinimumWidth(1024)
@@ -1274,198 +1276,236 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
         self.editors = []
         self.change_callback = change_callback
         for config in [default_config, ] + vdu_config_list:
-            tab = self.SettingsEditorTab(self, config)
+            tab = SettingsEditorTab(self, config, change_callback)
             tabs.addTab(tab, config.get_config_name())
             self.editors.append(tab)
         # .show() is non-modal, .exec() is modal
         self.make_visible()
 
     def closeEvent(self, event) -> None:
-        something_changed = False
-        for editor in self.editors:
-            editor.save()
-        if self.editors[0].has_made_changes:
-            # The first/default edit changes stuff that needs a restart
-            restart_message = QMessageBox()
-            restart_message.setText(translate("vdu_controls will now reset and use the new settings."))
-            restart_message.setIcon(QMessageBox.Warning)
-            restart_message.setStandardButtons(QMessageBox.Ok)
-            restart_message.exec()
-            QCoreApplication.exit(EXIT_CODE_FOR_RESTART)
-        else:
-            # No restart needed - just panel re-layout
-            self.change_callback()
-        # Must call the super closeEvent to ensure we unregister as a singleton dialog.
+        for editor in self.editors[1:]:
+            if editor.is_unsaved():
+                editor.save(cancel=QMessageBox.Ignore)
+        # Do the main config last - it may cause a restart of the app
+        if self.editors[0].is_unsaved():
+            self.editors[0].save(cancel=QMessageBox.Ignore)
         super().closeEvent(event)
 
-    class SettingsEditorTab(QWidget):
-        """A tab corresponding to a settings file, generates UI widgets for each tab based on what's in the config. """
 
-        def __init__(self, parent: QWidget, vdu_config: VduControlsConfig) -> None:
-            super().__init__()
-            editor_layout = QVBoxLayout()
-            self.has_made_changes = False
-            self.setLayout(editor_layout)
-            self.config_path = get_config_path(vdu_config.config_name)
-            self.ini_before = vdu_config.ini_content
-            copy = pickle.dumps(self.ini_before)
-            self.ini_editable = pickle.loads(copy)
-            for section in self.ini_editable:
-                if section == 'DEFAULT':
-                    continue
-                editor_layout.addWidget(QLabel('<b>' + section.replace('-', ' ') + '</b>'))
-                booleans_panel = QWidget()
-                booleans_grid = QGridLayout()
-                booleans_panel.setLayout(booleans_grid)
-                editor_layout.addWidget(booleans_panel)
-                n = 0
-                for option in self.ini_editable[section]:
-                    data_type = vdu_config.get_config_type(section, option)
-                    if data_type == 'boolean':
-                        booleans_grid.addWidget(
-                            SettingsEditor.SettingsEditorBooleanWidget(
-                                self.ini_editable, option, section), n // 3, n % 3)
-                        n += 1
-                    elif data_type == 'float':
-                        editor_layout.addWidget(
-                            SettingsEditor.SettingsEditorFloatWidget(self.ini_editable, option, section))
-                    elif data_type == 'text':
-                        editor_layout.addWidget(
-                            SettingsEditor.SettingsEditorTextEditorWidget(self.ini_editable, option, section))
-                    elif data_type == 'csv':
-                        editor_layout.addWidget(
-                            SettingsEditor.SettingsEditorCsvWidget(self.ini_editable, option, section))
+class SettingsEditorTab(QWidget):
+    """A tab corresponding to a settings file, generates UI widgets for each tab based on what's in the config. """
 
-            def save_clicked() -> None:
-                if self.is_unsaved():
-                    self.save(cancel=QMessageBox.Cancel)
-                else:
-                    save_message = QMessageBox()
-                    message = translate('No unsaved changes for {}.').format(vdu_config.config_name)
-                    save_message.setText(message)
-                    save_message.setIcon(QMessageBox.Critical)
-                    save_message.setStandardButtons(QMessageBox.Ok)
-                    save_message.exec()
+    def __init__(self, parent: QWidget, vdu_config: VduControlsConfig, change_callback: callable) -> None:
+        super().__init__()
+        editor_layout = QVBoxLayout()
+        self.change_callback = change_callback
+        self.changed = {}
+        self.setLayout(editor_layout)
+        self.config_path = get_config_path(vdu_config.config_name)
+        self.ini_before = vdu_config.ini_content
+        self.change_callback = change_callback
+        copy = pickle.dumps(self.ini_before)
+        self.ini_editable = pickle.loads(copy)
+        self.field_list = []
 
-            buttons_widget = QWidget()
-            button_layout = QHBoxLayout()
-            buttons_widget.setLayout(button_layout)
-            save_button = QPushButton(translate("Save {}").format(vdu_config.config_name))
-            save_button.clicked.connect(save_clicked)
-            button_layout.addWidget(save_button)
-            quit_button = QPushButton(translate("Close"))
-            quit_button.clicked.connect(parent.close)
-            button_layout.addWidget(quit_button)
-            editor_layout.addWidget(buttons_widget)
+        def field(widget: SettingsEditor.SettingsEditorFieldBase) -> QWidget:
+            self.field_list.append(widget)
+            return widget
 
-        def save(self, cancel: int = QMessageBox.Close) -> None:
-            if not self.config_path.parent.is_dir():
-                os.makedirs(self.config_path.parent)
+        for section in self.ini_editable:
+            if section == 'DEFAULT':
+                continue
+            editor_layout.addWidget(QLabel('<b>' + section.replace('-', ' ') + '</b>'))
+            booleans_panel = QWidget()
+            booleans_grid = QGridLayout()
+            booleans_panel.setLayout(booleans_grid)
+            editor_layout.addWidget(booleans_panel)
+            n = 0
+            for option in self.ini_editable[section]:
+                data_type = vdu_config.get_config_type(section, option)
+                if data_type == 'boolean':
+                    booleans_grid.addWidget(field(SettingsEditorBooleanWidget(self, option, section)), n // 3, n % 3)
+                    n += 1
+                elif data_type == 'float':
+                    editor_layout.addWidget(field(SettingsEditorFloatWidget(self, option, section)))
+                elif data_type == 'text':
+                    editor_layout.addWidget(field(SettingsEditorTextEditorWidget(self, option, section)))
+                elif data_type == 'csv':
+                    editor_layout.addWidget(field(SettingsEditorCsvWidget(self, option, section)))
+
+        def save_clicked() -> None:
             if self.is_unsaved():
+                self.save(cancel=QMessageBox.Cancel)
+            else:
                 save_message = QMessageBox()
-                message = translate('Overwrite existing {}?' if self.config_path.exists() else "Create new {}"
-                                    ).format(self.config_path.as_posix())
+                message = translate('No unsaved changes for {}.').format(vdu_config.config_name)
                 save_message.setText(message)
-                save_message.setIcon(QMessageBox.Question)
-                save_message.setStandardButtons(QMessageBox.Save | QMessageBox.Cancel)
-                rc = save_message.exec()
-                if rc == QMessageBox.Save:
-                    with open(self.config_path, 'w') as config_file:
-                        self.ini_editable.write(config_file)
-                        copy = pickle.dumps(self.ini_editable)
-                        self.ini_before = pickle.loads(copy)
-                        self.has_made_changes = True
+                save_message.setIcon(QMessageBox.Critical)
+                save_message.setStandardButtons(QMessageBox.Ok)
+                save_message.exec()
 
-        def is_unsaved(self) -> bool:
-            return pickle.dumps(self.ini_before) != pickle.dumps(self.ini_editable) \
-                   or not self.config_path.exists()
+        buttons_widget = QWidget()
+        button_layout = QHBoxLayout()
+        buttons_widget.setLayout(button_layout)
+        save_button = QPushButton(translate("Save {}").format(vdu_config.config_name))
+        save_button.clicked.connect(save_clicked)
+        button_layout.addWidget(save_button)
+        quit_button = QPushButton(translate("Close"))
+        quit_button.clicked.connect(parent.close)
+        button_layout.addWidget(quit_button)
+        editor_layout.addWidget(buttons_widget)
 
-    class SettingsEditorBooleanWidget(QWidget):
-        def __init__(self, ini_editable: configparser.ConfigParser, option: str, section: str) -> None:
-            super().__init__()
-            layout = QHBoxLayout()
-            self.setLayout(layout)
-            checkbox = QCheckBox(option.replace('-', ' '))
-            checkbox.setChecked(ini_editable.getboolean(section, option))
+    def save(self, cancel: int = QMessageBox.Close) -> None:
+        if not self.config_path.parent.is_dir():
+            os.makedirs(self.config_path.parent)
+        if self.is_unsaved():
+            save_message = QMessageBox()
+            message = translate('Overwrite existing {}?' if self.config_path.exists() else "Create new {}"
+                                ).format(self.config_path.as_posix())
+            save_message.setText(message)
+            save_message.setIcon(QMessageBox.Question)
+            save_message.setStandardButtons(QMessageBox.Save | cancel)
+            rc = save_message.exec()
+            if rc == QMessageBox.Save:
+                with open(self.config_path, 'w') as config_file:
+                    self.ini_editable.write(config_file)
+                    copy = pickle.dumps(self.ini_editable)
+                    self.ini_before = pickle.loads(copy)
+                # After file is closed...
+                self.change_callback(self.changed)
+                self.changed = {}
+            else:
+                copy = pickle.dumps(self.ini_before)
+                self.ini_editable = pickle.loads(copy)
+                self.reset()
 
-            def toggled(is_checked: bool) -> None:
-                # print(section, option, is_checked)
-                ini_editable[section][option] = 'yes' if is_checked else 'no'
+    def reset(self):
+        for field in self.field_list:
+            field.reset()
 
-            checkbox.toggled.connect(toggled)
-            layout.addWidget(checkbox)
-
-    class SettingsEditorFloatWidget(QWidget):
-        def __init__(self, ini_editable: configparser.ConfigParser, option: str, section: str) -> None:
-            super().__init__()
-            layout = QVBoxLayout()
-            self.setLayout(layout)
-            text_label = QLabel(option.replace('-', ' '))
-            layout.addWidget(text_label)
-            text_input = QLineEdit()
-            text_input.setMaximumWidth(100)
-            text_input.setMaxLength(4)
-            text_validator = QDoubleValidator()
-            text_validator.setRange(0.1, int(3.0), 4)
-            text_input.setValidator(text_validator)
-            text_input.setText(ini_editable[section][option])
-
-            def editing_finished() -> None:
-                # print(section, option, text_input.text())
-                ini_editable[section][option] = str(text_input.text())
-
-            text_input.editingFinished.connect(editing_finished)
-            layout.addWidget(text_input)
-
-    class SettingsEditorCsvWidget(QWidget):
-        def __init__(self, ini_editable: configparser.ConfigParser, option: str, section: str) -> None:
-            super().__init__()
-            layout = QVBoxLayout()
-            self.setLayout(layout)
-            text_label = QLabel(option.replace('-', ' '))
-            layout.addWidget(text_label)
-            text_input = QLineEdit()
-            text_input.setMaximumWidth(1000)
-            text_input.setMaxLength(500)
-            # TODO - should probably also allow spaces as well as commas, but the regexp is getting a bit tricky?
-            # Validator matches CSV of two digit hex or the empty string.
-            validator = QRegExpValidator(QRegExp(r"^([0-9a-fA-F]{2}([ \t]*,[ \t]*[0-9a-fA-F]{2})*)|$"))
-            text_input.setValidator(validator)
-            text_input.setText(ini_editable[section][option])
-
-            def editing_finished() -> None:
-                # print(section, option, text_input.text())
-                ini_editable[section][option] = str(text_input.text())
-
-            def input_rejected() -> None:
-                text_input.setStyleSheet("QLineEdit { color : red; }")
-
-            def text_edited() -> None:
-                text_input.setStyleSheet("QLineEdit { color : black; }")
-
-            text_input.editingFinished.connect(editing_finished)
-            text_input.inputRejected.connect(input_rejected)
-            text_input.textEdited.connect(text_edited)
-            layout.addWidget(text_input)
-
-    class SettingsEditorTextEditorWidget(QWidget):
-        def __init__(self, ini_editable: configparser.ConfigParser, option: str, section: str) -> None:
-            super().__init__()
-            layout = QVBoxLayout()
-            self.setLayout(layout)
-            text_label = QLabel(option.replace('-', ' '))
-            layout.addWidget(text_label)
-            text_editor = QPlainTextEdit(ini_editable[section][option])
-
-            def text_changed() -> None:
-                # print(section, option, text_editor.toPlainText())
-                ini_editable[section][option] = text_editor.toPlainText().replace("%", "%%")
-
-            text_editor.textChanged.connect(text_changed)
-            layout.addWidget(text_editor)
+    def is_unsaved(self) -> bool:
+        self.changed = {}
+        for section in self.ini_before:
+            for option in self.ini_before[section]:
+                if self.ini_before[section][option] != self.ini_editable[section][option]:
+                    self.changed[(section, option)] = (
+                    self.ini_before[section][option], self.ini_editable[section][option])
+        return len(self.changed) != 0
 
 
-def restart_due_to_config_change() -> None:
+class SettingsEditorFieldBase(QWidget):
+    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str) -> None:
+        super().__init__()
+        self.section_editor = section_editor
+        self.section = section
+        self.option = option
+
+
+class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
+    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str) -> None:
+        super().__init__(section_editor, option, section)
+        layout = QHBoxLayout()
+        self.setLayout(layout)
+        checkbox = QCheckBox(option.replace('-', ' '))
+        checkbox.setChecked(section_editor.ini_editable.getboolean(section, option))
+
+        def toggled(is_checked: bool) -> None:
+            # print(section, option, is_checked)
+            section_editor.ini_editable[section][option] = 'yes' if is_checked else 'no'
+
+        checkbox.toggled.connect(toggled)
+        layout.addWidget(checkbox)
+        self.checkbox = checkbox
+
+    def reset(self):
+        self.checkbox.setChecked(self.section_editor.ini_before.getboolean(self.section, self.option))
+
+
+class SettingsEditorFloatWidget(SettingsEditorFieldBase):
+    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str) -> None:
+        super().__init__(section_editor, option, section)
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+        text_label = QLabel(option.replace('-', ' '))
+        layout.addWidget(text_label)
+        text_input = QLineEdit()
+        text_input.setMaximumWidth(100)
+        text_input.setMaxLength(4)
+        text_validator = QDoubleValidator()
+        text_validator.setRange(0.1, int(3.0), 4)
+        text_input.setValidator(text_validator)
+        text_input.setText(section_editor.ini_editable[section][option])
+
+        def editing_finished() -> None:
+            # print(section, option, text_input.text())
+            section_editor.ini_editable[section][option] = str(text_input.text())
+
+        text_input.editingFinished.connect(editing_finished)
+        layout.addWidget(text_input)
+        self.text_input = text_input
+
+    def reset(self):
+        self.text_input.setText(self.section_editor.ini_before[self.section][self.option])
+
+
+class SettingsEditorCsvWidget(SettingsEditorFieldBase):
+    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str) -> None:
+        super().__init__(section_editor, option, section)
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+        text_label = QLabel(option.replace('-', ' '))
+        layout.addWidget(text_label)
+        text_input = QLineEdit()
+        text_input.setMaximumWidth(1000)
+        text_input.setMaxLength(500)
+        # TODO - should probably also allow spaces as well as commas, but the regexp is getting a bit tricky?
+        # Validator matches CSV of two digit hex or the empty string.
+        validator = QRegExpValidator(QRegExp(r"^([0-9a-fA-F]{2}([ \t]*,[ \t]*[0-9a-fA-F]{2})*)|$"))
+        text_input.setValidator(validator)
+        text_input.setText(section_editor.ini_editable[section][option])
+
+        def editing_finished() -> None:
+            # print(section, option, text_input.text())
+            section_editor.ini_editable[section][option] = str(text_input.text())
+
+        def input_rejected() -> None:
+            text_input.setStyleSheet("QLineEdit { color : red; }")
+
+        def text_edited() -> None:
+            text_input.setStyleSheet("QLineEdit { color : black; }")
+
+        text_input.editingFinished.connect(editing_finished)
+        text_input.inputRejected.connect(input_rejected)
+        text_input.textEdited.connect(text_edited)
+        layout.addWidget(text_input)
+        self.text_input = text_input
+
+    def reset(self):
+        self.text_input.setText(self.section_editor.ini_before[self.section][self.option])
+
+
+class SettingsEditorTextEditorWidget(SettingsEditorFieldBase):
+    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str) -> None:
+        super().__init__(section_editor, option, section)
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+        text_label = QLabel(option.replace('-', ' '))
+        layout.addWidget(text_label)
+        text_editor = QPlainTextEdit(section_editor.ini_editable[section][option])
+
+        def text_changed() -> None:
+            # print(section, option, text_editor.toPlainText())
+            section_editor.ini_editable[section][option] = text_editor.toPlainText().replace("%", "%%")
+
+        text_editor.textChanged.connect(text_changed)
+        layout.addWidget(text_editor)
+        self.text_editor = text_editor
+
+    def reset(self):
+        self.text_editor.setPlainText(self.section_editor.ini_before[self.section][self.option])
+
+
+def restart_application(reason: str) -> None:
     """
     Force a restart of the application.
 
@@ -1473,8 +1513,8 @@ def restart_due_to_config_change() -> None:
     when the GUI detects the number of monitors has changes.
     """
     alert = QMessageBox()
-    alert.setText(translate('The physical monitor configuration has changed. A restart is required.'))
-    alert.setInformativeText(translate('Dismiss this message to automatically restart.'))
+    alert.setText(reason)
+    alert.setInformativeText(translate('When this message is dismissed, vdu_controls will restart.'))
     alert.setIcon(QMessageBox.Critical)
     alert.exec()
     QCoreApplication.exit(EXIT_CODE_FOR_RESTART)
@@ -2116,7 +2156,7 @@ class VduControlsMainPanel(QWidget):
             self.context_menu.exec(self.mapToGlobal(position))
 
         self.customContextMenuRequested.connect(open_context_menu)
-        #self.setLayout(layout)
+        # self.setLayout(layout)
         # if len(QCameraInfo().availableCameras()) > 0:
         #
         #     def check_light_level_func():
@@ -2794,8 +2834,15 @@ class MainWindow(QMainWindow):
         else:
             main_window_action = None
 
+        def settings_changed(changed_settings: List):
+            if ('vdu-controls-globals', 'system-tray-enabled') in changed_settings:
+                restart_application(translate("The change to the system-tray-enabled option requires "
+                                              "vdu_controls to restart."))
+            create_main_control_panel()
+
         def edit_config() -> None:
-            SettingsEditor.invoke(main_config, [vdu.config for vdu in self.main_control_panel.vdu_controllers], create_main_control_panel)
+            SettingsEditor.invoke(main_config, [vdu.config for vdu in self.main_control_panel.vdu_controllers],
+                                  settings_changed)
 
         def refresh_from_vdus() -> None:
             create_main_control_panel()
@@ -2890,6 +2937,8 @@ class MainWindow(QMainWindow):
 
         def create_main_control_panel():
             # Call on initialisation and whenever the number of connected VDU's changes.
+            global log_to_syslog
+            log_to_syslog = main_config.is_syslog_enabled()
             if self.main_control_panel:
                 # Remove any existing control panel - which may now be incorrect for the config.
                 self.main_control_panel.refresh_finished.disconnect(refresh_finished)
@@ -3141,8 +3190,18 @@ def main():
         main_window.create_config_files()
 
     rc = app.exec_()
+    log_info(f"app exit rc={rc} {'EXIT_CODE_FOR_RESTART' if rc == EXIT_CODE_FOR_RESTART else ''}")
     if rc == EXIT_CODE_FOR_RESTART:
-        QProcess.startDetached(app.arguments()[0], app.arguments()[1:])
+        log_info(f"Trying to restart - this only works if {app.arguments()[0]} is executable and on your PATH): ", )
+        restart_status = QProcess.startDetached(app.arguments()[0], app.arguments()[1:])
+        if not restart_status:
+            dialog = QMessageBox()
+            dialog.setIcon(QMessageBox.Critical)
+            dialog.setText(translate(f"Restart of {app.arguments()[0]} failed.  Please restart manually."))
+            dialog.setInformativeText(translate(f"This is probably because {app.arguments()[0]} is not"
+                                                " executable or is not on your PATH."))
+            dialog.setStandardButtons(QMessageBox.Close)
+            dialog.exec()
     sys.exit(rc)
 
 
