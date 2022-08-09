@@ -377,8 +377,6 @@ ABOUT_TEXT = f"""
 <p>
 A virtual control panel for external Visual Display Units. 
 <p>
-Run vdu_controls --help in a console for help.
-<p>
 Visit <a href="https://github.com/digitaltrails/vdu_controls">https://github.com/digitaltrails/vdu_controls</a> for 
 more details.
 <p><p>
@@ -784,6 +782,10 @@ class DdcUtil:
                 if vcp_code not in self.supported_codes:
                     self.supported_codes[vcp_code] = vcp_name
         return self.supported_codes
+
+
+def si(widget: QWidget, icon_number: int):
+    return widget.style().standardIcon(icon_number)
 
 
 class DialogSingletonMixin:
@@ -1347,12 +1349,15 @@ class SettingsEditorTab(QWidget):
         buttons_widget = QWidget()
         button_layout = QHBoxLayout()
         buttons_widget.setLayout(button_layout)
-        save_button = QPushButton(translate("Save {}").format(vdu_config.config_name))
+
+        save_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), translate("Save {}").format(vdu_config.config_name))
         save_button.clicked.connect(save_clicked)
-        button_layout.addWidget(save_button)
-        quit_button = QPushButton(translate("Close"))
+        button_layout.addWidget(save_button, 0, Qt.AlignBottom | Qt.AlignLeft)
+
+        quit_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), translate("Close"))
         quit_button.clicked.connect(parent.close)
-        button_layout.addWidget(quit_button)
+        button_layout.addWidget(quit_button, 0, Qt.AlignBottom | Qt.AlignRight)
+
         editor_layout.addWidget(buttons_widget)
 
     def save(self, cancel: int = QMessageBox.Close) -> None:
@@ -1897,34 +1902,18 @@ class ContextMenu(QMenu):
         super().__init__()
         self.main_window = main_window
         if main_window_action is not None:
-            self.addAction(self.style().standardIcon(QStyle.SP_ComputerIcon),
-                           translate('Control Panel'),
-                           main_window_action)
+            self.addAction(si(self, QStyle.SP_ComputerIcon), translate('Control Panel'), main_window_action)
             self.addSeparator()
-        self.addAction(self.style().standardIcon(QStyle.SP_ComputerIcon),
-                       translate('Presets'),
-                       presets_action)
+        self.addAction(si(self, QStyle.SP_ComputerIcon), translate('Presets'), presets_action)
         self.presets_separator = self.addSeparator()
 
-        self.addAction(self.style().standardIcon(QStyle.SP_ComputerIcon),
-                       translate('Grey Scale'),
-                       chart_action)
-        self.addAction(self.style().standardIcon(QStyle.SP_ComputerIcon),
-                       translate('Settings'),
-                       settings_action)
-        self.addAction(self.style().standardIcon(QStyle.SP_BrowserReload),
-                       translate('Refresh'),
-                       refresh_action)
-        self.addAction(self.style().standardIcon(QStyle.SP_MessageBoxInformation),
-                       translate('About'),
-                       about_action)
-        self.addAction(self.style().standardIcon(QStyle.SP_DialogHelpButton),
-                       translate('Help'),
-                       help_action)
+        self.addAction(si(self, QStyle.SP_ComputerIcon), translate('Grey Scale'), chart_action)
+        self.addAction(si(self, QStyle.SP_ComputerIcon), translate('Settings'), settings_action)
+        self.addAction(si(self, QStyle.SP_BrowserReload), translate('Refresh'), refresh_action)
+        self.addAction(si(self, QStyle.SP_MessageBoxInformation), translate('About'), about_action)
+        self.addAction(si(self, QStyle.SP_DialogHelpButton), translate('Help'), help_action)
         self.addSeparator()
-        self.addAction(self.style().standardIcon(QStyle.SP_DialogCloseButton),
-                       translate('Quit'),
-                       quit_action)
+        self.addAction(si(self, QStyle.SP_DialogCloseButton), translate('Quit'), quit_action)
 
     def insert_preset_menu_item(self, preset: Preset) -> None:
         # Have to add it first and then move it (otherwise it won't appear - weird).
@@ -2331,7 +2320,7 @@ class PresetChooseIconButton(QPushButton):
 
     def __init__(self):
         super().__init__()
-        self.setIcon(self.style().standardIcon(PresetsDialog.no_icon_icon_number))
+        self.setIcon(si(self, PresetsDialog.no_icon_icon_number))
         self.setToolTip(translate('Choose a preset icon.'))
         self.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
         self.setAutoDefault(False)
@@ -2362,7 +2351,7 @@ class PresetChooseIconButton(QPushButton):
         elif self.preset:
             self.setIcon(self.preset.create_icon())
         else:
-            self.setIcon(self.style().standardIcon(PresetsDialog.no_icon_icon_number))
+            self.setIcon(si(self, PresetsDialog.no_icon_icon_number))
 
     def event(self, event: QEvent) -> bool:
         super().event(event)
@@ -2463,7 +2452,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         add_preset_layout.addWidget(add_preset_name_edit)
 
         add_button = QPushButton()  # translate('Add'))  # QPushButton(' \u2003')
-        add_button.setIcon(self.style().standardIcon(QStyle.SP_DriveFDIcon))
+        add_button.setIcon(si(self, QStyle.SP_DriveFDIcon))
         add_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
         # add_button.setStyleSheet('QPushButton { border: none; margin: 0px; padding: 0px;}')
         add_button.setFlat(True)
@@ -2515,9 +2504,10 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
 
         layout.addWidget(add_preset_widget)
 
-        close_button = QPushButton(translate('close'))
+        close_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), translate('close'))
         close_button.clicked.connect(self.close)
-        button_layout.addWidget(close_button)
+        button_layout.addSpacing(10)
+        button_layout.addWidget(close_button, 0, Qt.AlignRight | Qt.AlignBottom)
 
         layout.addWidget(button_box)
         # .show() is non-modal, .exec() is modal
@@ -2544,7 +2534,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         preset_name_button.setAutoDefault(False)
 
         edit_button = QPushButton()
-        edit_button.setIcon(self.style().standardIcon(QStyle.SP_FileIcon))
+        edit_button.setIcon(si(self, QStyle.SP_FileIcon))
         edit_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
         edit_button.setFlat(True)
         edit_button.setToolTip(translate('Edit the preset name and icon.'))
@@ -2553,7 +2543,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         edit_button.setAutoDefault(False)
 
         save_button = QPushButton()
-        save_button.setIcon(self.style().standardIcon(QStyle.SP_DriveFDIcon))
+        save_button.setIcon(si(self, QStyle.SP_DriveFDIcon))
         save_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
         save_button.setFlat(True)
         save_button.setContentsMargins(0, 0, 0, 0)
@@ -2563,7 +2553,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         save_button.setAutoDefault(False)
 
         delete_button = QPushButton()
-        delete_button.setIcon(self.style().standardIcon(QStyle.SP_DialogCloseButton))
+        delete_button.setIcon(si(self, QStyle.SP_DialogDiscardButton))
         delete_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
         delete_button.setFlat(True)
         delete_button.setToolTip('Delete this preset.')
@@ -2628,7 +2618,7 @@ def create_icon_from_path(path: Path):
             return QIcon(path.as_posix())
     else:
         # Copes with the case where the path has been deleted.
-        return QStyle.standardIcon(QStyle.SP_MessageBoxQuestion)
+        return QApplication.style().standardIcon(QStyle.SP_MessageBoxQuestion)
     return None
 
 
@@ -2658,7 +2648,6 @@ def create_merged_icon(base_icon: QIcon, overlay_icon: QIcon) -> QIcon:
     overlay_icon = QIcon()
     overlay_icon.addPixmap(combined_pixmap)
     return overlay_icon
-
 
 def install_as_desktop_application(uninstall: bool = False):
     """Self install this script in the current Linux user's bin directory and desktop applications->settings menu."""
@@ -2754,6 +2743,9 @@ class GreyScaleDialog(QDialog):
             'Use the content-menu to create additional charts and\n'
             'drag them onto each display.\n\nThis chart is resizable. '))
         layout.addWidget(svg_widget)
+        close_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), translate("Close"))
+        close_button.clicked.connect(self.hide)
+        layout.addWidget(close_button, 0, Qt.AlignRight)
         self.show()
         self.raise_()
         self.activateWindow()
@@ -2800,6 +2792,9 @@ class HelpDialog(QDialog, DialogSingletonMixin):
         markdown_view.setReadOnly(True)
         markdown_view.setMarkdown(__doc__)
         layout.addWidget(markdown_view)
+        close_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), translate("Close"))
+        close_button.clicked.connect(self.hide)
+        layout.addWidget(close_button, 0, Qt.AlignRight)
         self.setLayout(layout)
         # TODO maybe compute a minimum from the actual screen size
         self.setMinimumWidth(1600)
@@ -2812,7 +2807,6 @@ class MainWindow(QMainWindow):
 
     def __init__(self, main_config: VduControlsConfig, app: QApplication, session_startup: bool):
         super().__init__()
-
         self.app = app
         self.displayed_preset_name = None
         self.setObjectName('main_window')
@@ -2857,6 +2851,16 @@ class MainWindow(QMainWindow):
         def quit_app() -> None:
             self.app_save_state()
             app.quit()
+
+        for screen in app.screens():
+            log_info("Screen", screen.name())
+
+        # Not that useful - doesn't necessarily change if a screen is powered off
+        # def screen_changed(screen):
+        #     log_info("Screen changed:", screen.name)
+        #     settings_changed([])
+        # app.screenAdded.connect(screen_changed)
+        # app.screenRemoved.connect(screen_changed)
 
         self.preset_controller = PresetController()
 
