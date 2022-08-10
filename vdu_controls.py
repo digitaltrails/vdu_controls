@@ -1865,7 +1865,9 @@ class Preset:
 
     def get_icon_path(self) -> Path:
         if self.preset_ini.has_section("preset"):
-            return Path(self.preset_ini.get("preset", "icon", fallback=None))
+            path_text = self.preset_ini.get("preset", "icon", fallback=None)
+            return Path(path_text) if path_text else None
+        return None
 
     def set_icon_path(self, icon_path: Path):
         if icon_path:
