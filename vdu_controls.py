@@ -672,8 +672,9 @@ class DdcUtil:
         """Return a list of (vdu_id, desc) tuples."""
         display_list = []
         result = self.__run__('detect')
-        id_list = []
-        id_counts = {}
+        # Going to get rid of anything that is not a-z A-Z 0-9 as potential rubbish
+        rubbish = re.compile('[^a-zA-Z0-9]+')
+        # This isn't efficient, it doesn't need to be, so I'm keeping re-defs close to where they are used.
         for display_str in re.split("\n\n", result.stdout.decode('utf-8')):
             display_match = re.search('Display ([0-9]+)', display_str)
             if display_match is not None:
@@ -681,13 +682,15 @@ class DdcUtil:
                 log_info(f"checking display {vdu_id}")
                 fields = {m.group(1).strip(): m.group(2).strip() for m in re.finditer('[ \t]*([^:\n]+):[ \t]+([^\n]*)',
                                                                                       display_str)}
-                model_name = fields.get('Model', 'unknown_model')
-                manufacturer = fields.get('Mfg id', 'unknown_mfg')
-                serial_number = fields.get('Serial number', '')
-                bin_serial_number = fields.get('Binary serial number', '').split('(')[0].strip()
-                man_date = re.sub('[ :,\n]+', '_', fields.get('Manufacture year', ''))
+                model_name = rubbish.sub('_', fields.get('Model', 'unknown_model'))
+                manufacturer = rubbish.sub('_', fields.get('Mfg id', 'unknown_mfg'))
+                serial_number = rubbish.sub('_', fields.get('Serial number', ''))
+                bin_serial_number = rubbish.sub('_', fields.get('Binary serial number', '').split('(')[0].strip())
+                man_date = rubbish.sub('_', fields.get('Manufacture year', ''))
                 i2c_bus_id = fields.get('I2C bus', '').replace("/dev/", '').replace("-","_")
                 # Try and pin down a unique id that won't change even if other monitors are turned off.
+                # Ideally this should yield the same result for the same monitor - DisplayNum is the worst
+                # for that, so it's the fallback.
                 for possible in (serial_number, bin_serial_number, man_date, i2c_bus_id, f"DisplayNum{vdu_id}"):
                     if possible != '':
                         main_id = possible
