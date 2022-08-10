@@ -54,6 +54,17 @@ Display 2
       Manufacture year:     2019,  Week: 4
    VCP version:         2.1
    
+Display 3
+   I2C bus:  /dev/i2c-4
+   EDID synopsis:
+      Mfg id:               GSM
+      Model:                LG HDR 4K
+      Product code:         30471
+      Serial number:        
+      Binary serial number: 12345 (0xBC5EB1)
+      Manufacture year:     2019,  Week: 4
+   VCP version:         2.1
+   
 """
 
 CAPABILITIES_RESULTS = {
@@ -77,12 +88,20 @@ VCP Features:
    Feature: 10 (Brightness)
    Feature: 12 (Contrast)
    Feature: FF (Manufacturer specific feature)
-"""
+""",
+    "3": """Model: Not specified
+MCCS version: 2.1
+VCP Features:
+   Feature: 10 (Brightness)
+   Feature: 12 (Contrast)
+   Feature: FF (Manufacturer specific feature)
+""",
 }
 
 GETVCP_RESULTS = {
     "1": {"10": "VCP 10 C 90 100", "12": "VCP 12 C 100 100"},
-    "2": {"10": "VCP 10 C 13 100", "12": "VCP 12 C 60 100"}
+    "2": {"10": "VCP 10 C 13 100", "12": "VCP 12 C 60 100"},
+    "3": {"10": "VCP 10 C 10 100", "12": "VCP 12 C 70 100"}
 }
 
 

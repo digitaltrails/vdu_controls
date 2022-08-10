@@ -673,6 +673,7 @@ class DdcUtil:
         display_list = []
         result = self.__run__('detect')
         id_list = []
+        id_counts = {}
         for display_str in re.split("\n\n", result.stdout.decode('utf-8')):
             display_match = re.search('Display ([0-9]+)', display_str)
             if display_match is not None:
@@ -685,14 +686,11 @@ class DdcUtil:
                 serial_number = fields.get('Serial number', '')
                 bin_serial_number = fields.get('Binary serial number', '').split('(')[0].strip()
                 man_date = re.sub('[ :,\n]+', '_', fields.get('Manufacture year', ''))
-                i2c_bus_id = fields.get('I2C bus', '').replace("/dev/", '')
+                i2c_bus_id = fields.get('I2C bus', '').replace("/dev/", '').replace("-","_")
                 # Try and pin down a unique id that won't change even if other monitors are turned off.
-                # If that fails, fall back to the display number (which can change if monitors are turned off).
-                main_id = 'unknown'
-                for value in (serial_number, bin_serial_number, man_date, i2c_bus_id, f"DisplayNum{vdu_id}"):
-                    if value != '' and (model_name, value) not in id_list:
-                        id_list.append((model_name, value))
-                        main_id = value
+                for possible in (serial_number, bin_serial_number, man_date, i2c_bus_id, f"DisplayNum{vdu_id}"):
+                    if possible != '':
+                        main_id = possible
                         break
                 log_info(f"display={vdu_id} mfg={manufacturer} model={model_name} main_id={main_id}")
                 display_list.append((vdu_id, manufacturer, model_name, main_id))
