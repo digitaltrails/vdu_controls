@@ -2899,6 +2899,25 @@ class MainWindow(QMainWindow):
         #     settings_changed([])
         # app.screenAdded.connect(screen_changed)
         # app.screenRemoved.connect(screen_changed)
+        pre_v1_7_backup_path = CONFIG_DIR_PATH / 'pre-v1.7'
+        if CONFIG_DIR_PATH.exists() and not pre_v1_7_backup_path.exists():
+            alert = QMessageBox()
+            alert.setIcon(QMessageBox.Warning)
+            alert.setText("Welcome to V1.7\n\nExisting config and preset files will be "
+                          "need to be amended for v1.7.\n")
+            alert.setInformativeText(
+                "+ Config files will be converted when referenced.\n"
+                "+ Preset files will be converted when next saved.\n\n"
+                "The conversion will attempt to find alternatives to Display ID that are constant "
+                "across changing VDU configurations. For example, the selected identifier should "
+                "remain the same even if another VDU is powered down or removed.\n\n"
+                "Identifiers up for consideration include serial number, binary serial number, i2c address, " 
+                "and, as a fallback, staying with display ID.  Unfortunately "
+                "not all VDU's support all of these identifiers, and they are not necessarily unique.\n\n"
+                f"Existing config and presets will be backed up to {pre_v1_7_backup_path}")
+            pre_v1_7_backup_path.mkdir(exist_ok=True)
+            alert.setStandardButtons(QMessageBox.Ok)
+            alert.exec()
 
         self.preset_controller = PresetController()
 
