@@ -2412,6 +2412,8 @@ class PresetChooseIconButton(QPushButton):
                                                 self.last_icon_dir.as_posix(),
                                                 translate('SVG or PNG (*.svg *.png)'))
         self.last_selected_icon_path = Path(icon_file[0]) if icon_file[0] != '' else None
+        if self.last_selected_icon_path:
+            self.last_icon_dir = self.last_selected_icon_path.parent
         self.update_icon()
 
     def update_icon(self):
