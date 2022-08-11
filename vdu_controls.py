@@ -381,21 +381,31 @@ A virtual control panel for external Visual Display Units.
 Visit <a href="https://github.com/digitaltrails/vdu_controls">https://github.com/digitaltrails/vdu_controls</a> for 
 more details.
 <p><p>
-
+<hr>
+<small>
 <b>vdu_controls Copyright (C) 2021 Michael Hamilton</b>
-<p>
+<br><br>
 This program is free software: you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
 Free Software Foundation, version 3.
-<p>
+<br><br>
+<bold>
 This program is distributed in the hope that it will be useful, but
 WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
 more details.
-<p>
+</bold>
+<br><br>
 You should have received a copy of the GNU General Public License along
 with this program. If not, see <a href="https://www.gnu.org/licenses/">https://www.gnu.org/licenses/</a>.
-
+</small>
+<hr>
+<p><p>
+<quote>
+<small>
+Vdu_controls relies on <a href="https://www.ddcutil.com/">ddcutil</a>, a robust interface to DDC capable VDU's. 
+</small>
+</quote>
 """
 
 # Use Linux/UNIX signals for interprocess communication to trigger preset changes - 16 presets should be enough
@@ -2085,19 +2095,24 @@ class VduControlsMainPanel(QWidget):
         ddcutil_common_args = ['--force', ] if self.is_non_standard_enabled() else []
         self.ddcutil = DdcUtil(debug=default_config.is_debug_enabled(), common_args=ddcutil_common_args,
                                default_sleep_multiplier=default_config.get_sleep_multiplier())
-        self.detected_vdus = self.ddcutil.detect_monitors()
-        if session_startup:
-            # Loop in case the session is initialising/restoring which can make detection unreliable.
-            # Limit to a reasonable number of iterations.
-            for i in range(10):
-                log_info("Session appears to be initialising, delaying and looping detection until it stabilises.")
-                time.sleep(1.5)
-                prev_num = len(self.detected_vdus)
-                self.detected_vdus = self.ddcutil.detect_monitors()
-                if prev_num == len(self.detected_vdus):
-                    log_info(f"Number of detected monitors is stable at {len(self.detected_vdus)}")
-                    break
-                log_info(f"Number of detected monitors changed from {prev_num} to {len(self.detected_vdus)}")
+        ddcutil_problem = None
+        try:
+            self.detected_vdus = self.ddcutil.detect_monitors()
+            if session_startup:
+                # Loop in case the session is initialising/restoring which can make detection unreliable.
+                # Limit to a reasonable number of iterations.
+                for i in range(10):
+                    log_info("Session appears to be initialising, delaying and looping detection until it stabilises.")
+                    time.sleep(1.5)
+                    prev_num = len(self.detected_vdus)
+                    self.detected_vdus = self.ddcutil.detect_monitors()
+                    if prev_num == len(self.detected_vdus):
+                        log_info(f"Number of detected monitors is stable at {len(self.detected_vdus)}")
+                        break
+                    log_info(f"Number of detected monitors changed from {prev_num} to {len(self.detected_vdus)}")
+        except Exception as e:
+            log_error(e)
+            ddcutil_problem = e
         self.previously_detected_vdus = self.detected_vdus
         self.context_menu = app_context_menu
         app_context_menu.refresh_preset_menu()
@@ -2173,8 +2188,10 @@ class VduControlsMainPanel(QWidget):
             alert = QMessageBox()
             alert.setText(translate('No controllable monitors found, exiting.'))
             alert.setInformativeText(translate(
-                '''Run vdu_controls --debug in a console and check for additional messages.\
-                Check the requirements for the ddcutil command.'''))
+                "Is ddcutil installed?  Is i2c installed and configured?\n\n"
+                "Run vdu_controls --debug in a console and check for additional messages.\n\n"
+                f"{('Most recent ddcutil error: ' + str(ddcutil_problem)) if ddcutil_problem else ''}"
+                ))
             alert.setIcon(QMessageBox.Critical)
             alert.exec()
             sys.exit()
