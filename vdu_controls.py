@@ -657,6 +657,10 @@ class DdcUtil:
         self.common_args = [] if common_args is None else common_args
         self.vcp_type_map = {}
 
+    def change_settings(self, debug: bool, default_sleep_multiplier: float):
+        self.debug = debug
+        self.default_sleep_multiplier = default_sleep_multiplier
+
     def __run__(self, *args, sleep_multiplier: float = None) -> subprocess.CompletedProcess:
         if self.debug:
             log_debug("subprocess run    - ", DDCUTIL, args)
@@ -1011,6 +1015,11 @@ class VduControlsConfig:
         # Remove excess indentation while preserving the minimum existing indentation.
         alt_text = inspect.cleandoc(alt_text)
         self.ini_content['ddcutil-capabilities']['capabilities-override'] = alt_text
+
+    def reload(self):
+        for section in list(self.ini_content):
+            self.ini_content.remove_section(section)
+        self.parse_file(self.file_path)
 
     def debug_dump(self) -> None:
         origin = 'configuration' if self.file_path is None else os.path.basename(self.file_path)
@@ -2949,6 +2958,9 @@ class MainWindow(QMainWindow):
             if ('vdu-controls-globals', 'system-tray-enabled') in changed_settings:
                 restart_application(translate("The change to the system-tray-enabled option requires "
                                               "vdu_controls to restart."))
+            main_config.reload()
+            self.main_control_panel.ddcutil.change_settings(
+                debug=main_config.is_debug_enabled(), default_sleep_multiplier=main_config.get_sleep_multiplier())
             create_main_control_panel()
 
         def edit_config() -> None:
