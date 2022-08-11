@@ -358,7 +358,7 @@ from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
-    QWidgetItem
+    QWidgetItem, QScrollArea, QGroupBox, QFrame
 
 VDU_CONTROLS_VERSION = '1.7.0'
 
@@ -687,7 +687,7 @@ class DdcUtil:
                 serial_number = rubbish.sub('_', fields.get('Serial number', ''))
                 bin_serial_number = rubbish.sub('_', fields.get('Binary serial number', '').split('(')[0].strip())
                 man_date = rubbish.sub('_', fields.get('Manufacture year', ''))
-                i2c_bus_id = fields.get('I2C bus', '').replace("/dev/", '').replace("-","_")
+                i2c_bus_id = fields.get('I2C bus', '').replace("/dev/", '').replace("-", "_")
                 # Try and pin down a unique id that won't change even if other monitors are turned off.
                 # Ideally this should yield the same result for the same monitor - DisplayNum is the worst
                 # for that, so it's the fallback.
@@ -1412,7 +1412,7 @@ class SettingsEditorTab(QWidget):
             for option in self.ini_before[section]:
                 if self.ini_before[section][option] != self.ini_editable[section][option]:
                     self.changed[(section, option)] = (
-                    self.ini_before[section][option], self.ini_editable[section][option])
+                        self.ini_before[section][option], self.ini_editable[section][option])
         return len(self.changed) != 0
 
 
@@ -1826,11 +1826,13 @@ class VduControlPanel(QWidget):
         """Return the number of VDU controls.  Might be zero if initialization discovered no controllable attributes."""
         return len(self.vcp_controls)
 
-    def copy_state(self, preset_ini: configparser.ConfigParser) -> None:
-        vdu_section = self.vdu_model.vdu_model_and_serial_id
-        preset_ini[vdu_section] = {}
+    def copy_state(self, preset_ini: configparser.ConfigParser, update_only) -> None:
+        vdu_section_name = self.vdu_model.vdu_model_and_serial_id
+        if not preset_ini.has_section(vdu_section_name):
+            preset_ini.add_section(vdu_section_name)
         for control in self.vcp_controls:
-            preset_ini[vdu_section][control.vcp_capability.property_name()] = control.current_value
+            if not update_only or preset_ini.has_option(vdu_section_name, control.vcp_capability.property_name()):
+                preset_ini[vdu_section_name][control.vcp_capability.property_name()] = control.current_value
 
     def restore_state(self, preset_ini: configparser.ConfigParser) -> None:
         self.restore_state_specific_section_name(preset_ini, self.vdu_model.vdu_model_and_serial_id)
@@ -2252,7 +2254,7 @@ class VduControlsMainPanel(QWidget):
             if path.exists():
                 with open(path, 'r') as f:
                     text = f.read()
-                    if text == DANGER_AGREEMENT_NON_STANDARD_VCP_CODES:
+                    if text.strip() == DANGER_AGREEMENT_NON_STANDARD_VCP_CODES.strip():
                         log_warning("\n"
                                     "Non standard features may be enabled for write.\n"
                                     "ENABLING NON_STANDARD FEATURES COULD DAMAGE YOUR HARDWARE.\n"
@@ -2419,18 +2421,37 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         super().__init__()
         self.setWindowTitle(translate('Presets'))
         self.main_window = main_window
+        self.content_controls = {}
         self.setMinimumWidth(512)
         layout = QVBoxLayout()
         self.setLayout(layout)
-        presets_panel = QWidget()
+        presets_panel = QGroupBox()
+        presets_panel.setFlat(True)
         self.presets_panel = presets_panel
         presets_layout = QVBoxLayout()
+        presets_title = QLabel("Presets")
+        presets_title.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
+        presets_layout.addWidget(presets_title)
         presets_panel.setLayout(presets_layout)
         layout.addWidget(presets_panel)
         button_box = QWidget()
         button_layout = QHBoxLayout()
         button_box.setLayout(button_layout)
         main_window.app_context_menu.refresh_preset_menu()
+        base_ini = configparser.ConfigParser()
+        main_window.copy_to_preset_ini(base_ini)
+
+        def initialise_preset_from_controls(preset: Preset):
+            preset_ini = preset.preset_ini
+            for key, checkbox in self.content_controls.items():
+                if checkbox.isChecked():
+                    section, option = key
+                    if not preset_ini.has_option(section, option):
+                        # Can use a dummy value - it wil update when saved.
+                        value = base_ini.get(section, option, fallback="%should not happen%")
+                        if not preset_ini.has_section(section):
+                            preset_ini.add_section(section)
+                        preset_ini.set(section, option, value)
 
         def restore_preset(preset: Preset) -> None:
             self.main_window.restore_preset(preset)
@@ -2466,8 +2487,11 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
 
         def edit_preset(preset: Preset) -> None:
             self.main_window.restore_preset(preset)
-            add_preset_name_edit.setText(preset.name)
+            preset_name_edit.setText(preset.name)
             choose_icon_button.set_preset(preset)
+            for key, item in self.content_controls.items():
+                item.setChecked(preset.preset_ini.has_option(key[0], key[1]))
+            # TODO ??
             icon_path = preset.get_icon_path()
 
         for preset_def in self.main_window.preset_controller.find_presets().values():
@@ -2479,53 +2503,56 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 edit_action=edit_preset)
             presets_layout.addWidget(preset_widget)
 
-        add_preset_widget = QWidget()
-        add_preset_layout = QHBoxLayout()
-        add_preset_widget.setLayout(add_preset_layout)
-        add_preset_widget.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
+        edit_preset_widget = QWidget(parent=self)
+        edit_preset_layout = QHBoxLayout()
+        edit_preset_widget.setLayout(edit_preset_layout)
+        edit_preset_widget.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
 
         choose_icon_button = PresetChooseIconButton()
-        add_preset_layout.addWidget(choose_icon_button)
+        edit_preset_layout.addWidget(choose_icon_button)
 
-        add_preset_name_edit = QLineEdit()
-        add_preset_name_edit.setToolTip(translate('Enter a new preset name.'))
-        add_preset_name_edit.setClearButtonEnabled(True)
-        add_preset_layout.addWidget(add_preset_name_edit)
+        preset_name_edit = QLineEdit()
+        preset_name_edit.setToolTip(translate('Enter a new preset name.'))
+        preset_name_edit.setClearButtonEnabled(True)
 
-        add_button = QPushButton()  # translate('Add'))  # QPushButton(' \u2003')
-        add_button.setIcon(si(self, QStyle.SP_DriveFDIcon))
-        add_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
+        def change_edit_group_title():
+            changed_text = preset_name_edit.text()
+            if changed_text.strip() == "":
+                choose_icon_button.set_preset(None)
+            already_exists = self.find_preset_widget(changed_text)
+            edit_group_title.setText(translate("Edit Preset Options") if already_exists else translate("New Preset"))
+
+        preset_name_edit.textChanged.connect(change_edit_group_title)
+        edit_preset_layout.addWidget(preset_name_edit)
+
+        save_button = QPushButton()  # translate('Add'))  # QPushButton(' \u2003')
+        save_button.setIcon(si(self, QStyle.SP_DriveFDIcon))
+        save_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
         # add_button.setStyleSheet('QPushButton { border: none; margin: 0px; padding: 0px;}')
-        add_button.setFlat(True)
-        add_button.setToolTip(translate('Save current VDU settings to a new preset.'))
-        add_preset_layout.addWidget(add_button)
+        save_button.setFlat(True)
+        save_button.setToolTip(translate('Save current VDU settings to a new preset.'))
+        edit_preset_layout.addWidget(save_button)
 
-        def add_preset() -> None:
-            new_name = add_preset_name_edit.text().strip()
-            if new_name == '':
+        def save_edited_preset() -> None:
+            preset_name = preset_name_edit.text().strip()
+            if preset_name == '':
                 return
-            existing_preset_widget = self.find_preset_widget(new_name)
+            existing_preset_widget = self.find_preset_widget(preset_name)
             if existing_preset_widget:
                 save_message = QMessageBox()
-                message = translate("Replace existing '{}' preset?").format(new_name)
+                message = translate("Replace existing '{}' preset?").format(preset_name)
                 save_message.setText(message)
                 save_message.setIcon(QMessageBox.Question)
                 save_message.setStandardButtons(QMessageBox.Save | QMessageBox.Cancel)
                 if save_message.exec() == QMessageBox.Cancel:
                     return
-            if choose_icon_button.last_selected_icon_path is None:
-                save_message = QMessageBox()
-                message = translate("No icon has been selected for '{}' preset?").format(new_name)
-                save_message.setText(message)
-                save_message.setIcon(QMessageBox.Question)
-                save_message.setStandardButtons(QMessageBox.Save | QMessageBox.Cancel)
-                if save_message.exec() == QMessageBox.Cancel:
-                    return
-            new_preset = Preset(new_name)
-            new_preset.set_icon_path(choose_icon_button.last_selected_icon_path)
-            self.main_window.save_preset(new_preset)
+            preset = Preset(preset_name)
+            initialise_preset_from_controls(preset)
+            preset.set_icon_path(choose_icon_button.last_selected_icon_path)
+            self.main_window.save_preset(preset)
+            # Create a new widget - an easy way to update the icon.
             new_preset_widget = self.create_preset_widget(
-                new_preset,
+                preset,
                 restore_action=restore_preset,
                 save_action=save_preset,
                 delete_action=delete_preset,
@@ -2537,13 +2564,24 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 self.make_visible()
             else:
                 presets_layout.addWidget(new_preset_widget)
-            add_preset_name_edit.setText('')
-            choose_icon_button.set_preset(None)
+            preset_name_edit.setText('')
+
             main_window.display_active_preset_info(None)
 
-        add_button.clicked.connect(add_preset)
+        save_button.clicked.connect(save_edited_preset)
 
-        layout.addWidget(add_preset_widget)
+        edit_group_widget = QGroupBox()
+        edit_group_widget.setFlat(True)
+        edit_group_layout = QVBoxLayout()
+        edit_group_title = QLabel(translate("New Preset"))
+        edit_group_title.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
+        edit_group_layout.addWidget(edit_group_title)
+        edit_group_widget.setLayout(edit_group_layout)
+        content_controls_widget = self.create_preset_content_controls(base_ini)
+        edit_group_layout.addWidget(edit_preset_widget)
+        edit_group_layout.addWidget(content_controls_widget)
+
+        layout.addWidget(edit_group_widget)
 
         close_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), translate('close'))
         close_button.clicked.connect(self.close)
@@ -2578,7 +2616,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         edit_button.setIcon(si(self, QStyle.SP_FileIcon))
         edit_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
         edit_button.setFlat(True)
-        edit_button.setToolTip(translate('Edit the preset name and icon.'))
+        edit_button.setToolTip(translate('Edit the options for this preset.'))
         line_layout.addWidget(edit_button)
         edit_button.clicked.connect(partial(edit_action, preset=preset))
         edit_button.setAutoDefault(False)
@@ -2588,7 +2626,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         save_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
         save_button.setFlat(True)
         save_button.setContentsMargins(0, 0, 0, 0)
-        save_button.setToolTip(translate('Save the current VDU settings to this preset.'))
+        save_button.setToolTip(translate("Update this preset from the current VDU settings."))
         line_layout.addWidget(save_button)
         save_button.clicked.connect(partial(save_action, preset=preset))
         save_button.setAutoDefault(False)
@@ -2603,6 +2641,34 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         delete_button.setAutoDefault(False)
 
         return preset_widget
+
+    def create_preset_content_controls(self, base_ini: configparser.ConfigParser) -> QWidget:
+        container = QScrollArea(parent=self)
+        widget = QWidget()
+        layout = QVBoxLayout()
+        widget.setLayout(layout)
+        for count, section in enumerate(base_ini):
+            if section != configparser.DEFAULTSECT:
+                if count > 1:
+                    line = QFrame()
+                    line.setFrameShape(QFrame.HLine)
+                    line.setFrameShadow(QFrame.Sunken)
+                    layout.addWidget(line)
+                group_box = QGroupBox(section)
+                group_box.setFlat(True)
+                group_box.setToolTip(translate(f"Choose which settings to save for {section}"))
+                group_layout = QHBoxLayout()
+                group_box.setLayout(group_layout)
+                for option in base_ini[section]:
+                    option_control = QCheckBox(option)
+                    group_layout.addWidget(option_control)
+                    self.content_controls[(section, option)] = option_control
+                    option_control.setChecked(
+                        True)  # preset.preset_ini.has_option(section, option) if preset else True)
+                layout.addWidget(group_box)
+        container.setWidget(widget)
+        widget.show()
+        return container
 
     def event(self, event: QEvent) -> bool:
         super().event(event)
@@ -2689,6 +2755,7 @@ def create_merged_icon(base_icon: QIcon, overlay_icon: QIcon) -> QIcon:
     overlay_icon = QIcon()
     overlay_icon.addPixmap(combined_pixmap)
     return overlay_icon
+
 
 def install_as_desktop_application(uninstall: bool = False):
     """Self install this script in the current Linux user's bin directory and desktop applications->settings menu."""
@@ -3045,6 +3112,8 @@ class MainWindow(QMainWindow):
                 if section == control_panel.vdu_model.vdu_model_and_serial_id:
                     control_panel.restore_state(preset.preset_ini)
                     restored_list.append(control_panel)
+        # Cope with mixed pre-post v1.7 in a preset file,
+        # if not already restored from post v1.7 section, use pre v1.7 section
         for section in preset.preset_ini:
             for control_panel in self.main_control_panel.vdu_control_panels:
                 if control_panel not in restored_list and section == control_panel.vdu_model.pre1_7_id:
@@ -3058,15 +3127,19 @@ class MainWindow(QMainWindow):
             self.restore_preset(presets[preset_name])
 
     def save_preset(self, preset: Preset) -> None:
-        id_list = []
-        for control_panel in self.main_control_panel.vdu_control_panels:
-            control_panel.copy_state(preset.preset_ini)
-            id_list.append((control_panel.vdu_model.vdu_model_and_serial_id, control_panel.vdu_model.pre1_7_id))
+        id_list = self.copy_to_preset_ini(preset.preset_ini, update_only=True)
         preset.convert_v1_7_check(id_list)
         self.preset_controller.save_preset(preset)
         if not self.app_context_menu.has_preset_menu_item(preset.name):
             self.app_context_menu.insert_preset_menu_item(preset)
             self.display_active_preset_info(preset)
+
+    def copy_to_preset_ini(self, preset_ini: configparser.ConfigParser, update_only: bool = False) -> List:
+        id_list = []
+        for control_panel in self.main_control_panel.vdu_control_panels:
+            control_panel.copy_state(preset_ini, update_only)
+            id_list.append((control_panel.vdu_model.vdu_model_and_serial_id, control_panel.vdu_model.pre1_7_id))
+        return id_list
 
     def delete_preset(self, preset: Preset) -> None:
         self.preset_controller.delete_preset(preset)
