@@ -2518,11 +2518,17 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         def change_edit_group_title():
             changed_text = preset_name_edit.text()
             if changed_text.strip() == "":
-                choose_icon_button.set_preset(None)
-            already_exists = self.find_preset_widget(changed_text)
-            edit_group_title.setText(translate("Edit Preset Options") if already_exists else translate("New Preset"))
+                #choose_icon_button.set_preset(None)
+                content_controls_widget.setDisabled(True)
+                save_button.setDisabled(True)
+            else:
+                already_exists = self.find_preset_widget(changed_text)
+                edit_group_title.setText(translate("Edit Preset Options") if already_exists else translate("New Preset"))
+                content_controls_widget.setDisabled(False)
+                save_button.setDisabled(False)
 
         preset_name_edit.textChanged.connect(change_edit_group_title)
+
         edit_preset_layout.addWidget(preset_name_edit)
 
         save_button = QPushButton()  # translate('Add'))  # QPushButton(' \u2003')
@@ -2588,6 +2594,9 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         button_layout.addSpacing(10)
         button_layout.addWidget(close_button, 0, Qt.AlignRight | Qt.AlignBottom)
 
+        choose_icon_button.set_preset(None)
+        content_controls_widget.setDisabled(True)
+        save_button.setDisabled(True)
         layout.addWidget(button_box)
         # .show() is non-modal, .exec() is modal
         self.make_visible()
