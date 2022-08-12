@@ -2040,8 +2040,8 @@ class BottomToolBar(QToolBar):
         self.menu_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         self.menu_button.setToolTip("Context and Preset Menu")
 
-        self.preset_action = self.addAction(QIcon(), "preset")
-        self.preset_action.setVisible(True)
+        self.preset_action = self.addAction(QIcon(), "")
+        self.preset_action.setVisible(False)
         self.preset_action.triggered.connect(self.menu_button.click)
 
         self.addWidget(self.menu_button)
@@ -3141,11 +3141,10 @@ class MainWindow(QMainWindow):
             self.main_control_panel.initialise_control_panels(self.app_context_menu, main_config, session_startup)
             self.setCentralWidget(self.main_control_panel)
             self.adjustSize()
+            self.display_active_preset(None)
 
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         create_main_control_panel()
-
-        self.display_active_preset(None)
 
         self.app_restore_state()
 
