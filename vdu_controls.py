@@ -1136,7 +1136,7 @@ class VduControlsConfig:
         return parsed_args
 
 
-class VduController:
+class VduController(QObject):
     """
     Holds model+controller specific to an individual VDU including a map of its capabilities. A model object in
     MVC speak.
@@ -1149,10 +1149,13 @@ class VduController:
     two Display-Port inputs and it only has one.
     """
 
+    vdu_setting_changed = pyqtSignal()
+
     def __init__(self, vdu_id: str, vdu_model_name: str, vdu_serial: str, manufacturer: str,
                  default_config: VduControlsConfig,
                  ddcutil: DdcUtil,
                  ignore_monitor: bool = False, assume_standard_controls: bool = False) -> None:
+        super().__init__()
         self.vdu_id = vdu_id
         self.model_name = vdu_model_name
         self.serial = vdu_serial
@@ -1230,6 +1233,7 @@ class VduController:
 
     def set_attribute(self, vcp_code: str, value: str) -> None:
         self.ddcutil.set_attribute(self.vdu_id, vcp_code, value, sleep_multiplier=self.sleep_multiplier)
+        self.vdu_setting_changed.emit()
 
     def _parse_capabilities(self, capabilities_text=None) -> Mapping[str, VcpCapability]:
         """Return a map of vpc capabilities keyed by vcp code."""
@@ -2023,17 +2027,25 @@ class BottomToolBar(QToolBar):
         self.refresh_action = self.addAction(
             create_icon_from_svg_bytes(REFRESH_ICON_SOURCE), "Refresh settings from monitors", start_refresh_func)
         self.setIconSize(QSize(32, 32))
-        self.menu_button = QToolButton(self)
-        self.menu_button.setIcon(create_icon_from_svg_bytes(MENU_ICON_SOURCE))
         self.progress_bar = QProgressBar(self)
         # Disable text percentage label on the spinner progress-bar
         self.progress_bar.setTextVisible(False)
         self.progress_bar.setRange(0, 1)
         self.progress_bar.setDisabled(True)
         self.addWidget(self.progress_bar)
+
+        self.menu_button = QToolButton(self)
+        self.menu_button.setIcon(create_icon_from_svg_bytes(MENU_ICON_SOURCE))
         self.menu_button.setMenu(app_context_menu)
         self.menu_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.menu_button.setToolTip("Context and Preset Menu")
+
+        self.preset_action = self.addAction(QIcon(), "preset")
+        self.preset_action.setVisible(True)
+        self.preset_action.triggered.connect(self.menu_button.click)
+
         self.addWidget(self.menu_button)
+
         self.installEventFilter(self)
 
     def eventFilter(self, target: QObject, event: QEvent) -> bool:
@@ -2058,15 +2070,29 @@ class BottomToolBar(QToolBar):
         self.refresh_action.setDisabled(False)
         self.menu_button.setDisabled(False)
 
+    def display_active_preset(self, preset: Preset | None):
+        if preset:
+            self.preset_action.setToolTip(f"{preset.name} preset")
+            self.preset_action.setIcon(preset.create_icon())
+            self.preset_action.setVisible(True)
+        else:
+            self.preset_action.setToolTip("")
+            self.preset_action.setIcon(QIcon())
+            self.preset_action.setVisible(False)
+        self.layout().update()
+
 
 class VduControlsMainPanel(QWidget):
     """GUI for detected VDU's, it will construct and contain a control panel for each VDU."""
     refresh_finished = pyqtSignal()
     vdu_detected = pyqtSignal(VduController)
+    vdu_setting_changed = pyqtSignal()
     connected_vdus_changed = pyqtSignal()
 
     def __init__(self) -> None:
         super().__init__()
+        self.vdu_controllers = []
+        self.warnings = None
         self.bottom_toolbar = None
         self.context_menu = None
         self.ddcutil = None
@@ -2077,7 +2103,7 @@ class VduControlsMainPanel(QWidget):
         self.previously_detected_vdus = []
         self.detected_vdus = []
 
-    def initialise_control_panels(self, app_context_menu, default_config, session_startup):
+    def initialise_control_panels(self, app_context_menu: ContextMenu, main_config: VduControlsConfig, session_startup: bool):
         if self.layout():
             # Already laid out, must be responding to a configuration change requiring re-layout.
             # Remove all exisiting widgets.
@@ -2093,8 +2119,8 @@ class VduControlsMainPanel(QWidget):
         layout = QVBoxLayout()
         self.setLayout(layout)
         ddcutil_common_args = ['--force', ] if self.is_non_standard_enabled() else []
-        self.ddcutil = DdcUtil(debug=default_config.is_debug_enabled(), common_args=ddcutil_common_args,
-                               default_sleep_multiplier=default_config.get_sleep_multiplier())
+        self.ddcutil = DdcUtil(debug=main_config.is_debug_enabled(), common_args=ddcutil_common_args,
+                               default_sleep_multiplier=main_config.get_sleep_multiplier())
         ddcutil_problem = None
         try:
             self.detected_vdus = self.ddcutil.detect_monitors()
@@ -2117,13 +2143,13 @@ class VduControlsMainPanel(QWidget):
         self.context_menu = app_context_menu
         app_context_menu.refresh_preset_menu()
         layout1 = self.layout()
-        self.warnings = default_config.are_warnings_enabled()
+        self.warnings = main_config.are_warnings_enabled()
         self.vdu_controllers = []
         for vdu_id, manufacturer, vdu_model_name, vdu_serial in self.detected_vdus:
             controller = None
             while True:
                 try:
-                    controller = VduController(vdu_id, vdu_model_name, vdu_serial, manufacturer, default_config,
+                    controller = VduController(vdu_id, vdu_model_name, vdu_serial, manufacturer, main_config,
                                                self.ddcutil)
                 except Exception as e:
                     # Catch any kind of parse related error
@@ -2142,7 +2168,7 @@ class VduControlsMainPanel(QWidget):
                     alert1.setStandardButtons(QMessageBox.Ignore | QMessageBox.Apply | QMessageBox.Retry)
                     choice = alert1.exec()
                     if choice == QMessageBox.Ignore:
-                        controller = VduController(vdu_id, vdu_model_name, vdu_serial, manufacturer, default_config,
+                        controller = VduController(vdu_id, vdu_model_name, vdu_serial, manufacturer, main_config,
                                                    self.ddcutil, ignore_monitor=True)
                         controller.write_template_config_files()
                         warn = QMessageBox()
@@ -2152,7 +2178,7 @@ class VduControlsMainPanel(QWidget):
                             translate('Wrote {} config files to {}.').format(vdu_model_name, CONFIG_DIR_PATH))
                         warn.exec()
                     if choice == QMessageBox.Apply:
-                        controller = VduController(vdu_id, vdu_model_name, vdu_serial, manufacturer, default_config,
+                        controller = VduController(vdu_id, vdu_model_name, vdu_serial, manufacturer, main_config,
                                                    self.ddcutil, assume_standard_controls=True)
                         controller.write_template_config_files()
                         warn = QMessageBox()
@@ -2173,6 +2199,7 @@ class VduControlsMainPanel(QWidget):
                 self.vdu_detected.emit(controller)
                 vdu_control_panel = VduControlPanel(controller, self.warnings)
                 vdu_control_panel.connected_vdus_changed.connect(self.connected_vdus_changed)
+                controller.vdu_setting_changed.connect(self.vdu_setting_changed)
                 if vdu_control_panel.number_of_controls() != 0:
                     self.vdu_control_panels.append(vdu_control_panel)
                     layout1.addWidget(vdu_control_panel)
@@ -2288,6 +2315,9 @@ class VduControlsMainPanel(QWidget):
                                     "{}".format(path, DANGER_AGREEMENT_NON_STANDARD_VCP_CODES))
                         self.non_standard_enabled = True
         return self.non_standard_enabled
+
+    def display_active_preset(self, preset: Preset | None):
+        self.bottom_toolbar.display_active_preset(preset)
 
 
 class RefreshVduDataTask(QThread):
@@ -2600,7 +2630,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 presets_layout.addWidget(new_preset_widget)
             preset_name_edit.setText('')
 
-            main_window.display_active_preset_info(None)
+            main_window.display_active_preset(None)
 
         save_button.clicked.connect(save_edited_preset)
 
@@ -3070,6 +3100,9 @@ class MainWindow(QMainWindow):
                                                                            vdu.vdu_id, vdu.get_vdu_description()),
                     Qt.AlignTop | Qt.AlignHCenter)
 
+        def vdu_settings_changed_action() -> None:
+            self.display_active_preset(None)
+
         def respond_to_unix_signal(signal_number: int):
             if signal_number == signal.SIGHUP:
                 self.main_control_panel.refresh_data()
@@ -3085,7 +3118,7 @@ class MainWindow(QMainWindow):
         signal_wakeup_handler.signalReceived.connect(respond_to_unix_signal)
 
         def refresh_finished():
-            self.display_active_preset_info(None)
+            self.display_active_preset(None)
 
         def create_main_control_panel():
             # Call on initialisation and whenever the number of connected VDU's changes.
@@ -3095,12 +3128,14 @@ class MainWindow(QMainWindow):
                 # Remove any existing control panel - which may now be incorrect for the config.
                 self.main_control_panel.refresh_finished.disconnect(refresh_finished)
                 self.main_control_panel.vdu_detected.disconnect(vdu_detected_action)
+                self.main_control_panel.vdu_setting_changed.disconnect(vdu_settings_changed_action)
                 self.main_control_panel.connected_vdus_changed.disconnect(create_main_control_panel)
                 self.main_control_panel.deleteLater()
             self.main_control_panel = VduControlsMainPanel()
             # Write up the signal/slots first
             self.main_control_panel.refresh_finished.connect(refresh_finished)
             self.main_control_panel.vdu_detected.connect(vdu_detected_action)
+            self.main_control_panel.vdu_setting_changed.connect(vdu_settings_changed_action)
             self.main_control_panel.connected_vdus_changed.connect(create_main_control_panel)
             # Then initialise the control panel display
             self.main_control_panel.initialise_control_panels(self.app_context_menu, main_config, session_startup)
@@ -3110,7 +3145,7 @@ class MainWindow(QMainWindow):
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         create_main_control_panel()
 
-        self.display_active_preset_info(None)
+        self.display_active_preset(None)
 
         self.app_restore_state()
 
@@ -3158,7 +3193,7 @@ class MainWindow(QMainWindow):
             for control_panel in self.main_control_panel.vdu_control_panels:
                 if control_panel not in restored_list and section == control_panel.vdu_model.pre1_7_id:
                     control_panel.restore_state_pre17(preset.preset_ini)
-        self.display_active_preset_info(preset)
+        self.display_active_preset(preset)
         return preset
 
     def restore_named_preset(self, preset_name: str) -> None:
@@ -3172,7 +3207,7 @@ class MainWindow(QMainWindow):
         self.preset_controller.save_preset(preset)
         if not self.app_context_menu.has_preset_menu_item(preset.name):
             self.app_context_menu.insert_preset_menu_item(preset)
-            self.display_active_preset_info(preset)
+            self.display_active_preset(preset)
 
     def copy_to_preset_ini(self, preset_ini: configparser.ConfigParser, update_only: bool = False) -> List:
         id_list = []
@@ -3186,21 +3221,23 @@ class MainWindow(QMainWindow):
         if self.app_context_menu.has_preset_menu_item(preset.name):
             self.app_context_menu.remove_preset_menu_item(preset)
         if self.displayed_preset_name == preset.name:
-            self.display_active_preset_info(None)
+            self.display_active_preset(None)
 
-    def display_active_preset_info(self, preset: Preset | None) -> None:
+    def display_active_preset(self, preset: Preset | None) -> None:
         if preset is None:
             preset = self.preset_controller.which_preset_is_active(self.main_control_panel)
         if preset:
             self.setWindowTitle(preset.name)
             icon = create_merged_icon(self.app_icon, preset.create_icon())
             self.app.setWindowIcon(icon)
+            self.main_control_panel.display_active_preset(preset)
             if self.tray:
                 self.tray.setToolTip(f"{preset.name} \u2014 {self.app_name}")
                 self.tray.setIcon(icon)
         else:
             self.setWindowTitle("")
             self.setWindowIcon(self.app_icon)
+            self.main_control_panel.display_active_preset(preset)
             if self.tray:
                 self.tray.setToolTip(f"{self.app_name}")
                 self.tray.setIcon(self.app_icon)
@@ -3234,7 +3271,7 @@ class MainWindow(QMainWindow):
         super().event(event)
         # PalletChange happens after the new style sheet is in use.
         if event.type() == QEvent.PaletteChange:
-            self.display_active_preset_info(None)
+            self.display_active_preset(None)
             self.app_context_menu.refresh_preset_menu(reload=True)
         event.accept()
         return True
