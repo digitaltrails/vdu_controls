@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 """
-vdu_controls: A VDU control Panel
-=================================
+vdu_controls: monitor control Panel
+===================================
 
 A control panel for external monitors (*Visual Display Units*).
 
