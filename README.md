@@ -1,5 +1,5 @@
-vdu_controls - a GUI wrapper for ddcutil
-========================================
+vdu_controls - a VDU control panel
+==================================
 
 A control panel for external monitors (*Visual Display Units*).
 
