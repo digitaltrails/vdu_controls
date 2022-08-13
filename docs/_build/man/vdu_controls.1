@@ -27,12 +27,12 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Aug 06, 2022" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Aug 13, 2022" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.3.1
-.SH VDU_CONTROLS: A QT GUI WRAPPER FOR DDCUTIL
+.SH VDU_CONTROLS: A VDU CONTROL PANEL
 .sp
-A GUI for controlling connected \fIVisual Display Units\fP (\fIVDU\fP\(aqs) (also known as \fIdisplays\fP, or \fImonitors\fP).
+A control panel for external monitors (\fIVisual Display Units\fP).
 .SH USAGE:
 .INDENT 0.0
 .INDENT 3.5
@@ -103,41 +103,52 @@ uninstalls the vdu_controls application menu file and script for the current use
 .UNINDENT
 .SH DESCRIPTION
 .sp
-\fBvdu_controls\fP is a virtual control panel for physically connected VDU\(aqs.  It displays a set of controls for
-each  DVI/DP/HDMI/USB connected VDU and uses the \fBddcutil\fP command line utility to issue \fIDisplay Data Channel\fP
-(\fIDDC\fP) \fIVirtual Control Panel\fP  (\fIVCP\fP) commands to each of them. The intent is not to provide a comprehensive set
-of controls but rather to provide a simple panel with a selection of essential controls for the desktop.
+\fBvdu_controls\fP is a virtual control panel for externally connected VDU\(aqs.  The application detects
+DVI, DP, HDMI, or USB connected VDU\(aqs.  It provides controls for settings such as brightness and contrast.
 .sp
-A context menu containing this help is available by pressing the right\-mouse button either in the main user interface
-or on the system\-tray icon.  \fBvdu_controls\fP may be run as a system\-tray entry by using the \fB\-\-system\-tray\fP option.
+The application interacts with VDU\(aqs via the VESA \fIDisplay Data Channel\fP (\fIDDC\fP) \fIVirtual Control Panel\fP  (\fIVCP\fP)
+commands set.  DDC VCP interactions are mediated by the \fBddcutil\fP command line utility.  \fBDdcutil\fP provides
+a robust interface that is tolerant of the vagaries of the many OEM DDC implementations.
 .sp
-By default, \fBvdu_controls\fP offers a subset of possible controls including brightness and contrast.  Additional controls
-can be added by using the \fB\-\-enable\-vcp\-code\fP option to add any other codes supported by \fBddcutil\fP\&.  The full list
-of VCP codes supported by \fBddcutil\fP can be listed by running \fBddcutil vcpinfo \-\-verbose\fP\&. For example, the
-VCP code 66 is listed as an on/off control for an ambient light sensor, this can be enabled for \fBvdu_controls\fP by
-passing \fB\-\-enable\-vcp\-code 66\fP (the control will only appear in the user interface if the VDU reports that it
-has that capability).
+By default, \fBvdu_controls\fP offers a subset of controls including brightness, contrast and audio controls.  Additional
+controls can be enabled via the \fBSettings\fP dialog.
+.sp
+\fBvdu_controls\fP may optionally run as an entry in the system tray of KDE, Deepin, and GNOME. The UI automatically
+adapts to the quirks of the different tray implementations.
+.sp
+Named \fBPreset\fP configurations can be saved for later recalled. For example, a user could create
+presets for night, day, photography, movies, and so forth.
+.sp
+The UI\(aqs look\-and\-feel dynamically adjusts to the desktop theme.  Colors and icons automatically
+reconfigure without the need for a restart when changing between light and dark themes.
+.sp
+A context menu containing this help is available by pressing the right\-mouse button either in the main
+control panel or on the system\-tray icon.  The context menu is also available via a hamburger\-menu item on the
+bottom right of the main control panel.
 .sp
 Builtin laptop displays normally don\(aqt implement DDC and those displays are not supported, but a laptop\(aqs
 externally connected VDU\(aqs are likely to be controllable.
 .sp
 Some controls change the number of connected devices (for example, some VDU\(aqs support a power\-off command). If
-such controls are used, \fBvdu_controls\fP will detect the change and will restart itself to reconfigure the controls
-for the new situation (for example, DDC VDU 2 may now be DD VDU 1).  Similarly, if you physically unplug monitor, the
-same thing will happen.
+such controls are used, \fBvdu_controls\fP will detect the change and will reconfigure the controls
+for the new situation (for example, DDC VDU 2 may now be DD VDU 1).  If you change settings independently of
+\fBvdu_controls\fP, for example, by using a VDU\(aqs physical controls,  the \fBvdu_controls\fP UI includes a refresh
+button to force it to assess the new configuration.
 .sp
 Note that some VDU settings may disable or enable other settings. For example, setting a monitor to a specific
 picture\-profile might result in the contrast\-control being disabled, but \fBvdu_controls\fP will not be aware of
 the restriction resulting in its contrast\-control erring or appearing to do nothing.
 .SH CONFIGURATION
 .sp
-Configuration is supplied via command line parameters and config\-files.  The command line provides an immediate way
-to temporarily alter the behaviour of the application. The config files provide a more comprehensive and permanent
+Configuration changes can be made via the \fBSettings\fP dialog or via command line parameters (or by editing the
+config\-files directly).  The command line provides an immediate way to temporarily alter the behaviour of
+the application. The Settings\-Dialog and config files provide a more comprehensive and permanent
 solution for altering the application\(aqs configuration.
 .SS Settings Menu and Config files
 .sp
-The right\-mouse context\-menu \fBSettings\fP item can be used to customise the application by writing to a set of config
-files.  The \fBSettings\fP item will feature a tab for editing each config file.  The config files are named according
+The right\-mouse \- context\-menu \- \fBSettings\fP accesses the Settings dialog which can be used to
+customise the application by writing to a set of config files.  The \fBSettings\fP dialog features a tab for
+editing a config file specific to each VDU.  The config files are named according
 to the following scheme:
 .INDENT 0.0
 .INDENT 3.5
@@ -275,15 +286,15 @@ created to suit different lighting conditions or different applications, for exa
 Presets can be assigned a name and icon.  If the current monitor settings match a preset, the preset\(aqs name will show
 in the window\-title and tray tooltip, the preset\(aqs icon will overlay the normal tray icon.
 .sp
-The \fBPresets\fP item in right\-mouse \fBcontext\-menu\fP will bring up a dialog for managing and applying presets.
-The \fBcontext\-menu\fP also includes a shortcut for applying each existing presets. Any small SVG or PNG can be
-selected as a preset\(aqs icon.  Monochrome SVG icons that conform to the Plasma color conventions will be automatically
-inverted if the desktop them is changed from dark to light.
+The \fBPresets\fP item in right\-mouse \fBcontext\-menu\fP will bring up a \fBPresets\fP dialog for managing and applying
+presets.  The \fBcontext\-menu\fP also includes a shortcut for applying each existing presets.
 .sp
-The preset files are named as follows: \fB$HOME/.config/vdu_controls/Preset_<preset_name>.conf\fP
+Any small SVG or PNG can be selected as a preset\(aqs icon.  Monochrome SVG icons that conform to the Plasma color
+conventions will be automatically inverted if the desktop them is changed from dark to light.
 .sp
-Presets are saved in INI\-file format for ease of editing.  Each preset file contains a section for each connected
-VDU, something similar to the following example:
+Each preset is stored in the application config directory as \fB$HOME/.config/vdu_controls/Preset_<preset_name>.conf\fP\&.
+Preset files are saved in INI\-file format for ease of editing.  Each preset file contains a section for each connected
+VDU, for example:
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -296,7 +307,7 @@ icon = /usr/share/icons/breeze/status/16/cloudstatus.svg
 brightness = 50
 osd\-language = 02
 
-[LG_HDR_4K_Display2]
+[LG_HDR_4K_89765]
 brightness = 13
 audio\-speaker\-volume = 16
 input\-source = 0f
@@ -305,9 +316,8 @@ input\-source = 0f
 .UNINDENT
 .UNINDENT
 .sp
-Whe the GUI is used to create a preset file it saves a value for every VDU and every visible control.  A preset
-file need not include all VDu\(aqs or settings, it can be manually edited to remove VDU\(aqs and settings that aren\(aqt
-desired.
+When the GUI is used to create a preset file, your can select which controls to save.  For example, you
+might create a preset that includes only the brightness, but the contrast or audio volume.
 .SS Presets \- remote control
 .sp
 UNIX/Linux signals may be used to instruct a running \fBvdu_controls\fP to invoke a preset.  This feature is

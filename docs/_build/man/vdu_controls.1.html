@@ -1,8 +1,7 @@
-<h1 id="vdu_controls-a-qt-gui-wrapper-for-ddcutil">vdu_controls: A Qt
-GUI wrapper for ddcutil</h1>
-<p>A GUI for controlling connected <em>Visual Display Units</em>
-(<em>VDU</em>’s) (also known as <em>displays</em>, or
-<em>monitors</em>).</p>
+<h1 id="vdu_controls-a-vdu-control-panel">vdu_controls: A VDU control
+Panel</h1>
+<p>A control panel for external monitors (<em>Visual Display
+Units</em>).</p>
 <h1 id="usage">Usage:</h1>
 <pre><code>    vdu_controls [-h]
                  [--about] [--detailed-help]
@@ -33,53 +32,62 @@ GUI wrapper for ddcutil</h1>
   --install             installs the vdu_controls in the current user&#39;s path and desktop application menu.
   --uninstall           uninstalls the vdu_controls application menu file and script for the current user.</code></pre>
 <h1 id="description">Description</h1>
-<p><code>vdu_controls</code> is a virtual control panel for physically
-connected VDU’s. It displays a set of controls for each DVI/DP/HDMI/USB
-connected VDU and uses the <code>ddcutil</code> command line utility to
-issue <em>Display Data Channel</em> (<em>DDC</em>) <em>Virtual Control
-Panel</em> (<em>VCP</em>) commands to each of them. The intent is not to
-provide a comprehensive set of controls but rather to provide a simple
-panel with a selection of essential controls for the desktop.</p>
+<p><code>vdu_controls</code> is a virtual control panel for externally
+connected VDU’s. The application detects DVI, DP, HDMI, or USB connected
+VDU’s. It provides controls for settings such as brightness and
+contrast.</p>
+<p>The application interacts with VDU’s via the VESA <em>Display Data
+Channel</em> (<em>DDC</em>) <em>Virtual Control Panel</em>
+(<em>VCP</em>) commands set. DDC VCP interactions are mediated by the
+<code>ddcutil</code> command line utility. <code>Ddcutil</code> provides
+a robust interface that is tolerant of the vagaries of the many OEM DDC
+implementations.</p>
+<p>By default, <code>vdu_controls</code> offers a subset of controls
+including brightness, contrast and audio controls. Additional controls
+can be enabled via the <code>Settings</code> dialog.</p>
+<p><code>vdu_controls</code> may optionally run as an entry in the
+system tray of KDE, Deepin, and GNOME. The UI automatically adapts to
+the quirks of the different tray implementations.</p>
+<p>Named <code>Preset</code> configurations can be saved for later
+recalled. For example, a user could create presets for night, day,
+photography, movies, and so forth.</p>
+<p>The UI’s look-and-feel dynamically adjusts to the desktop theme.
+Colors and icons automatically reconfigure without the need for a
+restart when changing between light and dark themes.</p>
 <p>A context menu containing this help is available by pressing the
-right-mouse button either in the main user interface or on the
-system-tray icon. <code>vdu_controls</code> may be run as a system-tray
-entry by using the <code>--system-tray</code> option.</p>
-<p>By default, <code>vdu_controls</code> offers a subset of possible
-controls including brightness and contrast. Additional controls can be
-added by using the <code>--enable-vcp-code</code> option to add any
-other codes supported by <code>ddcutil</code>. The full list of VCP
-codes supported by <code>ddcutil</code> can be listed by running
-<code>ddcutil vcpinfo --verbose</code>. For example, the VCP code 66 is
-listed as an on/off control for an ambient light sensor, this can be
-enabled for <code>vdu_controls</code> by passing
-<code>--enable-vcp-code 66</code> (the control will only appear in the
-user interface if the VDU reports that it has that capability).</p>
+right-mouse button either in the main control panel or on the
+system-tray icon. The context menu is also available via a
+hamburger-menu item on the bottom right of the main control panel.</p>
 <p>Builtin laptop displays normally don’t implement DDC and those
 displays are not supported, but a laptop’s externally connected VDU’s
 are likely to be controllable.</p>
 <p>Some controls change the number of connected devices (for example,
 some VDU’s support a power-off command). If such controls are used,
-<code>vdu_controls</code> will detect the change and will restart itself
-to reconfigure the controls for the new situation (for example, DDC VDU
-2 may now be DD VDU 1). Similarly, if you physically unplug monitor, the
-same thing will happen.</p>
+<code>vdu_controls</code> will detect the change and will reconfigure
+the controls for the new situation (for example, DDC VDU 2 may now be DD
+VDU 1). If you change settings independently of
+<code>vdu_controls</code>, for example, by using a VDU’s physical
+controls, the <code>vdu_controls</code> UI includes a refresh button to
+force it to assess the new configuration.</p>
 <p>Note that some VDU settings may disable or enable other settings. For
 example, setting a monitor to a specific picture-profile might result in
 the contrast-control being disabled, but <code>vdu_controls</code> will
 not be aware of the restriction resulting in its contrast-control erring
 or appearing to do nothing.</p>
 <h1 id="configuration">Configuration</h1>
-<p>Configuration is supplied via command line parameters and
-config-files. The command line provides an immediate way to temporarily
-alter the behaviour of the application. The config files provide a more
-comprehensive and permanent solution for altering the application’s
-configuration.</p>
+<p>Configuration changes can be made via the <code>Settings</code>
+dialog or via command line parameters (or by editing the config-files
+directly). The command line provides an immediate way to temporarily
+alter the behaviour of the application. The Settings-Dialog and config
+files provide a more comprehensive and permanent solution for altering
+the application’s configuration.</p>
 <h2 id="settings-menu-and-config-files">Settings Menu and Config
 files</h2>
-<p>The right-mouse context-menu <code>Settings</code> item can be used
-to customise the application by writing to a set of config files. The
-<code>Settings</code> item will feature a tab for editing each config
-file. The config files are named according to the following scheme:</p>
+<p>The right-mouse - context-menu - <code>Settings</code> accesses the
+Settings dialog which can be used to customise the application by
+writing to a set of config files. The <code>Settings</code> dialog
+features a tab for editing a config file specific to each VDU. The
+config files are named according to the following scheme:</p>
 <ul>
 <li>Application wide default config:
 <code>$HOME/.config/vdu_controls/vdu_controls.conf</code></li>
@@ -178,17 +186,17 @@ settings match a preset, the preset’s name will show in the window-title
 and tray tooltip, the preset’s icon will overlay the normal tray
 icon.</p>
 <p>The <code>Presets</code> item in right-mouse
-<code>context-menu</code> will bring up a dialog for managing and
-applying presets. The <code>context-menu</code> also includes a shortcut
-for applying each existing presets. Any small SVG or PNG can be selected
-as a preset’s icon. Monochrome SVG icons that conform to the Plasma
-color conventions will be automatically inverted if the desktop them is
-changed from dark to light.</p>
-<p>The preset files are named as follows:
-<code>$HOME/.config/vdu_controls/Preset_&lt;preset_name&gt;.conf</code></p>
-<p>Presets are saved in INI-file format for ease of editing. Each preset
-file contains a section for each connected VDU, something similar to the
-following example::</p>
+<code>context-menu</code> will bring up a <code>Presets</code> dialog
+for managing and applying presets. The <code>context-menu</code> also
+includes a shortcut for applying each existing presets.</p>
+<p>Any small SVG or PNG can be selected as a preset’s icon. Monochrome
+SVG icons that conform to the Plasma color conventions will be
+automatically inverted if the desktop them is changed from dark to
+light.</p>
+<p>Each preset is stored in the application config directory as
+<code>$HOME/.config/vdu_controls/Preset_&lt;preset_name&gt;.conf</code>.
+Preset files are saved in INI-file format for ease of editing. Each
+preset file contains a section for each connected VDU, for example::</p>
 <pre><code>[preset]
 icon = /usr/share/icons/breeze/status/16/cloudstatus.svg
 
@@ -196,14 +204,13 @@ icon = /usr/share/icons/breeze/status/16/cloudstatus.svg
 brightness = 50
 osd-language = 02
 
-[LG_HDR_4K_Display2]
+[LG_HDR_4K_89765]
 brightness = 13
 audio-speaker-volume = 16
 input-source = 0f</code></pre>
-<p>Whe the GUI is used to create a preset file it saves a value for
-every VDU and every visible control. A preset file need not include all
-VDu’s or settings, it can be manually edited to remove VDU’s and
-settings that aren’t desired.</p>
+<p>When the GUI is used to create a preset file, your can select which
+controls to save. For example, you might create a preset that includes
+only the brightness, but the contrast or audio volume.</p>
 <h2 id="presets---remote-control">Presets - remote control</h2>
 <p>UNIX/Linux signals may be used to instruct a running
 <code>vdu_controls</code> to invoke a preset. This feature is provided
