@@ -1,24 +1,27 @@
 vdu_controls - a GUI wrapper for ddcutil
 ========================================
 
-A GUI for controlling connected *Visual Display Units* (*VDU*'s) (also known as *displays*, or *monitors*).
+A control panel for external monitors (*Visual Display Units*).
 
 Description
 -----------
 
-``vdu_controls`` is a virtual control panel for physically connected VDU's.  It displays a set of controls for
-each  DVI/DP/HDMI/USB connected VDU and uses the ``ddcutil`` command line utility to issue *Display Data Channel*
-(*DDC*) *Virtual Control Panel*  (*VCP*) commands to each of them.
+``vdu_controls`` is a virtual control panel for externally connected VDU's.  The application detects 
+DVI, DP, HDMI, or USB connected VDU's.  It provides controls for settings such as brightness and contrast.
 
-By default ``vdu_controls`` offers a subset of the possible controls including brightness, and contrast.  Additional 
-controls can be enabled via the ``--enable-vcp-code`` option.  ``vdu_controls`` may optionally run as an entry in the 
-system tray.  
+The application interacts with VDU's via the VESA *Display Data Channel* (*DDC*) *Virtual Control Panel*  (*VCP*) 
+commands set.  DDC VCP interactions are mediated by the ``ddcutil`` command line utility.  ``Ddcutil`` provides
+a robust interface that is tolerant of the vagaries of the many OEM DDC implementations.
 
-User named ``Preset`` configurations can be saved and recalled, for example, a user could create
-presets for night, day, sunny and so forth.
+By default ``vdu_controls`` offers a subset of controls including brightness, contrast and audio controls.  Additional
+controls can be enabled via the ``Settings`` dialog.  ``vdu_controls`` may optionally run as an entry in the
+system tray.
 
-The UI's look-and-feel dynamically adjusts to the desktop theme and desktop environment (light-theme, dark-theme, 
-KDE, Deepin, GNOME, ...).
+Named ``Preset`` configurations can be saved for later recalled. For example, a user could create
+presets for night, day, photography, movies, and so forth.
+
+The UI's look-and-feel dynamically adjusts to the desktop theme and desktop environment: light-theme,
+dark-theme, KDE, Deepin, GNOME, and others.
 
 ![Default](screen-shots/Screenshot_Large-330.png)  ![Custom](screen-shots/Screenshot_Small-227.png) 
 ![Custom](screen-shots/Screenshot_tray-200.png) ![Custom](screen-shots/Screenshot_settings-300.png)
@@ -139,8 +142,8 @@ Both brief help and detailed help can also be accessed via the command line:
 Whether run from the desktop application-menu or run from the command line, ``vdu-controls`` behaviour can be altered
 in a number of ways:
 
-* Command line options.
 * The `Settings` item in the context-menu.
+* Command line options.
 * Configurations files in `$HOME/.config/vdu_controls/`
 
 See the context-menu or the  [man page](https://htmlpreview.github.io/?https://raw.githubusercontent.com/digitaltrails/vdu_controls/master/docs/_build/man/vdu_controls.1.html)
