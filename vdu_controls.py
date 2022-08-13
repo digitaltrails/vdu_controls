@@ -3133,8 +3133,10 @@ class MainWindow(QMainWindow):
             # Call on initialisation and whenever the number of connected VDU's changes.
             global log_to_syslog
             log_to_syslog = main_config.is_syslog_enabled()
+            existing_width = 0
             if self.main_control_panel:
                 # Remove any existing control panel - which may now be incorrect for the config.
+                self.main_control_panel.width()
                 self.main_control_panel.refresh_finished.disconnect(refresh_finished)
                 self.main_control_panel.vdu_detected.disconnect(vdu_detected_action)
                 self.main_control_panel.vdu_setting_changed.disconnect(vdu_settings_changed_action)
@@ -3149,7 +3151,7 @@ class MainWindow(QMainWindow):
             # Then initialise the control panel display
             self.main_control_panel.initialise_control_panels(self.app_context_menu, main_config, session_startup)
             self.setCentralWidget(self.main_control_panel)
-            self.adjustSize()
+            self.setMinimumWidth(existing_width)
             self.display_active_preset(None)
 
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
