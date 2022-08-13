@@ -1,5 +1,5 @@
-vdu_controls - a monitor control panel
-======================================
+vdu_controls - a DDC control panel for monitors
+===============================================
 
 A control panel for external monitors (*Visual Display Units*).
 

@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 """
-vdu_controls: monitor control Panel
-===================================
+vdu_controls - a DDC control panel for monitors
+===============================================
 
 A control panel for external monitors (*Visual Display Units*).
 
