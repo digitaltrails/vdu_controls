@@ -53,8 +53,8 @@ a robust interface that is tolerant of the vagaries of the many OEM DDC implemen
 By default, ``vdu_controls`` offers a subset of controls including brightness, contrast and audio controls.  Additional
 controls can be enabled via the ``Settings`` dialog.
 
-``vdu_controls`` may optionally run as an entry in the system tray of KDE, Deepin, and GNOME. The UI automatically
-adapts to the quirks of the different tray implementations.
+``vdu_controls`` may optionally run as an entry in the system tray of KDE, Deepin, GNOME, and Xfce (and possibly
+others). The UI attempts to adapt to the quirks of the different tray implementations.
 
 Named ``Preset`` configurations can be saved for later recalled. For example, a user could create
 presets for night, day, photography, movies, and so forth.
@@ -307,7 +307,13 @@ Software::
 
 Kernel Modules::
 
+        modprobe i2c_dev
         lsmod | grep i2c_dev
+
+Get ddcutil working first. Check that the detect command detects your VDU's without issuing any
+errors:
+
+        ddcutil detect
 
 Read ddcutil readme concerning config of i2c_dev with nvidia GPU's. Detailed ddcutil info at https://www.ddcutil.com/
 
@@ -1329,23 +1335,37 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
         self.change_callback = change_callback
         for config in [default_config, ] + vdu_config_list:
             tab = SettingsEditorTab(self, config, change_callback)
+            tab.save_all_clicked.connect(self.save_all)
             tabs.addTab(tab, config.get_config_name())
             self.editors.append(tab)
         # .show() is non-modal, .exec() is modal
         self.make_visible()
 
-    def closeEvent(self, event) -> None:
+    def save_all(self, nothing_to_save_warning: bool = True):
+        needs_saving_count = 0
         for editor in self.editors[1:]:
             if editor.is_unsaved():
+                needs_saving_count += 1
                 editor.save(cancel=QMessageBox.Ignore)
         # Do the main config last - it may cause a restart of the app
         if self.editors[0].is_unsaved():
+            needs_saving_count += 1
             self.editors[0].save(cancel=QMessageBox.Ignore)
+        if nothing_to_save_warning and needs_saving_count == 0:
+            alert = QMessageBox()
+            alert.setIcon(QMessageBox.Critical)
+            alert.setText(translate("Nothing needs saving."))
+            alert.exec()
+
+    def closeEvent(self, event) -> None:
+        self.save_all(nothing_to_save_warning=False)
         super().closeEvent(event)
 
 
 class SettingsEditorTab(QWidget):
     """A tab corresponding to a settings file, generates UI widgets for each tab based on what's in the config. """
+
+    save_all_clicked = pyqtSignal()
 
     def __init__(self, parent: QWidget, vdu_config: VduControlsConfig, change_callback: callable) -> None:
         super().__init__()
@@ -1403,6 +1423,11 @@ class SettingsEditorTab(QWidget):
         save_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), translate("Save {}").format(vdu_config.config_name))
         save_button.clicked.connect(save_clicked)
         button_layout.addWidget(save_button, 0, Qt.AlignBottom | Qt.AlignLeft)
+
+        save_all_button = QPushButton(si(self, QStyle.SP_DriveFDIcon),
+                                      translate("Save All").format(vdu_config.config_name))
+        save_all_button.clicked.connect(self.save_all_clicked)
+        button_layout.addWidget(save_all_button, 0, Qt.AlignBottom | Qt.AlignLeft)
 
         quit_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), translate("Close"))
         quit_button.clicked.connect(parent.close)
@@ -2112,7 +2137,8 @@ class VduControlsMainPanel(QWidget):
         self.previously_detected_vdus = []
         self.detected_vdus = []
 
-    def initialise_control_panels(self, app_context_menu: ContextMenu, main_config: VduControlsConfig, session_startup: bool):
+    def initialise_control_panels(self, app_context_menu: ContextMenu, main_config: VduControlsConfig,
+                                  session_startup: bool):
         if self.layout():
             # Already laid out, must be responding to a configuration change requiring re-layout.
             # Remove all exisiting widgets.
@@ -2227,7 +2253,7 @@ class VduControlsMainPanel(QWidget):
                 "Is ddcutil installed?  Is i2c installed and configured?\n\n"
                 "Run vdu_controls --debug in a console and check for additional messages.\n\n"
                 f"{('Most recent ddcutil error: ' + str(ddcutil_problem)) if ddcutil_problem else ''}"
-                ))
+            ))
             alert.setIcon(QMessageBox.Critical)
             alert.exec()
             sys.exit()
@@ -2477,6 +2503,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
 
     no_icon_icon_number = QStyle.SP_ComputerIcon
 
+    edit_save_needed = pyqtSignal()
+
     @staticmethod
     def invoke(main_window: 'MainWindow') -> None:
         if PresetsDialog.exists():
@@ -2522,6 +2550,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
 
         def restore_preset(preset: Preset) -> None:
             self.main_window.restore_preset(preset)
+            self.preset_name_edit.setText('')
 
         def save_preset(preset: Preset) -> None:
             preset_path = get_config_path(proper_name('Preset', preset.name))
@@ -2534,6 +2563,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 rc = save_message.exec()
                 if rc == QMessageBox.Cancel:
                     return
+            self.preset_name_edit.setText('')
             self.main_window.save_preset(preset)
 
         def delete_preset(preset: Preset, target_widget: QWidget = None) -> None:
@@ -2549,12 +2579,15 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             self.main_window.delete_preset(preset)
             presets_layout.removeWidget(target_widget)
             target_widget.deleteLater()
+            self.preset_name_edit.setText('')
             presets_panel.adjustSize()
             presets_panel.repaint()
 
+        self.preset_name_edit = QLineEdit()
+
         def edit_preset(preset: Preset) -> None:
             self.main_window.restore_preset(preset)
-            preset_name_edit.setText(preset.name)
+            self.preset_name_edit.setText(preset.name)
             choose_icon_button.set_preset(preset)
             for key, item in self.content_controls.items():
                 item.setChecked(preset.preset_ini.has_option(key[0], key[1]))
@@ -2578,36 +2611,36 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         choose_icon_button = PresetChooseIconButton()
         edit_preset_layout.addWidget(choose_icon_button)
 
-        preset_name_edit = QLineEdit()
-        preset_name_edit.setToolTip(translate('Enter a new preset name.'))
-        preset_name_edit.setClearButtonEnabled(True)
+        self.preset_name_edit.setToolTip(translate('Enter a new preset name.'))
+        self.preset_name_edit.setClearButtonEnabled(True)
 
         def change_edit_group_title():
-            changed_text = preset_name_edit.text()
+            changed_text = self.preset_name_edit.text()
             if changed_text.strip() == "":
-                #choose_icon_button.set_preset(None)
+                # choose_icon_button.set_preset(None)
                 content_controls_widget.setDisabled(True)
-                save_button.setDisabled(True)
+                edit_save_button.setDisabled(True)
             else:
                 already_exists = self.find_preset_widget(changed_text)
-                edit_group_title.setText(translate("Edit Preset Options") if already_exists else translate("New Preset"))
+                edit_group_title.setText(
+                    translate("Edit Preset Options") if already_exists else translate("New Preset"))
                 content_controls_widget.setDisabled(False)
-                save_button.setDisabled(False)
+                edit_save_button.setDisabled(False)
 
-        preset_name_edit.textChanged.connect(change_edit_group_title)
+        self.preset_name_edit.textChanged.connect(change_edit_group_title)
 
-        edit_preset_layout.addWidget(preset_name_edit)
+        edit_preset_layout.addWidget(self.preset_name_edit)
 
-        save_button = QPushButton()  # translate('Add'))  # QPushButton(' \u2003')
-        save_button.setIcon(si(self, QStyle.SP_DriveFDIcon))
-        save_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
+        edit_save_button = QPushButton()  # translate('Add'))  # QPushButton(' \u2003')
+        edit_save_button.setIcon(si(self, QStyle.SP_DriveFDIcon))
+        edit_save_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
         # add_button.setStyleSheet('QPushButton { border: none; margin: 0px; padding: 0px;}')
-        save_button.setFlat(True)
-        save_button.setToolTip(translate('Save current VDU settings to a new preset.'))
-        edit_preset_layout.addWidget(save_button)
+        edit_save_button.setFlat(True)
+        edit_save_button.setToolTip(translate('Save current VDU settings to a new preset.'))
+        edit_preset_layout.addWidget(edit_save_button)
 
         def save_edited_preset() -> None:
-            preset_name = preset_name_edit.text().strip()
+            preset_name = self.preset_name_edit.text().strip()
             if preset_name == '':
                 return
             existing_preset_widget = self.find_preset_widget(preset_name)
@@ -2637,11 +2670,12 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 self.make_visible()
             else:
                 presets_layout.addWidget(new_preset_widget)
-            preset_name_edit.setText('')
+            self.preset_name_edit.setText('')
 
             main_window.display_active_preset(None)
 
-        save_button.clicked.connect(save_edited_preset)
+        edit_save_button.clicked.connect(save_edited_preset)
+        self.edit_save_needed.connect(save_edited_preset)
 
         edit_group_widget = QGroupBox()
         edit_group_widget.setFlat(True)
@@ -2663,7 +2697,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
 
         choose_icon_button.set_preset(None)
         content_controls_widget.setDisabled(True)
-        save_button.setDisabled(True)
+        edit_save_button.setDisabled(True)
         layout.addWidget(button_box)
         # .show() is non-modal, .exec() is modal
         self.make_visible()
@@ -2754,6 +2788,18 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         event.accept()
         return True
 
+    def closeEvent(self, event) -> None:
+        if self.preset_name_edit.text().strip() != '':
+            alert = QMessageBox()
+            alert.setIcon(QMessageBox.Question)
+            alert.setText("Save current edit?")
+            alert.setStandardButtons(QMessageBox.Save|QMessageBox.Ignore)
+            if alert.exec() == QMessageBox.Save:
+                self.edit_save_needed.emit()
+            else:
+                self.preset_name_edit.setText('')
+
+        super().closeEvent(event)
 
 def exception_handler(e_type, e_value, e_traceback):
     """Overarching error handler in case something unexpected happens."""

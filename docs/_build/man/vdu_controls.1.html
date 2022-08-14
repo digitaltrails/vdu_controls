@@ -46,8 +46,9 @@ implementations.</p>
 including brightness, contrast and audio controls. Additional controls
 can be enabled via the <code>Settings</code> dialog.</p>
 <p><code>vdu_controls</code> may optionally run as an entry in the
-system tray of KDE, Deepin, and GNOME. The UI automatically adapts to
-the quirks of the different tray implementations.</p>
+system tray of KDE, Deepin, GNOME, and Xfce (and possibly others). The
+UI attempts to adapt to the quirks of the different tray
+implementations.</p>
 <p>Named <code>Preset</code> configurations can be saved for later
 recalled. For example, a user could create presets for night, day,
 photography, movies, and so forth.</p>
@@ -295,7 +296,11 @@ to disambiguate the noun/verb duality of “display” and “monitor”</p>
 <pre><code>    zypper install python38-QtPy
     zypper install ddcutil</code></pre>
 <p>Kernel Modules::</p>
-<pre><code>    lsmod | grep i2c_dev</code></pre>
+<pre><code>    modprobe i2c_dev
+    lsmod | grep i2c_dev</code></pre>
+<p>Get ddcutil working first. Check that the detect command detects your
+VDU’s without issuing any errors:</p>
+<pre><code>    ddcutil detect</code></pre>
 <p>Read ddcutil readme concerning config of i2c_dev with nvidia GPU’s.
 Detailed ddcutil info at https://www.ddcutil.com/</p>
 <h1 id="vdu_controls-copyright-c-2021-michael-hamilton">vdu_controls
