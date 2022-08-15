@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import sys
+from pathlib import Path
 
 """
 ddcutil_simulator
@@ -32,93 +33,39 @@ with this program. If not, see <https://www.gnu.org/licenses/>.
 **Contact:**  m i c h a e l   @   a c t r i x   .   g e n   .   n z
 """
 
-DETECT_RESULT = """Display 1
-   I2C bus:  /dev/i2c-0
-   EDID synopsis:
-      Mfg id:               HWP
-      Model:                HP ZR24w
-      Product code:         10346
-      Serial number:        CNT00811J6
-      Binary serial number: 12345009 (0x00BC5EB1)
-      Manufacture year:     2010,  Week: 8
-   VCP version:         2.2
+BASE_PATH = Path.home()
 
-Display 2
-   I2C bus:  /dev/i2c-3
-   EDID synopsis:
-      Mfg id:               GSM
-      Model:                LG HDR 4K
-      Product code:         30471
-      Serial number:        
-      Binary serial number: 12345 (0xBC5EB1)
-      Manufacture year:     2019,  Week: 4
-   VCP version:         2.1
-   
-Display 3
-   I2C bus:  /dev/i2c-4
-   EDID synopsis:
-      Mfg id:               GSM
-      Model:                LG HDR 4K
-      Product code:         30471
-      Serial number:        
-      Binary serial number: 12345 (0xBC5EB1)
-      Manufacture year:     2019,  Week: 4
-   VCP version:         2.1
-   
-"""
+ANSWER_LINK = 'answer'
 
-CAPABILITIES_RESULTS = {
-    "1": """Model: ZR24w
-MCCS version: 2.2
-Commands:
-   Op Code: 01 (VCP Request)
-   Op Code: 02 (VCP Response)
-   Op Code: 03 (VCP Set)
-   Op Code: 07 (Timing Request)
-   Op Code: 0C (Save Settings)
-   Op Code: F3 (Capabilities Request)
-VCP Features:
-   Feature: 10 (Brightness)
-   Feature: 12 (Contrast)
-   Feature: FF (Manufacturer specific feature)
-""",
-    "2": """Model: Not specified
-MCCS version: 2.1
-VCP Features:
-   Feature: 10 (Brightness)
-   Feature: 12 (Contrast)
-   Feature: FF (Manufacturer specific feature)
-""",
-    "3": """Model: Not specified
-MCCS version: 2.1
-VCP Features:
-   Feature: 10 (Brightness)
-   Feature: 12 (Contrast)
-   Feature: FF (Manufacturer specific feature)
-""",
-}
-
-GETVCP_RESULTS = {
-    "1": {"10": "VCP 10 C 90 100", "12": "VCP 12 C 100 100"},
-    "2": {"10": "VCP 10 C 13 100", "12": "VCP 12 C 60 100"},
-    "3": {"10": "VCP 10 C 10 100", "12": "VCP 12 C 70 100"}
-}
+SIMULATOR_DATA_DIR = 'ddcutil_simulator_data'
 
 
 def main():
+    answer = ''
+    display_num = 0
+
     arg1 = sys.argv[1]
 
     if "--display" in sys.argv:
         display_num = sys.argv[sys.argv.index("--display") + 1]
+
     if "detect" in sys.argv:
-        print(DETECT_RESULT)
+        answer_path = BASE_PATH / SIMULATOR_DATA_DIR / ANSWER_LINK / 'detect'
+        with open(answer_path, 'r') as answer_file:
+            answer = answer_file.read()
     elif "capabilities" in sys.argv:
-        print(CAPABILITIES_RESULTS[display_num])
+        answer_path = BASE_PATH / SIMULATOR_DATA_DIR / ANSWER_LINK / f'capabilities_{display_num}'
+        with open(answer_path, 'r') as answer_file:
+            answer = answer_file.read()
     elif "setvcp" in sys.argv:
         pass
     elif "getvcp" in sys.argv:
-        code = sys.argv[sys.argv.index("getvcp") + 1]
-        print(GETVCP_RESULTS[display_num][code])
+        vcp_code = sys.argv[sys.argv.index("getvcp") + 1]
+        answer_path = BASE_PATH / SIMULATOR_DATA_DIR / ANSWER_LINK / f'getvcp_{display_num}_{vcp_code}'
+        with open(answer_path, 'r') as answer_file:
+            answer = answer_file.read()
+
+    print(answer)
 
 
 if __name__ == '__main__':

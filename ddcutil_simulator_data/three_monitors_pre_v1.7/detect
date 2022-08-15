@@ -1,0 +1,12 @@
+Display 1
+   I2C bus:  /dev/i2c-0
+   Monitor:             HWP:HP ZR24w:ABC0011111
+
+Display 2
+   I2C bus:  /dev/i2c-3
+   Monitor:             GSM:LG HDR 4K:
+
+Display 3
+   I2C bus:  /dev/i2c-4
+   Monitor:             GSM:LG HDR 4K:
+
