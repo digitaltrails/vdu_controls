@@ -349,7 +349,6 @@ import io
 import os
 import pickle
 import re
-import shutil
 import signal
 import socket
 import stat
@@ -915,6 +914,71 @@ def get_config_path(config_name: str) -> Path:
     return CONFIG_DIR_PATH.joinpath(config_name + '.conf')
 
 
+class ConfigIni(configparser.ConfigParser):
+    """ConfigParser is a little messy and its classname is a bit misleading, wrap it and bend it to our needs."""
+
+    METADATA_SECTION = "metadata"
+    METADATA_VERSION_OPTION = "version"
+    METADATA_TIMESTAMP_OPTION = "timestamp"
+
+    def __init__(self):
+        super().__init__()
+        if not self.has_section(ConfigIni.METADATA_SECTION):
+            self.add_section(ConfigIni.METADATA_SECTION)
+
+    def data_sections(self) -> List:
+        """Section other than metadata and DEFAULT - real data."""
+        return [s for s in self.sections() if s != configparser.DEFAULTSECT and s != ConfigIni.METADATA_SECTION]
+
+    def get_version(self) -> Tuple:
+        if self.has_option(ConfigIni.METADATA_SECTION, ConfigIni.METADATA_VERSION_OPTION):
+            version = self[ConfigIni.METADATA_SECTION][ConfigIni.METADATA_VERSION_OPTION]
+            try:
+                return *[int(i) for i in version.split('.')],
+            except ValueError as ve:
+                log_error(f"Illegal version number {version} should be i.j.k where i, j and k are integers.")
+        return 1, 6, 0
+
+    def is_version_ge(self, major, minor, release):
+        current_major, current_minor, current_release = self.get_version()
+        if current_major < major:
+            return False
+        if current_minor < minor:
+            return False
+        if current_release < release:
+            return False
+        return True
+
+    def save(self, config_path, backup_dir_name: str | None = None) -> None:
+        if not config_path.parent.is_dir():
+            os.makedirs(config_path.parent)
+        if backup_dir_name is not None and config_path.exists():
+            backup_dir = config_path.parent / backup_dir_name
+            backup_dir.mkdir(exist_ok=True)
+            file_version = 0
+            backup_path = backup_dir / config_path.name
+            while backup_path.exists():
+                file_version += 1
+                backup_path = backup_path.with_suffix(f".conf.{file_version}")
+            config_path.rename(backup_path)
+            log_info(f"Backed up old config as {backup_path.as_posix()}")
+        with open(config_path, 'w') as config_file:
+            self[ConfigIni.METADATA_SECTION][ConfigIni.METADATA_VERSION_OPTION] = VDU_CONTROLS_VERSION
+            self[ConfigIni.METADATA_SECTION][ConfigIni.METADATA_TIMESTAMP_OPTION] = str(datetime.now())
+            self.write(config_file)
+        log_info(f"Wrote config to {config_path.as_posix()}")
+
+    def duplicate(self):
+        new_ini = ConfigIni()
+        for section in self:
+            if section != configparser.DEFAULTSECT and section != ConfigIni.METADATA_SECTION:
+                new_ini.add_section(section)
+            for option in self[section]:
+                log_info(f"{section} {option}")
+                new_ini[section][option] = self[section][option]
+        return new_ini
+
+
 class VduControlsConfig:
     """
     A vdu_controls config that can be read or written from INI style files by the standard configparser package.
@@ -923,7 +987,7 @@ class VduControlsConfig:
 
     def __init__(self, config_name: str, default_enabled_vcp_codes: List = None, include_globals: bool = False) -> None:
         self.config_name = config_name
-        self.ini_content = configparser.ConfigParser()
+        self.ini_content = ConfigIni()
         # augment the configparser with type-info for run-time widget selection (default type is 'boolean')
         self.config_type_map = {
             'enable-vcp-codes': 'csv', 'sleep-multiplier': 'float', 'capabilities-override': 'text'}
@@ -1042,7 +1106,8 @@ class VduControlsConfig:
         self.ini_content['ddcutil-capabilities']['capabilities-override'] = alt_text
 
     def reload(self):
-        for section in list(self.ini_content):
+        log_info(f"Reloading {self.file_path}")
+        for section in list(self.ini_content.data_sections()):
             self.ini_content.remove_section(section)
         self.parse_file(self.file_path)
 
@@ -1059,11 +1124,8 @@ class VduControlsConfig:
             if not overwrite:
                 log_error(f"{config_path.as_posix()} exists, remove the file if you really want to replace it.")
                 return
-        log_warning(f"creating new config file {config_path.as_posix()}")
-        if not config_path.parent.is_dir():
-            os.makedirs(config_path.parent)
-        with open(config_path, 'w') as config_file:
-            self.ini_content.write(config_file)
+        log_info(f"creating new config file {config_path.as_posix()}")
+        self.ini_content.save(config_path)
 
     def parse_args(self, args=None) -> argparse.Namespace:
         """Parse command line arguments and integrate the results into this config"""
@@ -1186,7 +1248,7 @@ class VduController(QObject):
         self.vdu_model_id = proper_name(vdu_model_name.strip())
         self.capabilities_text = None
         self.config = None
-        self.convert_to_v1_7_check()
+        self.convert_to_v1_7_check(default_config)
         for config_name in (self.vdu_model_and_serial_id, self.pre1_7_id, self.vdu_model_id):
             config_path = get_config_path(config_name)
             log_info("checking for config file '" + config_path.as_posix() + "'")
@@ -1285,7 +1347,7 @@ class VduController(QObject):
                 feature_map[vcp_code] = capability
         return feature_map
 
-    def convert_to_v1_7_check(self):
+    def convert_to_v1_7_check(self, default_config: VduControlsConfig):
         old_config_path = get_config_path(self.pre1_7_id)
         if old_config_path.exists():
             new_config_path = get_config_path(self.vdu_model_and_serial_id)
@@ -1294,24 +1356,20 @@ class VduController(QObject):
                     log_warning(f"Skipping conversion of {old_config_path.as_posix()} to v1.7+ "
                                 f" '{new_config_path.as_posix()} already exists")
             else:
-                shutil.copy(old_config_path, new_config_path)
-                backup_path = old_config_path.parent / 'pre-v1.7' / old_config_path.name
-                backup_path.parent.mkdir(exist_ok=True)
-                file_version = 0
-                while backup_path.exists():
-                    file_version += 1
-                    backup_path = backup_path.with_suffix(f".conf.{file_version}")
-                old_config_path.rename(backup_path)
+                new_config = VduControlsConfig(self.vdu_model_and_serial_id,
+                                               default_enabled_vcp_codes=default_config.get_all_enabled_vcp_codes())
+                new_config.parse_file(old_config_path)
+                new_config.ini_content.save(new_config_path, backup_dir_name='pre-v1.7')
                 log_warning(f"Converted {old_config_path.as_posix()} to v1.7+ "
-                            f" '{new_config_path.as_posix()}")
-                log_info(f"Backed up old config as {backup_path.as_posix()}")
+                            f" {new_config_path.as_posix()}")
+
 
 
 class SettingsEditor(QDialog, DialogSingletonMixin):
     """
     Application Settings Editor, edits a default global settings file, and a settings file for each VDU.
     The files are in INI format.  Internally the settings are VduControlsConfig wrappers around
-    the standard class configparser.ConfigParser.
+    the standard class ConfigIni.
     """
 
     @staticmethod
@@ -1376,17 +1434,14 @@ class SettingsEditorTab(QWidget):
         self.config_path = get_config_path(vdu_config.config_name)
         self.ini_before = vdu_config.ini_content
         self.change_callback = change_callback
-        copy = pickle.dumps(self.ini_before)
-        self.ini_editable = pickle.loads(copy)
+        self.ini_editable = self.ini_before.duplicate()
         self.field_list = []
 
         def field(widget: SettingsEditor.SettingsEditorFieldBase) -> QWidget:
             self.field_list.append(widget)
             return widget
 
-        for section in self.ini_editable:
-            if section == 'DEFAULT':
-                continue
+        for section in self.ini_editable.data_sections():
             editor_layout.addWidget(QLabel('<b>' + section.replace('-', ' ') + '</b>'))
             booleans_panel = QWidget()
             booleans_grid = QGridLayout()
@@ -1409,12 +1464,11 @@ class SettingsEditorTab(QWidget):
             if self.is_unsaved():
                 self.save(cancel=QMessageBox.Cancel)
             else:
-                save_message = QMessageBox()
-                message = translate('No unsaved changes for {}.').format(vdu_config.config_name)
-                save_message.setText(message)
-                save_message.setIcon(QMessageBox.Critical)
-                save_message.setStandardButtons(QMessageBox.Ok)
-                save_message.exec()
+                decline_save_alert = QMessageBox()
+                decline_save_alert.setText(translate('No unsaved changes for {}.').format(vdu_config.config_name))
+                decline_save_alert.setIcon(QMessageBox.Critical)
+                decline_save_alert.setStandardButtons(QMessageBox.Ok)
+                decline_save_alert.exec()
 
         buttons_widget = QWidget()
         button_layout = QHBoxLayout()
@@ -1436,21 +1490,17 @@ class SettingsEditorTab(QWidget):
         editor_layout.addWidget(buttons_widget)
 
     def save(self, cancel: int = QMessageBox.Close) -> None:
-        if not self.config_path.parent.is_dir():
-            os.makedirs(self.config_path.parent)
         if self.is_unsaved():
-            save_message = QMessageBox()
-            message = translate('Overwrite existing {}?' if self.config_path.exists() else "Create new {}"
+            confirmation = QMessageBox()
+            message = translate('Update existing {}?' if self.config_path.exists() else "Create new {}"
                                 ).format(self.config_path.as_posix())
-            save_message.setText(message)
-            save_message.setIcon(QMessageBox.Question)
-            save_message.setStandardButtons(QMessageBox.Save | cancel)
-            rc = save_message.exec()
-            if rc == QMessageBox.Save:
-                with open(self.config_path, 'w') as config_file:
-                    self.ini_editable.write(config_file)
-                    copy = pickle.dumps(self.ini_editable)
-                    self.ini_before = pickle.loads(copy)
+            confirmation.setText(message)
+            confirmation.setIcon(QMessageBox.Question)
+            confirmation.setStandardButtons(QMessageBox.Save | cancel)
+            if confirmation.exec() == QMessageBox.Save:
+                self.ini_editable.save(self.config_path)
+                copy = pickle.dumps(self.ini_editable)
+                self.ini_before = pickle.loads(copy)
                 # After file is closed...
                 self.change_callback(self.changed)
                 self.changed = {}
@@ -1593,9 +1643,9 @@ def restart_application(reason: str) -> None:
     when the GUI detects the number of monitors has changes.
     """
     alert = QMessageBox()
+    alert.setIcon(QMessageBox.Critical)
     alert.setText(reason)
     alert.setInformativeText(translate('When this message is dismissed, vdu_controls will restart.'))
-    alert.setIcon(QMessageBox.Critical)
     alert.exec()
     QCoreApplication.exit(EXIT_CODE_FOR_RESTART)
 
@@ -1883,7 +1933,7 @@ class VduControlPanel(QWidget):
         """Return the number of VDU controls.  Might be zero if initialization discovered no controllable attributes."""
         return len(self.vcp_controls)
 
-    def copy_state(self, preset_ini: configparser.ConfigParser, update_only) -> None:
+    def copy_state(self, preset_ini: ConfigIni, update_only) -> None:
         vdu_section_name = self.vdu_model.vdu_model_and_serial_id
         if not preset_ini.has_section(vdu_section_name):
             preset_ini.add_section(vdu_section_name)
@@ -1891,14 +1941,14 @@ class VduControlPanel(QWidget):
             if not update_only or preset_ini.has_option(vdu_section_name, control.vcp_capability.property_name()):
                 preset_ini[vdu_section_name][control.vcp_capability.property_name()] = control.current_value
 
-    def restore_state(self, preset_ini: configparser.ConfigParser) -> None:
+    def restore_state(self, preset_ini: ConfigIni) -> None:
         self.restore_state_specific_section_name(preset_ini, self.vdu_model.vdu_model_and_serial_id)
 
-    def restore_state_pre17(self, preset_ini: configparser.ConfigParser):
+    def restore_state_pre17(self, preset_ini: ConfigIni):
         # Provides backward compatibility for pre 1.7 presets where DisplayN was used in the section name.
         self.restore_state_specific_section_name(preset_ini, self.vdu_model.pre1_7_id)
 
-    def restore_state_specific_section_name(self, preset_ini: configparser.ConfigParser, vdu_section: str) -> None:
+    def restore_state_specific_section_name(self, preset_ini: ConfigIni, vdu_section: str) -> None:
         # Provides backward compatibility for pre 1.7 presets where DisplayN was used in the section name.
         log_info(f"Preset restoring {vdu_section}")
         for control in self.vcp_controls:
@@ -1906,7 +1956,7 @@ class VduControlPanel(QWidget):
                 control.current_value = preset_ini[vdu_section][control.vcp_capability.property_name()]
         self.refresh_view()
 
-    def is_preset_active(self, preset_ini: configparser.ConfigParser) -> bool:
+    def is_preset_active(self, preset_ini: ConfigIni) -> bool:
         vdu_section = self.vdu_model.vdu_model_and_serial_id
         for control in self.vcp_controls:
             if control.vcp_capability.property_name() in preset_ini[vdu_section]:
@@ -1923,7 +1973,7 @@ class Preset:
     def __init__(self, name):
         self.name = name
         self.path = get_config_path(proper_name('Preset', name))
-        self.preset_ini = configparser.ConfigParser()
+        self.preset_ini = ConfigIni()
 
     def get_icon_path(self) -> Path:
         if self.preset_ini.has_section("preset"):
@@ -1947,23 +1997,19 @@ class Preset:
             abbreviation = full_acronym[0] if len(full_acronym) == 1 else full_acronym[0] + full_acronym[-1]
             return create_icon_from_text(abbreviation)
 
-    def load(self) -> configparser.ConfigParser:
+    def load(self) -> ConfigIni:
         if self.path.exists():
             log_info(f"reading preset file '{self.path.as_posix()}'")
             preset_text = Path(self.path).read_text()
-            preset_ini = configparser.ConfigParser()
+            preset_ini = ConfigIni()
             preset_ini.read_string(preset_text)
         else:
-            preset_ini = configparser.ConfigParser()
+            preset_ini = ConfigIni()
         self.preset_ini = preset_ini
         return self.preset_ini
 
     def save(self):
-        log_info(f"saving preset file '{self.path.as_posix()}'")
-        if not self.path.parent.is_dir():
-            os.makedirs(self.path.parent)
-        with open(self.path, 'w') as preset_file:
-            self.preset_ini.write(preset_file)
+        self.preset_ini.save(self.path)
 
     def delete(self):
         log_info(f"deleting preset file '{self.path.as_posix()}'")
@@ -2188,20 +2234,20 @@ class VduControlsMainPanel(QWidget):
                                                self.ddcutil)
                 except Exception as e:
                     # Catch any kind of parse related error
-                    alert1 = QMessageBox()
-                    alert1.setText(
+                    error_nocaps = QMessageBox()
+                    error_nocaps.setText(
                         translate('Failed to obtain capabilities for monitor {} {} {}.').format(vdu_id,
                                                                                                 vdu_model_name,
                                                                                                 vdu_serial))
-                    alert1.setInformativeText(translate(
+                    error_nocaps.setInformativeText(translate(
                         'Cannot automatically configure this monitor.'
                         '\n You can choose to:'
                         '\n 1: Retry obtaining the capabilities.'
                         '\n 2: Ignore this monitor.'
                         '\n 3: Apply standard brightness and contrast controls.'))
-                    alert1.setIcon(QMessageBox.Critical)
-                    alert1.setStandardButtons(QMessageBox.Ignore | QMessageBox.Apply | QMessageBox.Retry)
-                    choice = alert1.exec()
+                    error_nocaps.setIcon(QMessageBox.Critical)
+                    error_nocaps.setStandardButtons(QMessageBox.Ignore | QMessageBox.Apply | QMessageBox.Retry)
+                    choice = error_nocaps.exec()
                     if choice == QMessageBox.Ignore:
                         controller = VduController(vdu_id, vdu_model_name, vdu_serial, manufacturer, main_config,
                                                    self.ddcutil, ignore_monitor=True)
@@ -2239,23 +2285,23 @@ class VduControlsMainPanel(QWidget):
                     self.vdu_control_panels.append(vdu_control_panel)
                     layout1.addWidget(vdu_control_panel)
                 elif self.warnings:
-                    alert1 = QMessageBox()
-                    alert1.setText(
+                    warn_omitted = QMessageBox()
+                    warn_omitted.setText(
                         translate('Monitor {} {} lacks any accessible controls.').format(controller.vdu_id,
                                                                                          controller.get_vdu_description()))
-                    alert1.setInformativeText(translate('The monitor will be omitted from the control panel.'))
-                    alert1.setIcon(QMessageBox.Warning)
-                    alert1.exec()
+                    warn_omitted.setInformativeText(translate('The monitor will be omitted from the control panel.'))
+                    warn_omitted.setIcon(QMessageBox.Warning)
+                    warn_omitted.exec()
         if len(self.vdu_control_panels) == 0:
-            alert = QMessageBox()
-            alert.setText(translate('No controllable monitors found, exiting.'))
-            alert.setInformativeText(translate(
+            error_no_monitors = QMessageBox()
+            error_no_monitors.setText(translate('No controllable monitors found, exiting.'))
+            error_no_monitors.setInformativeText(translate(
                 "Is ddcutil installed?  Is i2c installed and configured?\n\n"
                 "Run vdu_controls --debug in a console and check for additional messages.\n\n"
                 f"{('Most recent ddcutil error: ' + str(ddcutil_problem)) if ddcutil_problem else ''}"
             ))
-            alert.setIcon(QMessageBox.Critical)
-            alert.exec()
+            error_no_monitors.setIcon(QMessageBox.Critical)
+            error_no_monitors.exec()
             sys.exit()
 
         def finish_refresh() -> None:
@@ -2533,7 +2579,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         button_layout = QHBoxLayout()
         button_box.setLayout(button_layout)
         main_window.app_context_menu.refresh_preset_menu()
-        base_ini = configparser.ConfigParser()
+        base_ini = ConfigIni()
         main_window.copy_to_preset_ini(base_ini)
 
         def initialise_preset_from_controls(preset: Preset):
@@ -2555,13 +2601,12 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         def save_preset(preset: Preset) -> None:
             preset_path = get_config_path(proper_name('Preset', preset.name))
             if preset_path.exists():
-                save_message = QMessageBox()
-                message = translate('Overwrite existing {}?').format(preset_path.as_posix())
-                save_message.setText(message)
-                save_message.setIcon(QMessageBox.Question)
-                save_message.setStandardButtons(QMessageBox.Save | QMessageBox.Cancel)
-                rc = save_message.exec()
-                if rc == QMessageBox.Cancel:
+                confirmation = QMessageBox()
+                message = translate('Update existing {} preset with current monitor settings?').format(preset.name)
+                confirmation.setText(message)
+                confirmation.setIcon(QMessageBox.Question)
+                confirmation.setStandardButtons(QMessageBox.Save | QMessageBox.Cancel)
+                if confirmation.exec() == QMessageBox.Cancel:
                     return
             self.preset_name_edit.setText('')
             self.main_window.save_preset(preset)
@@ -2569,8 +2614,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         def delete_preset(preset: Preset, target_widget: QWidget = None) -> None:
             log_info(f"delete preset {preset.name}")
             delete_confirmation = QMessageBox()
-            message = translate('Delete {}?').format(preset.name)
-            delete_confirmation.setText(message)
+            delete_confirmation.setText(translate('Delete {}?').format(preset.name))
             delete_confirmation.setIcon(QMessageBox.Question)
             delete_confirmation.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
             rc = delete_confirmation.exec()
@@ -2591,8 +2635,6 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             choose_icon_button.set_preset(preset)
             for key, item in self.content_controls.items():
                 item.setChecked(preset.preset_ini.has_option(key[0], key[1]))
-            # TODO ??
-            icon_path = preset.get_icon_path()
 
         for preset_def in self.main_window.preset_controller.find_presets().values():
             preset_widget = self.create_preset_widget(
@@ -2645,12 +2687,11 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 return
             existing_preset_widget = self.find_preset_widget(preset_name)
             if existing_preset_widget:
-                save_message = QMessageBox()
-                message = translate("Replace existing '{}' preset?").format(preset_name)
-                save_message.setText(message)
-                save_message.setIcon(QMessageBox.Question)
-                save_message.setStandardButtons(QMessageBox.Save | QMessageBox.Cancel)
-                if save_message.exec() == QMessageBox.Cancel:
+                confirmation = QMessageBox()
+                confirmation.setText(translate("Replace existing '{}' preset?").format(preset_name))
+                confirmation.setIcon(QMessageBox.Question)
+                confirmation.setStandardButtons(QMessageBox.Save | QMessageBox.Cancel)
+                if confirmation.exec() == QMessageBox.Cancel:
                     return
             preset = Preset(preset_name)
             initialise_preset_from_controls(preset)
@@ -2752,30 +2793,29 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
 
         return preset_widget
 
-    def create_preset_content_controls(self, base_ini: configparser.ConfigParser) -> QWidget:
+    def create_preset_content_controls(self, base_ini: ConfigIni) -> QWidget:
         container = QScrollArea(parent=self)
         widget = QWidget()
         layout = QVBoxLayout()
         widget.setLayout(layout)
-        for count, section in enumerate(base_ini):
-            if section != configparser.DEFAULTSECT:
-                if count > 1:
-                    line = QFrame()
-                    line.setFrameShape(QFrame.HLine)
-                    line.setFrameShadow(QFrame.Sunken)
-                    layout.addWidget(line)
-                group_box = QGroupBox(section)
-                group_box.setFlat(True)
-                group_box.setToolTip(translate(f"Choose which settings to save for {section}"))
-                group_layout = QHBoxLayout()
-                group_box.setLayout(group_layout)
-                for option in base_ini[section]:
-                    option_control = QCheckBox(option)
-                    group_layout.addWidget(option_control)
-                    self.content_controls[(section, option)] = option_control
-                    option_control.setChecked(
-                        True)  # preset.preset_ini.has_option(section, option) if preset else True)
-                layout.addWidget(group_box)
+        for count, section in enumerate(base_ini.data_sections()):
+            if count > 1:
+                line = QFrame()
+                line.setFrameShape(QFrame.HLine)
+                line.setFrameShadow(QFrame.Sunken)
+                layout.addWidget(line)
+            group_box = QGroupBox(section)
+            group_box.setFlat(True)
+            group_box.setToolTip(translate(f"Choose which settings to save for {section}"))
+            group_layout = QHBoxLayout()
+            group_box.setLayout(group_layout)
+            for option in base_ini[section]:
+                option_control = QCheckBox(option)
+                group_layout.addWidget(option_control)
+                self.content_controls[(section, option)] = option_control
+                option_control.setChecked(
+                    True)  # preset.preset_ini.has_option(section, option) if preset else True)
+            layout.addWidget(group_box)
         container.setWidget(widget)
         widget.show()
         return container
@@ -2793,13 +2833,14 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             alert = QMessageBox()
             alert.setIcon(QMessageBox.Question)
             alert.setText("Save current edit?")
-            alert.setStandardButtons(QMessageBox.Save|QMessageBox.Ignore)
+            alert.setStandardButtons(QMessageBox.Save | QMessageBox.Ignore)
             if alert.exec() == QMessageBox.Save:
                 self.edit_save_needed.emit()
             else:
                 self.preset_name_edit.setText('')
 
         super().closeEvent(event)
+
 
 def exception_handler(e_type, e_value, e_traceback):
     """Overarching error handler in case something unexpected happens."""
@@ -3265,7 +3306,7 @@ class MainWindow(QMainWindow):
             self.app_context_menu.insert_preset_menu_item(preset)
             self.display_active_preset(preset)
 
-    def copy_to_preset_ini(self, preset_ini: configparser.ConfigParser, update_only: bool = False) -> List:
+    def copy_to_preset_ini(self, preset_ini: ConfigIni, update_only: bool = False) -> List:
         id_list = []
         for control_panel in self.main_control_panel.vdu_control_panels:
             control_panel.copy_state(preset_ini, update_only)
@@ -3414,6 +3455,10 @@ def main():
     log_info("checking for config file '" + default_config_path.as_posix() + "'")
     if Path.is_file(default_config_path) and os.access(default_config_path, os.R_OK):
         main_config.parse_file(default_config_path)
+        if not main_config.ini_content.is_version_ge(1, 7, 0):
+            log_info(f"Converting {default_config_path} to version {VDU_CONTROLS_VERSION}")
+            main_config.ini_content.save(default_config_path, backup_dir_name='pre-v1.7')
+
     args = main_config.parse_args()
     global log_to_syslog
     log_to_syslog = main_config.is_syslog_enabled()
