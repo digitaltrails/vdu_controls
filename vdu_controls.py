@@ -376,7 +376,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
 
 VDU_CONTROLS_VERSION = '1.7.0'
 
-RELEASE_ANNOUNCMENT = f"""
+RELEASE_ANNOUNCEMENT = f"""
 <h3>Welcome to vdu_controls version {VDU_CONTROLS_VERSION}</h3>
 
 Please read the online release notes:<br>
@@ -715,11 +715,12 @@ class DdcUtil:
         # Going to get rid of anything that is not a-z A-Z 0-9 as potential rubbish
         rubbish = re.compile('[^a-zA-Z0-9]+')
         # This isn't efficient, it doesn't need to be, so I'm keeping re-defs close to where they are used.
+        key_prospects = {}
         for display_str in re.split("\n\n", result.stdout.decode('utf-8')):
             display_match = re.search('Display ([0-9]+)', display_str)
             if display_match is not None:
                 vdu_id = display_match.group(1)
-                log_info(f"checking display {vdu_id}")
+                log_info(f"checking possible ID's for display {vdu_id}")
                 fields = {m.group(1).strip(): m.group(2).strip() for m in re.finditer('[ \t]*([^:\n]+):[ \t]+([^\n]*)',
                                                                                       display_str)}
                 model_name = rubbish.sub('_', fields.get('Model', 'unknown_model'))
@@ -728,17 +729,32 @@ class DdcUtil:
                 bin_serial_number = rubbish.sub('_', fields.get('Binary serial number', '').split('(')[0].strip())
                 man_date = rubbish.sub('_', fields.get('Manufacture year', ''))
                 i2c_bus_id = fields.get('I2C bus', '').replace("/dev/", '').replace("-", "_")
-                # Try and pin down a unique id that won't change even if other monitors are turned off.
-                # Ideally this should yield the same result for the same monitor - DisplayNum is the worst
-                # for that, so it's the fallback.
-                for possible in (serial_number, bin_serial_number, man_date, i2c_bus_id, f"DisplayNum{vdu_id}"):
-                    if possible != '':
-                        main_id = possible
-                        break
-                log_info(f"display={vdu_id} mfg={manufacturer} model={model_name} main_id={main_id}")
-                display_list.append((vdu_id, manufacturer, model_name, main_id))
+                for candidate in serial_number, bin_serial_number, man_date, i2c_bus_id, f"DisplayNum{vdu_id}":
+                    if candidate.strip() != '':
+                        possibly_unique = (model_name, candidate)
+                        if possibly_unique in key_prospects:
+                            # Not unique - it's already been encountered.
+                            log_info(f"Ignoring non-unique key {possibly_unique[0]}_{possibly_unique[1]}" 
+                                     f" - it matches displays {vdu_id} and {key_prospects[possibly_unique][0]}")
+                            del key_prospects[possibly_unique]
+                        else:
+                            log_debug(possibly_unique)
+                            key_prospects[possibly_unique] = vdu_id, manufacturer
             elif len(display_str.strip()) != 0:
-                log_warning(f"ignoring {display_str}")
+                log_warning(f"Ignoring unparsable {display_str}")
+
+        # Try and pin down a unique id that won't change even if other monitors are turned off.
+        # Ideally this should yield the same result for the same monitor - DisplayNum is the worst
+        # for that, so it's the fallback.
+        key_already_assigned = {}
+        for model_and_main_id, vdu_id_and_manufacturer in key_prospects.items():
+            vdu_id, manufacturer = vdu_id_and_manufacturer
+            if vdu_id not in key_already_assigned:
+                model_name, main_id = model_and_main_id
+                log_info(f"Unique key for display={vdu_id} mfg={manufacturer} is (model={model_name} id={main_id})")
+                display_list.append((vdu_id, manufacturer, model_name, main_id))
+                key_already_assigned[vdu_id] = 1
+
         # For testing bad VDU's:
         # display_list.append(("3", "maker_y", "model_z", "1234"))
         return display_list
@@ -1118,10 +1134,11 @@ class VduControlsConfig:
         self.ini_content['ddcutil-capabilities']['capabilities-override'] = alt_text
 
     def reload(self):
-        log_info(f"Reloading {self.file_path}")
-        for section in list(self.ini_content.data_sections()):
-            self.ini_content.remove_section(section)
-        self.parse_file(self.file_path)
+        log_info(f"Reloading config: {self.file_path}")
+        if self.file_path:
+            for section in list(self.ini_content.data_sections()):
+                self.ini_content.remove_section(section)
+            self.parse_file(self.file_path)
 
     def debug_dump(self) -> None:
         origin = 'configuration' if self.file_path is None else os.path.basename(self.file_path)
@@ -1412,20 +1429,22 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
         self.make_visible()
 
     def save_all(self, nothing_to_save_warning: bool = True):
-        needs_saving_count = 0
-        for editor in self.editors[1:]:
-            if editor.is_unsaved():
-                needs_saving_count += 1
-                editor.save(cancel=QMessageBox.Ignore)
+        nothing_was_saved = True
         # Do the main config last - it may cause a restart of the app
-        if self.editors[0].is_unsaved():
-            needs_saving_count += 1
-            self.editors[0].save(cancel=QMessageBox.Ignore)
-        if nothing_to_save_warning and needs_saving_count == 0:
+        save_order = self.editors[1:] + [self.editors[0]]
+        for editor in save_order:
+            if editor.is_unsaved():
+                editor.save(cancel=QMessageBox.Ignore)
+                nothing_was_saved = False
+        if nothing_to_save_warning and nothing_was_saved:
             alert = QMessageBox()
             alert.setIcon(QMessageBox.Critical)
-            alert.setText(translate("Nothing needs saving."))
-            alert.exec()
+            alert.setText(translate("Nothing needs saving. Do you wish to save anyway?"))
+            alert.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            alert.setDefaultButton(QMessageBox.No)
+            if alert.exec() == QMessageBox.Yes:
+                for editor in save_order:
+                    editor.save(cancel=QMessageBox.Ignore, force=True)
 
     def closeEvent(self, event) -> None:
         self.save_all(nothing_to_save_warning=False)
@@ -1501,14 +1520,15 @@ class SettingsEditorTab(QWidget):
 
         editor_layout.addWidget(buttons_widget)
 
-    def save(self, cancel: int = QMessageBox.Close) -> None:
-        if self.is_unsaved():
+    def save(self, cancel: int = QMessageBox.Close, force: bool = False) -> None:
+        if self.is_unsaved() or force:
             confirmation = QMessageBox()
             message = translate('Update existing {}?' if self.config_path.exists() else "Create new {}"
                                 ).format(self.config_path.as_posix())
             confirmation.setText(message)
             confirmation.setIcon(QMessageBox.Question)
             confirmation.setStandardButtons(QMessageBox.Save | cancel)
+            confirmation.setDefaultButton(QMessageBox.Save)
             if confirmation.exec() == QMessageBox.Save:
                 self.ini_editable.save(self.config_path)
                 copy = pickle.dumps(self.ini_editable)
@@ -3292,19 +3312,25 @@ class MainWindow(QMainWindow):
         else:
             self.show()
 
+        if splash is not None:
+            splash.finish(self)
+
         if not main_config.ini_content.is_version_ge(1, 7, 0):
             if True:
                 # TDOD decide if this is necessary.
                 release_alert = QMessageBox()
                 release_alert.setIcon(QMessageBox.Information)
-                release_alert.setText(RELEASE_ANNOUNCMENT)
+                release_alert.setText(RELEASE_ANNOUNCEMENT)
                 release_alert.setTextFormat(Qt.RichText)
+                release_alert.setStandardButtons(QMessageBox.Close)
                 release_alert.exec()
-            log_info(f"Converting {main_config.file_path} to version {VDU_CONTROLS_VERSION}")
-            main_config.ini_content.save(main_config.file_path, backup_dir_name='pre-v1.7')
+            if main_config.file_path:
+                log_info(f"Converting {main_config.file_path} to version {VDU_CONTROLS_VERSION}")
+                main_config.ini_content.save(main_config.file_path, backup_dir_name='pre-v1.7')
+            else:
+                # Stops the release notes from being repeated.
+                main_config.write_file(get_config_path('vdu_controls'))
 
-        if splash is not None:
-            splash.finish(self)
 
     def restore_preset(self, preset: Preset) -> Preset:
         log_info(f"Preset changing to {preset.name}")
