@@ -372,10 +372,18 @@ from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
-    QWidgetItem, QScrollArea, QGroupBox, QFrame
+    QWidgetItem, QScrollArea, QGroupBox, QFrame, QSpacerItem
 
 VDU_CONTROLS_VERSION = '1.7.0'
 
+RELEASE_ANNOUNCMENT = f"""
+<h3>Welcome to vdu_controls version {VDU_CONTROLS_VERSION}</h3>
+
+Please read the online release notes:<br>
+<a href="https://github.com/digitaltrails/vdu_controls/releases/tag/v{VDU_CONTROLS_VERSION}">
+https://github.com/digitaltrails/vdu_controls/releases/tag/v{VDU_CONTROLS_VERSION}</a>
+<hr>
+"""
 
 def proper_name(*args):
     return re.sub(r'[^A-Za-z0-9._-]', '_', '_'.join([arg.strip() for arg in args]))
@@ -394,7 +402,10 @@ A virtual control panel for external Visual Display Units.
 <p>
 Visit <a href="https://github.com/digitaltrails/vdu_controls">https://github.com/digitaltrails/vdu_controls</a> for 
 more details.
-<p><p>
+<p>
+Release notes: <a href="https://github.com/digitaltrails/vdu_controls/releases/tag/v{VDU_CONTROLS_VERSION}">
+v{VDU_CONTROLS_VERSION}.</a>
+<p>
 <hr>
 <small>
 <b>vdu_controls Copyright (C) 2021 Michael Hamilton</b>
@@ -403,6 +414,7 @@ This program is free software: you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
 Free Software Foundation, version 3.
 <br><br>
+
 <bold>
 This program is distributed in the hope that it will be useful, but
 WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
@@ -959,7 +971,7 @@ class ConfigIni(configparser.ConfigParser):
             backup_path = backup_dir / config_path.name
             while backup_path.exists():
                 file_version += 1
-                backup_path = backup_path.with_suffix(f".conf.{file_version}")
+                backup_path = backup_path.with_suffix(f".conf_{file_version}")
             config_path.rename(backup_path)
             log_info(f"Backed up old config as {backup_path.as_posix()}")
         with open(config_path, 'w') as config_file:
@@ -2660,13 +2672,18 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             changed_text = self.preset_name_edit.text()
             if changed_text.strip() == "":
                 # choose_icon_button.set_preset(None)
-                content_controls_widget.setDisabled(True)
+                editor_controls_widget.setDisabled(True)
                 edit_save_button.setDisabled(True)
+                editor_title.setText(translate("Create new preset:"))
+                editor_controls_prompt.setText(("Controls to include:"))
+                editor_controls_prompt.setDisabled(True)
             else:
                 already_exists = self.find_preset_widget(changed_text)
-                edit_group_title.setText(
-                    translate("Edit Preset Options") if already_exists else translate("New Preset"))
-                content_controls_widget.setDisabled(False)
+                editor_title.setText(
+                    translate(f"Edit {changed_text}:") if already_exists else translate("Create new preset:"))
+                editor_controls_prompt.setText(translate(f"Controls to include in {changed_text}:"))
+                editor_controls_prompt.setDisabled(False)
+                editor_controls_widget.setDisabled(False)
                 edit_save_button.setDisabled(False)
 
         self.preset_name_edit.textChanged.connect(change_edit_group_title)
@@ -2718,18 +2735,21 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         edit_save_button.clicked.connect(save_edited_preset)
         self.edit_save_needed.connect(save_edited_preset)
 
-        edit_group_widget = QGroupBox()
-        edit_group_widget.setFlat(True)
-        edit_group_layout = QVBoxLayout()
-        edit_group_title = QLabel(translate("New Preset"))
-        edit_group_title.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
-        edit_group_layout.addWidget(edit_group_title)
-        edit_group_widget.setLayout(edit_group_layout)
-        content_controls_widget = self.create_preset_content_controls(base_ini)
-        edit_group_layout.addWidget(edit_preset_widget)
-        edit_group_layout.addWidget(content_controls_widget)
+        editor_groupbox = QGroupBox()
+        editor_groupbox.setFlat(True)
+        editor_layout = QVBoxLayout()
+        editor_title = QLabel(translate("New Preset:"))
+        editor_title.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
+        editor_layout.addWidget(editor_title)
+        editor_groupbox.setLayout(editor_layout)
+        editor_controls_widget = self.create_preset_content_controls(base_ini)
+        editor_layout.addWidget(edit_preset_widget)
+        editor_controls_prompt = QLabel(translate("Controls to include:"))
+        editor_controls_prompt.setDisabled(True)
+        editor_layout.addWidget(editor_controls_prompt)
+        editor_layout.addWidget(editor_controls_widget)
 
-        layout.addWidget(edit_group_widget)
+        layout.addWidget(editor_groupbox)
 
         close_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), translate('close'))
         close_button.clicked.connect(self.close)
@@ -2737,7 +2757,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         button_layout.addWidget(close_button, 0, Qt.AlignRight | Qt.AlignBottom)
 
         choose_icon_button.set_preset(None)
-        content_controls_widget.setDisabled(True)
+        editor_controls_widget.setDisabled(True)
         edit_save_button.setDisabled(True)
         layout.addWidget(button_box)
         # .show() is non-modal, .exec() is modal
@@ -3272,6 +3292,17 @@ class MainWindow(QMainWindow):
         else:
             self.show()
 
+        if not main_config.ini_content.is_version_ge(1, 7, 0):
+            if True:
+                # TDOD decide if this is necessary.
+                release_alert = QMessageBox()
+                release_alert.setIcon(QMessageBox.Information)
+                release_alert.setText(RELEASE_ANNOUNCMENT)
+                release_alert.setTextFormat(Qt.RichText)
+                release_alert.exec()
+            log_info(f"Converting {main_config.file_path} to version {VDU_CONTROLS_VERSION}")
+            main_config.ini_content.save(main_config.file_path, backup_dir_name='pre-v1.7')
+
         if splash is not None:
             splash.finish(self)
 
@@ -3455,9 +3486,6 @@ def main():
     log_info("checking for config file '" + default_config_path.as_posix() + "'")
     if Path.is_file(default_config_path) and os.access(default_config_path, os.R_OK):
         main_config.parse_file(default_config_path)
-        if not main_config.ini_content.is_version_ge(1, 7, 0):
-            log_info(f"Converting {default_config_path} to version {VDU_CONTROLS_VERSION}")
-            main_config.ini_content.save(default_config_path, backup_dir_name='pre-v1.7')
 
     args = main_config.parse_args()
     global log_to_syslog
