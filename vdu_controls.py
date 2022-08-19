@@ -2695,18 +2695,19 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 editor_controls_widget.setDisabled(True)
                 edit_save_button.setDisabled(True)
                 editor_title.setText(translate("Create new preset:"))
-                editor_controls_prompt.setText(("Controls to include:"))
+                editor_controls_prompt.setText(translate("Controls to include:"))
                 editor_controls_prompt.setDisabled(True)
             else:
                 already_exists = self.find_preset_widget(changed_text)
                 editor_title.setText(
-                    translate(f"Edit {changed_text}:") if already_exists else translate("Create new preset:"))
-                editor_controls_prompt.setText(translate(f"Controls to include in {changed_text}:"))
+                    translate("Edit {}:").format(changed_text) if already_exists else translate("Create new preset:"))
+                editor_controls_prompt.setText(translate("Controls to include in {}:").format(changed_text))
                 editor_controls_prompt.setDisabled(False)
                 editor_controls_widget.setDisabled(False)
                 edit_save_button.setDisabled(False)
 
         self.preset_name_edit.textChanged.connect(change_edit_group_title)
+        self.preset_name_edit.setValidator(QRegExpValidator(QRegExp("[A-Za-z0-9][A-Za-z0-9_ .-]{0,60}")))
 
         edit_preset_layout.addWidget(self.preset_name_edit)
 
