@@ -1433,6 +1433,7 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
     def save_all(self, nothing_to_save_warning: bool = True):
         nothing_was_saved = True
         # Do the main config last - it may cause a restart of the app
+        self.setEnabled(False)
         save_order = self.editors[1:] + [self.editors[0]]
         for editor in save_order:
             if editor.is_unsaved():
@@ -1447,6 +1448,7 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
             if alert.exec() == QMessageBox.Yes:
                 for editor in save_order:
                     editor.save(cancel=QMessageBox.Ignore, force=True)
+        self.setEnabled(True)
 
     def closeEvent(self, event) -> None:
         self.save_all(nothing_to_save_warning=False)
