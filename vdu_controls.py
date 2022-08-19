@@ -3358,10 +3358,11 @@ class MainWindow(QMainWindow):
             log_warning("Not all presets were converted, a monitor that is normally present is probably turned off.")
             cvt_alert = QMessageBox()
             cvt_alert.setIcon(QMessageBox.Warning)
-            cvt_alert.setText(translate("Temporarily unable to migrate {} to {}.").format(
-                ','.join(f"\n  Preset {p}: {v}" for p, v in failed_conversion), VDU_CONTROLS_VERSION))
+            cvt_alert.setText(translate("Temporarily unable to migrate some presets to {}:\n{}").format(
+                VDU_CONTROLS_VERSION,
+                '\n'.join(f"   {p} - {v}" for p, v in failed_conversion)))
             cvt_alert.setInformativeText("A monitor that is normally present is probably turned off."
-                                         " The preset will probably not work for the referenced monitor.\n\n"
+                                         " Old Presets will probably not function for the referenced monitor.\n\n"
                                          "The conversion will be attempted again when next restarted"
                                          " (suggest turning on all monitors before the next restart).")
             cvt_alert.exec()
