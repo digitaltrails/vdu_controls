@@ -1930,11 +1930,11 @@ class VduControlPanel(QWidget):
                         control = VduControlComboBox(vdu_model, capability)
                     except ValueError as valueError:
                         alert = QMessageBox()
+                        alert.setIcon(QMessageBox.Critical)
                         alert.setText(valueError.args[0])
                         alert.setInformativeText(
                             translate('If you want to extend the set of permitted values, see the man page concerning '
                                       'VDU/VDU-model config files .').format(capability.vcp_code, capability.name))
-                        alert.setIcon(QMessageBox.Critical)
                         alert.exec()
                 else:
                     raise TypeError(f'No GUI support for VCP type {capability.vcp_type} for vcp_code {vcp_code}')
@@ -1946,11 +1946,11 @@ class VduControlPanel(QWidget):
                 missing_vcp = VDU_SUPPORTED_CONTROLS.by_code[
                     vcp_code].name if vcp_code in VDU_SUPPORTED_CONTROLS.by_code else vcp_code
                 alert = QMessageBox()
+                alert.setIcon(QMessageBox.Warning)
                 alert.setText(
                     translate('Monitor {} lacks a VCP control for {}.').format(
                         vdu_model.get_vdu_description(), translate(missing_vcp)))
                 alert.setInformativeText(translate('No read/write ability for vcp_code {}.').format(vcp_code))
-                alert.setIcon(QMessageBox.Warning)
                 alert.exec()
         if len(self.vcp_controls) != 0:
             self.setLayout(layout)
@@ -2275,6 +2275,7 @@ class VduControlsMainPanel(QWidget):
                 except Exception as e:
                     # Catch any kind of parse related error
                     error_nocaps = QMessageBox()
+                    error_nocaps.setIcon(QMessageBox.Critical)
                     error_nocaps.setText(
                         translate('Failed to obtain capabilities for monitor {} {} {}.').format(vdu_id,
                                                                                                 vdu_model_name,
@@ -2285,7 +2286,6 @@ class VduControlsMainPanel(QWidget):
                         '\n 1: Retry obtaining the capabilities.'
                         '\n 2: Ignore this monitor.'
                         '\n 3: Apply standard brightness and contrast controls.'))
-                    error_nocaps.setIcon(QMessageBox.Critical)
                     error_nocaps.setStandardButtons(QMessageBox.Ignore | QMessageBox.Apply | QMessageBox.Retry)
                     choice = error_nocaps.exec()
                     if choice == QMessageBox.Ignore:
@@ -2293,7 +2293,7 @@ class VduControlsMainPanel(QWidget):
                                                    self.ddcutil, ignore_monitor=True)
                         controller.write_template_config_files()
                         warn = QMessageBox()
-                        warn.setIcon(QMessageBox.Warning)
+                        warn.setIcon(QMessageBox.Information)
                         warn.setText(translate('Ignoring {} monitor.').format(vdu_model_name))
                         warn.setInformativeText(
                             translate('Wrote {} config files to {}.').format(vdu_model_name, CONFIG_DIR_PATH))
@@ -2303,7 +2303,7 @@ class VduControlsMainPanel(QWidget):
                                                    self.ddcutil, assume_standard_controls=True)
                         controller.write_template_config_files()
                         warn = QMessageBox()
-                        warn.setIcon(QMessageBox.Warning)
+                        warn.setIcon(QMessageBox.Information)
                         warn.setText(
                             translate('Assuming {} has brightness and contrast controls.').format(vdu_model_name,
                                                                                                   CONFIG_DIR_PATH))
@@ -2327,21 +2327,21 @@ class VduControlsMainPanel(QWidget):
                     layout1.addWidget(vdu_control_panel)
                 elif self.warnings:
                     warn_omitted = QMessageBox()
+                    warn_omitted.setIcon(QMessageBox.Warning)
                     warn_omitted.setText(
                         translate('Monitor {} {} lacks any accessible controls.').format(controller.vdu_id,
                                                                                          controller.get_vdu_description()))
                     warn_omitted.setInformativeText(translate('The monitor will be omitted from the control panel.'))
-                    warn_omitted.setIcon(QMessageBox.Warning)
                     warn_omitted.exec()
         if len(self.vdu_control_panels) == 0:
             error_no_monitors = QMessageBox()
+            error_no_monitors.setIcon(QMessageBox.Critical)
             error_no_monitors.setText(translate('No controllable monitors found, exiting.'))
             error_no_monitors.setInformativeText(translate(
                 "Is ddcutil installed?  Is i2c installed and configured?\n\n"
                 "Run vdu_controls --debug in a console and check for additional messages.\n\n"
                 f"{('Most recent ddcutil error: ' + str(ddcutil_problem)) if ddcutil_problem else ''}"
             ))
-            error_no_monitors.setIcon(QMessageBox.Critical)
             error_no_monitors.exec()
             sys.exit()
 
@@ -2651,10 +2651,11 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             preset_path = get_config_path(proper_name('Preset', preset.name))
             if preset_path.exists():
                 confirmation = QMessageBox()
+                confirmation.setIcon(QMessageBox.Question)
                 message = translate('Update existing {} preset with current monitor settings?').format(preset.name)
                 confirmation.setText(message)
-                confirmation.setIcon(QMessageBox.Question)
                 confirmation.setStandardButtons(QMessageBox.Save | QMessageBox.Cancel)
+                confirmation.setDefaultButton(QMessageBox.Save)
                 if confirmation.exec() == QMessageBox.Cancel:
                     return
             self.preset_name_edit.setText('')
@@ -2663,9 +2664,10 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         def delete_preset(preset: Preset, target_widget: QWidget = None) -> None:
             log_info(f"delete preset {preset.name}")
             delete_confirmation = QMessageBox()
-            delete_confirmation.setText(translate('Delete {}?').format(preset.name))
             delete_confirmation.setIcon(QMessageBox.Question)
+            delete_confirmation.setText(translate('Delete {}?').format(preset.name))
             delete_confirmation.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+            delete_confirmation.setDefaultButton(QMessageBox.Ok)
             rc = delete_confirmation.exec()
             if rc == QMessageBox.Cancel:
                 return
@@ -2743,9 +2745,10 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             existing_preset_widget = self.find_preset_widget(preset_name)
             if existing_preset_widget:
                 confirmation = QMessageBox()
-                confirmation.setText(translate("Replace existing '{}' preset?").format(preset_name))
                 confirmation.setIcon(QMessageBox.Question)
+                confirmation.setText(translate("Replace existing '{}' preset?").format(preset_name))
                 confirmation.setStandardButtons(QMessageBox.Save | QMessageBox.Cancel)
+                confirmation.setDefaultButton(QMessageBox.Save)
                 if confirmation.exec() == QMessageBox.Cancel:
                     return
             preset = Preset(preset_name)
@@ -2892,6 +2895,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             alert.setIcon(QMessageBox.Question)
             alert.setText("Save current edit?")
             alert.setStandardButtons(QMessageBox.Save | QMessageBox.Ignore)
+            alert.defaultButton(QMessageBox.Save)
             if alert.exec() == QMessageBox.Save:
                 self.edit_save_needed.emit()
             else:
@@ -2904,12 +2908,12 @@ def exception_handler(e_type, e_value, e_traceback):
     """Overarching error handler in case something unexpected happens."""
     log_error("\n" + ''.join(traceback.format_exception(e_type, e_value, e_traceback)))
     alert = QMessageBox()
+    alert.setIcon(QMessageBox.Critical)
     alert.setText(translate('Error: {}').format(''.join(traceback.format_exception_only(e_type, e_value))))
     alert.setInformativeText(translate('Is --sleep-multiplier set too low?') +
                              '<br>_______________________________________________________<br>')
     alert.setDetailedText(
         translate('Details: {}').format(''.join(traceback.format_exception(e_type, e_value, e_traceback))))
-    alert.setIcon(QMessageBox.Critical)
     alert.exec()
     QApplication.quit()
 
