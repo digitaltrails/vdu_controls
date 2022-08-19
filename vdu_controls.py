@@ -385,6 +385,7 @@ https://github.com/digitaltrails/vdu_controls/releases/tag/v{VDU_CONTROLS_VERSIO
 <hr>
 """
 
+
 def proper_name(*args):
     return re.sub(r'[^A-Za-z0-9._-]', '_', '_'.join([arg.strip() for arg in args]))
 
@@ -734,7 +735,7 @@ class DdcUtil:
                         possibly_unique = (model_name, candidate)
                         if possibly_unique in key_prospects:
                             # Not unique - it's already been encountered.
-                            log_info(f"Ignoring non-unique key {possibly_unique[0]}_{possibly_unique[1]}" 
+                            log_info(f"Ignoring non-unique key {possibly_unique[0]}_{possibly_unique[1]}"
                                      f" - it matches displays {vdu_id} and {key_prospects[possibly_unique][0]}")
                             del key_prospects[possibly_unique]
                         else:
@@ -1269,16 +1270,17 @@ class VduController(QObject):
         self.ddcutil = ddcutil
         self.sleep_multiplier = None
         self.enabled_vcp_codes = default_config.get_all_enabled_vcp_codes()
-        self.vdu_model_and_serial_id = proper_name(vdu_model_name, vdu_serial)
+        self.vdu_stable_id = proper_name(vdu_model_name, vdu_serial)
         # Provides backward compatibility for pre 1.7 presets where DisplayN was used in the section name.
         # In older versions sometimes DisplayN was used as part of the ID, that gets messy if a monitor is turned off
-        # because the numbering changes.
-        self.pre1_7_id = proper_name(vdu_model_name.strip(), f"Display{vdu_id}")
+        # because the numbering changes.  Not all ID's prior to v1.7 would be display based, only those that lacked
+        # a text serial number,
+        self.pre1_7_display_based_id = proper_name(vdu_model_name.strip(), f"Display{vdu_id}")
         self.vdu_model_id = proper_name(vdu_model_name.strip())
         self.capabilities_text = None
         self.config = None
         self.convert_to_v1_7_check(default_config)
-        for config_name in (self.vdu_model_and_serial_id, self.pre1_7_id, self.vdu_model_id):
+        for config_name in (self.vdu_stable_id, self.pre1_7_display_based_id, self.vdu_model_id):
             config_path = get_config_path(config_name)
             log_info("checking for config file '" + config_path.as_posix() + "'")
             if os.path.isfile(config_path) and os.access(config_path, os.R_OK):
@@ -1303,14 +1305,14 @@ class VduController(QObject):
         self.capabilities = self._parse_capabilities(self.capabilities_text)
         if self.config is None:
             # In memory only config - in case it's needed by a future config editor
-            self.config = VduControlsConfig(self.vdu_model_and_serial_id,
+            self.config = VduControlsConfig(self.vdu_stable_id,
                                             default_enabled_vcp_codes=self.enabled_vcp_codes)
             self.config.set_capabilities_alt_text(self.capabilities_text)
         self.config.restrict_to_actual_capabilities(self.capabilities)
 
     def write_template_config_files(self) -> None:
         """Write template config files to $HOME/.config/vdu_controls/"""
-        for config_name in (self.vdu_model_and_serial_id, self.vdu_model_id):
+        for config_name in (self.vdu_stable_id, self.vdu_model_id):
             save_config_path = get_config_path(config_name)
             config = VduControlsConfig(config_name, default_enabled_vcp_codes=self.enabled_vcp_codes)
             config.set_capabilities_alt_text(self.capabilities_text)
@@ -1377,21 +1379,21 @@ class VduController(QObject):
         return feature_map
 
     def convert_to_v1_7_check(self, default_config: VduControlsConfig):
-        old_config_path = get_config_path(self.pre1_7_id)
+        # Only some config files will have old display based names - those whose monitor lacked a text serial number.
+        old_config_path = get_config_path(self.pre1_7_display_based_id)
         if old_config_path.exists():
-            new_config_path = get_config_path(self.vdu_model_and_serial_id)
+            new_config_path = get_config_path(self.vdu_stable_id)
             if new_config_path.exists():
                 if old_config_path.exists():
                     log_warning(f"Skipping conversion of {old_config_path.as_posix()} to v1.7+ "
                                 f" '{new_config_path.as_posix()} already exists")
             else:
-                new_config = VduControlsConfig(self.vdu_model_and_serial_id,
+                new_config = VduControlsConfig(self.vdu_stable_id,
                                                default_enabled_vcp_codes=default_config.get_all_enabled_vcp_codes())
                 new_config.parse_file(old_config_path)
                 new_config.ini_content.save(new_config_path, backup_dir_name='pre-v1.7')
                 log_warning(f"Converted {old_config_path.as_posix()} to v1.7+ "
                             f" {new_config_path.as_posix()}")
-
 
 
 class SettingsEditor(QDialog, DialogSingletonMixin):
@@ -1788,7 +1790,7 @@ class VduControlSlider(QWidget):
             except ValueError as ve:
                 # Might be initializing at login - can cause transient errors due to X11 talking to
                 # the monitor.
-                log_warning(f"Non integer values for slider {self.vdu_model.vdu_model_and_serial_id} "
+                log_warning(f"Non integer values for slider {self.vdu_model.vdu_stable_id} "
                             f"{self.vcp_capability.name} = {new_value} (max={max_value})")
                 log_warning("have to repeat vdu_model.get_attribute - maybe --sleep-multiplier is set too low?")
                 sleep_secs = 3.0
@@ -1798,7 +1800,7 @@ class VduControlSlider(QWidget):
                 continue
         # Something is wrong with ddcutils - pass the buck
         raise ValueError(
-            f"Non integer values for slider {self.vdu_model.vdu_model_and_serial_id} {self.vcp_capability.name} = {new_value} (max={max_value})")
+            f"Non integer values for slider {self.vdu_model.vdu_stable_id} {self.vcp_capability.name} = {new_value} (max={max_value})")
 
     def refresh_view(self) -> None:
         """Copy the internally cached current value onto the GUI view."""
@@ -1966,7 +1968,7 @@ class VduControlPanel(QWidget):
         return len(self.vcp_controls)
 
     def copy_state(self, preset_ini: ConfigIni, update_only) -> None:
-        vdu_section_name = self.vdu_model.vdu_model_and_serial_id
+        vdu_section_name = self.vdu_model.vdu_stable_id
         if not preset_ini.has_section(vdu_section_name):
             preset_ini.add_section(vdu_section_name)
         for control in self.vcp_controls:
@@ -1974,14 +1976,14 @@ class VduControlPanel(QWidget):
                 preset_ini[vdu_section_name][control.vcp_capability.property_name()] = control.current_value
 
     def restore_state(self, preset_ini: ConfigIni) -> None:
-        self.restore_state_specific_section_name(preset_ini, self.vdu_model.vdu_model_and_serial_id)
+        self.restore_state_specific_section_name(preset_ini, self.vdu_model.vdu_stable_id)
 
     def restore_state_pre17(self, preset_ini: ConfigIni):
-        # Provides backward compatibility for pre 1.7 presets where DisplayN was used in the section name.
-        self.restore_state_specific_section_name(preset_ini, self.vdu_model.pre1_7_id)
+        # Provides backward compatibility for pre 1.7 presets where DisplayN was used in the section name - those
+        # monitors that lacked a text serial number.
+        self.restore_state_specific_section_name(preset_ini, self.vdu_model.pre1_7_display_based_id)
 
     def restore_state_specific_section_name(self, preset_ini: ConfigIni, vdu_section: str) -> None:
-        # Provides backward compatibility for pre 1.7 presets where DisplayN was used in the section name.
         log_info(f"Preset restoring {vdu_section}")
         for control in self.vcp_controls:
             if control.vcp_capability.property_name() in preset_ini[vdu_section]:
@@ -1989,7 +1991,7 @@ class VduControlPanel(QWidget):
         self.refresh_view()
 
     def is_preset_active(self, preset_ini: ConfigIni) -> bool:
-        vdu_section = self.vdu_model.vdu_model_and_serial_id
+        vdu_section = self.vdu_model.vdu_stable_id
         for control in self.vcp_controls:
             if control.vcp_capability.property_name() in preset_ini[vdu_section]:
                 if control.current_value != preset_ini[vdu_section][control.vcp_capability.property_name()]:
@@ -2048,26 +2050,28 @@ class Preset:
         if self.path.exists():
             os.remove(self.path.as_posix())
 
-    def convert_v1_7_check(self, id_list: List):
-        convert_count = 0
-        for new_section_name, old_section_name in id_list:
-            if self.preset_ini.has_section(old_section_name):
-                convert_count += 1
-                if not self.preset_ini.has_section(new_section_name):
-                    self.preset_ini.add_section(new_section_name)
-                for option in self.preset_ini[old_section_name]:
-                    self.preset_ini[new_section_name][option] = self.preset_ini[old_section_name][option]
-                self.preset_ini.remove_section(old_section_name)
-        if convert_count > 0:
-            backup_path = self.path.parent / 'pre-v1.7' / self.path.name
-            backup_path.parent.mkdir(exist_ok=True)
-            file_version = 0
-            while backup_path.exists():
-                file_version += 1
-                backup_path = backup_path.with_suffix(f".conf.{file_version}")
-            log_info(f"Backed up old preset as {backup_path.as_posix()}")
-            self.path.rename(backup_path)
-            log_warning(f"Converted {self.name} to v1.7+ format.")
+    def convert_v1_7(self, new_and_old_ids: List) -> str | None:
+        """Returns problem id's if any"""
+        if self.preset_ini.is_version_ge(1, 7, 0):
+            # Already converted
+            return None
+        new_indexed_by_old = {old_id: new_id for new_id, old_id in new_and_old_ids}
+        for old_id, new_stable_id in new_indexed_by_old.items():
+            if self.preset_ini.has_section(old_id):
+                if not self.preset_ini.has_section(new_stable_id):
+                    self.preset_ini.add_section(new_stable_id)
+                for option in self.preset_ini[old_id]:
+                    self.preset_ini[new_stable_id][option] = self.preset_ini[old_id][option]
+                self.preset_ini.remove_section(old_id)
+        for vdu_id in self.preset_ini.data_sections():
+            if re.search("_Display[0-9]$", vdu_id):
+                log_info(f"Failed to convert Preset {self.name} VDU {vdu_id} to v1.7+,"
+                         " a participating display wasn't available.")
+                # Not fully converted - probably a display is turned off.
+                return vdu_id
+        self.preset_ini.save(self.path, backup_dir_name=self.path.parent / 'pre-v1.7')
+        log_info(f"Converted preset {self.name} to v1.7+ format.")
+        return None
 
 
 class ContextMenu(QMenu):
@@ -2214,6 +2218,7 @@ class VduControlsMainPanel(QWidget):
         self.vdu_control_panels = []
         self.previously_detected_vdus = []
         self.detected_vdus = []
+        self.new_and_old_ids = []
 
     def initialise_control_panels(self, app_context_menu: ContextMenu, main_config: VduControlsConfig,
                                   session_startup: bool):
@@ -2258,6 +2263,7 @@ class VduControlsMainPanel(QWidget):
         layout1 = self.layout()
         self.warnings = main_config.are_warnings_enabled()
         self.vdu_controllers = []
+        self.new_and_old_ids = []
         for vdu_id, manufacturer, vdu_model_name, vdu_serial in self.detected_vdus:
             controller = None
             while True:
@@ -2308,6 +2314,7 @@ class VduControlsMainPanel(QWidget):
                         continue
                 break
             if controller is not None:
+                self.new_and_old_ids.append((controller.vdu_stable_id, controller.pre1_7_display_based_id))
                 self.vdu_controllers.append(controller)
                 self.vdu_detected.emit(controller)
                 vdu_control_panel = VduControlPanel(controller, self.warnings)
@@ -2489,7 +2496,7 @@ class PresetController:
         for section in preset.preset_ini:
             if section != 'vdu_controls':
                 for control_panel in main_panel.vdu_control_panels:
-                    if section == control_panel.vdu_model.vdu_model_and_serial_id:
+                    if section == control_panel.vdu_model.vdu_stable_id:
                         if not control_panel.is_preset_active(preset.preset_ini):
                             return False
         return True
@@ -2504,6 +2511,14 @@ class PresetController:
             return presets.values()[preset_number]
         return None
 
+    def convert_presets_v1_7(self, new_and_old_ids: List) -> List:
+        problems = []
+        for preset_name, preset in self.find_presets().items():
+            problem_id = preset.convert_v1_7(new_and_old_ids)
+            if problem_id:
+                all_done = False
+                problems.append((preset_name, problem_id))
+        return problems
 
 class PresetWidget(QWidget):
     def __init__(self, name: str):
@@ -3317,21 +3332,33 @@ class MainWindow(QMainWindow):
             splash.finish(self)
 
         if not main_config.ini_content.is_version_ge(1, 7, 0):
-            if True:
-                # TDOD decide if this is necessary.
-                release_alert = QMessageBox()
-                release_alert.setIcon(QMessageBox.Information)
-                release_alert.setText(RELEASE_ANNOUNCEMENT)
-                release_alert.setTextFormat(Qt.RichText)
-                release_alert.setStandardButtons(QMessageBox.Close)
-                release_alert.exec()
+            release_alert = QMessageBox()
+            release_alert.setIcon(QMessageBox.Information)
+            release_alert.setText(RELEASE_ANNOUNCEMENT)
+            release_alert.setTextFormat(Qt.RichText)
+            release_alert.setStandardButtons(QMessageBox.Close)
+
             if main_config.file_path:
                 log_info(f"Converting {main_config.file_path} to version {VDU_CONTROLS_VERSION}")
                 main_config.ini_content.save(main_config.file_path, backup_dir_name='pre-v1.7')
+
             else:
                 # Stops the release notes from being repeated.
                 main_config.write_file(get_config_path('vdu_controls'))
 
+        # This cannot be completed until all the monitors in each preset are online
+        failed_conversion = self.preset_controller.convert_presets_v1_7(self.main_control_panel.new_and_old_ids)
+        if len(failed_conversion) != 0:
+            log_warning("Not all presets were converted, a monitor that is normally present is probably turned off.")
+            cvt_alert = QMessageBox()
+            cvt_alert.setIcon(QMessageBox.Warning)
+            cvt_alert.setText(translate("Temporarily unable to migrate {} to {}.").format(
+                ','.join(f"\n  Preset {p}: {v}" for p, v in failed_conversion), VDU_CONTROLS_VERSION))
+            cvt_alert.setInformativeText("A monitor that is normally present is probably turned off."
+                                         " The preset will probably not work for the referenced monitor.\n\n"
+                                         "The conversion will be attempted again when next restarted"
+                                         " (suggest turning on all monitors before the next restart).")
+            cvt_alert.exec()
 
     def restore_preset(self, preset: Preset) -> Preset:
         log_info(f"Preset changing to {preset.name}")
@@ -3339,14 +3366,14 @@ class MainWindow(QMainWindow):
         restored_list = []
         for section in preset.preset_ini:
             for control_panel in self.main_control_panel.vdu_control_panels:
-                if section == control_panel.vdu_model.vdu_model_and_serial_id:
+                if section == control_panel.vdu_model.vdu_stable_id:
                     control_panel.restore_state(preset.preset_ini)
                     restored_list.append(control_panel)
         # Cope with mixed pre-post v1.7 in a preset file,
         # if not already restored from post v1.7 section, use pre v1.7 section
         for section in preset.preset_ini:
             for control_panel in self.main_control_panel.vdu_control_panels:
-                if control_panel not in restored_list and section == control_panel.vdu_model.pre1_7_id:
+                if control_panel not in restored_list and section == control_panel.vdu_model.pre1_7_display_based_id:
                     control_panel.restore_state_pre17(preset.preset_ini)
         self.display_active_preset(preset)
         return preset
@@ -3358,7 +3385,7 @@ class MainWindow(QMainWindow):
 
     def save_preset(self, preset: Preset) -> None:
         id_list = self.copy_to_preset_ini(preset.preset_ini, update_only=True)
-        preset.convert_v1_7_check(id_list)
+        ##preset.convert_v1_7_check(id_list)
         self.preset_controller.save_preset(preset)
         if not self.app_context_menu.has_preset_menu_item(preset.name):
             self.app_context_menu.insert_preset_menu_item(preset)
@@ -3368,7 +3395,7 @@ class MainWindow(QMainWindow):
         id_list = []
         for control_panel in self.main_control_panel.vdu_control_panels:
             control_panel.copy_state(preset_ini, update_only)
-            id_list.append((control_panel.vdu_model.vdu_model_and_serial_id, control_panel.vdu_model.pre1_7_id))
+            id_list.append((control_panel.vdu_model.vdu_stable_id, control_panel.vdu_model.pre1_7_display_based_id))
         return id_list
 
     def delete_preset(self, preset: Preset) -> None:
