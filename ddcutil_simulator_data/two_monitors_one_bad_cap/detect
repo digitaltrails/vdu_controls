@@ -1,0 +1,22 @@
+Display 1
+   I2C bus:  /dev/i2c-0
+   EDID synopsis:
+      Mfg id:               HWP
+      Model:                HP ZR24w
+      Product code:         10346
+      Serial number:        ABC0011111
+      Binary serial number: 12345009 (0x00BC5EB1)
+      Manufacture year:     2010,  Week: 8
+   VCP version:         2.2
+
+Display 2
+   I2C bus:  /dev/i2c-3
+   EDID synopsis:
+      Mfg id:               GSM
+      Model:                LG HDR 4K
+      Product code:         30471
+      Serial number:        
+      Binary serial number: 12345 (0xBC5EB1)
+      Manufacture year:     2019,  Week: 4
+   VCP version:         2.1
+
