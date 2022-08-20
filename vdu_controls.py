@@ -3343,6 +3343,7 @@ class MainWindow(QMainWindow):
             release_alert.setText(RELEASE_ANNOUNCEMENT)
             release_alert.setTextFormat(Qt.RichText)
             release_alert.setStandardButtons(QMessageBox.Close)
+            release_alert.exec()
 
             if main_config.file_path:
                 log_info(f"Converting {main_config.file_path} to version {VDU_CONTROLS_VERSION}")
