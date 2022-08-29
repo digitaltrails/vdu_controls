@@ -64,7 +64,37 @@ target machine access to the i2c devices):
 4. See if vdu_controls now works in a normal user's account: ``python3 vdu_controls.py``
 
 If this works, then following the longer series of steps detailed by the links in the previous comment 
-would be the key to getting permissions set permanently.
+would be the key to getting permissions set permanently.  
+
+For the record, on my own OpenSUSE systems I diverge a little from the ddcutil documentation and
+use a variation of udev based approach described there.  Rather than setting up an i2c
+group, I set up udev rules to restrict i2c access to who ever is currently logged in (and 
+no one else).  Either approach should work.  These are the steps I employ to set up my own 
+local udev rule:
+
+Use an editor, echo, or cat to create a rule file and then activate it:
+```
+cat > /etc/udev/rules.d/60-ddcutil.rules <<EOF
+# local ddcutil udev rules
+# User I2C/DDC/CI Access
+KERNEL=="i2c-[0-99]*", TAG+="uaccess"
+EOF
+udevadm control --reload-rules
+udevadm trigger
+```
+Now udevadm should report the uaccess TAG:
+```
+udevadm info /dev/i2c-1
+...
+E: TAGS=:uaccess:seat:
+```
+And getfacl should report an access control list entry for the current graphical session owner:
+```
+getfacl /dev/i2c-1
+...
+user:alice:rw-
+```
+From now on, graphical login and logout will reassign i2c access to the session owner.
 
 Installing
 ----------
