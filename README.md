@@ -53,9 +53,7 @@ It's best to confirm that ``ddcutil`` is functioning before using ``vdu_controls
   and testing the required permissions.  
 
 The steps to obtaining the necessary rw permissions on ``/dev/i2c-[0-9]`` varies from one Linux distribution to 
-another. On some distributions, such as OpenSUSE Tumbleweed, loading the i2c-dev module at boot will automatically 
-result in the correct permissions being set on login (and removed on logout).  On other distributions it may be 
-necessary to follow all the steps described at www.ddcutil.com.  
+another. It may be necessary to follow all the steps described at www.ddcutil.com.  
 
 For the impatient the following steps can be followed to perform an insecure quick test (they grant anyone on the 
 target machine access to the i2c devices):
@@ -65,8 +63,34 @@ target machine access to the i2c devices):
 3. See if ddcutil works in a normal user's account: ``ddcutil detect``
 4. See if vdu_controls now works in a normal user's account: ``python3 vdu_controls.py``
 
-If this works, then following the longer series of steps detailed by the links in the previous comment would be 
-the key to getting permissions set permanently.
+If this works, then following the longer series of steps detailed by the links in the previous comment 
+would be the key to getting permissions set permanently.  
+
+For the record, on my own systems I diverge a little from the ddcutil documentation. Rather 
+following the ddcutil documentation and setting up a group, I set up udev rules to 
+restrict i2c access to who ever is currently logged in (and no one else).  Either approach
+will work.  If you're comfortable with a udev approach, these are the steps I employ to set 
+up my own local udev rule:
+
+Use a editor, echo, or cat to create a rule file and then activate it:
+```
+echo 'KERNEL=="i2c-[0-99]*", TAG+="uaccess"' > /etc/udev/rules.d/60-ddcutil.rules;
+udevadm control --reload-rules;
+udevadm trigger
+```
+Now udevadm should report the uaccess TAG:
+```
+udevadm info /dev/i2c-1
+...
+E: TAGS=:uaccess:seat:
+```
+And getfacl should report an access control list entry for the current graphical session owner:
+```
+getfacl /dev/i2c-1
+...
+user:alice:rw-
+```
+From now on, graphical login and logout will reassign i2c access to the session owner.
 
 Installing
 ----------
