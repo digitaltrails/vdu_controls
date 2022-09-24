@@ -17,7 +17,7 @@
 #
 
 Name: vdu_controls
-Version: 1.7.0
+Version: 1.7.1
 Release: 0
 License: GPL-3.0-or-later
 BuildArch: noarch
@@ -84,6 +84,8 @@ gzip -c docs/_build/man/vdu_controls.1 > %{buildroot}/%{_datadir}/man/man1/%{nam
 %{_datadir}/man/man1/%{name}.1.gz
 
 %changelog
+* Sun Sep 25 2022 Michael Hamilton <michael@actrix.gen.nz>
+- Fix for signal handling from Mark Lowne: vdu_controls 1.7.1
 * Thu Aug 4 2022 Michael Hamilton <michael@actrix.gen.nz>
 - Display current preset in window and tray title, preset icons: vdu_controls 1.7.0
 * Sun Jul 31 2022 Michael Hamilton <michael@actrix.gen.nz>

@@ -374,7 +374,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
     QWidgetItem, QScrollArea, QGroupBox, QFrame
 
-VDU_CONTROLS_VERSION = '1.7.0'
+VDU_CONTROLS_VERSION = '1.7.1'
 
 RELEASE_ANNOUNCEMENT = f"""
 <h3>Welcome to vdu_controls version {VDU_CONTROLS_VERSION}</h3>

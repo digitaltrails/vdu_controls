@@ -218,6 +218,8 @@ Michael Hamilton\
 
 Version History
 ---------------
+* 1.7.1
+  * Refactoring in 1.7 broke the signal handling - incorporate fix from Mark Lowne. 
 * 1.7.0
   * Presets can now optionally have icons which display in the menu and overlay the tray icon.
   * The Preset-management dialog now includes an icon selection button.
