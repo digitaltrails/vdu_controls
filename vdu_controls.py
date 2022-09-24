@@ -399,9 +399,9 @@ ABOUT_TEXT = f"""
 
 <b>vdu_controls version {VDU_CONTROLS_VERSION}</b>
 <p>
-A virtual control panel for external Visual Display Units. 
+A virtual control panel for external Visual Display Units.
 <p>
-Visit <a href="https://github.com/digitaltrails/vdu_controls">https://github.com/digitaltrails/vdu_controls</a> for 
+Visit <a href="https://github.com/digitaltrails/vdu_controls">https://github.com/digitaltrails/vdu_controls</a> for
 more details.
 <p>
 Release notes: <a href="https://github.com/digitaltrails/vdu_controls/releases/tag/v{VDU_CONTROLS_VERSION}">
@@ -430,7 +430,7 @@ with this program. If not, see <a href="https://www.gnu.org/licenses/">https://w
 <p><p>
 <quote>
 <small>
-Vdu_controls relies on <a href="https://www.ddcutil.com/">ddcutil</a>, a robust interface to DDC capable VDU's. 
+Vdu_controls relies on <a href="https://www.ddcutil.com/">ddcutil</a>, a robust interface to DDC capable VDU's.
 </small>
 </quote>
 """
@@ -560,21 +560,21 @@ DANGER_AGREEMENT_NON_STANDARD_VCP_CODES = """
 If you are attempting to enable non-standard VCP-codes for write, you must read and
 consider this notice before proceeding any further.
 
-Enabling ddcutil for VCP-codes not in the Display Data Channel (DDC) Virtual Control 
-Panel (VCP) standard may result in irreversible damage to any connected monitors and 
-any devices they are connected to (including the driving PC).  Before enabling 
-non-standard codes one should consider that these codes may need to be operated 
-in conjunction with other settings or codes. One should also be mindful that some 
-settings or combinations of settings may cause physical effects including and not 
-limited to overheating, screen-burn-in, shortened backlight lifetime, and cease 
+Enabling ddcutil for VCP-codes not in the Display Data Channel (DDC) Virtual Control
+Panel (VCP) standard may result in irreversible damage to any connected monitors and
+any devices they are connected to (including the driving PC).  Before enabling
+non-standard codes one should consider that these codes may need to be operated
+in conjunction with other settings or codes. One should also be mindful that some
+settings or combinations of settings may cause physical effects including and not
+limited to overheating, screen-burn-in, shortened backlight lifetime, and cease
 of function (bricking).
 
-It is your responsibility to assess and ensure the safety and wisdom of enabling 
+It is your responsibility to assess and ensure the safety and wisdom of enabling
 unsupported VCP codes and your responsibility for dealing with the consequences.
 
-Note that this software is licenced under the GPL Version 3 WITHOUT ANY WARRANTY; 
+Note that this software is licenced under the GPL Version 3 WITHOUT ANY WARRANTY;
 without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-PURPOSE.  
+PURPOSE.
 """
 ASSUMED_CONTROLS_CONFIG_VCP_CODES = ['10', '12']
 ASSUMED_CONTROLS_CONFIG_TEXT = ('\n'
@@ -1163,8 +1163,8 @@ class VduControlsConfig:
             args = sys.argv[1:]
         parser = argparse.ArgumentParser(
             description=textwrap.dedent("""
-            VDU Controls 
-              Uses ddcutil to issue Display Data Channel (DDC) Virtual Control Panel (VCP) commands. 
+            VDU Controls
+              Uses ddcutil to issue Display Data Channel (DDC) Virtual Control Panel (VCP) commands.
               Controls DVI/DP/HDMI/USB connected monitors (but not builtin laptop displays)."""),
             formatter_class=argparse.RawTextHelpFormatter)
         parser.epilog = textwrap.dedent("""
@@ -2510,7 +2510,7 @@ class PresetController:
     def get_preset(self, preset_number: int) -> Preset | None:
         presets = self.find_presets()
         if preset_number < len(presets):
-            return presets.values()[preset_number]
+            return list(presets.values())[preset_number]
         return None
 
     def convert_presets_v1_7(self, new_and_old_ids: List) -> List:
@@ -3265,7 +3265,7 @@ class MainWindow(QMainWindow):
             if signal_number == signal.SIGHUP:
                 self.main_control_panel.refresh_data()
             elif PRESET_SIGNAL_MIN <= signal_number <= PRESET_SIGNAL_MAX:
-                restore_preset = self.preset_controller.get_preset_name(signal_number - PRESET_SIGNAL_MIN)
+                restore_preset = self.preset_controller.get_preset(signal_number - PRESET_SIGNAL_MIN)
                 if restore_preset is not None:
                     self.restore_preset(restore_preset)
                 else:
