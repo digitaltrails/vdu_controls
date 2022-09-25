@@ -374,7 +374,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
     QWidgetItem, QScrollArea, QGroupBox, QFrame
 
-VDU_CONTROLS_VERSION = '1.7.1'
+VDU_CONTROLS_VERSION = '1.7.2'
 
 RELEASE_ANNOUNCEMENT = f"""
 <h3>Welcome to vdu_controls version {VDU_CONTROLS_VERSION}</h3>
@@ -1759,9 +1759,11 @@ class VduControlSlider(QWidget):
             except subprocess.SubprocessError:
                 msg = QMessageBox()
                 msg.setIcon(QMessageBox.Critical)
-                msg.setText(translate("Failed to communicate with {}").format(self.vdu_model.get_vdu_description()))
-                msg.setInformativeText(translate('Is the monitor switched off?<br>Is --sleep-multiplier set too low?'))
+                msg.setText(translate("Set value: Failed to communicate with display {}").format(self.vdu_model.vdu_id))
+                msg.setInformativeText(translate('Is the monitor switched off?<br>Is --sleep-multiplier set too low?'
+                                                 '<br>Checking connected displays.'))
                 msg.exec()
+                self.connected_vdus_changed.emit()
 
         slider.valueChanged.connect(slider_changed)
 
@@ -1862,9 +1864,11 @@ class VduControlComboBox(QWidget):
             except subprocess.SubprocessError:
                 msg = QMessageBox()
                 msg.setIcon(QMessageBox.Critical)
-                msg.setText(translate("Failed to communicate with {}").format(self.vdu_model.get_vdu_description()))
-                msg.setInformativeText(translate('Is the monitor switched off?<br>Is --sleep-multiplier set too low?'))
+                msg.setText(translate("Set option: failed to communicate with display {}").format(self.vdu_model.vdu_id))
+                msg.setInformativeText(translate('Is the monitor switched off?<br>Is --sleep-multiplier set too low?'
+                                                 '<br>Checking connected displays.'))
                 msg.exec()
+                self.connected_vdus_changed.emit()
 
         combo_box.currentIndexChanged.connect(index_changed)
 
@@ -1977,19 +1981,19 @@ class VduControlPanel(QWidget):
             if not update_only or preset_ini.has_option(vdu_section_name, control.vcp_capability.property_name()):
                 preset_ini[vdu_section_name][control.vcp_capability.property_name()] = control.current_value
 
-    def restore_state(self, preset_ini: ConfigIni) -> None:
-        self.restore_state_specific_section_name(preset_ini, self.vdu_model.vdu_stable_id)
+    def restore_vdu_state(self, preset_ini: ConfigIni) -> None:
+        self.restore_vdu_state_for_id(preset_ini, self.vdu_model.vdu_stable_id)
 
-    def restore_state_pre17(self, preset_ini: ConfigIni):
+    def restore_vdu_state_pre17(self, preset_ini: ConfigIni):
         # Provides backward compatibility for pre 1.7 presets where DisplayN was used in the section name - those
         # monitors that lacked a text serial number.
-        self.restore_state_specific_section_name(preset_ini, self.vdu_model.pre1_7_display_based_id)
+        self.restore_vdu_state_for_id(preset_ini, self.vdu_model.pre1_7_display_based_id)
 
-    def restore_state_specific_section_name(self, preset_ini: ConfigIni, vdu_section: str) -> None:
-        log_info(f"Preset restoring {vdu_section}")
+    def restore_vdu_state_for_id(self, preset_ini: ConfigIni, vdu_id: str) -> None:
+        log_info(f"Preset restoring {vdu_id}")
         for control in self.vcp_controls:
-            if control.vcp_capability.property_name() in preset_ini[vdu_section]:
-                control.current_value = preset_ini[vdu_section][control.vcp_capability.property_name()]
+            if control.vcp_capability.property_name() in preset_ini[vdu_id]:
+                control.current_value = preset_ini[vdu_id][control.vcp_capability.property_name()]
         self.refresh_view()
 
     def is_preset_active(self, preset_ini: ConfigIni) -> bool:
@@ -3375,14 +3379,14 @@ class MainWindow(QMainWindow):
         for section in preset.preset_ini:
             for control_panel in self.main_control_panel.vdu_control_panels:
                 if section == control_panel.vdu_model.vdu_stable_id:
-                    control_panel.restore_state(preset.preset_ini)
+                    control_panel.restore_vdu_state(preset.preset_ini)
                     restored_list.append(control_panel)
         # Cope with mixed pre-post v1.7 in a preset file,
         # if not already restored from post v1.7 section, use pre v1.7 section
         for section in preset.preset_ini:
             for control_panel in self.main_control_panel.vdu_control_panels:
                 if control_panel not in restored_list and section == control_panel.vdu_model.pre1_7_display_based_id:
-                    control_panel.restore_state_pre17(preset.preset_ini)
+                    control_panel.restore_vdu_state_pre17(preset.preset_ini)
         self.display_active_preset(preset)
         return preset
 

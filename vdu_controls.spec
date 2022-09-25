@@ -17,7 +17,7 @@
 #
 
 Name: vdu_controls
-Version: 1.7.1
+Version: 1.7.2
 Release: 0
 License: GPL-3.0-or-later
 BuildArch: noarch
@@ -84,6 +84,8 @@ gzip -c docs/_build/man/vdu_controls.1 > %{buildroot}/%{_datadir}/man/man1/%{nam
 %{_datadir}/man/man1/%{name}.1.gz
 
 %changelog
+* Mon Sep 26 2022 Michael Hamilton <michael@actrix.gen.nz>
+- Better handle monitor being powered off: vdu_controls 1.7.2
 * Sun Sep 25 2022 Michael Hamilton <michael@actrix.gen.nz>
 - Fix for signal handling from Mark Lowne: vdu_controls 1.7.1
 * Thu Aug 4 2022 Michael Hamilton <michael@actrix.gen.nz>
