@@ -85,7 +85,7 @@ gzip -c docs/_build/man/vdu_controls.1 > %{buildroot}/%{_datadir}/man/man1/%{nam
 
 %changelog
 * Mon Sep 26 2022 Michael Hamilton <michael@actrix.gen.nz>
-- Better handle monitor being powered off: vdu_controls 1.7.2
+- Better handle monitor being powered off, allow presets to be reordered on the menu: vdu_controls 1.7.2
 * Sun Sep 25 2022 Michael Hamilton <michael@actrix.gen.nz>
 - Fix for signal handling from Mark Lowne: vdu_controls 1.7.1
 * Thu Aug 4 2022 Michael Hamilton <michael@actrix.gen.nz>

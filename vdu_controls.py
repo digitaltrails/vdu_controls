@@ -1864,7 +1864,8 @@ class VduControlComboBox(QWidget):
             except subprocess.SubprocessError:
                 msg = QMessageBox()
                 msg.setIcon(QMessageBox.Critical)
-                msg.setText(translate("Set option: failed to communicate with display {}").format(self.vdu_model.vdu_id))
+                msg.setText(
+                    translate("Set option: failed to communicate with display {}").format(self.vdu_model.vdu_id))
                 msg.setInformativeText(translate('Is the monitor switched off?<br>Is --sleep-multiplier set too low?'
                                                  '<br>Checking connected displays.'))
                 msg.exec()
@@ -2476,7 +2477,7 @@ class PresetController:
 
     def find_presets(self) -> Mapping[str, Preset]:
         presets_still_present = []
-        for path_str in glob.glob(CONFIG_DIR_PATH.joinpath("Preset_*.conf").as_posix()):
+        for path_str in sorted(glob.glob(CONFIG_DIR_PATH.joinpath("Preset_*.conf").as_posix()), key=os.path.getmtime):
             preset_name = os.path.splitext(os.path.basename(path_str))[0].replace('Preset_', '').replace('_', ' ')
             if preset_name not in self.presets:
                 preset = Preset(preset_name)
@@ -2486,7 +2487,19 @@ class PresetController:
         for preset_name in list(self.presets.keys()):
             if preset_name not in presets_still_present:
                 del self.presets[preset_name]
+        order_presets_path = CONFIG_DIR_PATH.joinpath("Order_Presets.conf")
+        if order_presets_path.exists():
+            ordering = order_presets_path.read_text().split(",")
+            all_presets = list(self.presets.values())
+            all_presets.sort(key=lambda obj: ordering.index(obj.name) if obj.name in ordering else 0)
+            self.presets = {}
+            for preset in all_presets:
+                self.presets[preset.name] = preset
         return self.presets
+
+    def save_order(self, ordering):
+        order_presets_path = CONFIG_DIR_PATH.joinpath("Order_Presets.conf")
+        order_presets_path.write_text(','.join(ordering))
 
     def save_preset(self, preset: Preset) -> None:
         preset.save()
@@ -2525,6 +2538,7 @@ class PresetController:
                 all_done = False
                 problems.append((preset_name, problem_id))
         return problems
+
 
 class PresetWidget(QWidget):
     def __init__(self, name: str):
@@ -2691,13 +2705,58 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             for key, item in self.content_controls.items():
                 item.setChecked(preset.preset_ini.has_option(key[0], key[1]))
 
+        def up_action(preset: Preset, target_widget: QWidget) -> None:
+            log_info(f"move up preset {preset.name}")
+            index = presets_layout.indexOf(target_widget)
+            if index > 1:
+                presets_layout.removeWidget(target_widget)
+                new_preset_widget = self.create_preset_widget(
+                    preset,
+                    restore_action=restore_preset,
+                    save_action=save_preset,
+                    delete_action=delete_preset,
+                    edit_action=edit_preset,
+                    up_action=up_action,
+                    down_action=down_action)
+                presets_layout.insertWidget(index - 1, new_preset_widget)
+                target_widget.deleteLater()
+                presets_panel.adjustSize()
+                presets_panel.repaint()
+                order = [presets_layout.itemAt(i).widget().name for i in range(1, presets_layout.count())]
+                self.main_window.preset_controller.save_order(order)
+                main_window.display_active_preset(None)
+
+        def down_action(preset: Preset, target_widget: QWidget) -> None:
+            log_info(f"move up preset {preset.name}")
+            index = presets_layout.indexOf(target_widget)
+            if index < presets_layout.count() - 1:
+                presets_layout.removeWidget(target_widget)
+                new_preset_widget = self.create_preset_widget(
+                    preset,
+                    restore_action=restore_preset,
+                    save_action=save_preset,
+                    delete_action=delete_preset,
+                    edit_action=edit_preset,
+                    up_action=up_action,
+                    down_action=down_action)
+                presets_layout.insertWidget(index + 1, new_preset_widget)
+                target_widget.deleteLater()
+                # self.preset_name_edit.setText('')
+                presets_panel.adjustSize()
+                presets_panel.repaint()
+                order = [presets_layout.itemAt(i).widget().name for i in range(1, presets_layout.count())]
+                self.main_window.preset_controller.save_order(order)
+                main_window.display_active_preset(None)
+
         for preset_def in self.main_window.preset_controller.find_presets().values():
             preset_widget = self.create_preset_widget(
                 preset_def,
                 restore_action=restore_preset,
                 save_action=save_preset,
                 delete_action=delete_preset,
-                edit_action=edit_preset)
+                edit_action=edit_preset,
+                up_action=up_action,
+                down_action=down_action)
             presets_layout.addWidget(preset_widget)
 
         edit_preset_widget = QWidget(parent=self)
@@ -2765,7 +2824,9 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 restore_action=restore_preset,
                 save_action=save_preset,
                 delete_action=delete_preset,
-                edit_action=edit_preset)
+                edit_action=edit_preset,
+                up_action=up_action,
+                down_action=down_action)
             if existing_preset_widget:
                 presets_layout.replaceWidget(existing_preset_widget, new_preset_widget)
                 # The deleteLater removes the widget from the tree so that it is no longer findable and can be freed.
@@ -2815,8 +2876,13 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                     return w
         return None
 
-    def create_preset_widget(self, preset: Preset, restore_action=None, save_action=None, delete_action=None,
-                             edit_action=None) -> PresetWidget:
+    def create_preset_widget(self, preset: Preset,
+                             restore_action=None,
+                             save_action=None,
+                             delete_action=None,
+                             edit_action=None,
+                             up_action=None,
+                             down_action=None) -> PresetWidget:
         preset_widget = PresetWidget(preset.name)
         line_layout = QHBoxLayout()
         line_layout.setSpacing(0)
@@ -2846,6 +2912,26 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         line_layout.addWidget(save_button)
         save_button.clicked.connect(partial(save_action, preset=preset))
         save_button.setAutoDefault(False)
+
+        up_button = QPushButton()
+        up_button.setIcon(si(self, QStyle.SP_ArrowUp))
+        up_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
+        up_button.setFlat(True)
+        up_button.setContentsMargins(0, 0, 0, 0)
+        up_button.setToolTip(translate("Move up the menu order."))
+        line_layout.addWidget(up_button)
+        up_button.clicked.connect(partial(up_action, preset=preset, target_widget=preset_widget))
+        up_button.setAutoDefault(False)
+
+        down_button = QPushButton()
+        down_button.setIcon(si(self, QStyle.SP_ArrowDown))
+        down_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
+        down_button.setFlat(True)
+        down_button.setContentsMargins(0, 0, 0, 0)
+        down_button.setToolTip(translate("Move down the menu order."))
+        line_layout.addWidget(down_button)
+        down_button.clicked.connect(partial(down_action, preset=preset, target_widget=preset_widget))
+        down_button.setAutoDefault(False)
 
         delete_button = QPushButton()
         delete_button.setIcon(si(self, QStyle.SP_DialogDiscardButton))
@@ -2899,7 +2985,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             alert.setIcon(QMessageBox.Question)
             alert.setText("Save current edit?")
             alert.setStandardButtons(QMessageBox.Save | QMessageBox.Ignore)
-            alert.defaultButton(QMessageBox.Save)
+            alert.setDefaultButton(QMessageBox.Save)
             if alert.exec() == QMessageBox.Save:
                 self.edit_save_needed.emit()
             else:
