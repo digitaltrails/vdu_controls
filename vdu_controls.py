@@ -2477,7 +2477,8 @@ class PresetController:
 
     def find_presets(self) -> Mapping[str, Preset]:
         presets_still_present = []
-        for path_str in sorted(glob.glob(CONFIG_DIR_PATH.joinpath("Preset_*.conf").as_posix()), key=os.path.getmtime):
+        # Use a stable order for the files - alphabetical filename.
+        for path_str in sorted(glob.glob(CONFIG_DIR_PATH.joinpath("Preset_*.conf").as_posix()), key=os.path.basename):
             preset_name = os.path.splitext(os.path.basename(path_str))[0].replace('Preset_', '').replace('_', ' ')
             if preset_name not in self.presets:
                 preset = Preset(preset_name)
@@ -2487,10 +2488,12 @@ class PresetController:
         for preset_name in list(self.presets.keys()):
             if preset_name not in presets_still_present:
                 del self.presets[preset_name]
+        # If Order_Presets.conf exists, reorder according to the CSV Preset names it holds.
         order_presets_path = CONFIG_DIR_PATH.joinpath("Order_Presets.conf")
         if order_presets_path.exists():
             ordering = order_presets_path.read_text().split(",")
             all_presets = list(self.presets.values())
+            # Use the Preset-name's position in the Order_Presets.conf CSV as the key-value (or zero if not in the CSV)
             all_presets.sort(key=lambda obj: ordering.index(obj.name) if obj.name in ordering else 0)
             self.presets = {}
             for preset in all_presets:
