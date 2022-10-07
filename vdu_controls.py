@@ -2725,7 +2725,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 item.setChecked(preset.preset_ini.has_option(key[0], key[1]))
 
         def up_action(preset: Preset, target_widget: QWidget) -> None:
-            log_info(f"move up preset {preset.name}")
+            log_debug(f"move up preset {preset.name}")
             index = presets_layout.indexOf(target_widget)
             if index > 1:
                 presets_layout.removeWidget(target_widget)
@@ -2746,7 +2746,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 main_window.display_active_preset(None)
 
         def down_action(preset: Preset, target_widget: QWidget) -> None:
-            log_info(f"move up preset {preset.name}")
+            log_debug(f"move down preset {preset.name}")
             index = presets_layout.indexOf(target_widget)
             if index < presets_layout.count() - 1:
                 presets_layout.removeWidget(target_widget)
