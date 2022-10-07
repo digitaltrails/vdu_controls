@@ -221,6 +221,7 @@ Version History
 * 1.7.2
   * Better handle monitors being powered off: on set-value errors, check what's connected. 
   * The display ordering of presets can now be manually altered in the Presets dialog.
+  * Do not exit if no controllable monitor is found.
 * 1.7.1
   * Refactoring in 1.7 broke the signal handling - incorporate fix from Mark Lowne. 
 * 1.7.0

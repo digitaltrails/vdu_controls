@@ -2267,10 +2267,11 @@ class VduControlsMainPanel(QWidget):
         self.previously_detected_vdus = self.detected_vdus
         self.context_menu = app_context_menu
         app_context_menu.refresh_preset_menu()
-        layout1 = self.layout()
+        controllers_layout = self.layout()
         self.warnings = main_config.are_warnings_enabled()
         self.vdu_controllers = []
         self.new_and_old_ids = []
+
         for vdu_id, manufacturer, vdu_model_name, vdu_serial in self.detected_vdus:
             controller = None
             while True:
@@ -2329,7 +2330,7 @@ class VduControlsMainPanel(QWidget):
                 controller.vdu_setting_changed.connect(self.vdu_setting_changed)
                 if vdu_control_panel.number_of_controls() != 0:
                     self.vdu_control_panels.append(vdu_control_panel)
-                    layout1.addWidget(vdu_control_panel)
+                    controllers_layout.addWidget(vdu_control_panel)
                 elif self.warnings:
                     warn_omitted = QMessageBox()
                     warn_omitted.setIcon(QMessageBox.Warning)
@@ -2339,16 +2340,31 @@ class VduControlsMainPanel(QWidget):
                     warn_omitted.setInformativeText(translate('The monitor will be omitted from the control panel.'))
                     warn_omitted.exec()
         if len(self.vdu_control_panels) == 0:
-            error_no_monitors = QMessageBox()
-            error_no_monitors.setIcon(QMessageBox.Critical)
-            error_no_monitors.setText(translate('No controllable monitors found, exiting.'))
-            error_no_monitors.setInformativeText(translate(
-                "Is ddcutil installed?  Is i2c installed and configured?\n\n"
-                "Run vdu_controls --debug in a console and check for additional messages.\n\n"
-                f"{('Most recent ddcutil error: ' + str(ddcutil_problem)) if ddcutil_problem else ''}"
-            ))
-            error_no_monitors.exec()
-            sys.exit()
+            no_vdu_widget = QWidget()
+            no_vdu_layout = QHBoxLayout()
+            no_vdu_widget.setLayout(no_vdu_layout)
+            no_vdu_text = QLabel(translate('No controllable monitors found.\n'
+                                           'Use the refresh button if any become available.\n'
+                                           'Check that ddcutil and i2c are installed and configured.'))
+            no_vdu_text.setAlignment(Qt.AlignLeft)
+            no_vdu_image = QLabel()
+            no_vdu_image.setPixmap(QApplication.style().standardIcon(QStyle.SP_MessageBoxWarning).pixmap(QSize(64,64)))
+            no_vdu_image.setAlignment(Qt.AlignVCenter)
+            no_vdu_layout.addSpacing(32)
+            no_vdu_layout.addWidget(no_vdu_image)
+            no_vdu_layout.addWidget(no_vdu_text)
+            no_vdu_layout.addSpacing(32)
+            controllers_layout.addWidget(no_vdu_widget)
+            if self.warnings:
+                error_no_monitors = QMessageBox()
+                error_no_monitors.setIcon(QMessageBox.Critical)
+                error_no_monitors.setText(translate('No controllable monitors found.'))
+                error_no_monitors.setInformativeText(translate(
+                    "Is ddcutil installed?  Is i2c installed and configured?\n\n"
+                    "Run vdu_controls --debug in a console and check for additional messages.\n\n"
+                    f"{('Most recent ddcutil error: ' + str(ddcutil_problem)) if ddcutil_problem else ''}"
+                ))
+                error_no_monitors.exec()
 
         def finish_refresh() -> None:
             # GUI-thread QT signal handler for refresh task completion - execution will be in the GUI thread.
