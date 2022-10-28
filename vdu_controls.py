@@ -346,6 +346,8 @@ import configparser
 import glob
 import inspect
 import io
+import json
+import math
 import os
 import pickle
 import re
@@ -358,11 +360,13 @@ import syslog
 import textwrap
 import time
 import traceback
+import urllib.request
 from datetime import datetime, timedelta
 from functools import partial
 from pathlib import Path
-from typing import List, Tuple, Mapping, Type
+from typing import List, Tuple, Mapping, Type, Dict
 
+import pytz
 from PyQt5 import QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
     QSettings, QSize
@@ -915,6 +919,7 @@ class VduGuiSupportedControls:
         '60': VcpCapability('60', 'Input Source', 'SNC', causes_config_change=True),
         'D6': VcpCapability('D6', 'Power mode', 'SNC', causes_config_change=True),
         'CC': VcpCapability('CC', 'OSD Language', 'SNC'),
+        '0C': VcpCapability('0C', 'Color temperature', 'CNC', icon_source=BRIGHTNESS_SVG, enabled=True),
     }
     by_arg_name = {c.property_name(): c for c in by_code.values()}
     ddcutil_supported = None
@@ -1019,7 +1024,8 @@ class VduControlsConfig:
         self.ini_content = ConfigIni()
         # augment the configparser with type-info for run-time widget selection (default type is 'boolean')
         self.config_type_map = {
-            'enable-vcp-codes': 'csv', 'sleep-multiplier': 'float', 'capabilities-override': 'text'}
+            'enable-vcp-codes': 'csv', 'sleep-multiplier': 'float', 'capabilities-override': 'text',
+            'location': 'location'}
 
         if include_globals:
             self.ini_content['vdu-controls-globals'] = {
@@ -1027,7 +1033,8 @@ class VduControlsConfig:
                 'splash-screen-enabled': 'yes',
                 'warnings-enabled': 'no',
                 'debug-enabled': 'no',
-                'syslog-enabled': 'no', }
+                'syslog-enabled': 'no',
+                'location': ''}
 
         self.ini_content['vdu-controls-widgets'] = {}
         self.ini_content['ddcutil-parameters'] = {}
@@ -1114,6 +1121,12 @@ class VduControlsConfig:
                                 f"in enabled_vcp_codes ({enable_codes_str})")
         return enabled_vcp_codes
 
+    def get_location(self) -> Tuple[int, int]:
+        spec = self.ini_content.get('vdu-controls-globals', 'location', fallback=None)
+        if spec is None:
+            return None, None
+        return tuple([float(part) for part in spec.split(',')])
+
     def parse_file(self, config_path: Path) -> None:
         """Parse config values from file"""
         self.file_path = config_path
@@ -1190,6 +1203,7 @@ class VduControlsConfig:
         # Python 3.9 parser.add_argument('--debug',  action=argparse.BooleanOptionalAction, help='enable debugging')
         parser.add_argument('--system-tray', default=False, action='store_true',
                             help='start up as an entry in the system tray')
+        parser.add_argument('--location', default=None, type=str, help='latitude,longitude')
         parser.add_argument('--debug', default=False, action='store_true', help='enable debug output to stdout')
         parser.add_argument('--warnings', default=False, action='store_true',
                             help='popup a warning when a VDU lacks an enabled control')
@@ -1224,6 +1238,8 @@ class VduControlsConfig:
             self.ini_content['vdu-controls-globals']['syslog-enabled'] = 'yes'
         if parsed_args.system_tray:
             self.ini_content['vdu-controls-globals']['system-tray-enabled'] = 'yes'
+        if parsed_args.location:
+            self.ini_content['vdu-controls-globals']['location'] = parsed_args.location
 
         if len(parsed_args.show) != 0:
             for control_def in VDU_SUPPORTED_CONTROLS.by_arg_name.values():
@@ -1494,6 +1510,8 @@ class SettingsEditorTab(QWidget):
                     editor_layout.addWidget(field(SettingsEditorTextEditorWidget(self, option, section)))
                 elif data_type == 'csv':
                     editor_layout.addWidget(field(SettingsEditorCsvWidget(self, option, section)))
+                elif data_type == 'location':
+                    editor_layout.addWidget(field(SettingsEditorLocationWidget(self, option, section)))
 
         def save_clicked() -> None:
             if self.is_unsaved():
@@ -1627,6 +1645,42 @@ class SettingsEditorCsvWidget(SettingsEditorFieldBase):
         # TODO - should probably also allow spaces as well as commas, but the regexp is getting a bit tricky?
         # Validator matches CSV of two digit hex or the empty string.
         validator = QRegExpValidator(QRegExp(r"^([0-9a-fA-F]{2}([ \t]*,[ \t]*[0-9a-fA-F]{2})*)|$"))
+        text_input.setValidator(validator)
+        text_input.setText(section_editor.ini_editable[section][option])
+
+        def editing_finished() -> None:
+            # print(section, option, text_input.text())
+            section_editor.ini_editable[section][option] = str(text_input.text())
+
+        def input_rejected() -> None:
+            text_input.setStyleSheet("QLineEdit { color : red; }")
+
+        def text_edited() -> None:
+            text_input.setStyleSheet("QLineEdit { color : black; }")
+
+        text_input.editingFinished.connect(editing_finished)
+        text_input.inputRejected.connect(input_rejected)
+        text_input.textEdited.connect(text_edited)
+        layout.addWidget(text_input)
+        self.text_input = text_input
+
+    def reset(self):
+        self.text_input.setText(self.section_editor.ini_before[self.section][self.option])
+
+
+class SettingsEditorLocationWidget(SettingsEditorFieldBase):
+    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str) -> None:
+        super().__init__(section_editor, option, section)
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+        text_label = QLabel(option.replace('-', ' '))
+        layout.addWidget(text_label)
+        text_input = QLineEdit()
+        text_input.setMaximumWidth(250)
+        text_input.setMaxLength(250)
+        # TODO - should probably also allow spaces as well as commas, but the regexp is getting a bit tricky?
+        # Validator matches CSV of two digit hex or the empty string.
+        validator = QRegExpValidator(QRegExp(r"^([0-9.-]+,[0-9.-]+)|$"))
         text_input.setValidator(validator)
         text_input.setText(section_editor.ini_editable[section][option])
 
@@ -2348,7 +2402,7 @@ class VduControlsMainPanel(QWidget):
                                            'Check that ddcutil and i2c are installed and configured.'))
             no_vdu_text.setAlignment(Qt.AlignLeft)
             no_vdu_image = QLabel()
-            no_vdu_image.setPixmap(QApplication.style().standardIcon(QStyle.SP_MessageBoxWarning).pixmap(QSize(64,64)))
+            no_vdu_image.setPixmap(QApplication.style().standardIcon(QStyle.SP_MessageBoxWarning).pixmap(QSize(64, 64)))
             no_vdu_image.setAlignment(Qt.AlignVCenter)
             no_vdu_layout.addSpacing(32)
             no_vdu_layout.addWidget(no_vdu_image)
@@ -2630,6 +2684,104 @@ class PresetChooseIconButton(QPushButton):
         return True
 
 
+class PresetChooseElevationWidget(QWidget):
+    # def create_trigger_widget(self, base_ini: ConfigIni) -> QWidget:
+    #
+    def __init__(self, latitude: float, longitude: float):
+        super().__init__()
+        self.elevation_key = -1
+        self.latitude = latitude
+        self.longitude = longitude
+
+        if latitude is None:
+            return
+
+        weather_data = retrieve_wttr_data(latitude, longitude)
+        location_name = weather_data['nearest_area'][0]['areaName'][0]['value']
+        print(location_name)
+        # latitude, longitude = weather_data['nearest_area'][0]['latitude'], weather_data['nearest_area'][0]['longitude']
+
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+        label = QLabel(translate("Trigger at sun elevation: None"))
+        layout.addWidget(label)
+        slider = QSlider(Qt.Horizontal)
+        slider.setTracking(True)
+        self.slider = slider
+        self.when_index = index_local_time_today_by_solar_elevation(latitude=latitude, longitude=longitude)
+        self.elevation_steps = []
+        for i in range(-10,89):
+            self.elevation_steps.append(('East', i))
+        for i in range(90, -10, -1):
+            self.elevation_steps.append(('West', i))
+
+        slider.setMinimum(-1)
+        slider.setMaximum(len(self.elevation_steps))
+        slider.setValue(-1)
+        def sliding():
+            # minutes = slider.value()
+            # if minutes == -1:
+            #     label.setText(translate("Trigger at sun elevation: None"))
+            #     self.elevation = None
+            #     return
+            # local_now = datetime.now().astimezone()
+            # local_when = local_now.replace(hour=minutes // 60, minute=minutes % 60)
+            # self.elevation = round(calc_solar_elevation(local_when, latitude, longitude))
+            # print(minutes, local_when, self.elevation)
+            # if -6 <= self.elevation < 1 and local_when.hour < 12:
+            #     text_template = translate("Activate at dawn, sun elevation {}\u00B0 (today at {})")
+            # elif -6 <= self.elevation < 1 and local_when.hour > 12:
+            #     text_template = translate("Activate at dusk, sun elevation {}\u00B0 (today at {})")
+            # else:
+            #     text_template = translate("Activate at sun elevation {}\u00B0 (today at {})")
+            # display_text = text_template.format(self.elevation, local_when.strftime('%H:%M'))
+            # if display_text != label.text():
+            #     label.setText(display_text)
+            if slider.value() == -1:
+                label.setText(translate("Trigger at sun elevation: None"))
+                self.elevation_key = None
+                return
+            self.elevation_key = self.elevation_steps[slider.value()]
+            local_when = self.when_index[self.elevation_key] if self.elevation_key in self.when_index else ''
+            if local_when:
+                when_text = translate("today at {}").format(local_when.strftime('%H:%M'))
+            else:
+                when_text = translate("doesn't get that high today")
+            if -6 <= self.elevation_key[1] < 1 and self.elevation_key[0] == 'East':
+                when_text += translate(" dawn")
+            elif -6 <= self.elevation_key[1] < 1 and self.elevation_key[0] == 'West':
+                when_text += translate(" dusk")
+            print(self.elevation_key, local_when, self.elevation_key)
+            display_text = translate("Activate at sun elevation {}\u00B0 in the {} ({})").format(
+                self.elevation_key[1], self.elevation_key[0], when_text)
+            if display_text != label.text():
+                label.setText(display_text)
+
+        slider.valueChanged.connect(sliding)
+        layout.addWidget(slider)
+
+    def set_elevation(self, elevation_text: str):
+        if elevation_text:
+            parts = elevation_text.split()
+            self.elevation_key = parts[0], int(parts[1])
+            self.slider.setValue(self.elevation_steps.index(self.elevation_key))
+        else:
+            self.slider.setValue(-1)
+        # self.elevation = elevation
+        # if elevation is None:
+        #     self.slider.setValue(-1)
+        #     return
+        # local_now = datetime.now().astimezone()
+        # local_when = local_now.replace(hour=0, minute=0)
+        # while round(calc_solar_elevation(local_when, self.latitude, self.longitude)) != elevation:
+        #     local_when += timedelta(minutes=1)
+        #     print(local_when, calc_solar_elevation(local_when, self.latitude, self.longitude), elevation)
+        # self.slider.setValue(local_when.hour * 60 + local_when.minute)
+
+    def get_elevation_text(self) -> int:
+        return self.elevation_key if self.elevation_key is None else f"{self.elevation_key[0]} {self.elevation_key[1]}"
+
+
 class PresetsDialog(QDialog, DialogSingletonMixin):
     """A dialog for creating/updating/removing presets."""
 
@@ -2638,16 +2790,17 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
     edit_save_needed = pyqtSignal()
 
     @staticmethod
-    def invoke(main_window: 'MainWindow') -> None:
+    def invoke(main_window: 'MainWindow', main_config: VduControlsConfig) -> None:
         if PresetsDialog.exists():
             PresetsDialog.show_existing_dialog()
         else:
-            PresetsDialog(main_window)
+            PresetsDialog(main_window, main_config)
 
-    def __init__(self, main_window: 'MainWindow') -> None:
+    def __init__(self, main_window: 'MainWindow', main_config: VduControlsConfig) -> None:
         super().__init__()
         self.setWindowTitle(translate('Presets'))
         self.main_window = main_window
+        self.main_config = main_config
         self.content_controls = {}
         self.setMinimumWidth(512)
         layout = QVBoxLayout()
@@ -2665,6 +2818,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         button_layout = QHBoxLayout()
         button_box.setLayout(button_layout)
         main_window.app_context_menu.refresh_preset_menu()
+        # Create a temporary holder of preset values
         base_ini = ConfigIni()
         main_window.copy_to_preset_ini(base_ini)
 
@@ -2679,6 +2833,11 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                         if not preset_ini.has_section(section):
                             preset_ini.add_section(section)
                         preset_ini.set(section, option, value)
+            preset.set_icon_path(edit_choose_icon_button.last_selected_icon_path)
+            if editor_trigger_widget.get_elevation_text() is not None:
+                if not preset_ini.has_section('preset'):
+                    preset_ini.add_section('preset')
+                preset_ini.set('preset', 'solar-elevation', str(editor_trigger_widget.get_elevation_text()))
 
         def restore_preset(preset: Preset) -> None:
             self.main_window.restore_preset(preset)
@@ -2720,9 +2879,12 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         def edit_preset(preset: Preset) -> None:
             self.main_window.restore_preset(preset)
             self.preset_name_edit.setText(preset.name)
-            choose_icon_button.set_preset(preset)
+            edit_choose_icon_button.set_preset(preset)
             for key, item in self.content_controls.items():
                 item.setChecked(preset.preset_ini.has_option(key[0], key[1]))
+            if preset.preset_ini.has_section('preset'):
+                editor_trigger_widget.set_elevation(
+                    preset.preset_ini.get('preset', 'solar-elevation', fallback=None))
 
         def up_action(preset: Preset, target_widget: QWidget) -> None:
             log_debug(f"move up preset {preset.name}")
@@ -2783,8 +2945,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         edit_preset_widget.setLayout(edit_preset_layout)
         edit_preset_widget.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
 
-        choose_icon_button = PresetChooseIconButton()
-        edit_preset_layout.addWidget(choose_icon_button)
+        edit_choose_icon_button = PresetChooseIconButton()
+        edit_preset_layout.addWidget(edit_choose_icon_button)
 
         self.preset_name_edit.setToolTip(translate('Enter a new preset name.'))
         self.preset_name_edit.setClearButtonEnabled(True)
@@ -2794,6 +2956,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             if changed_text.strip() == "":
                 # choose_icon_button.set_preset(None)
                 editor_controls_widget.setDisabled(True)
+                editor_trigger_widget.setDisabled(True)
                 edit_save_button.setDisabled(True)
                 editor_title.setText(translate("Create new preset:"))
                 editor_controls_prompt.setText(translate("Controls to include:"))
@@ -2805,6 +2968,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 editor_controls_prompt.setText(translate("Controls to include in {}:").format(changed_text))
                 editor_controls_prompt.setDisabled(False)
                 editor_controls_widget.setDisabled(False)
+                editor_trigger_widget.setDisabled(False)
                 edit_save_button.setDisabled(False)
 
         self.preset_name_edit.textChanged.connect(change_edit_group_title)
@@ -2835,7 +2999,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                     return
             preset = Preset(preset_name)
             initialise_preset_from_controls(preset)
-            preset.set_icon_path(choose_icon_button.last_selected_icon_path)
+
             self.main_window.save_preset(preset)
             # Create a new widget - an easy way to update the icon.
             new_preset_widget = self.create_preset_widget(
@@ -2873,7 +3037,9 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         editor_controls_prompt.setDisabled(True)
         editor_layout.addWidget(editor_controls_prompt)
         editor_layout.addWidget(editor_controls_widget)
-
+        latitude, longitude = self.main_config.get_location()
+        editor_trigger_widget = PresetChooseElevationWidget(latitude=latitude, longitude=longitude)
+        editor_layout.addWidget(editor_trigger_widget)
         layout.addWidget(editor_groupbox)
 
         close_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), translate('close'))
@@ -2881,8 +3047,9 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         button_layout.addSpacing(10)
         button_layout.addWidget(close_button, 0, Qt.AlignRight | Qt.AlignBottom)
 
-        choose_icon_button.set_preset(None)
+        edit_choose_icon_button.set_preset(None)
         editor_controls_widget.setDisabled(True)
+        editor_trigger_widget.setDisabled(True)
         edit_save_button.setDisabled(True)
         layout.addWidget(button_box)
         # .show() is non-modal, .exec() is modal
@@ -3009,7 +3176,6 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 self.edit_save_needed.emit()
             else:
                 self.preset_name_edit.setText('')
-
         super().closeEvent(event)
 
 
@@ -3291,7 +3457,7 @@ class MainWindow(QMainWindow):
             GreyScaleDialog()
 
         def edit_presets() -> None:
-            PresetsDialog.invoke(self)
+            PresetsDialog.invoke(self, main_config)
 
         def quit_app() -> None:
             self.app_save_state()
@@ -3627,6 +3793,110 @@ class SignalWakeupHandler(QtNetwork.QAbstractSocket):
         signal_number = int(data[0])
         log_info("SignalWakeupHandler", signal_number)
         self.signalReceived.emit(signal_number)
+
+
+#
+# FUNCTION TO COMPUTE SOLAR AZIMUTH AND ZENITH ANGLE
+# Extracted from a larger gist by Antti Lipponen
+# https://gist.github.com/anttilipp/1c482c8cc529918b7b973339f8c28895
+# which was translated to Python from http://www.psa.es/sdg/sunpos.htm
+# Converted to only using the python math library (instead of numpy).
+# Coding style altered for use with vdu_controls.
+#
+def calc_solar_azimuth_zenith(localised_time: datetime, latitude: float, longitude: float) -> Tuple[float, float]:
+    """
+    Return azimuth degrees clockwise from true north and zenith in degrees from vertical direction.
+    """
+    utc_date_time = localised_time if localised_time.tzinfo is None else localised_time.astimezone(pytz.UTC)
+    # UTC from now on...
+    hours, minutes, seconds = utc_date_time.hour, utc_date_time.minute, utc_date_time.second
+    year, month, day = utc_date_time.year, utc_date_time.month, utc_date_time.day
+
+    earth_mean_radius = 6371.01
+    astronomical_unit = 149597890
+
+    # Calculate difference in days between the current Julian Day
+    # and JD 2451545.0, which is noon 1 January 2000 Universal Time
+
+    # Calculate time of the day in UT decimal hours
+    decimal_hours = hours + (minutes + seconds / 60.) / 60.
+    # Calculate current Julian Day
+    aux1 = int((month - 14.) / 12.)
+    aux2 = int((1461. * (year + 4800. + aux1)) / 4.) + int((367. * (month - 2. - 12. * aux1)) / 12.) - int(
+        (3. * int((year + 4900. + aux1) / 100.)) / 4.) + day - 32075.
+    julian_date = aux2 - 0.5 + decimal_hours / 24.
+    # Calculate difference between current Julian Day and JD 2451545.0
+    elapsed_julian_days = julian_date - 2451545.0
+
+    # Calculate ecliptic coordinates (ecliptic longitude and obliquity of the
+    # ecliptic in radians but without limiting the angle to be less than 2*Pi
+    # (i.e., the result may be greater than 2*Pi)
+    omega = 2.1429 - 0.0010394594 * elapsed_julian_days
+    mean_longitude = 4.8950630 + 0.017202791698 * elapsed_julian_days  # Radians
+    mean_anomaly = 6.2400600 + 0.0172019699 * elapsed_julian_days
+    ecliptic_longitude = mean_longitude + 0.03341607 * math.sin(mean_anomaly) + 0.00034894 * math.sin(
+        2. * mean_anomaly) - 0.0001134 - 0.0000203 * math.sin(omega)
+    ecliptic_obliquity = 0.4090928 - 6.2140e-9 * elapsed_julian_days + 0.0000396 * math.cos(omega)
+
+    # Calculate celestial coordinates ( right ascension and declination ) in radians
+    # but without limiting the angle to be less than 2*Pi (i.e., the result may be
+    # greater than 2*Pi)
+    sin_ecliptic_longitude = math.sin(ecliptic_longitude)
+    dy = math.cos(ecliptic_obliquity) * sin_ecliptic_longitude
+    dx = math.cos(ecliptic_longitude)
+    right_ascension = math.atan2(dy, dx)
+    if right_ascension < 0.0:
+        right_ascension = right_ascension + 2.0 * math.pi
+    declination = math.asin(math.sin(ecliptic_obliquity) * sin_ecliptic_longitude)
+
+    # Calculate local coordinates ( azimuth and zenith angle ) in degrees
+    greenwich_mean_sidereal_time = 6.6974243242 + 0.0657098283 * elapsed_julian_days + decimal_hours
+    local_mean_sidereal_time = (greenwich_mean_sidereal_time * 15. + longitude) * (math.pi / 180.)
+    hour_angle = local_mean_sidereal_time - right_ascension
+    latitude_in_radians = latitude * (math.pi / 180.)
+    cos_latitude = math.cos(latitude_in_radians)
+    sin_latitude = math.sin(latitude_in_radians)
+    cos_hour_angle = math.cos(hour_angle)
+    zenith_angle = (
+        math.acos(cos_latitude * cos_hour_angle * math.cos(declination) + math.sin(declination) * sin_latitude))
+    dy = -math.sin(hour_angle)
+    dx = math.tan(declination) * cos_latitude - sin_latitude * cos_hour_angle
+    azimuth = math.atan2(dy, dx)
+    if azimuth < 0.0:
+        azimuth += 2 * math.pi
+    azimuth = azimuth / (math.pi / 180.)
+    # Parallax Correction
+    parallax = (earth_mean_radius / astronomical_unit) * math.sin(zenith_angle)
+    zenith_angle = (zenith_angle + parallax) / (math.pi / 180.)
+    # Return azimuth as clockwise angle from true north
+    return azimuth, zenith_angle
+
+
+def calc_solar_azimuth_elevation(localised_time: datetime, latitude: float, longitude: float) -> Tuple[float, float]:
+    a, z = calc_solar_azimuth_zenith(localised_time, latitude, longitude)
+    return round(a), round(90.0 - z)
+
+
+def index_local_time_today_by_solar_elevation(latitude: float, longitude: float) -> Dict[Tuple[int, int], datetime]:
+    elevation_by_angle = {}
+    local_now = datetime.now().astimezone()
+    local_when = local_now.replace(hour=0, minute=0)
+    while local_when.day == local_now.day:
+        a, z = calc_solar_azimuth_elevation(local_when, latitude, longitude)
+        key = 'East' if a < 180 else 'West', round(z)
+        if key not in elevation_by_angle:
+            print(key)
+            elevation_by_angle[key] = local_when
+        local_when += timedelta(minutes=1)
+    return elevation_by_angle
+
+
+def retrieve_wttr_data(latitude: float, longitude: float):
+    with urllib.request.urlopen(f'https://wttr.in/{latitude},{longitude}?format=j1') as request:
+        json_content = request.read()
+        weather_data = json.loads(json_content)
+        return weather_data
+    return None
 
 
 def main():
