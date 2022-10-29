@@ -2729,7 +2729,7 @@ class PresetChooseElevationWidget(QWidget):
 
         layout = QVBoxLayout()
         self.setLayout(layout)
-        label = QLabel(translate("Trigger at sun elevation: None"))
+        label = QLabel(translate("Trigger at sun elevation:"))
 
         slider = QSlider(Qt.Horizontal)
         slider.setTracking(True)
@@ -2738,9 +2738,15 @@ class PresetChooseElevationWidget(QWidget):
         self.slider = slider
         self.elevation_steps = []
 
+        layout.addWidget(label)
+        layout.addWidget(slider)
+
         if latitude is None:
+            label.setText(translate("Trigger at sun elevation: location undefined (see settings)"))
+            slider.setDisabled(True)
             return
 
+        slider.setEnabled(True)
         self.elevation_time_map = create_todays_elevation_time_map(latitude=latitude, longitude=longitude)
 
         for i in range(-10, 89):
@@ -2751,7 +2757,7 @@ class PresetChooseElevationWidget(QWidget):
 
         def sliding():
             if slider.value() == -1:
-                label.setText(translate("Trigger at sun elevation: None"))
+                label.setText(translate("Trigger at sun elevation:"))
                 self.elevation_key = None
                 return
             self.elevation_key = self.elevation_steps[slider.value()]
@@ -2772,8 +2778,7 @@ class PresetChooseElevationWidget(QWidget):
                 label.setText(display_text)
 
         slider.valueChanged.connect(sliding)
-        layout.addWidget(label)
-        layout.addWidget(slider)
+
 
     def set_elevation(self, elevation_text: str):
         if elevation_text and len(self.elevation_steps) != 0:
