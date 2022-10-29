@@ -218,6 +218,8 @@ Michael Hamilton\
 
 Version History
 ---------------
+* 1.8.0
+  * Presets can be scheduled to activate according to solar elevation at a given latitude and longitude.
 * 1.7.2
   * Better handle monitors being powered off: on set-value errors, check what's connected. 
   * The display ordering of presets can now be manually altered in the Presets dialog.

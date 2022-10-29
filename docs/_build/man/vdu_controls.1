@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Aug 14, 2022" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Oct 29, 2022" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.3.1
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -43,6 +43,7 @@ A control panel for external monitors (\fIVisual Display Units\fP).
 [\-\-show {brightness,contrast,audio\-volume,input\-source,power\-mode,osd\-language}]
 [\-\-hide {brightness,contrast,audio\-volume,input\-source,power\-mode,osd\-language}]
 [\-\-enable\-vcp\-code vcp_code] [\-\-system\-tray] [\-\-debug] [\-\-warnings] [\-\-syslog]
+[\-\-location latitude,longitude]
 [\-\-no\-splash] [\-\-sleep\-multiplier multiplier]
 [\-\-create\-config\-files]
 [\-\-install] [\-\-uninstall]
@@ -74,6 +75,13 @@ enable a control for a vcp\-code unavailable via hide/show (maybe specified mult
 .TP
 .B  \-\-system\-tray
 start up as an entry in the system tray
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-location latitude,longitude
+local latitude and longitude for triggering presets by solar elevation
+.UNINDENT
+.INDENT 0.0
 .TP
 .B  \-\-debug
 enable debug output to stdout
@@ -302,6 +310,7 @@ VDU, for example:
 .ft C
 [preset]
 icon = /usr/share/icons/breeze/status/16/cloudstatus.svg
+solar\-elevation = eastern\-sky 40
 
 [HP_ZR24w_CNT008]
 brightness = 50
@@ -316,8 +325,24 @@ input\-source = 0f
 .UNINDENT
 .UNINDENT
 .sp
-When the GUI is used to create a preset file, your can select which controls to save.  For example, you
-might create a preset that includes only the brightness, but the contrast or audio volume.
+When the GUI is used to create a preset file, you can select which controls to save.  For example, you
+might create a preset that includes only the brightness, but not the contrast or audio volume.
+.SS Presets \- solar elevation triggers
+.sp
+A preset may include an option specifying \fBsolar\-elevation\fP\&. In which case \fBvdu_controls\fP will
+automatically restore the preset when the sun reaches that elevation. Each day\(aqs solar elevations
+are calculated based on the value of \fBlocation\fP option in the \fBvdu\-controls\-globals\fP\&.
+.sp
+Solar elevations may range from \-10 in the eastern sky (morning/ascending) to \-10 in the western
+sky (afternoon/descending), with a maximum of 90 degrees (midday).
+.sp
+A preset with a \fBsolar\-elevation\fP that is higher than current day\(aqs maximum won\(aqt be automatically
+activated.  For example,  a preset with a positive solar elevation will not trigger at mid\-winter
+in the Arctic circle because the sun never rises above the horizon.  Presets may
+always be manually invoked regardless of their specified solar elevations.
+.sp
+When \fBvdu_controls\fP starts up, it will automatically restore the preset with a qualifying \fBsolar\-elevation\fP
+that is closest to the current solar elevation.
 .SS Presets \- remote control
 .sp
 UNIX/Linux signals may be used to instruct a running \fBvdu_controls\fP to invoke a preset.  This feature is

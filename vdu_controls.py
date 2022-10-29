@@ -13,6 +13,7 @@ Usage:
                      [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                      [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                      [--enable-vcp-code vcp_code] [--system-tray] [--debug] [--warnings] [--syslog]
+                     [--location latitude,longitude]
                      [--no-splash] [--sleep-multiplier multiplier]
                      [--create-config-files]
                      [--install] [--uninstall]
@@ -30,6 +31,8 @@ Optional arguments:
       --enable-vcp-code vcp_code
                             enable a control for a vcp-code unavailable via hide/show (maybe specified multiple times)
       --system-tray         start up as an entry in the system tray
+      --location latitude,longitude
+                            local latitude and longitude for triggering presets by solar elevation
       --debug               enable debug output to stdout
       --warnings            popup a warning when a VDU lacks an enabled control
       --syslog              repeat diagnostic output to the syslog (journald)
@@ -199,6 +202,7 @@ VDU, for example::
 
     [preset]
     icon = /usr/share/icons/breeze/status/16/cloudstatus.svg
+    solar-elevation = eastern-sky 40
 
     [HP_ZR24w_CNT008]
     brightness = 50
@@ -209,8 +213,27 @@ VDU, for example::
     audio-speaker-volume = 16
     input-source = 0f
 
-When the GUI is used to create a preset file, your can select which controls to save.  For example, you
-might create a preset that includes only the brightness, but the contrast or audio volume.
+When the GUI is used to create a preset file, you can select which controls to save.  For example, you
+might create a preset that includes only the brightness, but not the contrast or audio volume.
+
+
+Presets - solar elevation triggers
+----------------------------------
+
+A preset may include an option specifying ``solar-elevation``. In which case ``vdu_controls`` will
+automatically restore the preset when the sun reaches that elevation. Each day's solar elevations
+are calculated based on the value of ``location`` option in the ``vdu-controls-globals``.
+
+Solar elevations may range from -10 in the eastern sky (morning/ascending) to -10 in the western
+sky (afternoon/descending), with a maximum of 90 degrees (midday).
+
+A preset with a ``solar-elevation`` that is higher than current day's maximum won't be automatically
+activated.  For example, at mid-winter in the Arctic circle, any preset with a positive solar elevation will
+not trigger because the sun never rises above the horizon.  Presets may always be manually invoked
+regardless of their specified solar elevations.
+
+When ``vdu_controls`` starts up, it will automatically restore the preset with a qualifying ``solar-elevation``
+that is closest to the current solar elevation.
 
 Presets - remote control
 ------------------------
@@ -361,7 +384,8 @@ import textwrap
 import time
 import traceback
 import urllib.request
-from datetime import datetime, timedelta
+from collections import namedtuple
+from datetime import datetime, timedelta, date
 from functools import partial
 from pathlib import Path
 from typing import List, Tuple, Mapping, Type, Dict
@@ -369,7 +393,7 @@ from typing import List, Tuple, Mapping, Type, Dict
 import pytz
 from PyQt5 import QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
-    QSettings, QSize
+    QSettings, QSize, QTimer
 from PyQt5.QtGui import QIntValidator, QPixmap, QIcon, QCursor, QImage, QPainter, QDoubleValidator, QRegExpValidator, \
     QPalette, QGuiApplication, QColor
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
@@ -378,7 +402,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
     QWidgetItem, QScrollArea, QGroupBox, QFrame
 
-VDU_CONTROLS_VERSION = '1.7.2'
+VDU_CONTROLS_VERSION = '1.8.0'
 
 RELEASE_ANNOUNCEMENT = f"""
 <h3>Welcome to vdu_controls version {VDU_CONTROLS_VERSION}</h3>
@@ -388,6 +412,11 @@ Please read the online release notes:<br>
 https://github.com/digitaltrails/vdu_controls/releases/tag/v{VDU_CONTROLS_VERSION}</a>
 <hr>
 """
+
+WESTERN_SKY = 'western-sky'
+EASTERN_SKY = 'eastern-sky'
+
+SolarElevation = namedtuple('SolarElevation', ['direction', 'elevation'])
 
 
 def proper_name(*args):
@@ -1123,7 +1152,7 @@ class VduControlsConfig:
 
     def get_location(self) -> Tuple[int, int]:
         spec = self.ini_content.get('vdu-controls-globals', 'location', fallback=None)
-        if spec is None:
+        if spec is None or spec.strip() == '':
             return None, None
         return tuple([float(part) for part in spec.split(',')])
 
@@ -2693,90 +2722,67 @@ class PresetChooseElevationWidget(QWidget):
         self.latitude = latitude
         self.longitude = longitude
 
-        if latitude is None:
-            return
-
         weather_data = retrieve_wttr_data(latitude, longitude)
         location_name = weather_data['nearest_area'][0]['areaName'][0]['value']
-        print(location_name)
+        log_info(location_name)
         # latitude, longitude = weather_data['nearest_area'][0]['latitude'], weather_data['nearest_area'][0]['longitude']
 
         layout = QVBoxLayout()
         self.setLayout(layout)
         label = QLabel(translate("Trigger at sun elevation: None"))
-        layout.addWidget(label)
+
         slider = QSlider(Qt.Horizontal)
         slider.setTracking(True)
-        self.slider = slider
-        self.when_index = index_local_time_today_by_solar_elevation(latitude=latitude, longitude=longitude)
-        self.elevation_steps = []
-        for i in range(-10,89):
-            self.elevation_steps.append(('East', i))
-        for i in range(90, -10, -1):
-            self.elevation_steps.append(('West', i))
-
         slider.setMinimum(-1)
-        slider.setMaximum(len(self.elevation_steps))
         slider.setValue(-1)
+        self.slider = slider
+        self.elevation_steps = []
+
+        if latitude is None:
+            return
+
+        self.elevation_time_map = create_todays_elevation_time_map(latitude=latitude, longitude=longitude)
+
+        for i in range(-10, 89):
+            self.elevation_steps.append(SolarElevation(EASTERN_SKY, i))
+        for i in range(90, -10, -1):
+            self.elevation_steps.append(SolarElevation(WESTERN_SKY, i))
+        slider.setMaximum(len(self.elevation_steps))
+
         def sliding():
-            # minutes = slider.value()
-            # if minutes == -1:
-            #     label.setText(translate("Trigger at sun elevation: None"))
-            #     self.elevation = None
-            #     return
-            # local_now = datetime.now().astimezone()
-            # local_when = local_now.replace(hour=minutes // 60, minute=minutes % 60)
-            # self.elevation = round(calc_solar_elevation(local_when, latitude, longitude))
-            # print(minutes, local_when, self.elevation)
-            # if -6 <= self.elevation < 1 and local_when.hour < 12:
-            #     text_template = translate("Activate at dawn, sun elevation {}\u00B0 (today at {})")
-            # elif -6 <= self.elevation < 1 and local_when.hour > 12:
-            #     text_template = translate("Activate at dusk, sun elevation {}\u00B0 (today at {})")
-            # else:
-            #     text_template = translate("Activate at sun elevation {}\u00B0 (today at {})")
-            # display_text = text_template.format(self.elevation, local_when.strftime('%H:%M'))
-            # if display_text != label.text():
-            #     label.setText(display_text)
             if slider.value() == -1:
                 label.setText(translate("Trigger at sun elevation: None"))
                 self.elevation_key = None
                 return
             self.elevation_key = self.elevation_steps[slider.value()]
-            local_when = self.when_index[self.elevation_key] if self.elevation_key in self.when_index else ''
-            if local_when:
-                when_text = translate("today at {}").format(local_when.strftime('%H:%M'))
+            occurs_at = \
+                self.elevation_time_map[self.elevation_key] if self.elevation_key in self.elevation_time_map else ''
+            if occurs_at:
+                when_text = translate("today at {}").format(occurs_at.strftime(translate('%H:%M')))
             else:
                 when_text = translate("doesn't get that high today")
-            if -6 <= self.elevation_key[1] < 1 and self.elevation_key[0] == 'East':
-                when_text += translate(" dawn")
-            elif -6 <= self.elevation_key[1] < 1 and self.elevation_key[0] == 'West':
-                when_text += translate(" dusk")
-            print(self.elevation_key, local_when, self.elevation_key)
+            if -6 <= self.elevation_key.elevation < 1 and self.elevation_key.direction == EASTERN_SKY:
+                when_text += " " + translate("dawn")
+            elif -6 <= self.elevation_key.elevation < 1 and self.elevation_key.direction == WESTERN_SKY:
+                when_text += " " + translate("dusk")
+            print(self.elevation_key, occurs_at, self.elevation_key)
             display_text = translate("Activate at sun elevation {}\u00B0 in the {} ({})").format(
-                self.elevation_key[1], self.elevation_key[0], when_text)
+                self.elevation_key.elevation, translate(self.elevation_key.direction), when_text)
             if display_text != label.text():
                 label.setText(display_text)
 
         slider.valueChanged.connect(sliding)
+        layout.addWidget(label)
         layout.addWidget(slider)
 
     def set_elevation(self, elevation_text: str):
-        if elevation_text:
+        if elevation_text and len(self.elevation_steps) != 0:
             parts = elevation_text.split()
             self.elevation_key = parts[0], int(parts[1])
-            self.slider.setValue(self.elevation_steps.index(self.elevation_key))
-        else:
-            self.slider.setValue(-1)
-        # self.elevation = elevation
-        # if elevation is None:
-        #     self.slider.setValue(-1)
-        #     return
-        # local_now = datetime.now().astimezone()
-        # local_when = local_now.replace(hour=0, minute=0)
-        # while round(calc_solar_elevation(local_when, self.latitude, self.longitude)) != elevation:
-        #     local_when += timedelta(minutes=1)
-        #     print(local_when, calc_solar_elevation(local_when, self.latitude, self.longitude), elevation)
-        # self.slider.setValue(local_when.hour * 60 + local_when.minute)
+            if self.elevation_key in self.elevation_steps:
+                self.slider.setValue(self.elevation_steps.index(self.elevation_key))
+                return
+        self.slider.setValue(-1)
 
     def get_elevation_text(self) -> int:
         return self.elevation_key if self.elevation_key is None else f"{self.elevation_key[0]} {self.elevation_key[1]}"
@@ -3422,6 +3428,9 @@ class MainWindow(QMainWindow):
         self.state_key = self.objectName() + "_window_state"
         self.settings = QSettings('vdu_controls.qt.state', 'vdu_controls')
         self.main_control_panel = None
+        self.main_config = main_config
+        self.scheduled_presets_list = []
+        self.schedule_day = datetime.today()
 
         gnome_tray_behaviour = main_config.is_system_tray_enabled() and \
                                os.environ.get('XDG_CURRENT_DESKTOP') is not None \
@@ -3609,6 +3618,12 @@ class MainWindow(QMainWindow):
         else:
             self.show()
 
+        overdue = self.schedule_presets()
+        if overdue:
+            # Start of run - this preset is the one that should be running now
+            log_info(f"Restoring preset {overdue.name} because scheduled to be active at this time ({datetime.now()}).")
+            self.restore_preset(overdue)
+
         if splash is not None:
             splash.finish(self)
 
@@ -3673,6 +3688,7 @@ class MainWindow(QMainWindow):
         if not self.app_context_menu.has_preset_menu_item(preset.name):
             self.app_context_menu.insert_preset_menu_item(preset)
             self.display_active_preset(preset)
+        self.schedule_presets()
 
     def copy_to_preset_ini(self, preset_ini: ConfigIni, update_only: bool = False) -> List:
         id_list = []
@@ -3740,6 +3756,47 @@ class MainWindow(QMainWindow):
             self.app_context_menu.refresh_preset_menu(reload=True)
         event.accept()
         return True
+
+    def schedule_presets(self) -> Preset:
+        latitude, longitude = self.main_config.get_location()
+        if latitude is None:
+            return
+        time_map = create_todays_elevation_time_map(latitude=latitude, longitude=longitude)
+        overdue = None
+        last_overdue_diff = -1000 * 60 * 60 * 24
+        for name, preset in self.preset_controller.find_presets().items():
+            if name not in self.scheduled_presets_list:
+                elevation_spec = preset.preset_ini.get('preset', 'solar-elevation', fallback=None)
+                if elevation_spec:
+                    parts = elevation_spec.split(' ')
+                    elevation_key = SolarElevation(parts[0], int(parts[1]))
+                    if elevation_key in time_map:
+                        when_today = time_map[elevation_key]
+                        diff = (when_today - datetime.now().astimezone()) / timedelta(milliseconds=1)
+                        if diff > 0:
+                            log_info(
+                                f"Scheduled preset {name} activation for {when_today} (in {diff / 1000 / 60} minutes)")
+                            QTimer.singleShot(int(diff), partial(self.activate_scheduled_preset, name))
+                            self.scheduled_presets_list.append(name)
+                        else:
+                            if diff > last_overdue_diff:
+                                overdue = preset
+                            last_overdue_diff = diff
+        # set a timer to rerun this at the beginning of the next day.
+        tomorrow = date.today() + timedelta(days=1)
+        if self.schedule_day != tomorrow:
+            daily_update_at = datetime(year=tomorrow.year, month=tomorrow.month, day=tomorrow.day).astimezone()
+            diff = (daily_update_at - datetime.now().astimezone()) / timedelta(milliseconds=1)
+            log_info(f"Scheduled timer update for tomorrow {daily_update_at} (in {diff / 1000 / 60} minutes)")
+            QTimer.singleShot(int(diff), self.schedule_presets)
+            self.schedule_day = tomorrow
+        return overdue
+
+    def activate_scheduled_preset(self, name: str):
+        log_info(f"Preset {name} activated according the schedule at {datetime.now().astimezone()}")
+        self.restore_named_preset(name)
+        if name in self.scheduled_presets_list:
+            self.scheduled_presets_list.remove(name)
 
 
 class SignalWakeupHandler(QtNetwork.QAbstractSocket):
@@ -3877,18 +3934,21 @@ def calc_solar_azimuth_elevation(localised_time: datetime, latitude: float, long
     return round(a), round(90.0 - z)
 
 
-def index_local_time_today_by_solar_elevation(latitude: float, longitude: float) -> Dict[Tuple[int, int], datetime]:
-    elevation_by_angle = {}
+def create_todays_elevation_time_map(latitude: float, longitude: float) -> Dict[Tuple[int, int], datetime]:
+    """
+    Create a minute-by-minute map of today's SolarElevations,
+    so for a given mapping[SolarElevation], return the first minute it occurs.
+    """
+    elevation_time_map = {}
     local_now = datetime.now().astimezone()
     local_when = local_now.replace(hour=0, minute=0)
     while local_when.day == local_now.day:
-        a, z = calc_solar_azimuth_elevation(local_when, latitude, longitude)
-        key = 'East' if a < 180 else 'West', round(z)
-        if key not in elevation_by_angle:
-            print(key)
-            elevation_by_angle[key] = local_when
+        a, e = calc_solar_azimuth_elevation(local_when, latitude, longitude)
+        key = SolarElevation(EASTERN_SKY if a < 180 else WESTERN_SKY, round(e))
+        if key not in elevation_time_map:
+            elevation_time_map[key] = local_when
         local_when += timedelta(minutes=1)
-    return elevation_by_angle
+    return elevation_time_map
 
 
 def retrieve_wttr_data(latitude: float, longitude: float):
