@@ -388,7 +388,7 @@ from collections import namedtuple
 from datetime import datetime, timedelta, date
 from functools import partial
 from pathlib import Path
-from typing import List, Tuple, Mapping, Type, Dict
+from typing import List, Tuple, Mapping, Type, Dict, Callable
 
 import pytz
 from PyQt5 import QtNetwork
@@ -1150,7 +1150,7 @@ class VduControlsConfig:
                                 f"in enabled_vcp_codes ({enable_codes_str})")
         return enabled_vcp_codes
 
-    def get_location(self) -> Tuple[int, int]:
+    def get_location(self) -> Tuple[int, int] | None:
         spec = self.ini_content.get('vdu-controls-globals', 'location', fallback=None)
         if spec is None or spec.strip() == '':
             return None, None
@@ -2098,8 +2098,9 @@ class Preset:
         self.name = name
         self.path = get_config_path(proper_name('Preset', name))
         self.preset_ini = ConfigIni()
+        self.timer = None
 
-    def get_icon_path(self) -> Path:
+    def get_icon_path(self) -> Path | None:
         if self.preset_ini.has_section("preset"):
             path_text = self.preset_ini.get("preset", "icon", fallback=None)
             return Path(path_text) if path_text else None
@@ -2137,8 +2138,34 @@ class Preset:
 
     def delete(self):
         log_info(f"deleting preset file '{self.path.as_posix()}'")
+        self.stop_timer()
         if self.path.exists():
             os.remove(self.path.as_posix())
+
+    def get_solar_elevation(self) -> SolarElevation | None:
+        elevation_spec = self.preset_ini.get('preset', 'solar-elevation', fallback=None)
+        if elevation_spec:
+            parts = elevation_spec.split(' ')
+            solar_elevation = SolarElevation(parts[0], int(parts[1]))
+            return solar_elevation
+        return None
+
+    def start_timer(self, when_local: datetime, action: Callable):
+        if self.timer:
+            self.stop_timer()
+        self.timer = QTimer()
+        self.timer.setSingleShot(True)
+        self.timer.timeout.connect(partial(action, self))
+        millis = int((when_local - datetime.now().astimezone()) / timedelta(milliseconds=1))
+        self.timer.start(millis)
+        log_info(f"Preset scheduled activation for '{self.name}' at {when_local} in {round(millis/1000/60)} minutes "
+                 f"{self.get_solar_elevation()}")
+
+    def stop_timer(self):
+        if self.timer:
+            log_info(f"Preset scheduled activation stopped for '{self.name}'")
+            self.timer.stop()
+            self.timer = None
 
     def convert_v1_7(self, new_and_old_ids: List) -> str | None:
         """Returns problem id's if any"""
@@ -2217,7 +2244,7 @@ class ContextMenu(QMenu):
                 return True
         return False
 
-    def get_preset_menu_item(self, name: str) -> QAction:
+    def get_preset_menu_item(self, name: str) -> QAction | None:
         for action in self.actions():
             if action == self.presets_separator:
                 break
@@ -3220,12 +3247,12 @@ def create_pixmap_from_svg_bytes(svg_bytes: bytes):
     return QPixmap.fromImage(image)
 
 
-def create_icon_from_svg_bytes(svg_bytes: bytes):
+def create_icon_from_svg_bytes(svg_bytes: bytes) -> QIcon:
     """There is no QIcon option for loading SVG from a string, only from a SVG file, so roll our own."""
     return QIcon(create_pixmap_from_svg_bytes(svg_bytes))
 
 
-def create_icon_from_path(path: Path):
+def create_icon_from_path(path: Path) -> QIcon | None:
     if path.exists():
         if path.suffix == '.svg':
             with open(path, 'rb') as icon_file:
@@ -3433,8 +3460,7 @@ class MainWindow(QMainWindow):
         self.settings = QSettings('vdu_controls.qt.state', 'vdu_controls')
         self.main_control_panel = None
         self.main_config = main_config
-        self.scheduled_presets_list = []
-        self.schedule_day = datetime.today()
+        self.daily_schedule_next_update = datetime.today()
 
         gnome_tray_behaviour = main_config.is_system_tray_enabled() and \
                                os.environ.get('XDG_CURRENT_DESKTOP') is not None \
@@ -3625,7 +3651,8 @@ class MainWindow(QMainWindow):
         overdue = self.schedule_presets()
         if overdue:
             # Start of run - this preset is the one that should be running now
-            log_info(f"Restoring preset {overdue.name} because scheduled to be active at this time ({datetime.now()}).")
+            log_info(f"Restoring preset {overdue.name} " 
+                     f"because its scheduled to be active at this time ({datetime.now()}).")
             self.restore_preset(overdue)
 
         if splash is not None:
@@ -3680,10 +3707,12 @@ class MainWindow(QMainWindow):
         self.display_active_preset(preset)
         return preset
 
-    def restore_named_preset(self, preset_name: str) -> None:
+    def restore_named_preset(self, preset_name: str):
         presets = self.preset_controller.find_presets()
         if preset_name in presets:
-            self.restore_preset(presets[preset_name])
+            preset = presets[preset_name]
+            self.restore_preset(preset)
+            return preset
 
     def save_preset(self, preset: Preset) -> None:
         id_list = self.copy_to_preset_ini(preset.preset_ini, update_only=True)
@@ -3692,6 +3721,7 @@ class MainWindow(QMainWindow):
         if not self.app_context_menu.has_preset_menu_item(preset.name):
             self.app_context_menu.insert_preset_menu_item(preset)
             self.display_active_preset(preset)
+        preset.stop_timer()
         self.schedule_presets()
 
     def copy_to_preset_ini(self, preset_ini: ConfigIni, update_only: bool = False) -> List:
@@ -3766,42 +3796,40 @@ class MainWindow(QMainWindow):
         if latitude is None:
             return
         time_map = create_todays_elevation_time_map(latitude=latitude, longitude=longitude)
-        overdue = None
-        last_overdue_diff = -1000 * 60 * 60 * 24
+        most_recent_overdue = None
+        latest_due = datetime.now().astimezone().replace(hour=0, minute=0, second=0, microsecond=0)
         for name, preset in self.preset_controller.find_presets().items():
-            if name not in self.scheduled_presets_list:
-                elevation_spec = preset.preset_ini.get('preset', 'solar-elevation', fallback=None)
-                if elevation_spec:
-                    parts = elevation_spec.split(' ')
-                    elevation_key = SolarElevation(parts[0], int(parts[1]))
-                    if elevation_key in time_map:
-                        when_today = time_map[elevation_key]
-                        diff = (when_today - datetime.now().astimezone()) / timedelta(milliseconds=1)
-                        if diff > 0:
-                            log_info(
-                                f"Scheduled preset {name} activation for {when_today} (in {diff / 1000 / 60} minutes)")
-                            QTimer.singleShot(int(diff), partial(self.activate_scheduled_preset, name))
-                            self.scheduled_presets_list.append(name)
+            if preset.timer is None:
+                elevation = preset.get_solar_elevation()
+                if elevation:
+                    if elevation in time_map:
+                        when_today = time_map[elevation]
+                        local_now = datetime.now().astimezone()
+                        if when_today > local_now:
+                            preset.start_timer(when_today, self.activate_scheduled_preset)
                         else:
-                            if diff > last_overdue_diff:
-                                overdue = preset
-                            last_overdue_diff = diff
+                            if when_today > latest_due:
+                                most_recent_overdue = preset
+                                latest_due = when_today
+                    else:
+                        log_info(f"Solar activation skipping preset {preset.name} {elevation} degrees"
+                                 " - the sun does not reach that elevation today.")
+
         # set a timer to rerun this at the beginning of the next day.
         tomorrow = date.today() + timedelta(days=1)
-        if self.schedule_day != tomorrow:
+        if self.daily_schedule_next_update != tomorrow:
             daily_update_at = datetime(year=tomorrow.year, month=tomorrow.month, day=tomorrow.day).astimezone()
-            diff = (daily_update_at - datetime.now().astimezone()) / timedelta(milliseconds=1)
-            log_info(f"Scheduled timer update for tomorrow {daily_update_at} (in {diff / 1000 / 60} minutes)")
-            QTimer.singleShot(int(diff), self.schedule_presets)
-            self.schedule_day = tomorrow
-        return overdue
+            millis = (daily_update_at - datetime.now().astimezone()) / timedelta(milliseconds=1)
+            log_info(f"Will update solar elevation activations tomorrow at "
+                     f" {daily_update_at} (in {round(millis / 1000 / 60)} minutes)")
+            QTimer.singleShot(int(millis), self.schedule_presets)
+            self.daily_schedule_next_update = tomorrow
+        return most_recent_overdue
 
-    def activate_scheduled_preset(self, name: str):
-        log_info(f"Preset {name} activated according the schedule at {datetime.now().astimezone()}")
-        self.restore_named_preset(name)
-        if name in self.scheduled_presets_list:
-            self.scheduled_presets_list.remove(name)
-
+    def activate_scheduled_preset(self, preset: Preset):
+        log_info(f"Preset {preset.name} activated according the schedule at {datetime.now().astimezone()}")
+        preset.stop_timer()
+        preset = self.restore_preset(preset)
 
 class SignalWakeupHandler(QtNetwork.QAbstractSocket):
     # https://stackoverflow.com/a/37229299/609575
@@ -3956,7 +3984,7 @@ def create_todays_elevation_time_map(latitude: float, longitude: float) -> Dict[
     return elevation_time_map
 
 
-def retrieve_wttr_data(latitude: float, longitude: float):
+def retrieve_wttr_data(latitude: float, longitude: float) -> Dict | None:
     with urllib.request.urlopen(f'https://wttr.in/{latitude},{longitude}?format=j1') as request:
         json_content = request.read()
         weather_data = json.loads(json_content)
