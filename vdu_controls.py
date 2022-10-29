@@ -2722,10 +2722,10 @@ class PresetChooseElevationWidget(QWidget):
         self.latitude = latitude
         self.longitude = longitude
 
-        weather_data = retrieve_wttr_data(latitude, longitude)
-        location_name = weather_data['nearest_area'][0]['areaName'][0]['value']
-        log_info(location_name)
-        # latitude, longitude = weather_data['nearest_area'][0]['latitude'], weather_data['nearest_area'][0]['longitude']
+        # weather_data = retrieve_wttr_data(latitude, longitude)
+        # location_name = weather_data['nearest_area'][0]['areaName'][0]['value']
+        # log_info(location_name)
+        # # latitude, longitude = weather_data['nearest_area'][0]['latitude'], weather_data['nearest_area'][0]['longitude']
 
         layout = QVBoxLayout()
         self.setLayout(layout)
@@ -2771,7 +2771,6 @@ class PresetChooseElevationWidget(QWidget):
                 when_text += " " + translate("dawn")
             elif -6 <= self.elevation_key.elevation < 1 and self.elevation_key.direction == WESTERN_SKY:
                 when_text += " " + translate("dusk")
-            print(self.elevation_key, occurs_at, self.elevation_key)
             display_text = translate("Activate at sun elevation {}\u00B0 in the {} ({})").format(
                 self.elevation_key.elevation, translate(self.elevation_key.direction), when_text)
             if display_text != label.text():
@@ -3862,6 +3861,7 @@ class SignalWakeupHandler(QtNetwork.QAbstractSocket):
 # Extracted from a larger gist by Antti Lipponen
 # https://gist.github.com/anttilipp/1c482c8cc529918b7b973339f8c28895
 # which was translated to Python from http://www.psa.es/sdg/sunpos.htm
+#
 # Converted to only using the python math library (instead of numpy).
 # Coding style altered for use with vdu_controls.
 #
