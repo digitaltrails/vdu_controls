@@ -2903,7 +2903,7 @@ class PresetChooseElevationWidget(QWidget):
             self.elevation_steps.append(SolarElevation(EASTERN_SKY, i))
         for i in range(90, -10, -1):
             self.elevation_steps.append(SolarElevation(WESTERN_SKY, i))
-        slider.setMaximum(len(self.elevation_steps))
+        slider.setMaximum(len(self.elevation_steps) - 1)
 
         def sliding():
             if slider.value() == -1:
