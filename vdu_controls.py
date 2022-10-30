@@ -418,6 +418,9 @@ EASTERN_SKY = 'eastern-sky'
 
 SolarElevation = namedtuple('SolarElevation', ['direction', 'elevation'])
 
+def format_solar_elevation_abbreviation(elevation: SolarElevation) -> str | None:
+    direction_char = '\u2197' if elevation.direction == EASTERN_SKY else '\u2199'
+    return f"\u2600 {direction_char} {elevation.elevation} \u00B0" if elevation is not None else None
 
 def proper_name(*args):
     return re.sub(r'[^A-Za-z0-9._-]', '_', '_'.join([arg.strip() for arg in args]))
@@ -2142,6 +2145,20 @@ class Preset:
         if self.path.exists():
             os.remove(self.path.as_posix())
 
+    def get_solar_elevation_abbreviation(self) -> str | None:
+        elevation = self.get_solar_elevation()
+        if elevation is None:
+            return ''
+        result = format_solar_elevation_abbreviation(elevation)
+        when = ''
+        if self.timer:
+            remaining_millis = self.timer.remainingTime()
+            if remaining_millis > 0:
+                when = datetime.now().astimezone() + timedelta(milliseconds=remaining_millis)
+                # 25F4
+                result += ' \u25F4 ' + when.strftime(translate("%H:%M"))
+        return result
+
     def get_solar_elevation(self) -> SolarElevation | None:
         elevation_spec = self.preset_ini.get('preset', 'solar-elevation', fallback=None)
         if elevation_spec:
@@ -2158,8 +2175,9 @@ class Preset:
         self.timer.timeout.connect(partial(action, self))
         millis = int((when_local - datetime.now().astimezone()) / timedelta(milliseconds=1))
         self.timer.start(millis)
-        log_info(f"Preset scheduled activation for '{self.name}' at {when_local} in {round(millis/1000/60)} minutes "
-                 f"{self.get_solar_elevation()}")
+        log_info(
+            f"Preset scheduled activation for '{self.name}' at {when_local} in {round(millis / 1000 / 60)} minutes "
+            f"{self.get_solar_elevation()}")
 
     def stop_timer(self):
         if self.timer:
@@ -2670,9 +2688,82 @@ class PresetController:
 
 
 class PresetWidget(QWidget):
-    def __init__(self, name: str):
+    def __init__(self,
+                 preset: Preset,
+                 restore_action=Callable,
+                 save_action=Callable,
+                 delete_action=Callable,
+                 edit_action=Callable,
+                 up_action=Callable,
+                 down_action=Callable):
         super().__init__()
-        self.name = name
+        self.name = preset.name
+        line_layout = QHBoxLayout()
+        line_layout.setSpacing(0)
+        self.setLayout(line_layout)
+
+        preset_name_button = PresetActivationButton(preset)
+
+        line_layout.addWidget(preset_name_button)
+        preset_name_button.clicked.connect(partial(restore_action, preset=preset))
+        preset_name_button.setAutoDefault(False)
+
+        line_layout.addSpacing(20)
+
+        edit_button = QPushButton()
+        edit_button.setIcon(si(self, QStyle.SP_FileIcon))
+        edit_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
+        edit_button.setFlat(True)
+        edit_button.setToolTip(translate('Edit the options for this preset.'))
+        line_layout.addWidget(edit_button)
+        edit_button.clicked.connect(partial(edit_action, preset=preset))
+        edit_button.setAutoDefault(False)
+
+        save_button = QPushButton()
+        save_button.setIcon(si(self, QStyle.SP_DriveFDIcon))
+        save_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
+        save_button.setFlat(True)
+        save_button.setContentsMargins(0, 0, 0, 0)
+        save_button.setToolTip(translate("Update this preset from the current VDU settings."))
+        line_layout.addWidget(save_button)
+        save_button.clicked.connect(partial(save_action, preset=preset))
+        save_button.setAutoDefault(False)
+
+        up_button = QPushButton()
+        up_button.setIcon(si(self, QStyle.SP_ArrowUp))
+        up_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
+        up_button.setFlat(True)
+        up_button.setContentsMargins(0, 0, 0, 0)
+        up_button.setToolTip(translate("Move up the menu order."))
+        line_layout.addWidget(up_button)
+        up_button.clicked.connect(partial(up_action, preset=preset, target_widget=self))
+        up_button.setAutoDefault(False)
+
+        down_button = QPushButton()
+        down_button.setIcon(si(self, QStyle.SP_ArrowDown))
+        down_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
+        down_button.setFlat(True)
+        down_button.setContentsMargins(0, 0, 0, 0)
+        down_button.setToolTip(translate("Move down the menu order."))
+        line_layout.addWidget(down_button)
+        down_button.clicked.connect(partial(down_action, preset=preset, target_widget=self))
+        down_button.setAutoDefault(False)
+
+        delete_button = QPushButton()
+        delete_button.setIcon(si(self, QStyle.SP_DialogDiscardButton))
+        delete_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
+        delete_button.setFlat(True)
+        delete_button.setToolTip('Delete this preset.')
+        line_layout.addWidget(delete_button)
+        delete_button.clicked.connect(partial(delete_action, preset=preset, target_widget=self))
+        delete_button.setAutoDefault(False)
+
+        solar_auto_text = preset.get_solar_elevation_abbreviation()
+        line_layout.addSpacing(20)
+        auto_label = QLabel(f"[{solar_auto_text}]" if solar_auto_text else "")
+        auto_label.setToolTip(translate("Current auto activation setting ({}).".format(preset.get_solar_elevation())))
+        #auto_label.setDisabled(True)
+        line_layout.addWidget(auto_label)
 
 
 class PresetActivationButton(QPushButton):
@@ -2681,7 +2772,7 @@ class PresetActivationButton(QPushButton):
         self.preset = preset
         self.setIcon(preset.create_icon())
         self.setText(preset.name)
-        self.setToolTip('Activate this preset.')
+        self.setToolTip(translate("Activate this preset"))
 
     def event(self, event: QEvent) -> bool:
         super().event(event)
@@ -2745,7 +2836,7 @@ class PresetChooseElevationWidget(QWidget):
     #
     def __init__(self, latitude: float, longitude: float):
         super().__init__()
-        self.elevation_key = -1
+        self.elevation_key = None
         self.latitude = latitude
         self.longitude = longitude
 
@@ -2805,7 +2896,6 @@ class PresetChooseElevationWidget(QWidget):
 
         slider.valueChanged.connect(sliding)
 
-
     def set_elevation(self, elevation_text: str):
         if elevation_text and len(self.elevation_steps) != 0:
             parts = elevation_text.split()
@@ -2815,8 +2905,9 @@ class PresetChooseElevationWidget(QWidget):
                 return
         self.slider.setValue(-1)
 
-    def get_elevation_text(self) -> int:
-        return self.elevation_key if self.elevation_key is None else f"{self.elevation_key[0]} {self.elevation_key[1]}"
+    def  get_elevation_ini_text(self) -> str:
+        # TODO Remove
+        return f"{self.elevation_key.direction} {self.elevation_key.elevation}" if self.elevation_key else ''
 
 
 class PresetsDialog(QDialog, DialogSingletonMixin):
@@ -2871,10 +2962,11 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                             preset_ini.add_section(section)
                         preset_ini.set(section, option, value)
             preset.set_icon_path(edit_choose_icon_button.last_selected_icon_path)
-            if editor_trigger_widget.get_elevation_text() is not None:
+            elevation_ini_text = editor_trigger_widget.get_elevation_ini_text()
+            if elevation_ini_text is not None:
                 if not preset_ini.has_section('preset'):
                     preset_ini.add_section('preset')
-                preset_ini.set('preset', 'solar-elevation', str(editor_trigger_widget.get_elevation_text()))
+                preset_ini.set('preset', 'solar-elevation', elevation_ini_text)
 
         def restore_preset(preset: Preset) -> None:
             self.main_window.restore_preset(preset)
@@ -2928,7 +3020,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             index = presets_layout.indexOf(target_widget)
             if index > 1:
                 presets_layout.removeWidget(target_widget)
-                new_preset_widget = self.create_preset_widget(
+                new_preset_widget = PresetWidget(
                     preset,
                     restore_action=restore_preset,
                     save_action=save_preset,
@@ -2949,7 +3041,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             index = presets_layout.indexOf(target_widget)
             if index < presets_layout.count() - 1:
                 presets_layout.removeWidget(target_widget)
-                new_preset_widget = self.create_preset_widget(
+                new_preset_widget = PresetWidget(
                     preset,
                     restore_action=restore_preset,
                     save_action=save_preset,
@@ -2967,7 +3059,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 main_window.display_active_preset(None)
 
         for preset_def in self.main_window.preset_controller.find_presets().values():
-            preset_widget = self.create_preset_widget(
+            preset_widget = PresetWidget(
                 preset_def,
                 restore_action=restore_preset,
                 save_action=save_preset,
@@ -3039,7 +3131,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
 
             self.main_window.save_preset(preset)
             # Create a new widget - an easy way to update the icon.
-            new_preset_widget = self.create_preset_widget(
+            new_preset_widget = PresetWidget(
                 preset,
                 restore_action=restore_preset,
                 save_action=save_preset,
@@ -3098,74 +3190,6 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 if w.name == name:
                     return w
         return None
-
-    def create_preset_widget(self, preset: Preset,
-                             restore_action=None,
-                             save_action=None,
-                             delete_action=None,
-                             edit_action=None,
-                             up_action=None,
-                             down_action=None) -> PresetWidget:
-        preset_widget = PresetWidget(preset.name)
-        line_layout = QHBoxLayout()
-        line_layout.setSpacing(0)
-        preset_widget.setLayout(line_layout)
-
-        preset_name_button = PresetActivationButton(preset)
-
-        line_layout.addWidget(preset_name_button)
-        preset_name_button.clicked.connect(partial(restore_action, preset=preset))
-        preset_name_button.setAutoDefault(False)
-
-        edit_button = QPushButton()
-        edit_button.setIcon(si(self, QStyle.SP_FileIcon))
-        edit_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
-        edit_button.setFlat(True)
-        edit_button.setToolTip(translate('Edit the options for this preset.'))
-        line_layout.addWidget(edit_button)
-        edit_button.clicked.connect(partial(edit_action, preset=preset))
-        edit_button.setAutoDefault(False)
-
-        save_button = QPushButton()
-        save_button.setIcon(si(self, QStyle.SP_DriveFDIcon))
-        save_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
-        save_button.setFlat(True)
-        save_button.setContentsMargins(0, 0, 0, 0)
-        save_button.setToolTip(translate("Update this preset from the current VDU settings."))
-        line_layout.addWidget(save_button)
-        save_button.clicked.connect(partial(save_action, preset=preset))
-        save_button.setAutoDefault(False)
-
-        up_button = QPushButton()
-        up_button.setIcon(si(self, QStyle.SP_ArrowUp))
-        up_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
-        up_button.setFlat(True)
-        up_button.setContentsMargins(0, 0, 0, 0)
-        up_button.setToolTip(translate("Move up the menu order."))
-        line_layout.addWidget(up_button)
-        up_button.clicked.connect(partial(up_action, preset=preset, target_widget=preset_widget))
-        up_button.setAutoDefault(False)
-
-        down_button = QPushButton()
-        down_button.setIcon(si(self, QStyle.SP_ArrowDown))
-        down_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
-        down_button.setFlat(True)
-        down_button.setContentsMargins(0, 0, 0, 0)
-        down_button.setToolTip(translate("Move down the menu order."))
-        line_layout.addWidget(down_button)
-        down_button.clicked.connect(partial(down_action, preset=preset, target_widget=preset_widget))
-        down_button.setAutoDefault(False)
-
-        delete_button = QPushButton()
-        delete_button.setIcon(si(self, QStyle.SP_DialogDiscardButton))
-        delete_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
-        delete_button.setFlat(True)
-        delete_button.setToolTip('Delete this preset.')
-        line_layout.addWidget(delete_button)
-        delete_button.clicked.connect(partial(delete_action, preset=preset, target_widget=preset_widget))
-        delete_button.setAutoDefault(False)
-
-        return preset_widget
 
     def create_preset_content_controls(self, base_ini: ConfigIni) -> QWidget:
         container = QScrollArea(parent=self)
@@ -3651,7 +3675,7 @@ class MainWindow(QMainWindow):
         overdue = self.schedule_presets()
         if overdue:
             # Start of run - this preset is the one that should be running now
-            log_info(f"Restoring preset {overdue.name} " 
+            log_info(f"Restoring preset {overdue.name} "
                      f"because its scheduled to be active at this time ({datetime.now()}).")
             self.restore_preset(overdue)
 
@@ -3830,6 +3854,7 @@ class MainWindow(QMainWindow):
         log_info(f"Preset {preset.name} activated according the schedule at {datetime.now().astimezone()}")
         preset.stop_timer()
         preset = self.restore_preset(preset)
+
 
 class SignalWakeupHandler(QtNetwork.QAbstractSocket):
     # https://stackoverflow.com/a/37229299/609575
