@@ -2118,6 +2118,7 @@ class Preset:
         self.path = get_config_path(proper_name('Preset', name))
         self.preset_ini = ConfigIni()
         self.timer = None
+        self.elevation_time_today = None
 
     def get_icon_path(self) -> Path | None:
         if self.preset_ini.has_section("preset"):
@@ -2166,13 +2167,8 @@ class Preset:
         if elevation is None:
             return ''
         result = format_solar_elevation_abbreviation(elevation)
-        when = ''
-        if self.timer:
-            remaining_millis = self.timer.remainingTime()
-            if remaining_millis > 0:
-                when = datetime.now().astimezone() + timedelta(milliseconds=remaining_millis)
-                # 25F4
-                result += ' \u25F4 ' + when.strftime(translate("%H:%M"))
+        if self.elevation_time_today:
+            result += ' \u25F4 ' + self.elevation_time_today.strftime(translate("%H:%M"))
         return result
 
     def get_solar_elevation(self) -> SolarElevation | None:
@@ -2775,10 +2771,15 @@ class PresetWidget(QWidget):
 
         solar_auto_text = preset.get_solar_elevation_abbreviation()
         line_layout.addSpacing(20)
-        auto_label = QLabel(f"[{solar_auto_text}]" if solar_auto_text else "")
-        auto_label.setToolTip(translate("Current auto activation setting ({}).".format(preset.get_solar_elevation())))
+        activation_info = QLabel("")
+        if solar_auto_text:
+            activation_info.setText(f"[{solar_auto_text}]")
+            activation_time_today = preset.elevation_time_today.strftime(translate('%H:%M'))
+            activation_desc = create_solar_elevation_ini_text(preset.get_solar_elevation())
+            activation_info.setToolTip("Auto activation at {}, today at {}.".format(
+                activation_desc, activation_time_today))
         # auto_label.setDisabled(True)
-        line_layout.addWidget(auto_label)
+        line_layout.addWidget(activation_info)
 
 
 class PresetActivationButton(QPushButton):
@@ -3839,6 +3840,7 @@ class MainWindow(QMainWindow):
                     if elevation in time_map:
                         when_today = time_map[elevation]
                         local_now = datetime.now().astimezone()
+                        preset.elevation_time_today = when_today
                         if when_today > local_now:
                             preset.start_timer(when_today, self.activate_scheduled_preset)
                         else:
