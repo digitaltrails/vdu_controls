@@ -2776,7 +2776,7 @@ class PresetWidget(QWidget):
             activation_info.setText(f"[{solar_auto_text}]")
             activation_time_today = preset.elevation_time_today.strftime(translate('%H:%M'))
             activation_desc = create_solar_elevation_ini_text(preset.get_solar_elevation())
-            activation_info.setToolTip("Auto activation at {}, today at {}.".format(
+            activation_info.setToolTip(translate("Auto activation at {}, today at {}.").format(
                 activation_desc, activation_time_today))
         # auto_label.setDisabled(True)
         line_layout.addWidget(activation_info)
