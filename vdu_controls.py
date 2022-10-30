@@ -419,9 +419,14 @@ EASTERN_SKY = 'eastern-sky'
 SolarElevation = namedtuple('SolarElevation', ['direction', 'elevation'])
 
 
-def format_solar_elevation_abbreviation(elevation: SolarElevation) -> str | None:
+def format_solar_elevation_abbreviation(elevation: SolarElevation) -> str:
     direction_char = '\u2197' if elevation.direction == EASTERN_SKY else '\u2199'
-    return f"\u2600 {direction_char} {elevation.elevation} \u00B0" if elevation is not None else None
+    return f"\u2600 {direction_char} {elevation.elevation}\u00B0"
+
+
+def format_solar_elevation_description(elevation: SolarElevation) -> str | None:
+    direction_text = translate(elevation.direction)
+    return f"{direction_text} {elevation.elevation}\u00B0"
 
 
 def create_solar_elevation_ini_text(elevation: SolarElevation):
@@ -2162,6 +2167,13 @@ class Preset:
         if self.path.exists():
             os.remove(self.path.as_posix())
 
+    def get_solar_elevation(self) -> SolarElevation | None:
+        elevation_spec = self.preset_ini.get('preset', 'solar-elevation', fallback=None)
+        if elevation_spec:
+            solar_elevation = parse_solar_elevation_ini_text(elevation_spec)
+            return solar_elevation
+        return None
+
     def get_solar_elevation_abbreviation(self) -> str | None:
         elevation = self.get_solar_elevation()
         if elevation is None:
@@ -2169,14 +2181,20 @@ class Preset:
         result = format_solar_elevation_abbreviation(elevation)
         if self.elevation_time_today:
             result += ' \u25F4 ' + self.elevation_time_today.strftime(translate("%H:%M"))
+        if self.timer and self.timer.remainingTime() > 0:
+            result += ' \u23F3'
         return result
 
-    def get_solar_elevation(self) -> SolarElevation | None:
-        elevation_spec = self.preset_ini.get('preset', 'solar-elevation', fallback=None)
-        if elevation_spec:
-            solar_elevation = parse_solar_elevation_ini_text(elevation_spec)
-            return solar_elevation
-        return None
+    def get_solar_elevation_description(self) -> str | None:
+        elevation = self.get_solar_elevation()
+        if elevation is None:
+            return ''
+        basic_desc = format_solar_elevation_description(elevation)
+        # This might not work too well in translation - rethink?
+        template = translate("{} later today at {}") if self.timer and self.timer.remainingTime() > 0 else \
+            translate("{} earlier today at {}")
+        result = template.format(basic_desc, self.elevation_time_today.strftime(translate("%H:%M")))
+        return result
 
     def start_timer(self, when_local: datetime, action: Callable):
         if self.timer:
@@ -2774,10 +2792,8 @@ class PresetWidget(QWidget):
         activation_info = QLabel("")
         if solar_auto_text:
             activation_info.setText(f"[{solar_auto_text}]")
-            activation_time_today = preset.elevation_time_today.strftime(translate('%H:%M'))
-            activation_desc = create_solar_elevation_ini_text(preset.get_solar_elevation())
-            activation_info.setToolTip(translate("Auto activation at {}, today at {}.").format(
-                activation_desc, activation_time_today))
+            activation_info.setToolTip(
+                translate("Auto activation: {}").format(preset.get_solar_elevation_description()))
         # auto_label.setDisabled(True)
         line_layout.addWidget(activation_info)
 
