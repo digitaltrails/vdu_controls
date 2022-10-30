@@ -418,9 +418,25 @@ EASTERN_SKY = 'eastern-sky'
 
 SolarElevation = namedtuple('SolarElevation', ['direction', 'elevation'])
 
+
 def format_solar_elevation_abbreviation(elevation: SolarElevation) -> str | None:
     direction_char = '\u2197' if elevation.direction == EASTERN_SKY else '\u2199'
     return f"\u2600 {direction_char} {elevation.elevation} \u00B0" if elevation is not None else None
+
+
+def create_solar_elevation_ini_text(elevation: SolarElevation):
+    return f"{elevation.direction} {elevation.elevation}" if elevation else ''
+
+
+def parse_solar_elevation_ini_text(ini_text: str):
+    parts = ini_text.strip().split(' ')
+    if len(parts) != 2:
+        raise ValueError(f"Invalid SolarElevation: '{ini_text}'")
+    if parts[0] not in [EASTERN_SKY, WESTERN_SKY]:
+        raise ValueError(f"Invalid value for  SolarElevation direction: '{parts[0]}'")
+    solar_elevation = SolarElevation(parts[0], int(parts[1]))
+    return solar_elevation
+
 
 def proper_name(*args):
     return re.sub(r'[^A-Za-z0-9._-]', '_', '_'.join([arg.strip() for arg in args]))
@@ -2162,8 +2178,7 @@ class Preset:
     def get_solar_elevation(self) -> SolarElevation | None:
         elevation_spec = self.preset_ini.get('preset', 'solar-elevation', fallback=None)
         if elevation_spec:
-            parts = elevation_spec.split(' ')
-            solar_elevation = SolarElevation(parts[0], int(parts[1]))
+            solar_elevation = parse_solar_elevation_ini_text(elevation_spec)
             return solar_elevation
         return None
 
@@ -2762,7 +2777,7 @@ class PresetWidget(QWidget):
         line_layout.addSpacing(20)
         auto_label = QLabel(f"[{solar_auto_text}]" if solar_auto_text else "")
         auto_label.setToolTip(translate("Current auto activation setting ({}).".format(preset.get_solar_elevation())))
-        #auto_label.setDisabled(True)
+        # auto_label.setDisabled(True)
         line_layout.addWidget(auto_label)
 
 
@@ -2898,16 +2913,11 @@ class PresetChooseElevationWidget(QWidget):
 
     def set_elevation(self, elevation_text: str):
         if elevation_text and len(self.elevation_steps) != 0:
-            parts = elevation_text.split()
-            self.elevation_key = parts[0], int(parts[1])
+            self.elevation_key = parse_solar_elevation_ini_text(elevation_text)
             if self.elevation_key in self.elevation_steps:
                 self.slider.setValue(self.elevation_steps.index(self.elevation_key))
                 return
         self.slider.setValue(-1)
-
-    def  get_elevation_ini_text(self) -> str:
-        # TODO Remove
-        return f"{self.elevation_key.direction} {self.elevation_key.elevation}" if self.elevation_key else ''
 
 
 class PresetsDialog(QDialog, DialogSingletonMixin):
@@ -2962,7 +2972,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                             preset_ini.add_section(section)
                         preset_ini.set(section, option, value)
             preset.set_icon_path(edit_choose_icon_button.last_selected_icon_path)
-            elevation_ini_text = editor_trigger_widget.get_elevation_ini_text()
+            elevation_ini_text = create_solar_elevation_ini_text(editor_trigger_widget.elevation_key)
             if elevation_ini_text is not None:
                 if not preset_ini.has_section('preset'):
                     preset_ini.add_section('preset')
