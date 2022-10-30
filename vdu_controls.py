@@ -420,7 +420,7 @@ SolarElevation = namedtuple('SolarElevation', ['direction', 'elevation'])
 
 
 def format_solar_elevation_abbreviation(elevation: SolarElevation) -> str:
-    direction_char = '\u2197' if elevation.direction == EASTERN_SKY else '\u2199'
+    direction_char = '\u29A8' if elevation.direction == EASTERN_SKY else '\u29A9'
     return f"\u2600 {direction_char} {elevation.elevation}\u00B0"
 
 
@@ -2868,7 +2868,7 @@ class PresetChooseElevationWidget(QWidget):
     #
     def __init__(self, latitude: float, longitude: float):
         super().__init__()
-        self.elevation_key = None
+        self.elevation = None
         self.latitude = latitude
         self.longitude = longitude
 
@@ -2879,7 +2879,9 @@ class PresetChooseElevationWidget(QWidget):
 
         layout = QVBoxLayout()
         self.setLayout(layout)
-        label = QLabel(translate("Trigger at sun elevation:"))
+        default_title = translate("Solar elevation trigger: ")
+
+        label = QLabel(default_title)
 
         slider = QSlider(Qt.Horizontal)
         slider.setTracking(True)
@@ -2892,37 +2894,45 @@ class PresetChooseElevationWidget(QWidget):
         layout.addWidget(slider)
 
         if latitude is None:
-            label.setText(translate("Trigger at sun elevation: location undefined (see settings)"))
+            label.setText(default_title + translate("location undefined (see settings)"))
             slider.setDisabled(True)
             return
 
         slider.setEnabled(True)
         self.elevation_time_map = create_todays_elevation_time_map(latitude=latitude, longitude=longitude)
 
-        for i in range(-10, 89):
+        for i in range(-19, 90):
             self.elevation_steps.append(SolarElevation(EASTERN_SKY, i))
-        for i in range(90, -10, -1):
+        for i in range(90, -20, -1):
             self.elevation_steps.append(SolarElevation(WESTERN_SKY, i))
         slider.setMaximum(len(self.elevation_steps) - 1)
 
         def sliding():
             if slider.value() == -1:
-                label.setText(translate("Trigger at sun elevation:"))
-                self.elevation_key = None
+                label.setText(default_title)
+                self.elevation = None
                 return
-            self.elevation_key = self.elevation_steps[slider.value()]
+            self.elevation = self.elevation_steps[slider.value()]
             occurs_at = \
-                self.elevation_time_map[self.elevation_key] if self.elevation_key in self.elevation_time_map else ''
+                self.elevation_time_map[self.elevation] if self.elevation in self.elevation_time_map else ''
             if occurs_at:
                 when_text = translate("today at {}").format(occurs_at.strftime(translate('%H:%M')))
             else:
                 when_text = translate("doesn't get that high today")
-            if -6 <= self.elevation_key.elevation < 1 and self.elevation_key.direction == EASTERN_SKY:
-                when_text += " " + translate("dawn")
-            elif -6 <= self.elevation_key.elevation < 1 and self.elevation_key.direction == WESTERN_SKY:
-                when_text += " " + translate("dusk")
-            display_text = translate("Activate at sun elevation {}\u00B0 in the {} ({})").format(
-                self.elevation_key.elevation, translate(self.elevation_key.direction), when_text)
+            # https://en.wikipedia.org/wiki/Twilight
+            if self.elevation.elevation < 1:
+                if self.elevation.elevation >= -6:
+                    when_text += " " + (translate("dawn") if self.elevation.direction == EASTERN_SKY else translate("dusk"))
+                elif self.elevation.elevation >= -18:
+                    # Astronomical twilight
+                    when_text += " " + translate("twilight")
+                else:
+                    when_text += " " + translate("nighttime")
+            display_text = translate("{} {} ({}, {})").format(
+                default_title,
+                format_solar_elevation_abbreviation(self.elevation),
+                translate(self.elevation.direction),
+                when_text)
             if display_text != label.text():
                 label.setText(display_text)
 
@@ -2930,9 +2940,9 @@ class PresetChooseElevationWidget(QWidget):
 
     def set_elevation(self, elevation_text: str):
         if elevation_text and len(self.elevation_steps) != 0:
-            self.elevation_key = parse_solar_elevation_ini_text(elevation_text)
-            if self.elevation_key in self.elevation_steps:
-                self.slider.setValue(self.elevation_steps.index(self.elevation_key))
+            self.elevation = parse_solar_elevation_ini_text(elevation_text)
+            if self.elevation in self.elevation_steps:
+                self.slider.setValue(self.elevation_steps.index(self.elevation))
                 return
         self.slider.setValue(-1)
 
@@ -2989,7 +2999,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                             preset_ini.add_section(section)
                         preset_ini.set(section, option, value)
             preset.set_icon_path(edit_choose_icon_button.last_selected_icon_path)
-            elevation_ini_text = create_solar_elevation_ini_text(editor_trigger_widget.elevation_key)
+            elevation_ini_text = create_solar_elevation_ini_text(editor_trigger_widget.elevation)
             if elevation_ini_text is not None:
                 if not preset_ini.has_section('preset'):
                     preset_ini.add_section('preset')
