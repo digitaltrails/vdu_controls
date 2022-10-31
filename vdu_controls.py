@@ -2295,6 +2295,8 @@ class Preset:
             log_info(f"Preset scheduled activation stopped for '{self.name}'")
             self.timer.stop()
             self.timer = None
+        if self.elevation_time_today:
+            self.elevation_time_today = None
 
     def convert_v1_7(self, new_and_old_ids: List) -> str | None:
         """Returns problem id's if any"""
