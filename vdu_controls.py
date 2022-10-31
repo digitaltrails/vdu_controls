@@ -389,13 +389,14 @@ from datetime import datetime, timedelta, date
 from functools import partial
 from pathlib import Path
 from typing import List, Tuple, Mapping, Type, Dict, Callable
+from urllib.error import URLError
 
 import pytz
 from PyQt5 import QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
     QSettings, QSize, QTimer
 from PyQt5.QtGui import QIntValidator, QPixmap, QIcon, QCursor, QImage, QPainter, QDoubleValidator, QRegExpValidator, \
-    QPalette, QGuiApplication, QColor
+    QPalette, QGuiApplication, QColor, QValidator
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
@@ -1174,7 +1175,7 @@ class VduControlsConfig:
                                 f"in enabled_vcp_codes ({enable_codes_str})")
         return enabled_vcp_codes
 
-    def get_location(self) -> Tuple[int, int] | None:
+    def get_location(self) -> Tuple[int, int] | Tuple[None, None]:
         spec = self.ini_content.get('vdu-controls-globals', 'location', fallback=None)
         if spec is None or spec.strip() == '':
             return None, None
@@ -1721,19 +1722,36 @@ class SettingsEditorCsvWidget(SettingsEditorFieldBase):
         self.text_input.setText(self.section_editor.ini_before[self.section][self.option])
 
 
+class LatitudeLongitudeValidator(QRegExpValidator):
+
+    def __init__(self):
+        super().__init__(QRegExp(r"^([0-9.-]+,[0-9.-]+)|$"))
+
+    def validate(self, text: str, pos: int) -> Tuple[QValidator.State, str, int]:
+        result = super().validate(text, pos)
+        if result[0] == QValidator.Acceptable:
+            if text != '':
+                lat, lon = [float(i) for i in text.split(',')]
+                if -90.0 <= lat <= 90.0:
+                    if -180.0 <= lon <= 180.0:
+                        return QValidator.Acceptable, text, pos
+                return QValidator.Invalid, text, pos
+        return result
+
+
 class SettingsEditorLocationWidget(SettingsEditorFieldBase):
     def __init__(self, section_editor: SettingsEditorTab, option: str, section: str) -> None:
         super().__init__(section_editor, option, section)
-        layout = QVBoxLayout()
+        layout = QHBoxLayout()
+        layout.setAlignment(Qt.AlignLeft)
         self.setLayout(layout)
         text_label = QLabel(option.replace('-', ' '))
         layout.addWidget(text_label)
         text_input = QLineEdit()
         text_input.setMaximumWidth(250)
         text_input.setMaxLength(250)
-        # TODO - should probably also allow spaces as well as commas, but the regexp is getting a bit tricky?
-        # Validator matches CSV of two digit hex or the empty string.
-        validator = QRegExpValidator(QRegExp(r"^([0-9.-]+,[0-9.-]+)|$"))
+
+        validator = LatitudeLongitudeValidator()
         text_input.setValidator(validator)
         text_input.setText(section_editor.ini_editable[section][option])
 
@@ -1750,11 +1768,63 @@ class SettingsEditorLocationWidget(SettingsEditorFieldBase):
         text_input.editingFinished.connect(editing_finished)
         text_input.inputRejected.connect(input_rejected)
         text_input.textEdited.connect(text_edited)
+        text_input.setToolTip(translate("Latitude,Longitude for solar elevation calculations."))
+
+        def detection_location():
+            ask_permission = QMessageBox()
+            ask_permission.setIcon(QMessageBox.Question)
+            ask_permission.setText(
+                translate('Query {} to obtain information based on your IP-address?').format(self.get_ipinfo_url()))
+            ask_permission.setStandardButtons(QMessageBox.Yes| QMessageBox.No)
+            if ask_permission.exec() == QMessageBox.Yes:
+                show_info = QMessageBox()
+                show_info.setIcon(QMessageBox.Information)
+                try:
+                    ipinfo = self.retrieve_ipinfo()
+                    info_text = f"{translate('Use the following info?')}\n" f"{ipinfo['loc']}\n" + \
+                        ','.join([ipinfo[key] for key in ('city', 'region', 'country') if key in ipinfo])
+                    full_text = f"Queried {self.get_ipinfo_url()}\n" + \
+                        '\n'.join([f"{name}: {value}" for name, value in ipinfo.items()])
+                    show_info.setText(info_text)
+                    show_info.setDetailedText(full_text)
+                    show_info.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+                    if show_info.exec() == QMessageBox.Yes:
+                        text_input.setText(ipinfo['loc'])
+                        editing_finished()
+                except (URLError, KeyError) as e:
+                    error_dialog = QMessageBox()
+                    error_dialog.setIcon(QMessageBox.Critical)
+                    error_dialog.setText(translate(f"Failed to obtain info from {self.get_ipinfo_url()}: {e}"))
+                    error_dialog.exec()
+                    return
+
+        detect_location_button = QPushButton(translate("Detect"))
+        detect_location_button.clicked.connect(detection_location)
+        detect_location_button.setToolTip(translate("Detect location by querying this desktop's external IP address."))
         layout.addWidget(text_input)
+        layout.addWidget(detect_location_button)
+        layout.addStretch(1)
+
         self.text_input = text_input
 
     def reset(self):
         self.text_input.setText(self.section_editor.ini_before[self.section][self.option])
+
+    def retrieve_ipinfo(self):
+        """
+        https://stackoverflow.com/a/55432323/609575
+        """
+        from urllib.request import urlopen
+        from json import load
+        url = self.get_ipinfo_url()
+        res = urlopen(url)
+        data = {}
+        if res:
+            data = load(res)
+        return data
+
+    def get_ipinfo_url(self):
+        return os.getenv('VDU_CONTROLS_IPINFO_URL', default='https://ipinfo.io/json')
 
 
 class SettingsEditorTextEditorWidget(SettingsEditorFieldBase):
