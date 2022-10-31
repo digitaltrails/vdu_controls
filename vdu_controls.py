@@ -959,6 +959,12 @@ class DialogSingletonMixin:
             log_debug(f'SingletonDialog exists {class_name} {class_name in DialogSingletonMixin._dialogs_map}')
         return class_name in DialogSingletonMixin._dialogs_map
 
+    @classmethod
+    def get_instance(cls: Type):
+        class_name = cls.__name__
+        if class_name in DialogSingletonMixin._dialogs_map:
+            return DialogSingletonMixin._dialogs_map[class_name]
+        return None
 
 class VduGuiSupportedControls:
     """Maps of controls supported by name on the command line and in config files."""
@@ -1710,7 +1716,7 @@ class SettingsEditorCsvWidget(SettingsEditorFieldBase):
             text_input.setStyleSheet("QLineEdit { color : red; }")
 
         def text_edited() -> None:
-            text_input.setStyleSheet("QLineEdit { color : black; }")
+            text_input.setStyleSheet(None)
 
         text_input.editingFinished.connect(editing_finished)
         text_input.inputRejected.connect(input_rejected)
@@ -1763,7 +1769,7 @@ class SettingsEditorLocationWidget(SettingsEditorFieldBase):
             text_input.setStyleSheet("QLineEdit { color : red; }")
 
         def text_edited() -> None:
-            text_input.setStyleSheet("QLineEdit { color : black; }")
+            text_input.setStyleSheet(None)
 
         text_input.editingFinished.connect(editing_finished)
         text_input.inputRejected.connect(input_rejected)
@@ -1775,16 +1781,16 @@ class SettingsEditorLocationWidget(SettingsEditorFieldBase):
             ask_permission.setIcon(QMessageBox.Question)
             ask_permission.setText(
                 translate('Query {} to obtain information based on your IP-address?').format(self.get_ipinfo_url()))
-            ask_permission.setStandardButtons(QMessageBox.Yes| QMessageBox.No)
+            ask_permission.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
             if ask_permission.exec() == QMessageBox.Yes:
                 show_info = QMessageBox()
                 show_info.setIcon(QMessageBox.Information)
                 try:
                     ipinfo = self.retrieve_ipinfo()
                     info_text = f"{translate('Use the following info?')}\n" f"{ipinfo['loc']}\n" + \
-                        ','.join([ipinfo[key] for key in ('city', 'region', 'country') if key in ipinfo])
+                                ','.join([ipinfo[key] for key in ('city', 'region', 'country') if key in ipinfo])
                     full_text = f"Queried {self.get_ipinfo_url()}\n" + \
-                        '\n'.join([f"{name}: {value}" for name, value in ipinfo.items()])
+                                '\n'.join([f"{name}: {value}" for name, value in ipinfo.items()])
                     show_info.setText(info_text)
                     show_info.setDetailedText(full_text)
                     show_info.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
@@ -2095,7 +2101,6 @@ class VduControlPanel(QWidget):
         super().__init__()
         layout = QVBoxLayout()
         label = QLabel()
-        # label.setStyleSheet("font-weight: bold");
         label.setText(translate('Monitor {}: {}').format(vdu_model.vdu_id, vdu_model.get_vdu_description()))
         layout.addWidget(label)
         self.vdu_model = vdu_model
@@ -2251,6 +2256,8 @@ class Preset:
         result = format_solar_elevation_abbreviation(elevation)
         if self.elevation_time_today:
             result += ' \u25F4 ' + self.elevation_time_today.strftime(translate("%H:%M"))
+        else:
+            result += ' \u29BB'
         if self.timer and self.timer.remainingTime() > 0:
             result += ' \u23F3'
         return result
@@ -2261,9 +2268,12 @@ class Preset:
             return ''
         basic_desc = format_solar_elevation_description(elevation)
         # This might not work too well in translation - rethink?
-        template = translate("{} later today at {}") if self.timer and self.timer.remainingTime() > 0 else \
-            translate("{} earlier today at {}")
-        result = template.format(basic_desc, self.elevation_time_today.strftime(translate("%H:%M")))
+        if self.elevation_time_today:
+            template = translate("{} later today at {}") if self.timer and self.timer.remainingTime() > 0 else \
+                translate("{} earlier today at {}")
+            result = template.format(basic_desc, self.elevation_time_today.strftime(translate("%H:%M")))
+        else:
+            result = basic_desc + ' ' + translate("the sun does not rise this high today")
         return result
 
     def start_timer(self, when_local: datetime, action: Callable):
@@ -2988,11 +2998,12 @@ class PresetChooseElevationWidget(QWidget):
             if occurs_at:
                 when_text = translate("today at {}").format(occurs_at.strftime(translate('%H:%M')))
             else:
-                when_text = translate("doesn't get that high today")
+                when_text = translate("the sun does not rise this high today")
             # https://en.wikipedia.org/wiki/Twilight
             if self.elevation.elevation < 1:
                 if self.elevation.elevation >= -6:
-                    when_text += " " + (translate("dawn") if self.elevation.direction == EASTERN_SKY else translate("dusk"))
+                    when_text += " " + (
+                        translate("dawn") if self.elevation.direction == EASTERN_SKY else translate("dusk"))
                 elif self.elevation.elevation >= -18:
                     # Astronomical twilight
                     when_text += " " + translate("twilight")
@@ -3019,6 +3030,7 @@ class PresetChooseElevationWidget(QWidget):
 
 class PresetsDialog(QDialog, DialogSingletonMixin):
     """A dialog for creating/updating/removing presets."""
+    # TODO refactor to allow for reloading location->schedule changes (or other external changes).
 
     no_icon_icon_number = QStyle.SP_ComputerIcon
 
@@ -3215,7 +3227,6 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         edit_save_button = QPushButton()  # translate('Add'))  # QPushButton(' \u2003')
         edit_save_button.setIcon(si(self, QStyle.SP_DriveFDIcon))
         edit_save_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
-        # add_button.setStyleSheet('QPushButton { border: none; margin: 0px; padding: 0px;}')
         edit_save_button.setFlat(True)
         edit_save_button.setToolTip(translate('Save current VDU settings to a new preset.'))
         edit_preset_layout.addWidget(edit_save_button)
@@ -3614,6 +3625,7 @@ class MainWindow(QMainWindow):
             self.main_control_panel.ddcutil.change_settings(
                 debug=main_config.is_debug_enabled(), default_sleep_multiplier=main_config.get_sleep_multiplier())
             create_main_control_panel()
+            self.schedule_presets(reset=True)
 
         def edit_config() -> None:
             SettingsEditor.invoke(main_config, [vdu.config for vdu in self.main_control_panel.vdu_controllers],
@@ -3922,7 +3934,7 @@ class MainWindow(QMainWindow):
         event.accept()
         return True
 
-    def schedule_presets(self) -> Preset:
+    def schedule_presets(self, reset: bool = False) -> Preset:
         latitude, longitude = self.main_config.get_location()
         if latitude is None:
             return
@@ -3930,6 +3942,8 @@ class MainWindow(QMainWindow):
         most_recent_overdue = None
         latest_due = datetime.now().astimezone().replace(hour=0, minute=0, second=0, microsecond=0)
         for name, preset in self.preset_controller.find_presets().items():
+            if reset:
+                preset.stop_timer()
             if preset.timer is None:
                 elevation = preset.get_solar_elevation()
                 if elevation:
