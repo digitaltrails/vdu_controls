@@ -938,6 +938,7 @@ class DialogSingletonMixin:
         If the dialog exists(), call this to make it visible by raising it.
         Internal, used by the class method show_existing_dialog()
         """
+        # .show() is non-modal, .exec() is modal
         self.show()
         self.raise_()
         self.activateWindow()
@@ -965,6 +966,7 @@ class DialogSingletonMixin:
         if class_name in DialogSingletonMixin._dialogs_map:
             return DialogSingletonMixin._dialogs_map[class_name]
         return None
+
 
 class VduGuiSupportedControls:
     """Maps of controls supported by name on the command line and in config files."""
@@ -2951,73 +2953,71 @@ class PresetChooseElevationWidget(QWidget):
         self.elevation = None
         self.latitude = latitude
         self.longitude = longitude
-
+        self.elevation_time_map = None
         # weather_data = retrieve_wttr_data(latitude, longitude)
         # location_name = weather_data['nearest_area'][0]['areaName'][0]['value']
         # log_info(location_name)
         # # latitude, longitude = weather_data['nearest_area'][0]['latitude'], weather_data['nearest_area'][0]['longitude']
-
         layout = QVBoxLayout()
         self.setLayout(layout)
-        default_title = translate("Solar elevation trigger: ")
-
-        label = QLabel(default_title)
-
+        self.default_title = translate("Solar elevation trigger: ")
         slider = QSlider(Qt.Horizontal)
-        slider.setTracking(True)
-        slider.setMinimum(-1)
-        slider.setValue(-1)
         self.slider = slider
+        self.slider.setTracking(True)
+        self.slider.setMinimum(-1)
+        self.slider.setValue(-1)
+        self.slider = self.slider
         self.elevation_steps = []
+        self.title_label = QLabel(self.default_title)
+        layout.addWidget(self.title_label)
+        layout.addWidget(self.slider)
+        self.configure_for_location(latitude, longitude)
+        self.slider.valueChanged.connect(self.sliding)
 
-        layout.addWidget(label)
-        layout.addWidget(slider)
-
-        if latitude is None:
-            label.setText(default_title + translate("location undefined (see settings)"))
-            slider.setDisabled(True)
+    def sliding(self):
+        if self.slider.value() == -1:
+            self.title_label.setText(self.default_title)
+            self.elevation = None
             return
+        self.elevation = self.elevation_steps[self.slider.value()]
+        occurs_at = \
+            self.elevation_time_map[self.elevation] if self.elevation in self.elevation_time_map else ''
+        if occurs_at:
+            when_text = translate("today at {}").format(occurs_at.strftime(translate('%H:%M')))
+        else:
+            when_text = translate("the sun does not rise this high today")
+        # https://en.wikipedia.org/wiki/Twilight
+        if self.elevation.elevation < 1:
+            if self.elevation.elevation >= -6:
+                when_text += " " + (
+                    translate("dawn") if self.elevation.direction == EASTERN_SKY else translate("dusk"))
+            elif self.elevation.elevation >= -18:
+                # Astronomical twilight
+                when_text += " " + translate("twilight")
+            else:
+                when_text += " " + translate("nighttime")
+        display_text = translate("{} {} ({}, {})").format(
+            self.default_title,
+            format_solar_elevation_abbreviation(self.elevation),
+            translate(self.elevation.direction),
+            when_text)
+        if display_text != self.title_label.text():
+            self.title_label.setText(display_text)
 
-        slider.setEnabled(True)
+    def configure_for_location(self, latitude: float | None, longitude: float | None):
+        if latitude is None:
+            self.title_label.setText(self.default_title + translate("location undefined (see settings)"))
+            self.slider.setDisabled(True)
+            return
+        self.slider.setEnabled(True)
         self.elevation_time_map = create_todays_elevation_time_map(latitude=latitude, longitude=longitude)
-
         for i in range(-19, 90):
             self.elevation_steps.append(SolarElevation(EASTERN_SKY, i))
         for i in range(90, -20, -1):
             self.elevation_steps.append(SolarElevation(WESTERN_SKY, i))
-        slider.setMaximum(len(self.elevation_steps) - 1)
-
-        def sliding():
-            if slider.value() == -1:
-                label.setText(default_title)
-                self.elevation = None
-                return
-            self.elevation = self.elevation_steps[slider.value()]
-            occurs_at = \
-                self.elevation_time_map[self.elevation] if self.elevation in self.elevation_time_map else ''
-            if occurs_at:
-                when_text = translate("today at {}").format(occurs_at.strftime(translate('%H:%M')))
-            else:
-                when_text = translate("the sun does not rise this high today")
-            # https://en.wikipedia.org/wiki/Twilight
-            if self.elevation.elevation < 1:
-                if self.elevation.elevation >= -6:
-                    when_text += " " + (
-                        translate("dawn") if self.elevation.direction == EASTERN_SKY else translate("dusk"))
-                elif self.elevation.elevation >= -18:
-                    # Astronomical twilight
-                    when_text += " " + translate("twilight")
-                else:
-                    when_text += " " + translate("nighttime")
-            display_text = translate("{} {} ({}, {})").format(
-                default_title,
-                format_solar_elevation_abbreviation(self.elevation),
-                translate(self.elevation.direction),
-                when_text)
-            if display_text != label.text():
-                label.setText(display_text)
-
-        slider.valueChanged.connect(sliding)
+        self.slider.setMaximum(len(self.elevation_steps) - 1)
+        self.slider.setValue(-1)
+        self.sliding()
 
     def set_elevation(self, elevation_text: str):
         if elevation_text and len(self.elevation_steps) != 0:
@@ -3030,7 +3030,7 @@ class PresetChooseElevationWidget(QWidget):
 
 class PresetsDialog(QDialog, DialogSingletonMixin):
     """A dialog for creating/updating/removing presets."""
-    # TODO refactor to allow for reloading location->schedule changes (or other external changes).
+    # TODO has become rather complex - break into parts?
 
     no_icon_icon_number = QStyle.SP_ComputerIcon
 
@@ -3052,255 +3052,94 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.setMinimumWidth(512)
         layout = QVBoxLayout()
         self.setLayout(layout)
-        presets_panel = QGroupBox()
-        presets_panel.setFlat(True)
-        self.presets_panel = presets_panel
-        presets_layout = QVBoxLayout()
+        self.presets_panel = QGroupBox()
+        self.presets_panel.setFlat(True)
+        self.presets_layout = QVBoxLayout()
         presets_title = QLabel("Presets")
         presets_title.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
-        presets_layout.addWidget(presets_title)
-        presets_panel.setLayout(presets_layout)
-        layout.addWidget(presets_panel)
+        self.presets_layout.addWidget(presets_title)
+        self.presets_panel.setLayout(self.presets_layout)
+        layout.addWidget(self.presets_panel)
         button_box = QWidget()
         button_layout = QHBoxLayout()
         button_box.setLayout(button_layout)
         main_window.app_context_menu.refresh_preset_menu()
         # Create a temporary holder of preset values
-        base_ini = ConfigIni()
-        main_window.copy_to_preset_ini(base_ini)
+        self.base_ini = ConfigIni()
+        main_window.copy_to_preset_ini(self.base_ini)
 
-        def initialise_preset_from_controls(preset: Preset):
-            preset_ini = preset.preset_ini
-            for key, checkbox in self.content_controls.items():
-                if checkbox.isChecked():
-                    section, option = key
-                    if not preset_ini.has_option(section, option):
-                        # Can use a dummy value - it wil update when saved.
-                        value = base_ini.get(section, option, fallback="%should not happen%")
-                        if not preset_ini.has_section(section):
-                            preset_ini.add_section(section)
-                        preset_ini.set(section, option, value)
-            preset.set_icon_path(edit_choose_icon_button.last_selected_icon_path)
-            elevation_ini_text = create_solar_elevation_ini_text(editor_trigger_widget.elevation)
-            if elevation_ini_text is not None:
-                if not preset_ini.has_section('preset'):
-                    preset_ini.add_section('preset')
-                preset_ini.set('preset', 'solar-elevation', elevation_ini_text)
+        self.populate_presets_layout()
 
-        def restore_preset(preset: Preset) -> None:
-            self.main_window.restore_preset(preset)
-            self.preset_name_edit.setText('')
+        self.edit_preset_widget = QWidget(parent=self)
+        self.edit_preset_layout = QHBoxLayout()
+        self.edit_preset_widget.setLayout(self.edit_preset_layout)
+        self.edit_preset_widget.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
 
-        def save_preset(preset: Preset) -> None:
-            preset_path = get_config_path(proper_name('Preset', preset.name))
-            if preset_path.exists():
-                confirmation = QMessageBox()
-                confirmation.setIcon(QMessageBox.Question)
-                message = translate('Update existing {} preset with current monitor settings?').format(preset.name)
-                confirmation.setText(message)
-                confirmation.setStandardButtons(QMessageBox.Save | QMessageBox.Cancel)
-                confirmation.setDefaultButton(QMessageBox.Save)
-                if confirmation.exec() == QMessageBox.Cancel:
-                    return
-            self.preset_name_edit.setText('')
-            self.main_window.save_preset(preset)
-
-        def delete_preset(preset: Preset, target_widget: QWidget = None) -> None:
-            log_info(f"delete preset {preset.name}")
-            delete_confirmation = QMessageBox()
-            delete_confirmation.setIcon(QMessageBox.Question)
-            delete_confirmation.setText(translate('Delete {}?').format(preset.name))
-            delete_confirmation.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
-            delete_confirmation.setDefaultButton(QMessageBox.Ok)
-            rc = delete_confirmation.exec()
-            if rc == QMessageBox.Cancel:
-                return
-            self.main_window.delete_preset(preset)
-            presets_layout.removeWidget(target_widget)
-            target_widget.deleteLater()
-            self.preset_name_edit.setText('')
-            presets_panel.adjustSize()
-            presets_panel.repaint()
+        self.edit_choose_icon_button = PresetChooseIconButton()
+        self.edit_preset_layout.addWidget(self.edit_choose_icon_button)
 
         self.preset_name_edit = QLineEdit()
-
-        def edit_preset(preset: Preset) -> None:
-            self.main_window.restore_preset(preset)
-            self.preset_name_edit.setText(preset.name)
-            edit_choose_icon_button.set_preset(preset)
-            for key, item in self.content_controls.items():
-                item.setChecked(preset.preset_ini.has_option(key[0], key[1]))
-            if preset.preset_ini.has_section('preset'):
-                editor_trigger_widget.set_elevation(
-                    preset.preset_ini.get('preset', 'solar-elevation', fallback=None))
-
-        def up_action(preset: Preset, target_widget: QWidget) -> None:
-            log_debug(f"move up preset {preset.name}")
-            index = presets_layout.indexOf(target_widget)
-            if index > 1:
-                presets_layout.removeWidget(target_widget)
-                new_preset_widget = PresetWidget(
-                    preset,
-                    restore_action=restore_preset,
-                    save_action=save_preset,
-                    delete_action=delete_preset,
-                    edit_action=edit_preset,
-                    up_action=up_action,
-                    down_action=down_action)
-                presets_layout.insertWidget(index - 1, new_preset_widget)
-                target_widget.deleteLater()
-                presets_panel.adjustSize()
-                presets_panel.repaint()
-                order = [presets_layout.itemAt(i).widget().name for i in range(1, presets_layout.count())]
-                self.main_window.preset_controller.save_order(order)
-                main_window.display_active_preset(None)
-
-        def down_action(preset: Preset, target_widget: QWidget) -> None:
-            log_debug(f"move down preset {preset.name}")
-            index = presets_layout.indexOf(target_widget)
-            if index < presets_layout.count() - 1:
-                presets_layout.removeWidget(target_widget)
-                new_preset_widget = PresetWidget(
-                    preset,
-                    restore_action=restore_preset,
-                    save_action=save_preset,
-                    delete_action=delete_preset,
-                    edit_action=edit_preset,
-                    up_action=up_action,
-                    down_action=down_action)
-                presets_layout.insertWidget(index + 1, new_preset_widget)
-                target_widget.deleteLater()
-                # self.preset_name_edit.setText('')
-                presets_panel.adjustSize()
-                presets_panel.repaint()
-                order = [presets_layout.itemAt(i).widget().name for i in range(1, presets_layout.count())]
-                self.main_window.preset_controller.save_order(order)
-                main_window.display_active_preset(None)
-
-        for preset_def in self.main_window.preset_controller.find_presets().values():
-            preset_widget = PresetWidget(
-                preset_def,
-                restore_action=restore_preset,
-                save_action=save_preset,
-                delete_action=delete_preset,
-                edit_action=edit_preset,
-                up_action=up_action,
-                down_action=down_action)
-            presets_layout.addWidget(preset_widget)
-
-        edit_preset_widget = QWidget(parent=self)
-        edit_preset_layout = QHBoxLayout()
-        edit_preset_widget.setLayout(edit_preset_layout)
-        edit_preset_widget.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
-
-        edit_choose_icon_button = PresetChooseIconButton()
-        edit_preset_layout.addWidget(edit_choose_icon_button)
-
         self.preset_name_edit.setToolTip(translate('Enter a new preset name.'))
         self.preset_name_edit.setClearButtonEnabled(True)
 
-        def change_edit_group_title():
-            changed_text = self.preset_name_edit.text()
-            if changed_text.strip() == "":
-                # choose_icon_button.set_preset(None)
-                editor_controls_widget.setDisabled(True)
-                editor_trigger_widget.setDisabled(True)
-                edit_save_button.setDisabled(True)
-                editor_title.setText(translate("Create new preset:"))
-                editor_controls_prompt.setText(translate("Controls to include:"))
-                editor_controls_prompt.setDisabled(True)
-            else:
-                already_exists = self.find_preset_widget(changed_text)
-                editor_title.setText(
-                    translate("Edit {}:").format(changed_text) if already_exists else translate("Create new preset:"))
-                editor_controls_prompt.setText(translate("Controls to include in {}:").format(changed_text))
-                editor_controls_prompt.setDisabled(False)
-                editor_controls_widget.setDisabled(False)
-                editor_trigger_widget.setDisabled(False)
-                edit_save_button.setDisabled(False)
-
-        self.preset_name_edit.textChanged.connect(change_edit_group_title)
+        self.preset_name_edit.textChanged.connect(self.change_edit_group_title)
         self.preset_name_edit.setValidator(QRegExpValidator(QRegExp("[A-Za-z0-9][A-Za-z0-9_ .-]{0,60}")))
 
-        edit_preset_layout.addWidget(self.preset_name_edit)
+        self.edit_preset_layout.addWidget(self.preset_name_edit)
 
-        edit_save_button = QPushButton()  # translate('Add'))  # QPushButton(' \u2003')
-        edit_save_button.setIcon(si(self, QStyle.SP_DriveFDIcon))
-        edit_save_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
-        edit_save_button.setFlat(True)
-        edit_save_button.setToolTip(translate('Save current VDU settings to a new preset.'))
-        edit_preset_layout.addWidget(edit_save_button)
+        self.edit_save_button = QPushButton()  # translate('Add'))  # QPushButton(' \u2003')
+        self.edit_save_button.setIcon(si(self, QStyle.SP_DriveFDIcon))
+        self.edit_save_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
+        self.edit_save_button.setFlat(True)
+        self.edit_save_button.setToolTip(translate('Save current VDU settings to a new preset.'))
+        self.edit_preset_layout.addWidget(self.edit_save_button)
 
-        def save_edited_preset() -> None:
-            preset_name = self.preset_name_edit.text().strip()
-            if preset_name == '':
-                return
-            existing_preset_widget = self.find_preset_widget(preset_name)
-            if existing_preset_widget:
-                confirmation = QMessageBox()
-                confirmation.setIcon(QMessageBox.Question)
-                confirmation.setText(translate("Replace existing '{}' preset?").format(preset_name))
-                confirmation.setStandardButtons(QMessageBox.Save | QMessageBox.Cancel)
-                confirmation.setDefaultButton(QMessageBox.Save)
-                if confirmation.exec() == QMessageBox.Cancel:
-                    return
-            preset = Preset(preset_name)
-            initialise_preset_from_controls(preset)
+        self.edit_save_button.clicked.connect(self.save_edited_preset)
+        self.edit_save_needed.connect(self.save_edited_preset)
 
-            self.main_window.save_preset(preset)
-            # Create a new widget - an easy way to update the icon.
-            new_preset_widget = PresetWidget(
-                preset,
-                restore_action=restore_preset,
-                save_action=save_preset,
-                delete_action=delete_preset,
-                edit_action=edit_preset,
-                up_action=up_action,
-                down_action=down_action)
-            if existing_preset_widget:
-                presets_layout.replaceWidget(existing_preset_widget, new_preset_widget)
-                # The deleteLater removes the widget from the tree so that it is no longer findable and can be freed.
-                existing_preset_widget.deleteLater()
-                self.make_visible()
-            else:
-                presets_layout.addWidget(new_preset_widget)
-            self.preset_name_edit.setText('')
-
-            main_window.display_active_preset(None)
-
-        edit_save_button.clicked.connect(save_edited_preset)
-        self.edit_save_needed.connect(save_edited_preset)
-
-        editor_groupbox = QGroupBox()
-        editor_groupbox.setFlat(True)
-        editor_layout = QVBoxLayout()
-        editor_title = QLabel(translate("New Preset:"))
-        editor_title.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
-        editor_layout.addWidget(editor_title)
-        editor_groupbox.setLayout(editor_layout)
-        editor_controls_widget = self.create_preset_content_controls(base_ini)
-        editor_layout.addWidget(edit_preset_widget)
-        editor_controls_prompt = QLabel(translate("Controls to include:"))
-        editor_controls_prompt.setDisabled(True)
-        editor_layout.addWidget(editor_controls_prompt)
-        editor_layout.addWidget(editor_controls_widget)
+        self.editor_groupbox = QGroupBox()
+        self.editor_groupbox.setFlat(True)
+        self.editor_layout = QVBoxLayout()
+        self.editor_title = QLabel(translate("New Preset:"))
+        self.editor_title.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
+        self.editor_layout.addWidget(self.editor_title)
+        self.editor_groupbox.setLayout(self.editor_layout)
+        self.editor_controls_widget = self.create_preset_content_controls()
+        self.editor_layout.addWidget(self.edit_preset_widget)
+        self.editor_controls_prompt = QLabel(translate("Controls to include:"))
+        self.editor_controls_prompt.setDisabled(True)
+        self.editor_layout.addWidget(self.editor_controls_prompt)
+        self.editor_layout.addWidget(self.editor_controls_widget)
         latitude, longitude = self.main_config.get_location()
-        editor_trigger_widget = PresetChooseElevationWidget(latitude=latitude, longitude=longitude)
-        editor_layout.addWidget(editor_trigger_widget)
-        layout.addWidget(editor_groupbox)
+        self.editor_trigger_widget = PresetChooseElevationWidget(latitude=latitude, longitude=longitude)
+        self.editor_layout.addWidget(self.editor_trigger_widget)
+        layout.addWidget(self.editor_groupbox)
 
-        close_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), translate('close'))
-        close_button.clicked.connect(self.close)
+        self.close_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), translate('close'))
+        self.close_button.clicked.connect(self.close)
         button_layout.addSpacing(10)
-        button_layout.addWidget(close_button, 0, Qt.AlignRight | Qt.AlignBottom)
+        button_layout.addWidget(self.close_button, 0, Qt.AlignRight | Qt.AlignBottom)
 
-        edit_choose_icon_button.set_preset(None)
-        editor_controls_widget.setDisabled(True)
-        editor_trigger_widget.setDisabled(True)
-        edit_save_button.setDisabled(True)
+        self.edit_choose_icon_button.set_preset(None)
+        self.editor_controls_widget.setDisabled(True)
+        self.editor_trigger_widget.setDisabled(True)
+        self.edit_save_button.setDisabled(True)
         layout.addWidget(button_box)
-        # .show() is non-modal, .exec() is modal
         self.make_visible()
+
+    def populate_presets_layout(self):
+        for preset_def in self.main_window.preset_controller.find_presets().values():
+            preset_widget = self.create_preset_widget(preset_def)
+            self.presets_layout.addWidget(preset_widget)
+
+    def reload_data(self):
+        for w in self.presets_panel.children():
+            if isinstance(w, PresetWidget):
+                w.deleteLater()
+        self.populate_presets_layout()
+        latitude, longitude = self.main_config.get_location()
+        self.preset_name_edit.setText('')
+        self.editor_trigger_widget.configure_for_location(latitude, longitude)
 
     def find_preset_widget(self, name) -> PresetWidget | None:
         for w in self.presets_panel.children():
@@ -3309,12 +3148,12 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                     return w
         return None
 
-    def create_preset_content_controls(self, base_ini: ConfigIni) -> QWidget:
+    def create_preset_content_controls(self) -> QWidget:
         container = QScrollArea(parent=self)
         widget = QWidget()
         layout = QVBoxLayout()
         widget.setLayout(layout)
-        for count, section in enumerate(base_ini.data_sections()):
+        for count, section in enumerate(self.base_ini.data_sections()):
             if count > 1:
                 line = QFrame()
                 line.setFrameShape(QFrame.HLine)
@@ -3325,7 +3164,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             group_box.setToolTip(translate(f"Choose which settings to save for {section}"))
             group_layout = QHBoxLayout()
             group_box.setLayout(group_layout)
-            for option in base_ini[section]:
+            for option in self.base_ini[section]:
                 option_control = QCheckBox(option)
                 group_layout.addWidget(option_control)
                 self.content_controls[(section, option)] = option_control
@@ -3335,6 +3174,157 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         container.setWidget(widget)
         widget.show()
         return container
+
+    def initialise_preset_from_controls(self, preset: Preset):
+        preset_ini = preset.preset_ini
+        for key, checkbox in self.content_controls.items():
+            if checkbox.isChecked():
+                section, option = key
+                if not preset_ini.has_option(section, option):
+                    # Can use a dummy value - it wil update when saved.
+                    value = self.base_ini.get(section, option, fallback="%should not happen%")
+                    if not preset_ini.has_section(section):
+                        preset_ini.add_section(section)
+                    preset_ini.set(section, option, value)
+        preset.set_icon_path(self.edit_choose_icon_button.last_selected_icon_path)
+        elevation_ini_text = create_solar_elevation_ini_text(self.editor_trigger_widget.elevation)
+        if elevation_ini_text is not None:
+            if not preset_ini.has_section('preset'):
+                preset_ini.add_section('preset')
+            preset_ini.set('preset', 'solar-elevation', elevation_ini_text)
+
+    def up_action(self, preset: Preset, target_widget: QWidget) -> None:
+        log_debug(f"move up preset {preset.name}")
+        index = self.presets_layout.indexOf(target_widget)
+        if index > 1:
+            self.presets_layout.removeWidget(target_widget)
+            new_preset_widget = self.create_preset_widget(preset)
+            self.presets_layout.insertWidget(index - 1, new_preset_widget)
+            target_widget.deleteLater()
+            self.presets_panel.adjustSize()
+            self.presets_panel.repaint()
+            order = [self.presets_layout.itemAt(i).widget().name for i in range(1, self.presets_layout.count())]
+            self.main_window.preset_controller.save_order(order)
+            self.main_window.display_active_preset(None)
+
+    def down_action(self, preset: Preset, target_widget: QWidget) -> None:
+        log_debug(f"move down preset {preset.name}")
+        index = self.presets_layout.indexOf(target_widget)
+        if index < self.presets_layout.count() - 1:
+            self.presets_layout.removeWidget(target_widget)
+            new_preset_widget = self.create_preset_widget(preset)
+            self.presets_layout.insertWidget(index + 1, new_preset_widget)
+            target_widget.deleteLater()
+            # self.preset_name_edit.setText('')
+            self.presets_panel.adjustSize()
+            self.presets_panel.repaint()
+            order = [self.presets_layout.itemAt(i).widget().name for i in range(1, self.presets_layout.count())]
+            self.main_window.preset_controller.save_order(order)
+            self.main_window.display_active_preset(None)
+
+    def restore_preset(self, preset: Preset) -> None:
+        self.main_window.restore_preset(preset)
+        self.preset_name_edit.setText('')
+
+    def save_preset(self, preset: Preset) -> None:
+        preset_path = get_config_path(proper_name('Preset', preset.name))
+        if preset_path.exists():
+            confirmation = QMessageBox()
+            confirmation.setIcon(QMessageBox.Question)
+            message = translate('Update existing {} preset with current monitor settings?').format(preset.name)
+            confirmation.setText(message)
+            confirmation.setStandardButtons(QMessageBox.Save | QMessageBox.Cancel)
+            confirmation.setDefaultButton(QMessageBox.Save)
+            if confirmation.exec() == QMessageBox.Cancel:
+                return
+        self.preset_name_edit.setText('')
+        self.main_window.save_preset(preset)
+
+    def delete_preset(self, preset: Preset, target_widget: QWidget = None) -> None:
+        log_info(f"delete preset {preset.name}")
+        delete_confirmation = QMessageBox()
+        delete_confirmation.setIcon(QMessageBox.Question)
+        delete_confirmation.setText(translate('Delete {}?').format(preset.name))
+        delete_confirmation.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+        delete_confirmation.setDefaultButton(QMessageBox.Ok)
+        rc = delete_confirmation.exec()
+        if rc == QMessageBox.Cancel:
+            return
+        self.main_window.delete_preset(preset)
+        self.presets_layout.removeWidget(target_widget)
+        target_widget.deleteLater()
+        self.preset_name_edit.setText('')
+        self.presets_panel.adjustSize()
+        self.presets_panel.repaint()
+
+    def change_edit_group_title(self):
+        changed_text = self.preset_name_edit.text()
+        if changed_text.strip() == "":
+            # choose_icon_button.set_preset(None)
+            self.editor_controls_widget.setDisabled(True)
+            self.editor_trigger_widget.setDisabled(True)
+            self.edit_save_button.setDisabled(True)
+            self.editor_title.setText(translate("Create new preset:"))
+            self.editor_controls_prompt.setText(translate("Controls to include:"))
+            self.editor_controls_prompt.setDisabled(True)
+        else:
+            already_exists = self.find_preset_widget(changed_text)
+            self.editor_title.setText(
+                translate("Edit {}:").format(changed_text) if already_exists else translate("Create new preset:"))
+            self.editor_controls_prompt.setText(translate("Controls to include in {}:").format(changed_text))
+            self.editor_controls_prompt.setDisabled(False)
+            self.editor_controls_widget.setDisabled(False)
+            self.editor_trigger_widget.setDisabled(False)
+            self.edit_save_button.setDisabled(False)
+
+    def edit_preset(self, preset: Preset) -> None:
+        self.main_window.restore_preset(preset)
+        self.preset_name_edit.setText(preset.name)
+        self.edit_choose_icon_button.set_preset(preset)
+        for key, item in self.content_controls.items():
+            item.setChecked(preset.preset_ini.has_option(key[0], key[1]))
+        if preset.preset_ini.has_section('preset'):
+            self.editor_trigger_widget.set_elevation(
+                preset.preset_ini.get('preset', 'solar-elevation', fallback=None))
+
+    def save_edited_preset(self) -> None:
+        preset_name = self.preset_name_edit.text().strip()
+        if preset_name == '':
+            return
+        existing_preset_widget = self.find_preset_widget(preset_name)
+        if existing_preset_widget:
+            confirmation = QMessageBox()
+            confirmation.setIcon(QMessageBox.Question)
+            confirmation.setText(translate("Replace existing '{}' preset?").format(preset_name))
+            confirmation.setStandardButtons(QMessageBox.Save | QMessageBox.Cancel)
+            confirmation.setDefaultButton(QMessageBox.Save)
+            if confirmation.exec() == QMessageBox.Cancel:
+                return
+        preset = Preset(preset_name)
+        self.initialise_preset_from_controls(preset)
+
+        self.main_window.save_preset(preset)
+        # Create a new widget - an easy way to update the icon.
+        new_preset_widget = self.create_preset_widget(preset)
+        if existing_preset_widget:
+            self.presets_layout.replaceWidget(existing_preset_widget, new_preset_widget)
+            # The deleteLater removes the widget from the tree so that it is no longer findable and can be freed.
+            existing_preset_widget.deleteLater()
+            self.make_visible()
+        else:
+            self.presets_layout.addWidget(new_preset_widget)
+        self.preset_name_edit.setText('')
+        self.main_window.display_active_preset(None)
+
+    def create_preset_widget(self, preset):
+        return PresetWidget(
+            preset,
+            restore_action=self.restore_preset,
+            save_action=self.save_preset,
+            delete_action=self.delete_preset,
+            edit_action=self.edit_preset,
+            up_action=self.up_action,
+            down_action=self.down_action)
 
     def event(self, event: QEvent) -> bool:
         super().event(event)
@@ -3621,14 +3611,14 @@ class MainWindow(QMainWindow):
             if ('vdu-controls-globals', 'system-tray-enabled') in changed_settings:
                 restart_application(translate("The change to the system-tray-enabled option requires "
                                               "vdu_controls to restart."))
-            if ('vdu-controls-globals', 'location') in changed_settings:
-                restart_application(translate("The change to the location option requires "
-                                              "vdu_controls to restart."))
             main_config.reload()
             self.main_control_panel.ddcutil.change_settings(
                 debug=main_config.is_debug_enabled(), default_sleep_multiplier=main_config.get_sleep_multiplier())
             create_main_control_panel()
             self.schedule_presets(reset=True)
+            presets_dialog = PresetsDialog.get_instance()
+            if presets_dialog:
+                presets_dialog.reload_data()
 
         def edit_config() -> None:
             SettingsEditor.invoke(main_config, [vdu.config for vdu in self.main_control_panel.vdu_controllers],
