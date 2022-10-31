@@ -3621,6 +3621,9 @@ class MainWindow(QMainWindow):
             if ('vdu-controls-globals', 'system-tray-enabled') in changed_settings:
                 restart_application(translate("The change to the system-tray-enabled option requires "
                                               "vdu_controls to restart."))
+            if ('vdu-controls-globals', 'location') in changed_settings:
+                restart_application(translate("The change to the location option requires "
+                                              "vdu_controls to restart."))
             main_config.reload()
             self.main_control_panel.ddcutil.change_settings(
                 debug=main_config.is_debug_enabled(), default_sleep_multiplier=main_config.get_sleep_multiplier())
