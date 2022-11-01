@@ -417,20 +417,21 @@ https://github.com/digitaltrails/vdu_controls/releases/tag/v{VDU_CONTROLS_VERSIO
 WESTERN_SKY = 'western-sky'
 EASTERN_SKY = 'eastern-sky'
 
-SolarElevation = namedtuple('SolarElevation', ['direction', 'elevation'])
+SolarElevationKey = namedtuple('SolarElevationKey', ['direction', 'elevation'])
+SolarElevationData = namedtuple('SolarElevationData', ['azimuth', 'zenith', 'when'])
 
 
-def format_solar_elevation_abbreviation(elevation: SolarElevation) -> str:
+def format_solar_elevation_abbreviation(elevation: SolarElevationKey) -> str:
     direction_char = '\u29A8' if elevation.direction == EASTERN_SKY else '\u29A9'
     return f"\u2600 {direction_char} {elevation.elevation}\u00B0"
 
 
-def format_solar_elevation_description(elevation: SolarElevation) -> str | None:
+def format_solar_elevation_description(elevation: SolarElevationKey) -> str | None:
     direction_text = translate(elevation.direction)
     return f"{direction_text} {elevation.elevation}\u00B0"
 
 
-def create_solar_elevation_ini_text(elevation: SolarElevation):
+def create_solar_elevation_ini_text(elevation: SolarElevationKey):
     return f"{elevation.direction} {elevation.elevation}" if elevation else ''
 
 
@@ -440,7 +441,7 @@ def parse_solar_elevation_ini_text(ini_text: str):
         raise ValueError(f"Invalid SolarElevation: '{ini_text}'")
     if parts[0] not in [EASTERN_SKY, WESTERN_SKY]:
         raise ValueError(f"Invalid value for  SolarElevation direction: '{parts[0]}'")
-    solar_elevation = SolarElevation(parts[0], int(parts[1]))
+    solar_elevation = SolarElevationKey(parts[0], int(parts[1]))
     return solar_elevation
 
 
@@ -2244,7 +2245,7 @@ class Preset:
         if self.path.exists():
             os.remove(self.path.as_posix())
 
-    def get_solar_elevation(self) -> SolarElevation | None:
+    def get_solar_elevation(self) -> SolarElevationKey | None:
         elevation_spec = self.preset_ini.get('preset', 'solar-elevation', fallback=None)
         if elevation_spec:
             solar_elevation = parse_solar_elevation_ini_text(elevation_spec)
@@ -2952,7 +2953,7 @@ class PresetChooseElevationWidget(QWidget):
     #
     def __init__(self, latitude: float, longitude: float):
         super().__init__()
-        self.elevation = None
+        self.elevation_key = None
         self.latitude = latitude
         self.longitude = longitude
         self.elevation_time_map = None
@@ -2979,29 +2980,29 @@ class PresetChooseElevationWidget(QWidget):
     def sliding(self):
         if self.slider.value() == -1:
             self.title_label.setText(self.default_title)
-            self.elevation = None
+            self.elevation_key = None
             return
-        self.elevation = self.elevation_steps[self.slider.value()]
+        self.elevation_key = self.elevation_steps[self.slider.value()]
         occurs_at = \
-            self.elevation_time_map[self.elevation] if self.elevation in self.elevation_time_map else ''
+            self.elevation_time_map[self.elevation_key].when if self.elevation_key in self.elevation_time_map else None
         if occurs_at:
             when_text = translate("today at {}").format(occurs_at.strftime(translate('%H:%M')))
         else:
             when_text = translate("the sun does not rise this high today")
         # https://en.wikipedia.org/wiki/Twilight
-        if self.elevation.elevation < 1:
-            if self.elevation.elevation >= -6:
+        if self.elevation_key.elevation < 1:
+            if self.elevation_key.elevation >= -6:
                 when_text += " " + (
-                    translate("dawn") if self.elevation.direction == EASTERN_SKY else translate("dusk"))
-            elif self.elevation.elevation >= -18:
+                    translate("dawn") if self.elevation_key.direction == EASTERN_SKY else translate("dusk"))
+            elif self.elevation_key.elevation >= -18:
                 # Astronomical twilight
                 when_text += " " + translate("twilight")
             else:
                 when_text += " " + translate("nighttime")
         display_text = translate("{} {} ({}, {})").format(
             self.default_title,
-            format_solar_elevation_abbreviation(self.elevation),
-            translate(self.elevation.direction),
+            format_solar_elevation_abbreviation(self.elevation_key),
+            translate(self.elevation_key.direction),
             when_text)
         if display_text != self.title_label.text():
             self.title_label.setText(display_text)
@@ -3014,18 +3015,18 @@ class PresetChooseElevationWidget(QWidget):
         self.slider.setEnabled(True)
         self.elevation_time_map = create_todays_elevation_time_map(latitude=latitude, longitude=longitude)
         for i in range(-19, 90):
-            self.elevation_steps.append(SolarElevation(EASTERN_SKY, i))
+            self.elevation_steps.append(SolarElevationKey(EASTERN_SKY, i))
         for i in range(90, -20, -1):
-            self.elevation_steps.append(SolarElevation(WESTERN_SKY, i))
+            self.elevation_steps.append(SolarElevationKey(WESTERN_SKY, i))
         self.slider.setMaximum(len(self.elevation_steps) - 1)
         self.slider.setValue(-1)
         self.sliding()
 
     def set_elevation(self, elevation_text: str):
         if elevation_text and len(self.elevation_steps) != 0:
-            self.elevation = parse_solar_elevation_ini_text(elevation_text)
-            if self.elevation in self.elevation_steps:
-                self.slider.setValue(self.elevation_steps.index(self.elevation))
+            self.elevation_key = parse_solar_elevation_ini_text(elevation_text)
+            if self.elevation_key in self.elevation_steps:
+                self.slider.setValue(self.elevation_steps.index(self.elevation_key))
                 return
         self.slider.setValue(-1)
 
@@ -3189,7 +3190,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                         preset_ini.add_section(section)
                     preset_ini.set(section, option, value)
         preset.set_icon_path(self.edit_choose_icon_button.last_selected_icon_path)
-        elevation_ini_text = create_solar_elevation_ini_text(self.editor_trigger_widget.elevation)
+        elevation_ini_text = create_solar_elevation_ini_text(self.editor_trigger_widget.elevation_key)
         if elevation_ini_text is not None:
             if not preset_ini.has_section('preset'):
                 preset_ini.add_section('preset')
@@ -3940,10 +3941,10 @@ class MainWindow(QMainWindow):
             if reset:
                 preset.stop_timer()
             if preset.timer is None:
-                elevation = preset.get_solar_elevation()
-                if elevation:
-                    if elevation in time_map:
-                        when_today = time_map[elevation]
+                elevation_key = preset.get_solar_elevation()
+                if elevation_key:
+                    if elevation_key in time_map:
+                        when_today = time_map[elevation_key].when
                         local_now = datetime.now().astimezone()
                         preset.elevation_time_today = when_today
                         if when_today > local_now:
@@ -3953,7 +3954,7 @@ class MainWindow(QMainWindow):
                                 most_recent_overdue = preset
                                 latest_due = when_today
                     else:
-                        log_info(f"Solar activation skipping preset {preset.name} {elevation} degrees"
+                        log_info(f"Solar activation skipping preset {preset.name} {elevation_key} degrees"
                                  " - the sun does not reach that elevation today.")
 
         # set a timer to rerun this at the beginning of the next day.
@@ -4104,12 +4105,7 @@ def calc_solar_azimuth_zenith(localised_time: datetime, latitude: float, longitu
     return azimuth, zenith_angle
 
 
-def calc_solar_azimuth_elevation(localised_time: datetime, latitude: float, longitude: float) -> Tuple[float, float]:
-    a, z = calc_solar_azimuth_zenith(localised_time, latitude, longitude)
-    return round(a), round(90.0 - z)
-
-
-def create_todays_elevation_time_map(latitude: float, longitude: float) -> Dict[Tuple[int, int], datetime]:
+def create_todays_elevation_time_map(latitude: float, longitude: float) -> Dict[SolarElevationKey, SolarElevationData]:
     """
     Create a minute-by-minute map of today's SolarElevations,
     so for a given mapping[SolarElevation], return the first minute it occurs.
@@ -4118,10 +4114,12 @@ def create_todays_elevation_time_map(latitude: float, longitude: float) -> Dict[
     local_now = datetime.now().astimezone()
     local_when = local_now.replace(hour=0, minute=0)
     while local_when.day == local_now.day:
-        a, e = calc_solar_azimuth_elevation(local_when, latitude, longitude)
-        key = SolarElevation(EASTERN_SKY if a < 180 else WESTERN_SKY, round(e))
+        a, z = calc_solar_azimuth_zenith(local_when, latitude, longitude)
+        e = round(90.0 - z)
+        direction = EASTERN_SKY if a < 180 else WESTERN_SKY
+        key = SolarElevationKey(elevation=round(e), direction=direction)
         if key not in elevation_time_map:
-            elevation_time_map[key] = local_when
+            elevation_time_map[key] = SolarElevationData(azimuth=a, zenith=z, when=local_when)
         local_when += timedelta(minutes=1)
     return elevation_time_map
 
