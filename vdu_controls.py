@@ -1947,7 +1947,8 @@ class VduControlSlider(QWidget):
                 except subprocess.SubprocessError:
                     msg = QMessageBox()
                     msg.setIcon(QMessageBox.Critical)
-                    msg.setText(translate("Set value: Failed to communicate with display {}").format(self.vdu_model.vdu_id))
+                    msg.setText(
+                        translate("Set value: Failed to communicate with display {}").format(self.vdu_model.vdu_id))
                     msg.setInformativeText(translate('Is the monitor switched off?<br>'
                                                      'Is the sleep-multiplier setting too low?'))
                     msg.setStandardButtons(QMessageBox.Retry | QMessageBox.Close)
@@ -2209,6 +2210,7 @@ class Preset:
         self.path = get_config_path(proper_name('Preset', name))
         self.preset_ini = ConfigIni()
         self.timer = None
+        self.timer_action = None
         self.elevation_time_today = None
 
     def get_icon_path(self) -> Path | None:
@@ -2249,7 +2251,7 @@ class Preset:
 
     def delete(self):
         log_info(f"deleting preset file '{self.path.as_posix()}'")
-        self.stop_timer()
+        self.remove_elevation_trigger()
         if self.path.exists():
             os.remove(self.path.as_posix())
 
@@ -2280,8 +2282,12 @@ class Preset:
         basic_desc = format_solar_elevation_description(elevation)
         # This might not work too well in translation - rethink?
         if self.elevation_time_today:
-            template = translate("{} later today at {}") if self.timer and self.timer.remainingTime() > 0 else \
-                translate("{} earlier today at {}")
+            if self.timer and self.timer.remainingTime() > 0:
+                template = translate("{} later today at {}")
+            elif self.elevation_time_today < datetime.now().astimezone():
+                template = translate("{} earlier today at {}")
+            else:
+                template = translate("{} suspended for  {}")
             result = template.format(basic_desc, self.elevation_time_today.strftime(translate("%H:%M")))
         else:
             result = basic_desc + ' ' + translate("the sun does not rise this high today")
@@ -2289,9 +2295,11 @@ class Preset:
 
     def start_timer(self, when_local: datetime, action: Callable):
         if self.timer:
-            self.stop_timer()
-        self.timer = QTimer()
-        self.timer.setSingleShot(True)
+            self.timer.stop()
+        else:
+            self.timer = QTimer()
+            self.timer.setSingleShot(True)
+        self.timer_action = action
         self.timer.timeout.connect(partial(action, self))
         millis = int((when_local - datetime.now().astimezone()) / timedelta(milliseconds=1))
         self.timer.start(millis)
@@ -2299,13 +2307,35 @@ class Preset:
             f"Preset scheduled activation for '{self.name}' at {when_local} in {round(millis / 1000 / 60)} minutes "
             f"{self.get_solar_elevation()}")
 
-    def stop_timer(self):
+    def remove_elevation_trigger(self):
         if self.timer:
-            log_info(f"Preset scheduled activation stopped for '{self.name}'")
+            log_info(f"Preset timer stopped for '{self.name}'")
             self.timer.stop()
             self.timer = None
         if self.elevation_time_today:
             self.elevation_time_today = None
+
+    def toggle_timer(self):
+        if self.elevation_time_today and self.elevation_time_today > datetime.now().astimezone():
+            if self.timer.remainingTime() > 0:
+                log_info(f"Preset scheduled timer cleared for '{self.name}'")
+                self.timer.stop()
+            else:
+                log_info(f"Preset scheduled timer restored for '{self.name}'")
+                self.start_timer(self.elevation_time_today, self.timer_action)
+
+    def get_timer_status(self) -> str:
+        if self.elevation_time_today:
+            if self.elevation_time_today < datetime.now().astimezone():
+                return "past"
+            if self.timer:
+                if self.timer.remainingTime() > 0:
+                    return "scheduled"
+                elif self.timer.remainingTime == 0:
+                    return "past"
+                else:
+                    return "suspended"
+        return "unscheduled"
 
     def convert_v1_7(self, new_and_old_ids: List) -> str | None:
         """Returns problem id's if any"""
@@ -2880,15 +2910,31 @@ class PresetWidget(QWidget):
         delete_button.clicked.connect(partial(delete_action, preset=preset, target_widget=self))
         delete_button.setAutoDefault(False)
 
-        solar_auto_text = preset.get_solar_elevation_abbreviation()
         line_layout.addSpacing(20)
-        activation_info = QLabel("")
-        if solar_auto_text:
-            activation_info.setText(f"[{solar_auto_text}]")
-            activation_info.setToolTip(
-                translate("Auto activation: {}").format(preset.get_solar_elevation_description()))
+        timer_control_button = QLabel("")
+        if preset.get_solar_elevation():
+            def format_description():
+                timer_status = preset.get_timer_status()
+                if timer_status == "scheduled":
+                    prefix = "Click to suspend {}"
+                elif timer_status == "suspended":
+                    prefix = "Click to re-enable {}"
+                else:
+                    prefix = "Scheduled {}"
+                return translate(prefix).format(preset.get_solar_elevation_description())
+
+            def toggle_timer(arg):
+                preset.toggle_timer()
+                auto_text = preset.get_solar_elevation_abbreviation()
+                timer_control_button.setText(f"[{auto_text}]")
+                timer_control_button.setToolTip(format_description())
+
+            timer_control_button.setText(f"[{preset.get_solar_elevation_abbreviation()}]")
+            status = preset.get_timer_status()
+            timer_control_button.setToolTip(format_description())
+            timer_control_button.mousePressEvent = toggle_timer
         # auto_label.setDisabled(True)
-        line_layout.addWidget(activation_info)
+        line_layout.addWidget(timer_control_button)
 
 
 class PresetActivationButton(QPushButton):
@@ -2964,7 +3010,6 @@ class PresetChooseElevationWidget(QWidget):
         self.elevation_key = None
         self.latitude = latitude
         self.longitude = longitude
-        self.last_when: datetime = None
         self.elevation_time_map: Dict[SolarElevationKey, SolarElevationData] = None
         # weather_data = retrieve_wttr_data(latitude, longitude)
         # location_name = weather_data['nearest_area'][0]['areaName'][0]['value']
@@ -2986,14 +3031,14 @@ class PresetChooseElevationWidget(QWidget):
         self.configure_for_location(latitude, longitude)
         self.slider.valueChanged.connect(self.sliding)
 
-
     def sliding(self):
         if self.slider.value() == -1:
             self.title_label.setText(self.default_title)
             self.elevation_key = None
             return
         self.elevation_key = self.elevation_steps[self.slider.value()]
-        elevation_data = self.elevation_time_map[self.elevation_key] if self.elevation_key in self.elevation_time_map else None
+        elevation_data = self.elevation_time_map[
+            self.elevation_key] if self.elevation_key in self.elevation_time_map else None
         occurs_at = elevation_data.when if elevation_data is not None else None
         if occurs_at:
             when_text = translate("today at {}").format(occurs_at.strftime(translate('%H:%M')))
@@ -3875,7 +3920,7 @@ class MainWindow(QMainWindow):
         if not self.app_context_menu.has_preset_menu_item(preset.name):
             self.app_context_menu.insert_preset_menu_item(preset)
             self.display_active_preset(preset)
-        preset.stop_timer()
+        preset.remove_elevation_trigger()
         self.schedule_presets()
 
     def copy_to_preset_ini(self, preset_ini: ConfigIni, update_only: bool = False) -> List:
@@ -3954,23 +3999,23 @@ class MainWindow(QMainWindow):
         latest_due = datetime.now().astimezone().replace(hour=0, minute=0, second=0, microsecond=0)
         for name, preset in self.preset_controller.find_presets().items():
             if reset:
-                preset.stop_timer()
-            if preset.timer is None:
-                elevation_key = preset.get_solar_elevation()
-                if elevation_key:
-                    if elevation_key in time_map:
-                        when_today = time_map[elevation_key].when
-                        local_now = datetime.now().astimezone()
-                        preset.elevation_time_today = when_today
-                        if when_today > local_now:
-                            preset.start_timer(when_today, self.activate_scheduled_preset)
-                        else:
-                            if when_today > latest_due:
-                                most_recent_overdue = preset
-                                latest_due = when_today
+                preset.remove_elevation_trigger()
+            elevation_key = preset.get_solar_elevation()
+            if elevation_key is not None and preset.get_timer_status() == "unscheduled":
+                if elevation_key in time_map:
+                    when_today = time_map[elevation_key].when
+                    local_now = datetime.now().astimezone()
+                    preset.elevation_time_today = when_today
+                    if when_today > local_now:
+                        preset.start_timer(when_today, self.activate_scheduled_preset)
                     else:
-                        log_info(f"Solar activation skipping preset {preset.name} {elevation_key} degrees"
-                                 " - the sun does not reach that elevation today.")
+                        if when_today > latest_due:
+                            most_recent_overdue = preset
+                            latest_due = when_today
+                else:
+                    log_info(f"Solar activation skipping preset {preset.name} {elevation_key} degrees"
+                             " - the sun does not reach that elevation today.")
+            # log_debug(f"{name} timer status: {preset.get_timer_status()}")
 
         # set a timer to rerun this at the beginning of the next day.
         tomorrow = date.today() + timedelta(days=1)
@@ -3985,8 +4030,11 @@ class MainWindow(QMainWindow):
 
     def activate_scheduled_preset(self, preset: Preset):
         log_info(f"Preset {preset.name} activated according the schedule at {datetime.now().astimezone()}")
-        preset.stop_timer()
-        preset = self.restore_preset(preset)
+        self.restore_preset(preset)
+        presets_dialog = PresetsDialog.get_instance()
+        if presets_dialog:
+            # TODO Update preset status display - a bit of an extreme way to do it - consider something better?
+            presets_dialog.reload_data()
 
 
 class SignalWakeupHandler(QtNetwork.QAbstractSocket):
