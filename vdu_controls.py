@@ -1935,21 +1935,25 @@ class VduControlSlider(QWidget):
         def slider_changed(value: int) -> None:
             self.current_value = str(value)
             text_input.setText(self.current_value)
-            try:
-                self.vdu_model.set_attribute(self.vcp_capability.vcp_code, self.current_value)
-                if self.vcp_capability.vcp_code in VDU_SUPPORTED_CONTROLS.by_code and \
-                        VDU_SUPPORTED_CONTROLS.by_code[self.vcp_capability.vcp_code].causes_config_change:
-                    # The VCP command has turned one off a VDU or changed what it is connected to.
-                    # VDU ID's will now be out of whack - restart the GUI.
-                    self.connected_vdus_changed.emit()
-            except subprocess.SubprocessError:
-                msg = QMessageBox()
-                msg.setIcon(QMessageBox.Critical)
-                msg.setText(translate("Set value: Failed to communicate with display {}").format(self.vdu_model.vdu_id))
-                msg.setInformativeText(translate('Is the monitor switched off?<br>Is --sleep-multiplier set too low?'
-                                                 '<br>Checking connected displays.'))
-                msg.exec()
-                self.connected_vdus_changed.emit()
+            while True:
+                try:
+                    self.vdu_model.set_attribute(self.vcp_capability.vcp_code, self.current_value)
+                    if self.vcp_capability.vcp_code in VDU_SUPPORTED_CONTROLS.by_code and \
+                            VDU_SUPPORTED_CONTROLS.by_code[self.vcp_capability.vcp_code].causes_config_change:
+                        # The VCP command has turned one off a VDU or changed what it is connected to.
+                        # VDU ID's will now be out of whack - restart the GUI.
+                        self.connected_vdus_changed.emit()
+                    return
+                except subprocess.SubprocessError:
+                    msg = QMessageBox()
+                    msg.setIcon(QMessageBox.Critical)
+                    msg.setText(translate("Set value: Failed to communicate with display {}").format(self.vdu_model.vdu_id))
+                    msg.setInformativeText(translate('Is the monitor switched off?<br>'
+                                                     'Is the sleep-multiplier setting too low?'))
+                    msg.setStandardButtons(QMessageBox.Retry | QMessageBox.Close)
+                    if msg.exec() == QMessageBox.Close:
+                        self.connected_vdus_changed.emit()
+                        return
 
         slider.valueChanged.connect(slider_changed)
 
@@ -2042,20 +2046,24 @@ class VduControlComboBox(QWidget):
         def index_changed(index: int) -> None:
             self.current_value = self.combo_box.currentData()
             self.validate_value()
-            try:
-                self.vdu_model.set_attribute(self.vcp_capability.vcp_code, self.current_value)
-                if self.vcp_capability.vcp_code in VDU_SUPPORTED_CONTROLS.by_code and \
-                        VDU_SUPPORTED_CONTROLS.by_code[self.vcp_capability.vcp_code].causes_config_change:
-                    self.connected_vdus_changed.emit()
-            except subprocess.SubprocessError:
-                msg = QMessageBox()
-                msg.setIcon(QMessageBox.Critical)
-                msg.setText(
-                    translate("Set option: failed to communicate with display {}").format(self.vdu_model.vdu_id))
-                msg.setInformativeText(translate('Is the monitor switched off?<br>Is --sleep-multiplier set too low?'
-                                                 '<br>Checking connected displays.'))
-                msg.exec()
-                self.connected_vdus_changed.emit()
+            while True:
+                try:
+                    self.vdu_model.set_attribute(self.vcp_capability.vcp_code, self.current_value)
+                    if self.vcp_capability.vcp_code in VDU_SUPPORTED_CONTROLS.by_code and \
+                            VDU_SUPPORTED_CONTROLS.by_code[self.vcp_capability.vcp_code].causes_config_change:
+                        self.connected_vdus_changed.emit()
+                    return
+                except subprocess.SubprocessError:
+                    msg = QMessageBox()
+                    msg.setIcon(QMessageBox.Critical)
+                    msg.setText(
+                        translate("Set option: failed to communicate with display {}").format(self.vdu_model.vdu_id))
+                    msg.setInformativeText(translate('Is the monitor switched off?<br>'
+                                                     'Is the sleep-multiplier setting too low?'))
+                    msg.setStandardButtons(QMessageBox.Retry | QMessageBox.Close)
+                    if msg.exec() == QMessageBox.Close:
+                        self.connected_vdus_changed.emit()
+                        return
 
         combo_box.currentIndexChanged.connect(index_changed)
 
@@ -2956,7 +2964,8 @@ class PresetChooseElevationWidget(QWidget):
         self.elevation_key = None
         self.latitude = latitude
         self.longitude = longitude
-        self.elevation_time_map = None
+        self.last_when: datetime = None
+        self.elevation_time_map: Dict[SolarElevationKey, SolarElevationData] = None
         # weather_data = retrieve_wttr_data(latitude, longitude)
         # location_name = weather_data['nearest_area'][0]['areaName'][0]['value']
         # log_info(location_name)
@@ -2977,14 +2986,15 @@ class PresetChooseElevationWidget(QWidget):
         self.configure_for_location(latitude, longitude)
         self.slider.valueChanged.connect(self.sliding)
 
+
     def sliding(self):
         if self.slider.value() == -1:
             self.title_label.setText(self.default_title)
             self.elevation_key = None
             return
         self.elevation_key = self.elevation_steps[self.slider.value()]
-        occurs_at = \
-            self.elevation_time_map[self.elevation_key].when if self.elevation_key in self.elevation_time_map else None
+        elevation_data = self.elevation_time_map[self.elevation_key] if self.elevation_key in self.elevation_time_map else None
+        occurs_at = elevation_data.when if elevation_data is not None else None
         if occurs_at:
             when_text = translate("today at {}").format(occurs_at.strftime(translate('%H:%M')))
         else:
@@ -3373,13 +3383,18 @@ def handle_theme(svg_str: bytes) -> bytes:
 
 def create_pixmap_from_svg_bytes(svg_bytes: bytes):
     """There is no QIcon option for loading SVG from a string, only from a SVG file, so roll our own."""
+    image = create_image_from_svg_bytes(svg_bytes)
+    return QPixmap.fromImage(image)
+
+
+def create_image_from_svg_bytes(svg_bytes):
     renderer = QSvgRenderer(handle_theme(svg_bytes))
     image = QImage(64, 64, QImage.Format_ARGB32)
     image.fill(0x0)
     painter = QPainter(image)
     renderer.render(painter)
     painter.end()
-    return QPixmap.fromImage(image)
+    return image
 
 
 def create_icon_from_svg_bytes(svg_bytes: bytes) -> QIcon:
