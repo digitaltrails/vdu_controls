@@ -396,7 +396,7 @@ from PyQt5 import QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
     QSettings, QSize, QTimer
 from PyQt5.QtGui import QIntValidator, QPixmap, QIcon, QCursor, QImage, QPainter, QDoubleValidator, QRegExpValidator, \
-    QPalette, QGuiApplication, QColor, QValidator
+    QPalette, QGuiApplication, QColor, QValidator, QPen, QFont
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
@@ -3028,8 +3028,14 @@ class PresetChooseElevationWidget(QWidget):
         self.title_label = QLabel(self.default_title)
         layout.addWidget(self.title_label)
         layout.addWidget(self.slider)
+        self.plot = QLabel()
+        self.plot.setFixedHeight(200)
+        self.plot.setFixedWidth(400)
+        layout.addSpacing(16)
+        layout.addWidget(self.plot)
         self.configure_for_location(latitude, longitude)
         self.slider.valueChanged.connect(self.sliding)
+        self.sun_image = None
 
     def sliding(self):
         if self.slider.value() == -1:
@@ -3061,14 +3067,18 @@ class PresetChooseElevationWidget(QWidget):
             when_text)
         if display_text != self.title_label.text():
             self.title_label.setText(display_text)
+        self.create_plot(self.elevation_key)
 
     def configure_for_location(self, latitude: float | None, longitude: float | None):
+        self.latitude = latitude
+        self.longitude = longitude
         if latitude is None:
             self.title_label.setText(self.default_title + translate("location undefined (see settings)"))
             self.slider.setDisabled(True)
             return
         self.slider.setEnabled(True)
         self.elevation_time_map = create_todays_elevation_time_map(latitude=latitude, longitude=longitude)
+        self.elevation_steps = []
         for i in range(-19, 90):
             self.elevation_steps.append(SolarElevationKey(EASTERN_SKY, i))
         for i in range(90, -20, -1):
@@ -3076,6 +3086,75 @@ class PresetChooseElevationWidget(QWidget):
         self.slider.setMaximum(len(self.elevation_steps) - 1)
         self.slider.setValue(-1)
         self.sliding()
+        self.create_plot(None)
+
+    def create_plot(self, ev_key: SolarElevationKey | None):
+
+        #width, height, plot_height = 400, 250, 200
+        width, height, plot_height = self.plot.width(), self.plot.height(), 2 * self.plot.height() // 3
+        origin_iy, range_iy = height // 2, self.plot.height() // 3
+        pixmap = QPixmap(width, height)
+        painter = QPainter(pixmap)
+
+        def reverse_x(x_val: int) -> int:
+            return width - x_val
+
+        painter.fillRect(0, 0, width, origin_iy, QColor(0x5b93c5))
+        painter.fillRect(0, origin_iy, width, height, QColor(0x7d5233))
+        painter.setPen(QPen(QColor(0xffffff), 6))
+        painter.drawLine(0, origin_iy, width, origin_iy)
+        painter.setPen(QPen(QColor(0xff965b), 6))
+
+        today = datetime.today().astimezone().replace(hour=0, minute=0)
+        sun_plot_x, sun_plot_y, sun_plot_time = None, None, None
+        max_y = -90.0
+        solar_noon_plot_x, solar_noon_plot_y = 0, 0  # Solar noon
+        t = today
+        while t.day == today.day:
+            a, z = calc_solar_azimuth_zenith(t, self.latitude, self.longitude)
+            x, y = ((t - today).total_seconds() / 60.0), math.sin(math.radians(90.0 - z)) * range_iy
+            plot_x, plot_y = round(width * x / (60.0 * 24.0)), origin_iy - round(y)
+            painter.drawPoint(reverse_x(plot_x), plot_y)
+            if y > max_y:
+                max_y = y
+                solar_noon_plot_x, solar_noon_plot_y = plot_x, plot_y
+            if ev_key and round(90.0 - z) == ev_key.elevation:
+                if (ev_key.direction == EASTERN_SKY and a < 180) or (ev_key.direction == WESTERN_SKY and a > 180):
+                    sun_plot_x, sun_plot_y = plot_x, plot_y
+                    sun_plot_time = t
+            t += timedelta(minutes=1)
+        if sun_plot_x is None:
+            sun_plot_x, sun_plot_y = solar_noon_plot_x, solar_noon_plot_y
+
+        painter.setPen(QPen(QColor(0xffffff), 6))
+        painter.drawLine(reverse_x(0), origin_iy, reverse_x(width), origin_iy)
+        painter.drawLine(reverse_x(solar_noon_plot_x), origin_iy, reverse_x(solar_noon_plot_x), 0)
+        if ev_key:
+            key_iy = origin_iy - round(math.sin(math.radians(ev_key.elevation)) * range_iy)
+            painter.setPen(QPen(QColor(0xffffff if key_iy >= solar_noon_plot_y else 0xcccccc), 6))
+            if ev_key.direction == EASTERN_SKY:
+                painter.drawLine(reverse_x(0), key_iy, reverse_x(solar_noon_plot_x), key_iy)
+            else:
+                painter.drawLine(reverse_x(solar_noon_plot_x), key_iy, reverse_x(width), key_iy)
+
+        painter.setPen(QPen(QColor(0xffffff), 6))
+        painter.setFont(QFont(QApplication.font().family(), width//20, QFont.Weight.Bold))
+        painter.drawText(reverse_x(solar_noon_plot_x - 150), origin_iy - 20, translate("E"))
+        painter.drawText(reverse_x(solar_noon_plot_x + 150), origin_iy - 20, translate("W"))
+        time_text = sun_plot_time.strftime("%H:%M") if sun_plot_time else "____"
+        painter.drawText(reverse_x(solar_noon_plot_x + width//4), origin_iy + height//4,
+                         f"{ev_key.elevation if ev_key else 0:3d}\u00B0 {time_text}")
+        painter.setPen(QPen(QColor(0xff965b), 2));
+        painter.setBrush(QColor(0xff965b))
+        painter.drawEllipse(reverse_x(solar_noon_plot_x + 8), origin_iy - 8, 16, 16)
+        if ev_key:
+            painter.setPen(QPen(QColor(0xff4a23), 6))
+            if self.sun_image is None:
+                self.sun_image = create_image_from_svg_bytes(BRIGHTNESS_SVG.replace(SVG_LIGHT_THEME_COLOR, b"#ffdd30"))
+            painter.drawImage(QPoint(reverse_x(sun_plot_x) - self.sun_image.width() // 2,
+                                     sun_plot_y - self.sun_image.height() // 2), self.sun_image)
+        painter.end()
+        self.plot.setPixmap(pixmap)
 
     def set_elevation(self, elevation_text: str):
         if elevation_text and len(self.elevation_steps) != 0:
