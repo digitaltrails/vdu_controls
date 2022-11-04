@@ -401,7 +401,7 @@ from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
-    QWidgetItem, QScrollArea, QGroupBox, QFrame
+    QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter
 
 VDU_CONTROLS_VERSION = '1.8.0'
 
@@ -3186,11 +3186,20 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.main_window = main_window
         self.main_config = main_config
         self.content_controls = {}
-        self.setMinimumWidth(512)
+        self.resize(1600, 800)
+        self.setMinimumWidth(1280)
+        self.setMinimumHeight(800)
         layout = QVBoxLayout()
         self.setLayout(layout)
 
+        presets_dialog_splitter = QSplitter()
+        presets_dialog_splitter.setOrientation(Qt.Horizontal)
+        presets_dialog_splitter.setHandleWidth(10)
+        layout.addWidget(presets_dialog_splitter)
+        #self.setLayout(presets_dialog_layout)
+
         self.presets_panel = QGroupBox()
+        self.presets_panel.setMinimumWidth(700)
         self.presets_panel.setFlat(True)
         presets_panel_layout = QVBoxLayout()
         self.presets_panel.setLayout(presets_panel_layout)
@@ -3204,7 +3213,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.preset_widgets_scrollarea.setWidget(preset_widgets_content)
         self.preset_widgets_scrollarea.setWidgetResizable(True)
         presets_panel_layout.addWidget(self.preset_widgets_scrollarea)
-        layout.addWidget(self.presets_panel)
+        presets_dialog_splitter.addWidget(self.presets_panel)
 
         button_box = QWidget()
         button_layout = QHBoxLayout()
@@ -3245,6 +3254,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
 
         self.editor_groupbox = QGroupBox()
         self.editor_groupbox.setFlat(True)
+        self.editor_groupbox.setMinimumHeight(768)
+        self.editor_groupbox.setMinimumWidth(500)
         self.editor_layout = QVBoxLayout()
         self.editor_title = QLabel(translate("New Preset:"))
         self.editor_title.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
@@ -3259,7 +3270,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         latitude, longitude = self.main_config.get_location()
         self.editor_trigger_widget = PresetChooseElevationWidget(latitude=latitude, longitude=longitude)
         self.editor_layout.addWidget(self.editor_trigger_widget)
-        layout.addWidget(self.editor_groupbox)
+        presets_dialog_splitter.addWidget(self.editor_groupbox)
 
         self.close_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), translate('close'))
         self.close_button.clicked.connect(self.close)
