@@ -3299,7 +3299,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.editor_trigger_widget.configure_for_location(latitude, longitude)
 
     def find_preset_widget(self, name) -> PresetWidget | None:
-        for w in self.presets_panel.children():
+        for i in range(self.preset_widgets_layout.count()):
+            w = self.preset_widgets_layout.itemAt(i).widget()
             if isinstance(w, PresetWidget):
                 if w.name == name:
                     return w
