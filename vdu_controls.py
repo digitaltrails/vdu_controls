@@ -3089,8 +3089,6 @@ class PresetChooseElevationWidget(QWidget):
         self.create_plot(None)
 
     def create_plot(self, ev_key: SolarElevationKey | None):
-
-        #width, height, plot_height = 400, 250, 200
         width, height, plot_height = self.plot.width(), self.plot.height(), 2 * self.plot.height() // 3
         origin_iy, range_iy = height // 2, self.plot.height() // 3
         pixmap = QPixmap(width, height)
@@ -3118,8 +3116,8 @@ class PresetChooseElevationWidget(QWidget):
             if y > max_y:
                 max_y = y
                 solar_noon_plot_x, solar_noon_plot_y = plot_x, plot_y
-            if ev_key and round(90.0 - z) == ev_key.elevation:
-                if (ev_key.direction == EASTERN_SKY and a < 180) or (ev_key.direction == WESTERN_SKY and a > 180):
+            if sun_plot_time is None and ev_key and round(90.0 - z) == ev_key.elevation:
+                if (ev_key.direction == EASTERN_SKY and round(a) <= 180) or (ev_key.direction == WESTERN_SKY and round(a) >= 180):
                     sun_plot_x, sun_plot_y = plot_x, plot_y
                     sun_plot_time = t
             t += timedelta(minutes=1)
