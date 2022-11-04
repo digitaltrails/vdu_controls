@@ -3196,13 +3196,12 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         presets_dialog_splitter.setOrientation(Qt.Horizontal)
         presets_dialog_splitter.setHandleWidth(10)
         layout.addWidget(presets_dialog_splitter)
-        #self.setLayout(presets_dialog_layout)
 
-        self.presets_panel = QGroupBox()
-        self.presets_panel.setMinimumWidth(700)
-        self.presets_panel.setFlat(True)
+        presets_panel = QGroupBox()
+        presets_panel.setMinimumWidth(700)
+        presets_panel.setFlat(True)
         presets_panel_layout = QVBoxLayout()
-        self.presets_panel.setLayout(presets_panel_layout)
+        presets_panel.setLayout(presets_panel_layout)
         presets_panel_title = QLabel("Presets")
         presets_panel_title.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
         presets_panel_layout.addWidget(presets_panel_title)
@@ -3213,7 +3212,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.preset_widgets_scrollarea.setWidget(preset_widgets_content)
         self.preset_widgets_scrollarea.setWidgetResizable(True)
         presets_panel_layout.addWidget(self.preset_widgets_scrollarea)
-        presets_dialog_splitter.addWidget(self.presets_panel)
+        presets_dialog_splitter.addWidget(presets_panel)
 
         button_box = QWidget()
         button_layout = QHBoxLayout()
@@ -3290,8 +3289,10 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             self.preset_widgets_layout.addWidget(preset_widget)
 
     def reload_data(self):
-        for w in self.presets_panel.children():
+        for i in range(self.preset_widgets_layout.count() - 1, -1, -1):
+            w = self.preset_widgets_layout.itemAt(i).widget()
             if isinstance(w, PresetWidget):
+                self.preset_widgets_layout.removeWidget(w)
                 w.deleteLater()
         self.populate_presets_layout()
         latitude, longitude = self.main_config.get_location()
@@ -3359,8 +3360,6 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             new_preset_widget = self.create_preset_widget(preset)
             self.preset_widgets_layout.insertWidget(index - 1, new_preset_widget)
             target_widget.deleteLater()
-            self.presets_panel.adjustSize()
-            self.presets_panel.repaint()
             order = [self.preset_widgets_layout.itemAt(i).widget().name for i in range(1, self.preset_widgets_layout.count())]
             self.main_window.preset_controller.save_order(order)
             self.main_window.display_active_preset(None)
@@ -3374,9 +3373,6 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             new_preset_widget = self.create_preset_widget(preset)
             self.preset_widgets_layout.insertWidget(index + 1, new_preset_widget)
             target_widget.deleteLater()
-            # self.preset_name_edit.setText('')
-            self.presets_panel.adjustSize()
-            self.presets_panel.repaint()
             order = [self.preset_widgets_layout.itemAt(i).widget().name for i in range(0, self.preset_widgets_layout.count())]
             self.main_window.preset_controller.save_order(order)
             self.main_window.display_active_preset(None)
@@ -3415,8 +3411,6 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         target_widget.deleteLater()
         self.preset_name_edit.setText('')
         self.preset_widgets_scrollarea.updateGeometry()
-        self.presets_panel.adjustSize()
-        self.presets_panel.repaint()
 
     def change_edit_group_title(self):
         changed_text = self.preset_name_edit.text()
