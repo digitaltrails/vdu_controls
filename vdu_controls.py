@@ -3189,14 +3189,23 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.setMinimumWidth(512)
         layout = QVBoxLayout()
         self.setLayout(layout)
+
         self.presets_panel = QGroupBox()
         self.presets_panel.setFlat(True)
-        self.presets_layout = QVBoxLayout()
-        presets_title = QLabel("Presets")
-        presets_title.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
-        self.presets_layout.addWidget(presets_title)
-        self.presets_panel.setLayout(self.presets_layout)
+        presets_panel_layout = QVBoxLayout()
+        self.presets_panel.setLayout(presets_panel_layout)
+        presets_panel_title = QLabel("Presets")
+        presets_panel_title.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
+        presets_panel_layout.addWidget(presets_panel_title)
+        self.preset_widgets_scrollarea = QScrollArea(parent=self)
+        preset_widgets_content = QWidget()
+        self.preset_widgets_layout = QVBoxLayout()
+        preset_widgets_content.setLayout(self.preset_widgets_layout)
+        self.preset_widgets_scrollarea.setWidget(preset_widgets_content)
+        self.preset_widgets_scrollarea.setWidgetResizable(True)
+        presets_panel_layout.addWidget(self.preset_widgets_scrollarea)
         layout.addWidget(self.presets_panel)
+
         button_box = QWidget()
         button_layout = QHBoxLayout()
         button_box.setLayout(button_layout)
@@ -3267,7 +3276,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
     def populate_presets_layout(self):
         for preset_def in self.main_window.preset_controller.find_presets().values():
             preset_widget = self.create_preset_widget(preset_def)
-            self.presets_layout.addWidget(preset_widget)
+            self.preset_widgets_layout.addWidget(preset_widget)
 
     def reload_data(self):
         for w in self.presets_panel.children():
@@ -3332,32 +3341,34 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
 
     def up_action(self, preset: Preset, target_widget: QWidget) -> None:
         log_debug(f"move up preset {preset.name}")
-        index = self.presets_layout.indexOf(target_widget)
-        if index > 1:
-            self.presets_layout.removeWidget(target_widget)
+        index = self.preset_widgets_layout.indexOf(target_widget)
+        if index > 0:
+            self.preset_widgets_layout.removeWidget(target_widget)
             new_preset_widget = self.create_preset_widget(preset)
-            self.presets_layout.insertWidget(index - 1, new_preset_widget)
+            self.preset_widgets_layout.insertWidget(index - 1, new_preset_widget)
             target_widget.deleteLater()
             self.presets_panel.adjustSize()
             self.presets_panel.repaint()
-            order = [self.presets_layout.itemAt(i).widget().name for i in range(1, self.presets_layout.count())]
+            order = [self.preset_widgets_layout.itemAt(i).widget().name for i in range(1, self.preset_widgets_layout.count())]
             self.main_window.preset_controller.save_order(order)
             self.main_window.display_active_preset(None)
+            self.preset_widgets_scrollarea.updateGeometry()
 
     def down_action(self, preset: Preset, target_widget: QWidget) -> None:
         log_debug(f"move down preset {preset.name}")
-        index = self.presets_layout.indexOf(target_widget)
-        if index < self.presets_layout.count() - 1:
-            self.presets_layout.removeWidget(target_widget)
+        index = self.preset_widgets_layout.indexOf(target_widget)
+        if index < self.preset_widgets_layout.count() - 1:
+            self.preset_widgets_layout.removeWidget(target_widget)
             new_preset_widget = self.create_preset_widget(preset)
-            self.presets_layout.insertWidget(index + 1, new_preset_widget)
+            self.preset_widgets_layout.insertWidget(index + 1, new_preset_widget)
             target_widget.deleteLater()
             # self.preset_name_edit.setText('')
             self.presets_panel.adjustSize()
             self.presets_panel.repaint()
-            order = [self.presets_layout.itemAt(i).widget().name for i in range(1, self.presets_layout.count())]
+            order = [self.preset_widgets_layout.itemAt(i).widget().name for i in range(0, self.preset_widgets_layout.count())]
             self.main_window.preset_controller.save_order(order)
             self.main_window.display_active_preset(None)
+            self.preset_widgets_scrollarea.updateGeometry()
 
     def restore_preset(self, preset: Preset) -> None:
         self.main_window.restore_preset(preset)
@@ -3388,9 +3399,10 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         if rc == QMessageBox.Cancel:
             return
         self.main_window.delete_preset(preset)
-        self.presets_layout.removeWidget(target_widget)
+        self.preset_widgets_layout.removeWidget(target_widget)
         target_widget.deleteLater()
         self.preset_name_edit.setText('')
+        self.preset_widgets_scrollarea.updateGeometry()
         self.presets_panel.adjustSize()
         self.presets_panel.repaint()
 
@@ -3444,12 +3456,24 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         # Create a new widget - an easy way to update the icon.
         new_preset_widget = self.create_preset_widget(preset)
         if existing_preset_widget:
-            self.presets_layout.replaceWidget(existing_preset_widget, new_preset_widget)
+            self.preset_widgets_layout.replaceWidget(existing_preset_widget, new_preset_widget)
             # The deleteLater removes the widget from the tree so that it is no longer findable and can be freed.
             existing_preset_widget.deleteLater()
             self.make_visible()
         else:
-            self.presets_layout.addWidget(new_preset_widget)
+            self.preset_widgets_layout.addWidget(new_preset_widget)
+            order = [self.preset_widgets_layout.itemAt(i).widget().name for i in range(0, self.preset_widgets_layout.count())] + [preset_name,]
+            self.main_window.preset_controller.save_order(order)
+
+            def scroll_to_bottom():
+                # TODO figure out why this does not work
+                self.preset_widgets_scrollarea.updateGeometry()
+                self.preset_widgets_scrollarea.verticalScrollBar().setValue(
+                    self.preset_widgets_scrollarea.verticalScrollBar().maximum())
+                self.preset_widgets_scrollarea.ensureWidgetVisible(new_preset_widget)
+
+            self.preset_widgets_scrollarea.updateGeometry()
+            QTimer.singleShot(0, scroll_to_bottom)
         self.preset_name_edit.setText('')
         self.main_window.display_active_preset(None)
 
