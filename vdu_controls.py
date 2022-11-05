@@ -3400,7 +3400,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
     def down_action(self, preset: Preset, target_widget: QWidget) -> None:
         log_debug(f"move down preset {preset.name}")
         index = self.preset_widgets_layout.indexOf(target_widget)
-        if index < self.preset_widgets_layout.count() - 1:
+        if index < self.preset_widgets_layout.count() - 2:
             self.preset_widgets_layout.removeWidget(target_widget)
             new_preset_widget = self.create_preset_widget(preset)
             self.preset_widgets_layout.insertWidget(index + 1, new_preset_widget)
