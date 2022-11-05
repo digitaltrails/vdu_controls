@@ -2854,15 +2854,10 @@ class PushButtonLeftJustified(QPushButton):
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent=parent)
         self.label = QLabel()
-        # Should I enable this or raise a bug against XFCE
         if 'xfce' in current_desktop.lower():
-            # XFCE issue - I knew playing this kind of game with QLabel was going to bite me
-            button_font = self.font()
-            label_font = QFont(button_font)
-            button_font.setPointSize(button_font.pointSize() + 2)
-            label_font.setPointSize(button_font.pointSize() - 1)
-            self.setFont(button_font)
-            self.label.setFont(label_font)
+            # XFCE issue - label text gets clipped - should I enable this or raise a bug against XFCE
+            self.setFont(QFont(self.font().family(), self.font().pointSize() + 3, self.font().weight()))
+            self.label.setFont(QFont(self.font().family(), self.font().pointSize() - 2, self.font().weight()))
         self.setLayout(QVBoxLayout())
         self.layout().addWidget(self.label)
 
