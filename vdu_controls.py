@@ -2279,6 +2279,7 @@ class Preset:
         if self.elevation_time_today:
             result += ' \u25F4 ' + self.elevation_time_today.strftime(translate("%H:%M"))
         else:
+            # Not possible today - sun doesn't get that high
             result += ' \u29BB'
         if self.timer and self.timer.remainingTime() > 0:
             result += ' \u23F3'
@@ -2848,6 +2849,17 @@ class PresetController:
         return problems
 
 
+class PushButtonLeftJustified(QPushButton):
+    def __init__(self, parent: QWidget | None = None):
+        super().__init__(parent=parent)
+        self.setLayout(QHBoxLayout())
+        self.label = QLabel()
+        self.layout().addWidget(self.label)
+
+    def setText(self, text: str) -> None:
+        self.label.setText(text)
+
+
 class PresetWidget(QWidget):
     def __init__(self,
                  preset: Preset,
@@ -2920,17 +2932,15 @@ class PresetWidget(QWidget):
         delete_button.setAutoDefault(False)
 
         line_layout.addSpacing(20)
-        timer_control_button = QLabel("")
-        if preset.get_solar_elevation():
+        timer_control_button = PushButtonLeftJustified(parent=self)
+        timer_control_button.setFlat(True)
+
+        if preset.get_solar_elevation() is not None:
             def format_description():
-                timer_status = preset.get_timer_status()
-                if timer_status == "scheduled":
-                    prefix = "Click to suspend {}"
-                elif timer_status == "suspended":
-                    prefix = "Click to re-enable {}"
-                else:
-                    prefix = "Scheduled {}"
-                return translate(prefix).format(preset.get_solar_elevation_description())
+                action_desc = {
+                    'scheduled': translate("Press to skip {}"), 'suspended': translate("Press to re-enable {}"),
+                    'past': translate("Scheduled {}"), 'unscheduled': translate("Not applicable {}")}
+                return action_desc[preset.get_timer_status()].format(preset.get_solar_elevation_description())
 
             def toggle_timer(arg):
                 preset.toggle_timer()
@@ -2942,6 +2952,8 @@ class PresetWidget(QWidget):
             status = preset.get_timer_status()
             timer_control_button.setToolTip(format_description())
             timer_control_button.mousePressEvent = toggle_timer
+        if preset.get_timer_status() in ('past', 'unscheduled'):
+            timer_control_button.setDisabled(True)
         # auto_label.setDisabled(True)
         line_layout.addWidget(timer_control_button)
 
@@ -3126,7 +3138,8 @@ class PresetChooseElevationWidget(QWidget):
                 max_y = y
                 solar_noon_plot_x, solar_noon_plot_y = plot_x, plot_y
             if sun_plot_time is None and ev_key and round(90.0 - z) == ev_key.elevation:
-                if (ev_key.direction == EASTERN_SKY and round(a) <= 180) or (ev_key.direction == WESTERN_SKY and round(a) >= 180):
+                if (ev_key.direction == EASTERN_SKY and round(a) <= 180) or (
+                        ev_key.direction == WESTERN_SKY and round(a) >= 180):
                     sun_plot_x, sun_plot_y = plot_x, plot_y
                     sun_plot_time = t
             t += timedelta(minutes=1)
@@ -3145,11 +3158,11 @@ class PresetChooseElevationWidget(QWidget):
                 painter.drawLine(reverse_x(solar_noon_plot_x), key_iy, reverse_x(width), key_iy)
 
         painter.setPen(QPen(QColor(0xffffff), 6))
-        painter.setFont(QFont(QApplication.font().family(), width//20, QFont.Weight.Bold))
+        painter.setFont(QFont(QApplication.font().family(), width // 20, QFont.Weight.Bold))
         painter.drawText(reverse_x(solar_noon_plot_x - 150), origin_iy - 20, translate("E"))
         painter.drawText(reverse_x(solar_noon_plot_x + 150), origin_iy - 20, translate("W"))
         time_text = sun_plot_time.strftime("%H:%M") if sun_plot_time else "____"
-        painter.drawText(reverse_x(solar_noon_plot_x + width//4), origin_iy + height//4,
+        painter.drawText(reverse_x(solar_noon_plot_x + width // 4), origin_iy + height // 4,
                          f"{ev_key.elevation if ev_key else 0:3d}\u00B0 {time_text}")
         painter.setPen(QPen(QColor(0xff965b), 2));
         painter.setBrush(QColor(0xff965b))
@@ -3367,7 +3380,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             new_preset_widget = self.create_preset_widget(preset)
             self.preset_widgets_layout.insertWidget(index - 1, new_preset_widget)
             target_widget.deleteLater()
-            order = [self.preset_widgets_layout.itemAt(i).widget().name for i in range(1, self.preset_widgets_layout.count())]
+            order = [self.preset_widgets_layout.itemAt(i).widget().name for i in
+                     range(1, self.preset_widgets_layout.count())]
             self.main_window.preset_controller.save_order(order)
             self.main_window.display_active_preset(None)
             self.preset_widgets_scrollarea.updateGeometry()
@@ -3380,7 +3394,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             new_preset_widget = self.create_preset_widget(preset)
             self.preset_widgets_layout.insertWidget(index + 1, new_preset_widget)
             target_widget.deleteLater()
-            order = [self.preset_widgets_layout.itemAt(i).widget().name for i in range(0, self.preset_widgets_layout.count())]
+            order = [self.preset_widgets_layout.itemAt(i).widget().name for i in
+                     range(0, self.preset_widgets_layout.count())]
             self.main_window.preset_controller.save_order(order)
             self.main_window.display_active_preset(None)
             self.preset_widgets_scrollarea.updateGeometry()
@@ -3475,7 +3490,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             self.make_visible()
         else:
             self.preset_widgets_layout.addWidget(new_preset_widget)
-            order = [self.preset_widgets_layout.itemAt(i).widget().name for i in range(0, self.preset_widgets_layout.count())] + [preset_name,]
+            order = [self.preset_widgets_layout.itemAt(i).widget().name for i in
+                     range(0, self.preset_widgets_layout.count())] + [preset_name, ]
             self.main_window.preset_controller.save_order(order)
 
             def scroll_to_bottom():
