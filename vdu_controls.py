@@ -3314,6 +3314,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             if isinstance(w, PresetWidget):
                 self.preset_widgets_layout.removeWidget(w)
                 w.deleteLater()
+            else:
+                self.preset_widgets_layout.removeItem(self.preset_widgets_layout.itemAt(i))
         self.populate_presets_layout()
         latitude, longitude = self.main_config.get_location()
         self.preset_name_edit.setText('')
@@ -3386,7 +3388,6 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.preset_widgets_layout.insertWidget(self.preset_widgets_layout.count() - 1, preset_widget)
 
     def up_action(self, preset: Preset, target_widget: QWidget) -> None:
-        log_debug(f"move up preset {preset.name}")
         index = self.preset_widgets_layout.indexOf(target_widget)
         if index > 0:
             self.preset_widgets_layout.removeWidget(target_widget)
@@ -3398,7 +3399,6 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             self.preset_widgets_scrollarea.updateGeometry()
 
     def down_action(self, preset: Preset, target_widget: QWidget) -> None:
-        log_debug(f"move down preset {preset.name}")
         index = self.preset_widgets_layout.indexOf(target_widget)
         if index < self.preset_widgets_layout.count() - 2:
             self.preset_widgets_layout.removeWidget(target_widget)
@@ -3428,7 +3428,6 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.main_window.save_preset(preset)
 
     def delete_preset(self, preset: Preset, target_widget: QWidget = None) -> None:
-        log_info(f"delete preset {preset.name}")
         delete_confirmation = QMessageBox()
         delete_confirmation.setIcon(QMessageBox.Question)
         delete_confirmation.setText(translate('Delete {}?').format(preset.name))
