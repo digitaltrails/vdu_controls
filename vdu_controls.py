@@ -394,13 +394,12 @@ import time
 import traceback
 import urllib.request
 from collections import namedtuple
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, timezone
 from functools import partial
 from pathlib import Path
 from typing import List, Tuple, Mapping, Type, Dict, Callable
 from urllib.error import URLError
 
-import pytz
 from PyQt5 import QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
     QSettings, QSize, QTimer
@@ -4235,7 +4234,7 @@ def calc_solar_azimuth_zenith(localised_time: datetime, latitude: float, longitu
     """
     Return azimuth degrees clockwise from true north and zenith in degrees from vertical direction.
     """
-    utc_date_time = localised_time if localised_time.tzinfo is None else localised_time.astimezone(pytz.UTC)
+    utc_date_time = localised_time if localised_time.tzinfo is None else localised_time.astimezone(timezone.utc)
     # UTC from now on...
     hours, minutes, seconds = utc_date_time.hour, utc_date_time.minute, utc_date_time.second
     year, month, day = utc_date_time.year, utc_date_time.month, utc_date_time.day
