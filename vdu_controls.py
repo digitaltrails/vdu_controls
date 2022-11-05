@@ -3306,6 +3306,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         for preset_def in self.main_window.preset_controller.find_presets().values():
             preset_widget = self.create_preset_widget(preset_def)
             self.preset_widgets_layout.addWidget(preset_widget)
+        self.preset_widgets_layout.addStretch(1)
 
     def reload_data(self):
         for i in range(self.preset_widgets_layout.count() - 1, -1, -1):
@@ -3371,6 +3372,19 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 preset_ini.add_section('preset')
             preset_ini.set('preset', 'solar-elevation', elevation_ini_text)
 
+    def get_presets(self):
+        return [self.preset_widgets_layout.itemAt(i).widget()
+                for i in range(0, self.preset_widgets_layout.count() - 1)
+                if isinstance(self.preset_widgets_layout.itemAt(i).widget(), PresetWidget)
+                ]
+
+    def get_presets_name_order(self):
+        return [w.name for w in self.get_presets()]
+
+    def add_preset_widget(self, preset_widget: PresetWidget):
+        # Insert before trailing stretch item
+        self.preset_widgets_layout.insertWidget(self.preset_widgets_layout.count() - 1, preset_widget)
+
     def up_action(self, preset: Preset, target_widget: QWidget) -> None:
         log_debug(f"move up preset {preset.name}")
         index = self.preset_widgets_layout.indexOf(target_widget)
@@ -3379,9 +3393,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             new_preset_widget = self.create_preset_widget(preset)
             self.preset_widgets_layout.insertWidget(index - 1, new_preset_widget)
             target_widget.deleteLater()
-            order = [self.preset_widgets_layout.itemAt(i).widget().name for i in
-                     range(1, self.preset_widgets_layout.count())]
-            self.main_window.preset_controller.save_order(order)
+            self.main_window.preset_controller.save_order(self.get_presets_name_order())
             self.main_window.display_active_preset(None)
             self.preset_widgets_scrollarea.updateGeometry()
 
@@ -3393,9 +3405,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             new_preset_widget = self.create_preset_widget(preset)
             self.preset_widgets_layout.insertWidget(index + 1, new_preset_widget)
             target_widget.deleteLater()
-            order = [self.preset_widgets_layout.itemAt(i).widget().name for i in
-                     range(0, self.preset_widgets_layout.count())]
-            self.main_window.preset_controller.save_order(order)
+            self.main_window.preset_controller.save_order(self.get_presets_name_order())
             self.main_window.display_active_preset(None)
             self.preset_widgets_scrollarea.updateGeometry()
 
@@ -3430,6 +3440,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.main_window.delete_preset(preset)
         self.preset_widgets_layout.removeWidget(target_widget)
         target_widget.deleteLater()
+        self.main_window.preset_controller.save_order(self.get_presets_name_order())
         self.preset_name_edit.setText('')
         self.preset_widgets_scrollarea.updateGeometry()
 
@@ -3488,10 +3499,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             existing_preset_widget.deleteLater()
             self.make_visible()
         else:
-            self.preset_widgets_layout.addWidget(new_preset_widget)
-            order = [self.preset_widgets_layout.itemAt(i).widget().name for i in
-                     range(0, self.preset_widgets_layout.count())] + [preset_name, ]
-            self.main_window.preset_controller.save_order(order)
+            self.add_preset_widget(new_preset_widget)
+            self.main_window.preset_controller.save_order(self.get_presets_name_order())
 
             def scroll_to_bottom():
                 # TODO figure out why this does not work
