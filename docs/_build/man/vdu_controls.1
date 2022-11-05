@@ -329,29 +329,28 @@ When the GUI is used to create a preset file, you can select which controls to s
 might create a preset that includes only the brightness, but not the contrast or audio volume.
 .SS Presets \- solar elevation triggers
 .sp
-Preset activation may optionally be triggered by solar elevation.  The idea being to tie presets
-to dawn or dusk, or to the Sun rising above the surrounding terrain (the time of which
-will vary as the seasons change).
+Preset activation may optionally be triggered by solar elevation.  Each preset may include
+an option specifying an angle of \fBsolar\-elevation\fP\&.  Such a preset will be automatically
+restored when the sun reaches that elevation.  When this should happen is calculated from
+the system\-time and the value of \fBlocation\fP option in the \fBvdu\-controls\-globals\fP\&.
 .sp
-Each preset may include an option specifying \fBsolar\-elevation\fP\&. In which case \fBvdu_controls\fP will
-automatically restore the preset when the sun reaches that elevation. Each day\(aqs solar elevations
-are calculated based on the value of \fBlocation\fP option in the \fBvdu\-controls\-globals\fP\&.
+Solar elevations may range from \-19 in the eastern sky (morning/ascending) to \-19 in the
+western sky (afternoon/descending), with a maximum of 90 degrees (midday).
 .sp
-Solar elevations may range from \-19 in the eastern sky (morning/ascending) to \-19 in the western
-sky (afternoon/descending), with a maximum of 90 degrees (midday).
+Presets may be confined to certain times of the year by choosing an
+appropriate \fBsolar\-elevation\fP\&.  For example, in the Arctic circle at mid\-winter ,
+any preset with a positive solar elevation will not trigger because the sun won\(aqt
+rise above the horizon.  Presets may always be manually invoked regardless of
+their specified solar elevations.
 .sp
-In order to allow settings to be confined to certain times of the year, a preset will not be
-automatically activate if it\(aqs \fBsolar\-elevation\fP angle is greater than current day\(aqs solar noon.
-For example, at mid\-winter in the Arctic circle, any preset with a positive solar elevation will
-not trigger because the sun never rises above the horizon.  Presets may always be manually invoked
-regardless of their specified solar elevations.
+On any given day, the user may temporarily override any trigger, in which case the
+tigger is suspended until the following day.  For example, if today is particularly
+dark, a user might choose to disable the triggers for the brighter parts of the day.
 .sp
-On any given day, the user may temporarily override any trigger, in which case the tigger is
-suspended until the following day.  For example, if today is particularly dark, a user might
-choose to disable the triggers for the brighter parts of the day.
-.sp
-When \fBvdu_controls\fP starts up, it will automatically restore the preset that would have most
-recently triggered.
+At startup \fBvdu_controls\fP will restore the last preset that would have been
+triggered for this day (if any).  For example, say you have \fBvdu_controls\fP
+set to run at login, and you\(aqve also set a preset to trigger at dawn, but today you
+actually arrive after dawn, the preset will be activated when you log in.
 .SS Presets \- remote control
 .sp
 UNIX/Linux signals may be used to instruct a running \fBvdu_controls\fP to invoke a preset.  This feature is

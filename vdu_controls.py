@@ -238,8 +238,8 @@ On any given day, the user may temporarily override any trigger, in which case t
 tigger is suspended until the following day.  For example, if today is particularly
 dark, a user might choose to disable the triggers for the brighter parts of the day.
 
-At startup ``vdu_controls`` will automatically restore the preset that would have
-previously triggered for this day (if any).  For example, say you have ``vdu_controls``
+At startup ``vdu_controls`` will restore the last preset that would have been
+triggered for this day (if any).  For example, say you have ``vdu_controls``
 set to run at login, and you've also set a preset to trigger at dawn, but today you
 actually arrive after dawn, the preset will be activated when you log in.
 
