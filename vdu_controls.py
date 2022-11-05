@@ -334,7 +334,7 @@ Described for OpenSUSE, similar for other distros:
 
 Software::
 
-        zypper install python38-QtPy
+        zypper install python3 python3-qt5 noto-sans-math-fonts noto-sans-symbols2-fonts
         zypper install ddcutil
 
 Kernel Modules::
@@ -427,6 +427,8 @@ EASTERN_SKY = 'eastern-sky'
 
 SolarElevationKey = namedtuple('SolarElevationKey', ['direction', 'elevation'])
 SolarElevationData = namedtuple('SolarElevationData', ['azimuth', 'zenith', 'when'])
+
+current_desktop = os.environ.get('XDG_CURRENT_DESKTOP', default='unknown')
 
 
 def format_solar_elevation_abbreviation(elevation: SolarElevationKey) -> str:
@@ -1039,7 +1041,7 @@ class ConfigIni(configparser.ConfigParser):
         if self.has_option(ConfigIni.METADATA_SECTION, ConfigIni.METADATA_VERSION_OPTION):
             version = self[ConfigIni.METADATA_SECTION][ConfigIni.METADATA_VERSION_OPTION]
             try:
-                return *[int(i) for i in version.split('.')],
+                return tuple([int(i) for i in version.split('.')])
             except ValueError as ve:
                 log_error(f"Illegal version number {version} should be i.j.k where i, j and k are integers.")
         return 1, 6, 0
@@ -2851,8 +2853,17 @@ class PresetController:
 class PushButtonLeftJustified(QPushButton):
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent=parent)
-        self.setLayout(QHBoxLayout())
         self.label = QLabel()
+        # Should I enable this or raise a bug against XFCE
+        if 'xfce' in current_desktop.lower():
+            # XFCE issue - I knew playing this kind of game with QLabel was going to bite me
+            button_font = self.font()
+            label_font = QFont(button_font)
+            button_font.setPointSize(button_font.pointSize() + 2)
+            label_font.setPointSize(button_font.pointSize() - 1)
+            self.setFont(button_font)
+            self.label.setFont(label_font)
+        self.setLayout(QVBoxLayout())
         self.layout().addWidget(self.label)
 
     def setText(self, text: str) -> None:
@@ -3786,6 +3797,8 @@ class MainWindow(QMainWindow):
 
     def __init__(self, main_config: VduControlsConfig, app: QApplication, session_startup: bool):
         super().__init__()
+
+        global current_desktop
         self.app = app
         self.displayed_preset_name = None
         self.setObjectName('main_window')
@@ -3796,9 +3809,9 @@ class MainWindow(QMainWindow):
         self.main_config = main_config
         self.daily_schedule_next_update = datetime.today()
 
-        gnome_tray_behaviour = main_config.is_system_tray_enabled() and \
-                               os.environ.get('XDG_CURRENT_DESKTOP') is not None \
-                               and 'gnome' in os.environ['XDG_CURRENT_DESKTOP'].lower()
+        current_desktop = os.environ.get('XDG_CURRENT_DESKTOP', default='unknown')
+
+        gnome_tray_behaviour = main_config.is_system_tray_enabled() and 'gnome' in current_desktop.lower()
 
         if gnome_tray_behaviour:
             # Gnome tray doesn't normally provide a way to bring up the main app.
