@@ -2289,6 +2289,7 @@ class Preset:
             # Not possible today - sun doesn't get that high
             result += ' \u29BB'
         if self.timer and self.timer.remainingTime() > 0:
+            # This character is too tall - it causes a jump when rendered - but nothing else is quite as appropriate.
             result += ' \u23F3'
         return result
 
@@ -2862,7 +2863,7 @@ class PushButtonLeftJustified(QPushButton):
         self.label = QLabel()
         if 'xfce' in current_desktop.lower():
             # XFCE issue - label text gets clipped - should I enable this or raise a bug against XFCE
-            self.setFont(QFont(self.font().family(), self.font().pointSize() + 3, self.font().weight()))
+            self.setFont(QFont(self.font().family(), self.font().pointSize() + 4, self.font().weight()))
             self.label.setFont(QFont(self.font().family(), self.font().pointSize() - 2, self.font().weight()))
         self.setLayout(QVBoxLayout())
         self.layout().addWidget(self.label)
@@ -2956,10 +2957,10 @@ class PresetWidget(QWidget):
             def toggle_timer(arg):
                 preset.toggle_timer()
                 auto_text = preset.get_solar_elevation_abbreviation()
-                timer_control_button.setText(f"[{auto_text}]")
+                timer_control_button.setText(f"{auto_text}")
                 timer_control_button.setToolTip(format_description())
 
-            timer_control_button.setText(f"[{preset.get_solar_elevation_abbreviation()}]")
+            timer_control_button.setText(f"{preset.get_solar_elevation_abbreviation()}")
             status = preset.get_timer_status()
             timer_control_button.setToolTip(format_description())
             timer_control_button.mousePressEvent = toggle_timer
