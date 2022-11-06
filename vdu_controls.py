@@ -417,7 +417,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
     QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter
 
-VDU_CONTROLS_VERSION = '1.8.0'
+VDU_CONTROLS_VERSION = '1.8.1'
 
 RELEASE_ANNOUNCEMENT = f"""
 <h3>Welcome to vdu_controls version {VDU_CONTROLS_VERSION}</h3>
@@ -1756,11 +1756,14 @@ class LatitudeLongitudeValidator(QRegExpValidator):
         result = super().validate(text, pos)
         if result[0] == QValidator.Acceptable:
             if text != '':
-                lat, lon = [float(i) for i in text.split(',')]
-                if -90.0 <= lat <= 90.0:
-                    if -180.0 <= lon <= 180.0:
-                        return QValidator.Acceptable, text, pos
-                return QValidator.Invalid, text, pos
+                try:
+                    lat, lon = [float(i) for i in text.split(',')]
+                    if -90.0 <= lat <= 90.0:
+                        if -180.0 <= lon <= 180.0:
+                            return QValidator.Acceptable, text, pos
+                    return QValidator.Invalid, text, pos
+                except ValueError as e:
+                    return QValidator.Intermediate, text, pos
         return result
 
 
@@ -1841,12 +1844,9 @@ class SettingsEditorLocationWidget(SettingsEditorFieldBase):
         """
         from urllib.request import urlopen
         from json import load
-        url = self.get_ipinfo_url()
-        res = urlopen(url)
-        data = {}
-        if res:
-            data = load(res)
-        return data
+        with urlopen(self.get_ipinfo_url()) as res:
+            return load(res)
+        return {}
 
     def get_ipinfo_url(self):
         return os.getenv('VDU_CONTROLS_IPINFO_URL', default='https://ipinfo.io/json')
@@ -2956,11 +2956,10 @@ class PresetWidget(QWidget):
 
             def toggle_timer(arg):
                 preset.toggle_timer()
-                auto_text = preset.get_solar_elevation_abbreviation()
-                timer_control_button.setText(f"{auto_text}")
+                timer_control_button.setText(preset.get_solar_elevation_abbreviation())
                 timer_control_button.setToolTip(format_description())
 
-            timer_control_button.setText(f"{preset.get_solar_elevation_abbreviation()}")
+            timer_control_button.setText(preset.get_solar_elevation_abbreviation())
             status = preset.get_timer_status()
             timer_control_button.setToolTip(format_description())
             timer_control_button.mousePressEvent = toggle_timer
