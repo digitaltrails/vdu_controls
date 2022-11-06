@@ -220,29 +220,35 @@ might create a preset that includes only the brightness, but not the contrast or
 Presets - solar elevation triggers
 ----------------------------------
 
-Preset activation may optionally be triggered by solar elevation.  Each preset may include
-an option specifying an angle of ``solar-elevation``.  Such a preset will be automatically
-restored when the sun reaches that elevation.  When this should happen is calculated from
-the system-time and the value of ``location`` option in the ``vdu-controls-globals``.
+A preset may be set to automatically trigger when the sun rises to a specified elevation.
+The idea being to allow a preset to trigger relative to dawn or dusk, or when the sun rises
+above some surrounding terrain (the time of which will vary as the seasons change).
 
-Solar elevations may range from -19 in the eastern sky (morning/ascending) to -19 in the
-western sky (afternoon/descending), with a maximum of 90 degrees (midday).
+To assign a trigger, use the Preset Dialog to set a preset's ``solar-elevation``.
+A solar elevation may range from -19 degrees in the eastern sky (morning/ascending)
+to -19 degrees in the western sky (afternoon/descending), with a maximum nearing
+90 degrees at midday.
 
-Presets may be confined to certain times of the year by choosing an
-appropriate ``solar-elevation``.  For example, in the Arctic circle at mid-winter ,
-any preset with a positive solar elevation will not trigger because the sun won't
-rise above the horizon.  Presets may always be manually invoked regardless of
-their specified solar elevations.
+If a preset has an elevation, it will be triggered each day at a time calculated
+by using the latitude and longitude specified by in the ``vdu-controls-globals``
+``location`` option.
+
+By choosing an appropriate ``solar-elevation`` a preset may be confined to specific
+times of the year.  For example, a preset with a positive solar elevation will
+not trigger at mid-winter in the Arctic circle (because the sun never gets that
+high).  Such a preset may always be manually selected regardless of its specified
+solar elevations.
 
 On any given day, the user may temporarily override any trigger, in which case the
-tigger is suspended until the following day.  For example, if today is particularly
-dark, a user might choose to disable the triggers for the brighter parts of the day.
+trigger is suspended until the following day.  For example, a user might choose to
+disable a trigger intended for the brightest part of the day if the day is particularly
+dull,
 
-At startup ``vdu_controls`` will restore the last preset that would have been
-triggered for this day (if any).  For example, say you have ``vdu_controls``
-set to run at login, and you've also set a preset to trigger at dawn, but today you
-actually arrive after dawn, the preset will be activated when you log in.
-
+At startup ``vdu_controls`` will restore the most recent preset that would have been
+triggered for this day (if any).  For example, say a user has ``vdu_controls``
+set to run at login, and they've also set a preset to trigger at dawn, but
+they don't actually log in until just after dawn, the overdue dawn preset will be
+triggered at login.
 
 Presets - remote control
 ------------------------
