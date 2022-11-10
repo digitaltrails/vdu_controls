@@ -384,7 +384,7 @@ import configparser
 import glob
 import inspect
 import io
-import json
+import locale
 import math
 import os
 import pickle
@@ -398,7 +398,6 @@ import syslog
 import textwrap
 import time
 import traceback
-import urllib.request
 from collections import namedtuple
 from datetime import datetime, timedelta, date, timezone
 from functools import partial
@@ -435,6 +434,10 @@ SolarElevationKey = namedtuple('SolarElevationKey', ['direction', 'elevation'])
 SolarElevationData = namedtuple('SolarElevationData', ['azimuth', 'zenith', 'when'])
 
 current_desktop = os.environ.get('XDG_CURRENT_DESKTOP', default='unknown')
+
+
+def zoned_now() -> datetime:
+    return datetime.now().astimezone()
 
 
 def format_solar_elevation_abbreviation(elevation: SolarElevationKey) -> str:
@@ -1077,7 +1080,7 @@ class ConfigIni(configparser.ConfigParser):
             log_info(f"Backed up old config as {backup_path.as_posix()}")
         with open(config_path, 'w') as config_file:
             self[ConfigIni.METADATA_SECTION][ConfigIni.METADATA_VERSION_OPTION] = VDU_CONTROLS_VERSION
-            self[ConfigIni.METADATA_SECTION][ConfigIni.METADATA_TIMESTAMP_OPTION] = str(datetime.now())
+            self[ConfigIni.METADATA_SECTION][ConfigIni.METADATA_TIMESTAMP_OPTION] = str(zoned_now())
             self.write(config_file)
         log_info(f"Wrote config to {config_path.as_posix()}")
 
@@ -1104,7 +1107,8 @@ class VduControlsConfig:
         # augment the configparser with type-info for run-time widget selection (default type is 'boolean')
         self.config_type_map = {
             'enable-vcp-codes': 'csv', 'sleep-multiplier': 'float', 'capabilities-override': 'text',
-            'location': 'location'}
+            'location': 'location',
+        }
 
         if include_globals:
             self.ini_content['vdu-controls-globals'] = {
@@ -1113,7 +1117,8 @@ class VduControlsConfig:
                 'warnings-enabled': 'no',
                 'debug-enabled': 'no',
                 'syslog-enabled': 'no',
-                'location': ''}
+                'location': '',
+            }
 
         self.ini_content['vdu-controls-widgets'] = {}
         self.ini_content['ddcutil-parameters'] = {}
@@ -1204,7 +1209,16 @@ class VduControlsConfig:
         spec = self.ini_content.get('vdu-controls-globals', 'location', fallback=None)
         if spec is None or spec.strip() == '':
             return None, None
-        return tuple([float(part) for part in spec.split(',')])
+        return tuple([float(part) for part in spec.split(',')[:2]])
+
+    def get_location_name(self) -> Tuple[int, int] | Tuple[None, None]:
+        spec = self.ini_content.get('vdu-controls-globals', 'location', fallback=None)
+        if spec is None or spec.strip() == '':
+            return None
+        parts = spec.split(',')
+        if len(parts) == 3:
+            return parts[2]
+        return self.get_location()
 
     def parse_file(self, config_path: Path) -> None:
         """Parse config values from file"""
@@ -1687,7 +1701,7 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
 class SettingsEditorFloatWidget(SettingsEditorFieldBase):
     def __init__(self, section_editor: SettingsEditorTab, option: str, section: str) -> None:
         super().__init__(section_editor, option, section)
-        layout = QVBoxLayout()
+        layout = QHBoxLayout()
         self.setLayout(layout)
         text_label = QLabel(option.replace('-', ' '))
         layout.addWidget(text_label)
@@ -1705,6 +1719,7 @@ class SettingsEditorFloatWidget(SettingsEditorFieldBase):
 
         text_input.editingFinished.connect(editing_finished)
         layout.addWidget(text_input)
+        layout.addStretch(1)
         self.text_input = text_input
 
     def reset(self):
@@ -1750,14 +1765,14 @@ class SettingsEditorCsvWidget(SettingsEditorFieldBase):
 class LatitudeLongitudeValidator(QRegExpValidator):
 
     def __init__(self):
-        super().__init__(QRegExp(r"^([0-9.-]+,[0-9.-]+)|$"))
+        super().__init__(QRegExp(r"^([+-]*[0-9.,]+[,;][+-]*[0-9.,]+)([,;]\w+)?|$"))
 
     def validate(self, text: str, pos: int) -> Tuple[QValidator.State, str, int]:
         result = super().validate(text, pos)
         if result[0] == QValidator.Acceptable:
             if text != '':
                 try:
-                    lat, lon = [float(i) for i in text.split(',')]
+                    lat, lon = [float(i) for i in text.split(',')[:2]]
                     if -90.0 <= lat <= 90.0:
                         if -180.0 <= lon <= 180.0:
                             return QValidator.Acceptable, text, pos
@@ -1776,7 +1791,8 @@ class SettingsEditorLocationWidget(SettingsEditorFieldBase):
         text_label = QLabel(option.replace('-', ' '))
         layout.addWidget(text_label)
         text_input = QLineEdit()
-        text_input.setMaximumWidth(250)
+        text_input.setFixedWidth(500)
+        text_input.setMaximumWidth(500)
         text_input.setMaxLength(250)
 
         validator = LatitudeLongitudeValidator()
@@ -1817,7 +1833,12 @@ class SettingsEditorLocationWidget(SettingsEditorFieldBase):
                     show_info.setDetailedText(full_text)
                     show_info.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
                     if show_info.exec() == QMessageBox.Yes:
-                        text_input.setText(ipinfo['loc'])
+                        data = ipinfo['loc']
+                        # for key in ('city', 'region', 'country'):
+                        #     if key in ipinfo:
+                        #         data = data + ',' + ipinfo[key]
+                        #         break
+                        text_input.setText(data)
                         editing_finished()
                 except (URLError, KeyError) as e:
                     error_dialog = QMessageBox()
@@ -2302,7 +2323,7 @@ class Preset:
         if self.elevation_time_today:
             if self.timer and self.timer.remainingTime() > 0:
                 template = translate("{} later today at {}")
-            elif self.elevation_time_today < datetime.now().astimezone():
+            elif self.elevation_time_today < zoned_now():
                 template = translate("{} earlier today at {}")
             else:
                 template = translate("{} suspended for  {}")
@@ -2319,7 +2340,7 @@ class Preset:
             self.timer.setSingleShot(True)
         self.timer_action = action
         self.timer.timeout.connect(partial(action, self))
-        millis = int((when_local - datetime.now().astimezone()) / timedelta(milliseconds=1))
+        millis = int((when_local - zoned_now()) / timedelta(milliseconds=1))
         self.timer.start(millis)
         log_info(
             f"Preset scheduled activation for '{self.name}' at {when_local} in {round(millis / 1000 / 60)} minutes "
@@ -2334,7 +2355,7 @@ class Preset:
             self.elevation_time_today = None
 
     def toggle_timer(self):
-        if self.elevation_time_today and self.elevation_time_today > datetime.now().astimezone():
+        if self.elevation_time_today and self.elevation_time_today > zoned_now():
             if self.timer.remainingTime() > 0:
                 log_info(f"Preset scheduled timer cleared for '{self.name}'")
                 self.timer.stop()
@@ -2344,7 +2365,7 @@ class Preset:
 
     def get_timer_status(self) -> str:
         if self.elevation_time_today:
-            if self.elevation_time_today < datetime.now().astimezone():
+            if self.elevation_time_today < zoned_now():
                 return "past"
             if self.timer:
                 if self.timer.remainingTime() > 0:
@@ -3135,7 +3156,7 @@ class PresetChooseElevationWidget(QWidget):
         painter.drawLine(0, origin_iy, width, origin_iy)
         painter.setPen(QPen(QColor(0xff965b), 6))
 
-        today = datetime.today().astimezone().replace(hour=0, minute=0)
+        today = zoned_now().replace(hour=0, minute=0)
         sun_plot_x, sun_plot_y, sun_plot_time = None, None, None
         max_y = -90.0
         solar_noon_plot_x, solar_noon_plot_y = 0, 0  # Solar noon
@@ -4004,8 +4025,8 @@ class MainWindow(QMainWindow):
         if overdue:
             # Start of run - this preset is the one that should be running now
             log_info(f"Restoring preset {overdue.name} "
-                     f"because its scheduled to be active at this time ({datetime.now()}).")
-            self.restore_preset(overdue)
+                     f"because its scheduled to be active at this time ({zoned_now()}).")
+            self.activate_scheduled_preset(overdue)
 
         if splash is not None:
             splash.finish(self)
@@ -4147,9 +4168,10 @@ class MainWindow(QMainWindow):
         latitude, longitude = self.main_config.get_location()
         if latitude is None:
             return
+        log_info(f"Scheduling presets reset={reset}")
         time_map = create_todays_elevation_time_map(latitude=latitude, longitude=longitude)
         most_recent_overdue = None
-        latest_due = datetime.now().astimezone().replace(hour=0, minute=0, second=0, microsecond=0)
+        latest_due = zoned_now().replace(hour=0, minute=0, second=0, microsecond=0)
         for name, preset in self.preset_controller.find_presets().items():
             if reset:
                 preset.remove_elevation_trigger()
@@ -4157,7 +4179,7 @@ class MainWindow(QMainWindow):
             if elevation_key is not None and preset.get_timer_status() == "unscheduled":
                 if elevation_key in time_map:
                     when_today = time_map[elevation_key].when
-                    local_now = datetime.now().astimezone()
+                    local_now = zoned_now()
                     preset.elevation_time_today = when_today
                     if when_today > local_now:
                         preset.start_timer(when_today, self.activate_scheduled_preset)
@@ -4174,15 +4196,15 @@ class MainWindow(QMainWindow):
         tomorrow = date.today() + timedelta(days=1)
         if self.daily_schedule_next_update != tomorrow:
             daily_update_at = datetime(year=tomorrow.year, month=tomorrow.month, day=tomorrow.day).astimezone()
-            millis = (daily_update_at - datetime.now().astimezone()) / timedelta(milliseconds=1)
+            millis = (daily_update_at - zoned_now()) / timedelta(milliseconds=1)
             log_info(f"Will update solar elevation activations tomorrow at "
                      f" {daily_update_at} (in {round(millis / 1000 / 60)} minutes)")
-            QTimer.singleShot(int(millis), self.schedule_presets)
+            QTimer.singleShot(int(millis), partial(self.schedule_presets, True))
             self.daily_schedule_next_update = tomorrow
         return most_recent_overdue
 
     def activate_scheduled_preset(self, preset: Preset):
-        log_info(f"Preset {preset.name} activated according the schedule at {datetime.now().astimezone()}")
+        log_info(f"Preset {preset.name} activated according the schedule at {zoned_now()}")
         self.restore_preset(preset)
         presets_dialog = PresetsDialog.get_instance()
         if presets_dialog:
@@ -4327,7 +4349,7 @@ def create_todays_elevation_time_map(latitude: float, longitude: float) -> Dict[
     so for a given mapping[SolarElevation], return the first minute it occurs.
     """
     elevation_time_map = {}
-    local_now = datetime.now().astimezone()
+    local_now = zoned_now()
     local_when = local_now.replace(hour=0, minute=0)
     while local_when.day == local_now.day:
         a, z = calc_solar_azimuth_zenith(local_when, latitude, longitude)
@@ -4338,14 +4360,6 @@ def create_todays_elevation_time_map(latitude: float, longitude: float) -> Dict[
             elevation_time_map[key] = SolarElevationData(azimuth=a, zenith=z, when=local_when)
         local_when += timedelta(minutes=1)
     return elevation_time_map
-
-
-def retrieve_wttr_data(latitude: float, longitude: float) -> Dict | None:
-    with urllib.request.urlopen(f'https://wttr.in/{latitude},{longitude}?format=j1') as request:
-        json_content = request.read()
-        weather_data = json.loads(json_content)
-        return weather_data
-    return None
 
 
 def main():
@@ -4361,6 +4375,8 @@ def main():
         signal.signal(i, signal_handler)
 
     sys.excepthook = exception_handler
+
+    locale.setlocale(locale.LC_ALL, '')
 
     # Call QApplication before parsing arguments, it will parse and remove Qt session restoration arguments.
     app = QApplication(sys.argv)
