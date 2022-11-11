@@ -89,7 +89,7 @@ gzip -c docs/_build/man/vdu_controls.1 > %{buildroot}/%{_datadir}/man/man1/%{nam
 
 %changelog
 * Fri Nov 11 2022 Michael Hamilton <michael@actrix.gen.nz>
-- Fix daily scheduling, add internationalisation: vdu_controls 1.8.1
+- Fix daily scheduling of presets: vdu_controls 1.8.1
 * Sat Oct 29 2022 Michael Hamilton <michael@actrix.gen.nz>
 - New feature, allow presets to be scheduled by solar elevation: vdu_controls 1.8.0
 * Mon Sep 26 2022 Michael Hamilton <michael@actrix.gen.nz>
