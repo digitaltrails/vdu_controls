@@ -1,441 +1,464 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE TS>
-<TS version="2.1" language="fr">
+<TS version="2.1">
 <context>
     <name>@default</name>
     <message>
-        <location filename="../vdu_controls.py" line="1462"/>
+        <location filename="../vdu_controls.py" line="1464" />
         <source>Failed to obtain monitor {} vcp_code {}</source>
         <translation>Impossible d'obtenir le moniteur {} vcp_code {}</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2437"/>
+        <location filename="../vdu_controls.py" line="2439" />
         <source>Settings</source>
-        <translation>Paramètres</translation>
+        <translation>Param&#232;tres</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4476"/>
+        <location filename="../vdu_controls.py" line="1574" />
         <source>Nothing needs saving. Do you wish to save anyway?</source>
-        <translation>Rien n'a besoin d'être sauvé. Voulez-vous sauver quand même?</translation>
+        <translation>Rien ne doit &#234;tre enregistr&#233;. Voulez-vous quand m&#234;me enregistrer ?</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="1632"/>
+        <location filename="../vdu_controls.py" line="1634" />
         <source>No unsaved changes for {}.</source>
-        <translation>Pas de changements non sauvés pour {}.</translation>
+        <translation>Aucun changement non sauvegard&#233; pour {}.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="1641"/>
+        <location filename="../vdu_controls.py" line="1643" />
         <source>Save {}</source>
-        <translation type="unfinished"></translation>
+        <translation>Sauvegarder {}</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="1645"/>
+        <location filename="../vdu_controls.py" line="1647" />
         <source>Save All</source>
-        <translation type="unfinished"></translation>
+        <translation>Tout sauvegarder</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3825"/>
+        <location filename="../vdu_controls.py" line="3828" />
         <source>Close</source>
-        <translation type="unfinished"></translation>
+        <translation>Fermer</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="1659"/>
+        <location filename="../vdu_controls.py" line="1661" />
         <source>Update existing {}?</source>
-        <translation type="unfinished"></translation>
+        <translation>Mettre &#224; jour les {} ? existants</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="1833"/>
+        <location filename="../vdu_controls.py" line="1835" />
         <source>Latitude,Longitude for solar elevation calculations.</source>
-        <translation type="unfinished"></translation>
+        <translation>Latitude,Longitude pour les calculs d'&#233;l&#233;vation solaire.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="1838"/>
+        <location filename="../vdu_controls.py" line="1840" />
         <source>Query {} to obtain information based on your IP-address?</source>
-        <translation type="unfinished"></translation>
+        <translation>Interroger {} pour obtenir des informations &#224; partir de votre adresse IP ?</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="1864"/>
+        <location filename="../vdu_controls.py" line="1866" />
         <source>Failed to obtain info from {self.get_ipinfo_url()}: {e}</source>
-        <translation type="unfinished"></translation>
+        <translation>&#201;chec de l'obtention d'informations &#224; partir de {self.get_ipinfo_url()} : {e}</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="1868"/>
+        <location filename="../vdu_controls.py" line="1870" />
         <source>Detect</source>
-        <translation type="unfinished"></translation>
+        <translation>D&#233;tecter</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="1870"/>
-        <source>Detect location by querying this desktop&apos;s external IP address.</source>
-        <translation type="unfinished"></translation>
+        <location filename="../vdu_controls.py" line="1872" />
+        <source>Detect location by querying this desktop's external IP address.</source>
+        <translation>Détecter l'emplacement en interrogeant l'adresse IP externe de ce bureau.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="1925"/>
+        <location filename="../vdu_controls.py" line="1927" />
         <source>When this message is dismissed, vdu_controls will restart.</source>
-        <translation type="unfinished"></translation>
+        <translation>Lorsque ce message est rejet&#233;, vdu_controls red&#233;marre.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2005"/>
+        <location filename="../vdu_controls.py" line="2007" />
         <source>Set value: Failed to communicate with display {}</source>
-        <translation type="unfinished"></translation>
+        <translation>D&#233;finir la valeur : Failed to communicate with display {}</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2117"/>
+        <location filename="../vdu_controls.py" line="2119" />
         <source>Is the monitor switched off?&lt;br&gt;Is the sleep-multiplier setting too low?</source>
-        <translation type="unfinished"></translation>
+        <translation>L'écran est-il éteint? &lt;br&gt;Le réglage du multiplicateur de sommeil est-il trop faible?</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2115"/>
+        <location filename="../vdu_controls.py" line="2117" />
         <source>Set option: failed to communicate with display {}</source>
-        <translation type="unfinished"></translation>
+        <translation>Set option : failed to communicate with display {} (&#233;chec de communication avec l'&#233;cran {})</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2141"/>
-        <source>Display {vnum} {vdesc} feature {code} &apos;({cdesc})&apos; has an undefined value &apos;{value}&apos;. Valid values are {valid}.</source>
-        <translation type="unfinished"></translation>
+        <location filename="../vdu_controls.py" line="2143" />
+        <source>Display {vnum} {vdesc} feature {code} '({cdesc})' has an undefined value '{value}'. Valid values are {valid}.</source>
+        <translation>L'affichage {vnum} {vdesc} de la fonction {code} '({cdesc})' a une valeur indéfinie '{value}'. Les valeurs valides sont {valid}.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2150"/>
+        <location filename="../vdu_controls.py" line="2152" />
         <source>If you want to extend the set of permitted values, you can edit the metadata for {} in the settings panel.  For more details see the man page concerning VDU/VDU-model config files.</source>
-        <translation type="unfinished"></translation>
+        <translation>Si vous souhaitez &#233;tendre l'ensemble des valeurs autoris&#233;es, vous pouvez modifier les m&#233;tadonn&#233;es de {} dans le panneau des param&#232;tres.  Pour plus de d&#233;tails, voir la page de manuel concernant les fichiers de configuration VDU/VDU-model.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2171"/>
+        <location filename="../vdu_controls.py" line="2173" />
         <source>Monitor {}: {}</source>
-        <translation type="unfinished"></translation>
+        <translation>Surveiller {} : {}</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2189"/>
+        <location filename="../vdu_controls.py" line="2191" />
         <source>If you want to extend the set of permitted values, see the man page concerning VDU/VDU-model config files .</source>
-        <translation type="unfinished"></translation>
+        <translation>Si vous souhaitez &#233;tendre l'ensemble des valeurs autoris&#233;es, consultez la page de manuel concernant les fichiers de configuration VDU/VDU-model.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2204"/>
+        <location filename="../vdu_controls.py" line="2206" />
         <source>Monitor {} lacks a VCP control for {}.</source>
-        <translation type="unfinished"></translation>
+        <translation>Le moniteur {} n'a pas de contr&#244;le VCP pour {}.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2207"/>
+        <location filename="../vdu_controls.py" line="2209" />
         <source>No read/write ability for vcp_code {}.</source>
-        <translation type="unfinished"></translation>
+        <translation>Pas de possibilit&#233; de lecture/&#233;criture pour vcp_code {}.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3121"/>
+        <location filename="../vdu_controls.py" line="3124" />
         <source>%H:%M</source>
-        <translation type="unfinished"></translation>
+        <translation>%H:%M</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2343"/>
+        <location filename="../vdu_controls.py" line="2345" />
         <source>{} later today at {}</source>
-        <translation type="unfinished"></translation>
+        <translation>{} plus tard dans la journ&#233;e &#224; {}</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2345"/>
+        <location filename="../vdu_controls.py" line="2347" />
         <source>{} earlier today at {}</source>
-        <translation type="unfinished"></translation>
+        <translation>{} plus t&#244;t dans la journ&#233;e &#224; {}</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2347"/>
+        <location filename="../vdu_controls.py" line="2349" />
         <source>{} suspended for  {}</source>
-        <translation type="unfinished"></translation>
+        <translation>{} suspendu pour {}</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3123"/>
+        <location filename="../vdu_controls.py" line="3126" />
         <source>the sun does not rise this high today</source>
-        <translation type="unfinished"></translation>
+        <translation>le soleil ne se l&#232;ve pas &#224; cette hauteur aujourd'hui</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2431"/>
+        <location filename="../vdu_controls.py" line="2433" />
         <source>Control Panel</source>
-        <translation type="unfinished"></translation>
+        <translation>Panneau de contr&#244;le</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3255"/>
+        <location filename="../vdu_controls.py" line="2983"/>
         <source>Presets</source>
-        <translation type="unfinished"></translation>
+        <translation>Préréglages</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2436"/>
+        <location filename="../vdu_controls.py" line="3258" />
+        <source>Presets</source>
+        <translation>Pr&#233;r&#233;glages</translation>
+    </message>
+    <message>
+        <location filename="../vdu_controls.py" line="2438" />
         <source>Grey Scale</source>
-        <translation type="unfinished"></translation>
+        <translation>&#201;chelle de gris</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2438"/>
+        <location filename="../vdu_controls.py" line="2440" />
         <source>Refresh</source>
-        <translation type="unfinished"></translation>
+        <translation>Rafra&#238;chir</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3800"/>
+        <location filename="../vdu_controls.py" line="3803" />
         <source>About</source>
-        <translation type="unfinished"></translation>
+        <translation>&#192; propos de</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3819"/>
+        <location filename="../vdu_controls.py" line="3822" />
         <source>Help</source>
-        <translation type="unfinished"></translation>
+        <translation>Aide</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2442"/>
+        <location filename="../vdu_controls.py" line="2444" />
         <source>Quit</source>
-        <translation type="unfinished"></translation>
+        <translation>Quitter</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2622"/>
+        <location filename="../vdu_controls.py" line="2624" />
         <source>Failed to obtain capabilities for monitor {} {} {}.</source>
-        <translation type="unfinished"></translation>
+        <translation>Impossible d'obtenir les capacit&#233;s du moniteur {} {} {}.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2626"/>
+        <location filename="../vdu_controls.py" line="2628" />
         <source>Cannot automatically configure this monitor.
  You can choose to:
  1: Retry obtaining the capabilities.
  2: Ignore this monitor.
  3: Apply standard brightness and contrast controls.</source>
-        <translation type="unfinished"></translation>
+        <translation>Impossible de configurer automatiquement ce moniteur.
+ Vous pouvez choisir de :
+ 1 : Réessayer d'obtenir les capacités.
+ 2 : Ignorer ce moniteur.
+ 3 : Appliquer les contrôles standard de luminosité et de contraste.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2640"/>
+        <location filename="../vdu_controls.py" line="2642" />
         <source>Ignoring {} monitor.</source>
-        <translation type="unfinished"></translation>
+        <translation>Ignorer le moniteur {}.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2653"/>
+        <location filename="../vdu_controls.py" line="2655" />
         <source>Wrote {} config files to {}.</source>
-        <translation type="unfinished"></translation>
+        <translation>&#201;criture de {} fichiers de configuration sur {}.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2650"/>
+        <location filename="../vdu_controls.py" line="2652" />
         <source>Assuming {} has brightness and contrast controls.</source>
-        <translation type="unfinished"></translation>
+        <translation>Supposant que {} a des contr&#244;les de luminosit&#233; et de contraste.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2653"/>
+        <location filename="../vdu_controls.py" line="2655" />
         <source>
 Please check these files and edit or remove them if they cause further issues.</source>
-        <translation type="unfinished"></translation>
+        <translation>Veuillez vérifier ces fichiers et les modifier ou les supprimer s'ils causent d'autres problèmes.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2674"/>
+        <location filename="../vdu_controls.py" line="2676" />
         <source>Monitor {} {} lacks any accessible controls.</source>
-        <translation type="unfinished"></translation>
+        <translation>Le moniteur {} {} n'a aucun contr&#244;le accessible.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2677"/>
+        <location filename="../vdu_controls.py" line="2679" />
         <source>The monitor will be omitted from the control panel.</source>
-        <translation type="unfinished"></translation>
+        <translation>Le moniteur sera omis du panneau de contr&#244;le.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2683"/>
+        <location filename="../vdu_controls.py" line="2685" />
         <source>No controllable monitors found.
 Use the refresh button if any become available.
 Check that ddcutil and i2c are installed and configured.</source>
-        <translation type="unfinished"></translation>
+        <translation>No controllable monitors found.
+Use the refresh button if any become available.
+Check that ddcutil and i2c are installed and configured.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2698"/>
+        <location filename="../vdu_controls.py" line="2700" />
         <source>No controllable monitors found.</source>
-        <translation type="unfinished"></translation>
+        <translation>Aucun moniteur contr&#244;lable trouv&#233;.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2699"/>
+        <location filename="../vdu_controls.py" line="2701" />
         <source>Is ddcutil installed?  Is i2c installed and configured?
 
 Run vdu_controls --debug in a console and check for additional messages.
 
-{(&apos;Most recent ddcutil error: &apos; + str(ddcutil_problem)) if ddcutil_problem else &apos;&apos;}</source>
-        <translation type="unfinished"></translation>
+{}</source>
+        <translation>Est-ce que ddcutil est installé ?  i2c est-il installé et configuré ?
+
+Exécutez vdu_controls --debug dans une console et vérifiez les messages supplémentaires.
+
+{}</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2941"/>
+        <location filename="../vdu_controls.py" line="2701" />
+        <source>(Most recent ddcutil error: {})</source>
+        <translation>(Erreur ddcutil la plus r&#233;cente : {})</translation>
+    </message>
+    <message>
+        <location filename="../vdu_controls.py" line="2944" />
         <source>Edit the options for this preset.</source>
-        <translation type="unfinished"></translation>
+        <translation>Modifier les options de ce pr&#233;r&#233;glage.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2951"/>
+        <location filename="../vdu_controls.py" line="2954" />
         <source>Update this preset from the current VDU settings.</source>
-        <translation type="unfinished"></translation>
+        <translation>Mettre &#224; jour ce pr&#233;r&#233;glage &#224; partir des param&#232;tres actuels du VDU.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2961"/>
+        <location filename="../vdu_controls.py" line="2964" />
         <source>Move up the menu order.</source>
-        <translation type="unfinished"></translation>
+        <translation>D&#233;placer vers le haut l'ordre du menu.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2971"/>
+        <location filename="../vdu_controls.py" line="2974" />
         <source>Move down the menu order.</source>
-        <translation type="unfinished"></translation>
+        <translation>Descendre dans l'ordre du menu.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2992"/>
+        <location filename="../vdu_controls.py" line="2983"/>
+        <source>Delete this preset.</source>
+        <translation>Supprimez ce préréglage.</translation>
+    </message>
+    <message>
+        <location filename="../vdu_controls.py" line="2995" />
         <source>Press to skip {}</source>
-        <translation type="unfinished"></translation>
+        <translation>Appuyer pour sauter {}</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2992"/>
+        <location filename="../vdu_controls.py" line="2995" />
         <source>Press to re-enable {}</source>
-        <translation type="unfinished"></translation>
+        <translation>Appuyer pour r&#233;activer {}</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2993"/>
+        <location filename="../vdu_controls.py" line="2996" />
         <source>Scheduled {}</source>
-        <translation type="unfinished"></translation>
+        <translation>Planifi&#233; {}</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="2993"/>
+        <location filename="../vdu_controls.py" line="2996" />
         <source>Not applicable {}</source>
-        <translation type="unfinished"></translation>
+        <translation>Non applicable {}</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3017"/>
+        <location filename="../vdu_controls.py" line="3020" />
         <source>Activate this preset</source>
-        <translation type="unfinished"></translation>
+        <translation>Activer cette pr&#233;s&#233;lection</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3033"/>
+        <location filename="../vdu_controls.py" line="3036" />
         <source>Choose a preset icon.</source>
-        <translation type="unfinished"></translation>
+        <translation>Choisissez une ic&#244;ne de pr&#233;r&#233;glage.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3051"/>
+        <location filename="../vdu_controls.py" line="3054" />
         <source>Icon SVG or PNG file</source>
-        <translation type="unfinished"></translation>
+        <translation>Ic&#244;ne Fichier SVG ou PNG</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3051"/>
+        <location filename="../vdu_controls.py" line="3054" />
         <source>SVG or PNG (*.svg *.png)</source>
-        <translation type="unfinished"></translation>
+        <translation>SVG ou PNG (*.svg *.png)</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3091"/>
+        <location filename="../vdu_controls.py" line="3094" />
         <source>Solar elevation trigger: </source>
-        <translation type="unfinished"></translation>
+        <translation>D&#233;clenchement de l'&#233;l&#233;vation solaire :</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3121"/>
+        <location filename="../vdu_controls.py" line="3124" />
         <source>today at {}</source>
-        <translation type="unfinished"></translation>
+        <translation>aujourd'hui &#224; {}</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3127"/>
+        <location filename="../vdu_controls.py" line="3130" />
         <source>dawn</source>
-        <translation type="unfinished"></translation>
+        <translation>l'aube</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3127"/>
+        <location filename="../vdu_controls.py" line="3130" />
         <source>dusk</source>
-        <translation type="unfinished"></translation>
+        <translation>cr&#233;puscule</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3131"/>
+        <location filename="../vdu_controls.py" line="3134" />
         <source>twilight</source>
-        <translation type="unfinished"></translation>
+        <translation>cr&#233;puscule</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3133"/>
+        <location filename="../vdu_controls.py" line="3136" />
         <source>nighttime</source>
-        <translation type="unfinished"></translation>
+        <translation>nuit</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3134"/>
+        <location filename="../vdu_controls.py" line="3137" />
         <source>{} {} ({}, {})</source>
-        <translation type="unfinished"></translation>
+        <translation>{} {} ({}, {})</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3147"/>
+        <location filename="../vdu_controls.py" line="3150" />
         <source>location undefined (see settings)</source>
-        <translation type="unfinished"></translation>
+        <translation>emplacement ind&#233;fini (voir param&#232;tres)</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3212"/>
+        <location filename="../vdu_controls.py" line="3215" />
         <source>E</source>
-        <translation type="unfinished"></translation>
+        <translation>E</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3213"/>
+        <location filename="../vdu_controls.py" line="3216" />
         <source>W</source>
-        <translation type="unfinished"></translation>
+        <translation>W</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3306"/>
+        <location filename="../vdu_controls.py" line="3309" />
         <source>Enter a new preset name.</source>
-        <translation type="unfinished"></translation>
+        <translation>Entrez un nouveau nom de pr&#233;r&#233;glage.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3318"/>
+        <location filename="../vdu_controls.py" line="3321" />
         <source>Save current VDU settings to a new preset.</source>
-        <translation type="unfinished"></translation>
+        <translation>Sauvegarder les param&#232;tres actuels du VDU dans une nouvelle pr&#233;s&#233;lection.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3329"/>
+        <location filename="../vdu_controls.py" line="3332" />
         <source>New Preset:</source>
-        <translation type="unfinished"></translation>
+        <translation>Nouveau pr&#233;r&#233;glage :</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3505"/>
+        <location filename="../vdu_controls.py" line="3508" />
         <source>Controls to include:</source>
-        <translation type="unfinished"></translation>
+        <translation>Contr&#244;les &#224; inclure :</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3344"/>
+        <location filename="../vdu_controls.py" line="3347" />
         <source>close</source>
-        <translation type="unfinished"></translation>
+        <translation>fermer</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3396"/>
+        <location filename="../vdu_controls.py" line="3399" />
         <source>Choose which settings to save for {section}</source>
-        <translation type="unfinished"></translation>
+        <translation>Choisissez les param&#232;tres &#224; sauvegarder pour {section}.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3472"/>
+        <location filename="../vdu_controls.py" line="3475" />
         <source>Update existing {} preset with current monitor settings?</source>
-        <translation type="unfinished"></translation>
+        <translation>Mettre &#224; jour le pr&#233;r&#233;glage existant {} avec les param&#232;tres actuels du moniteur ?</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3484"/>
+        <location filename="../vdu_controls.py" line="3487" />
         <source>Delete {}?</source>
-        <translation type="unfinished"></translation>
+        <translation>Supprimer {} ?</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3509"/>
+        <location filename="../vdu_controls.py" line="3512" />
         <source>Create new preset:</source>
-        <translation type="unfinished"></translation>
+        <translation>Cr&#233;er un nouveau pr&#233;r&#233;glage :</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3509"/>
+        <location filename="../vdu_controls.py" line="3512" />
         <source>Edit {}:</source>
-        <translation type="unfinished"></translation>
+        <translation>Modifier {} :</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3511"/>
+        <location filename="../vdu_controls.py" line="3514" />
         <source>Controls to include in {}:</source>
-        <translation type="unfinished"></translation>
+        <translation>Contr&#244;les &#224; inclure dans {} :</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3535"/>
-        <source>Replace existing &apos;{}&apos; preset?</source>
-        <translation type="unfinished"></translation>
+        <location filename="../vdu_controls.py" line="3538" />
+        <source>Replace existing '{}' preset?</source>
+        <translation>Remplacer le préréglage existant '{}' ?</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3604"/>
+        <location filename="../vdu_controls.py" line="3607" />
         <source>Error: {}</source>
-        <translation type="unfinished"></translation>
+        <translation>Erreur : {}</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3605"/>
+        <location filename="../vdu_controls.py" line="3608" />
         <source>Is --sleep-multiplier set too low?</source>
-        <translation type="unfinished"></translation>
+        <translation>Le param&#232;tre --sleep-multiplier est-il trop faible ?</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3607"/>
+        <location filename="../vdu_controls.py" line="3610" />
         <source>Details: {}</source>
-        <translation type="unfinished"></translation>
+        <translation>D&#233;tails : {}</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3762"/>
+        <location filename="../vdu_controls.py" line="3765" />
         <source>Grey Scale Reference</source>
-        <translation type="unfinished"></translation>
+        <translation>R&#233;f&#233;rence de l'&#233;chelle de gris</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3768"/>
+        <location filename="../vdu_controls.py" line="3771" />
         <source>Grey Scale Reference for VDU adjustment.
 
 Set contrast toward the maximum (for HDR monitors
@@ -446,69 +469,91 @@ Use the content-menu to create additional charts and
 drag them onto each display.
 
 This chart is resizable. </source>
-        <translation type="unfinished"></translation>
+        <translation>Référence de l'échelle de gris pour le réglage du VDU.
+
+Réglez le contraste vers le maximum (pour les moniteurs HDR
+essayez quelque chose de plus bas comme 70%) et ajustez la luminosité
+jusqu'à ce que le plus grand nombre de rectangles possible soit perçu.
+
+Utilisez le menu de contenu pour créer des graphiques supplémentaires et
+les faire glisser sur chaque écran.
+
+Ce graphique est redimensionnable.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3802"/>
+        <location filename="../vdu_controls.py" line="3805" />
         <source>About vdu_controls</source>
-        <translation type="unfinished"></translation>
+        <translation>&#192; propos de vdu_controls</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3867"/>
+        <location filename="../vdu_controls.py" line="3870" />
         <source>The change to the system-tray-enabled option requires vdu_controls to restart.</source>
-        <translation type="unfinished"></translation>
+        <translation>Le passage &#224; l'option system-tray-enabled n&#233;cessite le red&#233;marrage de vdu_controls.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3956"/>
+        <location filename="../vdu_controls.py" line="3959" />
         <source>
 
 VDU Controls
 Looking for DDC monitors...
 </source>
-        <translation type="unfinished"></translation>
+        <translation>
+
+VDU Controls
+Recherche de moniteurs DDC...</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3961"/>
+        <location filename="../vdu_controls.py" line="3964" />
         <source>
 
 VDU Controls {}
 DDC ID {}
 {}</source>
-        <translation type="unfinished"></translation>
+        <translation>
+
+VDU Controls {}
+DDC ID {}
+{}</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4074"/>
+        <location filename="../vdu_controls.py" line="4077" />
         <source>Temporarily unable to migrate some presets to {}:
 {}</source>
-        <translation type="unfinished"></translation>
+        <translation>Impossible de migrer certains presets vers {} :
+{}</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4475"/>
-        <source>Test translator</source>
-        <translation type="unfinished">Test translator passed</translation>
+        <location filename="../vdu_controls.py" line="4396" />
+        <source>Loaded {} translations from {}</source>
+        <translation>Chargement de {} traductions depuis {}</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4455"/>
-        <source>Restart of {app.arguments()[0]} failed.  Please restart manually.</source>
-        <translation type="unfinished"></translation>
+        <location filename="../vdu_controls.py" line="4473" />
+        <source>Restart of {} failed.  Please restart manually.</source>
+        <translation>Le red&#233;marrage de {} a &#233;chou&#233;.  Veuillez red&#233;marrer manuellement.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4456"/>
-        <source>This is probably because {app.arguments()[0]} is not executable or is not on your PATH.</source>
-        <translation type="unfinished"></translation>
+        <location filename="../vdu_controls.py" line="4474" />
+        <source>This is probably because {} is not executable or is not on your PATH.</source>
+        <translation>Ceci est probablement d&#251; au fait que {} n'est pas ex&#233;cutable ou ne se trouve pas dans votre PATH.</translation>
+    </message>
+    <message>
+        <location filename="../vdu_controls.py" line="449"/>
+        <source>eastern-sky</source>
+        <translation>ciel d'est</translation>
+    </message>
+    <message>
+        <location filename="../vdu_controls.py" line="449"/>
+        <source>western-sky</source>
+        <translation>ciel d'ouest</translation>
     </message>
 </context>
 <context>
     <name>QCoreApplication</name>
     <message>
-        <location filename="../vdu_controls.py" line="473"/>
-        <source>vdu_controls</source>
-        <translation type="obsolete">vdu_controls</translation>
-    </message>
-    <message>
-        <location filename="../vdu_controls.py" line="488"/>
+        <location filename="../vdu_controls.py" line="490" />
         <source>@default</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished" />
     </message>
 </context>
 </TS>

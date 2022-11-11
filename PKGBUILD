@@ -28,6 +28,7 @@ package() {
     mkdir -p /usr/bin
     mkdir -p /usr/share/applications
     mkdir -p /usr/share/man/man1
+    mkdir -p /usr/share/vdu_controls/translations
     install vdu_controls.py  /usr/bin/%{name}
 
     cat > /usr/share/applications/%{name}.desktop <<'EOF'
@@ -43,5 +44,5 @@ Categories=Settings
 EOF
 
     gzip -c docs/_build/man/vdu_controls.1 > /usr/share/man/man1/%{name}.1.gz
-
+    cp translations/en_NZ.qm /usr/share/vdu_controls/translations/en_NZ.qm
 }

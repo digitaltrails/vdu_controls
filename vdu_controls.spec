@@ -17,7 +17,7 @@
 #
 
 Name: vdu_controls
-Version: 1.8.0
+Version: 1.8.1
 Release: 0
 License: GPL-3.0-or-later
 BuildArch: noarch
@@ -52,8 +52,10 @@ mkdir -p %{buildroot}/%{_bindir}
 mkdir -p %{buildroot}/%{_datadir}/applications
 mkdir -p %{buildroot}/%{_datadir}/icons/hicolor/256x256/apps
 mkdir -p %{buildroot}/%{_datadir}/man/man1
+mkdir -p %{buildroot}/%{_datadir}/vdu_controls/translations
 install vdu_controls.py  %{buildroot}/%{_bindir}/%{name}
 install -m644 %{name}.png %{buildroot}/%{_datadir}/icons/hicolor/256x256/apps
+install -m644 translations/en_NZ.qm %{buildroot}/%{_datadir}/vdu_controls/translations
 
 cat > %{buildroot}/%{_datadir}/applications/%{name}.desktop <<'EOF'
 [Desktop Entry]
@@ -76,14 +78,18 @@ gzip -c docs/_build/man/vdu_controls.1 > %{buildroot}/%{_datadir}/man/man1/%{nam
 %dir %{_datadir}/icons/hicolor
 %dir %{_datadir}/icons/hicolor/*
 %dir %{_datadir}/icons/hicolor/*/apps
+%dir %{_datadir}/vdu_controls/translations
 %license LICENSE.md
 %defattr(-,root,root)
 %{_bindir}/%{name}
 %{_datadir}/applications/%{name}.desktop
 %{_datadir}/icons/hicolor/256x256/apps/%{name}.png
 %{_datadir}/man/man1/%{name}.1.gz
+%{_datadir}/vdu_controls/translations/en_NZ.qm
 
 %changelog
+* Fri Nov 11 2022 Michael Hamilton <michael@actrix.gen.nz>
+- Fix daily scheduling, add internationalisation: vdu_controls 1.8.1
 * Sat Oct 29 2022 Michael Hamilton <michael@actrix.gen.nz>
 - New feature, allow presets to be scheduled by solar elevation: vdu_controls 1.8.0
 * Mon Sep 26 2022 Michael Hamilton <michael@actrix.gen.nz>
