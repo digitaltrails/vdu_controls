@@ -2703,42 +2703,7 @@ class VduControlsMainPanel(QWidget):
             self.context_menu.exec(self.mapToGlobal(position))
 
         self.customContextMenuRequested.connect(open_context_menu)
-        # self.setLayout(layout)
-        # if len(QCameraInfo().availableCameras()) > 0:
-        #
-        #     def check_light_level_func():
-        #         camera_info = QCameraInfo()
-        #         print("cams=", camera_info.availableCameras())
-        #         if len(camera_info.availableCameras()) > 0:
-        #             camera = QCamera(camera_info.availableCameras()[0])
-        #             image_capture = QCameraImageCapture(camera)
-        #             if image_capture.isCaptureDestinationSupported(QCameraImageCapture.CaptureToBuffer):
-        #                 image_capture.setCaptureDestination(QCameraImageCapture.CaptureToBuffer)
-        #
-        #
-        #                 def capture_func(i, image):
-        #                     print(i, image)
-        #
-        #                 image_capture.imageAvailable.connect(capture_func)
-        #
-        #                 def capture_error(err,strerr):
-        #                     print("error", err, strerr)
-        #
-        #                 image_capture.error.connect(capture_error)
-        #
-        #                 viewfinder = QCameraViewfinder()
-        #                 viewfinder.show()
-        #
-        #                 camera.setViewfinder(viewfinder)
-        #                 camera.setCaptureMode(QCamera.CaptureStillImage)
-        #                 camera.start()
-        #                 camera.searchAndLock()
-        #                 image_capture.capture()
-        #                 camera.unlock()
-        #
-        #     self.timer = QTimer(self)
-        #     self.timer.timeout.connect(check_light_level_func)
-        #     self.timer.start(10000);
+
 
     def start_refresh(self) -> None:
         # Refreshes from all values from ddcutil.  May be slow, starts a busy spinner and then
@@ -3353,6 +3318,11 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         latitude, longitude = self.main_config.get_location()
         self.preset_name_edit.setText('')
         self.editor_trigger_widget.configure_for_location(latitude, longitude)
+
+    def refresh_view(self):
+        # A bit extreme, but it works
+        # TODO Update preset status display - a bit of an extreme way to do it - consider something better?
+        self.reload_data()
 
     def find_preset_widget(self, name) -> PresetWidget | None:
         for i in range(self.preset_widgets_layout.count()):
@@ -4200,7 +4170,12 @@ class MainWindow(QMainWindow):
             log_info(f"Will update solar elevation activations tomorrow at "
                      f" {daily_update_at} (in {round(millis / 1000 / 60)} minutes)")
             QTimer.singleShot(int(millis), partial(self.schedule_presets, True))
+            # Testing: QTimer.singleShot(int(1000*30), partial(self.schedule_presets, True))
             self.daily_schedule_next_update = tomorrow
+        if reset:
+            presets_dialog = PresetsDialog.get_instance()
+            if presets_dialog:
+                presets_dialog.refresh_view()
         return most_recent_overdue
 
     def activate_scheduled_preset(self, preset: Preset):
@@ -4208,9 +4183,7 @@ class MainWindow(QMainWindow):
         self.restore_preset(preset)
         presets_dialog = PresetsDialog.get_instance()
         if presets_dialog:
-            # TODO Update preset status display - a bit of an extreme way to do it - consider something better?
-            presets_dialog.reload_data()
-
+            presets_dialog.refresh_view()
 
 class SignalWakeupHandler(QtNetwork.QAbstractSocket):
     # https://stackoverflow.com/a/37229299/609575
