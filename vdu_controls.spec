@@ -17,7 +17,7 @@
 #
 
 Name: vdu_controls
-Version: 1.8.1
+Version: 1.8.2
 Release: 0
 License: GPL-3.0-or-later
 BuildArch: noarch
@@ -88,6 +88,8 @@ gzip -c docs/_build/man/vdu_controls.1 > %{buildroot}/%{_datadir}/man/man1/%{nam
 %{_datadir}/vdu_controls/translations/en_NZ.qm
 
 %changelog
+* Fri Nov 11 2022 Michael Hamilton <michael@actrix.gen.nz>
+- Internationalisation enhancements: vdu_controls 1.8.2
 * Fri Nov 11 2022 Michael Hamilton <michael@actrix.gen.nz>
 - Fix daily scheduling of presets: vdu_controls 1.8.1
 * Sat Oct 29 2022 Michael Hamilton <michael@actrix.gen.nz>
