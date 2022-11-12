@@ -85,7 +85,7 @@ gzip -c docs/_build/man/vdu_controls.1 > %{buildroot}/%{_datadir}/man/man1/%{nam
 %{_datadir}/applications/%{name}.desktop
 %{_datadir}/icons/hicolor/256x256/apps/%{name}.png
 %{_datadir}/man/man1/%{name}.1.gz
-%{_datadir}/vdu_controls/translations/en_NZ.qm
+%{_datadir}/vdu_controls/translations/*.qm
 
 %changelog
 * Fri Nov 11 2022 Michael Hamilton <michael@actrix.gen.nz>

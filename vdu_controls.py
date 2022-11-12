@@ -1865,7 +1865,8 @@ class SettingsEditorLocationWidget(SettingsEditorFieldBase):
                 except (URLError, KeyError) as e:
                     error_dialog = QMessageBox()
                     error_dialog.setIcon(QMessageBox.Critical)
-                    error_dialog.setText(translate("Failed to obtain info from {}: {}").format(self.get_ipinfo_url(), e))
+                    error_dialog.setText(
+                        translate("Failed to obtain info from {}: {}").format(self.get_ipinfo_url(), e))
                     error_dialog.exec()
                     return
 
@@ -2327,7 +2328,7 @@ class Preset:
             return ''
         result = format_solar_elevation_abbreviation(elevation)
         if self.elevation_time_today:
-            result += ' \u25F4 ' + self.elevation_time_today.strftime(translate("%H:%M"))
+            result += ' \u25F4 ' + self.elevation_time_today.strftime("%H:%M")
         else:
             # Not possible today - sun doesn't get that high
             result += ' \u29BB'
@@ -2700,12 +2701,13 @@ class VduControlsMainPanel(QWidget):
                 error_no_monitors = QMessageBox()
                 error_no_monitors.setIcon(QMessageBox.Critical)
                 error_no_monitors.setText(translate('No controllable monitors found.'))
+                extra_text = \
+                    translate("(Most recent ddcutil error: {})").format(str(ddcutil_problem)) if ddcutil_problem else ''
                 error_no_monitors.setInformativeText(
                     translate(
                         "Is ddcutil installed?  Is i2c installed and configured?\n\n"
-                        "Run vdu_controls --debug in a console and check for additional messages.\n\n{}").format(
-                        translate("(Most recent ddcutil error: {})").format(
-                            str(ddcutil_problem) if ddcutil_problem else '')))
+                        "Run vdu_controls --debug in a console and check for "
+                        "additional messages.\n\n{}").format(extra_text))
                 error_no_monitors.exec()
 
         def finish_refresh() -> None:
@@ -2726,7 +2728,6 @@ class VduControlsMainPanel(QWidget):
             self.context_menu.exec(self.mapToGlobal(position))
 
         self.customContextMenuRequested.connect(open_context_menu)
-
 
     def start_refresh(self) -> None:
         # Refreshes from all values from ddcutil.  May be slow, starts a busy spinner and then
@@ -2956,11 +2957,12 @@ class PresetWidget(QWidget):
         timer_control_button = PushButtonLeftJustified(parent=self)
         timer_control_button.setFlat(True)
 
+        action_desc = {
+            'scheduled': translate("Press to skip {}"), 'suspended': translate("Press to re-enable {}"),
+            'past': translate("Scheduled {}"), 'unscheduled': translate("Not applicable {}")}
+
         if preset.get_solar_elevation() is not None:
             def format_description():
-                action_desc = {
-                    'scheduled': translate("Press to skip {}"), 'suspended': translate("Press to re-enable {}"),
-                    'past': translate("Scheduled {}"), 'unscheduled': translate("Not applicable {}")}
                 return action_desc[preset.get_timer_status()].format(preset.get_solar_elevation_description())
 
             def toggle_timer(arg):
@@ -3088,14 +3090,16 @@ class PresetChooseElevationWidget(QWidget):
             self.elevation_key] if self.elevation_key in self.elevation_time_map else None
         occurs_at = elevation_data.when if elevation_data is not None else None
         if occurs_at:
-            when_text = translate("today at {}").format(occurs_at.strftime(translate('%H:%M')))
+            when_text = translate("today at {}").format(occurs_at.strftime('%H:%M'))
         else:
             when_text = translate("the sun does not rise this high today")
         # https://en.wikipedia.org/wiki/Twilight
         if self.elevation_key.elevation < 1:
             if self.elevation_key.elevation >= -6:
-                when_text += " " + (
-                    translate("dawn") if self.elevation_key.direction == EASTERN_SKY else translate("dusk"))
+                if self.elevation_key.direction == EASTERN_SKY:
+                    when_text += " " + translate("dawn")
+                else:
+                    when_text += " " + translate("dusk")
             elif self.elevation_key.elevation >= -18:
                 # Astronomical twilight
                 when_text += " " + translate("twilight")
@@ -3481,8 +3485,10 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             self.editor_controls_prompt.setDisabled(True)
         else:
             already_exists = self.find_preset_widget(changed_text)
-            self.editor_title.setText(
-                translate("Edit {}:").format(changed_text) if already_exists else translate("Create new preset:"))
+            if already_exists:
+                self.editor_title.setText(translate("Edit {}:").format(changed_text))
+            else:
+                self.editor_title.setText(translate("Create new preset:"))
             self.editor_controls_prompt.setText(translate("Controls to include in {}:").format(changed_text))
             self.editor_controls_prompt.setDisabled(False)
             self.editor_controls_widget.setDisabled(False)
@@ -3775,7 +3781,13 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
         self.setWindowTitle(translate('About'))
         self.setTextFormat(Qt.AutoText)
         self.setText(translate('About vdu_controls'))
-        self.setInformativeText(translate(ABOUT_TEXT))
+        path = find_locale_file("about_{}.txt")
+        if path.exists():
+            with open(path) as about_for_locale:
+                about_text = about_for_locale.read().format(VDU_CONTROLS_VERSION=VDU_CONTROLS_VERSION)
+        else:
+            about_text = ABOUT_TEXT
+        self.setInformativeText(about_text)
         self.setIcon(QMessageBox.Information)
         self.exec()
 
@@ -4208,6 +4220,7 @@ class MainWindow(QMainWindow):
         if presets_dialog:
             presets_dialog.refresh_view()
 
+
 class SignalWakeupHandler(QtNetwork.QAbstractSocket):
     # https://stackoverflow.com/a/37229299/609575
     # '''
@@ -4358,17 +4371,27 @@ def create_todays_elevation_time_map(latitude: float, longitude: float) -> Dict[
     return elevation_time_map
 
 
+def find_locale_file(filename_template: str) -> Path:
+    locale_name = QLocale.system().name()
+    filename = filename_template.format(locale_name)
+    for path in LOCALE_TRANSLATIONS_PATHS:
+        full_path = path.joinpath(filename)
+        log_info(f"Checking for {locale_name} translation: {full_path}")
+        if full_path.exists():
+            return full_path
+    return None
+
+
 def initialise_locale_translations(app) -> QTranslator:
     translator = QTranslator()
     log_info("Qt locale", QLocale.system().name())
     locale_name = QLocale.system().name()
-    filename = locale_name + '.qm'
-    for path in LOCALE_TRANSLATIONS_PATHS:
-        full_filename = path.joinpath(filename)
-        log_info(f"Checking for {locale_name} translation: {full_filename}")
-        if translator.load(filename, path.as_posix()):
+    path = find_locale_file("{}.qm")
+    if path is not None:
+        log_info(translate("Loading {} translations from {}").format(locale_name, path.as_posix()))
+        if translator.load(path.name, path.parent.as_posix()):
             app.installTranslator(translator)
-            log_info(translate("Loaded {} translations from {}").format(locale_name, full_filename))
+            log_info(translate("Loaded {} translations from {}").format(locale_name, path.as_posix()))
             return translator
     return None
 
