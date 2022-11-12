@@ -14,7 +14,7 @@ Example:
    # Lets try for a Danish translation:
 
    # Use the qt utility to extract the messages from vdu_controls.py:
-   pylupdate5 -tr-function translate  vdu_controls.py -ts translations/da_DK.ts
+   pylupdate5 vdu_controls.py -ts translations/da_DK.ts
    
    # Use extract_translations.py to extract the messages to a simpler format:
    python3 extract_translations.py translations/da_DK.ts > temp.txt

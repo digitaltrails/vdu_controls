@@ -669,6 +669,12 @@ DDC ID {}
         <source>ddcutil-capabilities</source>
         <translation>ddcutil-kapaciteter</translation>
     </message>
+    <message>
+        <location filename="../vdu_controls.py" line="1039"/>
+        <source>audio speaker volume</source>
+        <translation>lydhøjttalerens lydstyrke</translation>
+    </message>
+
 </context>
 <context>
     <name>QCoreApplication</name>
