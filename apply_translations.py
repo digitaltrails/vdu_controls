@@ -41,22 +41,22 @@ def main():
     for message_node in message_list:
         s = message_node.find('source')
         location = message_node.find('location')
-        line_num = location.attrib['line']
-        while line_num in lines_done:
-            line_num = '0' + line_num
-        lines_done[line_num] = True
+        line_key = location.attrib['line']
+        while line_key in lines_done:
+            line_key = '0' + line_key
+        lines_done[line_key] = True
         # print(s.text)
-        if line_num in translation_map:
+        if line_key in translation_map:
             # print(s.text, subs[s.text])
             translation = message_node.find('translation')
-            new_text = translation_map[line_num]
-            if new_text != source_map[line_num] and new_text.strip() != '':
-                print("Found", line_num)
+            new_text = translation_map[line_key]
+            if new_text != source_map[line_key] and new_text.strip() != '':
+                print("Found", line_key)
                 translation.text = new_text
                 translation.set('type', None)
                 del (translation.attrib['type'])
             else:
-                missing += f"[[{line_num}]]\n{source_map[line_num]} .\n"
+                missing += f"[[{line_key}]]\n{source_map[line_key]} .\n"
 
     output_filename = sys.argv[3]
     print(f"Updating {output_filename}")

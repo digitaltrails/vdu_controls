@@ -49,11 +49,12 @@ def main():
     for count, message in enumerate(message_list):
         source = message.find('source')
         location = message.find('location')
-        line = location.attrib['line']
-        while line in line_index:
-            line = '0' + line
-        line_index[line] = True
-        print(f"[[{line}]]")
+        line_key = location.attrib['line']
+        while line_key in line_index:
+            # More than one translate() allocated this line, make each uniquely keyed by repeatedly prefixing 0
+            line_key = '0' + line_key
+        line_index[line_key] = True
+        print(f"[[{line_key}]]")
         print(source.text, '.')
     tree.write('translations/test-edited.ts')
 
