@@ -407,7 +407,7 @@ from urllib.error import URLError
 
 from PyQt5 import QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
-    QSettings, QSize, QTimer, QTranslator, QLocale
+    QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP
 from PyQt5.QtGui import QIntValidator, QPixmap, QIcon, QCursor, QImage, QPainter, QDoubleValidator, QRegExpValidator, \
     QPalette, QGuiApplication, QColor, QValidator, QPen, QFont
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
@@ -1010,17 +1010,17 @@ class DialogSingletonMixin:
 class VduGuiSupportedControls:
     """Maps of controls supported by name on the command line and in config files."""
     by_code = {
-        '10': VcpCapability('10', 'Brightness', 'C', icon_source=BRIGHTNESS_SVG, enabled=True),
-        '12': VcpCapability('12', 'Contrast', 'C', icon_source=CONTRAST_SVG, enabled=True),
-        '62': VcpCapability('62', 'Audio volume', 'C', icon_source=VOLUME_SVG),
-        '8D': VcpCapability('8D', 'Audio mute', 'SNC', icon_source=VOLUME_SVG),
-        '8F': VcpCapability('8F', 'Audio treble', 'C', icon_source=VOLUME_SVG),
-        '91': VcpCapability('91', 'Audio bass', 'C', icon_source=VOLUME_SVG),
-        '64': VcpCapability('91', 'Audio mic volume', 'C', icon_source=VOLUME_SVG),
-        '60': VcpCapability('60', 'Input Source', 'SNC', causes_config_change=True),
-        'D6': VcpCapability('D6', 'Power mode', 'SNC', causes_config_change=True),
-        'CC': VcpCapability('CC', 'OSD Language', 'SNC'),
-        '0C': VcpCapability('0C', 'Color temperature', 'CNC', icon_source=BRIGHTNESS_SVG, enabled=True),
+        '10': VcpCapability('10', QT_TR_NOOP('brightness'), 'C', icon_source=BRIGHTNESS_SVG, enabled=True),
+        '12': VcpCapability('12', QT_TR_NOOP('contrast'), 'C', icon_source=CONTRAST_SVG, enabled=True),
+        '62': VcpCapability('62', QT_TR_NOOP('audio volume'), 'C', icon_source=VOLUME_SVG),
+        '8D': VcpCapability('8D', QT_TR_NOOP('audio mute'), 'SNC', icon_source=VOLUME_SVG),
+        '8F': VcpCapability('8F', QT_TR_NOOP('audio treble'), 'C', icon_source=VOLUME_SVG),
+        '91': VcpCapability('91', QT_TR_NOOP('audio bass'), 'C', icon_source=VOLUME_SVG),
+        '64': VcpCapability('91', QT_TR_NOOP('audio mic volume'), 'C', icon_source=VOLUME_SVG),
+        '60': VcpCapability('60', QT_TR_NOOP('input source'), 'SNC', causes_config_change=True),
+        'D6': VcpCapability('D6', QT_TR_NOOP('power mode'), 'SNC', causes_config_change=True),
+        'CC': VcpCapability('CC', QT_TR_NOOP('OSD language'), 'SNC'),
+        '0C': VcpCapability('0C', QT_TR_NOOP('color temperature'), 'CNC', icon_source=BRIGHTNESS_SVG, enabled=True),
     }
     by_arg_name = {c.property_name(): c for c in by_code.values()}
     ddcutil_supported = None
@@ -1128,23 +1128,23 @@ class VduControlsConfig:
         self.ini_content = ConfigIni()
         # augment the configparser with type-info for run-time widget selection (default type is 'boolean')
         self.config_type_map = {
-            'enable-vcp-codes': 'csv', 'sleep-multiplier': 'float', 'capabilities-override': 'text',
-            'location': 'location',
+            QT_TR_NOOP('enable-vcp-codes'): 'csv', QT_TR_NOOP('sleep-multiplier'): 'float', QT_TR_NOOP('capabilities-override'): 'text',
+            QT_TR_NOOP('location'): 'location',
         }
 
         if include_globals:
-            self.ini_content['vdu-controls-globals'] = {
-                'system-tray-enabled': 'no',
-                'splash-screen-enabled': 'yes',
-                'warnings-enabled': 'no',
-                'debug-enabled': 'no',
-                'syslog-enabled': 'no',
-                'location': '',
+            self.ini_content[QT_TR_NOOP('vdu-controls-globals')] = {
+                QT_TR_NOOP('system-tray-enabled'): 'no',
+                QT_TR_NOOP('splash-screen-enabled'): 'yes',
+                QT_TR_NOOP('warnings-enabled'): 'no',
+                QT_TR_NOOP('debug-enabled'): 'no',
+                QT_TR_NOOP('syslog-enabled'): 'no',
+                QT_TR_NOOP('location'): '',
             }
 
-        self.ini_content['vdu-controls-widgets'] = {}
-        self.ini_content['ddcutil-parameters'] = {}
-        self.ini_content['ddcutil-capabilities'] = {}
+        self.ini_content[QT_TR_NOOP('vdu-controls-widgets')] = {}
+        self.ini_content[QT_TR_NOOP('ddcutil-parameters')] = {}
+        self.ini_content[QT_TR_NOOP('ddcutil-capabilities')] = {}
 
         for vcp_code, item in VDU_SUPPORTED_CONTROLS.by_code.items():
             self.ini_content['vdu-controls-widgets'][item.property_name()] = 'yes' if item.enabled else 'no'
@@ -1608,7 +1608,8 @@ class SettingsEditorTab(QWidget):
             return widget
 
         for section in self.ini_editable.data_sections():
-            editor_layout.addWidget(QLabel('<b>' + section.replace('-', ' ') + '</b>'))
+            title = translate(section).replace('-', ' ')
+            editor_layout.addWidget(QLabel(f"<b>{title}</b>"))
             booleans_panel = QWidget()
             booleans_grid = QGridLayout()
             booleans_panel.setLayout(booleans_grid)
@@ -1699,13 +1700,23 @@ class SettingsEditorFieldBase(QWidget):
         self.section = section
         self.option = option
 
+    def translate_option(self):
+        # This is madness - we can't be sure of the case in capability descriptions retrieved from the monitors.
+        result = translate(self.option)
+        if result != self.option:
+            # Probably a command line option
+            return result.replace('-', ' ')
+        canonical = self.option.lower().replace('-', ' ')
+        result = translate(canonical)
+        return result
+
 
 class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
     def __init__(self, section_editor: SettingsEditorTab, option: str, section: str) -> None:
         super().__init__(section_editor, option, section)
         layout = QHBoxLayout()
         self.setLayout(layout)
-        checkbox = QCheckBox(option.replace('-', ' '))
+        checkbox = QCheckBox(self.translate_option())
         checkbox.setChecked(section_editor.ini_editable.getboolean(section, option))
 
         def toggled(is_checked: bool) -> None:
@@ -1725,7 +1736,7 @@ class SettingsEditorFloatWidget(SettingsEditorFieldBase):
         super().__init__(section_editor, option, section)
         layout = QHBoxLayout()
         self.setLayout(layout)
-        text_label = QLabel(option.replace('-', ' '))
+        text_label = QLabel(self.translate_option())
         layout.addWidget(text_label)
         text_input = QLineEdit()
         text_input.setMaximumWidth(100)
@@ -1753,7 +1764,7 @@ class SettingsEditorCsvWidget(SettingsEditorFieldBase):
         super().__init__(section_editor, option, section)
         layout = QVBoxLayout()
         self.setLayout(layout)
-        text_label = QLabel(option.replace('-', ' '))
+        text_label = QLabel(self.translate_option())
         layout.addWidget(text_label)
         text_input = QLineEdit()
         text_input.setMaximumWidth(1000)
@@ -1810,7 +1821,7 @@ class SettingsEditorLocationWidget(SettingsEditorFieldBase):
         layout = QHBoxLayout()
         layout.setAlignment(Qt.AlignLeft)
         self.setLayout(layout)
-        text_label = QLabel(option.replace('-', ' '))
+        text_label = QLabel(self.translate_option())
         layout.addWidget(text_label)
         text_input = QLineEdit()
         text_input.setFixedWidth(500)
@@ -1901,7 +1912,7 @@ class SettingsEditorTextEditorWidget(SettingsEditorFieldBase):
         super().__init__(section_editor, option, section)
         layout = QVBoxLayout()
         self.setLayout(layout)
-        text_label = QLabel(option.replace('-', ' '))
+        text_label = QLabel(self.translate_option())
         layout.addWidget(text_label)
         text_editor = QPlainTextEdit(section_editor.ini_editable[section][option])
 
@@ -1964,7 +1975,7 @@ class VduControlSlider(QWidget):
             layout.addWidget(svg_icon)
         else:
             label = QLabel()
-            label.setText(vcp_capability.name)
+            label.setText(translate(vcp_capability.name))
             layout.addWidget(label)
 
         self.slider = slider = QSlider()
@@ -2090,7 +2101,7 @@ class VduControlComboBox(QWidget):
         self.setLayout(layout)
 
         label = QLabel()
-        label.setText(vcp_capability.name)
+        label.setText(self.translate_label(vcp_capability.name))
         layout.addWidget(label)
 
         self.combo_box = combo_box = QComboBox()
@@ -2099,7 +2110,7 @@ class VduControlComboBox(QWidget):
         self.keys = []
         for value, desc in self.vcp_capability.values:
             self.keys.append(value)
-            combo_box.addItem(desc, value)
+            combo_box.addItem(self.translate_label(desc), value)
 
         self.validate_value()
         self.combo_box.setCurrentIndex(self.keys.index(self.current_value))
@@ -2127,6 +2138,13 @@ class VduControlComboBox(QWidget):
                         return
 
         combo_box.currentIndexChanged.connect(index_changed)
+
+    def translate_label(self, source: str):
+        canonical = source.lower()
+        maybe = translate(canonical)
+        result = maybe if maybe != canonical else source
+        # Default to capitalized version of each word
+        return ' '.join(w[:1].upper() + w[1:] for w in result.split(' '))
 
     def refresh_data(self) -> None:
         """Query the VDU for a new data value and cache it (maybe called from a task thread, so no GUI op's here)."""

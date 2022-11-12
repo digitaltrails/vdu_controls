@@ -47,15 +47,18 @@ def main():
     message_list = context.findall('message')
     line_index = {}
     for count, message in enumerate(message_list):
-        source = message.find('source')
-        location = message.find('location')
-        line_key = location.attrib['line']
-        while line_key in line_index:
-            # More than one translate() allocated this line, make each uniquely keyed by repeatedly prefixing 0
-            line_key = '0' + line_key
-        line_index[line_key] = True
-        print(f"[[{line_key}]]")
-        print(source.text, '.')
+        translation = message.find('translation')
+        if 'type' in translation.attrib and translation.attrib['type'] == 'unfinished':
+            source = message.find('source')
+            location = message.find('location')
+
+            line_key = location.attrib['line']
+            while line_key in line_index:
+                # More than one translate() allocated this line, make each uniquely keyed by repeatedly prefixing 0
+                line_key = '0' + line_key
+            line_index[line_key] = True
+            print(f"[[{line_key}]]")
+            print(source.text, '.')
     tree.write('translations/test-edited.ts')
 
 
