@@ -416,7 +416,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
     QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter
 
-VDU_CONTROLS_VERSION = '1.8.1'
+VDU_CONTROLS_VERSION = '1.8.2'
 
 RELEASE_ANNOUNCEMENT = f"""
 <h3>Welcome to vdu_controls version {VDU_CONTROLS_VERSION}</h3>
@@ -3824,8 +3824,8 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
         self.setTextFormat(Qt.AutoText)
         self.setText(tr('About vdu_controls'))
         path = find_locale_file("about_{}.txt")
-        if path.exists():
-            with open(path) as about_for_locale:
+        if path:
+            with open(path, encoding='utf-8') as about_for_locale:
                 about_text = about_for_locale.read().format(VDU_CONTROLS_VERSION=VDU_CONTROLS_VERSION)
         else:
             about_text = ABOUT_TEXT

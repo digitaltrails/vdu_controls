@@ -1,0 +1,38 @@
+
+
+<b>vdu_controls version {VDU_CONTROLS_VERSION}</b>
+<p>
+Un panneau de contrôle virtuel pour les unités d'affichage visuel externes.
+<p>
+Visitez le site <a href="https://github.com/digitaltrails/vdu_controls">https://github.com/digitaltrails/vdu_controls</a> pour
+plus de détails.
+<p>
+Notes de version: <a href="https://github.com/digitaltrails/vdu_controls/releases/tag/v{VDU_CONTROLS_VERSION}">
+v{VDU_CONTROLS_VERSION}.</a>
+<p>
+<hr>
+<small>
+<b>vdu_controls Copyright (C) 2021 Michael Hamilton</b>
+<br><br>
+This program is free software: you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the
+Free Software Foundation, version 3.
+<br><br>
+
+<bold>
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+more details.
+</bold>
+<br><br>
+You should have received a copy of the GNU General Public License along
+with this program. If not, see <a href="https://www.gnu.org/licenses/">https://www.gnu.org/licenses/</a>.
+</small>
+<hr>
+<p><p>
+<quote>
+<small>
+Vdu_controls s'appuie sur <a href="https://www.ddcutil.com/">ddcutil</a>, une interface robuste pour les VDU compatibles DDC.
+</small>
+</quote>
