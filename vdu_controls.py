@@ -1071,7 +1071,7 @@ class VduGuiSupportedControls:
 
 VDU_SUPPORTED_CONTROLS = VduGuiSupportedControls()
 
-CONFIG_DIR_PATH = Path.home().joinpath('.config').joinpath('vdu_controls')
+CONFIG_DIR_PATH = Path.home().joinpath('.config', 'vdu_controls')
 
 LOCALE_TRANSLATIONS_PATHS = (
     # Path.cwd().joinpath('translations'),
