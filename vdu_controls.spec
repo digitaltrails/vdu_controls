@@ -55,7 +55,9 @@ mkdir -p %{buildroot}/%{_datadir}/man/man1
 mkdir -p %{buildroot}/%{_datadir}/vdu_controls/translations
 install vdu_controls.py  %{buildroot}/%{_bindir}/%{name}
 install -m644 %{name}.png %{buildroot}/%{_datadir}/icons/hicolor/256x256/apps
-install -m644 translations/en_NZ.ts %{buildroot}/%{_datadir}/vdu_controls/translations
+install -m644 translations/*.ts %{buildroot}/%{_datadir}/vdu_controls/translations
+#install -m644 translations/about_*.txt %{buildroot}/%{_datadir}/vdu_controls/translations
+
 
 cat > %{buildroot}/%{_datadir}/applications/%{name}.desktop <<'EOF'
 [Desktop Entry]
@@ -85,7 +87,13 @@ gzip -c docs/_build/man/vdu_controls.1 > %{buildroot}/%{_datadir}/man/man1/%{nam
 %{_datadir}/applications/%{name}.desktop
 %{_datadir}/icons/hicolor/256x256/apps/%{name}.png
 %{_datadir}/man/man1/%{name}.1.gz
-%{_datadir}/vdu_controls/translations/
+%{_datadir}/vdu_controls/translations/en_NZ.ts
+#%{_datadir}/vdu_controls/translations/da_DK.ts
+#%{_datadir}/vdu_controls/translations/fr_FR.ts
+#%{_datadir}/vdu_controls/translations/de_DE.ts
+#%{_datadir}/vdu_controls/translations/about_da_DK.txt
+#%{_datadir}/vdu_controls/translations/about_fr_FR.txt
+#%{_datadir}/vdu_controls/translations/about_de_DE.txt
 
 %changelog
 * Fri Nov 11 2022 Michael Hamilton <michael@actrix.gen.nz>

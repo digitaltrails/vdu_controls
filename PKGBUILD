@@ -30,6 +30,7 @@ package() {
     mkdir -p /usr/share/man/man1
     mkdir -p /usr/share/vdu_controls/translations
     install vdu_controls.py  /usr/bin/%{name}
+    install -m644 translations/*.ts /usr/share/vdu_controls/translations
 
     cat > /usr/share/applications/%{name}.desktop <<'EOF'
 [Desktop Entry]

@@ -1073,9 +1073,10 @@ VDU_SUPPORTED_CONTROLS = VduGuiSupportedControls()
 
 CONFIG_DIR_PATH = Path.home().joinpath('.config').joinpath('vdu_controls')
 
-LOCALE_TRANSLATIONS_PATHS = (Path.cwd().joinpath('translations'),
-                             Path(CONFIG_DIR_PATH).joinpath('translations'),
-                             Path("/user/share/vdu_controls/translations"),)
+LOCALE_TRANSLATIONS_PATHS = (
+    # Path.cwd().joinpath('translations'),
+    Path(CONFIG_DIR_PATH).joinpath('translations'),
+    Path("/usr/share/vdu_controls/translations"),)
 
 
 def get_config_path(config_name: str) -> Path:
