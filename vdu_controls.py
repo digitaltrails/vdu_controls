@@ -2475,15 +2475,16 @@ class Preset:
             return True
         with open(weather_restriction_filename) as weather_file:
             code_list = weather_file.readlines()
+        log_info(f"Preset {self.name} weather requirements {weather_restriction_filename}: {code_list}")
         weather = QueryWeather(location.place_name)
-        log_info(f"Weather: {weather.area_name} {weather.weather_code} {weather.weather_desc}")
-        for code in code_list:
-            if weather.weather_code == code.split(",")[0]:
-                log_info(
-                    "Meet required weather conditions "
-                    f"{weather.area_name} {weather.weather_desc} code={weather.weather_code}")
+        log_info(f"Current weather: {weather.area_name} {weather.weather_code} {weather.weather_desc}")
+        for code_line in code_list:
+            required_code = code_line.strip().split()[0].split(',')[0]
+            if weather.weather_code.strip() == required_code:
+                log_info("Meet required weather conditions " 
+                         f"{weather.area_name} {weather.weather_desc} {weather.weather_code}")
                 return True
-        log_info(f"Cancelled due to weather {weather.area_name} {weather.weather_desc} code={weather.weather_code}")
+        log_info(f"Cancelled due to weather")
         return False
 
 
@@ -3113,23 +3114,24 @@ class QueryWeather:
 
     def __init__(self, location_name: str):
         lang = locale.getlocale()[0][:2]
-        # self.weather_code, self.weather_desc, self.visibility, self.cloud_cover, self.area_name, self.country_name = None, None, None
-        url = f"https://wttr.in/{location_name}?" + urllib.parse.urlencode({'lang': lang, 'format': 'j1'})
-        print(url)
+        self.url = f"https://wttr.in/{location_name}?" + urllib.parse.urlencode({'lang': lang, 'format': 'j1'})
         self.weather_data = None
-        with urllib.request.urlopen(url) as request:
-            json_content = request.read()
-            self.weather_data = json.loads(json_content)
-            self.weather_code = self.weather_data['current_condition'][0]['weatherCode']
-            lang_key = f"lang_{lang}"
-            if lang_key in self.weather_data['current_condition'][0]:
-                self.weather_desc = self.weather_data['current_condition'][0][lang_key][0]['value']
-            else:
-                self.weather_desc = self.weather_data['current_condition'][0]['weatherDesc'][0]['value']
-            self.visibility = self.weather_data['current_condition'][0]['visibility']
-            self.cloud_cover = self.weather_data['current_condition'][0]['cloudcover']
-            self.area_name = self.weather_data['nearest_area'][0]['areaName'][0]['value']
-            self.country_name = self.weather_data['nearest_area'][0]['country'][0]['value']
+        try:
+            with urllib.request.urlopen(self.url) as request:
+                json_content = request.read()
+                self.weather_data = json.loads(json_content)
+                self.weather_code = self.weather_data['current_condition'][0]['weatherCode']
+                lang_key = f"lang_{lang}"
+                if lang_key in self.weather_data['current_condition'][0]:
+                    self.weather_desc = self.weather_data['current_condition'][0][lang_key][0]['value']
+                else:
+                    self.weather_desc = self.weather_data['current_condition'][0]['weatherDesc'][0]['value']
+                self.visibility = self.weather_data['current_condition'][0]['visibility']
+                self.cloud_cover = self.weather_data['current_condition'][0]['cloudcover']
+                self.area_name = self.weather_data['nearest_area'][0]['areaName'][0]['value']
+                self.country_name = self.weather_data['nearest_area'][0]['country'][0]['value']
+        except (urllib.error.HTTPError, urllib.error.URLError) as e:
+            raise ValueError(self.url, str(e))
 
     def __str__(self):
         if self.weather_data == None:
@@ -3148,7 +3150,7 @@ class PresetChooseWeatherWidget(QWidget):
         self.label.setToolTip(tr("Current weather (from https://wttr.in) may veto activation by solar elevation."))
         self.layout().addWidget(self.label)
         self.chooser = QComboBox()
-        self.chooser.addItem("", None)
+        self.chooser.addItem("None", None)
 
         def select_action(index: int):
             self.required_weather_filepath = self.chooser.itemData(index)
@@ -4357,12 +4359,19 @@ class MainWindow(QMainWindow):
         return most_recent_overdue
 
     def activate_scheduled_preset(self, preset: Preset):
-        if preset.is_weather_ok(self.main_config.get_location()):
-            log_info(f"Preset {preset.name} activated according the schedule at {zoned_now()}")
-            self.restore_preset(preset)
-            presets_dialog = PresetsDialog.get_instance()
-            if presets_dialog:
-                presets_dialog.refresh_view()
+        try:
+            if preset.is_weather_ok(self.main_config.get_location()):
+                log_info(f"Preset {preset.name} activated according the schedule at {zoned_now()}")
+                self.restore_preset(preset)
+                presets_dialog = PresetsDialog.get_instance()
+                if presets_dialog:
+                    presets_dialog.refresh_view()
+        except ValueError as e:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Critical)
+            msg.setText(tr("Unable to query local weather: {}").format(str(e.args[0])))
+            msg.setInformativeText(e.args[1])
+            msg.exec()
 
 
 class SignalWakeupHandler(QtNetwork.QAbstractSocket):
