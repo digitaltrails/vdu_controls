@@ -2479,9 +2479,12 @@ class Preset:
         log_info(f"Weather: {weather.area_name} {weather.weather_code} {weather.weather_desc}")
         for code in code_list:
             if weather.weather_code == code.split(",")[0]:
-                log_info(f"Cancelled due to weather code {weather.weather_code} ({weather.area_name} {weather.weather_desc})")
-                return False
-        return True
+                log_info(
+                    "Meet required weather conditions "
+                    f"{weather.area_name} {weather.weather_desc} code={weather.weather_code}")
+                return True
+        log_info(f"Cancelled due to weather {weather.area_name} {weather.weather_desc} code={weather.weather_code}")
+        return False
 
 
 class ContextMenu(QMenu):
