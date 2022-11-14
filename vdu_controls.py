@@ -384,6 +384,7 @@ import configparser
 import glob
 import inspect
 import io
+import json
 import locale
 import math
 import os
@@ -398,6 +399,7 @@ import syslog
 import textwrap
 import time
 import traceback
+import urllib.request
 from collections import namedtuple
 from datetime import datetime, timedelta, date, timezone
 from functools import partial
@@ -1148,6 +1150,13 @@ class ConfigIni(configparser.ConfigParser):
         return new_ini
 
 
+class GeoLocation:
+    def __init__(self, latitude: float, longitude: float, place_name: str):
+        self.latitude: float = latitude
+        self.longitude: float = longitude
+        self.place_name: str = place_name
+
+
 class VduControlsConfig:
     """
     A vdu_controls config that can be read or written from INI style files by the standard configparser package.
@@ -1259,20 +1268,13 @@ class VduControlsConfig:
                                 f"in enabled_vcp_codes ({enable_codes_str})")
         return enabled_vcp_codes
 
-    def get_location(self) -> Tuple[int, int] | Tuple[None, None]:
-        spec = self.ini_content.get('vdu-controls-globals', 'location', fallback=None)
-        if spec is None or spec.strip() == '':
-            return None, None
-        return tuple([float(part) for part in spec.split(',')[:2]])
-
-    def get_location_name(self) -> Tuple[int, int] | Tuple[None, None]:
+    def get_location(self) -> GeoLocation | None:
         spec = self.ini_content.get('vdu-controls-globals', 'location', fallback=None)
         if spec is None or spec.strip() == '':
             return None
         parts = spec.split(',')
-        if len(parts) == 3:
-            return parts[2]
-        return self.get_location()
+        print(parts)
+        return GeoLocation(float(parts[0]), float(parts[1]), None if len(parts) < 3 else parts[2])
 
     def parse_file(self, config_path: Path) -> None:
         """Parse config values from file"""
@@ -1892,10 +1894,11 @@ class SettingsEditorLocationWidget(SettingsEditorFieldBase):
                     show_info.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
                     if show_info.exec() == QMessageBox.Yes:
                         data = ipinfo['loc']
-                        # for key in ('city', 'region', 'country'):
-                        #     if key in ipinfo:
-                        #         data = data + ',' + ipinfo[key]
-                        #         break
+                        # Get location name for weather lookups.
+                        for key in ('city', 'region', 'country'):
+                            if key in ipinfo:
+                                data = data + ',' + ipinfo[key]
+                                break
                         text_input.setText(data)
                         editing_finished()
                 except (URLError, KeyError) as e:
@@ -2464,6 +2467,21 @@ class Preset:
         self.preset_ini.save(self.path, backup_dir_name=self.path.parent / 'pre-v1.7')
         log_info(f"Converted preset {self.name} to v1.7+ format.")
         return None
+
+    def is_weather_ok(self, location: GeoLocation):
+        weather_restriction_filename = \
+            self.preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None)
+        if weather_restriction_filename is None:
+            return True
+        with open(weather_restriction_filename) as weather_file:
+            code_list = weather_file.readlines()
+        weather = QueryWeather(location.place_name)
+        log_info(f"Weather: {weather.area_name} {weather.weather_code} {weather.weather_desc}")
+        for code in code_list:
+            if weather.weather_code == code.split(",")[0]:
+                log_info(f"Cancelled due to weather code {weather.weather_code} ({weather.area_name} {weather.weather_desc})")
+                return False
+        return True
 
 
 class ContextMenu(QMenu):
@@ -3088,14 +3106,80 @@ class PresetChooseIconButton(QPushButton):
         return True
 
 
+class QueryWeather:
+
+    def __init__(self, location_name: str):
+        lang = locale.getlocale()[0][:2]
+        # self.weather_code, self.weather_desc, self.visibility, self.cloud_cover, self.area_name, self.country_name = None, None, None
+        url = f"https://wttr.in/{location_name}?" + urllib.parse.urlencode({'lang': lang, 'format': 'j1'})
+        print(url)
+        self.weather_data = None
+        with urllib.request.urlopen(url) as request:
+            json_content = request.read()
+            self.weather_data = json.loads(json_content)
+            self.weather_code = self.weather_data['current_condition'][0]['weatherCode']
+            lang_key = f"lang_{lang}"
+            if lang_key in self.weather_data['current_condition'][0]:
+                self.weather_desc = self.weather_data['current_condition'][0][lang_key][0]['value']
+            else:
+                self.weather_desc = self.weather_data['current_condition'][0]['weatherDesc'][0]['value']
+            self.visibility = self.weather_data['current_condition'][0]['visibility']
+            self.cloud_cover = self.weather_data['current_condition'][0]['cloudcover']
+            self.area_name = self.weather_data['nearest_area'][0]['areaName'][0]['value']
+            self.country_name = self.weather_data['nearest_area'][0]['country'][0]['value']
+
+    def __str__(self):
+        if self.weather_data == None:
+            return ""
+        return f"{self.area_name}, {self.country_name}, {self.weather_desc} ({self.weather_code})," \
+               f"cloud_cover {self.cloud_cover}, visibility {self.visibility}"
+
+
+class PresetChooseWeatherWidget(QWidget):
+
+    def __init__(self, location: GeoLocation | None):
+        super().__init__()
+        self.required_weather_filepath: Path | None = None
+        self.setLayout(QVBoxLayout())
+        self.label = QLabel(tr("Additional weather requirements"))
+        self.label.setToolTip(tr("Current weather (from https://wttr.in) may veto activation by solar elevation."))
+        self.layout().addWidget(self.label)
+        self.chooser = QComboBox()
+        self.chooser.addItem("", None)
+
+        def select_action(index: int):
+            self.required_weather_filepath = self.chooser.itemData(index)
+
+        self.chooser.currentIndexChanged.connect(select_action)
+        for count, path in enumerate(sorted(CONFIG_DIR_PATH.glob("*.weather"))):
+            weather_name = path.stem.replace('_', ' ')
+            self.chooser.addItem(weather_name, path)
+        self.chooser.setToolTip(self.label.toolTip())
+        self.layout().addWidget(self.chooser)
+        self.layout().addStretch(1)
+
+    def get_required_weather_filepath(self) -> Path | None:
+        return self.required_weather_filepath.as_posix() if self.required_weather_filepath is not None else None
+
+    def set_required_weather_filepath(self, weather_filename: str | None):
+        if weather_filename is None:
+            self.required_weather_filepath = None
+            self.chooser.setCurrentIndex(0)
+            return
+        self.required_weather_filepath = Path(weather_filename)
+        for i in range (1, self.chooser.count()):
+            if self.chooser.itemData(i).as_posix() == self.required_weather_filepath.as_posix():
+                self.chooser.setCurrentIndex(i)
+                return
+
+
 class PresetChooseElevationWidget(QWidget):
     # def create_trigger_widget(self, base_ini: ConfigIni) -> QWidget:
     #
-    def __init__(self, latitude: float, longitude: float):
+    def __init__(self, location: GeoLocation):
         super().__init__()
         self.elevation_key = None
-        self.latitude = latitude
-        self.longitude = longitude
+        self.location = location
         self.elevation_time_map: Dict[SolarElevationKey, SolarElevationData] = None
         # weather_data = retrieve_wttr_data(latitude, longitude)
         # location_name = weather_data['nearest_area'][0]['areaName'][0]['value']
@@ -3118,8 +3202,12 @@ class PresetChooseElevationWidget(QWidget):
         self.plot.setFixedHeight(200)
         self.plot.setFixedWidth(400)
         layout.addSpacing(16)
-        layout.addWidget(self.plot)
-        self.configure_for_location(latitude, longitude)
+        self.bottom_layout = QHBoxLayout()
+        self.bottom_layout.addWidget(self.plot)
+        layout.addLayout(self.bottom_layout)
+        self.weather_widget = PresetChooseWeatherWidget(location)
+        self.bottom_layout.addWidget(self.weather_widget)
+        self.configure_for_location(location)
         self.slider.valueChanged.connect(self.sliding)
         self.sun_image = None
 
@@ -3157,15 +3245,15 @@ class PresetChooseElevationWidget(QWidget):
             self.title_label.setText(display_text)
         self.create_plot(self.elevation_key)
 
-    def configure_for_location(self, latitude: float | None, longitude: float | None):
-        self.latitude = latitude
-        self.longitude = longitude
-        if latitude is None:
+    def configure_for_location(self, location: GeoLocation | None):
+        self.location = location
+        if location is None:
             self.title_label.setText(self.default_title + tr("location undefined (see settings)"))
             self.slider.setDisabled(True)
             return
         self.slider.setEnabled(True)
-        self.elevation_time_map = create_todays_elevation_time_map(latitude=latitude, longitude=longitude)
+        self.elevation_time_map = create_todays_elevation_time_map(latitude=location.latitude,
+                                                                   longitude=location.longitude)
         self.elevation_steps = []
         for i in range(-19, 90):
             self.elevation_steps.append(SolarElevationKey(EASTERN_SKY, i))
@@ -3197,7 +3285,7 @@ class PresetChooseElevationWidget(QWidget):
         solar_noon_plot_x, solar_noon_plot_y = 0, 0  # Solar noon
         t = today
         while t.day == today.day:
-            a, z = calc_solar_azimuth_zenith(t, self.latitude, self.longitude)
+            a, z = calc_solar_azimuth_zenith(t, self.location.latitude, self.location.longitude)
             x, y = ((t - today).total_seconds() / 60.0), math.sin(math.radians(90.0 - z)) * range_iy
             plot_x, plot_y = round(width * x / (60.0 * 24.0)), origin_iy - round(y)
             painter.drawPoint(reverse_x(plot_x), plot_y)
@@ -3250,6 +3338,12 @@ class PresetChooseElevationWidget(QWidget):
                 self.slider.setValue(self.elevation_steps.index(self.elevation_key))
                 return
         self.slider.setValue(-1)
+
+    def get_required_weather_filename(self) -> str | None:
+        return self.weather_widget.get_required_weather_filepath()
+
+    def set_required_weather_filename(self, weather_filename: str | None):
+        self.weather_widget.set_required_weather_filepath(weather_filename)
 
 
 class PresetsDialog(QDialog, DialogSingletonMixin):
@@ -3353,8 +3447,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.editor_controls_prompt.setDisabled(True)
         self.editor_layout.addWidget(self.editor_controls_prompt)
         self.editor_layout.addWidget(self.editor_controls_widget)
-        latitude, longitude = self.main_config.get_location()
-        self.editor_trigger_widget = PresetChooseElevationWidget(latitude=latitude, longitude=longitude)
+        self.editor_trigger_widget = PresetChooseElevationWidget(self.main_config.get_location())
         self.editor_layout.addWidget(self.editor_trigger_widget)
         presets_dialog_splitter.addWidget(self.editor_groupbox)
 
@@ -3385,9 +3478,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             else:
                 self.preset_widgets_layout.removeItem(self.preset_widgets_layout.itemAt(i))
         self.populate_presets_layout()
-        latitude, longitude = self.main_config.get_location()
         self.preset_name_edit.setText('')
-        self.editor_trigger_widget.configure_for_location(latitude, longitude)
+        self.editor_trigger_widget.configure_for_location(self.main_config.get_location())
 
     def refresh_view(self):
         # A bit extreme, but it works
@@ -3446,6 +3538,9 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             if not preset_ini.has_section('preset'):
                 preset_ini.add_section('preset')
             preset_ini.set('preset', 'solar-elevation', elevation_ini_text)
+            weather_filename = self.editor_trigger_widget.get_required_weather_filename()
+            if weather_filename is not None:
+                preset_ini.set('preset', 'solar-elevation-weather-restriction', weather_filename)
 
     def get_presets(self):
         return [self.preset_widgets_layout.itemAt(i).widget()
@@ -3547,6 +3642,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         if preset.preset_ini.has_section('preset'):
             self.editor_trigger_widget.set_elevation(
                 preset.preset_ini.get('preset', 'solar-elevation', fallback=None))
+            self.editor_trigger_widget.set_required_weather_filename(
+                preset.preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None))
 
     def save_edited_preset(self) -> None:
         preset_name = self.preset_name_edit.text().strip()
@@ -4213,11 +4310,11 @@ class MainWindow(QMainWindow):
         return True
 
     def schedule_presets(self, reset: bool = False) -> Preset:
-        latitude, longitude = self.main_config.get_location()
-        if latitude is None:
+        location = self.main_config.get_location()
+        if location is None:
             return
         log_info(f"Scheduling presets reset={reset}")
-        time_map = create_todays_elevation_time_map(latitude=latitude, longitude=longitude)
+        time_map = create_todays_elevation_time_map(latitude=location.latitude, longitude=location.longitude)
         most_recent_overdue = None
         latest_due = zoned_now().replace(hour=0, minute=0, second=0, microsecond=0)
         for name, preset in self.preset_controller.find_presets().items():
@@ -4257,11 +4354,12 @@ class MainWindow(QMainWindow):
         return most_recent_overdue
 
     def activate_scheduled_preset(self, preset: Preset):
-        log_info(f"Preset {preset.name} activated according the schedule at {zoned_now()}")
-        self.restore_preset(preset)
-        presets_dialog = PresetsDialog.get_instance()
-        if presets_dialog:
-            presets_dialog.refresh_view()
+        if preset.is_weather_ok(self.main_config.get_location()):
+            log_info(f"Preset {preset.name} activated according the schedule at {zoned_now()}")
+            self.restore_preset(preset)
+            presets_dialog = PresetsDialog.get_instance()
+            if presets_dialog:
+                presets_dialog.refresh_view()
 
 
 class SignalWakeupHandler(QtNetwork.QAbstractSocket):
