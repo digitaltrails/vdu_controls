@@ -2473,19 +2473,21 @@ class Preset:
             self.preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None)
         if weather_restriction_filename is None:
             return True
-        with open(weather_restriction_filename) as weather_file:
-            code_list = weather_file.readlines()
-        log_info(f"Preset {self.name} weather requirements {weather_restriction_filename}: {code_list}")
-        weather = QueryWeather(location.place_name)
-        log_info(f"Current weather: {weather.area_name} {weather.weather_code} {weather.weather_desc}")
-        for code_line in code_list:
-            required_code = code_line.strip().split()[0].split(',')[0]
-            if weather.weather_code.strip() == required_code:
-                log_info("Meet required weather conditions " 
-                         f"{weather.area_name} {weather.weather_desc} {weather.weather_code}")
-                return True
-        log_info(f"Cancelled due to weather")
-        return False
+        if Path(weather_restriction_filename).exists():
+            with open(weather_restriction_filename) as weather_file:
+                code_list = weather_file.readlines()
+            log_info(f"Preset {self.name} weather requirements {weather_restriction_filename}: {code_list}")
+            weather = QueryWeather(location.place_name)
+            log_info(f"Current weather: {weather.area_name} {weather.weather_code} {weather.weather_desc}")
+            for code_line in code_list:
+                # Allow spaces or commas
+                required_code = code_line.strip().split()[0].split(',')[0]
+                if weather.weather_code.strip() == required_code:
+                    log_info("Meet required weather conditions " 
+                             f"{weather.area_name} {weather.weather_desc} {weather.weather_code}")
+                    return True
+            log_info(f"Cancelled due to weather")
+            return False
 
 
 class ContextMenu(QMenu):
@@ -3114,6 +3116,8 @@ class QueryWeather:
 
     def __init__(self, location_name: str):
         lang = locale.getlocale()[0][:2]
+        if location_name is None or location_name.strip() == '':
+            location_name=''
         self.url = f"https://wttr.in/{location_name}?" + urllib.parse.urlencode({'lang': lang, 'format': 'j1'})
         self.weather_data = None
         try:
@@ -3144,24 +3148,81 @@ class PresetChooseWeatherWidget(QWidget):
 
     def __init__(self, location: GeoLocation | None):
         super().__init__()
+        self.init_weather()
         self.required_weather_filepath: Path | None = None
         self.setLayout(QVBoxLayout())
         self.label = QLabel(tr("Additional weather requirements"))
-        self.label.setToolTip(tr("Current weather (from https://wttr.in) may veto activation by solar elevation."))
+        self.label.setToolTip(
+            tr("Weather conditions will be retrieved from https://wttr.in"))
         self.layout().addWidget(self.label)
         self.chooser = QComboBox()
-        self.chooser.addItem("None", None)
+        self.warned = False
 
         def select_action(index: int):
             self.required_weather_filepath = self.chooser.itemData(index)
+            if self.chooser.itemData(index) is None:
+                self.info_label.setText('')
+            else:
+                if not self.warned and (location.place_name is None or location.place_name.strip() == ''):
+                    self.warned = True
+                    msg = QMessageBox()
+                    weather = QueryWeather(location.place_name)
+                    msg.setIcon(QMessageBox.Warning)
+                    msg.setText(
+                        tr("Location name isn't in Settings, https://wttr.in guessed your location as {} ({}).\n"
+                           ).format(weather.area_name, weather.country_name))
+                    msg.setInformativeText(
+                        tr("To make sure the right location is used, under Settings, " 
+                           "press the Detect button to set add a location name "
+                           "(or manually add it to the location in the format format: lat,long,myCity)"))
+                    msg.exec()
+                path = self.chooser.itemData(index)
+                if path.exists():
+                    with open(path) as weather_file:
+                        code_list = weather_file.read()
+                        self.info_label.setText(code_list)
+                else:
+                    self.chooser.removeItem(index)
+                    self.chooser.setCurrentIndex(0)
+            self.populate()
 
         self.chooser.currentIndexChanged.connect(select_action)
-        for count, path in enumerate(sorted(CONFIG_DIR_PATH.glob("*.weather"))):
-            weather_name = path.stem.replace('_', ' ')
-            self.chooser.addItem(weather_name, path)
         self.chooser.setToolTip(self.label.toolTip())
         self.layout().addWidget(self.chooser)
-        self.layout().addStretch(1)
+        self.info_label = QLabel()
+        self.info_label.setAlignment(Qt.AlignTop)
+        self.populate()
+        scroll_area = QScrollArea()
+        scroll_area.setWidget(self.info_label)
+        scroll_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        scroll_area.setWidgetResizable(True)
+        self.layout().addWidget(scroll_area)
+        #self.layout().addStretch(1)
+
+    def init_weather(self):
+        if len(list(CONFIG_DIR_PATH.glob("*.weather"))) == 0:
+            log_info(f"making good and bad weather in {CONFIG_DIR_PATH}")
+            with open(CONFIG_DIR_PATH.joinpath('good.weather'), 'w') as weather_file:
+                weather_file.write("113 Sunny\n116 PartlyCloudy\n119 Cloudy\n")
+            with open(CONFIG_DIR_PATH.joinpath('bad.weather'), 'w') as weather_file:
+                weather_file.write(
+                    "143 Fog\n179 LightSleetShowers\n182 LightSleet\n185 LightSleet\n200 ThunderyShowers\n227 " \
+                    "LightSnow\n230 HeavySnow\n248 Fog\n260 Fog\n266 LightRain\n281 LightSleet\n284 LightSleet\n293 " \
+                    "LightRain\n296 LightRain\n299 HeavyShowers\n302 HeavyRain\n305 HeavyShowers\n308 HeavyRain\n311 " \
+                    "LightSleet\n314 LightSleet\n317 LightSleet\n320 LightSnow\n323 LightSnowShowers\n326 " \
+                    "LightSnowShowers\n329 HeavySnow\n332 HeavySnow\n335 HeavySnowShowers\n338 HeavySnow\n350 " \
+                    "LightSleet\n353 LightShowers\n356 HeavyShowers\n359 HeavyRain\n362 LightSleetShowers\n365 " \
+                    "LightSleetShowers\n368 LightSnowShowers\n371 HeavySnowShowers\n374 LightSleetShowers\n377 " \
+                    "LightSleet\n386 ThunderyShowers\n389 ThunderyHeavyRain\n392 ThunderySnowShowers\n395 " \
+                    "HeavySnowShowers\n")
+    def populate(self):
+        if self.chooser.count() == 0:
+            self.chooser.addItem("None", None)
+        existing_paths = [self.chooser.itemData(i) for i in range(1, self.chooser.count())]
+        for path in sorted(CONFIG_DIR_PATH.glob("*.weather")):
+            if path not in existing_paths:
+                weather_name = path.stem.replace('_', ' ')
+                self.chooser.addItem(weather_name, path)
 
     def get_required_weather_filepath(self) -> Path | None:
         return self.required_weather_filepath.as_posix() if self.required_weather_filepath is not None else None
@@ -3170,12 +3231,14 @@ class PresetChooseWeatherWidget(QWidget):
         if weather_filename is None:
             self.required_weather_filepath = None
             self.chooser.setCurrentIndex(0)
+            self.info_label.setText('')
             return
         self.required_weather_filepath = Path(weather_filename)
-        for i in range (1, self.chooser.count()):
+        for i in range(1, self.chooser.count()):
             if self.chooser.itemData(i).as_posix() == self.required_weather_filepath.as_posix():
                 self.chooser.setCurrentIndex(i)
                 return
+
 
 
 class PresetChooseElevationWidget(QWidget):
@@ -3403,6 +3466,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         button_box = QWidget()
         button_layout = QHBoxLayout()
         button_box.setLayout(button_layout)
+        button_box.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         main_window.app_context_menu.refresh_preset_menu()
         # Create a temporary holder of preset values
         self.base_ini = ConfigIni()
