@@ -2386,6 +2386,7 @@ class Preset:
         if elevation is None:
             return ''
         result = format_solar_elevation_abbreviation(elevation)
+        weather_suffix = ' \u2614' if self.get_weather_restriction_filename() is not None else ''
         if self.elevation_time_today:
             result += ' \u25F4 ' + self.elevation_time_today.strftime("%H:%M")
         else:
@@ -2393,9 +2394,8 @@ class Preset:
             result += ' \u29BB'
         if self.timer and self.timer.remainingTime() > 0:
             # This character is too tall - it causes a jump when rendered - but nothing else is quite as appropriate.
-            result += ' \u23F3'
-        if self.get_weather_restriction_filename() is not None:
-            result += ' \u2614'
+            result += ' \u23F3' + weather_suffix
+
         return result
 
     def get_solar_elevation_description(self) -> str | None:
@@ -2403,14 +2403,15 @@ class Preset:
         if elevation is None:
             return ''
         basic_desc = format_solar_elevation_description(elevation)
+        weather_fn = self.get_weather_restriction_filename()
+        weather_suffix = tr(" (subject to {} weather)").format(Path(weather_fn).stem.replace('_', ' ')) if weather_fn is not None else ''
         # This might not work too well in translation - rethink?
         if self.elevation_time_today:
             if self.timer and self.timer.remainingTime() > 0:
-                template = tr("{} later today at {}")
-                if self.get_weather_restriction_filename() is not None:
-                    template += tr(' (subject to weather)')
+                template = tr("{} later today at {}") + weather_suffix
+
             elif self.elevation_time_today < zoned_now():
-                template = tr("{} earlier today at {}")
+                template = tr("{} earlier today at {}") + weather_suffix
             else:
                 template = tr("{} suspended for  {}")
             result = template.format(basic_desc, self.elevation_time_today.strftime(tr("%H:%M")))
