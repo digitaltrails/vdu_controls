@@ -2394,6 +2394,8 @@ class Preset:
         if self.timer and self.timer.remainingTime() > 0:
             # This character is too tall - it causes a jump when rendered - but nothing else is quite as appropriate.
             result += ' \u23F3'
+        if self.get_weather_restriction_filename() is not None:
+            result += ' \u2614'
         return result
 
     def get_solar_elevation_description(self) -> str | None:
@@ -2405,6 +2407,8 @@ class Preset:
         if self.elevation_time_today:
             if self.timer and self.timer.remainingTime() > 0:
                 template = tr("{} later today at {}")
+                if self.get_weather_restriction_filename() is not None:
+                    template += tr(' (subject to weather)')
             elif self.elevation_time_today < zoned_now():
                 template = tr("{} earlier today at {}")
             else:
@@ -2482,8 +2486,7 @@ class Preset:
         return None
 
     def is_weather_ok(self, location: GeoLocation):
-        weather_restriction_filename = \
-            self.preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None)
+        weather_restriction_filename = self.get_weather_restriction_filename()
         if weather_restriction_filename is None:
             return True
         if Path(weather_restriction_filename).exists():
@@ -2503,6 +2506,11 @@ class Preset:
                     return True
             log_info(f"Cancelled due to weather")
             return False
+
+    def get_weather_restriction_filename(self):
+        weather_restriction_filename = \
+            self.preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None)
+        return weather_restriction_filename
 
 
 class ContextMenu(QMenu):
