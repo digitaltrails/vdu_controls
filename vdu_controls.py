@@ -1156,6 +1156,15 @@ class GeoLocation:
         self.longitude: float = longitude
         self.place_name: str = place_name
 
+    def __eq__(self, other):
+        if other is None:
+            return False
+        if not isinstance(other, GeoLocation):
+            # don't attempt to compare against unrelated types
+            return NotImplemented
+        return self.latitude == other.latitude and self.longitude == other.longitude and \
+               self.place_name == other.place_name
+
 
 class VduControlsConfig:
     """
@@ -1273,7 +1282,6 @@ class VduControlsConfig:
         if spec is None or spec.strip() == '':
             return None
         parts = spec.split(',')
-        print(parts)
         return GeoLocation(float(parts[0]), float(parts[1]), None if len(parts) < 3 else parts[2])
 
     def parse_file(self, config_path: Path) -> None:
@@ -1875,39 +1883,10 @@ class SettingsEditorLocationWidget(SettingsEditorFieldBase):
         text_input.setToolTip(tr("Latitude,Longitude for solar elevation calculations."))
 
         def detection_location():
-            ask_permission = QMessageBox()
-            ask_permission.setIcon(QMessageBox.Question)
-            ask_permission.setText(
-                tr('Query {} to obtain information based on your IP-address?').format(self.get_ipinfo_url()))
-            ask_permission.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-            if ask_permission.exec() == QMessageBox.Yes:
-                show_info = QMessageBox()
-                show_info.setIcon(QMessageBox.Information)
-                try:
-                    ipinfo = self.retrieve_ipinfo()
-                    info_text = f"{tr('Use the following info?')}\n" f"{ipinfo['loc']}\n" + \
-                                ','.join([ipinfo[key] for key in ('city', 'region', 'country') if key in ipinfo])
-                    full_text = f"Queried {self.get_ipinfo_url()}\n" + \
-                                '\n'.join([f"{name}: {value}" for name, value in ipinfo.items()])
-                    show_info.setText(info_text)
-                    show_info.setDetailedText(full_text)
-                    show_info.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-                    if show_info.exec() == QMessageBox.Yes:
-                        data = ipinfo['loc']
-                        # Get location name for weather lookups.
-                        for key in ('city', 'region', 'country'):
-                            if key in ipinfo:
-                                data = data + ',' + ipinfo[key]
-                                break
-                        text_input.setText(data)
-                        editing_finished()
-                except (URLError, KeyError) as e:
-                    error_dialog = QMessageBox()
-                    error_dialog.setIcon(QMessageBox.Critical)
-                    error_dialog.setText(
-                        tr("Failed to obtain info from {}: {}").format(self.get_ipinfo_url(), e))
-                    error_dialog.exec()
-                    return
+            data_csv = self.location_dialog()
+            if data_csv:
+                text_input.setText(data_csv)
+                editing_finished()
 
         detect_location_button = QPushButton(tr("Detect"))
         detect_location_button.clicked.connect(detection_location)
@@ -1933,6 +1912,40 @@ class SettingsEditorLocationWidget(SettingsEditorFieldBase):
 
     def get_ipinfo_url(self):
         return os.getenv('VDU_CONTROLS_IPINFO_URL', default='https://ipinfo.io/json')
+
+    def location_dialog(self) -> str | None:
+        ask_permission = QMessageBox()
+        ask_permission.setIcon(QMessageBox.Question)
+        ask_permission.setText(
+            tr('Query {} to obtain information based on your IP-address?').format(self.get_ipinfo_url()))
+        ask_permission.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        if ask_permission.exec() == QMessageBox.Yes:
+            location_msg = QMessageBox()
+            location_msg.setIcon(QMessageBox.Information)
+            try:
+                ipinfo = self.retrieve_ipinfo()
+                info_text = f"{tr('Use the following info?')}\n" f"{ipinfo['loc']}\n" + \
+                            ','.join([ipinfo[key] for key in ('city', 'region', 'country') if key in ipinfo])
+                full_text = f"Queried {self.get_ipinfo_url()}\n" + \
+                            '\n'.join([f"{name}: {value}" for name, value in ipinfo.items()])
+                location_msg.setText(info_text)
+                location_msg.setDetailedText(full_text)
+                location_msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+                if location_msg.exec() == QMessageBox.Yes:
+                    data = ipinfo['loc']
+                    # Get location name for weather lookups.
+                    for key in ('city', 'region', 'country'):
+                        if key in ipinfo:
+                            data = data + ',' + ipinfo[key]
+                            break
+                    return data
+            except (URLError, KeyError) as e:
+                error_dialog = QMessageBox()
+                error_dialog.setIcon(QMessageBox.Critical)
+                error_dialog.setText(
+                    tr("Failed to obtain info from {}: {}").format(self.get_ipinfo_url(), e))
+                error_dialog.exec()
+        return ''
 
 
 class SettingsEditorTextEditorWidget(SettingsEditorFieldBase):
@@ -2478,12 +2491,14 @@ class Preset:
                 code_list = weather_file.readlines()
             log_info(f"Preset {self.name} weather requirements {weather_restriction_filename}: {code_list}")
             weather = QueryWeather(location.place_name)
+            if weather.area_name == "UNKNOWN":
+                return True
             log_info(f"Current weather: {weather.area_name} {weather.weather_code} {weather.weather_desc}")
             for code_line in code_list:
                 # Allow spaces or commas
                 required_code = code_line.strip().split()[0].split(',')[0]
                 if weather.weather_code.strip() == required_code:
-                    log_info("Meet required weather conditions " 
+                    log_info("Meet required weather conditions "
                              f"{weather.area_name} {weather.weather_desc} {weather.weather_code}")
                     return True
             log_info(f"Cancelled due to weather")
@@ -3117,7 +3132,7 @@ class QueryWeather:
     def __init__(self, location_name: str):
         lang = locale.getlocale()[0][:2]
         if location_name is None or location_name.strip() == '':
-            location_name=''
+            location_name = ''
         self.url = f"https://wttr.in/{location_name}?" + urllib.parse.urlencode({'lang': lang, 'format': 'j1'})
         self.weather_data = None
         try:
@@ -3134,19 +3149,25 @@ class QueryWeather:
                 self.cloud_cover = self.weather_data['current_condition'][0]['cloudcover']
                 self.area_name = self.weather_data['nearest_area'][0]['areaName'][0]['value']
                 self.country_name = self.weather_data['nearest_area'][0]['country'][0]['value']
-        except (urllib.error.HTTPError, urllib.error.URLError) as e:
+                self.latitude = self.weather_data['nearest_area'][0]['latitude']
+                self.longitude = self.weather_data['nearest_area'][0]['longitude']
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                self.area_name = 'UNKNOWN'
+                return
             raise ValueError(self.url, str(e))
 
     def __str__(self):
-        if self.weather_data == None:
+        if self.weather_data is None:
             return ""
         return f"{self.area_name}, {self.country_name}, {self.weather_desc} ({self.weather_code})," \
-               f"cloud_cover {self.cloud_cover}, visibility {self.visibility}"
+               f"cloud_cover {self.cloud_cover}, visibility {self.visibility}, " \
+               f"location={self.latitude},{self.longitude}"
 
 
 class PresetChooseWeatherWidget(QWidget):
 
-    def __init__(self, location: GeoLocation | None):
+    def __init__(self, location_func: Callable):
         super().__init__()
         self.init_weather()
         self.required_weather_filepath: Path | None = None
@@ -3156,26 +3177,14 @@ class PresetChooseWeatherWidget(QWidget):
             tr("Weather conditions will be retrieved from https://wttr.in"))
         self.layout().addWidget(self.label)
         self.chooser = QComboBox()
-        self.warned = False
+        self.warned: GeoLocation | None = None
 
         def select_action(index: int):
             self.required_weather_filepath = self.chooser.itemData(index)
             if self.chooser.itemData(index) is None:
                 self.info_label.setText('')
             else:
-                if not self.warned and (location.place_name is None or location.place_name.strip() == ''):
-                    self.warned = True
-                    msg = QMessageBox()
-                    weather = QueryWeather(location.place_name)
-                    msg.setIcon(QMessageBox.Warning)
-                    msg.setText(
-                        tr("Location name isn't in Settings, https://wttr.in guessed your location as {} ({}).\n"
-                           ).format(weather.area_name, weather.country_name))
-                    msg.setInformativeText(
-                        tr("To make sure the right location is used, under Settings, " 
-                           "press the Detect button to set add a location name "
-                           "(or manually add it to the location in the format format: lat,long,myCity)"))
-                    msg.exec()
+                self.validate_weather_location(location_func)
                 path = self.chooser.itemData(index)
                 if path.exists():
                     with open(path) as weather_file:
@@ -3197,7 +3206,7 @@ class PresetChooseWeatherWidget(QWidget):
         scroll_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         scroll_area.setWidgetResizable(True)
         self.layout().addWidget(scroll_area)
-        #self.layout().addStretch(1)
+        # self.layout().addStretch(1)
 
     def init_weather(self):
         if len(list(CONFIG_DIR_PATH.glob("*.weather"))) == 0:
@@ -3215,6 +3224,41 @@ class PresetChooseWeatherWidget(QWidget):
                     "LightSleetShowers\n368 LightSnowShowers\n371 HeavySnowShowers\n374 LightSleetShowers\n377 " \
                     "LightSleet\n386 ThunderyShowers\n389 ThunderyHeavyRain\n392 ThunderySnowShowers\n395 " \
                     "HeavySnowShowers\n")
+
+    def validate_weather_location(self, location_func: Callable):
+
+        if self.warned == location_func():
+            return
+        log_info("Validating weather location.")
+        corrective_actions = tr("You can use Setting's Detect button to automatically add a location name " \
+                                "or manually change the Setting's location name to one wttr recognises.")
+        location = location_func()
+        weather = QueryWeather(location.place_name)
+        if weather.area_name == "UNKNOWN":
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Critical)
+            msg.setText(
+                tr("The site https://wttr.in doesn't recognise place-name {}.").format(location.place_name))
+            msg.setInformativeText(corrective_actions)
+            msg.exec()
+            return
+        kilometres = calc_kilometers(float(weather.latitude), float(weather.longitude),
+                                     location.latitude, location.longitude)
+        if kilometres > 200:
+            use_km = QLocale.system().measurementSystem() == QLocale.MetricSystem
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Warning)
+            msg.setText(
+                tr("The site https://wttr.in reports your location as {}, {}, {},{} "
+                   "which is about {} {} from the latitude and longitude specified in Settings."
+                   "Please check the location specified in Settings."
+                   ).format(weather.area_name, weather.country_name, weather.latitude, weather.longitude,
+                            round(kilometres if use_km else kilometres * 0.621371), 'km' if use_km else 'miles'))
+            msg.setInformativeText(corrective_actions)
+            msg.setDetailedText(f"{weather}")
+            msg.exec()
+        self.warned = location
+
     def populate(self):
         if self.chooser.count() == 0:
             self.chooser.addItem("None", None)
@@ -3240,14 +3284,12 @@ class PresetChooseWeatherWidget(QWidget):
                 return
 
 
-
 class PresetChooseElevationWidget(QWidget):
     # def create_trigger_widget(self, base_ini: ConfigIni) -> QWidget:
     #
-    def __init__(self, location: GeoLocation):
+    def __init__(self, location_func: Callable):
         super().__init__()
         self.elevation_key = None
-        self.location = location
         self.elevation_time_map: Dict[SolarElevationKey, SolarElevationData] = None
         # weather_data = retrieve_wttr_data(latitude, longitude)
         # location_name = weather_data['nearest_area'][0]['areaName'][0]['value']
@@ -3273,9 +3315,9 @@ class PresetChooseElevationWidget(QWidget):
         self.bottom_layout = QHBoxLayout()
         self.bottom_layout.addWidget(self.plot)
         layout.addLayout(self.bottom_layout)
-        self.weather_widget = PresetChooseWeatherWidget(location)
+        self.weather_widget = PresetChooseWeatherWidget(location_func)
         self.bottom_layout.addWidget(self.weather_widget)
-        self.configure_for_location(location)
+        self.configure_for_location(location_func())
         self.slider.valueChanged.connect(self.sliding)
         self.sun_image = None
 
@@ -3516,7 +3558,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.editor_controls_prompt.setDisabled(True)
         self.editor_layout.addWidget(self.editor_controls_prompt)
         self.editor_layout.addWidget(self.editor_controls_widget)
-        self.editor_trigger_widget = PresetChooseElevationWidget(self.main_config.get_location())
+        self.editor_trigger_widget = PresetChooseElevationWidget(self.main_config.get_location)
         self.editor_layout.addWidget(self.editor_trigger_widget)
         presets_dialog_splitter.addWidget(self.editor_groupbox)
 
@@ -3769,7 +3811,6 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         # PalletChange happens after the new style sheet is in use.
         if event.type() == QEvent.PaletteChange:
             self.repaint()
-        event.accept()
         return True
 
     def closeEvent(self, event) -> None:
@@ -3777,9 +3818,13 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             alert = QMessageBox()
             alert.setIcon(QMessageBox.Question)
             alert.setText("Save current edit?")
-            alert.setStandardButtons(QMessageBox.Save | QMessageBox.Ignore)
+            alert.setStandardButtons(QMessageBox.Save | QMessageBox.Ignore | QMessageBox.Cancel)
             alert.setDefaultButton(QMessageBox.Save)
-            if alert.exec() == QMessageBox.Save:
+            answer = alert.exec()
+            if answer == QMessageBox.Cancel:
+                event.ignore()
+                return
+            elif answer == QMessageBox.Save:
                 self.edit_save_needed.emit()
             else:
                 self.preset_name_edit.setText('')
@@ -3990,7 +4035,7 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
         self.setWindowTitle(tr('About'))
         self.setTextFormat(Qt.AutoText)
         self.setText(tr('About vdu_controls'))
-        path = find_locale_file("about_{}.txt")
+        path = find_locale_specific_file("about_{}.txt")
         if path:
             with open(path, encoding='utf-8') as about_for_locale:
                 about_text = about_for_locale.read().format(VDU_CONTROLS_VERSION=VDU_CONTROLS_VERSION)
@@ -4569,6 +4614,15 @@ def calc_solar_azimuth_zenith(localised_time: datetime, latitude: float, longitu
     return azimuth, zenith_angle
 
 
+# Spherical distance from
+# https://stackoverflow.com/a/21623206/609575
+def calc_kilometers(lat1, lon1, lat2, lon2):
+    p = math.pi / 180
+    a = 0.5 - math.cos((lat2 - lat1) * p) / 2 + math.cos(lat1 * p) * math.cos(lat2 * p) * (
+            1 - math.cos((lon2 - lon1) * p)) / 2
+    return 12742 * math.asin(math.sqrt(a))
+
+
 def create_todays_elevation_time_map(latitude: float, longitude: float) -> Dict[SolarElevationKey, SolarElevationData]:
     """
     Create a minute-by-minute map of today's SolarElevations,
@@ -4588,7 +4642,7 @@ def create_todays_elevation_time_map(latitude: float, longitude: float) -> Dict[
     return elevation_time_map
 
 
-def find_locale_file(filename_template: str) -> Path:
+def find_locale_specific_file(filename_template: str) -> Path:
     locale_name = QLocale.system().name()
     filename = filename_template.format(locale_name)
     for path in LOCALE_TRANSLATIONS_PATHS:
@@ -4609,8 +4663,8 @@ def initialise_locale_translations(app) -> QTranslator:
     translator = QTranslator()
     log_info("Qt locale", QLocale.system().name())
     locale_name = QLocale.system().name()
-    ts_path = find_locale_file("{}.ts")
-    qm_path = find_locale_file("{}.qm")
+    ts_path = find_locale_specific_file("{}.ts")
+    qm_path = find_locale_specific_file("{}.qm")
 
     # If there is a .ts XML file in the path newer than the associated .qm binary file, load the messages
     # from the XML into a map and use them directly.  This is useful while developing and possibly useful
