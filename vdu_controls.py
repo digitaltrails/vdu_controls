@@ -3248,7 +3248,6 @@ class PresetChooseWeatherWidget(QWidget):
                     "Thundery Snow Showers\n395 Heavy Snow Showers\n")
 
     def validate_weather_location(self, location_func: Callable):
-
         if self.warned == location_func():
             return
         log_info("Validating weather location.")
@@ -3313,10 +3312,7 @@ class PresetChooseElevationWidget(QWidget):
         super().__init__()
         self.elevation_key = None
         self.elevation_time_map: Dict[SolarElevationKey, SolarElevationData] = None
-        # weather_data = retrieve_wttr_data(latitude, longitude)
-        # location_name = weather_data['nearest_area'][0]['areaName'][0]['value']
-        # log_info(location_name)
-        # # latitude, longitude = weather_data['nearest_area'][0]['latitude'], weather_data['nearest_area'][0]['longitude']
+        self.location: GeoLocation | None = None
         layout = QVBoxLayout()
         self.setLayout(layout)
         self.default_title = tr("Solar elevation trigger: ")
@@ -3347,7 +3343,10 @@ class PresetChooseElevationWidget(QWidget):
         if self.slider.value() == -1:
             self.title_label.setText(self.default_title)
             self.elevation_key = None
+            self.weather_widget.chooser.setCurrentIndex(0)
+            self.weather_widget.setEnabled(False)
             return
+        self.weather_widget.setEnabled(True)
         self.elevation_key = self.elevation_steps[self.slider.value()]
         elevation_data = self.elevation_time_map[
             self.elevation_key] if self.elevation_key in self.elevation_time_map else None
@@ -3468,8 +3467,11 @@ class PresetChooseElevationWidget(QWidget):
             self.elevation_key = parse_solar_elevation_ini_text(elevation_text)
             if self.elevation_key in self.elevation_steps:
                 self.slider.setValue(self.elevation_steps.index(self.elevation_key))
+                self.weather_widget.setEnabled(True)
                 return
         self.slider.setValue(-1)
+        self.weather_widget.setEnabled(False)
+        self.weather_widget.chooser.setCurrentIndex(0)
 
     def get_required_weather_filename(self) -> str | None:
         return self.weather_widget.get_required_weather_filepath()
