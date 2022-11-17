@@ -2386,16 +2386,16 @@ class Preset:
         if elevation is None:
             return ''
         result = format_solar_elevation_abbreviation(elevation)
-        weather_suffix = ' \u2614' if self.get_weather_restriction_filename() is not None else ''
         if self.elevation_time_today:
             result += ' \u25F4 ' + self.elevation_time_today.strftime("%H:%M")
         else:
             # Not possible today - sun doesn't get that high
             result += ' \u29BB'
+        if self.get_weather_restriction_filename() is not None:
+            result += ' \u2614'
         if self.timer and self.timer.remainingTime() > 0:
             # This character is too tall - it causes a jump when rendered - but nothing else is quite as appropriate.
-            result += ' \u23F3' + weather_suffix
-
+            result += ' \u23F3'
         return result
 
     def get_solar_elevation_description(self) -> str | None:
@@ -3044,7 +3044,7 @@ class PresetWidget(QWidget):
         delete_button.clicked.connect(partial(delete_action, preset=preset, target_widget=self))
         delete_button.setAutoDefault(False)
 
-        line_layout.addSpacing(20)
+        line_layout.addSpacing(10)
         timer_control_button = PushButtonLeftJustified(parent=self)
         timer_control_button.setFlat(True)
 
@@ -3219,20 +3219,33 @@ class PresetChooseWeatherWidget(QWidget):
 
     def init_weather(self):
         if len(list(CONFIG_DIR_PATH.glob("*.weather"))) == 0:
-            log_info(f"making good and bad weather in {CONFIG_DIR_PATH}")
+            log_info(f"making good, bad and all weather in {CONFIG_DIR_PATH}")
             with open(CONFIG_DIR_PATH.joinpath('good.weather'), 'w') as weather_file:
-                weather_file.write("113 Sunny\n116 PartlyCloudy\n119 Cloudy\n")
+                weather_file.write("113 Sunny\n116 Partly Cloudy\n119 Cloudy\n")
             with open(CONFIG_DIR_PATH.joinpath('bad.weather'), 'w') as weather_file:
                 weather_file.write(
-                    "143 Fog\n179 LightSleetShowers\n182 LightSleet\n185 LightSleet\n200 ThunderyShowers\n227 " \
-                    "LightSnow\n230 HeavySnow\n248 Fog\n260 Fog\n266 LightRain\n281 LightSleet\n284 LightSleet\n293 " \
-                    "LightRain\n296 LightRain\n299 HeavyShowers\n302 HeavyRain\n305 HeavyShowers\n308 HeavyRain\n311 " \
-                    "LightSleet\n314 LightSleet\n317 LightSleet\n320 LightSnow\n323 LightSnowShowers\n326 " \
-                    "LightSnowShowers\n329 HeavySnow\n332 HeavySnow\n335 HeavySnowShowers\n338 HeavySnow\n350 " \
-                    "LightSleet\n353 LightShowers\n356 HeavyShowers\n359 HeavyRain\n362 LightSleetShowers\n365 " \
-                    "LightSleetShowers\n368 LightSnowShowers\n371 HeavySnowShowers\n374 LightSleetShowers\n377 " \
-                    "LightSleet\n386 ThunderyShowers\n389 ThunderyHeavyRain\n392 ThunderySnowShowers\n395 " \
-                    "HeavySnowShowers\n")
+                    "143 Fog\n179 Light Sleet Showers\n182 Light Sleet\n185 Light Sleet\n200 Thundery Showers\n227 "
+                    "Light Snow\n230 Heavy Snow\n248 Fog\n260 Fog\n266 Light Rain\n281 Light Sleet\n284 Light "
+                    "Sleet\n293 Light Rain\n296 Light Rain\n299 Heavy Showers\n302 Heavy Rain\n305 Heavy Showers\n308 "
+                    "Heavy Rain\n311 Light Sleet\n314 Light Sleet\n317 Light Sleet\n320 Light Snow\n323 Light Snow "
+                    "Showers\n326 Light Snow Showers\n329 Heavy Snow\n332 Heavy Snow\n335 Heavy Snow Showers\n338 "
+                    "Heavy Snow\n350 Light Sleet\n353 Light Showers\n356 Heavy Showers\n359 Heavy Rain\n362 Light "
+                    "Sleet Showers\n365 Light Sleet Showers\n368 Light Snow Showers\n371 Heavy Snow Showers\n374 "
+                    "Light Sleet Showers\n377 Light Sleet\n386 Thundery Showers\n389 Thundery Heavy Rain\n392 "
+                    "Thundery Snow Showers\n395 HeavySnowShowers\n "
+                )
+            with open(CONFIG_DIR_PATH.joinpath('all.weather'), 'w') as weather_file:
+                weather_file.write(
+                    "113 Sunny\n116 Partly Cloudy\n119 Cloudy\n122 Very Cloudy\n143 Fog\n176 Light Showers\n179 Light "
+                    "Sleet Showers\n182 Light Sleet\n185 Light Sleet\n200 Thundery Showers\n227 Light Snow\n230 Heavy "
+                    "Snow\n248 Fog\n260 Fog\n263 Light Showers\n266 Light Rain\n281 Light Sleet\n284 Light Sleet\n293 "
+                    "Light Rain\n296 Light Rain\n299 Heavy Showers\n302 Heavy Rain\n305 Heavy Showers\n308 Heavy "
+                    "Rain\n311 Light Sleet\n314 Light Sleet\n317 Light Sleet\n320 Light Snow\n323 Light Snow "
+                    "Showers\n326 Light Snow Showers\n329 Heavy Snow\n332 Heavy Snow\n335 Heavy Snow Showers\n338 "
+                    "Heavy Snow\n350 Light Sleet\n353 Light Showers\n356 Heavy Showers\n359 Heavy Rain\n362 Light "
+                    "Sleet Showers\n365 Light Sleet Showers\n368 Light Snow Showers\n371 Heavy Snow Showers\n374 "
+                    "Light Sleet Showers\n377 Light Sleet\n386 Thundery Showers\n389 Thundery Heavy Rain\n392 "
+                    "Thundery Snow Showers\n395 Heavy Snow Showers\n")
 
     def validate_weather_location(self, location_func: Callable):
 
