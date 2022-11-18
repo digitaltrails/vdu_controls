@@ -418,6 +418,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
     QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter
 
+APPNAME = "VDU Controls"
 VDU_CONTROLS_VERSION = '1.8.2'
 
 RELEASE_ANNOUNCEMENT = f"""
@@ -1509,11 +1510,10 @@ class VduController(QObject):
         try:
             return self.ddcutil.get_attribute(self.vdu_id, vcp_code, sleep_multiplier=self.sleep_multiplier)
         except subprocess.CalledProcessError as e:
-            alert = QMessageBox()
+            alert = MessageBox(QMessageBox.Critical)
             alert.setText(tr("Failed to obtain monitor {} vcp_code {}").format(self.vdu_id, vcp_code))
             alert.setInformativeText(
                 "Problem communicating with monitor {} {}. Controls may be incorrect.".format(self.vdu_id, str(e)))
-            alert.setIcon(QMessageBox.Critical)
             alert.exec()
             return '0', '0'
 
@@ -1618,11 +1618,8 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
                 editor.save(cancel=QMessageBox.Ignore)
                 nothing_was_saved = False
         if nothing_to_save_warning and nothing_was_saved:
-            alert = QMessageBox()
-            alert.setIcon(QMessageBox.Critical)
+            alert = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Yes | QMessageBox.No, default=QMessageBox.No)
             alert.setText(tr("Nothing needs saving. Do you wish to save anyway?"))
-            alert.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-            alert.setDefaultButton(QMessageBox.No)
             if alert.exec() == QMessageBox.Yes:
                 for editor in save_order:
                     editor.save(cancel=QMessageBox.Ignore, force=True)
@@ -1680,10 +1677,8 @@ class SettingsEditorTab(QWidget):
             if self.is_unsaved():
                 self.save(cancel=QMessageBox.Cancel)
             else:
-                decline_save_alert = QMessageBox()
+                decline_save_alert = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Ok)
                 decline_save_alert.setText(tr('No unsaved changes for {}.').format(vdu_config.config_name))
-                decline_save_alert.setIcon(QMessageBox.Critical)
-                decline_save_alert.setStandardButtons(QMessageBox.Ok)
                 decline_save_alert.exec()
 
         buttons_widget = QWidget()
@@ -1707,13 +1702,10 @@ class SettingsEditorTab(QWidget):
 
     def save(self, cancel: int = QMessageBox.Close, force: bool = False) -> None:
         if self.is_unsaved() or force:
-            confirmation = QMessageBox()
-            message = tr('Update existing {}?' if self.config_path.exists() else "Create new {}"
-                         ).format(self.config_path.as_posix())
+            confirmation = MessageBox(QMessageBox.Question, buttons=QMessageBox.Save | cancel, default=QMessageBox.Save)
+            message = tr('Update existing {}?') if self.config_path.exists() else tr("Create new {}?")
+            message = message.format(self.config_path.as_posix())
             confirmation.setText(message)
-            confirmation.setIcon(QMessageBox.Question)
-            confirmation.setStandardButtons(QMessageBox.Save | cancel)
-            confirmation.setDefaultButton(QMessageBox.Save)
             if confirmation.exec() == QMessageBox.Save:
                 self.ini_editable.save(self.config_path)
                 copy = pickle.dumps(self.ini_editable)
@@ -1919,24 +1911,20 @@ class SettingsEditorLocationWidget(SettingsEditorFieldBase):
         return os.getenv('VDU_CONTROLS_IPINFO_URL', default='https://ipinfo.io/json')
 
     def location_dialog(self) -> str | None:
-        ask_permission = QMessageBox()
-        ask_permission.setIcon(QMessageBox.Question)
+        ask_permission = MessageBox(QMessageBox.Question, buttons=QMessageBox.Yes | QMessageBox.No)
         ask_permission.setText(
             tr('Query {} to obtain information based on your IP-address?').format(self.get_ipinfo_url()))
-        ask_permission.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
         if ask_permission.exec() == QMessageBox.Yes:
-            location_msg = QMessageBox()
-            location_msg.setIcon(QMessageBox.Information)
             try:
                 ipinfo = self.retrieve_ipinfo()
                 info_text = f"{tr('Use the following info?')}\n" f"{ipinfo['loc']}\n" + \
                             ','.join([ipinfo[key] for key in ('city', 'region', 'country') if key in ipinfo])
                 full_text = f"Queried {self.get_ipinfo_url()}\n" + \
                             '\n'.join([f"{name}: {value}" for name, value in ipinfo.items()])
-                location_msg.setText(info_text)
-                location_msg.setDetailedText(full_text)
-                location_msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-                if location_msg.exec() == QMessageBox.Yes:
+                confirm = MessageBox(QMessageBox.Information, buttons=QMessageBox.Yes | QMessageBox.No)
+                confirm.setText(info_text)
+                confirm.setDetailedText(full_text)
+                if confirm.exec() == QMessageBox.Yes:
                     data = ipinfo['loc']
                     # Get location name for weather lookups.
                     for key in ('city', 'region', 'country'):
@@ -1945,8 +1933,7 @@ class SettingsEditorLocationWidget(SettingsEditorFieldBase):
                             break
                     return data
             except (URLError, KeyError) as e:
-                error_dialog = QMessageBox()
-                error_dialog.setIcon(QMessageBox.Critical)
+                error_dialog = MessageBox(QMessageBox.Critical)
                 error_dialog.setText(
                     tr("Failed to obtain info from {}: {}").format(self.get_ipinfo_url(), e))
                 error_dialog.exec()
@@ -1981,8 +1968,7 @@ def restart_application(reason: str) -> None:
     To be invoked when part of the GUI executes a VCP command that changes the number of connected monitors or
     when the GUI detects the number of monitors has changes.
     """
-    alert = QMessageBox()
-    alert.setIcon(QMessageBox.Critical)
+    alert = MessageBox(QMessageBox.Critical)
     alert.setText(reason)
     alert.setInformativeText(tr('When this message is dismissed, vdu_controls will restart.'))
     alert.exec()
@@ -2062,13 +2048,10 @@ class VduControlSlider(QWidget):
                         self.connected_vdus_changed.emit()
                     return
                 except subprocess.SubprocessError:
-                    msg = QMessageBox()
-                    msg.setIcon(QMessageBox.Critical)
-                    msg.setText(
-                        tr("Set value: Failed to communicate with display {}").format(self.vdu_model.vdu_id))
+                    msg = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Retry | QMessageBox.Close, default=QMessageBox.Retry)
+                    msg.setText(tr("Set value: Failed to communicate with display {}").format(self.vdu_model.vdu_id))
                     msg.setInformativeText(tr('Is the monitor switched off?<br>'
                                               'Is the sleep-multiplier setting too low?'))
-                    msg.setStandardButtons(QMessageBox.Retry | QMessageBox.Close)
                     if msg.exec() == QMessageBox.Close:
                         self.connected_vdus_changed.emit()
                         return
@@ -2172,13 +2155,10 @@ class VduControlComboBox(QWidget):
                         self.connected_vdus_changed.emit()
                     return
                 except subprocess.SubprocessError:
-                    msg = QMessageBox()
-                    msg.setIcon(QMessageBox.Critical)
-                    msg.setText(
-                        tr("Set option: failed to communicate with display {}").format(self.vdu_model.vdu_id))
+                    msg = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Retry | QMessageBox.Close, default=QMessageBox.Retry)
+                    msg.setText(tr("Set option: failed to communicate with display {}").format(self.vdu_model.vdu_id))
                     msg.setInformativeText(tr('Is the monitor switched off?<br>'
                                               'Is the sleep-multiplier setting too low?'))
-                    msg.setStandardButtons(QMessageBox.Retry | QMessageBox.Close)
                     if msg.exec() == QMessageBox.Close:
                         self.connected_vdus_changed.emit()
                         return
@@ -2206,7 +2186,7 @@ class VduControlComboBox(QWidget):
             self.keys.append(self.current_value)
             self.combo_box.addItem('UNKNOWN-' + str(self.current_value), self.current_value)
             self.combo_box.model().item(self.combo_box.count() - 1).setEnabled(False)
-            alert = QMessageBox()
+            alert = MessageBox(QMessageBox.Critical)
             alert.setText(
                 tr("Display {vnum} {vdesc} feature {code} '({cdesc})' has an undefined value '{value}'. "
                    "Valid values are {valid}.").format(
@@ -2220,7 +2200,6 @@ class VduControlComboBox(QWidget):
                 tr('If you want to extend the set of permitted values, you can edit the metadata '
                    'for {} in the settings panel.  For more details see the man page concerning '
                    'VDU/VDU-model config files.').format(self.vdu_model.get_vdu_description()))
-            alert.setIcon(QMessageBox.Critical)
             alert.exec()
 
 
@@ -2252,8 +2231,7 @@ class VduControlPanel(QWidget):
                     try:
                         control = VduControlComboBox(vdu_model, capability)
                     except ValueError as valueError:
-                        alert = QMessageBox()
-                        alert.setIcon(QMessageBox.Critical)
+                        alert = MessageBox(QMessageBox.Critical)
                         alert.setText(valueError.args[0])
                         alert.setInformativeText(
                             tr('If you want to extend the set of permitted values, see the man page concerning '
@@ -2268,8 +2246,7 @@ class VduControlPanel(QWidget):
             elif warnings:
                 missing_vcp = VDU_SUPPORTED_CONTROLS.by_code[
                     vcp_code].name if vcp_code in VDU_SUPPORTED_CONTROLS.by_code else vcp_code
-                alert = QMessageBox()
-                alert.setIcon(QMessageBox.Warning)
+                alert = MessageBox(QMessageBox.Warning)
                 alert.setText(
                     tr('Monitor {} lacks a VCP control for {}.').format(
                         vdu_model.get_vdu_description(), tr(missing_vcp)))
@@ -2409,7 +2386,8 @@ class Preset:
             return ''
         basic_desc = format_solar_elevation_description(elevation)
         weather_fn = self.get_weather_restriction_filename()
-        weather_suffix = tr(" (subject to {} weather)").format(Path(weather_fn).stem.replace('_', ' ')) if weather_fn is not None else ''
+        weather_suffix = tr(" (subject to {} weather)").format(
+            Path(weather_fn).stem.replace('_', ' ')) if weather_fn is not None else ''
         # This might not work too well in translation - rethink?
         if self.elevation_time_today:
             if self.timer and self.timer.remainingTime() > 0:
@@ -2499,18 +2477,30 @@ class Preset:
             with open(weather_restriction_filename) as weather_file:
                 code_list = weather_file.readlines()
             log_info(f"Preset {self.name} weather requirements {weather_restriction_filename}: {code_list}")
-            weather = QueryWeather(location.place_name)
-            if weather.area_name == "UNKNOWN":
-                return True
-            log_info(f"Current weather: {weather.area_name} {weather.weather_code} {weather.weather_desc}")
-            for code_line in code_list:
-                # Allow spaces or commas
-                required_code = code_line.strip().split()[0].split(',')[0]
-                if weather.weather_code.strip() == required_code:
-                    log_info("Meet required weather conditions "
-                             f"{weather.area_name} {weather.weather_desc} {weather.weather_code}")
+            try:
+                weather = QueryWeather(location.place_name)
+                if weather.area_name == "UNKNOWN":
+                    msg = MessageBox(QMessageBox.Warning)
+                    msg.setText(
+                        tr("Unknown weather location, ignoring weather requirements. Please check Settings Location."))
+                    msg.exec()
                     return True
-            log_info(f"Cancelled due to weather")
+                log_info(f"Current weather: {weather.area_name} {weather.weather_code} {weather.weather_desc}")
+                for code_line in code_list:
+                    # Allow spaces or commas
+                    required_code = code_line.strip().split()[0].split(',')[0]
+                    if weather.weather_code.strip() == required_code:
+                        log_info("Meet required weather conditions "
+                                 f"{weather.area_name} {weather.weather_desc} {weather.weather_code}")
+                        return True
+                log_info(f"Cancelled due to weather")
+            except ValueError as e:
+                msg = MessageBox(QMessageBox.Warning)
+                msg.setText(
+                    tr("Ignoring weather requirements, unable to query local weather: {}").format(str(e.args[0])))
+                msg.setInformativeText(e.args[1])
+                msg.exec()
+                return True
             return False
 
     def get_weather_restriction_filename(self):
@@ -2718,26 +2708,21 @@ class VduControlsMainPanel(QWidget):
                                                self.ddcutil)
                 except Exception as e:
                     # Catch any kind of parse related error
-                    error_nocaps = QMessageBox()
-                    error_nocaps.setIcon(QMessageBox.Critical)
-                    error_nocaps.setText(
-                        tr('Failed to obtain capabilities for monitor {} {} {}.').format(vdu_id,
-                                                                                         vdu_model_name,
-                                                                                         vdu_serial))
-                    error_nocaps.setInformativeText(tr(
+                    no_auto = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Ignore | QMessageBox.Apply | QMessageBox.Retry)
+                    no_auto.setText(
+                        tr('Failed to obtain capabilities for monitor {} {} {}.').format(vdu_id, vdu_model_name, vdu_serial))
+                    no_auto.setInformativeText(tr(
                         'Cannot automatically configure this monitor.'
                         '\n You can choose to:'
                         '\n 1: Retry obtaining the capabilities.'
                         '\n 2: Ignore this monitor.'
                         '\n 3: Apply standard brightness and contrast controls.'))
-                    error_nocaps.setStandardButtons(QMessageBox.Ignore | QMessageBox.Apply | QMessageBox.Retry)
-                    choice = error_nocaps.exec()
+                    choice = no_auto.exec()
                     if choice == QMessageBox.Ignore:
                         controller = VduController(vdu_id, vdu_model_name, vdu_serial, manufacturer, main_config,
                                                    self.ddcutil, ignore_monitor=True)
                         controller.write_template_config_files()
-                        warn = QMessageBox()
-                        warn.setIcon(QMessageBox.Information)
+                        warn = MessageBox(QMessageBox.Information)
                         warn.setText(tr('Ignoring {} monitor.').format(vdu_model_name))
                         warn.setInformativeText(
                             tr('Wrote {} config files to {}.').format(vdu_model_name, CONFIG_DIR_PATH))
@@ -2746,11 +2731,9 @@ class VduControlsMainPanel(QWidget):
                         controller = VduController(vdu_id, vdu_model_name, vdu_serial, manufacturer, main_config,
                                                    self.ddcutil, assume_standard_controls=True)
                         controller.write_template_config_files()
-                        warn = QMessageBox()
-                        warn.setIcon(QMessageBox.Information)
+                        warn = MessageBox(QMessageBox.Information)
                         warn.setText(
-                            tr('Assuming {} has brightness and contrast controls.').format(vdu_model_name,
-                                                                                           CONFIG_DIR_PATH))
+                            tr('Assuming {} has brightness and contrast controls.').format(vdu_model_name, CONFIG_DIR_PATH))
                         warn.setInformativeText(
                             tr('Wrote {} config files to {}.').format(vdu_model_name, CONFIG_DIR_PATH) +
                             tr('\nPlease check these files and edit or remove them if they '
@@ -2770,8 +2753,7 @@ class VduControlsMainPanel(QWidget):
                     self.vdu_control_panels.append(vdu_control_panel)
                     controllers_layout.addWidget(vdu_control_panel)
                 elif self.warnings:
-                    warn_omitted = QMessageBox()
-                    warn_omitted.setIcon(QMessageBox.Warning)
+                    warn_omitted = MessageBox(QMessageBox.Warning)
                     warn_omitted.setText(
                         tr('Monitor {} {} lacks any accessible controls.').format(controller.vdu_id,
                                                                                   controller.get_vdu_description()))
@@ -2794,8 +2776,7 @@ class VduControlsMainPanel(QWidget):
             no_vdu_layout.addSpacing(32)
             controllers_layout.addWidget(no_vdu_widget)
             if self.warnings:
-                error_no_monitors = QMessageBox()
-                error_no_monitors.setIcon(QMessageBox.Critical)
+                error_no_monitors = MessageBox(QMessageBox.Critical)
                 error_no_monitors.setText(tr('No controllable monitors found.'))
                 extra_text = \
                     tr("(Most recent ddcutil error: {})").format(str(ddcutil_problem)) if ddcutil_problem else ''
@@ -2961,6 +2942,13 @@ class PresetController:
                 all_done = False
                 problems.append((preset_name, problem_id))
         return problems
+
+
+class MessageBox(QMessageBox):
+    def __init__(self, icon: QIcon, buttons: int | None = None, default: int | None = None) -> None:
+        super().__init__(icon, APPNAME, None, buttons=buttons)
+        if default is not None:
+            self.setDefaultButton(default)
 
 
 class PushButtonLeftJustified(QPushButton):
@@ -3148,7 +3136,8 @@ class QueryWeather:
         lang = locale.getlocale()[0][:2]
         if location_name is None or location_name.strip() == '':
             location_name = ''
-        self.url = f"https://wttr.in/{location_name}?" + urllib.parse.urlencode({'lang': lang, 'format': 'j1'})
+        wttr_url = os.getenv('VDU_CONTROLS_WTTR_URL', default='https://wttr.in')
+        self.url = f"{wttr_url}/{location_name}?" + urllib.parse.urlencode({'lang': lang, 'format': 'j1'})
         self.weather_data = None
         try:
             with urllib.request.urlopen(self.url) as request:
@@ -3168,9 +3157,11 @@ class QueryWeather:
                 self.longitude = self.weather_data['nearest_area'][0]['longitude']
         except urllib.error.HTTPError as e:
             if e.code == 404:
-                self.area_name = 'UNKNOWN'
-                return
-            raise ValueError(self.url, str(e))
+                raise ValueError(tr("Unknown location {}".format(location_name)),
+                                 tr("Please check Location in Settings"))
+            raise ValueError(tr("Failed to get weather from {}").format(self.url), str(e))
+        except URLError as ue:
+            raise ValueError(tr("Failed to get weather from {}").format(self.url), str(ue))
 
     def __str__(self):
         if self.weather_data is None:
@@ -3257,34 +3248,28 @@ class PresetChooseWeatherWidget(QWidget):
         if self.warned == location_func():
             return
         log_info("Validating weather location.")
-        corrective_actions = tr("You can use Setting's Detect button to automatically add a location name " \
-                                "or manually change the Setting's location name to one wttr recognises.")
         location = location_func()
-        weather = QueryWeather(location.place_name)
-        if weather.area_name == "UNKNOWN":
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Critical)
-            msg.setText(
-                tr("The site https://wttr.in doesn't recognise place-name {}.").format(location.place_name))
-            msg.setInformativeText(corrective_actions)
+        try:
+            weather = QueryWeather(location.place_name)
+            kilometres = calc_kilometers(float(weather.latitude), float(weather.longitude),
+                                         location.latitude, location.longitude)
+            if kilometres > 200:
+                use_km = QLocale.system().measurementSystem() == QLocale.MetricSystem
+                msg = MessageBox(QMessageBox.Warning)
+                msg.setText(
+                    tr("The site https://wttr.in reports your location as {}, {}, {},{} "
+                       "which is about {} {} from the latitude and longitude specified in Settings."
+                       ).format(weather.area_name, weather.country_name, weather.latitude, weather.longitude,
+                                round(kilometres if use_km else kilometres * 0.621371), 'km' if use_km else 'miles'))
+                msg.setInformativeText("Please check the location specified in Settings.")
+                msg.setDetailedText(f"{weather}")
+                msg.exec()
+            self.warned = location
+        except ValueError as e:
+            msg = MessageBox(QMessageBox.Critical)
+            msg.setText(tr("Failed to validate weather location: {}").format(e.args[0]))
+            msg.setInformativeText(e.args[1])
             msg.exec()
-            return
-        kilometres = calc_kilometers(float(weather.latitude), float(weather.longitude),
-                                     location.latitude, location.longitude)
-        if kilometres > 200:
-            use_km = QLocale.system().measurementSystem() == QLocale.MetricSystem
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Warning)
-            msg.setText(
-                tr("The site https://wttr.in reports your location as {}, {}, {},{} "
-                   "which is about {} {} from the latitude and longitude specified in Settings."
-                   "Please check the location specified in Settings."
-                   ).format(weather.area_name, weather.country_name, weather.latitude, weather.longitude,
-                            round(kilometres if use_km else kilometres * 0.621371), 'km' if use_km else 'miles'))
-            msg.setInformativeText(corrective_actions)
-            msg.setDetailedText(f"{weather}")
-            msg.exec()
-        self.warned = location
 
     def populate(self):
         if self.chooser.count() == 0:
@@ -3725,24 +3710,18 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
     def save_preset(self, preset: Preset) -> None:
         preset_path = get_config_path(proper_name('Preset', preset.name))
         if preset_path.exists():
-            confirmation = QMessageBox()
-            confirmation.setIcon(QMessageBox.Question)
+            confirmation = MessageBox(QMessageBox.Question, buttons=QMessageBox.Save | QMessageBox.Cancel, default=QMessageBox.Save)
             message = tr('Update existing {} preset with current monitor settings?').format(preset.name)
             confirmation.setText(message)
-            confirmation.setStandardButtons(QMessageBox.Save | QMessageBox.Cancel)
-            confirmation.setDefaultButton(QMessageBox.Save)
             if confirmation.exec() == QMessageBox.Cancel:
                 return
         self.preset_name_edit.setText('')
         self.main_window.save_preset(preset)
 
     def delete_preset(self, preset: Preset, target_widget: QWidget = None) -> None:
-        delete_confirmation = QMessageBox()
-        delete_confirmation.setIcon(QMessageBox.Question)
-        delete_confirmation.setText(tr('Delete {}?').format(preset.name))
-        delete_confirmation.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
-        delete_confirmation.setDefaultButton(QMessageBox.Ok)
-        rc = delete_confirmation.exec()
+        confirmation = MessageBox(QMessageBox.Question, buttons=QMessageBox.Ok | QMessageBox.Cancel, default=QMessageBox.Cancel)
+        confirmation.setText(tr('Delete {}?').format(preset.name))
+        rc = confirmation.exec()
         if rc == QMessageBox.Cancel:
             return
         self.main_window.delete_preset(preset)
@@ -3792,11 +3771,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             return
         existing_preset_widget = self.find_preset_widget(preset_name)
         if existing_preset_widget:
-            confirmation = QMessageBox()
-            confirmation.setIcon(QMessageBox.Question)
+            confirmation = MessageBox(QMessageBox.Question, buttons=QMessageBox.Save | QMessageBox.Cancel, default=QMessageBox.Save)
             confirmation.setText(tr("Replace existing '{}' preset?").format(preset_name))
-            confirmation.setStandardButtons(QMessageBox.Save | QMessageBox.Cancel)
-            confirmation.setDefaultButton(QMessageBox.Save)
             if confirmation.exec() == QMessageBox.Cancel:
                 return
         preset = Preset(preset_name)
@@ -3845,11 +3821,9 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
 
     def closeEvent(self, event) -> None:
         if self.preset_name_edit.text().strip() != '':
-            alert = QMessageBox()
-            alert.setIcon(QMessageBox.Question)
+            alert = MessageBox(QMessageBox.Question, buttons=QMessageBox.Save | QMessageBox.Ignore | QMessageBox.Cancel,
+                               default=QMessageBox.Save)
             alert.setText("Save current edit?")
-            alert.setStandardButtons(QMessageBox.Save | QMessageBox.Ignore | QMessageBox.Cancel)
-            alert.setDefaultButton(QMessageBox.Save)
             answer = alert.exec()
             if answer == QMessageBox.Cancel:
                 event.ignore()
@@ -3864,8 +3838,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
 def exception_handler(e_type, e_value, e_traceback):
     """Overarching error handler in case something unexpected happens."""
     log_error("\n" + ''.join(traceback.format_exception(e_type, e_value, e_traceback)))
-    alert = QMessageBox()
-    alert.setIcon(QMessageBox.Critical)
+    alert = MessageBox(QMessageBox.Critical)
     alert.setText(tr('Error: {}').format(''.join(traceback.format_exception_only(e_type, e_value))))
     alert.setInformativeText(tr('Is --sleep-multiplier set too low?') +
                              '<br>_______________________________________________________<br>')
@@ -4321,17 +4294,13 @@ class MainWindow(QMainWindow):
             splash.finish(self)
 
         if not main_config.ini_content.is_version_ge(1, 7, 0):
-            release_alert = QMessageBox()
-            release_alert.setIcon(QMessageBox.Information)
+            release_alert = MessageBox(QMessageBox.Information, buttons=QMessageBox.Close)
             release_alert.setText(RELEASE_ANNOUNCEMENT)
             release_alert.setTextFormat(Qt.RichText)
-            release_alert.setStandardButtons(QMessageBox.Close)
             release_alert.exec()
-
             if main_config.file_path:
                 log_info(f"Converting {main_config.file_path} to version {VDU_CONTROLS_VERSION}")
                 main_config.ini_content.save(main_config.file_path, backup_dir_name='pre-v1.7')
-
             else:
                 # Stops the release notes from being repeated.
                 main_config.write_file(get_config_path('vdu_controls'))
@@ -4340,8 +4309,7 @@ class MainWindow(QMainWindow):
         failed_conversion = self.preset_controller.convert_presets_v1_7(self.main_control_panel.new_and_old_ids)
         if len(failed_conversion) != 0:
             log_warning("Not all presets were converted, a monitor that is normally present is probably turned off.")
-            cvt_alert = QMessageBox()
-            cvt_alert.setIcon(QMessageBox.Warning)
+            cvt_alert = MessageBox(QMessageBox.Warning)
             cvt_alert.setText(tr("Temporarily unable to migrate some presets to {}:\n{}").format(
                 VDU_CONTROLS_VERSION,
                 '\n'.join(f"   {p} - {v}" for p, v in failed_conversion)))
@@ -4498,19 +4466,12 @@ class MainWindow(QMainWindow):
         return most_recent_overdue
 
     def activate_scheduled_preset(self, preset: Preset):
-        try:
-            if preset.is_weather_ok(self.main_config.get_location()):
-                log_info(f"Preset {preset.name} activated according the schedule at {zoned_now()}")
-                self.restore_preset(preset)
-                presets_dialog = PresetsDialog.get_instance()
-                if presets_dialog:
-                    presets_dialog.refresh_view()
-        except ValueError as e:
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Critical)
-            msg.setText(tr("Unable to query local weather: {}").format(str(e.args[0])))
-            msg.setInformativeText(e.args[1])
-            msg.exec()
+        if preset.is_weather_ok(self.main_config.get_location()):
+            log_info(f"Preset {preset.name} activated according the schedule at {zoned_now()}")
+            self.restore_preset(preset)
+            presets_dialog = PresetsDialog.get_instance()
+            if presets_dialog:
+                presets_dialog.refresh_view()
 
 
 class SignalWakeupHandler(QtNetwork.QAbstractSocket):
@@ -4787,12 +4748,10 @@ def main():
         log_info(f"Trying to restart - this only works if {app.arguments()[0]} is executable and on your PATH): ", )
         restart_status = QProcess.startDetached(app.arguments()[0], app.arguments()[1:])
         if not restart_status:
-            dialog = QMessageBox()
-            dialog.setIcon(QMessageBox.Critical)
+            dialog = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Close)
             dialog.setText(tr("Restart of {} failed.  Please restart manually.".format(app.arguments()[0])))
             dialog.setInformativeText(tr("This is probably because {} is not"
                                          " executable or is not on your PATH.".format(app.arguments()[0])))
-            dialog.setStandardButtons(QMessageBox.Close)
             dialog.exec()
     sys.exit(rc)
 
