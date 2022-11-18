@@ -2967,12 +2967,13 @@ class PushButtonLeftJustified(QPushButton):
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent=parent)
         self.label = QLabel()
-        if 'xfce' in current_desktop.lower():
-            # XFCE issue - label text gets clipped - should I enable this or raise a bug against XFCE
-            self.setFont(QFont(self.font().family(), self.font().pointSize() + 4, self.font().weight()))
-            self.label.setFont(QFont(self.font().family(), self.font().pointSize() - 2, self.font().weight()))
-        self.setLayout(QVBoxLayout())
+        layout = QVBoxLayout()
+        self.setLayout(layout)
         self.layout().addWidget(self.label)
+        # Not sure if this helps:
+        self.setContentsMargins(0, 0, 0, 0)
+        # Seems to fix top/bottom clipping on openbox and xfce:
+        layout.setContentsMargins(0, 0, 0, 0)
 
     def setText(self, text: str) -> None:
         self.label.setText(text)
