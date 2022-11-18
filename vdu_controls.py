@@ -2950,8 +2950,8 @@ class PresetController:
 
 
 class MessageBox(QMessageBox):
-    def __init__(self, icon: QIcon, buttons: int | None = None, default: int | None = None) -> None:
-        super().__init__(icon, APPNAME, None, buttons=buttons)
+    def __init__(self, icon: QIcon, buttons: int = QMessageBox.NoButton, default: int | None = None) -> None:
+        super().__init__(icon, APPNAME, '', buttons=buttons)
         if default is not None:
             self.setDefaultButton(default)
 
