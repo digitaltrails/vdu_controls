@@ -774,7 +774,12 @@ def log_error(*args):
 def is_logging_in():
     # If the time is near the login time, maybe the user is logging in
     try:
-        last_login_cmd = ["last", "--time-format=iso", f"{os.getlogin()}", "-1"]
+        # DO NOT USE use os.getlogin(), openbox doesn't define a tty - which makes os.getlogin() fail.
+        username = os.environ.get('USER', '')
+        if username == '':
+            log_error("Non critical error, environment variable USER is not defined, cannot determine is_logging_in")
+            return False
+        last_login_cmd = ["last", "--time-format=iso", username, "-1"]
         login_datetime = datetime.fromisoformat(subprocess.check_output(last_login_cmd).split()[3].decode("ascii"))
         return datetime.now(login_datetime.tzinfo) - login_datetime <= timedelta(seconds=30)
     except (subprocess.SubprocessError, FileNotFoundError, ValueError, IndexError) as e:
