@@ -2052,7 +2052,7 @@ class VduControlSlider(QWidget):
                     msg.setText(tr("Set value: Failed to communicate with display {}").format(self.vdu_model.vdu_id))
                     msg.setInformativeText(tr('Is the monitor switched off?<br>'
                                               'Is the sleep-multiplier setting too low?'))
-                    if msg.exec() == QMessageBox.Close:
+                    if msg.exec() != QMessageBox.Retry:
                         self.connected_vdus_changed.emit()
                         return
 
@@ -2347,6 +2347,10 @@ class Preset:
         self.preset_ini = preset_ini
         return self.preset_ini
 
+    def clear_content(self):
+        self.remove_elevation_trigger()
+        self.preset_ini = ConfigIni()
+
     def save(self):
         self.preset_ini.save(self.path)
 
@@ -2407,7 +2411,7 @@ class Preset:
             self.timer.stop()
         else:
             self.timer = QTimer()
-            self.timer.setSingleShot(True)
+        self.timer.setSingleShot(True)
         self.timer_action = action
         self.timer.timeout.connect(partial(action, self))
         millis = int((when_local - zoned_now()) / timedelta(milliseconds=1))
@@ -2417,6 +2421,7 @@ class Preset:
             f"{self.get_solar_elevation()}")
 
     def remove_elevation_trigger(self):
+        log_info(f"Preset elevation trigger removed for '{self.name}'")
         if self.timer:
             log_info(f"Preset timer stopped for '{self.name}'")
             self.timer.stop()
@@ -2978,6 +2983,7 @@ class PresetWidget(QWidget):
                  down_action=Callable):
         super().__init__()
         self.name = preset.name
+        self.preset = preset
         line_layout = QHBoxLayout()
         line_layout.setSpacing(0)
         self.setLayout(line_layout)
@@ -3769,15 +3775,17 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         preset_name = self.preset_name_edit.text().strip()
         if preset_name == '':
             return
-        existing_preset_widget = self.find_preset_widget(preset_name)
+        existing_preset_widget: PresetWidget | None = self.find_preset_widget(preset_name)
         if existing_preset_widget:
             confirmation = MessageBox(QMessageBox.Question, buttons=QMessageBox.Save | QMessageBox.Cancel, default=QMessageBox.Save)
             confirmation.setText(tr("Replace existing '{}' preset?").format(preset_name))
             if confirmation.exec() == QMessageBox.Cancel:
                 return
-        preset = Preset(preset_name)
+            preset = existing_preset_widget.preset
+            preset.clear_content()
+        else:
+            preset = Preset(preset_name)
         self.initialise_preset_from_controls(preset)
-
         self.main_window.save_preset(preset)
         # Create a new widget - an easy way to update the icon.
         new_preset_widget = self.create_preset_widget(preset)
