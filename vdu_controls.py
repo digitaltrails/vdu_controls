@@ -13,7 +13,7 @@ Usage:
                      [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                      [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                      [--enable-vcp-code vcp_code] [--system-tray] [--debug] [--warnings] [--syslog]
-                     [--location latitude,longitude]
+                     [--location latitude,longitude] [--translations-enabled]
                      [--no-splash] [--sleep-multiplier multiplier]
                      [--create-config-files]
                      [--install] [--uninstall]
@@ -33,6 +33,8 @@ Optional arguments:
       --system-tray         start up as an entry in the system tray
       --location latitude,longitude
                             local latitude and longitude for triggering presets by solar elevation
+      --translations-enabled
+                            enable language translations
       --debug               enable debug output to stdout
       --warnings            popup a warning when a VDU lacks an enabled control
       --syslog              repeat diagnostic output to the syslog (journald)
@@ -122,6 +124,7 @@ The config files are in INI-format divided into a number of sections as outlined
     # The vdu-controls-globals section is only required in $HOME/.config/vdu_controls/vdu_controls.conf
     system-tray-enabled = yes|no
     splash-screen-enabled = yes|no
+    translations-enabled = yes|no
     warnings-enabled = yes|no
     debug-enabled = yes|no
     syslog-enabled = yes|no
@@ -1206,6 +1209,7 @@ class VduControlsConfig:
         if include_globals:
             self.ini_content[QT_TR_NOOP('vdu-controls-globals')] = {
                 QT_TR_NOOP('system-tray-enabled'): 'no',
+                QT_TR_NOOP('translations-enabled'): 'no',
                 QT_TR_NOOP('splash-screen-enabled'): 'yes',
                 QT_TR_NOOP('warnings-enabled'): 'no',
                 QT_TR_NOOP('debug-enabled'): 'no',
@@ -1250,6 +1254,9 @@ class VduControlsConfig:
 
     def is_system_tray_enabled(self) -> bool:
         return self.ini_content.getboolean('vdu-controls-globals', 'system-tray-enabled', fallback=False)
+
+    def is_translations_enabled(self) -> bool:
+        return self.ini_content.getboolean('vdu-controls-globals', 'translations-enabled', fallback=False)
 
     def is_splash_screen_enabled(self) -> bool:
         return self.ini_content.getboolean('vdu-controls-globals', 'splash-screen-enabled', fallback=True)
@@ -1382,6 +1389,8 @@ class VduControlsConfig:
         parser.add_argument('--system-tray', default=False, action='store_true',
                             help='start up as an entry in the system tray')
         parser.add_argument('--location', default=None, type=str, help='latitude,longitude')
+        parser.add_argument('--translations-enabled', default=False, action='store_true',
+                            help='enable langauage translations')
         parser.add_argument('--debug', default=False, action='store_true', help='enable debug output to stdout')
         parser.add_argument('--warnings', default=False, action='store_true',
                             help='popup a warning when a VDU lacks an enabled control')
@@ -1418,6 +1427,8 @@ class VduControlsConfig:
             self.ini_content['vdu-controls-globals']['system-tray-enabled'] = 'yes'
         if parsed_args.location:
             self.ini_content['vdu-controls-globals']['location'] = parsed_args.location
+        if parsed_args.translations_enabled:
+            self.ini_content['vdu-controls-globals']['translations-enabled'] = 'yes'
 
         if len(parsed_args.show) != 0:
             for control_def in VDU_SUPPORTED_CONTROLS.by_arg_name.values():
@@ -4134,6 +4145,9 @@ class MainWindow(QMainWindow):
             if ('vdu-controls-globals', 'system-tray-enabled') in changed_settings:
                 restart_application(tr("The change to the system-tray-enabled option requires "
                                        "vdu_controls to restart."))
+            if ('vdu-controls-globals', 'translations-enabled') in changed_settings:
+                restart_application(tr("The change to the translations-enabled option requires "
+                                       "vdu_controls to restart."))
             main_config.reload()
             self.main_control_panel.ddcutil.change_settings(
                 debug=main_config.is_debug_enabled(), default_sleep_multiplier=main_config.get_sleep_multiplier())
@@ -4672,7 +4686,7 @@ translator: QTranslator | None = None
 ts_translations: Mapping[str, str] = {}
 
 
-def initialise_locale_translations(app) -> QTranslator:
+def initialise_locale_translations(app: QApplication) -> QTranslator:
     # Has to be put somewhere it won't be garbage collected when this function goes out of scope.
     global translator
     translator = QTranslator()
@@ -4756,7 +4770,8 @@ def main():
     log_info(f"application style is {app.style().objectName()}")
 
     # Assign to variable to stop it being reclaimed as garbage
-    initialise_locale_translations(app)
+    if main_config.is_translations_enabled():
+        initialise_locale_translations(app)
 
     if args.about:
         AboutDialog.invoke()
