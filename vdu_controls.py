@@ -611,6 +611,21 @@ CONTRAST_SVG = b"""
 </svg>
 """
 
+COLOR_TEMPERATURE_SVG = b"""
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <defs>
+    <clipPath>
+      <path d="m7 1023.36h1v1h-1z" style="fill:#f2f2f2"/>
+    </clipPath>
+  </defs>
+  <g transform="translate(1,1)">
+    <path d="m11.5 9c-1.213861 0-2.219022.855928-2.449219 2h-6.05078v1h6.05078c.230197 1.144072 1.235358 2 2.449219 2 1.213861 0 2.219022-.855928 2.449219-2h5.05078v-1h-5.05078c-.230197-1.144072-1.235358-2-2.449219-2" style="fill:#2ecc71"/>
+    <path d="m5.5 14c-1.385 0-2.5 1.115-2.5 2.5 0 1.385 1.115 2.5 2.5 2.5 1.21386 0 2.219022-.855928 2.449219-2h11.05078v-1h-11.05078c-.230196-1.144072-1.235358-2-2.449219-2m0 1c.831 0 1.5.669 1.5 1.5 0 .831-.669 1.5-1.5 1.5-.831 0-1.5-.669-1.5-1.5 0-.831.669-1.5 1.5-1.5" style="fill:#1d99f3"/>
+    <path d="m14.5 3c-1.21386 0-2.219022.855928-2.449219 2h-9.05078v1h9.05078c.230197 1.144072 1.235359 2 2.449219 2 1.21386 0 2.219022-.855928 2.449219-2h2.050781v-1h-2.050781c-.230197-1.144072-1.235359-2-2.449219-2m0 1c.831 0 1.5.669 1.5 1.5 0 .831-.669 1.5-1.5 1.5-.831 0-1.5-.669-1.5-1.5 0-.831.669-1.5 1.5-1.5" style="fill:#da4453"/>
+  </g>
+</svg>
+"""
+
 VOLUME_SVG = b"""
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="-7 -7 40 40" width="24" height="24">
   <style id="current-color-scheme" type="text/css">
@@ -1051,7 +1066,7 @@ class VduGuiSupportedControls:
         '60': VcpCapability('60', QT_TR_NOOP('input source'), 'SNC', causes_config_change=True),
         'D6': VcpCapability('D6', QT_TR_NOOP('power mode'), 'SNC', causes_config_change=True),
         'CC': VcpCapability('CC', QT_TR_NOOP('OSD language'), 'SNC'),
-        '0C': VcpCapability('0C', QT_TR_NOOP('color temperature'), 'CNC', icon_source=BRIGHTNESS_SVG, enabled=True),
+        '0C': VcpCapability('0C', QT_TR_NOOP('color temperature'), 'CNC', icon_source=COLOR_TEMPERATURE_SVG, enabled=True),
     }
 
     # Purely here to force inclusion of additional messages in the output of pylupdate5 (internationalisation).
@@ -1897,7 +1912,7 @@ class SettingsEditorLocationWidget(SettingsEditorFieldBase):
     def reset(self):
         self.text_input.setText(self.section_editor.ini_before[self.section][self.option])
 
-    def retrieve_ipinfo(self):
+    def retrieve_ipinfo(self) -> Mapping:
         """
         https://stackoverflow.com/a/55432323/609575
         """
@@ -1905,7 +1920,6 @@ class SettingsEditorLocationWidget(SettingsEditorFieldBase):
         from json import load
         with urlopen(self.get_ipinfo_url()) as res:
             return load(res)
-        return {}
 
     def get_ipinfo_url(self):
         return os.getenv('VDU_CONTROLS_IPINFO_URL', default='https://ipinfo.io/json')
@@ -1990,7 +2004,9 @@ class VduControlSlider(QWidget):
 
         self.vdu_model = vdu_model
         self.vcp_capability = vcp_capability
-        self.current_value = self.max_value = None
+        self.current_value: int | None = None
+        self.max_value: int | None = None
+        # Populates the None ints above:
         self.refresh_data()
 
         layout = QHBoxLayout()
@@ -2470,7 +2486,7 @@ class Preset:
                          " a participating display wasn't available.")
                 # Not fully converted - probably a display is turned off.
                 return vdu_id
-        self.preset_ini.save(self.path, backup_dir_name=self.path.parent / 'pre-v1.7')
+        self.preset_ini.save(self.path, backup_dir_name=(self.path.parent / 'pre-v1.7').as_posix())
         log_info(f"Converted preset {self.name} to v1.7+ format.")
         return None
 
@@ -2668,8 +2684,8 @@ class VduControlsMainPanel(QWidget):
             for i in range(0, self.layout().count()):
                 item = self.layout().itemAt(i)
                 if isinstance(item, QWidget):
-                    self.layout().removeWidget()
-                    self.layout().itemAt(i).deleteLater()
+                    self.layout().removeWidget(item)
+                    item.deleteLater()
                 elif isinstance(item, QWidgetItem):
                     self.layout().removeItem(item)
                     item.widget().deleteLater()
