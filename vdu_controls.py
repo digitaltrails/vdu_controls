@@ -4520,9 +4520,9 @@ class MainWindow(QMainWindow):
         if preset.is_weather_ok(self.main_config.get_location()):
             log_info(f"Preset {preset.name} activated according the schedule at {zoned_now()}")
             self.restore_preset(preset)
-            presets_dialog = PresetsDialog.get_instance()
-            if presets_dialog:
-                presets_dialog.refresh_view()
+        presets_dialog = PresetsDialog.get_instance()
+        if presets_dialog:
+            presets_dialog.refresh_view()
 
 
 class SignalWakeupHandler(QtNetwork.QAbstractSocket):
