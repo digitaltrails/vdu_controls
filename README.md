@@ -17,8 +17,10 @@ By default ``vdu_controls`` offers a subset of controls including brightness, co
 controls can be enabled via the ``Settings`` dialog.  ``vdu_controls`` may optionally run as an entry in the
 system tray.
 
-Named ``Preset`` configurations can be saved for later recalled. For example, a user could create
-presets for night, day, photography, movies, and so forth.
+Named ``Preset`` configurations can be saved for later recall. For example, a user could create
+presets for night, day, photography, movies, and so forth.  Presets may be automatically triggered
+according to solar elevation, and can be further constrained by local weather conditions (as
+reported by [https://wttr.in](https://wttr.in)) 
 
 The UI's look-and-feel dynamically adjusts to the desktop theme and desktop environment: light-theme,
 dark-theme, KDE, Deepin, GNOME, and others.
@@ -218,6 +220,9 @@ Michael Hamilton\
 
 Version History
 ---------------
+* 1.8.2
+  * Solar elevation weather requirements.
+  * Locale language support and sample AI generated translations.
 * 1.8.0
   * Presets can be scheduled to activate according to solar elevation at a given latitude and longitude.
 * 1.7.2

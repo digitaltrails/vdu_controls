@@ -97,7 +97,7 @@ gzip -c docs/_build/man/vdu_controls.1 > %{buildroot}/%{_datadir}/man/man1/%{nam
 
 %changelog
 * Fri Nov 11 2022 Michael Hamilton <michael@actrix.gen.nz>
-- Internationalisation enhancements: vdu_controls 1.8.2
+- Weather requirments, Internationalisation enhancements: vdu_controls 1.8.2
 * Fri Nov 11 2022 Michael Hamilton <michael@actrix.gen.nz>
 - Fix daily scheduling of presets: vdu_controls 1.8.1
 * Sat Oct 29 2022 Michael Hamilton <michael@actrix.gen.nz>

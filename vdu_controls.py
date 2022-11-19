@@ -253,6 +253,19 @@ set to run at login, and they've also set a preset to trigger at dawn, but
 they don't actually log in until just after dawn, the overdue dawn preset will be
 triggered at login.
 
+A solar elevation trigger can have a weather requirement which will be checked
+against the weather reported by https://wttr.in.  By default, there are three
+possible weather requirements: ``good``, ``bad``, and ``all weather``. Each possible
+requirement is defined by a file containing a list of WWO
+(https://www.worldweatheronline.com) weather codes, one code per line.  The
+three default possibilities are contained in the files
+``$HOME/.config/vdu_controls/{good,bad,all}.weather``.  Additional weather
+requirements can be created by using a text editor to create further files.
+The ``all.weather`` file exists primarily as a convenient resource that lists
+all possible codes.  Because weather is unpredictable and forecasts are
+often unreliable or out of date, it's best to use weather requirements as a
+coarse measure. Going beyond good and bad may not be very practical.
+
 Presets - remote control
 ------------------------
 

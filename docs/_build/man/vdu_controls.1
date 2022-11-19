@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Nov 06, 2022" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Nov 19, 2022" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.3.1
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -43,7 +43,7 @@ A control panel for external monitors (\fIVisual Display Units\fP).
 [\-\-show {brightness,contrast,audio\-volume,input\-source,power\-mode,osd\-language}]
 [\-\-hide {brightness,contrast,audio\-volume,input\-source,power\-mode,osd\-language}]
 [\-\-enable\-vcp\-code vcp_code] [\-\-system\-tray] [\-\-debug] [\-\-warnings] [\-\-syslog]
-[\-\-location latitude,longitude]
+[\-\-location latitude,longitude] [\-\-translations\-enabled]
 [\-\-no\-splash] [\-\-sleep\-multiplier multiplier]
 [\-\-create\-config\-files]
 [\-\-install] [\-\-uninstall]
@@ -82,6 +82,9 @@ start up as an entry in the system tray
 local latitude and longitude for triggering presets by solar elevation
 .UNINDENT
 .INDENT 0.0
+.TP
+.B  \-\-translations\-enabled
+enable language translations
 .TP
 .B  \-\-debug
 enable debug output to stdout
@@ -203,6 +206,7 @@ The config files are in INI\-format divided into a number of sections as outline
 # The vdu\-controls\-globals section is only required in $HOME/.config/vdu_controls/vdu_controls.conf
 system\-tray\-enabled = yes|no
 splash\-screen\-enabled = yes|no
+translations\-enabled = yes|no
 warnings\-enabled = yes|no
 debug\-enabled = yes|no
 syslog\-enabled = yes|no
@@ -228,7 +232,7 @@ enable\-vcp\-codes = NN, NN, NN
 sleep\-multiplier = 0.5
 
 [ddcutil\-capabilities]
-# The (possibly edited) output from "ddcutil \-\-display N capabilities" with leading spaces retained.
+# The (possibly edited) output from \(dqddcutil \-\-display N capabilities\(dq with leading spaces retained.
 capabilities\-override =
 .ft P
 .fi
@@ -358,6 +362,19 @@ triggered for this day (if any).  For example, say a user has \fBvdu_controls\fP
 set to run at login, and they\(aqve also set a preset to trigger at dawn, but
 they don\(aqt actually log in until just after dawn, the overdue dawn preset will be
 triggered at login.
+.sp
+A solar elevation trigger can have a weather requirement which will be checked
+against the weather reported by \fI\%https://wttr.in\fP\&.  By default, there are three
+possible weather requirements: \fBgood\fP, \fBbad\fP, and \fBall weather\fP\&. Each possible
+requirement is defined by a file containing a list of WWO
+(\fI\%https://www.worldweatheronline.com\fP) weather codes, one code per line.  The
+three default possibilities are contained in the files
+\fB$HOME/.config/vdu_controls/{good,bad,all}.weather\fP\&.  Additional weather
+requirements can be created by using a text editor to create further files.
+The \fBall.weather\fP file exists primarily as a convenient resource that lists
+all possible codes.  Because weather is unpredictable and forecasts are
+often unreliable or out of date, it\(aqs best to use weather requirements as a
+coarse measure. Going beyond good and bad may not be very practical.
 .SS Presets \- remote control
 .sp
 UNIX/Linux signals may be used to instruct a running \fBvdu_controls\fP to invoke a preset.  This feature is
@@ -365,7 +382,7 @@ provided so that scripts, cron or systemd\-timer might be used to change the pre
 condition appropriate for local circumstances.
 .sp
 Signals in the range 40 to 55 correspond to first to last presets (if any are defined).  Additionally, SIGHUP can
-be used to initiate "Refresh settings from monitors".  For example:
+be used to initiate \(dqRefresh settings from monitors\(dq.  For example:
 .INDENT 0.0
 .INDENT 3.5
 Identify the running vdu_controls (assuming it is installed as /usr/bin/vdu_controls):
@@ -422,7 +439,7 @@ Ambient light level as measured by a webcam:
 .nf
 .ft C
 ffmpeg \-y \-s 1024x768 \-i /dev/video0 \-frames 1 $HOME/tmp/out.jpg 1>&2
-ambient=$(convert $HOME/tmp/out.jpg \-colorspace gray \-resize 1x1 \-evaluate\-sequence Max \-format "%[fx:100*mean]" info:)
+ambient=$(convert $HOME/tmp/out.jpg \-colorspace gray \-resize 1x1 \-evaluate\-sequence Max \-format \(dq%[fx:100*mean]\(dq info:)
 echo $ambient
 .ft P
 .fi
@@ -447,7 +464,7 @@ Local time/sunrise/sunset again from wttr.in:
 .sp
 .nf
 .ft C
-curl \(aqwttr.in?format="dawn=%D,dusk=%d,weather=%C"\(aq
+curl \(aqwttr.in?format=\(dqdawn=%D,dusk=%d,weather=%C\(dq\(aq
 .ft P
 .fi
 .UNINDENT
@@ -497,7 +514,7 @@ All default controls, speed up ddcutil\-VDU interaction by passing a sleep multi
 .UNINDENT
 .sp
 This script often refers to displays and monitors as VDU\(aqs in order to
-disambiguate the noun/verb duality of "display" and "monitor"
+disambiguate the noun/verb duality of \(dqdisplay\(dq and \(dqmonitor\(dq
 .SH PREREQUISITES
 .sp
 Described for OpenSUSE, similar for other distros:

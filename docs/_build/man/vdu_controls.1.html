@@ -8,7 +8,7 @@ Units</em>).</p>
                  [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                  [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                  [--enable-vcp-code vcp_code] [--system-tray] [--debug] [--warnings] [--syslog]
-                 [--location latitude,longitude]
+                 [--location latitude,longitude] [--translations-enabled]
                  [--no-splash] [--sleep-multiplier multiplier]
                  [--create-config-files]
                  [--install] [--uninstall]</code></pre>
@@ -25,6 +25,8 @@ Units</em>).</p>
   --system-tray         start up as an entry in the system tray
   --location latitude,longitude
                         local latitude and longitude for triggering presets by solar elevation
+  --translations-enabled
+                        enable language translations
   --debug               enable debug output to stdout
   --warnings            popup a warning when a VDU lacks an enabled control
   --syslog              repeat diagnostic output to the syslog (journald)
@@ -124,6 +126,7 @@ as outlined below::</p>
 # The vdu-controls-globals section is only required in $HOME/.config/vdu_controls/vdu_controls.conf
 system-tray-enabled = yes|no
 splash-screen-enabled = yes|no
+translations-enabled = yes|no
 warnings-enabled = yes|no
 debug-enabled = yes|no
 syslog-enabled = yes|no
@@ -245,6 +248,20 @@ example, say a user has <code>vdu_controls</code> set to run at login,
 and they’ve also set a preset to trigger at dawn, but they don’t
 actually log in until just after dawn, the overdue dawn preset will be
 triggered at login.</p>
+<p>A solar elevation trigger can have a weather requirement which will
+be checked against the weather reported by https://wttr.in. By default,
+there are three possible weather requirements: <code>good</code>,
+<code>bad</code>, and <code>all weather</code>. Each possible
+requirement is defined by a file containing a list of WWO
+(https://www.worldweatheronline.com) weather codes, one code per line.
+The three default possibilities are contained in the files
+<code>$HOME/.config/vdu_controls/{good,bad,all}.weather</code>.
+Additional weather requirements can be created by using a text editor to
+create further files. The <code>all.weather</code> file exists primarily
+as a convenient resource that lists all possible codes. Because weather
+is unpredictable and forecasts are often unreliable or out of date, it’s
+best to use weather requirements as a coarse measure. Going beyond good
+and bad may not be very practical.</p>
 <h2 id="presets---remote-control">Presets - remote control</h2>
 <p>UNIX/Linux signals may be used to instruct a running
 <code>vdu_controls</code> to invoke a preset. This feature is provided
