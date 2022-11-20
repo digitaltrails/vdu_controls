@@ -216,9 +216,10 @@ VDU, for example::
     audio-speaker-volume = 16
     input-source = 0f
 
-When the GUI is used to create a preset file, you can select which controls to save.  For example, you
-might create a preset that includes only the brightness, but not the contrast or audio volume.
-
+When the GUI is used to create a preset file, you may select which controls to save.  For example, you
+might create a preset that includes the brightness, but not the contrast or audio-volume. Keeping
+the included controls to a minimum reduces the chances of the VDU failing to keep up with the
+associated stream of DDC commands.
 
 Presets - solar elevation triggers
 ----------------------------------
@@ -970,10 +971,10 @@ class DdcUtil:
 
     def set_attribute(self, vdu_id: str, vcp_code: str, new_value: str, sleep_multiplier: float = None) -> None:
         """Send a new value to a specific VDU and vcp_code."""
-        if self.get_type(vcp_code) == COMPLEX_NON_CONTINUOUS_TYPE:
-            new_value = 'x' + new_value
         current, _ = self.get_attribute(vdu_id, vcp_code)
         if new_value != current:
+            if self.get_type(vcp_code) == COMPLEX_NON_CONTINUOUS_TYPE:
+                new_value = 'x' + new_value
             self.__run__('--display', vdu_id, 'setvcp', vcp_code, new_value, sleep_multiplier=sleep_multiplier)
 
     def vcp_info(self) -> str:
@@ -2013,7 +2014,83 @@ def restart_application(reason: str) -> None:
     QCoreApplication.exit(EXIT_CODE_FOR_RESTART)
 
 
-class VduControlSlider(QWidget):
+class VduException(Exception): pass
+
+
+class VduControlBase(QWidget):
+    """
+    Base GUI control for a DDC attribute.
+    """
+    connected_vdus_changed = pyqtSignal()
+    current_msgbox: MessageBox | None = None
+
+    class DataUptodate(object):
+        """Used to wrap sequences of operations that have uptodate data and have no need to call ddcutil to set/get"""
+        def __init__(self, ui_control: VduControlBase):
+            self.ui_control = ui_control
+
+        def __enter__(self):
+            self.ui_control.is_data_uptodate = True
+
+        def __exit__(self, exc_type, exc_value, exc_tb):
+            self.ui_control.is_data_uptodate = False
+
+    def __init__(self, vdu_model: VduController, vcp_capability: VcpCapability) -> None:
+        """Construct the slider control and initialize its values from the VDU."""
+        super().__init__()
+        self.vdu_model = vdu_model
+        self.vcp_capability = vcp_capability
+        self.is_data_uptodate = False
+
+    def restore_vdu_attribute(self, new_value):
+        # Used when restoring a Preset
+        # Confine the UI to update the UI view only = stop the UI update from causing a ddcutil request.
+        # We're doing the ddcutil request directly here so we can propagate exceptions back up the stack.
+        with VduControlBase.DataUptodate(self):
+            self.__change_vdu_attribute(new_value)
+
+    def ui_change_vdu_attribute(self, new_value):
+        # Used when the user manipulates a control.
+        # If our data from ddcutil is already uptodate, there is no need to issue any ddcutil commands
+        # If the data is not uptodate, this call is as result of the user changing a slider/combo, we need to update the VDU's
+        if not self.is_data_uptodate:
+            # Update VDU with what ever the user has changed in the GUI.
+            self.__change_vdu_attribute(new_value)
+
+    def __change_vdu_attribute(self, new_value):
+        while True:
+            try:
+                self.vdu_model.set_attribute(self.vcp_capability.vcp_code, new_value)
+                if self.vcp_capability.vcp_code in VDU_SUPPORTED_CONTROLS.by_code and \
+                        VDU_SUPPORTED_CONTROLS.by_code[self.vcp_capability.vcp_code].causes_config_change:
+                    self.connected_vdus_changed.emit()
+                return
+            except subprocess.SubprocessError as spe:
+                msg = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Retry | QMessageBox.Close, default=QMessageBox.Retry)
+                msg.setText(tr("Set value: Failed to communicate with display {}").format(self.vdu_model.get_vdu_description()))
+                msg.setAttribute(Qt.WA_DeleteOnClose)
+                msg.setInformativeText(tr('Is the monitor switched off?<br>'
+                                          'Is the sleep-multiplier setting too low?'))
+                # Only allow the latest such dialog to stand
+                if VduControlBase.current_msgbox is not None:
+                    # Cause any past incident to be ignored so that the latest takes precedence.
+                    log_info(f"Replacing exiting message box with new one.")
+                    VduControlBase.current_msgbox.done(QMessageBox.Ignore)
+                VduControlBase.current_msgbox = msg
+                answer = msg.exec()
+                VduControlBase.current_msgbox = None
+                if answer == QMessageBox.Close:
+                    # Assume that the configured VDU's have changed
+                    self.connected_vdus_changed.emit()
+                    return
+                elif answer == QMessageBox.Ignore:
+                    # Ignore means this incident has been superseded by a later one - due to the activation of a later preset timer.
+                    raise VduException(f"Failed to communicate with display {self.vdu_model.get_vdu_description()}") from spe
+                log_info(
+                    f"Retry set {self.vdu_model.get_vdu_description()} vcp_code {self.vcp_capability.vcp_code} to {new_value}.")
+
+
+class VduControlSlider(VduControlBase):
     """
     GUI control for a DDC continuously variable attribute.
 
@@ -2024,10 +2101,8 @@ class VduControlSlider(QWidget):
 
     def __init__(self, vdu_model: VduController, vcp_capability: VcpCapability) -> None:
         """Construct the slider control and initialize its values from the VDU."""
-        super().__init__()
+        super().__init__(vdu_model, vcp_capability)
 
-        self.vdu_model = vdu_model
-        self.vcp_capability = vcp_capability
         self.current_value: int | None = None
         self.max_value: int | None = None
         # Populates the None ints above:
@@ -2078,23 +2153,7 @@ class VduControlSlider(QWidget):
         def slider_changed(value: int) -> None:
             self.current_value = str(value)
             text_input.setText(self.current_value)
-            while True:
-                try:
-                    self.vdu_model.set_attribute(self.vcp_capability.vcp_code, self.current_value)
-                    if self.vcp_capability.vcp_code in VDU_SUPPORTED_CONTROLS.by_code and \
-                            VDU_SUPPORTED_CONTROLS.by_code[self.vcp_capability.vcp_code].causes_config_change:
-                        # The VCP command has turned one off a VDU or changed what it is connected to.
-                        # VDU ID's will now be out of whack - restart the GUI.
-                        self.connected_vdus_changed.emit()
-                    return
-                except subprocess.SubprocessError:
-                    msg = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Retry | QMessageBox.Close, default=QMessageBox.Retry)
-                    msg.setText(tr("Set value: Failed to communicate with display {}").format(self.vdu_model.vdu_id))
-                    msg.setInformativeText(tr('Is the monitor switched off?<br>'
-                                              'Is the sleep-multiplier setting too low?'))
-                    if msg.exec() != QMessageBox.Retry:
-                        self.connected_vdus_changed.emit()
-                        return
+            self.ui_change_vdu_attribute(self.current_value)
 
         slider.valueChanged.connect(slider_changed)
 
@@ -2139,7 +2198,8 @@ class VduControlSlider(QWidget):
 
     def refresh_view(self) -> None:
         """Copy the internally cached current value onto the GUI view."""
-        self.slider.setValue(int(self.current_value))
+        with VduControlBase.DataUptodate(self):
+            self.slider.setValue(int(self.current_value))
 
     def event(self, event: QEvent) -> bool:
         super().event(event)
@@ -2150,20 +2210,17 @@ class VduControlSlider(QWidget):
         return True
 
 
-class VduControlComboBox(QWidget):
+class VduControlComboBox(VduControlBase):
     """
     GUI control for a DDC non-continuously variable attribute, one that has a list of choices.
 
     This is a duck-typed GUI control widget (could inherit from an abstract type if we wanted to get formal about it).
     """
-    connected_vdus_changed = pyqtSignal()
 
     def __init__(self, vdu_model: VduController, vcp_capability: VcpCapability) -> None:
         """Construct the combobox control and initialize its values from the VDU."""
-        super().__init__()
+        super().__init__(vdu_model, vcp_capability)
 
-        self.vdu_model = vdu_model
-        self.vcp_capability = vcp_capability
         self.current_value = vdu_model.get_attribute(vcp_capability.vcp_code)[0]
 
         layout = QHBoxLayout()
@@ -2187,21 +2244,7 @@ class VduControlComboBox(QWidget):
         def index_changed(index: int) -> None:
             self.current_value = self.combo_box.currentData()
             self.validate_value()
-            while True:
-                try:
-                    self.vdu_model.set_attribute(self.vcp_capability.vcp_code, self.current_value)
-                    if self.vcp_capability.vcp_code in VDU_SUPPORTED_CONTROLS.by_code and \
-                            VDU_SUPPORTED_CONTROLS.by_code[self.vcp_capability.vcp_code].causes_config_change:
-                        self.connected_vdus_changed.emit()
-                    return
-                except subprocess.SubprocessError:
-                    msg = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Retry | QMessageBox.Close, default=QMessageBox.Retry)
-                    msg.setText(tr("Set option: failed to communicate with display {}").format(self.vdu_model.vdu_id))
-                    msg.setInformativeText(tr('Is the monitor switched off?<br>'
-                                              'Is the sleep-multiplier setting too low?'))
-                    if msg.exec() == QMessageBox.Close:
-                        self.connected_vdus_changed.emit()
-                        return
+            self.ui_change_vdu_attribute(self.current_value)
 
         combo_box.currentIndexChanged.connect(index_changed)
 
@@ -2218,8 +2261,9 @@ class VduControlComboBox(QWidget):
 
     def refresh_view(self) -> None:
         """Copy the internally cached current value onto the GUI view."""
-        self.validate_value()
-        self.combo_box.setCurrentIndex(self.keys.index(self.current_value))
+        with VduControlBase.DataUptodate(self):
+            self.validate_value()
+            self.combo_box.setCurrentIndex(self.keys.index(self.current_value))
 
     def validate_value(self):
         if self.current_value not in self.keys:
@@ -2330,6 +2374,7 @@ class VduControlPanel(QWidget):
         for control in self.vcp_controls:
             if control.vcp_capability.property_name() in preset_ini[vdu_id]:
                 control.current_value = preset_ini[vdu_id][control.vcp_capability.property_name()]
+                control.restore_vdu_attribute(control.current_value)
         self.refresh_view()
 
     def is_preset_active(self, preset_ini: ConfigIni) -> bool:
@@ -3206,7 +3251,8 @@ class QueryWeather:
                 raise ValueError(tr("Unknown location {}".format(location_name)),
                                  tr("Please check Location in Settings"))
             raise ValueError(tr("Failed to get weather from {}").format(self.url), str(e))
-        except URLError as ue:
+        except Exception as ue:
+            # Can't afford to fall over because of a problem with a remote site
             raise ValueError(tr("Failed to get weather from {}").format(self.url), str(ue))
 
     def __str__(self):
@@ -4374,18 +4420,21 @@ class MainWindow(QMainWindow):
         log_info(f"Preset changing to {preset.name}")
         preset.load()
         restored_list = []
-        for section in preset.preset_ini:
-            for control_panel in self.main_control_panel.vdu_control_panels:
-                if section == control_panel.vdu_model.vdu_stable_id:
-                    control_panel.restore_vdu_state(preset.preset_ini)
-                    restored_list.append(control_panel)
-        # Cope with mixed pre-post v1.7 in a preset file,
-        # if not already restored from post v1.7 section, use pre v1.7 section
-        for section in preset.preset_ini:
-            for control_panel in self.main_control_panel.vdu_control_panels:
-                if control_panel not in restored_list and section == control_panel.vdu_model.pre1_7_display_based_id:
-                    control_panel.restore_vdu_state_pre17(preset.preset_ini)
-        self.display_active_preset(preset)
+        try:
+            for section in preset.preset_ini:
+                for control_panel in self.main_control_panel.vdu_control_panels:
+                    if section == control_panel.vdu_model.vdu_stable_id:
+                        control_panel.restore_vdu_state(preset.preset_ini)
+                        restored_list.append(control_panel)
+            # Cope with mixed pre-post v1.7 in a preset file,
+            # if not already restored from post v1.7 section, use pre v1.7 section
+            for section in preset.preset_ini:
+                for control_panel in self.main_control_panel.vdu_control_panels:
+                    if control_panel not in restored_list and section == control_panel.vdu_model.pre1_7_display_based_id:
+                        control_panel.restore_vdu_state_pre17(preset.preset_ini)
+            self.display_active_preset(preset)
+        except VduException as e:
+            log_warning(f"Abandoned restore of Preset {preset.name} due to: {e}")
         return preset
 
     def restore_named_preset(self, preset_name: str):
