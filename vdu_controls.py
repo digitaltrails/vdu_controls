@@ -267,10 +267,8 @@ all possible codes.  Because weather is unpredictable and forecasts are
 often unreliable or out of date, it's best to use weather requirements as a
 coarse measure. Going beyond good and bad may not be very practical.
 
-The location used for querying weather requirements is taken from the
-location name appended to ``Settings`` ``Location``.
 If ``wttr.in`` fails to recognise a location, the name part of ``Settings``
-``Location can be manually changed to anything suitable (the nearest
+``Location`` can be manually changed to anything suitable (the nearest
 recognised big city or an airport-code will do).  Alternatively if the
 location name is completely  removed from ``Settings`` ``Location``,
 then ``wttr.in`` will fall back to using the location associated
