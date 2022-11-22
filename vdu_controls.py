@@ -913,7 +913,7 @@ class DdcUtil:
                                      f" - it matches displays {vdu_id} and {key_prospects[possibly_unique][0]}")
                             del key_prospects[possibly_unique]
                         else:
-                            log_debug(possibly_unique)
+                            #log_debug(possibly_unique)
                             key_prospects[possibly_unique] = vdu_id, manufacturer
             elif len(display_str.strip()) != 0:
                 log_warning(f"Ignoring unparsable {display_str}")
@@ -2780,17 +2780,17 @@ class VduControlsMainPanel(QWidget):
         try:
             self.detected_vdus = self.ddcutil.detect_monitors()
             if session_startup:
+                log_info("Session appears to be initialising, delaying and looping detection until it stabilises.")
                 # Loop in case the session is initialising/restoring which can make detection unreliable.
                 # Limit to a reasonable number of iterations.
                 for i in range(10):
-                    log_info("Session appears to be initialising, delaying and looping detection until it stabilises.")
                     time.sleep(1.5)
                     prev_num = len(self.detected_vdus)
                     self.detected_vdus = self.ddcutil.detect_monitors()
                     if prev_num == len(self.detected_vdus):
-                        log_info(f"Number of detected monitors is stable at {len(self.detected_vdus)}")
+                        log_info(f"Number of detected monitors is stable at {len(self.detected_vdus)} (interation={i + 1})")
                         break
-                    log_info(f"Number of detected monitors changed from {prev_num} to {len(self.detected_vdus)}")
+                    log_info(f"Number of detected monitors changed from {prev_num} to {len(self.detected_vdus)} (interation={i + 1})")
         except Exception as e:
             log_error(e)
             ddcutil_problem = e
@@ -3354,9 +3354,7 @@ class PresetChooseWeatherWidget(QWidget):
         vf_file_path = CONFIG_DIR_PATH.joinpath('verified_weather_location.txt')
         if vf_file_path.exists():
             with open(vf_file_path) as vf:
-                vf_location = vf.read()
-                if vf_location == place_name:
-                    log_info(f"Verified weather location remains {vf_location}")
+                if vf.read() == place_name:
                     return
         try:
             log_info(f"Verifying weather location by querying {WEATHER_FORECAST_URL}.")
