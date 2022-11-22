@@ -447,15 +447,6 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
 APPNAME = "VDU Controls"
 VDU_CONTROLS_VERSION = '1.8.2'
 
-RELEASE_ANNOUNCEMENT = f"""
-<h3>Welcome to vdu_controls version {VDU_CONTROLS_VERSION}</h3>
-
-Please read the online release notes:<br>
-<a href="https://github.com/digitaltrails/vdu_controls/releases/tag/v{VDU_CONTROLS_VERSION}">
-https://github.com/digitaltrails/vdu_controls/releases/tag/v{VDU_CONTROLS_VERSION}</a>
-<hr>
-"""
-
 WESTERN_SKY = 'western-sky'
 EASTERN_SKY = 'eastern-sky'
 
@@ -589,6 +580,15 @@ At your request, your geographic location may be retrieved from <a href="{IP_ADD
 At your request, weather for your location may be retrieved from <a href="{WEATHER_FORECAST_URL}">{WEATHER_FORECAST_URL}</a>.
 </small>
 </quote>
+"""
+
+RELEASE_ANNOUNCEMENT = """
+<h3>{WELCOME}</h3>
+
+{NOTE}<br>
+<a href="https://github.com/digitaltrails/vdu_controls/releases/tag/v{VERSION}">
+https://github.com/digitaltrails/vdu_controls/releases/tag/v{VERSION}</a>
+<hr>
 """
 
 # Use Linux/UNIX signals for interprocess communication to trigger preset changes - 16 presets should be enough
@@ -2039,6 +2039,7 @@ class VduControlBase(QWidget):
 
     class DataUptodate(object):
         """Used to wrap sequences of operations that have uptodate data and have no need to call ddcutil to set/get"""
+
         def __init__(self, ui_control: VduControlBase):
             self.ui_control = ui_control
 
@@ -3372,7 +3373,7 @@ class PresetChooseWeatherWidget(QWidget):
                        "which is about {} {} from the latitude and longitude specified in Settings."
                        ).format(WEATHER_FORECAST_URL, weather.area_name, weather.country_name, weather.latitude, weather.longitude,
                                 round(kilometres if use_km else kilometres * 0.621371), 'km' if use_km else 'miles'))
-                msg.setInformativeText("Please check the location specified in Settings.")
+                msg.setInformativeText(tr("Please check the location specified in Settings."))
                 msg.setDetailedText(f"{weather}")
                 msg.exec()
             else:
@@ -4420,7 +4421,9 @@ class MainWindow(QMainWindow):
 
         if not main_config.ini_content.is_version_ge(1, 7, 0):
             release_alert = MessageBox(QMessageBox.Information, buttons=QMessageBox.Close)
-            release_alert.setText(RELEASE_ANNOUNCEMENT)
+            welcome = tr("Welcome to vdu_controls version {}").format(VDU_CONTROLS_VERSION)
+            note = tr("Please read the online release notes:")
+            release_alert.setText(RELEASE_ANNOUNCEMENT.format(WELCOME=welcome, NOTE=note, VERSION=VDU_CONTROLS_VERSION))
             release_alert.setTextFormat(Qt.RichText)
             release_alert.exec()
             if main_config.file_path:
