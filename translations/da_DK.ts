@@ -721,8 +721,8 @@ DDC ID {}
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3188" />
-        <source>Weather conditions will be retrieved from https://wttr.in</source>
-        <translation>Vejrforhold vil blive hentet fra https://wttr.in </translation>
+        <source>Weather conditions will be retrieved from {}</source>
+        <translation>Vejrforhold vil blive hentet fra {} </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3265" />

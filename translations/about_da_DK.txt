@@ -32,5 +32,9 @@ with this program. If not, see <a href="https://www.gnu.org/licenses/">https://w
 <small>
 <lille>
 Vdu_controls er afhængig af <a href="https://www.ddcutil.com/">ddcutil</a>, en robust grænseflade til DDC-kompatible skærme.
+<br>
+På din anmodning kan din geografiske placering blive hentet fra <a href="{IP_ADDRESS_INFO_URL}">{IP_ADDRESS_INFO_URL}</a>.
+<br>
+På din anmodning kan vejret for din placering hentes fra <a href="{WEATHER_FORECAST_URL}">{WEATHER_FORECAST_URL}</a>.
 </small>
 </quote>

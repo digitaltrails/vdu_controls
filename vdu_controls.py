@@ -267,6 +267,15 @@ all possible codes.  Because weather is unpredictable and forecasts are
 often unreliable or out of date, it's best to use weather requirements as a
 coarse measure. Going beyond good and bad may not be very practical.
 
+The location used for querying weather requirements is taken from the
+location name appended to ``Settings`` ``Location``.
+If ``wttr.in`` fails to recognise a location, the name part of ``Settings``
+``Location can be manually changed to anything suitable (the nearest
+recognised big city or an airport-code will do).  Alternatively if the
+location name is completely  removed from ``Settings`` ``Location``,
+then ``wttr.in`` will fall back to using the location associated
+with your external IP-Address.
+
 Presets - remote control
 ------------------------
 
@@ -450,6 +459,9 @@ https://github.com/digitaltrails/vdu_controls/releases/tag/v{VDU_CONTROLS_VERSIO
 WESTERN_SKY = 'western-sky'
 EASTERN_SKY = 'eastern-sky'
 
+IP_ADDRESS_INFO_URL = os.getenv('VDU_CONTROLS_IPINFO_URL', default='https://ipinfo.io/json')
+WEATHER_FORECAST_URL = os.getenv('VDU_CONTROLS_WTTR_URL', default='https://wttr.in')
+
 SolarElevationKey = namedtuple('SolarElevationKey', ['direction', 'elevation'])
 SolarElevationData = namedtuple('SolarElevationData', ['azimuth', 'zenith', 'when'])
 
@@ -571,6 +583,10 @@ with this program. If not, see <a href="https://www.gnu.org/licenses/">https://w
 <quote>
 <small>
 Vdu_controls relies on <a href="https://www.ddcutil.com/">ddcutil</a>, a robust interface to DDC capable VDU's.
+<br>
+At your request, your geographic location may be retrieved from <a href="{IP_ADDRESS_INFO_URL}">{IP_ADDRESS_INFO_URL}</a>.
+<br>
+At your request, weather for your location may be retrieved from <a href="{WEATHER_FORECAST_URL}">{WEATHER_FORECAST_URL}</a>.
 </small>
 </quote>
 """
@@ -1943,22 +1959,19 @@ class SettingsEditorLocationWidget(SettingsEditorFieldBase):
         """
         from urllib.request import urlopen
         from json import load
-        with urlopen(self.get_ipinfo_url()) as res:
+        with urlopen(IP_ADDRESS_INFO_URL) as res:
             return load(res)
-
-    def get_ipinfo_url(self):
-        return os.getenv('VDU_CONTROLS_IPINFO_URL', default='https://ipinfo.io/json')
 
     def location_dialog(self) -> str | None:
         ask_permission = MessageBox(QMessageBox.Question, buttons=QMessageBox.Yes | QMessageBox.No)
         ask_permission.setText(
-            tr('Query {} to obtain information based on your IP-address?').format(self.get_ipinfo_url()))
+            tr('Query {} to obtain information based on your IP-address?').format(IP_ADDRESS_INFO_URL))
         if ask_permission.exec() == QMessageBox.Yes:
             try:
                 ipinfo = self.retrieve_ipinfo()
                 info_text = f"{tr('Use the following info?')}\n" f"{ipinfo['loc']}\n" + \
                             ','.join([ipinfo[key] for key in ('city', 'region', 'country') if key in ipinfo])
-                full_text = f"Queried {self.get_ipinfo_url()}\n" + \
+                full_text = f"Queried {IP_ADDRESS_INFO_URL}\n" + \
                             '\n'.join([f"{name}: {value}" for name, value in ipinfo.items()])
                 confirm = MessageBox(QMessageBox.Information, buttons=QMessageBox.Yes | QMessageBox.No)
                 confirm.setText(info_text)
@@ -1974,7 +1987,7 @@ class SettingsEditorLocationWidget(SettingsEditorFieldBase):
             except (URLError, KeyError) as e:
                 error_dialog = MessageBox(QMessageBox.Critical)
                 error_dialog.setText(
-                    tr("Failed to obtain info from {}: {}").format(self.get_ipinfo_url(), e))
+                    tr("Failed to obtain info from {}: {}").format(IP_ADDRESS_INFO_URL, e))
                 error_dialog.exec()
         return ''
 
@@ -3227,11 +3240,11 @@ class QueryWeather:
         lang = locale.getlocale()[0][:2]
         if location_name is None or location_name.strip() == '':
             location_name = ''
-        wttr_url = os.getenv('VDU_CONTROLS_WTTR_URL', default='https://wttr.in')
-        self.url = f"{wttr_url}/{location_name}?" + urllib.parse.urlencode({'lang': lang, 'format': 'j1'})
+        weather_url = WEATHER_FORECAST_URL
+        self.url = f"{weather_url}/{location_name}?" + urllib.parse.urlencode({'lang': lang, 'format': 'j1'})
         self.weather_data = None
         try:
-            with urllib.request.urlopen(self.url) as request:
+            with urllib.request.urlopen(self.url, timeout=15) as request:
                 json_content = request.read()
                 self.weather_data = json.loads(json_content)
                 self.weather_code = self.weather_data['current_condition'][0]['weatherCode']
@@ -3272,7 +3285,7 @@ class PresetChooseWeatherWidget(QWidget):
         self.setLayout(QVBoxLayout())
         self.label = QLabel(tr("Additional weather requirements"))
         self.label.setToolTip(
-            tr("Weather conditions will be retrieved from https://wttr.in"))
+            tr("Weather conditions will be retrieved from {}").format(WEATHER_FORECAST_URL))
         self.layout().addWidget(self.label)
         self.chooser = QComboBox()
         self.warned: GeoLocation | None = None
@@ -3282,7 +3295,7 @@ class PresetChooseWeatherWidget(QWidget):
             if self.chooser.itemData(index) is None:
                 self.info_label.setText('')
             else:
-                self.validate_weather_location(location_func)
+                self.verify_weather_location(location_func)
                 path = self.chooser.itemData(index)
                 if path.exists():
                     with open(path) as weather_file:
@@ -3336,12 +3349,18 @@ class PresetChooseWeatherWidget(QWidget):
                     "Light Sleet Showers\n377 Light Sleet\n386 Thundery Showers\n389 Thundery Heavy Rain\n392 "
                     "Thundery Snow Showers\n395 Heavy Snow Showers\n")
 
-    def validate_weather_location(self, location_func: Callable):
-        if self.warned == location_func():
-            return
-        log_info("Validating weather location.")
+    def verify_weather_location(self, location_func: Callable):
         location = location_func()
+        place_name = location.place_name if location.place_name is not None else 'IP-address'
+        vf_file_path = CONFIG_DIR_PATH.joinpath('verified_weather_location.txt')
+        if vf_file_path.exists():
+            with open(vf_file_path) as vf:
+                vf_location = vf.read()
+                if vf_location == place_name:
+                    log_info(f"Verified weather location remains {vf_location}")
+                    return
         try:
+            log_info(f"Verifying weather location by querying {WEATHER_FORECAST_URL}.")
             weather = QueryWeather(location.place_name)
             kilometres = calc_kilometers(float(weather.latitude), float(weather.longitude),
                                          location.latitude, location.longitude)
@@ -3349,15 +3368,21 @@ class PresetChooseWeatherWidget(QWidget):
                 use_km = QLocale.system().measurementSystem() == QLocale.MetricSystem
                 msg = MessageBox(QMessageBox.Warning)
                 msg.setText(
-                    tr("The site https://wttr.in reports your location as {}, {}, {},{} "
+                    tr("The site {} reports your location as {}, {}, {},{} "
                        "which is about {} {} from the latitude and longitude specified in Settings."
-                       ).format(weather.area_name, weather.country_name, weather.latitude, weather.longitude,
+                       ).format(WEATHER_FORECAST_URL, weather.area_name, weather.country_name, weather.latitude, weather.longitude,
                                 round(kilometres if use_km else kilometres * 0.621371), 'km' if use_km else 'miles'))
                 msg.setInformativeText("Please check the location specified in Settings.")
                 msg.setDetailedText(f"{weather}")
                 msg.exec()
-            self.warned = location
+            else:
+                msg = MessageBox(QMessageBox.Information)
+                msg.setText(tr("Weather for {} will be retrieved from {}").format(place_name, WEATHER_FORECAST_URL))
+                msg.exec()
+            with open(vf_file_path, 'w') as vf:
+                vf.write(place_name)
         except ValueError as e:
+            log_error(f"Failed to validate location: {e}")
             msg = MessageBox(QMessageBox.Critical)
             msg.setText(tr("Failed to validate weather location: {}").format(e.args[0]))
             msg.setInformativeText(e.args[1])
@@ -4135,7 +4160,10 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
         path = find_locale_specific_file("about_{}.txt")
         if path:
             with open(path, encoding='utf-8') as about_for_locale:
-                about_text = about_for_locale.read().format(VDU_CONTROLS_VERSION=VDU_CONTROLS_VERSION)
+                about_text = about_for_locale.read().format(
+                    VDU_CONTROLS_VERSION=VDU_CONTROLS_VERSION,
+                    IP_ADDRESS_INFO_URL=IP_ADDRESS_INFO_URL,
+                    WEATHER_FORECAST_URL=WEATHER_FORECAST_URL)
         else:
             about_text = ABOUT_TEXT
         self.setInformativeText(about_text)

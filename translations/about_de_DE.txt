@@ -33,5 +33,9 @@ with this program. If not, see <a href="https://www.gnu.org/licenses/">https://w
 <quote>
 <small>
 Vdu_controls stützt sich auf <a href="https://www.ddcutil.com/">ddcutil</a>, eine robuste Schnittstelle zu DDC-fähigen Bildschirmen.
+<br>
+Auf Ihren Wunsch hin kann Ihr geografischer Standort von <a href="{IP_ADDRESS_INFO_URL}">{IP_ADDRESS_INFO_URL}</a> abgerufen werden.
+<br>
+Auf Ihren Wunsch hin kann das Wetter für Ihren Standort von <a href="{WEATHER_FORECAST_URL}">{WEATHER_FORECAST_URL}</a> abgerufen werden.
 </small>
 </quote>
