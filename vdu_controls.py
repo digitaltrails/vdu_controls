@@ -2322,7 +2322,12 @@ class VduControlPanel(QWidget):
                 control = None
                 capability = vdu_model.capabilities[vcp_code]
                 if capability.vcp_type == CONTINUOUS_TYPE:
-                    control = VduControlSlider(vdu_model, capability)
+                    try:
+                        control = VduControlSlider(vdu_model, capability)
+                    except ValueError as valueError:
+                        alert = MessageBox(QMessageBox.Critical)
+                        alert.setText(str(valueError))
+                        alert.exec()
                 elif capability.vcp_type == GUI_NON_CONTINUOUS_TYPE:
                     try:
                         control = VduControlComboBox(vdu_model, capability)
@@ -2914,7 +2919,10 @@ class VduControlsMainPanel(QWidget):
         self.detected_vdus = self.ddcutil.detect_monitors()
         for control_panel in self.vdu_control_panels:
             if control_panel.vdu_model.get_full_id() in self.detected_vdus:
-                control_panel.refresh_data()
+                try:
+                    control_panel.refresh_data()
+                except ValueError as ve:
+                    log_error(str(ve))
 
     def refresh_view(self) -> None:
         """Invoke when the GUI worker thread completes. Runs in the GUI thread and can refresh the GUI views."""
