@@ -1418,7 +1418,7 @@ class VduControlsConfig:
                             help='start up as an entry in the system tray')
         parser.add_argument('--location', default=None, type=str, help='latitude,longitude')
         parser.add_argument('--translations-enabled', default=False, action='store_true',
-                            help='enable langauage translations')
+                            help='enable language translations')
         parser.add_argument('--debug', default=False, action='store_true', help='enable debug output to stdout')
         parser.add_argument('--warnings', default=False, action='store_true',
                             help='popup a warning when a VDU lacks an enabled control')
@@ -2782,14 +2782,14 @@ class VduControlsMainPanel(QWidget):
                 log_info("Session appears to be initialising, delaying and looping detection until it stabilises.")
                 # Loop in case the session is initialising/restoring which can make detection unreliable.
                 # Limit to a reasonable number of iterations.
-                for i in range(10):
+                for i in range(1,11):
                     time.sleep(1.5)
                     prev_num = len(self.detected_vdus)
                     self.detected_vdus = self.ddcutil.detect_monitors()
                     if prev_num == len(self.detected_vdus):
-                        log_info(f"Number of detected monitors is stable at {len(self.detected_vdus)} (interation={i + 1})")
+                        log_info(f"Number of detected monitors is stable at {len(self.detected_vdus)} (loop={i})")
                         break
-                    log_info(f"Number of detected monitors changed from {prev_num} to {len(self.detected_vdus)} (interation={i + 1})")
+                    log_info(f"Number of detected monitors changed from {prev_num} to {len(self.detected_vdus)} (loop={i})")
         except Exception as e:
             log_error(e)
             ddcutil_problem = e
