@@ -2580,22 +2580,16 @@ class Preset:
                 code_list = weather_file.readlines()
             log_info(f"Preset {self.name} weather requirements {weather_restriction_filename}: {code_list}")
             try:
-                weather = QueryWeather(location.place_name)
-                if weather.area_name == "UNKNOWN":
-                    msg = MessageBox(QMessageBox.Warning)
-                    msg.setText(
-                        tr("Unknown weather location, ignoring weather requirements. Please check Settings Location."))
-                    msg.exec()
-                    return True
-                log_info(f"Current weather: {weather.area_name} {weather.weather_code} {weather.weather_desc}")
+                weather = QueryWeather(location)
+                if not weather.distance_from_location_is_acceptable:
+                    log_error(f"Weather location is {weather.distance_from_location} km from Settings Location, check settings.")
                 for code_line in code_list:
-                    # Allow spaces or commas
                     required_code = code_line.strip().split()[0].split(',')[0]
                     if weather.weather_code.strip() == required_code:
                         log_info("Meet required weather conditions "
-                                 f"{weather.area_name} {weather.weather_desc} {weather.weather_code}")
+                                 f"{weather.area_name} {weather.weather_code} {weather.weather_desc}")
                         return True
-                log_info(f"Cancelled due to weather")
+                log_info(f"Cancelled due to weather: {weather.area_name} {weather.weather_code} {weather.weather_desc}")
             except ValueError as e:
                 msg = MessageBox(QMessageBox.Warning)
                 msg.setText(
@@ -3235,11 +3229,13 @@ class PresetChooseIconButton(QPushButton):
 
 class QueryWeather:
 
-    def __init__(self, location_name: str):
+    def __init__(self, location:GeoLocation):
+        location_name = location.place_name
         lang = locale.getlocale()[0][:2]
         if location_name is None or location_name.strip() == '':
             location_name = ''
         weather_url = WEATHER_FORECAST_URL
+        self.maximum_distance_km = 200
         self.url = f"{weather_url}/{location_name}?" + urllib.parse.urlencode({'lang': lang, 'format': 'j1'})
         self.weather_data = None
         try:
@@ -3258,6 +3254,7 @@ class QueryWeather:
                 self.country_name = self.weather_data['nearest_area'][0]['country'][0]['value']
                 self.latitude = self.weather_data['nearest_area'][0]['latitude']
                 self.longitude = self.weather_data['nearest_area'][0]['longitude']
+                self.distance_from_location, self.distance_from_location_is_acceptable = self.__verify_weather_location(location)
         except urllib.error.HTTPError as e:
             if e.code == 404:
                 raise ValueError(tr("Unknown location {}".format(location_name)),
@@ -3266,6 +3263,11 @@ class QueryWeather:
         except Exception as ue:
             # Can't afford to fall over because of a problem with a remote site
             raise ValueError(tr("Failed to get weather from {}").format(self.url), str(ue))
+
+    def __verify_weather_location(self, location):
+        kilometres = calc_kilometers(float(self.latitude), float(self.longitude),
+                                     location.latitude, location.longitude)
+        return kilometres, kilometres <= self.maximum_distance_km
 
     def __str__(self):
         if self.weather_data is None:
@@ -3358,10 +3360,15 @@ class PresetChooseWeatherWidget(QWidget):
                     return
         try:
             log_info(f"Verifying weather location by querying {WEATHER_FORECAST_URL}.")
-            weather = QueryWeather(location.place_name)
-            kilometres = calc_kilometers(float(weather.latitude), float(weather.longitude),
-                                         location.latitude, location.longitude)
-            if kilometres > 200:
+            weather = QueryWeather(location)
+            if weather.distance_from_location_is_acceptable:
+                msg = MessageBox(QMessageBox.Information)
+                msg.setText(tr("Weather for {} will be retrieved from {}").format(place_name, WEATHER_FORECAST_URL))
+                msg.exec()
+                with open(vf_file_path, 'w') as vf:
+                    vf.write(place_name)
+            else:
+                kilometres = weather.distance_from_location
                 use_km = QLocale.system().measurementSystem() == QLocale.MetricSystem
                 msg = MessageBox(QMessageBox.Warning)
                 msg.setText(
@@ -3372,12 +3379,6 @@ class PresetChooseWeatherWidget(QWidget):
                 msg.setInformativeText(tr("Please check the location specified in Settings."))
                 msg.setDetailedText(f"{weather}")
                 msg.exec()
-            else:
-                msg = MessageBox(QMessageBox.Information)
-                msg.setText(tr("Weather for {} will be retrieved from {}").format(place_name, WEATHER_FORECAST_URL))
-                msg.exec()
-            with open(vf_file_path, 'w') as vf:
-                vf.write(place_name)
         except ValueError as e:
             log_error(f"Failed to validate location: {e}")
             msg = MessageBox(QMessageBox.Critical)
