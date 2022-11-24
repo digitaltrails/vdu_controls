@@ -2414,6 +2414,7 @@ class Preset:
         self.preset_ini = ConfigIni()
         self.timer = None
         self.timer_action = None
+        self.schedule_succeeded = False
         self.elevation_time_today = None
 
     def get_icon_path(self) -> Path | None:
@@ -2481,9 +2482,12 @@ class Preset:
             result += ' \u29BB'
         if self.get_weather_restriction_filename() is not None:
             result += ' \u2614'
-        if self.timer and self.timer.remainingTime() > 0:
-            # This character is too tall - it causes a jump when rendered - but nothing else is quite as appropriate.
-            result += ' \u23F3'
+        if self.timer:
+            if self.timer.remainingTime() > 0:
+                # This character is too tall - it causes a jump when rendered - but nothing else is quite as appropriate.
+                result += ' \u23F3'
+            else:
+                result += ' \u2714' if self.schedule_succeeded else ' \u2718'
         return result
 
     def get_solar_elevation_description(self) -> str | None:
@@ -2516,7 +2520,7 @@ class Preset:
         self.timer.setSingleShot(True)
         self.timer_action = action
         self.timer.timeout.connect(partial(action, self))
-        millis = int((when_local - zoned_now()) / timedelta(milliseconds=1))
+        millis = round((when_local - zoned_now()) / timedelta(milliseconds=1))
         self.timer.start(millis)
         log_info(
             f"Preset scheduled activation for '{self.name}' at {when_local} in {round(millis / 1000 / 60)} minutes "
@@ -3700,8 +3704,11 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.editor_layout.addWidget(self.editor_trigger_widget)
         presets_dialog_splitter.addWidget(self.editor_groupbox)
 
+        self.bottom_bar_message = QLabel(".")
         self.close_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), tr('close'))
         self.close_button.clicked.connect(self.close)
+        button_layout.addSpacing(5)
+        button_layout.addWidget(self.bottom_bar_message)
         button_layout.addSpacing(10)
         button_layout.addWidget(self.close_button, 0, Qt.AlignRight | Qt.AlignBottom)
 
@@ -3734,6 +3741,9 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         # A bit extreme, but it works
         # TODO Update preset status display - a bit of an extreme way to do it - consider something better?
         self.reload_data()
+
+    def set_message(self, message: str):
+        self.bottom_bar_message.setText(message)
 
     def find_preset_widget(self, name) -> PresetWidget | None:
         for i in range(self.preset_widgets_layout.count()):
@@ -4602,12 +4612,19 @@ class MainWindow(QMainWindow):
         return most_recent_overdue
 
     def activate_scheduled_preset(self, preset: Preset):
+        now = zoned_now()
         if preset.is_weather_ok(self.main_config.get_location()):
-            log_info(f"Preset {preset.name} activated according the schedule at {zoned_now()}")
+            log_info(f"Preset {preset.name} activated according the schedule at {now}")
             self.restore_preset(preset)
+            preset.schedule_succeeded = True
+            msg = tr("Preset {} activated on schedule at {}".format(preset.name, now.isoformat(' ', 'seconds')))
+        else:
+            preset.schedule_succeeded = False
+            msg = tr("Preset {} activation was cancelled due to weather at {}".format(preset.name, now.isoformat(' ', 'seconds')))
         presets_dialog = PresetsDialog.get_instance()
         if presets_dialog:
             presets_dialog.refresh_view()
+            presets_dialog.set_message(msg)
 
 
 class SignalWakeupHandler(QtNetwork.QAbstractSocket):
