@@ -4639,12 +4639,12 @@ class MainWindow(QMainWindow):
                 status_msg = tr("Preset {} activated on schedule at {}").format(preset.name, now.isoformat(' ', 'seconds'))
             else:
                 preset.latest_schedule_status = ScheduleStatus.failed_to_restore
-                status_msg = tr("Preset {} activation failed at {} - was the monitored turned off?").format(
-                    preset.name, now.isoformat(' ', 'seconds'))
+                status_msg = None  # Cannot issue message - may tread on following message from a more recent preset activation.
         presets_dialog = PresetsDialog.get_instance()
         if presets_dialog:
             presets_dialog.refresh_view()
-            presets_dialog.set_message(f"\u25F4 {status_msg} {preset.latest_schedule_status.symbol()} {status_msg_additional}")
+            if status_msg:
+                presets_dialog.set_message(f"\u25F4 {status_msg} {preset.latest_schedule_status.symbol()} {status_msg_additional}")
 
     def check_weather_requirements(self, preset) -> (bool, QueryWeather | None):
         try:
