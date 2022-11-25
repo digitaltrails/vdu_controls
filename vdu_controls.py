@@ -426,6 +426,7 @@ import traceback
 import urllib.request
 from collections import namedtuple
 from datetime import datetime, timedelta, date, timezone
+from enum import Enum
 from functools import partial
 from pathlib import Path
 from typing import List, Tuple, Mapping, Type, Dict, Callable
@@ -913,7 +914,7 @@ class DdcUtil:
                                      f" - it matches displays {vdu_id} and {key_prospects[possibly_unique][0]}")
                             del key_prospects[possibly_unique]
                         else:
-                            #log_debug(possibly_unique)
+                            # log_debug(possibly_unique)
                             key_prospects[possibly_unique] = vdu_id, manufacturer
             elif len(display_str.strip()) != 0:
                 log_warning(f"Ignoring unparsable {display_str}")
@@ -2414,7 +2415,7 @@ class Preset:
         self.preset_ini = ConfigIni()
         self.timer = None
         self.timer_action = None
-        self.schedule_succeeded = False
+        self.latest_schedule_status = ScheduleStatus.unscheduled
         self.elevation_time_today = None
 
     def get_icon_path(self) -> Path | None:
@@ -2487,8 +2488,9 @@ class Preset:
                 # This character is too tall - it causes a jump when rendered - but nothing else is quite as appropriate.
                 result += ' \u23F3'
             else:
-                result += ' \u2714' if self.schedule_succeeded else ' \u2718'
+                result += ' ' + self.latest_schedule_status.symbol()
         return result
+
 
     def get_solar_elevation_description(self) -> str | None:
         elevation = self.get_solar_elevation()
@@ -2580,33 +2582,27 @@ class Preset:
         log_info(f"Converted preset {self.name} to v1.7+ format.")
         return None
 
-    def is_weather_ok(self, location: GeoLocation):
+    def is_weather_dependent(self):
+        return self.get_weather_restriction_filename() is not None
+
+    def check_weather(self, weather: QueryWeather):
         weather_restriction_filename = self.get_weather_restriction_filename()
         if weather_restriction_filename is None:
             return True
-        if Path(weather_restriction_filename).exists():
-            with open(weather_restriction_filename) as weather_file:
-                code_list = weather_file.readlines()
+        if not Path(weather_restriction_filename).exists():
+            log_error(f"Preset {self.name} missing weather requirements file: {weather_restriction_filename}")
+            return True
+        with open(weather_restriction_filename) as weather_file:
+            code_list = weather_file.readlines()
             log_info(f"Preset {self.name} weather requirements {weather_restriction_filename}: {code_list}")
-            try:
-                weather = QueryWeather(location)
-                if not weather.distance_from_location_is_acceptable:
-                    log_error(f"Weather location is {weather.distance_from_location} km from Settings Location, check settings.")
-                for code_line in code_list:
-                    required_code = code_line.strip().split()[0].split(',')[0]
-                    if weather.weather_code.strip() == required_code:
-                        log_info("Meet required weather conditions "
-                                 f"{weather.area_name} {weather.weather_code} {weather.weather_desc}")
-                        return True
-                log_info(f"Cancelled due to weather: {weather.area_name} {weather.weather_code} {weather.weather_desc}")
-            except ValueError as e:
-                msg = MessageBox(QMessageBox.Warning)
-                msg.setText(
-                    tr("Ignoring weather requirements, unable to query local weather: {}").format(str(e.args[0])))
-                msg.setInformativeText(e.args[1])
-                msg.exec()
-                return True
-            return False
+            for code_line in code_list:
+                required_code = code_line.strip().split()[0].split(',')[0]
+                if weather.weather_code.strip() == required_code:
+                    log_info("Meet required weather conditions "
+                             f"{weather.area_name} {weather.weather_code} {weather.weather_desc}")
+                    return True
+        log_info(f"Failed to meet weather requirements: {weather.area_name} {weather.weather_code} {weather.weather_desc}")
+        return False
 
     def get_weather_restriction_filename(self):
         weather_restriction_filename = \
@@ -2786,7 +2782,7 @@ class VduControlsMainPanel(QWidget):
                 log_info("Session appears to be initialising, delaying and looping detection until it stabilises.")
                 # Loop in case the session is initialising/restoring which can make detection unreliable.
                 # Limit to a reasonable number of iterations.
-                for i in range(1,11):
+                for i in range(1, 11):
                     time.sleep(1.5)
                     prev_num = len(self.detected_vdus)
                     self.detected_vdus = self.ddcutil.detect_monitors()
@@ -3241,7 +3237,7 @@ class PresetChooseIconButton(QPushButton):
 
 class QueryWeather:
 
-    def __init__(self, location:GeoLocation):
+    def __init__(self, location: GeoLocation):
         location_name = location.place_name
         lang = locale.getlocale()[0][:2]
         if location_name is None or location_name.strip() == '':
@@ -3704,7 +3700,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.editor_layout.addWidget(self.editor_trigger_widget)
         presets_dialog_splitter.addWidget(self.editor_groupbox)
 
-        self.bottom_bar_message = QLabel(".")
+        self.bottom_bar_message = QLabel()
         self.close_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), tr('close'))
         self.close_button.clicked.connect(self.close)
         button_layout.addSpacing(5)
@@ -4215,6 +4211,19 @@ class HelpDialog(QDialog, DialogSingletonMixin):
         self.make_visible()
 
 
+class ScheduleStatus(Enum):
+    unscheduled = 0, ' '
+    succeeded = 1, '\u2714'
+    failed_to_restore = 2, '\u2718'
+    weather_cancellation = 3, '\u2744'
+
+    def symbol(self) -> str:
+        return self.value[1]
+
+    def __str__(self):
+        return self.value[0]
+
+
 class MainWindow(QMainWindow):
 
     def __init__(self, main_config: VduControlsConfig, app: QApplication, session_startup: bool):
@@ -4462,7 +4471,7 @@ class MainWindow(QMainWindow):
                                          " (suggest turning on all monitors before the next restart).")
             cvt_alert.exec()
 
-    def restore_preset(self, preset: Preset) -> Preset:
+    def restore_preset(self, preset: Preset) -> bool:
         log_info(f"Preset changing to {preset.name}")
         preset.load()
         restored_list = []
@@ -4481,7 +4490,8 @@ class MainWindow(QMainWindow):
             self.display_active_preset(preset)
         except VduException as e:
             log_warning(f"Abandoned restore of Preset {preset.name} due to: {e}")
-        return preset
+            return False
+        return True
 
     def restore_named_preset(self, preset_name: str):
         presets = self.preset_controller.find_presets()
@@ -4613,18 +4623,43 @@ class MainWindow(QMainWindow):
 
     def activate_scheduled_preset(self, preset: Preset):
         now = zoned_now()
-        if preset.is_weather_ok(self.main_config.get_location()):
-            log_info(f"Preset {preset.name} activated according the schedule at {now}")
-            self.restore_preset(preset)
-            preset.schedule_succeeded = True
-            msg = tr("Preset {} activated on schedule at {}".format(preset.name, now.isoformat(' ', 'seconds')))
+        proceed, weather = self.check_weather_requirements(preset)
+        status_msg_additional = ''
+        if not proceed:
+            preset.latest_schedule_status = ScheduleStatus.weather_cancellation
+            log_info(
+                f"Preset {preset.name} cancelled due to weather: {weather.area_name} {weather.weather_code} {weather.weather_desc}")
+            status_msg = tr("Preset {} activation was cancelled due to weather at {}").format(
+                preset.name, now.isoformat(' ', 'seconds'))
+            status_msg_additional = f"({weather.weather_desc})"
         else:
-            preset.schedule_succeeded = False
-            msg = tr("Preset {} activation was cancelled due to weather at {}".format(preset.name, now.isoformat(' ', 'seconds')))
+            log_info(f"Preset {preset.name} activating according the schedule at {now}")
+            if self.restore_preset(preset):
+                preset.latest_schedule_status = ScheduleStatus.succeeded
+                status_msg = tr("Preset {} activated on schedule at {}").format(preset.name, now.isoformat(' ', 'seconds'))
+            else:
+                preset.latest_schedule_status = ScheduleStatus.failed_to_restore
+                status_msg = tr("Preset {} activation failed at {} - was the monitored turned off?").format(
+                    preset.name, now.isoformat(' ', 'seconds'))
         presets_dialog = PresetsDialog.get_instance()
         if presets_dialog:
             presets_dialog.refresh_view()
-            presets_dialog.set_message(msg)
+            presets_dialog.set_message(f"\u25F4 {status_msg} {preset.latest_schedule_status.symbol()} {status_msg_additional}")
+
+    def check_weather_requirements(self, preset) -> (bool, QueryWeather | None):
+        try:
+            if preset.is_weather_dependent():
+                weather = QueryWeather(self.main_config.get_location())
+                if not weather.distance_from_location_is_acceptable:
+                    log_error(f"Weather location is {weather.distance_from_location} km from Settings Location, check settings.")
+                return preset.check_weather(weather), weather
+        except ValueError as e:
+            msg = MessageBox(QMessageBox.Warning)
+            msg.setText(
+                tr("Ignoring weather requirements, unable to query local weather: {}").format(str(e.args[0])))
+            msg.setInformativeText(e.args[1])
+            msg.exec()
+        return True, None
 
 
 class SignalWakeupHandler(QtNetwork.QAbstractSocket):
