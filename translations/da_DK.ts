@@ -282,13 +282,13 @@ Kør vdu_controls --debug i en konsol og tjek for yderligere meddelelser.
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3151"/>
-        <source>Press to skip {}</source>
-        <translation>Tryk for at springe over {} </translation>
+        <source>Press to skip: </source>
+        <translation>Tryk for at springe over: </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3151"/>
-        <source>Press to re-enable {}</source>
-        <translation>Tryk for at genaktivere {} </translation>
+        <source>Press to re-enable: </source>
+        <translation>Tryk for at genaktivere: </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3152"/>
@@ -479,12 +479,12 @@ Dette diagram kan ændres i størrelse.  </translation>
         <translation>Om vdu_controls </translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4258"/>
+        <location filename="../vdu_controls.py" line="4261"/>
         <source>The change to the system-tray-enabled option requires vdu_controls to restart.</source>
         <translation>Ændringen til indstillingen system-tray-enabled kræver, at vdu_controls genstartes. </translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4350"/>
+        <location filename="../vdu_controls.py" line="4353"/>
         <source>
 
 VDU Controls
@@ -497,7 +497,7 @@ Leder efter DDC-skærme...
  </translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4355"/>
+        <location filename="../vdu_controls.py" line="4358"/>
         <source>
 
 VDU Controls {}
@@ -510,24 +510,24 @@ DDC ID {}
 {} </translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4465"/>
+        <location filename="../vdu_controls.py" line="4468"/>
         <source>Temporarily unable to migrate some presets to {}:
 {}</source>
         <translation>Midlertidigt ikke i stand til at overføre nogle forudindstillinger til {}:
 {} </translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4859"/>
+        <location filename="../vdu_controls.py" line="4862"/>
         <source>Loaded {} translations from {}</source>
         <translation>Indlæst {} oversættelser fra {} </translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4941"/>
+        <location filename="../vdu_controls.py" line="4944"/>
         <source>Restart of {} failed.  Please restart manually.</source>
         <translation>Genstart af {} mislykkedes.  Genstart venligst manuelt. </translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4942"/>
+        <location filename="../vdu_controls.py" line="4945"/>
         <source>This is probably because {} is not executable or is not on your PATH.</source>
         <translation>Dette skyldes sandsynligvis, at {} ikke kan udføres eller ikke findes i din PATH. </translation>
     </message>
@@ -542,7 +542,7 @@ DDC ID {}
         <translation>vestlig himmel</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4863"/>
+        <location filename="../vdu_controls.py" line="4866"/>
         <source>Loading {} translations from {}</source>
         <translation>Indlæser {} oversættelser fra {} </translation>
     </message>
@@ -687,7 +687,7 @@ DDC ID {}
         <translation type="obsolete">Ukendt vejrplacering, ignorerer vejrkrav. Kontroller venligst Indstillinger Placering. </translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4658"/>
+        <location filename="../vdu_controls.py" line="4661"/>
         <source>Ignoring weather requirements, unable to query local weather: {}</source>
         <translation>Ignorerer vejrkrav, kan ikke spørge om det lokale vejr: {} </translation>
     </message>
@@ -722,12 +722,12 @@ DDC ID {}
         <translation>Det lykkedes ikke at validere vejrplacering: {} </translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4852"/>
+        <location filename="../vdu_controls.py" line="4855"/>
         <source>Using newer .ts file {} translations from {}</source>
         <translation>Brug af nyere .ts-fil {} oversættelser fra {} </translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4866"/>
+        <location filename="../vdu_controls.py" line="4869"/>
         <source>Using {} translations from {}</source>
         <translation>Brug af {} oversættelser fra {} </translation>
     </message>
@@ -747,17 +747,17 @@ DDC ID {}
         <translation>Vejret for {} vil blive hentet fra {}</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4261"/>
+        <location filename="../vdu_controls.py" line="4264"/>
         <source>The change to the translations-enabled option requires vdu_controls to restart.</source>
         <translation>Ændringen af indstillingen translations-enabled kræver, at vdu_controls genstartes.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4448"/>
+        <location filename="../vdu_controls.py" line="4451"/>
         <source>Welcome to vdu_controls version {}</source>
         <translation>Velkommen til vdu_controls version {}</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4449"/>
+        <location filename="../vdu_controls.py" line="4452"/>
         <source>Please read the online release notes:</source>
         <translation>Læs venligst online-udgivelsesbemærkningerne:</translation>
     </message>
@@ -767,14 +767,34 @@ DDC ID {}
         <translation>Tjek venligst den placering, der er angivet i Indstillinger.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4639"/>
+        <location filename="../vdu_controls.py" line="4642"/>
         <source>Preset {} activating on schedule at {}</source>
         <translation>Forudindstillet {} aktivering efter tidsplan d. {}</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4632"/>
+        <location filename="../vdu_controls.py" line="4635"/>
         <source>Preset {} activation was cancelled due to weather at {}</source>
         <translation>Forudindstillet {} aktivering blev annulleret på grund af vejret den {}</translation>
+    </message>
+    <message>
+        <location filename="../vdu_controls.py" line="4215"/>
+        <source>unscheduled</source>
+        <translation>ikke planlagt</translation>
+    </message>
+    <message>
+        <location filename="../vdu_controls.py" line="4216"/>
+        <source>succeeded</source>
+        <translation>lykkedes</translation>
+    </message>
+    <message>
+        <location filename="../vdu_controls.py" line="4217"/>
+        <source>skipped, superseded</source>
+        <translation>sprunget over, afløst</translation>
+    </message>
+    <message>
+        <location filename="../vdu_controls.py" line="4218"/>
+        <source>weather cancellation</source>
+        <translation>vejraflysning</translation>
     </message>
 </context>
 </TS>

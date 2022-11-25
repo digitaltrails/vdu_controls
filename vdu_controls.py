@@ -2415,7 +2415,7 @@ class Preset:
         self.preset_ini = ConfigIni()
         self.timer = None
         self.timer_action = None
-        self.latest_schedule_status = ScheduleStatus.unscheduled
+        self.schedule_status = ScheduleStatus.unscheduled
         self.elevation_time_today = None
 
     def get_icon_path(self) -> Path | None:
@@ -2483,14 +2483,8 @@ class Preset:
             result += ' \u29BB'
         if self.get_weather_restriction_filename() is not None:
             result += ' \u2614'
-        if self.timer:
-            if self.timer.remainingTime() > 0:
-                # This character is too tall - it causes a jump when rendered - but nothing else is quite as appropriate.
-                result += ' \u23F3'
-            else:
-                result += ' ' + self.latest_schedule_status.symbol()
+        result += ' ' + self.schedule_status.symbol()
         return result
-
 
     def get_solar_elevation_description(self) -> str | None:
         elevation = self.get_solar_elevation()
@@ -2506,7 +2500,7 @@ class Preset:
                 template = tr("{} later today at {}") + weather_suffix
 
             elif self.elevation_time_today < zoned_now():
-                template = tr("{} earlier today at {}") + weather_suffix
+                template = tr("{} earlier today at {}") + weather_suffix + f" ({self.schedule_status.description()})"
             else:
                 template = tr("{} suspended for  {}")
             result = template.format(basic_desc, self.elevation_time_today.strftime(tr("%H:%M")))
@@ -2524,6 +2518,7 @@ class Preset:
         self.timer.timeout.connect(partial(action, self))
         millis = round((when_local - zoned_now()) / timedelta(milliseconds=1))
         self.timer.start(millis)
+        self.schedule_status = ScheduleStatus.scheduled
         log_info(
             f"Preset scheduled activation for '{self.name}' at {when_local} in {round(millis / 1000 / 60)} minutes "
             f"{self.get_solar_elevation()}")
@@ -2536,15 +2531,18 @@ class Preset:
             self.timer = None
         if self.elevation_time_today:
             self.elevation_time_today = None
+        self.schedule_status = ScheduleStatus.unscheduled
 
     def toggle_timer(self):
         if self.elevation_time_today and self.elevation_time_today > zoned_now():
             if self.timer.remainingTime() > 0:
                 log_info(f"Preset scheduled timer cleared for '{self.name}'")
                 self.timer.stop()
+                self.schedule_status = ScheduleStatus.suspended
             else:
                 log_info(f"Preset scheduled timer restored for '{self.name}'")
                 self.start_timer(self.elevation_time_today, self.timer_action)
+                self.schedule_status = ScheduleStatus.scheduled
 
     def get_timer_status(self) -> str:
         if self.elevation_time_today:
@@ -3147,13 +3145,21 @@ class PresetWidget(QWidget):
         timer_control_button = PushButtonLeftJustified(parent=self)
         timer_control_button.setFlat(True)
 
-        action_desc = {
-            'scheduled': tr("Press to skip {}"), 'suspended': tr("Press to re-enable {}"),
-            'past': tr("Scheduled {}"), 'unscheduled': tr("Not applicable {}")}
+
+        # action_desc = {
+        #     'scheduled': , 'suspended': tr("Press to re-enable {}"),
+        #     'past': tr("Scheduled {}"), 'unscheduled': tr("Not applicable {}")}
 
         if preset.get_solar_elevation() is not None:
+
             def format_description():
-                return action_desc[preset.get_timer_status()].format(preset.get_solar_elevation_description())
+                if preset.schedule_status == ScheduleStatus.scheduled:
+                    action_desc = tr("Press to skip: ")
+                elif preset.schedule_status == ScheduleStatus.suspended:
+                    action_desc = tr("Press to re-enable: ")
+                else:
+                    action_desc = "{}"
+                return action_desc + preset.get_solar_elevation_description()
 
             def toggle_timer(arg):
                 preset.toggle_timer()
@@ -3161,11 +3167,9 @@ class PresetWidget(QWidget):
                 timer_control_button.setToolTip(format_description())
 
             timer_control_button.setText(preset.get_solar_elevation_abbreviation())
-            status = preset.get_timer_status()
             timer_control_button.setToolTip(format_description())
             timer_control_button.mousePressEvent = toggle_timer
-        if preset.get_timer_status() in ('past', 'unscheduled'):
-            timer_control_button.setDisabled(True)
+        timer_control_button.setEnabled(preset.schedule_status in (ScheduleStatus.scheduled, ScheduleStatus.suspended))
         # auto_label.setDisabled(True)
         line_layout.addWidget(timer_control_button)
 
@@ -4212,13 +4216,19 @@ class HelpDialog(QDialog, DialogSingletonMixin):
 
 
 class ScheduleStatus(Enum):
-    unscheduled = 0, ' '
-    succeeded = 1, '\u2714'
-    failed_to_restore = 2, '\u2718'
-    weather_cancellation = 3, '\u2744'
+    unscheduled = 0, ' ', QT_TR_NOOP('unscheduled')
+    # This hourglass character is too tall - it causes a jump when rendered - but nothing else is quite as appropriate.
+    scheduled = 1, '\u23F3', QT_TR_NOOP('scheduled')
+    suspended = 2, ' ', QT_TR_NOOP('suspended')
+    succeeded = 3, '\u2714', QT_TR_NOOP('succeeded')
+    skipped_superseded = 4, '\u2718', QT_TR_NOOP('skipped, superseded')
+    weather_cancellation = 5, '\u2744', QT_TR_NOOP('weather cancellation')
 
     def symbol(self) -> str:
         return self.value[1]
+
+    def description(self):
+        return self.value[2]
 
     def __str__(self):
         return self.value[0]
@@ -4589,7 +4599,7 @@ class MainWindow(QMainWindow):
             if reset:
                 preset.remove_elevation_trigger()
             elevation_key = preset.get_solar_elevation()
-            if elevation_key is not None and preset.get_timer_status() == "unscheduled":
+            if elevation_key is not None and preset.schedule_status == ScheduleStatus.unscheduled:
                 if elevation_key in time_map:
                     when_today = time_map[elevation_key].when
                     local_now = zoned_now()
@@ -4600,6 +4610,7 @@ class MainWindow(QMainWindow):
                         if when_today > latest_due:
                             most_recent_overdue = preset
                             latest_due = when_today
+                        preset.schedule_status = ScheduleStatus.skipped_superseded
                 else:
                     log_info(f"Solar activation skipping preset {preset.name} {elevation_key} degrees"
                              " - the sun does not reach that elevation today.")
@@ -4626,7 +4637,7 @@ class MainWindow(QMainWindow):
         proceed, weather = self.check_weather_requirements(preset)
         status_msg_additional = ''
         if not proceed:
-            preset.latest_schedule_status = ScheduleStatus.weather_cancellation
+            preset.schedule_status = ScheduleStatus.weather_cancellation
             log_info(
                 f"Preset {preset.name} cancelled due to weather: {weather.area_name} {weather.weather_code} {weather.weather_desc}")
             status_msg = tr("Preset {} activation was cancelled due to weather at {}").format(
@@ -4635,16 +4646,16 @@ class MainWindow(QMainWindow):
         else:
             log_info(f"Preset {preset.name} activating according the schedule at {now}")
             if self.restore_preset(preset):
-                preset.latest_schedule_status = ScheduleStatus.succeeded
+                preset.schedule_status = ScheduleStatus.succeeded
                 status_msg = tr("Preset {} activating on schedule at {}").format(preset.name, now.isoformat(' ', 'seconds'))
             else:
-                preset.latest_schedule_status = ScheduleStatus.failed_to_restore
+                preset.schedule_status = ScheduleStatus.skipped_superseded
                 status_msg = None  # Cannot issue message - may tread on following message from a more recent preset activation.
         presets_dialog = PresetsDialog.get_instance()
         if presets_dialog:
             presets_dialog.refresh_view()
             if status_msg:
-                presets_dialog.set_message(f"\u25F4 {status_msg} {preset.latest_schedule_status.symbol()} {status_msg_additional}")
+                presets_dialog.set_message(f"\u25F4 {status_msg} {preset.schedule_status.symbol()} {status_msg_additional}")
 
     def check_weather_requirements(self, preset) -> (bool, QueryWeather | None):
         try:

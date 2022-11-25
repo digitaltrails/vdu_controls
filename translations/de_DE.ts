@@ -417,13 +417,13 @@ Führen Sie vdu_controls --debug in einer Konsole aus und prüfen Sie auf zusät
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3151"/>
-        <source>Press to skip {}</source>
-        <translation>Drücken Sie zum Überspringen {} </translation>
+        <source>Press to skip: </source>
+        <translation>Drücken Sie zum Überspringen: </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3151"/>
-        <source>Press to re-enable {}</source>
-        <translation>Drücken Sie, um die Voreinstellung wieder zu aktivieren {} </translation>
+        <source>Press to re-enable: </source>
+        <translation>Drücken Sie, um die Voreinstellung wieder zu aktivieren: </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3152"/>
@@ -614,12 +614,12 @@ Dieses Diagramm ist in der Größe veränderbar.  </translation>
         <translation>Über vdu_controls </translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4258"/>
+        <location filename="../vdu_controls.py" line="4261"/>
         <source>The change to the system-tray-enabled option requires vdu_controls to restart.</source>
         <translation>Die Änderung der Option &quot;system-tray-enabled&quot; erfordert einen Neustart von vdu_controls. </translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4350"/>
+        <location filename="../vdu_controls.py" line="4353"/>
         <source>
 
 VDU Controls
@@ -632,7 +632,7 @@ Suche nach DDC-Monitoren...
  </translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4355"/>
+        <location filename="../vdu_controls.py" line="4358"/>
         <source>
 
 VDU Controls {}
@@ -645,39 +645,39 @@ DDC-ID {}
 {} </translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4465"/>
+        <location filename="../vdu_controls.py" line="4468"/>
         <source>Temporarily unable to migrate some presets to {}:
 {}</source>
         <translation>Vorübergehend nicht in der Lage, einige Voreinstellungen nach {} zu migrieren:
 {} </translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4852"/>
+        <location filename="../vdu_controls.py" line="4855"/>
         <source>Using newer .ts file {} translations from {}</source>
         <translation>Verwendet neuere .ts-Datei {} Übersetzungen von {} </translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4859"/>
+        <location filename="../vdu_controls.py" line="4862"/>
         <source>Loaded {} translations from {}</source>
         <translation>Geladene {} Übersetzungen von {} </translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4863"/>
+        <location filename="../vdu_controls.py" line="4866"/>
         <source>Loading {} translations from {}</source>
         <translation>Laden von {} Übersetzungen aus {} </translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4866"/>
+        <location filename="../vdu_controls.py" line="4869"/>
         <source>Using {} translations from {}</source>
         <translation>Verwenden von {} Übersetzungen aus {} </translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4941"/>
+        <location filename="../vdu_controls.py" line="4944"/>
         <source>Restart of {} failed.  Please restart manually.</source>
         <translation>Neustart von {} fehlgeschlagen.  Bitte starten Sie manuell neu. </translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4942"/>
+        <location filename="../vdu_controls.py" line="4945"/>
         <source>This is probably because {} is not executable or is not on your PATH.</source>
         <translation>Dies liegt wahrscheinlich daran, dass {} nicht ausführbar ist oder sich nicht in Ihrem PATH befindet. </translation>
     </message>
@@ -697,7 +697,7 @@ DDC-ID {}
         <translation type="obsolete">Unbekannter Wetterstandort, ignoriert Wetteranforderungen. Bitte überprüfen Sie die Einstellungen Standort. </translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4658"/>
+        <location filename="../vdu_controls.py" line="4661"/>
         <source>Ignoring weather requirements, unable to query local weather: {}</source>
         <translation>Ignoriert Wetteranforderungen, kann das lokale Wetter nicht abfragen: {} </translation>
     </message>
@@ -747,12 +747,12 @@ DDC-ID {}
         <translation>Das Wetter für {} wird von {} abgerufen.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4261"/>
+        <location filename="../vdu_controls.py" line="4264"/>
         <source>The change to the translations-enabled option requires vdu_controls to restart.</source>
         <translation>Die Änderung der Option translations-enabled erfordert einen Neustart von vdu_controls.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4448"/>
+        <location filename="../vdu_controls.py" line="4451"/>
         <source>Welcome to vdu_controls version {}</source>
         <translation>Willkommen bei vdu_controls Version {}</translation>
     </message>
@@ -762,19 +762,39 @@ DDC-ID {}
         <translation>Bitte überprüfen Sie den in den Einstellungen angegebenen Ort.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4449"/>
+        <location filename="../vdu_controls.py" line="4452"/>
         <source>Please read the online release notes:</source>
         <translation>Bitte lesen Sie die Online-Versionshinweise:</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4639"/>
+        <location filename="../vdu_controls.py" line="4642"/>
         <source>Preset {} activating on schedule at {}</source>
         <translation>Voreingestellte {} Aktivierung planmäßig am {}</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="4632"/>
+        <location filename="../vdu_controls.py" line="4635"/>
         <source>Preset {} activation was cancelled due to weather at {}</source>
         <translation>Die Aktivierung der Voreinstellung {} wurde aufgrund des Wetters am {} abgebrochen</translation>
+    </message>
+    <message>
+        <location filename="../vdu_controls.py" line="4215"/>
+        <source>unscheduled</source>
+        <translation>außerplanmäßig</translation>
+    </message>
+    <message>
+        <location filename="../vdu_controls.py" line="4216"/>
+        <source>succeeded</source>
+        <translation>gelungen</translation>
+    </message>
+    <message>
+        <location filename="../vdu_controls.py" line="4217"/>
+        <source>skipped, superseded</source>
+        <translation>übersprungen, ersetzt</translation>
+    </message>
+    <message>
+        <location filename="../vdu_controls.py" line="4218"/>
+        <source>weather cancellation</source>
+        <translation>Wetterabsage</translation>
     </message>
 </context>
 </TS>
