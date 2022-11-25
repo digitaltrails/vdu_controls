@@ -768,8 +768,8 @@ DDC-ID {}
     </message>
     <message>
         <location filename="../vdu_controls.py" line="4639"/>
-        <source>Preset {} activated on schedule at {}</source>
-        <translation>Voreinstellung {} planmäßig am {} aktiviert</translation>
+        <source>Preset {} activating on schedule at {}</source>
+        <translation>Voreingestellte {} Aktivierung planmäßig am {}</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="4632"/>

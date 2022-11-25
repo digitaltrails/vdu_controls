@@ -768,8 +768,8 @@ DDC ID {}
     </message>
     <message>
         <location filename="../vdu_controls.py" line="4639"/>
-        <source>Preset {} activated on schedule at {}</source>
-        <translation>Forudindstillet {} aktiveret efter planen den {}</translation>
+        <source>Preset {} activating on schedule at {}</source>
+        <translation>Forudindstillet {} aktivering efter tidsplan d. {}</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="4632"/>

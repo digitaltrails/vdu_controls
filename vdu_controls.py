@@ -4636,7 +4636,7 @@ class MainWindow(QMainWindow):
             log_info(f"Preset {preset.name} activating according the schedule at {now}")
             if self.restore_preset(preset):
                 preset.latest_schedule_status = ScheduleStatus.succeeded
-                status_msg = tr("Preset {} activated on schedule at {}").format(preset.name, now.isoformat(' ', 'seconds'))
+                status_msg = tr("Preset {} activating on schedule at {}").format(preset.name, now.isoformat(' ', 'seconds'))
             else:
                 preset.latest_schedule_status = ScheduleStatus.failed_to_restore
                 status_msg = None  # Cannot issue message - may tread on following message from a more recent preset activation.
