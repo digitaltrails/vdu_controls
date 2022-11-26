@@ -452,6 +452,19 @@ EASTERN_SKY = 'eastern-sky'
 IP_ADDRESS_INFO_URL = os.getenv('VDU_CONTROLS_IPINFO_URL', default='https://ipinfo.io/json')
 WEATHER_FORECAST_URL = os.getenv('VDU_CONTROLS_WTTR_URL', default='https://wttr.in')
 
+TIME_CLOCK_SYMBOL = '\u25F4'  # WHITE CIRCLE WITH UPPER LEFT QUADRANT
+WEATHER_RESTRICTION_SYMBOL = '\u2614'  # UMBRELLA WITH RAIN DROPS
+TOO_HIGH_SYMBOL = '\u29BB'  # CIRCLE WITH SUPERIMPOSED X
+DEGREE_SYMBOL = '\u00B0'  # DEGREE SIGN
+SUN_SYMBOL = '\u2600'  # BLACK SUN WITH RAYS
+WEST_ELEVATION_SYMBOL = '\u29A9'  # MEASURED ANGLE WITH OPEN ARM ENDING IN ARROW POINTING UP AND RIGHT
+EAST_ELEVATION_SYMBOL = '\u29A8'  # MEASURED ANGLE WITH OPEN ARM ENDING IN ARROW POINTING UP AND LEFT
+TIMER_RUNNING_SYMBOL = '\u23F3'  # HOURGLASS WITH FLOWING SAND
+WEATHER_CANCELLATION_SYMBOL = '\u2744'  # HEAVY CHECK MARK
+SKIPPED_SYMBOL = '\u2718'  # HEAVY BALLOT X
+SUCCESS_SYMBOL = '\u2714'  # SNOWFLAKE
+PRESET_APP_SEPARATOR_SYMBOL = '\u2014'  # EM DASH
+
 SolarElevationKey = namedtuple('SolarElevationKey', ['direction', 'elevation'])
 SolarElevationData = namedtuple('SolarElevationData', ['azimuth', 'zenith', 'when'])
 
@@ -463,14 +476,14 @@ def zoned_now() -> datetime:
 
 
 def format_solar_elevation_abbreviation(elevation: SolarElevationKey) -> str:
-    direction_char = '\u29A8' if elevation.direction == EASTERN_SKY else '\u29A9'
-    return f"\u2600 {direction_char} {elevation.elevation}\u00B0"
+    direction_char = EAST_ELEVATION_SYMBOL if elevation.direction == EASTERN_SKY else WEST_ELEVATION_SYMBOL
+    return f"{SUN_SYMBOL} {direction_char} {elevation.elevation}{DEGREE_SYMBOL}"
 
 
 def format_solar_elevation_description(elevation: SolarElevationKey) -> str | None:
     # Note - repeating the constants here to force them to be included by pylupdate5 internationalisation
     direction_text = tr('eastern-sky') if elevation.direction == EASTERN_SKY else tr('western-sky')
-    return f"{direction_text} {elevation.elevation}\u00B0"
+    return f"{direction_text} {elevation.elevation}{DEGREE_SYMBOL}"
 
 
 def create_solar_elevation_ini_text(elevation: SolarElevationKey):
@@ -2477,12 +2490,12 @@ class Preset:
             return ''
         result = format_solar_elevation_abbreviation(elevation)
         if self.elevation_time_today:
-            result += ' \u25F4 ' + self.elevation_time_today.strftime("%H:%M")
+            result += f" {TIME_CLOCK_SYMBOL} {self.elevation_time_today.strftime('%H:%M')}"
         else:
             # Not possible today - sun doesn't get that high
-            result += ' \u29BB'
+            result += ' ' + TOO_HIGH_SYMBOL
         if self.get_weather_restriction_filename() is not None:
-            result += ' \u2614'
+            result += ' ' + WEATHER_RESTRICTION_SYMBOL
         result += ' ' + self.schedule_status.symbol()
         return result
 
@@ -2498,12 +2511,11 @@ class Preset:
         if self.elevation_time_today:
             if self.timer and self.timer.remainingTime() > 0:
                 template = tr("{} later today at {}") + weather_suffix
-
             elif self.elevation_time_today < zoned_now():
                 template = tr("{} earlier today at {}") + weather_suffix + f" ({self.schedule_status.description()})"
             else:
                 template = tr("{} suspended for  {}")
-            result = template.format(basic_desc, self.elevation_time_today.strftime(tr("%H:%M")))
+            result = template.format(basic_desc, self.elevation_time_today.strftime("%H:%M"))
         else:
             result = basic_desc + ' ' + tr("the sun does not rise this high today")
         return result
@@ -2587,19 +2599,21 @@ class Preset:
         weather_restriction_filename = self.get_weather_restriction_filename()
         if weather_restriction_filename is None:
             return True
-        if not Path(weather_restriction_filename).exists():
+        path = Path(weather_restriction_filename)
+        if not path.exists():
             log_error(f"Preset {self.name} missing weather requirements file: {weather_restriction_filename}")
             return True
-        with open(weather_restriction_filename) as weather_file:
+        with open(path) as weather_file:
             code_list = weather_file.readlines()
             log_info(f"Preset {self.name} weather requirements {weather_restriction_filename}: {code_list}")
             for code_line in code_list:
                 required_code = code_line.strip().split()[0].split(',')[0]
                 if weather.weather_code.strip() == required_code:
-                    log_info("Meet required weather conditions "
+                    log_info(f"Preset {self.name} met {path.name} requirements. Current weather is: "
                              f"{weather.area_name} {weather.weather_code} {weather.weather_desc}")
                     return True
-        log_info(f"Failed to meet weather requirements: {weather.area_name} {weather.weather_code} {weather.weather_desc}")
+        log_info(f"Preset {self.name} failed {path.name} requirements. Current weather is: "
+                 f"{weather.area_name} {weather.weather_code} {weather.weather_desc}")
         return False
 
     def get_weather_restriction_filename(self):
@@ -3145,11 +3159,6 @@ class PresetWidget(QWidget):
         timer_control_button = PushButtonLeftJustified(parent=self)
         timer_control_button.setFlat(True)
 
-
-        # action_desc = {
-        #     'scheduled': , 'suspended': tr("Press to re-enable {}"),
-        #     'past': tr("Scheduled {}"), 'unscheduled': tr("Not applicable {}")}
-
         if preset.get_solar_elevation() is not None:
 
             def format_description():
@@ -3242,14 +3251,25 @@ class PresetChooseIconButton(QPushButton):
 class QueryWeather:
 
     def __init__(self, location: GeoLocation):
-        location_name = location.place_name
+        self.location = location
+        self.maximum_distance_km = int(os.getenv("VDU_CONTROLS_WEATHER_KM", default='200'))
+        lang = locale.getlocale()[0][:2]
+        self.url = f"{WEATHER_FORECAST_URL}/{location.place_name}?" + urllib.parse.urlencode({'lang': lang, 'format': 'j1'})
+        self.weather_data = None
+        self.proximity_km = 0
+        self.proximity_ok = True
+        self.longitude = self.latitude = self.country_name = self.area_name = None
+        self.cloud_cover = self.visibility = self.weather_desc = self.weather_code = None
+        self.when: datetime | None = None
+        self.query_succeeded = False
+
+    def run_query(self):
+        location_name = self.location.place_name
         lang = locale.getlocale()[0][:2]
         if location_name is None or location_name.strip() == '':
             location_name = ''
-        weather_url = WEATHER_FORECAST_URL
-        self.maximum_distance_km = 200
-        self.url = f"{weather_url}/{location_name}?" + urllib.parse.urlencode({'lang': lang, 'format': 'j1'})
-        self.weather_data = None
+
+        self.when = zoned_now()
         try:
             with urllib.request.urlopen(self.url, timeout=15) as request:
                 json_content = request.read()
@@ -3266,7 +3286,11 @@ class QueryWeather:
                 self.country_name = self.weather_data['nearest_area'][0]['country'][0]['value']
                 self.latitude = self.weather_data['nearest_area'][0]['latitude']
                 self.longitude = self.weather_data['nearest_area'][0]['longitude']
-                self.distance_from_location, self.distance_from_location_is_acceptable = self.__verify_weather_location(location)
+                self.proximity_km = calc_kilometers(float(self.latitude), float(self.longitude),
+                                                    self.location.latitude, self.location.longitude)
+                self.proximity_ok = self.proximity_km <= self.maximum_distance_km
+                self.query_succeeded = True
+                log_info(f"QueryWeather result: {self}")
         except urllib.error.HTTPError as e:
             if e.code == 404:
                 raise ValueError(tr("Unknown location {}".format(location_name)),
@@ -3276,17 +3300,26 @@ class QueryWeather:
             # Can't afford to fall over because of a problem with a remote site
             raise ValueError(tr("Failed to get weather from {}").format(self.url), str(ue))
 
-    def __verify_weather_location(self, location):
-        kilometres = calc_kilometers(float(self.latitude), float(self.longitude),
-                                     location.latitude, location.longitude)
-        return kilometres, kilometres <= self.maximum_distance_km
-
     def __str__(self):
         if self.weather_data is None:
             return ""
         return f"{self.area_name}, {self.country_name}, {self.weather_desc} ({self.weather_code})," \
                f"cloud_cover {self.cloud_cover}, visibility {self.visibility}, " \
                f"location={self.latitude},{self.longitude}"
+
+
+def weather_bad_locaton_dialog(weather):
+    kilometres = weather.proximity_km
+    use_km = QLocale.system().measurementSystem() == QLocale.MetricSystem
+    msg = MessageBox(QMessageBox.Warning)
+    msg.setText(
+        tr("The site {} reports your location as {}, {}, {},{} "
+           "which is about {} {} from the latitude and longitude specified in Settings."
+           ).format(WEATHER_FORECAST_URL, weather.area_name, weather.country_name, weather.latitude, weather.longitude,
+                    round(kilometres if use_km else kilometres * 0.621371), 'km' if use_km else 'miles'))
+    msg.setInformativeText(tr("Please check the location specified in Settings."))
+    msg.setDetailedText(f"{weather}")
+    msg.exec()
 
 
 class PresetChooseWeatherWidget(QWidget):
@@ -3365,6 +3398,7 @@ class PresetChooseWeatherWidget(QWidget):
     def verify_weather_location(self, location_func: Callable):
         location = location_func()
         place_name = location.place_name if location.place_name is not None else 'IP-address'
+        # Only do this check if the location has changed.
         vf_file_path = CONFIG_DIR_PATH.joinpath('verified_weather_location.txt')
         if vf_file_path.exists():
             with open(vf_file_path) as vf:
@@ -3373,24 +3407,15 @@ class PresetChooseWeatherWidget(QWidget):
         try:
             log_info(f"Verifying weather location by querying {WEATHER_FORECAST_URL}.")
             weather = QueryWeather(location)
-            if weather.distance_from_location_is_acceptable:
+            weather.run_query()
+            if weather.proximity_ok:
                 msg = MessageBox(QMessageBox.Information)
                 msg.setText(tr("Weather for {} will be retrieved from {}").format(place_name, WEATHER_FORECAST_URL))
                 msg.exec()
                 with open(vf_file_path, 'w') as vf:
                     vf.write(place_name)
             else:
-                kilometres = weather.distance_from_location
-                use_km = QLocale.system().measurementSystem() == QLocale.MetricSystem
-                msg = MessageBox(QMessageBox.Warning)
-                msg.setText(
-                    tr("The site {} reports your location as {}, {}, {},{} "
-                       "which is about {} {} from the latitude and longitude specified in Settings."
-                       ).format(WEATHER_FORECAST_URL, weather.area_name, weather.country_name, weather.latitude, weather.longitude,
-                                round(kilometres if use_km else kilometres * 0.621371), 'km' if use_km else 'miles'))
-                msg.setInformativeText(tr("Please check the location specified in Settings."))
-                msg.setDetailedText(f"{weather}")
-                msg.exec()
+                weather_bad_locaton_dialog(weather)
         except ValueError as e:
             log_error(f"Failed to validate location: {e}")
             msg = MessageBox(QMessageBox.Critical)
@@ -3485,7 +3510,7 @@ class PresetChooseElevationWidget(QWidget):
                 when_text += " " + tr("twilight")
             else:
                 when_text += " " + tr("nighttime")
-        display_text = tr("{} {} ({}, {})").format(
+        display_text = "{} {} ({}, {})".format(
             self.default_title,
             format_solar_elevation_abbreviation(self.elevation_key),
             tr(self.elevation_key.direction),
@@ -3567,7 +3592,7 @@ class PresetChooseElevationWidget(QWidget):
         painter.drawText(reverse_x(solar_noon_plot_x + 150), origin_iy - 20, tr("W"))
         time_text = sun_plot_time.strftime("%H:%M") if sun_plot_time else "____"
         painter.drawText(reverse_x(solar_noon_plot_x + width // 4), origin_iy + height // 4,
-                         f"{ev_key.elevation if ev_key else 0:3d}\u00B0 {time_text}")
+                         f"{ev_key.elevation if ev_key else 0:3d}{DEGREE_SYMBOL} {time_text}")
         painter.setPen(QPen(QColor(0xff965b), 2));
         painter.setBrush(QColor(0xff965b))
         painter.drawEllipse(reverse_x(solar_noon_plot_x + 8), origin_iy - 8, 16, 16)
@@ -3675,7 +3700,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
 
         self.edit_preset_layout.addWidget(self.preset_name_edit)
 
-        self.edit_save_button = QPushButton()  # translate('Add'))  # QPushButton(' \u2003')
+        self.edit_save_button = QPushButton()
         self.edit_save_button.setIcon(si(self, QStyle.SP_DriveFDIcon))
         self.edit_save_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
         self.edit_save_button.setFlat(True)
@@ -4218,11 +4243,11 @@ class HelpDialog(QDialog, DialogSingletonMixin):
 class ScheduleStatus(Enum):
     unscheduled = 0, ' ', QT_TR_NOOP('unscheduled')
     # This hourglass character is too tall - it causes a jump when rendered - but nothing else is quite as appropriate.
-    scheduled = 1, '\u23F3', QT_TR_NOOP('scheduled')
+    scheduled = 1, TIMER_RUNNING_SYMBOL, QT_TR_NOOP('scheduled')
     suspended = 2, ' ', QT_TR_NOOP('suspended')
-    succeeded = 3, '\u2714', QT_TR_NOOP('succeeded')
-    skipped_superseded = 4, '\u2718', QT_TR_NOOP('skipped, superseded')
-    weather_cancellation = 5, '\u2744', QT_TR_NOOP('weather cancellation')
+    succeeded = 3, SUCCESS_SYMBOL, QT_TR_NOOP('succeeded')
+    skipped_superseded = 4, SKIPPED_SYMBOL, QT_TR_NOOP('skipped, superseded')
+    weather_cancellation = 5, WEATHER_CANCELLATION_SYMBOL, QT_TR_NOOP('weather cancellation')
 
     def symbol(self) -> str:
         return self.value[1]
@@ -4248,6 +4273,7 @@ class MainWindow(QMainWindow):
         self.settings = QSettings('vdu_controls.qt.state', 'vdu_controls')
         self.main_control_panel = None
         self.main_config = main_config
+        self.weather_cache: QueryWeather = None
         self.daily_schedule_next_update = datetime.today()
 
         current_desktop = os.environ.get('XDG_CURRENT_DESKTOP', default='unknown')
@@ -4448,7 +4474,8 @@ class MainWindow(QMainWindow):
             # Start of run - this preset is the one that should be running now
             log_info(f"Restoring preset {overdue.name} "
                      f"because its scheduled to be active at this time ({zoned_now()}).")
-            self.activate_scheduled_preset(overdue)
+            # Weather check will have succeeded inside schedule_presets() above, don't do it again.
+            self.activate_scheduled_preset(overdue, check_weather=False)
 
         if splash is not None:
             splash.finish(self)
@@ -4543,7 +4570,7 @@ class MainWindow(QMainWindow):
             self.app.setWindowIcon(icon)
             self.main_control_panel.display_active_preset(preset)
             if self.tray:
-                self.tray.setToolTip(f"{preset.name} \u2014 {self.app_name}")
+                self.tray.setToolTip(f"{preset.name} {PRESET_APP_SEPARATOR_SYMBOL} {self.app_name}")
                 self.tray.setIcon(icon)
         else:
             self.setWindowTitle("")
@@ -4594,7 +4621,9 @@ class MainWindow(QMainWindow):
         log_info(f"Scheduling presets reset={reset}")
         time_map = create_todays_elevation_time_map(latitude=location.latitude, longitude=location.longitude)
         most_recent_overdue = None
-        latest_due = zoned_now().replace(hour=0, minute=0, second=0, microsecond=0)
+        local_now = zoned_now()
+        latest_due = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
+        weather: QueryWeather = None  # Reuse the weather, don't do multiple queries
         for name, preset in self.preset_controller.find_presets().items():
             if reset:
                 preset.remove_elevation_trigger()
@@ -4602,20 +4631,18 @@ class MainWindow(QMainWindow):
             if elevation_key is not None and preset.schedule_status == ScheduleStatus.unscheduled:
                 if elevation_key in time_map:
                     when_today = time_map[elevation_key].when
-                    local_now = zoned_now()
                     preset.elevation_time_today = when_today
                     if when_today > local_now:
                         preset.start_timer(when_today, self.activate_scheduled_preset)
                     else:
-                        if when_today > latest_due:
-                            most_recent_overdue = preset
-                            latest_due = when_today
                         preset.schedule_status = ScheduleStatus.skipped_superseded
+                        if when_today > latest_due:
+                            if self.apply_weather_requirements(preset, use_cache=True):
+                                most_recent_overdue = preset
+                                latest_due = when_today
                 else:
                     log_info(f"Solar activation skipping preset {preset.name} {elevation_key} degrees"
                              " - the sun does not reach that elevation today.")
-            # log_debug(f"{name} timer status: {preset.get_timer_status()}")
-
         # set a timer to rerun this at the beginning of the next day.
         tomorrow = date.today() + timedelta(days=1)
         if self.daily_schedule_next_update != tomorrow:
@@ -4626,51 +4653,59 @@ class MainWindow(QMainWindow):
             QTimer.singleShot(int(millis), partial(self.schedule_presets, True))
             # Testing: QTimer.singleShot(int(1000*30), partial(self.schedule_presets, True))
             self.daily_schedule_next_update = tomorrow
+        if weather is not None and not weather.proximity_ok:
+            weather_bad_locaton_dialog(weather)
         if reset:
             presets_dialog = PresetsDialog.get_instance()
             if presets_dialog:
                 presets_dialog.refresh_view()
         return most_recent_overdue
 
-    def activate_scheduled_preset(self, preset: Preset):
+    def activate_scheduled_preset(self, preset: Preset, check_weather: bool = True):
         now = zoned_now()
-        proceed, weather = self.check_weather_requirements(preset)
-        status_msg_additional = ''
-        if not proceed:
-            preset.schedule_status = ScheduleStatus.weather_cancellation
-            log_info(
-                f"Preset {preset.name} cancelled due to weather: {weather.area_name} {weather.weather_code} {weather.weather_desc}")
-            status_msg = tr("Preset {} activation was cancelled due to weather at {}").format(
-                preset.name, now.isoformat(' ', 'seconds'))
-            status_msg_additional = f"({weather.weather_desc})"
-        else:
+        weather_text = ''
+        proceed = True
+        if preset.is_weather_dependent() and check_weather:
+            proceed = self.apply_weather_requirements(preset)
+            if not proceed:
+                preset.schedule_status = ScheduleStatus.weather_cancellation
+                status_text = tr("Preset {} activation was cancelled due to weather at {}").format(
+                    preset.name, now.isoformat(' ', 'seconds'))
+                weather_text = f"({self.weather_cache.weather_desc})"
+        if proceed:
             log_info(f"Preset {preset.name} activating according the schedule at {now}")
             if self.restore_preset(preset):
                 preset.schedule_status = ScheduleStatus.succeeded
-                status_msg = tr("Preset {} activating on schedule at {}").format(preset.name, now.isoformat(' ', 'seconds'))
+                status_text = tr("Preset {} activating on schedule at {}").format(preset.name, now.isoformat(' ', 'seconds'))
             else:
                 preset.schedule_status = ScheduleStatus.skipped_superseded
-                status_msg = None  # Cannot issue message - may tread on following message from a more recent preset activation.
+                status_text = None  # Cannot issue message - may tread on following message from a more recent preset activation.
         presets_dialog = PresetsDialog.get_instance()
         if presets_dialog:
             presets_dialog.refresh_view()
-            if status_msg:
-                presets_dialog.set_message(f"\u25F4 {status_msg} {preset.schedule_status.symbol()} {status_msg_additional}")
+            if status_text:
+                presets_dialog.set_message(f"{TIME_CLOCK_SYMBOL} {status_text} {preset.schedule_status.symbol()} {weather_text}")
 
-    def check_weather_requirements(self, preset) -> (bool, QueryWeather | None):
+    def apply_weather_requirements(self, preset, use_cache: bool = False) -> bool:
         try:
             if preset.is_weather_dependent():
-                weather = QueryWeather(self.main_config.get_location())
-                if not weather.distance_from_location_is_acceptable:
-                    log_error(f"Weather location is {weather.distance_from_location} km from Settings Location, check settings.")
-                return preset.check_weather(weather), weather
+                if not use_cache or self.weather_cache is None:
+                    self.weather_cache = QueryWeather(self.main_config.get_location())
+                    self.weather_cache.run_query()
+                    if not self.weather_cache.proximity_ok:
+                        log_error(f"Preset {preset.name} weather location is {self.weather_cache.proximity_km} km from "
+                                  f"Settings Location, check settings.")
+                        weather_bad_locaton_dialog(self.weather_cache)
+                if not preset.check_weather(self.weather_cache):
+                    preset.schedule_status = ScheduleStatus.weather_cancellation
+                    return False
         except ValueError as e:
             msg = MessageBox(QMessageBox.Warning)
             msg.setText(
                 tr("Ignoring weather requirements, unable to query local weather: {}").format(str(e.args[0])))
             msg.setInformativeText(e.args[1])
             msg.exec()
-        return True, None
+        return True
 
 
 class SignalWakeupHandler(QtNetwork.QAbstractSocket):
