@@ -540,7 +540,7 @@ def tr(source_text: str, disambiguation: str = None):
 def translate_option(option_text):
     # We can't be sure of the case in capability descriptions retrieved from the monitors.
     # If there is no direct translation, we try canonical version of the name (all lowercase
-    # with '-' replaced with ' '.
+    # with '-' replaced with ' ').
     result = tr(option_text)
     if result != option_text:
         # Probably a command line option
@@ -1044,7 +1044,7 @@ class DialogSingletonMixin:
     debug = False
 
     def __init__(self) -> None:
-        """Registers the concrete class as a singleton so it can be reused later."""
+        """Registers the concrete class as a singleton, so it can be reused later."""
         super().__init__()
         class_name = self.__class__.__name__
         if class_name in DialogSingletonMixin._dialogs_map:
@@ -1172,7 +1172,7 @@ class ConfigIni(configparser.ConfigParser):
             version = self[ConfigIni.METADATA_SECTION][ConfigIni.METADATA_VERSION_OPTION]
             try:
                 return tuple([int(i) for i in version.split('.')])
-            except ValueError as ve:
+            except ValueError:
                 log_error(f"Illegal version number {version} should be i.j.k where i, j and k are integers.")
         return 1, 6, 0
 
@@ -1500,7 +1500,7 @@ class VduController(QObject):
     Capabilities are either extracted from ddcutil output or read from the INI-format files.  File read
     capabilities are provided so that the output from "ddcutil --display N capabilities" can be corrected (because
     it is sometimes incorrect due to sloppy implementation by manufacturers). For example, my LG monitor reports
-    two Display-Port inputs and it only has one.
+    two Display-Port inputs, and it only has one.
     """
 
     vdu_setting_changed = pyqtSignal()
@@ -1598,7 +1598,7 @@ class VduController(QObject):
             if len(stripped) != 0:
                 lines_list = stripped.split('\n')
                 if len(lines_list) == 1:
-                    range_pattern = re.compile('Values:\s+([0-9]+)..([0-9]+)')
+                    range_pattern = re.compile(r'Values:\s+([0-9]+)..([0-9]+)')
                     range_match = range_pattern.match(lines_list[0])
                     if range_match:
                         values_list = ["%%Range%%", range_match.group(1), range_match.group(2)]
@@ -1910,7 +1910,7 @@ class LatitudeLongitudeValidator(QRegExpValidator):
                         if -180.0 <= lon <= 180.0:
                             return QValidator.Acceptable, text, pos
                     return QValidator.Invalid, text, pos
-                except ValueError as e:
+                except ValueError:
                     return QValidator.Intermediate, text, pos
         return result
 
@@ -2207,7 +2207,7 @@ class VduControlSlider(VduControlBase):
                     int(new_value)
                     self.current_value = new_value
                 return
-            except ValueError as ve:
+            except ValueError:
                 # Might be initializing at login - can cause transient errors due to X11 talking to
                 # the monitor.
                 log_warning(f"Non integer values for slider {self.vdu_model.vdu_stable_id} "
@@ -2819,7 +2819,7 @@ class VduControlsMainPanel(QWidget):
                 try:
                     controller = VduController(vdu_id, vdu_model_name, vdu_serial, manufacturer, main_config,
                                                self.ddcutil)
-                except Exception as e:
+                except Exception:
                     # Catch any kind of parse related error
                     no_auto = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Ignore | QMessageBox.Apply | QMessageBox.Retry)
                     no_auto.setText(
@@ -3055,7 +3055,6 @@ class PresetController:
         for preset_name, preset in self.find_presets().items():
             problem_id = preset.convert_v1_7(new_and_old_ids)
             if problem_id:
-                all_done = False
                 problems.append((preset_name, problem_id))
         return problems
 
@@ -3593,7 +3592,7 @@ class PresetChooseElevationWidget(QWidget):
         time_text = sun_plot_time.strftime("%H:%M") if sun_plot_time else "____"
         painter.drawText(reverse_x(solar_noon_plot_x + width // 4), origin_iy + height // 4,
                          f"{ev_key.elevation if ev_key else 0:3d}{DEGREE_SYMBOL} {time_text}")
-        painter.setPen(QPen(QColor(0xff965b), 2));
+        painter.setPen(QPen(QColor(0xff965b), 2))
         painter.setBrush(QColor(0xff965b))
         painter.drawEllipse(reverse_x(solar_noon_plot_x + 8), origin_iy - 8, 16, 16)
         if ev_key:
@@ -4539,7 +4538,7 @@ class MainWindow(QMainWindow):
 
     def save_preset(self, preset: Preset) -> None:
         id_list = self.copy_to_preset_ini(preset.preset_ini, update_only=True)
-        ##preset.convert_v1_7_check(id_list)
+        #?preset.convert_v1_7_check(id_list)
         self.preset_controller.save_preset(preset)
         if not self.app_context_menu.has_preset_menu_item(preset.name):
             self.app_context_menu.insert_preset_menu_item(preset)
@@ -4663,6 +4662,7 @@ class MainWindow(QMainWindow):
 
     def activate_scheduled_preset(self, preset: Preset, check_weather: bool = True):
         now = zoned_now()
+        status_text = ''
         weather_text = ''
         proceed = True
         if preset.is_weather_dependent() and check_weather:
@@ -4712,7 +4712,7 @@ class SignalWakeupHandler(QtNetwork.QAbstractSocket):
     # https://stackoverflow.com/a/37229299/609575
     # '''
     # Quoted here: The Qt event loop is implemented in C(++). That means, that while it runs and no Python code is
-    # called (eg. by a Qt signal connected to a Python slot), the signals are noted, but the Python signal handlers
+    # called (e.g. by a Qt signal connected to a Python slot), the signals are noted, but the Python signal handlers
     # aren't called.
     #
     # But, since Python 2.6 and in Python 3 you can cause Qt to run a Python function when a signal with a handler is
