@@ -263,7 +263,7 @@ against the weather reported by https://wttr.in.
 By default, there are three possible weather requirements: ``good``,
 ``bad``, and ``all weather``.  Each  requirement is defined by a
 file containing a list of WWO (https://www.worldweatheronline.com) weather
-codes, one code per line.  The three default requirements are contained in
+codes, one per line.  The three default requirements are contained in
 the files ``$HOME/.config/vdu_controls/{good,bad,all}.weather``.  Additional
 weather requirements can be created by using a text editor to create further
 files.  The ``all.weather`` file exists primarily as a convenient resource
@@ -282,7 +282,7 @@ manually edited to something more suitable. The nearest big city or an
 airport-code will do, for example: LHR, LAX, JFK.  You can use a web browser
 to test a place-name, for example: https://wttr.in/JFK
 
-When weather requirements are in use, vdu_controls`` will check that the
+When weather requirements are in use, ``vdu_controls`` will check that the
 coordinates in ``Settings`` ``Location`` are a reasonable match for
 those returned from ``wttr.in``, a warning will be issued if they are more
 than 200 km (124 miles) apart.
