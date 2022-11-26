@@ -2625,8 +2625,8 @@ class Preset:
             code_list = weather_file.readlines()
             log_info(f"Preset {self.name} weather requirements {weather_restriction_filename}: {code_list}")
             for code_line in code_list:
-                required_code = code_line.strip().split()[0].split(',')[0]
-                if weather.weather_code.strip() == required_code:
+                parts = code_line.split()
+                if parts and weather.weather_code.strip() == parts[0]:
                     log_info(f"Preset {self.name} met {path.name} requirements. Current weather is: "
                              f"{weather.area_name} {weather.weather_code} {weather.weather_desc}")
                     return True
@@ -3397,7 +3397,7 @@ class PresetChooseWeatherWidget(QWidget):
                     "Heavy Snow\n350 Light Sleet\n353 Light Showers\n356 Heavy Showers\n359 Heavy Rain\n362 Light "
                     "Sleet Showers\n365 Light Sleet Showers\n368 Light Snow Showers\n371 Heavy Snow Showers\n374 "
                     "Light Sleet Showers\n377 Light Sleet\n386 Thundery Showers\n389 Thundery Heavy Rain\n392 "
-                    "Thundery Snow Showers\n395 HeavySnowShowers\n "
+                    "Thundery Snow Showers\n395 HeavySnowShowers\n"
                 )
             with open(CONFIG_DIR_PATH.joinpath('all.weather'), 'w') as weather_file:
                 weather_file.write(
