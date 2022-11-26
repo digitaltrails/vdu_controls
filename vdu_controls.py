@@ -254,25 +254,43 @@ set to run at login, and they've also set a preset to trigger at dawn, but
 they don't actually log in until just after dawn, the overdue dawn preset will be
 triggered at login.
 
-A solar elevation trigger can have a weather requirement which will be checked
-against the weather reported by https://wttr.in.  By default, there are three
-possible weather requirements: ``good``, ``bad``, and ``all weather``. Each possible
-requirement is defined by a file containing a list of WWO
-(https://www.worldweatheronline.com) weather codes, one code per line.  The
-three default possibilities are contained in the files
-``$HOME/.config/vdu_controls/{good,bad,all}.weather``.  Additional weather
-requirements can be created by using a text editor to create further files.
-The ``all.weather`` file exists primarily as a convenient resource that lists
-all possible codes.  Because weather is unpredictable and forecasts are
-often unreliable or out of date, it's best to use weather requirements as a
-coarse measure. Going beyond good and bad may not be very practical.
+Presets - supplementary weather requirements
+--------------------------------------------
 
-If ``wttr.in`` fails to recognise a location, the name part of ``Settings``
-``Location`` can be manually changed to anything suitable (the nearest
-recognised big city or an airport-code will do).  Alternatively if the
-location name is completely  removed from ``Settings`` ``Location``,
-then ``wttr.in`` will fall back to using the location associated
-with your external IP-Address.
+A solar elevation trigger can have a weather requirement which will be checked
+against the weather reported by https://wttr.in.
+
+By default, there are three possible weather requirements: ``good``,
+``bad``, and ``all weather``.  Each  requirement is defined by a
+file containing a list of WWO (https://www.worldweatheronline.com) weather
+codes, one code per line.  The three default requirements are contained in
+the files ``$HOME/.config/vdu_controls/{good,bad,all}.weather``.  Additional
+weather requirements can be created by using a text editor to create further
+files.  The ``all.weather`` file exists primarily as a convenient resource
+that lists all possible codes.
+
+Because reported current weather conditions may be inaccurate or out of date,
+it's best to use weather requirements as a coarse measure. Going beyond good
+and bad may not be very practical.  What's possible might depend on you local
+weather conditions.
+
+To ensure ``wttr.in`` supplies the weather for your location, please ensure
+that ``Settings`` ``Location`` includes a place-name suffix.  The ``Settings``
+``Location`` ``Detect`` button has been enhanced to fill out a place-name for
+you.  Should ``wttr.in`` not recognise a place-name, the place-name can be
+manually edited to something more suitable. The nearest big city or an
+airport-code will do, for example: LHR, LAX, JFK.  You can use a web browser
+to test a place-name, for example: https://wttr.in/JFK
+
+When weather requirements are in use, vdu_controls`` will check that the
+coordinates in ``Settings`` ``Location`` are a reasonable match for
+those returned from ``wttr.in``, a warning will be issued if they are more
+than 200 km (124 miles) apart.
+
+If the place-name is left blank, the ``wttr.in`` server will try to guess
+you location from your external IP address.  The guess may vary due to
+the state of the ``wttr.in`` server. It's best to fill out a place-name
+to ensure stable results.
 
 Presets - remote control
 ------------------------

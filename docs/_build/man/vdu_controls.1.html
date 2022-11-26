@@ -250,27 +250,40 @@ example, say a user has <code>vdu_controls</code> set to run at login,
 and they’ve also set a preset to trigger at dawn, but they don’t
 actually log in until just after dawn, the overdue dawn preset will be
 triggered at login.</p>
+<h2 id="presets---supplementary-weather-requirements">Presets -
+supplementary weather requirements</h2>
 <p>A solar elevation trigger can have a weather requirement which will
-be checked against the weather reported by https://wttr.in. By default,
-there are three possible weather requirements: <code>good</code>,
-<code>bad</code>, and <code>all weather</code>. Each possible
+be checked against the weather reported by https://wttr.in.</p>
+<p>By default, there are three possible weather requirements:
+<code>good</code>, <code>bad</code>, and <code>all weather</code>. Each
 requirement is defined by a file containing a list of WWO
 (https://www.worldweatheronline.com) weather codes, one code per line.
-The three default possibilities are contained in the files
+The three default requirements are contained in the files
 <code>$HOME/.config/vdu_controls/{good,bad,all}.weather</code>.
 Additional weather requirements can be created by using a text editor to
 create further files. The <code>all.weather</code> file exists primarily
-as a convenient resource that lists all possible codes. Because weather
-is unpredictable and forecasts are often unreliable or out of date, it’s
-best to use weather requirements as a coarse measure. Going beyond good
-and bad may not be very practical.</p>
-<p>If <code>wttr.in</code> fails to recognise a location, the name part
-of <code>Settings</code> <code>Location</code> can be manually changed
-to anything suitable (the nearest recognised big city or an airport-code
-will do). Alternatively if the location name is completely removed from
-<code>Settings</code> <code>Location</code>, then <code>wttr.in</code>
-will fall back to using the location associated with your external
-IP-Address.</p>
+as a convenient resource that lists all possible codes.</p>
+<p>Because reported current weather conditions may be inaccurate or out
+of date, it’s best to use weather requirements as a coarse measure.
+Going beyond good and bad may not be very practical. What’s possible
+might depend on you local weather conditions.</p>
+<p>To ensure <code>wttr.in</code> supplies the weather for your
+location, please ensure that <code>Settings</code> <code>Location</code>
+includes a place-name suffix. The <code>Settings</code>
+<code>Location</code> <code>Detect</code> button has been enhanced to
+fill out a place-name for you. Should <code>wttr.in</code> not recognise
+a place-name, the place-name can be manually edited to something more
+suitable. The nearest big city or an airport-code will do, for example:
+LHR, LAX, JFK. You can use a web browser to test a place-name, for
+example: https://wttr.in/JFK</p>
+<p>When weather requirements are in use,
+vdu_controls<code>will check that the coordinates in</code>Settings<code></code>Location<code>are a reasonable match for those returned from</code>wttr.in``,
+a warning will be issued if they are more than 200 km (124 miles)
+apart.</p>
+<p>If the place-name is left blank, the <code>wttr.in</code> server will
+try to guess you location from your external IP address. The guess may
+vary due to the state of the <code>wttr.in</code> server. It’s best to
+fill out a place-name to ensure stable results.</p>
 <h2 id="presets---remote-control">Presets - remote control</h2>
 <p>UNIX/Linux signals may be used to instruct a running
 <code>vdu_controls</code> to invoke a preset. This feature is provided
