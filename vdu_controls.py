@@ -3497,6 +3497,7 @@ class PresetChooseElevationWidget(QWidget):
         self.bottom_layout.addWidget(self.weather_widget)
         self.configure_for_location(location_func())
         self.slider.valueChanged.connect(self.sliding)
+        self.setMinimumWidth(800)
         self.sun_image = None
 
     def sliding(self):
@@ -3760,6 +3761,9 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.edit_save_button.setDisabled(True)
         layout.addWidget(button_box)
         self.make_visible()
+
+    def sizeHint(self) -> QSize:
+        return QSize(1200,768)
 
     def populate_presets_layout(self):
         for preset_def in self.main_window.preset_controller.find_presets().values():
@@ -4250,12 +4254,10 @@ class HelpDialog(QDialog, DialogSingletonMixin):
         close_button.clicked.connect(self.hide)
         layout.addWidget(close_button, 0, Qt.AlignRight)
         self.setLayout(layout)
-        # TODO maybe compute a minimum from the actual screen size
-        self.setMinimumWidth(1600)
-        self.setMinimumHeight(1024)
-        # .show() is non-modal, .exec() is modal
         self.make_visible()
 
+    def sizeHint(self) -> QSize:
+        return QSize(1200,768)
 
 class ScheduleStatus(Enum):
     unscheduled = 0, ' ', QT_TR_NOOP('unscheduled')
