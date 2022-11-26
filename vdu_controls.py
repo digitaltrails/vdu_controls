@@ -2623,7 +2623,6 @@ class Preset:
             return True
         with open(path) as weather_file:
             code_list = weather_file.readlines()
-            log_info(f"Preset {self.name} weather requirements {weather_restriction_filename}: {code_list}")
             for code_line in code_list:
                 parts = code_line.split()
                 if parts and weather.weather_code.strip() == parts[0]:
