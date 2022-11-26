@@ -3184,8 +3184,8 @@ class PresetWidget(QWidget):
                 elif preset.schedule_status == ScheduleStatus.suspended:
                     action_desc = tr("Press to re-enable: ")
                 else:
-                    action_desc = "{}"
-                return action_desc + preset.get_solar_elevation_description()
+                    action_desc = ''
+                return f"{action_desc}{SUN_SYMBOL} {preset.get_solar_elevation_description()}"
 
             def toggle_timer(arg):
                 preset.toggle_timer()
