@@ -4971,11 +4971,13 @@ def main():
     sys.excepthook = exception_handler
 
     # This is supposed to set the locale for all categories to the user’s default setting.
-    # This can error on some distros. Maybe if the LANG/LC_ALL settings are at uninstalled? Ignore the issue?
+    # This can error on some distros when the required language isn't installed, or if LANG
+    # is set without also specifying the UTF-8 encoding, so LANG=da_DK might fail,
+    # but LANG=da_DK.UTF-8 should work. For our purposes failure is not important.
     try:
         locale.setlocale(locale.LC_ALL, '')
     except locale.Error:
-        log_error("Could not set the default locale - may or may not be an issue...")
+        log_warning("Could not set the default locale - may not be an issue...")
     log_info("Python locale", locale.getlocale())
 
     # Call QApplication before parsing arguments, it will parse and remove Qt session restoration arguments.

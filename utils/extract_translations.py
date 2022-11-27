@@ -36,7 +36,7 @@ Example:
    
    # Copy the .qm file to somewhere the app can find it and then test:
    cp translations/da_DK.qm $HOME/.config/vdu_controls/translations/da_DK.qm
-   LC_ALL=da_DK LANG=da_DK LANGUAGE=da_DK python3  vdu_controls.py
+   LC_ALL.UTF-8=da_DK LANG=da_DK.UTF-8 LANGUAGE=da_DK.UTF-8 python3  vdu_controls.py
 
 """
 
