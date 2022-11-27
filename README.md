@@ -211,11 +211,10 @@ My development Linux desktop is [OpenSUSE Tumbleweed](https://get.opensuse.org/t
 interpreter and python3 libraries are from the standard OpenSUSE Tumbleweed repositories (Tumbleweed currently
 defaults python3 to [python 3.8](https://www.python.org/downloads/release/python-380/)).
 
-Authors
--------
+Author
+------
 
-Michael Hamilton\
-``m i c h a e l   @  a c t r i x   .   g e n  . n z``
+Michael Hamilton
 
 
 Version History

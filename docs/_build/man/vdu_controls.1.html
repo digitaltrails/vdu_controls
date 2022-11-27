@@ -257,8 +257,8 @@ be checked against the weather reported by https://wttr.in.</p>
 <p>By default, there are three possible weather requirements:
 <code>good</code>, <code>bad</code>, and <code>all weather</code>. Each
 requirement is defined by a file containing a list of WWO
-(https://www.worldweatheronline.com) weather codes, one code per line.
-The three default requirements are contained in the files
+(https://www.worldweatheronline.com) weather codes, one per line. The
+three default requirements are contained in the files
 <code>$HOME/.config/vdu_controls/{good,bad,all}.weather</code>.
 Additional weather requirements can be created by using a text editor to
 create further files. The <code>all.weather</code> file exists primarily
@@ -276,10 +276,11 @@ a place-name, the place-name can be manually edited to something more
 suitable. The nearest big city or an airport-code will do, for example:
 LHR, LAX, JFK. You can use a web browser to test a place-name, for
 example: https://wttr.in/JFK</p>
-<p>When weather requirements are in use,
-vdu_controls<code>will check that the coordinates in</code>Settings<code></code>Location<code>are a reasonable match for those returned from</code>wttr.in``,
-a warning will be issued if they are more than 200 km (124 miles)
-apart.</p>
+<p>When weather requirements are in use, <code>vdu_controls</code> will
+check that the coordinates in <code>Settings</code>
+<code>Location</code> are a reasonable match for those returned from
+<code>wttr.in</code>, a warning will be issued if they are more than 200
+km (124 miles) apart.</p>
 <p>If the place-name is left blank, the <code>wttr.in</code> server will
 try to guess you location from your external IP address. The guess may
 vary due to the state of the <code>wttr.in</code> server. It’s best to
@@ -375,8 +376,25 @@ VDU’s without issuing any errors:</p>
 <pre><code>    ddcutil detect</code></pre>
 <p>Read ddcutil readme concerning config of i2c_dev with nvidia GPU’s.
 Detailed ddcutil info at https://www.ddcutil.com/</p>
-<h1 id="vdu_controls-copyright-c-2021-michael-hamilton">vdu_controls
-Copyright (C) 2021 Michael Hamilton</h1>
+<h1 id="environment">Environment</h1>
+<p>LC_ALL, LANG, LANGUAGE These variables specify the locale for
+language translations and units of distance. LC_ALL is used by python,
+LANGUAGE is used by Qt. Normally, they should all have the same value,
+for example: <code>Da_DK</code>. For these to have any effect on
+language, <code>Settings</code> <code>Translations Enabled</code> must
+also be enabled. VDU_CONTROLS_IPINFO_URL This variable overrides the
+default ip-address to location service URL
+(<code>https://ipinfo.io/json</code>). VDU_CONTROLS_WTTR_URL This
+variable overrides default weather service URL
+(<code>https://wttr.in</code>). VDU_CONTROLS_WEATHER_KM This variable
+overrides the default maximum permissible spherical distance (in
+kilometres) between the <code>Settings</code> <code>Location</code> and
+<code>wttr.in</code> reported location (<code>200 km</code>, 124 miles).
+VDU_CONTROLS_DEVELOPER This variable changes some search paths to be
+more convenient in a development scenario. (<code>no</code> or yes)</p>
+<h1 id="reporting-bugs">Reporting Bugs</h1>
+<p>https://github.com/digitaltrails/vdu_controls/issues</p>
+<h1 id="gnu-license">GNU License</h1>
 <p>This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by the
 Free Software Foundation, version 3.</p>
@@ -387,7 +405,4 @@ Public License for more details.</p>
 <p>You should have received a copy of the GNU General Public License
 along with this program. If not, see <a
 href="https://www.gnu.org/licenses/"
-class="uri">https://www.gnu.org/licenses/</a>.</p>
-<p><strong>Contact:</strong> m i c h a e l @ a c t r i x . g e n . n
-z</p>
-<hr />
+class="uri">https://www.gnu.org/licenses/</a>. ———-</p>
