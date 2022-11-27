@@ -400,22 +400,26 @@ Read ddcutil readme concerning config of i2c_dev with nvidia GPU's. Detailed ddc
 Environment
 ===========
 
-LC_ALL, LANG, LANGUAGE
+    LC_ALL, LANG, LANGUAGE
         These  variables specify the locale for language translations and units
         of distance. LC_ALL is used by python, LANGUAGE is used by Qt.
         Normally, they should all have the same value, for example: ``Da_DK``.
         For these to have any effect on language, ``Settings`` ``Translations Enabled``
         must also be enabled.
-VDU_CONTROLS_IPINFO_URL
+
+    VDU_CONTROLS_IPINFO_URL
         This variable overrides the default ip-address to location service
         URL (``https://ipinfo.io/json``).
-VDU_CONTROLS_WTTR_URL
+
+    VDU_CONTROLS_WTTR_URL
         This variable overrides default weather service URL (``https://wttr.in``).
-VDU_CONTROLS_WEATHER_KM
+
+    VDU_CONTROLS_WEATHER_KM
         This variable overrides the default maximum permissible spherical
         distance (in kilometres) between the ``Settings`` ``Location``
         and ``wttr.in`` reported location (``200 km``, 124 miles).
-VDU_CONTROLS_DEVELOPER
+
+    VDU_CONTROLS_DEVELOPER
         This variable changes some search paths to be more convenient in
         a development scenario. (``no`` or yes)
 
