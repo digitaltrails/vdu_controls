@@ -33,7 +33,6 @@ vdu_controls-$version/screen-shots/kickoff.png
 vdu_controls-$version/setup.cfg
 vdu_controls-$version/vdu_controls.py
 vdu_controls-$version/vdu_controls.png
-vdu_controls-$version/translations/en_NZ.ts
 vdu_controls-$version/translations/da_DK.ts
 vdu_controls-$version/translations/fr_FR.ts
 vdu_controls-$version/translations/de_DE.ts

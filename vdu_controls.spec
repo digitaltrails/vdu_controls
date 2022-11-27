@@ -80,6 +80,7 @@ gzip -c docs/_build/man/vdu_controls.1 > %{buildroot}/%{_datadir}/man/man1/%{nam
 %dir %{_datadir}/icons/hicolor
 %dir %{_datadir}/icons/hicolor/*
 %dir %{_datadir}/icons/hicolor/*/apps
+%dir %{_datadir}/vdu_controls
 %dir %{_datadir}/vdu_controls/translations
 %license LICENSE.md
 %defattr(-,root,root)
@@ -87,7 +88,6 @@ gzip -c docs/_build/man/vdu_controls.1 > %{buildroot}/%{_datadir}/man/man1/%{nam
 %{_datadir}/applications/%{name}.desktop
 %{_datadir}/icons/hicolor/256x256/apps/%{name}.png
 %{_datadir}/man/man1/%{name}.1.gz
-%{_datadir}/vdu_controls/translations/en_NZ.ts
 %{_datadir}/vdu_controls/translations/da_DK.ts
 %{_datadir}/vdu_controls/translations/fr_FR.ts
 %{_datadir}/vdu_controls/translations/de_DE.ts
