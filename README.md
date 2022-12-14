@@ -219,6 +219,8 @@ Michael Hamilton
 
 Version History
 ---------------
+* 1.8.3
+  * Fix for a crash when the network is down and the weather site cannot be contacted. 
 * 1.8.2
   * Solar elevation weather requirements.
   * Locale language support and sample AI generated translations.

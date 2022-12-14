@@ -487,7 +487,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter
 
 APPNAME = "VDU Controls"
-VDU_CONTROLS_VERSION = '1.8.2'
+VDU_CONTROLS_VERSION = '1.8.3'
 
 WESTERN_SKY = 'western-sky'
 EASTERN_SKY = 'eastern-sky'
@@ -2640,7 +2640,7 @@ class Preset:
 
     def check_weather(self, weather: QueryWeather):
         weather_restriction_filename = self.get_weather_restriction_filename()
-        if weather_restriction_filename is None:
+        if weather.weather_code is None or weather_restriction_filename is None:
             return True
         path = Path(weather_restriction_filename)
         if not path.exists():
