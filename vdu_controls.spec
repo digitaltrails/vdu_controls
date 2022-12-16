@@ -17,7 +17,7 @@
 #
 
 Name: vdu_controls
-Version: 1.8.2
+Version: 1.8.3
 Release: 0
 License: GPL-3.0-or-later
 BuildArch: noarch
@@ -97,7 +97,7 @@ gzip -c docs/_build/man/vdu_controls.1 > %{buildroot}/%{_datadir}/man/man1/%{nam
 
 %changelog
 * Wed Dev 14 2022 Michael Hamilton <michael@actrix.gen.nz>
-- Fix crash when network is down and weather site is not contactable.
+- Fix crash when network is down and weather site is not contactable: vdu_controls 1.8.3
 * Fri Nov 11 2022 Michael Hamilton <michael@actrix.gen.nz>
 - Weather requirments, Internationalisation enhancements: vdu_controls 1.8.2
 * Fri Nov 11 2022 Michael Hamilton <michael@actrix.gen.nz>
