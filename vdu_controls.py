@@ -4657,6 +4657,7 @@ class MainWindow(QMainWindow):
         return True
 
     def schedule_presets(self, reset: bool = False) -> Preset:
+        # As well as scheduling, this method finds and returns the preset that should be applied at this time.
         location = self.main_config.get_location()
         if location is None:
             return
@@ -4665,7 +4666,6 @@ class MainWindow(QMainWindow):
         most_recent_overdue = None
         local_now = zoned_now()
         latest_due = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
-        weather: QueryWeather = None  # Reuse the weather, don't do multiple queries
         for name, preset in self.preset_controller.find_presets().items():
             if reset:
                 preset.remove_elevation_trigger()
@@ -4679,7 +4679,9 @@ class MainWindow(QMainWindow):
                     else:
                         preset.schedule_status = ScheduleStatus.skipped_superseded
                         if when_today > latest_due:
-                            if self.apply_weather_requirements(preset, use_cache=True):
+                            # This may be the preset that should be applicable now, check if weather prevents it.
+                            # Reuse the weather, don't do multiple weather queries while scheduling.
+                            if self.is_weather_satisfactory(preset, use_cache=True):
                                 most_recent_overdue = preset
                                 latest_due = when_today
                 else:
@@ -4695,8 +4697,6 @@ class MainWindow(QMainWindow):
             QTimer.singleShot(int(millis), partial(self.schedule_presets, True))
             # Testing: QTimer.singleShot(int(1000*30), partial(self.schedule_presets, True))
             self.daily_schedule_next_update = tomorrow
-        if weather is not None and not weather.proximity_ok:
-            weather_bad_locaton_dialog(weather)
         if reset:
             presets_dialog = PresetsDialog.get_instance()
             if presets_dialog:
@@ -4709,7 +4709,7 @@ class MainWindow(QMainWindow):
         weather_text = ''
         proceed = True
         if preset.is_weather_dependent() and check_weather:
-            proceed = self.apply_weather_requirements(preset)
+            proceed = self.is_weather_satisfactory(preset)
             if not proceed:
                 preset.schedule_status = ScheduleStatus.weather_cancellation
                 status_text = tr("Preset {} activation was cancelled due to weather at {}").format(
@@ -4729,7 +4729,7 @@ class MainWindow(QMainWindow):
             if status_text:
                 presets_dialog.set_message(f"{TIME_CLOCK_SYMBOL} {status_text} {preset.schedule_status.symbol()} {weather_text}")
 
-    def apply_weather_requirements(self, preset, use_cache: bool = False) -> bool:
+    def is_weather_satisfactory(self, preset, use_cache: bool = False) -> bool:
         try:
             if preset.is_weather_dependent():
                 if not use_cache or self.weather_cache is None:
