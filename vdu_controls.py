@@ -1254,7 +1254,6 @@ class ConfigIni(configparser.ConfigParser):
             if section != configparser.DEFAULTSECT and section != ConfigIni.METADATA_SECTION:
                 new_ini.add_section(section)
             for option in self[section]:
-                log_info(f"{section} {option}")
                 new_ini[section][option] = self[section][option]
         return new_ini
 
