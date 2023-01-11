@@ -3126,11 +3126,6 @@ class PresetWidget(QWidget):
         line_layout.addWidget(preset_name_button)
         preset_name_button.clicked.connect(partial(restore_action, preset=preset))
         preset_name_button.setAutoDefault(False)
-        button = preset_name_button
-        palette = QGuiApplication.palette()
-        palette.setColor(QPalette.Active, Qt.GlobalColor.blue)
-        #button.setAutoFillBackground(True)
-        button.setPalette(palette)
         line_layout.addSpacing(20)
 
         edit_button = QPushButton()
