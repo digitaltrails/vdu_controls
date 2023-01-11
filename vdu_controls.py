@@ -487,7 +487,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter
 
 APPNAME = "VDU Controls"
-VDU_CONTROLS_VERSION = '1.8.3'
+VDU_CONTROLS_VERSION = '1.8.4'
 
 WESTERN_SKY = 'western-sky'
 EASTERN_SKY = 'eastern-sky'
@@ -873,22 +873,6 @@ def log_warning(*args):
 
 def log_error(*args):
     log_wrapper(syslog.LOG_ERR, *args)
-
-
-def is_logging_in():
-    # If the time is near the login time, maybe the user is logging in
-    try:
-        # DO NOT USE use os.getlogin(), openbox doesn't define a tty - which makes os.getlogin() fail.
-        username = os.environ.get('USER', '')
-        if username == '':
-            log_error("Non critical error, environment variable USER is not defined, cannot determine is_logging_in")
-            return False
-        last_login_cmd = ["last", "--time-format=iso", username, "-1"]
-        login_datetime = datetime.fromisoformat(subprocess.check_output(last_login_cmd).split()[3].decode("ascii"))
-        return datetime.now(login_datetime.tzinfo) - login_datetime <= timedelta(seconds=30)
-    except (subprocess.SubprocessError, FileNotFoundError, ValueError, IndexError) as e:
-        log_error(f"Non critical error, cannot determine is_logging_in: {last_login_cmd} {e}")
-        return False
 
 
 class VcpCapability:
@@ -2809,8 +2793,7 @@ class VduControlsMainPanel(QWidget):
         self.detected_vdus = []
         self.new_and_old_ids = []
 
-    def initialise_control_panels(self, app_context_menu: ContextMenu, main_config: VduControlsConfig,
-                                  session_startup: bool):
+    def initialise_control_panels(self, app_context_menu: ContextMenu, main_config: VduControlsConfig):
         if self.layout():
             # Already laid out, must be responding to a configuration change requiring re-layout.
             # Remove all exisiting widgets.
@@ -2831,18 +2814,17 @@ class VduControlsMainPanel(QWidget):
         ddcutil_problem = None
         try:
             self.detected_vdus = self.ddcutil.detect_monitors()
-            if session_startup:
-                log_info("Session appears to be initialising, delaying and looping detection until it stabilises.")
-                # Loop in case the session is initialising/restoring which can make detection unreliable.
-                # Limit to a reasonable number of iterations.
-                for i in range(1, 11):
-                    time.sleep(1.5)
-                    prev_num = len(self.detected_vdus)
-                    self.detected_vdus = self.ddcutil.detect_monitors()
-                    if prev_num == len(self.detected_vdus):
-                        log_info(f"Number of detected monitors is stable at {len(self.detected_vdus)} (loop={i})")
-                        break
-                    log_info(f"Number of detected monitors changed from {prev_num} to {len(self.detected_vdus)} (loop={i})")
+            log_info("Detecting connected monitors, looping detection until it stabilises.")
+            # Loop in case the session is initialising/restoring which can make detection unreliable.
+            # Limit to a reasonable number of iterations.
+            for i in range(1, 11):
+                time.sleep(1.5)
+                prev_num = len(self.detected_vdus)
+                self.detected_vdus = self.ddcutil.detect_monitors()
+                if prev_num == len(self.detected_vdus):
+                    log_info(f"Number of detected monitors is stable at {len(self.detected_vdus)} (loop={i})")
+                    break
+                log_info(f"Number of detected monitors changed from {prev_num} to {len(self.detected_vdus)} (loop={i})")
         except Exception as e:
             log_error(e)
             ddcutil_problem = e
@@ -3144,7 +3126,11 @@ class PresetWidget(QWidget):
         line_layout.addWidget(preset_name_button)
         preset_name_button.clicked.connect(partial(restore_action, preset=preset))
         preset_name_button.setAutoDefault(False)
-
+        button = preset_name_button
+        palette = QGuiApplication.palette()
+        palette.setColor(QPalette.Active, Qt.GlobalColor.blue)
+        #button.setAutoFillBackground(True)
+        button.setPalette(palette)
         line_layout.addSpacing(20)
 
         edit_button = QPushButton()
@@ -4303,7 +4289,7 @@ class ScheduleStatus(Enum):
 
 class MainWindow(QMainWindow):
 
-    def __init__(self, main_config: VduControlsConfig, app: QApplication, session_startup: bool):
+    def __init__(self, main_config: VduControlsConfig, app: QApplication):
         super().__init__()
 
         global current_desktop
@@ -4475,7 +4461,7 @@ class MainWindow(QMainWindow):
             self.main_control_panel.vdu_setting_changed.connect(vdu_settings_changed_action)
             self.main_control_panel.connected_vdus_changed.connect(create_main_control_panel)
             # Then initialise the control panel display
-            self.main_control_panel.initialise_control_panels(self.app_context_menu, main_config, session_startup)
+            self.main_control_panel.initialise_control_panels(self.app_context_menu, main_config)
             self.setCentralWidget(self.main_control_panel)
             self.setMinimumWidth(existing_width)
             self.display_active_preset(None)
@@ -5022,7 +5008,7 @@ def main():
     if args.about:
         AboutDialog.invoke()
 
-    main_window = MainWindow(main_config, app, session_startup=is_logging_in())
+    main_window = MainWindow(main_config, app)
 
     if args.create_config_files:
         main_window.create_config_files()
