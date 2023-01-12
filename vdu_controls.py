@@ -1026,7 +1026,7 @@ class DdcUtil:
 
     def set_attribute(self, vdu_id: str, vcp_code: str, new_value: str, sleep_multiplier: float = None) -> None:
         """Send a new value to a specific VDU and vcp_code."""
-        current, _ = self.get_attribute(vdu_id, vcp_code)
+        current, _ = self.get_attribute(vdu_id, vcp_code, sleep_multiplier=sleep_multiplier)
         if new_value != current:
             if self.get_type(vcp_code) == COMPLEX_NON_CONTINUOUS_TYPE:
                 new_value = 'x' + new_value
