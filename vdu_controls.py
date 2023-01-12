@@ -1255,7 +1255,7 @@ class GeoLocation:
             # don't attempt to compare against unrelated types
             return NotImplemented
         return self.latitude == other.latitude and self.longitude == other.longitude and \
-               self.place_name == other.place_name
+            self.place_name == other.place_name
 
 
 class VduControlsConfig:
@@ -3770,7 +3770,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.make_visible()
 
     def sizeHint(self) -> QSize:
-        return QSize(1200,768)
+        return QSize(1200, 768)
 
     def populate_presets_layout(self):
         for preset_def in self.main_window.preset_controller.find_presets().values():
@@ -4264,7 +4264,8 @@ class HelpDialog(QDialog, DialogSingletonMixin):
         self.make_visible()
 
     def sizeHint(self) -> QSize:
-        return QSize(1200,768)
+        return QSize(1200, 768)
+
 
 class ScheduleStatus(Enum):
     unscheduled = 0, ' ', QT_TR_NOOP('unscheduled')
@@ -4565,7 +4566,7 @@ class MainWindow(QMainWindow):
 
     def save_preset(self, preset: Preset) -> None:
         id_list = self.copy_to_preset_ini(preset.preset_ini, update_only=True)
-        #?preset.convert_v1_7_check(id_list)
+        # ?preset.convert_v1_7_check(id_list)
         self.preset_controller.save_preset(preset)
         if not self.app_context_menu.has_preset_menu_item(preset.name):
             self.app_context_menu.insert_preset_menu_item(preset)
