@@ -1367,7 +1367,7 @@ class VduControlsConfig:
                 enabled_vcp_codes.append(control_def.vcp_code)
         enable_codes_str = self.ini_content['vdu-controls-widgets']['enable-vcp-codes']
         for vcp_code in enable_codes_str.split(","):
-            code = vcp_code.strip()
+            code = vcp_code.strip().upper()
             if code != '':
                 if code not in enabled_vcp_codes:
                     enabled_vcp_codes.append(code)
