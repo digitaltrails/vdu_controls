@@ -1313,10 +1313,12 @@ class VduControlsConfig:
 
     def restrict_to_actual_capabilities(self, vdu_capabilities: Mapping[str, VcpCapability]) -> None:
         for option in self.ini_content['vdu-controls-widgets']:
-            if self.get_config_type('vdu-controls-widgets', option) == 'boolean' \
-                    and option in VDU_SUPPORTED_CONTROLS.by_arg_name \
-                    and VDU_SUPPORTED_CONTROLS.by_arg_name[option].vcp_code not in vdu_capabilities:
-                del self.ini_content['vdu-controls-widgets'][option]
+            if self.get_config_type('vdu-controls-widgets', option) == 'boolean':
+                if option in VDU_SUPPORTED_CONTROLS.by_arg_name and \
+                        VDU_SUPPORTED_CONTROLS.by_arg_name[option].vcp_code not in vdu_capabilities:
+                    del self.ini_content['vdu-controls-widgets'][option]
+                elif option.startswith('unsupported-') and option[len('unsupported-'):] not in vdu_capabilities:
+                    del self.ini_content['vdu-controls-widgets'][option]
 
     def get_config_name(self) -> str:
         return self.config_name
