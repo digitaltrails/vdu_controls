@@ -2203,8 +2203,6 @@ class VduControlSlider(VduControlBase):
 
         self.current_value: int | None = None
         self.max_value: int | None = None
-        # Populates the None ints above:
-        self.refresh_data()
 
         layout = QHBoxLayout()
         self.setLayout(layout)
@@ -2225,11 +2223,11 @@ class VduControlSlider(VduControlBase):
 
         self.slider = slider = QSlider()
         slider.setMinimumWidth(200)
-        if len(vcp_capability.values) != 0:
-            slider.setRange(int(vcp_capability.values[1]), int(vcp_capability.values[2]))
-        else:
-            slider.setRange(0, int(self.max_value))
-        slider.setValue(int(self.current_value))
+        self.range_restriction = vcp_capability.values
+        if len(self.range_restriction) != 0:
+            slider.setRange(int(self.range_restriction[1]), int(self.range_restriction[2]))
+
+        self.slider = slider
         slider.setSingleStep(1)
         slider.setPageStep(10)
         slider.setTickInterval(10)
@@ -2242,9 +2240,8 @@ class VduControlSlider(VduControlBase):
         text_input = QLineEdit()
         text_input.setMaximumWidth(50)
         text_input.setMaxLength(4)
-        text_validator = QIntValidator()
-        text_validator.setRange(0, int(self.max_value))
-        text_input.setValidator(text_validator)
+        self.text_validator = QIntValidator()
+        text_input.setValidator(self.text_validator)
         text_input.setText(str(slider.value()))
         layout.addWidget(text_input)
 
@@ -2275,6 +2272,9 @@ class VduControlSlider(VduControlBase):
                     int(new_value)
                     int(max_value)
                     self.current_value, self.max_value = new_value, max_value
+                    self.text_validator.setRange(0, int(self.max_value))
+                    if len(self.range_restriction) == 0:
+                        self.slider.setRange(0, int(self.max_value))
                 else:
                     int(new_value)
                     self.current_value = new_value
@@ -2319,7 +2319,7 @@ class VduControlComboBox(VduControlBase):
         """Construct the combobox control and initialize its values from the VDU."""
         super().__init__(vdu_model, vcp_capability)
 
-        self.current_value = vdu_model.get_attribute(vcp_capability.vcp_code)[0]
+        self.current_value = None
 
         layout = QHBoxLayout()
         self.setLayout(layout)
@@ -2335,9 +2335,6 @@ class VduControlComboBox(VduControlBase):
         for value, desc in self.vcp_capability.values:
             self.keys.append(value)
             combo_box.addItem(self.translate_label(desc), value)
-
-        self.validate_value()
-        self.combo_box.setCurrentIndex(self.keys.index(self.current_value))
 
         def index_changed(index: int) -> None:
             self.current_value = self.combo_box.currentData()
@@ -2441,6 +2438,8 @@ class VduControlPanel(QWidget):
                 alert.exec()
         if len(self.vcp_controls) != 0:
             self.setLayout(layout)
+        self.refresh_data()
+        self.refresh_view()
 
     def refresh_data(self) -> None:
         """Tell the control widgets to get fresh VDU data (maybe called from a task thread, so no GUI op's here)."""
