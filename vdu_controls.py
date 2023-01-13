@@ -2444,7 +2444,10 @@ class VduControlPanel(QWidget):
 
     def refresh_data(self) -> None:
         """Tell the control widgets to get fresh VDU data (maybe called from a task thread, so no GUI op's here)."""
-        values = self.vdu_model.ddcutil.get_attributes(self.vdu_model.vdu_id, [control.vcp_capability.vcp_code for control in self.vcp_controls])
+        values = self.vdu_model.ddcutil.get_attributes(
+            self.vdu_model.vdu_id,
+            [control.vcp_capability.vcp_code for control in self.vcp_controls],
+            sleep_multiplier=self.vdu_model.sleep_multiplier)
         for control,value in zip(self.vcp_controls, values):
             control.refresh_data(value=value)
 
