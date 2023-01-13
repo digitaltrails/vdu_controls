@@ -1890,9 +1890,9 @@ class SettingsEditorFloatWidget(SettingsEditorFieldBase):
             try:
                 float(delocalized_text)
                 text_input.setPalette(valid_palette)
+                section_editor.ini_editable[section][option] = delocalized_text
             except ValueError:
                 text_input.setPalette(error_palette)
-            section_editor.ini_editable[section][option] = delocalized_text
 
         text_input.inputRejected.connect(partial(text_input.setPalette, error_palette))
         text_input.editingFinished.connect(editing_finished)
