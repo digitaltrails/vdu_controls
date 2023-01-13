@@ -782,6 +782,12 @@ DDCUTIL = "ddcutil"
 #: Internal special exit code used to signal that the exit handler should restart the program.
 EXIT_CODE_FOR_RESTART = 1959
 
+# Number of times to retry getting attributes - in case a monitor is slow after being powered up.
+GET_ATTRIBUTES_RETRIES = 3
+
+# All kinds of startup slowness may cause problems - how many times to wait and retry
+SLIDER_REFRESH_RETRIES = 4
+
 DANGER_AGREEMENT_NON_STANDARD_VCP_CODES = """
 If you are attempting to enable non-standard VCP-codes for write, you must read and
 consider this notice before proceeding any further.
@@ -998,31 +1004,6 @@ class DdcUtil:
         raise ValueError(
             f"ddcutil returned garbage for monitor {vdu_id} vcp_code {vcp_code}, try increasing --sleep-multiplier")
 
-    def __parse_value(self, vdu_id: str, vcp_code: str, result: str) -> Tuple[str, str] | None:
-        value_pattern = re.compile(r'VCP ' + vcp_code + r' ([A-Z]+) (.+)\n')
-        c_pattern = re.compile(r'([0-9]+) ([0-9]+)')
-        snc_pattern = re.compile(r'x([0-9a-f]+)')
-        cnc_pattern = re.compile(r'x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+)')
-        value_match = value_pattern.match(result)
-        if value_match is not None:
-            type_indicator = value_match.group(1)
-            self.vcp_type_map[vcp_code] = type_indicator
-            if type_indicator == CONTINUOUS_TYPE:
-                c_match = c_pattern.match(value_match.group(2))
-                if c_match is not None:
-                    return c_match.group(1), c_match.group(2)
-            elif type_indicator == SIMPLE_NON_CONTINUOUS_TYPE:
-                snc_match = snc_pattern.match(value_match.group(2))
-                if snc_match is not None:
-                    return snc_match.group(1), '0'
-            elif type_indicator == COMPLEX_NON_CONTINUOUS_TYPE:
-                cnc_match = cnc_pattern.match(value_match.group(2))
-                if cnc_match is not None:
-                    return '{:02x}'.format(int(cnc_match.group(3), 16) << 8 | int(cnc_match.group(4), 16)), '0'
-            else:
-                raise TypeError(f'Unsupported VCP type {type_indicator} for monitor {vdu_id} vcp_code {vcp_code}')
-        return None
-
     def set_attribute(self, vdu_id: str, vcp_code: str, new_value: str, sleep_multiplier: float = None) -> None:
         """Send a new value to a specific VDU and vcp_code."""
         current, _ = self.get_attribute(vdu_id, vcp_code, sleep_multiplier=sleep_multiplier)
@@ -1056,9 +1037,9 @@ class DdcUtil:
                     self.supported_codes[vcp_code] = vcp_name
         return self.supported_codes
 
-    def get_attributes(self, vdu_id: str, vcp_code_list: List[str], sleep_multiplier: float = None) -> List[str|None]:
+    def get_attributes(self, vdu_id: str, vcp_code_list: List[str], sleep_multiplier: float = None) -> List[Tuple[str, str] | None]:
         # Try a few times in case there is a glitch due to a monitor being turned off/on
-        for i in range(3):
+        for i in range(GET_ATTRIBUTES_RETRIES):
             args = ['--brief', '--display', vdu_id, 'getvcp'] + vcp_code_list
             result = self.__run__(*args, sleep_multiplier=sleep_multiplier)
             vcp_regexp = re.compile(r"^VCP ([0-9A-F]{2}) ")
@@ -1071,13 +1052,39 @@ class DdcUtil:
                 match = vcp_regexp.match(line_utf8)
                 if match is not None:
                     result_dict[match.group(1)] = line_utf8
-            result_list = [self.__parse_value(vdu_id, vcp_code, result_dict[vcp_code]) if vcp_code in result_dict else None for vcp_code in vcp_code_list]
+            result_list = [self.__parse_value(vdu_id, vcp_code, result_dict[vcp_code]) if vcp_code in result_dict else None for
+                           vcp_code in vcp_code_list]
             if None in result_list:
                 log_warning(f"obtained garbage '{result.stdout.decode('utf-8')}' will try again.")
                 log_warning(f"ddcutil maybe running too fast for monitor {vdu_id}, try increasing --sleep-multiplier.")
                 time.sleep(2)
             else:
                 return result_list
+
+    def __parse_value(self, vdu_id: str, vcp_code: str, result: str) -> Tuple[str, str] | None:
+        value_pattern = re.compile(r'VCP ' + vcp_code + r' ([A-Z]+) (.+)\n')
+        c_pattern = re.compile(r'([0-9]+) ([0-9]+)')
+        snc_pattern = re.compile(r'x([0-9a-f]+)')
+        cnc_pattern = re.compile(r'x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+)')
+        value_match = value_pattern.match(result)
+        if value_match is not None:
+            type_indicator = value_match.group(1)
+            self.vcp_type_map[vcp_code] = type_indicator
+            if type_indicator == CONTINUOUS_TYPE:
+                c_match = c_pattern.match(value_match.group(2))
+                if c_match is not None:
+                    return c_match.group(1), c_match.group(2)
+            elif type_indicator == SIMPLE_NON_CONTINUOUS_TYPE:
+                snc_match = snc_pattern.match(value_match.group(2))
+                if snc_match is not None:
+                    return snc_match.group(1), '0'
+            elif type_indicator == COMPLEX_NON_CONTINUOUS_TYPE:
+                cnc_match = cnc_pattern.match(value_match.group(2))
+                if cnc_match is not None:
+                    return '{:02x}'.format(int(cnc_match.group(3), 16) << 8 | int(cnc_match.group(4), 16)), '0'
+            else:
+                raise TypeError(f'Unsupported VCP type {type_indicator} for monitor {vdu_id} vcp_code {vcp_code}')
+        return None
 
 
 def si(widget: QWidget, icon_number: int):
@@ -1857,6 +1864,7 @@ class SettingsEditorFieldBase(QWidget):
         self.section_editor = section_editor
         self.section = section
         self.option = option
+        self.has_error = False
 
     def translate_option(self):
         return translate_option(self.option)
@@ -1882,84 +1890,79 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
         self.checkbox.setChecked(self.section_editor.ini_before.getboolean(self.section, self.option))
 
 
-class SettingsEditorFloatWidget(SettingsEditorFieldBase):
+class SettingsEditorLineBase(SettingsEditorFieldBase):
     def __init__(self, section_editor: SettingsEditorTab, option: str, section: str) -> None:
         super().__init__(section_editor, option, section)
         layout = QHBoxLayout()
+        layout.setAlignment(Qt.AlignLeft)
         self.setLayout(layout)
-        text_label = QLabel(self.translate_option())
-        layout.addWidget(text_label)
-        text_input = QLineEdit()
-        text_input.setMaximumWidth(100)
-        text_input.setMaxLength(4)
-        text_validator = QDoubleValidator()
-        text_validator.setNotation(QDoubleValidator.StandardNotation)
-        text_validator.setRange(0.1, 3.0, 4)
-        text_input.setValidator(text_validator)
-        valid_palette = text_input.palette()
-        error_palette = text_input.palette()
-        error_palette.setColor(QPalette.Text, Qt.red)
+        self.text_label = QLabel(self.translate_option())
+        layout.addWidget(self.text_label)
+        self.text_input = QLineEdit()
+        self.validator = None
+        self.valid_palette = self.text_input.palette()
+        self.error_palette = self.text_input.palette()
+        self.error_palette.setColor(QPalette.Text, Qt.red)
+        self.error_palette.setColor(QPalette.Window, Qt.red)
+        self.text_input.inputRejected.connect(partial(self.set_error_indication, True))
+        self.text_input.textEdited.connect(partial(self.set_error_indication, False))
+        self.text_input.editingFinished.connect(self.editing_finished)
+        layout.addWidget(self.text_input)
 
-        try:
-            text_input.setText(locale.format_string('%.2f', float(section_editor.ini_editable[section][option])))
-        except ValueError:
-            text_input.setText(section_editor.ini_editable[section][option])
+    def editing_finished(self) -> None:
+        text = self.text_input.text()
+        if self.validator is not None:
+            self.has_error = self.validator.validate(text, 0)[0] != QValidator.Acceptable
+            self.set_error_indication(self.has_error)
+        if not self.has_error:
+            internal_value = self.internalize_value(text)
+            if not self.has_error:
+                self.section_editor.ini_editable[self.section][self.option] = internal_value
 
-        def editing_finished() -> None:
-            text = text_input.text()
-            #print(section, option, text)
-            delocalized_text = locale.delocalize(str(text))
-            try:
-                float(delocalized_text)
-                text_input.setPalette(valid_palette)
-                section_editor.ini_editable[section][option] = delocalized_text
-            except ValueError:
-                text_input.setPalette(error_palette)
+    def internalize_value(self, text: str) -> str | None:
+        return str(text)
 
-        text_input.inputRejected.connect(partial(text_input.setPalette, error_palette))
-        text_input.editingFinished.connect(editing_finished)
-        layout.addWidget(text_input)
-        layout.addStretch(1)
-        self.text_input = text_input
+    def set_error_indication(self, has_error: bool):
+        self.has_error = has_error
+        self.text_input.setPalette(self.error_palette if has_error else self.valid_palette)
 
     def reset(self):
         self.text_input.setText(self.section_editor.ini_before[self.section][self.option])
 
 
-class SettingsEditorCsvWidget(SettingsEditorFieldBase):
+class SettingsEditorFloatWidget(SettingsEditorLineBase):
     def __init__(self, section_editor: SettingsEditorTab, option: str, section: str) -> None:
         super().__init__(section_editor, option, section)
-        layout = QVBoxLayout()
-        self.setLayout(layout)
-        text_label = QLabel(self.translate_option())
-        layout.addWidget(text_label)
-        text_input = QLineEdit()
-        text_input.setMaximumWidth(1000)
-        text_input.setMaxLength(500)
+        self.text_input.setMaximumWidth(100)
+        self.text_input.setMaxLength(4)
+        self.validator = QDoubleValidator()
+        self.validator.setNotation(QDoubleValidator.StandardNotation)
+        self.validator.setRange(0.1, 3.0, 4)
+        try:
+            self.text_input.setText(locale.format_string('%.2f', float(section_editor.ini_editable[section][option])))
+        except ValueError:
+            self.text_input.setText(section_editor.ini_editable[section][option])
+        self.layout().addStretch(1)
+
+    def internalize_value(self, text: str) -> str | None:
+        try:
+            delocalized_text = locale.delocalize(str(text))
+            float(delocalized_text)  # just validating, don't need the result.
+            return delocalized_text
+        except ValueError:
+            self.set_error_indication(True)
+        return None
+
+
+class SettingsEditorCsvWidget(SettingsEditorLineBase):
+    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str) -> None:
+        super().__init__(section_editor, option, section)
+        self.text_input.setMaximumWidth(1000)
+        self.text_input.setMaxLength(500)
         # TODO - should probably also allow spaces as well as commas, but the regexp is getting a bit tricky?
         # Validator matches CSV of two digit hex or the empty string.
-        validator = QRegExpValidator(QRegExp(r"^([0-9a-fA-F]{2}([ \t]*,[ \t]*[0-9a-fA-F]{2})*)|$"))
-        text_input.setValidator(validator)
-        text_input.setText(section_editor.ini_editable[section][option])
-
-        def editing_finished() -> None:
-            # print(section, option, text_input.text())
-            section_editor.ini_editable[section][option] = str(text_input.text())
-
-        def input_rejected() -> None:
-            text_input.setStyleSheet("QLineEdit { color : red; }")
-
-        def text_edited() -> None:
-            text_input.setStyleSheet(None)
-
-        text_input.editingFinished.connect(editing_finished)
-        text_input.inputRejected.connect(input_rejected)
-        text_input.textEdited.connect(text_edited)
-        layout.addWidget(text_input)
-        self.text_input = text_input
-
-    def reset(self):
-        self.text_input.setText(self.section_editor.ini_before[self.section][self.option])
+        self.validator = QRegExpValidator(QRegExp(r"^([0-9a-fA-F]{2}([ \t]*,[ \t]*[0-9a-fA-F]{2})*)|$"))
+        self.text_input.setText(section_editor.ini_editable[section][option])
 
 
 class LatitudeLongitudeValidator(QRegExpValidator):
@@ -1982,55 +1985,27 @@ class LatitudeLongitudeValidator(QRegExpValidator):
         return result
 
 
-class SettingsEditorLocationWidget(SettingsEditorFieldBase):
+class SettingsEditorLocationWidget(SettingsEditorLineBase):
     def __init__(self, section_editor: SettingsEditorTab, option: str, section: str) -> None:
         super().__init__(section_editor, option, section)
-        layout = QHBoxLayout()
-        layout.setAlignment(Qt.AlignLeft)
-        self.setLayout(layout)
-        text_label = QLabel(self.translate_option())
-        layout.addWidget(text_label)
-        text_input = QLineEdit()
-        text_input.setFixedWidth(500)
-        text_input.setMaximumWidth(500)
-        text_input.setMaxLength(250)
-
-        validator = LatitudeLongitudeValidator()
-        text_input.setValidator(validator)
-        text_input.setText(section_editor.ini_editable[section][option])
-
-        def editing_finished() -> None:
-            # print(section, option, text_input.text())
-            section_editor.ini_editable[section][option] = str(text_input.text())
-
-        def input_rejected() -> None:
-            text_input.setStyleSheet("QLineEdit { color : red; }")
-
-        def text_edited() -> None:
-            text_input.setStyleSheet(None)
-
-        text_input.editingFinished.connect(editing_finished)
-        text_input.inputRejected.connect(input_rejected)
-        text_input.textEdited.connect(text_edited)
-        text_input.setToolTip(tr("Latitude,Longitude for solar elevation calculations."))
+        self.text_input.setFixedWidth(500)
+        self.text_input.setMaximumWidth(500)
+        self.text_input.setMaxLength(250)
+        self.validator = LatitudeLongitudeValidator()
+        self.text_input.setText(section_editor.ini_editable[section][option])
+        self.text_input.setToolTip(tr("Latitude,Longitude for solar elevation calculations."))
 
         def detection_location():
             data_csv = self.location_dialog()
             if data_csv:
-                text_input.setText(data_csv)
-                editing_finished()
+                self.text_input.setText(data_csv)
+                self.editing_finished()
 
         detect_location_button = QPushButton(tr("Detect"))
         detect_location_button.clicked.connect(detection_location)
         detect_location_button.setToolTip(tr("Detect location by querying this desktop's external IP address."))
-        layout.addWidget(text_input)
-        layout.addWidget(detect_location_button)
-        layout.addStretch(1)
-
-        self.text_input = text_input
-
-    def reset(self):
-        self.text_input.setText(self.section_editor.ini_before[self.section][self.option])
+        self.layout().addWidget(detect_location_button)
+        self.layout().addStretch(1)
 
     def retrieve_ipinfo(self) -> Mapping:
         """
@@ -2259,7 +2234,7 @@ class VduControlSlider(VduControlBase):
 
     def refresh_data(self, value: Tuple[str, str] | None = None) -> None:
         """Query the VDU for a new data value and cache it (maybe called from a task thread, so no GUI op's here)."""
-        for i in range(4):
+        for i in range(SLIDER_REFRESH_RETRIES):
             try:
                 new_value, max_value = value if value is not None else self.vdu_model.get_attribute(self.vcp_capability.vcp_code)
                 if self.max_value is None:
@@ -2442,7 +2417,7 @@ class VduControlPanel(QWidget):
             self.vdu_model.vdu_id,
             [control.vcp_capability.vcp_code for control in self.vcp_controls],
             sleep_multiplier=self.vdu_model.sleep_multiplier)
-        for control,value in zip(self.vcp_controls, values):
+        for control, value in zip(self.vcp_controls, values):
             control.refresh_data(value=value)
 
     def refresh_view(self) -> None:
