@@ -992,37 +992,44 @@ class DdcUtil:
         attributes with "Continuous" values have a maximum, for consistency the method will return a zero maximum
         for "Non-Continuous" attributes.
         """
-        value_pattern = re.compile(r'VCP ' + vcp_code + r' ([A-Z]+) (.+)\n')
-        c_pattern = re.compile(r'([0-9]+) ([0-9]+)')
-        snc_pattern = re.compile(r'x([0-9a-f]+)')
-        cnc_pattern = re.compile(r'x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+)')
+
         # Try a few times in case there is a glitch due to a monitor being turned off/on
         for i in range(3):
             result = self.__run__('--brief', '--display', vdu_id, 'getvcp', vcp_code, sleep_multiplier=sleep_multiplier)
-            value_match = value_pattern.match(result.stdout.decode('utf-8'))
-            if value_match is not None:
-                type_indicator = value_match.group(1)
-                self.vcp_type_map[vcp_code] = type_indicator
-                if type_indicator == CONTINUOUS_TYPE:
-                    c_match = c_pattern.match(value_match.group(2))
-                    if c_match is not None:
-                        return c_match.group(1), c_match.group(2)
-                elif type_indicator == SIMPLE_NON_CONTINUOUS_TYPE:
-                    snc_match = snc_pattern.match(value_match.group(2))
-                    if snc_match is not None:
-                        return snc_match.group(1), '0'
-                elif type_indicator == COMPLEX_NON_CONTINUOUS_TYPE:
-                    cnc_match = cnc_pattern.match(value_match.group(2))
-                    if cnc_match is not None:
-                        return '{:02x}'.format(int(cnc_match.group(3), 16) << 8 | int(cnc_match.group(4), 16)), '0'
-                else:
-                    raise TypeError(f'Unsupported VCP type {type_indicator} for monitor {vdu_id} vcp_code {vcp_code}')
+            parsed_result = self.__parse_value(vdu_id, vcp_code, result.stdout.decode('utf-8'))
+            if parsed_result is not None:
+                return parsed_result
             log_warning(f"obtained garbage '{result.stdout.decode('utf-8')}' will try again.")
             log_warning(f"ddcutil maybe running too fast for monitor {vdu_id}, try increasing --sleep-multiplier.")
             time.sleep(2)
         log_error(f"ddcutil failed all attempts to get value for monitor {vdu_id} vcp_code {vcp_code}")
         raise ValueError(
             f"ddcutil returned garbage for monitor {vdu_id} vcp_code {vcp_code}, try increasing --sleep-multiplier")
+
+    def __parse_value(self, vdu_id: str, vcp_code: str, result: str) -> Tuple[str, str] | None:
+        value_pattern = re.compile(r'VCP ' + vcp_code + r' ([A-Z]+) (.+)\n')
+        c_pattern = re.compile(r'([0-9]+) ([0-9]+)')
+        snc_pattern = re.compile(r'x([0-9a-f]+)')
+        cnc_pattern = re.compile(r'x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+)')
+        value_match = value_pattern.match(result)
+        if value_match is not None:
+            type_indicator = value_match.group(1)
+            self.vcp_type_map[vcp_code] = type_indicator
+            if type_indicator == CONTINUOUS_TYPE:
+                c_match = c_pattern.match(value_match.group(2))
+                if c_match is not None:
+                    return c_match.group(1), c_match.group(2)
+            elif type_indicator == SIMPLE_NON_CONTINUOUS_TYPE:
+                snc_match = snc_pattern.match(value_match.group(2))
+                if snc_match is not None:
+                    return snc_match.group(1), '0'
+            elif type_indicator == COMPLEX_NON_CONTINUOUS_TYPE:
+                cnc_match = cnc_pattern.match(value_match.group(2))
+                if cnc_match is not None:
+                    return '{:02x}'.format(int(cnc_match.group(3), 16) << 8 | int(cnc_match.group(4), 16)), '0'
+            else:
+                raise TypeError(f'Unsupported VCP type {type_indicator} for monitor {vdu_id} vcp_code {vcp_code}')
+        return None
 
     def set_attribute(self, vdu_id: str, vcp_code: str, new_value: str, sleep_multiplier: float = None) -> None:
         """Send a new value to a specific VDU and vcp_code."""
@@ -1056,6 +1063,26 @@ class DdcUtil:
                 if vcp_code not in self.supported_codes:
                     self.supported_codes[vcp_code] = vcp_name
         return self.supported_codes
+
+    def get_attributes(self, vdu_id: str, vcp_code_list: List[str], sleep_multiplier: float = None):
+        for i in range(3):
+            args = ['--brief', '--display', vdu_id, 'getvcp'] + vcp_code_list
+            result = self.__run__(*args, sleep_multiplier=sleep_multiplier)
+            vcp_regexp = re.compile(r"^VCP ([0-9A-F]{2}) ")
+            # Results are not in the same order...
+            result_dict = {}
+            for line in result.stdout.split(b"\n"):
+                line_utf8 = line.decode('utf-8') + '\n'
+                match = vcp_regexp.match(line_utf8)
+                if match is not None:
+                    result_dict[match.group(1)] = line_utf8
+            result_list = [self.__parse_value(vdu_id, vcp_code, result_dict[vcp_code]) if vcp_code in result_dict else None for vcp_code in vcp_code_list]
+            if None in result_list:
+                log_warning(f"obtained garbage '{result.stdout.decode('utf-8')}' will try again.")
+                log_warning(f"ddcutil maybe running too fast for monitor {vdu_id}, try increasing --sleep-multiplier.")
+                time.sleep(2)
+            else:
+                return result_list
 
 
 def si(widget: QWidget, icon_number: int):
@@ -2238,11 +2265,11 @@ class VduControlSlider(VduControlBase):
 
         text_input.editingFinished.connect(text_changed)
 
-    def refresh_data(self) -> None:
+    def refresh_data(self, value: Tuple[str, str] | None = None) -> None:
         """Query the VDU for a new data value and cache it (maybe called from a task thread, so no GUI op's here)."""
         for i in range(4):
             try:
-                new_value, max_value = self.vdu_model.get_attribute(self.vcp_capability.vcp_code)
+                new_value, max_value = value if value is not None else self.vdu_model.get_attribute(self.vcp_capability.vcp_code)
                 if self.max_value is None:
                     # Validate as integer
                     int(new_value)
@@ -2326,9 +2353,9 @@ class VduControlComboBox(VduControlBase):
         # Default to capitalized version of each word
         return ' '.join(w[:1].upper() + w[1:] for w in result.split(' '))
 
-    def refresh_data(self) -> None:
+    def refresh_data(self, value: Tuple[str, str] | None = None) -> None:
         """Query the VDU for a new data value and cache it (maybe called from a task thread, so no GUI op's here)."""
-        self.current_value, _ = self.vdu_model.get_attribute(self.vcp_capability.vcp_code)
+        self.current_value, _ = value if value is not None else self.vdu_model.get_attribute(self.vcp_capability.vcp_code)
 
     def refresh_view(self) -> None:
         """Copy the internally cached current value onto the GUI view."""
@@ -2417,8 +2444,9 @@ class VduControlPanel(QWidget):
 
     def refresh_data(self) -> None:
         """Tell the control widgets to get fresh VDU data (maybe called from a task thread, so no GUI op's here)."""
-        for control in self.vcp_controls:
-            control.refresh_data()
+        values = self.vdu_model.ddcutil.get_attributes(self.vdu_model.vdu_id, [control.vcp_capability.vcp_code for control in self.vcp_controls])
+        for control,value in zip(self.vcp_controls, values):
+            control.refresh_data(value=value)
 
     def refresh_view(self) -> None:
         """Tell the control widgets to refresh their views from their internally cached values."""
