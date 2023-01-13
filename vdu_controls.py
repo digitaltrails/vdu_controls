@@ -992,17 +992,9 @@ class DdcUtil:
         attributes with "Continuous" values have a maximum, for consistency the method will return a zero maximum
         for "Non-Continuous" attributes.
         """
-
-        # Try a few times in case there is a glitch due to a monitor being turned off/on
-        for i in range(3):
-            result = self.__run__('--brief', '--display', vdu_id, 'getvcp', vcp_code, sleep_multiplier=sleep_multiplier)
-            parsed_result = self.__parse_value(vdu_id, vcp_code, result.stdout.decode('utf-8'))
-            if parsed_result is not None:
-                return parsed_result
-            log_warning(f"obtained garbage '{result.stdout.decode('utf-8')}' will try again.")
-            log_warning(f"ddcutil maybe running too fast for monitor {vdu_id}, try increasing --sleep-multiplier.")
-            time.sleep(2)
-        log_error(f"ddcutil failed all attempts to get value for monitor {vdu_id} vcp_code {vcp_code}")
+        result = self.get_attributes(vdu_id, [vcp_code], sleep_multiplier)[0]
+        if result is not None:
+            return result
         raise ValueError(
             f"ddcutil returned garbage for monitor {vdu_id} vcp_code {vcp_code}, try increasing --sleep-multiplier")
 
@@ -1064,11 +1056,14 @@ class DdcUtil:
                     self.supported_codes[vcp_code] = vcp_name
         return self.supported_codes
 
-    def get_attributes(self, vdu_id: str, vcp_code_list: List[str], sleep_multiplier: float = None):
+    def get_attributes(self, vdu_id: str, vcp_code_list: List[str], sleep_multiplier: float = None) -> List[str|None]:
+        # Try a few times in case there is a glitch due to a monitor being turned off/on
         for i in range(3):
             args = ['--brief', '--display', vdu_id, 'getvcp'] + vcp_code_list
             result = self.__run__(*args, sleep_multiplier=sleep_multiplier)
             vcp_regexp = re.compile(r"^VCP ([0-9A-F]{2}) ")
+            if len(vcp_code_list) == 1:
+                return [self.__parse_value(vdu_id, vcp_code_list[0], result.stdout.decode('utf-8'))]
             # Results are not in the same order...
             result_dict = {}
             for line in result.stdout.split(b"\n"):
