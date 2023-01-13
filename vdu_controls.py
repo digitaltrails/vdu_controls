@@ -1871,14 +1871,30 @@ class SettingsEditorFloatWidget(SettingsEditorFieldBase):
         text_input.setMaximumWidth(100)
         text_input.setMaxLength(4)
         text_validator = QDoubleValidator()
-        text_validator.setRange(0.1, int(3.0), 4)
+        text_validator.setNotation(QDoubleValidator.StandardNotation)
+        text_validator.setRange(0.1, 3.0, 4)
         text_input.setValidator(text_validator)
-        text_input.setText(section_editor.ini_editable[section][option])
+        valid_palette = text_input.palette()
+        error_palette = text_input.palette()
+        error_palette.setColor(QPalette.Text, Qt.red)
+
+        try:
+            text_input.setText(locale.format_string('%.2f', float(section_editor.ini_editable[section][option])))
+        except ValueError:
+            text_input.setText(section_editor.ini_editable[section][option])
 
         def editing_finished() -> None:
-            # print(section, option, text_input.text())
-            section_editor.ini_editable[section][option] = str(text_input.text())
+            text = text_input.text()
+            #print(section, option, text)
+            delocalized_text = locale.delocalize(str(text))
+            try:
+                float(delocalized_text)
+                text_input.setPalette(valid_palette)
+            except ValueError:
+                text_input.setPalette(error_palette)
+            section_editor.ini_editable[section][option] = delocalized_text
 
+        text_input.inputRejected.connect(partial(text_input.setPalette, error_palette))
         text_input.editingFinished.connect(editing_finished)
         layout.addWidget(text_input)
         layout.addStretch(1)
