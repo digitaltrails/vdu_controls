@@ -2413,9 +2413,9 @@ class VduControlPanel(QWidget):
         """Tell the control widgets to refresh their views from their internally cached values."""
         if self.refresh_data_exception is not None:
             alert = MessageBox(QMessageBox.Critical)
-            alert.setText(tr("Controls may be incorrect. Failed to refresh monitor {} data.").format(self.controller.vdu_id))
+            alert.setText(tr("Controls may be incorrect. Failed to refresh monitor {} data").format(self.controller.vdu_id))
             alert.setInformativeText(
-                tr("Problem communicating with monitor {}: {}.").format(self.controller.vdu_id, str(self.refresh_data_exception)))
+                tr("Problem communicating with monitor {}: {}").format(self.controller.vdu_id, str(self.refresh_data_exception)))
             alert.exec()
             # Perhaps part of the view can still be refreshed?
         for control in self.vcp_controls:

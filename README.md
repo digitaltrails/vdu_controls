@@ -181,6 +181,11 @@ See the context-menu or the  [man page](https://htmlpreview.github.io/?https://r
 
 VDU controls and optimisations can be specified in the global or VDU-specific config-files.
 
+Bugs and Suggestions
+--------------------
+If you encounter a bug or issue, or wish to make a suggestion, you're most welcome to raise 
+it on the [issues page](https://github.com/digitaltrails/vdu_controls/issues).
+
 Development
 -----------
 
@@ -210,6 +215,15 @@ My IDE for this project is [PyCharm Community Edition](https://www.jetbrains.com
 My development Linux desktop is [OpenSUSE Tumbleweed](https://get.opensuse.org/tumbleweed/). The python3
 interpreter and python3 libraries are from the standard OpenSUSE Tumbleweed repositories (Tumbleweed currently
 defaults python3 to [python 3.8](https://www.python.org/downloads/release/python-380/)).
+
+Acknowlegements
+---------------
+
+* [rockowitz](https://github.com/rockowitz), for the robust [ddcutil](https://github.com/rockowitz/ddcutil) utility
+* [yochananmarqos](https://github.com/yochananmarqos), for Gnome related suggestions and AUR port.
+* [denilsonsa](https://github.com/denilsonsa), for several suggestions, testing and fixes present in version 1.9.
+* [crashmatt](https://github.com/crashmatt), [lowne](https://github.com/lowne), [usr](https://github.com/usr)3, for contributing fixes to code and documentation.
+* [Jakeler](https://github.com/Jakeler), [kupiqu](https://github.com/kupiqu), for suggestions for enhancements. 
 
 Author
 ------
