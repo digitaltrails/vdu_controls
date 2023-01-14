@@ -220,6 +220,12 @@ Michael Hamilton
 Version History
 ---------------
 * 1.8.4
+  * Performance enhancements: 
+    * speed up initialization and refresh by combining multiple ddcutil getvcp requests; 
+    * stop executing a getvcp precheck beofre each setvcp. 
+  * _Settings Dialog_ text field validation fixes.
+  * _Settings Dialog_ _Settings Enable VCP Codes_ now works again.
+  * Fix the monitor specific sleep multipliers (they were not always being used).
   * Treat all monitor detection situations as needing time to stabilise (helps in disconnect situations). 
 * 1.8.3
   * Fix for a crash when the network is down and the weather site cannot be contacted. 
