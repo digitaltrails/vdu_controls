@@ -226,7 +226,8 @@ Version History
   * _Settings Dialog_ text field validation fixes.
   * _Settings Dialog_ _Settings Enable VCP Codes_ now works again.
   * Fix the monitor specific sleep multipliers (they were not always being used).
-  * Treat all monitor detection situations as needing time to stabilise (helps in disconnect situations). 
+  * Treat all monitor detection situations as needing time to stabilise (helps in disconnect situations).
+  * Dropped support for pre v1.8.0 config files. To convert from earlier versions, upgrade to v1.8.3 first. 
 * 1.8.3
   * Fix for a crash when the network is down and the weather site cannot be contacted. 
 * 1.8.2
