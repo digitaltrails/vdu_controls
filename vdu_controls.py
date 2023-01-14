@@ -1661,7 +1661,7 @@ class VduController(QObject):
             return values_list
 
         feature_pattern = re.compile(r'([0-9A-F]{2})\s+[(]([^)]+)[)]\s(.*)', re.DOTALL | re.MULTILINE)
-        feature_map: Mapping[str, VcpCapability] = {}
+        feature_map = {}
         for feature_text in capabilities_text.split(' Feature: '):
             feature_match = feature_pattern.match(feature_text)
             if feature_match:
@@ -4459,7 +4459,6 @@ class MainWindow(QMainWindow):
             splash.finish(self)
 
         if not main_config.ini_content.is_version_ge(1, 7, 0):
-            # First time use.
             release_alert = MessageBox(QMessageBox.Information, buttons=QMessageBox.Close)
             welcome = tr("Welcome to vdu_controls version {}").format(VDU_CONTROLS_VERSION)
             note = tr("Please read the online release notes:")
