@@ -489,6 +489,8 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
 APPNAME = "VDU Controls"
 VDU_CONTROLS_VERSION = '1.8.4'
 
+TABLET_TRACKING_FIX = True
+
 WESTERN_SKY = 'western-sky'
 EASTERN_SKY = 'eastern-sky'
 
@@ -2084,6 +2086,7 @@ class VduControlBase(QWidget):
         self.vdu_model = vdu_model
         self.vcp_capability = vcp_capability
         self.is_data_uptodate = False
+        self.setTabletTracking(True) if TABLET_TRACKING_FIX else None
 
     def restore_vdu_attribute(self, new_value):
         # Used when restoring a Preset
@@ -2180,6 +2183,7 @@ class VduControlSlider(VduControlBase):
         slider.setOrientation(Qt.Horizontal)
         # Don't rewrite the ddc value too often - not sure of the implications
         slider.setTracking(False)
+        slider.setTabletTracking(True) if TABLET_TRACKING_FIX else None
         layout.addWidget(slider)
 
         text_input = QLineEdit()
@@ -2188,6 +2192,7 @@ class VduControlSlider(VduControlBase):
         self.text_validator = QIntValidator()
         text_input.setValidator(self.text_validator)
         text_input.setText(str(slider.value()))
+        text_input.setTabletTracking(True) if TABLET_TRACKING_FIX else None
         layout.addWidget(text_input)
 
         def slider_changed(value: int) -> None:
@@ -2288,6 +2293,7 @@ class VduControlComboBox(VduControlBase):
             self.ui_change_vdu_attribute(self.current_value)
 
         combo_box.currentIndexChanged.connect(index_changed)
+        combo_box.setTabletTracking(True) if TABLET_TRACKING_FIX else None
 
     def translate_label(self, source: str):
         canonical = source.lower()
@@ -4396,6 +4402,15 @@ class MainWindow(QMainWindow):
             global log_to_syslog
             log_to_syslog = main_config.is_syslog_enabled()
             existing_width = 0
+            # Possible fix for wacom tablets -
+            # https://bugreports.qt.io/browse/QTBUG-65559?focusedCommentId=413132&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel
+            if TABLET_TRACKING_FIX:
+                log_info(f"TABLET_TRACKING_FIX={TABLET_TRACKING_FIX}")
+                self.setTabletTracking(True)
+                parent = self.parentWidget()
+                while parent is not None:
+                    parent.setTabletTracking(True)
+                    parent = parent.parentWidget()
             if self.main_control_panel:
                 # Remove any existing control panel - which may now be incorrect for the config.
                 self.main_control_panel.width()
