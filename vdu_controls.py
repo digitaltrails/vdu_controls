@@ -2246,12 +2246,10 @@ class VduControlSlider(VduControlBase):
             self.slider.setValue(int(self.current_value))
 
     def event(self, event: QEvent) -> bool:
-        super().event(event)
         # PalletChange happens after the new style sheet is in use.
         if event.type() == QEvent.PaletteChange:
             self.svg_icon.load(handle_theme(VDU_SUPPORTED_CONTROLS.by_code[self.vcp_capability.vcp_code].icon_source))
-        event.accept()
-        return True
+        return super().event(event)
 
 
 class VduControlComboBox(VduControlBase):
@@ -3167,12 +3165,10 @@ class PresetActivationButton(QPushButton):
         self.setToolTip(tr("Activate this preset"))
 
     def event(self, event: QEvent) -> bool:
-        super().event(event)
         # PalletChange happens after the new style sheet is in use.
         if event.type() == QEvent.PaletteChange:
             self.setIcon(self.preset.create_icon())
-        event.accept()
-        return True
+        return super().event(event)
 
 
 class PresetChooseIconButton(QPushButton):
@@ -3215,12 +3211,10 @@ class PresetChooseIconButton(QPushButton):
             self.setIcon(si(self, PresetsDialog.no_icon_icon_number))
 
     def event(self, event: QEvent) -> bool:
-        super().event(event)
         # PalletChange happens after the new style sheet is in use.
         if event.type() == QEvent.PaletteChange:
             self.update_icon()
-        event.accept()
-        return True
+        return super().event(event)
 
 
 class QueryWeather:
@@ -3952,11 +3946,10 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             down_action=self.down_action)
 
     def event(self, event: QEvent) -> bool:
-        super().event(event)
         # PalletChange happens after the new style sheet is in use.
         if event.type() == QEvent.PaletteChange:
             self.repaint()
-        return True
+        return super().event(event)
 
     def closeEvent(self, event) -> None:
         if self.preset_name_edit.text().strip() != '':
@@ -4556,13 +4549,11 @@ class MainWindow(QMainWindow):
             self.restoreState(window_state)
 
     def event(self, event: QEvent) -> bool:
-        super().event(event)
         # PalletChange happens after the new style sheet is in use.
         if event.type() == QEvent.PaletteChange:
             self.display_active_preset(None)
             self.app_context_menu.refresh_preset_menu(reload=True)
-        event.accept()
-        return True
+        return super().event(event)
 
     def schedule_presets(self, reset: bool = False) -> Preset:
         # As well as scheduling, this method finds and returns the preset that should be applied at this time.
