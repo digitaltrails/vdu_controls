@@ -487,7 +487,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter
 
 APPNAME = "VDU Controls"
-VDU_CONTROLS_VERSION = '1.8.4'
+VDU_CONTROLS_VERSION = '1.9.0'
 
 WESTERN_SKY = 'western-sky'
 EASTERN_SKY = 'eastern-sky'
