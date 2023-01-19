@@ -97,7 +97,7 @@ gzip -c docs/_build/man/vdu_controls.1 > %{buildroot}/%{_datadir}/man/man1/%{nam
 
 %changelog
 * Wed Jan 11 2023 Michael Hamilton <michael@actrix.gen.nz>
-- Treat all monitor detection situations as unstable/fluctuating: vdu_controls 1.9.0
+- Bug fixes and speedy performance improvements: vdu_controls 1.9.0
 * Wed Dec 14 2022 Michael Hamilton <michael@actrix.gen.nz>
 - Fix crash when network is down and weather site is not contactable: vdu_controls 1.8.3
 * Fri Nov 11 2022 Michael Hamilton <michael@actrix.gen.nz>

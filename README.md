@@ -220,13 +220,14 @@ Michael Hamilton
 Version History
 ---------------
 * 1.9.0
-  * Performance enhancements: 
-    * speed up initialization and refresh by combining multiple ddcutil getvcp requests; 
-    * stop executing a getvcp precheck beofre each setvcp. 
-  * _Settings Dialog_ text field validation fixes.
-  * _Settings Dialog_ _Settings Enable VCP Codes_ now works again.
-  * Fix the monitor specific sleep multipliers (they were not always being used).
-  * Treat all monitor detection situations as needing time to stabilise (helps in disconnect situations).
+  * Bug fixes and speedy performance improvements
+    * Speed up initialization and refresh by combining multiple ddcutil getvcp requests; 
+    * Stop executing a getvcp precheck before each setvcp. 
+    * Fix _Settings Dialog_ text field validation, some errors were invisibly ignored.
+    * Fix _Settings Dialog_ _Settings Enable VCP Codes_, they had stopped working.
+    * Fix the monitor specific sleep multipliers, they were not always being used.
+    * Treat all monitor detection situations as needing time to stabilise (helps in disconnect situations).
+    * Fix event handling so that pen input works on the main panel.
   * Dropped support for pre v1.8.0 config files. To convert from earlier versions, upgrade to v1.8.* first. 
 * 1.8.3
   * Fix for a crash when the network is down and the weather site cannot be contacted. 
