@@ -2701,13 +2701,11 @@ class BottomToolBar(QToolBar):
         self.installEventFilter(self)
 
     def eventFilter(self, target: QObject, event: QEvent) -> bool:
-        super().eventFilter(target, event)
         # PalletChange happens after the new style sheet is in use.
         if event.type() == QEvent.PaletteChange:
             self.refresh_action.setIcon(create_icon_from_svg_bytes(REFRESH_ICON_SOURCE))
             self.menu_button.setIcon(create_icon_from_svg_bytes(MENU_ICON_SOURCE))
-        event.accept()
-        return True
+        return super().eventFilter(target, event)
 
     def indicate_refresh_in_progress(self):
         self.refresh_action.setDisabled(True)
