@@ -2676,8 +2676,13 @@ class BottomToolBar(QToolBar):
 
     def __init__(self, start_refresh_func, app_context_menu, parent):
         super().__init__(parent=parent)
-        self.refresh_action = self.addAction(
-            create_icon_from_svg_bytes(REFRESH_ICON_SOURCE), "Refresh settings from monitors", start_refresh_func)
+
+        self.refresh_button = QToolButton(self)
+        self.refresh_button.setIcon(create_icon_from_svg_bytes(REFRESH_ICON_SOURCE))
+        self.refresh_button.setToolTip("Refresh settings from monitors")
+        self.refresh_button.pressed.connect(start_refresh_func)
+        self.addWidget(self.refresh_button)
+
         self.setIconSize(QSize(32, 32))
         self.progress_bar = QProgressBar(self)
         # Disable text percentage label on the spinner progress-bar
@@ -2703,13 +2708,14 @@ class BottomToolBar(QToolBar):
     def eventFilter(self, target: QObject, event: QEvent) -> bool:
         # PalletChange happens after the new style sheet is in use.
         if event.type() == QEvent.PaletteChange:
-            self.refresh_action.setIcon(create_icon_from_svg_bytes(REFRESH_ICON_SOURCE))
+            self.refresh_button.setIcon(create_icon_from_svg_bytes(REFRESH_ICON_SOURCE))
             self.menu_button.setIcon(create_icon_from_svg_bytes(MENU_ICON_SOURCE))
         return super().eventFilter(target, event)
 
     def indicate_refresh_in_progress(self):
-        self.refresh_action.setDisabled(True)
+        self.refresh_button.setDisabled(True)
         self.menu_button.setDisabled(True)
+        self.preset_action.setDisabled(True)
         self.progress_bar.setDisabled(False)
         # Setting range to 0,0 cause the progress bar to pulsate left/right - used as a busy spinner.
         self.progress_bar.setRange(0, 0)
@@ -2717,8 +2723,9 @@ class BottomToolBar(QToolBar):
     def indicate_refresh_complete(self):
         self.progress_bar.setRange(0, 1)
         self.progress_bar.setDisabled(True)
-        self.refresh_action.setDisabled(False)
+        self.refresh_button.setDisabled(False)
         self.menu_button.setDisabled(False)
+        self.preset_action.setDisabled(False)
 
     def display_active_preset(self, preset: Preset | None):
         if preset:
