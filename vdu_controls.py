@@ -4308,7 +4308,6 @@ class MainWindow(QMainWindow):
                                   settings_changed)
 
         def refresh_from_vdus() -> None:
-            create_main_control_panel()
             self.main_control_panel.start_refresh()
 
         def grey_scale() -> None:
