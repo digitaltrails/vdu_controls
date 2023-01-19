@@ -1002,7 +1002,7 @@ class DdcUtil:
         if result is not None:
             return result
         raise ValueError(
-            f"ddcutil returned garbage for monitor {vdu_id} vcp_code {vcp_code}, try increasing --sleep-multiplier")
+            f"ddcutil returned an invalid value for monitor {vdu_id} vcp_code {vcp_code}, try increasing --sleep-multiplier")
 
     def set_attribute(self, vdu_id: str, vcp_code: str, new_value: str, sleep_multiplier: float = None) -> None:
         """Send a new value to a specific VDU and vcp_code."""
@@ -1035,29 +1035,37 @@ class DdcUtil:
                     self.supported_codes[vcp_code] = vcp_name
         return self.supported_codes
 
-    def get_attributes(self, vdu_id: str, vcp_code_list: List[str], sleep_multiplier: float = None) -> List[Tuple[str, str] | None]:
-        # Try a few times in case there is a glitch due to a monitor being turned off/on
+    def get_attributes(self, vdu_id: str, vcp_code_list: List[str], sleep_multiplier: float = None) -> List[Tuple[str, str]] | None:
+        # Try a few times in case there is a glitch due to a monitor being turned-off/on or slow to respond
+        # Should we loop here, or higher up - maybe it doesn't matter.
         for i in range(GET_ATTRIBUTES_RETRIES):
             args = ['--brief', '--display', vdu_id, 'getvcp'] + vcp_code_list
-            result = self.__run__(*args, sleep_multiplier=sleep_multiplier)
-            vcp_regexp = re.compile(r"^VCP ([0-9A-F]{2}) ")
-            if len(vcp_code_list) == 1:
-                return [self.__parse_value(vdu_id, vcp_code_list[0], result.stdout.decode('utf-8'))]
-            # Results are not in the same order...
-            result_dict = {}
-            for line in result.stdout.split(b"\n"):
-                line_utf8 = line.decode('utf-8') + '\n'
-                match = vcp_regexp.match(line_utf8)
-                if match is not None:
-                    result_dict[match.group(1)] = line_utf8
-            result_list = [self.__parse_value(vdu_id, vcp_code, result_dict[vcp_code]) if vcp_code in result_dict else None for
-                           vcp_code in vcp_code_list]
-            if None in result_list:
-                log_warning(f"obtained garbage '{result.stdout.decode('utf-8')}' will try again.")
-                log_warning(f"ddcutil maybe running too fast for monitor {vdu_id}, try increasing --sleep-multiplier.")
-                time.sleep(2)
-            else:
+            try:
+                result = self.__run__(*args, sleep_multiplier=sleep_multiplier)
+                vcp_regexp = re.compile(r"^VCP ([0-9A-F]{2}) ")
+                # Faster if only one result to parse
+                if len(vcp_code_list) == 1:
+                    return [self.__parse_value(vdu_id, vcp_code_list[0], result.stdout.decode('utf-8'))]
+                # Slower, results are not in the same order...
+                result_dict = {}
+                for line in result.stdout.split(b"\n"):
+                    line_utf8 = line.decode('utf-8') + '\n'
+                    match = vcp_regexp.match(line_utf8)
+                    if match is not None:
+                        result_dict[match.group(1)] = line_utf8
+                result_list = [self.__parse_value(vdu_id, vcp_code, result_dict[vcp_code]) if vcp_code in result_dict else None for
+                               vcp_code in vcp_code_list]
+                if None in result_list:
+                    log_warning(f"parse failed '{result.stdout.decode('utf-8')}' will try again.")
+                    continue
                 return result_list
+            except subprocess.SubprocessError as e:
+                log_warning("Subprocess error: ", args, str(e))
+                if i + 1 == GET_ATTRIBUTES_RETRIES:
+                    raise  # Too many failures, pass the buck upstairs
+            log_warning(f"ddcutil maybe running too fast for monitor {vdu_id}, try increasing --sleep-multiplier.")
+            time.sleep(2)
+        return None
 
     def __parse_value(self, vdu_id: str, vcp_code: str, result: str) -> Tuple[str, str] | None:
         value_pattern = re.compile(r'VCP ' + vcp_code + r' ([A-Z]+) (.+)\n')
@@ -1627,11 +1635,11 @@ class VduController(QObject):
     def get_attribute(self, vcp_code: str) -> Tuple[str, str]:
         try:
             return self.ddcutil.get_attribute(self.vdu_id, vcp_code, sleep_multiplier=self.sleep_multiplier)
-        except subprocess.CalledProcessError as e:
+        except subprocess.SubprocessError as e:
             alert = MessageBox(QMessageBox.Critical)
-            alert.setText(tr("Failed to obtain monitor {} vcp_code {}").format(self.vdu_id, vcp_code))
+            alert.setText(tr("Controls may be incorrect. Failed to obtain monitor {} vcp_code {}").format(self.vdu_id, vcp_code))
             alert.setInformativeText(
-                "Problem communicating with monitor {} {}. Controls may be incorrect.".format(self.vdu_id, str(e)))
+                tr("Problem communicating with monitor {}: {}").format(self.vdu_id, str(e)))
             alert.exec()
             return '0', '0'
 
@@ -2242,8 +2250,9 @@ class VduControlSlider(VduControlBase):
 
     def refresh_view(self) -> None:
         """Copy the internally cached current value onto the GUI view."""
-        with VduControlBase.DataUptodate(self):
-            self.slider.setValue(int(self.current_value))
+        if self.current_value is not None:
+            with VduControlBase.DataUptodate(self):
+                self.slider.setValue(int(self.current_value))
 
     def event(self, event: QEvent) -> bool:
         # PalletChange happens after the new style sheet is in use.
@@ -2335,29 +2344,30 @@ class VduControlPanel(QWidget):
     """
     connected_vdus_changed = pyqtSignal()
 
-    def __init__(self, vdu_model: VduController, warnings: bool) -> None:
+    def __init__(self, controller: VduController, warnings: bool) -> None:
         super().__init__()
         layout = QVBoxLayout()
         label = QLabel()
-        label.setText(tr('Monitor {}: {}').format(vdu_model.vdu_id, vdu_model.get_vdu_description()))
+        label.setText(tr('Monitor {}: {}').format(controller.vdu_id, controller.get_vdu_description()))
         layout.addWidget(label)
-        self.vdu_model = vdu_model
+        self.controller = controller
         self.vcp_controls = []
+        self.refresh_data_exception = None
 
-        for vcp_code in vdu_model.enabled_vcp_codes:
-            if vcp_code in vdu_model.capabilities:
+        for vcp_code in controller.enabled_vcp_codes:
+            if vcp_code in controller.capabilities:
                 control = None
-                capability = vdu_model.capabilities[vcp_code]
+                capability = controller.capabilities[vcp_code]
                 if capability.vcp_type == CONTINUOUS_TYPE:
                     try:
-                        control = VduControlSlider(vdu_model, capability)
+                        control = VduControlSlider(controller, capability)
                     except ValueError as valueError:
                         alert = MessageBox(QMessageBox.Critical)
                         alert.setText(str(valueError))
                         alert.exec()
                 elif capability.vcp_type == GUI_NON_CONTINUOUS_TYPE:
                     try:
-                        control = VduControlComboBox(vdu_model, capability)
+                        control = VduControlComboBox(controller, capability)
                     except ValueError as valueError:
                         alert = MessageBox(QMessageBox.Critical)
                         alert.setText(valueError.args[0])
@@ -2377,7 +2387,7 @@ class VduControlPanel(QWidget):
                 alert = MessageBox(QMessageBox.Warning)
                 alert.setText(
                     tr('Monitor {} lacks a VCP control for {}.').format(
-                        vdu_model.get_vdu_description(), tr(missing_vcp)))
+                        controller.get_vdu_description(), tr(missing_vcp)))
                 alert.setInformativeText(tr('No read/write ability for vcp_code {}.').format(vcp_code))
                 alert.exec()
         if len(self.vcp_controls) != 0:
@@ -2387,15 +2397,27 @@ class VduControlPanel(QWidget):
 
     def refresh_data(self) -> None:
         """Tell the control widgets to get fresh VDU data (maybe called from a task thread, so no GUI op's here)."""
-        values = self.vdu_model.ddcutil.get_attributes(
-            self.vdu_model.vdu_id,
-            [control.vcp_capability.vcp_code for control in self.vcp_controls],
-            sleep_multiplier=self.vdu_model.sleep_multiplier)
-        for control, value in zip(self.vcp_controls, values):
-            control.refresh_data(value=value)
+        try:
+            self.refresh_data_exception = None
+            values = self.controller.ddcutil.get_attributes(
+                self.controller.vdu_id,
+                [control.vcp_capability.vcp_code for control in self.vcp_controls],
+                sleep_multiplier=self.controller.sleep_multiplier)
+            if values is not None:
+                for control, value in zip(self.vcp_controls, values):
+                    control.refresh_data(value=value)
+        except subprocess.SubprocessError as e:
+            self.refresh_data_exception = e
 
     def refresh_view(self) -> None:
         """Tell the control widgets to refresh their views from their internally cached values."""
+        if self.refresh_data_exception is not None:
+            alert = MessageBox(QMessageBox.Critical)
+            alert.setText(tr("Controls may be incorrect. Failed to refresh monitor {} data.").format(self.controller.vdu_id))
+            alert.setInformativeText(
+                tr("Problem communicating with monitor {}: {}.").format(self.controller.vdu_id, str(self.refresh_data_exception)))
+            alert.exec()
+            # Perhaps part of the view can still be refreshed?
         for control in self.vcp_controls:
             control.refresh_view()
 
@@ -2404,7 +2426,7 @@ class VduControlPanel(QWidget):
         return len(self.vcp_controls)
 
     def copy_state(self, preset_ini: ConfigIni, update_only) -> None:
-        vdu_section_name = self.vdu_model.vdu_stable_id
+        vdu_section_name = self.controller.vdu_stable_id
         if not preset_ini.has_section(vdu_section_name):
             preset_ini.add_section(vdu_section_name)
         for control in self.vcp_controls:
@@ -2412,15 +2434,15 @@ class VduControlPanel(QWidget):
                 preset_ini[vdu_section_name][control.vcp_capability.property_name()] = control.current_value
 
     def restore_vdu_state(self, preset_ini: ConfigIni) -> None:
-        log_info(f"Preset restoring {self.vdu_model.vdu_stable_id}")
+        log_info(f"Preset restoring {self.controller.vdu_stable_id}")
         for control in self.vcp_controls:
-            if control.vcp_capability.property_name() in preset_ini[self.vdu_model.vdu_stable_id]:
-                control.current_value = preset_ini[self.vdu_model.vdu_stable_id][control.vcp_capability.property_name()]
+            if control.vcp_capability.property_name() in preset_ini[self.controller.vdu_stable_id]:
+                control.current_value = preset_ini[self.controller.vdu_stable_id][control.vcp_capability.property_name()]
                 control.restore_vdu_attribute(control.current_value)
         self.refresh_view()
 
     def is_preset_active(self, preset_ini: ConfigIni) -> bool:
-        vdu_section = self.vdu_model.vdu_stable_id
+        vdu_section = self.controller.vdu_stable_id
         for control in self.vcp_controls:
             if control.vcp_capability.property_name() in preset_ini[vdu_section]:
                 if control.current_value != preset_ini[vdu_section][control.vcp_capability.property_name()]:
@@ -2918,7 +2940,7 @@ class VduControlsMainPanel(QWidget):
         """Refresh data from the VDU's. Called by a non-GUI task. Not in the GUI-thread, cannot do any GUI op's."""
         self.detected_vdus = self.ddcutil.detect_monitors()
         for control_panel in self.vdu_control_panels:
-            if control_panel.vdu_model.get_full_id() in self.detected_vdus:
+            if control_panel.controller.get_full_id() in self.detected_vdus:
                 try:
                     control_panel.refresh_data()
                 except ValueError as ve:
@@ -3023,7 +3045,7 @@ class PresetController:
         for section in preset.preset_ini:
             if section != 'vdu_controls':
                 for control_panel in main_panel.vdu_control_panels:
-                    if section == control_panel.vdu_model.vdu_stable_id:
+                    if section == control_panel.controller.vdu_stable_id:
                         if not control_panel.is_preset_active(preset.preset_ini):
                             return False
         return True
@@ -4473,7 +4495,7 @@ class MainWindow(QMainWindow):
         try:
             for section in preset.preset_ini:
                 for control_panel in self.main_control_panel.vdu_control_panels:
-                    if section == control_panel.vdu_model.vdu_stable_id:
+                    if section == control_panel.controller.vdu_stable_id:
                         control_panel.restore_vdu_state(preset.preset_ini)
                         restored_list.append(control_panel)
             self.display_active_preset(preset)
