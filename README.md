@@ -242,7 +242,11 @@ Version History
     * Fix the monitor specific sleep multipliers, they were not always being used.
     * Treat all monitor detection situations as needing time to stabilise (helps in disconnect situations).
     * Fix event handling so that pen input works on the main panel.
-  * Dropped support for pre v1.8.0 config files. To convert from earlier versions, upgrade to v1.8.* first. 
+    * Default to a sleep-multiplier of 1.0 to support a wider range of monitors out of the box.
+  * V1.9.0 drops support for converting from pre v1.8.0 config and preset files. To convert 
+    from earlier versions, first upgrade to v1.8.* (earlier versions of vdu_controls 
+    can be obtained from [github](https://github.com/digitaltrails/vdu_controls/releases). Alternatively, 
+    move or remove the old configs from `$HOME/.config/vdu_controls` (or ignore them).
 * 1.8.3
   * Fix for a crash when the network is down and the weather site cannot be contacted. 
 * 1.8.2

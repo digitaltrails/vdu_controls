@@ -40,7 +40,7 @@ Optional arguments:
       --syslog              repeat diagnostic output to the syslog (journald)
       --no-splash           don't show the splash screen
       --sleep-multiplier multiplier
-                            protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 0.5)
+                            protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 1.0)
       --create-config-files  if they do not exist, create template config INI files in $HOME/.config/vdu_controls/
       --install             installs the vdu_controls in the current user's path and desktop application menu.
       --uninstall           uninstalls the vdu_controls application menu file and script for the current user.
@@ -369,7 +369,7 @@ Examples
     vdu_controls --enable-vcp-code 63 --enable-vcp-code 93 --warnings --debug
         All default controls, plus controls for VCP_CODE 63 and 93, show any warnings, output debugging info.
 
-    vdu_controls --sleep-multiplier 0.1
+    vdu_controls --sleep-multiplier 0.4
         All default controls, speed up ddcutil-VDU interaction by passing a sleep multiplier.
 
 This script often refers to displays and monitors as VDU's in order to
@@ -1238,7 +1238,8 @@ class ConfigIni(configparser.ConfigParser):
                 log_error(f"Illegal version number {version} should be i.j.k where i, j and k are integers.")
         return 1, 6, 0
 
-    def is_version_ge(self, major, minor, release):
+    def is_version_ge(self, version_text: str = VDU_CONTROLS_VERSION):
+        major, minor, release = [int(i) for i in version_text.split(".")]
         current_major, current_minor, current_release = self.get_version()
         if current_major < major:
             return False
@@ -1329,7 +1330,7 @@ class VduControlsConfig:
 
         self.ini_content['vdu-controls-widgets']['enable-vcp-codes'] = ''
 
-        self.ini_content['ddcutil-parameters']['sleep-multiplier'] = str(0.5)
+        self.ini_content['ddcutil-parameters']['sleep-multiplier'] = str(1.0)
 
         self.ini_content['ddcutil-capabilities']['capabilities-override'] = ''
 
@@ -1377,7 +1378,7 @@ class VduControlsConfig:
         return self.ini_content.getboolean('vdu-controls-globals', 'syslog-enabled', fallback=False)
 
     def get_sleep_multiplier(self) -> float:
-        return self.ini_content.getfloat('ddcutil-parameters', 'sleep-multiplier', fallback=0.5)
+        return self.ini_content.getfloat('ddcutil-parameters', 'sleep-multiplier', fallback=1.0)
 
     def get_capabilities_alt_text(self) -> str:
         return self.ini_content['ddcutil-capabilities']['capabilities-override']
@@ -1502,8 +1503,8 @@ class VduControlsConfig:
                             help='popup a warning when a VDU lacks an enabled control')
         parser.add_argument('--syslog', default=False, action='store_true', help='enable diagnostic output to syslog')
         parser.add_argument('--no-splash', default=False, action='store_true', help="don't show the splash screen")
-        parser.add_argument('--sleep-multiplier', type=float, default="0.5",
-                            help='protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 0.5)')
+        parser.add_argument('--sleep-multiplier', type=float, default="1.0",
+                            help='protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 1.0)')
         parser.add_argument('--create-config-files', action='store_true',
                             help="create template config files, one global file and one for each detected VDU.")
         parser.add_argument('--install', action='store_true',
@@ -4484,7 +4485,8 @@ class MainWindow(QMainWindow):
         if splash is not None:
             splash.finish(self)
 
-        if not main_config.ini_content.is_version_ge(1, 7, 0):
+        if main_config.file_path is None or not main_config.ini_content.is_version_ge():
+            # User is new to this version - point them to the release notes.
             release_alert = MessageBox(QMessageBox.Information, buttons=QMessageBox.Close)
             welcome = tr("Welcome to vdu_controls version {}").format(VDU_CONTROLS_VERSION)
             note = tr("Please read the online release notes:")
@@ -4492,7 +4494,7 @@ class MainWindow(QMainWindow):
             release_alert.setTextFormat(Qt.RichText)
             release_alert.exec()
             # Stops the release notes from being repeated.
-            main_config.write_file(get_config_path('vdu_controls'))
+            main_config.write_file(get_config_path('vdu_controls'), overwrite=True)
 
     def restore_preset(self, preset: Preset) -> bool:
         log_info(f"Preset changing to {preset.name}")
