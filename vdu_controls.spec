@@ -26,8 +26,12 @@ Group: System/GUI/Other
 Summary: Visual Display Unit virtual control panel
 Source0:        %{name}-%{version}.tar.gz
 
-%if 0%{?suse_version} || 0%{?fedora_version}
+%if 0%{?suse_version}
 Requires: ddcutil python3 python3-qt5 noto-sans-math-fonts noto-sans-symbols2-fonts
+%endif
+
+%if 0%{?fedora_version}
+Requires: ddcutil python3 python3-qt5 google-noto-sans-math-fonts google-noto-sans-symbols2-fonts
 %endif
 
 BuildRequires: coreutils
