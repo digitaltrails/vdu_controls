@@ -2954,6 +2954,13 @@ class VduControlsMainPanel(QWidget):
         for control_panel in self.vdu_control_panels:
             control_panel.refresh_view()
 
+    def restore_preset(self, preset: Preset) -> bool:
+        preset.load()
+        for section in preset.preset_ini:
+            for control_panel in self.vdu_control_panels:
+                if section == control_panel.controller.vdu_stable_id:
+                    control_panel.restore_vdu_state(preset.preset_ini)
+
     def is_non_standard_enabled(self) -> bool:
         if self.non_standard_enabled is None:
             self.non_standard_enabled = False
@@ -4395,7 +4402,7 @@ class MainWindow(QMainWindow):
 
         def respond_to_unix_signal(signal_number: int):
             if signal_number == signal.SIGHUP:
-                self.main_control_panel.refresh_data()
+                self.main_control_panel.start_refresh()
             elif PRESET_SIGNAL_MIN <= signal_number <= PRESET_SIGNAL_MAX:
                 restore_preset = self.preset_controller.get_preset(signal_number - PRESET_SIGNAL_MIN)
                 if restore_preset is not None:
@@ -4489,26 +4496,19 @@ class MainWindow(QMainWindow):
 
     def restore_preset(self, preset: Preset) -> bool:
         log_info(f"Preset changing to {preset.name}")
-        preset.load()
-        restored_list = []
         try:
-            for section in preset.preset_ini:
-                for control_panel in self.main_control_panel.vdu_control_panels:
-                    if section == control_panel.controller.vdu_stable_id:
-                        control_panel.restore_vdu_state(preset.preset_ini)
-                        restored_list.append(control_panel)
+            self.main_control_panel.restore_preset(preset)
             self.display_active_preset(preset)
         except VduException as e:
             log_warning(f"Abandoned restore of Preset {preset.name} due to: {e}")
             return False
         return True
 
-    def restore_named_preset(self, preset_name: str):
+    def restore_named_preset(self, preset_name: str) -> None:
         presets = self.preset_controller.find_presets()
         if preset_name in presets:
             preset = presets[preset_name]
             self.restore_preset(preset)
-            return preset
 
     def save_preset(self, preset: Preset) -> None:
         self.copy_to_preset_ini(preset.preset_ini, update_only=True)
