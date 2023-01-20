@@ -234,8 +234,8 @@ Michael Hamilton
 Version History
 ---------------
 * 1.9.0
-  * Bug fixes and speedy performance improvements
-    * Speed up initialization and refresh by combining multiple ddcutil getvcp requests; 
+  * Bug fixes and speedy performance improvements:
+    * Speed up initialization and refresh by combining multiple ddcutil getvcp requests.
     * Stop executing a getvcp precheck before each setvcp. 
     * Fix _Settings Dialog_ text field validation, some errors were invisibly ignored.
     * Fix _Settings Dialog_ _Settings Enable VCP Codes_, they had stopped working.
@@ -243,7 +243,7 @@ Version History
     * Treat all monitor detection situations as needing time to stabilise (helps in disconnect situations).
     * Fix event handling so that pen input works on the main panel.
     * Default to a sleep-multiplier of 1.0 to support a wider range of monitors out of the box.
-  * V1.9.0 drops support for converting from pre v1.8.0 config and preset files. To convert 
+  * V1.9.0 drops support for converting from pre v1.7.0 config and preset files. To convert 
     from earlier versions, first upgrade to v1.8.* (earlier versions of vdu_controls 
     can be obtained from [github](https://github.com/digitaltrails/vdu_controls/releases). Alternatively, 
     move or remove the old configs from `$HOME/.config/vdu_controls` (or ignore them).
