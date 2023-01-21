@@ -51,17 +51,20 @@ def main():
 
     if "detect" in sys.argv:
         answer_path = BASE_PATH / SIMULATOR_DATA_DIR / ANSWER_LINK / 'detect'
+        print(f"answer_path={answer_path}")
         with open(answer_path, 'r') as answer_file:
             answer = answer_file.read()
     elif "capabilities" in sys.argv:
         answer_path = BASE_PATH / SIMULATOR_DATA_DIR / ANSWER_LINK / f'capabilities_{display_num}'
+        print(f"answer_path={answer_path}")
         with open(answer_path, 'r') as answer_file:
             answer = answer_file.read()
     elif "setvcp" in sys.argv:
         pass
     elif "getvcp" in sys.argv:
-        vcp_code = sys.argv[sys.argv.index("getvcp") + 1]
+        vcp_code = "_".join(sys.argv[sys.argv.index("getvcp") + 1:])
         answer_path = BASE_PATH / SIMULATOR_DATA_DIR / ANSWER_LINK / f'getvcp_{display_num}_{vcp_code}'
+        print(f"answer_path={answer_path}")
         with open(answer_path, 'r') as answer_file:
             answer = answer_file.read()
 
