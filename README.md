@@ -221,7 +221,7 @@ Acknowlegements
 
 * [rockowitz](https://github.com/rockowitz), for the robust [ddcutil](https://github.com/rockowitz/ddcutil) utility
 * [yochananmarqos](https://github.com/yochananmarqos), for Gnome related suggestions and AUR port.
-* [denilsonsa](https://github.com/denilsonsa), for several suggestions, testing and fixes present in version 1.9.
+* [denilsonsa](https://github.com/denilsonsa), for several issues, tests and fixes that contributed to version 1.9.0.
 * [crashmatt](https://github.com/crashmatt), [lowne](https://github.com/lowne), [usr](https://github.com/usr)3, for contributing fixes to code and documentation.
 * [Jakeler](https://github.com/Jakeler), [kupiqu](https://github.com/kupiqu), for suggestions for enhancements. 
 
