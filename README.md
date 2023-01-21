@@ -225,6 +225,7 @@ Acknowlegements
 * [crashmatt](https://github.com/crashmatt), [lowne](https://github.com/lowne), [usr](https://github.com/usr)3, for contributing fixes to code and documentation.
 * [Jakeler](https://github.com/Jakeler), [kupiqu](https://github.com/kupiqu), for suggestions for enhancements. 
 
+
 Author
 ------
 
@@ -352,10 +353,3 @@ more details.
 You should have received a copy of the GNU General Public License along
 with this program. If not, see <https://www.gnu.org/licenses/>.
 
-## Acknowledgments
-
-* [ddcutil](https://www.ddcutil.com)
-* [pyqt](https://riverbankcomputing.com/software/pyqt/)
-* [Sphinx Python Documentation Generator](https://www.sphinx-doc.org/en/master/index.html)
-* [PyCharm Community Edition](https://www.jetbrains.com/pycharm/)
-* [Pandoc](https://pandoc.org/)
