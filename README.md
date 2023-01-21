@@ -235,18 +235,19 @@ Version History
 ---------------
 * 1.9.0
   * Bug fixes and speedy performance improvements:
-    * Speed up initialization and refresh by combining multiple ddcutil getvcp requests.
-    * Stop executing a getvcp precheck before each setvcp. 
+    * Speed up initialization and refresh by combining multiple ddcutil `getvcp` requests.
+    * Stop executing a `getvcp` precheck before each `setvcp`. 
+    * Fix repeat-initialisation bug in _Context-Menu Refresh_.
     * Fix _Settings Dialog_ text field validation, some errors were invisibly ignored.
     * Fix _Settings Dialog_ _Settings Enable VCP Codes_, they had stopped working.
     * Fix the monitor specific sleep multipliers, they were not always being used.
     * Treat all monitor detection situations as needing time to stabilise (helps in disconnect situations).
-    * Fix event handling so that pen input works on the main panel.
+    * Fix event handling so that tablet+pen input works on the main window.
     * Default to a sleep-multiplier of 1.0 to support a wider range of monitors out of the box.
   * V1.9.0 drops support for converting from pre v1.7.0 config and preset files. To convert 
-    from earlier versions, first upgrade to v1.8.* (earlier versions of vdu_controls 
+    from earlier versions, first upgrade to  v1.8.* or v1.7.*. Earlier versions of vdu_controls 
     can be obtained from [github](https://github.com/digitaltrails/vdu_controls/releases). Alternatively, 
-    move or remove the old configs from `$HOME/.config/vdu_controls` (or ignore them).
+    move or remove the old configs from `$HOME/.config/vdu_controls`.
 * 1.8.3
   * Fix for a crash when the network is down and the weather site cannot be contacted. 
 * 1.8.2
