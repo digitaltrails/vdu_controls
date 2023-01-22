@@ -245,7 +245,7 @@ Version History
     * Treat all monitor detection situations as needing time to stabilise (helps in disconnect situations).
     * Fix event handling so that tablet+pen input works on the main window.
     * Default to a sleep-multiplier of 1.0 to support a wider range of monitors out of the box.
-  * V1.9.0 drops support for converting from pre v1.7.0 config and preset files. To convert 
+  * V1.9.0 drops support for converting from v1.6.* config and preset files. To convert 
     from v1.6.* and earlier versions, follow these steps to download and run v1.8.3:
     ```
      % wget https://github.com/digitaltrails/vdu_controls/blob/v1.8.3/vdu_controls.py
