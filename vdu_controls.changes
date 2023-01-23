@@ -1,0 +1,150 @@
+-------------------------------------------------------------------
+Mon Jan 23 02:39:53 UTC 2023 - malcolmlewis@opensuse.org
+
+- Clean up build in preparation for development repository and
+  Factory submission.
+
+-------------------------------------------------------------------
+Wed Jan 11 00:00:00 UTC 2023 - Michael Hamilton <michael@actrix.gen.nz>
+
+- Updated to version 1.9.0:
+  * Bug fixes and speedy performance improvements.
+
+-------------------------------------------------------------------
+Wed Dec 14 00:00:00 UTC 2022 - Michael Hamilton <michael@actrix.gen.nz>
+
+- Updated to version 1.8.3:
+  * Fix crash when network is down and weather site is not
+    contactable.
+
+-------------------------------------------------------------------
+Fri Nov 11 00:00:00 UTC 2022 - Michael Hamilton <michael@actrix.gen.nz>
+
+- Updated to version 1.8.1:
+  * Fix daily scheduling of presets.
+
+-------------------------------------------------------------------
+Sat Oct 29 00:00:00 UTC 2022 - Michael Hamilton <michael@actrix.gen.nz>
+
+- Updated to version 1.8.0:
+  * New feature, allow presets to be scheduled by solar elevation.
+
+-------------------------------------------------------------------
+Mon Sep 26 00:00:00 UTC 2022 - Michael Hamilton <michael@actrix.gen.nz>
+
+- Updated to version 1.7.2:
+  * Better handle monitor being powered off.
+  * Allow presets to be reordered on the menu.
+
+-------------------------------------------------------------------
+Sun Sep 25 00:00:00 UTC 2022 - Michael Hamilton <michael@actrix.gen.nz>
+
+- Updated to version 1.7.1:
+  * Fix for signal handling from Mark Lowne.
+
+-------------------------------------------------------------------
+Thu Aug  4 00:00:00 UTC 2022 - Michael Hamilton <michael@actrix.gen.nz>
+
+- Updated to version 1.7.0:
+  * Display current preset in window and tray title, preset icons.
+
+-------------------------------------------------------------------
+Sun Jul 31 00:00:00 UTC 2022 - Michael Hamilton <michael@actrix.gen.nz>
+
+- Updated to version 1.6.11:
+  * Cleaning up the help and Linux man page.
+
+-------------------------------------------------------------------
+Tue Jul 12 00:00:00 UTC 2022 - Michael Hamilton <michael@actrix.gen.nz>
+
+- Updated to version 1.6.10:
+  * Cope better with transient slider values, cope better with
+    session startup delays to detection.
+
+-------------------------------------------------------------------
+Mon Jun 13 00:00:00 UTC 2022 - Michael Hamilton <michael@actrix.gen.nz>
+
+- Update to version 1.6.8:
+- Fix preset save/restore bug introduced in 1.6.7.
+
+-------------------------------------------------------------------
+Sun Jun 12 00:00:00 UTC 2022 - Michael Hamilton <michael@actrix.gen.nz>
+
+- Updated to version 1.6.7:
+  * Fix issues with gnome 42.2 tray: when in gnome do as the
+    gnomens do.
+
+-------------------------------------------------------------------
+Sat Jun 11 00:00:00 UTC 2022 - Michael Hamilton <michael@actrix.gen.nz>
+
+- Updated to version 1.6.5:
+  * Widen handling of pare exceptions for VDU capabilities - catch
+    more exceptions.
+
+-------------------------------------------------------------------
+Wed Apr 13 00:00:00 UTC 2022 - Michael Hamilton <michael@actrix.gen.nz>
+
+- Updated to version 1.6.4:
+  * Wayland wait for system tray at login.
+  * Enable HiDPI icons.
+
+-------------------------------------------------------------------
+Sun Apr 10 00:00:00 UTC 2022 - Michael Hamilton <michael@actrix.gen.nz>
+
+- Updated to version 1.6.3:
+  * Added a hamburger menu to provide alternate access to the
+    context menu.
+
+-------------------------------------------------------------------
+Sat Apr  9 00:00:00 UTC 2022 - Michael Hamilton <michael@actrix.gen.nz>
+
+- Updated to version 1.6.2:
+  * Add a feature Values: min..max override.
+
+-------------------------------------------------------------------
+Mon Mar 14 00:00:00 UTC 2022 - Michael Hamilton <michael@actrix.gen.nz>
+
+- Updated to version 1.6.1:
+  * Wayland fixes.
+
+-------------------------------------------------------------------
+Mon Mar  7 00:00:00 UTC 2022 - Michael Hamilton <michael@actrix.gen.nz>
+
+- Updated to version 1.6.0:
+  * Let other processes trigger preset changes and settings
+    refreshes via UNIX/Linux signals.
+
+-------------------------------------------------------------------
+Sun Feb 27 00:00:00 UTC 2022 - Michael Hamilton <michael@actrix.gen.nz>
+
+- Updated to version 1.5.9:
+  * Cleanly handle monitors that do not respond to ddctuil
+    commands.
+
+-------------------------------------------------------------------
+Sat Dec  4 00:00:00 UTC 2021 - Michael Hamilton <michael@actrix.gen.nz>
+
+- Updated to version 1.5.7:
+  * Check if a system tray is available before applying
+    system_tray_enabled.
+
+-------------------------------------------------------------------
+Sat Nov 13 00:00:00 UTC 2021 - Michael Hamilton <michael@actrix.gen.nz>
+
+- Updated to version 1.5.5:
+  * Fix tray for some desktops.
+  * Combobox value enhanccments/fixes.
+  * Login-restart support/
+
+-------------------------------------------------------------------
+Mon Nov  8 00:00:00 UTC 2021 - Michael Hamilton <michael@actrix.gen.nz>
+
+- Updated to version 1.5.3:
+  * Detect and handle light/dark theme changes.
+
+-------------------------------------------------------------------
+Mon Oct  4 00:00:00 UTC 2021 - Michael Hamilton <michael@actrix.gen.nz>
+
+- Version 1.5.2:
+  * Packaged for rpm vdu_controls.
+

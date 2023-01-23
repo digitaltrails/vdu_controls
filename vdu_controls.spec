@@ -1,42 +1,48 @@
 #
-# spec file for vducontrols
+# spec file for package vdu_controls
 #
-# This program is free software: you can redistribute it and/or modify it
-# under the terms of the GNU General Public License as published by the
-# Free Software Foundation, version 3.
+# Copyright (c) 2023 SUSE LLC
+# Copyright (c) 2021-2023 Michael Hamilton <michael@actrix.gen.nz>
 #
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
-# more details.
-#
-# You should have received a copy of the GNU General Public License along
-# with this program. If not, see <https://www.gnu.org/licenses/>.
-#
-# Contact:  m i c h a e l   @   a c t r i x   .   g e n   .   n z
+# All modifications and additions to the file contributed by third parties
+# remain the property of their copyright owners, unless otherwise agreed
+# upon. The license for this file, and modifications and additions to the
+# file, is the same license as for the pristine package itself (unless the
+# license for the pristine package is not an Open Source License, in which
+# case the license is the MIT License). An "Open Source License" is a
+# license that conforms to the Open Source Definition (Version 1.9)
+# published by the Open Source Initiative.
+
+# Please submit bugfixes or comments via https://bugs.opensuse.org/
 #
 
-Name: vdu_controls
-Version: 1.9.0
-Release: 0
-License: GPL-3.0-or-later
-BuildArch: noarch
-URL: https://github.com/digitaltrails/vdu_controls
-Group: System/GUI/Other
-Summary: Visual Display Unit virtual control panel
-Source0:        %{name}-%{version}.tar.gz
 
+Name:           vdu_controls
+Version:        1.9.0
+Release:        0
+Summary:        Visual Display Unit virtual control panel
+License:        GPL-3.0-or-later
+URL:            https://github.com/digitaltrails/vdu_controls
+Source0:        https://github.com/digitaltrails/vdu_controls/archive/refs/tags/v1.9.0.tar.gz#/%{name}-%{version}.tar.gz
+BuildRequires:  coreutils
+BuildRequires:  hicolor-icon-theme
+BuildArch:      noarch
 %if 0%{?suse_version}
-Requires: ddcutil python3 python3-qt5 noto-sans-math-fonts noto-sans-symbols2-fonts
+Requires:       ddcutil
+Requires:       noto-sans-math-fonts
+Requires:       noto-sans-symbols2-fonts
+Requires:       python3
+Requires:       python3-qt5
 %endif
-
 %if 0%{?fedora_version}
-Requires: ddcutil python3 python3-qt5 google-noto-sans-math-fonts google-noto-sans-symbols2-fonts
+%define ext_man .gz
+Requires:       ddcutil
+Requires:       google-noto-sans-math-fonts
+Requires:       google-noto-sans-symbols2-fonts
+Requires:       python3
+Requires:       python3-qt5
 %endif
 
-BuildRequires: coreutils
-
-BuildRoot: %{_tmppath}/%{name}-%{version}-build
 %description
 vdu_controls is a virtual control panel for externally connected
 VDU's (visual display units).  Controls are included for backlight
@@ -45,53 +51,32 @@ line utility to interact with external displays via VESA Display
 Data Channel (DDC) Virtual Control Panel (VCP) standards.
 
 %prep
-%setup -q
+%autosetup
 
 %build
-
-exit 0
+#Just a placeholder, no build required.
 
 %install
-mkdir -p %{buildroot}/%{_bindir}
-mkdir -p %{buildroot}/%{_datadir}/applications
-mkdir -p %{buildroot}/%{_datadir}/icons/hicolor/256x256/apps
-mkdir -p %{buildroot}/%{_datadir}/man/man1
-mkdir -p %{buildroot}/%{_datadir}/vdu_controls/translations
-install vdu_controls.py  %{buildroot}/%{_bindir}/%{name}
-install -m644 %{name}.png %{buildroot}/%{_datadir}/icons/hicolor/256x256/apps
-install -m644 translations/*.ts %{buildroot}/%{_datadir}/vdu_controls/translations
-install -m644 translations/about_*.txt %{buildroot}/%{_datadir}/vdu_controls/translations
-
-
-cat > %{buildroot}/%{_datadir}/applications/%{name}.desktop <<'EOF'
-[Desktop Entry]
-Type=Application
-Terminal=false
-Exec=%{_bindir}/%{name}
-Name=VDU Controls
-GenericName=DDC control panel for monitors
-Comment=Virtual Control Panel for externally connected VDU's
-Icon=vdu_controls
-Categories=Settings
-EOF
-
-gzip -c docs/_build/man/vdu_controls.1 > %{buildroot}/%{_datadir}/man/man1/%{name}.1.gz
-
-%post
-
+install -d -m 0755 %{buildroot}%{_bindir} \
+                   %{buildroot}%{_mandir}/man1/ \
+                   %{buildroot}%{_datadir}/applications \
+                   %{buildroot}%{_datadir}/vdu_controls/translations \
+                   %{buildroot}%{_datadir}/icons/hicolor/256x256/apps
+install -m 0755 vdu_controls.py  %{buildroot}/%{_bindir}/%{name}
+install -m 0644 %{name}.desktop %{buildroot}%{_datadir}/applications/%{name}.desktop
+install -m 0644 %{name}.png %{buildroot}%{_datadir}/icons/hicolor/256x256/apps/%{name}.png
+install -m 0644 translations/*.ts %{buildroot}%{_datadir}/vdu_controls/translations/
+install -m 0644 translations/about_*.txt %{buildroot}%{_datadir}/vdu_controls/translations/
+install -m 0644 docs/_build/man/vdu_controls.1 %{buildroot}%{_mandir}/man1/
 
 %files
-%dir %{_datadir}/icons/hicolor
-%dir %{_datadir}/icons/hicolor/*
-%dir %{_datadir}/icons/hicolor/*/apps
+%license LICENSE.md
 %dir %{_datadir}/vdu_controls
 %dir %{_datadir}/vdu_controls/translations
-%license LICENSE.md
-%defattr(-,root,root)
 %{_bindir}/%{name}
 %{_datadir}/applications/%{name}.desktop
 %{_datadir}/icons/hicolor/256x256/apps/%{name}.png
-%{_datadir}/man/man1/%{name}.1.gz
+%{_mandir}/man1/%{name}.1%{?ext_man}
 %{_datadir}/vdu_controls/translations/da_DK.ts
 %{_datadir}/vdu_controls/translations/fr_FR.ts
 %{_datadir}/vdu_controls/translations/de_DE.ts
@@ -100,51 +85,3 @@ gzip -c docs/_build/man/vdu_controls.1 > %{buildroot}/%{_datadir}/man/man1/%{nam
 %{_datadir}/vdu_controls/translations/about_de_DE.txt
 
 %changelog
-* Wed Jan 11 2023 Michael Hamilton <michael@actrix.gen.nz>
-- Bug fixes and speedy performance improvements: vdu_controls 1.9.0
-* Wed Dec 14 2022 Michael Hamilton <michael@actrix.gen.nz>
-- Fix crash when network is down and weather site is not contactable: vdu_controls 1.8.3
-* Fri Nov 11 2022 Michael Hamilton <michael@actrix.gen.nz>
-- Weather requirments, Internationalisation enhancements: vdu_controls 1.8.2
-* Fri Nov 11 2022 Michael Hamilton <michael@actrix.gen.nz>
-- Fix daily scheduling of presets: vdu_controls 1.8.1
-* Sat Oct 29 2022 Michael Hamilton <michael@actrix.gen.nz>
-- New feature, allow presets to be scheduled by solar elevation: vdu_controls 1.8.0
-* Mon Sep 26 2022 Michael Hamilton <michael@actrix.gen.nz>
-- Better handle monitor being powered off, allow presets to be reordered on the menu: vdu_controls 1.7.2
-* Sun Sep 25 2022 Michael Hamilton <michael@actrix.gen.nz>
-- Fix for signal handling from Mark Lowne: vdu_controls 1.7.1
-* Thu Aug 4 2022 Michael Hamilton <michael@actrix.gen.nz>
-- Display current preset in window and tray title, preset icons: vdu_controls 1.7.0
-* Sun Jul 31 2022 Michael Hamilton <michael@actrix.gen.nz>
-- Cleaning up the help and Linux man page: vdu_controls 1.6.11
-* Tue Jul 12 2022 Michael Hamilton <michael@actrix.gen.nz>
-- Cope better with transient slider values, cope better with session startup delays to detection: vdu_controls 1.6.10
-* Mon Jun 13 2022 Michael Hamilton <michael@actrix.gen.nz>
-- Fix preset save/restore bug introduced in 1.6.7 : vdu_controls 1.6.8
-* Sun Jun 12 2022 Michael Hamilton <michael@actrix.gen.nz>
-- Fix issues with gnome 42.2 tray: when in gnome do as the gnomens do : vdu_controls 1.6.7
-* Sat Jun 11 2022 Michael Hamilton <michael@actrix.gen.nz>
-- Widen handling of pare exceptions for VDU capabilities - catch more exceptions : vdu_controls 1.6.5
-* Wed Apr 13 2022 Michael Hamilton <michael@actrix.gen.nz>
-- Wayland wait for system tray at login. Enable HiDPI icons : vdu_controls 1.6.4
-* Sun Apr 10 2022 Michael Hamilton <michael@actrix.gen.nz>
-- Added a hamburger menu to provide alternate access to the context menu : vdu_controls 1.6.3
-* Sat Apr 09 2022 Michael Hamilton <michael@actrix.gen.nz>
-- Add a feature Values: min..max override : vdu_controls 1.6.2
-* Mon Mar 14 2022 Michael Hamilton <michael@actrix.gen.nz>
-- Wayland fixes : vdu_controls 1.6.1
-* Mon Mar 07 2022 Michael Hamilton <michael@actrix.gen.nz>
-- Let other processes trigger preset changes and settings refreshes via UNIX/Linux signals: : vdu_controls 1.6.0
-* Sun Feb 27 2022 Michael Hamilton <michael@actrix.gen.nz>
-- Cleanly handle monitors that do not respond to ddctuil commands: vdu_controls 1.5.9
-* Sat Dec 04 2021 Michael Hamilton <michael@actrix.gen.nz>
-- Check if a system tray is available before applying system_tray_enabled: vdu_controls 1.5.7
-* Sat Nov 13 2021 Michael Hamilton <michael@actrix.gen.nz>
-- Escape % characters in the metadata: vdu_controls 1.5.6
-* Sat Nov 13 2021 Michael Hamilton <michael@actrix.gen.nz>
-- Fix tray for some desktops. Combobox value enhanccments/fixes. Login-restart support: vdu_controls 1.5.5
-* Mon Nov 08 2021 Michael Hamilton <michael@actrix.gen.nz>
-- Detect and handle light/dark theme changes: vdu_controls 1.5.3
-* Mon Oct 04 2021 Michael Hamilton <michael@actrix.gen.nz>
-- Packaged for rpm vdu_controls: 1.5.2
