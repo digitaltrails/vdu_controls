@@ -35,7 +35,7 @@ Requires:       python3
 Requires:       python3-qt5
 %endif
 %if 0%{?fedora_version}
-%define ext_man .gz
+%define ext_man *
 Requires:       ddcutil
 Requires:       google-noto-sans-math-fonts
 Requires:       google-noto-sans-symbols2-fonts
