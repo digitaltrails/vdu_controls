@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed 25 Jan 2023 23:08:56 UTC - Michael Hamilton <michael@actrix.gen.nz>
+
+- Updated to version 1.9.1
+  * Busy spinners and control lockouts applied during refresh and
+    preset activation.
+
+-------------------------------------------------------------------
 Mon Jan 23 02:39:53 UTC 2023 - malcolmlewis@opensuse.org
 
 - Clean up build in preparation for development repository and
@@ -118,7 +125,7 @@ Mon Mar  7 00:00:00 UTC 2022 - Michael Hamilton <michael@actrix.gen.nz>
 Sun Feb 27 00:00:00 UTC 2022 - Michael Hamilton <michael@actrix.gen.nz>
 
 - Updated to version 1.5.9:
-  * Cleanly handle monitors that do not respond to ddctuil
+  * Cleanly handle monitors that do not respond to ddcutil
     commands.
 
 -------------------------------------------------------------------
@@ -133,7 +140,7 @@ Sat Nov 13 00:00:00 UTC 2021 - Michael Hamilton <michael@actrix.gen.nz>
 
 - Updated to version 1.5.5:
   * Fix tray for some desktops.
-  * Combobox value enhanccments/fixes.
+  * Combobox value enhancements/fixes.
   * Login-restart support/
 
 -------------------------------------------------------------------

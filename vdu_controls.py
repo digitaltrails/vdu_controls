@@ -487,7 +487,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter
 
 APPNAME = "VDU Controls"
-VDU_CONTROLS_VERSION = '1.9.0'
+VDU_CONTROLS_VERSION = '1.9.1'
 
 WESTERN_SKY = 'western-sky'
 EASTERN_SKY = 'eastern-sky'
@@ -2440,7 +2440,6 @@ class VduControlPanel(QWidget):
             if control.vcp_capability.property_name() in preset_ini[self.controller.vdu_stable_id]:
                 control.current_value = preset_ini[self.controller.vdu_stable_id][control.vcp_capability.property_name()]
                 control.restore_vdu_attribute(control.current_value)
-        self.refresh_view()
 
     def is_preset_active(self, preset_ini: ConfigIni) -> bool:
         vdu_section = self.controller.vdu_stable_id
@@ -2603,7 +2602,6 @@ class Preset:
                     return "suspended"
         return "unscheduled"
 
-
     def is_weather_dependent(self):
         return self.get_weather_restriction_filename() is not None
 
@@ -2735,20 +2733,13 @@ class BottomToolBar(QToolBar):
             self.menu_button.setIcon(create_icon_from_svg_bytes(MENU_ICON_SOURCE))
         return super().eventFilter(target, event)
 
-    def indicate_refresh_in_progress(self):
-        self.refresh_button.setDisabled(True)
-        self.menu_button.setDisabled(True)
-        self.preset_action.setDisabled(True)
-        self.progress_bar.setDisabled(False)
+    def indicate_busy(self, is_busy: bool = True):
+        self.refresh_button.setDisabled(is_busy)
+        self.menu_button.setDisabled(is_busy)
+        self.preset_action.setDisabled(is_busy)
+        self.progress_bar.setDisabled(not is_busy)
         # Setting range to 0,0 cause the progress bar to pulsate left/right - used as a busy spinner.
-        self.progress_bar.setRange(0, 0)
-
-    def indicate_refresh_complete(self):
-        self.progress_bar.setRange(0, 1)
-        self.progress_bar.setDisabled(True)
-        self.refresh_button.setDisabled(False)
-        self.menu_button.setDisabled(False)
-        self.preset_action.setDisabled(False)
+        self.progress_bar.setRange(0, 0 if is_busy else 1)
 
     def display_active_preset(self, preset: Preset | None):
         if preset:
@@ -2782,6 +2773,7 @@ class VduControlsMainPanel(QWidget):
         self.vdu_control_panels = []
         self.previously_detected_vdus = []
         self.detected_vdus = []
+        self.restore_preset_thread = None
 
     def initialise_control_panels(self, app_context_menu: ContextMenu, main_config: VduControlsConfig):
         if self.layout():
@@ -2911,15 +2903,6 @@ class VduControlsMainPanel(QWidget):
                         "additional messages.\n\n{}").format(extra_text))
                 error_no_monitors.exec()
 
-        def finish_refresh() -> None:
-            # GUI-thread QT signal handler for refresh task completion - execution will be in the GUI thread.
-            # Stop the busy-spinner (progress bar).
-            self.bottom_toolbar.indicate_refresh_complete()
-            self.refresh_view()
-            self.refresh_finished.emit()
-
-        self.refreshDataTask = RefreshVduDataTask(self)
-        self.refreshDataTask.task_finished.connect(finish_refresh)
         self.bottom_toolbar = \
             BottomToolBar(start_refresh_func=self.start_refresh, app_context_menu=app_context_menu, parent=self)
         layout.addWidget(self.bottom_toolbar)
@@ -2931,36 +2914,56 @@ class VduControlsMainPanel(QWidget):
         self.customContextMenuRequested.connect(open_context_menu)
 
     def start_refresh(self) -> None:
-        # Refreshes from all values from ddcutil.  May be slow, starts a busy spinner and then
-        # starts the work in a task thread.
-        self.bottom_toolbar.indicate_refresh_in_progress()
-        # Start the background task
+
+        def refresh_data():
+            self.indicate_busy()
+            """Refresh data from the VDU's. Called by a non-GUI task. Not in the GUI-thread, cannot do any GUI op's."""
+            self.detected_vdus = self.ddcutil.detect_monitors()
+            for control_panel in self.vdu_control_panels:
+                if control_panel.controller.get_full_id() in self.detected_vdus:
+                    try:
+                        control_panel.refresh_data()
+                    except ValueError as ve:
+                        log_error(str(ve))
+
+        def refresh_view():
+            """Invoke when the GUI worker thread completes. Runs in the GUI thread and can refresh the GUI views."""
+            if self.detected_vdus != self.previously_detected_vdus:
+                self.connected_vdus_changed.emit()
+                self.previously_detected_vdus = self.detected_vdus
+            for control_panel in self.vdu_control_panels:
+                control_panel.refresh_view()
+            self.refresh_finished.emit()
+            self.indicate_busy(False)
+
+        self.refreshDataTask = WorkerThread(task_body=refresh_data, task_finished=refresh_view)
         self.refreshDataTask.start()
 
-    def refresh_data(self) -> None:
-        """Refresh data from the VDU's. Called by a non-GUI task. Not in the GUI-thread, cannot do any GUI op's."""
-        self.detected_vdus = self.ddcutil.detect_monitors()
+    def indicate_busy(self, is_busy: bool = True):
+        self.bottom_toolbar.indicate_busy(is_busy)
         for control_panel in self.vdu_control_panels:
-            if control_panel.controller.get_full_id() in self.detected_vdus:
-                try:
-                    control_panel.refresh_data()
-                except ValueError as ve:
-                    log_error(str(ve))
+            control_panel.setDisabled(is_busy)
 
-    def refresh_view(self) -> None:
-        """Invoke when the GUI worker thread completes. Runs in the GUI thread and can refresh the GUI views."""
-        if self.detected_vdus != self.previously_detected_vdus:
-            self.connected_vdus_changed.emit()
-            self.previously_detected_vdus = self.detected_vdus
-        for control_panel in self.vdu_control_panels:
-            control_panel.refresh_view()
+    def restore_preset(self, preset: Preset) -> None:
+        # Starts the restore, but it will complete in the worker thread
 
-    def restore_preset(self, preset: Preset) -> bool:
-        preset.load()
-        for section in preset.preset_ini:
-            for control_panel in self.vdu_control_panels:
-                if section == control_panel.controller.vdu_stable_id:
-                    control_panel.restore_vdu_state(preset.preset_ini)
+        def restore_preset_data():
+            self.indicate_busy()
+            preset.load()
+            for section in preset.preset_ini:
+                for control_panel in self.vdu_control_panels:
+                    if section == control_panel.controller.vdu_stable_id:
+                        control_panel.restore_vdu_state(preset.preset_ini)
+
+        def restore_preset_view():
+            for section in preset.preset_ini:
+                for control_panel in self.vdu_control_panels:
+                    if section == control_panel.controller.vdu_stable_id:
+                        control_panel.refresh_view()
+            self.indicate_busy(False)
+
+        self.restore_preset_thread = WorkerThread(task_body=restore_preset_data, task_finished=restore_preset_view)
+        self.restore_preset_thread.start()
 
     def is_non_standard_enabled(self) -> bool:
         if self.non_standard_enabled is None:
@@ -2982,27 +2985,19 @@ class VduControlsMainPanel(QWidget):
         self.bottom_toolbar.display_active_preset(preset)
 
 
-class RefreshVduDataTask(QThread):
-    """
-    Task to refresh VDU data from the physical VDU's.
+class WorkerThread(QThread):
+    finished = pyqtSignal()
 
-    Runs as a task because it can be quite slow depending on the number of VDU's, number of controls.  The task runs
-    outside the GUI thread and no parts of it can only update the GUI data, not the GUI view.
-    """
-
-    task_finished = pyqtSignal()
-
-    def __init__(self, main_widget: VduControlsMainPanel) -> None:
-        """Initialise the task that will run in a non-GUI thread to update all the widget's data."""
+    def __init__(self, task_body: Callable, task_finished: Callable) -> None:
         super().__init__()
-        self.main_widget = main_widget
+        self.task_body = task_body
+        self.task_finished = task_finished
+        self.finished.connect(task_finished)
 
-    def run(self) -> None:
-        """Run a task that uses ddcutil to retrieve data for all the visible controls (maybe slow)."""
-        # Running in a task thread, cannot interact with GUI thread, just update the data.
-        self.main_widget.refresh_data()
-        # Tell (qt-signal) the GUI-thread that the task has finished, the GUI thread will then update the view widgets.
-        self.task_finished.emit()
+    def run(self):
+        """Long-running task."""
+        self.task_body()
+        self.finished.emit()
 
 
 class PresetController:
@@ -3637,13 +3632,13 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
     edit_save_needed = pyqtSignal()
 
     @staticmethod
-    def invoke(main_window: 'MainWindow', main_config: VduControlsConfig) -> None:
+    def invoke(main_window: 'AppWindow', main_config: VduControlsConfig) -> None:
         if PresetsDialog.exists():
             PresetsDialog.show_existing_dialog()
         else:
             PresetsDialog(main_window, main_config)
 
-    def __init__(self, main_window: 'MainWindow', main_config: VduControlsConfig) -> None:
+    def __init__(self, main_window: 'AppWindow', main_config: VduControlsConfig) -> None:
         super().__init__()
         self.setWindowTitle(tr('Presets'))
         self.main_window = main_window
@@ -4265,7 +4260,7 @@ class ScheduleStatus(Enum):
         return self.value[0]
 
 
-class MainWindow(QMainWindow):
+class AppWindow(QMainWindow):
 
     def __init__(self, main_config: VduControlsConfig, app: QApplication):
         super().__init__()
@@ -4423,7 +4418,7 @@ class MainWindow(QMainWindow):
             global log_to_syslog
             log_to_syslog = main_config.is_syslog_enabled()
             existing_width = 0
-            if self.main_control_panel:
+            if self.main_control_panel is not None:
                 # Remove any existing control panel - which may now be incorrect for the config.
                 self.main_control_panel.width()
                 self.main_control_panel.refresh_finished.disconnect(refresh_finished)
@@ -4949,7 +4944,7 @@ def main():
     if args.about:
         AboutDialog.invoke()
 
-    main_window = MainWindow(main_config, app)
+    main_window = AppWindow(main_config, app)
 
     if args.create_config_files:
         main_window.create_config_files()

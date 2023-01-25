@@ -224,6 +224,8 @@ Acknowlegements
 * [denilsonsa](https://github.com/denilsonsa), for several issues, tests and fixes that contributed to version 1.9.0.
 * [crashmatt](https://github.com/crashmatt), [lowne](https://github.com/lowne), [usr](https://github.com/usr)3, for contributing fixes to code and documentation.
 * [Jakeler](https://github.com/Jakeler), [kupiqu](https://github.com/kupiqu), for suggestions for enhancements. 
+* [malcolmlewis](https://github.com/malcolmlewis) for assistance with the OpenSUSE Open Build Service submissions.
+* Plus others who have supplied feedback and suggestions.
 
 
 Author
@@ -234,6 +236,12 @@ Michael Hamilton
 
 Version History
 ---------------
+* 1.9.1 Spinning, spinning, spinning
+  * Preset activation now occurs in a sub-thread.
+  * Main panel spinner indication during preset activation (in addition to refresh).
+  * VDU controls locked during refresh and preset activation.
+  * Code cleanup of task threading.
+  * OpenSUSE changes for submission to Development and Factory.
 * 1.9.0
   * Bug fixes and speedy performance improvements:
     * Speed up initialization and refresh by combining multiple ddcutil `getvcp` requests.
