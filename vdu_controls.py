@@ -4480,8 +4480,8 @@ class AppWindow(QMainWindow):
         if splash is not None:
             splash.finish(self)
 
-        if main_config.file_path is None or not main_config.ini_content.is_version_ge():
-            # User is new to this version - point them to the release notes.
+        if main_config.file_path is None or (not main_config.ini_content.is_version_ge() and VDU_CONTROLS_VERSION.endswith('.0')):
+            # User is new to this major version - point them to the release notes.
             release_alert = MessageBox(QMessageBox.Information, buttons=QMessageBox.Close)
             welcome = tr("Welcome to vdu_controls version {}").format(VDU_CONTROLS_VERSION)
             note = tr("Please read the online release notes:")
