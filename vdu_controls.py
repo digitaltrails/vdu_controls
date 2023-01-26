@@ -477,7 +477,7 @@ from urllib.error import URLError
 
 from PyQt5 import QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
-    QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP
+    QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant
 from PyQt5.QtGui import QIntValidator, QPixmap, QIcon, QCursor, QImage, QPainter, QDoubleValidator, QRegExpValidator, \
     QPalette, QGuiApplication, QColor, QValidator, QPen, QFont
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
@@ -2636,10 +2636,11 @@ class ContextMenu(QMenu):
             self.addSeparator()
         self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Presets'), presets_action)
         self.presets_separator = self.addSeparator()
-
+        self.busy_disable_prop = "busy_disable"
         self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Grey Scale'), chart_action)
         self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Settings'), settings_action)
-        self.addAction(si(self, QStyle.SP_BrowserReload), tr('Refresh'), refresh_action)
+        self.addAction(si(self, QStyle.SP_BrowserReload), tr('Refresh'), refresh_action).setProperty(self.busy_disable_prop,
+                                                                                                     QVariant(True))
         self.addAction(si(self, QStyle.SP_MessageBoxInformation), tr('About'), about_action)
         self.addAction(si(self, QStyle.SP_DialogHelpButton), tr('Help'), help_action)
         self.addSeparator()
@@ -2652,6 +2653,7 @@ class ContextMenu(QMenu):
             self.main_window.restore_named_preset(self.sender().text())
 
         action = self.addAction(preset.create_icon(), preset.name, restore_preset)
+        action.setProperty(self.busy_disable_prop, QVariant(True))
         self.insertAction(self.presets_separator, action)
         # print(self.actions())
         self.update()
@@ -2682,6 +2684,11 @@ class ContextMenu(QMenu):
             if action.text() == name:
                 return action
         return None
+
+    def indicate_busy(self, is_busy: bool = True):
+        for action in self.actions():
+            if action.property(self.busy_disable_prop):
+                action.setDisabled(is_busy)
 
 
 class BottomToolBar(QToolBar):
@@ -2934,6 +2941,7 @@ class VduControlsMainPanel(QWidget):
         self.bottom_toolbar.indicate_busy(is_busy)
         for control_panel in self.vdu_control_panels:
             control_panel.setDisabled(is_busy)
+        self.context_menu.indicate_busy(is_busy)
 
     def restore_preset(self, preset: Preset) -> None:
         # Starts the restore, but it will complete in the worker thread
