@@ -1728,26 +1728,33 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
         # .show() is non-modal, .exec() is modal
         self.make_visible()
 
-    def save_all(self, nothing_to_save_warning: bool = True):
-        nothing_was_saved = True
-        # Do the main config last - it may cause a restart of the app
-        self.setEnabled(False)
-        save_order = self.editors[1:] + [self.editors[0]]
-        for editor in save_order:
-            if editor.is_unsaved():
-                editor.save(cancel=QMessageBox.Ignore)
-                nothing_was_saved = False
-        if nothing_to_save_warning and nothing_was_saved:
-            alert = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Yes | QMessageBox.No, default=QMessageBox.No)
-            alert.setText(tr("Nothing needs saving. Do you wish to save anyway?"))
-            if alert.exec() == QMessageBox.Yes:
-                for editor in save_order:
-                    editor.save(cancel=QMessageBox.Ignore, force=True)
-        self.setEnabled(True)
+    def save_all(self, warn_if_nothing_to_save: bool = True):
+        try:
+            nothing_to_save = True
+            # Do the main config last - it may cause a restart of the app
+            self.setEnabled(False)
+            save_order = self.editors[1:] + [self.editors[0]]
+            for editor in save_order:
+                if editor.is_unsaved():
+                    nothing_to_save = False
+                    if editor.save() == QMessageBox.Cancel:
+                        return QMessageBox.Cancel
+            if warn_if_nothing_to_save and nothing_to_save:
+                alert = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Yes | QMessageBox.No, default=QMessageBox.No)
+                alert.setText(tr("Nothing needs saving. Do you wish to save anyway?"))
+                if alert.exec() == QMessageBox.Yes:
+                    for editor in save_order:
+                        if editor.save(force=True) == QMessageBox.Cancel:
+                            return QMessageBox.Cancel
+        finally:
+            self.setEnabled(True)
+        return QMessageBox.Ok
 
     def closeEvent(self, event) -> None:
-        self.save_all(nothing_to_save_warning=False)
-        super().closeEvent(event)
+        if self.save_all(warn_if_nothing_to_save=False) == QMessageBox.Cancel:
+            event.ignore()
+        else:
+            super().closeEvent(event)
 
 
 class SettingsEditorTab(QWidget):
@@ -1795,7 +1802,7 @@ class SettingsEditorTab(QWidget):
 
         def save_clicked() -> None:
             if self.is_unsaved():
-                self.save(cancel=QMessageBox.Cancel)
+                self.save()
             else:
                 decline_save_alert = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Ok)
                 decline_save_alert.setText(tr('No unsaved changes for {}.').format(vdu_config.config_name))
@@ -1820,23 +1827,26 @@ class SettingsEditorTab(QWidget):
 
         editor_layout.addWidget(buttons_widget)
 
-    def save(self, cancel: int = QMessageBox.Close, force: bool = False) -> None:
+    def save(self, force: bool = False) -> int:
         if self.is_unsaved() or force:
-            confirmation = MessageBox(QMessageBox.Question, buttons=QMessageBox.Save | cancel, default=QMessageBox.Save)
+            confirmation = MessageBox(QMessageBox.Question,
+                                      buttons=QMessageBox.Save | QMessageBox.Cancel | QMessageBox.Discard, default=QMessageBox.Save)
             message = tr('Update existing {}?') if self.config_path.exists() else tr("Create new {}?")
             message = message.format(self.config_path.as_posix())
             confirmation.setText(message)
-            if confirmation.exec() == QMessageBox.Save:
+            answer = confirmation.exec()
+            if answer == QMessageBox.Save:
                 self.ini_editable.save(self.config_path)
                 copy = pickle.dumps(self.ini_editable)
                 self.ini_before = pickle.loads(copy)
                 # After file is closed...
                 self.change_callback(self.changed)
                 self.changed = {}
-            else:
+            elif answer == QMessageBox.Discard:
                 copy = pickle.dumps(self.ini_before)
                 self.ini_editable = pickle.loads(copy)
                 self.reset()
+            return answer
 
     def reset(self):
         for field in self.field_list:
@@ -2664,7 +2674,8 @@ class ContextMenu(QMenu):
 
     def refresh_preset_menu(self) -> None:
         for name, preset in self.main_window.preset_controller.find_presets().items():
-            if not self.has_preset_menu_item(name):
+            # Allow for presets with the same name as existing non-preset menu items
+            if not self.has_preset_menu_item(name) or not self.get_preset_menu_item(name).property(self.preset_prop):
                 self.insert_preset_menu_item(preset)
 
     def has_preset_menu_item(self, name: str) -> bool:
@@ -4007,7 +4018,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
 
     def closeEvent(self, event) -> None:
         if self.preset_name_edit.text().strip() != '':
-            alert = MessageBox(QMessageBox.Question, buttons=QMessageBox.Save | QMessageBox.Ignore | QMessageBox.Cancel,
+            alert = MessageBox(QMessageBox.Question, buttons=QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
                                default=QMessageBox.Save)
             alert.setText("Save current edit?")
             answer = alert.exec()
