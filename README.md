@@ -237,11 +237,11 @@ Michael Hamilton
 Version History
 ---------------
 * 1.9.1 Spinning, spinning, spinning
-  * Preset activation now occurs in a sub-thread.
-  * Main panel spinner indication during preset activation (in addition to refresh).
-  * VDU controls locked during refresh and preset activation.
-  * Code cleanup of task threading.
-  * OpenSUSE changes for submission to Development and Factory.
+  * Preset activation now occurs in a sub-thread (to allow the main UI to give a busy indication).
+  * Main panel oscillating progress bar will display during preset activation (in addition to displaying during refresh).
+  * VDU controls are now locked during refresh and preset activation (to prevent conflicting actions and values).
+  * Code cleanup of task threading (more symmetric, easier to read).
+  * _OpenSUSE_ changes for submission to _Development_ and _Factory_ by @malcolmlewis.
 * 1.9.0
   * Bug fixes and speedy performance improvements:
     * Speed up initialization and refresh by combining multiple ddcutil `getvcp` requests.
