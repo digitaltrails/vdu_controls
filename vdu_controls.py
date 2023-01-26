@@ -1571,8 +1571,7 @@ class VduController(QObject):
     vdu_setting_changed = pyqtSignal()
 
     def __init__(self, vdu_id: str, vdu_model_name: str, vdu_serial: str, manufacturer: str,
-                 default_config: VduControlsConfig,
-                 ddcutil: DdcUtil,
+                 default_config: VduControlsConfig, ddcutil: DdcUtil, vdu_exception_handler: Callable,
                  ignore_monitor: bool = False, assume_standard_controls: bool = False) -> None:
         super().__init__()
         self.vdu_id = vdu_id
@@ -1580,6 +1579,7 @@ class VduController(QObject):
         self.serial = vdu_serial
         self.manufacturer = manufacturer
         self.ddcutil = ddcutil
+        self.vdu_exception_handler = vdu_exception_handler
         self.sleep_multiplier = None
         self.enabled_vcp_codes = default_config.get_all_enabled_vcp_codes()
         self.vdu_stable_id = proper_name(vdu_model_name, vdu_serial)
@@ -1633,20 +1633,30 @@ class VduController(QObject):
         """Return a tuple that defines this VDU: (vdu_id, manufacturer, model, serial-number)."""
         return self.vdu_id, self.manufacturer, self.model_name, self.serial
 
+    def get_attributes(self, attributes: List[str]):
+        try:
+            # raise subprocess.SubprocessError("get_attributes")  # for testing
+            return self.ddcutil.get_attributes(self.vdu_id, attributes, sleep_multiplier=self.sleep_multiplier)
+        except (subprocess.SubprocessError, ValueError) as e:
+            raise VduException(vdu_description=self.get_vdu_description(), vcp_code=",".join(attributes), exception=e,
+                               operation="get_attributes")
+
     def get_attribute(self, vcp_code: str) -> Tuple[str, str]:
         try:
-            # raise subprocess.SubprocessError("get_attribute")  # XXXX for testing
+            # raise subprocess.SubprocessError("get_attribute")  # for testing
             return self.ddcutil.get_attribute(self.vdu_id, vcp_code, sleep_multiplier=self.sleep_multiplier)
         except (subprocess.SubprocessError, ValueError) as e:
-            raise VduException(vdu_description=self.get_vdu_description(), vcp_code=vcp_code, exception=e, operation="get_attribute")
+            raise VduException(vdu_description=self.get_vdu_description(), vcp_code=vcp_code, exception=e,
+                               operation="get_attribute")
 
     def set_attribute(self, vcp_code: str, value: str) -> None:
         try:
-            # raise subprocess.SubprocessError("set_attribute")  # XXX for testing
+            # raise subprocess.SubprocessError("set_attribute")  # for testing
             self.ddcutil.set_attribute(self.vdu_id, vcp_code, value, sleep_multiplier=self.sleep_multiplier)
             self.vdu_setting_changed.emit()
         except (subprocess.SubprocessError, ValueError) as e:
-            raise VduException(vdu_description=self.get_vdu_description(), vcp_code=vcp_code, exception=e, operation="set_attribute")
+            raise VduException(vdu_description=self.get_vdu_description(), vcp_code=vcp_code, exception=e,
+                               operation="set_attribute")
 
     def _parse_capabilities(self, capabilities_text=None) -> Mapping[str, VcpCapability]:
         """Return a map of vpc capabilities keyed by vcp code."""
@@ -2118,14 +2128,9 @@ class VduControlBase(QWidget):
                 try:
                     self.__change_vdu_attribute(new_value)
                     break
-                except VduException:
-                    msg = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Retry | QMessageBox.Close, default=QMessageBox.Retry)
-                    msg.setText(
-                        tr("Set value: Failed to communicate with display {}").format(self.controller.get_vdu_description()))
-                    msg.setAttribute(Qt.WA_DeleteOnClose)
-                    msg.setInformativeText(tr('Is the monitor switched off?<br>'
-                                              'Is the sleep-multiplier setting too low?'))
-                    answer = msg.exec()
+                except VduException as e:
+                    answer = self.controller.vdu_exception_handler(e, buttons=QMessageBox.Retry | QMessageBox.Close,
+                                                                   default_button=QMessageBox.Retry)
                     if answer == QMessageBox.Close:
                         # Assume that the configured VDU's have changed
                         self.connected_vdus_changed.emit()
@@ -2349,6 +2354,7 @@ class VduControlPanel(QWidget):
         layout.addWidget(label)
         self.controller = controller
         self.vcp_controls = []
+        self.vdu_exception_handler = vdu_exception_handler
 
         for vcp_code in controller.enabled_vcp_codes:
             if vcp_code in controller.capabilities:
@@ -2392,21 +2398,14 @@ class VduControlPanel(QWidget):
             self.refresh_data()
             self.refresh_view()
         except VduException as e:
-            vdu_exception_handler(e)
+            self.vdu_exception_handler(e)
 
     def refresh_data(self) -> None:
         """Tell the control widgets to get fresh VDU data (maybe called from a task thread, so no GUI op's here)."""
-        try:
-            # raise subprocess.SubprocessError("get_attributes")  # for testing
-            values = self.controller.ddcutil.get_attributes(
-                self.controller.vdu_id,
-                [control.vcp_capability.vcp_code for control in self.vcp_controls],
-                sleep_multiplier=self.controller.sleep_multiplier)
-            if values is not None:
-                for control, value in zip(self.vcp_controls, values):
-                    control.refresh_data(value=value)
-        except (subprocess.SubprocessError, ValueError) as e:
-            raise VduException(vdu_description=self.controller.get_vdu_description(), exception=e, operation="get_attributes")
+        values = self.controller.get_attributes([control.vcp_capability.vcp_code for control in self.vcp_controls])
+        if values is not None:
+            for control, value in zip(self.vcp_controls, values):
+                control.refresh_data(value=value)
 
     def refresh_view(self) -> None:
         """Tell the control widgets to refresh their views from their internally cached values."""
@@ -2637,6 +2636,7 @@ class ContextMenu(QMenu):
         self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Presets'), presets_action)
         self.presets_separator = self.addSeparator()
         self.busy_disable_prop = "busy_disable"
+        self.preset_prop = "is_preset"
         self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Grey Scale'), chart_action)
         self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Settings'), settings_action)
         self.addAction(si(self, QStyle.SP_BrowserReload), tr('Refresh'), refresh_action).setProperty(self.busy_disable_prop,
@@ -2654,6 +2654,7 @@ class ContextMenu(QMenu):
 
         action = self.addAction(preset.create_icon(), preset.name, restore_preset)
         action.setProperty(self.busy_disable_prop, QVariant(True))
+        action.setProperty(self.preset_prop, QVariant(True))
         self.insertAction(self.presets_separator, action)
         # print(self.actions())
         self.update()
@@ -2661,10 +2662,7 @@ class ContextMenu(QMenu):
     def remove_preset_menu_item(self, preset: Preset):
         self.removeAction(self.get_preset_menu_item(preset.name))
 
-    def refresh_preset_menu(self, reload: bool = False) -> None:
-        if reload:
-            for name, preset in self.main_window.preset_controller.find_presets().items():
-                self.remove_preset_menu_item(preset)
+    def refresh_preset_menu(self) -> None:
         for name, preset in self.main_window.preset_controller.find_presets().items():
             if not self.has_preset_menu_item(name):
                 self.insert_preset_menu_item(preset)
@@ -2733,7 +2731,6 @@ class BottomToolBar(QToolBar):
 
     def indicate_busy(self, is_busy: bool = True):
         self.refresh_button.setDisabled(is_busy)
-        self.menu_button.setDisabled(is_busy)
         self.preset_action.setDisabled(is_busy)
         self.progress_bar.setDisabled(not is_busy)
         # Setting range to 0,0 cause the progress bar to pulsate left/right - used as a busy spinner.
@@ -2821,7 +2818,7 @@ class VduControlsMainPanel(QWidget):
             while True:
                 try:
                     controller = VduController(vdu_id, vdu_model_name, vdu_serial, manufacturer, main_config,
-                                               self.ddcutil)
+                                               self.ddcutil, self.display_vdu_exception)
                 except Exception:
                     # Catch any kind of parse related error
                     no_auto = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Ignore | QMessageBox.Apply | QMessageBox.Retry)
@@ -2836,7 +2833,7 @@ class VduControlsMainPanel(QWidget):
                     choice = no_auto.exec()
                     if choice == QMessageBox.Ignore:
                         controller = VduController(vdu_id, vdu_model_name, vdu_serial, manufacturer, main_config,
-                                                   self.ddcutil, ignore_monitor=True)
+                                                   self.ddcutil, self.display_vdu_exception, ignore_monitor=True)
                         controller.write_template_config_files()
                         warn = MessageBox(QMessageBox.Information)
                         warn.setText(tr('Ignoring {} monitor.').format(vdu_model_name))
@@ -2845,7 +2842,7 @@ class VduControlsMainPanel(QWidget):
                         warn.exec()
                     if choice == QMessageBox.Apply:
                         controller = VduController(vdu_id, vdu_model_name, vdu_serial, manufacturer, main_config,
-                                                   self.ddcutil, assume_standard_controls=True)
+                                                   self.ddcutil, self.display_vdu_exception, assume_standard_controls=True)
                         controller.write_template_config_files()
                         warn = MessageBox(QMessageBox.Information)
                         warn.setText(
@@ -2861,7 +2858,7 @@ class VduControlsMainPanel(QWidget):
             if controller is not None:
                 self.vdu_controllers.append(controller)
                 self.vdu_detected.emit(controller)
-                vdu_control_panel = VduControlPanel(controller, self.warnings, self.display_task_error)
+                vdu_control_panel = VduControlPanel(controller, self.warnings, self.display_vdu_exception)
                 vdu_control_panel.connected_vdus_changed.connect(self.connected_vdus_changed)
                 controller.vdu_setting_changed.connect(self.vdu_setting_changed)
                 if vdu_control_panel.number_of_controls() != 0:
@@ -2913,10 +2910,10 @@ class VduControlsMainPanel(QWidget):
         self.customContextMenuRequested.connect(open_context_menu)
 
     def start_refresh(self) -> None:
+        self.indicate_busy()
 
         def refresh_data():
-            self.indicate_busy()
-            """Refresh data from the VDU's. Called by a non-GUI task. Not in the GUI-thread, cannot do any GUI op's."""
+            # Called in a non-GUI thread, cannot do any GUI op's.
             self.detected_vdus = self.ddcutil.detect_monitors()
             for control_panel in self.vdu_control_panels:
                 if control_panel.controller.get_full_id() in self.detected_vdus:
@@ -2925,7 +2922,7 @@ class VduControlsMainPanel(QWidget):
         def refresh_view():
             """Invoke when the GUI worker thread completes. Runs in the GUI thread and can refresh the GUI views."""
             if self.refresh_data_task.vdu_exception is not None:
-                self.display_task_error(self.refresh_data_task.vdu_exception)
+                self.display_vdu_exception(self.refresh_data_task.vdu_exception)
             if self.detected_vdus != self.previously_detected_vdus:
                 self.connected_vdus_changed.emit()
                 self.previously_detected_vdus = self.detected_vdus
@@ -2938,16 +2935,19 @@ class VduControlsMainPanel(QWidget):
         self.refresh_data_task.start()
 
     def indicate_busy(self, is_busy: bool = True):
-        self.bottom_toolbar.indicate_busy(is_busy)
+        if self.bottom_toolbar is not None:
+            self.bottom_toolbar.indicate_busy(is_busy)
+        if self.context_menu is not None:
+            self.context_menu.indicate_busy(is_busy)
         for control_panel in self.vdu_control_panels:
             control_panel.setDisabled(is_busy)
-        self.context_menu.indicate_busy(is_busy)
 
     def restore_preset(self, preset: Preset) -> None:
         # Starts the restore, but it will complete in the worker thread
+        self.indicate_busy()
 
         def restore_preset_data():
-            self.indicate_busy()
+            # Called in a non-GUI thread, cannot do any GUI op's.
             preset.load()
             for section in preset.preset_ini:
                 for control_panel in self.vdu_control_panels:
@@ -2955,8 +2955,9 @@ class VduControlsMainPanel(QWidget):
                         control_panel.restore_vdu_state(preset.preset_ini)
 
         def restore_preset_view():
+            # Called in a GUI thread, can do GUI op's.
             if self.restore_preset_thread.vdu_exception is not None:
-                self.display_task_error(self.restore_preset_thread.vdu_exception)
+                self.display_vdu_exception(self.restore_preset_thread.vdu_exception)
             else:
                 for section in preset.preset_ini:
                     for control_panel in self.vdu_control_panels:
@@ -2986,16 +2987,20 @@ class VduControlsMainPanel(QWidget):
     def display_active_preset(self, preset: Preset | None):
         self.bottom_toolbar.display_active_preset(preset)
 
-    def display_task_error(self, exception):
+    def display_vdu_exception(self, exception: VduException, buttons=QMessageBox.Close, default_button=QMessageBox.Close) -> int:
+        log_error(f"{exception.vdu_description} {exception.operation} {exception.attr_id} {exception.cause}")
         if self.alert is not None:
             # Dismiss any existing alert
             self.alert.done(QMessageBox.Close)
-        self.alert = MessageBox(QMessageBox.Critical)
-        self.alert.setText(tr("Controls may be incorrect. Failed to refresh monitor {} data").format(exception.vdu_description))
-        self.alert.setInformativeText(
-            tr("Problem communicating with monitor {}: {}").format(exception.vdu_description, str(exception.cause)))
-        self.alert.exec()
+        self.alert = MessageBox(QMessageBox.Critical, buttons=buttons, default=default_button)
+        self.alert.setText(
+            tr("Set value: Failed to communicate with display {}").format(exception.vdu_description))
+        self.alert.setAttribute(Qt.WA_DeleteOnClose)
+        self.alert.setInformativeText(tr('Is the monitor switched off?<br>'
+                                         'Is the sleep-multiplier setting too low?'))
+        answer = self.alert.exec()
         self.alert = None
+        return answer
 
 
 class WorkerThread(QThread):
@@ -4435,28 +4440,33 @@ class AppWindow(QMainWindow):
 
         def create_main_control_panel():
             # Call on initialisation and whenever the number of connected VDU's changes.
-            global log_to_syslog
-            log_to_syslog = main_config.is_syslog_enabled()
-            existing_width = 0
-            if self.main_control_panel is not None:
-                # Remove any existing control panel - which may now be incorrect for the config.
-                self.main_control_panel.width()
-                self.main_control_panel.refresh_finished.disconnect(refresh_finished)
-                self.main_control_panel.vdu_detected.disconnect(vdu_detected_action)
-                self.main_control_panel.vdu_setting_changed.disconnect(vdu_settings_changed_action)
-                self.main_control_panel.connected_vdus_changed.disconnect(create_main_control_panel)
-                self.main_control_panel.deleteLater()
-            self.main_control_panel = VduControlsMainPanel()
-            # Write up the signal/slots first
-            self.main_control_panel.refresh_finished.connect(refresh_finished)
-            self.main_control_panel.vdu_detected.connect(vdu_detected_action)
-            self.main_control_panel.vdu_setting_changed.connect(vdu_settings_changed_action)
-            self.main_control_panel.connected_vdus_changed.connect(create_main_control_panel)
-            # Then initialise the control panel display
-            self.main_control_panel.initialise_control_panels(self.app_context_menu, main_config)
-            self.setCentralWidget(self.main_control_panel)
-            self.setMinimumWidth(existing_width)
-            self.display_active_preset(None)
+            try:
+                global log_to_syslog
+                log_to_syslog = main_config.is_syslog_enabled()
+                existing_width = 0
+                if self.main_control_panel is not None:
+                    self.main_control_panel.indicate_busy(True)
+                    # Remove any existing control panel - which may now be incorrect for the config.
+                    self.main_control_panel.width()
+                    self.main_control_panel.refresh_finished.disconnect(refresh_finished)
+                    self.main_control_panel.vdu_detected.disconnect(vdu_detected_action)
+                    self.main_control_panel.vdu_setting_changed.disconnect(vdu_settings_changed_action)
+                    self.main_control_panel.connected_vdus_changed.disconnect(create_main_control_panel)
+                    self.main_control_panel.deleteLater()
+                self.main_control_panel = VduControlsMainPanel()
+                # Write up the signal/slots first
+                self.main_control_panel.refresh_finished.connect(refresh_finished)
+                self.main_control_panel.vdu_detected.connect(vdu_detected_action)
+                self.main_control_panel.vdu_setting_changed.connect(vdu_settings_changed_action)
+                self.main_control_panel.connected_vdus_changed.connect(create_main_control_panel)
+                # Then initialise the control panel display
+                self.main_control_panel.initialise_control_panels(self.app_context_menu, main_config)
+                self.main_control_panel.indicate_busy(True)
+                self.setCentralWidget(self.main_control_panel)
+                self.setMinimumWidth(existing_width)
+                self.display_active_preset(None)
+            finally:
+                self.main_control_panel.indicate_busy(False)
 
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         create_main_control_panel()
@@ -4572,7 +4582,7 @@ class AppWindow(QMainWindow):
                 self.tray.setToolTip(f"{self.app_name}")
                 self.tray.setIcon(self.app_icon)
         self.displayed_preset_name = preset.name if preset else None
-        self.app_context_menu.refresh_preset_menu(reload=True)
+        self.app_context_menu.refresh_preset_menu()
 
     def closeEvent(self, event):
         if self.tray is not None:
