@@ -237,10 +237,12 @@ Michael Hamilton
 Version History
 ---------------
 * 1.9.1
-  * The main panel progress bar will display during preset-activation (in addition to displaying during refresh).
-  * Controls now lock during refresh and preset-activation (to prevent conflicting actions).
-  * Code cleanup of non-GUI  sub-threads, and sub-thread error handling.
-  * _OpenSUSE_ changes for submission to _Development_ and _Factory_ by @malcolmlewis.
+  * The main panel progress-bar spinner will now also display during preset-activation (in addition to displaying during refresh).
+  * The text input to right of slider controls has been replaced with a SpinBox with up/down arrows.
+  * Refresh and preset controls now lock during refresh and preset-activation (to prevent conflicting actions).
+  * The context menu and hamburger menu are now available during refresh (a subset of actions is available, such as help and about).
+  * Build changes for submission to _OpenSUSE_  _Development_ and _Factory_ by @malcolmlewis.
+  * The thread handling and error handling has been cleaned up.
 * 1.9.0
   * Bug fixes and speedy performance improvements:
     * Speed up initialization and refresh by combining multiple ddcutil `getvcp` requests.
