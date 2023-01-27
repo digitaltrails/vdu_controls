@@ -2216,11 +2216,6 @@ class VduControlSlider(VduControlBase):
 
         slider.valueChanged.connect(slider_changed)
 
-        def slider_moved(value: int) -> None:
-            self.spinbox.setValue(value)
-
-        slider.sliderMoved.connect(slider_moved)
-
         def spinbox_value_changed() -> None:
             slider.setValue(self.spinbox.value())
 
