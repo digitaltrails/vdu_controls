@@ -2654,7 +2654,7 @@ class ContextMenu(QMenu):
         self.addSeparator()
         self.addAction(si(self, QStyle.SP_DialogCloseButton), tr('Quit'), quit_action)
 
-    def insert_preset_menu_item(self, preset: Preset) -> None:
+    def insert_preset_menu_action(self, preset: Preset) -> None:
         # Have to add it first and then move it (otherwise it won't appear - weird).
 
         def restore_preset() -> None:
@@ -2667,16 +2667,18 @@ class ContextMenu(QMenu):
         # print(self.actions())
         self.update()
 
-    def remove_preset_menu_item(self, preset: Preset):
-        self.removeAction(self.get_preset_menu_item(preset.name))
+    def remove_preset_menu_action(self, preset: Preset):
+        self.removeAction(self.get_preset_menu_action(preset.name))
 
-    def refresh_preset_menu(self) -> None:
+    def refresh_preset_menu(self, palette_change: bool = False) -> None:
         for name, preset in self.main_window.preset_controller.find_presets().items():
             # Allow for presets with the same name as existing non-preset menu items
-            if not self.has_preset_menu_item(name) or not self.get_preset_menu_item(name).property(self.preset_prop):
-                self.insert_preset_menu_item(preset)
+            if not self.has_preset_menu_action(name) or not self.get_preset_menu_action(name).property(self.preset_prop):
+                self.insert_preset_menu_action(preset)
+            elif palette_change:  # Must redraw icons in case desktop theme changed between light/dark.
+                self.get_preset_menu_action(name).setIcon(preset.create_icon())
 
-    def has_preset_menu_item(self, name: str) -> bool:
+    def has_preset_menu_action(self, name: str) -> bool:
         for action in self.actions():
             if action == self.presets_separator:
                 break
@@ -2684,7 +2686,7 @@ class ContextMenu(QMenu):
                 return True
         return False
 
-    def get_preset_menu_item(self, name: str) -> QAction | None:
+    def get_preset_menu_action(self, name: str) -> QAction | None:
         for action in self.actions():
             if action == self.presets_separator:
                 break
@@ -4551,8 +4553,8 @@ class AppWindow(QMainWindow):
         self.copy_to_preset_ini(preset.preset_ini, update_only=True)
         self.preset_controller.save_preset(preset)
         self.most_recent_preset = preset
-        if not self.app_context_menu.has_preset_menu_item(preset.name):
-            self.app_context_menu.insert_preset_menu_item(preset)
+        if not self.app_context_menu.has_preset_menu_action(preset.name):
+            self.app_context_menu.insert_preset_menu_action(preset)
             self.display_active_preset(preset)
         preset.remove_elevation_trigger()
         self.schedule_presets()
@@ -4563,8 +4565,8 @@ class AppWindow(QMainWindow):
 
     def delete_preset(self, preset: Preset) -> None:
         self.preset_controller.delete_preset(preset)
-        if self.app_context_menu.has_preset_menu_item(preset.name):
-            self.app_context_menu.remove_preset_menu_item(preset)
+        if self.app_context_menu.has_preset_menu_action(preset.name):
+            self.app_context_menu.remove_preset_menu_action(preset)
         if self.displayed_preset_name == preset.name:
             self.display_active_preset(None)
 
@@ -4620,7 +4622,7 @@ class AppWindow(QMainWindow):
         # PalletChange happens after the new style sheet is in use.
         if event.type() == QEvent.PaletteChange:
             self.display_active_preset(None)
-            self.app_context_menu.refresh_preset_menu(reload=True)
+            self.app_context_menu.refresh_preset_menu(palette_change=True)
         return super().event(event)
 
     def schedule_presets(self, reset: bool = False) -> Preset:
