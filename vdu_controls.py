@@ -4622,6 +4622,7 @@ class AppWindow(QMainWindow):
         if event.type() == QEvent.PaletteChange:
             self.display_active_preset()
             self.app_context_menu.refresh_preset_menu(palette_change=True)
+            self.main_control_panel.display_active_preset(self.most_recent_preset)
         return super().event(event)
 
     def schedule_presets(self, reset: bool = False) -> Preset:
