@@ -2776,6 +2776,7 @@ class VduControlsMainPanel(QWidget):
         self.detected_vdus = []
         self.restore_preset_thread = None
         self.alert = None
+        self.busy = False
 
     def initialise_control_panels(self, app_context_menu: ContextMenu, main_config: VduControlsConfig):
         if self.layout():
@@ -2941,6 +2942,7 @@ class VduControlsMainPanel(QWidget):
         self.refresh_data_task.start()
 
     def indicate_busy(self, is_busy: bool = True):
+        self.busy = is_busy
         if self.bottom_toolbar is not None:
             self.bottom_toolbar.indicate_busy(is_busy)
         if self.context_menu is not None:
@@ -3067,6 +3069,7 @@ class PresetController:
         self.presets[preset.name] = preset
 
     def which_preset_is_active(self, main_panel: VduControlsMainPanel) -> Preset | None:
+
         for name, preset in self.find_presets().items():
             if self.is_preset_active(preset, main_panel):
                 return preset
@@ -3880,7 +3883,6 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             self.preset_widgets_layout.insertWidget(index - 1, new_preset_widget)
             target_widget.deleteLater()
             self.main_window.preset_controller.save_order(self.get_presets_name_order())
-            self.main_window.display_active_preset(None)
             self.preset_widgets_scrollarea.updateGeometry()
 
     def down_action(self, preset: Preset, target_widget: QWidget) -> None:
@@ -3891,7 +3893,6 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             self.preset_widgets_layout.insertWidget(index + 1, new_preset_widget)
             target_widget.deleteLater()
             self.main_window.preset_controller.save_order(self.get_presets_name_order())
-            self.main_window.display_active_preset(None)
             self.preset_widgets_scrollarea.updateGeometry()
 
     def restore_preset(self, preset: Preset) -> None:
@@ -3993,7 +3994,6 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             self.preset_widgets_scrollarea.updateGeometry()
             QTimer.singleShot(0, scroll_to_bottom)
         self.preset_name_edit.setText('')
-        self.main_window.display_active_preset(None)
 
     def create_preset_widget(self, preset):
         return PresetWidget(
@@ -4425,7 +4425,7 @@ class AppWindow(QMainWindow):
                     Qt.AlignTop | Qt.AlignHCenter)
 
         def vdu_settings_changed_action() -> None:
-            self.display_active_preset(None)
+            self.display_active_preset()
 
         def respond_to_unix_signal(signal_number: int):
             if signal_number == signal.SIGHUP:
@@ -4442,7 +4442,7 @@ class AppWindow(QMainWindow):
         signal_wakeup_handler.signalReceived.connect(respond_to_unix_signal)
 
         def refresh_finished():
-            self.display_active_preset(None)
+            self.display_active_preset()
 
         def create_main_control_panel():
             # Call on initialisation and whenever the number of connected VDU's changes.
@@ -4470,7 +4470,7 @@ class AppWindow(QMainWindow):
                 self.main_control_panel.indicate_busy(True)
                 self.setCentralWidget(self.main_control_panel)
                 self.setMinimumWidth(existing_width)
-                self.display_active_preset(None)
+                self.display_active_preset()
             finally:
                 self.main_control_panel.indicate_busy(False)
 
@@ -4532,7 +4532,7 @@ class AppWindow(QMainWindow):
         try:
             self.most_recent_preset = preset
             self.main_control_panel.restore_preset(preset)
-            self.display_active_preset(preset)
+            self.display_active_preset()
         except VduException as e:
             log_warning(f"Abandoned restore of Preset {preset.name} due to: {e}")
             return False
@@ -4547,10 +4547,10 @@ class AppWindow(QMainWindow):
     def save_preset(self, preset: Preset) -> None:
         self.copy_to_preset_ini(preset.preset_ini, update_only=True)
         self.preset_controller.save_preset(preset)
-        self.most_recent_preset = preset
         if not self.app_context_menu.has_preset_menu_action(preset.name):
             self.app_context_menu.insert_preset_menu_action(preset)
-            self.display_active_preset(preset)
+        self.most_recent_preset = preset
+        self.display_active_preset()
         preset.remove_elevation_trigger()
         self.schedule_presets()
 
@@ -4559,20 +4559,24 @@ class AppWindow(QMainWindow):
             control_panel.copy_state(preset_ini, update_only)
 
     def delete_preset(self, preset: Preset) -> None:
+        if preset == self.most_recent_preset:
+            self.most_recent_preset = None
+            self.display_active_preset()
         self.preset_controller.delete_preset(preset)
         if self.app_context_menu.has_preset_menu_action(preset.name):
             self.app_context_menu.remove_preset_menu_action(preset)
-        if self.displayed_preset_name == preset.name:
-            self.display_active_preset(None)
 
-    def display_active_preset(self, preset: Preset | None) -> None:
-        if preset is None:
-            if self.most_recent_preset is not None and self.preset_controller.is_preset_active(self.most_recent_preset,
-                                                                                               self.main_control_panel):
-                preset = self.most_recent_preset  # Show most recent, copes with identical presets (such as dawn and dusk)
-            else:
-                preset = self.preset_controller.which_preset_is_active(self.main_control_panel)  # Match against VDU settings
+    def display_active_preset(self) -> None:
+        if self.most_recent_preset is not None and (self.main_control_panel.busy or
+                                                    self.preset_controller.is_preset_active(self.most_recent_preset,
+                                                                                            self.main_control_panel)):
+            preset = self.most_recent_preset
+        else:
+            preset = self.preset_controller.which_preset_is_active(self.main_control_panel)  # Match against VDU settings
+            self.most_recent_preset = preset
         if preset:
+            if self.windowTitle() == preset.name:
+                return
             self.setWindowTitle(preset.name)
             icon = create_merged_icon(self.app_icon, preset.create_icon())
             self.app.setWindowIcon(icon)
@@ -4616,7 +4620,7 @@ class AppWindow(QMainWindow):
     def event(self, event: QEvent) -> bool:
         # PalletChange happens after the new style sheet is in use.
         if event.type() == QEvent.PaletteChange:
-            self.display_active_preset(None)
+            self.display_active_preset()
             self.app_context_menu.refresh_preset_menu(palette_change=True)
         return super().event(event)
 
