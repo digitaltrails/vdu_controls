@@ -478,13 +478,13 @@ from urllib.error import URLError
 from PyQt5 import QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
     QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant
-from PyQt5.QtGui import QIntValidator, QPixmap, QIcon, QCursor, QImage, QPainter, QDoubleValidator, QRegExpValidator, \
+from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QDoubleValidator, QRegExpValidator, \
     QPalette, QGuiApplication, QColor, QValidator, QPen, QFont
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
-    QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter
+    QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox
 
 APPNAME = "VDU Controls"
 VDU_CONTROLS_VERSION = '1.9.1'
@@ -2202,30 +2202,29 @@ class VduControlSlider(VduControlBase):
         slider.setTracking(False)
         layout.addWidget(slider)
 
-        text_input = QLineEdit()
-        text_input.setMaximumWidth(50)
-        text_input.setMaxLength(4)
-        self.text_validator = QIntValidator()
-        text_input.setValidator(self.text_validator)
-        text_input.setText(str(slider.value()))
-        layout.addWidget(text_input)
+        self.spinbox = QSpinBox()
+        if len(self.range_restriction) != 0:
+            self.spinbox.setRange(int(self.range_restriction[1]), int(self.range_restriction[2]))
+
+        self.spinbox.setValue(slider.value())
+        layout.addWidget(self.spinbox)
 
         def slider_changed(value: int) -> None:
             self.current_value = str(value)
-            text_input.setText(self.current_value)
+            self.spinbox.setValue(value)
             self.ui_change_vdu_attribute(self.current_value)
 
         slider.valueChanged.connect(slider_changed)
 
         def slider_moved(value: int) -> None:
-            text_input.setText(str(value))
+            self.spinbox.setValue(value)
 
         slider.sliderMoved.connect(slider_moved)
 
-        def text_changed() -> None:
-            slider.setValue(int(text_input.text()))
+        def spinbox_value_changed() -> None:
+            slider.setValue(self.spinbox.value())
 
-        text_input.editingFinished.connect(text_changed)
+        self.spinbox.valueChanged.connect(spinbox_value_changed)
 
     def refresh_data(self, value: Tuple[str, str] | None = None) -> None:
         """Query the VDU for a new data value and cache it (maybe called from a task thread, so no GUI op's here)."""
@@ -2235,12 +2234,11 @@ class VduControlSlider(VduControlBase):
                 new_value, max_value = value if value is not None else self.controller.get_attribute(self.vcp_capability.vcp_code)
                 if self.max_value is None:
                     # Validate as integer
-                    int(new_value)
-                    int(max_value)
+                    _, int_max = int(new_value), int(max_value)
                     self.current_value, self.max_value = new_value, max_value
-                    self.text_validator.setRange(0, int(self.max_value))
                     if len(self.range_restriction) == 0:
-                        self.slider.setRange(0, int(self.max_value))
+                        self.spinbox.setRange(0, int_max)
+                        self.slider.setRange(0, int_max)
                 else:
                     int(new_value)
                     self.current_value = new_value
