@@ -2757,6 +2757,7 @@ class BottomToolBar(QToolBar):
 class VduControlsMainPanel(QWidget):
     """GUI for detected VDU's, it will construct and contain a control panel for each VDU."""
     refresh_finished = pyqtSignal()
+    restore_preset_finished = pyqtSignal()
     vdu_detected = pyqtSignal(VduController)
     vdu_setting_changed = pyqtSignal()
     connected_vdus_changed = pyqtSignal()
@@ -2776,7 +2777,6 @@ class VduControlsMainPanel(QWidget):
         self.detected_vdus = []
         self.restore_preset_thread = None
         self.alert = None
-        self.busy = False
 
     def initialise_control_panels(self, app_context_menu: ContextMenu, main_config: VduControlsConfig):
         if self.layout():
@@ -2935,14 +2935,13 @@ class VduControlsMainPanel(QWidget):
                 self.previously_detected_vdus = self.detected_vdus
             for control_panel in self.vdu_control_panels:
                 control_panel.refresh_view()
-            self.refresh_finished.emit()
             self.indicate_busy(False)
+            self.refresh_finished.emit()
 
         self.refresh_data_task = WorkerThread(task_body=refresh_data, task_finished=refresh_view)
         self.refresh_data_task.start()
 
     def indicate_busy(self, is_busy: bool = True):
-        self.busy = is_busy
         if self.bottom_toolbar is not None:
             self.bottom_toolbar.indicate_busy(is_busy)
         if self.context_menu is not None:
@@ -2972,6 +2971,7 @@ class VduControlsMainPanel(QWidget):
                         if section == control_panel.controller.vdu_stable_id:
                             control_panel.refresh_view()
             self.indicate_busy(False)
+            self.restore_preset_finished.emit()
 
         self.restore_preset_thread = WorkerThread(task_body=restore_preset_data, task_finished=restore_preset_view)
         self.restore_preset_thread.start()
@@ -4441,9 +4441,6 @@ class AppWindow(QMainWindow):
         global signal_wakeup_handler
         signal_wakeup_handler.signalReceived.connect(respond_to_unix_signal)
 
-        def refresh_finished():
-            self.display_active_preset()
-
         def create_main_control_panel():
             # Call on initialisation and whenever the number of connected VDU's changes.
             try:
@@ -4454,14 +4451,16 @@ class AppWindow(QMainWindow):
                     self.main_control_panel.indicate_busy(True)
                     # Remove any existing control panel - which may now be incorrect for the config.
                     self.main_control_panel.width()
-                    self.main_control_panel.refresh_finished.disconnect(refresh_finished)
+                    self.main_control_panel.refresh_finished.disconnect(self.display_active_preset)
+                    self.main_control_panel.restore_preset_finished.disconnect(self.display_active_preset)
                     self.main_control_panel.vdu_detected.disconnect(vdu_detected_action)
                     self.main_control_panel.vdu_setting_changed.disconnect(vdu_settings_changed_action)
                     self.main_control_panel.connected_vdus_changed.disconnect(create_main_control_panel)
                     self.main_control_panel.deleteLater()
                 self.main_control_panel = VduControlsMainPanel()
                 # Write up the signal/slots first
-                self.main_control_panel.refresh_finished.connect(refresh_finished)
+                self.main_control_panel.refresh_finished.connect(self.display_active_preset)
+                self.main_control_panel.restore_preset_finished.connect(self.display_active_preset)
                 self.main_control_panel.vdu_detected.connect(vdu_detected_action)
                 self.main_control_panel.vdu_setting_changed.connect(vdu_settings_changed_action)
                 self.main_control_panel.connected_vdus_changed.connect(create_main_control_panel)
@@ -4532,7 +4531,6 @@ class AppWindow(QMainWindow):
         try:
             self.most_recent_preset = preset
             self.main_control_panel.restore_preset(preset)
-            self.display_active_preset()
         except VduException as e:
             log_warning(f"Abandoned restore of Preset {preset.name} due to: {e}")
             return False
@@ -4567,9 +4565,8 @@ class AppWindow(QMainWindow):
             self.app_context_menu.remove_preset_menu_action(preset)
 
     def display_active_preset(self) -> None:
-        if self.most_recent_preset is not None and (self.main_control_panel.busy or
-                                                    self.preset_controller.is_preset_active(self.most_recent_preset,
-                                                                                            self.main_control_panel)):
+        if self.most_recent_preset is not None and self.preset_controller.is_preset_active(self.most_recent_preset,
+                                                                                           self.main_control_panel):
             preset = self.most_recent_preset
         else:
             preset = self.preset_controller.which_preset_is_active(self.main_control_panel)  # Match against VDU settings
