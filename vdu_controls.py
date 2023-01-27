@@ -3665,13 +3665,13 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
     edit_save_needed = pyqtSignal()
 
     @staticmethod
-    def invoke(main_window: 'AppWindow', main_config: VduControlsConfig) -> None:
+    def invoke(main_window: 'VduAppWindow', main_config: VduControlsConfig) -> None:
         if PresetsDialog.exists():
             PresetsDialog.show_existing_dialog()
         else:
             PresetsDialog(main_window, main_config)
 
-    def __init__(self, main_window: 'AppWindow', main_config: VduControlsConfig) -> None:
+    def __init__(self, main_window: 'VduAppWindow', main_config: VduControlsConfig) -> None:
         super().__init__()
         self.setWindowTitle(tr('Presets'))
         self.main_window = main_window
@@ -4290,7 +4290,7 @@ class ScheduleStatus(Enum):
         return self.value[0]
 
 
-class AppWindow(QMainWindow):
+class VduAppWindow(QMainWindow):
 
     def __init__(self, main_config: VduControlsConfig, app: QApplication):
         super().__init__()
@@ -4988,7 +4988,7 @@ def main():
     if args.about:
         AboutDialog.invoke()
 
-    main_window = AppWindow(main_config, app)
+    main_window = VduAppWindow(main_config, app)
 
     if args.create_config_files:
         main_window.create_config_files()
