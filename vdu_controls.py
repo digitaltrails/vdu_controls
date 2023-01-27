@@ -1718,36 +1718,39 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
         self.setLayout(layout)
         tabs = QTabWidget()
         layout.addWidget(tabs)
-        self.editors = []
+        self.editor_tab_list = []
         self.change_callback = change_callback
         for config in [default_config, ] + vdu_config_list:
             tab = SettingsEditorTab(self, config, change_callback)
             tab.save_all_clicked.connect(self.save_all)
             tabs.addTab(tab, config.get_config_name())
-            self.editors.append(tab)
+            self.editor_tab_list.append(tab)
         # .show() is non-modal, .exec() is modal
         self.make_visible()
 
     def save_all(self, warn_if_nothing_to_save: bool = True):
+        all_changes = {}
         try:
             nothing_to_save = True
             # Do the main config last - it may cause a restart of the app
             self.setEnabled(False)
-            save_order = self.editors[1:] + [self.editors[0]]
+            save_order = self.editor_tab_list[1:] + [self.editor_tab_list[0]]
             for editor in save_order:
                 if editor.is_unsaved():
                     nothing_to_save = False
-                    if editor.save() == QMessageBox.Cancel:
+                    if editor.save(all_changes=all_changes) == QMessageBox.Cancel:
                         return QMessageBox.Cancel
             if warn_if_nothing_to_save and nothing_to_save:
                 alert = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Yes | QMessageBox.No, default=QMessageBox.No)
                 alert.setText(tr("Nothing needs saving. Do you wish to save anyway?"))
                 if alert.exec() == QMessageBox.Yes:
                     for editor in save_order:
-                        if editor.save(force=True) == QMessageBox.Cancel:
+                        if editor.save(force=True, all_changes=all_changes) == QMessageBox.Cancel:
                             return QMessageBox.Cancel
         finally:
             self.setEnabled(True)
+            if len(all_changes) > 0:
+                self.change_callback(all_changes)
         return QMessageBox.Ok
 
     def closeEvent(self, event) -> None:
@@ -1827,7 +1830,7 @@ class SettingsEditorTab(QWidget):
 
         editor_layout.addWidget(buttons_widget)
 
-    def save(self, force: bool = False) -> int:
+    def save(self, force: bool = False, all_changes: Mapping[str, str] | None = None) -> int:
         if self.is_unsaved() or force:
             confirmation = MessageBox(QMessageBox.Question,
                                       buttons=QMessageBox.Save | QMessageBox.Cancel | QMessageBox.Discard, default=QMessageBox.Save)
@@ -1840,7 +1843,10 @@ class SettingsEditorTab(QWidget):
                 copy = pickle.dumps(self.ini_editable)
                 self.ini_before = pickle.loads(copy)
                 # After file is closed...
-                self.change_callback(self.changed)
+                if all_changes is None:
+                    self.change_callback(self.changed)
+                else:
+                    all_changes.update(self.changed)
                 self.changed = {}
             elif answer == QMessageBox.Discard:
                 copy = pickle.dumps(self.ini_before)
@@ -2099,41 +2105,43 @@ class VduControlBase(QWidget):
     """
     Base GUI control for a DDC attribute.
     """
+
     connected_vdus_changed = pyqtSignal()
     current_msgbox: MessageBox | None = None
 
-    class DataUptodate(object):
-        """Used to wrap sequences of operations that have uptodate data and have no need to call ddcutil to set/get"""
+    class VduUptodate(object):
+        """Used in conjunction with a with-statement to wrap operations when the
+        physical VDU and data are in sync, indicating there is no need to call ddcutil"""
 
         def __init__(self, ui_control: VduControlBase):
             self.ui_control = ui_control
 
         def __enter__(self):
-            self.ui_control.is_data_uptodate = True
+            self.ui_control.is_physical_vdu_uptodate = True
 
         def __exit__(self, exc_type, exc_value, exc_tb):
-            self.ui_control.is_data_uptodate = False
+            self.ui_control.is_physical_vdu_uptodate = False
 
     def __init__(self, controller: VduController, vcp_capability: VcpCapability) -> None:
         """Construct the slider control and initialize its values from the VDU."""
         super().__init__()
         self.controller = controller
         self.vcp_capability = vcp_capability
-        self.is_data_uptodate = False
+        self.is_physical_vdu_uptodate = False
 
-    def restore_vdu_attribute(self, new_value):
+    def restore_vdu_attribute(self, new_value: str):
         # Used when restoring a Preset
-        # Confine the UI to update the UI view only = stop the UI update from causing a ddcutil request.
-        # We're doing the ddcutil request directly here so we can propagate exceptions back up the stack.
-        with VduControlBase.DataUptodate(self):
+        # The with VduControlBase.VduUptodate stops any resultant signal/slot propagation (within this control)
+        # from causing further ddcutil requests. Any UI updates will just update the UI.
+        with VduControlBase.VduUptodate(self):
             self.__change_vdu_attribute(new_value)
 
     def ui_change_vdu_attribute(self, new_value):
         # Used when the user manipulates a control.
-        # If our data from ddcutil is already uptodate, there is no need to issue any ddcutil commands
-        # If the data is not uptodate, this call is as result of the user changing a slider/combo, we need to update the VDU's
-        if not self.is_data_uptodate:
-            # Update VDU with what ever the user has changed in the GUI.
+        # If the physical VDU is already uptodate, there is no need to issue any ddcutil commands
+        # If the physical VDU is not uptodate, the user must be changing a slider/combo, we need to update the physical VDU
+        if not self.is_physical_vdu_uptodate:
+            # Update VDU with what ever the user has changed in the GUI - loop on error at the user's discretion.
             while True:
                 try:
                     self.__change_vdu_attribute(new_value)
@@ -2256,7 +2264,7 @@ class VduControlSlider(VduControlBase):
     def refresh_view(self) -> None:
         """Copy the internally cached current value onto the GUI view."""
         if self.current_value is not None:
-            with VduControlBase.DataUptodate(self):
+            with VduControlBase.VduUptodate(self):  # The with stops the set from causing us to do further unneeded ddcutil calls.
                 self.slider.setValue(int(self.current_value))
 
     def event(self, event: QEvent) -> bool:
@@ -2314,7 +2322,7 @@ class VduControlComboBox(VduControlBase):
 
     def refresh_view(self) -> None:
         """Copy the internally cached current value onto the GUI view."""
-        with VduControlBase.DataUptodate(self):
+        with VduControlBase.VduUptodate(self): # The with stops the set from causing us to do further unneeded ddcutil calls.
             self.validate_value()
             self.combo_box.setCurrentIndex(self.keys.index(self.current_value))
 
@@ -2743,7 +2751,7 @@ class BottomToolBar(QToolBar):
         self.progress_bar.setRange(0, 0 if is_busy else 1)
 
     def display_active_preset(self, preset: Preset | None):
-        if preset:
+        if preset is not None:
             self.preset_action.setToolTip(f"{preset.name} preset")
             self.preset_action.setIcon(preset.create_icon())
             self.preset_action.setVisible(True)
@@ -4571,20 +4579,19 @@ class VduAppWindow(QMainWindow):
         else:
             preset = self.preset_controller.which_preset_is_active(self.main_control_panel)  # Match against VDU settings
             self.most_recent_preset = preset
-        if preset:
-            if self.windowTitle() == preset.name:
-                return
-            self.setWindowTitle(preset.name)
-            icon = create_merged_icon(self.app_icon, preset.create_icon())
-            self.app.setWindowIcon(icon)
+        if preset is not None:
             self.main_control_panel.display_active_preset(preset)
-            if self.tray:
-                self.tray.setToolTip(f"{preset.name} {PRESET_APP_SEPARATOR_SYMBOL} {self.app_name}")
-                self.tray.setIcon(icon)
+            if self.windowTitle() != preset.name:  # No need to change, already set correctly - prevent flashing during startup
+                self.setWindowTitle(preset.name)
+                icon = create_merged_icon(self.app_icon, preset.create_icon())
+                self.app.setWindowIcon(icon)
+                if self.tray:
+                    self.tray.setToolTip(f"{preset.name} {PRESET_APP_SEPARATOR_SYMBOL} {self.app_name}")
+                    self.tray.setIcon(icon)
         else:
+            self.main_control_panel.display_active_preset(None)
             self.setWindowTitle("")
             self.setWindowIcon(self.app_icon)
-            self.main_control_panel.display_active_preset(preset)
             if self.tray:
                 self.tray.setToolTip(f"{self.app_name}")
                 self.tray.setIcon(self.app_icon)
