@@ -2166,7 +2166,6 @@ class VduControlSlider(VduControlBase):
     A compound widget with icon, slider, and text-field.  This is a duck-typed GUI control widget (could inherit
     from an abstract type if we wanted to get formal about it).
     """
-    connected_vdus_changed = pyqtSignal()
 
     def __init__(self, controller: VduController, vcp_capability: VcpCapability) -> None:
         """Construct the slider control and initialize its values from the VDU."""
