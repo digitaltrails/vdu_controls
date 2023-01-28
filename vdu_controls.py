@@ -1828,7 +1828,7 @@ class SettingsEditorTab(QWidget):
 
         editor_layout.addWidget(buttons_widget)
 
-    def save(self, force: bool = False, all_changes: Mapping[str, str] | None = None) -> int:
+    def save(self, force: bool = False, all_changes: Dict[str, str] | None = None) -> int:
         if self.is_unsaved() or force:
             confirmation = MessageBox(QMessageBox.Question,
                                       buttons=QMessageBox.Save | QMessageBox.Cancel | QMessageBox.Discard, default=QMessageBox.Save)
