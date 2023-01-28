@@ -529,7 +529,7 @@ def format_solar_elevation_description(elevation: SolarElevationKey) -> str | No
     return f"{direction_text} {elevation.elevation}{DEGREE_SYMBOL}"
 
 
-def create_solar_elevation_ini_text(elevation: SolarElevationKey):
+def format_solar_elevation_ini_text(elevation: SolarElevationKey):
     return f"{elevation.direction} {elevation.elevation}" if elevation else ''
 
 
@@ -1202,7 +1202,7 @@ class VduGuiSupportedControls:
 VDU_SUPPORTED_CONTROLS = VduGuiSupportedControls()
 
 CONFIG_DIR_PATH = Path.home().joinpath('.config', 'vdu_controls')
-
+PRESET_NAME_FILE = CONFIG_DIR_PATH.joinpath('current_preset.txt')
 LOCALE_TRANSLATIONS_PATHS = [
     Path.cwd().joinpath('translations')] if os.getenv('VDU_CONTROLS_DEVELOPER', default="no") == 'yes' else [] + [
     Path(CONFIG_DIR_PATH).joinpath('translations'),
@@ -1704,10 +1704,8 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
     @staticmethod
     def invoke(default_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig],
                change_callback: callable) -> None:
-        if SettingsEditor.exists():
-            SettingsEditor.show_existing_dialog()
-        else:
-            SettingsEditor(default_config, vdu_config_list, change_callback)
+        SettingsEditor.show_existing_dialog() if SettingsEditor.exists() else SettingsEditor(default_config,
+                                                                                             vdu_config_list, change_callback)
 
     def __init__(self, default_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig],
                  change_callback) -> None:
@@ -2174,8 +2172,8 @@ class VduControlSlider(VduControlBase):
         """Construct the slider control and initialize its values from the VDU."""
         super().__init__(controller, vcp_capability)
 
-        self.current_value: int | None = None
-        self.max_value: int | None = None
+        self.current_value_str: str | None = None
+        self.max_value_str: str | None = None
 
         layout = QHBoxLayout()
         self.setLayout(layout)
@@ -2218,9 +2216,9 @@ class VduControlSlider(VduControlBase):
         layout.addWidget(self.spinbox)
 
         def slider_changed(value: int) -> None:
-            self.current_value = str(value)
+            self.current_value_str = str(value)
             self.spinbox.setValue(value)
-            self.ui_change_vdu_attribute(self.current_value)
+            self.ui_change_vdu_attribute(self.current_value_str)
 
         slider.valueChanged.connect(slider_changed)
 
@@ -2231,26 +2229,26 @@ class VduControlSlider(VduControlBase):
 
     def refresh_data(self, value: Tuple[str, str] | None = None) -> None:
         """Query the VDU for a new data value and cache it (maybe called from a task thread, so no GUI op's here)."""
-        new_value, max_value = None, None
+        new_value_str, max_value_str = None, None
         for i in range(SLIDER_REFRESH_RETRIES):
             try:
-                new_value, max_value = value if value is not None else self.controller.get_attribute(self.vcp_capability.vcp_code)
-                if self.max_value is None:
+                new_value_str, max_value_str = value if value is not None else self.controller.get_attribute(self.vcp_capability.vcp_code)
+                if self.max_value_str is None:
                     # Validate as integer
-                    _, int_max = int(new_value), int(max_value)
-                    self.current_value, self.max_value = new_value, max_value
+                    _, int_max = int(new_value_str), int(max_value_str)
+                    self.current_value_str, self.max_value_str = new_value_str, max_value_str
                     if len(self.range_restriction) == 0:
                         self.spinbox.setRange(0, int_max)
                         self.slider.setRange(0, int_max)
                 else:
-                    int(new_value)
-                    self.current_value = new_value
+                    int(new_value_str)
+                    self.current_value_str = new_value_str
                 return
             except ValueError:
                 # Might be initializing at login - can cause transient errors due to X11 talking to
                 # the monitor.
                 log_warning(f"Non integer values for slider {self.controller.vdu_stable_id} "
-                            f"{self.vcp_capability.name} = {new_value} (max={max_value})")
+                            f"{self.vcp_capability.name} = {new_value_str} (max={max_value_str})")
                 log_warning("have to repeat vdu_model.get_attribute - maybe --sleep-multiplier is set too low?")
                 sleep_secs = 3.0
                 log_warning(f"will try again in {sleep_secs} seconds in case this a transient error due to session "
@@ -2258,14 +2256,14 @@ class VduControlSlider(VduControlBase):
                 time.sleep(sleep_secs)
                 continue
         # Something is wrong with ddcutils - pass the buck
-        raise ValueError(
-            f"Non integer values for slider {self.controller.vdu_stable_id} {self.vcp_capability.name} = {new_value} (max={max_value})")
+        raise ValueError(f"Non integer values for slider {self.controller.vdu_stable_id} "
+                         f"{self.vcp_capability.name} = {new_value_str} (max={max_value_str})")
 
     def refresh_view(self) -> None:
         """Copy the internally cached current value onto the GUI view."""
-        if self.current_value is not None:
+        if self.current_value_str is not None:
             with VduControlBase.VduUptodate(self):  # The with stops the set from causing us to do further unneeded ddcutil calls.
-                self.slider.setValue(int(self.current_value))
+                self.slider.setValue(int(self.current_value_str))
 
     def event(self, event: QEvent) -> bool:
         # PalletChange happens after the new style sheet is in use.
@@ -2322,7 +2320,7 @@ class VduControlComboBox(VduControlBase):
 
     def refresh_view(self) -> None:
         """Copy the internally cached current value onto the GUI view."""
-        with VduControlBase.VduUptodate(self): # The with stops the set from causing us to do further unneeded ddcutil calls.
+        with VduControlBase.VduUptodate(self):  # The with stops the set from causing us to do further unneeded ddcutil calls.
             self.validate_value()
             self.combo_box.setCurrentIndex(self.keys.index(self.current_value))
 
@@ -2433,20 +2431,20 @@ class VduControlPanel(QWidget):
             preset_ini.add_section(vdu_section_name)
         for control in self.vcp_controls:
             if not update_only or preset_ini.has_option(vdu_section_name, control.vcp_capability.property_name()):
-                preset_ini[vdu_section_name][control.vcp_capability.property_name()] = control.current_value
+                preset_ini[vdu_section_name][control.vcp_capability.property_name()] = control.current_value_str
 
     def restore_vdu_state(self, preset_ini: ConfigIni) -> None:
         log_info(f"Preset restoring {self.controller.vdu_stable_id}")
         for control in self.vcp_controls:
             if control.vcp_capability.property_name() in preset_ini[self.controller.vdu_stable_id]:
-                control.current_value = preset_ini[self.controller.vdu_stable_id][control.vcp_capability.property_name()]
-                control.restore_vdu_attribute(control.current_value)
+                control.current_value_str = preset_ini[self.controller.vdu_stable_id][control.vcp_capability.property_name()]
+                control.restore_vdu_attribute(control.current_value_str)
 
     def is_preset_active(self, preset_ini: ConfigIni) -> bool:
         vdu_section = self.controller.vdu_stable_id
         for control in self.vcp_controls:
             if control.vcp_capability.property_name() in preset_ini[vdu_section]:
-                if control.current_value != preset_ini[vdu_section][control.vcp_capability.property_name()]:
+                if control.current_value_str != preset_ini[vdu_section][control.vcp_capability.property_name()]:
                     return False
         return True
 
@@ -2765,7 +2763,6 @@ class BottomToolBar(QToolBar):
 class VduControlsMainPanel(QWidget):
     """GUI for detected VDU's, it will construct and contain a control panel for each VDU."""
     refresh_finished = pyqtSignal()
-    restore_preset_finished = pyqtSignal()
     vdu_detected = pyqtSignal(VduController)
     vdu_setting_changed = pyqtSignal()
     connected_vdus_changed = pyqtSignal()
@@ -2786,7 +2783,8 @@ class VduControlsMainPanel(QWidget):
         self.restore_preset_thread = None
         self.alert = None
 
-    def initialise_control_panels(self, app_context_menu: ContextMenu, main_config: VduControlsConfig):
+    def initialise_control_panels(self, app_context_menu: ContextMenu, main_config: VduControlsConfig,
+                                  start_refresh_func: Callable):
         if self.layout():
             # Already laid out, must be responding to a configuration change requiring re-layout.
             # Remove all exisiting widgets.
@@ -2915,7 +2913,7 @@ class VduControlsMainPanel(QWidget):
                 error_no_monitors.exec()
 
         self.bottom_toolbar = \
-            BottomToolBar(start_refresh_func=self.start_refresh, app_context_menu=app_context_menu, parent=self)
+            BottomToolBar(start_refresh_func=start_refresh_func, app_context_menu=app_context_menu, parent=self)
         layout.addWidget(self.bottom_toolbar)
         self.setContextMenuPolicy(Qt.CustomContextMenu)
 
@@ -2924,30 +2922,34 @@ class VduControlsMainPanel(QWidget):
 
         self.customContextMenuRequested.connect(open_context_menu)
 
-    def start_refresh(self) -> None:
-        self.indicate_busy()
+    def refresh_data(self):
+        # Called in a non-GUI thread, cannot do any GUI op's.
+        self.detected_vdus = self.ddcutil.detect_monitors()
+        for control_panel in self.vdu_control_panels:
+            if control_panel.controller.get_full_id() in self.detected_vdus:
+                control_panel.refresh_data()
 
-        def refresh_data():
-            # Called in a non-GUI thread, cannot do any GUI op's.
-            self.detected_vdus = self.ddcutil.detect_monitors()
+    def refresh_view(self):
+        """Invoke when the GUI worker thread completes. Runs in the GUI thread and can refresh the GUI views."""
+        if self.detected_vdus != self.previously_detected_vdus:
+            self.connected_vdus_changed.emit()
+            self.previously_detected_vdus = self.detected_vdus
+        for control_panel in self.vdu_control_panels:
+            control_panel.refresh_view()
+
+    def restore_preset_data(self, preset: Preset):
+        # Called in a non-GUI thread, cannot do any GUI op's.
+        for section in preset.preset_ini:
             for control_panel in self.vdu_control_panels:
-                if control_panel.controller.get_full_id() in self.detected_vdus:
-                    control_panel.refresh_data()
+                if section == control_panel.controller.vdu_stable_id:
+                    control_panel.restore_vdu_state(preset.preset_ini)
 
-        def refresh_view():
-            """Invoke when the GUI worker thread completes. Runs in the GUI thread and can refresh the GUI views."""
-            if self.refresh_data_task.vdu_exception is not None:
-                self.display_vdu_exception(self.refresh_data_task.vdu_exception)
-            if self.detected_vdus != self.previously_detected_vdus:
-                self.connected_vdus_changed.emit()
-                self.previously_detected_vdus = self.detected_vdus
+    def restore_preset_view(self, preset: Preset):
+        # Called in a GUI thread, can do GUI op's.
+        for section in preset.preset_ini:
             for control_panel in self.vdu_control_panels:
-                control_panel.refresh_view()
-            self.indicate_busy(False)
-            self.refresh_finished.emit()
-
-        self.refresh_data_task = WorkerThread(task_body=refresh_data, task_finished=refresh_view)
-        self.refresh_data_task.start()
+                if section == control_panel.controller.vdu_stable_id:
+                    control_panel.refresh_view()
 
     def indicate_busy(self, is_busy: bool = True):
         if self.bottom_toolbar is not None:
@@ -2956,33 +2958,6 @@ class VduControlsMainPanel(QWidget):
             self.context_menu.indicate_busy(is_busy)
         for control_panel in self.vdu_control_panels:
             control_panel.setDisabled(is_busy)
-
-    def restore_preset(self, preset: Preset) -> None:
-        # Starts the restore, but it will complete in the worker thread
-        self.indicate_busy()
-
-        def restore_preset_data():
-            # Called in a non-GUI thread, cannot do any GUI op's.
-            preset.load()
-            for section in preset.preset_ini:
-                for control_panel in self.vdu_control_panels:
-                    if section == control_panel.controller.vdu_stable_id:
-                        control_panel.restore_vdu_state(preset.preset_ini)
-
-        def restore_preset_view():
-            # Called in a GUI thread, can do GUI op's.
-            if self.restore_preset_thread.vdu_exception is not None:
-                self.display_vdu_exception(self.restore_preset_thread.vdu_exception)
-            else:
-                for section in preset.preset_ini:
-                    for control_panel in self.vdu_control_panels:
-                        if section == control_panel.controller.vdu_stable_id:
-                            control_panel.refresh_view()
-            self.indicate_busy(False)
-            self.restore_preset_finished.emit()
-
-        self.restore_preset_thread = WorkerThread(task_body=restore_preset_data, task_finished=restore_preset_view)
-        self.restore_preset_thread.start()
 
     def is_non_standard_enabled(self) -> bool:
         if self.non_standard_enabled is None:
@@ -2999,6 +2974,15 @@ class VduControlsMainPanel(QWidget):
                                     "{}".format(path, DANGER_AGREEMENT_NON_STANDARD_VCP_CODES))
                         self.non_standard_enabled = True
         return self.non_standard_enabled
+
+    def is_preset_active(self, preset: Preset) -> bool:
+        for section in preset.preset_ini:
+            if section != 'vdu_controls':
+                for control_panel in self.vdu_control_panels:
+                    if section == control_panel.controller.vdu_stable_id:
+                        if not control_panel.is_preset_active(preset.preset_ini):
+                            return False
+        return True
 
     def display_active_preset(self, preset: Preset | None):
         self.bottom_toolbar.display_active_preset(preset)
@@ -3075,24 +3059,6 @@ class PresetController:
     def save_preset(self, preset: Preset) -> None:
         preset.save()
         self.presets[preset.name] = preset
-
-    def which_preset_is_active(self, main_panel: VduControlsMainPanel) -> Preset | None:
-
-        for name, preset in self.find_presets().items():
-            if self.is_preset_active(preset, main_panel):
-                return preset
-        return None
-
-    def is_preset_active(self, preset: Preset, main_panel: VduControlsMainPanel) -> bool:
-        if preset.name not in self.presets:  # Must have been deleted
-            return False
-        for section in preset.preset_ini:
-            if section != 'vdu_controls':
-                for control_panel in main_panel.vdu_control_panels:
-                    if section == control_panel.controller.vdu_stable_id:
-                        if not control_panel.is_preset_active(preset.preset_ini):
-                            return False
-        return True
 
     def delete_preset(self, preset: Preset) -> None:
         preset.delete()
@@ -3326,8 +3292,8 @@ class QueryWeather:
                 self.country_name = self.weather_data['nearest_area'][0]['country'][0]['value']
                 self.latitude = self.weather_data['nearest_area'][0]['latitude']
                 self.longitude = self.weather_data['nearest_area'][0]['longitude']
-                self.proximity_km = calc_kilometers(float(self.latitude), float(self.longitude),
-                                                    self.location.latitude, self.location.longitude)
+                self.proximity_km = spherical_kilometers(float(self.latitude), float(self.longitude),
+                                                         self.location.latitude, self.location.longitude)
                 self.proximity_ok = self.proximity_km <= self.maximum_distance_km
                 self.query_succeeded = True
                 log_info(f"QueryWeather result: {self}")
@@ -3348,7 +3314,7 @@ class QueryWeather:
                f"location={self.latitude},{self.longitude}"
 
 
-def weather_bad_locaton_dialog(weather):
+def weather_bad_location_dialog(weather):
     kilometres = weather.proximity_km
     use_km = QLocale.system().measurementSystem() == QLocale.MetricSystem
     msg = MessageBox(QMessageBox.Warning)
@@ -3455,7 +3421,7 @@ class PresetChooseWeatherWidget(QWidget):
                 with open(vf_file_path, 'w') as vf:
                     vf.write(place_name)
             else:
-                weather_bad_locaton_dialog(weather)
+                weather_bad_location_dialog(weather)
         except ValueError as e:
             log_error(f"Failed to validate location: {e}")
             msg = MessageBox(QMessageBox.Critical)
@@ -3494,7 +3460,7 @@ class PresetChooseElevationWidget(QWidget):
     def __init__(self, location_func: Callable):
         super().__init__()
         self.elevation_key = None
-        self.elevation_time_map: Dict[SolarElevationKey, SolarElevationData] = None
+        self.elevation_time_map: Dict[SolarElevationKey, SolarElevationData] | None = None
         self.location: GeoLocation | None = None
         layout = QVBoxLayout()
         self.setLayout(layout)
@@ -3674,10 +3640,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
 
     @staticmethod
     def invoke(main_window: 'VduAppWindow', main_config: VduControlsConfig) -> None:
-        if PresetsDialog.exists():
-            PresetsDialog.show_existing_dialog()
-        else:
-            PresetsDialog(main_window, main_config)
+        PresetsDialog.show_existing_dialog() if PresetsDialog.exists() else PresetsDialog(main_window, main_config)
 
     def __init__(self, main_window: 'VduAppWindow', main_config: VduControlsConfig) -> None:
         super().__init__()
@@ -3861,7 +3824,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                         preset_ini.add_section(section)
                     preset_ini.set(section, option, value)
         preset.set_icon_path(self.edit_choose_icon_button.last_selected_icon_path)
-        elevation_ini_text = create_solar_elevation_ini_text(self.editor_trigger_widget.elevation_key)
+        elevation_ini_text = format_solar_elevation_ini_text(self.editor_trigger_widget.elevation_key)
         if elevation_ini_text is not None:
             if not preset_ini.has_section('preset'):
                 preset_ini.add_section('preset')
@@ -4228,10 +4191,7 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
 
     @staticmethod
     def invoke():
-        if AboutDialog.exists():
-            AboutDialog.show_existing_dialog()
-        else:
-            AboutDialog()
+        AboutDialog.show_existing_dialog() if AboutDialog.exists() else AboutDialog()
 
     def __init__(self):
         super().__init__()
@@ -4256,10 +4216,7 @@ class HelpDialog(QDialog, DialogSingletonMixin):
 
     @staticmethod
     def invoke():
-        if HelpDialog.exists():
-            HelpDialog.show_existing_dialog()
-        else:
-            HelpDialog()
+        HelpDialog.show_existing_dialog() if HelpDialog.exists() else HelpDialog()
 
     def __init__(self):
         super().__init__()
@@ -4312,9 +4269,10 @@ class VduAppWindow(QMainWindow):
         self.settings = QSettings('vdu_controls.qt.state', 'vdu_controls')
         self.main_control_panel = None
         self.main_config = main_config
-        self.weather_cache: QueryWeather = None
+        self.weather_cache: QueryWeather | None = None
         self.daily_schedule_next_update = datetime.today()
-        self.most_recent_preset = None
+        self.refresh_data_task = None
+        self.restore_preset_thread = None
 
         current_desktop = os.environ.get('XDG_CURRENT_DESKTOP', default='unknown')
 
@@ -4350,7 +4308,7 @@ class VduAppWindow(QMainWindow):
                                   settings_changed)
 
         def refresh_from_vdus() -> None:
-            self.main_control_panel.start_refresh()
+            self.start_refresh()
 
         def grey_scale() -> None:
             GreyScaleDialog()
@@ -4433,11 +4391,11 @@ class VduAppWindow(QMainWindow):
                     Qt.AlignTop | Qt.AlignHCenter)
 
         def vdu_settings_changed_action() -> None:
-            self.display_active_preset()
+            self.display_active_preset()  # The indicated preset may no longer be relevant.
 
         def respond_to_unix_signal(signal_number: int):
             if signal_number == signal.SIGHUP:
-                self.main_control_panel.start_refresh()
+                self.start_refresh()
             elif PRESET_SIGNAL_MIN <= signal_number <= PRESET_SIGNAL_MAX:
                 restore_preset = self.preset_controller.get_preset(signal_number - PRESET_SIGNAL_MIN)
                 if restore_preset is not None:
@@ -4460,7 +4418,6 @@ class VduAppWindow(QMainWindow):
                     # Remove any existing control panel - which may now be incorrect for the config.
                     self.main_control_panel.width()
                     self.main_control_panel.refresh_finished.disconnect(self.display_active_preset)
-                    self.main_control_panel.restore_preset_finished.disconnect(self.display_active_preset)
                     self.main_control_panel.vdu_detected.disconnect(vdu_detected_action)
                     self.main_control_panel.vdu_setting_changed.disconnect(vdu_settings_changed_action)
                     self.main_control_panel.connected_vdus_changed.disconnect(create_main_control_panel)
@@ -4468,12 +4425,11 @@ class VduAppWindow(QMainWindow):
                 self.main_control_panel = VduControlsMainPanel()
                 # Write up the signal/slots first
                 self.main_control_panel.refresh_finished.connect(self.display_active_preset)
-                self.main_control_panel.restore_preset_finished.connect(self.display_active_preset)
                 self.main_control_panel.vdu_detected.connect(vdu_detected_action)
                 self.main_control_panel.vdu_setting_changed.connect(vdu_settings_changed_action)
                 self.main_control_panel.connected_vdus_changed.connect(create_main_control_panel)
                 # Then initialise the control panel display
-                self.main_control_panel.initialise_control_panels(self.app_context_menu, main_config)
+                self.main_control_panel.initialise_control_panels(self.app_context_menu, main_config, self.start_refresh)
                 self.main_control_panel.indicate_busy(True)
                 self.setCentralWidget(self.main_control_panel)
                 self.setMinimumWidth(existing_width)
@@ -4534,15 +4490,49 @@ class VduAppWindow(QMainWindow):
             # Stops the release notes from being repeated.
             main_config.write_file(get_config_path('vdu_controls'), overwrite=True)
 
-    def restore_preset(self, preset: Preset) -> bool:
+    def start_refresh(self) -> None:
+        self.main_control_panel.indicate_busy()
+
+        def refresh_data():
+            # Called in a non-GUI thread, cannot do any GUI op's.
+            self.main_control_panel.refresh_data()
+
+        def refresh_view():
+            """Invoke when the GUI worker thread completes. Runs in the GUI thread and can refresh the GUI views."""
+            if self.refresh_data_task.vdu_exception is not None:
+                self.display_vdu_exception(self.refresh_data_task.vdu_exception)
+            self.main_control_panel.refresh_view()
+            self.main_control_panel.indicate_busy(False)
+            self.display_active_preset()
+
+        self.refresh_data_task = WorkerThread(task_body=refresh_data, task_finished=refresh_view)
+        self.refresh_data_task.start()
+
+    def restore_preset(self, preset: Preset) -> None:
         log_info(f"Preset changing to {preset.name}")
-        try:
-            self.most_recent_preset = preset
-            self.main_control_panel.restore_preset(preset)
-        except VduException as e:
-            log_warning(f"Abandoned restore of Preset {preset.name} due to: {e}")
-            return False
-        return True
+
+        # Starts the restore, but it will complete in the worker thread
+        self.main_control_panel.indicate_busy()
+
+        def restore_preset_data():
+            # Called in a non-GUI thread, cannot do any GUI op's.
+            preset.load()
+            self.main_control_panel.restore_preset_data(preset)
+
+        def restore_preset_view():
+            # Called in a GUI thread, can do GUI op's.
+            if self.restore_preset_thread.vdu_exception is not None:
+                self.main_control_panel.display_vdu_exception(self.restore_preset_thread.vdu_exception)
+                self.display_active_preset()
+            else:
+                self.main_control_panel.restore_preset_view(preset)
+                self.display_active_preset(preset)
+            self.main_control_panel.indicate_busy(False)
+            with open(PRESET_NAME_FILE, 'w') as cps_file:
+                cps_file.write(preset.name)
+
+        self.restore_preset_thread = WorkerThread(task_body=restore_preset_data, task_finished=restore_preset_view)
+        self.restore_preset_thread.start()
 
     def restore_named_preset(self, preset_name: str) -> None:
         presets = self.preset_controller.find_presets()
@@ -4555,7 +4545,6 @@ class VduAppWindow(QMainWindow):
         self.preset_controller.save_preset(preset)
         if not self.app_context_menu.has_preset_menu_action(preset.name):
             self.app_context_menu.insert_preset_menu_action(preset)
-        self.most_recent_preset = preset
         self.display_active_preset()
         preset.remove_elevation_trigger()
         self.schedule_presets()
@@ -4565,21 +4554,37 @@ class VduAppWindow(QMainWindow):
             control_panel.copy_state(preset_ini, update_only)
 
     def delete_preset(self, preset: Preset) -> None:
-        if preset == self.most_recent_preset:
-            self.most_recent_preset = None
-            self.display_active_preset()
         self.preset_controller.delete_preset(preset)
         if self.app_context_menu.has_preset_menu_action(preset.name):
             self.app_context_menu.remove_preset_menu_action(preset)
+        self.display_active_preset()
 
-    def display_active_preset(self) -> None:
-        if self.most_recent_preset is not None and self.preset_controller.is_preset_active(self.most_recent_preset,
-                                                                                           self.main_control_panel):
-            preset = self.most_recent_preset
+    def which_preset_is_active(self) -> Preset | None:
+        # See if we have a record of which was last active, and see if it still is active
+        if PRESET_NAME_FILE.exists():
+            with open(PRESET_NAME_FILE, 'r') as cps_file:
+                preset_name = cps_file.read()
+                if preset_name.strip() != '':
+                    preset = self.preset_controller.presets.get(preset_name)  # will be None if it has been deleted
+                    if preset is not None and self.main_control_panel.is_preset_active(preset):
+                        return preset
+        # Guess by testing each possible preset against the current VDU settings
+        for name, preset in self.preset_controller.find_presets().items():
+            if self.main_control_panel.is_preset_active(preset):
+                return preset
+        return None
+
+    def display_active_preset(self, preset=None) -> None:
+        if preset is None:
+            preset = self.which_preset_is_active()
+        if preset is None:
+            self.main_control_panel.display_active_preset(None)
+            self.setWindowTitle("")
+            self.setWindowIcon(self.app_icon)
+            if self.tray:
+                self.tray.setToolTip(f"{self.app_name}")
+                self.tray.setIcon(self.app_icon)
         else:
-            preset = self.preset_controller.which_preset_is_active(self.main_control_panel)  # Match against VDU settings
-            self.most_recent_preset = preset
-        if preset is not None:
             self.main_control_panel.display_active_preset(preset)
             if self.windowTitle() != preset.name:  # No need to change, already set correctly - prevent flashing during startup
                 self.setWindowTitle(preset.name)
@@ -4588,14 +4593,6 @@ class VduAppWindow(QMainWindow):
                 if self.tray:
                     self.tray.setToolTip(f"{preset.name} {PRESET_APP_SEPARATOR_SYMBOL} {self.app_name}")
                     self.tray.setIcon(icon)
-        else:
-            self.main_control_panel.display_active_preset(None)
-            self.setWindowTitle("")
-            self.setWindowIcon(self.app_icon)
-            if self.tray:
-                self.tray.setToolTip(f"{self.app_name}")
-                self.tray.setIcon(self.app_icon)
-        self.displayed_preset_name = preset.name if preset else None
         self.app_context_menu.refresh_preset_menu()
 
     def closeEvent(self, event):
@@ -4629,11 +4626,11 @@ class VduAppWindow(QMainWindow):
             self.main_control_panel.display_active_preset(self.most_recent_preset)
         return super().event(event)
 
-    def schedule_presets(self, reset: bool = False) -> Preset:
+    def schedule_presets(self, reset: bool = False) -> Preset | None:
         # As well as scheduling, this method finds and returns the preset that should be applied at this time.
         location = self.main_config.get_location()
         if location is None:
-            return
+            return None
         log_info(f"Scheduling presets reset={reset}")
         time_map = create_todays_elevation_time_map(latitude=location.latitude, longitude=location.longitude)
         most_recent_overdue = None
@@ -4690,12 +4687,9 @@ class VduAppWindow(QMainWindow):
                 weather_text = f"({self.weather_cache.weather_desc})"
         if proceed:
             log_info(f"Preset {preset.name} activating according the schedule at {now}")
-            if self.restore_preset(preset):
-                preset.schedule_status = ScheduleStatus.succeeded
-                status_text = tr("Preset {} activating on schedule at {}").format(preset.name, now.isoformat(' ', 'seconds'))
-            else:
-                preset.schedule_status = ScheduleStatus.skipped_superseded
-                status_text = None  # Cannot issue message - may tread on following message from a more recent preset activation.
+            self.restore_preset(preset)  # Happens asynchronously in a thread
+            preset.schedule_status = ScheduleStatus.succeeded  # Schedule succeeded (restore thread might still not succeed though)
+            status_text = tr("Preset {} activating on schedule at {}").format(preset.name, now.isoformat(' ', 'seconds'))
         presets_dialog = PresetsDialog.get_instance()
         if presets_dialog:
             presets_dialog.refresh_view()
@@ -4711,7 +4705,7 @@ class VduAppWindow(QMainWindow):
                     if not self.weather_cache.proximity_ok:
                         log_error(f"Preset {preset.name} weather location is {self.weather_cache.proximity_km} km from "
                                   f"Settings Location, check settings.")
-                        weather_bad_locaton_dialog(self.weather_cache)
+                        weather_bad_location_dialog(self.weather_cache)
                 if not preset.check_weather(self.weather_cache):
                     preset.schedule_status = ScheduleStatus.weather_cancellation
                     return False
@@ -4857,7 +4851,7 @@ def calc_solar_azimuth_zenith(localised_time: datetime, latitude: float, longitu
 
 # Spherical distance from
 # https://stackoverflow.com/a/21623206/609575
-def calc_kilometers(lat1, lon1, lat2, lon2):
+def spherical_kilometers(lat1, lon1, lat2, lon2):
     p = math.pi / 180
     a = 0.5 - math.cos((lat2 - lat1) * p) / 2 + math.cos(lat1 * p) * math.cos(lat2 * p) * (
             1 - math.cos((lon2 - lon1) * p)) / 2
@@ -4883,7 +4877,7 @@ def create_todays_elevation_time_map(latitude: float, longitude: float) -> Dict[
     return elevation_time_map
 
 
-def find_locale_specific_file(filename_template: str) -> Path:
+def find_locale_specific_file(filename_template: str) -> Path | None:
     locale_name = QLocale.system().name()
     filename = filename_template.format(locale_name)
     for path in LOCALE_TRANSLATIONS_PATHS:
@@ -4898,7 +4892,7 @@ translator: QTranslator | None = None
 ts_translations: Mapping[str, str] = {}
 
 
-def initialise_locale_translations(app: QApplication) -> QTranslator:
+def initialise_locale_translations(app: QApplication):
     # Has to be put somewhere it won't be garbage collected when this function goes out of scope.
     global translator
     translator = QTranslator()
