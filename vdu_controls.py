@@ -2172,8 +2172,8 @@ class VduControlSlider(VduControlBase):
         """Construct the slider control and initialize its values from the VDU."""
         super().__init__(controller, vcp_capability)
 
-        self.current_value_str: str | None = None
-        self.max_value_str: str | None = None
+        self.current_value: str | None = None
+        self.max_value: str | None = None
 
         layout = QHBoxLayout()
         self.setLayout(layout)
@@ -2216,9 +2216,9 @@ class VduControlSlider(VduControlBase):
         layout.addWidget(self.spinbox)
 
         def slider_changed(value: int) -> None:
-            self.current_value_str = str(value)
+            self.current_value = str(value)
             self.spinbox.setValue(value)
-            self.ui_change_vdu_attribute(self.current_value_str)
+            self.ui_change_vdu_attribute(self.current_value)
 
         slider.valueChanged.connect(slider_changed)
 
@@ -2233,16 +2233,16 @@ class VduControlSlider(VduControlBase):
         for i in range(SLIDER_REFRESH_RETRIES):
             try:
                 new_value_str, max_value_str = value if value is not None else self.controller.get_attribute(self.vcp_capability.vcp_code)
-                if self.max_value_str is None:
+                if self.max_value is None:
                     # Validate as integer
                     _, int_max = int(new_value_str), int(max_value_str)
-                    self.current_value_str, self.max_value_str = new_value_str, max_value_str
+                    self.current_value, self.max_value = new_value_str, max_value_str
                     if len(self.range_restriction) == 0:
                         self.spinbox.setRange(0, int_max)
                         self.slider.setRange(0, int_max)
                 else:
                     int(new_value_str)
-                    self.current_value_str = new_value_str
+                    self.current_value = new_value_str
                 return
             except ValueError:
                 # Might be initializing at login - can cause transient errors due to X11 talking to
@@ -2261,9 +2261,9 @@ class VduControlSlider(VduControlBase):
 
     def refresh_view(self) -> None:
         """Copy the internally cached current value onto the GUI view."""
-        if self.current_value_str is not None:
+        if self.current_value is not None:
             with VduControlBase.VduUptodate(self):  # The with stops the set from causing us to do further unneeded ddcutil calls.
-                self.slider.setValue(int(self.current_value_str))
+                self.slider.setValue(int(self.current_value))
 
     def event(self, event: QEvent) -> bool:
         # PalletChange happens after the new style sheet is in use.
@@ -2431,20 +2431,20 @@ class VduControlPanel(QWidget):
             preset_ini.add_section(vdu_section_name)
         for control in self.vcp_controls:
             if not update_only or preset_ini.has_option(vdu_section_name, control.vcp_capability.property_name()):
-                preset_ini[vdu_section_name][control.vcp_capability.property_name()] = control.current_value_str
+                preset_ini[vdu_section_name][control.vcp_capability.property_name()] = control.current_value
 
     def restore_vdu_state(self, preset_ini: ConfigIni) -> None:
         log_info(f"Preset restoring {self.controller.vdu_stable_id}")
         for control in self.vcp_controls:
             if control.vcp_capability.property_name() in preset_ini[self.controller.vdu_stable_id]:
-                control.current_value_str = preset_ini[self.controller.vdu_stable_id][control.vcp_capability.property_name()]
-                control.restore_vdu_attribute(control.current_value_str)
+                control.current_value = preset_ini[self.controller.vdu_stable_id][control.vcp_capability.property_name()]
+                control.restore_vdu_attribute(control.current_value)
 
     def is_preset_active(self, preset_ini: ConfigIni) -> bool:
         vdu_section = self.controller.vdu_stable_id
         for control in self.vcp_controls:
             if control.vcp_capability.property_name() in preset_ini[vdu_section]:
-                if control.current_value_str != preset_ini[vdu_section][control.vcp_capability.property_name()]:
+                if control.current_value != preset_ini[vdu_section][control.vcp_capability.property_name()]:
                     return False
         return True
 
