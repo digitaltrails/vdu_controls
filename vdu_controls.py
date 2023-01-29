@@ -4081,7 +4081,7 @@ def install_as_desktop_application(uninstall: bool = False):
         log_info(f"creating {icon_path.as_posix()}")
         get_splash_image().save(icon_path.as_posix())
 
-    log_info('INFO: installation complete. Your desktop->applications->settings should now contain VDU Controls')
+    log_info('Installation complete. Your desktop->applications->settings should now contain VDU Controls')
 
 
 class GreyScaleDialog(QDialog):
