@@ -49,6 +49,9 @@ def main():
     if "--display" in sys.argv:
         display_num = sys.argv[sys.argv.index("--display") + 1]
 
+    if "--edid" in sys.argv:
+        display_num = sys.argv[sys.argv.index("--edid") + 1][:20]
+
     if "detect" in sys.argv:
         answer_path = BASE_PATH / SIMULATOR_DATA_DIR / ANSWER_LINK / 'detect'
         print(f"answer_path={answer_path}")
@@ -62,7 +65,7 @@ def main():
     elif "setvcp" in sys.argv:
         pass
     elif "getvcp" in sys.argv:
-        vcp_code = "_".join(sys.argv[sys.argv.index("getvcp") + 1:])
+        vcp_code = "_".join(sys.argv[sys.argv.index("getvcp") + 1:-2])
         answer_path = BASE_PATH / SIMULATOR_DATA_DIR / ANSWER_LINK / f'getvcp_{display_num}_{vcp_code}'
         print(f"answer_path={answer_path}")
         with open(answer_path, 'r') as answer_file:
