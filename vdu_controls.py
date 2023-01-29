@@ -914,6 +914,9 @@ class DdcUtil:
         self.default_sleep_multiplier = default_sleep_multiplier
         self.common_args = [] if common_args is None else common_args
         self.vcp_type_map = {}
+        self.use_edid = os.getenv('VDU_CONTROLS_USE_EDID', default="yes") == 'yes'
+        log_info(f"use_edid={self.use_edid} (to disable it: export VDU_CONTROLS_USE_EDID=no)")
+        self.edid_map = {}
 
     def change_settings(self, debug: bool, default_sleep_multiplier: float):
         self.debug = debug
@@ -921,36 +924,41 @@ class DdcUtil:
 
     def __run__(self, *args, sleep_multiplier: float = None) -> subprocess.CompletedProcess:
         if self.debug:
-            log_debug("subprocess run    - ", DDCUTIL, args)
+            log_debug("subprocess run    - ", DDCUTIL, [a if len(a) < 30 else a[:30] + "..." for a in args])
         multiplier_str = str(self.default_sleep_multiplier if sleep_multiplier is None else sleep_multiplier)
         result = subprocess.run(
             [DDCUTIL, '--sleep-multiplier', multiplier_str] + self.common_args + list(args),
             stdout=subprocess.PIPE, check=True)
         if self.debug:
-            log_debug("subprocess result - ", result)
+            log_debug("subprocess result - ", [a if len(a) < 30 else a[:30] + "..." for a in result.args],
+                      f"rc={result.returncode}", f"stdout={result.stdout}")
         return result
 
     def detect_monitors(self) -> List[Tuple[str, str, str, str]]:
         """Return a list of (vdu_id, desc) tuples."""
         display_list = []
-        result = self.__run__('detect')
+        result = self.__run__('detect', '--verbose')
         # Going to get rid of anything that is not a-z A-Z 0-9 as potential rubbish
         rubbish = re.compile('[^a-zA-Z0-9]+')
         # This isn't efficient, it doesn't need to be, so I'm keeping re-defs close to where they are used.
         key_prospects = {}
         for display_str in re.split("\n\n", result.stdout.decode('utf-8')):
-            display_match = re.search('Display ([0-9]+)', display_str)
+            display_match = re.search(r'Display ([0-9]+)', display_str)
             if display_match is not None:
                 vdu_id = display_match.group(1)
                 log_info(f"checking possible ID's for display {vdu_id}")
-                fields = {m.group(1).strip(): m.group(2).strip() for m in re.finditer('[ \t]*([^:\n]+):[ \t]+([^\n]*)',
-                                                                                      display_str)}
+                fields = {fm.group(1).strip(): fm.group(2).strip() for fm in re.finditer(r'[ \t]*([^:\n]+):[ \t]+([^\n]*)',
+                                                                                         display_str)}
                 model_name = rubbish.sub('_', fields.get('Model', 'unknown_model'))
                 manufacturer = rubbish.sub('_', fields.get('Mfg id', 'unknown_mfg'))
                 serial_number = rubbish.sub('_', fields.get('Serial number', ''))
                 bin_serial_number = rubbish.sub('_', fields.get('Binary serial number', '').split('(')[0].strip())
                 man_date = rubbish.sub('_', fields.get('Manufacture year', ''))
                 i2c_bus_id = fields.get('I2C bus', '').replace("/dev/", '').replace("-", "_")
+                if self.use_edid:
+                    edid = self.parse_edid(display_str)
+                    if edid and edid not in self.edid_map.values():
+                        self.edid_map[vdu_id] = edid
                 for candidate in serial_number, bin_serial_number, man_date, i2c_bus_id, f"DisplayNum{vdu_id}":
                     if candidate.strip() != '':
                         possibly_unique = (model_name, candidate)
@@ -981,9 +989,21 @@ class DdcUtil:
         # display_list.append(("3", "maker_y", "model_z", "1234"))
         return display_list
 
+    def parse_edid(self, display_str: str) -> str:
+        edid_match = re.search(r'EDID hex dump:\n[^\n]+(\n([ \t]+[+]0).+)+', display_str)
+        if edid_match:
+            edid = "".join([part for part in re.findall(r'((?: [0-9a-f][0-9a-f]){16})', edid_match.group(0))])
+            edid = edid.replace(' ', '')
+            log_info(f"EDID={edid}") if self.debug else None
+            return edid
+        return None
+
     def query_capabilities(self, vdu_id: str) -> str:
         """Return a vpc capabilities string."""
-        result = self.__run__('--display', vdu_id, 'capabilities')
+        if vdu_id in self.edid_map:
+            result = self.__run__('capabilities', '--edid', self.edid_map[vdu_id])
+        else:
+            result = self.__run__('capabilities', '--display', vdu_id)
         capability_text = result.stdout.decode('utf-8')
         return capability_text
 
@@ -1008,7 +1028,10 @@ class DdcUtil:
         """Send a new value to a specific VDU and vcp_code."""
         if self.get_type(vcp_code) == COMPLEX_NON_CONTINUOUS_TYPE:
             new_value = 'x' + new_value
-        self.__run__('--display', vdu_id, 'setvcp', vcp_code, new_value, sleep_multiplier=sleep_multiplier)
+        if vdu_id in self.edid_map:
+            self.__run__('setvcp', vcp_code, new_value, '--edid', self.edid_map[vdu_id], sleep_multiplier=sleep_multiplier)
+        else:
+            self.__run__('setvcp', vcp_code, new_value, '--display', vdu_id, sleep_multiplier=sleep_multiplier)
 
     def vcp_info(self) -> str:
         """Returns info about all codes known to ddcutil, whether supported or not."""
@@ -1039,7 +1062,10 @@ class DdcUtil:
         # Try a few times in case there is a glitch due to a monitor being turned-off/on or slow to respond
         # Should we loop here, or higher up - maybe it doesn't matter.
         for i in range(GET_ATTRIBUTES_RETRIES):
-            args = ['--brief', '--display', vdu_id, 'getvcp'] + vcp_code_list
+            if vdu_id in self.edid_map:
+                args = ['--brief', 'getvcp'] + vcp_code_list + ['--edid', self.edid_map[vdu_id]]
+            else:
+                args = ['--brief', 'getvcp'] + vcp_code_list + ['--display', vdu_id]
             try:
                 result = self.__run__(*args, sleep_multiplier=sleep_multiplier)
                 vcp_regexp = re.compile(r"^VCP ([0-9A-F]{2}) ")
@@ -4191,10 +4217,8 @@ class VduAppWindow(QMainWindow):
         self.detected_vdu_list = []
         self.vdu_controllers = []
         self.previously_detected_vdu_list = []
-        
-        ddcutil_common_args = ['--force', ] if self.is_non_standard_enabled() else []
-        self.ddcutil = DdcUtil(debug=self.main_config.is_debug_enabled(), common_args=ddcutil_common_args,
-                               default_sleep_multiplier=self.main_config.get_sleep_multiplier())
+
+        self.ddcutil = None
 
         current_desktop = os.environ.get('XDG_CURRENT_DESKTOP', default='unknown')
 
@@ -4385,6 +4409,9 @@ class VduAppWindow(QMainWindow):
     def create_controllers(self) -> None:
         ddcutil_problem = None
         try:
+            ddcutil_common_args = ['--force', ] if self.is_non_standard_enabled() else []
+            self.ddcutil = DdcUtil(debug=self.main_config.is_debug_enabled(), common_args=ddcutil_common_args,
+                                   default_sleep_multiplier=self.main_config.get_sleep_multiplier())
             self.detected_vdu_list = self.ddcutil.detect_monitors()
             log_info("Detecting connected monitors, looping detection until it stabilises.")
             # Loop in case the session is initialising/restoring which can make detection unreliable.
@@ -4397,7 +4424,7 @@ class VduAppWindow(QMainWindow):
                     log_info(f"Number of detected monitors is stable at {len(self.detected_vdu_list)} (loop={i})")
                     break
                 log_info(f"Number of detected monitors changed from {prev_num} to {len(self.detected_vdu_list)} (loop={i})")
-        except Exception as e:
+        except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
             log_error(e)
             ddcutil_problem = e
         self.previously_detected_vdu_list = self.detected_vdu_list
@@ -4409,8 +4436,9 @@ class VduAppWindow(QMainWindow):
                 try:
                     controller = VduController(vdu_id, vdu_model_name, vdu_serial, manufacturer, self.main_config,
                                                self.ddcutil, self.main_panel.display_vdu_exception)
-                except (re.error, ValueError, OSError):  # TODO figure out other possible Exceptions:
+                except (subprocess.SubprocessError, ValueError, re.error,  OSError):  # TODO figure out other possible Exceptions:
                     # Catch any kind of parse related error
+                    log_error(e)
                     no_auto = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Ignore | QMessageBox.Apply | QMessageBox.Retry)
                     no_auto.setText(
                         tr('Failed to obtain capabilities for monitor {} {} {}.').format(vdu_id, vdu_model_name, vdu_serial))
