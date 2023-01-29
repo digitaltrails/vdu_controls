@@ -2221,8 +2221,20 @@ class VduControlSlider(VduControlBase):
 
         slider.valueChanged.connect(slider_changed)
 
+        self.sliding = False  # Stop the controls from circular feedback and from triggering self.ui_change_vdu_attribute()
+
+        def slider_moved(value: int) -> None:
+            try:
+                self.sliding = True
+                self.spinbox.setValue(value)
+            finally:
+                self.sliding = False
+
+        slider.sliderMoved.connect(slider_moved)
+
         def spinbox_value_changed() -> None:
-            slider.setValue(self.spinbox.value())
+            if not self.sliding:
+                slider.setValue(self.spinbox.value())
 
         self.spinbox.valueChanged.connect(spinbox_value_changed)
 
