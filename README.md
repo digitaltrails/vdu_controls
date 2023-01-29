@@ -242,6 +242,7 @@ Version History
   * The main panel progress-bar spinner will now also display during preset-activation (in addition to displaying during refresh).
   * Refresh and preset controls now lock during refresh and preset-activation (to prevent conflicting actions).
   * The context menu and hamburger menu are now available during refresh (a subset of actions is available, such as help and about).
+  * The VDU `EDID` 128/256 byte identifier is now used internally to ensure the controls operate on the correct monitor.
   * Build changes for submission to _OpenSUSE_  _Development_ and _Factory_ by @malcolmlewis.
   * The thread handling and error handling has been cleaned up.
 * 1.9.0

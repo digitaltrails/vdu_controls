@@ -3,7 +3,7 @@ Wed 25 Jan 2023 23:08:56 UTC - Michael Hamilton <michael@actrix.gen.nz>
 
 - Updated to version 1.9.1
   * Busy spinners and control lockouts applied during refresh and
-    preset activation.  Introducing SpinBox input fields.
+    preset activation.  Introducing SpinBox input fields. Use EDID.
 
 -------------------------------------------------------------------
 Mon Jan 23 02:39:53 UTC 2023 - malcolmlewis@opensuse.org
