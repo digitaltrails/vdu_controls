@@ -2815,7 +2815,7 @@ class VduControlsMainPanel(QWidget):
 
     def initialise_control_panels(self, app_context_menu: ContextMenu, main_config: VduControlsConfig,
                                   vdu_controllers: List[VduController],
-                                  start_refresh_func: Callable):
+                                  start_refresh_func: Callable, splash_message_signal: pyqtSignal):
 
         self.vdu_controllers = vdu_controllers
 
@@ -2839,6 +2839,7 @@ class VduControlsMainPanel(QWidget):
         warnings_enabled = main_config.are_warnings_enabled()
 
         for controller in self.vdu_controllers:
+            splash_message_signal.emit(f"DDC ID {controller.vdu_id}\n{controller.get_vdu_description()}")
             vdu_control_panel = VduControlPanel(controller, warnings_enabled, self.display_vdu_exception)
             vdu_control_panel.connected_vdus_changed.connect(self.connected_vdus_changed)
             controller.vdu_setting_changed.connect(self.vdu_setting_changed)
@@ -4192,7 +4193,7 @@ class ScheduleStatus(Enum):
 
 
 class VduAppWindow(QMainWindow):
-    splash_vdu_detected = pyqtSignal(VduController)
+    splash_message_signal = pyqtSignal(str)
 
     def __init__(self, main_config: VduControlsConfig, app: QApplication):
         super().__init__()
@@ -4325,12 +4326,11 @@ class VduAppWindow(QMainWindow):
             splash.showMessage(tr('\n\nVDU Controls\nLooking for DDC monitors...\n'),
                                Qt.AlignTop | Qt.AlignHCenter)
 
-        def splash_vdu_detected_action(vdu: VduController) -> None:
+        def splash_message_action(message) -> None:
             if splash is not None:
-                log_info(f"Splash {vdu.vdu_id} {vdu.get_vdu_description()}")
+                log_info(f"Splash {message}")
                 splash.showMessage(
-                    tr('\n\nVDU Controls {}\nDDC ID {}\n{}').format(VDU_CONTROLS_VERSION,
-                                                                    vdu.vdu_id, vdu.get_vdu_description()),
+                    f"\n\nVDU Controls {VDU_CONTROLS_VERSION}\n{message}",
                     Qt.AlignTop | Qt.AlignHCenter)
 
         def respond_to_unix_signal(signal_number: int):
@@ -4347,7 +4347,7 @@ class VduAppWindow(QMainWindow):
         global signal_wakeup_handler
         signal_wakeup_handler.signalReceived.connect(respond_to_unix_signal)
 
-        self.splash_vdu_detected.connect(splash_vdu_detected_action)
+        self.splash_message_signal.connect(splash_message_action)
 
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         self.create_main_control_panel()
@@ -4385,6 +4385,7 @@ class VduAppWindow(QMainWindow):
             # Start of run - this preset is the one that should be running now
             log_info(f"Restoring preset {overdue.name} "
                      f"because its scheduled to be active at this time ({zoned_now()}).")
+            self.splash_message_signal.emit(tr("Restoring Preset\n{}").format(overdue.name))
             # Weather check will have succeeded inside schedule_presets() above, don't do it again.
             self.activate_scheduled_preset(overdue, check_weather=False)
 
@@ -4470,7 +4471,6 @@ class VduAppWindow(QMainWindow):
                 break
             if controller is not None:
                 self.vdu_controllers.append(controller)
-                self.splash_vdu_detected.emit(controller)
         if len(self.vdu_controllers) == 0:
             if self.main_config.are_warnings_enabled():
                 error_no_monitors = MessageBox(QMessageBox.Critical)
@@ -4503,10 +4503,12 @@ class VduAppWindow(QMainWindow):
             # Then initialise the control panel display
             self.create_controllers()
             self.main_panel.initialise_control_panels(self.app_context_menu, self.main_config,
-                                                      self.vdu_controllers, self.start_refresh)
+                                                      self.vdu_controllers, self.start_refresh, self.splash_message_signal)
             self.main_panel.indicate_busy(True)
             self.setCentralWidget(self.main_panel)
             self.setMinimumWidth(existing_width)
+            self.splash_message_signal.emit(
+                "Reticulating Splines" if self.main_config.is_debug_enabled() else tr("Checking Presets"))
             self.display_active_preset()
         finally:
             self.main_panel.indicate_busy(False)
