@@ -2603,12 +2603,12 @@ class Preset:
             f"{self.get_solar_elevation()}")
 
     def remove_elevation_trigger(self):
-        log_info(f"Preset elevation trigger removed for '{self.name}'")
         if self.timer:
             log_info(f"Preset timer stopped for '{self.name}'")
             self.timer.stop()
             self.timer = None
-        if self.elevation_time_today:
+        if self.elevation_time_today is not None:
+            log_info(f"Preset elevation time cleared for '{self.name}'")
             self.elevation_time_today = None
         self.schedule_status = ScheduleStatus.unscheduled
 
