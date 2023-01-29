@@ -922,16 +922,22 @@ class DdcUtil:
         self.debug = debug
         self.default_sleep_multiplier = default_sleep_multiplier
 
+    def id_key_args(self, display_id: str) -> List[str, str]:
+        if display_id in self.edid_map:
+            return ['--edid', self.edid_map[display_id]]
+        return ['--display', display_id]
+
     def __run__(self, *args, sleep_multiplier: float = None) -> subprocess.CompletedProcess:
-        if self.debug:
-            log_debug("subprocess run    - ", DDCUTIL, [a if len(a) < 30 else a[:30] + "..." for a in args])
         multiplier_str = str(self.default_sleep_multiplier if sleep_multiplier is None else sleep_multiplier)
-        result = subprocess.run(
-            [DDCUTIL, '--sleep-multiplier', multiplier_str] + self.common_args + list(args),
-            stdout=subprocess.PIPE, check=True)
-        if self.debug:
-            log_debug("subprocess result - ", [a if len(a) < 30 else a[:30] + "..." for a in result.args],
-                      f"rc={result.returncode}", f"stdout={result.stdout}")
+        process_args = [DDCUTIL, '--sleep-multiplier', multiplier_str] + self.common_args + list(args)
+        try:
+            result = subprocess.run(process_args, stdout=subprocess.PIPE, check=True)
+            if self.debug:  # Shorten EDID to 30 characters when logging it (it will be the only long argument)
+                log_debug("subprocess result: ", [arg if len(arg) < 30 else arg[:30] + "..." for arg in result.args],
+                          f"rc={result.returncode}", f"stdout={result.stdout}")
+        except Exception as e:  # Shorten EDID (see similar above)
+            log_error("subprocess result: ", [arg if len(arg) < 30 else arg[:30] + "..." for arg in process_args], f"exception={e}")
+            raise
         return result
 
     def detect_monitors(self) -> List[Tuple[str, str, str, str]]:
@@ -957,7 +963,8 @@ class DdcUtil:
                 i2c_bus_id = fields.get('I2C bus', '').replace("/dev/", '').replace("-", "_")
                 if self.use_edid:
                     edid = self.parse_edid(display_str)
-                    if edid and edid not in self.edid_map.values():
+                    # check for duplicate edid, any duplicate will use the display Num
+                    if edid is not None and edid not in self.edid_map.values():
                         self.edid_map[vdu_id] = edid
                 for candidate in serial_number, bin_serial_number, man_date, i2c_bus_id, f"DisplayNum{vdu_id}":
                     if candidate.strip() != '':
@@ -989,21 +996,17 @@ class DdcUtil:
         # display_list.append(("3", "maker_y", "model_z", "1234"))
         return display_list
 
-    def parse_edid(self, display_str: str) -> str:
+    def parse_edid(self, display_str: str) -> str | None:
         edid_match = re.search(r'EDID hex dump:\n[^\n]+(\n([ \t]+[+]0).+)+', display_str)
         if edid_match:
-            edid = "".join([part for part in re.findall(r'((?: [0-9a-f][0-9a-f]){16})', edid_match.group(0))])
-            edid = edid.replace(' ', '')
+            edid = "".join([part for part in re.findall(r'((?: [0-9a-f][0-9a-f]){16})', edid_match.group(0))]).replace(' ', '')
             log_info(f"EDID={edid}") if self.debug else None
             return edid
         return None
 
     def query_capabilities(self, vdu_id: str) -> str:
         """Return a vpc capabilities string."""
-        if vdu_id in self.edid_map:
-            result = self.__run__('capabilities', '--edid', self.edid_map[vdu_id])
-        else:
-            result = self.__run__('capabilities', '--display', vdu_id)
+        result = self.__run__(*['capabilities'] + self.id_key_args(vdu_id))
         capability_text = result.stdout.decode('utf-8')
         return capability_text
 
@@ -1018,7 +1021,7 @@ class DdcUtil:
         attributes with "Continuous" values have a maximum, for consistency the method will return a zero maximum
         for "Non-Continuous" attributes.
         """
-        result = self.get_attributes(vdu_id, [vcp_code], sleep_multiplier)[0]
+        result = self.get_attributes(vdu_id, [vcp_code], sleep_multiplier=sleep_multiplier)[0]
         if result is not None:
             return result
         raise ValueError(
@@ -1028,16 +1031,13 @@ class DdcUtil:
         """Send a new value to a specific VDU and vcp_code."""
         if self.get_type(vcp_code) == COMPLEX_NON_CONTINUOUS_TYPE:
             new_value = 'x' + new_value
-        if vdu_id in self.edid_map:
-            self.__run__('setvcp', vcp_code, new_value, '--edid', self.edid_map[vdu_id], sleep_multiplier=sleep_multiplier)
-        else:
-            self.__run__('setvcp', vcp_code, new_value, '--display', vdu_id, sleep_multiplier=sleep_multiplier)
+        self.__run__(*['setvcp', vcp_code, new_value] + self.id_key_args(vdu_id), sleep_multiplier=sleep_multiplier)
 
     def vcp_info(self) -> str:
         """Returns info about all codes known to ddcutil, whether supported or not."""
         return self.__run__('--verbose', 'vcpinfo').stdout.decode('utf-8')
 
-    def get_supported_vcp_codes(self) -> Mapping[str, str]:
+    def get_supported_vcp_codes(self) -> Dict[str, str]:
         """Returns a map of descriptions keyed by vcp_code, the codes that ddcutil appears to support."""
         if self.supported_codes is not None:
             return self.supported_codes
@@ -1062,10 +1062,7 @@ class DdcUtil:
         # Try a few times in case there is a glitch due to a monitor being turned-off/on or slow to respond
         # Should we loop here, or higher up - maybe it doesn't matter.
         for i in range(GET_ATTRIBUTES_RETRIES):
-            if vdu_id in self.edid_map:
-                args = ['--brief', 'getvcp'] + vcp_code_list + ['--edid', self.edid_map[vdu_id]]
-            else:
-                args = ['--brief', 'getvcp'] + vcp_code_list + ['--display', vdu_id]
+            args = ['--brief', 'getvcp'] + vcp_code_list + self.id_key_args(vdu_id)
             try:
                 result = self.__run__(*args, sleep_multiplier=sleep_multiplier)
                 vcp_regexp = re.compile(r"^VCP ([0-9A-F]{2}) ")
@@ -1373,7 +1370,7 @@ class VduControlsConfig:
             return self.config_type_map[option]
         return 'boolean'
 
-    def restrict_to_actual_capabilities(self, vdu_capabilities: Mapping[str, VcpCapability]) -> None:
+    def restrict_to_actual_capabilities(self, vdu_capabilities: Dict[str, VcpCapability]) -> None:
         for option in self.ini_content['vdu-controls-widgets']:
             if self.get_config_type('vdu-controls-widgets', option) == 'boolean':
                 if option in VDU_SUPPORTED_CONTROLS.by_arg_name and \
@@ -1684,7 +1681,7 @@ class VduController(QObject):
             raise VduException(vdu_description=self.get_vdu_description(), vcp_code=vcp_code, exception=e,
                                operation="set_attribute")
 
-    def _parse_capabilities(self, capabilities_text=None) -> Mapping[str, VcpCapability]:
+    def _parse_capabilities(self, capabilities_text=None) -> Dict[str, VcpCapability]:
         """Return a map of vpc capabilities keyed by vcp code."""
 
         def parse_values(values_str: str) -> List[str]:
@@ -2966,7 +2963,7 @@ class PresetController:
         self.presets = {}
         pass
 
-    def find_presets(self) -> Mapping[str, Preset]:
+    def find_presets(self) -> Dict[str, Preset]:
         presets_still_present = []
         # Use a stable order for the files - alphabetical filename.
         for path_str in sorted(glob.glob(CONFIG_DIR_PATH.joinpath("Preset_*.conf").as_posix()), key=os.path.basename):
@@ -4195,7 +4192,6 @@ class ScheduleStatus(Enum):
 
 
 class VduAppWindow(QMainWindow):
-
     splash_vdu_detected = pyqtSignal(VduController)
 
     def __init__(self, main_config: VduControlsConfig, app: QApplication):
@@ -4436,9 +4432,9 @@ class VduAppWindow(QMainWindow):
                 try:
                     controller = VduController(vdu_id, vdu_model_name, vdu_serial, manufacturer, self.main_config,
                                                self.ddcutil, self.main_panel.display_vdu_exception)
-                except (subprocess.SubprocessError, ValueError, re.error,  OSError):  # TODO figure out other possible Exceptions:
+                except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:  # TODO figure out all possible Exceptions:
                     # Catch any kind of parse related error
-                    log_error(e)
+                    log_error(f"Problem creating controller for {vdu_id} {vdu_model_name} {vdu_serial} exception={e}")
                     no_auto = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Ignore | QMessageBox.Apply | QMessageBox.Retry)
                     no_auto.setText(
                         tr('Failed to obtain capabilities for monitor {} {} {}.').format(vdu_id, vdu_model_name, vdu_serial))
@@ -4904,7 +4900,7 @@ def spherical_kilometers(lat1, lon1, lat2, lon2):
 def create_todays_elevation_time_map(latitude: float, longitude: float) -> Dict[SolarElevationKey, SolarElevationData]:
     """
     Create a minute-by-minute map of today's SolarElevations,
-    so for a given mapping[SolarElevation], return the first minute it occurs.
+    so for a given dict[SolarElevation], return the first minute it occurs.
     """
     elevation_time_map = {}
     local_now = zoned_now()
@@ -4932,7 +4928,7 @@ def find_locale_specific_file(filename_template: str) -> Path | None:
 
 
 translator: QTranslator | None = None
-ts_translations: Mapping[str, str] = {}
+ts_translations: Dict[str, str] = {}
 
 
 def initialise_locale_translations(app: QApplication):
