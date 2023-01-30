@@ -851,6 +851,7 @@ COMPLEX_NON_CONTINUOUS_TYPE = 'CNC'
 GUI_NON_CONTINUOUS_TYPE = SIMPLE_NON_CONTINUOUS_TYPE
 
 log_to_syslog = False
+log_debug_enabled = False
 
 
 def log_wrapper(severity, *args):
@@ -866,7 +867,8 @@ def log_wrapper(severity, *args):
 
 
 def log_debug(*args):
-    log_wrapper(syslog.LOG_DEBUG, *args)
+    if log_debug_enabled:
+        log_wrapper(syslog.LOG_DEBUG, *args)
 
 
 def log_info(*args):
@@ -915,7 +917,7 @@ class DdcUtil:
         self.common_args = [] if common_args is None else common_args
         self.vcp_type_map = {}
         self.use_edid = os.getenv('VDU_CONTROLS_USE_EDID', default="yes") == 'yes'
-        log_info(f"use_edid={self.use_edid} (to disable it: export VDU_CONTROLS_USE_EDID=no)")
+        log_info(f"Use_edid={self.use_edid} (to disable it: export VDU_CONTROLS_USE_EDID=no)")
         self.edid_map = {}
 
     def change_settings(self, debug: bool, default_sleep_multiplier: float):
@@ -952,7 +954,7 @@ class DdcUtil:
             display_match = re.search(r'Display ([0-9]+)', display_str)
             if display_match is not None:
                 vdu_id = display_match.group(1)
-                log_info(f"checking possible ID's for display {vdu_id}")
+                log_debug(f"checking possible ID's for display {vdu_id}") if log_debug_enabled else None
                 fields = {fm.group(1).strip(): fm.group(2).strip() for fm in re.finditer(r'[ \t]*([^:\n]+):[ \t]+([^\n]*)',
                                                                                          display_str)}
                 model_name = rubbish.sub('_', fields.get('Model', 'unknown_model'))
@@ -988,7 +990,8 @@ class DdcUtil:
             vdu_id, manufacturer = vdu_id_and_manufacturer
             if vdu_id not in key_already_assigned:
                 model_name, main_id = model_and_main_id
-                log_info(f"Unique key for display={vdu_id} mfg={manufacturer} is (model={model_name} id={main_id})")
+                log_debug(
+                    f"Unique key for display={vdu_id} mfg={manufacturer} is (model={model_name} id={main_id})") if log_debug_enabled else None
                 display_list.append((vdu_id, manufacturer, model_name, main_id))
                 key_already_assigned[vdu_id] = 1
 
@@ -1272,19 +1275,9 @@ class ConfigIni(configparser.ConfigParser):
             return False
         return True
 
-    def save(self, config_path, backup_dir_name: str | None = None) -> None:
+    def save(self, config_path) -> None:
         if not config_path.parent.is_dir():
             os.makedirs(config_path.parent)
-        if backup_dir_name is not None and config_path.exists():
-            backup_dir = config_path.parent / backup_dir_name
-            backup_dir.mkdir(exist_ok=True)
-            file_version = 0
-            backup_path = backup_dir / config_path.name
-            while backup_path.exists():
-                file_version += 1
-                backup_path = backup_path.with_suffix(f".conf_{file_version}")
-            config_path.rename(backup_path)
-            log_info(f"Backed up old config as {backup_path.as_posix()}")
         with open(config_path, 'w') as config_file:
             self[ConfigIni.METADATA_SECTION][ConfigIni.METADATA_VERSION_OPTION] = VDU_CONTROLS_VERSION
             self[ConfigIni.METADATA_SECTION][ConfigIni.METADATA_TIMESTAMP_OPTION] = str(zoned_now())
@@ -1447,9 +1440,9 @@ class VduControlsConfig:
         self.file_path = config_path
         basename = os.path.basename(config_path)
         config_text = Path(config_path).read_text()
-        log_info("using config file '" + config_path.as_posix() + "'")
+        log_info("Using config file '" + config_path.as_posix() + "'")
         if re.search(r'(\[ddcutil-capabilities])|(\[ddcutil-parameters])|(\[vdu-controls-\w])', config_text) is None:
-            log_info(f"old style config file {basename} overrides ddcutils capabilities")
+            log_info(f"Old style config file {basename} overrides ddcutils capabilities")
             self.ini_content['ddcutil-capabilities']['capabilities-override'] = config_text
             return
         self.ini_content.read_string(config_text)
@@ -1482,7 +1475,7 @@ class VduControlsConfig:
             if not overwrite:
                 log_error(f"{config_path.as_posix()} exists, remove the file if you really want to replace it.")
                 return
-        log_info(f"creating new config file {config_path.as_posix()}")
+        log_info(f"Creating new config file {config_path.as_posix()}")
         self.ini_content.save(config_path)
 
     def parse_args(self, args=None) -> argparse.Namespace:
@@ -1593,25 +1586,26 @@ class VduController(QObject):
 
     vdu_setting_changed = pyqtSignal()
 
-    def __init__(self, vdu_id: str, vdu_model_name: str, vdu_serial: str, manufacturer: str,
+    def __init__(self, vdu_id: str, vdu_model_name: str, vdu_unique_text_id: str, manufacturer: str,
                  default_config: VduControlsConfig, ddcutil: DdcUtil, vdu_exception_handler: Callable,
                  ignore_monitor: bool = False, assume_standard_controls: bool = False) -> None:
         super().__init__()
+        self.vdu_stable_id = proper_name(vdu_model_name, vdu_unique_text_id)
+        log_info(f"Initializing controls for monitor={vdu_id} model={vdu_model_name} text_id={self.vdu_stable_id}")
         self.vdu_id = vdu_id
         self.model_name = vdu_model_name
-        self.serial = vdu_serial
+        self.serial = vdu_unique_text_id
         self.manufacturer = manufacturer
         self.ddcutil = ddcutil
         self.vdu_exception_handler = vdu_exception_handler
         self.sleep_multiplier = None
         self.enabled_vcp_codes = default_config.get_all_enabled_vcp_codes()
-        self.vdu_stable_id = proper_name(vdu_model_name, vdu_serial)
         self.vdu_model_id = proper_name(vdu_model_name.strip())
         self.capabilities_text = None
         self.config = None
         for config_name in (self.vdu_stable_id, self.vdu_model_id):
             config_path = get_config_path(config_name)
-            log_info("checking for config file '" + config_path.as_posix() + "'")
+            log_debug("checking for config file '" + config_path.as_posix() + "'") if log_debug_enabled else None
             if os.path.isfile(config_path) and os.access(config_path, os.R_OK):
                 config = VduControlsConfig(config_name,
                                            default_enabled_vcp_codes=default_config.get_all_enabled_vcp_codes())
@@ -2469,7 +2463,6 @@ class VduControlPanel(QWidget):
                 preset_ini[vdu_section_name][control.vcp_capability.property_name()] = control.current_value
 
     def restore_vdu_state(self, preset_ini: ConfigIni) -> None:
-        log_info(f"Preset restoring {self.controller.vdu_stable_id}")
         for control in self.vcp_controls:
             if control.vcp_capability.property_name() in preset_ini[self.controller.vdu_stable_id]:
                 control.current_value = preset_ini[self.controller.vdu_stable_id][control.vcp_capability.property_name()]
@@ -2522,7 +2515,7 @@ class Preset:
 
     def load(self) -> ConfigIni:
         if self.path.exists():
-            log_info(f"reading preset file '{self.path.as_posix()}'")
+            log_info(f"Reading preset file '{self.path.as_posix()}'")
             preset_text = Path(self.path).read_text()
             preset_ini = ConfigIni()
             preset_ini.read_string(preset_text)
@@ -2539,7 +2532,7 @@ class Preset:
         self.preset_ini.save(self.path)
 
     def delete(self):
-        log_info(f"deleting preset file '{self.path.as_posix()}'")
+        log_info(f"Deleting preset file '{self.path.as_posix()}'")
         self.remove_elevation_trigger()
         if self.path.exists():
             os.remove(self.path.as_posix())
@@ -2599,7 +2592,7 @@ class Preset:
         self.timer.start(millis)
         self.schedule_status = ScheduleStatus.scheduled
         log_info(
-            f"Preset scheduled activation for '{self.name}' at {when_local} in {round(millis / 1000 / 60)} minutes "
+            f"Scheduled preset '{self.name}' for {when_local} in {round(millis / 1000 / 60)} minutes "
             f"{self.get_solar_elevation()}")
 
     def remove_elevation_trigger(self):
@@ -2895,6 +2888,7 @@ class VduControlsMainPanel(QWidget):
         for section in preset.preset_ini:
             for control_panel in self.vdu_control_panels:
                 if section == control_panel.controller.vdu_stable_id:
+                    log_info(f"Restoring preset '{preset.name}' monitor {control_panel.controller.vdu_stable_id}")
                     control_panel.restore_vdu_state(preset.preset_ini)
 
     def restore_preset_view(self, preset: Preset):
@@ -3310,7 +3304,7 @@ class PresetChooseWeatherWidget(QWidget):
 
     def init_weather(self):
         if len(list(CONFIG_DIR_PATH.glob("*.weather"))) == 0:
-            log_info(f"making good, bad and all weather in {CONFIG_DIR_PATH}")
+            log_info(f"Making good, bad and all weather in {CONFIG_DIR_PATH}")
             with open(CONFIG_DIR_PATH.joinpath('good.weather'), 'w') as weather_file:
                 weather_file.write("113 Sunny\n116 Partly Cloudy\n119 Cloudy\n")
             with open(CONFIG_DIR_PATH.joinpath('bad.weather'), 'w') as weather_file:
@@ -3578,6 +3572,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
     @staticmethod
     def invoke(main_window: 'VduAppWindow', main_config: VduControlsConfig) -> None:
         PresetsDialog.show_existing_dialog() if PresetsDialog.exists() else PresetsDialog(main_window, main_config)
+        presets_dialog_message('')
 
     def __init__(self, main_window: 'VduAppWindow', main_config: VduControlsConfig) -> None:
         super().__init__()
@@ -3711,7 +3706,9 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         # TODO Update preset status display - a bit of an extreme way to do it - consider something better?
         self.reload_data()
 
-    def set_message(self, message: str):
+    def display_status_message(self, message: str, refresh_view: bool = False):
+        if refresh_view:
+            self.refresh_view()
         self.bottom_bar_message.setText(message)
 
     def find_preset_widget(self, name) -> PresetWidget | None:
@@ -3792,6 +3789,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             target_widget.deleteLater()
             self.main_window.preset_controller.save_order(self.get_presets_name_order())
             self.preset_widgets_scrollarea.updateGeometry()
+        self.display_status_message('')
 
     def down_action(self, preset: Preset, target_widget: QWidget) -> None:
         index = self.preset_widgets_layout.indexOf(target_widget)
@@ -3802,6 +3800,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             target_widget.deleteLater()
             self.main_window.preset_controller.save_order(self.get_presets_name_order())
             self.preset_widgets_scrollarea.updateGeometry()
+        self.display_status_message('')
 
     def restore_preset(self, preset: Preset) -> None:
         self.main_window.restore_preset(preset)
@@ -3814,15 +3813,18 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             message = tr('Update existing {} preset with current monitor settings?').format(preset.name)
             confirmation.setText(message)
             if confirmation.exec() == QMessageBox.Cancel:
+                self.display_status_message('')
                 return
         self.preset_name_edit.setText('')
         self.main_window.save_preset(preset)
+        self.display_status_message(tr("Saved {}").format(preset.name))
 
     def delete_preset(self, preset: Preset, target_widget: QWidget = None) -> None:
         confirmation = MessageBox(QMessageBox.Question, buttons=QMessageBox.Ok | QMessageBox.Cancel, default=QMessageBox.Cancel)
         confirmation.setText(tr('Delete {}?').format(preset.name))
         rc = confirmation.exec()
         if rc == QMessageBox.Cancel:
+            self.display_status_message('')
             return
         self.main_window.delete_preset(preset)
         self.preset_widgets_layout.removeWidget(target_widget)
@@ -3830,6 +3832,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.main_window.preset_controller.save_order(self.get_presets_name_order())
         self.preset_name_edit.setText('')
         self.preset_widgets_scrollarea.updateGeometry()
+        self.display_status_message(tr("Deleted {}").format(preset.name))
 
     def change_edit_group_title(self):
         changed_text = self.preset_name_edit.text()
@@ -3864,6 +3867,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 preset.preset_ini.get('preset', 'solar-elevation', fallback=None))
             self.editor_trigger_widget.set_required_weather_filename(
                 preset.preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None))
+        self.display_status_message('')  # Will be shortly followed by a restore message
 
     def save_edited_preset(self) -> None:
         preset_name = self.preset_name_edit.text().strip()
@@ -3874,6 +3878,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             confirmation = MessageBox(QMessageBox.Question, buttons=QMessageBox.Save | QMessageBox.Cancel, default=QMessageBox.Save)
             confirmation.setText(tr("Replace existing '{}' preset?").format(preset_name))
             if confirmation.exec() == QMessageBox.Cancel:
+                self.display_status_message('')
                 return
             preset = existing_preset_widget.preset
             preset.clear_content()
@@ -3902,6 +3907,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             self.preset_widgets_scrollarea.updateGeometry()
             QTimer.singleShot(0, scroll_to_bottom)
         self.preset_name_edit.setText('')
+        self.display_status_message(tr("Saved {}").format(preset.name))
 
     def create_preset_widget(self, preset):
         return PresetWidget(
@@ -3932,7 +3938,14 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 self.edit_save_needed.emit()
             else:
                 self.preset_name_edit.setText('')
+        self.display_status_message('')
         super().closeEvent(event)
+
+
+def presets_dialog_message(message: str, refresh_view: bool = False):
+    presets_dialog = PresetsDialog.get_instance()
+    if presets_dialog:
+        presets_dialog.display_status_message(message, refresh_view=refresh_view)
 
 
 def exception_handler(e_type, e_value, e_traceback):
@@ -4042,11 +4055,11 @@ def install_as_desktop_application(uninstall: bool = False):
 
     if uninstall:
         os.remove(installed_script_path)
-        log_info(f"removed {installed_script_path.as_posix()}")
+        log_info(f"Removed {installed_script_path.as_posix()}")
         os.remove(desktop_definition_path)
-        log_info(f"removed {desktop_definition_path.as_posix()}")
+        log_info(f"Removed {desktop_definition_path.as_posix()}")
         os.remove(icon_path)
-        log_info(f"removed {icon_path.as_posix()}")
+        log_info(f"Removed {icon_path.as_posix()}")
         return
 
     if installed_script_path.exists():
@@ -4054,15 +4067,15 @@ def install_as_desktop_application(uninstall: bool = False):
     else:
         source = open(__file__).read()
         source = source.replace("#!/usr/bin/python3", '#!' + sys.executable)
-        log_info(f"creating {installed_script_path.as_posix()}")
+        log_info(f"Creating {installed_script_path.as_posix()}")
         open(installed_script_path, 'w').write(source)
         log_info(f"chmod u+rwx {installed_script_path.as_posix()}")
         os.chmod(installed_script_path, stat.S_IRWXU)
 
     if desktop_definition_path.exists():
-        log_warning(f"skipping installation of {desktop_definition_path.as_posix()}, it is already present.")
+        log_warning(f"Skipping installation of {desktop_definition_path.as_posix()}, it is already present.")
     else:
-        log_info(f"creating {desktop_definition_path.as_posix()}")
+        log_info(f"Creating {desktop_definition_path.as_posix()}")
         desktop_definition = textwrap.dedent(f"""
             [Desktop Entry]
             Type=Application
@@ -4078,7 +4091,7 @@ def install_as_desktop_application(uninstall: bool = False):
     if icon_path.exists():
         log_warning(f"skipping installation of {icon_path.as_posix()}, it is already present.")
     else:
-        log_info(f"creating {icon_path.as_posix()}")
+        log_info(f"Creating {icon_path.as_posix()}")
         get_splash_image().save(icon_path.as_posix())
 
     log_info('Installation complete. Your desktop->applications->settings should now contain VDU Controls')
@@ -4263,8 +4276,9 @@ class VduAppWindow(QMainWindow):
             self.app_save_state()
             app.quit()
 
-        for screen in app.screens():
-            log_info("Screen", screen.name())
+        if log_debug_enabled:
+            for screen in app.screens():
+                log_info("Screen", screen.name())
 
         # Not that useful - doesn't necessarily change if a screen is powered off
         # def screen_changed(screen):
@@ -4306,7 +4320,7 @@ class VduAppWindow(QMainWindow):
                         break
                     time.sleep(1)
             if QSystemTrayIcon.isSystemTrayAvailable():
-                log_info("using system tray.")
+                log_info("Using system tray.")
                 # This next call appears to be automatic on KDE, but not on gnome.
                 app.setQuitOnLastWindowClosed(False)
                 self.tray = QSystemTrayIcon()
@@ -4383,7 +4397,7 @@ class VduAppWindow(QMainWindow):
         overdue = self.schedule_presets()
         if overdue:
             # Start of run - this preset is the one that should be running now
-            log_info(f"Restoring preset {overdue.name} "
+            log_info(f"Restoring preset '{overdue.name}' "
                      f"because its scheduled to be active at this time ({zoned_now()}).")
             self.splash_message_signal.emit(tr("Restoring Preset\n{}").format(overdue.name))
             # Weather check will have succeeded inside schedule_presets() above, don't do it again.
@@ -4409,18 +4423,19 @@ class VduAppWindow(QMainWindow):
             ddcutil_common_args = ['--force', ] if self.is_non_standard_enabled() else []
             self.ddcutil = DdcUtil(debug=self.main_config.is_debug_enabled(), common_args=ddcutil_common_args,
                                    default_sleep_multiplier=self.main_config.get_sleep_multiplier())
-            self.detected_vdu_list = self.ddcutil.detect_monitors()
-            log_info("Detecting connected monitors, looping detection until it stabilises.")
+            self.detected_vdu_list = []
+            log_debug("Detecting connected monitors, looping detection until it stabilises.")
             # Loop in case the session is initialising/restoring which can make detection unreliable.
             # Limit to a reasonable number of iterations.
             for i in range(1, 11):
-                time.sleep(1.5)
                 prev_num = len(self.detected_vdu_list)
                 self.detected_vdu_list = self.ddcutil.detect_monitors()
                 if prev_num == len(self.detected_vdu_list):
                     log_info(f"Number of detected monitors is stable at {len(self.detected_vdu_list)} (loop={i})")
                     break
-                log_info(f"Number of detected monitors changed from {prev_num} to {len(self.detected_vdu_list)} (loop={i})")
+                elif prev_num > 0:
+                    log_info(f"Number of detected monitors changed from {prev_num} to {len(self.detected_vdu_list)} (loop={i})")
+                time.sleep(1.5)
         except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
             log_error(e)
             ddcutil_problem = e
@@ -4536,8 +4551,6 @@ class VduAppWindow(QMainWindow):
         self.refresh_data_task.start()
 
     def restore_preset(self, preset: Preset) -> None:
-        log_info(f"Preset changing to {preset.name}")
-
         # Starts the restore, but it will complete in the worker thread
         self.main_panel.indicate_busy()
 
@@ -4557,6 +4570,7 @@ class VduAppWindow(QMainWindow):
             self.main_panel.indicate_busy(False)
             with open(PRESET_NAME_FILE, 'w') as cps_file:
                 cps_file.write(preset.name)
+            presets_dialog_message(tr("Restored {}").format(preset.name))
 
         self.restore_preset_thread = WorkerThread(task_body=restore_preset_data, task_finished=restore_preset_view)
         self.restore_preset_thread.start()
@@ -4713,15 +4727,11 @@ class VduAppWindow(QMainWindow):
                     preset.name, now.isoformat(' ', 'seconds'))
                 weather_text = f"({self.weather_cache.weather_desc})"
         if proceed:
-            log_info(f"Preset {preset.name} activating according the schedule at {now}")
             self.restore_preset(preset)  # Happens asynchronously in a thread
             preset.schedule_status = ScheduleStatus.succeeded  # Schedule succeeded (restore thread might still not succeed though)
-            status_text = tr("Preset {} activating on schedule at {}").format(preset.name, now.isoformat(' ', 'seconds'))
-        presets_dialog = PresetsDialog.get_instance()
-        if presets_dialog:
-            presets_dialog.refresh_view()
-            if status_text:
-                presets_dialog.set_message(f"{TIME_CLOCK_SYMBOL} {status_text} {preset.schedule_status.symbol()} {weather_text}")
+            status_text = tr("Preset {} activating at {}").format(preset.name, now.isoformat(' ', 'seconds'))
+        presets_dialog_message(
+            f"{TIME_CLOCK_SYMBOL} {status_text} {preset.schedule_status.symbol()} {weather_text}", refresh_view=True)
 
     def is_weather_satisfactory(self, preset, use_cache: bool = False) -> bool:
         try:
@@ -4923,8 +4933,9 @@ def find_locale_specific_file(filename_template: str) -> Path | None:
     filename = filename_template.format(locale_name)
     for path in LOCALE_TRANSLATIONS_PATHS:
         full_path = path.joinpath(filename)
-        log_info(f"Checking for {locale_name} translation: {full_path}")
+        log_debug(f"Checking for {locale_name} translation: {full_path}") if log_debug_enabled else None
         if full_path.exists():
+            log_info(f"Found {locale_name} translation: {full_path}")
             return full_path
     return None
 
@@ -4969,7 +4980,7 @@ def main():
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     def signal_handler(x, y):
-        log_info("signal received", x, y)
+        log_info("Signal received", x, y)
 
     signal.signal(signal.SIGHUP, signal_handler)
     for i in range(PRESET_SIGNAL_MIN, PRESET_SIGNAL_MAX):
@@ -4998,13 +5009,15 @@ def main():
 
     main_config = VduControlsConfig('vdu_controls', include_globals=True)
     default_config_path = get_config_path('vdu_controls')
-    log_info("checking for config file '" + default_config_path.as_posix() + "'")
+    log_info("Looking for config file '" + default_config_path.as_posix() + "'")
     if Path.is_file(default_config_path) and os.access(default_config_path, os.R_OK):
         main_config.parse_file(default_config_path)
 
     args = main_config.parse_args()
+    global log_debug_enabled
     global log_to_syslog
     log_to_syslog = main_config.is_syslog_enabled()
+    log_debug_enabled = main_config.is_debug_enabled()
     if args.syslog:
         log_to_syslog = True
     if args.debug:
@@ -5021,7 +5034,7 @@ def main():
         print(__doc__)
         sys.exit()
 
-    log_info(f"application style is {app.style().objectName()}")
+    log_debug(f"application style is {app.style().objectName()}") if log_debug_enabled else None
 
     # Assign to variable to stop it being reclaimed as garbage
     if main_config.is_translations_enabled():
@@ -5036,7 +5049,7 @@ def main():
         main_window.create_config_files()
 
     rc = app.exec_()
-    log_info(f"app exit rc={rc} {'EXIT_CODE_FOR_RESTART' if rc == EXIT_CODE_FOR_RESTART else ''}")
+    log_info(f"App exit rc={rc} {'EXIT_CODE_FOR_RESTART' if rc == EXIT_CODE_FOR_RESTART else ''}")
     if rc == EXIT_CODE_FOR_RESTART:
         log_info(f"Trying to restart - this only works if {app.arguments()[0]} is executable and on your PATH): ", )
         restart_status = QProcess.startDetached(app.arguments()[0], app.arguments()[1:])
