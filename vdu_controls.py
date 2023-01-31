@@ -547,7 +547,7 @@ def proper_name(*args):
     return re.sub(r'[^A-Za-z0-9._-]', '_', '_'.join([arg.strip() for arg in args]))
 
 
-def tr(source_text: str, disambiguation: str = None):
+def tr(source_text: str, disambiguation: str | None = None):
     """
     This function is named tr() so that it matches what pylupdate5 is looking for.
     If this method is ever renamed to something other than tr(), then you must
@@ -886,8 +886,8 @@ def log_error(*args):
 class VcpCapability:
     """Representation of a VCP (Virtual Control Panel) capability for a VDU."""
 
-    def __init__(self, vcp_code: str, vcp_name: str, vcp_type: str, values: List = None,
-                 causes_config_change: bool = False, icon_source: bytes = None, enabled: bool = False):
+    def __init__(self, vcp_code: str, vcp_name: str, vcp_type: str, values: List | None = None,
+                 causes_config_change: bool = False, icon_source: bytes | None = None, enabled: bool = False):
         self.vcp_code = vcp_code
         self.name = vcp_name
         self.vcp_type = vcp_type
@@ -912,24 +912,24 @@ class DdcUtil:
     def __init__(self, debug: bool = False, common_args=None, default_sleep_multiplier: float = 1.0) -> None:
         super().__init__()
         self.debug = debug
-        self.supported_codes = None
+        self.supported_codes: Dict[str, str] | None = None
         self.default_sleep_multiplier = default_sleep_multiplier
         self.common_args = [] if common_args is None else common_args
-        self.vcp_type_map = {}
+        self.vcp_type_map: Dict[str, str] = {}
         self.use_edid = os.getenv('VDU_CONTROLS_USE_EDID', default="yes") == 'yes'
         log_info(f"Use_edid={self.use_edid} (to disable it: export VDU_CONTROLS_USE_EDID=no)")
-        self.edid_map = {}
+        self.edid_map: Dict[str, str] = {}
 
     def change_settings(self, debug: bool, default_sleep_multiplier: float):
         self.debug = debug
         self.default_sleep_multiplier = default_sleep_multiplier
 
-    def id_key_args(self, display_id: str) -> List[str, str]:
+    def id_key_args(self, display_id: str) -> List[str]:
         if display_id in self.edid_map:
             return ['--edid', self.edid_map[display_id]]
         return ['--display', display_id]
 
-    def __run__(self, *args, sleep_multiplier: float = None) -> subprocess.CompletedProcess:
+    def __run__(self, *args, sleep_multiplier: float | None = None) -> subprocess.CompletedProcess:
         multiplier_str = str(self.default_sleep_multiplier if sleep_multiplier is None else sleep_multiplier)
         process_args = [DDCUTIL, '--sleep-multiplier', multiplier_str] + self.common_args + list(args)
         try:
@@ -949,7 +949,7 @@ class DdcUtil:
         # Going to get rid of anything that is not a-z A-Z 0-9 as potential rubbish
         rubbish = re.compile('[^a-zA-Z0-9]+')
         # This isn't efficient, it doesn't need to be, so I'm keeping re-defs close to where they are used.
-        key_prospects = {}
+        key_prospects: Dict[Tuple[str, str], Tuple[str, str]] = {}
         for display_str in re.split("\n\n", result.stdout.decode('utf-8')):
             display_match = re.search(r'Display ([0-9]+)', display_str)
             if display_match is not None:
@@ -1016,7 +1016,7 @@ class DdcUtil:
     def get_type(self, vcp_code):
         return self.vcp_type_map[vcp_code] if vcp_code in self.vcp_type_map else None
 
-    def get_attribute(self, vdu_id: str, vcp_code: str, sleep_multiplier: float = None) -> Tuple[str, str]:
+    def get_attribute(self, vdu_id: str, vcp_code: str, sleep_multiplier: float | None = None) -> Tuple[str, str]:
         """
         Given a VDU id and vcp_code, retrieve the attribute's current value from the VDU.
 
@@ -1024,13 +1024,13 @@ class DdcUtil:
         attributes with "Continuous" values have a maximum, for consistency the method will return a zero maximum
         for "Non-Continuous" attributes.
         """
-        result = self.get_attributes(vdu_id, [vcp_code], sleep_multiplier=sleep_multiplier)[0]
+        result = self.get_attributes(vdu_id, [vcp_code], sleep_multiplier=sleep_multiplier)
         if result is not None:
-            return result
+            return result[0]
         raise ValueError(
             f"ddcutil returned an invalid value for monitor {vdu_id} vcp_code {vcp_code}, try increasing --sleep-multiplier")
 
-    def set_attribute(self, vdu_id: str, vcp_code: str, new_value: str, sleep_multiplier: float = None) -> None:
+    def set_attribute(self, vdu_id: str, vcp_code: str, new_value: str, sleep_multiplier: float | None = None) -> None:
         """Send a new value to a specific VDU and vcp_code."""
         if self.get_type(vcp_code) == COMPLEX_NON_CONTINUOUS_TYPE:
             new_value = 'x' + new_value
@@ -1061,29 +1061,37 @@ class DdcUtil:
                     self.supported_codes[vcp_code] = vcp_name
         return self.supported_codes
 
-    def get_attributes(self, vdu_id: str, vcp_code_list: List[str], sleep_multiplier: float = None) -> List[Tuple[str, str]] | None:
+    def get_attributes(self,
+                       vdu_id: str,
+                       vcp_code_list: List[str],
+                       sleep_multiplier: float | None = None) -> List[Tuple[str, str]] | None:
+        """
+        Returns None if there is an error communicating with the VDU
+        """
         # Try a few times in case there is a glitch due to a monitor being turned-off/on or slow to respond
         # Should we loop here, or higher up - maybe it doesn't matter.
+        vcp_code_regexp = re.compile(r"^VCP ([0-9A-F]{2}) ")  # VCP 2-digit-hex
         for i in range(GET_ATTRIBUTES_RETRIES):
             args = ['--brief', 'getvcp'] + vcp_code_list + self.id_key_args(vdu_id)
             try:
-                result = self.__run__(*args, sleep_multiplier=sleep_multiplier)
-                vcp_regexp = re.compile(r"^VCP ([0-9A-F]{2}) ")
-                # Faster if only one result to parse
-                if len(vcp_code_list) == 1:
-                    return [self.__parse_value(vdu_id, vcp_code_list[0], result.stdout.decode('utf-8'))]
-                # Slower, results are not in the same order...
-                result_dict = {}
-                for line in result.stdout.split(b"\n"):
+                from_ddcutil = self.__run__(*args, sleep_multiplier=sleep_multiplier)
+                unordered_results: Dict[str, str|None] = {}
+                for line in from_ddcutil.stdout.split(b"\n"):
                     line_utf8 = line.decode('utf-8') + '\n'
-                    match = vcp_regexp.match(line_utf8)
-                    if match is not None:
-                        result_dict[match.group(1)] = line_utf8
-                result_list = [self.__parse_value(vdu_id, vcp_code, result_dict[vcp_code]) if vcp_code in result_dict else None for
-                               vcp_code in vcp_code_list]
-                if None in result_list:
-                    log_warning(f"parse failed '{result.stdout.decode('utf-8')}' will try again.")
-                    continue
+                    vcp_code_match = vcp_code_regexp.match(line_utf8)
+                    if vcp_code_match is not None:
+                        unordered_results[vcp_code_match.group(1)] = line_utf8
+                # Order results into vcp_code_list order:
+                result_list: List[Tuple[str, str|None]] = []
+                for vcp_code in vcp_code_list:
+                    if vcp_code not in unordered_results:
+                        log_warning(f"getvcp '{vcp_code}' missing result, try {i + 1}, will try again.")
+                        continue
+                    value_max_pair: Tuple[str, str] | None = self.__parse_value(vdu_id, vcp_code, unordered_results[vcp_code])
+                    if value_max_pair is None:
+                        log_warning(f"getvcp '{vcp_code}' parse failed '{unordered_results[vcp_code]}', try {i + 1}, will try again.")
+                        continue
+                    result_list.append(value_max_pair)
                 return result_list
             except subprocess.SubprocessError as e:
                 log_warning("Subprocess error: ", args, str(e))
@@ -1316,7 +1324,7 @@ class VduControlsConfig:
     Includes a method that can fold in values from command line arguments parsed by the standard argparse package.
     """
 
-    def __init__(self, config_name: str, default_enabled_vcp_codes: List = None, include_globals: bool = False) -> None:
+    def __init__(self, config_name: str, default_enabled_vcp_codes: List | None = None, include_globals: bool = False) -> None:
         self.config_name = config_name
         self.ini_content = ConfigIni()
         # augment the configparser with type-info for run-time widget selection (default type is 'boolean')
@@ -3817,7 +3825,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.main_window.save_preset(preset)
         self.display_status_message(tr("Saved {}").format(preset.name))
 
-    def delete_preset(self, preset: Preset, target_widget: QWidget = None) -> None:
+    def delete_preset(self, preset: Preset, target_widget: QWidget | None = None) -> None:
         confirmation = MessageBox(QMessageBox.Question, buttons=QMessageBox.Ok | QMessageBox.Cancel, default=QMessageBox.Cancel)
         confirmation.setText(tr('Delete {}?').format(preset.name))
         rc = confirmation.exec()
