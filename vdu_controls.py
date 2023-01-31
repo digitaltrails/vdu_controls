@@ -4563,8 +4563,13 @@ class VduAppWindow(QMainWindow):
         def restore_preset_view():
             # Called in a GUI thread, can do GUI op's.
             if self.restore_preset_thread.vdu_exception is not None:
-                self.main_panel.display_vdu_exception(self.restore_preset_thread.vdu_exception)
-                self.display_active_preset()
+                answer = self.main_panel.display_vdu_exception(
+                    self.restore_preset_thread.vdu_exception,
+                    buttons=QMessageBox.Retry|QMessageBox.Close, default_button=QMessageBox.Retry)
+                if answer == QMessageBox.Retry:
+                    self.restore_preset(preset)  # Try again (recursion)
+                else:
+                    self.display_active_preset()
             else:
                 self.main_panel.restore_preset_view(preset)
                 self.display_active_preset(preset)
