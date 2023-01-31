@@ -2460,7 +2460,8 @@ class VduControlPanel(QWidget):
             preset_ini.add_section(vdu_section_name)
         for control in self.vcp_controls:
             if not update_only or preset_ini.has_option(vdu_section_name, control.vcp_capability.property_name()):
-                preset_ini[vdu_section_name][control.vcp_capability.property_name()] = control.current_value
+                if control.current_value is not None:
+                    preset_ini[vdu_section_name][control.vcp_capability.property_name()] = control.current_value
 
     def restore_vdu_state(self, preset_ini: ConfigIni) -> None:
         for control in self.vcp_controls:
@@ -4539,7 +4540,7 @@ class VduAppWindow(QMainWindow):
         def refresh_view():
             """Invoke when the GUI worker thread completes. Runs in the GUI thread and can refresh the GUI views."""
             if self.refresh_data_task.vdu_exception is not None:
-                self.display_vdu_exception(self.refresh_data_task.vdu_exception)
+                self.main_panel.display_vdu_exception(self.refresh_data_task.vdu_exception)
             if self.detected_vdu_list != self.previously_detected_vdu_list:
                 self.create_main_control_panel()
                 self.previously_detected_vdu_list = self.detected_vdu_list
