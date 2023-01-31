@@ -1345,9 +1345,7 @@ class VduControlsConfig:
             self.ini_content['vdu-controls-widgets'][item.property_name()] = 'yes' if item.enabled else 'no'
 
         self.ini_content['vdu-controls-widgets']['enable-vcp-codes'] = ''
-
         self.ini_content['ddcutil-parameters']['sleep-multiplier'] = str(1.0)
-
         self.ini_content['ddcutil-capabilities']['capabilities-override'] = ''
 
         if default_enabled_vcp_codes is not None:
@@ -2602,7 +2600,6 @@ class Preset:
             self.timer.stop()
             self.timer = None
         if self.elevation_time_today is not None:
-            log_info(f"Preset elevation time cleared for '{self.name}'")
             self.elevation_time_today = None
         self.schedule_status = ScheduleStatus.unscheduled
 
