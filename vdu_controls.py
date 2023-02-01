@@ -2200,7 +2200,7 @@ class VduControlSlider(VduControlBase):
 
         layout = QHBoxLayout()
         self.setLayout(layout)
-        self.svg_icon: QSvgWidget = None
+        self.svg_icon: QSvgWidget | None = None
 
         if vcp_capability.vcp_code in VDU_SUPPORTED_CONTROLS.by_code and \
                 VDU_SUPPORTED_CONTROLS.by_code[vcp_capability.vcp_code].icon_source is not None:
@@ -2881,7 +2881,7 @@ class VduControlsMainPanel(QWidget):
 
         self.customContextMenuRequested.connect(open_context_menu)
 
-    def refresh_data(self, detected_vdu_list: List[VduControlPanel]):
+    def refresh_data(self, detected_vdu_list: List[Tuple[str, str, str, str]]):
         for control_panel in self.vdu_control_panels:
             if control_panel.controller.get_full_id() in detected_vdu_list:
                 control_panel.refresh_data()
@@ -2951,7 +2951,7 @@ class WorkerThread(QThread):
         self.task_body = task_body
         self.task_finished = task_finished
         self.finished_work.connect(task_finished)
-        self.vdu_exception : VduException | None = None
+        self.vdu_exception: VduException | None = None
 
     def run(self):
         """Long-running task."""
@@ -3012,7 +3012,7 @@ class PresetController:
 
 
 class MessageBox(QMessageBox):
-    def __init__(self, icon: QIcon, buttons: int = QMessageBox.NoButton, default: QMessageBox.StandardButton | None = None) -> None:
+    def __init__(self, icon: QIcon, buttons: QMessageBox.StandardButtons = QMessageBox.NoButton, default: QMessageBox.StandardButton | None = None) -> None:
         super().__init__(icon, APPNAME, '', buttons=buttons)
         if default is not None:
             self.setDefaultButton(default)
@@ -3870,16 +3870,18 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             self.edit_save_button.setDisabled(False)
 
     def edit_preset(self, preset: Preset) -> None:
-        self.main_window.restore_preset(preset)
-        self.preset_name_edit.setText(preset.name)
-        self.edit_choose_icon_button.set_preset(preset)
-        for key, item in self.content_controls.items():
-            item.setChecked(preset.preset_ini.has_option(key[0], key[1]))
-        if preset.preset_ini.has_section('preset'):
-            self.editor_trigger_widget.set_elevation(
-                preset.preset_ini.get('preset', 'solar-elevation', fallback=None))
-            self.editor_trigger_widget.set_required_weather_filename(
-                preset.preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None))
+        def begin_editing():
+            self.preset_name_edit.setText(preset.name)
+            self.edit_choose_icon_button.set_preset(preset)
+            for key, item in self.content_controls.items():
+                item.setChecked(preset.preset_ini.has_option(key[0], key[1]))
+            if preset.preset_ini.has_section('preset'):
+                self.editor_trigger_widget.set_elevation(
+                    preset.preset_ini.get('preset', 'solar-elevation', fallback=None))
+                self.editor_trigger_widget.set_required_weather_filename(
+                    preset.preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None))
+
+        self.main_window.restore_preset(preset, restore_finished=begin_editing)
         self.display_status_message('')  # Will be shortly followed by a restore message
 
     def save_edited_preset(self) -> None:
@@ -4562,7 +4564,7 @@ class VduAppWindow(QMainWindow):
         self.refresh_data_task = WorkerThread(task_body=refresh_data, task_finished=refresh_view)
         self.refresh_data_task.start()
 
-    def restore_preset(self, preset: Preset) -> None:
+    def restore_preset(self, preset: Preset, restore_finished: Callable | None = None) -> None:
         # Starts the restore, but it will complete in the worker thread
         self.main_panel.indicate_busy()
 
@@ -4580,14 +4582,18 @@ class VduAppWindow(QMainWindow):
                 if answer == QMessageBox.Retry:
                     self.restore_preset(preset)  # Try again (recursion)
                 else:
+                    preset.schedule_status = ScheduleStatus.skipped_superseded
                     self.display_active_preset()
             else:
+                preset.schedule_status = ScheduleStatus.succeeded
                 self.main_panel.restore_preset_view(preset)
                 self.display_active_preset(preset)
             self.main_panel.indicate_busy(False)
             with open(PRESET_NAME_FILE, 'w') as cps_file:
                 cps_file.write(preset.name)
-            presets_dialog_message(tr("Restored {}").format(preset.name))
+            presets_dialog_message(tr("Restored {}").format(preset.name), refresh_view=True)
+            if restore_finished is not None:
+                restore_finished()
 
         self.restore_preset_thread = WorkerThread(task_body=restore_preset_data, task_finished=restore_preset_view)
         self.restore_preset_thread.start()
@@ -4743,7 +4749,6 @@ class VduAppWindow(QMainWindow):
                 weather_text = f"({self.weather_query.weather_desc if self.weather_query is not None else ''})"
         if proceed:
             self.restore_preset(preset)  # Happens asynchronously in a thread
-            preset.schedule_status = ScheduleStatus.succeeded  # Schedule succeeded (restore thread might still not succeed though)
             status_text = tr("Preset {} activating at {}").format(preset.name, now.isoformat(' ', 'seconds'))
         presets_dialog_message(
             f"{TIME_CLOCK_SYMBOL} {status_text} {preset.schedule_status.symbol()} {weather_text}", refresh_view=True)
