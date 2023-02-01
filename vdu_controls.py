@@ -1659,6 +1659,8 @@ class VduController(QObject):
 
     def get_attributes(self, attributes: List[str]):
         try:
+            if len(attributes) == 0:
+                return []
             # raise subprocess.SubprocessError("get_attributes")  # for testing
             return self.ddcutil.get_attributes(self.vdu_id, attributes, sleep_multiplier=self.sleep_multiplier)
         except (subprocess.SubprocessError, ValueError) as e:
