@@ -468,7 +468,7 @@ import time
 import traceback
 import urllib.request
 from collections import namedtuple
-from datetime import datetime, timedelta, date, timezone
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from functools import partial
 from pathlib import Path
@@ -523,14 +523,14 @@ def format_solar_elevation_abbreviation(elevation: SolarElevationKey) -> str:
     return f"{SUN_SYMBOL} {direction_char} {elevation.elevation}{DEGREE_SYMBOL}"
 
 
-def format_solar_elevation_description(elevation: SolarElevationKey) -> str | None:
+def format_solar_elevation_description(elevation: SolarElevationKey) -> str:
     # Note - repeating the constants here to force them to be included by pylupdate5 internationalisation
     direction_text = tr('eastern-sky') if elevation.direction == EASTERN_SKY else tr('western-sky')
     return f"{direction_text} {elevation.elevation}{DEGREE_SYMBOL}"
 
 
-def format_solar_elevation_ini_text(elevation: SolarElevationKey):
-    return f"{elevation.direction} {elevation.elevation}" if elevation else ''
+def format_solar_elevation_ini_text(elevation: SolarElevationKey | None):
+    return f"{elevation.direction} {elevation.elevation}" if elevation is not None else ''
 
 
 def parse_solar_elevation_ini_text(ini_text: str):
@@ -651,7 +651,7 @@ https://github.com/digitaltrails/vdu_controls/releases/tag/v{VERSION}</a>
 PRESET_SIGNAL_MIN = 40
 PRESET_SIGNAL_MAX = 55
 
-signal_wakeup_handler = None
+signal_wakeup_handler: Callable | None = None
 
 # On Plasma Wayland the system tray may not be immediately available at login - so keep trying for...
 SYSTEM_TRAY_WAIT_SECONDS = 20
@@ -1075,21 +1075,22 @@ class DdcUtil:
             args = ['--brief', 'getvcp'] + vcp_code_list + self.id_key_args(vdu_id)
             try:
                 from_ddcutil = self.__run__(*args, sleep_multiplier=sleep_multiplier)
-                unordered_results: Dict[str, str|None] = {}
+                unordered_results: Dict[str, str] = {}
                 for line in from_ddcutil.stdout.split(b"\n"):
                     line_utf8 = line.decode('utf-8') + '\n'
                     vcp_code_match = vcp_code_regexp.match(line_utf8)
                     if vcp_code_match is not None:
                         unordered_results[vcp_code_match.group(1)] = line_utf8
                 # Order results into vcp_code_list order:
-                result_list: List[Tuple[str, str|None]] = []
+                result_list: List[Tuple[str, str]] = []
                 for vcp_code in vcp_code_list:
                     if vcp_code not in unordered_results:
                         log_warning(f"getvcp '{vcp_code}' missing result, try {i + 1}, will try again.")
                         continue
                     value_max_pair: Tuple[str, str] | None = self.__parse_value(vdu_id, vcp_code, unordered_results[vcp_code])
                     if value_max_pair is None:
-                        log_warning(f"getvcp '{vcp_code}' parse failed '{unordered_results[vcp_code]}', try {i + 1}, will try again.")
+                        log_warning(
+                            f"getvcp '{vcp_code}' parse failed '{unordered_results[vcp_code]}', try {i + 1}, will try again.")
                         continue
                     result_list.append(value_max_pair)
                 return result_list
@@ -1127,7 +1128,7 @@ class DdcUtil:
         return None
 
 
-def si(widget: QWidget, icon_number: int):
+def si(widget: QWidget, icon_number: QStyle.StandardPixmap):
     return widget.style().standardIcon(icon_number)
 
 
@@ -1136,7 +1137,7 @@ class DialogSingletonMixin:
     A mixin that can augment a QDialog or QMessageBox with code to enforce a singleton UI.
     For example, it is used so that only ones settings editor can be active at a time.
     """
-    _dialogs_map = {}
+    _dialogs_map: Dict[str, DialogSingletonMixin] = {}
     debug = False
 
     def __init__(self) -> None:
@@ -1303,10 +1304,10 @@ class ConfigIni(configparser.ConfigParser):
 
 
 class GeoLocation:
-    def __init__(self, latitude: float, longitude: float, place_name: str):
+    def __init__(self, latitude: float, longitude: float, place_name: str | None):
         self.latitude: float = latitude
         self.longitude: float = longitude
-        self.place_name: str = place_name
+        self.place_name: str | None = place_name
 
     def __eq__(self, other):
         if other is None:
@@ -1362,7 +1363,7 @@ class VduControlsConfig:
                     self.enable_supported_vcp_code(code)
                 else:
                     self.enable_unsupported_vcp_code(code)
-        self.file_path = None
+        self.file_path: Path | None = None
 
     def get_config_type(self, section: str, option: str) -> str:
         if option in self.config_type_map:
@@ -1604,10 +1605,10 @@ class VduController(QObject):
         self.manufacturer = manufacturer
         self.ddcutil = ddcutil
         self.vdu_exception_handler = vdu_exception_handler
-        self.sleep_multiplier = None
+        self.sleep_multiplier: float | None = None
         self.enabled_vcp_codes = default_config.get_all_enabled_vcp_codes()
         self.vdu_model_id = proper_name(vdu_model_name.strip())
-        self.capabilities_text = None
+        self.capabilities_text: str | None = None
         self.config = None
         for config_name in (self.vdu_stable_id, self.vdu_model_id):
             config_path = get_config_path(config_name)
@@ -1644,7 +1645,7 @@ class VduController(QObject):
         for config_name in (self.vdu_stable_id, self.vdu_model_id):
             save_config_path = get_config_path(config_name)
             config = VduControlsConfig(config_name, default_enabled_vcp_codes=self.enabled_vcp_codes)
-            config.set_capabilities_alt_text(self.capabilities_text)
+            config.set_capabilities_alt_text(self.capabilities_text if self.capabilities_text is not None else '')
             config.write_file(save_config_path)
             self.config = config
 
@@ -1725,8 +1726,7 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
     """
 
     @staticmethod
-    def invoke(default_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig],
-               change_callback: callable) -> None:
+    def invoke(default_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig], change_callback: Callable) -> None:
         SettingsEditor.show_existing_dialog() if SettingsEditor.exists() else SettingsEditor(default_config,
                                                                                              vdu_config_list, change_callback)
 
@@ -1750,7 +1750,7 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
         self.make_visible()
 
     def save_all(self, warn_if_nothing_to_save: bool = True):
-        all_changes = {}
+        all_changes: Dict[str, str] = {}
         try:
             nothing_to_save = True
             # Do the main config last - it may cause a restart of the app
@@ -1786,19 +1786,19 @@ class SettingsEditorTab(QWidget):
 
     save_all_clicked = pyqtSignal()
 
-    def __init__(self, parent: QWidget, vdu_config: VduControlsConfig, change_callback: callable) -> None:
+    def __init__(self, parent: QWidget, vdu_config: VduControlsConfig, change_callback: Callable) -> None:
         super().__init__()
         editor_layout = QVBoxLayout()
         self.change_callback = change_callback
-        self.changed = {}
+        self.changed: Dict[Tuple[str, str], Tuple[str, str]] = {}
         self.setLayout(editor_layout)
         self.config_path = get_config_path(vdu_config.config_name)
         self.ini_before = vdu_config.ini_content
         self.change_callback = change_callback
         self.ini_editable = self.ini_before.duplicate()
-        self.field_list = []
+        self.field_list: List[SettingsEditorFieldBase] = []
 
-        def field(widget: SettingsEditor.SettingsEditorFieldBase) -> QWidget:
+        def field(widget: SettingsEditorFieldBase) -> QWidget:
             self.field_list.append(widget)
             return widget
 
@@ -1874,6 +1874,7 @@ class SettingsEditorTab(QWidget):
                 self.ini_editable = pickle.loads(copy)
                 self.reset()
             return answer
+        return QMessageBox.Cancel
 
     def reset(self):
         for field in self.field_list:
@@ -1930,7 +1931,7 @@ class SettingsEditorLineBase(SettingsEditorFieldBase):
         self.text_label = QLabel(self.translate_option())
         layout.addWidget(self.text_label)
         self.text_input = QLineEdit()
-        self.validator = None
+        self.validator: QValidator | None = None
         self.valid_palette = self.text_input.palette()
         self.error_palette = self.text_input.palette()
         self.error_palette.setColor(QPalette.Text, Qt.red)
@@ -2303,7 +2304,9 @@ class VduControlSlider(VduControlBase):
     def event(self, event: QEvent) -> bool:
         # PalletChange happens after the new style sheet is in use.
         if event.type() == QEvent.PaletteChange:
-            self.svg_icon.load(handle_theme(VDU_SUPPORTED_CONTROLS.by_code[self.vcp_capability.vcp_code].icon_source))
+            icon_source = VDU_SUPPORTED_CONTROLS.by_code[self.vcp_capability.vcp_code].icon_source
+            if icon_source is not None:
+                self.svg_icon.load(handle_theme(icon_source))
         return super().event(event)
 
 
@@ -2504,7 +2507,7 @@ class Preset:
             return Path(path_text) if path_text else None
         return None
 
-    def set_icon_path(self, icon_path: Path):
+    def set_icon_path(self, icon_path: Path | None):
         if icon_path:
             if not self.preset_ini.has_section("preset"):
                 self.preset_ini.add_section("preset")
@@ -2551,7 +2554,7 @@ class Preset:
             return solar_elevation
         return None
 
-    def get_solar_elevation_abbreviation(self) -> str | None:
+    def get_solar_elevation_abbreviation(self) -> str:
         elevation = self.get_solar_elevation()
         if elevation is None:
             return ''
@@ -2566,7 +2569,7 @@ class Preset:
         result += ' ' + self.schedule_status.symbol()
         return result
 
-    def get_solar_elevation_description(self) -> str | None:
+    def get_solar_elevation_description(self) -> str:
         elevation = self.get_solar_elevation()
         if elevation is None:
             return ''
@@ -2703,7 +2706,8 @@ class ContextMenu(QMenu):
         self.update()
 
     def remove_preset_menu_action(self, preset: Preset):
-        self.removeAction(self.get_preset_menu_action(preset.name))
+        action = self.get_preset_menu_action(preset.name)
+        self.removeAction(action) if action is not None else None
 
     def refresh_preset_menu(self, palette_change: bool = False) -> None:
         for name, preset in self.main_window.preset_controller.find_presets().items():
@@ -2802,15 +2806,13 @@ class VduControlsMainPanel(QWidget):
 
     def __init__(self) -> None:
         super().__init__()
-        self.vdu_controllers = []
-        self.bottom_toolbar = None
-        self.context_menu = None
+        self.vdu_controllers: List[VduController] = []
+        self.bottom_toolbar: BottomToolBar | None = None
+        self.context_menu: ContextMenu | None = None
         self.refresh_data_task = None
         self.setObjectName("vdu_controls_main_panel")
-        self.non_standard_enabled = None
-        self.vdu_control_panels = []
-        self.restore_preset_thread = None
-        self.alert = None
+        self.vdu_control_panels: List[VduControlPanel] = []
+        self.alert: QMessageBox | None = None
 
     def initialise_control_panels(self, app_context_menu: ContextMenu, main_config: VduControlsConfig,
                                   vdu_controllers: List[VduController],
@@ -2879,9 +2881,9 @@ class VduControlsMainPanel(QWidget):
 
         self.customContextMenuRequested.connect(open_context_menu)
 
-    def refresh_data(self, detected_vdus: []):
+    def refresh_data(self, detected_vdu_list: List[VduControlPanel]):
         for control_panel in self.vdu_control_panels:
-            if control_panel.controller.get_full_id() in detected_vdus:
+            if control_panel.controller.get_full_id() in detected_vdu_list:
                 control_panel.refresh_data()
 
     def refresh_view(self):
@@ -2941,13 +2943,13 @@ class VduControlsMainPanel(QWidget):
 
 
 class WorkerThread(QThread):
-    finished = pyqtSignal()
+    finished_work = pyqtSignal()
 
     def __init__(self, task_body: Callable, task_finished: Callable) -> None:
         super().__init__()
         self.task_body = task_body
         self.task_finished = task_finished
-        self.finished.connect(task_finished)
+        self.finished_work.connect(task_finished)
         self.vdu_exception = None
 
     def run(self):
@@ -2956,7 +2958,7 @@ class WorkerThread(QThread):
             self.task_body()
         except VduException as e:
             self.vdu_exception = e
-        self.finished.emit()
+        self.finished_work.emit()
 
 
 class PresetController:
@@ -3009,7 +3011,7 @@ class PresetController:
 
 
 class MessageBox(QMessageBox):
-    def __init__(self, icon: QIcon, buttons: int = QMessageBox.NoButton, default: int | None = None) -> None:
+    def __init__(self, icon: QIcon, buttons: int = QMessageBox.NoButton, default: QMessageBox.StandardButton | None = None) -> None:
         super().__init__(icon, APPNAME, '', buttons=buttons)
         if default is not None:
             self.setDefaultButton(default)
@@ -3108,7 +3110,7 @@ class PresetWidget(QWidget):
 
         if preset.get_solar_elevation() is not None:
 
-            def format_description():
+            def format_description() -> str:
                 if preset.schedule_status == ScheduleStatus.scheduled:
                     action_desc = tr("Press to skip: ")
                 elif preset.schedule_status == ScheduleStatus.suspended:
@@ -3124,7 +3126,7 @@ class PresetWidget(QWidget):
 
             timer_control_button.setText(preset.get_solar_elevation_abbreviation())
             timer_control_button.setToolTip(format_description())
-            timer_control_button.mousePressEvent = toggle_timer
+            timer_control_button.clicked.connect(toggle_timer)
         timer_control_button.setEnabled(preset.schedule_status in (ScheduleStatus.scheduled, ScheduleStatus.suspended))
         # auto_label.setDisabled(True)
         line_layout.addWidget(timer_control_button)
@@ -3153,7 +3155,7 @@ class PresetChooseIconButton(QPushButton):
         self.setToolTip(tr('Choose a preset icon.'))
         self.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
         self.setAutoDefault(False)
-        self.last_selected_icon_path = None
+        self.last_selected_icon_path: Path | None = None
         self.last_icon_dir = Path("/usr/share/icons")
         if not self.last_icon_dir.exists():
             self.last_icon_dir = Path.home()
@@ -3162,8 +3164,9 @@ class PresetChooseIconButton(QPushButton):
 
     def set_preset(self, preset: Preset | None):
         self.preset = preset
-        self.last_selected_icon_path = self.preset.get_icon_path() if preset else None
-        if self.last_selected_icon_path:
+        if preset is not None:
+            self.last_selected_icon_path = preset.get_icon_path()
+        if self.last_selected_icon_path is not None:
             self.last_icon_dir = self.last_selected_icon_path.parent
         self.update_icon()
 
@@ -3196,7 +3199,8 @@ class QueryWeather:
     def __init__(self, location: GeoLocation):
         self.location = location
         self.maximum_distance_km = int(os.getenv("VDU_CONTROLS_WEATHER_KM", default='200'))
-        lang = locale.getlocale()[0][:2]
+        loc = locale.getlocale()
+        lang = loc[0][:2] if loc is not None else 'C'
         self.url = f"{WEATHER_FORECAST_URL}/{location.place_name}?" + urllib.parse.urlencode({'lang': lang, 'format': 'j1'})
         self.weather_data = None
         self.proximity_km = 0
@@ -3214,6 +3218,7 @@ class QueryWeather:
 
         self.when = zoned_now()
         try:
+            log_info(f"QueryWeather: {self.url}")
             with urllib.request.urlopen(self.url, timeout=15) as request:
                 json_content = request.read()
                 self.weather_data = json.loads(json_content)
@@ -3376,7 +3381,7 @@ class PresetChooseWeatherWidget(QWidget):
                 self.chooser.addItem(weather_name, path)
 
     def get_required_weather_filepath(self) -> Path | None:
-        return self.required_weather_filepath.as_posix() if self.required_weather_filepath is not None else None
+        return self.required_weather_filepath if self.required_weather_filepath is not None else None
 
     def set_required_weather_filepath(self, weather_filename: str | None):
         if weather_filename is None:
@@ -3396,7 +3401,7 @@ class PresetChooseElevationWidget(QWidget):
     #
     def __init__(self, location_func: Callable):
         super().__init__()
-        self.elevation_key = None
+        self.elevation_key: SolarElevationKey | None = None
         self.elevation_time_map: Dict[SolarElevationKey, SolarElevationData] | None = None
         self.location: GeoLocation | None = None
         layout = QVBoxLayout()
@@ -3408,7 +3413,7 @@ class PresetChooseElevationWidget(QWidget):
         self.slider.setMinimum(-1)
         self.slider.setValue(-1)
         self.slider = self.slider
-        self.elevation_steps = []
+        self.elevation_steps: List[SolarElevationKey] = []
         self.title_label = QLabel(self.default_title)
         layout.addWidget(self.title_label)
         layout.addWidget(self.slider)
@@ -3424,7 +3429,7 @@ class PresetChooseElevationWidget(QWidget):
         self.configure_for_location(location_func())
         self.slider.valueChanged.connect(self.sliding)
         self.setMinimumWidth(800)
-        self.sun_image = None
+        self.sun_image: QImage | None = None
 
     def sliding(self):
         if self.slider.value() == -1:
@@ -3561,7 +3566,8 @@ class PresetChooseElevationWidget(QWidget):
         self.weather_widget.chooser.setCurrentIndex(0)
 
     def get_required_weather_filename(self) -> str | None:
-        return self.weather_widget.get_required_weather_filepath()
+        path = self.weather_widget.get_required_weather_filepath()
+        return path.as_posix() if path else None
 
     def set_required_weather_filename(self, weather_filename: str | None):
         self.weather_widget.set_required_weather_filepath(weather_filename)
@@ -3585,7 +3591,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.setWindowTitle(tr('Presets'))
         self.main_window = main_window
         self.main_config = main_config
-        self.content_controls = {}
+        self.content_controls: Dict[Tuple[str, str], QWidget] = {}
         self.resize(1600, 800)
         self.setMinimumWidth(1280)
         self.setMinimumHeight(800)
@@ -3825,7 +3831,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.main_window.save_preset(preset)
         self.display_status_message(tr("Saved {}").format(preset.name))
 
-    def delete_preset(self, preset: Preset, target_widget: QWidget | None = None) -> None:
+    def delete_preset(self, preset: Preset, target_widget: QWidget) -> None:
         confirmation = MessageBox(QMessageBox.Question, buttons=QMessageBox.Ok | QMessageBox.Cancel, default=QMessageBox.Cancel)
         confirmation.setText(tr('Delete {}?').format(preset.name))
         rc = confirmation.exec()
@@ -3979,7 +3985,7 @@ def create_pixmap_from_svg_bytes(svg_bytes: bytes):
     return QPixmap.fromImage(image)
 
 
-def create_image_from_svg_bytes(svg_bytes):
+def create_image_from_svg_bytes(svg_bytes) -> QImage:
     renderer = QSvgRenderer(handle_theme(svg_bytes))
     image = QImage(64, 64, QImage.Format_ARGB32)
     image.fill(0x0)
@@ -3994,7 +4000,7 @@ def create_icon_from_svg_bytes(svg_bytes: bytes) -> QIcon:
     return QIcon(create_pixmap_from_svg_bytes(svg_bytes))
 
 
-def create_icon_from_path(path: Path) -> QIcon | None:
+def create_icon_from_path(path: Path) -> QIcon:
     if path.exists():
         if path.suffix == '.svg':
             with open(path, 'rb') as icon_file:
@@ -4002,10 +4008,8 @@ def create_icon_from_path(path: Path) -> QIcon | None:
                 return create_icon_from_svg_bytes(icon_bytes)
         if path.suffix == '.png':
             return QIcon(path.as_posix())
-    else:
-        # Copes with the case where the path has been deleted.
-        return QApplication.style().standardIcon(QStyle.SP_MessageBoxQuestion)
-    return None
+    # Copes with the case where the path has been deleted.
+    return QApplication.style().standardIcon(QStyle.SP_MessageBoxQuestion)
 
 
 def create_icon_from_text(text: str) -> QIcon:
@@ -4109,7 +4113,7 @@ class GreyScaleDialog(QDialog):
     # This stops garbage collection of independent instances of this dialog until the user closes them.
     # If you don't do this the dialog will disappear before it becomes visible.  Could also pass a parent
     # which would achieve the same thing - but would alter where the dialog appears.
-    _active_list = []
+    _active_list: List[QDialog] = []
 
     def __init__(self):
         super().__init__()
@@ -4224,30 +4228,32 @@ class VduAppWindow(QMainWindow):
         self.geometry_key = self.objectName() + "_geometry"
         self.state_key = self.objectName() + "_window_state"
         self.settings = QSettings('vdu_controls.qt.state', 'vdu_controls')
-        self.main_panel = None
+        self.main_panel: VduControlsMainPanel | None = None
         self.main_config = main_config
-        self.weather_cache: QueryWeather | None = None
+        self.weather_query: QueryWeather | None = None
         self.daily_schedule_next_update = datetime.today()
-        self.refresh_data_task = None
-        self.restore_preset_thread = None
-        self.detected_vdu_list = []
-        self.vdu_controllers = []
-        self.previously_detected_vdu_list = []
+        self.refresh_data_task: WorkerThread | None = None
+        self.restore_preset_thread: WorkerThread | None = None
+        self.detected_vdu_list: List[Tuple[str, str, str, str]] = []
+        self.vdu_controllers: List[VduController] = []
+        self.previously_detected_vdu_list: List[Tuple[str, str, str, str]] = []
 
-        self.ddcutil = None
+        self.ddcutil: DdcUtil | None = None
 
         current_desktop = os.environ.get('XDG_CURRENT_DESKTOP', default='unknown')
 
         gnome_tray_behaviour = main_config.is_system_tray_enabled() and 'gnome' in current_desktop.lower()
 
+        main_window_action: Callable | None = None
+
         if gnome_tray_behaviour:
             # Gnome tray doesn't normally provide a way to bring up the main app.
-            def main_window_action() -> None:
+            def main_window_action_implemenation() -> None:
                 self.show()
                 self.raise_()
                 self.activateWindow()
-        else:
-            main_window_action = None
+
+            main_window_action = main_window_action_implemenation
 
         def settings_changed(changed_settings: List):
             if ('vdu-controls-globals', 'system-tray-enabled') in changed_settings:
@@ -4266,8 +4272,7 @@ class VduAppWindow(QMainWindow):
                 presets_dialog.reload_data()
 
         def edit_config() -> None:
-            SettingsEditor.invoke(main_config, [vdu.config for vdu in self.main_panel.vdu_controllers],
-                                  settings_changed)
+            SettingsEditor.invoke(main_config, [vdu.config for vdu in self.main_panel.vdu_controllers], settings_changed)
 
         def refresh_from_vdus() -> None:
             self.start_refresh()
@@ -4570,7 +4575,7 @@ class VduAppWindow(QMainWindow):
             if self.restore_preset_thread.vdu_exception is not None:
                 answer = self.main_panel.display_vdu_exception(
                     self.restore_preset_thread.vdu_exception,
-                    buttons=QMessageBox.Retry|QMessageBox.Close, default_button=QMessageBox.Retry)
+                    buttons=QMessageBox.Retry | QMessageBox.Close, default_button=QMessageBox.Retry)
                 if answer == QMessageBox.Retry:
                     self.restore_preset(preset)  # Try again (recursion)
                 else:
@@ -4709,12 +4714,11 @@ class VduAppWindow(QMainWindow):
                     log_info(f"Solar activation skipping preset {preset.name} {elevation_key} degrees"
                              " - the sun does not reach that elevation today.")
         # set a timer to rerun this at the beginning of the next day.
-        tomorrow = date.today() + timedelta(days=1)
+        tomorrow = zoned_now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
         if self.daily_schedule_next_update != tomorrow:
-            daily_update_at = datetime(year=tomorrow.year, month=tomorrow.month, day=tomorrow.day).astimezone()
-            millis = (daily_update_at - zoned_now()) / timedelta(milliseconds=1)
+            millis = (tomorrow - zoned_now()) / timedelta(milliseconds=1)
             log_info(f"Will update solar elevation activations tomorrow at "
-                     f" {daily_update_at} (in {round(millis / 1000 / 60)} minutes)")
+                     f" {tomorrow} (in {round(millis / 1000 / 60)} minutes)")
             QTimer.singleShot(int(millis), partial(self.schedule_presets, True))
             # Testing: QTimer.singleShot(int(1000*30), partial(self.schedule_presets, True))
             self.daily_schedule_next_update = tomorrow
@@ -4735,7 +4739,7 @@ class VduAppWindow(QMainWindow):
                 preset.schedule_status = ScheduleStatus.weather_cancellation
                 status_text = tr("Preset {} activation was cancelled due to weather at {}").format(
                     preset.name, now.isoformat(' ', 'seconds'))
-                weather_text = f"({self.weather_cache.weather_desc})"
+                weather_text = f"({self.weather_query.weather_desc if self.weather_query is not None else ''})"
         if proceed:
             self.restore_preset(preset)  # Happens asynchronously in a thread
             preset.schedule_status = ScheduleStatus.succeeded  # Schedule succeeded (restore thread might still not succeed though)
@@ -4746,14 +4750,16 @@ class VduAppWindow(QMainWindow):
     def is_weather_satisfactory(self, preset, use_cache: bool = False) -> bool:
         try:
             if preset.is_weather_dependent():
-                if not use_cache or self.weather_cache is None:
-                    self.weather_cache = QueryWeather(self.main_config.get_location())
-                    self.weather_cache.run_query()
-                    if not self.weather_cache.proximity_ok:
-                        log_error(f"Preset {preset.name} weather location is {self.weather_cache.proximity_km} km from "
-                                  f"Settings Location, check settings.")
-                        weather_bad_location_dialog(self.weather_cache)
-                if not preset.check_weather(self.weather_cache):
+                if not use_cache or self.weather_query is None:
+                    location = self.main_config.get_location()
+                    if location is not None:
+                        self.weather_query = QueryWeather(location)
+                        self.weather_query.run_query()
+                        if not self.weather_query.proximity_ok:
+                            log_error(f"Preset {preset.name} weather location is {self.weather_query.proximity_km} km from "
+                                      f"Settings Location, check settings.")
+                            weather_bad_location_dialog(self.weather_query)
+                if not preset.check_weather(self.weather_query):
                     preset.schedule_status = ScheduleStatus.weather_cancellation
                     return False
         except ValueError as e:
@@ -4970,10 +4976,13 @@ def initialise_locale_translations(app: QApplication):
         log_info(tr("Using newer .ts file {} translations from {}").format(locale_name, ts_path.as_posix()))
         import xml.etree.ElementTree as XmlElementTree
         global ts_translations
-        for message in XmlElementTree.parse(ts_path).find('context').findall('message'):
-            translation = message.find('translation').text
-            if translation:
-                ts_translations[message.find('source').text] = translation
+        context = XmlElementTree.parse(ts_path).find('context')
+        if context is not None:
+            for message in context.findall('message'):
+                translation = message.find('translation')
+                source = message.find('source')
+                if translation is not None and source is not None and translation.text is not None and source.text is not None:
+                    ts_translations[source.text] = translation.text
         log_info(tr("Loaded {} translations from {}").format(locale_name, ts_path.as_posix()))
         return
 
