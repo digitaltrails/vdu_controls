@@ -20,7 +20,7 @@ system tray.
 Named ``Preset`` configurations can be saved for later recall. For example, a user could create
 presets for night, day, photography, movies, and so forth.  Presets may be automatically triggered
 according to solar elevation, and can be further constrained by local weather conditions (as
-reported by [https://wttr.in](https://wttr.in)) 
+reported by [https://wttr.in](https://wttr.in)).  Presets may also be activated by UNIX signals.
 
 The UI's look-and-feel dynamically adjusts to the desktop theme and desktop environment: light-theme,
 dark-theme, KDE, Deepin, GNOME, and others.
