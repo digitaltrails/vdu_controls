@@ -2200,7 +2200,7 @@ class VduControlSlider(VduControlBase):
 
         layout = QHBoxLayout()
         self.setLayout(layout)
-        self.svg_icon = None
+        self.svg_icon: QSvgWidget = None
 
         if vcp_capability.vcp_code in VDU_SUPPORTED_CONTROLS.by_code and \
                 VDU_SUPPORTED_CONTROLS.by_code[vcp_capability.vcp_code].icon_source is not None:
@@ -2496,10 +2496,10 @@ class Preset:
         self.name = name
         self.path = get_config_path(proper_name('Preset', name))
         self.preset_ini = ConfigIni()
-        self.timer = None
-        self.timer_action = None
+        self.timer: QTimer | None = None
+        self.timer_action: Callable | None = None
         self.schedule_status = ScheduleStatus.unscheduled
-        self.elevation_time_today = None
+        self.elevation_time_today: datetime | None = None
 
     def get_icon_path(self) -> Path | None:
         if self.preset_ini.has_section("preset"):
@@ -2924,7 +2924,8 @@ class VduControlsMainPanel(QWidget):
         return True
 
     def display_active_preset(self, preset: Preset | None):
-        self.bottom_toolbar.display_active_preset(preset)
+        if self.bottom_toolbar:
+            self.bottom_toolbar.display_active_preset(preset)
 
     def display_vdu_exception(self, exception: VduException, buttons=QMessageBox.Close, default_button=QMessageBox.Close) -> int:
         log_error(f"{exception.vdu_description} {exception.operation} {exception.attr_id} {exception.cause}")
@@ -2950,7 +2951,7 @@ class WorkerThread(QThread):
         self.task_body = task_body
         self.task_finished = task_finished
         self.finished_work.connect(task_finished)
-        self.vdu_exception = None
+        self.vdu_exception : VduException | None = None
 
     def run(self):
         """Long-running task."""
