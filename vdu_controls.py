@@ -3244,7 +3244,7 @@ class QueryWeather:
                 log_info(f"QueryWeather result: {self}")
         except urllib.error.HTTPError as e:
             if e.code == 404:
-                raise ValueError(tr("Unknown location {}".format(location_name)),
+                raise ValueError(tr("Unknown location {}").format(location_name),
                                  tr("Please check Location in Settings"))
             raise ValueError(tr("Failed to get weather from {}").format(self.url), str(e))
         except Exception as ue:
@@ -4784,11 +4784,11 @@ class VduAppWindow(QMainWindow):
             with open(path, 'r') as f:
                 text = f.read()
                 if text.strip() == DANGER_AGREEMENT_NON_STANDARD_VCP_CODES.strip():
-                    log_warning("\n"
-                                "Non standard features may be enabled for write.\n"
-                                "ENABLING NON_STANDARD FEATURES COULD DAMAGE YOUR HARDWARE.\n"
-                                "To disable non-standard features delete the file {}.\n"
-                                "{}".format(path, DANGER_AGREEMENT_NON_STANDARD_VCP_CODES))
+                    log_warning(f"\n"
+                                f"Non standard features may be enabled for write.\n"
+                                f"ENABLING NON_STANDARD FEATURES COULD DAMAGE YOUR HARDWARE.\n"
+                                f"To disable non-standard features delete the file {path}.\n"
+                                f"{DANGER_AGREEMENT_NON_STANDARD_VCP_CODES}")
                     return True
         return False
 
@@ -5082,9 +5082,9 @@ def main():
         restart_status = QProcess.startDetached(app.arguments()[0], app.arguments()[1:])
         if not restart_status:
             dialog = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Close)
-            dialog.setText(tr("Restart of {} failed.  Please restart manually.".format(app.arguments()[0])))
+            dialog.setText(tr("Restart of {} failed.  Please restart manually.").format(app.arguments()[0]))
             dialog.setInformativeText(tr("This is probably because {} is not"
-                                         " executable or is not on your PATH.".format(app.arguments()[0])))
+                                         " executable or is not on your PATH.").format(app.arguments()[0]))
             dialog.exec()
     sys.exit(rc)
 
