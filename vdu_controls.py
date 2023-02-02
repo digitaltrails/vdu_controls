@@ -484,7 +484,7 @@ from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
-    QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox
+    QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox
 
 APPNAME = "VDU Controls"
 VDU_CONTROLS_VERSION = '1.9.1'
@@ -1964,28 +1964,26 @@ class SettingsEditorLineBase(SettingsEditorFieldBase):
         self.text_input.setText(self.section_editor.ini_before[self.section][self.option])
 
 
-class SettingsEditorFloatWidget(SettingsEditorLineBase):
+class SettingsEditorFloatWidget(SettingsEditorFieldBase):
     def __init__(self, section_editor: SettingsEditorTab, option: str, section: str) -> None:
         super().__init__(section_editor, option, section)
-        self.text_input.setMaximumWidth(100)
-        self.text_input.setMaxLength(4)
-        self.validator = QDoubleValidator()
-        self.validator.setNotation(QDoubleValidator.StandardNotation)
-        self.validator.setRange(0.1, 3.0, 4)
-        try:
-            self.text_input.setText(locale.format_string('%.2f', float(section_editor.ini_editable[section][option])))
-        except ValueError:
-            self.text_input.setText(section_editor.ini_editable[section][option])
-        self.layout().addStretch(1)
+        self.setLayout(QHBoxLayout())
+        self.layout().setAlignment(Qt.AlignLeft)
+        self.text_label = QLabel(self.translate_option())
+        self.layout().addWidget(self.text_label)
+        self.spinbox = QDoubleSpinBox()
+        self.spinbox.setRange(0.1, 4.0)
+        self.spinbox.setSingleStep(0.1)
+        self.spinbox.setValue(float(section_editor.ini_editable[section][option]))
+        self.layout().addWidget(self.spinbox)
 
-    def internalize_value(self, text: str) -> str | None:
-        try:
-            delocalized_text = locale.delocalize(str(text))
-            float(delocalized_text)  # just validating, don't need the result.
-            return delocalized_text
-        except ValueError:
-            self.set_error_indication(True)
-        return None
+        def spinbox_value_changed() -> None:
+            section_editor.ini_editable[section][option] = locale.delocalize(f"{self.spinbox.value():.2f}")
+
+        self.spinbox.valueChanged.connect(spinbox_value_changed)
+
+    def reset(self):
+        self.spinbox.setValue(float(self.section_editor.ini_before.get(self.section, self.option)))
 
 
 class SettingsEditorCsvWidget(SettingsEditorLineBase):
@@ -3670,11 +3668,25 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.editor_title.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
         self.editor_layout.addWidget(self.editor_title)
         self.editor_groupbox.setLayout(self.editor_layout)
+
         self.editor_controls_widget = self.create_preset_content_controls()
         self.editor_layout.addWidget(self.edit_preset_widget)
+
+        self.controls_title_widget = QWidget()
+        self.controls_title_widget.setLayout(QHBoxLayout())
         self.editor_controls_prompt = QLabel(tr("Controls to include:"))
-        self.editor_controls_prompt.setDisabled(True)
-        self.editor_layout.addWidget(self.editor_controls_prompt)
+        self.controls_title_widget.layout().addWidget(self.editor_controls_prompt, alignment=Qt.AlignLeft)
+        self.controls_title_widget.layout().addStretch(10)
+        self.controls_title_widget.layout().addWidget(QLabel(tr("Transition")), alignment=Qt.AlignRight)
+        self.transition_seconds_widget = QSpinBox()
+        self.transition_seconds_widget.setRange(0, 600)
+        self.controls_title_widget.layout().addWidget(QSpinBox(), alignment=Qt.AlignRight)
+        self.controls_title_widget.layout().addWidget(QLabel(tr("seconds")))
+        self.controls_title_widget.setDisabled(True)
+
+        self.editor_layout.addWidget(self.controls_title_widget)
+
+        #self.editor_layout.addWidget(self.editor_controls_prompt)
         self.editor_layout.addWidget(self.editor_controls_widget)
         self.editor_trigger_widget = PresetChooseElevationWidget(self.main_config.get_location)
         self.editor_layout.addWidget(self.editor_trigger_widget)
@@ -3781,6 +3793,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             weather_filename = self.editor_trigger_widget.get_required_weather_filename()
             if weather_filename is not None:
                 preset_ini.set('preset', 'solar-elevation-weather-restriction', weather_filename)
+        preset_ini.set('preset', 'transition-seconds', str(self.transition_seconds_widget.value()))
 
     def get_presets(self):
         return [self.preset_widgets_layout.itemAt(i).widget()
@@ -3858,7 +3871,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             self.edit_save_button.setDisabled(True)
             self.editor_title.setText(tr("Create new preset:"))
             self.editor_controls_prompt.setText(tr("Controls to include:"))
-            self.editor_controls_prompt.setDisabled(True)
+            self.controls_title_widget.setDisabled(True)
         else:
             already_exists = self.find_preset_widget(changed_text)
             if already_exists:
@@ -3866,9 +3879,9 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             else:
                 self.editor_title.setText(tr("Create new preset:"))
             self.editor_controls_prompt.setText(tr("Controls to include in {}:").format(changed_text))
-            self.editor_controls_prompt.setDisabled(False)
             self.editor_controls_widget.setDisabled(False)
             self.editor_trigger_widget.setDisabled(False)
+            self.controls_title_widget.setDisabled(False)
             self.edit_save_button.setDisabled(False)
 
     def edit_preset(self, preset: Preset) -> None:
@@ -3882,6 +3895,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                     preset.preset_ini.get('preset', 'solar-elevation', fallback=None))
                 self.editor_trigger_widget.set_required_weather_filename(
                     preset.preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None))
+                self.transition_seconds_widget.setValue(preset.preset_ini.getint('preset', 'transition_seconds', fallback=0))
 
         self.main_window.restore_preset(preset, restore_finished=begin_editing)
         self.display_status_message('')  # Will be shortly followed by a restore message
