@@ -1287,7 +1287,7 @@ class ConfigIni(configparser.ConfigParser):
     def save(self, config_path) -> None:
         if not config_path.parent.is_dir():
             os.makedirs(config_path.parent)
-        with open(config_path, 'w') as config_file:
+        with open(config_path, 'w', encoding="utf-8") as config_file:
             self[ConfigIni.METADATA_SECTION][ConfigIni.METADATA_VERSION_OPTION] = VDU_CONTROLS_VERSION
             self[ConfigIni.METADATA_SECTION][ConfigIni.METADATA_TIMESTAMP_OPTION] = str(zoned_now())
             self.write(config_file)
@@ -2651,7 +2651,7 @@ class Preset:
         if not path.exists():
             log_error(f"Preset {self.name} missing weather requirements file: {weather_restriction_filename}")
             return True
-        with open(path) as weather_file:
+        with open(path, encoding="utf-8") as weather_file:
             code_list = weather_file.readlines()
             for code_line in code_list:
                 parts = code_line.split()
@@ -3295,7 +3295,7 @@ class PresetChooseWeatherWidget(QWidget):
                 self.verify_weather_location(location_func)
                 path = self.chooser.itemData(index)
                 if path.exists():
-                    with open(path) as weather_file:
+                    with open(path, encoding="utf-8") as weather_file:
                         code_list = weather_file.read()
                         self.info_label.setText(code_list)
                 else:
@@ -3319,9 +3319,9 @@ class PresetChooseWeatherWidget(QWidget):
     def init_weather(self):
         if len(list(CONFIG_DIR_PATH.glob("*.weather"))) == 0:
             log_info(f"Making good, bad and all weather in {CONFIG_DIR_PATH}")
-            with open(CONFIG_DIR_PATH.joinpath('good.weather'), 'w') as weather_file:
+            with open(CONFIG_DIR_PATH.joinpath('good.weather'), 'w', encoding="utf-8") as weather_file:
                 weather_file.write("113 Sunny\n116 Partly Cloudy\n119 Cloudy\n")
-            with open(CONFIG_DIR_PATH.joinpath('bad.weather'), 'w') as weather_file:
+            with open(CONFIG_DIR_PATH.joinpath('bad.weather'), 'w', encoding="utf-8") as weather_file:
                 weather_file.write(
                     "143 Fog\n179 Light Sleet Showers\n182 Light Sleet\n185 Light Sleet\n200 Thundery Showers\n227 "
                     "Light Snow\n230 Heavy Snow\n248 Fog\n260 Fog\n266 Light Rain\n281 Light Sleet\n284 Light "
@@ -3333,7 +3333,7 @@ class PresetChooseWeatherWidget(QWidget):
                     "Light Sleet Showers\n377 Light Sleet\n386 Thundery Showers\n389 Thundery Heavy Rain\n392 "
                     "Thundery Snow Showers\n395 HeavySnowShowers\n"
                 )
-            with open(CONFIG_DIR_PATH.joinpath('all.weather'), 'w') as weather_file:
+            with open(CONFIG_DIR_PATH.joinpath('all.weather'), 'w', encoding="utf-8") as weather_file:
                 weather_file.write(
                     "113 Sunny\n116 Partly Cloudy\n119 Cloudy\n122 Very Cloudy\n143 Fog\n176 Light Showers\n179 Light "
                     "Sleet Showers\n182 Light Sleet\n185 Light Sleet\n200 Thundery Showers\n227 Light Snow\n230 Heavy "
@@ -3352,7 +3352,7 @@ class PresetChooseWeatherWidget(QWidget):
         # Only do this check if the location has changed.
         vf_file_path = CONFIG_DIR_PATH.joinpath('verified_weather_location.txt')
         if vf_file_path.exists():
-            with open(vf_file_path) as vf:
+            with open(vf_file_path, encoding="utf-8") as vf:
                 if vf.read() == place_name:
                     return
         try:
@@ -3363,7 +3363,7 @@ class PresetChooseWeatherWidget(QWidget):
                 msg = MessageBox(QMessageBox.Information)
                 msg.setText(tr("Weather for {} will be retrieved from {}").format(place_name, WEATHER_FORECAST_URL))
                 msg.exec()
-                with open(vf_file_path, 'w') as vf:
+                with open(vf_file_path, 'w', encoding="utf-8") as vf:
                     vf.write(place_name)
             else:
                 weather_bad_location_dialog(weather)
@@ -4591,7 +4591,7 @@ class VduAppWindow(QMainWindow):
                 self.main_panel.restore_preset_view(preset)
                 self.display_active_preset(preset)
             self.main_panel.indicate_busy(False)
-            with open(PRESET_NAME_FILE, 'w') as cps_file:
+            with open(PRESET_NAME_FILE, 'w', encoding="utf-8") as cps_file:
                 cps_file.write(preset.name)
             presets_dialog_message(tr("Restored {}").format(preset.name), refresh_view=True)
             if restore_finished is not None:
@@ -4628,7 +4628,7 @@ class VduAppWindow(QMainWindow):
     def which_preset_is_active(self) -> Preset | None:
         # See if we have a record of which was last active, and see if it still is active
         if PRESET_NAME_FILE.exists():
-            with open(PRESET_NAME_FILE, 'r') as cps_file:
+            with open(PRESET_NAME_FILE, encoding="utf-8") as cps_file:
                 preset_name = cps_file.read()
                 if preset_name.strip() != '':
                     preset = self.preset_controller.presets.get(preset_name)  # will be None if it has been deleted
@@ -4781,7 +4781,7 @@ class VduAppWindow(QMainWindow):
     def is_non_standard_enabled(self) -> bool:
         path = get_config_path("danger")
         if path.exists():
-            with open(path, 'r') as f:
+            with open(path, encoding="utf-8") as f:
                 text = f.read()
                 if text.strip() == DANGER_AGREEMENT_NON_STANDARD_VCP_CODES.strip():
                     log_warning(f"\n"
