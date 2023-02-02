@@ -1350,7 +1350,7 @@ class VduControlsConfig:
         self.ini_content[QT_TR_NOOP('ddcutil-parameters')] = {}
         self.ini_content[QT_TR_NOOP('ddcutil-capabilities')] = {}
 
-        for vcp_code, item in VDU_SUPPORTED_CONTROLS.by_code.items():
+        for item in VDU_SUPPORTED_CONTROLS.by_code.values():
             self.ini_content['vdu-controls-widgets'][item.property_name()] = 'yes' if item.enabled else 'no'
 
         self.ini_content['vdu-controls-widgets']['enable-vcp-codes'] = ''
@@ -1365,14 +1365,14 @@ class VduControlsConfig:
                     self.enable_unsupported_vcp_code(code)
         self.file_path: Path | None = None
 
-    def get_config_type(self, section: str, option: str) -> str:
+    def get_config_data_type(self, option: str) -> str:
         if option in self.config_type_map:
             return self.config_type_map[option]
         return 'boolean'
 
     def restrict_to_actual_capabilities(self, vdu_capabilities: Dict[str, VcpCapability]) -> None:
         for option in self.ini_content['vdu-controls-widgets']:
-            if self.get_config_type('vdu-controls-widgets', option) == 'boolean':
+            if self.get_config_data_type(option) == 'boolean':
                 if option in VDU_SUPPORTED_CONTROLS.by_arg_name and \
                         VDU_SUPPORTED_CONTROLS.by_arg_name[option].vcp_code not in vdu_capabilities:
                     del self.ini_content['vdu-controls-widgets'][option]
@@ -1813,7 +1813,7 @@ class SettingsEditorTab(QWidget):
             editor_layout.addWidget(booleans_panel)
             n = 0
             for option in self.ini_editable[section]:
-                data_type = vdu_config.get_config_type(section, option)
+                data_type = vdu_config.get_config_data_type(option)
                 if data_type == 'boolean':
                     booleans_grid.addWidget(field(SettingsEditorBooleanWidget(self, option, section)), n // 3, n % 3)
                     n += 1
@@ -2267,7 +2267,7 @@ class VduControlSlider(VduControlBase):
     def refresh_data(self, value: Tuple[str, str] | None = None) -> None:
         """Query the VDU for a new data value and cache it (maybe called from a task thread, so no GUI op's here)."""
         new_value_str, max_value_str = None, None
-        for i in range(SLIDER_REFRESH_RETRIES):
+        for _ in range(SLIDER_REFRESH_RETRIES):
             try:
                 new_value_str, max_value_str = value if value is not None else self.controller.get_attribute(
                     self.vcp_capability.vcp_code)
@@ -3491,7 +3491,7 @@ class PresetChooseElevationWidget(QWidget):
         self.create_plot(None)
 
     def create_plot(self, ev_key: SolarElevationKey | None):
-        width, height, plot_height = self.plot.width(), self.plot.height(), 2 * self.plot.height() // 3
+        width, height = self.plot.width(), self.plot.height()
         origin_iy, range_iy = height // 2, self.plot.height() // 3
         pixmap = QPixmap(width, height)
         painter = QPainter(pixmap)
@@ -4331,7 +4331,7 @@ class VduAppWindow(QMainWindow):
         if main_config.is_system_tray_enabled():
             if not QSystemTrayIcon.isSystemTrayAvailable():
                 log_warning("no system tray, waiting to see if one becomes available.")
-                for i in range(0, SYSTEM_TRAY_WAIT_SECONDS):
+                for _ in range(0, SYSTEM_TRAY_WAIT_SECONDS):
                     if QSystemTrayIcon.isSystemTrayAvailable():
                         break
                     time.sleep(1)
@@ -4635,7 +4635,7 @@ class VduAppWindow(QMainWindow):
                     if preset is not None and self.main_panel.is_preset_active(preset):
                         return preset
         # Guess by testing each possible preset against the current VDU settings
-        for name, preset in self.preset_controller.find_presets().items():
+        for preset in self.preset_controller.find_presets().values():
             if self.main_panel.is_preset_active(preset):
                 return preset
         return None
@@ -4701,7 +4701,7 @@ class VduAppWindow(QMainWindow):
         most_recent_overdue = None
         local_now = zoned_now()
         latest_due = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
-        for name, preset in self.preset_controller.find_presets().items():
+        for preset in self.preset_controller.find_presets().values():
             if reset:
                 preset.remove_elevation_trigger()
             elevation_key = preset.get_solar_elevation()
