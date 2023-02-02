@@ -1002,7 +1002,7 @@ class DdcUtil:
     def parse_edid(self, display_str: str) -> str | None:
         edid_match = re.search(r'EDID hex dump:\n[^\n]+(\n([ \t]+[+]0).+)+', display_str)
         if edid_match:
-            edid = "".join([part for part in re.findall(r'((?: [0-9a-f][0-9a-f]){16})', edid_match.group(0))]).replace(' ', '')
+            edid = "".join(re.findall('((?: [0-9a-f][0-9a-f]){16})', edid_match.group(0))).replace(' ', '')
             log_info(f"EDID={edid}") if self.debug else None
             return edid
         return None
