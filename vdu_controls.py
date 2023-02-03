@@ -1717,7 +1717,8 @@ class VduController(QObject):
                 values = parse_values(feature_match.group(3))
                 # Guess type from existence or not of value list
                 vcp_type = CONTINUOUS_TYPE if len(values) == 0 or values[0] == "%%Range%%" else GUI_NON_CONTINUOUS_TYPE
-                capability = VcpCapability(vcp_code, vcp_name, vcp_type=vcp_type, values=values, icon_source=None)
+                capability = VcpCapability(vcp_code, vcp_name, vcp_type=vcp_type, values=values, icon_source=None,
+                                           can_transition=vcp_type == CONTINUOUS_TYPE)
                 feature_map[vcp_code] = capability
         return feature_map
 
@@ -2475,7 +2476,6 @@ class VduControlPanel(QWidget):
                     preset_ini[vdu_section_name][control.vcp_capability.property_name()] = control.current_value
 
     def restore_vdu_state(self, preset_ini: ConfigIni) -> None:
-        transition_seconds = preset_ini.getint("preset", "transition-seconds", fallback=0)
         for control in self.vcp_controls:
             if control.vcp_capability.property_name() in preset_ini[self.controller.vdu_stable_id]:
                 control.current_value = preset_ini[self.controller.vdu_stable_id][control.vcp_capability.property_name()]
@@ -3015,7 +3015,8 @@ class PresetController:
 
 
 class MessageBox(QMessageBox):
-    def __init__(self, icon: QIcon, buttons: QMessageBox.StandardButtons = QMessageBox.NoButton, default: QMessageBox.StandardButton | None = None) -> None:
+    def __init__(self, icon: QIcon, buttons: QMessageBox.StandardButtons = QMessageBox.NoButton,
+                 default: QMessageBox.StandardButton | None = None) -> None:
         super().__init__(icon, APPNAME, '', buttons=buttons)
         if default is not None:
             self.setDefaultButton(default)
@@ -3680,16 +3681,11 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.editor_controls_prompt = QLabel(tr("Controls to include:"))
         self.controls_title_widget.layout().addWidget(self.editor_controls_prompt, alignment=Qt.AlignLeft)
         self.controls_title_widget.layout().addStretch(10)
-        self.controls_title_widget.layout().addWidget(QLabel(tr("Transition")), alignment=Qt.AlignRight)
-        self.transition_seconds_widget = QSpinBox()
-        self.transition_seconds_widget.setRange(0, 600)
-        self.controls_title_widget.layout().addWidget(QSpinBox(), alignment=Qt.AlignRight)
-        self.controls_title_widget.layout().addWidget(QLabel(tr("seconds")))
         self.controls_title_widget.setDisabled(True)
 
         self.editor_layout.addWidget(self.controls_title_widget)
 
-        #self.editor_layout.addWidget(self.editor_controls_prompt)
+        # self.editor_layout.addWidget(self.editor_controls_prompt)
         self.editor_layout.addWidget(self.editor_controls_widget)
         self.editor_trigger_widget = PresetChooseElevationWidget(self.main_config.get_location)
         self.editor_layout.addWidget(self.editor_trigger_widget)
@@ -3796,7 +3792,6 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             weather_filename = self.editor_trigger_widget.get_required_weather_filename()
             if weather_filename is not None:
                 preset_ini.set('preset', 'solar-elevation-weather-restriction', weather_filename)
-        preset_ini.set('preset', 'transition-seconds', str(self.transition_seconds_widget.value()))
 
     def get_presets(self):
         return [self.preset_widgets_layout.itemAt(i).widget()
@@ -3898,7 +3893,6 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                     preset.preset_ini.get('preset', 'solar-elevation', fallback=None))
                 self.editor_trigger_widget.set_required_weather_filename(
                     preset.preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None))
-                self.transition_seconds_widget.setValue(preset.preset_ini.getint('preset', 'transition_seconds', fallback=0))
 
         self.main_window.restore_preset(preset, restore_finished=begin_editing)
         self.display_status_message('')  # Will be shortly followed by a restore message
