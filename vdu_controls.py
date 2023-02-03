@@ -3589,7 +3589,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
     @staticmethod
     def invoke(main_window: 'VduAppWindow', main_config: VduControlsConfig) -> None:
         PresetsDialog.show_existing_dialog() if PresetsDialog.exists() else PresetsDialog(main_window, main_config)
-        presets_dialog_message('')
+        presets_dialog_update_view('', refresh_view=False)
 
     def __init__(self, main_window: 'VduAppWindow', main_config: VduControlsConfig) -> None:
         super().__init__()
@@ -3732,9 +3732,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         # TODO Update preset status display - a bit of an extreme way to do it - consider something better?
         self.reload_data()
 
-    def display_status_message(self, message: str, refresh_view: bool = False):
-        if refresh_view:
-            self.refresh_view()
+    def set_status_message(self, message: str):
         self.bottom_bar_message.setText(message)
 
     def find_preset_widget(self, name) -> PresetWidget | None:
@@ -3815,7 +3813,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             target_widget.deleteLater()
             self.main_window.preset_controller.save_order(self.get_presets_name_order())
             self.preset_widgets_scrollarea.updateGeometry()
-        self.display_status_message('')
+        self.set_status_message('')
 
     def down_action(self, preset: Preset, target_widget: QWidget) -> None:
         index = self.preset_widgets_layout.indexOf(target_widget)
@@ -3826,7 +3824,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             target_widget.deleteLater()
             self.main_window.preset_controller.save_order(self.get_presets_name_order())
             self.preset_widgets_scrollarea.updateGeometry()
-        self.display_status_message('')
+        self.set_status_message('')
 
     def restore_preset(self, preset: Preset) -> None:
         self.main_window.restore_preset(preset)
@@ -3839,18 +3837,18 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             message = tr('Update existing {} preset with current monitor settings?').format(preset.name)
             confirmation.setText(message)
             if confirmation.exec() == QMessageBox.Cancel:
-                self.display_status_message('')
+                self.set_status_message('')
                 return
         self.preset_name_edit.setText('')
         self.main_window.save_preset(preset)
-        self.display_status_message(tr("Saved {}").format(preset.name))
+        self.set_status_message(tr("Saved {}").format(preset.name))
 
     def delete_preset(self, preset: Preset, target_widget: QWidget) -> None:
         confirmation = MessageBox(QMessageBox.Question, buttons=QMessageBox.Ok | QMessageBox.Cancel, default=QMessageBox.Cancel)
         confirmation.setText(tr('Delete {}?').format(preset.name))
         rc = confirmation.exec()
         if rc == QMessageBox.Cancel:
-            self.display_status_message('')
+            self.set_status_message('')
             return
         self.main_window.delete_preset(preset)
         self.preset_widgets_layout.removeWidget(target_widget)
@@ -3858,7 +3856,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.main_window.preset_controller.save_order(self.get_presets_name_order())
         self.preset_name_edit.setText('')
         self.preset_widgets_scrollarea.updateGeometry()
-        self.display_status_message(tr("Deleted {}").format(preset.name))
+        self.set_status_message(tr("Deleted {}").format(preset.name))
 
     def change_edit_group_title(self):
         changed_text = self.preset_name_edit.text()
@@ -3883,7 +3881,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             self.edit_save_button.setDisabled(False)
 
     def edit_preset(self, preset: Preset) -> None:
-        def begin_editing():
+        def begin_editing(succeeded: bool):
             self.preset_name_edit.setText(preset.name)
             self.edit_choose_icon_button.set_preset(preset)
             for key, item in self.content_controls.items():
@@ -3895,7 +3893,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                     preset.preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None))
 
         self.main_window.restore_preset(preset, restore_finished=begin_editing)
-        self.display_status_message('')  # Will be shortly followed by a restore message
+        self.set_status_message('')  # Will be shortly followed by a restore message
 
     def save_edited_preset(self) -> None:
         preset_name = self.preset_name_edit.text().strip()
@@ -3906,7 +3904,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             confirmation = MessageBox(QMessageBox.Question, buttons=QMessageBox.Save | QMessageBox.Cancel, default=QMessageBox.Save)
             confirmation.setText(tr("Replace existing '{}' preset?").format(preset_name))
             if confirmation.exec() == QMessageBox.Cancel:
-                self.display_status_message('')
+                self.set_status_message('')
                 return
             preset = existing_preset_widget.preset
             preset.clear_content()
@@ -3935,7 +3933,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             self.preset_widgets_scrollarea.updateGeometry()
             QTimer.singleShot(0, scroll_to_bottom)
         self.preset_name_edit.setText('')
-        self.display_status_message(tr("Saved {}").format(preset.name))
+        self.set_status_message(tr("Saved {}").format(preset.name))
 
     def create_preset_widget(self, preset):
         return PresetWidget(
@@ -3966,14 +3964,16 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 self.edit_save_needed.emit()
             else:
                 self.preset_name_edit.setText('')
-        self.display_status_message('')
+        self.set_status_message('')
         super().closeEvent(event)
 
 
-def presets_dialog_message(message: str, refresh_view: bool = False):
+def presets_dialog_update_view(message: str, refresh_view: bool = True):
     presets_dialog = PresetsDialog.get_instance()
     if presets_dialog:
-        presets_dialog.display_status_message(message, refresh_view=refresh_view)
+        presets_dialog.set_status_message(message)
+        if refresh_view:
+            presets_dialog.refresh_view()
 
 
 def exception_handler(e_type, e_value, e_traceback):
@@ -4588,25 +4588,24 @@ class VduAppWindow(QMainWindow):
 
         def restore_preset_view():
             # Called in a GUI thread, can do GUI op's.
+            succeeded = False
             if self.restore_preset_thread.vdu_exception is not None:
                 answer = self.main_panel.display_vdu_exception(
                     self.restore_preset_thread.vdu_exception,
                     buttons=QMessageBox.Retry | QMessageBox.Close, default_button=QMessageBox.Retry)
                 if answer == QMessageBox.Retry:
-                    self.restore_preset(preset)  # Try again (recursion)
-                else:
-                    preset.schedule_status = ScheduleStatus.skipped_superseded
-                    self.display_active_preset()
+                    self.restore_preset(preset, restore_finished=restore_finished)  # Try again (recursion) in new thread
+                    return  # Don't do anything more the recursive call will take over from here
             else:
-                preset.schedule_status = ScheduleStatus.succeeded
+                succeeded = True
                 self.main_panel.restore_preset_view(preset)
-                self.display_active_preset(preset)
-            self.main_panel.indicate_busy(False)
             with open(PRESET_NAME_FILE, 'w', encoding="utf-8") as cps_file:
                 cps_file.write(preset.name)
-            presets_dialog_message(tr("Restored {}").format(preset.name), refresh_view=True)
+            self.main_panel.indicate_busy(False)
+            self.display_active_preset()
+            presets_dialog_update_view(tr("Restored {}").format(preset.name))
             if restore_finished is not None:
-                restore_finished()
+                restore_finished(succeeded)
 
         self.restore_preset_thread = WorkerThread(task_body=restore_preset_data, task_finished=restore_preset_view)
         self.restore_preset_thread.start()
@@ -4757,14 +4756,21 @@ class VduAppWindow(QMainWindow):
             proceed = self.is_weather_satisfactory(preset)
             if not proceed:
                 preset.schedule_status = ScheduleStatus.weather_cancellation
-                status_text = tr("Preset {} activation was cancelled due to weather at {}").format(
+                message = tr("Preset {} activation was cancelled due to weather at {}").format(
                     preset.name, now.isoformat(' ', 'seconds'))
                 weather_text = f"({self.weather_query.weather_desc if self.weather_query is not None else ''})"
         if proceed:
-            self.restore_preset(preset)  # Happens asynchronously in a thread
             status_text = tr("Preset {} activating at {}").format(preset.name, now.isoformat(' ', 'seconds'))
-        presets_dialog_message(
-            f"{TIME_CLOCK_SYMBOL} {status_text} {preset.schedule_status.symbol()} {weather_text}", refresh_view=True)
+            message = f"{TIME_CLOCK_SYMBOL} {status_text} {preset.schedule_status.symbol()} {weather_text}"
+
+            def finished(succeeded: bool):
+                preset.schedule_status = ScheduleStatus.succeeded if succeeded else ScheduleStatus.skipped_superseded
+                self.display_active_preset()
+                presets_dialog_update_view(message + ' - ' + tr("Restored {}").format(preset.name))
+
+            self.restore_preset(preset, restore_finished=finished)  # Happens asynchronously in a thread
+
+        presets_dialog_update_view(message)
 
     def is_weather_satisfactory(self, preset, use_cache: bool = False) -> bool:
         try:
