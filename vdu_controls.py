@@ -887,7 +887,8 @@ class VcpCapability:
     """Representation of a VCP (Virtual Control Panel) capability for a VDU."""
 
     def __init__(self, vcp_code: str, vcp_name: str, vcp_type: str, values: List | None = None,
-                 causes_config_change: bool = False, icon_source: bytes | None = None, enabled: bool = False):
+                 causes_config_change: bool = False, icon_source: bytes | None = None, enabled: bool = False,
+                 can_transition: bool = False):
         self.vcp_code = vcp_code
         self.name = vcp_name
         self.vcp_type = vcp_type
@@ -895,6 +896,7 @@ class VcpCapability:
         self.causes_config_change = causes_config_change
         # Default config enablement
         self.enabled = enabled
+        self.can_transition = can_transition
         # For future use if we want to implement non-continuous types of VCP (VCP types SNC or CNC)
         self.values = [] if values is None else values
 
@@ -1198,13 +1200,13 @@ class DialogSingletonMixin:
 class VduGuiSupportedControls:
     """Maps of controls supported by name on the command line and in config files."""
     by_code = {
-        '10': VcpCapability('10', QT_TR_NOOP('brightness'), 'C', icon_source=BRIGHTNESS_SVG, enabled=True),
-        '12': VcpCapability('12', QT_TR_NOOP('contrast'), 'C', icon_source=CONTRAST_SVG, enabled=True),
-        '62': VcpCapability('62', QT_TR_NOOP('audio volume'), 'C', icon_source=VOLUME_SVG),
+        '10': VcpCapability('10', QT_TR_NOOP('brightness'), 'C', icon_source=BRIGHTNESS_SVG, enabled=True, can_transition=True),
+        '12': VcpCapability('12', QT_TR_NOOP('contrast'), 'C', icon_source=CONTRAST_SVG, enabled=True, can_transition=True),
+        '62': VcpCapability('62', QT_TR_NOOP('audio volume'), 'C', icon_source=VOLUME_SVG, can_transition=True),
         '8D': VcpCapability('8D', QT_TR_NOOP('audio mute'), 'SNC', icon_source=VOLUME_SVG),
-        '8F': VcpCapability('8F', QT_TR_NOOP('audio treble'), 'C', icon_source=VOLUME_SVG),
-        '91': VcpCapability('91', QT_TR_NOOP('audio bass'), 'C', icon_source=VOLUME_SVG),
-        '64': VcpCapability('91', QT_TR_NOOP('audio mic volume'), 'C', icon_source=VOLUME_SVG),
+        '8F': VcpCapability('8F', QT_TR_NOOP('audio treble'), 'C', icon_source=VOLUME_SVG, can_transition=True),
+        '91': VcpCapability('91', QT_TR_NOOP('audio bass'), 'C', icon_source=VOLUME_SVG, can_transition=True),
+        '64': VcpCapability('91', QT_TR_NOOP('audio mic volume'), 'C', icon_source=VOLUME_SVG, can_transition=True),
         '60': VcpCapability('60', QT_TR_NOOP('input source'), 'SNC', causes_config_change=True),
         'D6': VcpCapability('D6', QT_TR_NOOP('power mode'), 'SNC', causes_config_change=True),
         'CC': VcpCapability('CC', QT_TR_NOOP('OSD language'), 'SNC'),
@@ -2400,7 +2402,7 @@ class VduControlPanel(QWidget):
         label.setText(tr('Monitor {}: {}').format(controller.vdu_id, controller.get_vdu_description()))
         layout.addWidget(label)
         self.controller = controller
-        self.vcp_controls = []
+        self.vcp_controls: List[VduControlBase] = []
         self.vdu_exception_handler = vdu_exception_handler
 
         for vcp_code in controller.enabled_vcp_codes:
@@ -2473,6 +2475,7 @@ class VduControlPanel(QWidget):
                     preset_ini[vdu_section_name][control.vcp_capability.property_name()] = control.current_value
 
     def restore_vdu_state(self, preset_ini: ConfigIni) -> None:
+        transition_seconds = preset_ini.getint("preset", "transition-seconds", fallback=0)
         for control in self.vcp_controls:
             if control.vcp_capability.property_name() in preset_ini[self.controller.vdu_stable_id]:
                 control.current_value = preset_ini[self.controller.vdu_stable_id][control.vcp_capability.property_name()]
