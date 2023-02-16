@@ -4894,7 +4894,11 @@ class VduAppWindow(QMainWindow):
                 self.display_active_preset()
                 presets_dialog_update_view(message + ' - ' + tr("Restored {}").format(preset.name))
 
-            self.restore_preset(preset, restore_finished=finished)  # Happens asynchronously in a thread
+            # Happens asynchronously in a thread
+            if preset.preset_ini.get("preset", "transition-type", fallback="None") == "None":
+                self.restore_preset(preset)
+            else:
+                self.restore_preset_transitionally(preset)
 
         presets_dialog_update_view(message)
 
