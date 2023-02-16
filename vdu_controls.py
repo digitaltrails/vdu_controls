@@ -487,7 +487,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox
 
 APPNAME = "VDU Controls"
-VDU_CONTROLS_VERSION = '1.9.1'
+VDU_CONTROLS_VERSION = '1.9.2'
 
 WESTERN_SKY = 'western-sky'
 EASTERN_SKY = 'eastern-sky'
@@ -2500,7 +2500,7 @@ class Preset:
         self.preset_ini = ConfigIni()
         self.timer: QTimer | None = None
         self.timer_action: Callable | None = None
-        self.schedule_status = ScheduleStatus.unscheduled
+        self.schedule_status = ScheduleStatus.UNSCHEDULED
         self.elevation_time_today: datetime | None = None
 
     def get_icon_path(self) -> Path | None:
@@ -2592,6 +2592,13 @@ class Preset:
             result = basic_desc + ' ' + tr("the sun does not rise this high today")
         return result
 
+    def get_transition_type(self):
+        name = self.preset_ini.get('preset', 'transition-type', fallback="NONE")
+        for transition_type in TransitionType:
+            if str(transition_type) == name:
+                return transition_type
+        return TransitionType.NONE
+
     def start_timer(self, when_local: datetime, action: Callable):
         if self.timer:
             self.timer.stop()
@@ -2602,7 +2609,7 @@ class Preset:
         self.timer.timeout.connect(partial(action, self))
         millis = round((when_local - zoned_now()) / timedelta(milliseconds=1))
         self.timer.start(millis)
-        self.schedule_status = ScheduleStatus.scheduled
+        self.schedule_status = ScheduleStatus.SCHEDULED
         log_info(
             f"Scheduled preset '{self.name}' for {when_local} in {round(millis / 1000 / 60)} minutes "
             f"{self.get_solar_elevation()}")
@@ -2614,18 +2621,18 @@ class Preset:
             self.timer = None
         if self.elevation_time_today is not None:
             self.elevation_time_today = None
-        self.schedule_status = ScheduleStatus.unscheduled
+        self.schedule_status = ScheduleStatus.UNSCHEDULED
 
     def toggle_timer(self):
         if self.elevation_time_today and self.elevation_time_today > zoned_now():
             if self.timer.remainingTime() > 0:
                 log_info(f"Preset scheduled timer cleared for '{self.name}'")
                 self.timer.stop()
-                self.schedule_status = ScheduleStatus.suspended
+                self.schedule_status = ScheduleStatus.SUSPENDED
             else:
                 log_info(f"Preset scheduled timer restored for '{self.name}'")
                 self.start_timer(self.elevation_time_today, self.timer_action)
-                self.schedule_status = ScheduleStatus.scheduled
+                self.schedule_status = ScheduleStatus.SCHEDULED
 
     def get_timer_status(self) -> str:
         if self.elevation_time_today:
@@ -3182,9 +3189,9 @@ class PresetWidget(QWidget):
         if preset.get_solar_elevation() is not None:
 
             def format_description() -> str:
-                if preset.schedule_status == ScheduleStatus.scheduled:
+                if preset.schedule_status == ScheduleStatus.SCHEDULED:
                     action_desc = tr("Press to skip: ")
-                elif preset.schedule_status == ScheduleStatus.suspended:
+                elif preset.schedule_status == ScheduleStatus.SUSPENDED:
                     action_desc = tr("Press to re-enable: ")
                 else:
                     action_desc = ''
@@ -3198,7 +3205,7 @@ class PresetWidget(QWidget):
             timer_control_button.setText(preset.get_solar_elevation_abbreviation())
             timer_control_button.setToolTip(format_description())
             timer_control_button.clicked.connect(toggle_timer)
-        timer_control_button.setEnabled(preset.schedule_status in (ScheduleStatus.scheduled, ScheduleStatus.suspended))
+        timer_control_button.setEnabled(preset.schedule_status in (ScheduleStatus.SCHEDULED, ScheduleStatus.SUSPENDED))
         # auto_label.setDisabled(True)
         line_layout.addWidget(timer_control_button)
 
@@ -3749,9 +3756,9 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.controls_title_widget.layout().addStretch(10)
         self.controls_title_widget.layout().addWidget(QLabel(tr("Transition")), alignment=Qt.AlignRight)
         self.transition_type_widget = QComboBox()
-        self.transition_types = { "None": tr("None"), "Scheduled": tr("On schedule"), "Always": tr("Always") }
-        for label, value in self.transition_types.items():
-            self.transition_type_widget.addItem(label, userData=value)
+
+        for transition_type in TransitionType:
+            self.transition_type_widget.addItem(transition_type.description(), userData=transition_type)
         self.controls_title_widget.layout().addWidget(self.transition_type_widget)
         self.controls_title_widget.setDisabled(True)
 
@@ -3862,7 +3869,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             weather_filename = self.editor_trigger_widget.get_required_weather_filename()
             if weather_filename is not None:
                 preset_ini.set('preset', 'solar-elevation-weather-restriction', weather_filename)
-        preset_ini.set('preset', 'transition-type', self.transition_type_widget.currentData())
+        preset_ini.set('preset', 'transition-type', str(self.transition_type_widget.currentData()))
 
     def get_presets(self):
         return [self.preset_widgets_layout.itemAt(i).widget()
@@ -3964,8 +3971,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                     preset.preset_ini.get('preset', 'solar-elevation', fallback=None))
                 self.editor_trigger_widget.set_required_weather_filename(
                     preset.preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None))
-                self.transition_type_widget.setCurrentIndex(
-                    list(self.transition_types.values()).index(preset.preset_ini.get('preset', 'transition-type', fallback="None")))
+                self.transition_type_widget.setCurrentIndex(preset.get_transition_type().index())
         self.main_window.restore_preset(preset, restore_finished=begin_editing)
         self.set_status_message('')  # Will be shortly followed by a restore message
 
@@ -4287,13 +4293,13 @@ class HelpDialog(QDialog, DialogSingletonMixin):
 
 
 class ScheduleStatus(Enum):
-    unscheduled = 0, ' ', QT_TR_NOOP('unscheduled')
+    UNSCHEDULED = 0, ' ', QT_TR_NOOP('unscheduled')
     # This hourglass character is too tall - it causes a jump when rendered - but nothing else is quite as appropriate.
-    scheduled = 1, TIMER_RUNNING_SYMBOL, QT_TR_NOOP('scheduled')
-    suspended = 2, ' ', QT_TR_NOOP('suspended')
-    succeeded = 3, SUCCESS_SYMBOL, QT_TR_NOOP('succeeded')
-    skipped_superseded = 4, SKIPPED_SYMBOL, QT_TR_NOOP('skipped, superseded')
-    weather_cancellation = 5, WEATHER_CANCELLATION_SYMBOL, QT_TR_NOOP('weather cancellation')
+    SCHEDULED = 1, TIMER_RUNNING_SYMBOL, QT_TR_NOOP('scheduled')
+    SUSPENDED = 2, ' ', QT_TR_NOOP('suspended')
+    SUCCEEDED = 3, SUCCESS_SYMBOL, QT_TR_NOOP('succeeded')
+    SKIPPED_SUPERSEDED = 4, SKIPPED_SYMBOL, QT_TR_NOOP('skipped, superseded')
+    WEATHER_CANCELLATION = 5, WEATHER_CANCELLATION_SYMBOL, QT_TR_NOOP('weather cancellation')
 
     def symbol(self) -> str:
         return self.value[1]
@@ -4303,6 +4309,24 @@ class ScheduleStatus(Enum):
 
     def __str__(self):
         return self.value[0]
+
+
+class TransitionType(Enum):
+    NONE = 0, ' ', QT_TR_NOOP('None')
+    SCHEDULED = 1, ' ', QT_TR_NOOP('On schedule')
+    ALWAYS = 2, ' ', QT_TR_NOOP('Always')
+
+    def index(self):
+        return self.value[0]
+
+    def symbol(self) -> str:
+        return self.value[1]
+
+    def description(self):
+        return self.value[2]
+
+    def __str__(self):
+        return self.name.lower()
 
 
 class VduAppWindow(QMainWindow):
@@ -4419,7 +4443,7 @@ class VduAppWindow(QMainWindow):
                 for _ in range(0, SYSTEM_TRAY_WAIT_SECONDS):
                     if QSystemTrayIcon.isSystemTrayAvailable():
                         break
-                    time.sleep(1)
+                    time.sleep(0.25)  # TODO - at least use a constant
             if QSystemTrayIcon.isSystemTrayAvailable():
                 log_info("Using system tray.")
                 # This next call appears to be automatic on KDE, but not on gnome.
@@ -4704,7 +4728,8 @@ class VduAppWindow(QMainWindow):
                         self.restore_preset_thread.vdu_exception,
                         buttons=QMessageBox.Retry | QMessageBox.Close, default_button=QMessageBox.Retry)
                     if answer == QMessageBox.Retry:
-                        self.restore_preset_transitionally(preset, restore_finished=restore_finished)  # Try again (recursion) in new thread
+                        self.restore_preset_transitionally(preset,
+                                                           restore_finished=restore_finished)  # Try again (recursion) in new thread
                         return  # Don't do anything more the recursive call will take over from here
                 else:
                     succeeded = True
@@ -4718,7 +4743,8 @@ class VduAppWindow(QMainWindow):
                         restore_finished(succeeded)
                     presets_dialog_update_view(tr("Restored {}").format(preset.name))
                 elif restoration.state == TransitionalRestoration.State.PARTIAL:
-                    presets_dialog_update_view(tr("Transitioning to preset {} {}").format(preset.name, '...' if time.time_ns() % 2 == 0 else ''))
+                    presets_dialog_update_view(
+                        tr("Transitioning to preset {} {}").format(preset.name, '...' if time.time_ns() % 2 == 0 else ''))
                     self.restore_preset_thread = WorkerThread(task_body=restore_preset_data, task_finished=restore_preset_view)
                     self.restore_preset_thread.start()
                 elif restoration.state == TransitionalRestoration.State.INTERRUPTED:
@@ -4737,7 +4763,7 @@ class VduAppWindow(QMainWindow):
         presets = self.preset_controller.find_presets()
         if preset_name in presets:
             preset = presets[preset_name]
-            if preset.preset_ini.get("preset", "transition-type", fallback="None") == "Always":
+            if preset.get_transition_type() == TransitionType.ALWAYS:
                 self.restore_preset_transitionally(preset)
             else:
                 self.restore_preset(preset)
@@ -4841,14 +4867,14 @@ class VduAppWindow(QMainWindow):
             if reset:
                 preset.remove_elevation_trigger()
             elevation_key = preset.get_solar_elevation()
-            if elevation_key is not None and preset.schedule_status == ScheduleStatus.unscheduled:
+            if elevation_key is not None and preset.schedule_status == ScheduleStatus.UNSCHEDULED:
                 if elevation_key in time_map:
                     when_today = time_map[elevation_key].when
                     preset.elevation_time_today = when_today
                     if when_today > local_now:
                         preset.start_timer(when_today, self.activate_scheduled_preset)
                     else:
-                        preset.schedule_status = ScheduleStatus.skipped_superseded
+                        preset.schedule_status = ScheduleStatus.SKIPPED_SUPERSEDED
                         if when_today > latest_due:
                             # This may be the preset that should be applicable now, check if weather prevents it.
                             # Reuse the weather, don't do multiple weather queries while scheduling.
@@ -4881,7 +4907,7 @@ class VduAppWindow(QMainWindow):
         if preset.is_weather_dependent() and check_weather:
             proceed = self.is_weather_satisfactory(preset)
             if not proceed:
-                preset.schedule_status = ScheduleStatus.weather_cancellation
+                preset.schedule_status = ScheduleStatus.WEATHER_CANCELLATION
                 message = tr("Preset {} activation was cancelled due to weather at {}").format(
                     preset.name, now.isoformat(' ', 'seconds'))
                 weather_text = f"({self.weather_query.weather_desc if self.weather_query is not None else ''})"
@@ -4890,12 +4916,12 @@ class VduAppWindow(QMainWindow):
             message = f"{TIME_CLOCK_SYMBOL} {status_text} {preset.schedule_status.symbol()} {weather_text}"
 
             def finished(succeeded: bool):
-                preset.schedule_status = ScheduleStatus.succeeded if succeeded else ScheduleStatus.skipped_superseded
+                preset.schedule_status = ScheduleStatus.SUCCEEDED if succeeded else ScheduleStatus.SKIPPED_SUPERSEDED
                 self.display_active_preset()
                 presets_dialog_update_view(message + ' - ' + tr("Restored {}").format(preset.name))
 
             # Happens asynchronously in a thread
-            if immediately or preset.preset_ini.get("preset", "transition-type", fallback="None") == "None":
+            if immediately or preset.get_transition_type() == TransitionType.NONE:
                 self.restore_preset(preset)
             else:
                 self.restore_preset_transitionally(preset)
@@ -4915,7 +4941,7 @@ class VduAppWindow(QMainWindow):
                                       f"Settings Location, check settings.")
                             weather_bad_location_dialog(self.weather_query)
                 if not preset.check_weather(self.weather_query):
-                    preset.schedule_status = ScheduleStatus.weather_cancellation
+                    preset.schedule_status = ScheduleStatus.WEATHER_CANCELLATION
                     return False
         except ValueError as e:
             msg = MessageBox(QMessageBox.Warning)
