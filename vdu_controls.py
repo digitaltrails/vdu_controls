@@ -2962,6 +2962,7 @@ class TransitionalRestoration(object):
         self.final_values = []
         self.expected_values = []
         self.state = TransitionalRestoration.State.INITIALIZED
+        self.transition_step_seconds = 1
 
     def __enter__(self):
         for control_panel in self.controller.vdu_control_panels:
@@ -3007,6 +3008,7 @@ class TransitionalRestoration(object):
         self.expected_values = new_values
         self.state = TransitionalRestoration.State.PARTIAL
         log_info(f"Partial transition to {self.preset.name}", self.expected_values, new_values, self.final_values)
+        time.sleep(self.transition_step_seconds)
         return self.state
 
 
@@ -3745,6 +3747,12 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.editor_controls_prompt = QLabel(tr("Controls to include:"))
         self.controls_title_widget.layout().addWidget(self.editor_controls_prompt, alignment=Qt.AlignLeft)
         self.controls_title_widget.layout().addStretch(10)
+        self.controls_title_widget.layout().addWidget(QLabel(tr("Transition")), alignment=Qt.AlignRight)
+        self.transition_type_widget = QComboBox()
+        self.transition_types = { "None": tr("None"), "Scheduled": tr("On schedule"), "Always": tr("Always") }
+        for label, value in self.transition_types.items():
+            self.transition_type_widget.addItem(label, userData=value)
+        self.controls_title_widget.layout().addWidget(self.transition_type_widget)
         self.controls_title_widget.setDisabled(True)
 
         self.editor_layout.addWidget(self.controls_title_widget)
@@ -3854,6 +3862,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             weather_filename = self.editor_trigger_widget.get_required_weather_filename()
             if weather_filename is not None:
                 preset_ini.set('preset', 'solar-elevation-weather-restriction', weather_filename)
+        preset_ini.set('preset', 'transition-type', self.transition_type_widget.currentData())
 
     def get_presets(self):
         return [self.preset_widgets_layout.itemAt(i).widget()
@@ -3955,7 +3964,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                     preset.preset_ini.get('preset', 'solar-elevation', fallback=None))
                 self.editor_trigger_widget.set_required_weather_filename(
                     preset.preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None))
-
+                self.transition_type_widget.setCurrentIndex(
+                    list(self.transition_types.values()).index(preset.preset_ini.get('preset', 'transition-type', fallback="None")))
         self.main_window.restore_preset(preset, restore_finished=begin_editing)
         self.set_status_message('')  # Will be shortly followed by a restore message
 
@@ -4709,7 +4719,6 @@ class VduAppWindow(QMainWindow):
                     presets_dialog_update_view(tr("Restored {}").format(preset.name))
                 elif restoration.state == TransitionalRestoration.State.PARTIAL:
                     presets_dialog_update_view(tr("Transitioning to preset {} {}").format(preset.name, '...' if time.time_ns() % 2 == 0 else ''))
-                    time.sleep(1)
                     self.restore_preset_thread = WorkerThread(task_body=restore_preset_data, task_finished=restore_preset_view)
                     self.restore_preset_thread.start()
                 elif restoration.state == TransitionalRestoration.State.INTERRUPTED:
@@ -4728,7 +4737,10 @@ class VduAppWindow(QMainWindow):
         presets = self.preset_controller.find_presets()
         if preset_name in presets:
             preset = presets[preset_name]
-            self.restore_preset_transitionally(preset)
+            if preset.preset_ini.get("preset", "transition-type", fallback="None") == "Always":
+                self.restore_preset_transitionally(preset)
+            else:
+                self.restore_preset(preset)
 
     def save_preset(self, preset: Preset) -> None:
         self.copy_to_preset_ini(preset.preset_ini, update_only=True)
