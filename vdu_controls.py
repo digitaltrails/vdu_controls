@@ -4502,7 +4502,7 @@ class VduAppWindow(QMainWindow):
                      f"because its scheduled to be active at this time ({zoned_now()}).")
             self.splash_message_signal.emit(tr("Restoring Preset\n{}").format(overdue.name))
             # Weather check will have succeeded inside schedule_presets() above, don't do it again.
-            self.activate_scheduled_preset(overdue, check_weather=False)
+            self.activate_scheduled_preset(overdue, check_weather=False, immediately=True)
 
         if splash is not None:
             splash.finish(self)
@@ -4873,7 +4873,7 @@ class VduAppWindow(QMainWindow):
                 presets_dialog.refresh_view()
         return most_recent_overdue
 
-    def activate_scheduled_preset(self, preset: Preset, check_weather: bool = True):
+    def activate_scheduled_preset(self, preset: Preset, check_weather: bool = True, immediately: bool = False):
         now = zoned_now()
         status_text = ''
         weather_text = ''
@@ -4895,7 +4895,7 @@ class VduAppWindow(QMainWindow):
                 presets_dialog_update_view(message + ' - ' + tr("Restored {}").format(preset.name))
 
             # Happens asynchronously in a thread
-            if preset.preset_ini.get("preset", "transition-type", fallback="None") == "None":
+            if immediately or preset.preset_ini.get("preset", "transition-type", fallback="None") == "None":
                 self.restore_preset(preset)
             else:
                 self.restore_preset_transitionally(preset)
