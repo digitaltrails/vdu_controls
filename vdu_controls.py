@@ -472,6 +472,7 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 from functools import partial
 from pathlib import Path
+from threading import Lock
 from typing import List, Tuple, Mapping, Type, Dict, Callable
 from urllib.error import URLError
 
@@ -921,6 +922,7 @@ class DdcUtil:
         self.use_edid = os.getenv('VDU_CONTROLS_USE_EDID', default="yes") == 'yes'
         log_info(f"Use_edid={self.use_edid} (to disable it: export VDU_CONTROLS_USE_EDID=no)")
         self.edid_map: Dict[str, str] = {}
+        self.lock = Lock()
 
     def change_settings(self, debug: bool, default_sleep_multiplier: float):
         self.debug = debug
@@ -932,17 +934,18 @@ class DdcUtil:
         return ['--display', display_id]
 
     def __run__(self, *args, sleep_multiplier: float | None = None) -> subprocess.CompletedProcess:
-        multiplier_str = str(self.default_sleep_multiplier if sleep_multiplier is None else sleep_multiplier)
-        process_args = [DDCUTIL, '--sleep-multiplier', multiplier_str] + self.common_args + list(args)
-        try:
-            result = subprocess.run(process_args, stdout=subprocess.PIPE, check=True)
-            if self.debug:  # Shorten EDID to 30 characters when logging it (it will be the only long argument)
-                log_debug("subprocess result: ", [arg if len(arg) < 30 else arg[:30] + "..." for arg in result.args],
-                          f"rc={result.returncode}", f"stdout={result.stdout}")
-        except Exception as e:  # Shorten EDID (see similar above)
-            log_error("subprocess result: ", [arg if len(arg) < 30 else arg[:30] + "..." for arg in process_args], f"exception={e}")
-            raise
-        return result
+        with self.lock:
+            multiplier_str = str(self.default_sleep_multiplier if sleep_multiplier is None else sleep_multiplier)
+            process_args = [DDCUTIL, '--sleep-multiplier', multiplier_str] + self.common_args + list(args)
+            try:
+                result = subprocess.run(process_args, stdout=subprocess.PIPE, check=True)
+                if self.debug:  # Shorten EDID to 30 characters when logging it (it will be the only long argument)
+                    log_debug("subprocess result: ", [arg if len(arg) < 30 else arg[:30] + "..." for arg in result.args],
+                              f"rc={result.returncode}", f"stdout={result.stdout}")
+            except Exception as e:  # Shorten EDID (see similar above)
+                log_error("subprocess result: ", [arg if len(arg) < 30 else arg[:30] + "..." for arg in process_args], f"exception={e}")
+                raise
+            return result
 
     def detect_monitors(self) -> List[Tuple[str, str, str, str]]:
         """Return a list of (vdu_id, desc) tuples."""
@@ -2952,81 +2955,15 @@ class VduControlsMainPanel(QWidget):
         return answer
 
 
-class TransitionalRestoration(object):
-    """Used in conjunction with a with-statement to wrap operations when the
-    physical VDU and data are in sync, indicating there is no need to call ddcutil"""
-
-    class State(Enum):
-        INITIALIZED = 0
-        PARTIAL = 1
-        FINISHED = 2
-        INTERRUPTED = 3
-
-    def __init__(self, controller: VduControlsMainPanel, preset: Preset):
-        self.controller = controller
-        self.preset = preset
-        self.controls_list = []
-        self.final_values = []
-        self.expected_values = []
-        self.state = TransitionalRestoration.State.INITIALIZED
-        self.transition_step_seconds = 1
-
-    def __enter__(self):
-        for control_panel in self.controller.vdu_control_panels:
-            section = control_panel.controller.vdu_stable_id
-            if section in self.preset.preset_ini:
-                for control in control_panel.vcp_controls:
-                    if control.vcp_capability.can_transition:
-                        property_name = control.vcp_capability.property_name()
-                        if property_name in self.preset.preset_ini[section]:
-                            self.controls_list.append(control)
-                            self.final_values.append(self.preset.preset_ini[section][property_name])
-        self.expected_values = [control.controller.get_attribute(control.vcp_capability.vcp_code)[0] for control in
-                                self.controls_list]
-        return self
-
-    def __exit__(self, exc_type, exc_value, exc_tb):
-        pass
-
-    def step(self):
-        current_values = []
-        new_values = []
-        for control, final_value, expected_value in zip(self.controls_list, self.final_values, self.expected_values):
-            current_value = control.controller.get_attribute(control.vcp_capability.vcp_code)[0]
-            if current_value != expected_value:  # User must have changed something - cancel the transition
-                self.state = TransitionalRestoration.State.INTERRUPTED
-                log_warning(f"Interrupted transition to {self.preset.name}")
-                return self.state
-            current_values.append(current_value)
-            int_val = int(current_value)
-            diff = int(final_value) - int_val
-            if diff:
-                new_value = str(int_val + (1 if diff > 0 else -1))
-                new_values.append(new_value)
-                control.restore_vdu_attribute(new_value)
-                log_info(f"Step transition to {self.preset.name} {current_value} -> {new_value}")
-            else:
-                new_values.append(current_value)
-        if current_values == self.final_values:  # Finished
-            self.controller.restore_preset_data(self.preset)  # Do non transition capable values
-            self.state = TransitionalRestoration.State.FINISHED
-            log_info(f"Finished transition to {self.preset.name}")
-            return self.State
-        self.expected_values = new_values
-        self.state = TransitionalRestoration.State.PARTIAL
-        log_info(f"Partial transition to {self.preset.name}", self.expected_values, new_values, self.final_values)
-        time.sleep(self.transition_step_seconds)
-        return self.state
-
-
 class WorkerThread(QThread):
     finished_work = pyqtSignal()
 
-    def __init__(self, task_body: Callable, task_finished: Callable) -> None:
+    def __init__(self, task_body: Callable, task_finished: Callable = None) -> None:
         super().__init__()
         self.task_body = task_body
         self.task_finished = task_finished
-        self.finished_work.connect(task_finished)
+        if self.task_finished is not None:
+            self.finished_work.connect(task_finished)
         self.vdu_exception: VduException | None = None
 
     def run(self):
@@ -3036,6 +2973,87 @@ class WorkerThread(QThread):
         except VduException as e:
             self.vdu_exception = e
         self.finished_work.emit()
+
+
+class TransitionState(Enum):
+    INITIALIZED = 0
+    PARTIAL = 1
+    FINISHED = 2
+    INTERRUPTED = 3
+
+
+class TransitionWorker(WorkerThread):
+    """Used in conjunction with a with-statement to wrap operations when the
+    physical VDU and data are in sync, indicating there is no need to call ddcutil"""
+    progress_signal = pyqtSignal()
+
+    def __init__(self, mainPanel: VduControlsMainPanel, preset: Preset, progress: Callable, finished: Callable,
+                 immediately: bool = False):
+        super().__init__(self.task_body, finished)
+        log_info(f"Transition {preset.name} immediately={immediately}")
+        self.main_panel = mainPanel
+        self.preset = preset
+        self.non_transient_controls_list = []
+        self.non_transient_final_values = []
+        self.transient_controls_list = []
+        self.transient_final_values = []
+        self.expected_values = []
+        self.state = TransitionState.INITIALIZED
+        self.transition_step_seconds = 0.1  # TODO make this a constant?
+        self.transition_immediately = immediately
+        self.progress_signal.connect(progress)
+        for control_panel in self.main_panel.vdu_control_panels:
+            section = control_panel.controller.vdu_stable_id
+            if section in self.preset.preset_ini:
+                for control in control_panel.vcp_controls:
+                    property_name = control.vcp_capability.property_name()
+                    if property_name in self.preset.preset_ini[section]:
+                        if control.vcp_capability.can_transition and not self.transition_immediately:
+                            self.transient_controls_list.append(control)
+                            self.transient_final_values.append(self.preset.preset_ini[section][property_name])
+                        else:
+                            self.non_transient_controls_list.append(control)
+                            self.non_transient_final_values.append(self.preset.preset_ini[section][property_name])
+        if not immediately:
+            self.expected_values = [control.controller.get_attribute(control.vcp_capability.vcp_code)[0] for control in
+                                    self.transient_controls_list]
+
+    def task_body(self):
+        while (result := self.step()) == result.PARTIAL:
+            self.progress_signal.emit()
+            time.sleep(self.transition_step_seconds)
+
+    def step(self):
+        current_values = []
+        new_values = []
+        for control, final_value, expected_value in zip(self.transient_controls_list, self.transient_final_values,
+                                                        self.expected_values):
+            current_value = control.controller.get_attribute(control.vcp_capability.vcp_code)[0]
+            if current_value != expected_value:  # User must have changed something - cancel the transition
+                self.state = TransitionState.INTERRUPTED
+                log_warning(f"Interrupted transition to {self.preset.name}")
+                return self.state
+            current_values.append(current_value)
+            if current_value != final_value:
+                int_val = int(current_value)
+                diff = int(final_value) - int_val
+                if diff:
+                    new_value = str(int_val + (1 if diff > 0 else -1))
+                    new_values.append(new_value)
+                    control.restore_vdu_attribute(new_value)
+            else:
+                new_values.append(current_value)
+        if current_values == self.transient_final_values:  # Finished - do non transient values
+            for control, new_value in zip(self.non_transient_controls_list, self.non_transient_final_values):
+                control.restore_vdu_attribute(new_value)
+            self.state = TransitionState.FINISHED
+            log_info(f"Finished restoring to {self.preset.name}")
+            return self.state
+        self.expected_values = new_values
+        self.state = TransitionState.PARTIAL
+        log_info(f"Partial transition: {self.preset.name} "
+                 f"cur={self.expected_values} step={new_values} final={self.transient_final_values}")
+        return self.state
 
 
 class PresetController:
@@ -3907,7 +3925,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.set_status_message('')
 
     def restore_preset(self, preset: Preset) -> None:
-        self.main_window.restore_preset(preset)
+        self.main_window.restore_preset(preset, immediately=True)
         self.preset_name_edit.setText('')
 
     def save_preset(self, preset: Preset) -> None:
@@ -3972,7 +3990,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 self.editor_trigger_widget.set_required_weather_filename(
                     preset.preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None))
                 self.transition_type_widget.setCurrentIndex(preset.get_transition_type().index())
-        self.main_window.restore_preset(preset, restore_finished=begin_editing)
+
+        self.main_window.restore_preset(preset, restore_finished=begin_editing, immediately=True)
         self.set_status_message('')  # Will be shortly followed by a restore message
 
     def save_edited_preset(self) -> None:
@@ -4478,7 +4497,7 @@ class VduAppWindow(QMainWindow):
             elif PRESET_SIGNAL_MIN <= signal_number <= PRESET_SIGNAL_MAX:
                 restore_preset = self.preset_controller.get_preset(signal_number - PRESET_SIGNAL_MIN)
                 if restore_preset is not None:
-                    self.restore_preset(restore_preset)
+                    self.restore_preset(restore_preset, immediately=restore_preset.get_transition_type() != TransitionType.ALWAYS)
                 else:
                     # Cannot raise a Qt alert inside the signal handler in case another signal comes in.
                     log_warning(f"ignoring signal {signal_number}, no preset associated with that signal number.")
@@ -4675,98 +4694,64 @@ class VduAppWindow(QMainWindow):
         self.refresh_data_task = WorkerThread(task_body=refresh_data, task_finished=refresh_view)
         self.refresh_data_task.start()
 
-    def restore_preset(self, preset: Preset, restore_finished: Callable | None = None) -> None:
+    def restore_preset(self, preset: Preset, restore_finished: Callable | None = None, immediately: bool = False) -> None:
         # Starts the restore, but it will complete in the worker thread
+
+        if not immediately:
+            presets_dialog_update_view(tr("Transitioning to preset {}").format(preset.name))
         self.main_panel.indicate_busy()
+        preset.load()
+        progress_counter = 0
+        dummy_preset = Preset("?")
 
-        def restore_preset_data():
-            # Called in a non-GUI thread, cannot do any GUI op's.
-            preset.load()
-            self.main_panel.restore_preset_data(preset)
+        def update_progress():
+            nonlocal progress_counter
+            progress_counter += 1
+            self.main_panel.indicate_busy(False) if progress_counter == 1 else None
+            self.main_panel.refresh_view()
+            presets_dialog_update_view(
+                tr("Transitioning to preset {} {}").format(preset.name, '...' if time.time_ns() % 2 == 0 else ''))
+            if progress_counter % 2 == 0:
+                self.display_active_preset(preset)
+            else:
+                self.display_active_preset(dummy_preset)
 
-        def restore_preset_view():
-            # Called in a GUI thread, can do GUI op's.
-            succeeded = False
-            if self.restore_preset_thread.vdu_exception is not None:
+        def finished():
+            nonlocal worker_thread
+            if worker_thread.vdu_exception is not None:
                 answer = self.main_panel.display_vdu_exception(
-                    self.restore_preset_thread.vdu_exception,
+                    worker_thread.vdu_exception,
                     buttons=QMessageBox.Retry | QMessageBox.Close, default_button=QMessageBox.Retry)
                 if answer == QMessageBox.Retry:
-                    self.restore_preset(preset, restore_finished=restore_finished)  # Try again (recursion) in new thread
+                    # Try again (recursion) in new thread
+                    self.restore_preset(preset, restore_finished=restore_finished, immediately=immediately)
                     return  # Don't do anything more the recursive call will take over from here
             else:
-                succeeded = True
-                self.main_panel.restore_preset_view(preset)
-            with open(PRESET_NAME_FILE, 'w', encoding="utf-8") as cps_file:
-                cps_file.write(preset.name)
+                self.main_panel.refresh_view()
             self.main_panel.indicate_busy(False)
-            self.display_active_preset()
-            presets_dialog_update_view(tr("Restored {}").format(preset.name))
-            if restore_finished is not None:
-                restore_finished(succeeded)
-
-        self.restore_preset_thread = WorkerThread(task_body=restore_preset_data, task_finished=restore_preset_view)
-        self.restore_preset_thread.start()
-
-    def restore_preset_transitionally(self, preset: Preset, restore_finished: Callable | None = None) -> None:
-        # Starts the restore, but it will complete in the worker thread
-        presets_dialog_update_view(tr("Transitioning to preset {}").format(preset.name))
-        self.main_panel.indicate_busy()
-
-        preset.load()
-        with TransitionalRestoration(self.main_panel, preset) as restoration:
-
-            def restore_preset_data():
-                # Called in a non-GUI thread, cannot do any GUI op's.
-                restoration.step()
-
-            def restore_preset_view():
-                # Called in a GUI thread, can do GUI op's.
-                succeeded = False
-                if self.restore_preset_thread.vdu_exception is not None:
-                    answer = self.main_panel.display_vdu_exception(
-                        self.restore_preset_thread.vdu_exception,
-                        buttons=QMessageBox.Retry | QMessageBox.Close, default_button=QMessageBox.Retry)
-                    if answer == QMessageBox.Retry:
-                        self.restore_preset_transitionally(preset,
-                                                           restore_finished=restore_finished)  # Try again (recursion) in new thread
-                        return  # Don't do anything more the recursive call will take over from here
-                else:
-                    succeeded = True
-                    self.main_panel.refresh_view()
+            if worker_thread.state == TransitionState.FINISHED:
                 with open(PRESET_NAME_FILE, 'w', encoding="utf-8") as cps_file:
                     cps_file.write(preset.name)
-                self.main_panel.indicate_busy(False)
-                if restoration.state == TransitionalRestoration.State.FINISHED:
-                    self.display_active_preset()
-                    if restore_finished is not None:
-                        restore_finished(succeeded)
-                    presets_dialog_update_view(tr("Restored {}").format(preset.name))
-                elif restoration.state == TransitionalRestoration.State.PARTIAL:
-                    presets_dialog_update_view(
-                        tr("Transitioning to preset {} {}").format(preset.name, '...' if time.time_ns() % 2 == 0 else ''))
-                    self.restore_preset_thread = WorkerThread(task_body=restore_preset_data, task_finished=restore_preset_view)
-                    self.restore_preset_thread.start()
-                elif restoration.state == TransitionalRestoration.State.INTERRUPTED:
-                    self.display_active_preset()
-                    presets_dialog_update_view(tr("Interrupted restoration of {}").format(preset.name))
-                    if restore_finished is not None:
-                        restore_finished(False)
-                else:
-                    log_error(f"Invalid transition state {restoration.state}")
+                self.display_active_preset()
+                if restore_finished is not None:
+                    restore_finished(True)
+                presets_dialog_update_view(tr("Restored {}").format(preset.name))
+            elif worker_thread.state == TransitionState.INTERRUPTED:
+                self.display_active_preset()
+                presets_dialog_update_view(tr("Interrupted restoration of {}").format(preset.name))
+                if restore_finished is not None:
+                    restore_finished(False)
+            else:
+                log_error(f"Invalid transition state {worker_thread.state}")
 
-            self.main_panel.indicate_busy()
-            self.restore_preset_thread = WorkerThread(task_body=restore_preset_data, task_finished=restore_preset_view)
-            self.restore_preset_thread.start()
+        worker_thread = TransitionWorker(self.main_panel, preset, update_progress, finished, immediately)
+        worker_thread.start()
 
     def restore_named_preset(self, preset_name: str) -> None:
         presets = self.preset_controller.find_presets()
         if preset_name in presets:
             preset = presets[preset_name]
-            if preset.get_transition_type() == TransitionType.ALWAYS:
-                self.restore_preset_transitionally(preset)
-            else:
-                self.restore_preset(preset)
+            self.restore_preset(preset, immediately=preset.get_transition_type() != TransitionType.ALWAYS)
 
     def save_preset(self, preset: Preset) -> None:
         self.copy_to_preset_ini(preset.preset_ini, update_only=True)
@@ -4921,11 +4906,9 @@ class VduAppWindow(QMainWindow):
                 presets_dialog_update_view(message + ' - ' + tr("Restored {}").format(preset.name))
 
             # Happens asynchronously in a thread
-            if immediately or preset.get_transition_type() == TransitionType.NONE:
-                self.restore_preset(preset)
-            else:
-                self.restore_preset_transitionally(preset)
-
+            self.restore_preset(preset,
+                                restore_finished=finished,
+                                immediately=immediately or preset.get_transition_type() == TransitionType.NONE)
         presets_dialog_update_view(message)
 
     def is_weather_satisfactory(self, preset, use_cache: bool = False) -> bool:
