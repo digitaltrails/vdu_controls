@@ -3020,11 +3020,11 @@ class TransitionWorker(WorkerThread):
                         else:
                             self.non_transient_controls_list.append(control)
                             self.non_transient_final_values.append(self.preset.preset_ini[section][property_name])
-        if not immediately:
-            self.expected_values = [control.controller.get_attribute(control.vcp_capability.vcp_code)[0] for control in
-                                    self.transient_controls_list]
 
     def task_body(self):
+        if not self.transition_immediately:
+            self.expected_values = [control.controller.get_attribute(control.vcp_capability.vcp_code)[0] for control in
+                                    self.transient_controls_list]
         while (result := self.step()) == result.PARTIAL:
             self.progress_signal.emit()
             time.sleep(self.transition_step_seconds)
@@ -4746,9 +4746,9 @@ class VduAppWindow(QMainWindow):
                 with open(PRESET_NAME_FILE, 'w', encoding="utf-8") as cps_file:
                     cps_file.write(preset.name)
                 self.display_active_preset(preset)
+                presets_dialog_update_view(tr("Restored {}").format(preset.name))
                 if restore_finished is not None:
                     restore_finished(True)
-                presets_dialog_update_view(tr("Restored {}").format(preset.name))
             elif worker_thread.state == TransitionState.INTERRUPTED:
                 self.display_active_preset()
                 presets_dialog_update_view(tr("Interrupted restoration of {}").format(preset.name))
