@@ -2512,6 +2512,9 @@ class Preset:
         self.schedule_status = ScheduleStatus.UNSCHEDULED
         self.elevation_time_today: datetime | None = None
 
+    def get_title_name(self):
+        return self.name
+
     def get_icon_path(self) -> Path | None:
         if self.preset_ini.has_section("preset"):
             path_text = self.preset_ini.get("preset", "icon", fallback=None)
@@ -2806,7 +2809,7 @@ class BottomToolBar(QToolBar):
 
     def display_active_preset(self, preset: Preset | None):
         if preset is not None:
-            self.preset_action.setToolTip(f"{preset.name} preset")
+            self.preset_action.setToolTip(f"{preset.get_title_name()} preset")
             self.preset_action.setIcon(preset.create_icon())
             self.preset_action.setVisible(True)
         else:
@@ -2831,6 +2834,7 @@ class VduControlsMainPanel(QWidget):
         self.setObjectName("vdu_controls_main_panel")
         self.vdu_control_panels: List[VduControlPanel] = []
         self.alert: QMessageBox | None = None
+        self.busy = False
 
     def initialise_control_panels(self, app_context_menu: ContextMenu, main_config: VduControlsConfig,
                                   vdu_controllers: List[VduController],
@@ -2925,6 +2929,7 @@ class VduControlsMainPanel(QWidget):
                     control_panel.refresh_view()
 
     def indicate_busy(self, is_busy: bool = True):
+        self.busy = is_busy
         if self.bottom_toolbar is not None:
             self.bottom_toolbar.indicate_busy(is_busy)
         if self.context_menu is not None:
@@ -3060,6 +3065,26 @@ class TransitionWorker(WorkerThread):
         log_info(f"Partial transition: {self.preset.name} "
                  f"cur={self.expected_values} step={new_values} final={self.transient_final_values}")
         return self.state
+
+
+class TransitioningDummyPreset(Preset):
+
+    def __init__(self, wrapped: Preset):
+        super().__init__(wrapped.name)
+        self.count = 1
+        # self.clocks = ('\u25F7','\u25F6', '\u25F5', '\u25F4')
+        # self.arrows_big = ('\u25B6', '\u25B7')
+        self.arrows = ('\u25B8', '\u25B9')
+        self.icons = (wrapped.create_icon(), create_icon_from_svg_bytes(TRANSITION_ICON_SOURCE))
+
+    def update_progress(self):
+        self.count += 1
+
+    def get_title_name(self):
+        return self.arrows[self.count % 2] + self.name
+
+    def create_icon(self) -> QIcon:
+        return self.icons[self.count % 2]
 
 
 class PresetController:
@@ -4376,6 +4401,7 @@ class VduAppWindow(QMainWindow):
         self.detected_vdu_list: List[Tuple[str, str, str, str]] = []
         self.vdu_controllers: List[VduController] = []
         self.previously_detected_vdu_list: List[Tuple[str, str, str, str]] = []
+        self.transition_in_progress_preset: Preset = None
 
         self.ddcutil: DdcUtil | None = None
 
@@ -4703,34 +4729,26 @@ class VduAppWindow(QMainWindow):
     def restore_preset(self, preset: Preset, restore_finished: Callable | None = None, immediately: bool = False) -> None:
         # Starts the restore, but it will complete in the worker thread
 
-        class DummyPreset(Preset):
-
-            def create_icon(self) -> QIcon:
-                return create_icon_from_svg_bytes(TRANSITION_ICON_SOURCE)
-
-        dummy_preset = DummyPreset("?")
+        self.transition_in_progress_preset: TransitioningDummyPreset = None
 
         if not immediately:
+            self.transition_in_progress_preset = TransitioningDummyPreset(preset)
             presets_dialog_update_view(tr("Transitioning to preset {}").format(preset.name))
-            self.display_active_preset(dummy_preset)
+            self.display_active_preset(self.transition_in_progress_preset)
         self.main_panel.indicate_busy()
         preset.load()
-        progress_counter = 0
 
         def update_progress():
-            nonlocal progress_counter
-            progress_counter += 1
-            self.main_panel.indicate_busy(False) if progress_counter == 1 else None
+            self.main_panel.indicate_busy(False) if self.main_panel.busy else None
             self.main_panel.refresh_view()
             presets_dialog_update_view(
                 tr("Transitioning to preset {} {}").format(preset.name, '...' if time.time_ns() % 2 == 0 else ''))
-            if progress_counter % 2 == 0:
-                self.display_active_preset(preset)
-            else:
-                self.display_active_preset(dummy_preset)
+            self.transition_in_progress_preset.update_progress() if self.transition_in_progress_preset else None
+            self.display_active_preset(self.transition_in_progress_preset)
 
         def finished():
             nonlocal worker_thread
+            self.transition_in_progress_preset = None
             if worker_thread.vdu_exception is not None:
                 answer = self.main_panel.display_vdu_exception(
                     worker_thread.vdu_exception,
@@ -4801,6 +4819,8 @@ class VduAppWindow(QMainWindow):
         return None
 
     def display_active_preset(self, preset=None) -> None:
+        if preset is None and self.transition_in_progress_preset is not None:
+            preset = self.transition_in_progress_preset
         if preset is None:
             preset = self.which_preset_is_active()
         if preset is None:
@@ -4812,12 +4832,12 @@ class VduAppWindow(QMainWindow):
                 self.tray.setIcon(self.app_icon)
         else:
             self.main_panel.display_active_preset(preset)
-            if self.windowTitle() != preset.name:  # No need to change, already set correctly - prevent flashing during startup
-                self.setWindowTitle(preset.name)
+            if self.windowTitle() != preset.get_title_name():  # No need to change, already set correctly - prevent flashing during startup
+                self.setWindowTitle(preset.get_title_name())
                 icon = create_merged_icon(self.app_icon, preset.create_icon())
                 self.app.setWindowIcon(icon)
                 if self.tray:
-                    self.tray.setToolTip(f"{preset.name} {PRESET_APP_SEPARATOR_SYMBOL} {self.app_name}")
+                    self.tray.setToolTip(f"{preset.get_title_name()} {PRESET_APP_SEPARATOR_SYMBOL} {self.app_name}")
                     self.tray.setIcon(icon)
         self.app_context_menu.refresh_preset_menu()
 
