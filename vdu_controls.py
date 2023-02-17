@@ -759,6 +759,12 @@ REFRESH_ICON_SOURCE = b"""
 </svg>
 """
 
+TRANSITION_ICON_SOURCE = b"""
+<svg  xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24">
+  <rect width="10" height="10" rx="4" x="6" y="6" stroke="black" stroke-width="1" fill="#80ff00" />
+</svg>
+"""
+
 '''Creates a SVG of grey rectangles typical of the sort used for VDU calibration.'''
 GREY_SCALE_SVG = f'''
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1"  width="256" height="152" viewBox="0 0 256 152">
@@ -4697,12 +4703,19 @@ class VduAppWindow(QMainWindow):
     def restore_preset(self, preset: Preset, restore_finished: Callable | None = None, immediately: bool = False) -> None:
         # Starts the restore, but it will complete in the worker thread
 
+        class DummyPreset(Preset):
+
+            def create_icon(self) -> QIcon:
+                return create_icon_from_svg_bytes(TRANSITION_ICON_SOURCE)
+
+        dummy_preset = DummyPreset("?")
+
         if not immediately:
             presets_dialog_update_view(tr("Transitioning to preset {}").format(preset.name))
+            self.display_active_preset(dummy_preset)
         self.main_panel.indicate_busy()
         preset.load()
         progress_counter = 0
-        dummy_preset = Preset("?")
 
         def update_progress():
             nonlocal progress_counter
@@ -4732,7 +4745,7 @@ class VduAppWindow(QMainWindow):
             if worker_thread.state == TransitionState.FINISHED:
                 with open(PRESET_NAME_FILE, 'w', encoding="utf-8") as cps_file:
                     cps_file.write(preset.name)
-                self.display_active_preset()
+                self.display_active_preset(preset)
                 if restore_finished is not None:
                     restore_finished(True)
                 presets_dialog_update_view(tr("Restored {}").format(preset.name))
