@@ -4757,8 +4757,7 @@ class VduAppWindow(QMainWindow):
                     # Try again (recursion) in new thread
                     self.restore_preset(preset, restore_finished=restore_finished, immediately=immediately)
                     return  # Don't do anything more the recursive call will take over from here
-            else:
-                self.main_panel.refresh_view()
+            self.main_panel.refresh_view()
             self.main_panel.indicate_busy(False)
             if worker_thread.state == TransitionState.FINISHED:
                 with open(PRESET_NAME_FILE, 'w', encoding="utf-8") as cps_file:
@@ -4767,13 +4766,11 @@ class VduAppWindow(QMainWindow):
                 presets_dialog_update_view(tr("Restored {}").format(preset.name))
                 if restore_finished is not None:
                     restore_finished(True)
-            elif worker_thread.state == TransitionState.INTERRUPTED:
+            else:  # Interrupted or exception:
                 self.display_active_preset()
                 presets_dialog_update_view(tr("Interrupted restoration of {}").format(preset.name))
                 if restore_finished is not None:
                     restore_finished(False)
-            else:
-                log_error(f"Invalid transition state {worker_thread.state}")
 
         worker_thread = TransitionWorker(self.main_panel, preset, update_progress, finished, immediately)
         worker_thread.start()
