@@ -3264,7 +3264,12 @@ class PresetActivationButton(QPushButton):
         super().__init__()
         self.preset = preset
         self.setIcon(preset.create_icon())
-        self.setText(preset.name)
+        text = preset.name
+        if preset.get_transition_type() == TransitionType.SCHEDULED:
+            text += ' +'
+        elif preset.get_transition_type() == TransitionType.ALWAYS:
+            text += ' *'
+        self.setText(text)
         self.setToolTip(tr("Activate this preset"))
 
     def event(self, event: QEvent) -> bool:
