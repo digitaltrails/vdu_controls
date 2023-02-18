@@ -3043,6 +3043,8 @@ class TransitionWorker(WorkerThread):
         while (result := self.step()) == result.PARTIAL:
             self.progress_signal.emit()
             time.sleep(self.transition_step_seconds)
+        if self.state == TransitionState.FINISHED:
+            log_info(f"Finished restoring {self.preset.name} {round(self.elapsed_time.total_seconds(), ndigits=2)} seconds")
 
     def step(self):
         try:
@@ -3069,7 +3071,6 @@ class TransitionWorker(WorkerThread):
                 for control, new_value in zip(self.non_transient_controls_list, self.non_transient_final_values):
                     control.restore_vdu_attribute(new_value)
                 self.state = TransitionState.FINISHED
-                log_info(f"Finished restoring to {self.preset.name}")
                 return self.state
             self.expected_values = new_values
             self.state = TransitionState.PARTIAL
@@ -4779,10 +4780,8 @@ class VduAppWindow(QMainWindow):
                 with open(PRESET_NAME_FILE, 'w', encoding="utf-8") as cps_file:
                     cps_file.write(preset.name)
                 self.display_active_preset(preset)
-                presets_dialog_update_view(tr("Restored {}").format(preset.name) +
-                tr("Restored {} (elapsed time {} seconds)").format(
-                    preset.name, round(worker_thread.elapsed_time.total_seconds(), ndigits=1))
-                )
+                presets_dialog_update_view(tr("Restored {} (elapsed time {} seconds)").format(
+                    preset.name, round(worker_thread.elapsed_time.total_seconds(), ndigits=1)))
                 if restore_finished is not None:
                     restore_finished(True)
             else:  # Interrupted or exception:
