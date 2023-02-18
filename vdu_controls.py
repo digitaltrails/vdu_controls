@@ -61,8 +61,10 @@ controls can be enabled via the ``Settings`` dialog.
 ``vdu_controls`` may optionally run as an entry in the system tray of KDE, Deepin, GNOME, and Xfce (and possibly
 others). The UI attempts to adapt to the quirks of the different tray implementations.
 
-Named ``Preset`` configurations can be saved for later recalled. For example, a user could create
-presets for night, day, photography, movies, and so forth.
+Named ``Preset`` configurations can be saved for later recall. For example, a user could create
+presets for night, day, photography, movies, and so forth.  Presets may be automatically triggered
+according to solar elevation, and can be further constrained by local weather conditions. Presets can
+be set to transition immediately or gradually.  Presets may also be activated by UNIX signals.
 
 The UI's look-and-feel dynamically adjusts to the desktop theme.  Colors and icons automatically
 reconfigure without the need for a restart when changing between light and dark themes.
@@ -196,8 +198,15 @@ in the window-title and tray tooltip, the preset's icon will overlay the normal 
 The ``Presets`` item in right-mouse ``context-menu`` will bring up a ``Presets`` dialog for managing and applying
 presets.  The ``context-menu`` also includes a shortcut for applying each existing presets.
 
-Any small SVG or PNG can be selected as a preset's icon.  Monochrome SVG icons that conform to the Plasma color
-conventions will be automatically inverted if the desktop them is changed from dark to light.
+Any small SVG or PNG can be assigned as a preset's icon.  Monochrome SVG icons that conform to the Plasma color
+conventions will be automatically inverted if the desktop them is changed from dark to light. If a preset lacks
+an icon, it will be assigned one created from the letters of its name (the first letter of the first and last words).
+
+Presets may be set to transition immediately (the default); gradually on schedule (solar elevation); or gradually
+always (when triggered by schedule, context menu, or UNIX signal).  The speed of transition is determined by
+how quickly the VDU's can respond to adjustment (which is generally quite slowly).  During a transition,
+the transition will be abandoned if the controls involved in the transition are manually altered, or another
+preset is manually invoked.
 
 Each preset is stored in the application config directory as ``$HOME/.config/vdu_controls/Preset_<preset_name>.conf``.
 Preset files are saved in INI-file format for ease of editing.  Each preset file contains a section for each connected
@@ -206,6 +215,7 @@ VDU, for example::
     [preset]
     icon = /usr/share/icons/breeze/status/16/cloudstatus.svg
     solar-elevation = eastern-sky 40
+    transition-type = scheduled
 
     [HP_ZR24w_CNT008]
     brightness = 50
@@ -214,12 +224,11 @@ VDU, for example::
     [LG_HDR_4K_89765]
     brightness = 13
     audio-speaker-volume = 16
-    input-source = 0f
 
 When the GUI is used to create a preset file, you may select which controls to save.  For example, you
 might create a preset that includes the brightness, but not the contrast or audio-volume. Keeping
-the included controls to a minimum reduces the chances of the VDU failing to keep up with the
-associated stream of DDC commands.
+the included controls to a minimum speeds up the transtion and reduces the chances of the VDU failing
+to keep up with the associated stream of DDC commands.
 
 Presets - solar elevation triggers
 ----------------------------------
@@ -440,8 +449,7 @@ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
 more details.
 
 You should have received a copy of the GNU General Public License along
-with this program. If not, see <https://www.gnu.org/licenses/>.
-----------
+with this program. If not, see https://www.gnu.org/licenses/.
 """
 from __future__ import annotations
 
@@ -3264,13 +3272,9 @@ class PresetActivationButton(QPushButton):
         super().__init__()
         self.preset = preset
         self.setIcon(preset.create_icon())
-        text = preset.name
-        if preset.get_transition_type() == TransitionType.SCHEDULED:
-            text += ' +'
-        elif preset.get_transition_type() == TransitionType.ALWAYS:
-            text += ' *'
-        self.setText(text)
-        self.setToolTip(tr("Activate this preset"))
+        text = preset.get_title_name()
+        self.setText(f"{preset.get_title_name()} {preset.get_transition_type().abbreviation()}")
+        self.setToolTip(tr("Restore {} (immediately)").format(preset.get_title_name()))
 
     def event(self, event: QEvent) -> bool:
         # PalletChange happens after the new style sheet is in use.
@@ -4367,14 +4371,14 @@ class ScheduleStatus(Enum):
 
 
 class TransitionType(Enum):
-    NONE = 0, ' ', QT_TR_NOOP('No')
-    SCHEDULED = 1, ' ', QT_TR_NOOP('On schedule')
-    ALWAYS = 2, ' ', QT_TR_NOOP('Always')
+    NONE = 0, '', QT_TR_NOOP('No')
+    SCHEDULED = 1, '\u25b9', QT_TR_NOOP('On schedule')
+    ALWAYS = 2, '\u25b8', QT_TR_NOOP('Always')
 
     def index(self):
         return self.value[0]
 
-    def symbol(self) -> str:
+    def abbreviation(self) -> str:
         return self.value[1]
 
     def description(self):

@@ -32,7 +32,7 @@ Units</em>).</p>
   --syslog              repeat diagnostic output to the syslog (journald)
   --no-splash           don&#39;t show the splash screen
   --sleep-multiplier multiplier
-                        protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 0.5)
+                        protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 1.0)
   --create-config-files  if they do not exist, create template config INI files in $HOME/.config/vdu_controls/
   --install             installs the vdu_controls in the current user&#39;s path and desktop application menu.
   --uninstall           uninstalls the vdu_controls application menu file and script for the current user.</code></pre>
@@ -55,8 +55,12 @@ system tray of KDE, Deepin, GNOME, and Xfce (and possibly others). The
 UI attempts to adapt to the quirks of the different tray
 implementations.</p>
 <p>Named <code>Preset</code> configurations can be saved for later
-recalled. For example, a user could create presets for night, day,
-photography, movies, and so forth.</p>
+recall. For example, a user could create presets for night, day,
+photography, movies, and so forth. Presets may be automatically
+triggered according to solar elevation, and can be further constrained
+by local weather conditions. Presets can be set to transition
+immediately or gradually. Presets may also be activated by UNIX
+signals.</p>
 <p>The UI’s look-and-feel dynamically adjusts to the desktop theme.
 Colors and icons automatically reconfigure without the need for a
 restart when changing between light and dark themes.</p>
@@ -196,10 +200,19 @@ icon.</p>
 <code>context-menu</code> will bring up a <code>Presets</code> dialog
 for managing and applying presets. The <code>context-menu</code> also
 includes a shortcut for applying each existing presets.</p>
-<p>Any small SVG or PNG can be selected as a preset’s icon. Monochrome
+<p>Any small SVG or PNG can be assigned as a preset’s icon. Monochrome
 SVG icons that conform to the Plasma color conventions will be
 automatically inverted if the desktop them is changed from dark to
-light.</p>
+light. If a preset lacks an icon, it will be assigned one created from
+the letters of its name (the first letter of the first and last
+words).</p>
+<p>Presets may be set to transition immediately (the default); gradually
+on schedule (solar elevation); or gradually always (when triggered by
+schedule, context menu, or UNIX signal). The speed of transition is
+determined by how quickly the VDU’s can respond to adjustment (which is
+generally quite slowly). During a transition, the transition will be
+abandoned if the controls involved in the transition are manually
+altered, or another preset is manually invoked.</p>
 <p>Each preset is stored in the application config directory as
 <code>$HOME/.config/vdu_controls/Preset_&lt;preset_name&gt;.conf</code>.
 Preset files are saved in INI-file format for ease of editing. Each
@@ -207,6 +220,7 @@ preset file contains a section for each connected VDU, for example::</p>
 <pre><code>[preset]
 icon = /usr/share/icons/breeze/status/16/cloudstatus.svg
 solar-elevation = eastern-sky 40
+transition-type = scheduled
 
 [HP_ZR24w_CNT008]
 brightness = 50
@@ -214,13 +228,13 @@ osd-language = 02
 
 [LG_HDR_4K_89765]
 brightness = 13
-audio-speaker-volume = 16
-input-source = 0f</code></pre>
+audio-speaker-volume = 16</code></pre>
 <p>When the GUI is used to create a preset file, you may select which
 controls to save. For example, you might create a preset that includes
 the brightness, but not the contrast or audio-volume. Keeping the
-included controls to a minimum reduces the chances of the VDU failing to
-keep up with the associated stream of DDC commands.</p>
+included controls to a minimum speeds up the transtion and reduces the
+chances of the VDU failing to keep up with the associated stream of DDC
+commands.</p>
 <h2 id="presets---solar-elevation-triggers">Presets - solar elevation
 triggers</h2>
 <p>A preset may be set to automatically trigger when the sun rises to a
@@ -359,7 +373,7 @@ vdu_controls --create-config-files --system-tray --no-splash --show brightness -
 vdu_controls --enable-vcp-code 63 --enable-vcp-code 93 --warnings --debug
     All default controls, plus controls for VCP_CODE 63 and 93, show any warnings, output debugging info.
 
-vdu_controls --sleep-multiplier 0.1
+vdu_controls --sleep-multiplier 0.4
     All default controls, speed up ddcutil-VDU interaction by passing a sleep multiplier.</code></pre>
 <p>This script often refers to displays and monitors as VDU’s in order
 to disambiguate the noun/verb duality of “display” and “monitor”</p>
@@ -410,6 +424,4 @@ WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
 Public License for more details.</p>
 <p>You should have received a copy of the GNU General Public License
-along with this program. If not, see <a
-href="https://www.gnu.org/licenses/"
-class="uri">https://www.gnu.org/licenses/</a>. ———-</p>
+along with this program. If not, see https://www.gnu.org/licenses/.</p>

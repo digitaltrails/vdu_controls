@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Nov 27, 2022" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Feb 19, 2023" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.3.1
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -99,7 +99,7 @@ repeat diagnostic output to the syslog (journald)
 don\(aqt show the splash screen
 .TP
 .BI \-\-sleep\-multiplier \ multiplier
-protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 0.5)
+protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 1.0)
 .TP
 .B  \-\-create\-config\-files
 if they do not exist, create template config INI files in $HOME/.config/vdu_controls/
@@ -127,8 +127,10 @@ controls can be enabled via the \fBSettings\fP dialog.
 \fBvdu_controls\fP may optionally run as an entry in the system tray of KDE, Deepin, GNOME, and Xfce (and possibly
 others). The UI attempts to adapt to the quirks of the different tray implementations.
 .sp
-Named \fBPreset\fP configurations can be saved for later recalled. For example, a user could create
-presets for night, day, photography, movies, and so forth.
+Named \fBPreset\fP configurations can be saved for later recall. For example, a user could create
+presets for night, day, photography, movies, and so forth.  Presets may be automatically triggered
+according to solar elevation, and can be further constrained by local weather conditions. Presets can
+be set to transition immediately or gradually.  Presets may also be activated by UNIX signals.
 .sp
 The UI\(aqs look\-and\-feel dynamically adjusts to the desktop theme.  Colors and icons automatically
 reconfigure without the need for a restart when changing between light and dark themes.
@@ -301,8 +303,15 @@ in the window\-title and tray tooltip, the preset\(aqs icon will overlay the nor
 The \fBPresets\fP item in right\-mouse \fBcontext\-menu\fP will bring up a \fBPresets\fP dialog for managing and applying
 presets.  The \fBcontext\-menu\fP also includes a shortcut for applying each existing presets.
 .sp
-Any small SVG or PNG can be selected as a preset\(aqs icon.  Monochrome SVG icons that conform to the Plasma color
-conventions will be automatically inverted if the desktop them is changed from dark to light.
+Any small SVG or PNG can be assigned as a preset\(aqs icon.  Monochrome SVG icons that conform to the Plasma color
+conventions will be automatically inverted if the desktop them is changed from dark to light. If a preset lacks
+an icon, it will be assigned one created from the letters of its name (the first letter of the first and last words).
+.sp
+Presets may be set to transition immediately (the default); gradually on schedule (solar elevation); or gradually
+always (when triggered by schedule, context menu, or UNIX signal).  The speed of transition is determined by
+how quickly the VDU\(aqs can respond to adjustment (which is generally quite slowly).  During a transition,
+the transition will be abandoned if the controls involved in the transition are manually altered, or another
+preset is manually invoked.
 .sp
 Each preset is stored in the application config directory as \fB$HOME/.config/vdu_controls/Preset_<preset_name>.conf\fP\&.
 Preset files are saved in INI\-file format for ease of editing.  Each preset file contains a section for each connected
@@ -315,6 +324,7 @@ VDU, for example:
 [preset]
 icon = /usr/share/icons/breeze/status/16/cloudstatus.svg
 solar\-elevation = eastern\-sky 40
+transition\-type = scheduled
 
 [HP_ZR24w_CNT008]
 brightness = 50
@@ -323,7 +333,6 @@ osd\-language = 02
 [LG_HDR_4K_89765]
 brightness = 13
 audio\-speaker\-volume = 16
-input\-source = 0f
 .ft P
 .fi
 .UNINDENT
@@ -331,8 +340,8 @@ input\-source = 0f
 .sp
 When the GUI is used to create a preset file, you may select which controls to save.  For example, you
 might create a preset that includes the brightness, but not the contrast or audio\-volume. Keeping
-the included controls to a minimum reduces the chances of the VDU failing to keep up with the
-associated stream of DDC commands.
+the included controls to a minimum speeds up the transtion and reduces the chances of the VDU failing
+to keep up with the associated stream of DDC commands.
 .SS Presets \- solar elevation triggers
 .sp
 A preset may be set to automatically trigger when the sun rises to a specified elevation.
@@ -532,7 +541,7 @@ Create template config files in $HOME/.config/vdu_controls/ that include the oth
 .B vdu_controls \-\-enable\-vcp\-code 63 \-\-enable\-vcp\-code 93 \-\-warnings \-\-debug
 All default controls, plus controls for VCP_CODE 63 and 93, show any warnings, output debugging info.
 .TP
-.B vdu_controls \-\-sleep\-multiplier 0.1
+.B vdu_controls \-\-sleep\-multiplier 0.4
 All default controls, speed up ddcutil\-VDU interaction by passing a sleep multiplier.
 .UNINDENT
 .UNINDENT
@@ -624,8 +633,7 @@ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
 more details.
 .sp
 You should have received a copy of the GNU General Public License along
-with this program. If not, see <\fI\%https://www.gnu.org/licenses/\fP>.
-\-\-\-\-\-\-\-\-\-\-
+with this program. If not, see \fI\%https://www.gnu.org/licenses/\fP\&.
 .SH AUTHOR
 Michael Hamilton
 .SH COPYRIGHT

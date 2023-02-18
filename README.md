@@ -20,7 +20,8 @@ system tray.
 Named ``Preset`` configurations can be saved for later recall. For example, a user could create
 presets for night, day, photography, movies, and so forth.  Presets may be automatically triggered
 according to solar elevation, and can be further constrained by local weather conditions (as
-reported by [https://wttr.in](https://wttr.in)).  Presets may also be activated by UNIX signals.
+reported by [https://wttr.in](https://wttr.in)). Presets can be set to transition immediately or
+gradually.  Presets may also be activated by UNIX signals.
 
 The UI's look-and-feel dynamically adjusts to the desktop theme and desktop environment: light-theme,
 dark-theme, KDE, Deepin, GNOME, and others.
@@ -240,6 +241,12 @@ Michael Hamilton
 
 Version History
 ---------------
+* 1.9.2
+  * Optional _Slow Transitions_ for presets:
+    * The Presets Dialog now includes an option to set a Preset to _Transition Slowly_.
+    * The tray, main panel, and Preset Dialog indicate when a slow transition is in progress.
+    * Transitions are performed by a non-GUI thread, the GUI remains accessible during slow transitions.
+    * A slow transition can be interrupted by moving the controls being transitioned or invoking a preset.
 * 1.9.1
   * The text input to right of slider controls has been replaced with a SpinBox with up/down arrows.
   * The main panel progress-bar spinner will now also display during preset-activation (in addition to displaying during refresh).
