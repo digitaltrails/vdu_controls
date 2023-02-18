@@ -3062,8 +3062,8 @@ class TransitionWorker(WorkerThread):
             return self.state
         self.expected_values = new_values
         self.state = TransitionState.PARTIAL
-        log_info(f"Partial transition: {self.preset.name} "
-                 f"cur={self.expected_values} step={new_values} final={self.transient_final_values}")
+        log_debug(f"Partial transition: {self.preset.name} cur={self.expected_values} " 
+                  f"step={new_values} final={self.transient_final_values}") if log_debug_enabled else None
         return self.state
 
 
@@ -3803,7 +3803,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.editor_controls_prompt = QLabel(tr("Controls to include:"))
         self.controls_title_widget.layout().addWidget(self.editor_controls_prompt, alignment=Qt.AlignLeft)
         self.controls_title_widget.layout().addStretch(10)
-        self.controls_title_widget.layout().addWidget(QLabel(tr("Transition")), alignment=Qt.AlignRight)
+        self.controls_title_widget.layout().addWidget(QLabel(tr("Transition slowly")), alignment=Qt.AlignRight)
         self.transition_type_widget = QComboBox()
 
         for transition_type in TransitionType:
@@ -4362,7 +4362,7 @@ class ScheduleStatus(Enum):
 
 
 class TransitionType(Enum):
-    NONE = 0, ' ', QT_TR_NOOP('None')
+    NONE = 0, ' ', QT_TR_NOOP('No')
     SCHEDULED = 1, ' ', QT_TR_NOOP('On schedule')
     ALWAYS = 2, ' ', QT_TR_NOOP('Always')
 
