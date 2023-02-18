@@ -3010,6 +3010,7 @@ class TransitionWorker(WorkerThread):
                  immediately: bool = False):
         super().__init__(self.task_body, finished)
         log_info(f"Transition {preset.name} immediately={immediately}")
+        self.start_time = datetime.now()
         self.main_panel = mainPanel
         self.preset = preset
         self.non_transient_controls_list = []
@@ -3033,6 +3034,7 @@ class TransitionWorker(WorkerThread):
                         else:
                             self.non_transient_controls_list.append(control)
                             self.non_transient_final_values.append(self.preset.preset_ini[section][property_name])
+        self.elapsed_time = datetime.now() - self.start_time
 
     def task_body(self):
         if not self.transition_immediately:
@@ -3043,36 +3045,39 @@ class TransitionWorker(WorkerThread):
             time.sleep(self.transition_step_seconds)
 
     def step(self):
-        current_values = []
-        new_values = []
-        for control, final_value, expected_value in zip(self.transient_controls_list, self.transient_final_values,
-                                                        self.expected_values):
-            current_value = control.controller.get_attribute(control.vcp_capability.vcp_code)[0]
-            if current_value != expected_value:  # User must have changed something - cancel the transition
-                self.state = TransitionState.INTERRUPTED
-                log_warning(f"Interrupted transition to {self.preset.name}")
-                return self.state
-            current_values.append(current_value)
-            if current_value != final_value:
-                int_val = int(current_value)
-                diff = int(final_value) - int_val
-                if diff:
-                    new_value = str(int_val + (1 if diff > 0 else -1))
-                    new_values.append(new_value)
+        try:
+            current_values = []
+            new_values = []
+            for control, final_value, expected_value in zip(self.transient_controls_list, self.transient_final_values,
+                                                            self.expected_values):
+                current_value = control.controller.get_attribute(control.vcp_capability.vcp_code)[0]
+                if current_value != expected_value:  # User must have changed something - cancel the transition
+                    self.state = TransitionState.INTERRUPTED
+                    log_warning(f"Interrupted transition to {self.preset.name}")
+                    return self.state
+                current_values.append(current_value)
+                if current_value != final_value:
+                    int_val = int(current_value)
+                    diff = int(final_value) - int_val
+                    if diff:
+                        new_value = str(int_val + (1 if diff > 0 else -1))
+                        new_values.append(new_value)
+                        control.restore_vdu_attribute(new_value)
+                else:
+                    new_values.append(current_value)
+            if current_values == self.transient_final_values:  # Finished - do non transient values
+                for control, new_value in zip(self.non_transient_controls_list, self.non_transient_final_values):
                     control.restore_vdu_attribute(new_value)
-            else:
-                new_values.append(current_value)
-        if current_values == self.transient_final_values:  # Finished - do non transient values
-            for control, new_value in zip(self.non_transient_controls_list, self.non_transient_final_values):
-                control.restore_vdu_attribute(new_value)
-            self.state = TransitionState.FINISHED
-            log_info(f"Finished restoring to {self.preset.name}")
+                self.state = TransitionState.FINISHED
+                log_info(f"Finished restoring to {self.preset.name}")
+                return self.state
+            self.expected_values = new_values
+            self.state = TransitionState.PARTIAL
+            log_debug(f"Partial transition: {self.preset.name} cur={self.expected_values} " 
+                      f"step={new_values} final={self.transient_final_values}") if log_debug_enabled else None
             return self.state
-        self.expected_values = new_values
-        self.state = TransitionState.PARTIAL
-        log_debug(f"Partial transition: {self.preset.name} cur={self.expected_values} " 
-                  f"step={new_values} final={self.transient_final_values}") if log_debug_enabled else None
-        return self.state
+        finally:
+            self.elapsed_time = datetime.now() - self.start_time
 
 
 class TransitioningDummyPreset(Preset):
@@ -4748,10 +4753,12 @@ class VduAppWindow(QMainWindow):
         preset.load()
 
         def update_progress():
+            nonlocal worker_thread
             self.main_panel.indicate_busy(False) if self.main_panel.busy else None
             self.main_panel.refresh_view()
             presets_dialog_update_view(
-                tr("Transitioning to preset {} {}").format(preset.name, '...' if time.time_ns() % 2 == 0 else ''))
+                tr("Transitioning to preset {} (elapsed time {} seconds)...").format(
+                    preset.name, round(worker_thread.elapsed_time.total_seconds(), ndigits=1)))
             self.transition_in_progress_preset.update_progress() if self.transition_in_progress_preset else None
             self.display_active_preset(self.transition_in_progress_preset)
 
@@ -4772,7 +4779,10 @@ class VduAppWindow(QMainWindow):
                 with open(PRESET_NAME_FILE, 'w', encoding="utf-8") as cps_file:
                     cps_file.write(preset.name)
                 self.display_active_preset(preset)
-                presets_dialog_update_view(tr("Restored {}").format(preset.name))
+                presets_dialog_update_view(tr("Restored {}").format(preset.name) +
+                tr("Restored {} (elapsed time {} seconds)").format(
+                    preset.name, round(worker_thread.elapsed_time.total_seconds(), ndigits=1))
+                )
                 if restore_finished is not None:
                     restore_finished(True)
             else:  # Interrupted or exception:
