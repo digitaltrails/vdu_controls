@@ -3044,6 +3044,7 @@ class TransitionWorker(WorkerThread):
         log_info(f"Transition {preset.name} immediately={immediately}")
         self.start_time = datetime.now()
         self.end_time: datetime | None = None
+        self.last_progress_time = datetime.now()
         self.main_panel = main_panel
         self.preset = preset
         self.non_transient_controls_list = []
@@ -3075,12 +3076,13 @@ class TransitionWorker(WorkerThread):
         while self.state == TransitionState.PARTIAL or self.state == TransitionState.INITIALIZED:
             step_start = datetime.now() if self.state == TransitionState.PARTIAL else self.start_time
             self.step()
-            self.progress_signal.emit()
-            remaining_secs = self.preset.get_step_interval_seconds() - (datetime.now() - step_start).total_seconds()
-            for _ in range(0, int(remaining_secs)):  # Sleep for the required number of seconds (if any remain)
-                time.sleep(1.0)
-                self.progress_signal.emit()  # Keep progress indicators winking
-            time.sleep((remaining_secs % 1) if remaining_secs > 0.0 else 0.1)  # fraction remainder, or 0.1 if haven't sleep
+            if self.state == TransitionState.PARTIAL:
+                remaining_secs = self.preset.get_step_interval_seconds() - (datetime.now() - step_start).total_seconds()
+                for _ in range(0, int(remaining_secs)):  # Sleep for the required number of seconds (if any remain)
+                    time.sleep(1.0)
+                    self.progress_signal.emit()  # Keep progress indicators winking
+                    self.last_progress_time = datetime.now()
+                time.sleep((remaining_secs % 1) if remaining_secs > 0.0 else 0.1)  # fraction remainder, or 0.1 if haven't sleep
         self.end_time = datetime.now()
         if self.state == TransitionState.FINISHED:
             log_info(f"Finished restoring {self.preset.name} {round(self.total_elapsed_seconds(), ndigits=2)} seconds")
@@ -3105,6 +3107,10 @@ class TransitionWorker(WorkerThread):
                     control.restore_vdu_attribute(new_value)
             else:
                 new_values.append(current_value)
+            now = datetime.now()
+            if (now - self.last_progress_time).total_seconds() >= 1.0:
+                self.last_progress_time = now
+                self.progress_signal.emit()
         if current_values == self.transient_final_values:  # Finished - do non transient values
             for control, new_value in zip(self.non_transient_controls_list, self.non_transient_final_values):
                 control.restore_vdu_attribute(new_value)
