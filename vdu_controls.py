@@ -3053,7 +3053,6 @@ class TransitionWorker(WorkerThread):
         self.transient_final_values = []
         self.expected_values = []
         self.state = TransitionState.INITIALIZED
-        self.transition_step_seconds = 0.1  # TODO make this a constant?
         self.transition_immediately = immediately
         self.progress_signal.connect(progress)
         for control_panel in self.main_panel.vdu_control_panels:
