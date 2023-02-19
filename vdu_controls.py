@@ -3077,7 +3077,6 @@ class TransitionWorker(WorkerThread):
             self.step()
             self.progress_signal.emit()
             remaining_secs = self.preset.get_step_interval_seconds() - (datetime.now() - step_start).total_seconds()
-            print(remaining_secs)
             for _ in range(0, int(remaining_secs)):  # Sleep for the required number of seconds (if any remain)
                 time.sleep(1.0)
                 self.progress_signal.emit()  # Keep progress indicators winking
