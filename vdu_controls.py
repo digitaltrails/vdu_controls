@@ -3075,8 +3075,7 @@ class TransitionWorker(WorkerThread):
                                     self.transient_controls_list]
         while self.state == TransitionState.PARTIAL or self.state == TransitionState.INITIALIZED:
             step_start = datetime.now() if self.state == TransitionState.PARTIAL else self.start_time
-            self.step()
-            if self.state == TransitionState.PARTIAL:
+            if self.step() == TransitionState.PARTIAL:
                 remaining_secs = self.preset.get_step_interval_seconds() - (datetime.now() - step_start).total_seconds()
                 for _ in range(0, int(remaining_secs)):  # Sleep for the required number of seconds (if any remain)
                     time.sleep(1.0)
@@ -3094,8 +3093,8 @@ class TransitionWorker(WorkerThread):
                                                         self.expected_values):
             current_value = control.controller.get_attribute(control.vcp_capability.vcp_code)[0]
             if current_value != expected_value:  # User must have changed something - cancel the transition
-                self.state = TransitionState.INTERRUPTED
                 log_warning(f"Interrupted transition to {self.preset.name}")
+                self.state = TransitionState.INTERRUPTED
                 return self.state
             current_values.append(current_value)
             if current_value != final_value:
@@ -3117,9 +3116,9 @@ class TransitionWorker(WorkerThread):
             self.state = TransitionState.FINISHED
             return self.state
         self.expected_values = new_values
-        self.state = TransitionState.PARTIAL
         log_debug(f"Partial transition: {self.preset.name} cur={self.expected_values} "
                   f"step={new_values} final={self.transient_final_values}") if log_debug_enabled else None
+        self.state = TransitionState.PARTIAL
         return self.state
 
     def total_elapsed_seconds(self) -> float:
