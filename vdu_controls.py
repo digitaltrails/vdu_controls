@@ -216,6 +216,7 @@ VDU, for example::
     icon = /usr/share/icons/breeze/status/16/cloudstatus.svg
     solar-elevation = eastern-sky 40
     transition-type = scheduled
+    transition-step-interval-seconds = 5
 
     [HP_ZR24w_CNT008]
     brightness = 50
@@ -262,6 +263,34 @@ triggered for this day (if any).  For example, say a user has ``vdu_controls``
 set to run at login, and they've also set a preset to trigger at dawn, but
 they don't actually log in until just after dawn, the overdue dawn preset will be
 triggered at login.
+
+Presets - Slow Transitions
+--------------------------
+
+A preset may be set to ``Transition Slowly``, in which case changes to controls
+slider controls such as brightness and contrast will be stepped by one until the
+final values are reached.  Any non-continuous values will be set after all continuous
+values have reached their final values.
+
+The Preset Dialog includes controls to set a Preset's transition to one
+of three values:
+
+    * ``No`` transition, change values immediately;
+    * ``On schedule`` according to a solar elevation trigger;
+    * ``Always`` either by selection in the context menu or by solar elevation.
+
+The preset activation and edit buttons in the Presets Dialog will activate any
+preset immediately regardless of the transition settings.
+
+Normally a transition single-steps the controls as quickly as possible.  In practice
+this means each step takes 1 to 4 seconds depending on the number of VDU's and number
+of controls being altered.  The Presets Dialog includes controls to set a ``Transition
+Step Interval`` which can be used to increase the seconds between
+steps and extend the transition over a longer period of time.
+
+If any transitioning controls change independently of the transition, the
+transition will cease.  In that manner a transition can be abandoned by dragging
+a slider or choosing a different preset.
 
 Presets - supplementary weather requirements
 --------------------------------------------

@@ -325,6 +325,7 @@ VDU, for example:
 icon = /usr/share/icons/breeze/status/16/cloudstatus.svg
 solar\-elevation = eastern\-sky 40
 transition\-type = scheduled
+transition\-step\-interval\-seconds = 5
 
 [HP_ZR24w_CNT008]
 brightness = 50
@@ -373,6 +374,40 @@ triggered for this day (if any).  For example, say a user has \fBvdu_controls\fP
 set to run at login, and they\(aqve also set a preset to trigger at dawn, but
 they don\(aqt actually log in until just after dawn, the overdue dawn preset will be
 triggered at login.
+.SS Presets \- Slow Transitions
+.sp
+A preset may be set to \fBTransition Slowly\fP, in which case changes to controls
+slider controls such as brightness and contrast will be stepped by one until the
+final values are reached.  Any non\-continuous values will be set after all continuous
+values have reached their final values.
+.sp
+The Preset Dialog includes controls to set a Preset\(aqs transition to one
+of three values:
+.INDENT 0.0
+.INDENT 3.5
+.INDENT 0.0
+.IP \(bu 2
+\fBNo\fP transition, change values immediately;
+.IP \(bu 2
+\fBOn schedule\fP according to a solar elevation trigger;
+.IP \(bu 2
+\fBAlways\fP either by selection in the context menu or by solar elevation.
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.sp
+The preset activation and edit buttons in the Presets Dialog will activate any
+preset immediately regardless of the transition settings.
+.sp
+Normally a transition single\-steps the controls as quickly as possible.  In practice
+this means each step takes 1 to 4 seconds depending on the number of VDU\(aqs and number
+of controls being altered.  The Presets Dialog includes controls to set a \fBTransition
+Step Interval\fP which can be used to increase the seconds between
+steps and extend the transition over a longer period of time.
+.sp
+If any transitioning controls change independently of the transition, the
+transition will cease.  In that manner a transition can be abandoned by dragging
+a slider or choosing a different preset.
 .SS Presets \- supplementary weather requirements
 .sp
 A solar elevation trigger can have a weather requirement which will be checked
