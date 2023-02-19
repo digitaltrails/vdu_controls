@@ -2619,6 +2619,9 @@ class Preset:
                 return transition_type
         return TransitionType.NONE
 
+    def get_step_interval_seconds(self):
+        return self.preset_ini.getint('preset', 'transition-step-interval-seconds', fallback=0)
+
     def start_timer(self, when_local: datetime, action: Callable):
         if self.timer:
             self.timer.stop()
@@ -3006,12 +3009,13 @@ class TransitionWorker(WorkerThread):
     physical VDU and data are in sync, indicating there is no need to call ddcutil"""
     progress_signal = pyqtSignal()
 
-    def __init__(self, mainPanel: VduControlsMainPanel, preset: Preset, progress: Callable, finished: Callable,
+    def __init__(self, main_panel: VduControlsMainPanel, preset: Preset, progress: Callable, finished: Callable,
                  immediately: bool = False):
         super().__init__(self.task_body, finished)
         log_info(f"Transition {preset.name} immediately={immediately}")
         self.start_time = datetime.now()
-        self.main_panel = mainPanel
+        self.end_time: datetime | None = None
+        self.main_panel = main_panel
         self.preset = preset
         self.non_transient_controls_list = []
         self.non_transient_final_values = []
@@ -3034,51 +3038,58 @@ class TransitionWorker(WorkerThread):
                         else:
                             self.non_transient_controls_list.append(control)
                             self.non_transient_final_values.append(self.preset.preset_ini[section][property_name])
-        self.elapsed_time = datetime.now() - self.start_time
 
     def task_body(self):
         if not self.transition_immediately:
             self.expected_values = [control.controller.get_attribute(control.vcp_capability.vcp_code)[0] for control in
                                     self.transient_controls_list]
-        while (result := self.step()) == result.PARTIAL:
+        while self.state == TransitionState.PARTIAL or self.state == TransitionState.INITIALIZED:
+            step_start = datetime.now() if self.state == TransitionState.PARTIAL else self.start_time
+            self.step()
             self.progress_signal.emit()
-            time.sleep(self.transition_step_seconds)
+            remaining_secs = self.preset.get_step_interval_seconds() - (datetime.now() - step_start).total_seconds()
+            print(remaining_secs)
+            for _ in range(0, int(remaining_secs)):  # Sleep for the required number of seconds (if any remain)
+                time.sleep(1.0)
+                self.progress_signal.emit()  # Keep progress indicators winking
+            time.sleep((remaining_secs % 1) if remaining_secs > 0.0 else 0.1)  # fraction remainder, or 0.1 if haven't sleep
+        self.end_time = datetime.now()
         if self.state == TransitionState.FINISHED:
-            log_info(f"Finished restoring {self.preset.name} {round(self.elapsed_time.total_seconds(), ndigits=2)} seconds")
+            log_info(f"Finished restoring {self.preset.name} {round(self.total_elapsed_seconds(), ndigits=2)} seconds")
 
     def step(self):
-        try:
-            current_values = []
-            new_values = []
-            for control, final_value, expected_value in zip(self.transient_controls_list, self.transient_final_values,
-                                                            self.expected_values):
-                current_value = control.controller.get_attribute(control.vcp_capability.vcp_code)[0]
-                if current_value != expected_value:  # User must have changed something - cancel the transition
-                    self.state = TransitionState.INTERRUPTED
-                    log_warning(f"Interrupted transition to {self.preset.name}")
-                    return self.state
-                current_values.append(current_value)
-                if current_value != final_value:
-                    int_val = int(current_value)
-                    diff = int(final_value) - int_val
-                    if diff:
-                        new_value = str(int_val + (1 if diff > 0 else -1))
-                        new_values.append(new_value)
-                        control.restore_vdu_attribute(new_value)
-                else:
-                    new_values.append(current_value)
-            if current_values == self.transient_final_values:  # Finished - do non transient values
-                for control, new_value in zip(self.non_transient_controls_list, self.non_transient_final_values):
-                    control.restore_vdu_attribute(new_value)
-                self.state = TransitionState.FINISHED
+        current_values = []
+        new_values = []
+        for control, final_value, expected_value in zip(self.transient_controls_list, self.transient_final_values,
+                                                        self.expected_values):
+            current_value = control.controller.get_attribute(control.vcp_capability.vcp_code)[0]
+            if current_value != expected_value:  # User must have changed something - cancel the transition
+                self.state = TransitionState.INTERRUPTED
+                log_warning(f"Interrupted transition to {self.preset.name}")
                 return self.state
-            self.expected_values = new_values
-            self.state = TransitionState.PARTIAL
-            log_debug(f"Partial transition: {self.preset.name} cur={self.expected_values} " 
-                      f"step={new_values} final={self.transient_final_values}") if log_debug_enabled else None
+            current_values.append(current_value)
+            if current_value != final_value:
+                int_val = int(current_value)
+                diff = int(final_value) - int_val
+                if diff:
+                    new_value = str(int_val + (1 if diff > 0 else -1))
+                    new_values.append(new_value)
+                    control.restore_vdu_attribute(new_value)
+            else:
+                new_values.append(current_value)
+        if current_values == self.transient_final_values:  # Finished - do non transient values
+            for control, new_value in zip(self.non_transient_controls_list, self.non_transient_final_values):
+                control.restore_vdu_attribute(new_value)
+            self.state = TransitionState.FINISHED
             return self.state
-        finally:
-            self.elapsed_time = datetime.now() - self.start_time
+        self.expected_values = new_values
+        self.state = TransitionState.PARTIAL
+        log_debug(f"Partial transition: {self.preset.name} cur={self.expected_values} "
+                  f"step={new_values} final={self.transient_final_values}") if log_debug_enabled else None
+        return self.state
+
+    def total_elapsed_seconds(self) -> float:
+        return ((self.end_time if self.end_time else datetime.now()) - self.start_time).total_seconds()
 
 
 class TransitioningDummyPreset(Preset):
@@ -3813,23 +3824,27 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.editor_controls_widget = self.create_preset_content_controls()
         self.editor_layout.addWidget(self.edit_preset_widget)
 
-        self.controls_title_widget = QWidget()
-        self.controls_title_widget.setLayout(QHBoxLayout())
-        self.editor_controls_prompt = QLabel(tr("Controls to include:"))
-        self.controls_title_widget.layout().addWidget(self.editor_controls_prompt, alignment=Qt.AlignLeft)
-        self.controls_title_widget.layout().addStretch(10)
-        self.controls_title_widget.layout().addWidget(QLabel(tr("Transition slowly")), alignment=Qt.AlignRight)
-        self.transition_type_widget = QComboBox()
+        self.controls_title_widget = self.editor_controls_prompt = QLabel(tr("Controls to include:"))
+        self.controls_title_widget.setDisabled(True)
+        self.editor_layout.addWidget(self.controls_title_widget)
+        self.editor_layout.addWidget(self.editor_controls_widget)
 
+        self.transitions_widget = QWidget()
+        self.transitions_widget.setLayout(QHBoxLayout())
+        self.transitions_widget.layout().addWidget(QLabel(tr("Transition slowly")), alignment=Qt.AlignLeft)
+        self.transition_type_widget = QComboBox()
         for transition_type in TransitionType:
             self.transition_type_widget.addItem(transition_type.description(), userData=transition_type)
-        self.controls_title_widget.layout().addWidget(self.transition_type_widget)
-        self.controls_title_widget.setDisabled(True)
+        self.transitions_widget.layout().addWidget(self.transition_type_widget, alignment=Qt.AlignLeft)
+        self.transitions_widget.layout().addStretch(10)
+        self.transitions_widget.layout().addWidget(QLabel(tr("Transition step")), alignment=Qt.AlignRight)
+        self.step_seconds_widget = QSpinBox()
+        self.step_seconds_widget.setRange(0, 60)
+        self.transitions_widget.layout().addWidget(self.step_seconds_widget, alignment=Qt.AlignRight)
+        self.transitions_widget.layout().addWidget(QLabel(tr("seconds")), alignment=Qt.AlignRight)
+        self.transitions_widget.setDisabled(True)
+        self.editor_layout.addWidget(self.transitions_widget)
 
-        self.editor_layout.addWidget(self.controls_title_widget)
-
-        # self.editor_layout.addWidget(self.editor_controls_prompt)
-        self.editor_layout.addWidget(self.editor_controls_widget)
         self.editor_trigger_widget = PresetChooseElevationWidget(self.main_config.get_location)
         self.editor_layout.addWidget(self.editor_trigger_widget)
         presets_dialog_splitter.addWidget(self.editor_groupbox)
@@ -3934,6 +3949,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             if weather_filename is not None:
                 preset_ini.set('preset', 'solar-elevation-weather-restriction', weather_filename)
         preset_ini.set('preset', 'transition-type', str(self.transition_type_widget.currentData()))
+        preset_ini.set('preset', 'transition-step-interval-seconds', str(self.step_seconds_widget.value()))
 
     def get_presets(self):
         return [self.preset_widgets_layout.itemAt(i).widget()
@@ -4012,6 +4028,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             self.editor_title.setText(tr("Create new preset:"))
             self.editor_controls_prompt.setText(tr("Controls to include:"))
             self.controls_title_widget.setDisabled(True)
+            self.transitions_widget.setDisabled(True)
         else:
             already_exists = self.find_preset_widget(changed_text)
             if already_exists:
@@ -4022,6 +4039,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             self.editor_controls_widget.setDisabled(False)
             self.editor_trigger_widget.setDisabled(False)
             self.controls_title_widget.setDisabled(False)
+            self.transitions_widget.setDisabled(False)
             self.edit_save_button.setDisabled(False)
 
     def edit_preset(self, preset: Preset) -> None:
@@ -4036,6 +4054,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 self.editor_trigger_widget.set_required_weather_filename(
                     preset.preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None))
                 self.transition_type_widget.setCurrentIndex(preset.get_transition_type().index())
+                self.step_seconds_widget.setValue(int(preset.get_step_interval_seconds()))
 
         self.main_window.restore_preset(preset, restore_finished=begin_editing, immediately=True)
         self.set_status_message('')  # Will be shortly followed by a restore message
@@ -4759,7 +4778,7 @@ class VduAppWindow(QMainWindow):
             self.main_panel.refresh_view()
             presets_dialog_update_view(
                 tr("Transitioning to preset {} (elapsed time {} seconds)...").format(
-                    preset.name, round(worker_thread.elapsed_time.total_seconds(), ndigits=1)))
+                    preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=1)))
             self.transition_in_progress_preset.update_progress() if self.transition_in_progress_preset else None
             self.display_active_preset(self.transition_in_progress_preset)
 
@@ -4781,7 +4800,7 @@ class VduAppWindow(QMainWindow):
                     cps_file.write(preset.name)
                 self.display_active_preset(preset)
                 presets_dialog_update_view(tr("Restored {} (elapsed time {} seconds)").format(
-                    preset.name, round(worker_thread.elapsed_time.total_seconds(), ndigits=1)))
+                    preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=1)))
                 if restore_finished is not None:
                     restore_finished(True)
             else:  # Interrupted or exception:
