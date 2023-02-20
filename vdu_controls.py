@@ -517,7 +517,7 @@ from PyQt5 import QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
     QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant
 from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QDoubleValidator, QRegExpValidator, \
-    QPalette, QGuiApplication, QColor, QValidator, QPen, QFont
+    QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
@@ -3288,9 +3288,25 @@ class PresetWidget(QWidget):
         delete_button.clicked.connect(partial(delete_action, preset=preset, target_widget=self))
         delete_button.setAutoDefault(False)
 
-        line_layout.addSpacing(10)
+        preset_transition_button = PushButtonLeftJustified()
+        preset_transition_button.setText(f"{preset.get_transition_type().abbreviation()}{str(preset.get_step_interval_seconds())}")
+        preset_transition_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
+        width = QFontMetrics(preset_transition_button.font()).horizontalAdvance(">99")
+        preset_transition_button.setMaximumWidth(width + 5)
+        preset_transition_button.setFlat(True)
+        preset_transition_button.setToolTip(tr("Transition to {}, each step is {} seconds. Normally transitions: {}").format(
+            preset.get_title_name(), preset.get_step_interval_seconds(), preset.get_transition_type().description()))
+        preset_transition_button.clicked.connect(partial(restore_action, preset=preset, immediately=False))
+        preset_transition_button.setAutoDefault(False)
+        if preset.get_transition_type() == TransitionType.NONE:
+            preset_transition_button.setDisabled(True)
+            preset_transition_button.setText('')
+        line_layout.addWidget(preset_transition_button)
+
+        line_layout.addSpacing(5)
         timer_control_button = PushButtonLeftJustified(parent=self)
         timer_control_button.setFlat(True)
+        timer_control_button.setAutoDefault(False)
 
         if preset.get_solar_elevation() is not None:
 
@@ -3312,7 +3328,6 @@ class PresetWidget(QWidget):
             timer_control_button.setToolTip(format_description())
             timer_control_button.clicked.connect(toggle_timer)
         timer_control_button.setEnabled(preset.schedule_status in (ScheduleStatus.SCHEDULED, ScheduleStatus.SUSPENDED))
-        # auto_label.setDisabled(True)
         line_layout.addWidget(timer_control_button)
 
 
@@ -3322,7 +3337,7 @@ class PresetActivationButton(QPushButton):
         self.preset = preset
         self.setIcon(preset.create_icon())
         text = preset.get_title_name()
-        self.setText(f"{preset.get_title_name()} {preset.get_transition_type().abbreviation()}")
+        self.setText(preset.get_title_name())
         self.setToolTip(tr("Restore {} (immediately)").format(preset.get_title_name()))
 
     def event(self, event: QEvent) -> bool:
@@ -4018,8 +4033,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             self.preset_widgets_scrollarea.updateGeometry()
         self.set_status_message('')
 
-    def restore_preset(self, preset: Preset) -> None:
-        self.main_window.restore_preset(preset, immediately=True)
+    def restore_preset(self, preset: Preset, immediately: bool = True) -> None:
+        self.main_window.restore_preset(preset, immediately=immediately)
         self.preset_name_edit.setText('')
 
     def save_preset(self, preset: Preset) -> None:
