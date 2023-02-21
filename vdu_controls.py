@@ -3009,7 +3009,7 @@ class VduControlsMainPanel(QWidget):
 class WorkerThread(QThread):
     finished_work = pyqtSignal()
 
-    def __init__(self, task_body: Callable, task_finished: Callable = None) -> None:
+    def __init__(self, task_body: Callable, task_finished: Callable | None = None) -> None:
         super().__init__()
         self.task_body = task_body
         self.task_finished = task_finished
@@ -3047,11 +3047,11 @@ class TransitionWorker(WorkerThread):
         self.last_progress_time = datetime.now()
         self.main_panel = main_panel
         self.preset = preset
-        self.non_transient_controls_list = []
-        self.non_transient_final_values = []
-        self.transient_controls_list = []
-        self.transient_final_values = []
-        self.expected_values = []
+        self.non_transient_controls_list: List[VduControlBase] = []
+        self.non_transient_final_values: List[str] = []
+        self.transient_controls_list: List[VduControlBase] = []
+        self.transient_final_values: List[str] = []
+        self.expected_values: List[str] = []
         self.state = TransitionState.INITIALIZED
         self.transition_immediately = immediately
         self.progress_signal.connect(progress)
@@ -4482,7 +4482,7 @@ class VduAppWindow(QMainWindow):
         self.detected_vdu_list: List[Tuple[str, str, str, str]] = []
         self.vdu_controllers: List[VduController] = []
         self.previously_detected_vdu_list: List[Tuple[str, str, str, str]] = []
-        self.transition_in_progress_preset: Preset = None
+        self.transitioning_dummy_preset: Preset | None = None
 
         self.ddcutil: DdcUtil | None = None
 
@@ -4810,12 +4810,12 @@ class VduAppWindow(QMainWindow):
     def restore_preset(self, preset: Preset, restore_finished: Callable | None = None, immediately: bool = False) -> None:
         # Starts the restore, but it will complete in the worker thread
 
-        self.transition_in_progress_preset: TransitioningDummyPreset = None
+        self.transitioning_dummy_preset: TransitioningDummyPreset | None = None
 
         if not immediately:
-            self.transition_in_progress_preset = TransitioningDummyPreset(preset)
+            self.transitioning_dummy_preset = TransitioningDummyPreset(preset)
             presets_dialog_update_view(tr("Transitioning to preset {}").format(preset.name))
-            self.display_active_preset(self.transition_in_progress_preset)
+            self.display_active_preset(self.transitioning_dummy_preset)
         self.main_panel.indicate_busy()
         preset.load()
 
@@ -4826,12 +4826,12 @@ class VduAppWindow(QMainWindow):
             presets_dialog_update_view(
                 tr("Transitioning to preset {} (elapsed time {} seconds)...").format(
                     preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=1)))
-            self.transition_in_progress_preset.update_progress() if self.transition_in_progress_preset else None
-            self.display_active_preset(self.transition_in_progress_preset)
+            self.transitioning_dummy_preset.update_progress() if self.transitioning_dummy_preset else None
+            self.display_active_preset(self.transitioning_dummy_preset)
 
         def finished():
             nonlocal worker_thread
-            self.transition_in_progress_preset = None
+            self.transitioning_dummy_preset = None
             if worker_thread.vdu_exception is not None:
                 answer = self.main_panel.display_vdu_exception(
                     worker_thread.vdu_exception,
@@ -4900,8 +4900,8 @@ class VduAppWindow(QMainWindow):
         return None
 
     def display_active_preset(self, preset=None) -> None:
-        if preset is None and self.transition_in_progress_preset is not None:
-            preset = self.transition_in_progress_preset
+        if preset is None and self.transitioning_dummy_preset is not None:
+            preset = self.transitioning_dummy_preset
         if preset is None:
             preset = self.which_preset_is_active()
         if preset is None:
