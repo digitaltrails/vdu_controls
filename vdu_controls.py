@@ -3047,11 +3047,10 @@ class TransitionWorker(WorkerThread):
         self.last_progress_time = datetime.now()
         self.main_panel = main_panel
         self.preset = preset
-        self.non_transient_controls_list: List[VduControlBase] = []
-        self.non_transient_final_values: List[str] = []
-        self.transient_controls_list: List[VduControlBase] = []
-        self.transient_final_values: List[str] = []
-        self.expected_values: List[str] = []
+        self.preset_non_transitioning_controls: List[VduControlBase] = []  # specific to this preset
+        self.preset_transitioning_controls: List[VduControlBase] = []  # specific to this preset
+        self.final_values: Dict[VduControlBase, str] = {}
+        self.expected_values: Dict[VduControlBase, str] = {}
         self.state = TransitionState.INITIALIZED
         self.transition_immediately = immediately
         self.progress_signal.connect(progress)
@@ -3061,17 +3060,13 @@ class TransitionWorker(WorkerThread):
                 for control in control_panel.vcp_controls:
                     property_name = control.vcp_capability.property_name()
                     if property_name in self.preset.preset_ini[section]:
+                        self.final_values[control] = self.preset.preset_ini[section][property_name]
                         if control.vcp_capability.can_transition and not self.transition_immediately:
-                            self.transient_controls_list.append(control)
-                            self.transient_final_values.append(self.preset.preset_ini[section][property_name])
+                            self.preset_transitioning_controls.append(control)
                         else:
-                            self.non_transient_controls_list.append(control)
-                            self.non_transient_final_values.append(self.preset.preset_ini[section][property_name])
+                            self.preset_non_transitioning_controls.append(control)
 
     def task_body(self):
-        if not self.transition_immediately:
-            self.expected_values = [control.controller.get_attribute(control.vcp_capability.vcp_code)[0] for control in
-                                    self.transient_controls_list]
         while self.state == TransitionState.PARTIAL or self.state == TransitionState.INITIALIZED:
             step_start = datetime.now() if self.state == TransitionState.PARTIAL else self.start_time
             if self.step() == TransitionState.PARTIAL:
@@ -3086,38 +3081,42 @@ class TransitionWorker(WorkerThread):
             log_info(f"Finished restoring {self.preset.name} {round(self.total_elapsed_seconds(), ndigits=2)} seconds")
 
     def step(self):
-        current_values = []
-        new_values = []
-        for control, final_value, expected_value in zip(self.transient_controls_list, self.transient_final_values,
-                                                        self.expected_values):
-            current_value = control.controller.get_attribute(control.vcp_capability.vcp_code)[0]
-            if current_value != expected_value:  # User must have changed something - cancel the transition
-                log_warning(f"Interrupted transition to {self.preset.name}")
-                self.state = TransitionState.INTERRUPTED
-                return self.state
-            current_values.append(current_value)
-            if current_value != final_value:
-                int_val = int(current_value)
+        more_to_do = False
+        if not self.transition_immediately:  # if we are transitioning slowly...
+
+            for control_panel in self.main_panel.vdu_control_panels:  # Check that no one else is changing the controls
+                control_panel.refresh_data()  # Update the values of all the controls
+                for control in control_panel.vcp_controls:
+                    current_value = control.current_value  # play safe, get a constant copy now
+                    if control in self.expected_values:
+                        if self.expected_values[control] != current_value:
+                            log_warning(f"Interrupted transition to {self.preset.name}")
+                            self.state = TransitionState.INTERRUPTED  # Something else is changing the controls - abandon the task
+                            return self.state
+                    else:
+                        self.expected_values[control] = current_value  # must be first time through, initialize value
+
+            for control in self.preset_transitioning_controls:  # Step each control by 1 or -1...
+                int_val = int(self.expected_values[control])
+                final_value = self.final_values[control]
                 diff = int(final_value) - int_val
-                if diff:
+                if diff != 0:
                     new_value = str(int_val + (1 if diff > 0 else -1))
-                    new_values.append(new_value)
+                    self.expected_values[control] = new_value  # revise to new value
                     control.restore_vdu_attribute(new_value)
-            else:
-                new_values.append(current_value)
-            now = datetime.now()
-            if (now - self.last_progress_time).total_seconds() >= 1.0:
-                self.last_progress_time = now
-                self.progress_signal.emit()
-        if current_values == self.transient_final_values:  # Finished - do non transient values
-            for control, new_value in zip(self.non_transient_controls_list, self.non_transient_final_values):
-                control.restore_vdu_attribute(new_value)
-            self.state = TransitionState.FINISHED
-            return self.state
-        self.expected_values = new_values
-        log_debug(f"Partial transition: {self.preset.name} cur={self.expected_values} "
-                  f"step={new_values} final={self.transient_final_values}") if log_debug_enabled else None
-        self.state = TransitionState.PARTIAL
+                    more_to_do = more_to_do or new_value != final_value
+                now = datetime.now()
+                if (now - self.last_progress_time).total_seconds() >= 1.0:
+                    self.last_progress_time = now
+                    self.progress_signal.emit()
+
+            if more_to_do:  # Some transitioning controls are not at their final values, need to step again
+                self.state = TransitionState.PARTIAL
+                return self.state
+
+        for control in self.preset_non_transitioning_controls:  # Finish by doing the non-transitioning controls
+            control.restore_vdu_attribute(self.final_values[control])
+        self.state = TransitionState.FINISHED
         return self.state
 
     def total_elapsed_seconds(self) -> float:
