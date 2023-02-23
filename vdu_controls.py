@@ -283,10 +283,10 @@ The preset activation and edit buttons in the Presets Dialog will activate any
 preset immediately regardless of the transition settings.
 
 Normally a transition single-steps the controls as quickly as possible.  In practice
-this means each step takes 1 to 4 seconds depending on the number of VDU's and number
-of controls being altered.  The Presets Dialog includes controls to set a ``Transition
-Step Interval`` which can be used to increase the seconds between
-steps and extend the transition over a longer period of time.
+this means each step takes one or more seconds and increases linearly depending on the
+number of VDU's and number of controls being altered.  The Presets Dialog includes
+a ``Transition Step seconds`` control that can be used to increase the step interval
+and extend a transition over a longer period of time.
 
 If any transitioning controls change independently of the transition, the
 transition will cease.  In that manner a transition can be abandoned by dragging
