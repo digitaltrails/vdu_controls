@@ -45,7 +45,8 @@ Dependencies
 All the following runtime dependencies are likely to be pre-packaged on any modern Linux distribution 
 (``vdu_controls`` was originally developed on OpenSUSE Tumbleweed).
 
-* ddcutil: the command line utility that interfaces to VDU's via DDC over i2c-dev or USB.
+* ddcutil >= 1.3: the command line utility that interfaces to VDU's via DDC over i2c-dev or USB. (If 
+  anyone requires support for versions of ddcutil prior to v1.3 please contact me directly.)
 * i2c-dev: the i2c-dev kernel module normally shipped with all Linux distributions and required by [ddcutil](https://www.ddcutil.com)
 * python >=3.8: ``vdu_controls`` is written in python and may depend on some features present only in 3.8 onward.
 * python >=3.8 QtPy: the python GUI library used by ``vdu_controls``.
