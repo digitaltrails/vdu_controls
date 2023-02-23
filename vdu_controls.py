@@ -4442,7 +4442,7 @@ class ScheduleStatus(Enum):
 
 
 class TransitionType(Enum):
-    NONE = 0, '', QT_TR_NOOP('No')
+    NONE = 0, '', QT_TR_NOOP('Never')
     SCHEDULED = 1, '\u25b9', QT_TR_NOOP('On schedule')
     ALWAYS = 2, '\u25b8', QT_TR_NOOP('Always')
 
