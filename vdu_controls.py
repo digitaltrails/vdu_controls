@@ -2668,7 +2668,7 @@ class Preset:
 
     def remove_elevation_trigger(self):
         if self.timer:
-            log_info(f"Preset timer stopped for '{self.name}'")
+            log_info(f"Preset timer and schedule status cleared for '{self.name}'")
             self.timer.stop()
             self.timer = None
         if self.elevation_time_today is not None:
