@@ -1,11 +1,11 @@
 -------------------------------------------------------------------
 Sat 18 Feb 2023 23:18:56 UTC - Michael Hamilton <michael@actrix.gen.nz>
 
-- Version 1.9.2 optional Slow Transitions for presets:
-  * The Presets Dialog now includes an option to set a Preset to Transition Slowly.
-  * The tray, main panel, and Preset Dialog indicate when a slow transition is in progress.
-  * Transitions are performed by a non-GUI thread, the GUI remains accessible during slow transitions.
-  * A slow transition can be interrupted by moving the controls being transitioned or invoking a preset.
+- Version 1.9.2 optional Smooth Transitions for presets:
+  * The Presets Dialog now includes an option to set a Preset to Transition Smoothly.
+  * The tray, main panel, and Preset Dialog indicate when a smooth transition is in progress.
+  * Transitions are performed by a non-GUI thread, the GUI remains accessible during smooth transitions.
+  * A smooth transition can be interrupted by moving the controls being transitioned or invoking a preset.
 
 -------------------------------------------------------------------
 Wed 25 Jan 2023 23:08:56 UTC - Michael Hamilton <michael@actrix.gen.nz>

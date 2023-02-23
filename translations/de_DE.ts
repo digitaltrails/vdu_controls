@@ -784,11 +784,6 @@ Suche nach DDC-Monitoren...
         <translation>Wiederherstellen {} (sofort)</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3880"/>
-        <source>Transition slowly</source>
-        <translation>Langsam übergehen</translation>
-    </message>
-    <message>
         <location filename="../vdu_controls.py" line="3886"/>
         <source>Transition step</source>
         <translation>Übergang Schritt</translation>
@@ -837,6 +832,11 @@ Suche nach DDC-Monitoren...
         <location filename="../vdu_controls.py" line="4445"/>
         <source>Never</source>
         <translation>Niemals</translation>
+    </message>
+    <message>
+        <location filename="../vdu_controls.py" line="3880"/>
+        <source>Transition smoothly</source>
+        <translation>Reibungsloser Übergang</translation>
     </message>
 </context>
 </TS>

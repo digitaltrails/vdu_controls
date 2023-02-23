@@ -264,10 +264,10 @@ set to run at login, and they've also set a preset to trigger at dawn, but
 they don't actually log in until just after dawn, the overdue dawn preset will be
 triggered at login.
 
-Presets - Slow Transitions
---------------------------
+Presets - Smooth Transitions
+----------------------------
 
-A preset may be set to ``Transition Slowly``, in which case changes to controls
+A preset may be set to ``Transition Smoothly``, in which case changes to controls
 slider controls such as brightness and contrast will be stepped by one until the
 final values are reached.  Any non-continuous values will be set after all continuous
 values have reached their final values.
@@ -3082,7 +3082,7 @@ class TransitionWorker(WorkerThread):
 
     def step(self):
         more_to_do = False
-        if not self.transition_immediately:  # if we are transitioning slowly...
+        if not self.transition_immediately:  # if we are transitioning smoothly...
 
             for control_panel in self.main_panel.vdu_control_panels:  # Check that no one else is changing the controls
                 control_panel.refresh_data()  # Update the values of all the controls
@@ -3877,7 +3877,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
 
         self.transitions_widget = QWidget()
         self.transitions_widget.setLayout(QHBoxLayout())
-        self.transitions_widget.layout().addWidget(QLabel(tr("Transition slowly")), alignment=Qt.AlignLeft)
+        self.transitions_widget.layout().addWidget(QLabel(tr("Transition smoothly")), alignment=Qt.AlignLeft)
         self.transition_type_widget = QComboBox()
         for transition_type in TransitionType:
             self.transition_type_widget.addItem(transition_type.description(), userData=transition_type)

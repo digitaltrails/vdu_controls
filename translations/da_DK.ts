@@ -784,11 +784,6 @@ Leder efter DDC-skærme...
         <translation>Gendan {} (straks)</translation>
     </message>
     <message>
-        <location filename="../vdu_controls.py" line="3880"/>
-        <source>Transition slowly</source>
-        <translation>Overgang langsomt</translation>
-    </message>
-    <message>
         <location filename="../vdu_controls.py" line="3886"/>
         <source>Transition step</source>
         <translation>Overgangstrin</translation>
@@ -837,6 +832,11 @@ Leder efter DDC-skærme...
         <location filename="../vdu_controls.py" line="4445"/>
         <source>Never</source>
         <translation>Aldrig</translation>
+    </message>
+    <message>
+        <location filename="../vdu_controls.py" line="3880"/>
+        <source>Transition smoothly</source>
+        <translation>Overgang jævnt</translation>
     </message>
 </context>
 </TS>

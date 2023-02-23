@@ -242,11 +242,11 @@ Michael Hamilton
 Version History
 ---------------
 * 1.9.2
-  * Optional _Slow Transitions_ for presets:
-    * The Presets Dialog now includes an option to set a Preset to _Transition Slowly_.
-    * The tray, main panel, and Preset Dialog indicate when a slow transition is in progress.
-    * Transitions are performed by a non-GUI thread, the GUI remains accessible during slow transitions.
-    * A slow transition can be interrupted by moving the controls being transitioned or invoking a preset.
+  * Optional _Smooth Transitions_ for presets:
+    * The Presets Dialog now includes an option to set a Preset to _Transition Smoothly_.
+    * The tray, main panel, and Preset Dialog indicate when a smooth transition is in progress.
+    * Transitions are performed by a non-GUI thread, the GUI remains accessible during smooth transitions.
+    * A smooth transition can be interrupted by moving the controls being transitioned or invoking a preset.
 * 1.9.1
   * The text input to right of slider controls has been replaced with a SpinBox with up/down arrows.
   * The main panel progress-bar spinner will now also display during preset-activation (in addition to displaying during refresh).
