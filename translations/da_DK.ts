@@ -825,8 +825,8 @@ Leder efter DDC-skærme...
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3296"/>
-        <source>Transition to {}, each step is {} seconds. Normally transitions: {}</source>
-        <translation>Overgang til {}, hvert trin er {} sekunder. Normalt overgange: {}</translation>
+        <source>Transition to {}, each step is {} seconds. {}</source>
+        <translation>Overgang til {}, hvert trin er {} sekunder. {}</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="4445"/>

@@ -277,9 +277,11 @@ of three values:
 
     * ``No`` transition, change values immediately;
     * ``On schedule`` according to a solar elevation trigger;
-    * ``Always`` either by selection in the context menu or by solar elevation.
+    * ``On signal`` on the appropriate UNIX signal;
+    * ``On schedule or On signal`` according to elevation trigger or UNIX signal;
+    * ``Always`` in all circumstances, including when selected in the context-menu.
 
-The preset activation and edit buttons in the Presets Dialog will activate any
+In the Presets Dialog, the preset activation and edit buttons will activate any
 preset immediately regardless of the transition settings.
 
 Normally a transition single-steps the controls as quickly as possible.  In practice
@@ -525,7 +527,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox
 
 APPNAME = "VDU Controls"
-VDU_CONTROLS_VERSION = '1.9.2'
+VDU_CONTROLS_VERSION = '1.9.3'
 
 WESTERN_SKY = 'western-sky'
 EASTERN_SKY = 'eastern-sky'
@@ -3293,7 +3295,7 @@ class PresetWidget(QWidget):
         width = QFontMetrics(preset_transition_button.font()).horizontalAdvance(">99")
         preset_transition_button.setMaximumWidth(width + 5)
         preset_transition_button.setFlat(True)
-        preset_transition_button.setToolTip(tr("Transition to {}, each step is {} seconds. Normally transitions: {}").format(
+        preset_transition_button.setToolTip(tr("Transition to {}, each step is {} seconds. {}").format(
             preset.get_title_name(), preset.get_step_interval_seconds(), preset.get_transition_type().description()))
         preset_transition_button.clicked.connect(partial(restore_action, preset=preset, immediately=False))
         preset_transition_button.setAutoDefault(False)
@@ -4444,7 +4446,9 @@ class ScheduleStatus(Enum):
 class TransitionType(Enum):
     NONE = 0, '', QT_TR_NOOP('Never')
     SCHEDULED = 1, '\u25b9', QT_TR_NOOP('On schedule')
-    ALWAYS = 2, '\u25b8', QT_TR_NOOP('Always')
+    SIGNAL = 2, '\u25b9', QT_TR_NOOP('On Signal')
+    SCHEDULE_OR_SIGNAL = 3, '\u25b9\u26a1', QT_TR_NOOP('On Schedule or On Signal')
+    ALWAYS = 4, '\u25b8', QT_TR_NOOP('Always')
 
     def index(self):
         return self.value[0]
@@ -4608,8 +4612,13 @@ class VduAppWindow(QMainWindow):
                 self.start_refresh()
             elif PRESET_SIGNAL_MIN <= signal_number <= PRESET_SIGNAL_MAX:
                 restore_preset = self.preset_controller.get_preset(signal_number - PRESET_SIGNAL_MIN)
+                log_info(f"Signaled for preset {restore_preset.name} transition-type={restore_preset.get_transition_type()}")
                 if restore_preset is not None:
-                    self.restore_preset(restore_preset, immediately=restore_preset.get_transition_type() != TransitionType.ALWAYS)
+                    self.restore_preset(
+                        restore_preset,
+                        immediately=restore_preset.get_transition_type() not in (TransitionType.SIGNAL,
+                                                                                 TransitionType.SCHEDULE_OR_SIGNAL,
+                                                                                 TransitionType.ALWAYS))
                 else:
                     # Cannot raise a Qt alert inside the signal handler in case another signal comes in.
                     log_warning(f"ignoring signal {signal_number}, no preset associated with that signal number.")
@@ -4862,7 +4871,8 @@ class VduAppWindow(QMainWindow):
         presets = self.preset_controller.find_presets()
         if preset_name in presets:
             preset = presets[preset_name]
-            self.restore_preset(preset, immediately=preset.get_transition_type() != TransitionType.ALWAYS)
+            # Transition immediately unless the Preset is required to ALWAYS transition.
+            self.restore_preset(preset, immediately=not preset.get_transition_type() == TransitionType.ALWAYS)
 
     def save_preset(self, preset: Preset) -> None:
         self.copy_to_preset_ini(preset.preset_ini, update_only=True)
@@ -5019,9 +5029,12 @@ class VduAppWindow(QMainWindow):
                 presets_dialog_update_view(message + ' - ' + tr("Restored {}").format(preset.name))
 
             # Happens asynchronously in a thread
-            self.restore_preset(preset,
-                                restore_finished=finished,
-                                immediately=immediately or preset.get_transition_type() == TransitionType.NONE)
+            self.restore_preset(
+                preset,
+                restore_finished=finished,
+                immediately=immediately or preset.get_transition_type() not in (TransitionType.SCHEDULED,
+                                                                                TransitionType.SCHEDULE_OR_SIGNAL,
+                                                                                TransitionType.ALWAYS))
         presets_dialog_update_view(message)
 
     def is_weather_satisfactory(self, preset, use_cache: bool = False) -> bool:

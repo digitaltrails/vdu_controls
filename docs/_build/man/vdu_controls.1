@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Feb 24, 2023" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Mar 05, 2023" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.3.1
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -391,12 +391,16 @@ of three values:
 .IP \(bu 2
 \fBOn schedule\fP according to a solar elevation trigger;
 .IP \(bu 2
-\fBAlways\fP either by selection in the context menu or by solar elevation.
+\fBOn signal\fP on the appropriate UNIX signal;
+.IP \(bu 2
+\fBOn schedule or On signal\fP according to elevation trigger or UNIX signal;
+.IP \(bu 2
+\fBAlways\fP in all circumstances, including when selected in the context\-menu.
 .UNINDENT
 .UNINDENT
 .UNINDENT
 .sp
-The preset activation and edit buttons in the Presets Dialog will activate any
+In the Presets Dialog, the preset activation and edit buttons will activate any
 preset immediately regardless of the transition settings.
 .sp
 Normally a transition single\-steps the controls as quickly as possible.  In practice

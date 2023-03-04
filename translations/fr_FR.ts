@@ -825,8 +825,8 @@ Recherche de moniteurs DDC...
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3296"/>
-        <source>Transition to {}, each step is {} seconds. Normally transitions: {}</source>
-        <translation>Transition vers {}, chaque étape dure {} secondes. Normalement, les transitions : {}</translation>
+        <source>Transition to {}, each step is {} seconds. {}</source>
+        <translation>Transition vers {}, chaque étape dure {} secondes. {}</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="4445"/>

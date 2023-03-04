@@ -275,8 +275,10 @@ reached their final values.</p>
 one of three values:</p>
 <pre><code>* ``No`` transition, change values immediately;
 * ``On schedule`` according to a solar elevation trigger;
-* ``Always`` either by selection in the context menu or by solar elevation.</code></pre>
-<p>The preset activation and edit buttons in the Presets Dialog will
+* ``On signal`` on the appropriate UNIX signal;
+* ``On schedule or On signal`` according to elevation trigger or UNIX signal;
+* ``Always`` in all circumstances, including when selected in the context-menu.</code></pre>
+<p>In the Presets Dialog, the preset activation and edit buttons will
 activate any preset immediately regardless of the transition
 settings.</p>
 <p>Normally a transition single-steps the controls as quickly as
