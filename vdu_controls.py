@@ -2643,14 +2643,14 @@ class Preset:
             result = basic_desc + ' ' + tr("the sun does not rise this high today")
         return result
 
-    def get_transition_type(self):
+    def get_transition_type(self) -> TransitionType | None:
         name = self.preset_ini.get('preset', 'transition-type', fallback="NONE")
         for transition_type in TransitionType:
             if str(transition_type) == name:
                 return transition_type
         return TransitionType.NONE
 
-    def get_step_interval_seconds(self):
+    def get_step_interval_seconds(self) -> int:
         return self.preset_ini.getint('preset', 'transition-step-interval-seconds', fallback=0)
 
     def start_timer(self, when_local: datetime, action: Callable):
@@ -3597,6 +3597,35 @@ class PresetChooseWeatherWidget(QWidget):
                 return
 
 
+class PresetChooseTransitionWidget(QWidget):
+
+    def __init__(self):
+        super().__init__()
+        self.setLayout(QHBoxLayout())
+        self.layout().addWidget(QLabel(tr("Transition smoothly")), alignment=Qt.AlignLeft)
+        self.transition_type_widget = QComboBox()
+        for transition_type in TransitionType:
+            self.transition_type_widget.addItem(transition_type.description(), userData=transition_type)
+        self.layout().addWidget(self.transition_type_widget, alignment=Qt.AlignLeft)
+        self.layout().addStretch(10)
+        self.layout().addWidget(QLabel(tr("Transition step")), alignment=Qt.AlignRight)
+        self.step_seconds_widget = QSpinBox()
+        self.step_seconds_widget.setRange(0, 60)
+        self.layout().addWidget(self.step_seconds_widget, alignment=Qt.AlignRight)
+        self.layout().addWidget(QLabel(tr("seconds")), alignment=Qt.AlignRight)
+
+    def set_transition_type(self, transition_type: TransitionType):
+        self.transition_type_widget.setCurrentIndex(transition_type.index())
+
+    def set_step_seconds(self, seconds: int):
+        self.step_seconds_widget.setValue(seconds)
+
+    def get_transition_type(self) -> TransitionType:
+        return self.transition_type_widget.currentData()
+
+    def get_step_seconds(self) -> int:
+        return self.step_seconds_widget.value()
+
 class PresetChooseElevationWidget(QWidget):
     # def create_trigger_widget(self, base_ini: ConfigIni) -> QWidget:
     #
@@ -3877,21 +3906,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.editor_layout.addWidget(self.controls_title_widget)
         self.editor_layout.addWidget(self.editor_controls_widget)
 
-        self.transitions_widget = QWidget()
-        self.transitions_widget.setLayout(QHBoxLayout())
-        self.transitions_widget.layout().addWidget(QLabel(tr("Transition smoothly")), alignment=Qt.AlignLeft)
-        self.transition_type_widget = QComboBox()
-        for transition_type in TransitionType:
-            self.transition_type_widget.addItem(transition_type.description(), userData=transition_type)
-        self.transitions_widget.layout().addWidget(self.transition_type_widget, alignment=Qt.AlignLeft)
-        self.transitions_widget.layout().addStretch(10)
-        self.transitions_widget.layout().addWidget(QLabel(tr("Transition step")), alignment=Qt.AlignRight)
-        self.step_seconds_widget = QSpinBox()
-        self.step_seconds_widget.setRange(0, 60)
-        self.transitions_widget.layout().addWidget(self.step_seconds_widget, alignment=Qt.AlignRight)
-        self.transitions_widget.layout().addWidget(QLabel(tr("seconds")), alignment=Qt.AlignRight)
-        self.transitions_widget.setDisabled(True)
-        self.editor_layout.addWidget(self.transitions_widget)
+        self.editor_transitions_widget = PresetChooseTransitionWidget()
+        self.editor_layout.addWidget(self.editor_transitions_widget)
 
         self.editor_trigger_widget = PresetChooseElevationWidget(self.main_config.get_location)
         self.editor_layout.addWidget(self.editor_trigger_widget)
@@ -3907,6 +3923,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
 
         self.edit_choose_icon_button.set_preset(None)
         self.editor_controls_widget.setDisabled(True)
+        self.editor_transitions_widget.setDisabled(True)
         self.editor_trigger_widget.setDisabled(True)
         self.edit_save_button.setDisabled(True)
         layout.addWidget(button_box)
@@ -3996,8 +4013,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             weather_filename = self.editor_trigger_widget.get_required_weather_filename()
             if weather_filename is not None:
                 preset_ini.set('preset', 'solar-elevation-weather-restriction', weather_filename)
-        preset_ini.set('preset', 'transition-type', str(self.transition_type_widget.currentData()))
-        preset_ini.set('preset', 'transition-step-interval-seconds', str(self.step_seconds_widget.value()))
+        preset_ini.set('preset', 'transition-type', str(self.editor_transitions_widget.get_transition_type()))
+        preset_ini.set('preset', 'transition-step-interval-seconds', str(self.editor_transitions_widget.get_step_seconds()))
 
     def get_presets(self):
         return [self.preset_widgets_layout.itemAt(i).widget()
@@ -4071,12 +4088,13 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         if changed_text.strip() == "":
             # choose_icon_button.set_preset(None)
             self.editor_controls_widget.setDisabled(True)
+            self.editor_transitions_widget.setDisabled(True)
             self.editor_trigger_widget.setDisabled(True)
             self.edit_save_button.setDisabled(True)
             self.editor_title.setText(tr("Create new preset:"))
             self.editor_controls_prompt.setText(tr("Controls to include:"))
             self.controls_title_widget.setDisabled(True)
-            self.transitions_widget.setDisabled(True)
+            self.editor_transitions_widget.setDisabled(True)
         else:
             already_exists = self.find_preset_widget(changed_text)
             if already_exists:
@@ -4085,9 +4103,10 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 self.editor_title.setText(tr("Create new preset:"))
             self.editor_controls_prompt.setText(tr("Controls to include in {}:").format(changed_text))
             self.editor_controls_widget.setDisabled(False)
+            self.editor_transitions_widget.setDisabled(False)
             self.editor_trigger_widget.setDisabled(False)
             self.controls_title_widget.setDisabled(False)
-            self.transitions_widget.setDisabled(False)
+            self.editor_transitions_widget.setDisabled(False)
             self.edit_save_button.setDisabled(False)
 
     def edit_preset(self, preset: Preset) -> None:
@@ -4101,9 +4120,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                     preset.preset_ini.get('preset', 'solar-elevation', fallback=None))
                 self.editor_trigger_widget.set_required_weather_filename(
                     preset.preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None))
-                self.transition_type_widget.setCurrentIndex(preset.get_transition_type().index())
-                self.step_seconds_widget.setValue(int(preset.get_step_interval_seconds()))
-
+                self.editor_transitions_widget.set_transition_type(preset.get_transition_type())
+                self.editor_transitions_widget.set_step_seconds(preset.get_step_interval_seconds())
         self.main_window.restore_preset(preset, restore_finished=begin_editing, immediately=True)
         self.set_status_message('')  # Will be shortly followed by a restore message
 
