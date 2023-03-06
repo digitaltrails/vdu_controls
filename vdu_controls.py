@@ -272,14 +272,13 @@ slider controls such as brightness and contrast will be stepped by one until the
 final values are reached.  Any non-continuous values will be set after all continuous
 values have reached their final values.
 
-The Preset Dialog includes controls to set a Preset's transition to one
-of three values:
+The Preset Dialog includes controls to set a Preset's transition type to a
+combination these values:
 
-    * ``No`` transition, change values immediately;
+    * ``None`` transition, values change immediately;
     * ``On schedule`` according to a solar elevation trigger;
     * ``On signal`` on the appropriate UNIX signal;
-    * ``On schedule or On signal`` according to elevation trigger or UNIX signal;
-    * ``Always`` in all circumstances, including when selected in the context-menu.
+    * ``On menu`` when selected in the context-menu;
 
 In the Presets Dialog, the preset activation and edit buttons will activate any
 preset immediately regardless of the transition settings.
@@ -508,7 +507,7 @@ import traceback
 import urllib.request
 from collections import namedtuple
 from datetime import datetime, timedelta, timezone
-from enum import Enum
+from enum import Enum, IntFlag
 from functools import partial
 from pathlib import Path
 from threading import Lock
@@ -547,6 +546,10 @@ WEATHER_CANCELLATION_SYMBOL = '\u2744'  # HEAVY CHECK MARK
 SKIPPED_SYMBOL = '\u2718'  # HEAVY BALLOT X
 SUCCESS_SYMBOL = '\u2714'  # SNOWFLAKE
 PRESET_APP_SEPARATOR_SYMBOL = '\u2014'  # EM DASH
+MENU_SYMBOL = '\u2630'  # TRIGRAM FOR HEAVEN - hamburger menu
+TRANSITION_SYMBOL = '\u25b9'  # WHITE RIGHT POINTING SMALL TRIANGLE
+TRANSITION_ALWAYS_SYMBOL = '\u25b8\u2732'  # BLACK RIGHT POINTING SMALL TRIANGLE + OPEN CENTER ASTERIX
+SIGNAL_SYMBOL = '\u26a1'  # HIGH VOLTAGE - lightning bolt
 
 SolarElevationKey = namedtuple('SolarElevationKey', ['direction', 'elevation'])
 SolarElevationData = namedtuple('SolarElevationData', ['azimuth', 'zenith', 'when'])
@@ -988,7 +991,8 @@ class DdcUtil:
                     log_debug("subprocess result: ", [arg if len(arg) < 30 else arg[:30] + "..." for arg in result.args],
                               f"rc={result.returncode}", f"stdout={result.stdout}")
             except Exception as e:  # Shorten EDID (see similar above)
-                log_error("subprocess result: ", [arg if len(arg) < 30 else arg[:30] + "..." for arg in process_args], f"exception={e}")
+                log_error("subprocess result: ", [arg if len(arg) < 30 else arg[:30] + "..." for arg in process_args],
+                          f"exception={e}")
                 raise
             return result
 
@@ -2643,12 +2647,8 @@ class Preset:
             result = basic_desc + ' ' + tr("the sun does not rise this high today")
         return result
 
-    def get_transition_type(self) -> TransitionType | None:
-        name = self.preset_ini.get('preset', 'transition-type', fallback="NONE")
-        for transition_type in TransitionType:
-            if str(transition_type) == name:
-                return transition_type
-        return TransitionType.NONE
+    def get_transition_type(self) -> TransitionType:
+        return parse_transaction_type(self.preset_ini.get('preset', 'transition-type', fallback="NONE"))
 
     def get_step_interval_seconds(self) -> int:
         return self.preset_ini.getint('preset', 'transition-step-interval-seconds', fallback=0)
@@ -3290,13 +3290,19 @@ class PresetWidget(QWidget):
         delete_button.setAutoDefault(False)
 
         preset_transition_button = PushButtonLeftJustified()
-        preset_transition_button.setText(f"{preset.get_transition_type().abbreviation()}{str(preset.get_step_interval_seconds())}")
+        preset_transition_button.setText(
+            f"{preset.get_transition_type().abbreviation()}"
+            f"{str(preset.get_step_interval_seconds()) if preset.get_step_interval_seconds() > 0 else ''}")
         preset_transition_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
-        width = QFontMetrics(preset_transition_button.font()).horizontalAdvance(">99")
+        width = QFontMetrics(preset_transition_button.font()).horizontalAdvance(">____99")
         preset_transition_button.setMaximumWidth(width + 5)
         preset_transition_button.setFlat(True)
-        preset_transition_button.setToolTip(tr("Transition to {}, each step is {} seconds. {}").format(
-            preset.get_title_name(), preset.get_step_interval_seconds(), preset.get_transition_type().description()))
+        if preset.get_step_interval_seconds() > 0:
+            preset_transition_button.setToolTip(tr("Transition to {}, each step is {} seconds. {}").format(
+                preset.get_title_name(), preset.get_step_interval_seconds(), preset.get_transition_type().description()))
+        else:
+            preset_transition_button.setToolTip(tr("Transition to {}. {}").format(
+                preset.get_title_name(), preset.get_transition_type().description()))
         preset_transition_button.clicked.connect(partial(restore_action, preset=preset, immediately=False))
         preset_transition_button.setAutoDefault(False)
         if preset.get_transition_type() == TransitionType.NONE:
@@ -3337,7 +3343,6 @@ class PresetActivationButton(QPushButton):
         super().__init__()
         self.preset = preset
         self.setIcon(preset.create_icon())
-        text = preset.get_title_name()
         self.setText(preset.get_title_name())
         self.setToolTip(tr("Restore {} (immediately)").format(preset.get_title_name()))
 
@@ -3603,28 +3608,57 @@ class PresetChooseTransitionWidget(QWidget):
         super().__init__()
         self.setLayout(QHBoxLayout())
         self.layout().addWidget(QLabel(tr("Transition smoothly")), alignment=Qt.AlignLeft)
-        self.transition_type_widget = QComboBox()
-        for transition_type in TransitionType:
-            self.transition_type_widget.addItem(transition_type.description(), userData=transition_type)
+        self.transition_type_widget = QPushButton("None")
+        self.button_menu = QMenu()
+        self.transition_type = TransitionType.NONE
+        self.is_setting = False
+
+        for transition_type in TransitionType.ALWAYS.component_values():
+            action = QAction(transition_type.description(), self.button_menu)
+            action.setData(transition_type)
+            action.setCheckable(True)
+            action.toggled.connect(self.update_value)
+            self.button_menu.addAction(action)
+
+        self.transition_type_widget.setMenu(self.button_menu)
         self.layout().addWidget(self.transition_type_widget, alignment=Qt.AlignLeft)
-        self.layout().addStretch(10)
+        self.layout().addStretch(20)
         self.layout().addWidget(QLabel(tr("Transition step")), alignment=Qt.AlignRight)
         self.step_seconds_widget = QSpinBox()
         self.step_seconds_widget.setRange(0, 60)
         self.layout().addWidget(self.step_seconds_widget, alignment=Qt.AlignRight)
-        self.layout().addWidget(QLabel(tr("seconds")), alignment=Qt.AlignRight)
+        self.layout().addWidget(QLabel(tr("sec.")), alignment=Qt.AlignRight)
+
+    def update_value(self):
+        if self.is_setting:
+            return
+        for act in self.button_menu.actions():
+            if act.isChecked():
+                self.transition_type |= act.data()
+            elif act.data() in self.transition_type:
+                self.transition_type ^= act.data()
+        self.transition_type_widget.setText(str(self.transition_type.description()))
 
     def set_transition_type(self, transition_type: TransitionType):
-        self.transition_type_widget.setCurrentIndex(transition_type.index())
+        try:
+            self.is_setting = True
+            # self.transition_type_widget.setCurrentIndex(transition_type.index())
+            self.transition_type = transition_type
+            for act in self.button_menu.actions():
+                act.setChecked(self.transition_type & act.data())
+            self.transition_type_widget.setText(str(self.transition_type.description()))
+        finally:
+            self.is_setting = False
 
     def set_step_seconds(self, seconds: int):
         self.step_seconds_widget.setValue(seconds)
 
     def get_transition_type(self) -> TransitionType:
-        return self.transition_type_widget.currentData()
+        return self.transition_type
 
     def get_step_seconds(self) -> int:
         return self.step_seconds_widget.value()
+
 
 class PresetChooseElevationWidget(QWidget):
     # def create_trigger_widget(self, base_ini: ConfigIni) -> QWidget:
@@ -3823,7 +3857,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.main_config = main_config
         self.content_controls: Dict[Tuple[str, str], QWidget] = {}
         self.resize(1600, 800)
-        self.setMinimumWidth(1280)
+        self.setMinimumWidth(1320)
         self.setMinimumHeight(800)
         layout = QVBoxLayout()
         self.setLayout(layout)
@@ -3834,7 +3868,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         layout.addWidget(presets_dialog_splitter)
 
         presets_panel = QGroupBox()
-        presets_panel.setMinimumWidth(700)
+        presets_panel.setMinimumWidth(750)
         presets_panel.setFlat(True)
         presets_panel_layout = QVBoxLayout()
         presets_panel.setLayout(presets_panel_layout)
@@ -3891,7 +3925,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.editor_groupbox = QGroupBox()
         self.editor_groupbox.setFlat(True)
         self.editor_groupbox.setMinimumHeight(768)
-        self.editor_groupbox.setMinimumWidth(500)
+        self.editor_groupbox.setMinimumWidth(550)
         self.editor_layout = QVBoxLayout()
         self.editor_title = QLabel(tr("New Preset:"))
         self.editor_title.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
@@ -4122,6 +4156,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                     preset.preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None))
                 self.editor_transitions_widget.set_transition_type(preset.get_transition_type())
                 self.editor_transitions_widget.set_step_seconds(preset.get_step_interval_seconds())
+
         self.main_window.restore_preset(preset, restore_finished=begin_editing, immediately=True)
         self.set_status_message('')  # Will be shortly followed by a restore message
 
@@ -4415,7 +4450,10 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
             about_text = ABOUT_TEXT
         self.setInformativeText(about_text)
         self.setIcon(QMessageBox.Information)
-        self.exec()
+        self.setModal(False)
+        self.show()
+        self.raise_()
+        self.activateWindow()
 
 
 class HelpDialog(QDialog, DialogSingletonMixin):
@@ -4461,24 +4499,56 @@ class ScheduleStatus(Enum):
         return self.value[0]
 
 
-class TransitionType(Enum):
-    NONE = 0, '', QT_TR_NOOP('Never')
-    SCHEDULED = 1, '\u25b9', QT_TR_NOOP('On schedule')
-    SIGNAL = 2, '\u25b9', QT_TR_NOOP('On Signal')
-    SCHEDULE_OR_SIGNAL = 3, '\u25b9\u26a1', QT_TR_NOOP('On Schedule or On Signal')
-    ALWAYS = 4, '\u25b8', QT_TR_NOOP('Always')
+class TransitionType(IntFlag):
+    _ignore_ = ['abbreviations', 'descriptions']  # Seems very hacky
 
-    def index(self):
-        return self.value[0]
+    NONE = 0
+    SCHEDULED = 1
+    MENU = 2
+    SIGNAL = 4
+    ALWAYS = 7
 
-    def abbreviation(self) -> str:
-        return self.value[1]
+    abbreviations = {NONE: '',
+                     SCHEDULED: TIME_CLOCK_SYMBOL,
+                     MENU: MENU_SYMBOL,
+                     SIGNAL: SIGNAL_SYMBOL,
+                     ALWAYS: TRANSITION_ALWAYS_SYMBOL}
 
-    def description(self):
-        return self.value[2]
+    descriptions = {
+        NONE: QT_TR_NOOP('Never'),
+        SCHEDULED: QT_TR_NOOP('On schedule'),
+        MENU: QT_TR_NOOP('On menu'),
+        SIGNAL: QT_TR_NOOP('On signal'),
+        ALWAYS: QT_TR_NOOP('Always')}
+
+    def abbreviation(self, abbreviations=abbreviations) -> str:  # Even more hacky
+        if self.value in (TransitionType.NONE, TransitionType.ALWAYS):
+            return abbreviations[self]
+        return TRANSITION_SYMBOL + ''.join([abbreviations[component] for component in self.component_values()])
+
+    def description(self, descriptions=descriptions):  # Yuck
+        if self.value in (TransitionType.NONE, TransitionType.ALWAYS):
+            return descriptions[self]
+        return ','.join([descriptions[component] for component in self.component_values()])
+
+    def component_values(self) -> List[TransitionType]:
+        # similar to Python 3.11 enum.show_flag_values(self) - list of power of two components for self
+        return [option for option in TransitionType if (option & (option - 1) == 0) and option != 0 and option in self]
 
     def __str__(self):
-        return self.name.lower()
+        if self.value == TransitionType.NONE:
+            return self.name.lower()
+        return ','.join([component.name.lower() for component in self.component_values()])
+
+
+def parse_transaction_type(string_value: str):
+    transaction_type = TransitionType.NONE
+    string_value = string_value.replace('schedule_or_signal', 'scheduled,signal')  # Backward compatible for unreleased 1.9.2
+    for component_value in string_value.split(','):
+        for option in TransitionType:
+            if component_value.lower() == option.name.lower():
+                transaction_type |= option
+    return transaction_type
 
 
 class VduAppWindow(QMainWindow):
@@ -4634,9 +4704,7 @@ class VduAppWindow(QMainWindow):
                 if restore_preset is not None:
                     self.restore_preset(
                         restore_preset,
-                        immediately=restore_preset.get_transition_type() not in (TransitionType.SIGNAL,
-                                                                                 TransitionType.SCHEDULE_OR_SIGNAL,
-                                                                                 TransitionType.ALWAYS))
+                        immediately=TransitionType.SIGNAL not in restore_preset.get_transition_type())
                 else:
                     # Cannot raise a Qt alert inside the signal handler in case another signal comes in.
                     log_warning(f"ignoring signal {signal_number}, no preset associated with that signal number.")
@@ -4890,7 +4958,7 @@ class VduAppWindow(QMainWindow):
         if preset_name in presets:
             preset = presets[preset_name]
             # Transition immediately unless the Preset is required to ALWAYS transition.
-            self.restore_preset(preset, immediately=not preset.get_transition_type() == TransitionType.ALWAYS)
+            self.restore_preset(preset, immediately=TransitionType.MENU not in preset.get_transition_type())
 
     def save_preset(self, preset: Preset) -> None:
         self.copy_to_preset_ini(preset.preset_ini, update_only=True)
@@ -5027,7 +5095,6 @@ class VduAppWindow(QMainWindow):
 
     def activate_scheduled_preset(self, preset: Preset, check_weather: bool = True, immediately: bool = False):
         now = zoned_now()
-        status_text = ''
         weather_text = ''
         proceed = True
         if preset.is_weather_dependent() and check_weather:
@@ -5050,9 +5117,7 @@ class VduAppWindow(QMainWindow):
             self.restore_preset(
                 preset,
                 restore_finished=finished,
-                immediately=immediately or preset.get_transition_type() not in (TransitionType.SCHEDULED,
-                                                                                TransitionType.SCHEDULE_OR_SIGNAL,
-                                                                                TransitionType.ALWAYS))
+                immediately=immediately or TransitionType.SCHEDULED not in preset.get_transition_type())
         presets_dialog_update_view(message)
 
     def is_weather_satisfactory(self, preset, use_cache: bool = False) -> bool:

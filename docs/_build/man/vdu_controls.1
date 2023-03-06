@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Mar 05, 2023" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Mar 06, 2023" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.3.1
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -381,21 +381,19 @@ slider controls such as brightness and contrast will be stepped by one until the
 final values are reached.  Any non\-continuous values will be set after all continuous
 values have reached their final values.
 .sp
-The Preset Dialog includes controls to set a Preset\(aqs transition to one
-of three values:
+The Preset Dialog includes controls to set a Preset\(aqs transition type to a
+combination these values:
 .INDENT 0.0
 .INDENT 3.5
 .INDENT 0.0
 .IP \(bu 2
-\fBNo\fP transition, change values immediately;
+\fBNone\fP transition, values change immediately;
 .IP \(bu 2
 \fBOn schedule\fP according to a solar elevation trigger;
 .IP \(bu 2
 \fBOn signal\fP on the appropriate UNIX signal;
 .IP \(bu 2
-\fBOn schedule or On signal\fP according to elevation trigger or UNIX signal;
-.IP \(bu 2
-\fBAlways\fP in all circumstances, including when selected in the context\-menu.
+\fBOn menu\fP when selected in the context\-menu;
 .UNINDENT
 .UNINDENT
 .UNINDENT

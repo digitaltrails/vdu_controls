@@ -3,6 +3,7 @@ Sun 05 Mar 2023 07:34:00 UTC - Michael Hamilton <michael@actrix.gen.nz>
 
 - Version 1.9.3
   * Added an option to transition smoothly on UNIX signal.
+  * Replaced the transition combo-box with a button+checkboxes.
 
 -------------------------------------------------------------------
 Sat 18 Feb 2023 23:18:56 UTC - Michael Hamilton <michael@actrix.gen.nz>

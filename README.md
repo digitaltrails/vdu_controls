@@ -244,6 +244,7 @@ Version History
 ---------------
 * 1.9.3
   * Added an option to transition smoothly on UNIX signal.
+  * Replaced the transition combo-box with a button+checkboxes.
 * 1.9.2
   * Optional _Smooth Transitions_ for presets:
     * The Presets Dialog now includes an option to set a Preset to _Transition Smoothly_.
