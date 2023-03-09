@@ -3036,8 +3036,7 @@ class TransitionState(Enum):
 
 
 class TransitionWorker(WorkerThread):
-    """Used in conjunction with a with-statement to wrap operations when the
-    physical VDU and data are in sync, indicating there is no need to call ddcutil"""
+
     progress_signal = pyqtSignal()
 
     def __init__(self, main_panel: VduControlsMainPanel, preset: Preset, progress: Callable, finished: Callable,
@@ -3069,63 +3068,65 @@ class TransitionWorker(WorkerThread):
                             self.preset_non_transitioning_controls.append(control)
 
     def task_body(self):
-        while self.state == TransitionState.PARTIAL or self.state == TransitionState.INITIALIZED:
-            step_start = datetime.now() if self.state == TransitionState.PARTIAL else self.start_time
-            if self.step() == TransitionState.PARTIAL:
-                remaining_secs = self.preset.get_step_interval_seconds() - (datetime.now() - step_start).total_seconds()
-                for _ in range(0, int(remaining_secs)):  # Sleep for the required number of seconds (if any remain)
-                    time.sleep(1.0)
+        if not self.transition_immediately:
+            while True:
+                if self.check_for_interruptions() == TransitionState.INTERRUPTED:
+                    return
+                step_start = datetime.now()
+                if self.step() == TransitionState.FINISHED:
+                    break
+                remaining_secs = min(self.preset.get_step_interval_seconds() - (datetime.now() - step_start).total_seconds(), 0.1)
+                while remaining_secs >= 0.0:
                     self.progress_signal.emit()  # Keep progress indicators winking
                     self.last_progress_time = datetime.now()
-                time.sleep((remaining_secs % 1) if remaining_secs > 0.0 else 0.1)  # fraction remainder, or 0.1 if haven't sleep
+                    if self.check_for_interruptions() == TransitionState.INTERRUPTED:  # Keep checking for interruptions
+                        return
+                    time.sleep(1.0 if remaining_secs >= 1.0 else remaining_secs)
+                    remaining_secs -= 1.0
+        for control in self.preset_non_transitioning_controls:  # Finish by doing the non-transitioning controls
+            control.restore_vdu_attribute(self.final_values[control])
+        self.state = TransitionState.FINISHED
         self.end_time = datetime.now()
         if self.state == TransitionState.FINISHED:
             log_info(f"Finished restoring {self.preset.name} {round(self.total_elapsed_seconds(), ndigits=2)} seconds")
 
-    def step(self):
+    def step(self) -> TransitionState:
         more_to_do = False
-        if not self.transition_immediately:  # if we are transitioning smoothly...
+        for control in self.preset_transitioning_controls:  # Step each control by 1 or -1...
+            int_val = int(self.expected_values[control])
+            final_value = self.final_values[control]
+            diff = int(final_value) - int_val
+            if diff != 0:
+                new_value = str(int_val + (1 if diff > 0 else -1))
+                self.expected_values[control] = new_value  # revise to new value
+                control.restore_vdu_attribute(new_value)
+                more_to_do = more_to_do or new_value != final_value
+            now = datetime.now()
+            if (now - self.last_progress_time).total_seconds() >= 1.0:
+                self.last_progress_time = now
+                self.progress_signal.emit()
+        # Some transitioning controls are not at their final values, need to step again
+        self.state = TransitionState.PARTIAL if more_to_do else TransitionState.FINISHED
+        return self.state
 
-            for control_panel in self.main_panel.vdu_control_panels:  # Check that no one else is changing the controls
-                control_panel.refresh_data()  # Update the values of all the controls
-                for control in control_panel.vcp_controls:
-                    current_value = control.current_value  # play safe, get a constant copy now
-                    if control in self.expected_values:
-                        if self.expected_values[control] != current_value:
-                            log_warning(f"Interrupted transition to {self.preset.name}")
-                            self.state = TransitionState.INTERRUPTED  # Something else is changing the controls - abandon the task
-                            return self.state
-                    else:
-                        self.expected_values[control] = current_value  # must be first time through, initialize value
-
-            for control in self.preset_transitioning_controls:  # Step each control by 1 or -1...
-                int_val = int(self.expected_values[control])
-                final_value = self.final_values[control]
-                diff = int(final_value) - int_val
-                if diff != 0:
-                    new_value = str(int_val + (1 if diff > 0 else -1))
-                    self.expected_values[control] = new_value  # revise to new value
-                    control.restore_vdu_attribute(new_value)
-                    more_to_do = more_to_do or new_value != final_value
-                now = datetime.now()
-                if (now - self.last_progress_time).total_seconds() >= 1.0:
-                    self.last_progress_time = now
-                    self.progress_signal.emit()
-
-            if more_to_do:  # Some transitioning controls are not at their final values, need to step again
-                self.state = TransitionState.PARTIAL
-                return self.state
-
-        for control in self.preset_non_transitioning_controls:  # Finish by doing the non-transitioning controls
-            control.restore_vdu_attribute(self.final_values[control])
-        self.state = TransitionState.FINISHED
+    def check_for_interruptions(self) -> TransitionState:
+        for control_panel in self.main_panel.vdu_control_panels:  # Check that no one else is changing the controls
+            control_panel.refresh_data()  # Update the values of all the controls
+            for control in control_panel.vcp_controls:
+                current_value = control.current_value  # play safe, get a constant copy now
+                if control in self.expected_values:
+                    if self.expected_values[control] != current_value:
+                        log_warning(f"Interrupted transition to {self.preset.name}")
+                        self.state = TransitionState.INTERRUPTED  # Something else is changing the controls - abandon the task
+                else:
+                    self.expected_values[control] = current_value  # must be first time through, initialize value
         return self.state
 
     def total_elapsed_seconds(self) -> float:
         return ((self.end_time if self.end_time else datetime.now()) - self.start_time).total_seconds()
 
 
-class TransitioningDummyPreset(Preset):
+class TransitioningDummyPreset(Preset):  # A wrapper that creates titles and icons that indicate a transition is in progress.
 
     def __init__(self, wrapped: Preset):
         super().__init__(wrapped.name)
