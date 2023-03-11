@@ -481,6 +481,9 @@ more details.
 You should have received a copy of the GNU General Public License along
 with this program. If not, see https://www.gnu.org/licenses/.
 """
+
+# vdu_controls Copyright (C) 2021 Michael Hamilton
+
 from __future__ import annotations
 
 import argparse
@@ -505,6 +508,7 @@ import textwrap
 import time
 import traceback
 import urllib.request
+from ast import literal_eval
 from collections import namedtuple
 from datetime import datetime, timedelta, timezone
 from enum import Enum, IntFlag
@@ -517,8 +521,8 @@ from urllib.error import URLError
 from PyQt5 import QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
     QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant
-from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QDoubleValidator, QRegExpValidator, \
-    QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics
+from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QRegExpValidator, \
+    QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
@@ -1803,6 +1807,8 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
             tab.save_all_clicked.connect(self.save_all)
             tabs.addTab(tab, config.get_config_name())
             self.editor_tab_list.append(tab)
+
+        tabs.addTab(SettingsLuxTab(default_config, vdu_config_list), tr("Auto Adjustment"))
         # .show() is non-modal, .exec() is modal
         self.make_visible()
 
@@ -2050,6 +2056,139 @@ class SettingsEditorCsvWidget(SettingsEditorLineBase):
         # Validator matches CSV of two digit hex or the empty string.
         self.validator = QRegExpValidator(QRegExp(r"^([0-9a-fA-F]{2}([ \t]*,[ \t]*[0-9a-fA-F]{2})*)|$"))
         self.text_input.setText(section_editor.ini_editable[section][option])
+
+
+class SettingsLuxChart(QLabel):
+
+    def __init__(self, chart_date:Dict[str, List[Tuple[int,int]]], parent=None):
+        super().__init__(parent=parent)
+        self.possible_colors = [0xff965b, 0xaaff5b, 0x8896ff]
+        self.data = chart_date
+        self.current_profile = list(chart_date.keys())[0]
+        self.line_colors = { k:v for k,v in zip(self.data.keys(), self.possible_colors[0:len(self.data)]) }
+        self.plot_height = 600
+        self.plot_width = 600
+        self.y_origin = self.plot_height + 50
+        self.x_origin = 120
+        self.setFixedHeight(self.plot_height + 150)
+        self.setFixedWidth(self.plot_width + 200)
+        self.create_plot()
+
+    def create_plot(self):
+        width, height = self.width(), self.height()
+        pixmap = QPixmap(width, height)
+        painter = QPainter(pixmap)
+        painter.fillRect(0, 0, width, height, QColor(0x5b93c5))
+        painter.setPen(QPen(QColor(0xffffff), 4))
+        painter.drawText(width // 4, 30, "Click plot to draw brightness/lux response curve.")
+
+        # Draw x-axis
+        painter.drawLine(self.x_origin, self.y_origin, self.x_origin + self.plot_width, self.y_origin)
+        for lux in [0, 10, 100, 1_000, 10_000, 100_000]:  # Draw x-axis ticks
+            x = self.x_from_lux(lux)
+            painter.drawLine(self.x_origin + x, self.y_origin + 5, self.x_origin + x, self.y_origin - 5)
+            painter.drawText(self.x_origin + x - 8 * len(str(lux)), self.y_origin + 35, str(lux))
+        painter.drawText(self.x_origin + self.plot_width // 2 - len(str("Lux")), self.y_origin + 65, str("Lux"))
+
+        # Draw y-axis
+        painter.drawLine(self.x_origin, self.y_origin, self.x_origin, self.y_origin - self.plot_height)
+        for percent in range(0, 101, 10):  # Draw y-axis ticks
+            y = self.y_from_percent(percent)
+            painter.drawLine(self.x_origin - 5, self.y_origin - y, self.x_origin + 5, self.y_origin - y)
+            painter.drawText(self.x_origin - 50, self.y_origin - y + 5, str(percent))
+        painter.save()
+        painter.translate(self.x_origin - 70, self.y_origin - self.plot_height // 2 + 6 * len("Brightness %"))
+        painter.rotate(-90)
+        painter.drawText(0, 0, "Brightness %")
+        painter.restore()
+
+        # draw curve per vdu - draw current_profile last/on-top
+        for name, vdu_data in [(k, v) for k, v in self.data.items() if k != self.current_profile] + \
+                              [(self.current_profile, self.data[self.current_profile])]:
+            painter.setPen(QPen(QColor(self.line_colors[name]), 6))
+            last_x = 0
+            last_y = 0
+            for lux, percent in vdu_data:
+                x = self.x_origin + self.x_from_lux(lux)
+                y = self.y_origin - self.y_from_percent(percent)
+                painter.drawEllipse(x - 10, y - 10, 20, 20)
+                if last_x and last_y:
+                    painter.drawLine(last_x, last_y, x, y)
+                last_x = x
+                last_y = y
+
+        painter.end()
+        self.setPixmap(pixmap)
+
+    def set_current_profile(self, name: str):
+        self.current_profile = name
+        self.create_plot()
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        local_pos = self.mapFromGlobal(event.globalPos())
+        x = local_pos.x() - self.x_origin
+        y = self.y_origin - local_pos.y()
+        percent = self.percent_from_y(y)
+        lux = self.lux_from_x(x)
+        if percent < 0 or lux < 0 or percent > 100 or lux > 100000:
+            return
+        print(f"percent={percent}, lux={lux}")
+        deleted = False
+        vdu_data = self.data[self.current_profile]
+        for existing_lux, existing_percent in vdu_data:
+            existing_x = self.x_from_lux(existing_lux)
+            existing_y = self.y_from_percent(existing_percent)
+            if existing_x - 10 <= x <= existing_x + 10 and existing_y - 10 <= y <= existing_y + 10:
+                vdu_data.remove((existing_lux, existing_percent))
+                deleted = True
+        if not deleted:
+            vdu_data.append((lux, percent))
+            vdu_data.sort()
+        self.create_plot()
+        self.update()
+        event.ignore()
+
+    def percent_from_y(self, y):
+        return round(100.0 * abs(y) / self.plot_height)
+
+    def y_from_percent(self, percent):
+        return round(self.plot_height * percent / 100)
+
+    def lux_from_x(self, x):
+        return round(10.0 ** (math.log10(1) + (x / self.plot_width) * (math.log10(100000) - math.log10(1))))
+
+    def x_from_lux(self, lux: int) -> int:
+        return round((math.log10(lux) - math.log10(1)) / ((math.log10(100000) - math.log10(1)) / self.plot_width)) if lux > 0 else 0
+
+
+class SettingsLuxTab(QWidget):
+
+    def __init__(self, default_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig]):
+        super().__init__()
+        self.chart_data = {}
+        self.setLayout(QVBoxLayout())
+        self.profile_selector = QComboBox()
+
+        self.layout().addWidget(self.profile_selector)
+
+        for vdu_config in vdu_config_list:
+            vdu_name = vdu_config.get_config_name()
+            self.chart_data[vdu_name] = literal_eval(
+                vdu_config.ini_content.get('preset', 'lux-profile', fallback="[(1,10),(100_000,100)]"))
+            self.profile_selector.addItem(vdu_name, userData=vdu_name)
+
+        self.plot = SettingsLuxChart(self.chart_data)
+        self.plot.set_current_profile(list(self.chart_data.keys())[0])
+        self.plot.setFixedHeight(900)
+        self.plot.setFixedWidth(900)
+
+        self.layout().addWidget(self.plot)
+        self.setMinimumWidth(920)
+
+        def select_profile(index: int):
+            self.plot.set_current_profile(list(self.chart_data.keys())[index])
+
+        self.profile_selector.currentIndexChanged.connect(select_profile)
 
 
 class LatitudeLongitudeValidator(QRegExpValidator):
