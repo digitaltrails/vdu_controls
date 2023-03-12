@@ -2066,21 +2066,19 @@ class SettingsLuxChart(QLabel):
         self.data = chart_date
         self.current_profile = list(chart_date.keys())[0]
         self.line_colors = { k:v for k,v in zip(self.data.keys(), self.possible_colors[0:len(self.data)]) }
-        self.plot_height = 600
-        self.plot_width = 600
-        self.y_origin = self.plot_height + 50
-        self.x_origin = 120
-        self.setFixedHeight(self.plot_height + 150)
-        self.setFixedWidth(self.plot_width + 200)
+        self.plot_height, self.plot_width = 600, 600
+        self.x_origin, self.y_origin = 120, self.plot_height + 50
+        self.pixmap_height, self.pixmap_width, = self.plot_height + 150, self.plot_width + 200
+        self.setFixedHeight(self.pixmap_height)
+        self.setFixedWidth(self.pixmap_width)
         self.create_plot()
 
     def create_plot(self):
-        width, height = self.width(), self.height()
-        pixmap = QPixmap(width, height)
+        pixmap = QPixmap(self.pixmap_width, self.pixmap_height)
         painter = QPainter(pixmap)
-        painter.fillRect(0, 0, width, height, QColor(0x5b93c5))
+        painter.fillRect(0, 0, self.pixmap_width, self.pixmap_height, QColor(0x5b93c5))
         painter.setPen(QPen(QColor(0xffffff), 4))
-        painter.drawText(width // 4, 30, "Click plot to draw brightness/lux response curve.")
+        painter.drawText(self.pixmap_width // 4, 30, "Click plot to draw brightness/lux response curve.")
 
         # Draw x-axis
         painter.drawLine(self.x_origin, self.y_origin, self.x_origin + self.plot_width, self.y_origin)
@@ -2106,16 +2104,14 @@ class SettingsLuxChart(QLabel):
         for name, vdu_data in [(k, v) for k, v in self.data.items() if k != self.current_profile] + \
                               [(self.current_profile, self.data[self.current_profile])]:
             painter.setPen(QPen(QColor(self.line_colors[name]), 6))
-            last_x = 0
-            last_y = 0
+            last_x, last_y = 0, 0
             for lux, percent in vdu_data:
                 x = self.x_origin + self.x_from_lux(lux)
                 y = self.y_origin - self.y_from_percent(percent)
                 painter.drawEllipse(x - 10, y - 10, 20, 20)
                 if last_x and last_y:
                     painter.drawLine(last_x, last_y, x, y)
-                last_x = x
-                last_y = y
+                last_x, last_y = x, y
 
         painter.end()
         self.setPixmap(pixmap)
@@ -2179,11 +2175,9 @@ class SettingsLuxTab(QWidget):
 
         self.plot = SettingsLuxChart(self.chart_data)
         self.plot.set_current_profile(list(self.chart_data.keys())[0])
-        self.plot.setFixedHeight(900)
-        self.plot.setFixedWidth(900)
 
         self.layout().addWidget(self.plot)
-        self.setMinimumWidth(920)
+        self.layout().addStretch(0)
 
         def select_profile(index: int):
             self.plot.set_current_profile(list(self.chart_data.keys())[index])
