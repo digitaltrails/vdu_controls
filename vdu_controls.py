@@ -4410,7 +4410,6 @@ def install_as_desktop_application(uninstall: bool = False):
 
     log_info('Installation complete. Your desktop->applications->settings should now contain VDU Controls')
 
-
 class AutoLuxChart(QLabel):
 
     def __init__(self, chart_data: Dict[str, List[Tuple[int, int]]], range_restrictions: Dict[str, Tuple[int, int]],
@@ -4538,14 +4537,42 @@ class AutoLuxChart(QLabel):
         return round((math.log10(lux) - math.log10(1)) / ((math.log10(100000) - math.log10(1)) / self.plot_width)) if lux > 0 else 0
 
 
-def get_metered_lux(device: str):
-    if pathlib.Path(device).exists():
-        with serial.Serial(device) as gy30:
-            buffer = gy30.readline()
-            value = float(buffer.decode('utf-8').replace("\r\n", ''))
-            print(f"lux={value:6.2f}")
-            return value
-    return None
+class LuxMeterWidget(QWidget):
+
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
+        self.setLayout(QVBoxLayout())
+        self.current_lux = QLabel()
+        big_font = self.current_lux.font()
+        big_font.setPointSize(big_font.pointSize() + 8)
+        self.current_lux.setFont(big_font)
+        self.layout().addWidget(self.current_lux)
+        self.history = []
+        self.lux_plot = QLabel()
+        self.lux_plot.setFixedWidth(200)
+        self.lux_plot.setFixedHeight(100)
+        self.layout().addWidget(self.lux_plot)
+
+    def display_current_lux(self, lux: int):
+        self.current_lux.setText(tr("Lux: {}".format(lux)))
+        self.history = self.history[-100:]
+        self.history.append(lux)
+        pixmap = QPixmap(self.lux_plot.width(), self.lux_plot.height())
+        painter = QPainter(pixmap)
+        painter.fillRect(0, 0, self.lux_plot.width(), self.lux_plot.height(), QColor(0x6baee8)) # 0x5b93c5))
+        painter.setPen(QPen(QColor(0xffdd30), 1))
+        for i in range(len(self.history)):
+            painter.drawLine(i, self.lux_plot.height(), i, self.lux_plot.height() - self.y_from_lux(self.history[i]))
+        painter.end()
+        self.lux_plot.setPixmap(pixmap)
+
+    def clear_history(self):
+        if len(self.history) > 1:
+            self.history = (self.history + [0]*10)[-100:]
+
+    def y_from_lux(self, lux: int) -> int:
+        return round(
+            (math.log10(lux) - math.log10(1)) / ((math.log10(100000) - math.log10(1)) / self.lux_plot.height())) if lux > 0 else 0
 
 
 class LuxMeterSerialDevice(WorkerThread):
@@ -4597,12 +4624,14 @@ class AutoLuxDialog(QDialog, DialogSingletonMixin):
         grid_layout = QGridLayout()
         top_box.setLayout(grid_layout)
 
-        self.current_lux = QLabel()
-        big_font = self.current_lux.font()
-        big_font.setPointSize(big_font.pointSize() + 8)
-        self.current_lux.setFont(big_font)
-        self.display_current_lux(100_000.0)
-        grid_layout.addWidget(self.current_lux, 0, 0, 2, 3, alignment=Qt.AlignLeft|Qt.AlignTop)
+        # self.current_lux = QLabel()
+        # big_font = self.current_lux.font()
+        # big_font.setPointSize(big_font.pointSize() + 8)
+        # self.current_lux.setFont(big_font)
+        # self.display_current_lux(100_000.0)
+        self.lux_display = LuxMeterWidget(parent=self)
+        self.lux_display.display_current_lux(0.0)
+        grid_layout.addWidget(self.lux_display, 0, 0, 3, 3, alignment=Qt.AlignLeft | Qt.AlignTop)
 
         def choose_device():
             device = QFileDialog.getOpenFileName(self, tr("Select a tty device or fifo"), "/dev/ttyUSB0")[0]
@@ -4649,7 +4678,7 @@ class AutoLuxDialog(QDialog, DialogSingletonMixin):
             self.config.set('lux-profile', self.plot.current_vdu, repr(self.plot.data[self.plot.current_vdu]))
             self.has_changes = True
 
-        self.plot = AutoLuxChart(self.chart_data, self.range_restrictions, chart_changed_callback)
+        self.plot = AutoLuxChart(self.chart_data, self.range_restrictions, chart_changed_callback, parent=self)
         self.plot.set_current_profile(list(self.chart_data.keys())[0])
 
         self.layout().addWidget(self.plot)
@@ -4678,11 +4707,12 @@ class AutoLuxDialog(QDialog, DialogSingletonMixin):
         self.show()
 
     def display_current_lux(self, lux: float):
-        self.current_lux.setText(tr("Lux: {:0.0f}".format(lux)))
+        self.lux_display.display_current_lux(round(lux))
 
     def enable(self, checkstate=None):
         if self.enabled_checkbox.isChecked():
             pass
+
     def parse_device(self, device):
         if pathlib.Path(device).is_char_device():
             self.meter_device_selector.setText(tr(" Device {}").format(device))
@@ -4717,6 +4747,7 @@ class AutoLuxDialog(QDialog, DialogSingletonMixin):
 
     def start_lux_metering(self):
         self.device = LuxMeterSerialDevice(self.config.get('lux-meter', "lux-device", fallback="/dev/ttyUSB0"), interval=1.0)
+        self.lux_display.clear_history()
         self.device.new_lux_value.connect(self.display_current_lux)
         self.device.start()
 
