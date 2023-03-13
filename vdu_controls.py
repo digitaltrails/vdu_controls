@@ -534,6 +534,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
     QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox
+from serial import SerialException
 
 APPNAME = "VDU Controls"
 VDU_CONTROLS_VERSION = '1.9.3'
@@ -4436,7 +4437,7 @@ class AutoLuxChart(QLabel):
         painter = QPainter(pixmap)
         painter.fillRect(0, 0, self.pixmap_width, self.pixmap_height, QColor(0x5b93c5))
         painter.setPen(QPen(QColor(0xffffff), 4))
-        painter.drawText(self.pixmap_width // 4, 30, "Click plot to draw brightness/lux response curve.")
+        painter.drawText(self.pixmap_width // 3, 30, "Lux Brightness Response Profiles")
 
         # Draw x-axis
         painter.drawLine(self.x_origin, self.y_origin, self.x_origin + self.plot_width, self.y_origin)
@@ -4463,7 +4464,7 @@ class AutoLuxChart(QLabel):
         if min_v > 0:
             painter.setPen(QPen(QColor(0xff0000), 4))
             cutoff = self.y_origin - self.y_from_percent(min_v)
-            painter.drawLine(self.x_origin, cutoff, self.x_origin + self.plot_width, cutoff)
+            painter.fillRect(self.x_origin, cutoff, self.plot_width, self.y_from_percent(min_v), QColor(0,0,255,20))
         if max_v < 100:
             painter.setPen(QPen(QColor(0xff0000), 4))
             cutoff = self.y_origin - self.y_from_percent(max_v)
@@ -4560,13 +4561,17 @@ class LuxMeterSerialDevice(WorkerThread):
     def task_body(self):
         if not pathlib.Path(self.device_name).exists():
             return
-        with serial.Serial(self.device_name) as meter:
-            while not self.stop_requested:
-                buffer = meter.readline()
-                value = float(buffer.decode('utf-8').replace("\r\n", ''))
-                self.new_lux_value.emit(value)
-                print(value)
-                time.sleep(self.interval)
+        while not self.stop_requested:
+            try:
+                with serial.Serial(self.device_name) as meter:
+                    while not self.stop_requested:
+                        buffer = meter.readline()
+                        value = float(buffer.decode('utf-8').replace("\r\n", ''))
+                        self.new_lux_value.emit(value)
+                        print(value)
+                        time.sleep(self.interval)
+            except (SerialException, ValueError) as se:
+                log_warning(f"Retry read of {self.device} after exception", se)
 
 
 class AutoLuxDialog(QDialog, DialogSingletonMixin):
@@ -4583,40 +4588,49 @@ class AutoLuxDialog(QDialog, DialogSingletonMixin):
         self.path = get_config_path('AutoLux')
         self.config = self.load_config()
         self.has_changes = False
-        self.device = None
+        self.device = self.config.get("lux-meter", "lux-device", fallback="/dev/ttyUSB0")
 
         self.setLayout(QVBoxLayout())
 
-        self.enabled_checkbox = QCheckBox(tr("Enable automatic brightness metering"))
-        self.layout().addWidget(self.enabled_checkbox)
-        self.enabled_checkbox.stateChanged.connect(self.enable)
-
-        def display_value(lux: float):
-            self.current_lux.setText(str(int(lux)))
+        top_box = QWidget()
+        self.layout().addWidget(top_box)
+        grid_layout = QGridLayout()
+        top_box.setLayout(grid_layout)
 
         self.current_lux = QLabel()
-        self.layout().addWidget(self.current_lux)
+        big_font = self.current_lux.font()
+        big_font.setPointSize(big_font.pointSize() + 8)
+        self.current_lux.setFont(big_font)
+        self.display_current_lux(100_000.0)
+        grid_layout.addWidget(self.current_lux, 0, 0, 2, 3, alignment=Qt.AlignLeft|Qt.AlignTop)
 
         def choose_device():
-            device = QFileDialog.getOpenFileName(self, tr("Select an executable program or an actual tty device"),
-                                                 "/dev/ttyUSB0")[0]
-            print(device)
-            if device == '':
-                self.device = None
-            if pathlib.Path(device).is_char_device():
-                if not self.config.has_section('lux-meter'):
-                    self.config.add_section('lux-meter')
-                self.config.set('lux-meter', "lux-device", device)
-                self.has_changes = True
-            elif os.path.isfile(device) and os.access(device, os.X_OK):
-                pass
+            device = QFileDialog.getOpenFileName(self, tr("Select a tty device or fifo"), "/dev/ttyUSB0")[0]
+            if device != '':
+                device = self.parse_device(device)
+                if device is not None:
+                    if not self.config.has_section('lux-meter'):
+                        self.config.add_section('lux-meter')
+                    self.config.set('lux-meter', "lux-device", device)
+                    self.has_changes = True
 
-        self.meter_device_selector = PushButtonLeftJustified("Device: /dev/usb/tty0")
-        self.layout().addWidget(self.meter_device_selector)
+        self.meter_device_selector = PushButtonLeftJustified()
+        self.parse_device(self.device)
+        grid_layout.addWidget(self.meter_device_selector, 0, 2, 1, 3)
         self.meter_device_selector.pressed.connect(choose_device)
 
-        self.interval = QLineEdit()
-        self.layout().addWidget(self.interval)
+        self.enabled_checkbox = QCheckBox(tr("Enable automatic brightness adjustment"))
+        #self.enabled_checkbox.setLayoutDirection(Qt.RightToLeft)
+        grid_layout.addWidget(self.enabled_checkbox, 1, 2, 1, 3)
+        self.enabled_checkbox.stateChanged.connect(self.enable)
+
+        self.interval_label = QLabel(tr("Adjustment interval minutes"))
+        grid_layout.addWidget(self.interval_label, 2, 2, 1, 2)
+
+        self.interval = QSpinBox()
+        self.interval.setMinimum(1)
+        self.interval.setMaximum(120)
+        grid_layout.addWidget(self.interval, 2, 4, 1, 1)
 
         self.profile_selector = QComboBox()
         self.layout().addWidget(self.profile_selector)
@@ -4627,7 +4641,6 @@ class AutoLuxDialog(QDialog, DialogSingletonMixin):
             self.range_restrictions[vdu.vdu_stable_id] = min_v, max_v
             self.chart_data[vdu.vdu_stable_id] = literal_eval(
                 self.config.get('lux-profile', vdu.vdu_stable_id, fallback=f"[(1, {min_v}),(100_000, {max_v})]"))
-
             self.profile_selector.addItem(vdu.get_vdu_description(), userData=vdu.vdu_stable_id)
 
         def chart_changed_callback():
@@ -4665,18 +4678,28 @@ class AutoLuxDialog(QDialog, DialogSingletonMixin):
         self.show()
 
     def display_current_lux(self, lux: float):
-        self.current_lux.setText(str(int(lux)))
+        self.current_lux.setText(tr("Lux: {:0.0f}".format(lux)))
 
     def enable(self, checkstate=None):
         if self.enabled_checkbox.isChecked():
             pass
+    def parse_device(self, device):
+        if pathlib.Path(device).is_char_device():
+            self.meter_device_selector.setText(tr(" Device {}").format(device))
+            return device
+        elif pathlib.Path(device).is_fifo():
+            self.meter_device_selector.setText(tr(" Fifo {}").format(device))
+            return device
+        else:
+            self.meter_device_selector.setText(tr(" Not available {}").format(device))
+        return None
 
     def load_config(self):
         if self.path.exists():
             log_info(f"Reading autolux file '{self.path.as_posix()}'")
-            preset_text = Path(self.path).read_text()
+            text = Path(self.path).read_text()
             config = ConfigIni()
-            config.read_string(preset_text)
+            config.read_string(text)
         else:
             config = ConfigIni()
         self.config = config
