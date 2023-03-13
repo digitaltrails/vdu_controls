@@ -13,7 +13,7 @@ Usage:
                      [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                      [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                      [--enable-vcp-code vcp_code] [--system-tray] [--debug] [--warnings] [--syslog]
-                     [--location latitude,longitude] [--translations-enabled]
+                     [--location latitude,longitude] [--translations-enabled] [--no-weather]
                      [--no-splash] [--sleep-multiplier multiplier]
                      [--create-config-files]
                      [--install] [--uninstall]
@@ -35,6 +35,8 @@ Optional arguments:
                             local latitude and longitude for triggering presets by solar elevation
       --translations-enabled
                             enable language translations
+      --no-weather
+                            disable weather lookups
       --debug               enable debug output to stdout
       --warnings            popup a warning when a VDU lacks an enabled control
       --syslog              repeat diagnostic output to the syslog (journald)
@@ -127,6 +129,7 @@ The config files are in INI-format divided into a number of sections as outlined
     system-tray-enabled = yes|no
     splash-screen-enabled = yes|no
     translations-enabled = yes|no
+    weather-enabled = yes|no
     warnings-enabled = yes|no
     debug-enabled = yes|no
     syslog-enabled = yes|no
@@ -1400,6 +1403,7 @@ class VduControlsConfig:
             self.ini_content[QT_TR_NOOP('vdu-controls-globals')] = {
                 QT_TR_NOOP('system-tray-enabled'): 'no',
                 QT_TR_NOOP('translations-enabled'): 'no',
+                QT_TR_NOOP('weather-enabled'): 'yes',
                 QT_TR_NOOP('splash-screen-enabled'): 'yes',
                 QT_TR_NOOP('warnings-enabled'): 'no',
                 QT_TR_NOOP('debug-enabled'): 'no',
@@ -1448,6 +1452,10 @@ class VduControlsConfig:
 
     def is_translations_enabled(self) -> bool:
         return self.ini_content.getboolean('vdu-controls-globals', 'translations-enabled', fallback=False)
+
+    def is_weather_enabled(self) -> bool:
+        print(self.ini_content.getboolean('vdu-controls-globals', 'weather-enabled', fallback=True))
+        return self.ini_content.getboolean('vdu-controls-globals', 'weather-enabled', fallback=True)
 
     def is_splash_screen_enabled(self) -> bool:
         return self.ini_content.getboolean('vdu-controls-globals', 'splash-screen-enabled', fallback=True)
@@ -1582,6 +1590,8 @@ class VduControlsConfig:
         parser.add_argument('--location', default=None, type=str, help='latitude,longitude')
         parser.add_argument('--translations-enabled', default=False, action='store_true',
                             help='enable language translations')
+        parser.add_argument('--no-weather', default=False, action='store_true', help='disable weather lookups')
+        parser.set_defaults(weather_disabled=True)
         parser.add_argument('--debug', default=False, action='store_true', help='enable debug output to stdout')
         parser.add_argument('--warnings', default=False, action='store_true',
                             help='popup a warning when a VDU lacks an enabled control')
@@ -1620,6 +1630,8 @@ class VduControlsConfig:
             self.ini_content['vdu-controls-globals']['location'] = parsed_args.location
         if parsed_args.translations_enabled:
             self.ini_content['vdu-controls-globals']['translations-enabled'] = 'yes'
+        if parsed_args.no_weather:
+            self.ini_content['vdu-controls-globals']['weather-enabled'] = 'no'
 
         if len(parsed_args.show) != 0:
             for control_def in VDU_SUPPORTED_CONTROLS.by_arg_name.values():
@@ -4536,7 +4548,6 @@ def get_metered_lux(device: str):
 
 
 class LuxMeterSerialDevice(WorkerThread):
-
     new_lux_value = pyqtSignal(float)
 
     def __init__(self, device_name: str, interval: float = 10.0):
@@ -4703,8 +4714,6 @@ class AutoLuxDialog(QDialog, DialogSingletonMixin):
                 return
         self.stop_lux_metering()
         super().closeEvent(event)
-
-
 
 
 class GreyScaleDialog(QDialog):
@@ -5445,7 +5454,7 @@ class VduAppWindow(QMainWindow):
 
     def is_weather_satisfactory(self, preset, use_cache: bool = False) -> bool:
         try:
-            if preset.is_weather_dependent():
+            if preset.is_weather_dependent() and self.main_config.is_weather_enabled():
                 if not use_cache or self.weather_query is None:
                     location = self.main_config.get_location()
                     if location is not None:
