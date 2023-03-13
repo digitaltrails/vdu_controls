@@ -496,7 +496,9 @@ import json
 import locale
 import math
 import os
+import pathlib
 import pickle
+import random
 import re
 import signal
 import socket
@@ -518,6 +520,7 @@ from threading import Lock
 from typing import List, Tuple, Mapping, Type, Dict, Callable
 from urllib.error import URLError
 
+import serial
 from PyQt5 import QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
     QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant
@@ -1807,8 +1810,6 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
             tab.save_all_clicked.connect(self.save_all)
             tabs.addTab(tab, config.get_config_name())
             self.editor_tab_list.append(tab)
-
-        tabs.addTab(SettingsLuxTab(default_config, vdu_config_list), tr("Auto Adjustment"))
         # .show() is non-modal, .exec() is modal
         self.make_visible()
 
@@ -2056,133 +2057,6 @@ class SettingsEditorCsvWidget(SettingsEditorLineBase):
         # Validator matches CSV of two digit hex or the empty string.
         self.validator = QRegExpValidator(QRegExp(r"^([0-9a-fA-F]{2}([ \t]*,[ \t]*[0-9a-fA-F]{2})*)|$"))
         self.text_input.setText(section_editor.ini_editable[section][option])
-
-
-class SettingsLuxChart(QLabel):
-
-    def __init__(self, chart_date:Dict[str, List[Tuple[int,int]]], parent=None):
-        super().__init__(parent=parent)
-        self.possible_colors = [0xff965b, 0xaaff5b, 0x8896ff]
-        self.data = chart_date
-        self.current_profile = list(chart_date.keys())[0]
-        self.line_colors = { k:v for k,v in zip(self.data.keys(), self.possible_colors[0:len(self.data)]) }
-        self.plot_height, self.plot_width = 600, 600
-        self.x_origin, self.y_origin = 120, self.plot_height + 50
-        self.pixmap_height, self.pixmap_width, = self.plot_height + 150, self.plot_width + 200
-        self.setFixedHeight(self.pixmap_height)
-        self.setFixedWidth(self.pixmap_width)
-        self.create_plot()
-
-    def create_plot(self):
-        pixmap = QPixmap(self.pixmap_width, self.pixmap_height)
-        painter = QPainter(pixmap)
-        painter.fillRect(0, 0, self.pixmap_width, self.pixmap_height, QColor(0x5b93c5))
-        painter.setPen(QPen(QColor(0xffffff), 4))
-        painter.drawText(self.pixmap_width // 4, 30, "Click plot to draw brightness/lux response curve.")
-
-        # Draw x-axis
-        painter.drawLine(self.x_origin, self.y_origin, self.x_origin + self.plot_width, self.y_origin)
-        for lux in [0, 10, 100, 1_000, 10_000, 100_000]:  # Draw x-axis ticks
-            x = self.x_from_lux(lux)
-            painter.drawLine(self.x_origin + x, self.y_origin + 5, self.x_origin + x, self.y_origin - 5)
-            painter.drawText(self.x_origin + x - 8 * len(str(lux)), self.y_origin + 35, str(lux))
-        painter.drawText(self.x_origin + self.plot_width // 2 - len(str("Lux")), self.y_origin + 65, str("Lux"))
-
-        # Draw y-axis
-        painter.drawLine(self.x_origin, self.y_origin, self.x_origin, self.y_origin - self.plot_height)
-        for percent in range(0, 101, 10):  # Draw y-axis ticks
-            y = self.y_from_percent(percent)
-            painter.drawLine(self.x_origin - 5, self.y_origin - y, self.x_origin + 5, self.y_origin - y)
-            painter.drawText(self.x_origin - 50, self.y_origin - y + 5, str(percent))
-        painter.save()
-        painter.translate(self.x_origin - 70, self.y_origin - self.plot_height // 2 + 6 * len("Brightness %"))
-        painter.rotate(-90)
-        painter.drawText(0, 0, "Brightness %")
-        painter.restore()
-
-        # draw curve per vdu - draw current_profile last/on-top
-        for name, vdu_data in [(k, v) for k, v in self.data.items() if k != self.current_profile] + \
-                              [(self.current_profile, self.data[self.current_profile])]:
-            painter.setPen(QPen(QColor(self.line_colors[name]), 6))
-            last_x, last_y = 0, 0
-            for lux, percent in vdu_data:
-                x = self.x_origin + self.x_from_lux(lux)
-                y = self.y_origin - self.y_from_percent(percent)
-                painter.drawEllipse(x - 10, y - 10, 20, 20)
-                if last_x and last_y:
-                    painter.drawLine(last_x, last_y, x, y)
-                last_x, last_y = x, y
-
-        painter.end()
-        self.setPixmap(pixmap)
-
-    def set_current_profile(self, name: str):
-        self.current_profile = name
-        self.create_plot()
-
-    def mousePressEvent(self, event: QMouseEvent) -> None:
-        local_pos = self.mapFromGlobal(event.globalPos())
-        x = local_pos.x() - self.x_origin
-        y = self.y_origin - local_pos.y()
-        percent = self.percent_from_y(y)
-        lux = self.lux_from_x(x)
-        if percent < 0 or lux < 0 or percent > 100 or lux > 100000:
-            return
-        print(f"percent={percent}, lux={lux}")
-        deleted = False
-        vdu_data = self.data[self.current_profile]
-        for existing_lux, existing_percent in vdu_data:
-            existing_x = self.x_from_lux(existing_lux)
-            existing_y = self.y_from_percent(existing_percent)
-            if existing_x - 10 <= x <= existing_x + 10 and existing_y - 10 <= y <= existing_y + 10:
-                vdu_data.remove((existing_lux, existing_percent))
-                deleted = True
-        if not deleted:
-            vdu_data.append((lux, percent))
-            vdu_data.sort()
-        self.create_plot()
-        self.update()
-        event.ignore()
-
-    def percent_from_y(self, y):
-        return round(100.0 * abs(y) / self.plot_height)
-
-    def y_from_percent(self, percent):
-        return round(self.plot_height * percent / 100)
-
-    def lux_from_x(self, x):
-        return round(10.0 ** (math.log10(1) + (x / self.plot_width) * (math.log10(100000) - math.log10(1))))
-
-    def x_from_lux(self, lux: int) -> int:
-        return round((math.log10(lux) - math.log10(1)) / ((math.log10(100000) - math.log10(1)) / self.plot_width)) if lux > 0 else 0
-
-
-class SettingsLuxTab(QWidget):
-
-    def __init__(self, default_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig]):
-        super().__init__()
-        self.chart_data = {}
-        self.setLayout(QVBoxLayout())
-        self.profile_selector = QComboBox()
-
-        self.layout().addWidget(self.profile_selector)
-
-        for vdu_config in vdu_config_list:
-            vdu_name = vdu_config.get_config_name()
-            self.chart_data[vdu_name] = literal_eval(
-                vdu_config.ini_content.get('preset', 'lux-profile', fallback="[(1,10),(100_000,100)]"))
-            self.profile_selector.addItem(vdu_name, userData=vdu_name)
-
-        self.plot = SettingsLuxChart(self.chart_data)
-        self.plot.set_current_profile(list(self.chart_data.keys())[0])
-
-        self.layout().addWidget(self.plot)
-        self.layout().addStretch(0)
-
-        def select_profile(index: int):
-            self.plot.set_current_profile(list(self.chart_data.keys())[index])
-
-        self.profile_selector.currentIndexChanged.connect(select_profile)
 
 
 class LatitudeLongitudeValidator(QRegExpValidator):
@@ -2868,7 +2742,7 @@ class ContextMenu(QMenu):
     def __init__(self,
                  main_window,
                  main_window_action,
-                 about_action, help_action, chart_action, settings_action,
+                 about_action, help_action, chart_action, auto_lux_action, settings_action,
                  presets_action, refresh_action, quit_action) -> None:
         super().__init__()
         self.main_window = main_window
@@ -2880,6 +2754,7 @@ class ContextMenu(QMenu):
         self.busy_disable_prop = "busy_disable"
         self.preset_prop = "is_preset"
         self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Grey Scale'), chart_action)
+        self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Light meter'), auto_lux_action)
         self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Settings'), settings_action)
         self.addAction(si(self, QStyle.SP_BrowserReload), tr('Refresh'), refresh_action).setProperty(self.busy_disable_prop,
                                                                                                      QVariant(True))
@@ -3169,7 +3044,6 @@ class TransitionState(Enum):
 
 
 class TransitionWorker(WorkerThread):
-
     progress_signal = pyqtSignal()
 
     def __init__(self, main_panel: VduControlsMainPanel, preset: Preset, progress: Callable, finished: Callable,
@@ -3337,7 +3211,7 @@ class MessageBox(QMessageBox):
 
 
 class PushButtonLeftJustified(QPushButton):
-    def __init__(self, parent: QWidget | None = None):
+    def __init__(self, text: str = None, parent: QWidget | None = None):
         super().__init__(parent=parent)
         self.label = QLabel()
         layout = QVBoxLayout()
@@ -3347,6 +3221,8 @@ class PushButtonLeftJustified(QPushButton):
         self.setContentsMargins(0, 0, 0, 0)
         # Seems to fix top/bottom clipping on openbox and xfce:
         layout.setContentsMargins(0, 0, 0, 0)
+        if text is not None:
+            self.setText(text)
 
     def setText(self, text: str) -> None:
         self.label.setText(text)
@@ -4522,6 +4398,315 @@ def install_as_desktop_application(uninstall: bool = False):
     log_info('Installation complete. Your desktop->applications->settings should now contain VDU Controls')
 
 
+class AutoLuxChart(QLabel):
+
+    def __init__(self, chart_data: Dict[str, List[Tuple[int, int]]], range_restrictions: Dict[str, Tuple[int, int]],
+                 chart_changed_callback: Callable, parent=None):
+        super().__init__(parent=parent)
+        random.seed(0x543abc)
+        self.possible_colors = [QColor.fromHsl((h * 27) % 359,
+                                               random.randint(64, 128),
+                                               random.randint(192, 200)) for h in range(len(chart_data))]
+        self.chart_changed_callback = chart_changed_callback
+        self.data = chart_data
+        self.range_restrictions = range_restrictions
+        self.current_vdu = list(chart_data.keys())[0]
+        self.line_colors = {k: v for k, v in zip(self.data.keys(), self.possible_colors[0:len(self.data)])}
+        self.plot_height, self.plot_width = 600, 600
+        self.x_origin, self.y_origin = 120, self.plot_height + 50
+        self.pixmap_height, self.pixmap_width, = self.plot_height + 150, self.plot_width + 200
+        self.setFixedHeight(self.pixmap_height)
+        self.setFixedWidth(self.pixmap_width)
+        self.create_plot()
+
+    def create_plot(self):
+        pixmap = QPixmap(self.pixmap_width, self.pixmap_height)
+        painter = QPainter(pixmap)
+        painter.fillRect(0, 0, self.pixmap_width, self.pixmap_height, QColor(0x5b93c5))
+        painter.setPen(QPen(QColor(0xffffff), 4))
+        painter.drawText(self.pixmap_width // 4, 30, "Click plot to draw brightness/lux response curve.")
+
+        # Draw x-axis
+        painter.drawLine(self.x_origin, self.y_origin, self.x_origin + self.plot_width, self.y_origin)
+        for lux in [0, 10, 100, 1_000, 10_000, 100_000]:  # Draw x-axis ticks
+            x = self.x_from_lux(lux)
+            painter.drawLine(self.x_origin + x, self.y_origin + 5, self.x_origin + x, self.y_origin - 5)
+            painter.drawText(self.x_origin + x - 8 * len(str(lux)), self.y_origin + 35, str(lux))
+        painter.drawText(self.x_origin + self.plot_width // 2 - len(str("Lux")), self.y_origin + 65, str("Lux"))
+
+        # Draw y-axis
+        painter.drawLine(self.x_origin, self.y_origin, self.x_origin, self.y_origin - self.plot_height)
+        for percent in range(0, 101, 10):  # Draw y-axis ticks
+            y = self.y_from_percent(percent)
+            painter.drawLine(self.x_origin - 5, self.y_origin - y, self.x_origin + 5, self.y_origin - y)
+            painter.drawText(self.x_origin - 50, self.y_origin - y + 5, str(percent))
+        painter.save()
+        painter.translate(self.x_origin - 70, self.y_origin - self.plot_height // 2 + 6 * len("Brightness %"))
+        painter.rotate(-90)
+        painter.drawText(0, 0, "Brightness %")
+        painter.restore()
+
+        # Draw range restrictions (if not 0..100)
+        min_v, max_v = self.range_restrictions[self.current_vdu]
+        if min_v > 0:
+            painter.setPen(QPen(QColor(0xff0000), 4))
+            cutoff = self.y_origin - self.y_from_percent(min_v)
+            painter.drawLine(self.x_origin, cutoff, self.x_origin + self.plot_width, cutoff)
+        if max_v < 100:
+            painter.setPen(QPen(QColor(0xff0000), 4))
+            cutoff = self.y_origin - self.y_from_percent(max_v)
+            painter.drawLine(self.x_origin, cutoff, self.x_origin + self.plot_width, cutoff)
+
+        ellipse_diameter = 20
+        # draw curve per vdu - draw current_profile last/on-top
+        for name, vdu_data in [(k, v) for k, v in self.data.items() if k != self.current_vdu] + \
+                              [(self.current_vdu, self.data[self.current_vdu])]:
+            painter.setPen(QPen(QColor(self.line_colors[name]), 6))
+            last_x, last_y = 0, 0
+            for lux, percent in vdu_data:
+                x = self.x_origin + self.x_from_lux(lux)
+                y = self.y_origin - self.y_from_percent(percent)
+                painter.drawEllipse(x - ellipse_diameter // 2, y - ellipse_diameter // 2, ellipse_diameter, ellipse_diameter)
+                if last_x and last_y:
+                    painter.drawLine(last_x, last_y, x, y)
+                last_x, last_y = x, y
+
+        painter.end()
+        self.setPixmap(pixmap)
+
+    def set_current_profile(self, name: str):
+        self.current_vdu = name
+        self.create_plot()
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        local_pos = self.mapFromGlobal(event.globalPos())
+        x = local_pos.x() - self.x_origin
+        y = self.y_origin - local_pos.y()
+        percent = self.percent_from_y(y)
+        lux = self.lux_from_x(x)
+        print(f"percent={percent}, lux={lux}")
+        deleted = False
+        vdu_data = self.data[self.current_vdu]
+        for existing_lux, existing_percent in vdu_data:
+            existing_x = self.x_from_lux(existing_lux)
+            existing_y = self.y_from_percent(existing_percent)
+            if existing_x - 10 <= x <= existing_x + 10 and existing_y - 10 <= y <= existing_y + 10:
+                vdu_data.remove((existing_lux, existing_percent))
+                deleted = True
+        if not deleted:
+            vdu_data.append((lux, percent))
+            vdu_data.sort()
+        self.create_plot()
+        self.update()
+        self.chart_changed_callback()
+        event.ignore()
+
+    def percent_from_y(self, y):
+        percent = round(100.0 * abs(y) / self.plot_height)
+        min_v, max_v = self.range_restrictions[self.current_vdu]
+        if percent > max_v:
+            return max_v
+        if percent < min_v:
+            return min_v
+        return percent
+
+    def y_from_percent(self, percent):
+        return round(self.plot_height * percent / 100)
+
+    def lux_from_x(self, x):
+        lux = round(10.0 ** (math.log10(1) + (x / self.plot_width) * (math.log10(100_000) - math.log10(1))))
+        if lux > 100_000:
+            return 100_000
+        if lux < 0:
+            return 0
+        return lux
+
+    def x_from_lux(self, lux: int) -> int:
+        return round((math.log10(lux) - math.log10(1)) / ((math.log10(100000) - math.log10(1)) / self.plot_width)) if lux > 0 else 0
+
+
+def get_metered_lux(device: str):
+    if pathlib.Path(device).exists():
+        with serial.Serial(device) as gy30:
+            buffer = gy30.readline()
+            value = float(buffer.decode('utf-8').replace("\r\n", ''))
+            print(f"lux={value:6.2f}")
+            return value
+    return None
+
+
+class LuxMeterSerialDevice(WorkerThread):
+
+    new_lux_value = pyqtSignal(float)
+
+    def __init__(self, device_name: str, interval: float = 10.0):
+        super().__init__(task_body=self.task_body)
+        self.device_name = device_name
+        self.interval = interval
+        self.device = serial.Serial(device_name) if pathlib.Path(device_name).exists() else None
+        self.stop_requested = False
+
+    def task_body(self):
+        if not pathlib.Path(self.device_name).exists():
+            return
+        with serial.Serial(self.device_name) as meter:
+            while not self.stop_requested:
+                buffer = meter.readline()
+                value = float(buffer.decode('utf-8').replace("\r\n", ''))
+                self.new_lux_value.emit(value)
+                print(value)
+                time.sleep(self.interval)
+
+
+class AutoLuxDialog(QDialog, DialogSingletonMixin):
+
+    @staticmethod
+    def invoke(default_config: VduControlsConfig, vdu_controllers: List[VduController]) -> None:
+        AutoLuxDialog.show_existing_dialog() if AutoLuxDialog.exists() else AutoLuxDialog(default_config,
+                                                                                          vdu_controllers)
+
+    def __init__(self, default_config: VduControlsConfig, vdu_controllers: List[VduController]):
+        super().__init__()
+        self.chart_data = {}
+        self.range_restrictions = {}
+        self.path = get_config_path('AutoLux')
+        self.config = self.load_config()
+        self.has_changes = False
+        self.device = None
+
+        self.setLayout(QVBoxLayout())
+
+        self.enabled_checkbox = QCheckBox(tr("Enable automatic brightness metering"))
+        self.layout().addWidget(self.enabled_checkbox)
+        self.enabled_checkbox.stateChanged.connect(self.enable)
+
+        def display_value(lux: float):
+            self.current_lux.setText(str(int(lux)))
+
+        self.current_lux = QLabel()
+        self.layout().addWidget(self.current_lux)
+
+        def choose_device():
+            device = QFileDialog.getOpenFileName(self, tr("Select an executable program or an actual tty device"),
+                                                 "/dev/ttyUSB0")[0]
+            print(device)
+            if device == '':
+                self.device = None
+            if pathlib.Path(device).is_char_device():
+                if not self.config.has_section('lux-meter'):
+                    self.config.add_section('lux-meter')
+                self.config.set('lux-meter', "lux-device", device)
+                self.has_changes = True
+            elif os.path.isfile(device) and os.access(device, os.X_OK):
+                pass
+
+        self.meter_device_selector = PushButtonLeftJustified("Device: /dev/usb/tty0")
+        self.layout().addWidget(self.meter_device_selector)
+        self.meter_device_selector.pressed.connect(choose_device)
+
+        self.interval = QLineEdit()
+        self.layout().addWidget(self.interval)
+
+        self.profile_selector = QComboBox()
+        self.layout().addWidget(self.profile_selector)
+
+        for vdu in vdu_controllers:
+            range_restriction = vdu.capabilities['10'].values
+            min_v, max_v = (0, 100) if len(range_restriction) == 0 else (int(range_restriction[1]), int(range_restriction[2]))
+            self.range_restrictions[vdu.vdu_stable_id] = min_v, max_v
+            self.chart_data[vdu.vdu_stable_id] = literal_eval(
+                self.config.get('lux-profile', vdu.vdu_stable_id, fallback=f"[(1, {min_v}),(100_000, {max_v})]"))
+
+            self.profile_selector.addItem(vdu.get_vdu_description(), userData=vdu.vdu_stable_id)
+
+        def chart_changed_callback():
+            if not self.config.has_section('lux-profile'):
+                self.config.add_section('lux-profile')
+            self.config.set('lux-profile', self.plot.current_vdu, repr(self.plot.data[self.plot.current_vdu]))
+            self.has_changes = True
+
+        self.plot = AutoLuxChart(self.chart_data, self.range_restrictions, chart_changed_callback)
+        self.plot.set_current_profile(list(self.chart_data.keys())[0])
+
+        self.layout().addWidget(self.plot)
+        self.layout().addStretch(0)
+
+        buttons_widget = QWidget()
+        button_layout = QHBoxLayout()
+        buttons_widget.setLayout(button_layout)
+
+        save_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr("Save"))
+        save_button.clicked.connect(self.save_config)
+        button_layout.addWidget(save_button, 0, Qt.AlignBottom | Qt.AlignLeft)
+        button_layout.addStretch(0)
+
+        quit_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), tr("Close"))
+        quit_button.clicked.connect(self.close)
+        button_layout.addWidget(quit_button, 0, Qt.AlignBottom | Qt.AlignRight)
+
+        self.layout().addWidget(buttons_widget)
+
+        def select_profile(index: int):
+            self.plot.set_current_profile(list(self.chart_data.keys())[index])
+
+        self.profile_selector.currentIndexChanged.connect(select_profile)
+        self.start_lux_metering()
+        self.show()
+
+    def display_current_lux(self, lux: float):
+        self.current_lux.setText(str(int(lux)))
+
+    def enable(self, checkstate=None):
+        if self.enabled_checkbox.isChecked():
+            pass
+
+    def load_config(self):
+        if self.path.exists():
+            log_info(f"Reading autolux file '{self.path.as_posix()}'")
+            preset_text = Path(self.path).read_text()
+            config = ConfigIni()
+            config.read_string(preset_text)
+        else:
+            config = ConfigIni()
+        self.config = config
+        return self.config
+
+    def save_config(self):
+        self.config.save(self.path)
+        self.stop_lux_metering()
+        self.start_lux_metering()
+        self.has_changes = False
+
+    def make_visible(self):
+        self.start_lux_metering()
+        super().make_visible()
+
+    def start_lux_metering(self):
+        self.device = LuxMeterSerialDevice(self.config.get('lux-meter', "lux-device", fallback="/dev/ttyUSB0"), interval=1.0)
+        self.device.new_lux_value.connect(self.display_current_lux)
+        self.device.start()
+
+    def stop_lux_metering(self):
+        self.device.new_lux_value.disconnect(self.display_current_lux)
+        self.device.stop_requested = True
+
+    def closeEvent(self, event) -> None:
+        if self.has_changes:
+            alert = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
+                               default=QMessageBox.Cancel)
+            alert.setText(tr("There are unsaved changes?"))
+            answer = alert.exec()
+            if answer == QMessageBox.Save:
+                self.save_config()
+            elif answer == QMessageBox.Cancel:
+                event.ignore()
+                return
+        self.stop_lux_metering()
+        super().closeEvent(event)
+
+
+
+
 class GreyScaleDialog(QDialog):
     """Creates a dialog with a grey scale VDU calibration image.  Non-model. Have as many as you like - one per VDU."""
 
@@ -4748,6 +4933,9 @@ class VduAppWindow(QMainWindow):
         def refresh_from_vdus() -> None:
             self.start_refresh()
 
+        def auto_lux_action() -> None:
+            AutoLuxDialog.invoke(main_config, self.main_panel.vdu_controllers)
+
         def grey_scale() -> None:
             GreyScaleDialog()
 
@@ -4776,6 +4964,7 @@ class VduAppWindow(QMainWindow):
                                             about_action=AboutDialog.invoke,
                                             help_action=HelpDialog.invoke,
                                             chart_action=grey_scale,
+                                            auto_lux_action=auto_lux_action,
                                             settings_action=edit_config,
                                             presets_action=edit_presets,
                                             refresh_action=refresh_from_vdus,
