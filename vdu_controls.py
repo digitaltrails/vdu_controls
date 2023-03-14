@@ -13,7 +13,7 @@ Usage:
                      [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                      [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                      [--enable-vcp-code vcp_code] [--system-tray] [--debug] [--warnings] [--syslog]
-                     [--location latitude,longitude] [--translations-enabled] [--no-weather]
+                     [--location latitude,longitude] [--translations-enabled] [--no-weather] [--lux-meter-enabled]
                      [--no-splash] [--sleep-multiplier multiplier]
                      [--create-config-files]
                      [--install] [--uninstall]
@@ -37,6 +37,7 @@ Optional arguments:
                             enable language translations
       --no-weather
                             disable weather lookups
+      --lux-meter-enabled   enable hardware light metering
       --debug               enable debug output to stdout
       --warnings            popup a warning when a VDU lacks an enabled control
       --syslog              repeat diagnostic output to the syslog (journald)
@@ -130,6 +131,7 @@ The config files are in INI-format divided into a number of sections as outlined
     splash-screen-enabled = yes|no
     translations-enabled = yes|no
     weather-enabled = yes|no
+    lux-meter-enabled = yes|no
     warnings-enabled = yes|no
     debug-enabled = yes|no
     syslog-enabled = yes|no
@@ -1405,6 +1407,7 @@ class VduControlsConfig:
                 QT_TR_NOOP('system-tray-enabled'): 'no',
                 QT_TR_NOOP('translations-enabled'): 'no',
                 QT_TR_NOOP('weather-enabled'): 'yes',
+                QT_TR_NOOP('lux-meter-enabled'): 'no',
                 QT_TR_NOOP('splash-screen-enabled'): 'yes',
                 QT_TR_NOOP('warnings-enabled'): 'no',
                 QT_TR_NOOP('debug-enabled'): 'no',
@@ -1460,6 +1463,9 @@ class VduControlsConfig:
 
     def is_splash_screen_enabled(self) -> bool:
         return self.ini_content.getboolean('vdu-controls-globals', 'splash-screen-enabled', fallback=True)
+
+    def is_lux_meter_enabled(self) -> bool:
+        return self.ini_content.getboolean('vdu-controls-globals', 'lux-meter-enabled', fallback=False)
 
     def are_warnings_enabled(self) -> bool:
         return self.ini_content.getboolean('vdu-controls-globals', 'warnings-enabled', fallback=True)
@@ -1593,6 +1599,8 @@ class VduControlsConfig:
                             help='enable language translations')
         parser.add_argument('--no-weather', default=False, action='store_true', help='disable weather lookups')
         parser.set_defaults(weather_disabled=True)
+        parser.add_argument('--lux-meter-enabled', default=False, action='store_true',
+                            help='enable hardware light metering')
         parser.add_argument('--debug', default=False, action='store_true', help='enable debug output to stdout')
         parser.add_argument('--warnings', default=False, action='store_true',
                             help='popup a warning when a VDU lacks an enabled control')
@@ -1631,6 +1639,8 @@ class VduControlsConfig:
             self.ini_content['vdu-controls-globals']['location'] = parsed_args.location
         if parsed_args.translations_enabled:
             self.ini_content['vdu-controls-globals']['translations-enabled'] = 'yes'
+        if parsed_args.lux_meter_enabled:
+            self.ini_content['vdu-controls-globals']['lux-meter-enabled'] = 'yes'
         if parsed_args.no_weather:
             self.ini_content['vdu-controls-globals']['weather-enabled'] = 'no'
 
@@ -2181,7 +2191,7 @@ def restart_application(reason: str) -> None:
     To be invoked when part of the GUI executes a VCP command that changes the number of connected monitors or
     when the GUI detects the number of monitors has changes.
     """
-    alert = MessageBox(QMessageBox.Critical)
+    alert = MessageBox(QMessageBox.Warning)
     alert.setText(reason)
     alert.setInformativeText(tr('When this message is dismissed, vdu_controls will restart.'))
     alert.exec()
@@ -2755,7 +2765,7 @@ class ContextMenu(QMenu):
     def __init__(self,
                  main_window,
                  main_window_action,
-                 about_action, help_action, chart_action, auto_lux_action, settings_action,
+                 about_action, help_action, chart_action, lux_meter_action, settings_action,
                  presets_action, refresh_action, quit_action) -> None:
         super().__init__()
         self.main_window = main_window
@@ -2767,7 +2777,8 @@ class ContextMenu(QMenu):
         self.busy_disable_prop = "busy_disable"
         self.preset_prop = "is_preset"
         self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Grey Scale'), chart_action)
-        self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Light meter'), auto_lux_action)
+        if lux_meter_action is not None:
+            self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Light meter'), lux_meter_action)
         self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Settings'), settings_action)
         self.addAction(si(self, QStyle.SP_BrowserReload), tr('Refresh'), refresh_action).setProperty(self.busy_disable_prop,
                                                                                                      QVariant(True))
@@ -4603,11 +4614,10 @@ class LuxMeterSerialDevice(WorkerThread):
                         buffer = meter.readline()
                         value = float(buffer.decode('utf-8').replace("\r\n", ''))
                         self.new_lux_value.emit(value)
-                        print(value)
                         time.sleep(self.interval)
             except (SerialException, ValueError) as se:
-                self.interval += 1
-                log_warning(f"Retry read of {self.device} after exception increasing sleep to {self.interval}", se)
+                log_warning(f"Retry read of {self.device}, will reopen feed in 10 seconds", se)
+                time.sleep(5)
 
 
 class LuxDialog(QDialog, DialogSingletonMixin):
@@ -4619,6 +4629,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
     def __init__(self, default_config: VduControlsConfig, vdu_controllers: List[VduController]):
         super().__init__()
+        self.setWindowTitle(tr('Lux Metering'))
         self.chart_data = {}
         self.range_restrictions = {}
         self.path = get_config_path('AutoLux')
@@ -4986,12 +4997,10 @@ class VduAppWindow(QMainWindow):
             main_window_action = main_window_action_implemenation
 
         def settings_changed(changed_settings: List):
-            if ('vdu-controls-globals', 'system-tray-enabled') in changed_settings:
-                restart_application(tr("The change to the system-tray-enabled option requires "
-                                       "vdu_controls to restart."))
-            if ('vdu-controls-globals', 'translations-enabled') in changed_settings:
-                restart_application(tr("The change to the translations-enabled option requires "
-                                       "vdu_controls to restart."))
+            for setting in ['system-tray-enabled', 'translations-enabled', 'lux-meter-enabled']:
+                if ('vdu-controls-globals', setting) in changed_settings:
+                    restart_application(tr("The change to the {} option requires "
+                                           "vdu_controls to restart.").format(setting))
             main_config.reload()
             self.ddcutil.change_settings(debug=main_config.is_debug_enabled(),
                                          default_sleep_multiplier=main_config.get_sleep_multiplier())
@@ -5007,7 +5016,7 @@ class VduAppWindow(QMainWindow):
         def refresh_from_vdus() -> None:
             self.start_refresh()
 
-        def auto_lux_action() -> None:
+        def lux_meter_action() -> None:
             LuxDialog.invoke(main_config, self.main_panel.vdu_controllers)
 
         def grey_scale() -> None:
@@ -5038,7 +5047,7 @@ class VduAppWindow(QMainWindow):
                                             about_action=AboutDialog.invoke,
                                             help_action=HelpDialog.invoke,
                                             chart_action=grey_scale,
-                                            auto_lux_action=auto_lux_action,
+                                            lux_meter_action=lux_meter_action if main_config.is_lux_meter_enabled() else None,
                                             settings_action=edit_config,
                                             presets_action=edit_presets,
                                             refresh_action=refresh_from_vdus,
