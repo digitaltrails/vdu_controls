@@ -4716,8 +4716,8 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             pass
 
     def default_profile(self, min_value: int, max_value: int):
-        lux_values = [10, 100, 1_000, 10_000, 100_000]
-        brightness_values = [15, 70, 90, 95, 100]
+        lux_values = [0, 10, 100, 1_000, 10_000, 100_000]
+        brightness_values = [15, 15, 70, 90, 95, 100]
         brightness_values = [v if v >= min_value else min_value for v in brightness_values]
         brightness_values = [v if v <= max_value else max_value for v in brightness_values]
         return repr(list(zip(lux_values, brightness_values)))
