@@ -526,14 +526,14 @@ from urllib.error import URLError
 import serial
 from PyQt5 import QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
-    QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant
+    QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, QRect
 from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QRegExpValidator, \
     QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
-    QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox
+    QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QToolTip
 from serial import SerialException
 
 APPNAME = "VDU Controls"
@@ -4410,6 +4410,7 @@ def install_as_desktop_application(uninstall: bool = False):
 
     log_info('Installation complete. Your desktop->applications->settings should now contain VDU Controls')
 
+
 class AutoLuxChart(QLabel):
 
     def __init__(self, chart_data: Dict[str, List[Tuple[int, int]]], range_restrictions: Dict[str, Tuple[int, int]],
@@ -4429,6 +4430,7 @@ class AutoLuxChart(QLabel):
         self.pixmap_height, self.pixmap_width, = self.plot_height + 150, self.plot_width + 200
         self.setFixedHeight(self.pixmap_height)
         self.setFixedWidth(self.pixmap_width)
+        self.setMouseTracking(True)  # Enable mouse move events
         self.create_plot()
 
     def create_plot(self):
@@ -4463,14 +4465,14 @@ class AutoLuxChart(QLabel):
         if min_v > 0:
             painter.setPen(QPen(QColor(0xff0000), 4))
             cutoff = self.y_origin - self.y_from_percent(min_v)
-            painter.fillRect(self.x_origin, cutoff, self.plot_width, self.y_from_percent(min_v), QColor(0,0,255,20))
+            painter.fillRect(self.x_origin, cutoff, self.plot_width, self.y_from_percent(min_v), QColor(0, 0, 255, 20))
         if max_v < 100:
             painter.setPen(QPen(QColor(0xff0000), 4))
             cutoff = self.y_origin - self.y_from_percent(max_v)
             painter.drawLine(self.x_origin, cutoff, self.x_origin + self.plot_width, cutoff)
 
         ellipse_diameter = 20
-        # draw curve per vdu - draw current_profile last/on-top
+        # draw profile per vdu - draw current_profile last/on-top
         for name, vdu_data in [(k, v) for k, v in self.data.items() if k != self.current_vdu] + \
                               [(self.current_vdu, self.data[self.current_vdu])]:
             painter.setPen(QPen(QColor(self.line_colors[name]), 6))
@@ -4478,7 +4480,8 @@ class AutoLuxChart(QLabel):
             for lux, percent in vdu_data:
                 x = self.x_origin + self.x_from_lux(lux)
                 y = self.y_origin - self.y_from_percent(percent)
-                painter.drawEllipse(x - ellipse_diameter // 2, y - ellipse_diameter // 2, ellipse_diameter, ellipse_diameter)
+                if self.current_vdu == name:
+                    painter.drawEllipse(x - ellipse_diameter // 2, y - ellipse_diameter // 2, ellipse_diameter, ellipse_diameter)
                 if last_x and last_y:
                     painter.drawLine(last_x, last_y, x, y)
                 last_x, last_y = x, y
@@ -4494,9 +4497,6 @@ class AutoLuxChart(QLabel):
         local_pos = self.mapFromGlobal(event.globalPos())
         x = local_pos.x() - self.x_origin
         y = self.y_origin - local_pos.y()
-        percent = self.percent_from_y(y)
-        lux = self.lux_from_x(x)
-        print(f"percent={percent}, lux={lux}")
         deleted = False
         vdu_data = self.data[self.current_vdu]
         for existing_lux, existing_percent in vdu_data:
@@ -4506,12 +4506,20 @@ class AutoLuxChart(QLabel):
                 vdu_data.remove((existing_lux, existing_percent))
                 deleted = True
         if not deleted:
+            percent = self.percent_from_y(y)
+            lux = self.lux_from_x(x)
             vdu_data.append((lux, percent))
             vdu_data.sort()
         self.create_plot()
         self.update()
         self.chart_changed_callback()
-        event.ignore()
+        event.accept()
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        local_pos = self.mapFromGlobal(event.globalPos())
+        percent = self.percent_from_y(self.y_origin - local_pos.y())
+        lux = self.lux_from_x(local_pos.x() - self.x_origin)
+        QToolTip.showText(self.mapToGlobal(event.pos()), f"{lux}, {percent}", self, QRect(event.pos().x(), event.pos().y(), 1, 1))
 
     def percent_from_y(self, y):
         percent = round(100.0 * abs(y) / self.plot_height)
@@ -4559,7 +4567,7 @@ class LuxMeterWidget(QWidget):
         self.history.append(lux)
         pixmap = QPixmap(self.lux_plot.width(), self.lux_plot.height())
         painter = QPainter(pixmap)
-        painter.fillRect(0, 0, self.lux_plot.width(), self.lux_plot.height(), QColor(0x6baee8)) # 0x5b93c5))
+        painter.fillRect(0, 0, self.lux_plot.width(), self.lux_plot.height(), QColor(0x6baee8))  # 0x5b93c5))
         painter.setPen(QPen(QColor(0xffdd30), 1))
         for i in range(len(self.history)):
             painter.drawLine(i, self.lux_plot.height(), i, self.lux_plot.height() - self.y_from_lux(self.history[i]))
@@ -4568,7 +4576,7 @@ class LuxMeterWidget(QWidget):
 
     def clear_history(self):
         if len(self.history) > 1:
-            self.history = (self.history + [0]*10)[-100:]
+            self.history = (self.history + [0] * 10)[-100:]
 
     def y_from_lux(self, lux: int) -> int:
         return round(
@@ -4598,15 +4606,16 @@ class LuxMeterSerialDevice(WorkerThread):
                         print(value)
                         time.sleep(self.interval)
             except (SerialException, ValueError) as se:
-                log_warning(f"Retry read of {self.device} after exception", se)
+                self.interval += 1
+                log_warning(f"Retry read of {self.device} after exception increasing sleep to {self.interval}", se)
 
 
-class AutoLuxDialog(QDialog, DialogSingletonMixin):
+class LuxDialog(QDialog, DialogSingletonMixin):
 
     @staticmethod
     def invoke(default_config: VduControlsConfig, vdu_controllers: List[VduController]) -> None:
-        AutoLuxDialog.show_existing_dialog() if AutoLuxDialog.exists() else AutoLuxDialog(default_config,
-                                                                                          vdu_controllers)
+        LuxDialog.show_existing_dialog() if LuxDialog.exists() else LuxDialog(default_config,
+                                                                              vdu_controllers)
 
     def __init__(self, default_config: VduControlsConfig, vdu_controllers: List[VduController]):
         super().__init__()
@@ -4624,11 +4633,6 @@ class AutoLuxDialog(QDialog, DialogSingletonMixin):
         grid_layout = QGridLayout()
         top_box.setLayout(grid_layout)
 
-        # self.current_lux = QLabel()
-        # big_font = self.current_lux.font()
-        # big_font.setPointSize(big_font.pointSize() + 8)
-        # self.current_lux.setFont(big_font)
-        # self.display_current_lux(100_000.0)
         self.lux_display = LuxMeterWidget(parent=self)
         self.lux_display.display_current_lux(0.0)
         grid_layout.addWidget(self.lux_display, 0, 0, 3, 3, alignment=Qt.AlignLeft | Qt.AlignTop)
@@ -4649,7 +4653,7 @@ class AutoLuxDialog(QDialog, DialogSingletonMixin):
         self.meter_device_selector.pressed.connect(choose_device)
 
         self.enabled_checkbox = QCheckBox(tr("Enable automatic brightness adjustment"))
-        #self.enabled_checkbox.setLayoutDirection(Qt.RightToLeft)
+        # self.enabled_checkbox.setLayoutDirection(Qt.RightToLeft)
         grid_layout.addWidget(self.enabled_checkbox, 1, 2, 1, 3)
         self.enabled_checkbox.stateChanged.connect(self.enable)
 
@@ -4669,7 +4673,7 @@ class AutoLuxDialog(QDialog, DialogSingletonMixin):
             min_v, max_v = (0, 100) if len(range_restriction) == 0 else (int(range_restriction[1]), int(range_restriction[2]))
             self.range_restrictions[vdu.vdu_stable_id] = min_v, max_v
             self.chart_data[vdu.vdu_stable_id] = literal_eval(
-                self.config.get('lux-profile', vdu.vdu_stable_id, fallback=f"[(1, {min_v}),(100_000, {max_v})]"))
+                self.config.get('lux-profile', vdu.vdu_stable_id, fallback=f"{self.default_profile(min_v, max_v)}"))
             self.profile_selector.addItem(vdu.get_vdu_description(), userData=vdu.vdu_stable_id)
 
         def chart_changed_callback():
@@ -4712,6 +4716,13 @@ class AutoLuxDialog(QDialog, DialogSingletonMixin):
     def enable(self, checkstate=None):
         if self.enabled_checkbox.isChecked():
             pass
+
+    def default_profile(self, min_value: int, max_value: int):
+        lux_values = [10, 100, 1_000, 10_000, 100_000]
+        brightness_values = [15, 70, 90, 95, 100]
+        brightness_values = [v if v >= min_value else min_value for v in brightness_values]
+        brightness_values = [v if v <= max_value else max_value for v in brightness_values]
+        return repr(list(zip(lux_values, brightness_values)))
 
     def parse_device(self, device):
         if pathlib.Path(device).is_char_device():
@@ -4997,7 +5008,7 @@ class VduAppWindow(QMainWindow):
             self.start_refresh()
 
         def auto_lux_action() -> None:
-            AutoLuxDialog.invoke(main_config, self.main_panel.vdu_controllers)
+            LuxDialog.invoke(main_config, self.main_panel.vdu_controllers)
 
         def grey_scale() -> None:
             GreyScaleDialog()
