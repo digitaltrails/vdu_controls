@@ -13,7 +13,7 @@ Usage:
                      [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                      [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                      [--enable-vcp-code vcp_code] [--system-tray] [--debug] [--warnings] [--syslog]
-                     [--location latitude,longitude] [--translations-enabled] [--no-weather] [--lux-meter-enabled]
+                     [--location latitude,longitude] [--translations] [--no-weather] [--lux-meter]
                      [--no-splash] [--sleep-multiplier multiplier]
                      [--create-config-files]
                      [--install] [--uninstall]
@@ -33,11 +33,11 @@ Optional arguments:
       --system-tray         start up as an entry in the system tray
       --location latitude,longitude
                             local latitude and longitude for triggering presets by solar elevation
-      --translations-enabled
+      --translations
                             enable language translations
       --no-weather
                             disable weather lookups
-      --lux-meter-enabled   enable hardware light metering
+      --lux-meter           enable hardware light metering
       --debug               enable debug output to stdout
       --warnings            popup a warning when a VDU lacks an enabled control
       --syslog              repeat diagnostic output to the syslog (journald)
