@@ -4611,28 +4611,41 @@ class LuxMeterSerialDevice():
             self.serial_device.close()
 
 
-class LuxAutoBrightnessTimer(QTimer):
+class LuxAutoBrightnessWorker(WorkerThread):
 
     def __init__(self, lux_monitor: LuxMonitor):
-        super().__init__()
+        super().__init__(task_body=self.adjust_brightness)
         self.lux_monitor = lux_monitor
         self.last_value = None
-        self.timeout.connect(self.adjust_brightness)
+        self.stop_requested = False
 
     def adjust_brightness(self):
-        self.lux_monitor.lux_config.load()  # Refresh
-        metered_lux = self.lux_monitor.lux_meter.get_value()
-        for vdu in self.lux_monitor.main_app.vdu_controllers:
-            profile = self.lux_monitor.lux_config.get_vdu_profile(vdu)
-            brightness = 20
-            for lux, brightness in profile:
-                if metered_lux > lux:
-                    brightness = brightness
-            current_brightness = vdu.get_attribute('10')
-            if current_brightness != brightness:
-                log_info(f"Adjust brightness for {vdu.vdu_stable_id} to {brightness}")
-                vdu.set_attribute('10', str(round(brightness)))
-                self.last_value = brightness
+        while True:
+            print("looping")
+            if self.stop_requested:
+                return
+            if self.lux_monitor.lux_config.load().is_metering_enabled():
+                self.lux_monitor.lux_config.load()  # Refresh
+                metered_lux = self.lux_monitor.lux_meter.get_value()
+                for vdu in self.lux_monitor.main_app.vdu_controllers:
+                    profile = self.lux_monitor.lux_config.get_vdu_profile(vdu)
+                    brightness = 20
+                    for lux, value in profile:
+                        if metered_lux > lux:
+                            brightness = value
+                    current_brightness = vdu.get_attribute('10')
+                    if current_brightness != brightness:
+                        if vdu.get_attribute('10') != brightness:
+                            # self.lux_monitor.main_app.restore_preset(LuxPreset(),)  # TODO use an internal preset for transitioning
+                            log_info(f"Adjust brightness for {vdu.vdu_stable_id} to {brightness} lux={lux} metered-lux={metered_lux}")
+                            vdu.set_attribute('10', str(round(brightness)))
+                        self.last_value = brightness
+            sleep_start_time = time.time()
+            sleep_end_time = sleep_start_time + self.lux_monitor.lux_config.get_interval_minutes() * 60.0
+            while time.time() < sleep_end_time:
+                time.sleep(5.0)
+                if self.stop_requested:
+                    return
 
 class LuxConfig(ConfigIni):
 
@@ -4661,6 +4674,9 @@ class LuxConfig(ConfigIni):
 
     def get_interval_minutes(self):
         return self.getint("lux-meter", "interval-minutes", fallback=1)
+
+    def is_metering_enabled(self):
+        return self.getboolean("lux-meter", "automatic-brightness", fallback=False)
 
     def load(self, force: bool = False) -> LuxConfig:
         if self.path.exists():
@@ -4724,7 +4740,12 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         # self.enabled_checkbox.setLayoutDirection(Qt.RightToLeft)
         grid_layout.addWidget(self.enabled_checkbox, 1, 2, 1, 3)
 
-        #self.enabled_checkbox.stateChanged.connect(None)
+        def toggle_enabled(value):
+            if not self.config.has_section('lux-meter'):
+                self.config.add_section('lux-meter')
+            self.config.set("lux-meter", "automatic-brightness", "yes" if value else "no")
+
+        self.enabled_checkbox.stateChanged.connect(toggle_enabled)
 
         self.interval_label = QLabel(tr("Adjustment interval minutes"))
         grid_layout.addWidget(self.interval_label, 2, 2, 1, 2)
@@ -4828,8 +4849,6 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
     def save_config(self):
         self.config.save(self.path)
-        self.stop_lux_metering()
-        self.start_lux_metering()
         self.has_changes = False
 
     def closeEvent(self, event) -> None:
@@ -5017,16 +5036,14 @@ class LuxMonitor:
         self.main_app = main_app
         self.lux_config: LuxConfig | None = None
         self.lux_meter: LuxMeterSerialDevice | None = None
-        self.lux_auto_brightness_timer: LuxAutoBrightnessTimer | None = None
+        self.lux_auto_brightness_worker: LuxAutoBrightnessWorker | None = None
         self.initialise()
 
     def initialise(self):
         self.lux_config = LuxConfig().load()
         self.lux_meter = LuxMeterSerialDevice(self.lux_config.get_device_name())
-        self.lux_auto_brightness_timer = LuxAutoBrightnessTimer(self)
-        self.lux_auto_brightness_timer.setInterval(self.lux_config.get_interval_minutes() * 60_000)
-        self.lux_auto_brightness_timer.adjust_brightness()
-        #self.lux_auto_brightness_timer.start()
+        self.lux_auto_brightness_worker = LuxAutoBrightnessWorker(self)
+        self.lux_auto_brightness_worker.start()
 
 
 class VduAppWindow(QMainWindow):
