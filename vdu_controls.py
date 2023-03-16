@@ -3051,8 +3051,9 @@ class WorkerThread(QThread):
 class TransitionState(Enum):
     INITIALIZED = 0
     PARTIAL = 1
-    FINISHED = 2
-    INTERRUPTED = 3
+    FINISHED_STEPPING = 2
+    FINISHED = 3
+    INTERRUPTED = 4
 
 
 class TransitionWorker(WorkerThread):
@@ -3064,15 +3065,17 @@ class TransitionWorker(WorkerThread):
         log_info(f"Transition {preset.name} immediately={immediately}")
         self.start_time = datetime.now()
         self.end_time: datetime | None = None
+        self.last_step_time: float = 0.0
         self.last_progress_time = datetime.now()
         self.main_panel = main_panel
         self.preset = preset
+        self.step_interval_seconds = self.preset.get_step_interval_seconds()
         self.preset_non_transitioning_controls: List[VduControlBase] = []  # specific to this preset
         self.preset_transitioning_controls: List[VduControlBase] = []  # specific to this preset
         self.final_values: Dict[VduControlBase, str] = {}
         self.expected_values: Dict[VduControlBase, str] = {}
-        self.state = TransitionState.INITIALIZED
         self.transition_immediately = immediately
+        self.state = TransitionState.FINISHED_STEPPING if self.transition_immediately else TransitionState.INITIALIZED
         self.progress_signal.connect(progress)
         for control_panel in self.main_panel.vdu_control_panels:
             section = control_panel.controller.vdu_stable_id
@@ -3087,29 +3090,24 @@ class TransitionWorker(WorkerThread):
                             self.preset_non_transitioning_controls.append(control)
 
     def task_body(self):
-        if not self.transition_immediately:
-            while True:
-                if self.check_for_interruptions() == TransitionState.INTERRUPTED:
-                    return
-                step_start = datetime.now()
-                if self.step() == TransitionState.FINISHED:
-                    break
-                remaining_secs = min(self.preset.get_step_interval_seconds() - (datetime.now() - step_start).total_seconds(), 0.1)
-                while remaining_secs >= 0.0:
-                    self.progress_signal.emit()  # Keep progress indicators winking
-                    self.last_progress_time = datetime.now()
-                    if self.check_for_interruptions() == TransitionState.INTERRUPTED:  # Keep checking for interruptions
-                        return
-                    time.sleep(1.0 if remaining_secs >= 1.0 else remaining_secs)
-                    remaining_secs -= 1.0
-        for control in self.preset_non_transitioning_controls:  # Finish by doing the non-transitioning controls
-            control.restore_vdu_attribute(self.final_values[control])
-        self.state = TransitionState.FINISHED
-        self.end_time = datetime.now()
-        if self.state == TransitionState.FINISHED:
+        while self.state != TransitionState.FINISHED_STEPPING and self.values_are_as_expected():
+            cycle_start = time.time()
+            if cycle_start - self.last_step_time > self.step_interval_seconds:
+                self.last_step_time = cycle_start
+                self.step()
+            if self.step_interval_seconds > 0:
+                remainder = 1.0 - time.time() - cycle_start
+                if remainder > 0.0:
+                    time.sleep(remainder)
+            self.progress_signal.emit()
+        if self.state == TransitionState.FINISHED_STEPPING:
+            for control in self.preset_non_transitioning_controls:  # Finish by doing the non-transitioning controls
+                control.restore_vdu_attribute(self.final_values[control])
+            self.state = TransitionState.FINISHED
+            self.end_time = datetime.now()
             log_info(f"Finished restoring {self.preset.name} {round(self.total_elapsed_seconds(), ndigits=2)} seconds")
 
-    def step(self) -> TransitionState:
+    def step(self):
         more_to_do = False
         for control in self.preset_transitioning_controls:  # Step each control by 1 or -1...
             int_val = int(self.expected_values[control])
@@ -3125,10 +3123,9 @@ class TransitionWorker(WorkerThread):
                 self.last_progress_time = now
                 self.progress_signal.emit()
         # Some transitioning controls are not at their final values, need to step again
-        self.state = TransitionState.PARTIAL if more_to_do else TransitionState.FINISHED
-        return self.state
+        self.state = TransitionState.PARTIAL if more_to_do else TransitionState.FINISHED_STEPPING
 
-    def check_for_interruptions(self) -> TransitionState:
+    def values_are_as_expected(self) -> bool:
         for control_panel in self.main_panel.vdu_control_panels:  # Check that no one else is changing the controls
             control_panel.refresh_data()  # Update the values of all the controls
             for control in control_panel.vcp_controls:
@@ -3139,7 +3136,7 @@ class TransitionWorker(WorkerThread):
                         self.state = TransitionState.INTERRUPTED  # Something else is changing the controls - abandon the task
                 else:
                     self.expected_values[control] = current_value  # must be first time through, initialize value
-        return self.state
+        return self.state != TransitionState.INTERRUPTED
 
     def total_elapsed_seconds(self) -> float:
         return ((self.end_time if self.end_time else datetime.now()) - self.start_time).total_seconds()
@@ -4624,17 +4621,18 @@ class LuxAutoBrightnessTimer(QTimer):
 
     def adjust_brightness(self):
         self.lux_monitor.lux_config.load()  # Refresh
-        value = self.lux_monitor.lux_meter.get_value()
-        if value != self.last_value or value is None:
-            for vdu in self.lux_monitor.main_app.vdu_controllers:
-                profile = self.lux_monitor.lux_config.get_vdu_profile(vdu)
-                chosen = 20
-                for lux, brightness in profile:
-                    if value > lux:
-                        chosen = brightness
-                log_info(f"Adjust brightness for {vdu.vdu_stable_id} to {chosen}")
-                vdu.set_attribute('10', str(round(chosen)))
-            self.last_value = value
+        metered_lux = self.lux_monitor.lux_meter.get_value()
+        for vdu in self.lux_monitor.main_app.vdu_controllers:
+            profile = self.lux_monitor.lux_config.get_vdu_profile(vdu)
+            brightness = 20
+            for lux, brightness in profile:
+                if metered_lux > lux:
+                    brightness = brightness
+            current_brightness = vdu.get_attribute('10')
+            if current_brightness != brightness:
+                log_info(f"Adjust brightness for {vdu.vdu_stable_id} to {brightness}")
+                vdu.set_attribute('10', str(round(brightness)))
+                self.last_value = brightness
 
 class LuxConfig(ConfigIni):
 
@@ -5028,7 +5026,7 @@ class LuxMonitor:
         self.lux_auto_brightness_timer = LuxAutoBrightnessTimer(self)
         self.lux_auto_brightness_timer.setInterval(self.lux_config.get_interval_minutes() * 60_000)
         self.lux_auto_brightness_timer.adjust_brightness()
-        self.lux_auto_brightness_timer.start()
+        #self.lux_auto_brightness_timer.start()
 
 
 class VduAppWindow(QMainWindow):
