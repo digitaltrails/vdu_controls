@@ -2273,7 +2273,7 @@ class VduControlSlider(VduControlBase):
         """Construct the slider control and initialize its values from the VDU."""
         super().__init__(controller, vcp_capability)
 
-        #controller.vdu_setting_changed.connect(self.refresh_view)
+        # controller.vdu_setting_changed.connect(self.refresh_view)
 
         self.max_value: str | None = None
 
@@ -2400,7 +2400,7 @@ class VduControlComboBox(VduControlBase):
         """Construct the combobox control and initialize its values from the VDU."""
         super().__init__(controller, vcp_capability)
 
-        #controller.vdu_setting_changed.connect(self.refresh_view)
+        # controller.vdu_setting_changed.connect(self.refresh_view)
 
         layout = QHBoxLayout()
         self.setLayout(layout)
@@ -3135,7 +3135,8 @@ class TransitionWorker(WorkerThread):
                 step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
                 str_value = str(int_val + step)
                 self.expected_values[control] = str_value  # revise to new value
-                print(f"step vdu={control.controller.vdu_stable_id} code={control.vcp_capability.vcp_code} value={str_value} final={final_value}")
+                print(
+                    f"step vdu={control.controller.vdu_stable_id} code={control.vcp_capability.vcp_code} value={str_value} final={final_value}")
                 control.restore_vdu_attribute(str_value)
                 self._update_gui_view.emit(control)
                 more_to_do = more_to_do or str_value != final_value
@@ -4502,7 +4503,7 @@ class LuxProfileChart(QLabel):
                 painter.setPen(QPen(QColor(self.line_colors[name]), 6))
                 x = self.x_origin + self.x_from_lux(lux)
                 y = self.y_origin - self.y_from_percent(percent)
-                #painter.drawPoint(x, y)
+                # painter.drawPoint(x, y)
                 if self.current_vdu == name:
                     painter.drawEllipse(x - ellipse_diameter // 2, y - ellipse_diameter // 2, ellipse_diameter, ellipse_diameter)
                 if last_x and last_y:
@@ -4594,8 +4595,9 @@ class LuxMeterWidget(QWidget):
         self.lux_plot.setFixedWidth(200)
         self.lux_plot.setFixedHeight(100)
         self.layout().addWidget(self.lux_plot)
+        self.lux_meter_worker: LuxMeterWidgetThread | None = None
 
-    def display_current_lux(self, lux: int):
+    def display_lux(self, lux: int):
         self.current_lux.setText(tr("Lux: {}".format(lux)))
         self.history = self.history[-100:]
         self.history.append(lux)
@@ -4612,9 +4614,36 @@ class LuxMeterWidget(QWidget):
         if len(self.history) > 1:
             self.history = (self.history + [0] * 10)[-100:]
 
+    def start_metering(self, lux_meter):
+        if self.lux_meter_worker is not None:
+            self.stop_metering()
+        self.lux_meter_worker = LuxMeterWidgetThread(lux_meter)
+        self.lux_meter_worker.new_lux_value.connect(self.display_lux)
+        self.lux_meter_worker.start()
+
+    def stop_metering(self):
+        self.lux_meter_worker.stop_requested = True
+        self.lux_meter_worker.new_lux_value.disconnect(self.display_lux)
+        self.interrupt_history()
+        self.lux_meter_worker = None
+
     def y_from_lux(self, lux: int) -> int:
         return round(
             (math.log10(lux) - math.log10(1)) / ((math.log10(100000) - math.log10(1)) / self.lux_plot.height())) if lux > 0 else 0
+
+
+class LuxMeterWidgetThread(WorkerThread):
+    new_lux_value = pyqtSignal(int)
+
+    def __init__(self, lux_meter: LuxMeterSerialDevice):
+        super().__init__(task_body=self.read_meter)
+        self.lux_meter = lux_meter
+        self.stop_requested = False
+
+    def read_meter(self):
+        while not self.stop_requested:
+            self.new_lux_value.emit(round(self.lux_meter.get_cached_value(5.0)))
+            time.sleep(5.0)
 
 
 class LuxMeterSerialDevice():
@@ -4640,7 +4669,7 @@ class LuxMeterSerialDevice():
             while True:
                 try:
                     self.serial_device.flushInput()
-                    time.sleep(0.5)
+                    time.sleep(0.1)
                     buffer = self.serial_device.readline()
                     value = float(buffer.decode('utf-8').replace("\r\n", ''))
                     print(f"meter={value}")
@@ -4779,10 +4808,6 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.range_restrictions = {}
         self.has_changes = False
 
-        self.display_lux_timer = QTimer()  # TODO timers can cause jerky response - change to QThread?
-        self.display_lux_timer.setInterval(5_000)
-        self.display_lux_timer.timeout.connect(self.display_current_lux)
-
         self.path = get_config_path('AutoLux')
 
         self.device_name = ''
@@ -4795,10 +4820,10 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         grid_layout = QGridLayout()
         top_box.setLayout(grid_layout)
 
-        self.lux_display = LuxMeterWidget(parent=self)
+        self.lux_meter_widget = LuxMeterWidget(parent=self)
         lux = 0 if self.main_app.lux_monitor.lux_meter is None else self.main_app.lux_monitor.lux_meter.get_cached_value(5.0)
-        self.lux_display.display_current_lux(lux)
-        grid_layout.addWidget(self.lux_display, 0, 0, 3, 3, alignment=Qt.AlignLeft | Qt.AlignTop)
+        self.lux_meter_widget.display_lux(lux)
+        grid_layout.addWidget(self.lux_meter_widget, 0, 0, 3, 3, alignment=Qt.AlignLeft | Qt.AlignTop)
 
         def choose_device():
             device_name = QFileDialog.getOpenFileName(self, tr("Select a tty device or fifo"), "/dev/ttyUSB0")[0]
@@ -4890,19 +4915,11 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         if not in_constructor:
             self.plot.update_data(self.chart_data, self.range_restrictions)
             self.plot.set_current_profile(list(self.chart_data.keys())[0])
-        self.display_lux_timer.start()
+        self.lux_meter_widget.start_metering(self.main_app.lux_monitor.lux_meter)
 
     def make_visible(self):
         self.reinitialise()
-        self.display_current_lux()
-        self.lux_display.interrupt_history()
-        self.display_lux_timer.start()
         super().make_visible()
-
-    def display_current_lux(self):
-        if self.main_app.lux_monitor.lux_meter is not None:
-            lux = self.main_app.lux_monitor.lux_meter.get_cached_value(5.0)
-            self.lux_display.display_current_lux(round(lux))
 
     def show_current_device(self, device):
         if pathlib.Path(device).is_char_device():
@@ -4942,7 +4959,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             elif answer == QMessageBox.Cancel:
                 event.ignore()
                 return
-        self.display_lux_timer.stop()
+        self.lux_meter_widget.stop_metering()
         super().closeEvent(event)
 
 
