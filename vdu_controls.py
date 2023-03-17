@@ -2257,6 +2257,9 @@ class VduControlBase(QWidget):
                 VDU_SUPPORTED_CONTROLS.by_code[self.vcp_capability.vcp_code].causes_config_change:
             self.connected_vdus_changed.emit()
 
+    def refresh_view(self):
+        pass
+
 
 class VduControlSlider(VduControlBase):
     """
@@ -2682,7 +2685,7 @@ class Preset:
             self.timer = QTimer()
         self.timer.setSingleShot(True)
         self.timer_action = action
-        self.timer.timeout.connect(partial(action, self))
+        self.timer.timeout.connect(partial(action, self))  # TODO the action may be running in an inappropriate thread
         millis = round((when_local - zoned_now()) / timedelta(milliseconds=1))
         self.timer.start(millis)
         self.schedule_status = ScheduleStatus.SCHEDULED
@@ -3062,6 +3065,7 @@ class TransitionState(Enum):
 
 class TransitionWorker(WorkerThread):
     progress_signal = pyqtSignal()
+    _update_gui_view = pyqtSignal(VduControlBase)
 
     def __init__(self, main_panel: VduControlsMainPanel, preset: Preset, progress_callable: Callable, finished_callable: Callable,
                  immediately: bool = False):
@@ -3081,6 +3085,7 @@ class TransitionWorker(WorkerThread):
         self.transition_immediately = immediately
         self.state = TransitionState.FINISHED_STEPPING if self.transition_immediately else TransitionState.INITIALIZED
         self.progress_callable = progress_callable
+
         for control_panel in self.main_panel.vdu_control_panels:
             section = control_panel.controller.vdu_stable_id
             if section in self.preset.preset_ini:
@@ -3094,6 +3099,10 @@ class TransitionWorker(WorkerThread):
                             self.preset_non_transitioning_controls.append(control)
 
     def task_body(self):
+        def update_gui(gui_control: VduControlBase):
+            gui_control.refresh_view()
+
+        self._update_gui_view.connect(update_gui)
         self.progress_signal.connect(self.progress_callable)  # Connect here in the right thread
         while self.state != TransitionState.FINISHED_STEPPING and self.values_are_as_expected():
             print("cycle")
@@ -3109,6 +3118,7 @@ class TransitionWorker(WorkerThread):
         if self.state == TransitionState.FINISHED_STEPPING:
             for control in self.preset_non_transitioning_controls:  # Finish by doing the non-transitioning controls
                 control.restore_vdu_attribute(self.final_values[control])
+                self._update_gui_view.emit(control)
             self.state = TransitionState.FINISHED
             self.end_time = datetime.now()
             log_info(f"Finished {self.preset.name} {round(self.total_elapsed_seconds(), ndigits=2)} seconds")
@@ -3127,6 +3137,7 @@ class TransitionWorker(WorkerThread):
                 self.expected_values[control] = str_value  # revise to new value
                 print(f"step vdu={control.controller.vdu_stable_id} code={control.vcp_capability.vcp_code} value={str_value} final={final_value}")
                 control.restore_vdu_attribute(str_value)
+                self._update_gui_view.emit(control)
                 more_to_do = more_to_do or str_value != final_value
             now = datetime.now()
             if (now - self.last_progress_time).total_seconds() >= 1.0:
@@ -4614,6 +4625,15 @@ class LuxMeterSerialDevice():
         self.device = serial.Serial(device_name) if pathlib.Path(device_name).exists() else None
         self.serial_device = serial.Serial(self.device_name)
         self.lock = Lock()
+        self.cached_value = None
+        self.cached_time = None
+
+    def get_cached_value(self, age_seconds: float):
+        if self.cached_value is not None and time.time() - self.cached_time <= age_seconds:
+            return self.cached_value
+        self.cached_value = self.get_value()
+        self.cached_time = time.time()
+        return self.cached_value
 
     def get_value(self):
         with self.lock:
@@ -4656,12 +4676,18 @@ class LuxAutoBrightnessPreset(Preset):
 
 
 class LuxAutoBrightnessWorker(WorkerThread):
+    _refresh_gui_view = pyqtSignal(VduControlBase)
 
     def __init__(self, lux_monitor: LuxMonitor):
         super().__init__(task_body=self.adjust_brightness)
         self.lux_monitor = lux_monitor
         self.last_value = None
         self.stop_requested = False
+
+        def refresh_control(control: VduControlBase):
+            control.refresh_view()
+
+        self._refresh_gui_view.connect(refresh_control)
 
     def adjust_brightness(self):
         while True:
@@ -4681,14 +4707,13 @@ class LuxAutoBrightnessWorker(WorkerThread):
                 current_brightness = int(controller.get_attribute('10')[0])
                 if current_brightness != profile_brightness:
                     diff = profile_brightness - current_brightness
-                    step_size = 2
+                    step_size = 4 if abs(diff) < 8 else 8
                     step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
                     print(f"stepping {id} step={step} current={current_brightness} target={profile_brightness}")
                     for control in control_panel.vcp_controls:
                         if control.vcp_capability.vcp_code == '10':
                             control.restore_vdu_attribute(str(current_brightness + step))
-                            # Not sure why this works, perhaps because it's a QThread it can interact with the UI.
-                            control.refresh_view()
+                            self._refresh_gui_view.emit(control)
                     in_progress = in_progress or current_brightness + step != profile_brightness
             time.sleep(1.0)  # give DDC some time to settle.
             if not in_progress:
@@ -4771,7 +4796,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         top_box.setLayout(grid_layout)
 
         self.lux_display = LuxMeterWidget(parent=self)
-        lux = 0 if self.main_app.lux_monitor.lux_meter is None else self.main_app.lux_monitor.lux_meter.get_value()
+        lux = 0 if self.main_app.lux_monitor.lux_meter is None else self.main_app.lux_monitor.lux_meter.get_cached_value(5.0)
         self.lux_display.display_current_lux(lux)
         grid_layout.addWidget(self.lux_display, 0, 0, 3, 3, alignment=Qt.AlignLeft | Qt.AlignTop)
 
@@ -4876,7 +4901,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
     def display_current_lux(self):
         if self.main_app.lux_monitor.lux_meter is not None:
-            lux = self.main_app.lux_monitor.lux_meter.get_value()
+            lux = self.main_app.lux_monitor.lux_meter.get_cached_value(5.0)
             self.lux_display.display_current_lux(round(lux))
 
     def show_current_device(self, device):
@@ -5095,10 +5120,10 @@ class LuxMonitor:
 
     def initialise(self):
         self.lux_config = LuxConfig().load()
-        self.lux_meter = LuxMeterSerialDevice(self.lux_config.get_device_name())
         if self.lux_config.is_metering_enabled():
             try:
                 log_info("Lux auto-brightness monitoring commences.")
+                self.lux_meter = LuxMeterSerialDevice(self.lux_config.get_device_name())
                 if self.lux_auto_brightness_worker is not None:
                     self.lux_auto_brightness_worker.stop_requested = True
                 self.lux_auto_brightness_worker = LuxAutoBrightnessWorker(self)
@@ -5106,7 +5131,7 @@ class LuxMonitor:
             except SerialException as se:
                 print(f"failed {se}")
         else:
-            log_info("Lux auto-brightness monitoring stopping.")
+            log_info("Lux auto-brightness monitoring stopping.")  # TODO handle exception
             if self.lux_auto_brightness_worker is not None:
                 self.lux_auto_brightness_worker.stop_requested = True
                 self.lux_auto_brightness_worker = None
@@ -5476,7 +5501,6 @@ class VduAppWindow(QMainWindow):
             nonlocal worker_thread
             print(f"update progress self.main_panel.busy={self.main_panel.busy}")
             self.main_panel.indicate_busy(False) if self.main_panel.busy else None
-            self.main_panel.refresh_view()
             presets_dialog_update_view(
                 tr("Transitioning to preset {} (elapsed time {} seconds)...").format(
                     preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=1)))
