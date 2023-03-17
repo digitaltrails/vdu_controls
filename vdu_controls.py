@@ -3122,12 +3122,12 @@ class TransitionWorker(WorkerThread):
             diff = int(final_value) - int_val
             if diff != 0:
                 step_size = 5
-                step = math.copysign(step_size, diff) if abs(diff) > step_size else diff
-                new_value = str(int_val + step)
-                self.expected_values[control] = new_value  # revise to new value
-                print(f"step vdu={control.controller.vdu_stable_id} code={control.vcp_capability.vcp_code} value={new_value} final={final_value}")
-                control.restore_vdu_attribute(new_value)
-                more_to_do = more_to_do or new_value != final_value
+                step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
+                str_value = str(int_val + step)
+                self.expected_values[control] = str_value  # revise to new value
+                print(f"step vdu={control.controller.vdu_stable_id} code={control.vcp_capability.vcp_code} value={str_value} final={final_value}")
+                control.restore_vdu_attribute(str_value)
+                more_to_do = more_to_do or str_value != final_value
             now = datetime.now()
             if (now - self.last_progress_time).total_seconds() >= 1.0:
                 self.last_progress_time = now
@@ -4422,8 +4422,8 @@ class LuxProfileChart(QLabel):
     def __init__(self, chart_data: Dict[str, List[Tuple[int, int]]], range_restrictions: Dict[str, Tuple[int, int]],
                  chart_changed_callback: Callable, parent=None):
         super().__init__(parent=parent)
-        random.seed(0x543abc)
-        self.possible_colors = [QColor.fromHsl((h * 27) % 359,
+        random.seed(0x543fff)
+        self.possible_colors = [QColor.fromHsl(int(h * 137.508) % 255,
                                                random.randint(64, 128),
                                                random.randint(192, 200)) for h in range(len(chart_data))]
         self.chart_changed_callback = chart_changed_callback
@@ -4444,7 +4444,7 @@ class LuxProfileChart(QLabel):
         self.current_vdu = list(chart_data.keys())[0]
         self.range_restrictions = range_restrictions
 
-    def create_plot(self):
+    def create_plot(self, hover_pos: Tuple[int, int] | None = None):
         pixmap = QPixmap(self.pixmap_width, self.pixmap_height)
         painter = QPainter(pixmap)
         painter.fillRect(0, 0, self.pixmap_width, self.pixmap_height, QColor(0x5b93c5))
@@ -4486,16 +4486,29 @@ class LuxProfileChart(QLabel):
         # draw profile per vdu - draw current_profile last/on-top
         for name, vdu_data in [(k, v) for k, v in self.data.items() if k != self.current_vdu] + \
                               [(self.current_vdu, self.data[self.current_vdu])]:
-            painter.setPen(QPen(QColor(self.line_colors[name]), 6))
             last_x, last_y = 0, 0
             for lux, percent in vdu_data:
+                painter.setPen(QPen(QColor(self.line_colors[name]), 6))
                 x = self.x_origin + self.x_from_lux(lux)
                 y = self.y_origin - self.y_from_percent(percent)
+                #painter.drawPoint(x, y)
                 if self.current_vdu == name:
                     painter.drawEllipse(x - ellipse_diameter // 2, y - ellipse_diameter // 2, ellipse_diameter, ellipse_diameter)
                 if last_x and last_y:
+                    painter.setPen(QPen(QColor(self.line_colors[name]), 6))
                     painter.drawLine(last_x, last_y, x, y)
                 last_x, last_y = x, y
+
+        if hover_pos is not None:
+            x, y = hover_pos
+            if self.x_origin <= x <= self.x_origin + self.plot_width and self.y_origin - self.plot_width <= y <= self.y_origin:
+                painter.setPen(QPen(QColor(0xffffff), 1))
+                painter.drawLine(self.x_origin, y, self.x_origin + self.plot_width, y)
+                painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height)
+                percent = self.percent_from_y(y - self.y_origin)
+                lux = self.lux_from_x(x - self.x_origin)
+                painter.setPen(QPen(QColor(0x000000), 1))
+                painter.drawText(x + 10, y - 10, f"{lux}, {percent}%")
 
         painter.end()
         self.setPixmap(pixmap)
@@ -4528,9 +4541,8 @@ class LuxProfileChart(QLabel):
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         local_pos = self.mapFromGlobal(event.globalPos())
-        percent = self.percent_from_y(self.y_origin - local_pos.y())
-        lux = self.lux_from_x(local_pos.x() - self.x_origin)
-        QToolTip.showText(self.mapToGlobal(event.pos()), f"{lux}, {percent}", self, QRect(event.pos().x(), event.pos().y(), 1, 1))
+        self.create_plot(hover_pos=(local_pos.x(), local_pos.y()))
+        self.update()
 
     def percent_from_y(self, y):
         percent = round(100.0 * abs(y) / self.plot_height)
@@ -4657,7 +4669,7 @@ class LuxAutoBrightnessWorker(WorkerThread):
                 return
             self.lux_monitor.lux_config.load()  # Refresh
             metered_lux = self.lux_monitor.lux_meter.get_value()
-            in_progress = False # self.main_panel.vdu_control_panels
+            in_progress = False
             for control_panel in self.lux_monitor.main_app.main_panel.vdu_control_panels:
                 controller = control_panel.controller
                 id = control_panel.controller.vdu_stable_id
@@ -4675,14 +4687,14 @@ class LuxAutoBrightnessWorker(WorkerThread):
                     for control in control_panel.vcp_controls:
                         if control.vcp_capability.vcp_code == '10':
                             control.restore_vdu_attribute(str(current_brightness + step))
-                            # Not sure how this works, perhaps because it's a QThread it can interact with the UI.
+                            # Not sure why this works, perhaps because it's a QThread it can interact with the UI.
                             control.refresh_view()
                     in_progress = in_progress or current_brightness + step != profile_brightness
+            time.sleep(1.0)  # give DDC some time to settle.
             if not in_progress:
-                sleep_start_time = time.time()
-                sleep_end_time = sleep_start_time + self.lux_monitor.lux_config.get_interval_minutes() * 60.0
+                sleep_end_time = time.time() + self.lux_monitor.lux_config.get_interval_minutes() * 60.0
                 while time.time() < sleep_end_time:
-                    time.sleep(5.0)
+                    time.sleep(1.0)
                     if self.stop_requested:
                         return
 
@@ -4742,7 +4754,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.range_restrictions = {}
         self.has_changes = False
 
-        self.display_lux_timer = QTimer()
+        self.display_lux_timer = QTimer()  # TODO timers can cause jerky response - change to QThread?
         self.display_lux_timer.setInterval(5_000)
         self.display_lux_timer.timeout.connect(self.display_current_lux)
 
@@ -4759,7 +4771,8 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         top_box.setLayout(grid_layout)
 
         self.lux_display = LuxMeterWidget(parent=self)
-        self.lux_display.display_current_lux(0.0)
+        lux = 0 if self.main_app.lux_monitor.lux_meter is None else self.main_app.lux_monitor.lux_meter.get_value()
+        self.lux_display.display_current_lux(lux)
         grid_layout.addWidget(self.lux_display, 0, 0, 3, 3, alignment=Qt.AlignLeft | Qt.AlignTop)
 
         def choose_device():
@@ -4835,7 +4848,6 @@ class LuxDialog(QDialog, DialogSingletonMixin):
                 self.plot.set_current_profile(list(self.chart_data.keys())[index])
 
         self.profile_selector.currentIndexChanged.connect(select_profile)
-
         self.show()
 
     def reinitialise(self, in_constructor: bool = False):
@@ -5083,12 +5095,12 @@ class LuxMonitor:
 
     def initialise(self):
         self.lux_config = LuxConfig().load()
+        self.lux_meter = LuxMeterSerialDevice(self.lux_config.get_device_name())
         if self.lux_config.is_metering_enabled():
             try:
                 log_info("Lux auto-brightness monitoring commences.")
                 if self.lux_auto_brightness_worker is not None:
                     self.lux_auto_brightness_worker.stop_requested = True
-                self.lux_meter = LuxMeterSerialDevice(self.lux_config.get_device_name())
                 self.lux_auto_brightness_worker = LuxAutoBrightnessWorker(self)
                 self.lux_auto_brightness_worker.start()
             except SerialException as se:
