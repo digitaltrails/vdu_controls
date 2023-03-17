@@ -4707,9 +4707,9 @@ class LuxAutoBrightnessPreset(Preset):
 class LuxAutoBrightnessWorker(WorkerThread):
     _refresh_gui_view = pyqtSignal(VduControlBase)
 
-    def __init__(self, lux_monitor: LuxMonitor):
+    def __init__(self, main_app: VduAppWindow):
         super().__init__(task_body=self.adjust_brightness)
-        self.lux_monitor = lux_monitor
+        self.main_app = main_app
         self.last_value = None
         self.stop_requested = False
 
@@ -4722,13 +4722,13 @@ class LuxAutoBrightnessWorker(WorkerThread):
         while True:
             if self.stop_requested:
                 return
-            self.lux_monitor.lux_config.load()  # Refresh
-            metered_lux = self.lux_monitor.lux_meter.get_value()
+            lux_monitor_data = self.main_app.lux_monitor_data
+            lux_monitor_data.lux_config.load()  # Refresh
+            metered_lux = lux_monitor_data.lux_meter.get_value()
             in_progress = False
-            for control_panel in self.lux_monitor.main_app.main_panel.vdu_control_panels:
+            for control_panel in self.main_app.main_panel.vdu_control_panels:
                 controller = control_panel.controller
-                id = control_panel.controller.vdu_stable_id
-                profile = self.lux_monitor.lux_config.get_vdu_profile(controller)
+                profile = lux_monitor_data.lux_config.get_vdu_profile(controller)
                 profile_brightness = 20
                 for lux, value in profile:
                     if metered_lux > lux:
@@ -4744,9 +4744,9 @@ class LuxAutoBrightnessWorker(WorkerThread):
                             control.restore_vdu_attribute(str(current_brightness + step))
                             self._refresh_gui_view.emit(control)
                     in_progress = in_progress or current_brightness + step != profile_brightness
-            time.sleep(1.0)  # give DDC some time to settle.
+            time.sleep(0.5)  # give DDC some time to settle.
             if not in_progress:
-                sleep_end_time = time.time() + self.lux_monitor.lux_config.get_interval_minutes() * 60.0
+                sleep_end_time = time.time() + lux_monitor_data.lux_config.get_interval_minutes() * 60.0
                 while time.time() < sleep_end_time:
                     time.sleep(1.0)
                     if self.stop_requested:
@@ -4821,7 +4821,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         top_box.setLayout(grid_layout)
 
         self.lux_meter_widget = LuxMeterWidget(parent=self)
-        lux = 0 if self.main_app.lux_monitor.lux_meter is None else self.main_app.lux_monitor.lux_meter.get_cached_value(5.0)
+        lux = 0 if self.main_app.lux_monitor_data.lux_meter is None else self.main_app.lux_monitor_data.lux_meter.get_cached_value(5.0)
         self.lux_meter_widget.display_lux(lux)
         grid_layout.addWidget(self.lux_meter_widget, 0, 0, 3, 3, alignment=Qt.AlignLeft | Qt.AlignTop)
 
@@ -4901,7 +4901,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.show()
 
     def reinitialise(self, in_constructor: bool = False):
-        self.config = self.main_app.lux_monitor.lux_config.duplicate(LuxConfig())
+        self.config = self.main_app.lux_monitor_data.lux_config.duplicate(LuxConfig())
         self.device_name = self.config.get("lux-meter", "lux-device", fallback="/dev/ttyUSB0")
         self.enabled_checkbox.setChecked(self.config.is_metering_enabled())
         self.has_changes = False
@@ -4915,7 +4915,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         if not in_constructor:
             self.plot.update_data(self.chart_data, self.range_restrictions)
             self.plot.set_current_profile(list(self.chart_data.keys())[0])
-        self.lux_meter_widget.start_metering(self.main_app.lux_monitor.lux_meter)
+        self.lux_meter_widget.start_metering(self.main_app.lux_monitor_data.lux_meter)
 
     def make_visible(self):
         self.reinitialise()
@@ -4945,7 +4945,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
     def save_config(self):
         self.config.save(self.path)
-        self.main_app.lux_monitor.initialise()
+        self.main_app.lux_monitor_data.initialise(self.main_app)
         self.has_changes = False
 
     def closeEvent(self, event) -> None:
@@ -5002,7 +5002,6 @@ class GreyScaleDialog(QDialog):
         event.accept()
 
 
-# TODO consider changing to a non-modal QDialog which would also remove the need for a multiple inheritance
 class AboutDialog(QMessageBox, DialogSingletonMixin):
 
     @staticmethod
@@ -5126,16 +5125,15 @@ def parse_transaction_type(string_value: str):
     return transaction_type
 
 
-class LuxMonitor:
+class LuxMonitoringData:
 
-    def __init__(self, main_app: VduAppWindow) -> None:
+    def __init__(self) -> None:
         super().__init__()
-        self.main_app = main_app
         self.lux_config: LuxConfig | None = None
         self.lux_meter: LuxMeterSerialDevice | None = None
         self.lux_auto_brightness_worker: LuxAutoBrightnessWorker | None = None
 
-    def initialise(self):
+    def initialise(self, main_app: VduAppWindow):
         self.lux_config = LuxConfig().load()
         if self.lux_config.is_metering_enabled():
             try:
@@ -5143,7 +5141,7 @@ class LuxMonitor:
                 self.lux_meter = LuxMeterSerialDevice(self.lux_config.get_device_name())
                 if self.lux_auto_brightness_worker is not None:
                     self.lux_auto_brightness_worker.stop_requested = True
-                self.lux_auto_brightness_worker = LuxAutoBrightnessWorker(self)
+                self.lux_auto_brightness_worker = LuxAutoBrightnessWorker(main_app)
                 self.lux_auto_brightness_worker.start()
             except SerialException as se:
                 print(f"failed {se}")
@@ -5179,7 +5177,7 @@ class VduAppWindow(QMainWindow):
         self.transitioning_dummy_preset: Preset | None = None
         self.ddcutil: DdcUtil | None = None
         if self.main_config.is_set(GlobalOption.LUX_METER_ENABLED):
-            self.lux_monitor = LuxMonitor(self)
+            self.lux_monitor_data = LuxMonitoringData()
         current_desktop = os.environ.get('XDG_CURRENT_DESKTOP', default='unknown')
         gnome_tray_behaviour = main_config.is_set(GlobalOption.SYSTEM_TRAY_ENABLED) and 'gnome' in current_desktop.lower()
 
@@ -5318,7 +5316,7 @@ class VduAppWindow(QMainWindow):
         self.app_restore_state()
 
         if self.main_config.is_set(GlobalOption.LUX_METER_ENABLED):
-            self.lux_monitor.initialise()
+            self.lux_monitor_data.initialise(self)
 
         if self.tray is not None:
             def show_window():
