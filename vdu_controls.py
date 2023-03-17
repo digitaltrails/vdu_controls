@@ -3101,7 +3101,7 @@ class TransitionWorker(WorkerThread):
     def task_body(self):
         def update_gui(gui_control: VduControlBase):
             gui_control.refresh_view()
-
+        # TODO figure out - may be the wrong thread for doing the connects - but it works
         self._update_gui_view.connect(update_gui)
         self.progress_signal.connect(self.progress_callable)  # Connect here in the right thread
         while self.state != TransitionState.FINISHED_STEPPING and self.values_are_as_expected():
@@ -4716,7 +4716,7 @@ class LuxAutoBrightnessWorker(WorkerThread):
         def refresh_control(control: VduControlBase):
             control.refresh_view()
 
-        self._refresh_gui_view.connect(refresh_control)
+        self._refresh_gui_view.connect(refresh_control)  # Make sure GUI refreshes occur in the GUI thread (this thread).
 
     def adjust_brightness(self):
         while True:
