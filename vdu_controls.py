@@ -5004,6 +5004,33 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         super().closeEvent(event)
 
 
+class LuxMonitoringData:
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.lux_config: LuxConfig | None = None
+        self.lux_meter: LuxMeterSerialDevice | None = None
+        self.lux_auto_brightness_worker: LuxAutoBrightnessWorker | None = None
+
+    def initialise(self, main_app: VduAppWindow):
+        self.lux_config = LuxConfig().load()
+        if self.lux_config.is_metering_enabled():
+            try:
+                log_info("Lux auto-brightness monitoring commences.")
+                self.lux_meter = lux_create_device(self.lux_config.get_device_name())
+                if self.lux_auto_brightness_worker is not None:
+                    self.lux_auto_brightness_worker.stop_requested = True
+                self.lux_auto_brightness_worker = LuxAutoBrightnessWorker(main_app)
+                self.lux_auto_brightness_worker.start()
+            except SerialException as se:
+                print(f"failed {se}")
+        else:
+            log_info("Lux auto-brightness monitoring stopping.")  # TODO handle exception
+            if self.lux_auto_brightness_worker is not None:
+                self.lux_auto_brightness_worker.stop_requested = True
+                self.lux_auto_brightness_worker = None
+
+
 class GreyScaleDialog(QDialog):
     """Creates a dialog with a grey scale VDU calibration image.  Non-model. Have as many as you like - one per VDU."""
 
@@ -5164,33 +5191,6 @@ def parse_transaction_type(string_value: str):
             if component_value.lower() == option.name.lower():
                 transaction_type |= option
     return transaction_type
-
-
-class LuxMonitoringData:
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.lux_config: LuxConfig | None = None
-        self.lux_meter: LuxMeterSerialDevice | None = None
-        self.lux_auto_brightness_worker: LuxAutoBrightnessWorker | None = None
-
-    def initialise(self, main_app: VduAppWindow):
-        self.lux_config = LuxConfig().load()
-        if self.lux_config.is_metering_enabled():
-            try:
-                log_info("Lux auto-brightness monitoring commences.")
-                self.lux_meter = lux_create_device(self.lux_config.get_device_name())
-                if self.lux_auto_brightness_worker is not None:
-                    self.lux_auto_brightness_worker.stop_requested = True
-                self.lux_auto_brightness_worker = LuxAutoBrightnessWorker(main_app)
-                self.lux_auto_brightness_worker.start()
-            except SerialException as se:
-                print(f"failed {se}")
-        else:
-            log_info("Lux auto-brightness monitoring stopping.")  # TODO handle exception
-            if self.lux_auto_brightness_worker is not None:
-                self.lux_auto_brightness_worker.stop_requested = True
-                self.lux_auto_brightness_worker = None
 
 
 class VduAppWindow(QMainWindow):
