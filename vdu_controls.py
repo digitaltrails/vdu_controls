@@ -506,6 +506,7 @@ import pathlib
 import pickle
 import random
 import re
+import select
 import signal
 import socket
 import stat
@@ -4645,12 +4646,10 @@ class LuxMeterWidgetThread(WorkerThread):
 
     def __init__(self, lux_meter: LuxMeterSerialDevice):
         super().__init__(task_body=self.read_meter)
-        print(f"lux meter init {threading.get_ident()}")
         self.lux_meter = lux_meter
         self.stop_requested = False
 
     def read_meter(self):
-        print(f"lux meter running {threading.get_ident()}")
         while not self.stop_requested:
             if self.lux_meter is None:
                 return
@@ -4672,7 +4671,7 @@ class LuxMeterFifoDevice:
     def __init__(self, device_name: str, thread: QThread = None):
         super().__init__()
         self.device_name = device_name
-        self.fifo = os.open(self.device_name, os.O_RDONLY | os.O_NONBLOCK)
+        self.fifo = open(self.device_name)
         self.lock = Lock()
         self.cached_value = None
         self.cached_time = time.time()
@@ -4689,22 +4688,13 @@ class LuxMeterFifoDevice:
         with self.lock:
             while True:
                 try:
-                    buffer = b''
-                    while not buffer.endswith(b'\n'):
-                        char = os.read(self.fifo, 1)
-                        print(char, threading.get_ident())
-                        if char == b'' or char is None:
-                            time.sleep(5)
-                        else:
-                            buffer += char
-                    value = float(buffer.decode('utf-8').replace("\n", ''))
-                    print(f"meter={value}")
-                    return value
+                    if len(select.select([self.fifo], [], [], 5.0)[0]) == 1:
+                        buffer = self.fifo.readline()
+                        if len(select.select([self.fifo], [], [], 0.0)[0]) == 0 and buffer is not None:   # Buffer has been flushed
+                            return float(buffer.replace('\n', ''))
                 except (OSError, ValueError) as se:
                     log_warning(f"Retry read of {self.device_name}, will reopen feed in 10 seconds", se)
                     time.sleep(10)
-                    os.close(self.fifo)
-                    self.fifo = os.open(self.device_name, os.O_RDONLY | os.O_NONBLOCK)
 
     def close(self):
         with self.lock:
