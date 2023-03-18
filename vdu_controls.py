@@ -379,6 +379,19 @@ cloud conditions. For example:
 
         curl 'wttr.in?format="dawn=%D,dusk=%d,weather=%C"'
 
+Light/Lux Metering
+------------------
+
+If you have a hardware device that can provide a ambient Lux reading, ``vdu_controls`` can use
+this this device to adjust VDU brightness values.
+
+The Settings Dialog includes an option enable a lux meter.  Once enabled, a Content Menu
+Light Meter option can be used to bring up a Lux Metering Dialog.  The dialog can be used
+to define the metering device and the Lux Brightness Response Profile for each VDU.
+
+The metering device must be readable as a character device or fifo.  It must supply one
+floating point lux reading per line.
+
 Responsiveness
 --------------
 
