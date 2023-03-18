@@ -1178,7 +1178,7 @@ class DdcUtil:
                     result_list.append(value_max_pair)
                 return result_list
             except subprocess.SubprocessError as e:
-                log_warning("Subprocess error: ", args, str(e))
+                #log_warning("Subprocess error: ", args, str(e))  # duplicates existing logging
                 if i + 1 == GET_ATTRIBUTES_RETRIES:
                     raise  # Too many failures, pass the buck upstairs
             log_warning(f"ddcutil maybe running too fast for monitor {vdu_id}, try increasing --sleep-multiplier.")
@@ -4698,6 +4698,7 @@ class LuxMeterFifoDevice:
             while True:
                 try:
                     if self.fifo is None:
+                        log_info(f"Initialising fifo {self.device_name} - waiting on fifo data.")
                         self.fifo = open(self.device_name)
                     if len(select.select([self.fifo], [], [], 5.0)[0]) == 1:
                         buffer = self.fifo.readline()
@@ -4736,6 +4737,7 @@ class LuxMeterSerialDevice:
             while True:
                 try:
                     if self.serial_device is None:
+                        log_info(f"Initialising character device {self.device_name} - waiting on data.")
                         self.serial_device = serial.Serial(self.device_name)
                     self.serial_device.flushInput()
                     time.sleep(0.1)
@@ -4759,7 +4761,7 @@ class LuxAutoBrightnessWorker(WorkerThread):
     _refresh_gui_view = pyqtSignal(VduControlBase)
 
     def __init__(self, main_app: VduAppWindow):
-        super().__init__(task_body=self.adjust_brightness)
+        super().__init__(task_body=self.adjust_brightness, task_finished=self.finished_callable)
         self.main_app = main_app
         self.last_value = None
         self.stop_requested = False
@@ -4774,29 +4776,28 @@ class LuxAutoBrightnessWorker(WorkerThread):
             if self.stop_requested:
                 return
             lux_monitor_data = self.main_app.lux_monitor_data
-            lux_monitor_data.lux_config.load()  # Refresh
+            lux_config = lux_monitor_data.lux_config.load()  # Refresh
             if lux_monitor_data.lux_meter is None:
                 return
             metered_lux = lux_monitor_data.lux_meter.get_value()
             in_progress = False
             for control_panel in self.main_app.main_panel.vdu_control_panels:
                 controller = control_panel.controller
-                profile = lux_monitor_data.lux_config.get_vdu_profile(controller)
-                profile_brightness = 20
-                for lux, value in profile:
-                    if metered_lux > lux:
-                        profile_brightness = value
-                current_brightness = int(controller.get_attribute('10')[0])
-                if current_brightness != profile_brightness:
-                    diff = profile_brightness - current_brightness
-                    step_size = 4 if abs(diff) < 8 else 8
-                    step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
-                    log_info(f"stepping {controller.vdu_stable_id} step={step} current={current_brightness} target={profile_brightness}")
-                    for control in control_panel.vcp_controls:
-                        if control.vcp_capability.vcp_code == '10':
-                            control.restore_vdu_attribute(str(current_brightness + step))
-                            self._refresh_gui_view.emit(control)
-                    in_progress = in_progress or current_brightness + step != profile_brightness
+                profile_brightness = next((v for x, v in reversed(lux_config.get_vdu_profile(controller)) if metered_lux >= x), 20)
+                brightness_control = next((c for c in control_panel.vcp_controls if c.vcp_capability.vcp_code == '10'), None)
+                if brightness_control is not None:
+                    try:
+                        current_brightness = int(controller.get_attribute('10')[0])
+                        if current_brightness != profile_brightness:
+                            diff = profile_brightness - current_brightness
+                            step_size = 4 if abs(diff) < 8 else 8
+                            step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
+                            log_info(f"Auto lux: stepping {controller.vdu_stable_id} step={step} current={current_brightness} target={profile_brightness}")
+                            brightness_control.restore_vdu_attribute(str(current_brightness + step))
+                            self._refresh_gui_view.emit(brightness_control)
+                            in_progress = in_progress or current_brightness + step != profile_brightness
+                    except VduException as ve:
+                        log_warning(f"Lux Auto Brightness error on {controller.vdu_stable_id}, will sleep and try again: {ve}")
             time.sleep(0.5)  # give DDC some time to settle.
             if not in_progress:
                 sleep_end_time = time.time() + lux_monitor_data.lux_config.get_interval_minutes() * 60.0
@@ -4805,6 +4806,8 @@ class LuxAutoBrightnessWorker(WorkerThread):
                     if self.stop_requested:
                         return
 
+    def finished_callable(self):
+        log_info(f"LuxAutoBrightnessWorker exited exception={self.vdu_exception}")
 
 class LuxConfig(ConfigIni):
 
