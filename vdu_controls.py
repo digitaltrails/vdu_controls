@@ -3060,7 +3060,7 @@ class WorkerThread(QThread):
 
     def __init__(self, task_body: Callable, task_finished: Callable | None = None) -> None:
         super().__init__()
-        log_info(f"init in thread = {threading.get_ident()} {task_body} {self}")
+        log_info(f"init in thread = {threading.get_ident()} {self.__class__.__name__}")
         self.task_body = task_body
         self.task_finished = task_finished
         if self.task_finished is not None:
@@ -3070,7 +3070,7 @@ class WorkerThread(QThread):
     def run(self):
         """Long-running task."""
         try:
-            log_info(f"run in thread = {threading.get_ident()} {self}")
+            log_info(f"run in thread = {threading.get_ident()} {self.task_body}")
             self.task_body()
         except VduException as e:
             self.vdu_exception = e
@@ -3127,7 +3127,6 @@ class TransitionWorker(WorkerThread):
         self._update_gui_view.connect(update_gui)
         self.progress_signal.connect(self.progress_callable)  # Connect here in the right thread
         while self.state != TransitionState.FINISHED_STEPPING and self.values_are_as_expected():
-            print("cycle")
             cycle_start = time.time()
             if cycle_start - self.last_step_time > self.step_interval_seconds:
                 self.last_step_time = cycle_start
@@ -3147,7 +3146,6 @@ class TransitionWorker(WorkerThread):
 
     def step(self):
         more_to_do = False
-        print('step')
         for control in self.preset_transitioning_controls:  # Step each control by 1 or -1...
             int_val = int(self.expected_values[control])
             final_value = self.final_values[control]
@@ -3157,8 +3155,6 @@ class TransitionWorker(WorkerThread):
                 step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
                 str_value = str(int_val + step)
                 self.expected_values[control] = str_value  # revise to new value
-                print(
-                    f"step vdu={control.controller.vdu_stable_id} code={control.vcp_capability.vcp_code} value={str_value} final={final_value}")
                 control.restore_vdu_attribute(str_value)
                 self._update_gui_view.emit(control)
                 more_to_do = more_to_do or str_value != final_value
@@ -4684,7 +4680,7 @@ class LuxMeterFifoDevice:
     def __init__(self, device_name: str, thread: QThread = None):
         super().__init__()
         self.device_name = device_name
-        self.fifo = open(self.device_name)
+        self.fifo = None
         self.lock = Lock()
         self.cached_value = None
         self.cached_time = time.time()
@@ -4701,12 +4697,14 @@ class LuxMeterFifoDevice:
         with self.lock:
             while True:
                 try:
+                    if self.fifo is None:
+                        self.fifo = open(self.device_name)
                     if len(select.select([self.fifo], [], [], 5.0)[0]) == 1:
                         buffer = self.fifo.readline()
                         if len(select.select([self.fifo], [], [], 0.0)[0]) == 0 and buffer is not None:   # Buffer has been flushed
                             return float(buffer.replace('\n', ''))
                 except (OSError, ValueError) as se:
-                    log_warning(f"Retry read of {self.device_name}, will reopen feed in 10 seconds", se)
+                    log_warning(f"Retry read of {self.device_name}, will retry feed in 10 seconds", se)
                     time.sleep(10)
 
     def close(self):
@@ -4720,7 +4718,7 @@ class LuxMeterSerialDevice:
     def __init__(self, device_name: str):
         super().__init__()
         self.device_name = device_name
-        self.serial_device = serial.Serial(device_name)
+        self.serial_device = None
         self.lock = Lock()
         self.cached_value = None
         self.cached_time = time.time()
@@ -4737,6 +4735,8 @@ class LuxMeterSerialDevice:
         with self.lock:
             while True:
                 try:
+                    if self.serial_device is None:
+                        self.serial_device = serial.Serial(self.device_name)
                     self.serial_device.flushInput()
                     time.sleep(0.1)
                     buffer = self.serial_device.readline()
@@ -4791,7 +4791,7 @@ class LuxAutoBrightnessWorker(WorkerThread):
                     diff = profile_brightness - current_brightness
                     step_size = 4 if abs(diff) < 8 else 8
                     step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
-                    print(f"stepping {controller.vdu_stable_id} step={step} current={current_brightness} target={profile_brightness}")
+                    log_info(f"stepping {controller.vdu_stable_id} step={step} current={current_brightness} target={profile_brightness}")
                     for control in control_panel.vcp_controls:
                         if control.vcp_capability.vcp_code == '10':
                             control.restore_vdu_attribute(str(current_brightness + step))
@@ -5568,7 +5568,6 @@ class VduAppWindow(QMainWindow):
 
         def update_progress():
             nonlocal worker_thread
-            print(f"update progress self.main_panel.busy={self.main_panel.busy}")
             self.main_panel.indicate_busy(False) if self.main_panel.busy else None
             presets_dialog_update_view(
                 tr("Transitioning to preset {} (elapsed time {} seconds)...").format(
