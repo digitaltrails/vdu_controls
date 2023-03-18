@@ -13,10 +13,10 @@ Usage:
                      [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                      [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                      [--enable-vcp-code vcp_code] [--system-tray] [--debug] [--warnings] [--syslog]
-                     [--location latitude,longitude] [--translations] [--no-weather] [--lux-meter]
-                     [--no-splash] [--sleep-multiplier multiplier]
-                     [--create-config-files]
-                     [--install] [--uninstall]
+                     [--location latitude,longitude] [--translations] [--lux-meter]
+                     [--no-schedule] [--no-weather] [--no-splash]
+                     [--sleep-multiplier multiplier]
+                     [--create-config-files] [--install] [--uninstall]
 
 Optional arguments:
 -------------------
@@ -35,8 +35,8 @@ Optional arguments:
                             local latitude and longitude for triggering presets by solar elevation
       --translations
                             enable language translations
-      --no-weather
-                            disable weather lookups
+      --no-schedule         disable preset schedule
+      --no-weather          disable weather lookups
       --lux-meter           enable hardware light metering
       --debug               enable debug output to stdout
       --warnings            popup a warning when a VDU lacks an enabled control
@@ -131,6 +131,7 @@ The config files are in INI-format divided into a number of sections as outlined
     splash-screen-enabled = yes|no
     translations-enabled = yes|no
     weather-enabled = yes|no
+    schedule-enabled = yes|no
     lux-meter-enabled = yes|no
     warnings-enabled = yes|no
     debug-enabled = yes|no
@@ -512,6 +513,7 @@ import subprocess
 import sys
 import syslog
 import textwrap
+import threading
 import time
 import traceback
 import urllib.request
@@ -1385,24 +1387,28 @@ class GeoLocation:
 
 
 class GlobalOption(Enum):
-    SYSTEM_TRAY_ENABLED = QT_TR_NOOP('system-tray-enabled'), 'no'
-    TRANSLATIONS_ENABLED = QT_TR_NOOP('translations-enabled'), 'no'
-    WEATHER_ENABLED = QT_TR_NOOP('weather-enabled'), 'yes'
-    LUX_METER_ENABLED = QT_TR_NOOP('lux-meter-enabled'), 'no'
-    SPLASH_SCREEN_ENABLED = QT_TR_NOOP('splash-screen-enabled'), 'yes'
-    WARNINGS_ENABLED = QT_TR_NOOP('warnings-enabled'), 'no'
-    DEBUG_ENABLED = QT_TR_NOOP('debug-enabled'), 'no'
-    SYSLOG_ENABLED = QT_TR_NOOP('syslog-enabled'), 'no'
+    SYSTEM_TRAY_ENABLED = QT_TR_NOOP('system-tray-enabled'), 'no', 'restart'
+    TRANSLATIONS_ENABLED = QT_TR_NOOP('translations-enabled'), 'no', 'restart'
+    WEATHER_ENABLED = QT_TR_NOOP('weather-enabled'), 'yes', ''
+    SCHEDULE_ENABLED = QT_TR_NOOP('schedule-enabled'), 'yes', ''
+    LUX_METER_ENABLED = QT_TR_NOOP('lux-meter-enabled'), 'no', 'restart'
+    SPLASH_SCREEN_ENABLED = QT_TR_NOOP('splash-screen-enabled'), 'yes', ''
+    WARNINGS_ENABLED = QT_TR_NOOP('warnings-enabled'), 'no', ''
+    DEBUG_ENABLED = QT_TR_NOOP('debug-enabled'), 'no', ''
+    SYSLOG_ENABLED = QT_TR_NOOP('syslog-enabled'), 'no', ''
     LOCATION = QT_TR_NOOP('location'), ''
 
     def name(self) -> str:
         return self.value[0]
 
-    def arg_name(self, no=False) -> str:
-        return ("no_" if no else "") + self.value[0].replace("-enabled", "").replace("-", "_")
+    def arg_name(self, with_prefix_no=False) -> str:
+        return ("no_" if with_prefix_no else "") + self.value[0].replace("-enabled", "").replace("-", "_")
 
     def is_bool(self) -> bool:
         return self.name().endswith("-enabled")
+
+    def requires_restart(self):
+        return self.value[2] == 'restart'
 
     def default_value(self) -> str:
         return self.value[1]
@@ -1594,8 +1600,8 @@ class VduControlsConfig:
         parser.add_argument('--location', default=None, type=str, help='latitude,longitude')
         parser.add_argument('--translations', default=False, action='store_true',
                             help='enable language translations')
+        parser.add_argument('--no-schedule', default=False, action='store_true', help='disable preset schedule')
         parser.add_argument('--no-weather', default=False, action='store_true', help='disable weather lookups')
-        parser.set_defaults(weather_disabled=True)
         parser.add_argument('--lux-meter', default=False, action='store_true',
                             help='enable hardware light metering')
         parser.add_argument('--debug', default=False, action='store_true', help='enable debug output to stdout')
@@ -1627,7 +1633,7 @@ class VduControlsConfig:
             if option.is_bool():
                 if option.arg_name() in arg_values and arg_values[option.arg_name()]:
                     self.set_global(option, "yes")
-                if option.arg_name(no=True) in arg_values and arg_values[option.arg_name(no=True)]:
+                if option.arg_name(with_prefix_no=True) in arg_values and arg_values[option.arg_name(with_prefix_no=True)]:
                     self.set_global(option, "no")
             elif option.arg_name() in arg_values and arg_values[option.arg_name()] is not None:
                 self.set_global(option, arg_values[option.arg_name()])
@@ -3040,6 +3046,7 @@ class WorkerThread(QThread):
 
     def __init__(self, task_body: Callable, task_finished: Callable | None = None) -> None:
         super().__init__()
+        log_info(f"init in thread = {threading.get_ident()} {task_body} {self}")
         self.task_body = task_body
         self.task_finished = task_finished
         if self.task_finished is not None:
@@ -3049,6 +3056,7 @@ class WorkerThread(QThread):
     def run(self):
         """Long-running task."""
         try:
+            log_info(f"run in thread = {threading.get_ident()} {self}")
             self.task_body()
         except VduException as e:
             self.vdu_exception = e
@@ -4637,28 +4645,86 @@ class LuxMeterWidgetThread(WorkerThread):
 
     def __init__(self, lux_meter: LuxMeterSerialDevice):
         super().__init__(task_body=self.read_meter)
+        print(f"lux meter init {threading.get_ident()}")
         self.lux_meter = lux_meter
         self.stop_requested = False
 
     def read_meter(self):
+        print(f"lux meter running {threading.get_ident()}")
         while not self.stop_requested:
+            if self.lux_meter is None:
+                return
             self.new_lux_value.emit(round(self.lux_meter.get_cached_value(5.0)))
             time.sleep(5.0)
 
 
-class LuxMeterSerialDevice():
+def lux_create_device(device_name: str):
+    if pathlib.Path(device_name).exists() and os.access(device_name, os.R_OK):
+        if pathlib.Path(device_name).is_char_device():
+            return LuxMeterSerialDevice(device_name)
+        elif pathlib.Path(device_name).is_fifo():
+            return LuxMeterFifoDevice(device_name)
+    return None
+
+
+class LuxMeterFifoDevice:
+
+    def __init__(self, device_name: str, thread: QThread = None):
+        super().__init__()
+        self.device_name = device_name
+        self.fifo = os.open(self.device_name, os.O_RDONLY | os.O_NONBLOCK)
+        self.lock = Lock()
+        self.cached_value = None
+        self.cached_time = time.time()
+        self.thread = thread
+
+    def get_cached_value(self, age_seconds: float):
+        if self.cached_value is not None and time.time() - self.cached_time <= age_seconds:
+            return self.cached_value
+        self.cached_value = self.get_value()
+        self.cached_time = time.time()
+        return self.cached_value
+
+    def get_value(self):
+        with self.lock:
+            while True:
+                try:
+                    buffer = b''
+                    while not buffer.endswith(b'\n'):
+                        char = os.read(self.fifo, 1)
+                        print(char, threading.get_ident())
+                        if char == b'' or char is None:
+                            time.sleep(5)
+                        else:
+                            buffer += char
+                    value = float(buffer.decode('utf-8').replace("\n", ''))
+                    print(f"meter={value}")
+                    return value
+                except (OSError, ValueError) as se:
+                    log_warning(f"Retry read of {self.device_name}, will reopen feed in 10 seconds", se)
+                    time.sleep(10)
+                    os.close(self.fifo)
+                    self.fifo = os.open(self.device_name, os.O_RDONLY | os.O_NONBLOCK)
+
+    def close(self):
+        with self.lock:
+            if self.fifo is not None:
+                os.close(self.fifo)
+
+
+class LuxMeterSerialDevice:
 
     def __init__(self, device_name: str):
         super().__init__()
         self.device_name = device_name
-        self.device = serial.Serial(device_name) if pathlib.Path(device_name).exists() else None
-        self.serial_device = serial.Serial(self.device_name)
+        self.serial_device = serial.Serial(device_name)
         self.lock = Lock()
         self.cached_value = None
-        self.cached_time = None
+        self.cached_time = time.time()
 
     def get_cached_value(self, age_seconds: float):
         if self.cached_value is not None and time.time() - self.cached_time <= age_seconds:
+            print(f"lux meter return cached value {self.cached_value}")
             return self.cached_value
         self.cached_value = self.get_value()
         self.cached_time = time.time()
@@ -4682,26 +4748,8 @@ class LuxMeterSerialDevice():
 
     def close(self):
         with self.lock:
-            self.serial_device.close()
-
-
-class LuxAutoBrightnessPreset(Preset):
-
-    def __init__(self, to_do: List[Tuple[str, int]]):
-        super().__init__("Auto-brightness")
-        for vdu_stable_id, brightness in to_do:
-            self.preset_ini.add_section(vdu_stable_id)
-            self.preset_ini[vdu_stable_id]['brightness'] = str(brightness)
-        self.preset_ini.add_section('preset')
-        self.preset_ini['preset']['transition-type'] = 'scheduled,menu,signal'
-        self.preset_ini['preset']['transition-step-interval-seconds'] = '1'
-        self.icon = create_icon_from_svg_bytes(BRIGHTNESS_SVG)
-
-    def load(self) -> ConfigIni:
-        return self
-
-    def create_icon(self) -> QIcon:
-        return self.icon
+            if self.serial_device is not None:
+                self.serial_device.close()
 
 
 class LuxAutoBrightnessWorker(WorkerThread):
@@ -4724,6 +4772,8 @@ class LuxAutoBrightnessWorker(WorkerThread):
                 return
             lux_monitor_data = self.main_app.lux_monitor_data
             lux_monitor_data.lux_config.load()  # Refresh
+            if lux_monitor_data.lux_meter is None:
+                return
             metered_lux = lux_monitor_data.lux_meter.get_value()
             in_progress = False
             for control_panel in self.main_app.main_panel.vdu_control_panels:
@@ -4738,7 +4788,7 @@ class LuxAutoBrightnessWorker(WorkerThread):
                     diff = profile_brightness - current_brightness
                     step_size = 4 if abs(diff) < 8 else 8
                     step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
-                    print(f"stepping {id} step={step} current={current_brightness} target={profile_brightness}")
+                    print(f"stepping {controller.vdu_stable_id} step={step} current={current_brightness} target={profile_brightness}")
                     for control in control_panel.vcp_controls:
                         if control.vcp_capability.vcp_code == '10':
                             control.restore_vdu_attribute(str(current_brightness + step))
@@ -4821,8 +4871,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         top_box.setLayout(grid_layout)
 
         self.lux_meter_widget = LuxMeterWidget(parent=self)
-        lux = 0 if self.main_app.lux_monitor_data.lux_meter is None else self.main_app.lux_monitor_data.lux_meter.get_cached_value(5.0)
-        self.lux_meter_widget.display_lux(lux)
+        self.lux_meter_widget.display_lux(0)
         grid_layout.addWidget(self.lux_meter_widget, 0, 0, 3, 3, alignment=Qt.AlignLeft | Qt.AlignTop)
 
         def choose_device():
@@ -4946,6 +4995,8 @@ class LuxDialog(QDialog, DialogSingletonMixin):
     def save_config(self):
         self.config.save(self.path)
         self.main_app.lux_monitor_data.initialise(self.main_app)
+        self.lux_meter_widget.stop_metering()
+        self.lux_meter_widget.start_metering(self.main_app.lux_monitor_data.lux_meter)
         self.has_changes = False
 
     def closeEvent(self, event) -> None:
@@ -5138,7 +5189,7 @@ class LuxMonitoringData:
         if self.lux_config.is_metering_enabled():
             try:
                 log_info("Lux auto-brightness monitoring commences.")
-                self.lux_meter = LuxMeterSerialDevice(self.lux_config.get_device_name())
+                self.lux_meter = lux_create_device(self.lux_config.get_device_name())
                 if self.lux_auto_brightness_worker is not None:
                     self.lux_auto_brightness_worker.stop_requested = True
                 self.lux_auto_brightness_worker = LuxAutoBrightnessWorker(main_app)
@@ -5193,8 +5244,8 @@ class VduAppWindow(QMainWindow):
             main_window_action = main_window_action_implemenation
 
         def settings_changed(changed_settings: List):
-            for setting in ['system-tray-enabled', 'translations-enabled', 'lux-meter-enabled']:
-                if ('vdu-controls-globals', setting) in changed_settings:
+            for setting in GlobalOption:
+                if ('vdu-controls-globals', setting.name()) in changed_settings and setting.requires_restart():
                     restart_application(tr("The change to the {} option requires "
                                            "vdu_controls to restart.").format(setting))
             main_config.reload()
@@ -5648,6 +5699,9 @@ class VduAppWindow(QMainWindow):
 
     def schedule_presets(self, reset: bool = False) -> Preset | None:
         # As well as scheduling, this method finds and returns the preset that should be applied at this time.
+        if not self.main_config.is_set(GlobalOption.SCHEDULE_ENABLED):
+            log_info("Scheduling is disabled")
+            return
         location = self.main_config.get_location()
         if location is None:
             return None
@@ -5693,6 +5747,9 @@ class VduAppWindow(QMainWindow):
         return most_recent_overdue
 
     def activate_scheduled_preset(self, preset: Preset, check_weather: bool = True, immediately: bool = False):
+        if not self.main_config.is_set(GlobalOption.SCHEDULE_ENABLED):
+            log_info(f"Schedule is disabled - not activating preset {preset.name}")
+            return
         now = zoned_now()
         weather_text = ''
         proceed = True
