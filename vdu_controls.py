@@ -4571,7 +4571,7 @@ class LuxProfileChart(QLabel):
         self.create_plot(hover_pos=(local_pos.x(), local_pos.y()))
         self.update()
 
-    def find_close_to(self, x: int, y: int, vdu_data: Dict[str, List[Tuple[int, int]]]) -> Tuple:
+    def find_close_to(self, x: int, y: int, vdu_data: List[Tuple[int, int]]) -> Tuple:
         for existing_lux, existing_percent in vdu_data:
             existing_x = self.x_from_lux(existing_lux)
             existing_y = self.y_from_percent(existing_percent)
