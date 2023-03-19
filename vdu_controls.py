@@ -4764,6 +4764,7 @@ class LuxMeterSerialDevice:
 
 class LuxAutoBrightnessWorker(WorkerThread):
     _refresh_gui_view = pyqtSignal(VduControlBase)
+    _message = pyqtSignal(str)
 
     def __init__(self, main_app: VduAppWindow):
         super().__init__(task_body=self.adjust_brightness, task_finished=self.finished_callable)
@@ -4776,7 +4777,16 @@ class LuxAutoBrightnessWorker(WorkerThread):
 
         self._refresh_gui_view.connect(refresh_control)  # Make sure GUI refreshes occur in the GUI thread (this thread).
 
+        def lux_message(message: str):
+            if LuxDialog.exists():
+                dialog = LuxDialog.get_instance()
+                dialog.display_message(message)
+
+        self._message.connect(lux_message)
+
     def adjust_brightness(self):
+        self._message.emit(tr("Brightness auto adjustment is enabled."))
+        time.sleep(2.0)
         while True:
             if self.stop_requested:
                 return
@@ -4798,13 +4808,16 @@ class LuxAutoBrightnessWorker(WorkerThread):
                             step_size = 4 if abs(diff) < 8 else 8
                             step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
                             log_info(f"Auto lux: stepping {controller.vdu_stable_id} step={step} current={current_brightness} target={profile_brightness}")
+                            self._message.emit(tr("Adjusting {}...").format(controller.vdu_stable_id))
                             brightness_control.restore_vdu_attribute(str(current_brightness + step))
                             self._refresh_gui_view.emit(brightness_control)
                             in_progress = in_progress or current_brightness + step != profile_brightness
                     except VduException as ve:
+                        self._message.emit(tr("Error adjusting {}").format(controller.vdu_stable_id))
                         log_warning(f"Lux Auto Brightness error on {controller.vdu_stable_id}, will sleep and try again: {ve}")
             time.sleep(0.5)  # give DDC some time to settle.
             if not in_progress:
+                self._message.emit("")
                 sleep_end_time = time.time() + lux_monitor_data.lux_config.get_interval_minutes() * 60.0
                 while time.time() < sleep_end_time:
                     time.sleep(1.0)
@@ -4945,6 +4958,10 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         revert_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr("Revert"))
         revert_button.clicked.connect(self.reinitialise)
         button_layout.addWidget(revert_button, 0, Qt.AlignBottom | Qt.AlignLeft)
+
+        button_layout.addSpacing(30)
+        self.message_area = QLabel("Lux Meter")
+        button_layout.addWidget(self.message_area)
         button_layout.addStretch(0)
 
         quit_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), tr("Close"))
@@ -4978,6 +4995,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.lux_meter_widget.start_metering(self.main_app.lux_monitor_data.lux_meter)
 
     def make_visible(self):
+        self.display_message("")
         self.reinitialise()
         super().make_visible()
 
@@ -4991,6 +5009,9 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         else:
             self.meter_device_selector.setText(tr(" Not available {}").format(device))
         return None
+
+    def display_message(self, message):
+        self.message_area.setText(message)
 
     def load_config(self):
         if self.path.exists():
@@ -5009,6 +5030,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.lux_meter_widget.stop_metering()
         self.lux_meter_widget.start_metering(self.main_app.lux_monitor_data.lux_meter)
         self.has_changes = False
+        self.display_message(tr("Saved {}").format(self.path.name))
 
     def closeEvent(self, event) -> None:
         if self.has_changes:
