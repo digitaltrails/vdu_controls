@@ -4532,14 +4532,14 @@ class LuxProfileChart(QLabel):
         if hover_pos is not None:
             x, y = hover_pos
             if self.x_origin <= x <= self.x_origin + self.plot_width and self.y_origin - self.plot_width <= y <= self.y_origin:
-                painter.setPen(QPen(QColor(0xffffff), 1))
+                match = self.find_close_to(x - self.x_origin, self.y_origin - y, vdu_data=self.data[self.current_vdu])
+                painter.setPen(QPen(QColor(0xffffff), 1)) if match[0] is None else painter.setPen(QPen(QColor(0xff0000), 2))
                 painter.drawLine(self.x_origin, y, self.x_origin + self.plot_width, y)
                 painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height)
                 percent = self.percent_from_y(y - self.y_origin)
                 lux = self.lux_from_x(x - self.x_origin)
                 painter.setPen(QPen(QColor(0x000000), 1))
                 painter.drawText(x + 10, y - 10, f"{lux}, {percent}%")
-
         painter.end()
         self.setPixmap(pixmap)
 
@@ -4553,18 +4553,15 @@ class LuxProfileChart(QLabel):
         y = self.y_origin - local_pos.y()
         deleted = False
         vdu_data = self.data[self.current_vdu]
-        for existing_lux, existing_percent in vdu_data:
-            existing_x = self.x_from_lux(existing_lux)
-            existing_y = self.y_from_percent(existing_percent)
-            if existing_x - 10 <= x <= existing_x + 10 and existing_y - 10 <= y <= existing_y + 10:
-                vdu_data.remove((existing_lux, existing_percent))
-                deleted = True
-        if not deleted:
+        _, _, existing_lux, existing_percent = self.find_close_to(x, y, vdu_data)
+        if existing_lux is not None:
+            vdu_data.remove((existing_lux, existing_percent))
+        else:
             percent = self.percent_from_y(y)
             lux = self.lux_from_x(x)
             vdu_data.append((lux, percent))
             vdu_data.sort()
-        self.create_plot()
+        self.create_plot(hover_pos=(local_pos.x(), local_pos.y()))
         self.update()
         self.chart_changed_callback()
         event.accept()
@@ -4573,6 +4570,14 @@ class LuxProfileChart(QLabel):
         local_pos = self.mapFromGlobal(event.globalPos())
         self.create_plot(hover_pos=(local_pos.x(), local_pos.y()))
         self.update()
+
+    def find_close_to(self, x: int, y: int, vdu_data: Dict[str, List[Tuple[int, int]]]) -> Tuple:
+        for existing_lux, existing_percent in vdu_data:
+            existing_x = self.x_from_lux(existing_lux)
+            existing_y = self.y_from_percent(existing_percent)
+            if existing_x - 10 <= x <= existing_x + 10 and existing_y - 10 <= y <= existing_y + 10:
+                return existing_x, existing_y, existing_lux, existing_percent
+        return None, None, None, None
 
     def percent_from_y(self, y):
         percent = round(100.0 * abs(y) / self.plot_height)
