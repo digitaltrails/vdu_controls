@@ -4982,6 +4982,8 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.device_name = self.config.get("lux-meter", "lux-device", fallback="/dev/ttyUSB0")
         self.enabled_checkbox.setChecked(self.config.is_metering_enabled())
         self.has_changes = False
+        for _ in range(0, self.profile_selector.count()):
+            self.profile_selector.removeItem(0)
         for vdu in self.main_app.vdu_controllers:
             range_restriction = vdu.capabilities['10'].values
             min_v, max_v = (0, 100) if len(range_restriction) == 0 else (int(range_restriction[1]), int(range_restriction[2]))
