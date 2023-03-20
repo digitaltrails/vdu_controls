@@ -771,20 +771,8 @@ CONTRAST_SVG = b"""
 </svg>
 """
 
-PLAY_SVG = b"""
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="2 3 14 14" width="24" height="24">
-  <defs>
-    <style type="text/css" id="current-color-scheme">
-      .ColorScheme-Text { color:#232629; }
-    </style>
-  </defs>
-  <g transform="translate(1,1)">
-    <path style="fill:currentColor;fill-opacity:1;stroke:none"
-     d="m 8.0039062,4 c -2.7614237,0 -5,2.2385763 -5,5 0,2.761424 2.2385763,5 5,5 2.7614238,0 4.9999998,-2.238576 4.9999998,-5 0,-2.7614237 -2.238576,-4.9999999 -4.9999998,-5 z m 0,1 c 2.2091388,1e-7 3.9999998,1.7908611 3.9999998,4 0,2.209139 -1.790861,4 -3.9999998,4 -2.209139,0 -4,-1.790861 -4,-4 0,-2.209139 1.790861,-4 4,-4 z M 6.5,6.5 v 5 L 10,9 Z"
-     class="ColorScheme-Text" id="path4"/>
-  </g>
-</svg>
-"""
+AUTO_LUX_ON_SVG = BRIGHTNESS_SVG.replace(b'viewBox="0 0 24 24"', b'viewBox="3 3 18 18"').replace(b'#232629', b'#ff8500')
+AUTO_LUX_OFF_SVG = BRIGHTNESS_SVG.replace(b'viewBox="0 0 24 24"', b'viewBox="3 3 18 18"').replace(b'#232629', b'#94989c')
 
 COLOR_TEMPERATURE_SVG = b"""
 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
@@ -2794,7 +2782,7 @@ class ContextMenu(QMenu):
     def __init__(self,
                  main_window,
                  main_window_action,
-                 about_action, help_action, chart_action, lux_meter_action, settings_action,
+                 about_action, help_action, chart_action, lux_auto_action, lux_meter_action, settings_action,
                  presets_action, refresh_action, quit_action) -> None:
         super().__init__()
         self.main_window = main_window
@@ -2807,6 +2795,7 @@ class ContextMenu(QMenu):
         self.preset_prop = "is_preset"
         self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Grey Scale'), chart_action)
         if lux_meter_action is not None:
+            self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Auto/Manual'), lux_auto_action)
             self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Light meter'), lux_meter_action)
         self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Settings'), settings_action)
         self.addAction(si(self, QStyle.SP_BrowserReload), tr('Refresh'), refresh_action).setProperty(self.busy_disable_prop,
@@ -4511,7 +4500,7 @@ class LuxProfileChart(QLabel):
         painter.drawText(self.pixmap_width // 3, 30, "Lux Brightness Response Profiles")
 
         # Draw x-axis
-        painter.drawLine(self.x_origin, self.y_origin, self.x_origin + self.plot_width, self.y_origin)
+        painter.drawLine(self.x_origin, self.y_origin, self.x_origin + self.plot_width + 25, self.y_origin)
         for lux in [0, 10, 100, 1_000, 10_000, 100_000]:  # Draw x-axis ticks
             x = self.x_from_lux(lux)
             painter.drawLine(self.x_origin + x, self.y_origin + 5, self.x_origin + x, self.y_origin - 5)
@@ -4533,13 +4522,13 @@ class LuxProfileChart(QLabel):
         # Draw range restrictions (if not 0..100)
         min_v, max_v = self.range_restrictions[self.current_vdu]
         if min_v > 0:
-            painter.setPen(QPen(QColor(0xff0000), 4))
+            painter.setPen(QPen(QColor(0xff0000), 2, Qt.DashLine))
             cutoff = self.y_origin - self.y_from_percent(min_v)
-            painter.fillRect(self.x_origin, cutoff, self.plot_width, self.y_from_percent(min_v), QColor(0, 0, 255, 20))
+            painter.drawLine(self.x_origin, cutoff, self.x_origin + self.plot_width + 25, cutoff)
         if max_v < 100:
-            painter.setPen(QPen(QColor(0xff0000), 4))
+            painter.setPen(QPen(QColor(0xff0000), 2, Qt.DashLine))
             cutoff = self.y_origin - self.y_from_percent(max_v)
-            painter.drawLine(self.x_origin, cutoff, self.x_origin + self.plot_width, cutoff)
+            painter.drawLine(self.x_origin, cutoff, self.x_origin + self.plot_width + 25, cutoff)
 
         ellipse_diameter = 20
         # draw profile per vdu - draw current_profile last/on-top
@@ -4547,16 +4536,22 @@ class LuxProfileChart(QLabel):
                               [(self.current_vdu, self.data[self.current_vdu])]:
             last_x, last_y = 0, 0
             for lux, percent in vdu_data:
+                histogram_color = QColor(self.line_colors[name])
+                histogram_color.setAlpha(50)
                 painter.setPen(QPen(QColor(self.line_colors[name]), 6))
                 x = self.x_origin + self.x_from_lux(lux)
                 y = self.y_origin - self.y_from_percent(percent)
                 # painter.drawPoint(x, y)
                 if self.current_vdu == name:
                     painter.drawEllipse(x - ellipse_diameter // 2, y - ellipse_diameter // 2, ellipse_diameter, ellipse_diameter)
+                    if last_x and last_y:
+                        painter.fillRect(last_x, last_y, x - last_x, self.y_origin - last_y, histogram_color)
                 if last_x and last_y:
                     painter.setPen(QPen(QColor(self.line_colors[name]), 6))
                     painter.drawLine(last_x, last_y, x, y)
                 last_x, last_y = x, y
+            if self.current_vdu == name and last_x and last_y:
+                painter.fillRect(last_x, last_y, 25, self.y_origin - last_y, histogram_color)
 
         if hover_pos is not None:
             x, y = hover_pos
@@ -4790,7 +4785,7 @@ class LuxMeterSerialDevice:
                 self.serial_device.close()
 
 
-class LuxAutoBrightnessWorker(WorkerThread):
+class LuxAutoWorker(WorkerThread):
     _refresh_gui_view = pyqtSignal(VduControlBase)
     _message = pyqtSignal(str)
 
@@ -4818,7 +4813,7 @@ class LuxAutoBrightnessWorker(WorkerThread):
         while True:
             if self.stop_requested:
                 return
-            lux_monitor_data = self.main_app.lux_monitor_data
+            lux_monitor_data = self.main_app.lux_auto_controller
             lux_config = lux_monitor_data.lux_config.load()  # Refresh
             if lux_monitor_data.lux_meter is None:
                 return
@@ -4886,7 +4881,7 @@ class LuxConfig(ConfigIni):
     def get_interval_minutes(self) -> int:
         return self.getint('lux-meter', 'interval-minutes', fallback=1)
 
-    def is_metering_enabled(self):
+    def is_auto_enabled(self):
         return self.getboolean("lux-meter", "automatic-brightness", fallback=False)
 
     def load(self, force: bool = False) -> LuxConfig:
@@ -4961,8 +4956,8 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         button_layout = QHBoxLayout()
         buttons_widget.setLayout(button_layout)
 
-        save_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr("Save"))
-        save_button.setToolTip(tr("Save and implement charted VDU profiles."))
+        save_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr("Apply"))
+        save_button.setToolTip(tr("Save and apply charted VDU profiles."))
         save_button.clicked.connect(partial(self.save_profiles))
         button_layout.addWidget(save_button, 0, Qt.AlignBottom | Qt.AlignLeft)
 
@@ -5021,7 +5016,8 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.make_visible()
 
     def reinitialise(self, in_constructor: bool = False):
-        self.config = self.main_app.lux_monitor_data.lux_config.duplicate(LuxConfig())
+        current_selection = 0 if self.profile_selector.currentIndex() == -1 else self.profile_selector.currentIndex()
+        self.config = self.main_app.lux_auto_controller.lux_config.duplicate(LuxConfig())
         self.device_name = self.config.get("lux-meter", "lux-device", fallback="/dev/ttyUSB0")
         self.enabled_checkbox.setChecked(self.config.is_metering_enabled())
         self.has_profile_changes = False
@@ -5036,8 +5032,9 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.show_current_device(self.device_name)
         if not in_constructor:
             self.plot.update_data(self.chart_data, self.range_restrictions)
-            self.plot.set_current_profile(list(self.chart_data.keys())[0])
-        self.lux_meter_widget.start_metering(self.main_app.lux_monitor_data.lux_meter)
+            self.profile_selector.setCurrentIndex(current_selection)
+            self.plot.set_current_profile(list(self.chart_data.keys())[current_selection])
+        self.lux_meter_widget.start_metering(self.main_app.lux_auto_controller.lux_meter)
 
     def make_visible(self):
         self.display_message("")
@@ -5073,9 +5070,9 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.has_profile_changes = False
         self.config.save(self.path)
         if requires_auto_brightness_restart:
-            self.main_app.lux_monitor_data.update()
+            self.main_app.lux_auto_controller.update()
             self.lux_meter_widget.stop_metering()
-            self.lux_meter_widget.start_metering(self.main_app.lux_monitor_data.lux_meter)
+            self.lux_meter_widget.start_metering(self.main_app.lux_auto_controller.lux_meter)
 
     def save_profiles(self):
         if not self.config.has_section('lux-profile'):
@@ -5098,27 +5095,27 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         super().closeEvent(event)
 
 
-class LuxMonitoringData:
+class LuxAutoController:
 
     def __init__(self, main_app: VduAppWindow) -> None:
         super().__init__()
         self.main_app = main_app
         self.lux_config: LuxConfig | None = None
         self.lux_meter: LuxMeterSerialDevice | None = None
-        self.lux_auto_brightness_worker: LuxAutoBrightnessWorker | None = None
+        self.lux_auto_brightness_worker: LuxAutoWorker | None = None
         self.button = QToolButton()
-        self.lux_button = ToolButton(BRIGHTNESS_SVG, tr("Automatic brightness control"))
+        self.lux_button = ToolButton(AUTO_LUX_ON_SVG, tr("Automatic brightness control"))
         self.lux_button.pressed.connect(self.toggle_auto)
 
     def update(self):
         self.lux_config = LuxConfig().load()
-        if self.lux_config.is_metering_enabled():
+        if self.lux_config.is_auto_enabled():
             try:
                 log_info("Lux auto-brightness monitoring enabled.")
                 self.lux_meter = lux_create_device(self.lux_config.get_device_name())
                 if self.lux_auto_brightness_worker is not None:
                     self.lux_auto_brightness_worker.stop_requested = True
-                self.lux_auto_brightness_worker = LuxAutoBrightnessWorker(self.main_app)
+                self.lux_auto_brightness_worker = LuxAutoWorker(self.main_app)
                 self.lux_auto_brightness_worker.start()
             except SerialException as se:
                 print(f"failed {se}")
@@ -5127,10 +5124,16 @@ class LuxMonitoringData:
             if self.lux_auto_brightness_worker is not None:
                 self.lux_auto_brightness_worker.stop_requested = True
                 self.lux_auto_brightness_worker = None
-        self.lux_button.refresh_icon(BRIGHTNESS_SVG if self.lux_config.is_metering_enabled() else PLAY_SVG)
+        self.lux_button.refresh_icon(self.current_auto_svg())
+
+    def is_auto_enabled(self):
+        return self.lux_config.is_auto_enabled()
+
+    def current_auto_svg(self):
+        return AUTO_LUX_ON_SVG if self.is_auto_enabled() else AUTO_LUX_OFF_SVG
 
     def toggle_auto(self):
-        enabled = self.lux_config.load().is_metering_enabled()
+        enabled = self.is_auto_enabled()
         self.lux_config.set('lux-meter', 'automatic-brightness', 'no' if enabled else 'yes')
         self.lux_config.save(get_config_path('AutoLux'))
         self.update()
@@ -5326,7 +5329,7 @@ class VduAppWindow(QMainWindow):
         self.previously_detected_vdu_list: List[Tuple[str, str, str, str]] = []
         self.transitioning_dummy_preset: Preset | None = None
         self.ddcutil: DdcUtil | None = None
-        self.lux_monitor_data = LuxMonitoringData(self) if self.main_config.is_set(GlobalOption.LUX_METER_ENABLED) else None
+        self.lux_auto_controller = LuxAutoController(self) if self.main_config.is_set(GlobalOption.LUX_METER_ENABLED) else None
         current_desktop = os.environ.get('XDG_CURRENT_DESKTOP', default='unknown')
         gnome_tray_behaviour = main_config.is_set(GlobalOption.SYSTEM_TRAY_ENABLED) and 'gnome' in current_desktop.lower()
 
@@ -5362,6 +5365,18 @@ class VduAppWindow(QMainWindow):
         def refresh_from_vdus() -> None:
             self.start_refresh()
 
+        def lux_auto_action() -> None:
+            self.lux_auto_controller.toggle_auto()
+            icon = self.app_icon
+            tip = ''
+            if self.lux_auto_controller.is_auto_enabled():
+                icon = create_merged_icon(self.app_icon, create_icon_from_svg_bytes(self.lux_auto_controller.current_auto_svg()))
+                tip = f"{tr('Auto')} {PRESET_APP_SEPARATOR_SYMBOL} "
+            self.app.setWindowIcon(icon)
+            if self.tray:
+                self.tray.setToolTip(f"{tip}{self.app_name}")
+                self.tray.setIcon(icon)
+
         def lux_meter_action() -> None:
             LuxDialog.invoke(self)
 
@@ -5386,6 +5401,8 @@ class VduAppWindow(QMainWindow):
                                             about_action=AboutDialog.invoke,
                                             help_action=HelpDialog.invoke,
                                             chart_action=grey_scale,
+                                            lux_auto_action=lux_auto_action if main_config.is_set(
+                                                GlobalOption.LUX_METER_ENABLED) else None,
                                             lux_meter_action=lux_meter_action if main_config.is_set(
                                                 GlobalOption.LUX_METER_ENABLED) else None,
                                             settings_action=edit_config,
@@ -5465,8 +5482,8 @@ class VduAppWindow(QMainWindow):
         self.create_main_control_panel()
         self.app_restore_state()
 
-        if self.main_config.is_set(GlobalOption.LUX_METER_ENABLED) and self.lux_monitor_data is not None:
-            self.lux_monitor_data.update()
+        if self.main_config.is_set(GlobalOption.LUX_METER_ENABLED) and self.lux_auto_controller is not None:
+            self.lux_auto_controller.update()
 
         if self.tray is not None:
             def show_window():
@@ -5620,8 +5637,8 @@ class VduAppWindow(QMainWindow):
             refresh_button = ToolButton(REFRESH_ICON_SOURCE, tr("Refresh settings from monitors"))
             refresh_button.pressed.connect(self.start_refresh)
             tool_buttons = [refresh_button]
-            if self.main_config.is_set(GlobalOption.LUX_METER_ENABLED) and self.lux_monitor_data is not None:
-                tool_buttons.append(self.lux_monitor_data.lux_button)
+            if self.main_config.is_set(GlobalOption.LUX_METER_ENABLED) and self.lux_auto_controller is not None:
+                tool_buttons.append(self.lux_auto_controller.lux_button)
             self.main_panel.initialise_control_panels(self.app_context_menu, self.main_config, self.vdu_controllers,
                                                       tool_buttons, self.splash_message_signal)
             self.main_panel.indicate_busy(True)
