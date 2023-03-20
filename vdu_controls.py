@@ -5326,8 +5326,7 @@ class VduAppWindow(QMainWindow):
         self.previously_detected_vdu_list: List[Tuple[str, str, str, str]] = []
         self.transitioning_dummy_preset: Preset | None = None
         self.ddcutil: DdcUtil | None = None
-        if self.main_config.is_set(GlobalOption.LUX_METER_ENABLED):
-            self.lux_monitor_data = LuxMonitoringData(self)
+        self.lux_monitor_data = LuxMonitoringData(self) if self.main_config.is_set(GlobalOption.LUX_METER_ENABLED) else None
         current_desktop = os.environ.get('XDG_CURRENT_DESKTOP', default='unknown')
         gnome_tray_behaviour = main_config.is_set(GlobalOption.SYSTEM_TRAY_ENABLED) and 'gnome' in current_desktop.lower()
 
@@ -5347,6 +5346,7 @@ class VduAppWindow(QMainWindow):
                 if ('vdu-controls-globals', setting.name()) in changed_settings and setting.requires_restart():
                     restart_application(tr("The change to the {} option requires "
                                            "vdu_controls to restart.").format(setting))
+                    return
             main_config.reload()
             self.ddcutil.change_settings(debug=main_config.is_set(GlobalOption.DEBUG_ENABLED),
                                          default_sleep_multiplier=main_config.get_sleep_multiplier())
@@ -5465,7 +5465,7 @@ class VduAppWindow(QMainWindow):
         self.create_main_control_panel()
         self.app_restore_state()
 
-        if self.main_config.is_set(GlobalOption.LUX_METER_ENABLED):
+        if self.main_config.is_set(GlobalOption.LUX_METER_ENABLED) and self.lux_monitor_data is not None:
             self.lux_monitor_data.update()
 
         if self.tray is not None:
@@ -5620,7 +5620,7 @@ class VduAppWindow(QMainWindow):
             refresh_button = ToolButton(REFRESH_ICON_SOURCE, tr("Refresh settings from monitors"))
             refresh_button.pressed.connect(self.start_refresh)
             tool_buttons = [refresh_button]
-            if self.main_config.is_set(GlobalOption.LUX_METER_ENABLED):
+            if self.main_config.is_set(GlobalOption.LUX_METER_ENABLED) and self.lux_monitor_data is not None:
                 tool_buttons.append(self.lux_monitor_data.lux_button)
             self.main_panel.initialise_control_panels(self.app_context_menu, self.main_config, self.vdu_controllers,
                                                       tool_buttons, self.splash_message_signal)
