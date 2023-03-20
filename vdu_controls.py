@@ -5392,6 +5392,7 @@ class VduAppWindow(QMainWindow):
             if self.tray:
                 self.tray.setToolTip(f"{tip}{self.app_name}")
                 self.tray.setIcon(icon)
+                self.tray.setContextMenu(self.app_context_menu)  # Force refresh
 
         def lux_meter_action() -> None:
             LuxDialog.invoke(self)
@@ -5802,6 +5803,7 @@ class VduAppWindow(QMainWindow):
                     self.tray.setToolTip(f"{preset.get_title_name()} {PRESET_APP_SEPARATOR_SYMBOL} {self.app_name}")
                     self.tray.setIcon(icon)
         self.app_context_menu.refresh_preset_menu()
+        self.tray.setContextMenu(self.app_context_menu)  # Force refresh
 
     def closeEvent(self, event):
         if self.tray is not None:
