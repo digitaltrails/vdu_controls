@@ -5035,7 +5035,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         current_selection = 0 if self.profile_selector.currentIndex() == -1 else self.profile_selector.currentIndex()
         self.config = self.main_app.lux_auto_controller.lux_config.duplicate(LuxConfig())
         self.device_name = self.config.get("lux-meter", "lux-device", fallback="/dev/ttyUSB0")
-        self.enabled_checkbox.setChecked(self.config.is_metering_enabled())
+        self.enabled_checkbox.setChecked(self.config.is_auto_enabled())
         self.has_profile_changes = False
         for _ in range(0, self.profile_selector.count()):
             self.profile_selector.removeItem(0)
