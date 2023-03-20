@@ -544,14 +544,14 @@ from urllib.error import URLError
 import serial
 from PyQt5 import QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
-    QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, QRect
+    QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant
 from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QRegExpValidator, \
     QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
-    QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QToolTip
+    QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox
 from serial import SerialException
 
 APPNAME = "VDU Controls"
@@ -767,6 +767,21 @@ CONTRAST_SVG = b"""
   </defs>
   <g transform="translate(1,1)">
     <path style="fill:currentColor;fill-opacity:1;stroke:none" transform="translate(-1,-1)" d="m 12,7 c -2.761424,0 -5,2.2386 -5,5 0,2.7614 2.238576,5 5,5 2.761424,0 5,-2.2386 5,-5 0,-2.7614 -2.238576,-5 -5,-5 z m 0,1 v 8 C 9.790861,16 8,14.2091 8,12 8,9.7909 9.790861,8 12,8" class="ColorScheme-Text" id="path79" />
+  </g>
+</svg>
+"""
+
+PLAY_SVG = b"""
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="2 3 14 14" width="24" height="24">
+  <defs>
+    <style type="text/css" id="current-color-scheme">
+      .ColorScheme-Text { color:#232629; }
+    </style>
+  </defs>
+  <g transform="translate(1,1)">
+    <path style="fill:currentColor;fill-opacity:1;stroke:none"
+     d="m 8.0039062,4 c -2.7614237,0 -5,2.2385763 -5,5 0,2.761424 2.2385763,5 5,5 2.7614238,0 4.9999998,-2.238576 4.9999998,-5 0,-2.7614237 -2.238576,-4.9999999 -4.9999998,-5 z m 0,1 c 2.2091388,1e-7 3.9999998,1.7908611 3.9999998,4 0,2.209139 -1.790861,4 -3.9999998,4 -2.209139,0 -4,-1.790861 -4,-4 0,-2.209139 1.790861,-4 4,-4 z M 6.5,6.5 v 5 L 10,9 Z"
+     class="ColorScheme-Text" id="path4"/>
   </g>
 </svg>
 """
@@ -1178,7 +1193,7 @@ class DdcUtil:
                     result_list.append(value_max_pair)
                 return result_list
             except subprocess.SubprocessError as e:
-                #log_warning("Subprocess error: ", args, str(e))  # duplicates existing logging
+                # log_warning("Subprocess error: ", args, str(e))  # duplicates existing logging
                 if i + 1 == GET_ATTRIBUTES_RETRIES:
                     raise  # Too many failures, pass the buck upstairs
             log_warning(f"ddcutil maybe running too fast for monitor {vdu_id}, try increasing --sleep-multiplier.")
@@ -1889,7 +1904,6 @@ class SettingsEditorTab(QWidget):
         self.setLayout(editor_layout)
         self.config_path = get_config_path(vdu_config.config_name)
         self.ini_before = vdu_config.ini_content
-        self.change_callback = change_callback
         self.ini_editable = self.ini_before.duplicate()
         self.field_list: List[SettingsEditorFieldBase] = []
 
@@ -2849,18 +2863,32 @@ class ContextMenu(QMenu):
                 action.setDisabled(is_busy)
 
 
-class BottomToolBar(QToolBar):
+class ToolButton(QToolButton):
 
-    def __init__(self, start_refresh_func, app_context_menu, parent):
+    def __init__(self, svg_source: bytes, tip: str | None = None, parent: QWidget | None = None):
+        super().__init__(parent)
+        if tip is not None:
+            self.setToolTip(tip)
+        self.svg_source = svg_source
+        self.refresh_icon()
+
+    def refresh_icon(self, svg_source: bytes | None = None):
+        if svg_source is not None:
+            self.svg_source = svg_source
+        self.setIcon(create_icon_from_svg_bytes(self.svg_source))
+
+
+class VduPanelBottomToolBar(QToolBar):
+
+    def __init__(self, tool_buttons: List[ToolButton], app_context_menu: ContextMenu, parent: VduControlsMainPanel):
         super().__init__(parent=parent)
 
-        self.refresh_button = QToolButton(self)
-        self.refresh_button.setIcon(create_icon_from_svg_bytes(REFRESH_ICON_SOURCE))
-        self.refresh_button.setToolTip("Refresh settings from monitors")
-        self.refresh_button.pressed.connect(start_refresh_func)
-        self.addWidget(self.refresh_button)
+        self.tool_buttons = tool_buttons
+        for button in self.tool_buttons:
+            self.addWidget(button)
 
         self.setIconSize(QSize(32, 32))
+
         self.progress_bar = QProgressBar(self)
         # Disable text percentage label on the spinner progress-bar
         self.progress_bar.setTextVisible(False)
@@ -2868,11 +2896,9 @@ class BottomToolBar(QToolBar):
         self.progress_bar.setDisabled(True)
         self.addWidget(self.progress_bar)
 
-        self.menu_button = QToolButton(self)
-        self.menu_button.setIcon(create_icon_from_svg_bytes(MENU_ICON_SOURCE))
+        self.menu_button = ToolButton(MENU_ICON_SOURCE, tr("Context and Preset Menu"), self)
         self.menu_button.setMenu(app_context_menu)
         self.menu_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-        self.menu_button.setToolTip("Context and Preset Menu")
 
         self.preset_action = self.addAction(QIcon(), "")
         self.preset_action.setVisible(False)
@@ -2885,12 +2911,14 @@ class BottomToolBar(QToolBar):
     def eventFilter(self, target: QObject, event: QEvent) -> bool:
         # PalletChange happens after the new style sheet is in use.
         if event.type() == QEvent.PaletteChange:
-            self.refresh_button.setIcon(create_icon_from_svg_bytes(REFRESH_ICON_SOURCE))
-            self.menu_button.setIcon(create_icon_from_svg_bytes(MENU_ICON_SOURCE))
+            for button in self.tool_buttons:
+                button.refresh_icon()
+            self.menu_button.refresh_icon()
         return super().eventFilter(target, event)
 
     def indicate_busy(self, is_busy: bool = True):
-        self.refresh_button.setDisabled(is_busy)
+        for button in self.tool_buttons:
+            button.setDisabled(is_busy)
         self.preset_action.setDisabled(is_busy)
         self.progress_bar.setDisabled(not is_busy)
         # Setting range to 0,0 cause the progress bar to pulsate left/right - used as a busy spinner.
@@ -2917,7 +2945,7 @@ class VduControlsMainPanel(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self.vdu_controllers: List[VduController] = []
-        self.bottom_toolbar: BottomToolBar | None = None
+        self.bottom_toolbar: VduPanelBottomToolBar | None = None
         self.context_menu: ContextMenu | None = None
         self.refresh_data_task = None
         self.setObjectName("vdu_controls_main_panel")
@@ -2927,7 +2955,8 @@ class VduControlsMainPanel(QWidget):
 
     def initialise_control_panels(self, app_context_menu: ContextMenu, main_config: VduControlsConfig,
                                   vdu_controllers: List[VduController],
-                                  start_refresh_func: Callable, splash_message_signal: pyqtSignal):
+                                  tool_buttons: List[ToolButton],
+                                  splash_message_signal: pyqtSignal):
 
         self.vdu_controllers = vdu_controllers
 
@@ -2982,8 +3011,7 @@ class VduControlsMainPanel(QWidget):
             no_vdu_layout.addSpacing(32)
             controllers_layout.addWidget(no_vdu_widget)
 
-        self.bottom_toolbar = \
-            BottomToolBar(start_refresh_func=start_refresh_func, app_context_menu=app_context_menu, parent=self)
+        self.bottom_toolbar = VduPanelBottomToolBar(tool_buttons=tool_buttons, app_context_menu=app_context_menu, parent=self)
         layout.addWidget(self.bottom_toolbar)
         self.setContextMenuPolicy(Qt.CustomContextMenu)
 
@@ -3123,6 +3151,7 @@ class TransitionWorker(WorkerThread):
     def task_body(self):
         def update_gui(gui_control: VduControlBase):
             gui_control.refresh_view()
+
         # TODO figure out - may be the wrong thread for doing the connects - but it works
         self._update_gui_view.connect(update_gui)
         self.progress_signal.connect(self.progress_callable)  # Connect here in the right thread
@@ -4551,7 +4580,6 @@ class LuxProfileChart(QLabel):
         local_pos = self.mapFromGlobal(event.globalPos())
         x = local_pos.x() - self.x_origin
         y = self.y_origin - local_pos.y()
-        deleted = False
         vdu_data = self.data[self.current_vdu]
         _, _, existing_lux, existing_percent = self.find_close_to(x, y, vdu_data)
         if existing_lux is not None:
@@ -4638,17 +4666,17 @@ class LuxMeterWidget(QWidget):
             self.history = (self.history + [0] * 10)[-100:]
 
     def start_metering(self, lux_meter):
-        if self.lux_meter_worker is not None:
-            self.stop_metering()
+        self.stop_metering()
         self.lux_meter_worker = LuxMeterWidgetThread(lux_meter)
         self.lux_meter_worker.new_lux_value.connect(self.display_lux)
         self.lux_meter_worker.start()
 
     def stop_metering(self):
-        self.lux_meter_worker.stop_requested = True
-        self.lux_meter_worker.new_lux_value.disconnect(self.display_lux)
-        self.interrupt_history()
-        self.lux_meter_worker = None
+        if self.lux_meter_worker is not None:
+            self.lux_meter_worker.stop_requested = True
+            self.lux_meter_worker.new_lux_value.disconnect(self.display_lux)
+            self.interrupt_history()
+            self.lux_meter_worker = None
 
     def y_from_lux(self, lux: int) -> int:
         return round(
@@ -4707,7 +4735,7 @@ class LuxMeterFifoDevice:
                         self.fifo = open(self.device_name)
                     if len(select.select([self.fifo], [], [], 5.0)[0]) == 1:
                         buffer = self.fifo.readline()
-                        if len(select.select([self.fifo], [], [], 0.0)[0]) == 0 and buffer is not None:   # Buffer has been flushed
+                        if len(select.select([self.fifo], [], [], 0.0)[0]) == 0 and buffer is not None:  # Buffer has been flushed
                             return float(buffer.replace('\n', ''))
                 except (OSError, ValueError) as se:
                     log_warning(f"Retry read of {self.device_name}, will retry feed in 10 seconds", se)
@@ -4748,7 +4776,7 @@ class LuxMeterSerialDevice:
                     time.sleep(0.1)
                     buffer = self.serial_device.readline()
                     value = float(buffer.decode('utf-8').replace("\r\n", ''))
-                    print(f"meter={value}")
+                    # print(f"meter={value}")
                     return value
                 except (SerialException, ValueError) as se:
                     log_warning(f"Retry read of {self.device_name}, will reopen feed in 10 seconds", se)
@@ -4807,17 +4835,19 @@ class LuxAutoBrightnessWorker(WorkerThread):
                             diff = profile_brightness - current_brightness
                             step_size = 4 if abs(diff) < 8 else 8
                             step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
-                            log_info(f"Auto lux: stepping {controller.vdu_stable_id} step={step} current={current_brightness} target={profile_brightness}")
+                            log_info(
+                                f"Auto lux: lux={metered_lux} stepping {controller.vdu_stable_id} step={step} current={current_brightness} target={profile_brightness}")
                             self._message.emit(tr("Adjusting {}...").format(controller.vdu_stable_id))
                             brightness_control.restore_vdu_attribute(str(current_brightness + step))
                             self._refresh_gui_view.emit(brightness_control)
                             in_progress = in_progress or current_brightness + step != profile_brightness
                     except VduException as ve:
                         self._message.emit(tr("Error adjusting {}").format(controller.vdu_stable_id))
-                        log_warning(f"Lux Auto Brightness error on {controller.vdu_stable_id}, will sleep and try again: {ve}")
+                        log_warning(f"Auto lux: Brightness error on {controller.vdu_stable_id}, will sleep and try again: {ve}")
             time.sleep(0.5)  # give DDC some time to settle.
             if not in_progress:
                 self._message.emit("")
+                log_info(f"Auto lux: Sleeping {lux_monitor_data.lux_config.get_interval_minutes()} minutes")
                 sleep_end_time = time.time() + lux_monitor_data.lux_config.get_interval_minutes() * 60.0
                 while time.time() < sleep_end_time:
                     time.sleep(1.0)
@@ -4826,6 +4856,7 @@ class LuxAutoBrightnessWorker(WorkerThread):
 
     def finished_callable(self):
         log_info(f"LuxAutoBrightnessWorker exited exception={self.vdu_exception}")
+
 
 class LuxConfig(ConfigIni):
 
@@ -4852,8 +4883,8 @@ class LuxConfig(ConfigIni):
         brightness_values = [v if v <= max_v else max_v for v in brightness_values]
         return list(zip(lux_values, brightness_values))
 
-    def get_interval_minutes(self):
-        return self.getint("lux-meter", "interval-minutes", fallback=1)
+    def get_interval_minutes(self) -> int:
+        return self.getint('lux-meter', 'interval-minutes', fallback=1)
 
     def is_metering_enabled(self):
         return self.getboolean("lux-meter", "automatic-brightness", fallback=False)
@@ -4880,7 +4911,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.main_app = main_app
         self.chart_data = {}
         self.range_restrictions = {}
-        self.has_changes = False
+        self.has_profile_changes = False
 
         self.path = get_config_path('AutoLux')
 
@@ -4898,38 +4929,20 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.lux_meter_widget.display_lux(0)
         grid_layout.addWidget(self.lux_meter_widget, 0, 0, 3, 3, alignment=Qt.AlignLeft | Qt.AlignTop)
 
-        def choose_device():
-            device_name = QFileDialog.getOpenFileName(self, tr("Select a tty device or fifo"), "/dev/ttyUSB0")[0]
-            if device_name != '':
-                device_name = self.show_current_device(device_name)
-                if device_name is not None:
-                    if not self.config.has_section('lux-meter'):
-                        self.config.add_section('lux-meter')
-                    self.config.set('lux-meter', "lux-device", device_name)
-                    self.has_changes = True
-
         self.meter_device_selector = PushButtonLeftJustified()
         grid_layout.addWidget(self.meter_device_selector, 0, 2, 1, 3)
-        self.meter_device_selector.pressed.connect(choose_device)
 
         self.enabled_checkbox = QCheckBox(tr("Enable automatic brightness adjustment"))
         # self.enabled_checkbox.setLayoutDirection(Qt.RightToLeft)
         grid_layout.addWidget(self.enabled_checkbox, 1, 2, 1, 3)
 
-        def toggle_enabled(enabled: bool):
-            if not self.config.has_section('lux-meter'):
-                self.config.add_section('lux-meter')
-            self.config.set("lux-meter", "automatic-brightness", "yes" if enabled else "no")
-
-        self.enabled_checkbox.stateChanged.connect(toggle_enabled)
-
         self.interval_label = QLabel(tr("Adjustment interval minutes"))
         grid_layout.addWidget(self.interval_label, 2, 2, 1, 2)
 
-        self.interval = QSpinBox()
-        self.interval.setMinimum(1)
-        self.interval.setMaximum(120)
-        grid_layout.addWidget(self.interval, 2, 4, 1, 1)
+        self.interval_selector = QSpinBox()
+        self.interval_selector.setMinimum(1)
+        self.interval_selector.setMaximum(120)
+        grid_layout.addWidget(self.interval_selector, 2, 4, 1, 1)
 
         self.profile_selector = QComboBox()
         self.layout().addWidget(self.profile_selector)
@@ -4937,10 +4950,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.reinitialise(in_constructor=True)
 
         def chart_changed_callback():
-            if not self.config.has_section('lux-profile'):
-                self.config.add_section('lux-profile')
-            self.config.set('lux-profile', self.plot.current_vdu, repr(self.plot.data[self.plot.current_vdu]))
-            self.has_changes = True
+            self.has_profile_changes = True
 
         self.plot = LuxProfileChart(self.chart_data, self.range_restrictions, chart_changed_callback, parent=self)
 
@@ -4952,10 +4962,12 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         buttons_widget.setLayout(button_layout)
 
         save_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr("Save"))
-        save_button.clicked.connect(self.save_config)
+        save_button.setToolTip(tr("Save and implement charted VDU profiles."))
+        save_button.clicked.connect(partial(self.save_profiles))
         button_layout.addWidget(save_button, 0, Qt.AlignBottom | Qt.AlignLeft)
 
         revert_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr("Revert"))
+        revert_button.setToolTip(tr("Revert charted VDU profiles to those last saved."))
         revert_button.clicked.connect(self.reinitialise)
         button_layout.addWidget(revert_button, 0, Qt.AlignBottom | Qt.AlignLeft)
 
@@ -4970,18 +4982,49 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
         self.layout().addWidget(buttons_widget)
 
+        def choose_device():
+            device_name = QFileDialog.getOpenFileName(self, tr("Select a tty device or fifo"), "/dev/ttyUSB0")[0]
+            if device_name != '':
+                device_name = self.show_current_device(device_name)
+                if device_name is not None:
+                    if not self.config.has_section('lux-meter'):
+                        self.config.add_section('lux-meter')
+                    if device_name != self.config.get('lux-meter', 'lux-device', fallback=None):
+                        self.config.set('lux-meter', "lux-device", device_name)
+                        self.save_settings()
+
+        self.meter_device_selector.pressed.connect(choose_device)
+
+        def toggle_enabled(enabled: bool):
+            if not self.config.has_section('lux-meter'):
+                self.config.add_section('lux-meter')
+            self.config.set('lux-meter', 'automatic-brightness', 'yes' if enabled else 'no')
+            self.save_settings()
+
+        self.enabled_checkbox.stateChanged.connect(toggle_enabled)
+
+        def interval_selector_changed() -> None:
+            if not self.config.has_section('lux-meter'):
+                self.config.add_section('lux-meter')
+            self.config.set('lux-meter', 'interval-minutes', str(self.interval_selector.value()))
+            self.save_settings(requires_auto_brightness_restart=False)
+
+        self.interval_selector.setValue(self.config.get_interval_minutes())
+        self.interval_selector.valueChanged.connect(interval_selector_changed)
+
         def select_profile(index: int):
             if self.plot is not None:
                 self.plot.set_current_profile(list(self.chart_data.keys())[index])
 
         self.profile_selector.currentIndexChanged.connect(select_profile)
-        self.show()
+
+        self.make_visible()
 
     def reinitialise(self, in_constructor: bool = False):
         self.config = self.main_app.lux_monitor_data.lux_config.duplicate(LuxConfig())
         self.device_name = self.config.get("lux-meter", "lux-device", fallback="/dev/ttyUSB0")
         self.enabled_checkbox.setChecked(self.config.is_metering_enabled())
-        self.has_changes = False
+        self.has_profile_changes = False
         for _ in range(0, self.profile_selector.count()):
             self.profile_selector.removeItem(0)
         for vdu in self.main_app.vdu_controllers:
@@ -5026,22 +5069,28 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.config = config
         return self.config
 
-    def save_config(self):
+    def save_settings(self, requires_auto_brightness_restart: bool = True):
+        self.has_profile_changes = False
         self.config.save(self.path)
-        self.main_app.lux_monitor_data.initialise(self.main_app)
-        self.lux_meter_widget.stop_metering()
-        self.lux_meter_widget.start_metering(self.main_app.lux_monitor_data.lux_meter)
-        self.has_changes = False
-        self.display_message(tr("Saved {}").format(self.path.name))
+        if requires_auto_brightness_restart:
+            self.main_app.lux_monitor_data.update()
+            self.lux_meter_widget.stop_metering()
+            self.lux_meter_widget.start_metering(self.main_app.lux_monitor_data.lux_meter)
+
+    def save_profiles(self):
+        if not self.config.has_section('lux-profile'):
+            self.config.add_section('lux-profile')
+        self.config.set('lux-profile', self.plot.current_vdu, repr(self.plot.data[self.plot.current_vdu]))
+        self.save_settings(True)
 
     def closeEvent(self, event) -> None:
-        if self.has_changes:
+        if self.has_profile_changes:
             alert = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
                                default=QMessageBox.Cancel)
-            alert.setText(tr("There are unsaved changes?"))
+            alert.setText(tr("There are unsaved profile changes?"))
             answer = alert.exec()
             if answer == QMessageBox.Save:
-                self.save_config()
+                self.save_profiles()
             elif answer == QMessageBox.Cancel:
                 event.ignore()
                 return
@@ -5051,29 +5100,44 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
 class LuxMonitoringData:
 
-    def __init__(self) -> None:
+    def __init__(self, main_app: VduAppWindow) -> None:
         super().__init__()
+        self.main_app = main_app
         self.lux_config: LuxConfig | None = None
         self.lux_meter: LuxMeterSerialDevice | None = None
         self.lux_auto_brightness_worker: LuxAutoBrightnessWorker | None = None
+        self.button = QToolButton()
+        self.lux_button = ToolButton(BRIGHTNESS_SVG, tr("Automatic brightness control"))
+        self.lux_button.pressed.connect(self.toggle_auto)
 
-    def initialise(self, main_app: VduAppWindow):
+    def update(self):
         self.lux_config = LuxConfig().load()
         if self.lux_config.is_metering_enabled():
             try:
-                log_info("Lux auto-brightness monitoring commences.")
+                log_info("Lux auto-brightness monitoring enabled.")
                 self.lux_meter = lux_create_device(self.lux_config.get_device_name())
                 if self.lux_auto_brightness_worker is not None:
                     self.lux_auto_brightness_worker.stop_requested = True
-                self.lux_auto_brightness_worker = LuxAutoBrightnessWorker(main_app)
+                self.lux_auto_brightness_worker = LuxAutoBrightnessWorker(self.main_app)
                 self.lux_auto_brightness_worker.start()
             except SerialException as se:
                 print(f"failed {se}")
         else:
-            log_info("Lux auto-brightness monitoring stopping.")  # TODO handle exception
+            log_info("Lux auto-brightness monitoring disabled.")  # TODO handle exception
             if self.lux_auto_brightness_worker is not None:
                 self.lux_auto_brightness_worker.stop_requested = True
                 self.lux_auto_brightness_worker = None
+        self.lux_button.refresh_icon(BRIGHTNESS_SVG if self.lux_config.is_metering_enabled() else PLAY_SVG)
+
+    def toggle_auto(self):
+        enabled = self.lux_config.load().is_metering_enabled()
+        self.lux_config.set('lux-meter', 'automatic-brightness', 'no' if enabled else 'yes')
+        self.lux_config.save(get_config_path('AutoLux'))
+        self.update()
+        lux_dialog = LuxDialog.get_instance()
+        if lux_dialog is not None:
+            lux_dialog.reinitialise()
+        return enabled
 
 
 class GreyScaleDialog(QDialog):
@@ -5263,7 +5327,7 @@ class VduAppWindow(QMainWindow):
         self.transitioning_dummy_preset: Preset | None = None
         self.ddcutil: DdcUtil | None = None
         if self.main_config.is_set(GlobalOption.LUX_METER_ENABLED):
-            self.lux_monitor_data = LuxMonitoringData()
+            self.lux_monitor_data = LuxMonitoringData(self)
         current_desktop = os.environ.get('XDG_CURRENT_DESKTOP', default='unknown')
         gnome_tray_behaviour = main_config.is_set(GlobalOption.SYSTEM_TRAY_ENABLED) and 'gnome' in current_desktop.lower()
 
@@ -5402,7 +5466,7 @@ class VduAppWindow(QMainWindow):
         self.app_restore_state()
 
         if self.main_config.is_set(GlobalOption.LUX_METER_ENABLED):
-            self.lux_monitor_data.initialise(self)
+            self.lux_monitor_data.update()
 
         if self.tray is not None:
             def show_window():
@@ -5553,8 +5617,13 @@ class VduAppWindow(QMainWindow):
             self.main_panel.connected_vdus_changed.connect(self.create_main_control_panel)
             # Then initialise the control panel display
             self.create_controllers()
-            self.main_panel.initialise_control_panels(self.app_context_menu, self.main_config,
-                                                      self.vdu_controllers, self.start_refresh, self.splash_message_signal)
+            refresh_button = ToolButton(REFRESH_ICON_SOURCE, tr("Refresh settings from monitors"))
+            refresh_button.pressed.connect(self.start_refresh)
+            tool_buttons = [refresh_button]
+            if self.main_config.is_set(GlobalOption.LUX_METER_ENABLED):
+                tool_buttons.append(self.lux_monitor_data.lux_button)
+            self.main_panel.initialise_control_panels(self.app_context_menu, self.main_config, self.vdu_controllers,
+                                                      tool_buttons, self.splash_message_signal)
             self.main_panel.indicate_busy(True)
             self.setCentralWidget(self.main_panel)
             self.setMinimumWidth(existing_width)
@@ -5832,9 +5901,6 @@ class VduAppWindow(QMainWindow):
             msg.setInformativeText(e.args[1])
             msg.exec()
         return True
-
-    def lux_auto_brightness(self, enable: bool):
-        self.lux_auto_brightness_timer.enable(enable)
 
     def is_non_standard_enabled(self) -> bool:
         path = get_config_path("danger")
