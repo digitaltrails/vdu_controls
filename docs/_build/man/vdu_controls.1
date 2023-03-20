@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Mar 06, 2023" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Mar 21, 2023" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.3.1
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -43,10 +43,10 @@ A control panel for external monitors (\fIVisual Display Units\fP).
 [\-\-show {brightness,contrast,audio\-volume,input\-source,power\-mode,osd\-language}]
 [\-\-hide {brightness,contrast,audio\-volume,input\-source,power\-mode,osd\-language}]
 [\-\-enable\-vcp\-code vcp_code] [\-\-system\-tray] [\-\-debug] [\-\-warnings] [\-\-syslog]
-[\-\-location latitude,longitude] [\-\-translations\-enabled]
-[\-\-no\-splash] [\-\-sleep\-multiplier multiplier]
-[\-\-create\-config\-files]
-[\-\-install] [\-\-uninstall]
+[\-\-location latitude,longitude] [\-\-translations] [\-\-lux\-meter]
+[\-\-no\-schedule] [\-\-no\-weather] [\-\-no\-splash]
+[\-\-sleep\-multiplier multiplier]
+[\-\-create\-config\-files] [\-\-install] [\-\-uninstall]
 .UNINDENT
 .UNINDENT
 .UNINDENT
@@ -83,8 +83,17 @@ local latitude and longitude for triggering presets by solar elevation
 .UNINDENT
 .INDENT 0.0
 .TP
-.B  \-\-translations\-enabled
+.B  \-\-translations
 enable language translations
+.TP
+.B  \-\-no\-schedule
+disable preset schedule
+.TP
+.B  \-\-no\-weather
+disable weather lookups
+.TP
+.B  \-\-lux\-meter
+enable hardware light metering
 .TP
 .B  \-\-debug
 enable debug output to stdout
@@ -209,6 +218,9 @@ The config files are in INI\-format divided into a number of sections as outline
 system\-tray\-enabled = yes|no
 splash\-screen\-enabled = yes|no
 translations\-enabled = yes|no
+weather\-enabled = yes|no
+schedule\-enabled = yes|no
+lux\-meter\-enabled = yes|no
 warnings\-enabled = yes|no
 debug\-enabled = yes|no
 syslog\-enabled = yes|no
@@ -543,6 +555,33 @@ curl \(aqwttr.in?format=\(dqdawn=%D,dusk=%d,weather=%C\(dq\(aq
 .UNINDENT
 .UNINDENT
 .UNINDENT
+.SS Light/Lux Metering
+.sp
+If you have a hardware device that can provide a ambient Lux reading, \fBvdu_controls\fP can use
+this this device to adjust VDU brightness values.
+.sp
+The Settings Dialog includes an option enable a lux meter.  Once enabled, a Content Menu
+Light Meter option can be used to bring up a Lux Metering Dialog.  The dialog can be used
+to define the metering device and the Lux Brightness Response Profile for each VDU.
+.sp
+Due to the limitations of VDU hardware and DDC, gradual/stepping changes in brightness
+are quite likely to noticeable.  To avoid annoying frequent noticable changes in brightness,
+it\(aqs recommended that Lux Brightness Profiles be stepped according to stable ranges of
+ambient lighting.  For example, you might what to set a single profile step that includes
+full sun and sun hidden by occasional light clouds.
+.sp
+If light metering and Presets are both being utilised, their combine changes to brightness
+may conflict. For example, a Preset may set a reduced brightness, but soon after,
+light metering might increase it.
+.sp
+The metering device must a readable character device or UNIX fifo (named\-pipe).  It must
+periodically supply one floating point lux reading per line.  Each line must be terminated
+by carriage\-return newline (character device) or just newline (fifo/named\-pipe). Possible
+hardware devices include the GY\-30/BH1750 lux meter wired to an Arduino which may act
+as a character device.  It may be possible use webcam/camera output to compute an
+approximate lux value, ether by analysing image content, or examining image settings that
+contribute to exposure such ISO values, apertures, and shutter speed, the result could be
+feed to a fifo.
 .SS Responsiveness
 .sp
 If your VDU\(aqs are modern, you may find a smaller sleep\-multiplier will speed up the \fBddcutil\fP/VDU protocol

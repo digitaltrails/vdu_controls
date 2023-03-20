@@ -8,10 +8,10 @@ Units</em>).</p>
                  [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                  [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                  [--enable-vcp-code vcp_code] [--system-tray] [--debug] [--warnings] [--syslog]
-                 [--location latitude,longitude] [--translations-enabled]
-                 [--no-splash] [--sleep-multiplier multiplier]
-                 [--create-config-files]
-                 [--install] [--uninstall]</code></pre>
+                 [--location latitude,longitude] [--translations] [--lux-meter]
+                 [--no-schedule] [--no-weather] [--no-splash]
+                 [--sleep-multiplier multiplier]
+                 [--create-config-files] [--install] [--uninstall]</code></pre>
 <h2 id="optional-arguments">Optional arguments:</h2>
 <pre><code>  -h, --help            show this help message and exit
   --detailed-help       full help in Markdown format
@@ -25,8 +25,11 @@ Units</em>).</p>
   --system-tray         start up as an entry in the system tray
   --location latitude,longitude
                         local latitude and longitude for triggering presets by solar elevation
-  --translations-enabled
+  --translations
                         enable language translations
+  --no-schedule         disable preset schedule
+  --no-weather          disable weather lookups
+  --lux-meter           enable hardware light metering
   --debug               enable debug output to stdout
   --warnings            popup a warning when a VDU lacks an enabled control
   --syslog              repeat diagnostic output to the syslog (journald)
@@ -131,6 +134,9 @@ as outlined below::</p>
 system-tray-enabled = yes|no
 splash-screen-enabled = yes|no
 translations-enabled = yes|no
+weather-enabled = yes|no
+schedule-enabled = yes|no
+lux-meter-enabled = yes|no
 warnings-enabled = yes|no
 debug-enabled = yes|no
 syslog-enabled = yes|no
@@ -364,6 +370,33 @@ example:</p>
 * Local time/sunrise/sunset again from wttr.in::
 
     curl &#39;wttr.in?format=&quot;dawn=%D,dusk=%d,weather=%C&quot;&#39;</code></pre>
+<h2 id="lightlux-metering">Light/Lux Metering</h2>
+<p>If you have a hardware device that can provide a ambient Lux reading,
+<code>vdu_controls</code> can use this this device to adjust VDU
+brightness values.</p>
+<p>The Settings Dialog includes an option enable a lux meter. Once
+enabled, a Content Menu Light Meter option can be used to bring up a Lux
+Metering Dialog. The dialog can be used to define the metering device
+and the Lux Brightness Response Profile for each VDU.</p>
+<p>Due to the limitations of VDU hardware and DDC, gradual/stepping
+changes in brightness are quite likely to noticeable. To avoid annoying
+frequent noticable changes in brightness, it’s recommended that Lux
+Brightness Profiles be stepped according to stable ranges of ambient
+lighting. For example, you might what to set a single profile step that
+includes full sun and sun hidden by occasional light clouds.</p>
+<p>If light metering and Presets are both being utilised, their combine
+changes to brightness may conflict. For example, a Preset may set a
+reduced brightness, but soon after, light metering might increase
+it.</p>
+<p>The metering device must a readable character device or UNIX fifo
+(named-pipe). It must periodically supply one floating point lux reading
+per line. Each line must be terminated by carriage-return newline
+(character device) or just newline (fifo/named-pipe). Possible hardware
+devices include the GY-30/BH1750 lux meter wired to an Arduino which may
+act as a character device. It may be possible use webcam/camera output
+to compute an approximate lux value, ether by analysing image content,
+or examining image settings that contribute to exposure such ISO values,
+apertures, and shutter speed, the result could be feed to a fifo.</p>
 <h2 id="responsiveness">Responsiveness</h2>
 <p>If your VDU’s are modern, you may find a smaller sleep-multiplier
 will speed up the <code>ddcutil</code>/VDU protocol exchanges making

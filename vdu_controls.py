@@ -389,8 +389,24 @@ The Settings Dialog includes an option enable a lux meter.  Once enabled, a Cont
 Light Meter option can be used to bring up a Lux Metering Dialog.  The dialog can be used
 to define the metering device and the Lux Brightness Response Profile for each VDU.
 
-The metering device must be readable as a character device or fifo.  It must supply one
-floating point lux reading per line.
+Due to the limitations of VDU hardware and DDC, gradual/stepping changes in brightness
+are quite likely to noticeable.  To avoid annoying frequent noticable changes in brightness,
+it's recommended that Lux Brightness Profiles be stepped according to stable ranges of
+ambient lighting.  For example, you might what to set a single profile step that includes
+full sun and sun hidden by occasional light clouds.
+
+If light metering and Presets are both being utilised, their combine changes to brightness
+may conflict. For example, a Preset may set a reduced brightness, but soon after,
+light metering might increase it.
+
+The metering device must a readable character device or UNIX fifo (named-pipe).  It must
+periodically supply one floating point lux reading per line.  Each line must be terminated
+by carriage-return newline (character device) or just newline (fifo/named-pipe). Possible
+hardware devices include the GY-30/BH1750 lux meter wired to an Arduino which may act
+as a character device.  It may be possible use webcam/camera output to compute an
+approximate lux value, ether by analysing image content, or examining image settings that
+contribute to exposure such ISO values, apertures, and shutter speed, the result could be
+feed to a fifo.
 
 Responsiveness
 --------------
