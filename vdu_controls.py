@@ -2812,7 +2812,7 @@ class ContextMenu(QMenu):
         self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Grey Scale'), chart_action)
         if lux_meter_action is not None:
             self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Auto/Manual'), lux_auto_action)
-            self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Light meter'), lux_meter_action)
+            self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Light metering'), lux_meter_action)
         self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Settings'), settings_action)
         self.addAction(si(self, QStyle.SP_BrowserReload), tr('Refresh'), refresh_action).setProperty(self.busy_disable_prop,
                                                                                                      QVariant(True))
@@ -4666,7 +4666,7 @@ class LuxMeterWidget(QWidget):
         pixmap = QPixmap(self.lux_plot.width(), self.lux_plot.height())
         painter = QPainter(pixmap)
         painter.fillRect(0, 0, self.lux_plot.width(), self.lux_plot.height(), QColor(0x6baee8))  # 0x5b93c5))
-        painter.setPen(QPen(QColor(0xffdd30), 1))
+        painter.setPen(QPen(QColor(0xfec053), 1))  #fbc21b 0xffdd30 #fec053
         for i in range(len(self.history)):
             painter.drawLine(i, self.lux_plot.height(), i, self.lux_plot.height() - self.y_from_lux(self.history[i]))
         painter.end()
