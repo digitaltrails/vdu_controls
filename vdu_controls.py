@@ -5447,14 +5447,12 @@ class VduAppWindow(QMainWindow):
                 # This next call appears to be automatic on KDE, but not on gnome.
                 app.setQuitOnLastWindowClosed(False)
                 self.tray = QSystemTrayIcon()
-                # icon = create_merged_icon(app_icon, create_icon_from_svg_string(MENU_ICON_SOURCE))
-                self.tray.setIcon(self.app_icon)
                 self.tray.setContextMenu(self.app_context_menu)
             else:
                 log_error("no system tray - cannot run in system tray.")
 
-        app.setWindowIcon(self.app_icon)
         self.app_name = "VDU Controls"
+        self.set_icon_and_title()
         app.setApplicationDisplayName(self.app_name)
         # Make sure all icons use HiDPI - toolbars don't by default, so force it.
         app.setAttribute(Qt.AA_UseHighDpiPixmaps)
@@ -5545,6 +5543,16 @@ class VduAppWindow(QMainWindow):
             release_alert.exec()
             # Stops the release notes from being repeated.
             main_config.write_file(get_config_path('vdu_controls'), overwrite=True)
+
+    def set_icon_and_title(self, icon: QIcon | None = None, title_prefix: str | None = None):
+        title = f"{title_prefix} {PRESET_APP_SEPARATOR_SYMBOL} {self.app_name}" if title_prefix else self.app_name
+        if self.windowTitle() != title:
+            self.setWindowTitle(title)
+        icon = create_merged_icon(self.app_icon, icon) if icon else self.app_icon
+        self.app.setWindowIcon(icon)
+        if self.tray:
+            self.tray.setToolTip(title)
+            self.tray.setIcon(icon)
 
     def create_controllers(self) -> None:
         ddcutil_problem = None
@@ -5783,15 +5791,10 @@ class VduAppWindow(QMainWindow):
 
     def display_lux_auto_indicators(self):
         if self.lux_auto_controller is not None and self.lux_auto_controller.lux_config is not None:
-            icon = self.app_icon
-            tip = ''
             if self.lux_auto_controller.is_auto_enabled():
-                icon = create_merged_icon(self.app_icon, create_icon_from_svg_bytes(self.lux_auto_controller.current_auto_svg()))
-                tip = f"{tr('Auto')} {PRESET_APP_SEPARATOR_SYMBOL} "
-            self.app.setWindowIcon(icon)
-            if self.tray:
-                self.tray.setToolTip(f"{tip}{self.app_name}")
-                self.tray.setIcon(icon)
+                self.set_icon_and_title(create_icon_from_svg_bytes(self.lux_auto_controller.current_auto_svg()), tr('Auto'))
+            else:
+                self.set_icon_and_title()
 
     def display_active_preset(self, preset=None) -> None:
         if preset is None and self.transitioning_dummy_preset is not None:
@@ -5800,20 +5803,11 @@ class VduAppWindow(QMainWindow):
             preset = self.which_preset_is_active()
         if preset is None:
             self.main_panel.display_active_preset(None)
-            self.setWindowTitle("")
-            self.setWindowIcon(self.app_icon)
-            if self.tray:
-                self.tray.setToolTip(f"{self.app_name}")
-                self.tray.setIcon(self.app_icon)
+            self.set_icon_and_title()
+            self.display_lux_auto_indicators()  # Check in case both schedule and lux auto are active
         else:
             self.main_panel.display_active_preset(preset)
-            if self.windowTitle() != preset.get_title_name():  # No need to change, already set correctly - prevent flashing during startup
-                self.setWindowTitle(preset.get_title_name())
-                icon = create_merged_icon(self.app_icon, preset.create_icon())
-                self.app.setWindowIcon(icon)
-                if self.tray:
-                    self.tray.setToolTip(f"{preset.get_title_name()} {PRESET_APP_SEPARATOR_SYMBOL} {self.app_name}")
-                    self.tray.setIcon(icon)
+            self.set_icon_and_title(preset.create_icon(), preset.get_title_name())
         self.app_context_menu.refresh_preset_menu()
 
     def closeEvent(self, event):
