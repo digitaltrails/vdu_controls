@@ -4802,6 +4802,7 @@ class LuxMeterSerialDevice:
 
 
 class LuxAutoWorker(WorkerThread):
+    working = pyqtSignal()
     _refresh_gui_view = pyqtSignal(VduControlBase)
     _message = pyqtSignal(str)
 
@@ -4829,11 +4830,12 @@ class LuxAutoWorker(WorkerThread):
         while True:
             if self.stop_requested:
                 return
-            lux_monitor_data = self.main_app.lux_auto_controller
-            lux_config = lux_monitor_data.lux_config.load()  # Refresh
-            if lux_monitor_data.lux_meter is None:
+            self.working.emit()
+            lux_auto_controller = self.main_app.lux_auto_controller
+            lux_config = lux_auto_controller.lux_config.load()  # Refresh
+            if lux_auto_controller.lux_meter is None:  # In app config change
                 return
-            metered_lux = lux_monitor_data.lux_meter.get_value()
+            metered_lux = lux_auto_controller.lux_meter.get_value()
             in_progress = False
             for control_panel in self.main_app.main_panel.vdu_control_panels:
                 controller = control_panel.controller
@@ -4858,8 +4860,8 @@ class LuxAutoWorker(WorkerThread):
             time.sleep(0.5)  # give DDC some time to settle.
             if not in_progress:
                 self._message.emit("")
-                log_info(f"Auto lux: Sleeping {lux_monitor_data.lux_config.get_interval_minutes()} minutes")
-                sleep_end_time = time.time() + lux_monitor_data.lux_config.get_interval_minutes() * 60.0
+                # log_info(f"Auto lux: Sleeping {lux_auto_controller.lux_config.get_interval_minutes()} minutes")
+                sleep_end_time = time.time() + lux_auto_controller.lux_config.get_interval_minutes() * 60.0
                 while time.time() < sleep_end_time:
                     time.sleep(1.0)
                     if self.stop_requested:
@@ -5131,7 +5133,9 @@ class LuxAutoController:
                 self.lux_meter = lux_create_device(self.lux_config.get_device_name())
                 if self.lux_auto_brightness_worker is not None:
                     self.lux_auto_brightness_worker.stop_requested = True
+                    self.lux_auto_brightness_worker.working.disconnect(self.main_app.display_lux_auto_indicators)
                 self.lux_auto_brightness_worker = LuxAutoWorker(self.main_app)
+                self.lux_auto_brightness_worker.working.connect(self.main_app.display_lux_auto_indicators)
                 self.lux_auto_brightness_worker.start()
             except SerialException as se:
                 print(f"failed {se}")
@@ -5383,16 +5387,7 @@ class VduAppWindow(QMainWindow):
 
         def lux_auto_action() -> None:
             self.lux_auto_controller.toggle_auto()
-            icon = self.app_icon
-            tip = ''
-            if self.lux_auto_controller.is_auto_enabled():
-                icon = create_merged_icon(self.app_icon, create_icon_from_svg_bytes(self.lux_auto_controller.current_auto_svg()))
-                tip = f"{tr('Auto')} {PRESET_APP_SEPARATOR_SYMBOL} "
-            self.app.setWindowIcon(icon)
-            if self.tray:
-                self.tray.setToolTip(f"{tip}{self.app_name}")
-                self.tray.setIcon(icon)
-                self.tray.setContextMenu(self.app_context_menu)  # Force refresh
+            self.display_lux_auto_indicators()
 
         def lux_meter_action() -> None:
             LuxDialog.invoke(self)
@@ -5703,7 +5698,10 @@ class VduAppWindow(QMainWindow):
 
         def update_progress():
             nonlocal worker_thread
-            self.main_panel.indicate_busy(False) if self.main_panel.busy else None
+            if self.main_panel.busy:
+                self.main_panel.indicate_busy(False)
+                if self.tray is not None:
+                    self.tray.setContextMenu(self.app_context_menu)  # Force refresh
             presets_dialog_update_view(
                 tr("Transitioning to preset {} (elapsed time {} seconds)...").format(
                     preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=1)))
@@ -5723,6 +5721,8 @@ class VduAppWindow(QMainWindow):
                     return  # Don't do anything more the recursive call will take over from here
             self.main_panel.refresh_view()
             self.main_panel.indicate_busy(False)
+            if self.tray is not None:
+                self.tray.setContextMenu(self.app_context_menu)  # Force refresh
             if worker_thread.state == TransitionState.FINISHED:
                 with open(PRESET_NAME_FILE, 'w', encoding="utf-8") as cps_file:
                     cps_file.write(preset.name)
@@ -5781,6 +5781,18 @@ class VduAppWindow(QMainWindow):
                 return preset
         return None
 
+    def display_lux_auto_indicators(self):
+        if self.lux_auto_controller is not None and self.lux_auto_controller.lux_config is not None:
+            icon = self.app_icon
+            tip = ''
+            if self.lux_auto_controller.is_auto_enabled():
+                icon = create_merged_icon(self.app_icon, create_icon_from_svg_bytes(self.lux_auto_controller.current_auto_svg()))
+                tip = f"{tr('Auto')} {PRESET_APP_SEPARATOR_SYMBOL} "
+            self.app.setWindowIcon(icon)
+            if self.tray:
+                self.tray.setToolTip(f"{tip}{self.app_name}")
+                self.tray.setIcon(icon)
+
     def display_active_preset(self, preset=None) -> None:
         if preset is None and self.transitioning_dummy_preset is not None:
             preset = self.transitioning_dummy_preset
@@ -5803,7 +5815,6 @@ class VduAppWindow(QMainWindow):
                     self.tray.setToolTip(f"{preset.get_title_name()} {PRESET_APP_SEPARATOR_SYMBOL} {self.app_name}")
                     self.tray.setIcon(icon)
         self.app_context_menu.refresh_preset_menu()
-        self.tray.setContextMenu(self.app_context_menu)  # Force refresh
 
     def closeEvent(self, event):
         if self.tray is not None:
