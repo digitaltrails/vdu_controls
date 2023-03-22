@@ -558,11 +558,11 @@ from typing import List, Tuple, Mapping, Type, Dict, Callable
 from urllib.error import URLError
 
 import serial
-from PyQt5 import QtNetwork
+from PyQt5 import QtNetwork, QtGui
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
     QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant
 from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QRegExpValidator, \
-    QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent
+    QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
@@ -4483,6 +4483,7 @@ def install_as_desktop_application(uninstall: bool = False):
 
 class LuxProfileChart(QLabel):
 
+
     def __init__(self, chart_data: Dict[str, List[Tuple[int, int]]], range_restrictions: Dict[str, Tuple[int, int]],
                  chart_changed_callback: Callable, parent=None):
         super().__init__(parent=parent)
@@ -4498,9 +4499,16 @@ class LuxProfileChart(QLabel):
         self.plot_height, self.plot_width = 600, 600
         self.x_origin, self.y_origin = 120, self.plot_height + 50
         self.pixmap_height, self.pixmap_width, = self.plot_height + 150, self.plot_width + 200
-        self.setFixedHeight(self.pixmap_height)
-        self.setFixedWidth(self.pixmap_width)
         self.setMouseTracking(True)  # Enable mouse move events
+        self.setMinimumWidth(700)
+        self.setMinimumHeight(700)
+        self.create_plot()
+
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        super().resizeEvent(event)
+        self.plot_height, self.plot_width = event.size().height() - 150, event.size().width() - 200
+        self.x_origin, self.y_origin = 120, self.plot_height + 50
+        self.pixmap_height, self.pixmap_width, = self.plot_height + 150, self.plot_width + 200
         self.create_plot()
 
     def update_data(self, chart_data: Dict[str, List[Tuple[int, int]]], range_restrictions: Dict[str, Tuple[int, int]]):
@@ -4966,9 +4974,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             self.has_profile_changes = True
 
         self.plot = LuxProfileChart(self.chart_data, self.range_restrictions, chart_changed_callback, parent=self)
-
-        self.layout().addWidget(self.plot)
-        self.layout().addStretch(0)
+        self.layout().addWidget(self.plot, 1)
 
         buttons_widget = QWidget()
         button_layout = QHBoxLayout()
