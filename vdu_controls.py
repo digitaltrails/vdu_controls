@@ -4483,40 +4483,41 @@ def install_as_desktop_application(uninstall: bool = False):
 
 class LuxProfileChart(QLabel):
 
-
     def __init__(self, chart_data: Dict[str, List[Tuple[int, int]]], range_restrictions: Dict[str, Tuple[int, int]],
                  chart_changed_callback: Callable, parent=None):
         super().__init__(parent=parent)
-        random.seed(0x543fff)
-        self.possible_colors = [QColor.fromHsl(int(h * 137.508) % 255,
-                                               random.randint(64, 128),
-                                               random.randint(192, 200)) for h in range(len(chart_data))]
         self.chart_changed_callback = chart_changed_callback
         self.data = chart_data
         self.range_restrictions = range_restrictions
-        self.current_vdu = list(chart_data.keys())[0]
-        self.line_colors = {k: v for k, v in zip(self.data.keys(), self.possible_colors[0:len(self.data)])}
-        self.plot_height, self.plot_width = 600, 600
+        self.current_lux = None
+        self.current_vdu = None
+        self.pixmap_width = 800
+        self.pixmap_height = 750
+        self.plot_width, self.plot_height = self.pixmap_width - 200 , self.pixmap_height - 150
         self.x_origin, self.y_origin = 120, self.plot_height + 50
-        self.pixmap_height, self.pixmap_width, = self.plot_height + 150, self.plot_width + 200
-        self.setMouseTracking(True)  # Enable mouse move events
-        self.setMinimumWidth(700)
-        self.setMinimumHeight(700)
-        self.create_plot()
+        self.setMouseTracking(True)  # Enable mouse move events so we can draw cross-hairs
+        self.setMinimumWidth(self.pixmap_width)
+        self.setMinimumHeight(self.pixmap_height)
+        self.update_data(chart_data, range_restrictions)
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
-        self.plot_height, self.plot_width = event.size().height() - 150, event.size().width() - 200
+        self.plot_width, self.plot_height = event.size().width() - 200, event.size().height() - 150
         self.x_origin, self.y_origin = 120, self.plot_height + 50
-        self.pixmap_height, self.pixmap_width, = self.plot_height + 150, self.plot_width + 200
+        self.pixmap_width, self.pixmap_height = event.size().width(), event.size().height()
         self.create_plot()
 
     def update_data(self, chart_data: Dict[str, List[Tuple[int, int]]], range_restrictions: Dict[str, Tuple[int, int]]):
         self.data = chart_data
-        self.current_vdu = list(chart_data.keys())[0]
+        self.current_vdu = None if len(chart_data) == 0 else list(chart_data.keys())[0]
         self.range_restrictions = range_restrictions
 
     def create_plot(self, hover_pos: Tuple[int, int] | None = None):
+        random.seed(0x543fff)
+        possible_colors = [QColor.fromHsl(int(h * 137.508) % 255,
+                                               random.randint(64, 128),
+                                               random.randint(192, 200)) for h in range(len(self.data))]
+        line_colors = {k: v for k, v in zip(self.data.keys(), possible_colors[0:len(self.data)])}
         pixmap = QPixmap(self.pixmap_width, self.pixmap_height)
         painter = QPainter(pixmap)
         painter.fillRect(0, 0, self.pixmap_width, self.pixmap_height, QColor(0x5b93c5))
@@ -4543,6 +4544,11 @@ class LuxProfileChart(QLabel):
         painter.drawText(0, 0, "Brightness %")
         painter.restore()
 
+        if self.current_vdu is None:
+            painter.end()
+            self.setPixmap(pixmap)
+            return
+
         # Draw range restrictions (if not 0..100)
         min_v, max_v = self.range_restrictions[self.current_vdu]
         if min_v > 0:
@@ -4560,9 +4566,9 @@ class LuxProfileChart(QLabel):
                               [(self.current_vdu, self.data[self.current_vdu])]:
             last_x, last_y = 0, 0
             for lux, percent in vdu_data:
-                histogram_color = QColor(self.line_colors[name])
+                histogram_color = QColor(line_colors[name])
                 histogram_color.setAlpha(50)
-                painter.setPen(QPen(QColor(self.line_colors[name]), 6))
+                painter.setPen(QPen(QColor(line_colors[name]), 6))
                 x = self.x_origin + self.x_from_lux(lux)
                 y = self.y_origin - self.y_from_percent(percent)
                 # painter.drawPoint(x, y)
@@ -4571,11 +4577,16 @@ class LuxProfileChart(QLabel):
                     if last_x and last_y:
                         painter.fillRect(last_x, last_y, x - last_x, self.y_origin - last_y, histogram_color)
                 if last_x and last_y:
-                    painter.setPen(QPen(QColor(self.line_colors[name]), 6))
+                    painter.setPen(QPen(QColor(line_colors[name]), 6))
                     painter.drawLine(last_x, last_y, x, y)
                 last_x, last_y = x, y
             if self.current_vdu == name and last_x and last_y:
                 painter.fillRect(last_x, last_y, 25, self.y_origin - last_y, histogram_color)
+
+        if self.current_lux is not None:
+            painter.setPen(QPen(QColor(0xfec053), 1, 30))  # fbc21b 0xffdd30 #fec053
+            x = self.x_origin + self.x_from_lux(self.current_lux)
+            painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height)
 
         if hover_pos is not None:
             x, y = hover_pos
@@ -4652,14 +4663,15 @@ class LuxProfileChart(QLabel):
 
 class LuxMeterWidget(QWidget):
 
-    def __init__(self, parent=None):
+    def __init__(self, lux_changed_callback: Callable, parent=None):
         super().__init__(parent=parent)
         self.setLayout(QVBoxLayout())
-        self.current_lux = QLabel()
-        big_font = self.current_lux.font()
+        self.current_lux_display = QLabel()
+        self.lux_changed_callback = lux_changed_callback
+        big_font = self.current_lux_display.font()
         big_font.setPointSize(big_font.pointSize() + 8)
-        self.current_lux.setFont(big_font)
-        self.layout().addWidget(self.current_lux)
+        self.current_lux_display.setFont(big_font)
+        self.layout().addWidget(self.current_lux_display)
         self.history = []
         self.lux_plot = QLabel()
         self.lux_plot.setFixedWidth(200)
@@ -4668,7 +4680,7 @@ class LuxMeterWidget(QWidget):
         self.lux_meter_worker: LuxMeterWidgetThread | None = None
 
     def display_lux(self, lux: int):
-        self.current_lux.setText(tr("Lux: {}".format(lux)))
+        self.current_lux_display.setText(tr("Lux: {}".format(lux)))
         self.history = self.history[-100:]
         self.history.append(lux)
         pixmap = QPixmap(self.lux_plot.width(), self.lux_plot.height())
@@ -4679,6 +4691,7 @@ class LuxMeterWidget(QWidget):
             painter.drawLine(i, self.lux_plot.height(), i, self.lux_plot.height() - self.y_from_lux(self.history[i]))
         painter.end()
         self.lux_plot.setPixmap(pixmap)
+        self.lux_changed_callback(lux)
 
     def interrupt_history(self):
         if len(self.history) > 1:
@@ -4946,7 +4959,14 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         grid_layout = QGridLayout()
         top_box.setLayout(grid_layout)
 
-        self.lux_meter_widget = LuxMeterWidget(parent=self)
+        self.plot: LuxProfileChart = None
+
+        def lux_changed(lux: int):
+            if self.plot:
+                self.plot.current_lux = lux
+                self.plot.create_plot()
+
+        self.lux_meter_widget = LuxMeterWidget(lux_changed, parent=self)
         self.lux_meter_widget.display_lux(0)
         grid_layout.addWidget(self.lux_meter_widget, 0, 0, 3, 3, alignment=Qt.AlignLeft | Qt.AlignTop)
 
@@ -4967,8 +4987,6 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
         self.profile_selector = QComboBox()
         self.layout().addWidget(self.profile_selector)
-
-        self.reinitialise(in_constructor=True)
 
         def chart_changed_callback():
             self.has_profile_changes = True
@@ -5023,41 +5041,53 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.enabled_checkbox.stateChanged.connect(toggle_enabled)
 
         def interval_selector_changed() -> None:
-            if not self.config.has_section('lux-meter'):
-                self.config.add_section('lux-meter')
+            self.config.add_section('lux-meter') if not self.config.has_section('lux-meter') else None
             self.config.set('lux-meter', 'interval-minutes', str(self.interval_selector.value()))
             self.save_settings(requires_auto_brightness_restart=False)
 
-        self.interval_selector.setValue(self.config.get_interval_minutes())
         self.interval_selector.valueChanged.connect(interval_selector_changed)
 
         def select_profile(index: int):
             if self.plot is not None:
                 self.plot.set_current_profile(list(self.chart_data.keys())[index])
+            self.config.add_section('lux-ui') if not self.config.has_section('lux-ui') else None
+            if self.config.get('lux-ui', 'selected-profile', fallback=None) != self.profile_selector.itemData(index):
+                self.config.set('lux-ui', 'selected-profile', self.profile_selector.itemData(index))
+                self.save_settings()
 
         self.profile_selector.currentIndexChanged.connect(select_profile)
-
         self.make_visible()
+        self.in_constructor = False
 
-    def reinitialise(self, in_constructor: bool = False):
-        current_selection = 0 if self.profile_selector.currentIndex() == -1 else self.profile_selector.currentIndex()
+    def reinitialise(self):
         self.config = self.main_app.lux_auto_controller.lux_config.duplicate(LuxConfig())
         self.device_name = self.config.get("lux-meter", "lux-device", fallback="/dev/ttyUSB0")
         self.enabled_checkbox.setChecked(self.config.is_auto_enabled())
         self.has_profile_changes = False
-        for _ in range(0, self.profile_selector.count()):
-            self.profile_selector.removeItem(0)
-        for vdu in self.main_app.vdu_controllers:
+
+        new_id_list = []
+        for index, vdu in enumerate(self.main_app.vdu_controllers):
             range_restriction = vdu.capabilities['10'].values
             min_v, max_v = (0, 100) if len(range_restriction) == 0 else (int(range_restriction[1]), int(range_restriction[2]))
             self.range_restrictions[vdu.vdu_stable_id] = min_v, max_v
             self.chart_data[vdu.vdu_stable_id] = self.config.get_vdu_profile(vdu)
-            self.profile_selector.addItem(vdu.get_vdu_description(), userData=vdu.vdu_stable_id)
+            new_id_list.append(vdu.vdu_stable_id)
+
         self.show_current_device(self.device_name)
-        if not in_constructor:
-            self.plot.update_data(self.chart_data, self.range_restrictions)
-            self.profile_selector.setCurrentIndex(current_selection)
-            self.plot.set_current_profile(list(self.chart_data.keys())[current_selection])
+        self.interval_selector.setValue(self.config.get_interval_minutes())
+
+        existing_id_list = [self.profile_selector.itemData(index) for index in range(0, self.profile_selector.count())]
+        existing_selected_id = self.config.get('lux-ui', 'selected-profile', fallback=new_id_list[0] if new_id_list else None)
+        self.profile_selector.blockSignals(True)  # Stop initialization from causing signally until all data is aligned.
+        if new_id_list != existing_id_list:
+            self.profile_selector.clear()
+            for index, vdu in enumerate(self.main_app.vdu_controllers):
+                self.profile_selector.addItem(vdu.get_vdu_description(), userData=vdu.vdu_stable_id)
+                if vdu.vdu_stable_id == existing_selected_id:
+                    self.profile_selector.setCurrentIndex(index)
+                    self.plot.current_vdu = existing_selected_id
+        self.profile_selector.blockSignals(False)
+
         self.lux_meter_widget.start_metering(self.main_app.lux_auto_controller.lux_meter)
 
     def make_visible(self):
