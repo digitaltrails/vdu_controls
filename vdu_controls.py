@@ -558,7 +558,7 @@ from typing import List, Tuple, Mapping, Type, Dict, Callable
 from urllib.error import URLError
 
 import serial
-from PyQt5 import QtNetwork, QtGui
+from PyQt5 import QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
     QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant
 from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QRegExpValidator, \
@@ -599,7 +599,11 @@ SIGNAL_SYMBOL = '\u26a1'  # HIGH VOLTAGE - lightning bolt
 SolarElevationKey = namedtuple('SolarElevationKey', ['direction', 'elevation'])
 SolarElevationData = namedtuple('SolarElevationData', ['azimuth', 'zenith', 'when'])
 
-current_desktop = os.environ.get('XDG_CURRENT_DESKTOP', default='unknown')
+gui_thread: QThread | None = None
+
+
+def is_running_in_gui_thread():
+    return QThread.currentThread() == gui_thread
 
 
 def zoned_now() -> datetime:
@@ -787,7 +791,8 @@ CONTRAST_SVG = b"""
 </svg>
 """
 
-AUTO_LUX_ON_SVG = BRIGHTNESS_SVG.replace(b'viewBox="0 0 24 24"', b'viewBox="3 3 18 18"').replace(b'#232629', b'#ff8500') # 0xfec053 ff8500  fea900
+AUTO_LUX_ON_SVG = BRIGHTNESS_SVG.replace(b'viewBox="0 0 24 24"', b'viewBox="3 3 18 18"').replace(b'#232629',
+                                                                                                 b'#ff8500')  # 0xfec053 ff8500  fea900
 AUTO_LUX_OFF_SVG = BRIGHTNESS_SVG.replace(b'viewBox="0 0 24 24"', b'viewBox="3 3 18 18"').replace(b'#232629', b'#94989c')
 
 COLOR_TEMPERATURE_SVG = b"""
@@ -3092,8 +3097,11 @@ class WorkerThread(QThread):
     finished_work = pyqtSignal()
 
     def __init__(self, task_body: Callable, task_finished: Callable | None = None) -> None:
+        """Init should always be called from the GUI thread - for easy access to the GUI thread"""
         super().__init__()
-        log_info(f"init in thread = {threading.get_ident()} {self.__class__.__name__}")
+        log_debug(f"WorkerThread init in thread = {threading.get_ident()} {self.__class__.__name__}")
+        # Background is always initiated from the GUI thread to grant the worker's __init__ easy access to the GUI thread.
+        assert is_running_in_gui_thread()
         self.task_body = task_body
         self.task_finished = task_finished
         if self.task_finished is not None:
@@ -3101,9 +3109,9 @@ class WorkerThread(QThread):
         self.vdu_exception: VduException | None = None
 
     def run(self):
-        """Long-running task."""
+        """Long-running task, runs in a separate non-GUI thread"""
         try:
-            log_info(f"run in thread = {threading.get_ident()} {self.task_body}")
+            log_debug(f"WorkerThread run in thread = {threading.get_ident()} {self.task_body}")
             self.task_body()
         except VduException as e:
             self.vdu_exception = e
@@ -3120,7 +3128,7 @@ class TransitionState(Enum):
 
 class TransitionWorker(WorkerThread):
     progress_signal = pyqtSignal()
-    _update_gui_view = pyqtSignal(VduControlBase)
+    _update_gui_component_signal = pyqtSignal(VduControlBase)
 
     def __init__(self, main_panel: VduControlsMainPanel, preset: Preset, progress_callable: Callable, finished_callable: Callable,
                  immediately: bool = False):
@@ -3141,6 +3149,13 @@ class TransitionWorker(WorkerThread):
         self.state = TransitionState.FINISHED_STEPPING if self.transition_immediately else TransitionState.INITIALIZED
         self.progress_callable = progress_callable
 
+        def update_gui_component(vdu_gui_component: VduControlBase):
+            vdu_gui_component.refresh_view()
+
+        # Make sure these signals execute in the GUI thread by connecting them here (this __init__ runs in the GUI thread).
+        self._update_gui_component_signal.connect(update_gui_component)
+        self.progress_signal.connect(self.progress_callable)
+
         for control_panel in self.main_panel.vdu_control_panels:
             section = control_panel.controller.vdu_stable_id
             if section in self.preset.preset_ini:
@@ -3154,12 +3169,6 @@ class TransitionWorker(WorkerThread):
                             self.preset_non_transitioning_controls.append(control)
 
     def task_body(self):
-        def update_gui(gui_control: VduControlBase):
-            gui_control.refresh_view()
-
-        # TODO figure out - may be the wrong thread for doing the connects - but it works
-        self._update_gui_view.connect(update_gui)
-        self.progress_signal.connect(self.progress_callable)  # Connect here in the right thread
         while self.state != TransitionState.FINISHED_STEPPING and self.values_are_as_expected():
             cycle_start = time.time()
             if cycle_start - self.last_step_time > self.step_interval_seconds:
@@ -3173,7 +3182,7 @@ class TransitionWorker(WorkerThread):
         if self.state == TransitionState.FINISHED_STEPPING:
             for control in self.preset_non_transitioning_controls:  # Finish by doing the non-transitioning controls
                 control.restore_vdu_attribute(self.final_values[control])
-                self._update_gui_view.emit(control)
+                self._update_gui_component_signal.emit(control)
             self.state = TransitionState.FINISHED
             self.end_time = datetime.now()
             log_info(f"Finished {self.preset.name} {round(self.total_elapsed_seconds(), ndigits=2)} seconds")
@@ -3190,7 +3199,7 @@ class TransitionWorker(WorkerThread):
                 str_value = str(int_val + step)
                 self.expected_values[control] = str_value  # revise to new value
                 control.restore_vdu_attribute(str_value)
-                self._update_gui_view.emit(control)
+                self._update_gui_component_signal.emit(control)
                 more_to_do = more_to_do or str_value != final_value
             now = datetime.now()
             if (now - self.last_progress_time).total_seconds() >= 1.0:
@@ -4493,7 +4502,7 @@ class LuxProfileChart(QLabel):
         self.current_vdu = None
         self.pixmap_width = 800
         self.pixmap_height = 750
-        self.plot_width, self.plot_height = self.pixmap_width - 200 , self.pixmap_height - 150
+        self.plot_width, self.plot_height = self.pixmap_width - 200, self.pixmap_height - 150
         self.x_origin, self.y_origin = 120, self.plot_height + 50
         self.setMouseTracking(True)  # Enable mouse move events so we can draw cross-hairs
         self.setMinimumWidth(self.pixmap_width)
@@ -4515,8 +4524,8 @@ class LuxProfileChart(QLabel):
     def create_plot(self, hover_pos: Tuple[int, int] | None = None):
         random.seed(0x543fff)
         possible_colors = [QColor.fromHsl(int(h * 137.508) % 255,
-                                               random.randint(64, 128),
-                                               random.randint(192, 200)) for h in range(len(self.data))]
+                                          random.randint(64, 128),
+                                          random.randint(192, 200)) for h in range(len(self.data))]
         line_colors = {k: v for k, v in zip(self.data.keys(), possible_colors[0:len(self.data)])}
         pixmap = QPixmap(self.pixmap_width, self.pixmap_height)
         painter = QPainter(pixmap)
@@ -4686,7 +4695,7 @@ class LuxMeterWidget(QWidget):
         pixmap = QPixmap(self.lux_plot.width(), self.lux_plot.height())
         painter = QPainter(pixmap)
         painter.fillRect(0, 0, self.lux_plot.width(), self.lux_plot.height(), QColor(0x6baee8))  # 0x5b93c5))
-        painter.setPen(QPen(QColor(0xfec053), 1))  #fbc21b 0xffdd30 #fec053
+        painter.setPen(QPen(QColor(0xfec053), 1))  # fbc21b 0xffdd30 #fec053
         for i in range(len(self.history)):
             painter.drawLine(i, self.lux_plot.height(), i, self.lux_plot.height() - self.y_from_lux(self.history[i]))
         painter.end()
@@ -4959,7 +4968,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         grid_layout = QGridLayout()
         top_box.setLayout(grid_layout)
 
-        self.plot: LuxProfileChart = None
+        self.plot: LuxProfileChart | None = None
 
         def lux_changed(lux: int):
             if self.plot:
@@ -5363,11 +5372,12 @@ def parse_transaction_type(string_value: str):
 
 class VduAppWindow(QMainWindow):
     splash_message_signal = pyqtSignal(str)
+    _restore_preset_in_gui_thread = pyqtSignal(Preset, object, bool)
 
     def __init__(self, main_config: VduControlsConfig, app: QApplication):
         super().__init__()
-
-        global current_desktop
+        global gui_thread
+        gui_thread = app.thread()
         self.app = app
         self.displayed_preset_name = None
         self.setObjectName('main_window')
@@ -5383,11 +5393,13 @@ class VduAppWindow(QMainWindow):
         self.detected_vdu_list: List[Tuple[str, str, str, str]] = []
         self.vdu_controllers: List[VduController] = []
         self.previously_detected_vdu_list: List[Tuple[str, str, str, str]] = []
-        self.transitioning_dummy_preset: Preset | None = None
+        self.transitioning_dummy_preset: TransitioningDummyPreset | None = None
         self.ddcutil: DdcUtil | None = None
         self.lux_auto_controller = LuxAutoController(self) if self.main_config.is_set(GlobalOption.LUX_METER_ENABLED) else None
-        current_desktop = os.environ.get('XDG_CURRENT_DESKTOP', default='unknown')
-        gnome_tray_behaviour = main_config.is_set(GlobalOption.SYSTEM_TRAY_ENABLED) and 'gnome' in current_desktop.lower()
+        gnome_tray_behaviour = main_config.is_set(GlobalOption.SYSTEM_TRAY_ENABLED) and 'gnome' in os.environ.get(
+            'XDG_CURRENT_DESKTOP', default='unknown').lower()
+
+        self._restore_preset_in_gui_thread.connect(self.restore_preset)
 
         main_window_action: Callable | None = None
 
@@ -5508,12 +5520,13 @@ class VduAppWindow(QMainWindow):
             if signal_number == signal.SIGHUP:
                 self.start_refresh()
             elif PRESET_SIGNAL_MIN <= signal_number <= PRESET_SIGNAL_MAX:
-                restore_preset = self.preset_controller.get_preset(signal_number - PRESET_SIGNAL_MIN)
-                log_info(f"Signaled for preset {restore_preset.name} transition-type={restore_preset.get_transition_type()}")
-                if restore_preset is not None:
-                    self.restore_preset(
-                        restore_preset,
-                        immediately=TransitionType.SIGNAL not in restore_preset.get_transition_type())
+                preset = self.preset_controller.get_preset(signal_number - PRESET_SIGNAL_MIN)
+                log_info(f"Signaled for preset {preset.name} transition-type={preset.get_transition_type()}")
+                if preset is not None:
+                    # Signals occur outside the GUI thread - initiate the restore in the GUI thread
+                    immediately = TransitionType.SIGNAL not in preset.get_transition_type()
+                    log_info("initiate_restore_preset", threading.get_ident())  # This method is for use by non-GUI threads.
+                    self._restore_preset_in_gui_thread.emit(preset, None, immediately)
                 else:
                     # Cannot raise a Qt alert inside the signal handler in case another signal comes in.
                     log_warning(f"ignoring signal {signal_number}, no preset associated with that signal number.")
@@ -5707,6 +5720,7 @@ class VduAppWindow(QMainWindow):
             self.main_panel.indicate_busy(False)
 
     def start_refresh(self) -> None:
+        assert is_running_in_gui_thread()
         self.main_panel.indicate_busy()
 
         def refresh_data():
@@ -5730,7 +5744,7 @@ class VduAppWindow(QMainWindow):
 
     def restore_preset(self, preset: Preset, restore_finished: Callable | None = None, immediately: bool = False) -> None:
         # Starts the restore, but it will complete in the worker thread
-
+        assert is_running_in_gui_thread()    # Boilerplate in case this is called from the wrong thread.
         self.transitioning_dummy_preset: TransitioningDummyPreset | None = None
 
         if not immediately:
@@ -5826,6 +5840,7 @@ class VduAppWindow(QMainWindow):
         return None
 
     def display_lux_auto_indicators(self):
+        assert is_running_in_gui_thread()  # Boilerplate in case this is called from the wrong thread.
         if self.lux_auto_controller is not None and self.lux_auto_controller.lux_config is not None:
             if self.lux_auto_controller.is_auto_enabled():
                 self.set_icon_and_title(create_icon_from_svg_bytes(self.lux_auto_controller.current_auto_svg()), tr('Auto'))
@@ -5833,6 +5848,7 @@ class VduAppWindow(QMainWindow):
                 self.set_icon_and_title()
 
     def display_active_preset(self, preset=None) -> None:
+        assert is_running_in_gui_thread()  # Boilerplate in case this is called from the wrong thread.
         if preset is None and self.transitioning_dummy_preset is not None:
             preset = self.transitioning_dummy_preset
         if preset is None:
@@ -5878,6 +5894,7 @@ class VduAppWindow(QMainWindow):
 
     def schedule_presets(self, reset: bool = False) -> Preset | None:
         # As well as scheduling, this method finds and returns the preset that should be applied at this time.
+        assert is_running_in_gui_thread()  # Needs to be run in the GUI thread so the timers also run in the GUI thread
         if not self.main_config.is_set(GlobalOption.SCHEDULE_ENABLED):
             log_info("Scheduling is disabled")
             return
@@ -5926,6 +5943,7 @@ class VduAppWindow(QMainWindow):
         return most_recent_overdue
 
     def activate_scheduled_preset(self, preset: Preset, check_weather: bool = True, immediately: bool = False):
+        assert is_running_in_gui_thread()
         if not self.main_config.is_set(GlobalOption.SCHEDULE_ENABLED):
             log_info(f"Schedule is disabled - not activating preset {preset.name}")
             return
