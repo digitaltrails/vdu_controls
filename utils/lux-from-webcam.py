@@ -19,6 +19,7 @@ more details.
 You should have received a copy of the GNU General Public License along
 with this program. If not, see https://www.gnu.org/licenses/.
 """
+import math
 import signal
 import sys
 
@@ -32,17 +33,23 @@ CAMERA_DEVICE = '/dev/video0'
 MANUAL_EXPOSURE_SETTING = 1
 AUTO_EXPOSURE_SETTING = 3
 
-# Customise to your desktop and webcam
+# Customise these values to your desktop and webcam
 # Logitech, Inc. Webcam C270 settings for my study
 LUX_BRIGHTNESS = [
-    ('SUNLIGHT',       100000, 140),
-    ('DAYLIGHT',        10000, 120),
+    ('SUNLIGHT',       100000, 250),
+    ('DAYLIGHT',        10000, 160),
     ('OVERCAST',         1000, 110),
-    ('SUNRISE_SUNSET',    400,  40),
+    ('SUNRISE_SUNSET',    400,  50),
     ('DARK_OVERCAST',     100,  20),
     ('LIVING_ROOM',        50,   5),
     ('NIGHT',               5,   0),
 ]
+
+def to_lux_log(average_brightness):
+    if average_brightness <= 0:
+        return 0
+    else:
+        return 10 ** ((average_brightness / 255) * math.log10(10000))
 
 
 def main():
@@ -68,11 +75,18 @@ def main():
 
         brightness = cv2.mean(gray_image)[0]
 
+        previous_lux, previous_value = None, None
         for name, lux, value in LUX_BRIGHTNESS:
             if brightness >= value:
-                print(f"INFO lux={lux}, brightness={brightness}, name={name}", file=sys.stderr)
+                if previous_lux:
+                    # Interpolate on a log10 scale - at least that's what I think this is (idea from chatgpt)
+                    print(f"INFO: log10 interpolating {brightness} over {value}..{previous_value} to lux {lux}..{previous_lux}",
+                          file=sys.stderr)
+                    lux = lux + 10 ** ((brightness - value) / (previous_value - value) * math.log10((previous_lux - lux)))
+                print(f"INFO: brightness={brightness}, value={value}, lux={lux}, name={name}", file=sys.stderr)
                 print(lux)
                 break
+            previous_lux, previous_value = lux, value
     finally:
         print(f"Restoring auto-exposure={auto_exposure} exposure={exposure}", file=sys.stderr)
         camera.set(cv2.CAP_PROP_AUTO_EXPOSURE, auto_exposure)

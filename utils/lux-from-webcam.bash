@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# lux-from-brightness.bash - guess lux value based on a webcam image
+# lux-from-value.bash - guess lux value based on a webcam image
 # ==================================================================
 # Copyright (C) 2023 Michael Hamilton
 #
@@ -36,23 +36,33 @@ v4l2-ctl  --device $DEVICE  \
 
 # Fix issues in MJPG that bother ImageMagick
 convert $IMAGE_LOCATION $IMAGE_LOCATION-fixed 1>/dev/null 2>&1
-ambient=$(convert $IMAGE_LOCATION-fixed -colorspace gray -resize 1x1 -evaluate-sequence Max -format "%[fx:100*mean]" info:)
-ambient=$(echo $ambient | sed 's/[.].*//')
-echo "INFO: camera-ambient: $ambient" > /dev/stderr
+# Compute average brightness 0..255.
+brightness=$(convert $IMAGE_LOCATION-fixed -colorspace gray -resize 1x1 -evaluate-sequence Max -format "%[fx:255*mean]" info:)
+brightness=$(echo $brightness | sed 's/[.].*//')
+echo "INFO: camera-brightness: $brightness/255" > /dev/stderr
 
-while read name lux brightness
+while read name lux value
 do
-  if [ $ambient -ge $brightness ]
+  if [ $brightness -ge $value ]
   then
-    echo "INFO: ambient=$ambient brightness=$brightness lux=$lux" > /dev/stderr
+    if [ "$previous_value" != '' ]
+    then
+        # Interpolate on a log10 scale - at least that's what I think this is (idea from chatgpt)
+        echo "INFO: log10 interpolating $brightness over $value..$previous_value to lux $lux..$previous_lux" > /dev/stderr
+        lux=$(awk -v b=$brightness  -v v=$value -v pv=$previous_value -v lx=$lux -v plx=$previous_lux '
+        BEGIN { print(lx + 10 ** ((b - v) / (pv - v) * log(plx - lx)/log(10))); exit 0; }' < /dev/null)
+    fi
+    echo "INFO: brightness=$brightness, value=$value, lux=$lux, name=$name" > /dev/stderr
     echo $lux
     break
   fi
+  previous_value=$value
+  previous_lux=$lux
 done <<EOF
-SUNLIGHT       100000 140
-DAYLIGHT        10000 120
+SUNLIGHT       100000 250
+DAYLIGHT        10000 160
 OVERCAST         1000 110
-SUNRISE_SUNSET    400  40
+SUNRISE_SUNSET    400  50
 DARK_OVERCAST     100  20
 LIVING_ROOM        50   5
 NIGHT               5   0
