@@ -399,11 +399,14 @@ If light metering and Presets are both being utilised, their combine changes to 
 may conflict. For example, a Preset may set a reduced brightness, but soon after,
 light metering might increase it.
 
-The metering device must a readable character device or UNIX fifo (named-pipe).  It must
-periodically supply one floating point lux reading per line.  Each line must be terminated
-by carriage-return newline (character device) or just newline (fifo/named-pipe). Possible
-hardware devices include the GY-30/BH1750 lux meter wired to an Arduino which may act
-as a character device.  It may be possible use webcam/camera output to compute an
+The metering device must a readable character device, a UNIX fifo (named-pipe), or a
+runnable script.  The character device or fifo must periodically supply one floating point
+lux reading per line.  Each line must be terminated by carriage-return newline (character
+device) or just newline (fifo/named-pipe). The runnable script will be run each time a
+value is needed, it must output a single line containing a lux value.
+
+Possible hardware devices include the GY-30/BH1750 lux meter wired to an Arduino which may
+act as a character device.  It may be possible use webcam/camera output to compute an
 approximate lux value, ether by analysing image content, or examining image settings that
 contribute to exposure such ISO values, apertures, and shutter speed, the result could be
 feed to a fifo.
@@ -4746,6 +4749,8 @@ def lux_create_device(device_name: str):
             return LuxMeterSerialDevice(device_name)
         elif pathlib.Path(device_name).is_fifo():
             return LuxMeterFifoDevice(device_name)
+        elif pathlib.Path(device_name).exists() and os.access(device_name, os.X_OK):
+            return LuxMeterRunnableDevice(device_name)
     return None
 
 
@@ -4760,14 +4765,14 @@ class LuxMeterFifoDevice:
         self.cached_time = time.time()
         self.thread = thread
 
-    def get_cached_value(self, age_seconds: float):
+    def get_cached_value(self, age_seconds: float) -> float:
         if self.cached_value is not None and time.time() - self.cached_time <= age_seconds:
             return self.cached_value
         self.cached_value = self.get_value()
         self.cached_time = time.time()
         return self.cached_value
 
-    def get_value(self):
+    def get_value(self) -> float:
         with self.lock:
             while True:
                 try:
@@ -4786,6 +4791,37 @@ class LuxMeterFifoDevice:
         with self.lock:
             if self.fifo is not None:
                 os.close(self.fifo)
+
+
+class LuxMeterRunnableDevice:
+
+    def __init__(self, device_name: str, thread: QThread = None):
+        super().__init__()
+        self.runnable = device_name
+        self.lock = Lock()
+        self.cached_value = None
+        self.cached_time = time.time()
+        self.thread = thread
+
+    def get_cached_value(self, age_seconds: float) -> float:
+        if self.cached_value is not None and time.time() - self.cached_time <= age_seconds:
+            return self.cached_value
+        self.cached_value = self.get_value()
+        self.cached_time = time.time()
+        return self.cached_value
+
+    def get_value(self) -> float:
+        with self.lock:
+            while True:
+                try:
+                    result = subprocess.run([self.runnable], stdout=subprocess.PIPE, check=True)
+                    return float(result.stdout)
+                except (OSError, ValueError, subprocess.CalledProcessError) as se:
+                    log_warning(f"Error running {self.runnable}, will retry in 10 seconds", se)
+                    time.sleep(10)
+
+    def close(self):
+        pass
 
 
 class LuxMeterSerialDevice:
@@ -5110,6 +5146,8 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             self.meter_device_selector.setText(tr(" Device {}").format(device))
         elif path.is_fifo():
             self.meter_device_selector.setText(tr(" Fifo {}").format(device))
+        elif path.exists() and os.access(device, os.X_OK):
+            self.meter_device_selector.setText(tr(" Run {}").format(device))
         else:
             self.meter_device_selector.setText(tr(" Not available {}").format(device))
             return None
