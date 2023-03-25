@@ -3128,7 +3128,7 @@ class TransitionState(Enum):
 
 class TransitionWorker(WorkerThread):
     progress_signal = pyqtSignal()
-    _update_gui_component_signal = pyqtSignal(VduControlBase)
+    _update_gui_signal = pyqtSignal(VduControlBase)
 
     def __init__(self, main_panel: VduControlsMainPanel, preset: Preset, progress_callable: Callable, finished_callable: Callable,
                  immediately: bool = False):
@@ -3149,11 +3149,11 @@ class TransitionWorker(WorkerThread):
         self.state = TransitionState.FINISHED_STEPPING if self.transition_immediately else TransitionState.INITIALIZED
         self.progress_callable = progress_callable
 
-        def update_gui_component(vdu_gui_component: VduControlBase):
-            vdu_gui_component.refresh_view()
+        def update_gui(target_widget: VduControlBase):
+            target_widget.refresh_view()  # Cause the control to refresh and show the latest value.
 
         # Make sure these signals execute in the GUI thread by connecting them here (this __init__ runs in the GUI thread).
-        self._update_gui_component_signal.connect(update_gui_component)
+        self._update_gui_signal.connect(update_gui)
         self.progress_signal.connect(self.progress_callable)
 
         for control_panel in self.main_panel.vdu_control_panels:
@@ -3182,7 +3182,7 @@ class TransitionWorker(WorkerThread):
         if self.state == TransitionState.FINISHED_STEPPING:
             for control in self.preset_non_transitioning_controls:  # Finish by doing the non-transitioning controls
                 control.restore_vdu_attribute(self.final_values[control])
-                self._update_gui_component_signal.emit(control)
+                self._update_gui_signal.emit(control)
             self.state = TransitionState.FINISHED
             self.end_time = datetime.now()
             log_info(f"Finished {self.preset.name} {round(self.total_elapsed_seconds(), ndigits=2)} seconds")
@@ -3199,7 +3199,7 @@ class TransitionWorker(WorkerThread):
                 str_value = str(int_val + step)
                 self.expected_values[control] = str_value  # revise to new value
                 control.restore_vdu_attribute(str_value)
-                self._update_gui_component_signal.emit(control)
+                self._update_gui_signal.emit(control)
                 more_to_do = more_to_do or str_value != final_value
             now = datetime.now()
             if (now - self.last_progress_time).total_seconds() >= 1.0:
