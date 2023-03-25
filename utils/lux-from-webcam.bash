@@ -39,7 +39,7 @@ convert $IMAGE_LOCATION $IMAGE_LOCATION-fixed 1>/dev/null 2>&1
 # Compute average brightness 0..255.
 brightness=$(convert $IMAGE_LOCATION-fixed -colorspace gray -resize 1x1 -evaluate-sequence Max -format "%[fx:255*mean]" info:)
 brightness=$(echo $brightness | sed 's/[.].*//')
-echo "INFO: camera-brightness: $brightness/255" > /dev/stderr
+echo "INFO: camera-brightness: $brightness/255" >&2
 
 while read name lux value
 do
@@ -48,11 +48,11 @@ do
     if [ "$previous_value" != '' ]
     then
         # Interpolate on a log10 scale - at least that's what I think this is (idea from chatgpt)
-        echo "INFO: log10 interpolating $brightness over $value..$previous_value to lux $lux..$previous_lux" > /dev/stderr
+        echo "INFO: log10 interpolating $brightness over $value..$previous_value to lux $lux..$previous_lux" >&2
         lux=$(awk -v b=$brightness  -v v=$value -v pv=$previous_value -v lx=$lux -v plx=$previous_lux '
         BEGIN { print(lx + 10 ** ((b - v) / (pv - v) * log(plx - lx)/log(10))); exit 0; }' < /dev/null)
     fi
-    echo "INFO: brightness=$brightness, value=$value, lux=$lux, name=$name" > /dev/stderr
+    echo "INFO: brightness=$brightness, value=$value, lux=$lux, name=$name" >&2
     echo $lux
     break
   fi
