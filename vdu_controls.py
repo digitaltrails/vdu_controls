@@ -5031,7 +5031,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         def choose_device():
             device_name = QFileDialog.getOpenFileName(self, tr("Select a tty device or fifo"), "/dev/ttyUSB0")[0]
             if device_name != '':
-                device_name = self.show_current_device(device_name)
+                device_name = self.validate_device(device_name)
                 if device_name is not None:
                     if not self.config.has_section('lux-meter'):
                         self.config.add_section('lux-meter')
@@ -5082,7 +5082,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             self.chart_data[vdu.vdu_stable_id] = self.config.get_vdu_profile(vdu)
             new_id_list.append(vdu.vdu_stable_id)
 
-        self.show_current_device(self.device_name)
+        self.validate_device(self.device_name)
         self.interval_selector.setValue(self.config.get_interval_minutes())
 
         existing_id_list = [self.profile_selector.itemData(index) for index in range(0, self.profile_selector.count())]
@@ -5100,20 +5100,27 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.lux_meter_widget.start_metering(self.main_app.lux_auto_controller.lux_meter)
 
     def make_visible(self):
+        super().make_visible()
         self.display_message("")
         self.reinitialise()
-        super().make_visible()
 
-    def show_current_device(self, device):
-        if pathlib.Path(device).is_char_device():
+    def validate_device(self, device):
+        path = pathlib.Path(device)
+        if path.is_char_device():
             self.meter_device_selector.setText(tr(" Device {}").format(device))
-            return device
-        elif pathlib.Path(device).is_fifo():
+        elif path.is_fifo():
             self.meter_device_selector.setText(tr(" Fifo {}").format(device))
-            return device
         else:
             self.meter_device_selector.setText(tr(" Not available {}").format(device))
-        return None
+            return None
+        print(f"access {device} {os.access(device, os.R_OK)}")
+        if not os.access(device, os.R_OK):
+            alert = MessageBox(QMessageBox.Critical)
+            alert.setText(tr("No read access to {}").format(device))
+            if path.is_char_device() and path.group() != "root":
+                alert.setInformativeText(tr("You might need to be a member of the {} group.").format(path.group()))
+            alert.exec()
+        return device
 
     def display_message(self, message):
         self.message_area.setText(message)
