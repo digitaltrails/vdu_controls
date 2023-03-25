@@ -382,22 +382,13 @@ cloud conditions. For example:
 Light/Lux Metering
 ------------------
 
-If you have a hardware device that can provide a ambient Lux reading, ``vdu_controls`` can use
-this this device to adjust VDU brightness values.
+``vdu_controls`` can a hardware lux metering device to adjust VDU brightness according
+to a specified lux/brightness profile.
 
-The Settings Dialog includes an option enable a lux meter.  Once enabled, a Content Menu
-Light Meter option can be used to bring up a Lux Metering Dialog.  The dialog can be used
-to define the metering device and the Lux Brightness Response Profile for each VDU.
-
-Due to the limitations of VDU hardware and DDC, gradual/stepping changes in brightness
-are quite likely to noticeable.  To avoid annoying frequent noticable changes in brightness,
-it's recommended that Lux Brightness Profiles be stepped according to stable ranges of
-ambient lighting.  For example, you might what to set a single profile step that includes
-full sun and sun hidden by occasional light clouds.
-
-If light metering and Presets are both being utilised, their combine changes to brightness
-may conflict. For example, a Preset may set a reduced brightness, but soon after,
-light metering might increase it.
+The Settings Dialog includes an option enable lux metering options.  When enabled, the
+Content Menu will include Light Meter option to access a Light/Lux Metering Dialog.
+The dialog can be used to define the metering device and the Lux Brightness Response
+Profile for each VDU.
 
 The metering device must a readable character device, a UNIX fifo (named-pipe), or a
 runnable script.  The character device or fifo must periodically supply one floating point
@@ -410,6 +401,61 @@ act as a character device.  It may be possible use webcam/camera output to compu
 approximate lux value, ether by analysing image content, or examining image settings that
 contribute to exposure such ISO values, apertures, and shutter speed, the result could be
 feed to a fifo.
+
+Example scripts for mapping webcam average brightness to approximate lux values are
+available in ``/usr/share/vdu_controls/sample-scripts/`` or they can be downloaded
+from https://github.com/digitaltrails/vdu_controls/tree/master/sample-scripts.  They
+will require customising for your own webcam and lighting conditions.
+
+In creating an "lux meter" for used with vdu_controls, theres is no need to produce
+standard lux values.  It is sufficient to produce log10-like values from 1 to 10000
+that can be used to create a VDU profile that changes according to your own ambient
+conditions.  Metered values need not be continuous, a set of appropriate stepped
+values might serve just as well as a continuous measure. Potential step values might
+include typical lux values, for example:
+
+    Lighting conditions and lux values::
+
+        sunlight       100000
+        daylight        10000
+        overcast         1000
+        sunrise/sunset    400
+        dark-overcast     100
+        living-room        50
+        night               5
+
+Due to the limitations of DDC protocol, gradual/stepping changes in brightness
+are quite likely to noticeable and potentially annoying.  For this reason lux/brightness
+profiles define set steps of brightness values so that brightness levels remain constant
+over set ranges of lux values.  Achieving an acceptable profile will require some
+experimentation with the step lux-thresholds and lux-ranges.
+
+If light-levels are changing frequently and extremely, for example, as the sun passes
+behind a succession of clouds, the main panel, context-menu, and light-metering dialog
+each contain Manual/Auto controls for disabling/enabling lux metering.  Additionally,
+you might tune the lux/brightness profile to eliminate the issue.
+
+If light metering and Presets are both being utilised, their combined effects
+may conflict. For example, a Preset may set a reduced brightness, but soon after,
+light metering might increase it.  If you wish to use both Presets and Lux-metering, it
+might be best to design your lux/brightness profile steps to match the brightness levels
+of specific Presets, for example, a full-sun Preset and the matching step in a
+lux/brightness Profile might both be assigned the same brightness level.
+
+Light metering settings and profiles are stored in::
+
+    $HOME/.config/vdu_controls/AutoLux.conf
+
+A typical example follows::
+
+    [lux-meter]
+    automatic-brightness = yes
+    lux-device = /dev/ttyUSB0
+    interval-minutes = 2
+
+    [lux-profile]
+    hp_zr24w_cnt008 = [(1, 90), (29, 90), (926, 100), (8414, 100), (100000, 100)]
+    lg_hdr_4k_8 = [(1, 13), (60, 25), (100, 50), (299, 70), (1000, 90), (10000, 100), (100000, 100)]
 
 Responsiveness
 --------------
@@ -574,7 +620,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
 from serial import SerialException
 
 APPNAME = "VDU Controls"
-VDU_CONTROLS_VERSION = '1.9.3'
+VDU_CONTROLS_VERSION = '1.10.0'
 
 WESTERN_SKY = 'western-sky'
 EASTERN_SKY = 'eastern-sky'

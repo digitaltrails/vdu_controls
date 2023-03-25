@@ -242,6 +242,10 @@ Michael Hamilton
 
 Version History
 ---------------
+* 1.10.0
+  * Added hardware lux metering options (serial-port, UNIX-fifo, or executable-script).
+  * Added lux-to-brightness profiles per VDU.
+  * Added sample scripts for using a webcam to produce approximate lux values to the sample-scripts folder.
 * 1.9.3
   * Added an option to transition smoothly on UNIX signal.
   * Replaced the transition combo-box with a button+checkboxes.

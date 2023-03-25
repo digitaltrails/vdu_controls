@@ -1,5 +1,5 @@
 pkgname=vdu_controls
-pkgver=1.9.3
+pkgver=1.10.0
 pkgrel=1
 pkgdesc="Visual Display Unit virtual control panel"
 arch=('i686' 'x86_64')
@@ -29,8 +29,10 @@ package() {
     mkdir -p /usr/share/applications
     mkdir -p /usr/share/man/man1
     mkdir -p /usr/share/vdu_controls/translations
+    mkdir -p /usr/share/vdu_controls/sample-scripts
     install vdu_controls.py  /usr/bin/%{name}
     install -m644 translations/*.ts /usr/share/vdu_controls/translations
+    install -m755 sample-scripts/* /usr/share/vdu_controls/sample-scripts
 
     cat > /usr/share/applications/%{name}.desktop <<'EOF'
 [Desktop Entry]

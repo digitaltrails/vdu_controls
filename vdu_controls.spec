@@ -18,12 +18,12 @@
 
 
 Name:           vdu_controls
-Version:        1.9.3
+Version:        1.10.0
 Release:        0
 Summary:        Visual Display Unit virtual control panel
 License:        GPL-3.0-or-later
 URL:            https://github.com/digitaltrails/vdu_controls
-Source0:        https://github.com/digitaltrails/vdu_controls/archive/refs/tags/v1.9.3.tar.gz#/%{name}-%{version}.tar.gz
+Source0:        https://github.com/digitaltrails/vdu_controls/archive/refs/tags/v1.10.0.tar.gz#/%{name}-%{version}.tar.gz
 BuildRequires:  coreutils
 BuildRequires:  hicolor-icon-theme
 BuildArch:      noarch
@@ -61,12 +61,14 @@ install -d -m 0755 %{buildroot}%{_bindir} \
                    %{buildroot}%{_mandir}/man1/ \
                    %{buildroot}%{_datadir}/applications \
                    %{buildroot}%{_datadir}/vdu_controls/translations \
+                   %{buildroot}%{_datadir}/vdu_controls/sample-scripts \
                    %{buildroot}%{_datadir}/icons/hicolor/256x256/apps
 install -m 0755 vdu_controls.py  %{buildroot}/%{_bindir}/%{name}
 install -m 0644 %{name}.desktop %{buildroot}%{_datadir}/applications/%{name}.desktop
 install -m 0644 %{name}.png %{buildroot}%{_datadir}/icons/hicolor/256x256/apps/%{name}.png
 install -m 0644 translations/*.ts %{buildroot}%{_datadir}/vdu_controls/translations/
 install -m 0644 translations/about_*.txt %{buildroot}%{_datadir}/vdu_controls/translations/
+install -m 0755 sample-scripts/* %{buildroot}%{_datadir}/vdu_controls/sample-scripts/
 install -m 0644 docs/_build/man/vdu_controls.1 %{buildroot}%{_mandir}/man1/
 
 %files
@@ -83,5 +85,7 @@ install -m 0644 docs/_build/man/vdu_controls.1 %{buildroot}%{_mandir}/man1/
 %{_datadir}/vdu_controls/translations/about_da_DK.txt
 %{_datadir}/vdu_controls/translations/about_fr_FR.txt
 %{_datadir}/vdu_controls/translations/about_de_DE.txt
+%{_datadir}/vdu_controls/sample-scripts/lux-from-webcam.bash
+%{_datadir}/vdu_controls/sample-scripts/lux-from-webcam.py
 
 %changelog

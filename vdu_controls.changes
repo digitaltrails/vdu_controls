@@ -1,6 +1,16 @@
 -------------------------------------------------------------------
 Sun 05 Mar 2023 07:34:00 UTC - Michael Hamilton <michael@actrix.gen.nz>
 
+- Version 1.10.0
+  * Added hardware lux metering options (serial-port, UNIX-fifo, or executable-script).
+  * Added lux-to-brightness profiles per VDU.
+  * Added sample scripts for using a webcam to produce approximate lux values.
+    to /usr/share/vdu_controls/sample-scripts/
+  * Cleanup of thread handling - clarification of GUI/non-GUI thread operations.
+
+-------------------------------------------------------------------
+Sun 05 Mar 2023 07:34:00 UTC - Michael Hamilton <michael@actrix.gen.nz>
+
 - Version 1.9.3
   * Added an option to transition smoothly on UNIX signal.
   * Replaced the transition combo-box with a button+checkboxes.
