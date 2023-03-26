@@ -243,12 +243,12 @@ Michael Hamilton
 Version History
 ---------------
 * 1.10.0
-  * Added hardware lux metering options (serial-port, UNIX-fifo, or executable-script).
+  * Added hardware lux metering options (GY30/BH1750+Arduino, UNIX-fifo, or executable-script).
   * Added lux-to-brightness profiles per VDU.
-  * Added sample scripts for using a webcam to produce approximate lux values to the sample-scripts folder.
-* 1.9.3
+  * Added sample scripts for using a webcam to produce approximate lux values.
   * Added an option to transition smoothly on UNIX signal.
   * Replaced the transition combo-box with a button+checkboxes.
+  * Cleanup of thread handling - clarification of GUI/non-GUI thread operations.
 * 1.9.2
   * Optional _Smooth Transitions_ for presets:
     * The Presets Dialog now includes an option to set a Preset to _Transition Smoothly_.
