@@ -4570,7 +4570,7 @@ class LuxProfileChart(QLabel):
         self.current_vdu = None if len(chart_data) == 0 else list(chart_data.keys())[0]
         self.range_restrictions = range_restrictions
 
-    def create_plot(self, hover_pos: Tuple[int, int] | None = None):
+    def create_plot(self):
         random.seed(0x543fff)
         possible_colors = [QColor.fromHsl(int(h * 137.508) % 255,
                                           random.randint(64, 128),
@@ -4641,22 +4641,26 @@ class LuxProfileChart(QLabel):
             if self.current_vdu == name and last_x and last_y:
                 painter.fillRect(last_x, last_y, 25, self.y_origin - last_y, histogram_color)
 
-        if self.current_lux is not None:
+        if self.current_lux is not None:  # Draw vertical line at current lux
             painter.setPen(QPen(QColor(0xfec053), 1, 30))  # fbc21b 0xffdd30 #fec053
             x = self.x_origin + self.x_from_lux(self.current_lux)
             painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height)
 
-        if hover_pos is not None:
-            x, y = hover_pos
-            if self.x_origin <= x <= self.x_origin + self.plot_width and self.y_origin - self.plot_width <= y <= self.y_origin:
-                match = self.find_close_to(x - self.x_origin, self.y_origin - y, vdu_data=self.data[self.current_vdu])
-                painter.setPen(QPen(QColor(0xffffff), 1)) if match[0] is None else painter.setPen(QPen(QColor(0xff0000), 2))
-                painter.drawLine(self.x_origin, y, self.x_origin + self.plot_width, y)
-                painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height)
-                percent = self.percent_from_y(y - self.y_origin)
-                lux = self.lux_from_x(x - self.x_origin)
-                painter.setPen(QPen(QColor(0x000000), 1))
-                painter.drawText(x + 10, y - 10, f"{lux}, {percent}%")
+        mouse_pos = self.mapFromGlobal(self.cursor().pos())  # Draw cross-hairs at mouse pos
+        x, y = mouse_pos.x(), mouse_pos.y()
+        if self.x_origin <= x <= self.x_origin + self.plot_width and self.y_origin - self.plot_width <= y <= self.y_origin:
+            match = self.find_close_to(x - self.x_origin, self.y_origin - y, vdu_data=self.data[self.current_vdu])
+            if match[0] is not None:  # Snap to position for deleting the point under the mouse.
+                painter.setPen(QPen(QColor(0xff0000), 2))
+                x, y, lux, percent = match[0] + self.x_origin, self.y_origin - match[1], match[2], match[3]
+            else:  # Show precise position for adding a new point
+                lux, percent = self.lux_from_x(x - self.x_origin), self.percent_from_y(y - self.y_origin)
+                painter.setPen(QPen(QColor(0xffffff), 1))
+            painter.drawLine(self.x_origin, y, self.x_origin + self.plot_width + 5, y)
+            painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height - 5)  # Tooltip lux and percent
+            painter.setPen(QPen(QColor(0x000000), 1))
+            painter.drawText(x + 10, y - 10, f"{lux}, {percent}%")
+
         painter.end()
         self.setPixmap(pixmap)
 
@@ -4677,21 +4681,21 @@ class LuxProfileChart(QLabel):
             lux = self.lux_from_x(x)
             vdu_data.append((lux, percent))
             vdu_data.sort()
-        self.create_plot(hover_pos=(local_pos.x(), local_pos.y()))
+        self.create_plot()
         self.update()
         self.chart_changed_callback()
         event.accept()
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        local_pos = self.mapFromGlobal(event.globalPos())
-        self.create_plot(hover_pos=(local_pos.x(), local_pos.y()))
+        self.create_plot()
         self.update()
 
     def find_close_to(self, x: int, y: int, vdu_data: List[Tuple[int, int]]) -> Tuple:
+        r = 5
         for existing_lux, existing_percent in vdu_data:
             existing_x = self.x_from_lux(existing_lux)
             existing_y = self.y_from_percent(existing_percent)
-            if existing_x - 10 <= x <= existing_x + 10 and existing_y - 10 <= y <= existing_y + 10:
+            if existing_x - r <= x <= existing_x + r and existing_y - r <= y <= existing_y + r:
                 return existing_x, existing_y, existing_lux, existing_percent
         return None, None, None, None
 
