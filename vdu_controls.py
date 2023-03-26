@@ -386,7 +386,7 @@ Light/Lux Metering
 to a specified lux/brightness profile.
 
 The Settings Dialog includes an option enable lux metering options.  When enabled, the
-Content Menu will include Light Meter option to access a Light/Lux Metering Dialog.
+Content Menu will include Light Meter option to access a Light-Meter Dialog.
 The dialog can be used to define the metering device and the Lux Brightness Response
 Profile for each VDU.
 
@@ -2866,7 +2866,7 @@ class ContextMenu(QMenu):
         self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Grey Scale'), chart_action)
         if lux_meter_action is not None:
             self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Auto/Manual'), lux_auto_action)
-            self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Light metering'), lux_meter_action)
+            self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Light-Meter'), lux_meter_action)
         self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Settings'), settings_action)
         self.addAction(si(self, QStyle.SP_BrowserReload), tr('Refresh'), refresh_action).setProperty(self.busy_disable_prop,
                                                                                                      QVariant(True))
@@ -5036,7 +5036,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
     def __init__(self, main_app: VduAppWindow):
         super().__init__()
-        self.setWindowTitle(tr('Lux Metering'))
+        self.setWindowTitle(tr('Light-Meter'))
         self.main_app = main_app
         self.chart_data = {}
         self.range_restrictions = {}
