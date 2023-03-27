@@ -520,6 +520,8 @@ errors:
 
 Read ddcutil readme concerning config of i2c_dev with nvidia GPU's. Detailed ddcutil info at https://www.ddcutil.com/
 
+If you wish to use a serial-port lux metering device, the ``pyserial`` module is a runtime requirement.
+
 Environment
 ===========
 
@@ -601,12 +603,12 @@ from collections import namedtuple
 from datetime import datetime, timedelta, timezone
 from enum import Enum, IntFlag
 from functools import partial
+from importlib import import_module
 from pathlib import Path
 from threading import Lock
 from typing import List, Tuple, Mapping, Type, Dict, Callable
 from urllib.error import URLError
 
-import serial
 from PyQt5 import QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
     QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant
@@ -617,7 +619,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
     QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox
-from serial import SerialException
+
 
 APPNAME = "VDU Controls"
 VDU_CONTROLS_VERSION = '1.10.0'
@@ -4883,6 +4885,10 @@ class LuxMeterSerialDevice:
         self.lock = Lock()
         self.cached_value = None
         self.cached_time = time.time()
+        try:
+            self.serial_module = import_module('serial')
+        except ModuleNotFoundError as mnf:
+            raise LuxDeviceException("The required 'pyserial' serial-port module is not installed on this system.")
 
     def get_cached_value(self, age_seconds: float):
         if self.cached_value is not None and time.time() - self.cached_time <= age_seconds:
@@ -4898,18 +4904,18 @@ class LuxMeterSerialDevice:
                 try:
                     if self.serial_device is None:
                         log_info(f"Initialising character device {self.device_name} - waiting on data.")
-                        self.serial_device = serial.Serial(self.device_name)
+                        self.serial_device = self.serial_module.Serial(self.device_name)
                     self.serial_device.flushInput()
                     time.sleep(0.1)
                     buffer = self.serial_device.readline()
                     value = float(buffer.decode('utf-8').replace("\r\n", ''))
                     # print(f"meter={value}")
                     return value
-                except (SerialException, ValueError) as se:
+                except (self.serial_module.SerialException, ValueError) as se:
                     log_warning(f"Retry read of {self.device_name}, will reopen feed in 10 seconds", se)
                     time.sleep(10)
                     self.serial_device.close()
-                    self.serial_device = serial.Serial(self.device_name)
+                    self.serial_device = self.serial_module.Serial(self.device_name)
 
     def close(self):
         with self.lock:
@@ -5253,6 +5259,10 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         super().closeEvent(event)
 
 
+class LuxDeviceException(Exception):
+    pass
+
+
 class LuxAutoController:
 
     def __init__(self, main_app: VduAppWindow) -> None:
@@ -5277,8 +5287,11 @@ class LuxAutoController:
                 self.lux_auto_brightness_worker = LuxAutoWorker(self.main_app)
                 self.lux_auto_brightness_worker.working.connect(self.main_app.display_lux_auto_indicators)
                 self.lux_auto_brightness_worker.start()
-            except SerialException as se:
-                print(f"failed {se}")
+            except LuxDeviceException as lde:
+                alert = MessageBox(QMessageBox.Critical)
+                alert.setText(tr("Error setting up lux meter: {}").format(self.lux_config.get_device_name()))
+                alert.setInformativeText(str(lde))
+                alert.exec()
         else:
             log_info("Lux auto-brightness monitoring disabled.")  # TODO handle exception
             if self.lux_auto_brightness_worker is not None:
@@ -5589,7 +5602,7 @@ class VduAppWindow(QMainWindow):
                 log_info("Using system tray.")
                 # This next call appears to be automatic on KDE, but not on gnome.
                 app.setQuitOnLastWindowClosed(False)
-                self.tray = QSystemTrayIcon()
+                self.tray = QSystemTrayIcon(parent=self)
                 self.tray.setContextMenu(self.app_context_menu)
             else:
                 log_error("no system tray - cannot run in system tray.")
@@ -5958,12 +5971,15 @@ class VduAppWindow(QMainWindow):
         self.app_context_menu.refresh_preset_menu()
 
     def closeEvent(self, event):
-        if self.tray is not None:
-            self.hide()
-            event.ignore()  # hide the window
-        else:
-            self.app_save_state()
-            event.accept()  # let the window close
+        self.app_save_state()
+        # Despite what you find on Google, the following seems unnecessary, and causes vdu_controls to veto logout/shutdown
+        # if it's window is present on the desktop.  Leaving the code here for one more version.
+        if os.getenv("VDU_CONTROLS_OLD_CLOSE_BEHAVIOR") is not None:
+            if self.tray is not None:
+                self.hide()
+                event.ignore()  # hide the window
+            else:
+                event.accept()  # let the window close
 
     def create_config_files(self):
         for vdu_model in self.main_panel.vdu_controllers:
