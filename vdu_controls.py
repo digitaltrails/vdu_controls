@@ -5266,7 +5266,7 @@ class LuxAutoController:
         self.lux_meter: LuxMeterSerialDevice | None = None
         self.lux_auto_brightness_worker: LuxAutoWorker | None = None
         self.button = QToolButton()
-        self.lux_button = ToolButton(AUTO_LUX_ON_SVG, tr("Automatic brightness control"))
+        self.lux_button = ToolButton(AUTO_LUX_ON_SVG, tr("Toggle automatic brightness control"))
         self.lux_button.pressed.connect(self.toggle_auto)
 
     def update(self):
