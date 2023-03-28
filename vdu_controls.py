@@ -3631,8 +3631,9 @@ def weather_bad_location_dialog(weather):
 
 class PresetChooseWeatherWidget(QWidget):
 
-    def __init__(self, location_func: Callable):
+    def __init__(self, location: GeoLocation):
         super().__init__()
+        self.location = location
         self.init_weather()
         self.required_weather_filepath: Path | None = None
         self.setLayout(QVBoxLayout())
@@ -3648,7 +3649,7 @@ class PresetChooseWeatherWidget(QWidget):
             if self.chooser.itemData(index) is None:
                 self.info_label.setText('')
             else:
-                self.verify_weather_location(location_func)
+                self.verify_weather_location(self.location)
                 path = self.chooser.itemData(index)
                 if path.exists():
                     with open(path, encoding="utf-8") as weather_file:
@@ -3702,8 +3703,7 @@ class PresetChooseWeatherWidget(QWidget):
                     "Light Sleet Showers\n377 Light Sleet\n386 Thundery Showers\n389 Thundery Heavy Rain\n392 "
                     "Thundery Snow Showers\n395 Heavy Snow Showers\n")
 
-    def verify_weather_location(self, location_func: Callable):
-        location = location_func()
+    def verify_weather_location(self, location: GeoLocation):
         place_name = location.place_name if location.place_name is not None else 'IP-address'
         # Only do this check if the location has changed.
         vf_file_path = CONFIG_DIR_PATH.joinpath('verified_weather_location.txt')
@@ -3754,6 +3754,9 @@ class PresetChooseWeatherWidget(QWidget):
                 self.chooser.setCurrentIndex(i)
                 return
 
+    def update_location(self, location: GeoLocation):
+        self.location = location
+        self.verify_weather_location(self.location)
 
 class PresetChooseTransitionWidget(QWidget):
 
@@ -3816,11 +3819,11 @@ class PresetChooseTransitionWidget(QWidget):
 class PresetChooseElevationWidget(QWidget):
     # def create_trigger_widget(self, base_ini: ConfigIni) -> QWidget:
     #
-    def __init__(self, location_func: Callable):
+    def __init__(self, location: GeoLocation):
         super().__init__()
         self.elevation_key: SolarElevationKey | None = None
         self.elevation_time_map: Dict[SolarElevationKey, SolarElevationData] | None = None
-        self.location: GeoLocation | None = None
+        self.location: GeoLocation = location
         layout = QVBoxLayout()
         self.setLayout(layout)
         self.title_prefix = tr("Solar elevation trigger: ")
@@ -3841,9 +3844,9 @@ class PresetChooseElevationWidget(QWidget):
         self.bottom_layout = QHBoxLayout()
         self.bottom_layout.addWidget(self.plot)
         layout.addLayout(self.bottom_layout)
-        self.weather_widget = PresetChooseWeatherWidget(location_func)
+        self.weather_widget = PresetChooseWeatherWidget(location)
         self.bottom_layout.addWidget(self.weather_widget)
-        self.configure_for_location(location_func())
+        self.configure_for_location(location)
         self.slider.valueChanged.connect(self.sliding)
         self.setMinimumWidth(800)
         self.sun_image: QImage | None = None
@@ -3897,6 +3900,7 @@ class PresetChooseElevationWidget(QWidget):
         self.slider.setValue(-1)
         self.sliding()
         self.create_plot(None)
+        self.weather_widget.update_location(location)
 
     def create_plot(self, ev_key: SolarElevationKey | None):
         width, height = self.plot.width(), self.plot.height()
@@ -3904,7 +3908,7 @@ class PresetChooseElevationWidget(QWidget):
         pixmap = QPixmap(width, height)
         painter = QPainter(pixmap)
 
-        def reverse_x(x_val: int) -> int:  # makes thinking right to left a bit easier.
+        def reverse_x(x_val: int) -> int:  # makes thinking right-to-left a bit easier. MAYBE
             return width - x_val
 
         painter.fillRect(0, 0, width, origin_iy, QColor(0x5b93c5))
@@ -3918,7 +3922,9 @@ class PresetChooseElevationWidget(QWidget):
         max_y = -90.0
         solar_noon_plot_x, solar_noon_plot_y = 0, 0  # Solar noon
         t = today
-        while t.day == today.day:  # Draw elevation curve for today:
+
+        # Draw elevation curve for today:
+        while t.day == today.day:
             a, z = calc_solar_azimuth_zenith(t, self.location.latitude, self.location.longitude)
             x, y = ((t - today).total_seconds() / 60.0), math.sin(math.radians(90.0 - z)) * range_iy
             plot_x, plot_y = round(width * x / (60.0 * 24.0)), origin_iy - round(y)
@@ -3932,30 +3938,39 @@ class PresetChooseElevationWidget(QWidget):
                     sun_plot_x, sun_plot_y = plot_x, plot_y
                     sun_plot_time = t
             t += timedelta(minutes=1)
+
         if sun_plot_x is None:  # ev_key is for an elevation that does not occur today - draw sun at noon elev.
             sun_plot_x, sun_plot_y = solar_noon_plot_x, solar_noon_plot_y
+
         # Draw various annotations such the horizon-line, noon-line, E & W, and the current degrees:
         painter.setPen(QPen(QColor(0xffffff), 6))
         painter.drawLine(reverse_x(0), origin_iy, reverse_x(width), origin_iy)
         painter.drawLine(reverse_x(solar_noon_plot_x), origin_iy, reverse_x(solar_noon_plot_x), 0)
         painter.setPen(QPen(QColor(0xffffff), 6))
         painter.setFont(QFont(QApplication.font().family(), width // 20, QFont.Weight.Bold))
-        painter.drawText(reverse_x(solar_noon_plot_x - 150), origin_iy - 20, tr("E"))
-        painter.drawText(reverse_x(solar_noon_plot_x + 150), origin_iy - 20, tr("W"))
+        painter.drawText(QPoint(reverse_x(solar_noon_plot_x - 150), origin_iy - 32), tr("E"))
+        painter.drawText(QPoint(reverse_x(solar_noon_plot_x + 140), origin_iy - 32), tr("W"))
         time_text = sun_plot_time.strftime("%H:%M") if sun_plot_time else "____"
         painter.drawText(reverse_x(solar_noon_plot_x + width // 4), origin_iy + height // 4,
                          f"{ev_key.elevation if ev_key else 0:3d}{DEGREE_SYMBOL} {time_text}")
         painter.setPen(QPen(QColor(0xff965b), 2))
         painter.setBrush(QColor(0xff965b))
         painter.drawEllipse(reverse_x(solar_noon_plot_x + 8), origin_iy - 8, 16, 16)
+
         if ev_key:
-            # Draw a line representing the slider degrees - may be higher than sun for today:
+            # Draw a line representing the slider degrees and rise/set indicator - may be higher than sun for today:
             key_iy = origin_iy - round(math.sin(math.radians(ev_key.elevation)) * range_iy)
             painter.setPen(QPen(QColor(0xffffff if key_iy >= solar_noon_plot_y else 0xcccccc), 6))
+            painter.setBrush(painter.pen().color())
             if ev_key.direction == EASTERN_SKY:
                 painter.drawLine(reverse_x(0), key_iy, reverse_x(solar_noon_plot_x), key_iy)
+                painter.setPen(QPen(painter.pen().color(), 1))
+                painter.drawPolygon([QPoint(reverse_x(0) - 20 + tx, key_iy - 10 + ty) for tx, ty in [(-8, 0), (0, -16), (8, 0)]])
             else:
                 painter.drawLine(reverse_x(solar_noon_plot_x), key_iy, reverse_x(width), key_iy)
+                painter.setPen(QPen(painter.pen().color(), 1))
+                painter.drawPolygon([QPoint(reverse_x(width - 18) + tx, key_iy + 10 + ty) for tx, ty in [(-8, 0), (0, 16), (8, 0)]])
+
             # Draw the sun
             painter.setPen(QPen(QColor(0xff4a23), 6))
             if self.sun_image is None:
@@ -4090,7 +4105,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.editor_transitions_widget = PresetChooseTransitionWidget()
         self.editor_layout.addWidget(self.editor_transitions_widget)
 
-        self.editor_trigger_widget = PresetChooseElevationWidget(self.main_config.get_location)
+        self.editor_trigger_widget = PresetChooseElevationWidget(self.main_config.get_location())
         self.editor_layout.addWidget(self.editor_trigger_widget)
         presets_dialog_splitter.addWidget(self.editor_groupbox)
 
