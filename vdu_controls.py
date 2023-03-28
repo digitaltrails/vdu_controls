@@ -3823,7 +3823,7 @@ class PresetChooseElevationWidget(QWidget):
         self.location: GeoLocation | None = None
         layout = QVBoxLayout()
         self.setLayout(layout)
-        self.default_title = tr("Solar elevation trigger: ")
+        self.title_prefix = tr("Solar elevation trigger: ")
         slider = QSlider(Qt.Horizontal)
         self.slider = slider
         self.slider.setTracking(True)
@@ -3831,7 +3831,7 @@ class PresetChooseElevationWidget(QWidget):
         self.slider.setValue(-1)
         self.slider = self.slider
         self.elevation_steps: List[SolarElevationKey] = []
-        self.title_label = QLabel(self.default_title)
+        self.title_label = QLabel(self.title_prefix)
         layout.addWidget(self.title_label)
         layout.addWidget(self.slider)
         self.plot = QLabel()
@@ -3850,7 +3850,7 @@ class PresetChooseElevationWidget(QWidget):
 
     def sliding(self):
         if self.slider.value() == -1:
-            self.title_label.setText(self.default_title)
+            self.title_label.setText(self.title_prefix)
             self.elevation_key = None
             self.weather_widget.chooser.setCurrentIndex(0)
             self.weather_widget.setEnabled(False)
@@ -3859,7 +3859,7 @@ class PresetChooseElevationWidget(QWidget):
         self.elevation_key = self.elevation_steps[self.slider.value()]
         elevation_data = self.elevation_time_map[
             self.elevation_key] if self.elevation_key in self.elevation_time_map else None
-        occurs_at = elevation_data.when if elevation_data is not None else None
+        occurs_at = elevation_data.when if elevation_data is not None else None  # No elev data => sun doesn't rise this high today
         if occurs_at:
             when_text = tr("today at {}").format(occurs_at.strftime('%H:%M'))
         else:
@@ -3867,20 +3867,15 @@ class PresetChooseElevationWidget(QWidget):
         # https://en.wikipedia.org/wiki/Twilight
         if self.elevation_key.elevation < 1:
             if self.elevation_key.elevation >= -6:
-                if self.elevation_key.direction == EASTERN_SKY:
-                    when_text += " " + tr("dawn")
-                else:
-                    when_text += " " + tr("dusk")
+                when_text += " " + (tr("dawn") if self.elevation_key.direction == EASTERN_SKY else tr("dusk"))
             elif self.elevation_key.elevation >= -18:
                 # Astronomical twilight
                 when_text += " " + tr("twilight")
             else:
                 when_text += " " + tr("nighttime")
         display_text = "{} {} ({}, {})".format(
-            self.default_title,
-            format_solar_elevation_abbreviation(self.elevation_key),
-            tr(self.elevation_key.direction),
-            when_text)
+            self.title_prefix,
+            format_solar_elevation_abbreviation(self.elevation_key), tr(self.elevation_key.direction), when_text)
         if display_text != self.title_label.text():
             self.title_label.setText(display_text)
         self.create_plot(self.elevation_key)
@@ -3888,12 +3883,11 @@ class PresetChooseElevationWidget(QWidget):
     def configure_for_location(self, location: GeoLocation | None):
         self.location = location
         if location is None:
-            self.title_label.setText(self.default_title + tr("location undefined (see settings)"))
+            self.title_label.setText(self.title_prefix + tr("location undefined (see settings)"))
             self.slider.setDisabled(True)
             return
         self.slider.setEnabled(True)
-        self.elevation_time_map = create_todays_elevation_time_map(latitude=location.latitude,
-                                                                   longitude=location.longitude)
+        self.elevation_time_map = create_todays_elevation_time_map(latitude=location.latitude, longitude=location.longitude)
         self.elevation_steps = []
         for i in range(-19, 90):
             self.elevation_steps.append(SolarElevationKey(EASTERN_SKY, i))
@@ -3910,7 +3904,7 @@ class PresetChooseElevationWidget(QWidget):
         pixmap = QPixmap(width, height)
         painter = QPainter(pixmap)
 
-        def reverse_x(x_val: int) -> int:
+        def reverse_x(x_val: int) -> int:  # makes thinking right to left a bit easier.
             return width - x_val
 
         painter.fillRect(0, 0, width, origin_iy, QColor(0x5b93c5))
@@ -3924,7 +3918,7 @@ class PresetChooseElevationWidget(QWidget):
         max_y = -90.0
         solar_noon_plot_x, solar_noon_plot_y = 0, 0  # Solar noon
         t = today
-        while t.day == today.day:
+        while t.day == today.day:  # Draw elevation curve for today:
             a, z = calc_solar_azimuth_zenith(t, self.location.latitude, self.location.longitude)
             x, y = ((t - today).total_seconds() / 60.0), math.sin(math.radians(90.0 - z)) * range_iy
             plot_x, plot_y = round(width * x / (60.0 * 24.0)), origin_iy - round(y)
@@ -3938,20 +3932,12 @@ class PresetChooseElevationWidget(QWidget):
                     sun_plot_x, sun_plot_y = plot_x, plot_y
                     sun_plot_time = t
             t += timedelta(minutes=1)
-        if sun_plot_x is None:
+        if sun_plot_x is None:  # ev_key is for an elevation that does not occur today - draw sun at noon elev.
             sun_plot_x, sun_plot_y = solar_noon_plot_x, solar_noon_plot_y
-
+        # Draw various annotations such the horizon-line, noon-line, E & W, and the current degrees:
         painter.setPen(QPen(QColor(0xffffff), 6))
         painter.drawLine(reverse_x(0), origin_iy, reverse_x(width), origin_iy)
         painter.drawLine(reverse_x(solar_noon_plot_x), origin_iy, reverse_x(solar_noon_plot_x), 0)
-        if ev_key:
-            key_iy = origin_iy - round(math.sin(math.radians(ev_key.elevation)) * range_iy)
-            painter.setPen(QPen(QColor(0xffffff if key_iy >= solar_noon_plot_y else 0xcccccc), 6))
-            if ev_key.direction == EASTERN_SKY:
-                painter.drawLine(reverse_x(0), key_iy, reverse_x(solar_noon_plot_x), key_iy)
-            else:
-                painter.drawLine(reverse_x(solar_noon_plot_x), key_iy, reverse_x(width), key_iy)
-
         painter.setPen(QPen(QColor(0xffffff), 6))
         painter.setFont(QFont(QApplication.font().family(), width // 20, QFont.Weight.Bold))
         painter.drawText(reverse_x(solar_noon_plot_x - 150), origin_iy - 20, tr("E"))
@@ -3963,6 +3949,14 @@ class PresetChooseElevationWidget(QWidget):
         painter.setBrush(QColor(0xff965b))
         painter.drawEllipse(reverse_x(solar_noon_plot_x + 8), origin_iy - 8, 16, 16)
         if ev_key:
+            # Draw a line representing the slider degrees - may be higher than sun for today:
+            key_iy = origin_iy - round(math.sin(math.radians(ev_key.elevation)) * range_iy)
+            painter.setPen(QPen(QColor(0xffffff if key_iy >= solar_noon_plot_y else 0xcccccc), 6))
+            if ev_key.direction == EASTERN_SKY:
+                painter.drawLine(reverse_x(0), key_iy, reverse_x(solar_noon_plot_x), key_iy)
+            else:
+                painter.drawLine(reverse_x(solar_noon_plot_x), key_iy, reverse_x(width), key_iy)
+            # Draw the sun
             painter.setPen(QPen(QColor(0xff4a23), 6))
             if self.sun_image is None:
                 self.sun_image = create_image_from_svg_bytes(BRIGHTNESS_SVG.replace(SVG_LIGHT_THEME_COLOR, b"#ffdd30"))
