@@ -4981,7 +4981,7 @@ class LuxAutoWorker(WorkerThread):
                             diff = profile_brightness - current_brightness
                             step_size = 4 if abs(diff) < 8 else 8
                             step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
-                            log_debug(
+                            log_info(
                                 f"Auto lux: lux={metered_lux} stepping {controller.vdu_stable_id} step={step} current={current_brightness} target={profile_brightness}")
                             self._message.emit(tr("Adjusting {}...").format(controller.vdu_stable_id))
                             brightness_control.restore_vdu_attribute(str(current_brightness + step))
