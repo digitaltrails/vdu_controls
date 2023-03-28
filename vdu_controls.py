@@ -2867,7 +2867,7 @@ class ContextMenu(QMenu):
         self.preset_prop = "is_preset"
         self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Grey Scale'), chart_action)
         if lux_meter_action is not None:
-            self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Auto/Manual'), lux_auto_action)
+            self.lux_auto_action = self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Auto/Manual'), lux_auto_action)
             self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Light-Meter'), lux_meter_action)
         self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Settings'), settings_action)
         self.addAction(si(self, QStyle.SP_BrowserReload), tr('Refresh'), refresh_action).setProperty(self.busy_disable_prop,
@@ -2923,6 +2923,8 @@ class ContextMenu(QMenu):
             if action.property(self.busy_disable_prop):
                 action.setDisabled(is_busy)
 
+    def lux_auto_indicator(self, on_auto: bool) -> None:
+        self.lux_auto_action.setText(('\u2600' if on_auto else '') + tr('Auto/Manual'))
 
 class ToolButton(QToolButton):
 
@@ -4979,7 +4981,7 @@ class LuxAutoWorker(WorkerThread):
                             diff = profile_brightness - current_brightness
                             step_size = 4 if abs(diff) < 8 else 8
                             step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
-                            log_info(
+                            log_debug(
                                 f"Auto lux: lux={metered_lux} stepping {controller.vdu_stable_id} step={step} current={current_brightness} target={profile_brightness}")
                             self._message.emit(tr("Adjusting {}...").format(controller.vdu_stable_id))
                             brightness_control.restore_vdu_attribute(str(current_brightness + step))
@@ -5550,9 +5552,10 @@ class VduAppWindow(QMainWindow):
         def refresh_from_vdus() -> None:
             self.start_refresh()
 
-        def lux_auto_action() -> None:
+        def lux_auto_action() -> bool:
             self.lux_auto_controller.toggle_auto()
             self.display_lux_auto_indicators()
+            return self.lux_auto_controller.is_auto_enabled()
 
         def lux_meter_action() -> None:
             LuxDialog.invoke(self)
@@ -5961,8 +5964,10 @@ class VduAppWindow(QMainWindow):
         if self.lux_auto_controller is not None and self.lux_auto_controller.lux_config is not None:
             if self.lux_auto_controller.is_auto_enabled():
                 self.set_icon_and_title(create_icon_from_svg_bytes(self.lux_auto_controller.current_auto_svg()), tr('Auto'))
+                self.app_context_menu.lux_auto_indicator(True)
             else:
                 self.set_icon_and_title()
+                self.app_context_menu.lux_auto_indicator(False)
 
     def display_active_preset(self, preset=None) -> None:
         assert is_running_in_gui_thread()  # Boilerplate in case this is called from the wrong thread.
