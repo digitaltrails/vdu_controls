@@ -3839,17 +3839,17 @@ class PresetChooseElevationWidget(QWidget):
         layout.addWidget(self.title_label)
         layout.addWidget(self.slider)
         self.plot = QLabel()
-        self.plot.setFixedHeight(200)
-        self.plot.setFixedWidth(400)
+        self.plot.setMinimumHeight(150)
+        self.plot.setMinimumWidth(200)
         layout.addSpacing(16)
         self.bottom_layout = QHBoxLayout()
-        self.bottom_layout.addWidget(self.plot)
+        self.bottom_layout.addWidget(self.plot, 1)
         layout.addLayout(self.bottom_layout)
         self.weather_widget = PresetChooseWeatherWidget(location)
-        self.bottom_layout.addWidget(self.weather_widget)
+        self.bottom_layout.addWidget(self.weather_widget, 0)
         self.configure_for_location(location)
         self.slider.valueChanged.connect(self.sliding)
-        self.setMinimumWidth(800)
+        self.setMinimumWidth(400)
         self.sun_image: QImage | None = None
 
     def sliding(self):
@@ -3903,9 +3903,15 @@ class PresetChooseElevationWidget(QWidget):
         self.create_plot(None)
         self.weather_widget.update_location(location)
 
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        super().resizeEvent(event)
+        self.create_plot(self.elevation_key)
+
     def create_plot(self, ev_key: SolarElevationKey | None):
         width, height = self.plot.width(), self.plot.height()
         origin_iy, range_iy = height // 2, self.plot.height() // 3
+        std_line_width = 4
+
         pixmap = QPixmap(width, height)
         painter = QPainter(pixmap)
 
@@ -3914,17 +3920,16 @@ class PresetChooseElevationWidget(QWidget):
 
         painter.fillRect(0, 0, width, origin_iy, QColor(0x5b93c5))
         painter.fillRect(0, origin_iy, width, height, QColor(0x7d5233))
-        painter.setPen(QPen(QColor(0xffffff), 6))
+        painter.setPen(QPen(QColor(0xffffff), std_line_width))  # Horizon
         painter.drawLine(0, origin_iy, width, origin_iy)
-        painter.setPen(QPen(QColor(0xff965b), 6))
 
+        # Draw elevation curve for today:
+        painter.setPen(QPen(QColor(0xff965b), std_line_width))
         today = zoned_now().replace(hour=0, minute=0)
         sun_plot_x, sun_plot_y, sun_plot_time = None, None, None
         max_y = -90.0
         solar_noon_plot_x, solar_noon_plot_y = 0, 0  # Solar noon
         t = today
-
-        # Draw elevation curve for today:
         while t.day == today.day:
             a, z = calc_solar_azimuth_zenith(t, self.location.latitude, self.location.longitude)
             x, y = ((t - today).total_seconds() / 60.0), math.sin(math.radians(90.0 - z)) * range_iy
@@ -3944,13 +3949,13 @@ class PresetChooseElevationWidget(QWidget):
             sun_plot_x, sun_plot_y = solar_noon_plot_x, solar_noon_plot_y
 
         # Draw various annotations such the horizon-line, noon-line, E & W, and the current degrees:
-        painter.setPen(QPen(QColor(0xffffff), 6))
+        painter.setPen(QPen(QColor(0xffffff), std_line_width))
         painter.drawLine(reverse_x(0), origin_iy, reverse_x(width), origin_iy)
         painter.drawLine(reverse_x(solar_noon_plot_x), origin_iy, reverse_x(solar_noon_plot_x), 0)
-        painter.setPen(QPen(QColor(0xffffff), 6))
+        painter.setPen(QPen(QColor(0xffffff), std_line_width))
         painter.setFont(QFont(QApplication.font().family(), width // 20, QFont.Weight.Bold))
-        painter.drawText(QPoint(reverse_x(solar_noon_plot_x - 150), origin_iy - 32), tr("E"))
-        painter.drawText(QPoint(reverse_x(solar_noon_plot_x + 140), origin_iy - 32), tr("W"))
+        painter.drawText(QPoint(reverse_x(70), origin_iy - 32), tr("E"))
+        painter.drawText(QPoint(reverse_x(width - 25), origin_iy - 32), tr("W"))
         time_text = sun_plot_time.strftime("%H:%M") if sun_plot_time else "____"
         painter.drawText(reverse_x(solar_noon_plot_x + width // 4), origin_iy + height // 4,
                          f"{ev_key.elevation if ev_key else 0:3d}{DEGREE_SYMBOL} {time_text}")
@@ -3961,7 +3966,7 @@ class PresetChooseElevationWidget(QWidget):
         if ev_key:
             # Draw a line representing the slider degrees and rise/set indicator - may be higher than sun for today:
             key_iy = origin_iy - round(math.sin(math.radians(ev_key.elevation)) * range_iy)
-            painter.setPen(QPen(QColor(0xffffff if key_iy >= solar_noon_plot_y else 0xcccccc), 6))
+            painter.setPen(QPen(QColor(0xffffff if key_iy >= solar_noon_plot_y else 0xcccccc), std_line_width))
             painter.setBrush(painter.pen().color())
             if ev_key.direction == EASTERN_SKY:
                 painter.drawLine(reverse_x(0), key_iy, reverse_x(solar_noon_plot_x), key_iy)
@@ -3973,7 +3978,7 @@ class PresetChooseElevationWidget(QWidget):
                 painter.drawPolygon([QPoint(reverse_x(width - 18) + tx, key_iy + 10 + ty) for tx, ty in [(-8, 0), (0, 16), (8, 0)]])
 
             # Draw the sun
-            painter.setPen(QPen(QColor(0xff4a23), 6))
+            painter.setPen(QPen(QColor(0xff4a23), std_line_width))
             if self.sun_image is None:
                 self.sun_image = create_image_from_svg_bytes(BRIGHTNESS_SVG.replace(SVG_LIGHT_THEME_COLOR, b"#ffdd30"))
             painter.drawImage(QPoint(reverse_x(sun_plot_x) - self.sun_image.width() // 2,
@@ -4019,9 +4024,9 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.main_window = main_window
         self.main_config = main_config
         self.content_controls: Dict[Tuple[str, str], QWidget] = {}
-        self.resize(1600, 800)
-        self.setMinimumWidth(1320)
-        self.setMinimumHeight(800)
+        self.resize(1500, 800)
+        self.setMinimumWidth(1350)
+        self.setMinimumHeight(600)
         layout = QVBoxLayout()
         self.setLayout(layout)
 
@@ -4031,7 +4036,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         layout.addWidget(presets_dialog_splitter)
 
         presets_panel = QGroupBox()
-        presets_panel.setMinimumWidth(750)
+        presets_panel.setMinimumWidth(700)
         presets_panel.setFlat(True)
         presets_panel_layout = QVBoxLayout()
         presets_panel.setLayout(presets_panel_layout)
@@ -4561,8 +4566,8 @@ class LuxProfileChart(QLabel):
         self.range_restrictions = range_restrictions
         self.current_lux = None
         self.current_vdu = None
-        self.pixmap_width = 800
-        self.pixmap_height = 750
+        self.pixmap_width = 600
+        self.pixmap_height = 550
         self.plot_width, self.plot_height = self.pixmap_width - 200, self.pixmap_height - 150
         self.x_origin, self.y_origin = 120, self.plot_height + 50
         self.setMouseTracking(True)  # Enable mouse move events so we can draw cross-hairs
@@ -5060,6 +5065,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.chart_data = {}
         self.range_restrictions = {}
         self.has_profile_changes = False
+        self.setMinimumWidth(750)
 
         self.path = get_config_path('AutoLux')
 
