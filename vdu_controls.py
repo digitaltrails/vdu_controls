@@ -3035,8 +3035,7 @@ class VduControlsMainPanel(QWidget):
                     self.layout().removeItem(item)
                     item.widget().deleteLater()
 
-        layout = QVBoxLayout()
-        self.setLayout(layout)
+        self.setLayout(QVBoxLayout())
         self.context_menu = app_context_menu
         app_context_menu.refresh_preset_menu()
         controllers_layout = self.layout()
@@ -3075,7 +3074,7 @@ class VduControlsMainPanel(QWidget):
             controllers_layout.addWidget(no_vdu_widget)
 
         self.bottom_toolbar = VduPanelBottomToolBar(tool_buttons=tool_buttons, app_context_menu=app_context_menu, parent=self)
-        layout.addWidget(self.bottom_toolbar)
+        self.layout().addWidget(self.bottom_toolbar)
         self.setContextMenuPolicy(Qt.CustomContextMenu)
 
         def open_context_menu(position: QPoint) -> None:
@@ -5042,6 +5041,9 @@ class LuxConfig(ConfigIni):
                 text = Path(self.path).read_text()
                 self.read_string(text)
                 self.last_modified_time = Path.stat(self.path).st_mtime
+        else:
+            for section_name in ['lux-meter', 'lux-profile', 'lux-ui']:
+                self.add_section(section_name)
         return self
 
 
@@ -5136,8 +5138,6 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             if device_name != '':
                 device_name = self.validate_device(device_name)
                 if device_name is not None:
-                    if not self.config.has_section('lux-meter'):
-                        self.config.add_section('lux-meter')
                     if device_name != self.config.get('lux-meter', 'lux-device', fallback=None):
                         self.config.set('lux-meter', "lux-device", device_name)
                         self.save_settings()
@@ -5145,15 +5145,12 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.meter_device_selector.pressed.connect(choose_device)
 
         def toggle_enabled(enabled: bool):
-            if not self.config.has_section('lux-meter'):
-                self.config.add_section('lux-meter')
             self.config.set('lux-meter', 'automatic-brightness', 'yes' if enabled else 'no')
             self.save_settings()
 
         self.enabled_checkbox.stateChanged.connect(toggle_enabled)
 
         def interval_selector_changed() -> None:
-            self.config.add_section('lux-meter') if not self.config.has_section('lux-meter') else None
             self.config.set('lux-meter', 'interval-minutes', str(self.interval_selector.value()))
             self.save_settings(requires_auto_brightness_restart=False)
 
@@ -5162,7 +5159,6 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         def select_profile(index: int):
             if self.plot is not None:
                 self.plot.set_current_profile(list(self.chart_data.keys())[index])
-            self.config.add_section('lux-ui') if not self.config.has_section('lux-ui') else None
             if self.config.get('lux-ui', 'selected-profile', fallback=None) != self.profile_selector.itemData(index):
                 self.config.set('lux-ui', 'selected-profile', self.profile_selector.itemData(index))
                 self.save_settings()
@@ -5250,8 +5246,6 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             self.lux_meter_widget.start_metering(self.main_app.lux_auto_controller.lux_meter)
 
     def save_profiles(self):
-        if not self.config.has_section('lux-profile'):
-            self.config.add_section('lux-profile')
         self.config.set('lux-profile', self.plot.current_vdu, repr(self.plot.data[self.plot.current_vdu]))
         self.save_settings(True)
 
@@ -5282,9 +5276,13 @@ class LuxAutoController:
         self.lux_config: LuxConfig | None = None
         self.lux_meter: LuxMeterSerialDevice | None = None
         self.lux_auto_brightness_worker: LuxAutoWorker | None = None
-        self.button = QToolButton()
+        self.lux_button: ToolButton = None
+        self.create_tool_button()
+
+    def create_tool_button(self) -> ToolButton:
         self.lux_button = ToolButton(AUTO_LUX_ON_SVG, tr("Toggle automatic brightness control"))
         self.lux_button.pressed.connect(self.toggle_auto)
+        return self.lux_button
 
     def update(self):
         self.lux_config = LuxConfig().load()
@@ -5816,6 +5814,7 @@ class VduAppWindow(QMainWindow):
                 self.main_panel.vdu_setting_changed.disconnect(self.display_active_preset)
                 self.main_panel.connected_vdus_changed.disconnect(self.create_main_control_panel)
                 self.main_panel.deleteLater()
+                self.main_panel = None
             self.main_panel = VduControlsMainPanel()
             # Write up the signal/slots first
 
@@ -5827,7 +5826,7 @@ class VduAppWindow(QMainWindow):
             refresh_button.pressed.connect(self.start_refresh)
             tool_buttons = [refresh_button]
             if self.main_config.is_set(GlobalOption.LUX_METER_ENABLED) and self.lux_auto_controller is not None:
-                tool_buttons.append(self.lux_auto_controller.lux_button)
+                tool_buttons.append(self.lux_auto_controller.create_tool_button())
             self.main_panel.initialise_control_panels(self.app_context_menu, self.main_config, self.vdu_controllers,
                                                       tool_buttons, self.splash_message_signal)
             self.main_panel.indicate_busy(True)
