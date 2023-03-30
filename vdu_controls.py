@@ -3815,101 +3815,48 @@ class PresetChooseTransitionWidget(QWidget):
 
     def get_step_seconds(self) -> int:
         return self.step_seconds_widget.value()
+class PresetChooseElevationChart(QLabel):
 
+    selected_elevation_signal = pyqtSignal(object)
 
-class PresetChooseElevationWidget(QWidget):
-    # def create_trigger_widget(self, base_ini: ConfigIni) -> QWidget:
-    #
-    def __init__(self, location: GeoLocation):
+    def __init__(self):
         super().__init__()
-        self.elevation_key: SolarElevationKey | None = None
-        self.elevation_time_map: Dict[SolarElevationKey, SolarElevationData] | None = None
-        self.location: GeoLocation = location
-        layout = QVBoxLayout()
-        self.setLayout(layout)
-        self.title_prefix = tr("Solar elevation trigger: ")
-        slider = QSlider(Qt.Horizontal)
-        self.slider = slider
-        self.slider.setTracking(True)
-        self.slider.setMinimum(-1)
-        self.slider.setValue(-1)
-        self.slider = self.slider
-        self.elevation_steps: List[SolarElevationKey] = []
-        self.title_label = QLabel(self.title_prefix)
-        layout.addWidget(self.title_label)
-        layout.addWidget(self.slider)
-        self.plot = QLabel()
-        self.plot.setMinimumHeight(150)
-        self.plot.setMinimumWidth(200)
-        layout.addSpacing(16)
-        self.bottom_layout = QHBoxLayout()
-        self.bottom_layout.addWidget(self.plot, 1)
-        layout.addLayout(self.bottom_layout)
-        self.weather_widget = PresetChooseWeatherWidget(location)
-        self.bottom_layout.addWidget(self.weather_widget, 0)
-        self.configure_for_location(location)
-        self.slider.valueChanged.connect(self.sliding)
-        self.setMinimumWidth(400)
+        self.setMinimumHeight(150)
+        self.setMinimumWidth(200)
         self.sun_image: QImage | None = None
-
-    def sliding(self):
-        if self.slider.value() == -1:
-            self.title_label.setText(self.title_prefix)
-            self.elevation_key = None
-            self.weather_widget.chooser.setCurrentIndex(0)
-            self.weather_widget.setEnabled(False)
-            return
-        self.weather_widget.setEnabled(True)
-        self.elevation_key = self.elevation_steps[self.slider.value()]
-        elevation_data = self.elevation_time_map[
-            self.elevation_key] if self.elevation_key in self.elevation_time_map else None
-        occurs_at = elevation_data.when if elevation_data is not None else None  # No elev data => sun doesn't rise this high today
-        if occurs_at:
-            when_text = tr("today at {}").format(occurs_at.strftime('%H:%M'))
-        else:
-            when_text = tr("the sun does not rise this high today")
-        # https://en.wikipedia.org/wiki/Twilight
-        if self.elevation_key.elevation < 1:
-            if self.elevation_key.elevation >= -6:
-                when_text += " " + (tr("dawn") if self.elevation_key.direction == EASTERN_SKY else tr("dusk"))
-            elif self.elevation_key.elevation >= -18:
-                # Astronomical twilight
-                when_text += " " + tr("twilight")
-            else:
-                when_text += " " + tr("nighttime")
-        display_text = "{} {} ({}, {})".format(
-            self.title_prefix,
-            format_solar_elevation_abbreviation(self.elevation_key), tr(self.elevation_key.direction), when_text)
-        if display_text != self.title_label.text():
-            self.title_label.setText(display_text)
-        self.create_plot(self.elevation_key)
-
-    def configure_for_location(self, location: GeoLocation | None):
-        self.location = location
-        if location is None:
-            self.title_label.setText(self.title_prefix + tr("location undefined (see settings)"))
-            self.slider.setDisabled(True)
-            return
-        self.slider.setEnabled(True)
-        self.elevation_time_map = create_todays_elevation_time_map(latitude=location.latitude, longitude=location.longitude)
-        self.elevation_steps = []
+        self.setMouseTracking(True)
+        self.in_drag = False
+        self.last_pos = None
+        self.elevation_time_map: Dict[SolarElevationKey, SolarElevationData] | None = None
+        self.elevation_key: SolarElevationKey | None = None
+        self.location: GeoLocation | None = None
+        self.elevation_steps: List[SolarElevationKey] = []
         for i in range(-19, 90):
             self.elevation_steps.append(SolarElevationKey(EASTERN_SKY, i))
         for i in range(90, -20, -1):
             self.elevation_steps.append(SolarElevationKey(WESTERN_SKY, i))
-        self.slider.setMaximum(len(self.elevation_steps) - 1)
-        self.slider.setValue(-1)
-        self.sliding()
-        self.create_plot(None)
-        self.weather_widget.update_location(location)
 
-    def resizeEvent(self, event: QResizeEvent) -> None:
-        super().resizeEvent(event)
-        self.create_plot(self.elevation_key)
+    def has_elevation_key(self, key: SolarElevationKey):
+        return key in self.elevation_steps
 
-    def create_plot(self, ev_key: SolarElevationKey | None):
-        width, height = self.plot.width(), self.plot.height()
-        origin_iy, range_iy = height // 2, self.plot.height() // 3
+    def get_elevation_data(self, elevation_key: SolarElevationKey):
+        return self.elevation_time_map[elevation_key] if elevation_key in self.elevation_time_map else None
+
+    def set_elevation_key(self, elevation_key: SolarElevationKey):
+        self.elevation_key = elevation_key
+        self.create_plot()
+
+    def configure_for_location(self, location: GeoLocation | None):
+        self.location = location
+        self.elevation_time_map = create_todays_elevation_time_map(latitude=location.latitude,
+                                                                   longitude=location.longitude)
+        self.elevation_key = None
+        self.create_plot()
+
+    def create_plot(self):
+        ev_key = self.elevation_key
+        width, height = self.width(), self.height()
+        origin_iy, range_iy = height // 2, self.height() // 2.5
         std_line_width = 4
 
         pixmap = QPixmap(width, height)
@@ -3923,18 +3870,18 @@ class PresetChooseElevationWidget(QWidget):
         painter.setPen(QPen(QColor(0xffffff), std_line_width))  # Horizon
         painter.drawLine(0, origin_iy, width, origin_iy)
 
-        # Draw elevation curve for today:
-        painter.setPen(QPen(QColor(0xff965b), std_line_width))
+        # Perform computations for today's curve and maxima.
         today = zoned_now().replace(hour=0, minute=0)
         sun_plot_x, sun_plot_y, sun_plot_time = None, None, None
         max_y = -90.0
         solar_noon_plot_x, solar_noon_plot_y = 0, 0  # Solar noon
         t = today
+        curve_points = []
         while t.day == today.day:
             a, z = calc_solar_azimuth_zenith(t, self.location.latitude, self.location.longitude)
             x, y = ((t - today).total_seconds() / 60.0), math.sin(math.radians(90.0 - z)) * range_iy
             plot_x, plot_y = round(width * x / (60.0 * 24.0)), origin_iy - round(y)
-            painter.drawPoint(reverse_x(plot_x), plot_y)
+            curve_points.append(QPoint(reverse_x(plot_x), plot_y))
             if y > max_y:
                 max_y = y
                 solar_noon_plot_x, solar_noon_plot_y = plot_x, plot_y
@@ -3944,9 +3891,26 @@ class PresetChooseElevationWidget(QWidget):
                     sun_plot_x, sun_plot_y = plot_x, plot_y
                     sun_plot_time = t
             t += timedelta(minutes=1)
-
         if sun_plot_x is None:  # ev_key is for an elevation that does not occur today - draw sun at noon elev.
             sun_plot_x, sun_plot_y = solar_noon_plot_x, solar_noon_plot_y
+
+        # Draw pie/compas angle
+        if ev_key:
+            start_angle = ev_key.elevation if ev_key.direction == EASTERN_SKY else (180 - ev_key.elevation)  # anticlockwise from 0
+        else:
+            start_angle = 180 + 19
+        painter.setPen(QColor(255,255,255))
+        painter.setBrush(QColor(255, 255, 255, 64))
+        span_angle = -(start_angle + 19) # From start angle spanning counterclockwise back toward the right to -19.
+        max_iy = round(math.sin(math.radians(90)) * range_iy)
+        rw = rh = max_iy * 2
+        rx, ry = reverse_x(solar_noon_plot_x) - rw // 2, origin_iy - rh // 2
+        painter.drawPie(rx, ry, rw, rh, start_angle * 16, span_angle * 16)
+
+        # Draw elevation curve for today:
+
+        painter.setPen(QPen(QColor(0xff965b), std_line_width))
+        painter.drawPoints(curve_points)
 
         # Draw various annotations such the horizon-line, noon-line, E & W, and the current degrees:
         painter.setPen(QPen(QColor(0xffffff), std_line_width))
@@ -3983,19 +3947,155 @@ class PresetChooseElevationWidget(QWidget):
                 self.sun_image = create_image_from_svg_bytes(BRIGHTNESS_SVG.replace(SVG_LIGHT_THEME_COLOR, b"#ffdd30"))
             painter.drawImage(QPoint(reverse_x(sun_plot_x) - self.sun_image.width() // 2,
                                      sun_plot_y - self.sun_image.height() // 2), self.sun_image)
-        painter.end()
-        self.plot.setPixmap(pixmap)
 
-    def set_elevation(self, elevation_text: str):
-        if elevation_text and len(self.elevation_steps) != 0:
-            self.elevation_key = parse_solar_elevation_ini_text(elevation_text)
-            if self.elevation_key in self.elevation_steps:
-                self.slider.setValue(self.elevation_steps.index(self.elevation_key))
-                self.weather_widget.setEnabled(True)
+            if self.in_drag:
+                painter.setPen(QPen(QColor(0xff0000), 6))
+                painter.drawLine(10, 0, 10, height) if self.last_pos.x() <= 20 else None
+                painter.drawLine(width - 10, 0, width - 10, height) if self.last_pos.x() >= width - 20 else None
+
+        painter.end()
+        self.setPixmap(pixmap)
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        self.last_pos = self.mapFromGlobal(event.globalPos())
+        self.in_drag = True
+        event.accept()
+
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        self.in_drag = False
+        self.last_pos = None
+        event.accept()
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        pos = self.mapFromGlobal(event.globalPos())
+        x = pos.x()
+        if self.in_drag:
+            if x <= 5 or x >= self.width() - 5:  # Deletion zone
+                self.set_elevation_key(None)
+                self.selected_elevation_signal.emit(None)
                 return
+            left_edge = self.width() // 6
+            right_edge = self.width() - self.width() // 6
+            if x < left_edge:  # Buffer zone before deletion
+                x = left_edge
+            if x > right_edge:
+                x = right_edge
+            i = len(self.elevation_steps) - 1 - round((len(self.elevation_steps) - 1) * (x - left_edge) / (right_edge - left_edge))
+            self.set_elevation_key(self.elevation_steps[i])
+            self.selected_elevation_signal.emit(self.elevation_key)
+            self.last_pos = pos
+        else:
+            self.last_pos = None
+        event.accept()
+
+
+class PresetChooseElevationWidget(QWidget):
+
+    _slider_select_elevation = pyqtSignal(object)
+
+    # def create_trigger_widget(self, base_ini: ConfigIni) -> QWidget:
+    #
+    def __init__(self, location: GeoLocation):
+        super().__init__()
+        self.elevation_key: SolarElevationKey | None = None
+        self.location: GeoLocation = location
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+        self.title_prefix = tr("Solar elevation trigger: ")
+        slider = QSlider(Qt.Horizontal)
+        self.slider = slider
+        self.slider.setTracking(True)
+        self.slider.setMinimum(-1)
         self.slider.setValue(-1)
+        self.slider = self.slider
+        self.title_label = QLabel(self.title_prefix)
+        layout.addWidget(self.title_label)
+        layout.addWidget(self.slider)
+        self.elevation_chart = PresetChooseElevationChart()
+        layout.addSpacing(16)
+        self.bottom_layout = QHBoxLayout()
+        self.bottom_layout.addWidget(self.elevation_chart, 1)
+        layout.addLayout(self.bottom_layout)
+        self.weather_widget = PresetChooseWeatherWidget(location)
+        self.bottom_layout.addWidget(self.weather_widget, 0)
+        self.configure_for_location(location)
+        self.slider.valueChanged.connect(self.sliding)
+        self._slider_select_elevation.connect(self.set_elevation_key)
+        self.elevation_chart.selected_elevation_signal.connect(self.set_elevation_key)
+        self.setMinimumWidth(400)
+        self.sun_image: QImage | None = None
+
+    def sliding(self):
+        value = self.slider.value()
+        if value == -1:
+            self._slider_select_elevation.emit(None)
+            return
+        chart = self.elevation_chart
+        self._slider_select_elevation.emit(chart.elevation_steps[value] if 0 <= value < len(chart.elevation_steps) else None)
+
+    def display_elevation_description(self):
+        if self.elevation_key is None:
+            self.title_label.setText(self.title_prefix)
+            return
+        elevation_data = self.elevation_chart.get_elevation_data(self.elevation_key)
+        occurs_at = elevation_data.when if elevation_data is not None else None  # No elev data => sun doesn't rise this high today
+        if occurs_at:
+            when_text = tr("today at {}").format(occurs_at.strftime('%H:%M'))
+        else:
+            when_text = tr("the sun does not rise this high today")
+        # https://en.wikipedia.org/wiki/Twilight
+        if self.elevation_key.elevation < 1:
+            if self.elevation_key.elevation >= -6:
+                when_text += " " + (tr("dawn") if self.elevation_key.direction == EASTERN_SKY else tr("dusk"))
+            elif self.elevation_key.elevation >= -18:
+                # Astronomical twilight
+                when_text += " " + tr("twilight")
+            else:
+                when_text += " " + tr("nighttime")
+        display_text = "{} {} ({}, {})".format(
+            self.title_prefix,
+            format_solar_elevation_abbreviation(self.elevation_key), tr(self.elevation_key.direction), when_text)
+        if display_text != self.title_label.text():
+            self.title_label.setText(display_text)
+
+    def configure_for_location(self, location: GeoLocation | None):
+        self.elevation_chart.configure_for_location(location)
+        self.location = location
+        if location is None:
+            self.title_label.setText(self.title_prefix + tr("location undefined (see settings)"))
+            self.slider.setDisabled(True)
+            return
+        self.slider.setEnabled(True)
+        self.slider.setMaximum(len(self.elevation_chart.elevation_steps) - 1)
+        self.slider.setValue(-1)
+        self.sliding()
+        self.weather_widget.update_location(location)
+
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        super().resizeEvent(event)
+        self.elevation_chart.set_elevation_key(self.elevation_key)
+
+    def set_elevation_from_text(self, elevation_text: str):
+        if elevation_text and len(self.elevation_chart.elevation_steps) != 0:
+            elevation_key = parse_solar_elevation_ini_text(elevation_text)
+            if self.elevation_chart.has_elevation_key(elevation_key):
+                self.set_elevation_key(elevation_key)
+                return
+        self.set_elevation_key(None)
+
+    def set_elevation_key(self, elevation_key: SolarElevationKey):
+        if self.elevation_chart.has_elevation_key(elevation_key):
+            self.elevation_key = elevation_key
+            self.slider.setValue(self.elevation_chart.elevation_steps.index(self.elevation_key))
+            self.elevation_chart.set_elevation_key(self.elevation_key)
+            self.weather_widget.setEnabled(True)
+            self.display_elevation_description()
+            return
+        self.slider.setValue(-1)
+        self.elevation_chart.set_elevation_key(None)
         self.weather_widget.setEnabled(False)
         self.weather_widget.chooser.setCurrentIndex(0)
+        self.display_elevation_description()
 
     def get_required_weather_filename(self) -> str | None:
         path = self.weather_widget.get_required_weather_filepath()
@@ -4024,7 +4124,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.main_window = main_window
         self.main_config = main_config
         self.content_controls: Dict[Tuple[str, str], QWidget] = {}
-        self.resize(1500, 800)
+        self.resize(1600, 800)
         self.setMinimumWidth(1350)
         self.setMinimumHeight(600)
         layout = QVBoxLayout()
@@ -4318,7 +4418,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             for key, item in self.content_controls.items():
                 item.setChecked(preset.preset_ini.has_option(key[0], key[1]))
             if preset.preset_ini.has_section('preset'):
-                self.editor_trigger_widget.set_elevation(
+                self.editor_trigger_widget.set_elevation_from_text(
                     preset.preset_ini.get('preset', 'solar-elevation', fallback=None))
                 self.editor_trigger_widget.set_required_weather_filename(
                     preset.preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None))
