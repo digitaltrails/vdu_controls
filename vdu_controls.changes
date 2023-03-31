@@ -7,6 +7,8 @@ Sun 26 Mar 2023 07:34:00 UTC - Michael Hamilton <michael@actrix.gen.nz>
   * Added sample scripts for using a webcam to produce approximate lux values.
   * Added an option to transition smoothly on UNIX signal.
   * Replaced the transition combo-box with a button+checkboxes.
+  * Added drag-to-change, click-to-delete, to the elevation chart component.
+  * Added a setting to quickly disable weather and another for elevation-scheduling.
   * Cleanup of thread handling - clarification of GUI/non-GUI thread operations.
 
 -------------------------------------------------------------------

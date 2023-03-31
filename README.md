@@ -248,6 +248,8 @@ Version History
   * Added sample scripts for using a webcam to produce approximate lux values.
   * Added an option to transition smoothly on UNIX signal.
   * Replaced the transition combo-box with a button+checkboxes.
+  * Added drag-to-change, click-to-delete, to the elevation chart component.
+  * Added a setting to quickly disable weather and another for elevation-scheduling.
   * Cleanup of thread handling - clarification of GUI/non-GUI thread operations.
 * 1.9.2
   * Optional _Smooth Transitions_ for presets:
