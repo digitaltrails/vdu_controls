@@ -4750,10 +4750,11 @@ class LuxProfileChart(QLabel):
                                           random.randint(64, 128),
                                           random.randint(192, 200)) for h in range(len(self.data))]
         line_colors = {k: v for k, v in zip(self.data.keys(), possible_colors[0:len(self.data)])}
+        std_line_width = 4
         pixmap = QPixmap(self.pixmap_width, self.pixmap_height)
         painter = QPainter(pixmap)
         painter.fillRect(0, 0, self.pixmap_width, self.pixmap_height, QColor(0x5b93c5))
-        painter.setPen(QPen(QColor(0xffffff), 4))
+        painter.setPen(QPen(QColor(0xffffff), std_line_width))
         painter.drawText(self.pixmap_width // 3, 30, "Lux Brightness Response Profiles")
 
         # Draw x-axis
@@ -4784,15 +4785,15 @@ class LuxProfileChart(QLabel):
         # Draw range restrictions (if not 0..100)
         min_v, max_v = self.range_restrictions[self.current_vdu]
         if min_v > 0:
-            painter.setPen(QPen(QColor(0xff0000), 2, Qt.DashLine))
+            painter.setPen(QPen(QColor(0xff0000), std_line_width // 2, Qt.DashLine))
             cutoff = self.y_origin - self.y_from_percent(min_v)
             painter.drawLine(self.x_origin, cutoff, self.x_origin + self.plot_width + 25, cutoff)
         if max_v < 100:
-            painter.setPen(QPen(QColor(0xff0000), 2, Qt.DashLine))
+            painter.setPen(QPen(QColor(0xff0000), std_line_width // 2, Qt.DashLine))
             cutoff = self.y_origin - self.y_from_percent(max_v)
             painter.drawLine(self.x_origin, cutoff, self.x_origin + self.plot_width + 25, cutoff)
 
-        ellipse_diameter = 20
+        ellipse_diameter = std_line_width * 4
         # draw profile per vdu - draw current_profile last/on-top
         for name, vdu_data in [(k, v) for k, v in self.data.items() if k != self.current_vdu] + \
                               [(self.current_vdu, self.data[self.current_vdu])]:
@@ -4800,7 +4801,7 @@ class LuxProfileChart(QLabel):
             for lux, percent in vdu_data:
                 histogram_color = QColor(line_colors[name])
                 histogram_color.setAlpha(50)
-                painter.setPen(QPen(QColor(line_colors[name]), 6))
+                painter.setPen(QPen(QColor(line_colors[name]), std_line_width))
                 x = self.x_origin + self.x_from_lux(lux)
                 y = self.y_origin - self.y_from_percent(percent)
                 # painter.drawPoint(x, y)
@@ -4809,7 +4810,7 @@ class LuxProfileChart(QLabel):
                     if last_x and last_y:
                         painter.fillRect(last_x, last_y, x - last_x, self.y_origin - last_y, histogram_color)
                 if last_x and last_y:
-                    painter.setPen(QPen(QColor(line_colors[name]), 6))
+                    painter.setPen(QPen(QColor(line_colors[name]), std_line_width))
                     painter.drawLine(last_x, last_y, x, y)
                 last_x, last_y = x, y
             if self.current_vdu == name and last_x and last_y:
