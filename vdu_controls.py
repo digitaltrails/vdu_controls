@@ -2923,8 +2923,10 @@ class ContextMenu(QMenu):
             if action.property(self.busy_disable_prop):
                 action.setDisabled(is_busy)
 
-    def lux_auto_indicator(self, on_auto: bool) -> None:
-        self.lux_auto_action.setText(('\u2600' if on_auto else '') + tr('Auto/Manual'))
+    def update_lux_auto_icon(self, icon: QIcon) -> None:
+        if self.lux_auto_action.icon() != icon:
+            self.lux_auto_action.setIcon(icon)
+            self.update()
 
 class ToolButton(QToolButton):
 
@@ -2935,10 +2937,10 @@ class ToolButton(QToolButton):
         self.svg_source = svg_source
         self.refresh_icon()
 
-    def refresh_icon(self, svg_source: bytes | None = None):
+    def refresh_icon(self, svg_source: bytes | None = None):  # may refresh the theme (coloring light/dark) of the icon
         if svg_source is not None:
             self.svg_source = svg_source
-        self.setIcon(create_icon_from_svg_bytes(self.svg_source))
+        self.setIcon(create_themed_icon_from_svg_bytes(self.svg_source))  # this may alter the SVG for light/dark theme
 
 
 class VduPanelBottomToolBar(QToolBar):
@@ -3285,7 +3287,7 @@ class TransitioningDummyPreset(Preset):  # A wrapper that creates titles and ico
         # self.clocks = ('\u25F7','\u25F6', '\u25F5', '\u25F4')
         # self.arrows_big = ('\u25B6', '\u25B7')
         self.arrows = ('\u25B8', '\u25B9')
-        self.icons = (wrapped.create_icon(), create_icon_from_svg_bytes(TRANSITION_ICON_SOURCE))
+        self.icons = (wrapped.create_icon(), create_themed_icon_from_svg_bytes(TRANSITION_ICON_SOURCE))
 
     def update_progress(self):
         self.count += 1
@@ -3978,7 +3980,7 @@ class PresetChooseElevationChart(QLabel):
             # Draw the sun
             painter.setPen(QPen(QColor(0xff4a23), std_line_width))
             if self.sun_image is None:
-                self.sun_image = create_image_from_svg_bytes(BRIGHTNESS_SVG.replace(SVG_LIGHT_THEME_COLOR, b"#ffdd30"))
+                self.sun_image = create_themed_image_from_svg_bytes(BRIGHTNESS_SVG.replace(SVG_LIGHT_THEME_COLOR, b"#ffdd30"))
             painter.drawImage(QPoint(reverse_x(sun_plot_x) - self.sun_image.width() // 2,
                                      sun_plot_y - self.sun_image.height() // 2), self.sun_image)
 
@@ -4585,13 +4587,13 @@ def handle_theme(svg_str: bytes) -> bytes:
     return svg_str
 
 
-def create_pixmap_from_svg_bytes(svg_bytes: bytes):
+def create_themed_pixmap_from_svg_bytes(svg_bytes: bytes):
     """There is no QIcon option for loading SVG from a string, only from a SVG file, so roll our own."""
-    image = create_image_from_svg_bytes(svg_bytes)
+    image = create_themed_image_from_svg_bytes(svg_bytes)
     return QPixmap.fromImage(image)
 
 
-def create_image_from_svg_bytes(svg_bytes) -> QImage:
+def create_themed_image_from_svg_bytes(svg_bytes) -> QImage:
     renderer = QSvgRenderer(handle_theme(svg_bytes))
     image = QImage(64, 64, QImage.Format_ARGB32)
     image.fill(0x0)
@@ -4601,9 +4603,9 @@ def create_image_from_svg_bytes(svg_bytes) -> QImage:
     return image
 
 
-def create_icon_from_svg_bytes(svg_bytes: bytes) -> QIcon:
+def create_themed_icon_from_svg_bytes(svg_bytes: bytes) -> QIcon:
     """There is no QIcon option for loading SVG from a string, only from a SVG file, so roll our own."""
-    return QIcon(create_pixmap_from_svg_bytes(svg_bytes))
+    return QIcon(create_themed_pixmap_from_svg_bytes(svg_bytes))
 
 
 def create_icon_from_path(path: Path) -> QIcon:
@@ -4611,7 +4613,7 @@ def create_icon_from_path(path: Path) -> QIcon:
         if path.suffix == '.svg':
             with open(path, 'rb') as icon_file:
                 icon_bytes = icon_file.read()
-                return create_icon_from_svg_bytes(icon_bytes)
+                return create_themed_icon_from_svg_bytes(icon_bytes)
         if path.suffix == '.png':
             return QIcon(path.as_posix())
     # Copes with the case where the path has been deleted.
@@ -5449,6 +5451,7 @@ class LuxAutoController:
         return self.lux_button
 
     def update(self):
+        assert(is_running_in_gui_thread())
         self.lux_config = LuxConfig().load()
         if self.lux_config.is_auto_enabled():
             try:
@@ -5460,6 +5463,7 @@ class LuxAutoController:
                 self.lux_auto_brightness_worker = LuxAutoWorker(self.main_app)
                 self.lux_auto_brightness_worker.working.connect(self.main_app.display_lux_auto_indicators)
                 self.lux_auto_brightness_worker.start()
+                self.main_app.display_lux_auto_indicators()  # Refresh indicators immediately
             except LuxDeviceException as lde:
                 alert = MessageBox(QMessageBox.Critical)
                 alert.setText(tr("Error setting up lux meter: {}").format(self.lux_config.get_device_name()))
@@ -5469,8 +5473,10 @@ class LuxAutoController:
             log_info("Lux auto-brightness monitoring disabled.")  # TODO handle exception
             if self.lux_auto_brightness_worker is not None:
                 self.lux_auto_brightness_worker.stop_requested = True
+                self.lux_auto_brightness_worker.working.disconnect(self.main_app.display_lux_auto_indicators)
                 self.lux_auto_brightness_worker = None
-        self.lux_button.refresh_icon(self.current_auto_svg())
+                self.main_app.display_lux_auto_indicators()
+        self.lux_button.refresh_icon(self.current_auto_svg())  # Refresh indicators immediately
 
     def is_auto_enabled(self):
         return self.lux_config.is_auto_enabled()
@@ -5782,7 +5788,7 @@ class VduAppWindow(QMainWindow):
                 log_error("no system tray - cannot run in system tray.")
 
         self.app_name = "VDU Controls"
-        self.set_icon_and_title()
+        self.set_app_icon_and_title()
         app.setApplicationDisplayName(self.app_name)
         # Make sure all icons use HiDPI - toolbars don't by default, so force it.
         app.setAttribute(Qt.AA_UseHighDpiPixmaps)
@@ -5875,7 +5881,8 @@ class VduAppWindow(QMainWindow):
             # Stops the release notes from being repeated.
             main_config.write_file(get_config_path('vdu_controls'), overwrite=True)
 
-    def set_icon_and_title(self, icon: QIcon | None = None, title_prefix: str | None = None):
+    def set_app_icon_and_title(self, icon: QIcon | None = None, title_prefix: str | None = None):
+        assert(is_running_in_gui_thread())
         title = f"{title_prefix} {PRESET_APP_SEPARATOR_SYMBOL} {self.app_name}" if title_prefix else self.app_name
         if self.windowTitle() != title:
             self.setWindowTitle(title)
@@ -6042,7 +6049,7 @@ class VduAppWindow(QMainWindow):
             if self.main_panel.busy:
                 self.main_panel.indicate_busy(False)
                 if self.tray is not None:
-                    self.tray.setContextMenu(self.app_context_menu)  # Force refresh
+                    self.refresh_tray_menu()
             presets_dialog_update_view(
                 tr("Transitioning to preset {} (elapsed time {} seconds)...").format(
                     preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=1)))
@@ -6063,7 +6070,7 @@ class VduAppWindow(QMainWindow):
             self.main_panel.refresh_view()
             self.main_panel.indicate_busy(False)
             if self.tray is not None:
-                self.tray.setContextMenu(self.app_context_menu)  # Force refresh
+                self.refresh_tray_menu()
             if worker_thread.state == TransitionState.FINISHED:
                 with open(PRESET_NAME_FILE, 'w', encoding="utf-8") as cps_file:
                     cps_file.write(preset.name)
@@ -6125,12 +6132,13 @@ class VduAppWindow(QMainWindow):
     def display_lux_auto_indicators(self):
         assert is_running_in_gui_thread()  # Boilerplate in case this is called from the wrong thread.
         if self.lux_auto_controller is not None and self.lux_auto_controller.lux_config is not None:
+            icon = create_themed_icon_from_svg_bytes(self.lux_auto_controller.current_auto_svg())
+            self.app_context_menu.update_lux_auto_icon(icon)
+            self.refresh_tray_menu()
             if self.lux_auto_controller.is_auto_enabled():
-                self.set_icon_and_title(create_icon_from_svg_bytes(self.lux_auto_controller.current_auto_svg()), tr('Auto'))
-                self.app_context_menu.lux_auto_indicator(True)
+                self.set_app_icon_and_title(icon, tr('Auto'))
             else:
-                self.set_icon_and_title()
-                self.app_context_menu.lux_auto_indicator(False)
+                self.set_app_icon_and_title()
 
     def display_active_preset(self, preset=None) -> None:
         assert is_running_in_gui_thread()  # Boilerplate in case this is called from the wrong thread.
@@ -6140,12 +6148,17 @@ class VduAppWindow(QMainWindow):
             preset = self.which_preset_is_active()
         if preset is None:
             self.main_panel.display_active_preset(None)
-            self.set_icon_and_title()
+            self.set_app_icon_and_title()
             self.display_lux_auto_indicators()  # Check in case both schedule and lux auto are active
         else:
             self.main_panel.display_active_preset(preset)
-            self.set_icon_and_title(preset.create_icon(), preset.get_title_name())
+            self.set_app_icon_and_title(preset.create_icon(), preset.get_title_name())
         self.app_context_menu.refresh_preset_menu()
+
+    def refresh_tray_menu(self):
+        assert is_running_in_gui_thread()
+        self.app_context_menu.update()
+        #self.tray.setContextMenu(self.app_context_menu)  # Force refresh
 
     def closeEvent(self, event):
         self.app_save_state()
