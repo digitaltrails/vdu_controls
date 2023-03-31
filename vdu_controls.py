@@ -3826,7 +3826,7 @@ class PresetChooseElevationChart(QLabel):
         self.sun_image: QImage | None = None
         self.setMouseTracking(True)
         self.in_drag = False
-        self.last_pos = None
+        self.current_pos = None
         self.elevation_time_map: Dict[SolarElevationKey, SolarElevationData] | None = None
         self.elevation_key: SolarElevationKey | None = None
         self.location: GeoLocation | None = None
@@ -3846,7 +3846,7 @@ class PresetChooseElevationChart(QLabel):
     def get_elevation_data(self, elevation_key: SolarElevationKey):
         return self.elevation_time_map[elevation_key] if elevation_key in self.elevation_time_map else None
 
-    def set_elevation_key(self, elevation_key: SolarElevationKey):
+    def set_elevation_key(self, elevation_key: SolarElevationKey | None):
         self.elevation_key = elevation_key
         self.create_plot()
 
@@ -3860,9 +3860,9 @@ class PresetChooseElevationChart(QLabel):
     def create_plot(self):
         ev_key = self.elevation_key
         width, height = self.width(), self.height()
-        origin_iy, range_iy = height // 2, self.height() // 2.5
+        origin_iy, range_iy = round(height / 2), round(self.height() / 2.5)
         self.horizon_y = origin_iy
-        self.radius_of_deletion = width // 10
+        self.radius_of_deletion = round(width / 10)
         std_line_width = 4
 
         pixmap = QPixmap(width, height)
@@ -3902,21 +3902,7 @@ class PresetChooseElevationChart(QLabel):
         self.noon_x = reverse_x(solar_noon_plot_x)
         self.noon_y = solar_noon_plot_y
 
-        # Draw pie/compas angle
-        if ev_key:
-            start_angle = ev_key.elevation if ev_key.direction == EASTERN_SKY else (180 - ev_key.elevation)  # anticlockwise from 0
-        else:
-            start_angle = 180 + 19
-        painter.setPen(QColor(255,255,255))
-        painter.setBrush(QColor(255, 255, 255, 64))
-        span_angle = -(start_angle + 19) # From start angle spanning counterclockwise back toward the right to -19.
-        max_iy = round(math.sin(math.radians(90)) * range_iy)
-        rw = rh = max_iy * 2
-        rx, ry = reverse_x(solar_noon_plot_x) - rw // 2, origin_iy - rh // 2
-        painter.drawPie(rx, ry, rw, rh, start_angle * 16, span_angle * 16)
-
         # Draw elevation curve for today:
-
         painter.setPen(QPen(QColor(0xff965b), std_line_width))
         painter.drawPoints(curve_points)
 
@@ -3932,9 +3918,37 @@ class PresetChooseElevationChart(QLabel):
         painter.drawText(reverse_x(solar_noon_plot_x + width // 4), origin_iy + height // 4,
                          f"{ev_key.elevation if ev_key else 0:3d}{DEGREE_SYMBOL} {time_text}")
 
-        _, radius = self.calc_angle_radius(self.last_pos) if self.last_pos else (0, 21)
+        # Draw pie/compas angle
+        angle, radius = self.calc_angle_radius(self.current_pos) if self.current_pos else (0, 21)
+        if ev_key:
+            angle_above_horz = ev_key.elevation if ev_key.direction == EASTERN_SKY else (180 - ev_key.elevation)  # anticlockwise from 0
+        else:
+            angle_above_horz = 180 + 19
+        painter.setPen(QPen(QColor(0xffffff if self.current_pos is None or self.in_drag or radius > self.radius_of_deletion else 0xff0000), 2))
+        painter.setBrush(QColor(255, 255, 255, 64))
+        span_angle = -(angle_above_horz + 19) # From start angle spanning counterclockwise back toward the right to -19.
+        rw = rh = range_iy * 2
+        rx, ry = reverse_x(solar_noon_plot_x) - rw // 2, origin_iy - rh // 2
+        painter.drawPie(rx, ry, rw, rh, angle_above_horz * 16, span_angle * 16)
 
-        painter.setPen(QPen(QColor(0xff965b if radius > self.radius_of_deletion else 0xff0000), 2))
+        # Draw drag dot
+        painter.setFont(QFont(QApplication.font().family(), 10, QFont.Weight.Normal))
+        if self.current_pos is not None or self.in_drag or radius >= self.radius_of_deletion:
+            painter.setPen(QPen(QColor(0xff0000), 6))
+            painter.setBrush(QColor(0xffffff))
+            pie_x, pie_y = round(range_iy * math.cos(math.radians(angle_above_horz))) - 8, round(range_iy * math.sin(math.radians(angle_above_horz)) + 8)
+            painter.drawEllipse(reverse_x(solar_noon_plot_x - pie_x), origin_iy - pie_y, 16, 16)
+            if not self.in_drag:
+                painter.setPen(QPen(QColor(0xffffff), 1))
+                painter.drawText(QPoint(reverse_x(solar_noon_plot_x - pie_x) + 10, origin_iy - pie_y - 5), tr("Drag to change."))
+
+        # Draw origin dot
+        painter.setPen(QPen(QColor(0xff965b), 2))
+        if self.current_pos is not None and not self.in_drag:
+            if radius < self.radius_of_deletion:
+                painter.setPen(QPen(QColor(0xffffff), 1))
+                painter.drawText(QPoint(reverse_x(solar_noon_plot_x + 8) + 10, origin_iy - 8 - 5), tr("Click to delete."))
+                painter.setPen(QPen(QColor(0xff0000), 2))
         painter.setBrush(painter.pen().color())
         painter.drawEllipse(reverse_x(solar_noon_plot_x + 8), origin_iy - 8, 16, 16)
 
@@ -3959,11 +3973,6 @@ class PresetChooseElevationChart(QLabel):
             painter.drawImage(QPoint(reverse_x(sun_plot_x) - self.sun_image.width() // 2,
                                      sun_plot_y - self.sun_image.height() // 2), self.sun_image)
 
-            if self.in_drag:
-                painter.setPen(QPen(QColor(0xff0000), 6))
-                painter.drawLine(10, 0, 10, height) if self.last_pos.x() <= 20 else None
-                painter.drawLine(width - 10, 0, width - 10, height) if self.last_pos.x() >= width - 20 else None
-
         painter.end()
         self.setPixmap(pixmap)
 
@@ -3976,9 +3985,14 @@ class PresetChooseElevationChart(QLabel):
         print(angle, radius)
         return angle, radius
 
+    def update_current_pos(self, global_pos: QPoint):
+        local_pos = self.mapFromGlobal(global_pos)
+        self.current_pos = local_pos if (0 < local_pos.x() < self.width() and 0 <= local_pos.y() < self.height()) else None
+        return self.current_pos
+
     def mousePressEvent(self, event: QMouseEvent) -> None:
-        self.last_pos = self.mapFromGlobal(event.globalPos())
-        angle, radius = self.calc_angle_radius(self.last_pos)
+        pos = self.update_current_pos(event.globalPos())
+        angle, radius = self.calc_angle_radius(pos)
         if radius <= self.radius_of_deletion:
             self.set_elevation_key(None)
             self.selected_elevation_signal.emit(None)
@@ -3987,23 +4001,29 @@ class PresetChooseElevationChart(QLabel):
         event.accept()
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        self.update_current_pos(event.globalPos())
         self.in_drag = False
-        self.last_pos = None
         event.accept()
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        self.last_pos = pos = self.mapFromGlobal(event.globalPos())
-        angle, radius = self.calc_angle_radius(pos)
-        if self.in_drag:
-            self.last_pos = pos
-            angle = -angle if pos.x() < self.noon_x else angle
-            key = SolarElevationKey(EASTERN_SKY if pos.x() >= self.noon_x else WESTERN_SKY, angle)
-            if key in self.elevation_steps:
-                self.set_elevation_key(key)
-                self.selected_elevation_signal.emit(key)
-        else:
-            self.create_plot()
+        pos = self.update_current_pos(event.globalPos())
+        if pos is not None and 0 <= pos.x() < self.width() and 0 <= pos.y() < self.height():
+            angle, radius = self.calc_angle_radius(pos)
+            if self.in_drag:
+                self.current_pos = pos
+                angle = -angle if pos.x() < self.noon_x else angle
+                key = SolarElevationKey(EASTERN_SKY if pos.x() >= self.noon_x else WESTERN_SKY, angle)
+                if key in self.elevation_steps:
+                    self.set_elevation_key(key)
+                    self.selected_elevation_signal.emit(key)
+                    return
+        self.create_plot()
         event.accept()
+
+    def leaveEvent(self, event: QEvent) -> None:
+        self.current_pos = None
+        self.create_plot()
+        super().leaveEvent(event)
 
 
 class PresetChooseElevationWidget(QWidget):
@@ -4100,7 +4120,7 @@ class PresetChooseElevationWidget(QWidget):
                 return
         self.set_elevation_key(None)
 
-    def set_elevation_key(self, elevation_key: SolarElevationKey):
+    def set_elevation_key(self, elevation_key: SolarElevationKey | None):
         if self.elevation_chart.has_elevation_key(elevation_key):
             self.elevation_key = elevation_key
             self.slider.setValue(self.elevation_chart.elevation_steps.index(self.elevation_key))
@@ -5400,7 +5420,7 @@ class LuxAutoController:
         self.lux_config: LuxConfig | None = None
         self.lux_meter: LuxMeterSerialDevice | None = None
         self.lux_auto_brightness_worker: LuxAutoWorker | None = None
-        self.lux_button: ToolButton = None
+        self.lux_button: ToolButton | None = None
         self.create_tool_button()
 
     def create_tool_button(self) -> ToolButton:
