@@ -3989,7 +3989,7 @@ class PresetChooseElevationChart(QLabel):
         x, y = pos.x(), pos.y()
         adjacent = x - self.noon_x
         opposite = self.horizon_y - y
-        angle = 0 if adjacent == 0 else round(math.degrees(math.atan(opposite / adjacent)))
+        angle = 90 if adjacent == 0 else round(math.degrees(math.atan(opposite / adjacent)))
         radius = round(math.sqrt(adjacent ** 2 + opposite ** 2))
         return angle, radius
 
