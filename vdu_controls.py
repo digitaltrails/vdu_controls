@@ -842,9 +842,8 @@ CONTRAST_SVG = b"""
 </svg>
 """
 
-AUTO_LUX_ON_SVG = BRIGHTNESS_SVG.replace(b'viewBox="0 0 24 24"', b'viewBox="3 3 18 18"').replace(b'#232629',
-                                                                                                 b'#ff8500')  # 0xfec053 ff8500  fea900
-AUTO_LUX_OFF_SVG = BRIGHTNESS_SVG.replace(b'viewBox="0 0 24 24"', b'viewBox="3 3 18 18"').replace(b'#232629', b'#94989c')
+AUTO_LUX_ON_SVG = BRIGHTNESS_SVG.replace(b'viewBox="0 0 24 24"', b'viewBox="3 3 18 18"').replace(b'#232629', b'#ff8500')
+AUTO_LUX_OFF_SVG = BRIGHTNESS_SVG.replace(b'viewBox="0 0 24 24"', b'viewBox="3 3 18 18"').replace(b'#232629', b'#84888c')
 
 COLOR_TEMPERATURE_SVG = b"""
 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
@@ -2697,7 +2696,7 @@ class Preset:
             # Only room for two letters at most - use first and last if more than one word.
             full_acronym = [word[0] for word in re.split(r"[ _-]", self.name) if word != '']
             abbreviation = full_acronym[0] if len(full_acronym) == 1 else full_acronym[0] + full_acronym[-1]
-            return create_icon_from_text(abbreviation)
+            return create_themed_icon_from_text(abbreviation)
 
     def load(self) -> ConfigIni:
         if self.path.exists():
@@ -4620,7 +4619,7 @@ def create_icon_from_path(path: Path) -> QIcon:
     return QApplication.style().standardIcon(QStyle.SP_MessageBoxQuestion)
 
 
-def create_icon_from_text(text: str) -> QIcon:
+def create_themed_icon_from_text(text: str) -> QIcon:
     pixmap = QPixmap(32, 32)
     pixmap.fill(Qt.transparent)
     painter = QPainter(pixmap)
@@ -5479,7 +5478,7 @@ class LuxAutoController:
         self.lux_button.refresh_icon(self.current_auto_svg())  # Refresh indicators immediately
 
     def is_auto_enabled(self):
-        return self.lux_config.is_auto_enabled()
+        return self.lux_config is not None and self.lux_config.is_auto_enabled()
 
     def current_auto_svg(self):
         return AUTO_LUX_ON_SVG if self.is_auto_enabled() else AUTO_LUX_OFF_SVG
@@ -6131,8 +6130,8 @@ class VduAppWindow(QMainWindow):
 
     def display_lux_auto_indicators(self):
         assert is_running_in_gui_thread()  # Boilerplate in case this is called from the wrong thread.
-        if self.lux_auto_controller is not None and self.lux_auto_controller.lux_config is not None:
-            icon = create_themed_icon_from_svg_bytes(self.lux_auto_controller.current_auto_svg())
+        if self.main_config.is_set(GlobalOption.LUX_METER_ENABLED) and self.lux_auto_controller is not None:
+            icon = create_themed_icon_from_svg_bytes(self.lux_auto_controller.current_auto_svg() )
             self.app_context_menu.update_lux_auto_icon(icon)
             self.refresh_tray_menu()
             if self.lux_auto_controller.is_auto_enabled():
