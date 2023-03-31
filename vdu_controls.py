@@ -3988,7 +3988,6 @@ class PresetChooseElevationChart(QLabel):
         opposite = self.horizon_y - y
         angle = 0 if adjacent == 0 else round(math.degrees(math.atan(opposite / adjacent)))
         radius = round(math.sqrt(adjacent ** 2 + opposite ** 2))
-        print(angle, radius)
         return angle, radius
 
     def update_current_pos(self, global_pos: QPoint):
