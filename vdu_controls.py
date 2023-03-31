@@ -3879,92 +3879,98 @@ class PresetChooseElevationChart(QLabel):
         # Perform computations for today's curve and maxima.
         today = zoned_now().replace(hour=0, minute=0)
         sun_plot_x, sun_plot_y, sun_plot_time = None, None, None
-        max_y = -90.0
-        solar_noon_plot_x, solar_noon_plot_y = 0, 0  # Solar noon
+        max_sun_height = -90.0
+        solar_noon_x, solar_noon_y = 0, 0  # Solar noon
         t = today
         curve_points = []
         while t.day == today.day:
+            second_of_day = (t - today).total_seconds()
+            x = round(width * second_of_day / (60.0 * 60.0 * 24.0))
             a, z = calc_solar_azimuth_zenith(t, self.location.latitude, self.location.longitude)
-            x, y = ((t - today).total_seconds() / 60.0), math.sin(math.radians(90.0 - z)) * range_iy
-            plot_x, plot_y = round(width * x / (60.0 * 24.0)), origin_iy - round(y)
-            curve_points.append(QPoint(reverse_x(plot_x), plot_y))
-            if y > max_y:
-                max_y = y
-                solar_noon_plot_x, solar_noon_plot_y = plot_x, plot_y
+            sun_height = math.sin(math.radians(90.0 - z)) * range_iy
+            y = origin_iy - round(sun_height)
+            curve_points.append(QPoint(reverse_x(x), y))  # Save the plot points to a list
+            if sun_height > max_sun_height:
+                max_sun_height = sun_height
+                solar_noon_x, solar_noon_y = x, y
             if sun_plot_time is None and ev_key and round(90.0 - z) == ev_key.elevation:
                 if (ev_key.direction == EASTERN_SKY and round(a) <= 180) or (
                         ev_key.direction == WESTERN_SKY and round(a) >= 180):
-                    sun_plot_x, sun_plot_y = plot_x, plot_y
+                    sun_plot_x, sun_plot_y = x, y
                     sun_plot_time = t
             t += timedelta(minutes=1)
         if sun_plot_x is None:  # ev_key is for an elevation that does not occur today - draw sun at noon elev.
-            sun_plot_x, sun_plot_y = solar_noon_plot_x, solar_noon_plot_y
-        self.noon_x = reverse_x(solar_noon_plot_x)
-        self.noon_y = solar_noon_plot_y
+            sun_plot_x, sun_plot_y = solar_noon_x, solar_noon_y
+        self.noon_x = reverse_x(solar_noon_x)
+        self.noon_y = solar_noon_y
 
-        # Draw elevation curve for today:
+        # Draw elevation curve for today from the accumulated plot points:
         painter.setPen(QPen(QColor(0xff965b), std_line_width))
         painter.drawPoints(curve_points)
 
         # Draw various annotations such the horizon-line, noon-line, E & W, and the current degrees:
         painter.setPen(QPen(QColor(0xffffff), std_line_width))
         painter.drawLine(reverse_x(0), origin_iy, reverse_x(width), origin_iy)
-        painter.drawLine(reverse_x(solar_noon_plot_x), origin_iy, reverse_x(solar_noon_plot_x), 0)
+        painter.drawLine(reverse_x(solar_noon_x), origin_iy, reverse_x(solar_noon_x), 0)
         painter.setPen(QPen(QColor(0xffffff), std_line_width))
         painter.setFont(QFont(QApplication.font().family(), width // 20, QFont.Weight.Bold))
         painter.drawText(QPoint(reverse_x(70), origin_iy - 32), tr("E"))
         painter.drawText(QPoint(reverse_x(width - 25), origin_iy - 32), tr("W"))
         time_text = sun_plot_time.strftime("%H:%M") if sun_plot_time else "____"
-        painter.drawText(reverse_x(solar_noon_plot_x + width // 4), origin_iy + height // 4,
+        painter.drawText(reverse_x(solar_noon_x + width // 4), origin_iy + height // 4,
                          f"{ev_key.elevation if ev_key else 0:3d}{DEGREE_SYMBOL} {time_text}")
 
         # Draw pie/compas angle
-        angle, radius = self.calc_angle_radius(self.current_pos) if self.current_pos else (0, 21)
         if ev_key:
             angle_above_horz = ev_key.elevation if ev_key.direction == EASTERN_SKY else (180 - ev_key.elevation)  # anticlockwise from 0
         else:
             angle_above_horz = 180 + 19
+        _, radius = self.calc_angle_radius(self.current_pos) if self.current_pos else (0, 21)
         painter.setPen(QPen(QColor(0xffffff if self.current_pos is None or self.in_drag or radius > self.radius_of_deletion else 0xff0000), 2))
         painter.setBrush(QColor(255, 255, 255, 64))
         span_angle = -(angle_above_horz + 19) # From start angle spanning counterclockwise back toward the right to -19.
-        rw = rh = range_iy * 2
-        rx, ry = reverse_x(solar_noon_plot_x) - rw // 2, origin_iy - rh // 2
-        painter.drawPie(rx, ry, rw, rh, angle_above_horz * 16, span_angle * 16)
+        pie_width = pie_height = range_iy * 2
+        painter.drawPie(reverse_x(solar_noon_x) - pie_width // 2,
+                        origin_iy - pie_height // 2,
+                        pie_width,
+                        pie_height,
+                        angle_above_horz * 16, span_angle * 16)
 
-        # Draw drag dot
+        # Draw drag-dot
         painter.setFont(QFont(QApplication.font().family(), 10, QFont.Weight.Normal))
         if self.current_pos is not None or self.in_drag or radius >= self.radius_of_deletion:
             painter.setPen(QPen(QColor(0xff0000), 6))
             painter.setBrush(QColor(0xffffff))
-            pie_x, pie_y = round(range_iy * math.cos(math.radians(angle_above_horz))) - 8, round(range_iy * math.sin(math.radians(angle_above_horz)) + 8)
-            painter.drawEllipse(reverse_x(solar_noon_plot_x - pie_x), origin_iy - pie_y, 16, 16)
+            ddot_x = round(range_iy * math.cos(math.radians(angle_above_horz))) - 8
+            ddot_y = round(range_iy * math.sin(math.radians(angle_above_horz))) + 8
+            painter.drawEllipse(reverse_x(solar_noon_x - ddot_x), origin_iy - ddot_y, 16, 16)
             if not self.in_drag:
                 painter.setPen(QPen(QColor(0xffffff), 1))
-                painter.drawText(QPoint(reverse_x(solar_noon_plot_x - pie_x) + 10, origin_iy - pie_y - 5), tr("Drag to change."))
+                painter.drawText(QPoint(reverse_x(solar_noon_x - ddot_x) + 10, origin_iy - ddot_y - 5), tr("Drag to change."))
 
-        # Draw origin dot
+        # Draw origin-dot
         painter.setPen(QPen(QColor(0xff965b), 2))
         if self.current_pos is not None and not self.in_drag:
             if radius < self.radius_of_deletion:
                 painter.setPen(QPen(QColor(0xffffff), 1))
-                painter.drawText(QPoint(reverse_x(solar_noon_plot_x + 8) + 10, origin_iy - 8 - 5), tr("Click to delete."))
+                painter.drawText(QPoint(reverse_x(solar_noon_x + 8) + 10, origin_iy - 8 - 5), tr("Click to delete."))
                 painter.setPen(QPen(QColor(0xff0000), 2))
         painter.setBrush(painter.pen().color())
-        painter.drawEllipse(reverse_x(solar_noon_plot_x + 8), origin_iy - 8, 16, 16)
+        painter.drawEllipse(reverse_x(solar_noon_x + 8), origin_iy - 8, 16, 16)
 
         if ev_key:
             # Draw a line representing the slider degrees and rise/set indicator - may be higher than sun for today:
-            key_iy = origin_iy - round(math.sin(math.radians(ev_key.elevation)) * range_iy)
-            painter.setPen(QPen(QColor(0xffffff if key_iy >= solar_noon_plot_y else 0xcccccc), std_line_width))
+            sky_line_y = origin_iy - round(math.sin(math.radians(ev_key.elevation)) * range_iy)
+            painter.setPen(QPen(QColor(0xffffff if sky_line_y >= solar_noon_y else 0xcccccc), std_line_width))
             painter.setBrush(painter.pen().color())
             if ev_key.direction == EASTERN_SKY:
-                painter.drawLine(reverse_x(0), key_iy, reverse_x(solar_noon_plot_x), key_iy)
+                painter.drawLine(reverse_x(0), sky_line_y, reverse_x(solar_noon_x), sky_line_y)
                 painter.setPen(QPen(painter.pen().color(), 1))
-                painter.drawPolygon([QPoint(reverse_x(0) - 20 + tx, key_iy - 10 + ty) for tx, ty in [(-8, 0), (0, -16), (8, 0)]])
+                painter.drawPolygon([QPoint(reverse_x(0) - 20 + tx, sky_line_y - 10 + ty) for tx, ty in [(-8, 0), (0, -16), (8, 0)]])
             else:
-                painter.drawLine(reverse_x(solar_noon_plot_x), key_iy, reverse_x(width), key_iy)
+                painter.drawLine(reverse_x(solar_noon_x), sky_line_y, reverse_x(width), sky_line_y)
                 painter.setPen(QPen(painter.pen().color(), 1))
-                painter.drawPolygon([QPoint(reverse_x(width - 18) + tx, key_iy + 10 + ty) for tx, ty in [(-8, 0), (0, 16), (8, 0)]])
+                painter.drawPolygon([QPoint(reverse_x(width - 18) + tx, sky_line_y + 10 + ty) for tx, ty in [(-8, 0), (0, 16), (8, 0)]])
 
             # Draw the sun
             painter.setPen(QPen(QColor(0xff4a23), std_line_width))
