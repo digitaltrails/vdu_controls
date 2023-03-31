@@ -3917,7 +3917,7 @@ class PresetChooseElevationChart(QLabel):
         painter.drawText(QPoint(reverse_x(70), origin_iy - 32), tr("E"))
         painter.drawText(QPoint(reverse_x(width - 25), origin_iy - 32), tr("W"))
         time_text = sun_plot_time.strftime("%H:%M") if sun_plot_time else "____"
-        painter.drawText(reverse_x(solar_noon_x + width // 4), origin_iy + height // 4,
+        painter.drawText(reverse_x(solar_noon_x + width // 4), origin_iy + int(height / 2.75),
                          f"{ev_key.elevation if ev_key else 0:3d}{DEGREE_SYMBOL} {time_text}")
 
         # Draw pie/compas angle
@@ -3930,10 +3930,7 @@ class PresetChooseElevationChart(QLabel):
         painter.setBrush(QColor(255, 255, 255, 64))
         span_angle = -(angle_above_horz + 19) # From start angle spanning counterclockwise back toward the right to -19.
         pie_width = pie_height = range_iy * 2
-        painter.drawPie(reverse_x(solar_noon_x) - pie_width // 2,
-                        origin_iy - pie_height // 2,
-                        pie_width,
-                        pie_height,
+        painter.drawPie(reverse_x(solar_noon_x) - pie_width // 2, origin_iy - pie_height // 2, pie_width, pie_height,
                         angle_above_horz * 16, span_angle * 16)
 
         # Draw drag-dot
@@ -3941,8 +3938,9 @@ class PresetChooseElevationChart(QLabel):
         if self.current_pos is not None or self.in_drag or radius >= self.radius_of_deletion:
             painter.setPen(QPen(QColor(0xff0000), 6))
             painter.setBrush(QColor(0xffffff))
-            ddot_x = round(range_iy * math.cos(math.radians(angle_above_horz))) - 8
-            ddot_y = round(range_iy * math.sin(math.radians(angle_above_horz))) + 8
+            ddot_radians = math.radians(angle_above_horz if ev_key else -19)
+            ddot_x = round(range_iy * math.cos(ddot_radians)) - 8
+            ddot_y = round(range_iy * math.sin(ddot_radians)) + 8
             painter.drawEllipse(reverse_x(solar_noon_x - ddot_x), origin_iy - ddot_y, 16, 16)
             if not self.in_drag:
                 painter.setPen(QPen(QColor(0xffffff), 1))
@@ -3961,7 +3959,12 @@ class PresetChooseElevationChart(QLabel):
         if ev_key:
             # Draw a line representing the slider degrees and rise/set indicator - may be higher than sun for today:
             sky_line_y = origin_iy - round(math.sin(math.radians(ev_key.elevation)) * range_iy)
-            painter.setPen(QPen(QColor(0xffffff if sky_line_y >= solar_noon_y else 0xcccccc), std_line_width))
+            if sky_line_y >= solar_noon_y:
+                sky_line_pen = QPen(QColor(0xffffff), 2)
+            else:
+                sky_line_pen = QPen(QColor(0xcccccc), 2)
+                sky_line_pen.setStyle(Qt.DotLine)
+            painter.setPen(sky_line_pen)
             painter.setBrush(painter.pen().color())
             if ev_key.direction == EASTERN_SKY:
                 painter.drawLine(reverse_x(0), sky_line_y, reverse_x(solar_noon_x), sky_line_y)
@@ -4041,29 +4044,39 @@ class PresetChooseElevationWidget(QWidget):
         super().__init__()
         self.elevation_key: SolarElevationKey | None = None
         self.location: GeoLocation = location
+
         layout = QVBoxLayout()
         self.setLayout(layout)
         self.title_prefix = tr("Solar elevation trigger: ")
-        slider = QSlider(Qt.Horizontal)
-        self.slider = slider
+        self.title_label = QLabel(self.title_prefix)
+        layout.addWidget(self.title_label)
+        layout.addSpacing(8)
+
+        self.elevation_chart = PresetChooseElevationChart()
+        self.elevation_chart.selected_elevation_signal.connect(self.set_elevation_key)
+
+        self.slider = QSlider(Qt.Horizontal)
         self.slider.setTracking(True)
         self.slider.setMinimum(-1)
         self.slider.setValue(-1)
-        self.slider = self.slider
-        self.title_label = QLabel(self.title_prefix)
-        layout.addWidget(self.title_label)
-        layout.addWidget(self.slider)
-        self.elevation_chart = PresetChooseElevationChart()
-        layout.addSpacing(16)
-        self.bottom_layout = QHBoxLayout()
-        self.bottom_layout.addWidget(self.elevation_chart, 1)
-        layout.addLayout(self.bottom_layout)
+        self.slider.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        self.slider.setTickInterval(5)
+        self.slider.setTickPosition(QSlider.TicksAbove)
+        self._slider_select_elevation.connect(self.set_elevation_key)
+
+        bottom_layout = QHBoxLayout()
+        layout.addLayout(bottom_layout)
+
+        chart_slider_layout = QVBoxLayout()
+        chart_slider_layout.addWidget(self.elevation_chart, 1)
+        chart_slider_layout.addWidget(self.slider)
+        bottom_layout.addLayout(chart_slider_layout, 1)
+
         self.weather_widget = PresetChooseWeatherWidget(location)
-        self.bottom_layout.addWidget(self.weather_widget, 0)
+        bottom_layout.addWidget(self.weather_widget, 0)
         self.configure_for_location(location)
         self.slider.valueChanged.connect(self.sliding)
-        self._slider_select_elevation.connect(self.set_elevation_key)
-        self.elevation_chart.selected_elevation_signal.connect(self.set_elevation_key)
+
         self.setMinimumWidth(400)
         self.sun_image: QImage | None = None
 
@@ -4129,6 +4142,7 @@ class PresetChooseElevationWidget(QWidget):
         if self.elevation_chart.has_elevation_key(elevation_key):
             self.elevation_key = elevation_key
             self.slider.setValue(self.elevation_chart.elevation_steps.index(self.elevation_key))
+            self.slider.setToolTip(f"{self.elevation_key.elevation}{DEGREE_SYMBOL}")
             self.elevation_chart.set_elevation_key(self.elevation_key)
             self.weather_widget.setEnabled(True)
             self.display_elevation_description()
@@ -4167,7 +4181,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.main_window = main_window
         self.main_config = main_config
         self.content_controls: Dict[Tuple[str, str], QWidget] = {}
-        self.resize(1600, 800)
+        self.resize(1600, 850)
         self.setMinimumWidth(1350)
         self.setMinimumHeight(600)
         layout = QVBoxLayout()
