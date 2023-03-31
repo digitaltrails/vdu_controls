@@ -3934,7 +3934,7 @@ class PresetChooseElevationChart(QLabel):
                         angle_above_horz * 16, span_angle * 16)
 
         # Draw drag-dot
-        painter.setFont(QFont(QApplication.font().family(), 10, QFont.Weight.Normal))
+        painter.setFont(QFont(QApplication.font().family(), 8, QFont.Weight.Normal))
         if self.current_pos is not None or self.in_drag or radius >= self.radius_of_deletion:
             painter.setPen(QPen(QColor(0xff0000), 6))
             painter.setBrush(QColor(0xffffff))
