@@ -5121,50 +5121,56 @@ class LuxAutoWorker(WorkerThread):
         self._message.connect(lux_message)
 
     def adjust_brightness(self):
-        self._message.emit(tr("Brightness auto adjustment is enabled."))
+        log_info(f"LuxAutoBrightnessWorker monitoring commences (Thread={threading.get_ident()})")
+        self._message.emit(tr("Brightness auto adjustment monitoring commences."))
         time.sleep(2.0)
-        while True:
-            if self.stop_requested:
-                return
-            self.working.emit()
-            lux_auto_controller = self.main_app.lux_auto_controller
-            lux_config = lux_auto_controller.lux_config.load()  # Refresh
-            if lux_auto_controller.lux_meter is None:  # In app config change
-                return
-            metered_lux = lux_auto_controller.lux_meter.get_value()
-            in_progress = False
-            for control_panel in self.main_app.main_panel.vdu_control_panels:
-                controller = control_panel.controller
-                profile_brightness = next((v for x, v in reversed(lux_config.get_vdu_profile(controller)) if metered_lux >= x), 20)
-                brightness_control = next((c for c in control_panel.vcp_controls if c.vcp_capability.vcp_code == '10'), None)
-                if brightness_control is not None:
-                    try:
-                        current_brightness = int(controller.get_attribute('10')[0])
-                        if current_brightness != profile_brightness:
-                            diff = profile_brightness - current_brightness
-                            step_size = 4 if abs(diff) < 8 else 8
-                            step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
-                            log_info(
-                                f"Auto lux: lux={metered_lux} stepping {controller.vdu_stable_id} step={step} current={current_brightness} target={profile_brightness}")
-                            self._message.emit(tr("Adjusting {}...").format(controller.vdu_stable_id))
-                            brightness_control.restore_vdu_attribute(str(current_brightness + step))
-                            self._refresh_gui_view.emit(brightness_control)
-                            in_progress = in_progress or current_brightness + step != profile_brightness
-                    except VduException as ve:
-                        self._message.emit(tr("Error adjusting {}").format(controller.vdu_stable_id))
-                        log_warning(f"Auto lux: Brightness error on {controller.vdu_stable_id}, will sleep and try again: {ve}")
-            time.sleep(0.5)  # give DDC some time to settle.
-            if not in_progress:
-                self._message.emit("")
-                # log_info(f"Auto lux: Sleeping {lux_auto_controller.lux_config.get_interval_minutes()} minutes")
-                sleep_end_time = time.time() + lux_auto_controller.lux_config.get_interval_minutes() * 60.0
-                while time.time() < sleep_end_time:
-                    time.sleep(1.0)
+        try:
+            while True:
+                if self.stop_requested:
+                    return
+                self.working.emit()
+                lux_auto_controller = self.main_app.lux_auto_controller
+                lux_config = lux_auto_controller.lux_config.load()  # Refresh
+                if lux_auto_controller.lux_meter is None:  # In app config change
+                    return
+                metered_lux = lux_auto_controller.lux_meter.get_value()
+                in_progress = False
+                for control_panel in self.main_app.main_panel.vdu_control_panels:
                     if self.stop_requested:
                         return
+                    controller = control_panel.controller
+                    profile_brightness = next((v for x, v in reversed(lux_config.get_vdu_profile(controller)) if metered_lux >= x), 20)
+                    brightness_control = next((c for c in control_panel.vcp_controls if c.vcp_capability.vcp_code == '10'), None)
+                    if brightness_control is not None:
+                        try:
+                            current_brightness = int(controller.get_attribute('10')[0])
+                            if current_brightness != profile_brightness:
+                                diff = profile_brightness - current_brightness
+                                step_size = 4 if abs(diff) < 8 else 8
+                                step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
+                                log_info(
+                                    f"Auto lux: lux={metered_lux} stepping {controller.vdu_stable_id} step={step} current={current_brightness} target={profile_brightness}")
+                                self._message.emit(tr("Adjusting {}...").format(controller.vdu_stable_id))
+                                brightness_control.restore_vdu_attribute(str(current_brightness + step))
+                                self._refresh_gui_view.emit(brightness_control)
+                                in_progress = in_progress or current_brightness + step != profile_brightness
+                        except VduException as ve:
+                            self._message.emit(tr("Error adjusting {}").format(controller.vdu_stable_id))
+                            log_warning(f"Auto lux: Brightness error on {controller.vdu_stable_id}, will sleep and try again: {ve}")
+                time.sleep(0.5) if not self.stop_requested else None  # give DDC some time to settle.
+                if not in_progress:
+                    self._message.emit("")
+                    sleep_end_time = time.time() + lux_auto_controller.lux_config.get_interval_minutes() * 60.0
+                    while time.time() < sleep_end_time:
+                        if self.stop_requested:
+                            return
+                        time.sleep(1.0)
+        finally:
+            log_info(f"LuxAutoBrightnessWorker exiting (Thread={threading.get_ident()})")
 
     def finished_callable(self):
-        log_info(f"LuxAutoBrightnessWorker exited exception={self.vdu_exception}")
+        if self.vdu_exception:
+            log_error(f"LuxAutoBrightnessWorker exited with exception={self.vdu_exception}")
 
 
 class LuxConfig(ConfigIni):
@@ -5406,7 +5412,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.has_profile_changes = False
         self.config.save(self.path)
         if requires_auto_brightness_restart:
-            self.main_app.lux_auto_controller.update()
+            self.main_app.lux_auto_controller.refresh_from_config()
             self.lux_meter_widget.stop_metering()
             self.lux_meter_widget.start_metering(self.main_app.lux_auto_controller.lux_meter)
 
@@ -5449,12 +5455,12 @@ class LuxAutoController:
         self.lux_button.pressed.connect(self.toggle_auto)
         return self.lux_button
 
-    def update(self):
+    def refresh_from_config(self):
         assert(is_running_in_gui_thread())
         self.lux_config = LuxConfig().load()
         if self.lux_config.is_auto_enabled():
             try:
-                log_info("Lux auto-brightness monitoring enabled.")
+                log_info("Lux auto-brightness settings refresh - restart monitoring.")
                 self.lux_meter = lux_create_device(self.lux_config.get_device_name())
                 if self.lux_auto_brightness_worker is not None:
                     self.lux_auto_brightness_worker.stop_requested = True
@@ -5469,7 +5475,7 @@ class LuxAutoController:
                 alert.setInformativeText(str(lde))
                 alert.exec()
         else:
-            log_info("Lux auto-brightness monitoring disabled.")  # TODO handle exception
+            log_info("Lux auto-brightness settings refresh - monitoring is off.")  # TODO handle exception
             if self.lux_auto_brightness_worker is not None:
                 self.lux_auto_brightness_worker.stop_requested = True
                 self.lux_auto_brightness_worker.working.disconnect(self.main_app.display_lux_auto_indicators)
@@ -5487,7 +5493,7 @@ class LuxAutoController:
         enabled = self.is_auto_enabled()
         self.lux_config.set('lux-meter', 'automatic-brightness', 'no' if enabled else 'yes')
         self.lux_config.save(get_config_path('AutoLux'))
-        self.update()
+        self.refresh_from_config()
         lux_dialog = LuxDialog.get_instance()
         if lux_dialog is not None:
             lux_dialog.reinitialise()
@@ -5829,7 +5835,7 @@ class VduAppWindow(QMainWindow):
         self.app_restore_state()
 
         if self.main_config.is_set(GlobalOption.LUX_METER_ENABLED) and self.lux_auto_controller is not None:
-            self.lux_auto_controller.update()
+            self.lux_auto_controller.refresh_from_config()
 
         if self.tray is not None:
             def show_window():
