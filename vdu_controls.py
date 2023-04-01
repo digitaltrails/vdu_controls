@@ -5120,31 +5120,29 @@ class LuxAutoWorker(WorkerThread):
 
         self._message.connect(lux_message)
 
-    def adjust_brightness(self):
+    def adjust_brightness(self):  # TODO could do with simplification
         log_info(f"LuxAutoBrightnessWorker monitoring commences (Thread={threading.get_ident()})")
         self._message.emit(tr("Brightness auto adjustment monitoring commences."))
         time.sleep(2.0)
         try:
-            while True:
-                if self.stop_requested:
-                    return
+            while not self.stop_requested:
                 self.working.emit()
                 lux_auto_controller = self.main_app.lux_auto_controller
-                lux_config = lux_auto_controller.lux_config.load()  # Refresh
                 if lux_auto_controller.lux_meter is None:  # In app config change
-                    return
+                    break
+                lux_config = lux_auto_controller.lux_config.load()  # Refresh
                 metered_lux = lux_auto_controller.lux_meter.get_value()
                 in_progress = False
                 for control_panel in self.main_app.main_panel.vdu_control_panels:
                     if self.stop_requested:
-                        return
+                        break
                     controller = control_panel.controller
                     profile_brightness = next((v for x, v in reversed(lux_config.get_vdu_profile(controller)) if metered_lux >= x), 20)
                     brightness_control = next((c for c in control_panel.vcp_controls if c.vcp_capability.vcp_code == '10'), None)
                     if brightness_control is not None:
                         try:
                             current_brightness = int(controller.get_attribute('10')[0])
-                            if current_brightness != profile_brightness:
+                            if not self.stop_requested and current_brightness != profile_brightness:
                                 diff = profile_brightness - current_brightness
                                 step_size = 4 if abs(diff) < 8 else 8
                                 step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
@@ -5157,14 +5155,14 @@ class LuxAutoWorker(WorkerThread):
                         except VduException as ve:
                             self._message.emit(tr("Error adjusting {}").format(controller.vdu_stable_id))
                             log_warning(f"Auto lux: Brightness error on {controller.vdu_stable_id}, will sleep and try again: {ve}")
-                time.sleep(0.5) if not self.stop_requested else None  # give DDC some time to settle.
-                if not in_progress:
-                    self._message.emit("")
-                    sleep_end_time = time.time() + lux_auto_controller.lux_config.get_interval_minutes() * 60.0
-                    while time.time() < sleep_end_time:
-                        if self.stop_requested:
-                            return
-                        time.sleep(1.0)
+                if not self.stop_requested:
+                    if in_progress:
+                        time.sleep(0.5)  # give DDC some time to settle.
+                    else:  # Sleep for the intervul between updates - but check for stop requests.
+                        self._message.emit("")
+                        sleep_end_time = time.time() + lux_auto_controller.lux_config.get_interval_minutes() * 60.0
+                        while not self.stop_requested and time.time() < sleep_end_time:
+                            time.sleep(1.0)
         finally:
             log_info(f"LuxAutoBrightnessWorker exiting (Thread={threading.get_ident()})")
 
