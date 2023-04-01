@@ -5121,9 +5121,9 @@ class LuxAutoWorker(WorkerThread):
         self._message.connect(lux_message)
 
     def adjust_brightness(self):  # TODO could do with simplification
+        time.sleep(2.0)  # Give any previous thread a chance to exit
         log_info(f"LuxAutoBrightnessWorker monitoring commences (Thread={threading.get_ident()})")
         self._message.emit(tr("Brightness auto adjustment monitoring commences."))
-        time.sleep(2.0)
         try:
             while not self.stop_requested:
                 self.working.emit()
@@ -5313,11 +5313,12 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
         self.meter_device_selector.pressed.connect(choose_device)
 
-        def toggle_enabled(enabled: bool):
-            self.config.set('lux-meter', 'automatic-brightness', 'yes' if enabled else 'no')
-            self.save_settings()
+        def set_auto_monitoring(checked: int):
+            if (checked == Qt.Checked) != self.config.is_auto_enabled():
+                self.config.set('lux-meter', 'automatic-brightness', 'yes' if checked == Qt.Checked else 'no')
+                self.save_settings()
 
-        self.enabled_checkbox.stateChanged.connect(toggle_enabled)
+        self.enabled_checkbox.stateChanged.connect(set_auto_monitoring)
 
         def interval_selector_changed() -> None:
             self.config.set('lux-meter', 'interval-minutes', str(self.interval_selector.value()))
