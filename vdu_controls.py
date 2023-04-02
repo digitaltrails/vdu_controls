@@ -457,19 +457,25 @@ A typical example follows::
     hp_zr24w_cnt008 = [(1, 90), (29, 90), (926, 100), (8414, 100), (100000, 100)]
     lg_hdr_4k_8 = [(1, 13), (60, 25), (100, 50), (299, 70), (1000, 90), (10000, 100), (100000, 100)]
 
-Responsiveness
---------------
+Improving Response Time
+-----------------------
 
-If your VDU's are modern, you may find a smaller sleep-multiplier will speed up the ``ddcutil``/VDU protocol
+DDC/I2C is not the speediest form of communication and VDU's may also be sluggish to respond.  This
+means that the responsiveness and smoothness of ``vdu_controls`` is somewhat limited by the underlying
+technologies.
+
+If your VDU's are modern, you may find a smaller ``sleep-multiplier`` will speed up the ``ddcutil``/VDU protocol
 exchanges making both ``ddcutil`` and ``vdu_controls`` much more responsive.  In a multi-VDU setup where the VDU's
-are quite different, VDU config files can be used to specify individual multipliers (see previous section).
+are quite different, individual multipliers can be configured (see previous section).  Reducing the multipliers
+will increase the possibility of errors, a bit of experimentation will be required.
 
-Startup speed may be increased by creating VDU config files with ``capabilities-override`` preset. Using an
-override eliminates the need to run ``ddcutil`` to retrieve VDU capabilities.  The ``--create-config-files``
-of context-menu settings-editor will pre-populate ``capabilities-override`` for each connected VDU.
+The startup-speed is increased by caching each VDU's capabilities and eliminate the need to run ``ddcutil``
+to retrieve each VDU's capabilities.  When the `settings-editor` is used to save a VDU's configuration, it
+will automatically cache the VDU's capabilities in the ``capabilities-override`` field (as will
+the ``--create-config-files`` command line option).
 
-Reducing the number of enabled controls can speed up the initialisation and reduce the time taken when the
-refresh button is pressed.
+Reducing the number of enabled controls can greatly speed up the initialisation, reduce the time taken when the
+refresh button is pressed, and reduce the time taken to restore presets.
 
 Examples
 ========
@@ -3948,14 +3954,14 @@ class PresetChooseElevationChart(QLabel):
             ddot_y = round(range_iy * math.sin(ddot_radians)) + 8
             painter.drawEllipse(reverse_x(solar_noon_x - ddot_x), origin_iy - ddot_y, 16, 16)
             if not self.in_drag:
-                painter.setPen(QPen(QColor(0xffffff), 1))
+                painter.setPen(QPen(QColor(0x000000), 1))
                 painter.drawText(QPoint(reverse_x(solar_noon_x - ddot_x) + 10, origin_iy - ddot_y - 5), tr("Drag to change."))
 
         # Draw origin-dot
         painter.setPen(QPen(QColor(0xff965b), 2))
         if self.current_pos is not None and not self.in_drag:
             if radius < self.radius_of_deletion:
-                painter.setPen(QPen(QColor(0xffffff), 1))
+                painter.setPen(QPen(QColor(0x000000), 1))
                 painter.drawText(QPoint(reverse_x(solar_noon_x + 8) + 10, origin_iy - 8 - 5), tr("Click to delete."))
                 painter.setPen(QPen(QColor(0xff0000), 2))
         painter.setBrush(painter.pen().color())
@@ -4835,13 +4841,15 @@ class LuxProfileChart(QLabel):
             if match[0] is not None:  # Snap to position for deleting the point under the mouse.
                 painter.setPen(QPen(QColor(0xff0000), 2))
                 x, y, lux, percent = match[0] + self.x_origin, self.y_origin - match[1], match[2], match[3]
+                prefix = tr('Delete')
             else:  # Show precise position for adding a new point
                 lux, percent = self.lux_from_x(x - self.x_origin), self.percent_from_y(y - self.y_origin)
                 painter.setPen(QPen(QColor(0xffffff), 1))
+                prefix = ''
             painter.drawLine(self.x_origin, y, self.x_origin + self.plot_width + 5, y)
             painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height - 5)  # Tooltip lux and percent
             painter.setPen(QPen(QColor(0x000000), 1))
-            painter.drawText(x + 10, y - 10, f"{lux}, {percent}%")
+            painter.drawText(x + 10, y - 10, f"{prefix} {lux}, {percent}%")
 
         painter.end()
         self.setPixmap(pixmap)
@@ -4914,7 +4922,7 @@ class LuxMeterWidget(QWidget):
         big_font.setPointSize(big_font.pointSize() + 8)
         self.current_lux_display.setFont(big_font)
         self.layout().addWidget(self.current_lux_display)
-        self.history = []
+        self.history = [0] * 50
         self.lux_plot = QLabel()
         self.lux_plot.setFixedWidth(200)
         self.lux_plot.setFixedHeight(100)
@@ -5246,12 +5254,12 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         grid_layout = QGridLayout()
         top_box.setLayout(grid_layout)
 
-        self.plot: LuxProfileChart | None = None
+        self.profile_plot: LuxProfileChart | None = None
 
         def lux_changed(lux: int):
-            if self.plot:
-                self.plot.current_lux = lux
-                self.plot.create_plot()
+            if self.profile_plot:
+                self.profile_plot.current_lux = lux
+                self.profile_plot.create_plot()
 
         self.lux_meter_widget = LuxMeterWidget(lux_changed, parent=self)
         self.lux_meter_widget.display_lux(0)
@@ -5275,11 +5283,8 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.profile_selector = QComboBox()
         self.layout().addWidget(self.profile_selector)
 
-        def chart_changed_callback():
-            self.has_profile_changes = True
-
-        self.plot = LuxProfileChart(self.chart_data, self.range_restrictions, chart_changed_callback, parent=self)
-        self.layout().addWidget(self.plot, 1)
+        self.profile_plot = LuxProfileChart(self.chart_data, self.range_restrictions, self.chart_changed_callback, parent=self)
+        self.layout().addWidget(self.profile_plot, 1)
 
         buttons_widget = QWidget()
         button_layout = QHBoxLayout()
@@ -5331,8 +5336,8 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.interval_selector.valueChanged.connect(interval_selector_changed)
 
         def select_profile(index: int):
-            if self.plot is not None:
-                self.plot.set_current_profile(list(self.chart_data.keys())[index])
+            if self.profile_plot is not None:
+                self.profile_plot.set_current_profile(list(self.chart_data.keys())[index])
             if self.config.get('lux-ui', 'selected-profile', fallback=None) != self.profile_selector.itemData(index):
                 self.config.set('lux-ui', 'selected-profile', self.profile_selector.itemData(index))
                 self.save_settings()
@@ -5341,13 +5346,16 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.make_visible()
         self.in_constructor = False
 
+    def chart_changed_callback(self):
+        self.has_profile_changes = True
+
     def reinitialise(self):
         self.config = self.main_app.lux_auto_controller.lux_config.duplicate(LuxConfig())
         self.device_name = self.config.get("lux-meter", "lux-device", fallback="/dev/ttyUSB0")
         self.enabled_checkbox.setChecked(self.config.is_auto_enabled())
         self.has_profile_changes = False
 
-        new_id_list = []
+        new_id_list = []   # List of all currently connected VDU's
         for index, vdu in enumerate(self.main_app.vdu_controllers):
             range_restriction = vdu.capabilities['10'].values
             min_v, max_v = (0, 100) if len(range_restriction) == 0 else (int(range_restriction[1]), int(range_restriction[2]))
@@ -5361,15 +5369,15 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         existing_id_list = [self.profile_selector.itemData(index) for index in range(0, self.profile_selector.count())]
         existing_selected_id = self.config.get('lux-ui', 'selected-profile', fallback=new_id_list[0] if new_id_list else None)
         self.profile_selector.blockSignals(True)  # Stop initialization from causing signally until all data is aligned.
-        if new_id_list != existing_id_list:
+        if new_id_list != existing_id_list:  # List of connected VDU's has changed
             self.profile_selector.clear()
             for index, vdu in enumerate(self.main_app.vdu_controllers):
                 self.profile_selector.addItem(vdu.get_vdu_description(), userData=vdu.vdu_stable_id)
                 if vdu.vdu_stable_id == existing_selected_id:
                     self.profile_selector.setCurrentIndex(index)
-                    self.plot.current_vdu = existing_selected_id
+                    self.profile_plot.current_vdu = existing_selected_id
         self.profile_selector.blockSignals(False)
-
+        self.profile_plot = LuxProfileChart(self.chart_data, self.range_restrictions, self.chart_changed_callback, parent=self)
         self.lux_meter_widget.start_metering(self.main_app.lux_auto_controller.lux_meter)
 
     def make_visible(self):
@@ -5420,7 +5428,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             self.lux_meter_widget.start_metering(self.main_app.lux_auto_controller.lux_meter)
 
     def save_profiles(self):
-        self.config.set('lux-profile', self.plot.current_vdu, repr(self.plot.data[self.plot.current_vdu]))
+        self.config.set('lux-profile', self.profile_plot.current_vdu, repr(self.profile_plot.data[self.profile_plot.current_vdu]))
         self.save_settings(True)
 
     def closeEvent(self, event) -> None:
