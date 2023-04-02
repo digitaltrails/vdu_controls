@@ -995,6 +995,10 @@ def get_splash_image() -> QPixmap:
     return pixmap
 
 
+def clamp(v, min_v, max_v):
+    return max(min(max_v, v), min_v)
+
+
 #: Could be a str enumeration of VCP types
 CONTINUOUS_TYPE = 'C'
 SIMPLE_NON_CONTINUOUS_TYPE = 'SNC'
@@ -4823,8 +4827,10 @@ class LuxProfileChart(QLabel):
             painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height)
 
         mouse_pos = self.mapFromGlobal(self.cursor().pos())  # Draw cross-hairs at mouse pos
-        x, y = mouse_pos.x(), mouse_pos.y()
-        if self.x_origin <= x <= self.x_origin + self.plot_width and self.y_origin - self.plot_width <= y <= self.y_origin:
+        x, y, margin = mouse_pos.x(), mouse_pos.y(), 20
+        if margin <= x <= self.width() - margin and margin <= y <= self.height() - margin:
+            x = clamp(mouse_pos.x(), self.x_origin, self.x_origin + self.plot_width)
+            y = clamp(mouse_pos.y(), self.y_origin - self.plot_height, self.y_origin)
             match = self.find_close_to(x - self.x_origin, self.y_origin - y, vdu_data=self.data[self.current_vdu])
             if match[0] is not None:  # Snap to position for deleting the point under the mouse.
                 painter.setPen(QPen(QColor(0xff0000), 2))
@@ -4888,11 +4894,9 @@ class LuxProfileChart(QLabel):
         return round(self.plot_height * percent / 100)
 
     def lux_from_x(self, x):
-        lux = round(10.0 ** (math.log10(1) + (x / self.plot_width) * (math.log10(100_000) - math.log10(1))))
+        lux = 0 if x <= 0 else round(10.0 ** (math.log10(1) + (x / self.plot_width) * (math.log10(100_000) - math.log10(1))))
         if lux > 100_000:
             return 100_000
-        if lux < 0:
-            return 0
         return lux
 
     def x_from_lux(self, lux: int) -> int:
@@ -5144,7 +5148,7 @@ class LuxAutoWorker(WorkerThread):
                             current_brightness = int(controller.get_attribute('10')[0])
                             if not self.stop_requested and current_brightness != profile_brightness:
                                 diff = profile_brightness - current_brightness
-                                step_size = 4 if abs(diff) < 8 else 8
+                                step_size = max(1, abs(diff) // 3)  # 4 if abs(diff) < 8 else 8  # TODO find a good heuristic
                                 step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
                                 log_info(
                                     f"Auto lux: lux={metered_lux} stepping {controller.vdu_stable_id} step={step} current={current_brightness} target={profile_brightness}")
