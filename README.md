@@ -231,6 +231,8 @@ Acknowlegements
 * [crashmatt](https://github.com/crashmatt), [lowne](https://github.com/lowne), [usr](https://github.com/usr)3, for contributing fixes to code and documentation.
 * [Jakeler](https://github.com/Jakeler), [kupiqu](https://github.com/kupiqu), for suggestions for enhancements. 
 * [malcolmlewis](https://github.com/malcolmlewis) for assistance with the OpenSUSE Open Build Service submissions.
+* [Christopher Laws](https://github.com/claws) for the [BH1750 library](https://github.com/claws/BH1750) 
+  and [example build](https://github.com/claws/BH1750#example) (for use with the auto-brightness option).
 * Plus others who have supplied feedback and suggestions.
 
 
