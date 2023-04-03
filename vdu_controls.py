@@ -4989,16 +4989,16 @@ class LuxMeterWidgetThread(WorkerThread):
 
 def lux_create_device(device_name: str):
     if not pathlib.Path(device_name).exists():
-        raise LuxDeviceException(f"Failed to setup {device_name} - path does not exist.")
+        raise LuxDeviceException(tr("Failed to setup {} - path does not exist.").format(device_name))
     if not os.access(device_name, os.R_OK):
-        raise LuxDeviceException(f"Failed to setup {device_name} - no read access to device.")
+        raise LuxDeviceException(tr("Failed to setup {} - no read access to device.").format({device_name}))
     if pathlib.Path(device_name).is_char_device():
         return LuxMeterSerialDevice(device_name)
     elif pathlib.Path(device_name).is_fifo():
         return LuxMeterFifoDevice(device_name)
     elif pathlib.Path(device_name).exists() and os.access(device_name, os.X_OK):
         return LuxMeterRunnableDevice(device_name)
-    raise LuxDeviceException(f"Failed to setup {device_name} - not an recognised kind of device.")
+    raise LuxDeviceException(tr("Failed to setup {} - not an recognised kind of device or not executable.").format(device_name))
 
 
 
@@ -5084,7 +5084,7 @@ class LuxMeterSerialDevice:
         try:
             self.serial_module = import_module('serial')
         except ModuleNotFoundError as mnf:
-            raise LuxDeviceException("The required 'pyserial' serial-port module is not installed on this system.")
+            raise LuxDeviceException(tr("The required pyserial serial-port module is not installed on this system."))
 
     def get_cached_value(self, age_seconds: float):
         if self.cached_value is not None and time.time() - self.cached_time <= age_seconds:
