@@ -4742,6 +4742,7 @@ class LuxProfileChart(QLabel):
         self.setMinimumWidth(self.pixmap_width)
         self.setMinimumHeight(self.pixmap_height)
         self.update_data(chart_data, range_restrictions)
+        self.possible_colors = []
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
@@ -4755,12 +4756,16 @@ class LuxProfileChart(QLabel):
         self.current_vdu = None if len(chart_data) == 0 else list(chart_data.keys())[0]
         self.range_restrictions = range_restrictions
 
+    def get_line_color_cache(self, number_of_lines: int):
+        if len(self.possible_colors) < number_of_lines:
+            random.seed(0x543fff)
+            self.possible_colors = [QColor.fromHsl(int(h * 137.508) % 255,
+                                                   random.randint(64, 128),
+                                                   random.randint(192, 200)) for h in range(number_of_lines)]
+        return self.possible_colors
+
     def create_plot(self):
-        random.seed(0x543fff)
-        possible_colors = [QColor.fromHsl(int(h * 137.508) % 255,
-                                          random.randint(64, 128),
-                                          random.randint(192, 200)) for h in range(len(self.data))]
-        line_colors = {k: v for k, v in zip(self.data.keys(), possible_colors[0:len(self.data)])}
+        line_colors = {k: v for k, v in zip(self.data.keys(), self.get_line_color_cache(len(self.data)))}
         std_line_width = 4
         pixmap = QPixmap(self.pixmap_width, self.pixmap_height)
         painter = QPainter(pixmap)
