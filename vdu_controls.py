@@ -599,6 +599,7 @@ import stat
 import subprocess
 import sys
 import syslog
+import termios
 import textwrap
 import threading
 import time
@@ -4987,14 +4988,18 @@ class LuxMeterWidgetThread(WorkerThread):
 
 
 def lux_create_device(device_name: str):
-    if pathlib.Path(device_name).exists() and os.access(device_name, os.R_OK):
-        if pathlib.Path(device_name).is_char_device():
-            return LuxMeterSerialDevice(device_name)
-        elif pathlib.Path(device_name).is_fifo():
-            return LuxMeterFifoDevice(device_name)
-        elif pathlib.Path(device_name).exists() and os.access(device_name, os.X_OK):
-            return LuxMeterRunnableDevice(device_name)
-    return None
+    if not pathlib.Path(device_name).exists():
+        raise LuxDeviceException(f"Failed to setup {device_name} - path does not exist.")
+    if not os.access(device_name, os.R_OK):
+        raise LuxDeviceException(f"Failed to setup {device_name} - no read access to device.")
+    if pathlib.Path(device_name).is_char_device():
+        return LuxMeterSerialDevice(device_name)
+    elif pathlib.Path(device_name).is_fifo():
+        return LuxMeterFifoDevice(device_name)
+    elif pathlib.Path(device_name).exists() and os.access(device_name, os.X_OK):
+        return LuxMeterRunnableDevice(device_name)
+    raise LuxDeviceException(f"Failed to setup {device_name} - not an recognised kind of device.")
+
 
 
 class LuxMeterFifoDevice:
@@ -5091,6 +5096,7 @@ class LuxMeterSerialDevice:
 
     def get_value(self):
         with self.lock:
+            backoff_secs = 10
             while True:
                 try:
                     if self.serial_device is None:
@@ -5102,11 +5108,13 @@ class LuxMeterSerialDevice:
                     value = float(buffer.decode('utf-8').replace("\r\n", ''))
                     # print(f"meter={value}")
                     return value
-                except (self.serial_module.SerialException, ValueError) as se:
-                    log_warning(f"Retry read of {self.device_name}, will reopen feed in 10 seconds", se)
-                    time.sleep(10)
-                    self.serial_device.close()
-                    self.serial_device = self.serial_module.Serial(self.device_name)
+                except (self.serial_module.SerialException, termios.error, FileNotFoundError, ValueError) as se:
+                    log_warning(f"Retry read of {self.device_name}, will reopen feed in {backoff_secs} seconds", se)
+                    time.sleep(backoff_secs)
+                    backoff_secs = backoff_secs * 2 if backoff_secs < 300 else 300
+                    if self.serial_device is not None:
+                        self.serial_device.close()
+                    self.serial_device = None
 
     def close(self):
         with self.lock:
@@ -5146,6 +5154,7 @@ class LuxAutoWorker(WorkerThread):
                 self.working.emit()
                 lux_auto_controller = self.main_app.lux_auto_controller
                 if lux_auto_controller.lux_meter is None:  # In app config change
+                    log_error("Exiting, no lux meter available.")
                     break
                 lux_config = lux_auto_controller.lux_config.load()  # Refresh
                 metered_lux = lux_auto_controller.lux_meter.get_value()
@@ -5181,7 +5190,7 @@ class LuxAutoWorker(WorkerThread):
                         while not self.stop_requested and time.time() < sleep_end_time:
                             time.sleep(1.0)
         finally:
-            log_info(f"LuxAutoBrightnessWorker exiting (Thread={threading.get_ident()})")
+            log_info(f"LuxAutoBrightnessWorker exiting (stop_requested={self.stop_requested}) (Thread={threading.get_ident()})")
 
     def finished_callable(self):
         if self.vdu_exception:
@@ -5477,14 +5486,16 @@ class LuxAutoController:
             try:
                 log_info("Lux auto-brightness settings refresh - restart monitoring.")
                 self.lux_meter = lux_create_device(self.lux_config.get_device_name())
-                if self.lux_auto_brightness_worker is not None:
-                    self.lux_auto_brightness_worker.stop_requested = True
-                    self.lux_auto_brightness_worker.working.disconnect(self.main_app.display_lux_auto_indicators)
-                self.lux_auto_brightness_worker = LuxAutoWorker(self.main_app)
-                self.lux_auto_brightness_worker.working.connect(self.main_app.display_lux_auto_indicators)
-                self.lux_auto_brightness_worker.start()
+                if self.lux_meter is not None:
+                    if self.lux_auto_brightness_worker is not None:
+                        self.lux_auto_brightness_worker.stop_requested = True
+                        self.lux_auto_brightness_worker.working.disconnect(self.main_app.display_lux_auto_indicators)
+                    self.lux_auto_brightness_worker = LuxAutoWorker(self.main_app)
+                    self.lux_auto_brightness_worker.working.connect(self.main_app.display_lux_auto_indicators)
+                    self.lux_auto_brightness_worker.start()
                 self.main_app.display_lux_auto_indicators()  # Refresh indicators immediately
             except LuxDeviceException as lde:
+                log_error(f"Error setting up lux meter {lde}")
                 alert = MessageBox(QMessageBox.Critical)
                 alert.setText(tr("Error setting up lux meter: {}").format(self.lux_config.get_device_name()))
                 alert.setInformativeText(str(lde))
@@ -6153,7 +6164,8 @@ class VduAppWindow(QMainWindow):
 
     def display_lux_auto_indicators(self):
         assert is_running_in_gui_thread()  # Boilerplate in case this is called from the wrong thread.
-        if self.main_config.is_set(GlobalOption.LUX_METER_ENABLED) and self.lux_auto_controller is not None:
+        if self.main_config.is_set(GlobalOption.LUX_METER_ENABLED) \
+                and self.lux_auto_controller is not None and self.lux_auto_controller.lux_meter is not None:
             icon = create_themed_icon_from_svg_bytes(self.lux_auto_controller.current_auto_svg() )
             self.app_context_menu.update_lux_auto_icon(icon)
             self.refresh_tray_menu()
