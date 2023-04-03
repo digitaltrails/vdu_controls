@@ -4771,7 +4771,7 @@ class LuxProfileChart(QLabel):
         painter = QPainter(pixmap)
         painter.fillRect(0, 0, self.pixmap_width, self.pixmap_height, QColor(0x5b93c5))
         painter.setPen(QPen(QColor(0xffffff), std_line_width))
-        painter.drawText(self.pixmap_width // 3, 30, "Lux Brightness Response Profiles")
+        painter.drawText(self.pixmap_width // 3, 30, tr("Lux Brightness Response Profiles"))
 
         # Draw x-axis
         painter.drawLine(self.x_origin, self.y_origin, self.x_origin + self.plot_width + 25, self.y_origin)
@@ -4788,9 +4788,9 @@ class LuxProfileChart(QLabel):
             painter.drawLine(self.x_origin - 5, self.y_origin - y, self.x_origin + 5, self.y_origin - y)
             painter.drawText(self.x_origin - 50, self.y_origin - y + 5, str(percent))
         painter.save()
-        painter.translate(self.x_origin - 70, self.y_origin - self.plot_height // 2 + 6 * len("Brightness %"))
+        painter.translate(self.x_origin - 70, self.y_origin - self.plot_height // 2 + 6 * len(tr("Brightness %")))
         painter.rotate(-90)
-        painter.drawText(0, 0, "Brightness %")
+        painter.drawText(0, 0, tr("Brightness %"))
         painter.restore()
 
         if self.current_vdu is None:
@@ -5245,7 +5245,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.chart_data = {}
         self.range_restrictions = {}
         self.has_profile_changes = False
-        self.setMinimumWidth(750)
+        self.setMinimumWidth(800)
 
         self.path = get_config_path('AutoLux')
 
