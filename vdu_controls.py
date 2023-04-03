@@ -5377,7 +5377,6 @@ class LuxDialog(QDialog, DialogSingletonMixin):
                     self.profile_selector.setCurrentIndex(index)
                     self.profile_plot.current_vdu = existing_selected_id
         self.profile_selector.blockSignals(False)
-        self.profile_plot = LuxProfileChart(self.chart_data, self.range_restrictions, self.chart_changed_callback, parent=self)
         self.lux_meter_widget.start_metering(self.main_app.lux_auto_controller.lux_meter)
 
     def make_visible(self):
@@ -6043,6 +6042,8 @@ class VduAppWindow(QMainWindow):
                 self.previously_detected_vdu_list = self.detected_vdu_list
             self.main_panel.refresh_view()
             self.main_panel.indicate_busy(False)
+            if self.main_config.is_set(GlobalOption.LUX_METER_ENABLED) and LuxDialog.exists():
+                LuxDialog.get_instance().reinitialise()  # in case the number of connected monitors have changed.
             self.display_active_preset()
 
         self.refresh_data_task = WorkerThread(task_body=refresh_data, task_finished=refresh_view)
