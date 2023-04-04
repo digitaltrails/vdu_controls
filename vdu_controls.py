@@ -1682,9 +1682,7 @@ class VduControlsConfig:
                             help='Detailed help (in markdown format).')
         parser.add_argument('--about', default=False, action='store_true',
                             help='about vdu_controls window')
-        parser.add_argument('--show',
-                            default=[],
-                            action='append',
+        parser.add_argument('--show', default=[], action='append',
                             choices=[vcp.property_name() for vcp in VDU_SUPPORTED_CONTROLS.by_code.values()],
                             help='show specified control only (--show may be specified multiple times)')
         parser.add_argument('--hide', default=[], action='append',
@@ -1700,8 +1698,7 @@ class VduControlsConfig:
                             help='enable language translations')
         parser.add_argument('--no-schedule', default=False, action='store_true', help='disable preset schedule')
         parser.add_argument('--no-weather', default=False, action='store_true', help='disable weather lookups')
-        parser.add_argument('--lux-meter', default=False, action='store_true',
-                            help='enable hardware light metering')
+        parser.add_argument('--lux-meter', default=False, action='store_true', help='enable hardware light metering')
         parser.add_argument('--debug', default=False, action='store_true', help='enable debug output to stdout')
         parser.add_argument('--warnings', default=False, action='store_true',
                             help='popup a warning when a VDU lacks an enabled control')
@@ -1914,10 +1911,9 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
         super().__init__()
         self.setWindowTitle(tr('Settings'))
         self.setMinimumWidth(1024)
-        layout = QVBoxLayout()
-        self.setLayout(layout)
+        self.setLayout(QVBoxLayout())
         tabs = QTabWidget()
-        layout.addWidget(tabs)
+        self.layout().addWidget(tabs)
         self.editor_tab_list = []
         self.change_callback = change_callback
         for config in [default_config, ] + vdu_config_list:
@@ -2083,8 +2079,7 @@ class SettingsEditorFieldBase(QWidget):
 class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
     def __init__(self, section_editor: SettingsEditorTab, option: str, section: str) -> None:
         super().__init__(section_editor, option, section)
-        layout = QHBoxLayout()
-        self.setLayout(layout)
+        self.setLayout(QHBoxLayout())
         checkbox = QCheckBox(self.translate_option())
         checkbox.setChecked(section_editor.ini_editable.getboolean(section, option))
 
@@ -2092,7 +2087,7 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
             section_editor.ini_editable[section][option] = 'yes' if is_checked else 'no'
 
         checkbox.toggled.connect(toggled)
-        layout.addWidget(checkbox)
+        self.layout().addWidget(checkbox)
         self.checkbox = checkbox
 
     def reset(self):
@@ -2375,11 +2370,7 @@ class VduControlSlider(VduControlBase):
     def __init__(self, controller: VduController, vcp_capability: VcpCapability) -> None:
         """Construct the slider control and initialize its values from the VDU."""
         super().__init__(controller, vcp_capability)
-
-        # controller.vdu_setting_changed.connect(self.refresh_view)
-
         self.max_value: str | None = None
-
         layout = QHBoxLayout()
         self.setLayout(layout)
         self.svg_icon: QSvgWidget | None = None
@@ -2502,16 +2493,11 @@ class VduControlComboBox(VduControlBase):
     def __init__(self, controller: VduController, vcp_capability: VcpCapability) -> None:
         """Construct the combobox control and initialize its values from the VDU."""
         super().__init__(controller, vcp_capability)
-
-        # controller.vdu_setting_changed.connect(self.refresh_view)
-
         layout = QHBoxLayout()
         self.setLayout(layout)
-
         label = QLabel()
         label.setText(self.translate_label(vcp_capability.name))
         layout.addWidget(label)
-
         self.combo_box = combo_box = QComboBox()
         layout.addWidget(combo_box)
 
@@ -3034,7 +3020,7 @@ class VduControlsMainPanel(QWidget):
 
         if self.layout():
             # Already laid out, must be responding to a configuration change requiring re-layout.
-            # Remove all exisiting widgets.
+            # Remove all existing widgets.
             for i in range(0, self.layout().count()):
                 item = self.layout().itemAt(i)
                 if isinstance(item, QWidget):
@@ -3291,8 +3277,7 @@ class TransitioningDummyPreset(Preset):  # A wrapper that creates titles and ico
     def __init__(self, wrapped: Preset):
         super().__init__(wrapped.name)
         self.count = 1
-        # self.clocks = ('\u25F7','\u25F6', '\u25F5', '\u25F4')
-        # self.arrows_big = ('\u25B6', '\u25B7')
+        # self.clocks = ('\u25F7','\u25F6', '\u25F5', '\u25F4') self.arrows_big = ('\u25B6', '\u25B7')
         self.arrows = ('\u25B8', '\u25B9')
         self.icons = (wrapped.create_icon(), create_themed_icon_from_svg_bytes(TRANSITION_ICON_SOURCE))
 
@@ -3681,7 +3666,6 @@ class PresetChooseWeatherWidget(QWidget):
         scroll_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         scroll_area.setWidgetResizable(True)
         self.layout().addWidget(scroll_area)
-        # self.layout().addStretch(1)
 
     def init_weather(self):
         if len(list(CONFIG_DIR_PATH.glob("*.weather"))) == 0:
@@ -3772,8 +3756,9 @@ class PresetChooseTransitionWidget(QWidget):
 
     def __init__(self):
         super().__init__()
-        self.setLayout(QHBoxLayout())
-        self.layout().addWidget(QLabel(tr("Transition smoothly")), alignment=Qt.AlignLeft)
+        layout = QHBoxLayout()
+        self.setLayout(layout)
+        layout.addWidget(QLabel(tr("Transition smoothly")), alignment=Qt.AlignLeft)
         self.transition_type_widget = QPushButton("None")
         self.button_menu = QMenu()
         self.transition_type = TransitionType.NONE
@@ -3787,13 +3772,13 @@ class PresetChooseTransitionWidget(QWidget):
             self.button_menu.addAction(action)
 
         self.transition_type_widget.setMenu(self.button_menu)
-        self.layout().addWidget(self.transition_type_widget, alignment=Qt.AlignLeft)
-        self.layout().addStretch(20)
-        self.layout().addWidget(QLabel(tr("Transition step")), alignment=Qt.AlignRight)
+        layout.addWidget(self.transition_type_widget, alignment=Qt.AlignLeft)
+        layout.addStretch(20)
+        layout.addWidget(QLabel(tr("Transition step")), alignment=Qt.AlignRight)
         self.step_seconds_widget = QSpinBox()
         self.step_seconds_widget.setRange(0, 60)
-        self.layout().addWidget(self.step_seconds_widget, alignment=Qt.AlignRight)
-        self.layout().addWidget(QLabel(tr("sec.")), alignment=Qt.AlignRight)
+        layout.addWidget(self.step_seconds_widget, alignment=Qt.AlignRight)
+        layout.addWidget(QLabel(tr("sec.")), alignment=Qt.AlignRight)
 
     def update_value(self):
         if self.is_setting:
@@ -3808,7 +3793,6 @@ class PresetChooseTransitionWidget(QWidget):
     def set_transition_type(self, transition_type: TransitionType):
         try:
             self.is_setting = True
-            # self.transition_type_widget.setCurrentIndex(transition_type.index())
             self.transition_type = transition_type
             for act in self.button_menu.actions():
                 act.setChecked(self.transition_type & act.data())
@@ -4047,8 +4031,6 @@ class PresetChooseElevationWidget(QWidget):
 
     _slider_select_elevation = pyqtSignal(object)
 
-    # def create_trigger_widget(self, base_ini: ConfigIni) -> QWidget:
-    #
     def __init__(self, location: GeoLocation):
         super().__init__()
         self.elevation_key: SolarElevationKey | None = None
@@ -4354,8 +4336,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 option_control = QCheckBox(translate_option(option))
                 group_layout.addWidget(option_control)
                 self.content_controls[(section, option)] = option_control
-                option_control.setChecked(
-                    True)  # preset.preset_ini.has_option(section, option) if preset else True)
+                option_control.setChecked(True)
             layout.addWidget(group_box)
         container.setWidget(widget)
         widget.show()
@@ -4454,7 +4435,6 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
     def change_edit_group_title(self):
         changed_text = self.preset_name_edit.text()
         if changed_text.strip() == "":
-            # choose_icon_button.set_preset(None)
             self.editor_controls_widget.setDisabled(True)
             self.editor_transitions_widget.setDisabled(True)
             self.editor_trigger_widget.setDisabled(True)
@@ -4818,7 +4798,6 @@ class LuxProfileChart(QLabel):
                 painter.setPen(QPen(QColor(line_colors[name]), std_line_width))
                 x = self.x_origin + self.x_from_lux(lux)
                 y = self.y_origin - self.y_from_percent(percent)
-                # painter.drawPoint(x, y)
                 if self.current_vdu == name:
                     painter.drawEllipse(x - ellipse_diameter // 2, y - ellipse_diameter // 2, ellipse_diameter, ellipse_diameter)
                     if last_x and last_y:
@@ -5260,10 +5239,11 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.device_name = ''
         self.config: LuxConfig | None = None
 
-        self.setLayout(QVBoxLayout())
+        main_layout = QVBoxLayout()
+        self.setLayout(main_layout)
 
         top_box = QWidget()
-        self.layout().addWidget(top_box)
+        main_layout.addWidget(top_box)
         grid_layout = QGridLayout()
         top_box.setLayout(grid_layout)
 
@@ -5282,7 +5262,6 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         grid_layout.addWidget(self.meter_device_selector, 0, 2, 1, 3)
 
         self.enabled_checkbox = QCheckBox(tr("Enable automatic brightness adjustment"))
-        # self.enabled_checkbox.setLayoutDirection(Qt.RightToLeft)
         grid_layout.addWidget(self.enabled_checkbox, 1, 2, 1, 3)
 
         self.interval_label = QLabel(tr("Adjustment interval minutes"))
@@ -5294,10 +5273,10 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         grid_layout.addWidget(self.interval_selector, 2, 4, 1, 1)
 
         self.profile_selector = QComboBox()
-        self.layout().addWidget(self.profile_selector)
+        main_layout.addWidget(self.profile_selector)
 
         self.profile_plot = LuxProfileChart(self.chart_data, self.range_restrictions, self.chart_changed_callback, parent=self)
-        self.layout().addWidget(self.profile_plot, 1)
+        main_layout.addWidget(self.profile_plot, 1)
 
         buttons_widget = QWidget()
         button_layout = QHBoxLayout()
@@ -5322,7 +5301,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         quit_button.clicked.connect(self.close)
         button_layout.addWidget(quit_button, 0, Qt.AlignBottom | Qt.AlignRight)
 
-        self.layout().addWidget(buttons_widget)
+        main_layout.addWidget(buttons_widget)
 
         def choose_device():
             device_name = QFileDialog.getOpenFileName(self, tr("Select a tty device or fifo"), "/dev/ttyUSB0")[0]
@@ -5856,9 +5835,8 @@ class VduAppWindow(QMainWindow):
                     self.hide()
                 else:
                     if len(self.settings.allKeys()) == 0:
-                        # No previous state - guess a position near the tray.
-                        # Use the mouse pos as a guess to where the system tray is.  The Linux Qt x,y geometry returned by
-                        # the tray icon is 0,0, so we can't use that.
+                        # No previous state - guess a position near the tray. Use the mouse pos as a guess to where the
+                        # system tray is.  The Linux Qt x,y geometry returned by the tray icon is 0,0, so we can't use that.
                         p = QCursor.pos()
                         wg = self.geometry()
                         # Also try to cope with the tray not being at the bottom right of the screen.
