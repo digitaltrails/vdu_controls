@@ -1216,7 +1216,6 @@ class DdcUtil:
         info = DdcUtil().vcp_info()
         code_definitions = info.split("\nVCP code ")
         for code_def in code_definitions[1:]:
-            # print(code_def)
             lines = code_def.split('\n')
             vcp_code, vcp_name = lines[0].split(': ', 1)
             ddcutil_feature_subsets = None
@@ -2090,7 +2089,6 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
         checkbox.setChecked(section_editor.ini_editable.getboolean(section, option))
 
         def toggled(is_checked: bool) -> None:
-            # print(section, option, is_checked)
             section_editor.ini_editable[section][option] = 'yes' if is_checked else 'no'
 
         checkbox.toggled.connect(toggled)
@@ -2265,7 +2263,6 @@ class SettingsEditorTextEditorWidget(SettingsEditorFieldBase):
         text_editor = QPlainTextEdit(section_editor.ini_editable[section][option])
 
         def text_changed() -> None:
-            # print(section, option, text_editor.toPlainText())
             section_editor.ini_editable[section][option] = text_editor.toPlainText().replace("%", "%%")
 
         text_editor.textChanged.connect(text_changed)
@@ -2299,6 +2296,8 @@ class VduException(Exception):
         self.cause = exception
         self.operation = operation
 
+    def __str__(self):
+        return f"VduException: {self.vdu_description} op={self.operation} attr={self.attr_id} {self.cause}"
 
 class VduControlBase(QWidget):
     """
@@ -2793,9 +2792,8 @@ class Preset:
         millis = round((when_local - zoned_now()) / timedelta(milliseconds=1))
         self.timer.start(millis)
         self.schedule_status = ScheduleStatus.SCHEDULED
-        log_info(
-            f"Scheduled preset '{self.name}' for {when_local} in {round(millis / 1000 / 60)} minutes "
-            f"{self.get_solar_elevation()}")
+        log_info(f"Scheduled preset '{self.name}' for {when_local} in {round(millis / 1000 / 60)} minutes "
+                 f"{self.get_solar_elevation()}")
 
     def remove_elevation_trigger(self):
         if self.timer:
@@ -2897,7 +2895,6 @@ class ContextMenu(QMenu):
         action.setProperty(self.busy_disable_prop, QVariant(True))
         action.setProperty(self.preset_prop, QVariant(True))
         self.insertAction(self.presets_separator, action)
-        # print(self.actions())
         self.update()
 
     def remove_preset_menu_action(self, preset: Preset):
@@ -5001,7 +4998,6 @@ def lux_create_device(device_name: str):
     raise LuxDeviceException(tr("Failed to setup {} - not an recognised kind of device or not executable.").format(device_name))
 
 
-
 class LuxMeterFifoDevice:
 
     def __init__(self, device_name: str, thread: QThread = None):
@@ -5088,7 +5084,6 @@ class LuxMeterSerialDevice:
 
     def get_cached_value(self, age_seconds: float):
         if self.cached_value is not None and time.time() - self.cached_time <= age_seconds:
-            print(f"lux meter return cached value {self.cached_value}")
             return self.cached_value
         self.cached_value = self.get_value()
         self.cached_time = time.time()
@@ -5106,7 +5101,6 @@ class LuxMeterSerialDevice:
                     time.sleep(0.1)
                     buffer = self.serial_device.readline()
                     value = float(buffer.decode('utf-8').replace("\r\n", ''))
-                    # print(f"meter={value}")
                     return value
                 except (self.serial_module.SerialException, termios.error, FileNotFoundError, ValueError) as se:
                     log_warning(f"Retry read of {self.device_name}, will reopen feed in {backoff_secs} seconds", se)
@@ -5150,6 +5144,7 @@ class LuxAutoWorker(WorkerThread):
         log_info(f"LuxAutoBrightnessWorker monitoring commences (Thread={threading.get_ident()})")
         self._message.emit(tr("Brightness auto adjustment monitoring commences."))
         try:
+            step_count = last_step_number = 0
             while not self.stop_requested:
                 self.working.emit()
                 lux_auto_controller = self.main_app.lux_auto_controller
@@ -5158,7 +5153,6 @@ class LuxAutoWorker(WorkerThread):
                     break
                 lux_config = lux_auto_controller.lux_config.load()  # Refresh
                 metered_lux = lux_auto_controller.lux_meter.get_value()
-                in_progress = False
                 for control_panel in self.main_app.main_panel.vdu_control_panels:
                     if self.stop_requested:
                         break
@@ -5169,26 +5163,31 @@ class LuxAutoWorker(WorkerThread):
                         try:
                             current_brightness = int(controller.get_attribute('10')[0])
                             if not self.stop_requested and current_brightness != profile_brightness:
+                                step_count += 1
+                                log_info("LuxAutoBrightnessWorker: stepping commences..") if step_count == 1 else None
                                 diff = profile_brightness - current_brightness
                                 step_size = max(1, abs(diff) // 3)  # 4 if abs(diff) < 8 else 8  # TODO find a good heuristic
                                 step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
-                                log_info(
-                                    f"Auto lux: lux={metered_lux} stepping {controller.vdu_stable_id} step={step} current={current_brightness} target={profile_brightness}")
+                                log_debug(f"LuxAutoBrightnessWorker: lux={metered_lux} stepping {controller.vdu_stable_id}"
+                                          f" step={step} current={current_brightness}" 
+                                          f"target={profile_brightness}") if log_debug_enabled else None
                                 self._message.emit(tr("Adjusting {}...").format(controller.vdu_stable_id))
                                 brightness_control.restore_vdu_attribute(str(current_brightness + step))
                                 self._refresh_gui_view.emit(brightness_control)
-                                in_progress = in_progress or current_brightness + step != profile_brightness
                         except VduException as ve:
                             self._message.emit(tr("Error adjusting {}").format(controller.vdu_stable_id))
                             log_warning(f"Auto lux: Brightness error on {controller.vdu_stable_id}, will sleep and try again: {ve}")
                 if not self.stop_requested:
-                    if in_progress:
-                        time.sleep(0.5)  # give DDC some time to settle.
+                    if step_count != last_step_number: # Let i2c settle down, the conitnue stepping
+                        time.sleep(0.5)
                     else:  # Sleep for the intervul between updates - but check for stop requests.
+                        log_info(f"LuxAutoBrightnessWorker: ..stepping completed") if step_count != 0 else None
+                        step_count = 0
                         self._message.emit("")
-                        sleep_end_time = time.time() + lux_auto_controller.lux_config.get_interval_minutes() * 60.0
+                        sleep_end_time = time.time() + lux_auto_controller.lux_config.get_interval_minutes() * 60.0 - 0.5
                         while not self.stop_requested and time.time() < sleep_end_time:
                             time.sleep(1.0)
+                last_step_number = step_count
         finally:
             log_info(f"LuxAutoBrightnessWorker exiting (stop_requested={self.stop_requested}) (Thread={threading.get_ident()})")
 
@@ -5409,7 +5408,6 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         else:
             self.meter_device_selector.setText(tr(" Not available {}").format(device))
             return None
-        print(f"access {device} {os.access(device, os.R_OK)}")
         if not os.access(device, os.R_OK):
             alert = MessageBox(QMessageBox.Critical)
             alert.setText(tr("No read access to {}").format(device))
@@ -5420,17 +5418,6 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
     def display_message(self, message):
         self.message_area.setText(message)
-
-    def load_config(self):
-        if self.path.exists():
-            log_info(f"Reading autolux file '{self.path.as_posix()}'")
-            text = Path(self.path).read_text()
-            config = ConfigIni()
-            config.read_string(text)
-        else:
-            config = ConfigIni()
-        self.config = config
-        return self.config
 
     def save_settings(self, requires_auto_brightness_restart: bool = True):
         self.has_profile_changes = False
