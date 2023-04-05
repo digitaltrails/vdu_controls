@@ -1,8 +1,24 @@
 #!/bin/bash
 #
-# lux-from-value.bash - guess lux value based on a webcam image
+# lux-from-webcam.bash - guess lux value based on a webcam image
 # ==================================================================
 # Copyright (C) 2023 Michael Hamilton
+#
+# This script will read lux/brightness values from ~/.config/lux-from-webcam.data
+# Add as many discrete values as you require: name lux value. The name is
+# simple a comment and should have no spaces.
+#
+# When run for the first time a default data file ~/.config/lux-from-webcam.data
+# will be populated with data typical to my own study and webcam, please alter
+# it to match your own circumstances.
+#
+# The script will optionally include ~/.config/lux-from-webcam.config
+# and can be used to override any of the follow constants:
+#
+#    DATA_FILE=~/.config/lux-from-webcam.data
+#    DEVICE=/dev/video0
+#    MANUAL_EXPOSURE_SETTING=1
+#    IMAGE_LOCATION=$HOME/tmp/out.jpg
 #
 # GNU License
 # ===========
@@ -20,8 +36,32 @@
 # with this program. If not, see https://www.gnu.org/licenses/.
 #
 
+CONFIG_FILE=~/.config/lux-from-webcam.config
+DATA_FILE=~/.config/lux-from-webcam.data
 DEVICE=/dev/video0
+MANUAL_EXPOSURE_SETTING=1
 IMAGE_LOCATION=$HOME/tmp/out.jpg
+
+if [ -f $CONFIG_FILE ]
+then
+    echo "INFO: including config file: $CONFIG_FILE" >&2
+    . $CONFIG_FILE
+fi
+
+if [ \! -f $DATA_FILE ]
+then
+    echo "INFO: creating $DATA_FILE based on the Logitech Webcam C270, please customise to your local conditions." >&2
+    cat > $DATA_FILE <<EOF
+SUNLIGHT       100000 250
+DAYLIGHT        10000 160
+OVERCAST         1000 110
+SUNRISE_SUNSET    400  50
+DARK_OVERCAST     100  20
+LIVING_ROOM        50   5
+NIGHT               5   0  
+EOF
+fi
+
 existing_settings=$(v4l2-ctl --device $DEVICE --get-ctrl auto_exposure,exposure_time_absolute | awk '
 {setting[++i]=$2} END {printf "auto_exposure=%s,exposure_time_absolute=%s", setting[1], setting[2]}')
 
@@ -29,8 +69,11 @@ trap "v4l2-ctl --device $DEVICE --set-ctrl $existing_settings" EXIT
 
 # Decide on exposure settings based on the output of v4l2-ctl --device /dev/video0 --list-ctrls-menus
 # and trial images samples.
+
+current_exposure_mode=$(v4l2-ctl --device $DEVICE --get-ctrl auto_exposure | awk '{print $2}')
+
 v4l2-ctl  --device $DEVICE  \
-  --set-ctrl auto_exposure=1,exposure_time_absolute=64 \
+  --set-ctrl auto_exposure=$MANUAL_EXPOSURE_SETTING,exposure_time_absolute=64 \
   --set-fmt-video=width=1280,height=720,pixelformat=MJPG \
   --stream-mmap --stream-to=$IMAGE_LOCATION --stream-count=1
 
@@ -58,14 +101,4 @@ do
   fi
   previous_value=$value
   previous_lux=$lux
-done <<EOF
-SUNLIGHT       100000 250
-DAYLIGHT        10000 160
-OVERCAST         1000 110
-SUNRISE_SUNSET    400  50
-DARK_OVERCAST     100  20
-LIVING_ROOM        50   5
-NIGHT               5   0
-EOF
-# Logitech, Inc. Webcam C270 settings for my study
-# Customise the above table to your desktop and webcam
+done < $DATA_FILE

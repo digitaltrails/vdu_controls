@@ -2,6 +2,15 @@
 """
 lux-from-brightness.py - guess lux value based on a webcam image
 ================================================================
+
+This script will read lux/brightness values from ~/.config/lux-from-webcam.data
+Add as many discrete values as you require: name lux value. The name is
+simple a comment and should have no spaces.
+
+When run for the first time a default data file ~/.config/lux-from-webcam.data
+will be populated with data typical to my own study and webcam, please alter
+it to match your own circumstances.
+
 Copyright (C) 2023 Michael Hamilton
 
 GNU License
@@ -20,11 +29,11 @@ You should have received a copy of the GNU General Public License along
 with this program. If not, see https://www.gnu.org/licenses/.
 """
 import math
+import pathlib
 import signal
 import sys
 
 import cv2
-
 
 CAMERA_DEVICE = '/dev/video0'
 
@@ -36,14 +45,31 @@ AUTO_EXPOSURE_SETTING = 3
 # Customise these values to your desktop and webcam
 # Logitech, Inc. Webcam C270 settings for my study
 LUX_BRIGHTNESS = [
-    ('SUNLIGHT',       100000, 250),
-    ('DAYLIGHT',        10000, 160),
-    ('OVERCAST',         1000, 110),
-    ('SUNRISE_SUNSET',    400,  50),
-    ('DARK_OVERCAST',     100,  20),
-    ('LIVING_ROOM',        50,   5),
-    ('NIGHT',               5,   0),
+    ('SUNLIGHT', 100000, 250),
+    ('DAYLIGHT', 10000, 160),
+    ('OVERCAST', 1000, 110),
+    ('SUNRISE_SUNSET', 400, 50),
+    ('DARK_OVERCAST', 100, 20),
+    ('LIVING_ROOM', 50, 5),
+    ('NIGHT', 5, 0),
 ]
+
+
+def get_brightness_data():
+    path = pathlib.Path.home().joinpath('.config', 'lux-from-webcam.data')
+    if not path.exists():
+        print(f"INFO: creating {path.as_posix()} based on the Logitech Webcam C270, please customise to your local conditions.",
+              file=sys.stderr)
+        with open(path, 'w') as config_file:
+            for name, lux, brightness in LUX_BRIGHTNESS:
+                config_file.write(f"{name:20} {lux:6} {brightness:3}\n")
+    result = []
+    with open(path, 'r') as config_file:
+        print(f"INFO: reading {path.as_posix()}", file=sys.stderr)
+        while line := config_file.readline():
+            result.append(tuple(int(v) if v.isnumeric() else v for v in line.split()))
+    return result
+
 
 def to_lux_log(average_brightness):
     if average_brightness <= 0:
@@ -76,7 +102,7 @@ def main():
         brightness = cv2.mean(gray_image)[0]
 
         previous_lux, previous_value = None, None
-        for name, lux, value in LUX_BRIGHTNESS:
+        for name, lux, value in get_brightness_data():
             if brightness >= value:
                 if previous_lux:
                     # Interpolate on a log10 scale - at least that's what I think this is (idea from chatgpt)
