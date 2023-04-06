@@ -7,7 +7,7 @@ I've also written a couple of alternative webcam based light metering scripts in
 my system with my Logitech Webcam C270.
 
 These hardware solutions and there configuration are quite likely to require some customisation
-for local ambient lighting conditions and local hardware conditions.  In order to use them you'll
+for local ambient lighting conditions and local hardware options.  In order to use them you'll
 need to be comfortable editing and configuring hardware and scripts using the command line.
 
 GY30/BH1750 + Arduino Lux metering
