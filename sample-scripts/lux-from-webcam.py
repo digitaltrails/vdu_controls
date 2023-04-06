@@ -7,9 +7,8 @@ This script will read lux/brightness values from ~/.config/lux-from-webcam.data
 Add as many discrete values as you require: name lux value. The name is
 simple a comment and should have no spaces.
 
-When run for the first time a default data file ~/.config/lux-from-webcam.data
-will be populated with data typical to my own study and webcam, please alter
-it to match your own circumstances.
+A default config file is created when the script is first run, please alter
+it to match your own ambient lighting conditions.
 
 Copyright (C) 2023 Michael Hamilton
 
