@@ -79,7 +79,7 @@ v4l2-ctl  --device $DEVICE  \
 # Fix issues in MJPG that bother ImageMagick
 convert $IMAGE_LOCATION $IMAGE_LOCATION-fixed 1>/dev/null 2>&1
 # Compute average brightness 0..255.
-brightness=$(convert $IMAGE_LOCATION-fixed -colorspace gray -resize 1x1 -evaluate-sequence Max -format "%[fx:255*mean]" info:)
+brightness=$(convert $IMAGE_LOCATION-fixed -colorspace gray -resize 1x1 -format "%[fx:255*mean]" info:)
 brightness=$(echo $brightness | sed 's/[.].*//')
 echo "INFO: camera-brightness: $brightness/255" >&2
 
