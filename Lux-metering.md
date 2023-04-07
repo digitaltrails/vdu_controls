@@ -97,9 +97,9 @@ LIVING_ROOM        50   5
 NIGHT               5   0  
 ```
 
-I've included two scripts which can read such mapping. They both take the
-raw webcam value and interpolate between mapped values to produce a "lux" 
-output suitable for ``vdu_controls``:
+I've included two scripts which can read such mapping and help with creating 
+one. They both take the raw webcam value and interpolate between mapped 
+values to produce a "lux" output suitable for ``vdu_controls``:
 
  * [lux-from-webcam.bash](/sample-scripts/lux-from-webcam.bash):  This bash script averages a webcam capture by converting 
      it to a 1 pixel image (I barely understand the imagemagick voodoo, but
@@ -121,8 +121,19 @@ chmod U+x lux-from-webcam.py
 Once they are set to be executable, they can be selected 
 in  `Light Metering Dialog` and ``vdu_controls`` will recognise 
 then as "Runnable" scripts that provide a single value per run.
+They can also be run in a shell to experiment with creating new
+mapping values, they output diagnostics to stderr, for example:
 
-The requirements for the two scripts are available on all major Linux distributions.
+```
+% /usr/share/vdu_controls/sample-scripts/lux-from-webcam.bash
+INFO: camera-brightness: 129/255
+INFO: log10 interpolating 129 over 110..160 to lux 1000..10000
+INFO: brightness=129, value=110, lux=1031.81, name=OVERCAST
+1031.81
+```
+
+The requirements for the two scripts are available on all major Linux 
+distributions.
 
 Both of the scripts are set to use options available with a 
 __Logitech Webcam C270__, they may need editing to use similar 
