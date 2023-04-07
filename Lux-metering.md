@@ -101,12 +101,12 @@ I've included two scripts which can read such mapping. They both take the
 raw webcam value and interpolate between mapped values to produce a "lux" 
 output suitable for ``vdu_controls``:
 
- * [lux-from-webcam.bash](/sample-scripts/):  This bash script averages a webcam capture by converting 
+ * [lux-from-webcam.bash](/sample-scripts/lux-from-webcam.bash):  This bash script averages a webcam capture by converting 
      it to a 1 pixel image (I barely understand the imagemagick voodoo, but
      it seems to work).  Requirements: ``ImageMagick-7`` (image conversion software),
      and ``v4l-utils`` (Video 4 Linux camera controls)
 
- * [lux-from-webcam.py](/sample-scripts/):  Averages a webcam capture by using OpenCV, otherwise
+ * [lux-from-webcam.py](/sample-scripts/lux-from-webcam.py):  Averages a webcam capture by using OpenCV, otherwise
      it's pretty much the same as the bash script.  Requirements: the ``cv2`` 
      (opencv-python real-time computer vision library)
 
