@@ -1,22 +1,21 @@
 Lux metering - sample scripts
 =============================
 
-For lux metering I primarily use a simple light meter built using an Arduino and a GY30/BH1750 sensor.
+For lux metering I use a simple light meter built using an Arduino and 
+a __GY30/BH1750__ sensor.  
 
-I've also written a couple of alternative webcam based light metering scripts in this folder work on 
-my system with my Logitech Webcam C270.
+I've also written a couple of alternative webcam based light metering 
+scripts that use my Logitech Webcam C270 to achieve an approximate 
+metering value.
 
-These hardware solutions and there configuration are quite likely to require some customisation
-for local ambient lighting conditions and local hardware options.  In order to use them you'll
-need to be comfortable editing and configuring hardware and scripts using the command line.
 
 GY30/BH1750 + Arduino Lux metering
 ----------------------------------
 
-Using an Arduino and a GY30/BH1750 is the most reliable way of obtaining true Lux values.  A simple Sketch 
-using [Christopher Laws' BH1750 library](https://github.com/claws/BH1750) can be uploaded 
-to the Arduino to retrieve a feed of Lux values.  The sketch I'm using in my Arduino employs the 
-following code:
+Using an Arduino and a GY30/BH1750 is the most reliable way of obtaining
+true Lux values.  A simple Sketch using [Christopher Laws' BH1750 library](https://github.com/claws/BH1750) 
+can be uploaded to the Arduino to enable a feed of Lux values.  The 
+sketch I'm using in my build employs the following code:
 
 ```
 #include <BH1750.h>
@@ -35,45 +34,57 @@ void loop() {
 }
 ```
 
-This provides a feed of Lux values to a USB tty on a Linux host, typically /dev/ttyUSB0 (or /dev/ttyUSB1, etc).  
+This sketch can provide a feed of Lux values to a USB tty on a Linux host, 
+typically /dev/ttyUSB0 (or /dev/ttyUSB1, etc).  
 
-You may need to configure access to the tty device.  On many systems this would mean adding your username
-to an appropriate group,  as can be seen if we inspect the device when the Arduino is connected to the system:
+You may need to configure access-rights to the tty device.  On many systems 
+this would mean adding your username to an appropriate group - use the `ls`
+command to see what user and group owns the device:
 
 ```
-ls -l /dev/ttyUSB0                                                                              1 ↵  10269  08:45:34
+% ls -l /dev/ttyUSB0                                                                              1 ↵  10269  08:45:34
 crw-rw---- 1 root dialout 188, 0 Apr  7 07:32 /dev/ttyUSB0
 ```
 
-The above is from my OpenSUSE system, the required group is named ``dialout``. So I'd need to do:
+The above example is from my OpenSUSE system, the required group is ``dialout``. So I'd need to do:
 
 ```
 sudo usermod --append --groups dialout michael
 ```
 
-Note this would grant access to all ``dialout`` devices (all ttys/modems), so you have to comfortable 
-with that.  You may also need to re-login to pick up the new group access.
+Note this would grant access to all ``dialout`` devices (all ttys and modems) - you 
+have to comfortable with that.  After making any access changes, you will 
+have to re-login so that the entire desktop session will pick up the changes.
 
-Once the sketch is running and the permissions have been set up, the tty feed can be directly read 
-by ``vdu_controls``, just configure the correct device path in the ``Light Metering Dialog``. 
+Once the sketch is running and the permissions have been set up, the tty 
+feed can be directly read by ``vdu_controls``, just configure the correct 
+device path in the ``Light Metering Dialog``. 
 
 Webcam based approximation to Lux metering
 ------------------------------------------
 
-Some webcams can be used to measure light levels in a way that can be approximately 
-mapped over a typical lux range.  
+If you don't wish to obtain and built the components for a Arduino
+based solution, you may be able to employ a webcam.
 
-This is easily achieved if the webcam includes Linux accessible options for setting
-a manual fixed exposure. By setting a fixed exposure, the measured average brightness
-in a still capture should vary according to ambient lighting conditions.  By sampling 
-stills over a range of typical lighting conditions a mapping of brightness to 
-approximate lux values can be developed.  
+Some webcams can be used to achieve an approximate metering values. 
+I've written a couple f scripts that take this approach.  They will
+require customisation for the local ambient lighting conditions and 
+local hardware options.  In order to use them you'll need to be 
+comfortable editing and configuring hardware and scripts using the 
+command line.
 
-A webcam based mapping need not be contiguous, accurate, or realistic, the mapping 
-just needs to be sufficient for use with ``vdu_controls``.  Seek a range of values that 
-corresponded to useful cutoffs/transitions.  For example, I've used these values 
-with a Logitech Webcam C270 in a study with access to  a large amount of natural 
-daylight:
+Using a webcam easiest of if the webcam includes 
+Linux accessible options for setting a manual fixed exposure. By 
+setting a fixed exposure, the measured average brightness in a 
+still capture should vary according to ambient lighting conditions.
+A mapping of brightness to approximate lux values can be developed
+by sampling stills over a range of lighting conditions.  
+
+A webcam based mapping need not be contiguous, accurate, or realistic, 
+the mapping just needs to be sufficient for use with ``vdu_controls``.  
+Seek a range of values that corresponded to a variety of normal 
+circumstances. For example, I've used the follow values with in
+a study with access to a large amount of natural daylight:
 
 ```
 Typical scene     Lux Brightness
@@ -99,23 +110,32 @@ output suitable for ``vdu_controls``:
      it's pretty much the same as the bash script.  Requirements: the ``cv2`` 
      (opencv-python real-time computer vision library)
 
-In order to use these with ``vdu_controls``, they must be set to be executable:
+In order to use these with ``vdu_controls``, they must be set to be 
+executable:
 
 ```
 chmod u+x lux-from-webcam.bash
 chmod U+x lux-from-webcam.py
 ```
 
-Once they are set to be executable, they can be selected in  `Light Metering Dialog` and
-it will recognise then as "Runnable" scripts that provide a single value per run.
+Once they are set to be executable, they can be selected 
+in  `Light Metering Dialog` and ``vdu_controls`` will recognise 
+then as "Runnable" scripts that provide a single value per run.
 
-The requirements for the two scripts are packaged for all major distributions.
+The requirements for the two scripts are available on all major Linux distributions.
 
-Both of the scripts are set to use options available with a Logitech Webcam C270,
-they may need editing to use similar options on other webcams.  
+Both of the scripts are set to use options available with a 
+__Logitech Webcam C270__, they may need editing to use similar 
+options on other webcams.  
 
-Because I use a GY30/BH1750 + Arduino, I'm not sure how much support I can 
-provide for webcam based approaches over the long term.  Hence, these are 
+If a webcam doesn't support fixed manual exposures, it may still be
+possible to use some heuristics to guess at the available light, or
+to perhaps at least guess at whether it is day or night by recognising
+differing light or dark areas in the image (such as weather a lamp is
+lit). Such heuristics would likely be very specific to local 
+circumstances, I've not explored them to any great degree.
+
+Because I use a GY30/BH1750 + Arduino, the webcam based scripts are 
 provided as sample scripts with the expectation that the end-user is happy
 to edit and maintain their own versions.
 
