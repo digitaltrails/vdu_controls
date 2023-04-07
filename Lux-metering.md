@@ -66,7 +66,7 @@ Webcam based approximation to Lux metering
 ------------------------------------------
 
 If you don't wish to build an Arduino based solution, you 
-may be able to use a webcam to achieve an usable metering values. 
+may be able to use a webcam to achieve usable metering values. 
 
 I've developed two scripts:  
 
