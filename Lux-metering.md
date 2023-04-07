@@ -163,7 +163,7 @@ You can improvise your own light metering device and scripts.
 The ``Light Metering Dialog`` provides three options for light metering 
 input:
 
- * A tty device (assumed to provide a stream of values separated by carriage-return+linefeed.
+ * A tty device (assumed to provide a stream of values separated by carriage-return linefeed).
  * A UNIX FIFO (assumed to provide a stream of values separated by linefeed).
  * An executable (assume to provide one value each time it is run).
 
