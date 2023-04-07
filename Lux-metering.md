@@ -35,10 +35,10 @@ void loop() {
 ```
 
 This sketch can provide a feed of Lux values to a USB tty on a Linux host, 
-typically /dev/ttyUSB0 (or /dev/ttyUSB1, etc).  
+typically `/dev/ttyUSB0`, `/dev/ttyUSB1`, ...  
 
 You may need to configure access-rights to the tty device.  On many systems 
-this would mean adding your username to an appropriate group - use the `ls`
+this would mean adding your username to an appropriate group. Use the `ls`
 command to see what user and group owns the device:
 
 ```
@@ -46,15 +46,17 @@ command to see what user and group owns the device:
 crw-rw---- 1 root dialout 188, 0 Apr  7 07:32 /dev/ttyUSB0
 ```
 
-The above example is from my OpenSUSE system, the required group is ``dialout``. So I'd need to do:
+The above example is from my OpenSUSE system, which assigns
+these devices to the `dialout` group.  In my case, I'd needed to do:
 
 ```
 sudo usermod --append --groups dialout michael
 ```
 
-Note this would grant access to all ``dialout`` devices (all ttys and modems) - you 
-have to comfortable with that.  After making any access changes, you will 
-have to re-login so that the entire desktop session will pick up the changes.
+This grants access to all ``dialout`` devices (all ttys and modems) - which 
+may have other security implications.  After adding a user to a group, 
+the user will have to re-login - it's the easiest way to ensure the 
+whole desktop session hierarchy takes on the change.
 
 Once the sketch is running and the permissions have been set up, the tty 
 feed can be directly read by ``vdu_controls``, just configure the correct 
@@ -63,28 +65,73 @@ device path in the ``Light Metering Dialog``.
 Webcam based approximation to Lux metering
 ------------------------------------------
 
-If you don't wish to obtain and build an Arduino based solution, you 
-may be able to employ a webcam.
+If you don't wish to build an Arduino based solution, you 
+may be able to use a webcam to achieve an usable metering values. 
 
-Some webcams can be used to achieve an approximate metering values. 
-I've written a couple f scripts that take this approach.  They will
-require customisation for the local ambient lighting conditions and 
-local hardware options.  In order to use them you'll need to be 
-comfortable editing and configuring hardware and scripts using the 
-command line.
+I've developed two scripts:  
 
-Using a webcam easiest of if the webcam includes 
-Linux accessible options for setting a manual fixed exposure. By 
-setting a fixed exposure, the measured average brightness in a 
-still capture should vary according to ambient lighting conditions.
-A mapping of brightness to approximate lux values can be developed
-by sampling stills over a range of lighting conditions.  
+ * [lux-from-webcam.bash](/sample-scripts/lux-from-webcam.bash):  This bash script averages a webcam capture by converting 
+     it to a 1 pixel image (I barely understand the imagemagick voodoo, but
+     it seems to work).  Requirements: ``ImageMagick-7`` (image conversion software),
+     and ``v4l-utils`` (Video 4 Linux camera controls)
 
-A webcam based mapping need not be contiguous, accurate, or realistic, 
-the mapping just needs to be sufficient for use with ``vdu_controls``.  
-Seek a range of values that corresponded to a variety of normal 
-circumstances. For example, I've used the follow values with in
-a study with access to a large amount of natural daylight:
+ * [lux-from-webcam.py](/sample-scripts/lux-from-webcam.py):  Averages a webcam capture by using OpenCV, otherwise
+     it's pretty much the same as the bash script.  Requirements: the ``cv2`` 
+     (opencv-python real-time computer vision library)
+
+They are intended for webcams that feature manual exposure controls. By 
+using manual exposure to set a constant/fixed exposure, images can be 
+sampled from a variety of lighting conditions. The average brightness in 
+the images can be used to develop a mapping of brightness values to 
+approximate lux values. The mapping need not be contiguous, accurate, or 
+realistic, they just need to be produce values sufficient for 
+use with ``vdu_controls``.
+
+The scripts will require customisation for the local ambient lighting 
+conditions and  local hardware options.  In order to use them you'll need 
+to be comfortable editing and configuring hardware and scripts using the 
+command line. The requirements for the two scripts are available on 
+all major Linux distributions.
+
+Both scripts are similar in their approach:
+1. capture a still image, 
+2. compute the average brightness for the captured image (0..255), 
+3. consult a table of brightness to lux mappings, 
+4. interpolate (log10) between the matched mapping entries,
+5. output a single lux value (typically 0 to 10000 on a log10 scale).
+
+They both read the same config file: 
+
+  `~/.config/lux-from-webcam.data`. 
+  
+You can use either script, or even switch from one to the other.
+
+In order to use these with ``vdu_controls``, they must be set to be 
+executable:
+
+```
+chmod u+x lux-from-webcam.bash
+chmod U+x lux-from-webcam.py
+```
+
+Once they are set to be executable, they will be able to be selected 
+as _"Runnable"_ script in the  `Light Metering Dialog`. Then
+metering can be enabled, and ``vdu_controls`` will periodically
+run the selected script to obtain a single lux values.
+
+They can also be run in a shell to experiment with creating new
+mapping values. They both output diagnostics to stderr, for example:
+
+```
+% /usr/share/vdu_controls/sample-scripts/lux-from-webcam.bash
+INFO: camera-brightness: 129/255
+INFO: log10 interpolating 129 over 110..160 to lux 1000..10000
+INFO: brightness=129, value=110, lux=1031.81, name=OVERCAST
+1031.81
+```
+
+I've derived the following example mapping in a study with access 
+to a large amount of natural daylight:
 
 ```
 Typical scene     Lux Brightness
@@ -97,43 +144,6 @@ LIVING_ROOM        50   5
 NIGHT               5   0  
 ```
 
-I've included two scripts which can read such mapping and help with creating 
-one. They both take the raw webcam value and interpolate between mapped 
-values to produce a "lux" output suitable for ``vdu_controls``:
-
- * [lux-from-webcam.bash](/sample-scripts/lux-from-webcam.bash):  This bash script averages a webcam capture by converting 
-     it to a 1 pixel image (I barely understand the imagemagick voodoo, but
-     it seems to work).  Requirements: ``ImageMagick-7`` (image conversion software),
-     and ``v4l-utils`` (Video 4 Linux camera controls)
-
- * [lux-from-webcam.py](/sample-scripts/lux-from-webcam.py):  Averages a webcam capture by using OpenCV, otherwise
-     it's pretty much the same as the bash script.  Requirements: the ``cv2`` 
-     (opencv-python real-time computer vision library)
-
-In order to use these with ``vdu_controls``, they must be set to be 
-executable:
-
-```
-chmod u+x lux-from-webcam.bash
-chmod U+x lux-from-webcam.py
-```
-
-Once they are set to be executable, they can be selected 
-in  `Light Metering Dialog` and ``vdu_controls`` will recognise 
-then as "Runnable" scripts that provide a single value per run.
-They can also be run in a shell to experiment with creating new
-mapping values, they output diagnostics to stderr, for example:
-
-```
-% /usr/share/vdu_controls/sample-scripts/lux-from-webcam.bash
-INFO: camera-brightness: 129/255
-INFO: log10 interpolating 129 over 110..160 to lux 1000..10000
-INFO: brightness=129, value=110, lux=1031.81, name=OVERCAST
-1031.81
-```
-
-The requirements for the two scripts are available on all major Linux 
-distributions.
 
 Both of the scripts are set to use options available with a 
 __Logitech Webcam C270__, they may need editing to use similar 
@@ -144,22 +154,28 @@ possible to use some heuristics to guess at the available light, or
 to perhaps at least guess at whether it is day or night by recognising
 differing light or dark areas in the image (such as weather a lamp is
 lit). Such heuristics would likely be very specific to local 
-circumstances, I've not explored them to any great degree.
-
-Because I use a GY30/BH1750 + Arduino, the webcam based scripts are 
-provided as sample scripts with the expectation that the end-user is happy
-to edit and maintain their own versions.
+circumstances, I've not explored such an approach to any great degree.
 
 Other options
 -------------
 
-You can improvise your own light metering device and scripts, the ``Light Metering Dialog``
-provides three options for light metering inputs:
+You can improvise your own light metering device and scripts. 
+The ``Light Metering Dialog`` provides three options for light metering 
+input:
 
  * A tty device (assumed to provide a stream of values separated by carriage-return+linefeed.
  * A UNIX FIFO (assumed to provide a stream of values separated by linefeed).
  * An executable (assume to provide one value each time it is run).
 
-Remember, they need not supply accurate or realistic values, the values just
-have to be useful for setting up mappings in the ``Light Metering Dialog``
+Remember, a light meter need not supply accurate or realistic values, the 
+values just have to be useful for setting up mappings 
+in the ``Light Metering Dialog``. Any scale of values ranging from 0 to 
+10000 would likely be usable because ``vdu_controls`` allows you to
+chart out a custom mapping from lux to VDU brightness. If you 
+want to map pitch dark to 1000 "lux", that's fine, within ``vdu_controls``
+just map 1000 "lux" to an appropriate VDU brightness (within this closed
+system lux can mean what ever you want it to mean).
+
+See the  [vdu_controls(1) man page](https://htmlpreview.github.io/?https://raw.githubusercontent.com/digitaltrails/vdu_controls/master/docs/_build/man/vdu_controls.1.html)
+for further infor on Lux Metering.
 
