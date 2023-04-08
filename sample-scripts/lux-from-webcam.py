@@ -50,6 +50,7 @@ AUTO_EXPOSURE_SETTING = 3
 DATA_FILE = Path.home().joinpath('.config', 'lux-from-webcam.data').as_posix()
 IMAGE_LOCATION = Path('/tmp').joinpath('lux-from-webcam.jpg').as_posix()
 SAVE_IMAGE = False
+VERBOSE = False
 
 # Customise these values to your desktop and webcam
 # Logitech, Inc. Webcam C270 settings for my study
@@ -105,13 +106,13 @@ def main():
     camera = cv2.VideoCapture(CAMERA_DEVICE)
     auto_exposure = camera.get(cv2.CAP_PROP_AUTO_EXPOSURE)
     exposure = camera.get(cv2.CAP_PROP_EXPOSURE)
-    print(f"INFO: existing values: auto-exposure={auto_exposure} exposure={exposure}", file=sys.stderr)
+    print(f"INFO: existing values: auto-exposure={auto_exposure} exposure={exposure}", file=sys.stderr) if VERBOSE else None
     try:
         camera.set(cv2.CAP_PROP_AUTO_EXPOSURE, MANUAL_EXPOSURE_OPTION)
         camera.set(cv2.CAP_PROP_EXPOSURE, MANUAL_EXPOSURE_TIME)
         new_auto_exposure = camera.get(cv2.CAP_PROP_AUTO_EXPOSURE)
         new_exposure = camera.get(cv2.CAP_PROP_EXPOSURE)
-        print(f"INFO: new values: auto-exposure={new_auto_exposure} exposure={new_exposure}", file=sys.stderr)
+        print(f"INFO: new values: auto-exposure={new_auto_exposure} exposure={new_exposure}", file=sys.stderr) if VERBOSE else None
 
         result, image = camera.read()
         cv2.imwrite(IMAGE_LOCATION, image) if SAVE_IMAGE else None  # uncomment to check the image exposure etc.
@@ -126,14 +127,14 @@ def main():
                 if previous_lux:
                     # Interpolate on a log10 scale - at least that's what I think this is (idea from chatgpt)
                     print(f"INFO: log10 interpolating {brightness} over {value}..{previous_value} to lux {lux}..{previous_lux}",
-                          file=sys.stderr)
+                          file=sys.stderr) if VERBOSE else None
                     lux = lux + 10 ** ((brightness - value) / (previous_value - value) * math.log10((previous_lux - lux)))
                 print(f"INFO: brightness={brightness}, value={value}, lux={lux}, name={name}", file=sys.stderr)
                 print(lux)
                 break
             previous_lux, previous_value = lux, value
     finally:
-        print(f"Restoring auto-exposure={auto_exposure} exposure={exposure}", file=sys.stderr)
+        print(f"Restoring auto-exposure={auto_exposure} exposure={exposure}", file=sys.stderr) if VERBOSE else None
         camera.set(cv2.CAP_PROP_AUTO_EXPOSURE, auto_exposure)
         if auto_exposure != AUTO_EXPOSURE_SETTING:  # Can only set exposure if not on auto_exposure
             camera.set(cv2.CAP_PROP_EXPOSURE, exposure)

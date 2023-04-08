@@ -82,14 +82,14 @@ current_exposure_mode=$(v4l2-ctl --device $CAMERA_DEVICE --get-ctrl auto_exposur
 v4l2-ctl  --device $CAMERA_DEVICE  \
   --set-ctrl auto_exposure=$MANUAL_EXPOSURE_OPTION,exposure_time_absolute=$MANUAL_EXPOSURE_TIME \
   --set-fmt-video=width=1280,height=720,pixelformat=MJPG \
-  --stream-mmap --stream-to=$IMAGE_LOCATION --stream-count=1
+  --stream-mmap --stream-to=$IMAGE_LOCATION --stream-count=1 2>&1 | grep -v '<'
 
 # Fix issues in MJPG that bother ImageMagick
 convert $IMAGE_LOCATION $IMAGE_LOCATION-fixed 1>/dev/null 2>&1
 # Compute average brightness 0..255.
 brightness=$(convert $IMAGE_LOCATION-fixed -colorspace gray -resize 1x1 -format "%[fx:255*mean]" info:)
 brightness=$(echo $brightness | sed 's/[.].*//')
-echo "INFO: camera-brightness: $brightness/255" >&2
+[[ -n "$VERBOSE" ]] && echo "INFO: camera-brightness: $brightness/255" >&2
 
 while read name lux value
 do
@@ -98,7 +98,7 @@ do
     if [ "$previous_value" != '' ]
     then
         # Interpolate on a log10 scale - at least that's what I think this is (idea from chatgpt)
-        echo "INFO: log10 interpolating $brightness over $value..$previous_value to lux $lux..$previous_lux" >&2
+        [[ -n "$VERBOSE" ]] && echo "INFO: log10 interpolating $brightness over $value..$previous_value to lux $lux..$previous_lux" >&2
         lux=$(awk -v b=$brightness  -v v=$value -v pv=$previous_value -v lx=$lux -v plx=$previous_lux '
         BEGIN { print(lx + 10 ** ((b - v) / (pv - v) * log(plx - lx)/log(10))); exit 0; }' < /dev/null)
     fi
