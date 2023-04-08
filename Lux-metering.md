@@ -17,8 +17,8 @@ adjust VDU brightness based on the most recent lux reading:
 
 ![Default](screen-shots/lux-profiles.png)
 
-(Note: the `Light Meter Dialog` is only available after enabling lux meter options in
-the `Settings Dialog`)
+(Note: the `Light Meter Dialog` is only available after enabling `lux-options` in
+the main `Settings Dialog`)
 
 This document discusses some hardware options for lux metering.
 
