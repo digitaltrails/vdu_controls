@@ -23,6 +23,10 @@ according to solar elevation, and can be further constrained by local weather co
 reported by [https://wttr.in](https://wttr.in)). Presets can be set to transition immediately or
 gradually.  Presets may also be activated by UNIX signals.
 
+_Version 1.10_ introduces options for using lux readings from a hardware lux meter (or in some 
+cases a webcam).  When lux metering is enabled, ``vdu_controls`` can vary brightness according 
+to customisable  lux/VDU-brightness profiles. See [Lux Metering](./Lux-metering.md) for more details.
+
 The UI's look-and-feel dynamically adjusts to the desktop theme and desktop environment: light-theme,
 dark-theme, KDE, Deepin, GNOME, and others.
 
