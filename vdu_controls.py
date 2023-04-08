@@ -132,7 +132,7 @@ The config files are in INI-format divided into a number of sections as outlined
     translations-enabled = yes|no
     weather-enabled = yes|no
     schedule-enabled = yes|no
-    lux-meter-enabled = yes|no
+    lux-options-enabled = yes|no
     warnings-enabled = yes|no
     debug-enabled = yes|no
     syslog-enabled = yes|no
@@ -1489,7 +1489,7 @@ class GlobalOption(Enum):
     TRANSLATIONS_ENABLED = QT_TR_NOOP('translations-enabled'), 'no', 'restart'
     WEATHER_ENABLED = QT_TR_NOOP('weather-enabled'), 'yes', ''
     SCHEDULE_ENABLED = QT_TR_NOOP('schedule-enabled'), 'yes', ''
-    LUX_METER_ENABLED = QT_TR_NOOP('lux-meter-enabled'), 'no', 'restart'
+    LUX_OPTIONS_ENABLED = QT_TR_NOOP('lux-options-enabled'), 'no', 'restart'
     SPLASH_SCREEN_ENABLED = QT_TR_NOOP('splash-screen-enabled'), 'yes', ''
     WARNINGS_ENABLED = QT_TR_NOOP('warnings-enabled'), 'no', ''
     DEBUG_ENABLED = QT_TR_NOOP('debug-enabled'), 'no', ''
@@ -5679,7 +5679,7 @@ class VduAppWindow(QMainWindow):
         self.previously_detected_vdu_list: List[Tuple[str, str, str, str]] = []
         self.transitioning_dummy_preset: TransitioningDummyPreset | None = None
         self.ddcutil: DdcUtil | None = None
-        self.lux_auto_controller = LuxAutoController(self) if self.main_config.is_set(GlobalOption.LUX_METER_ENABLED) else None
+        self.lux_auto_controller = LuxAutoController(self) if self.main_config.is_set(GlobalOption.LUX_OPTIONS_ENABLED) else None
         gnome_tray_behaviour = main_config.is_set(GlobalOption.SYSTEM_TRAY_ENABLED) and 'gnome' in os.environ.get(
             'XDG_CURRENT_DESKTOP', default='unknown').lower()
 
@@ -5747,9 +5747,9 @@ class VduAppWindow(QMainWindow):
                                             help_action=HelpDialog.invoke,
                                             chart_action=grey_scale,
                                             lux_auto_action=lux_auto_action if main_config.is_set(
-                                                GlobalOption.LUX_METER_ENABLED) else None,
+                                                GlobalOption.LUX_OPTIONS_ENABLED) else None,
                                             lux_meter_action=lux_meter_action if main_config.is_set(
-                                                GlobalOption.LUX_METER_ENABLED) else None,
+                                                GlobalOption.LUX_OPTIONS_ENABLED) else None,
                                             settings_action=edit_config,
                                             presets_action=edit_presets,
                                             refresh_action=refresh_from_vdus,
@@ -5826,7 +5826,7 @@ class VduAppWindow(QMainWindow):
         self.create_main_control_panel()
         self.app_restore_state()
 
-        if self.main_config.is_set(GlobalOption.LUX_METER_ENABLED) and self.lux_auto_controller is not None:
+        if self.main_config.is_set(GlobalOption.LUX_OPTIONS_ENABLED) and self.lux_auto_controller is not None:
             self.lux_auto_controller.refresh_from_config()
 
         if self.tray is not None:
@@ -5992,7 +5992,7 @@ class VduAppWindow(QMainWindow):
             refresh_button = ToolButton(REFRESH_ICON_SOURCE, tr("Refresh settings from monitors"))
             refresh_button.pressed.connect(self.start_refresh)
             tool_buttons = [refresh_button]
-            if self.main_config.is_set(GlobalOption.LUX_METER_ENABLED) and self.lux_auto_controller is not None:
+            if self.main_config.is_set(GlobalOption.LUX_OPTIONS_ENABLED) and self.lux_auto_controller is not None:
                 tool_buttons.append(self.lux_auto_controller.create_tool_button())
             self.main_panel.initialise_control_panels(self.app_context_menu, self.main_config, self.vdu_controllers,
                                                       tool_buttons, self.splash_message_signal)
@@ -6023,7 +6023,7 @@ class VduAppWindow(QMainWindow):
                 self.previously_detected_vdu_list = self.detected_vdu_list
             self.main_panel.refresh_view()
             self.main_panel.indicate_busy(False)
-            if self.main_config.is_set(GlobalOption.LUX_METER_ENABLED) and LuxDialog.exists():
+            if self.main_config.is_set(GlobalOption.LUX_OPTIONS_ENABLED) and LuxDialog.exists():
                 LuxDialog.get_instance().reinitialise()  # in case the number of connected monitors have changed.
             self.display_active_preset()
 
@@ -6129,7 +6129,7 @@ class VduAppWindow(QMainWindow):
 
     def display_lux_auto_indicators(self):
         assert is_running_in_gui_thread()  # Boilerplate in case this is called from the wrong thread.
-        if self.main_config.is_set(GlobalOption.LUX_METER_ENABLED) \
+        if self.main_config.is_set(GlobalOption.LUX_OPTIONS_ENABLED) \
                 and self.lux_auto_controller is not None and self.lux_auto_controller.lux_meter is not None:
             icon = create_themed_icon_from_svg_bytes(self.lux_auto_controller.current_auto_svg() )
             self.app_context_menu.update_lux_auto_icon(icon)

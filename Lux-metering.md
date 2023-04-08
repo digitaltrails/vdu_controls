@@ -11,11 +11,14 @@ metering value.
 Introduction
 ------------
 
-`Vdu_controls` `Light Meter Dialog` provides for mapping from measured
+The `Vdu_controls` `Light Meter Dialog` provides for mapping from measured
 lux values to VDU monitor brightness and can be set to periodically
 adjust VDU brightness based on the most recent lux reading:
 
 ![Default](screen-shots/lux-profiles.png)
+
+(Note: the `Light Meter Dialog` is only available after enabling lux meter options in
+the `Settings Dialog`)
 
 This document discusses some hardware options for lux metering.
 
