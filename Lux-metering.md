@@ -28,7 +28,7 @@ GY30/BH1750 + Arduino Lux metering
 
 An Arduino and a GY30/BH1750 is the very reliable way of obtaining
 true Lux values.  At the time of writing, the Arduino Nano and a 
-GY30/BH1750 can be for about US$10.  
+GY30/BH1750 can be purchased for about US$10.  
 
 The image below shows a [Arduino nano](https://en.wikipedia.org/wiki/Arduino_Nano), 
 the [GY-30/BH1750](https://github.com/claws/BH1750#bh1750) and the
