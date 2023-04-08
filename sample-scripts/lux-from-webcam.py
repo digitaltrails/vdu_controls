@@ -10,6 +10,12 @@ simple a comment and should have no spaces.
 A default config file is created when the script is first run, please alter
 it to match your own ambient lighting conditions.
 
+Exposure time is 1/s seconds, so 64 is 1/64 of a second.
+The appropriate manual exposure option (if there is one) can be 
+discovered by running
+
+   v4l2-ctl -d /dev/video0 --list-ctrls-menus 
+
 Copyright (C) 2023 Michael Hamilton
 
 GNU License
@@ -28,7 +34,7 @@ You should have received a copy of the GNU General Public License along
 with this program. If not, see https://www.gnu.org/licenses/.
 """
 import math
-import pathlib
+from pathlib import Path
 import signal
 import sys
 
@@ -38,8 +44,12 @@ CAMERA_DEVICE = '/dev/video0'
 
 # Find these out for you camera: run v4l2-ctl --device /dev/video0 --list-ctrls-menus
 # specifically: v4l2-ctl --device /dev/video0 --get-ctrl auto_exposure
-MANUAL_EXPOSURE_SETTING = 1
+MANUAL_EXPOSURE_OPTION = 1
+MANUAL_EXPOSURE_TIME = 64
 AUTO_EXPOSURE_SETTING = 3
+DATA_FILE = Path.home().joinpath('.config', 'lux-from-webcam.data').as_posix()
+IMAGE_LOCATION = Path('/tmp').joinpath('lux-from-webcam.jpg').as_posix()
+SAVE_IMAGE = False
 
 # Customise these values to your desktop and webcam
 # Logitech, Inc. Webcam C270 settings for my study
@@ -55,7 +65,7 @@ LUX_BRIGHTNESS = [
 
 
 def get_brightness_data():
-    path = pathlib.Path.home().joinpath('.config', 'lux-from-webcam.data')
+    path = Path(DATA_FILE)
     if not path.exists():
         print(f"INFO: creating {path.as_posix()} based on the Logitech Webcam C270, please customise to your local conditions.",
               file=sys.stderr)
@@ -70,33 +80,43 @@ def get_brightness_data():
     return result
 
 
+def load_config_file():  # translates bash assignments to python globals
+    config = Path.home().joinpath('.config', 'lux-from-webcam.config')
+    if config.exists():
+        with open(config) as config_file:
+            print(f"INFO: reading config: {config.as_posix()}", file=sys.stderr)
+            while line := config_file.readline():
+                if not line.startswith("#"):
+                    parts = [part.strip() for part in line.split("=")]
+                    cmd = f"{parts[0]} = {parts[1]}" if parts[
+                        1].isnumeric() else f"{parts[0]} = '{parts[1].replace('~', Path.home().as_posix())}'"
+                    exec(cmd, globals())
+
+
 def to_lux_log(average_brightness):
-    if average_brightness <= 0:
-        return 0
-    else:
-        return 10 ** ((average_brightness / 255) * math.log10(10000))
+    return 0 if average_brightness <= 0 else 10 ** ((average_brightness / 255) * math.log10(10000))
 
 
 def main():
     """vdu_controls application main."""
     # Allow control-c to terminate the program
     signal.signal(signal.SIGINT, signal.SIG_DFL)
-
+    load_config_file()
     camera = cv2.VideoCapture(CAMERA_DEVICE)
     auto_exposure = camera.get(cv2.CAP_PROP_AUTO_EXPOSURE)
     exposure = camera.get(cv2.CAP_PROP_EXPOSURE)
     print(f"INFO: existing values: auto-exposure={auto_exposure} exposure={exposure}", file=sys.stderr)
     try:
-        camera.set(cv2.CAP_PROP_AUTO_EXPOSURE, MANUAL_EXPOSURE_SETTING)
-        camera.set(cv2.CAP_PROP_EXPOSURE, 64)
+        camera.set(cv2.CAP_PROP_AUTO_EXPOSURE, MANUAL_EXPOSURE_OPTION)
+        camera.set(cv2.CAP_PROP_EXPOSURE, MANUAL_EXPOSURE_TIME)
         new_auto_exposure = camera.get(cv2.CAP_PROP_AUTO_EXPOSURE)
         new_exposure = camera.get(cv2.CAP_PROP_EXPOSURE)
         print(f"INFO: new values: auto-exposure={new_auto_exposure} exposure={new_exposure}", file=sys.stderr)
 
         result, image = camera.read()
-        # cv2.imwrite("sample.png", image)  # uncomment to check the image exposure etc.
+        cv2.imwrite(IMAGE_LOCATION, image) if SAVE_IMAGE else None  # uncomment to check the image exposure etc.
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        # cv2.imwrite("sample-gray.png", gray_image)
+        cv2.imwrite(IMAGE_LOCATION + "-gray", gray_image) if SAVE_IMAGE else None
 
         brightness = cv2.mean(gray_image)[0]
 

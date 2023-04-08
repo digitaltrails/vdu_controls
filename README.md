@@ -60,7 +60,7 @@ It's best to confirm that ``ddcutil`` is functioning before using ``vdu_controls
 The steps to obtaining the necessary rw permissions on ``/dev/i2c-[0-9]`` varies from one Linux distribution to 
 another. It may be necessary to follow all the steps described at www.ddcutil.com.  
 
-For the impatient the following steps can be followed to perform an insecure quick test (they grant anyone on the 
+For the impatient the following steps can be followed to perform an unsecure quick test (they grant anyone on the 
 target machine access to the i2c devices):
 
 1. Load i2c-dev: ``sudo modprobe i2c-dev``

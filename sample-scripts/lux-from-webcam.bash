@@ -15,9 +15,16 @@
 # and can be used to override any of the follow constants:
 #
 #    DATA_FILE=~/.config/lux-from-webcam.data
-#    DEVICE=/dev/video0
-#    MANUAL_EXPOSURE_SETTING=1
+#    CAMERA_DEVICE=/dev/video0
+#    MANUAL_EXPOSURE_OPTION=1
+#    MANUAL_EXPOSURE_TIME=64
 #    IMAGE_LOCATION=$HOME/tmp/out.jpg
+#
+# Exposure time is 1/s seconds, so 64 is 1/64 of a second.
+# The appropriate manual exposure option (if there is one) can be
+# discovered by running
+#
+#    v4l2-ctl -d /dev/video0 --list-ctrls-menus
 #
 # GNU License
 # ===========
@@ -37,9 +44,10 @@
 
 CONFIG_FILE=~/.config/lux-from-webcam.config
 DATA_FILE=~/.config/lux-from-webcam.data
-DEVICE=/dev/video0
-MANUAL_EXPOSURE_SETTING=1
-IMAGE_LOCATION=$HOME/tmp/out.jpg
+CAMERA_DEVICE=/dev/video0
+MANUAL_EXPOSURE_OPTION=1
+MANUAL_EXPOSURE_TIME=64
+IMAGE_LOCATION=/tmp/lux-from-webcam.jpg
 
 if [ -f $CONFIG_FILE ]
 then
@@ -61,18 +69,18 @@ NIGHT               5   0
 EOF
 fi
 
-existing_settings=$(v4l2-ctl --device $DEVICE --get-ctrl auto_exposure,exposure_time_absolute | awk '
+existing_settings=$(v4l2-ctl --device $CAMERA_DEVICE --get-ctrl auto_exposure,exposure_time_absolute | awk '
 {setting[++i]=$2} END {printf "auto_exposure=%s,exposure_time_absolute=%s", setting[1], setting[2]}')
 
-trap "v4l2-ctl --device $DEVICE --set-ctrl $existing_settings" EXIT
+trap "v4l2-ctl --device $CAMERA_DEVICE --set-ctrl $existing_settings" EXIT
 
 # Decide on exposure settings based on the output of v4l2-ctl --device /dev/video0 --list-ctrls-menus
 # and trial images samples.
 
-current_exposure_mode=$(v4l2-ctl --device $DEVICE --get-ctrl auto_exposure | awk '{print $2}')
+current_exposure_mode=$(v4l2-ctl --device $CAMERA_DEVICE --get-ctrl auto_exposure | awk '{print $2}')
 
-v4l2-ctl  --device $DEVICE  \
-  --set-ctrl auto_exposure=$MANUAL_EXPOSURE_SETTING,exposure_time_absolute=64 \
+v4l2-ctl  --device $CAMERA_DEVICE  \
+  --set-ctrl auto_exposure=$MANUAL_EXPOSURE_OPTION,exposure_time_absolute=$MANUAL_EXPOSURE_TIME \
   --set-fmt-video=width=1280,height=720,pixelformat=MJPG \
   --stream-mmap --stream-to=$IMAGE_LOCATION --stream-count=1
 
