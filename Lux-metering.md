@@ -8,17 +8,26 @@ I've also written a couple of alternative webcam based light metering
 scripts that use my Logitech Webcam C270 to achieve an approximate 
 metering value.
 
+Introduction
+------------
+
+`Vdu_controls` `Light Meter Dialog` provides for mapping from measured
+lux values to VDU monitor brightness and can be set to periodically
+adjust VDU brightness based on the most recent lux reading:
+
+![Default](screen-shots/lux-profiles.png)
+
+This document discusses some hardware options for lux metering.
 
 
 GY30/BH1750 + Arduino Lux metering
 ----------------------------------
 
-Using an Arduino and a GY30/BH1750 is the most reliable way of obtaining
-true Lux values.  I bought an Arduino Nano and a GY30/BH1750 for about
-US$10.  A simple Sketch using 
-[Christopher Laws' BH1750 library](https://github.com/claws/BH1750) 
-can be uploaded to the Arduino to enable a feed of Lux values.
-The image below shows the [Arduino nano](https://en.wikipedia.org/wiki/Arduino_Nano), 
+An Arduino and a GY30/BH1750 is the very reliable way of obtaining
+true Lux values.  At the time of writing, the Arduino Nano and a 
+GY30/BH1750 can be for about US$10.  
+
+The image below shows a [Arduino nano](https://en.wikipedia.org/wiki/Arduino_Nano), 
 the [GY-30/BH1750](https://github.com/claws/BH1750#bh1750) and the
 required wiring connections: 
 
@@ -31,8 +40,10 @@ headers pre-fitted, in which case assembly on a solderless
 breadboard would be extremely easy.  Power and tty communication 
 is via the USB connection to the PC.
 
-The [_Arduino Sketch_](https://docs.arduino.cc/learn/programming/sketches) 
-code I'm using is as follows:
+A simple [_Arduino Sketch_](https://docs.arduino.cc/learn/programming/sketches)  using 
+[Christopher Laws' BH1750 library](https://github.com/claws/BH1750) 
+will allow a GY30/BH1750 equipped Arduino to produce a feed 
+of Lux values. The sketch code I'm using is as follows:
 
 ```
 #include <BH1750.h>
@@ -51,13 +62,14 @@ void loop() {
 }
 ```
 
-This sketch provides a feed of Lux values to a USB tty. On a Linux 
-host, the relevant tty device would typically be `/dev/ttyUSB0`, 
-`/dev/ttyUSB1`, ...  
+This sketch produces a feed of Lux values to the Nano's USB tty
+output. On a Linux host, the corresponding input tty device 
+would typically be `/dev/ttyUSB0`, `/dev/ttyUSB1`, ...  
 
-You may need to configure access-rights to the tty device.  On many systems 
-this would mean adding your username to an appropriate group. Use the `ls`
-command to see what user and group owns the device:
+The permissions on the Linux system may need to be configured to allow
+the desktop user access to the USB tty device.  On many systems this 
+would mean adding the desktop user's username to an appropriate group. 
+The `ls` command can be used to see what user and group owns the device:
 
 ```
 % ls -l /dev/ttyUSB0                                                                              1 ↵  10269  08:45:34
@@ -86,7 +98,8 @@ Manual exposure webcam approximate Lux metering
 If you don't wish to build an Arduino based solution, you 
 may be able to use a webcam to achieve usable metering values. 
 
-I've developed two scripts:  
+I've developed two scripts that can uses a webcam frame grab
+to calculate a lux-like value:  
 
  * [**lux-from-webcam.bash**](/sample-scripts/lux-from-webcam.bash):  This bash 
      script averages a webcam capture by using ImageMagick to convert 
@@ -100,11 +113,11 @@ I've developed two scripts:
      **Dependencies**: ``cv2``(`OpenCV` python real-time computer vision library).
 
 Both scripts are intended for use with webcams that feature manual 
-exposure controls. Employing a fixed manual exposure allows brightness
-to be measured by calculating the average brightness in captured images.
-Such an approach will work reliably for any desktop that remains 
-installed at the same location where the camera's view remains
-predominantly constant.
+exposure controls. Sampling from fixed manual exposures allows relative
+brightness to be measured by calculating the average brightness in 
+captured images. Such an approach will work reliably for any desktop 
+where the webcam's view is fixed and the only major change throughout 
+the day is the light level.
 
 The average brightness in the images can be used to develop a mapping 
 of brightness values to approximate lux values. The mapping need not be 
@@ -113,13 +126,16 @@ sufficient for use with ``vdu_controls``.
 
 ### How to tell if a webcam has a manual exposure option
 
-Both of the scripts are set to use options available with a 
-__Logitech Webcam C270__, they may need editing to use similar 
-options on other webcams.
+When attempting to use these scripts with a webcam, it's first
+necessary to find out whether the webcam has any options for manual
+exposure and how to configure them.  Both of the scripts are 
+set to use options available with a  __Logitech Webcam C270__, the 
+scripts, or their associated config file, may need editing to employ 
+similar options on other webcams.
 
 The `Video for Linux` command `v4l-ctl --list-ctrls-menu` can be 
-used to find out what a camera supports, for example, here is the output
-for a Logitech Webcam C270:
+used to find out what options a webcam supports, for example, here 
+is the output for a Logitech Webcam C270:
 ```
 % v4l2-ctl -d /dev/video0 --list-ctrls-menus                                                         1 ↵  10293  07:56:22
 
@@ -147,11 +163,12 @@ Camera Controls
      exposure_dynamic_framerate 0x009a0903 (bool)   : default=0 value=1
 ```
 
-The Logitech Webcam C270 supports `auto_exposure` being set 
+The Logitech Webcam C270 supports `auto_exposure` manual setting of 
 to `1 Manual Mode`.  The camera also supports setting 
-the `exposure_time_absolute` which allows us to set something appropriate 
-for comparing brightness (on Linux the time is in units of 
-1/exposure_time_absolute seconds, so 64 would mean 1/64 of a second).
+the `exposure_time_absolute` to something appropriate for 
+sampling brightness in the local environment (on Linux, 
+the exposure time is set in units of 1/exposure_time_absolute 
+seconds, so 64 would mean 1/64 of a second).
 
 ### Customising the scripts
 
