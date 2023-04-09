@@ -2767,6 +2767,9 @@ class Preset:
     def get_step_interval_seconds(self) -> int:
         return self.preset_ini.getint('preset', 'transition-step-interval-seconds', fallback=0)
 
+    def get_lux_value(self) -> int:
+        return self.preset_ini.getint('preset', 'lux-value', fallback=0)
+
     def start_timer(self, when_local: datetime, action: Callable):
         if self.timer:
             self.timer.stop()
@@ -3752,6 +3755,7 @@ class PresetChooseWeatherWidget(QWidget):
         self.location = location
         self.verify_weather_location(self.location)
 
+
 class PresetChooseTransitionWidget(QWidget):
 
     def __init__(self):
@@ -3808,6 +3812,51 @@ class PresetChooseTransitionWidget(QWidget):
 
     def get_step_seconds(self) -> int:
         return self.step_seconds_widget.value()
+
+
+class PresetChooseLuxWidget(QWidget):
+
+    def __init__(self):
+        super().__init__()
+        layout = QHBoxLayout()
+        self.setLayout(layout)
+        layout.addWidget(QLabel(tr("Lux trigger")), alignment=Qt.AlignLeft)
+        self.lux_value_widget = QSpinBox()
+        self.lux_value_widget.setRange(0, 100_000)
+        scale_up = 1000
+        layout.addWidget(self.lux_value_widget, alignment=Qt.AlignLeft)
+        self.lux_slider = QSlider()
+        self.lux_slider.setMinimum(int(math.log10(1) * scale_up))
+        self.lux_slider.setMaximum(int(math.log10(100_000) * scale_up))
+        # self.lux_slider.setTickInterval(100)
+        # self.lux_slider.setTickPosition(QSlider.TicksAbove)
+        self.lux_slider.setOrientation(Qt.Horizontal)
+        layout.addWidget(self.lux_slider, stretch=1)
+
+        def slider_moved(value: int) -> None:
+            try:
+                self.sliding = True
+                print((value/1000)**10)
+                self.lux_value_widget.setValue(int(10**(value/scale_up)))
+            finally:
+                self.sliding = False
+
+        self.lux_slider.sliderMoved.connect(slider_moved)
+
+        def spinbox_value_changed() -> None:
+            if not self.sliding:
+                self.lux_slider.setValue(int(math.log10(self.lux_slider.value()) * scale_up))
+
+        self.lux_value_widget.valueChanged.connect(spinbox_value_changed)
+
+
+    def set_lux_value(self, lux: int):
+        self.lux_value_widget.setValue(lux)
+
+    def get_lux_value(self) -> int:
+        return self.lux_value_widget.value()
+
+
 class PresetChooseElevationChart(QLabel):
 
     selected_elevation_signal = pyqtSignal(object)
@@ -4256,11 +4305,19 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.editor_layout.addWidget(self.controls_title_widget)
         self.editor_layout.addWidget(self.editor_controls_widget)
 
+
         self.editor_transitions_widget = PresetChooseTransitionWidget()
         self.editor_layout.addWidget(self.editor_transitions_widget)
 
+        if self.main_config.is_set(GlobalOption.LUX_OPTIONS_ENABLED):
+            self.editor_lux_widget = PresetChooseLuxWidget()
+            self.editor_layout.addWidget(self.editor_lux_widget)
+        else:
+            self.editor_lux_widget = None
+
         self.editor_trigger_widget = PresetChooseElevationWidget(self.main_config.get_location())
         self.editor_layout.addWidget(self.editor_trigger_widget)
+
         presets_dialog_splitter.addWidget(self.editor_groupbox)
 
         self.bottom_bar_message = QLabel()
@@ -4274,6 +4331,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.edit_choose_icon_button.set_preset(None)
         self.editor_controls_widget.setDisabled(True)
         self.editor_transitions_widget.setDisabled(True)
+        self.editor_lux_widget.setDisabled(True) if self.editor_lux_widget else None
         self.editor_trigger_widget.setDisabled(True)
         self.edit_save_button.setDisabled(True)
         layout.addWidget(button_box)
@@ -4364,6 +4422,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 preset_ini.set('preset', 'solar-elevation-weather-restriction', weather_filename)
         preset_ini.set('preset', 'transition-type', str(self.editor_transitions_widget.get_transition_type()))
         preset_ini.set('preset', 'transition-step-interval-seconds', str(self.editor_transitions_widget.get_step_seconds()))
+        preset_ini.set('preset', 'lux-trigger', str(self.editor_lux_widget.get_lux_value())) if self.editor_lux_widget else None
 
     def get_presets(self):
         return [self.preset_widgets_layout.itemAt(i).widget()
@@ -4443,6 +4502,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             self.editor_controls_prompt.setText(tr("Controls to include:"))
             self.controls_title_widget.setDisabled(True)
             self.editor_transitions_widget.setDisabled(True)
+            self.editor_lux_widget.setDisabled(True) if self.editor_lux_widget else None
         else:
             already_exists = self.find_preset_widget(changed_text)
             if already_exists:
@@ -4455,6 +4515,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             self.editor_trigger_widget.setDisabled(False)
             self.controls_title_widget.setDisabled(False)
             self.editor_transitions_widget.setDisabled(False)
+            self.editor_lux_widget.setDisabled(False) if self.editor_lux_widget else None
             self.edit_save_button.setDisabled(False)
 
     def edit_preset(self, preset: Preset) -> None:
@@ -4470,6 +4531,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                     preset.preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None))
                 self.editor_transitions_widget.set_transition_type(preset.get_transition_type())
                 self.editor_transitions_widget.set_step_seconds(preset.get_step_interval_seconds())
+                self.editor_lux_widget.set_lux_value(preset.get_lux_value()) if self.editor_lux_widget else None
 
         self.main_window.restore_preset(preset, restore_finished=begin_editing, immediately=True)
         self.set_status_message('')  # Will be shortly followed by a restore message
