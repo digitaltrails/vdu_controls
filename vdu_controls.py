@@ -4837,16 +4837,15 @@ class LuxProfileChart(QLabel):
                 painter.setPen(QPen(QColor(0xff0000), 2))
                 x, y, lux, percent, point_data = match[0] + self.x_origin, self.y_origin - match[1], match[2], match[3], match[4]
                 point_preset_name = point_data.preset_name if point_data.preset_name is not None else ''
-                prefix = tr('Left click to delete') + ' '
             else:  # Show precise position for adding a new point
                 lux, percent = self.lux_from_x(x - self.x_origin), self.percent_from_y(y - self.y_origin)
                 painter.setPen(QPen(QColor(0xffffff), 1))
-                prefix = point_preset_name = ''
+                point_preset_name = ''
             painter.drawLine(self.x_origin, y, self.x_origin + self.plot_width + 5, y)
             painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height - 5)  # Tooltip lux and percent
             painter.setPen(QPen(QColor(0x000000), 1))
-            painter.drawText(x + 10, y - 10, f"{prefix}{lux}, {percent}% {point_preset_name}")
-            painter.drawText(x + 10, y + 25, "Right click to attach Preset") if prefix != '' else None
+            painter.drawText(x + 10, y - 10, f"{lux}, {percent}% {point_preset_name}")
+            #painter.drawText(x + 10, y + 25, "Click for menu.") if match[0] is not None else None
 
         painter.end()
         self.setPixmap(pixmap)
@@ -4863,7 +4862,35 @@ class LuxProfileChart(QLabel):
         vdu_data = self.profile_data[self.current_vdu_id]
         _, _, existing_lux, existing_percent, existing_point = self.find_close_to(x, y, vdu_data)
         if event.button() == Qt.LeftButton:
-            if existing_lux is not None:  # Delete
+            if existing_lux is not None:
+                self.show_point_menu(event)
+            else:  # Add
+                percent = self.percent_from_y(y)
+                lux = self.lux_from_x(x)
+                vdu_data.append(LuxPoint(lux, percent))
+                vdu_data.sort()
+                self.show_changes()
+        event.accept()
+
+    def show_point_menu(self, event):
+        menu = QMenu(self)
+        local_pos = self.mapFromGlobal(event.globalPos())
+        x = local_pos.x() - self.x_origin
+        y = self.y_origin - local_pos.y()
+        vdu_data = self.profile_data[self.current_vdu_id]
+        _, _, existing_lux, existing_percent, existing_point = self.find_close_to(x, y, vdu_data)
+        menu.addAction(tr("Delete point")).setData("delete")
+        menu.addAction(tr("Attach Preset")).setData("attach") if existing_point.preset_name is None else None
+        menu.addAction(tr("Detach Preset")).setData("detach") if existing_point.preset_name is not None else None
+        action = menu.exec(event.globalPos())
+        if action is not None:
+            if action.data() == "attach":
+                if self.attach_preset(x, y, existing_point):
+                    self.show_changes()
+            elif action.data() == "detach":
+                if self.detach_preset(existing_point):
+                    self.show_changes()
+            elif action.data() == "delete":
                 proceed = True
                 if existing_point.preset_name is not None:
                     alert = MessageBox(QMessageBox.Warning, buttons=QMessageBox.Yes | QMessageBox.Cancel,
@@ -4873,22 +4900,14 @@ class LuxProfileChart(QLabel):
                     proceed = alert.exec() == QMessageBox.Yes
                 if proceed:
                     vdu_data.remove(existing_point)
-                    changed = True
-            else:  # Add
-                percent = self.percent_from_y(y)
-                lux = self.lux_from_x(x)
-                vdu_data.append(LuxPoint(lux, percent))
-                vdu_data.sort()
-                changed = True
-        elif event.button() == Qt.RightButton:
-            changed = self.attach_preset(vdu_data, x, y, existing_point)
-        if changed:
-            self.create_plot()
-            self.update()
-            self.chart_changed_callback()
-        event.accept()
+                    self.show_changes()
 
-    def attach_preset(self, vdu_data, x, y, existing_point: LuxPoint) -> bool:
+    def show_changes(self):
+        self.create_plot()
+        self.update()
+        self.chart_changed_callback()
+
+    def attach_preset(self, x, y, existing_point: LuxPoint) -> bool:
         ask_preset = QInputDialog()
         presets = self.main_app.get_presets()
         ask_preset.setComboBoxItems(list(presets.keys()))
@@ -4900,7 +4919,7 @@ class LuxProfileChart(QLabel):
             lux = existing_point.lux if existing_point is not None else self.lux_from_x(x)
             alert = MessageBox(QMessageBox.Question, buttons=QMessageBox.Yes | QMessageBox.No,
                                default=QMessageBox.Yes)
-            alert.setText(tr("Create points for all VDU's in the preset?"))
+            alert.setText(tr("Create points at {} lux for all VDU's in the preset?").format(lux))
             answer = alert.exec()
             target = self.profile_data.items() if answer == QMessageBox.Yes else [(self.current_vdu_id,
                                                                                    self.profile_data[self.current_vdu_id])]
@@ -4918,6 +4937,26 @@ class LuxProfileChart(QLabel):
                     profile_data.sort()
             return True
         return False
+
+    def detach_preset(self, existing_point: LuxPoint) -> bool:
+        preset_name = existing_point.preset_name
+        existing_point.preset_name = None
+        others = []
+        vdus = []
+        for vdu_id, lux_points in self.profile_data.items():
+            for lux_point in lux_points:
+                if lux_point.lux == existing_point.lux and lux_point.preset_name == preset_name:
+                    others.append(lux_point)
+                    vdus.append(vdu_id)
+        if len(others) > 0:
+            alert = MessageBox(QMessageBox.Question, buttons=QMessageBox.Yes | QMessageBox.No,
+                               default=QMessageBox.Yes)
+            alert.setText(tr("Detach {} from the other VDU's at {} lux?").format(preset_name, existing_point.lux))
+            alert.setInformativeText(tr("Other VDU's: {}").format(", ".join(vdus)))
+            if alert.exec() == QMessageBox.Yes:
+                for other in others:
+                    other.preset_name = None
+        return True
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         self.create_plot()
