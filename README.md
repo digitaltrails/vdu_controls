@@ -27,6 +27,11 @@ _Version 1.10_ introduces options for using lux readings from a hardware lux met
 cases a webcam).  When lux metering is enabled, ``vdu_controls`` can vary brightness according 
 to customisable  lux/VDU-brightness profiles. See [Lux Metering](./Lux-metering.md) for more details.
 
+> **Note:** Attaching Presets to Lux-Metering in the version 1.10 is preview-only, 
+> the attachment UI is still being prototyped, further design changes may not be non-backward compatible.  
+> It should be also noted that version 1.10 it's not yet an official release (although it's 
+> mature enough to be my daily driver).
+
 The UI's look-and-feel dynamically adjusts to the desktop theme and desktop environment: light-theme,
 dark-theme, KDE, Deepin, GNOME, and others.
 

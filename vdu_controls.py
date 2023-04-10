@@ -4917,13 +4917,7 @@ class LuxProfileChart(QLabel):
             preset_name = ask_preset.textValue()
             preset = presets[preset_name]
             lux = existing_point.lux if existing_point is not None else self.lux_from_x(x)
-            alert = MessageBox(QMessageBox.Question, buttons=QMessageBox.Yes | QMessageBox.No,
-                               default=QMessageBox.Yes)
-            alert.setText(tr("Create points at {} lux for all VDU's in the preset?").format(lux))
-            answer = alert.exec()
-            target = self.profile_data.items() if answer == QMessageBox.Yes else [(self.current_vdu_id,
-                                                                                   self.profile_data[self.current_vdu_id])]
-            for vdu_id, profile_data in target:
+            for vdu_id, profile_data in self.profile_data.items():
                 if vdu_id in preset.preset_ini:
                     default_percent = self.percent_from_y(y)
                     if vdu_id in self.range_restrictions and self.range_restrictions[vdu_id]:
@@ -4940,22 +4934,10 @@ class LuxProfileChart(QLabel):
 
     def detach_preset(self, existing_point: LuxPoint) -> bool:
         preset_name = existing_point.preset_name
-        existing_point.preset_name = None
-        others = []
-        vdus = []
         for vdu_id, lux_points in self.profile_data.items():
             for lux_point in lux_points:
                 if lux_point.lux == existing_point.lux and lux_point.preset_name == preset_name:
-                    others.append(lux_point)
-                    vdus.append(vdu_id)
-        if len(others) > 0:
-            alert = MessageBox(QMessageBox.Question, buttons=QMessageBox.Yes | QMessageBox.No,
-                               default=QMessageBox.Yes)
-            alert.setText(tr("Detach {} from the other VDU's at {} lux?").format(preset_name, existing_point.lux))
-            alert.setInformativeText(tr("Other VDU's: {}").format(", ".join(vdus)))
-            if alert.exec() == QMessageBox.Yes:
-                for other in others:
-                    other.preset_name = None
+                    lux_point.preset_name = None
         return True
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
