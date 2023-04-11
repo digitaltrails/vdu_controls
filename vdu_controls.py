@@ -4721,7 +4721,7 @@ class LuxConfigChart(QLabel):
         self.main_app = main_app
         self.range_restrictions = range_restrictions
         self.current_lux = None
-        self.current_vdu_id = None
+        self.current_vdu_id = None if len(profile_data) == 0 else list(profile_data.keys())[0]
         self.pixmap_width = 600
         self.pixmap_height = 550
         self.plot_width, self.plot_height = self.pixmap_width - 200, self.pixmap_height - 150
@@ -4729,7 +4729,6 @@ class LuxConfigChart(QLabel):
         self.setMouseTracking(True)  # Enable mouse move events so we can draw cross-hairs
         self.setMinimumWidth(self.pixmap_width)
         self.setMinimumHeight(self.pixmap_height)
-        self.update_data(profile_data, range_restrictions, preset_points, main_app)
         self.possible_colors = []
 
     def resizeEvent(self, event: QResizeEvent) -> None:
@@ -4738,13 +4737,6 @@ class LuxConfigChart(QLabel):
         self.x_origin, self.y_origin = 120, self.plot_height + 50
         self.pixmap_width, self.pixmap_height = event.size().width(), event.size().height()
         self.create_plot()
-
-    def update_data(self, profile_data: Dict[str, List[Tuple[int, int]]], range_restrictions: Dict[str, Tuple[int, int]],
-                    preset_points: List[LuxPoint], main_app: VduAppWindow):
-        self.profile_data = profile_data
-        self.preset_points = preset_points
-        self.current_vdu_id = None if len(profile_data) == 0 else list(profile_data.keys())[0]
-        self.range_restrictions = range_restrictions
 
     def get_line_color_cache(self, number_of_lines: int):
         if len(self.possible_colors) < number_of_lines:
@@ -4757,7 +4749,7 @@ class LuxConfigChart(QLabel):
     def create_plot(self):
         line_colors = {k: v for k, v in zip(self.profile_data.keys(), self.get_line_color_cache(len(self.profile_data)))}
         std_line_width = 4
-        preset_color = 0x00cc00
+        preset_color = 0xebfff9
         pixmap = QPixmap(self.pixmap_width, self.pixmap_height)
         painter = QPainter(pixmap)
         painter.fillRect(0, 0, self.pixmap_width, self.pixmap_height, QColor(0x5b93c5))
@@ -4799,7 +4791,6 @@ class LuxConfigChart(QLabel):
             painter.setPen(QPen(QColor(0xff0000), std_line_width // 2, Qt.DashLine))
             cutoff = self.y_origin - self.y_from_percent(max_v)
             painter.drawLine(self.x_origin, cutoff, self.x_origin + self.plot_width + 25, cutoff)
-
 
         # draw profile per vdu - draw current_profile last/on-top
         for vdu_id, vdu_data in [(k, v) for k, v in self.profile_data.items() if k != self.current_vdu_id] + \
