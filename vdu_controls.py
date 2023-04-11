@@ -435,13 +435,6 @@ behind a succession of clouds, the main panel, context-menu, and light-metering 
 each contain Manual/Auto controls for disabling/enabling lux metering.  Additionally,
 you might tune the lux/brightness profile to eliminate the issue.
 
-If light metering and Presets are both being utilised, their combined effects
-may conflict. For example, a Preset may set a reduced brightness, but soon after,
-light metering might increase it.  If you wish to use both Presets and Lux-metering, it
-might be best to design your lux/brightness profile steps to match the brightness levels
-of specific Presets, for example, a full-sun Preset and the matching step in a
-lux/brightness Profile might both be assigned the same brightness level.
-
 Light metering settings and profiles are stored in::
 
     $HOME/.config/vdu_controls/AutoLux.conf
@@ -456,6 +449,28 @@ A typical example follows::
     [lux-profile]
     hp_zr24w_cnt008 = [(1, 90), (29, 90), (926, 100), (8414, 100), (100000, 100)]
     lg_hdr_4k_8 = [(1, 13), (60, 25), (100, 50), (299, 70), (1000, 90), (10000, 100), (100000, 100)]
+
+Light/Lux Metering and Presets
+-------------------------------
+
+The Light-Meter Dialog includes the ability to set a Preset to trigger at
+a lux value.  This feature is accessed by hovering under the bottom axis
+of the Lux Profile Chart.
+
+When a Preset is tied to a lux value, the Preset's VDU brightness values become
+fixed points on the Lux Profile Chart.  When the specified metered lux value is
+achieved, the metered stepping process will restore the Preset's brightness
+values and then follow that by triggering the Preset restoration.  This ordering
+of events reduces the likelihood of metered-stepping, and Preset-restoration from
+clashing.
+
+If you utilise light-metered auto-brightness and Preset-scheduling together,
+their combined effects may conflict. For example, a scheduled Preset may set a
+reduced brightness, but soon after, light-metering might increase it.  If you wish
+to use the two together, design your lux/brightness profile steps to match the
+brightness levels of specific Presets, for example, a full-sun Preset and the
+matching step in a lux/brightness Profile might both be assigned the same brightness
+level.
 
 Improving Response Time
 -----------------------
