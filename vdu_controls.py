@@ -464,6 +464,11 @@ values and then follow that by triggering the Preset restoration.  This ordering
 of events reduces the likelihood of metered-stepping, and Preset-restoration from
 clashing.
 
+If a Preset is attached to a lux value and then detached, the Preset's profile
+points will be converted to normal (editable) profile points. Attach/detach is
+a quick way to copy VDU brightness values from Presets if you don't want to
+permanently attach them.
+
 If you utilise light-metered auto-brightness and Preset-scheduling together,
 their combined effects may conflict. For example, a scheduled Preset may set a
 reduced brightness, but soon after, light-metering might increase it.  If you wish
@@ -4771,33 +4776,30 @@ class LuxConfigChart(QLabel):
         painter.setPen(QPen(Qt.white, std_line_width))
         painter.drawText(self.pixmap_width // 3, 30, tr("Lux Brightness Response Profiles"))
 
-        # Draw x-axis
-        painter.drawLine(self.x_origin, self.y_origin, self.x_origin + self.plot_width + 25, self.y_origin)
+        painter.drawLine(self.x_origin, self.y_origin, self.x_origin + self.plot_width + 25, self.y_origin)  # Draw x-axis
         for lux in [0, 10, 100, 1_000, 10_000, 100_000]:  # Draw x-axis ticks
             x = self.x_from_lux(lux)
             painter.drawLine(self.x_origin + x, self.y_origin + 5, self.x_origin + x, self.y_origin - 5)
-            painter.drawText(self.x_origin + x - 8 * len(str(lux)), self.y_origin + 35, str(lux))
-        painter.drawText(self.x_origin + self.plot_width // 2 - len(str("Lux")), self.y_origin + 65, str("Lux"))
+            painter.drawText(self.x_origin + x - 8 * len(str(lux)), self.y_origin + 40, str(lux))
+        painter.drawText(self.x_origin + self.plot_width // 2 - len(str("Lux")), self.y_origin + 70, str("Lux"))
 
-        # Draw y-axis
-        painter.drawLine(self.x_origin, self.y_origin, self.x_origin, self.y_origin - self.plot_height)
-        for percent in range(0, 101, 10):  # Draw y-axis ticks
-            y = self.y_from_percent(percent)
+        painter.drawLine(self.x_origin, self.y_origin, self.x_origin, self.y_origin - self.plot_height)   # Draw y-axis
+        for brightness in range(0, 101, 10):  # Draw y-axis ticks
+            y = self.y_from_percent(brightness)
             painter.drawLine(self.x_origin - 5, self.y_origin - y, self.x_origin + 5, self.y_origin - y)
-            painter.drawText(self.x_origin - 50, self.y_origin - y + 5, str(percent))
+            painter.drawText(self.x_origin - 50, self.y_origin - y + 5, str(brightness))
         painter.save()
         painter.translate(self.x_origin - 70, self.y_origin - self.plot_height // 2 + 6 * len(tr("Brightness %")))
         painter.rotate(-90)
         painter.drawText(0, 0, tr("Brightness %"))
         painter.restore()
 
-        if self.current_vdu_id is None:
+        if self.current_vdu_id is None:  # Nothing to draw
             painter.end()
             self.setPixmap(pixmap)
             return
 
-        # Draw range restrictions (if not 0..100)
-        min_v, max_v = self.range_restrictions[self.current_vdu_id]
+        min_v, max_v = self.range_restrictions[self.current_vdu_id]   # Draw range restrictions (if not 0..100)
         if min_v > 0:
             painter.setPen(QPen(Qt.red, std_line_width // 2, Qt.DashLine))
             cutoff = self.y_origin - self.y_from_percent(min_v)
@@ -4807,35 +4809,39 @@ class LuxConfigChart(QLabel):
             cutoff = self.y_origin - self.y_from_percent(max_v)
             painter.drawLine(self.x_origin, cutoff, self.x_origin + self.plot_width + 25, cutoff)
 
-        # draw profile per vdu - draw current_profile last/on-top
-        for vdu_id, vdu_data in [(k, v) for k, v in self.profile_data.items() if k != self.current_vdu_id] + \
+        point_markers = []  # Draw profile lines/histogram per vdu, current_profile last/on-top, collect point marker locations
+        for vdu_id, vdu_data in [(vid, data) for vid, data in self.profile_data.items() if vid != self.current_vdu_id] + \
                                 [(self.current_vdu_id, self.profile_data[self.current_vdu_id])]:
             last_x, last_y = 0, 0
             for point_data in vdu_data:
                 lux = point_data.lux
-                percent = point_data.brightness if point_data.preset_name is None else self.main_app.get_preset_brightness(
-                    point_data.preset_name, vdu_id)
-                if percent > 0:
-                    histogram_color = QColor(line_colors[vdu_id])
-                    histogram_color.setAlpha(50)
-                    x = self.x_origin + self.x_from_lux(lux)
-                    y = self.y_origin - self.y_from_percent(percent)
-                    if self.current_vdu_id == vdu_id:
-                        if point_data.preset_name is None:  # Normal point
-                            marker_diameter = std_line_width * 4
-                            painter.setPen(QPen(QColor(line_colors[vdu_id]), std_line_width))
-                        else:  # Preset Point - fixed/non-deletable brightness level from Preset
-                            marker_diameter = std_line_width * 2
-                            painter.setPen(QPen(QColor(preset_color), std_line_width))
-                        painter.drawEllipse(x - marker_diameter // 2, y - marker_diameter // 2, marker_diameter, marker_diameter)
-                        if last_x and last_y:
-                            painter.fillRect(last_x, last_y, x - last_x, self.y_origin - last_y, histogram_color)
-                    if last_x and last_y:  # Join the previous and current point with a line
-                        painter.setPen(QPen(QColor(line_colors[vdu_id]), std_line_width))
-                        painter.drawLine(last_x, last_y, x, y)
-                    last_x, last_y = x, y
+                if point_data.preset_name is None:
+                    brightness = point_data.brightness
+                else:
+                    brightness = self.main_app.get_preset_brightness(point_data.preset_name, vdu_id)
+                vdu_line_color = QColor(line_colors[vdu_id])
+                x = self.x_origin + self.x_from_lux(lux)
+                y = self.y_origin - self.y_from_percent(brightness)
+                if last_x and last_y:  # Join the previous and current point with a line
+                    painter.setPen(QPen(vdu_line_color, std_line_width))
+                    painter.drawLine(last_x, last_y, x, y)
+                if self.current_vdu_id == vdu_id:  # Special handling for the current/selected VDU
+                    point_markers.append((point_data, x, y, lux, brightness))  # Save data for drawing markers later
+                    if last_x and last_y:  # draw histogram rectangle
+                        vdu_line_color.setAlpha(50)
+                        painter.fillRect(last_x, last_y, x - last_x, self.y_origin - last_y, vdu_line_color)
+                last_x, last_y = x, y
             if self.current_vdu_id == vdu_id and last_x and last_y:   # Fill steps under the points
-                painter.fillRect(last_x, last_y, 25, self.y_origin - last_y, histogram_color)
+                painter.fillRect(last_x, last_y, 25, self.y_origin - last_y, vdu_line_color)
+
+        for point_data, x, y, lux, brightness in point_markers:  # draw point markers on top of lines and histograms
+            if point_data.preset_name is None:  # Normal point
+                marker_diameter = std_line_width * 4
+                painter.setPen(QPen(QColor(line_colors[vdu_id]), std_line_width))
+            else:  # Preset Point - fixed/non-deletable brightness level from Preset
+                marker_diameter = std_line_width * 2
+                painter.setPen(QPen(QColor(preset_color), std_line_width))
+            painter.drawEllipse(x - marker_diameter // 2, y - marker_diameter // 2, marker_diameter, marker_diameter)
 
         for preset_point in self.preset_points:  # draw preset vertical lines and white triangle below axis
             painter.setPen(QPen(Qt.white, std_line_width // 2, Qt.DashLine))
@@ -4845,9 +4851,9 @@ class LuxConfigChart(QLabel):
             painter.drawPolygon([QPoint(x + tx//2, self.y_origin + 16 + ty//2) for tx, ty in triangle])
 
         if self.current_lux is not None:  # Draw vertical line at current lux
-            painter.setPen(QPen(QColor(0xfec053), 1, 30))  # fbc21b 0xffdd30 #fec053
+            painter.setPen(QPen(QColor(0xfec053), 2))  # fbc21b 0xffdd30 #fec053
             x = self.x_origin + self.x_from_lux(self.current_lux)
-            painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height)
+            painter.drawLine(x, self.y_origin + 10, x, self.y_origin - self.plot_height - 10)
 
         marker_diameter = std_line_width * 4
         mouse_pos = self.mapFromGlobal(self.cursor().pos())  # Draw cross-hairs at mouse pos
@@ -4857,7 +4863,7 @@ class LuxConfigChart(QLabel):
             y = clamp(mouse_y, self.y_origin - self.plot_height, self.y_origin)
             match = self.find_close_to(x - self.x_origin, self.y_origin - y, self.current_vdu_id)
             if match[0] is not None:  # Existing Point: snap to position for deleting the point under the mouse.
-                x, y, lux, percent, point_data = match[0] + self.x_origin, self.y_origin - match[1], match[2], match[3], match[4]
+                x, y, lux, brightness, point_data = match[0] + self.x_origin, self.y_origin - match[1], match[2], match[3], match[4]
                 point_preset_name = point_data.preset_name if point_data.preset_name is not None else ''
                 if not point_preset_name:  # Existing normal point: cross-hairs, white for add, red for delete
                     painter.setPen(QPen(Qt.red if match[0] is not None else Qt.white, 2))
@@ -4876,7 +4882,7 @@ class LuxConfigChart(QLabel):
                         painter.setPen(QPen(Qt.black, 1))
                         painter.drawText(x + 10, self.y_origin - 35, tr("Click remove preset at {} lux").format(lux))
             else:  # Potential new Point - show precise position for adding a new point
-                lux, percent = self.lux_from_x(x - self.x_origin), self.percent_from_y(y - self.y_origin)
+                lux, brightness = self.lux_from_x(x - self.x_origin), self.percent_from_y(y - self.y_origin)
                 point_preset_name = ''
                 painter.setPen(QPen(Qt.white, 1))
                 painter.drawLine(self.x_origin, y, self.x_origin + self.plot_width + 5, y)
@@ -4888,7 +4894,7 @@ class LuxConfigChart(QLabel):
                     painter.setPen(QPen(Qt.black, 1))
                     painter.drawText(x + 10, self.y_origin - 35, tr("Click to add preset at {} lux").format(lux))
             painter.setPen(QPen(Qt.black, 1))
-            painter.drawText(x + 10, y - 10, f"{lux} lux, {percent}% {point_preset_name}")  # Tooltip lux and percent
+            painter.drawText(x + 10, y - 10, f"{lux} lux, {brightness}% {point_preset_name}")  # Tooltip lux and percent
 
         painter.end()
         self.setPixmap(pixmap)
@@ -4929,9 +4935,11 @@ class LuxConfigChart(QLabel):
         point = self.find_preset_point_close_to(x)
         if point is not None:  # Delete
             self.preset_points.remove(point)
-            for profile in self.profile_data.values():
-                if point in profile:
-                    profile.remove(point)
+            for vdu_id, profile in self.profile_data.items():
+                for profile_point in profile:
+                    if profile_point == point:  # Note: these will not be the same object
+                        profile_point.preset_name = None  # Convert to normal point - as a convenience for the user
+                        profile_point.brightness = self.main_app.get_preset_brightness(point.preset_name, vdu_id)
             return True
         ask_preset = QInputDialog()
         presets = self.main_app.get_presets()
@@ -4954,39 +4962,6 @@ class LuxConfigChart(QLabel):
         self.update()
         self.chart_changed_callback()
 
-    def attach_preset(self, x, y, existing_point: LuxPoint) -> bool:
-        ask_preset = QInputDialog()
-        presets = self.main_app.get_presets()
-        ask_preset.setComboBoxItems(list(presets.keys()))
-        ask_preset.setOption(QInputDialog.UseListViewForComboBoxItems)
-        rc = ask_preset.exec()
-        if rc == QDialog.Accepted:
-            preset_name = ask_preset.textValue()
-            preset = presets[preset_name]
-            lux = existing_point.lux if existing_point is not None else self.lux_from_x(x)
-            for vdu_id, profile_data in self.profile_data.items():
-                if vdu_id in preset.preset_ini:
-                    default_percent = self.percent_from_y(y)
-                    if vdu_id in self.range_restrictions and self.range_restrictions[vdu_id]:
-                        min_v, max_v = self.range_restrictions[vdu_id]
-                        default_percent = max(min(max_v, default_percent), min_v)
-                    percent = preset.preset_ini.getint(vdu_id, 'brightness', fallback=default_percent)
-                    new_point = LuxPoint(lux, percent, preset_name)
-                    if new_point in profile_data:
-                        profile_data.remove(new_point)
-                    profile_data.append(new_point)
-                    profile_data.sort()
-            return True
-        return False
-
-    def detach_preset(self, existing_point: LuxPoint) -> bool:
-        preset_name = existing_point.preset_name
-        for vdu_id, lux_points in self.profile_data.items():
-            for lux_point in lux_points:
-                if lux_point.lux == existing_point.lux and lux_point.preset_name == preset_name:
-                    lux_point.preset_name = None
-        return True
-
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         self.create_plot()
         self.update()
@@ -4995,8 +4970,10 @@ class LuxConfigChart(QLabel):
         r = self.snap_to_margin
         for point_data in self.profile_data[vdu_id]:
             existing_lux = point_data.lux
-            existing_percent = point_data.brightness if point_data.preset_name is None else self.main_app.get_preset_brightness(
-                    point_data.preset_name, vdu_id)
+            if point_data.preset_name is None:
+                existing_percent = point_data.brightness
+            else:
+                existing_percent = self.main_app.get_preset_brightness(point_data.preset_name, vdu_id)
             existing_x = self.x_from_lux(existing_lux)
             existing_y = self.y_from_percent(existing_percent)
             if existing_x - r <= x <= existing_x + r and (existing_y - r <= y <= existing_y + r or point_data.preset_name is not None):
@@ -5347,7 +5324,7 @@ class LuxPoint:
         return self.lux < other.lux
 
     def __eq__(self, other):
-        return self.lux == other.lux
+        return self.lux == other.lux and self.preset_name == other.preset_name
 
 
 class LuxConfig(ConfigIni):
@@ -5358,7 +5335,7 @@ class LuxConfig(ConfigIni):
         self.last_modified_time = 0.0
 
     def get_device_name(self):
-        return self.get("lux-meter", "lux-device", fallback="/dev/ttyUSB0")
+        return self.get("lux-meter", "lux-device", fallback=None)
 
     def set_device_name(self, device_name: str):
         self.set("lux-meter", "lux-device", device_name)
@@ -5447,6 +5424,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         grid_layout.addWidget(self.lux_meter_widget, 0, 0, 3, 3, alignment=Qt.AlignLeft | Qt.AlignTop)
 
         self.meter_device_selector = PushButtonLeftJustified()
+        self.meter_device_selector.setText(tr("No metering source selected"))
         grid_layout.addWidget(self.meter_device_selector, 0, 2, 1, 3)
 
         self.enabled_checkbox = QCheckBox(tr("Enable automatic brightness adjustment"))
@@ -5532,7 +5510,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
     def reinitialise(self):
         self.config: LuxConfig = self.main_app.lux_auto_controller.lux_config.duplicate(LuxConfig())
-        self.device_name = self.config.get("lux-meter", "lux-device", fallback="/dev/ttyUSB0")
+        self.device_name = self.config.get("lux-meter", "lux-device", fallback=None)
         self.enabled_checkbox.setChecked(self.config.is_auto_enabled())
         self.has_profile_changes = False
 
@@ -5568,6 +5546,8 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.reinitialise()
 
     def validate_device(self, device):
+        if device is None or device.strip() == '':
+            return None
         path = pathlib.Path(device)
         if path.is_char_device():
             self.meter_device_selector.setText(tr(" Device {}").format(device))
@@ -5643,10 +5623,11 @@ class LuxAutoController:
     def refresh_from_config(self):
         assert(is_running_in_gui_thread())
         self.lux_config = LuxConfig().load()
-        if self.lux_config.is_auto_enabled():
-            try:
-                log_info("Lux auto-brightness settings refresh - restart monitoring.")
+        try:
+            if self.lux_config.get_device_name() is not None and  self.lux_config.get_device_name().strip() != '':
                 self.lux_meter = lux_create_device(self.lux_config.get_device_name())
+            if self.lux_config.is_auto_enabled():
+                log_info("Lux auto-brightness settings refresh - restart monitoring.")
                 if self.lux_meter is not None:
                     if self.lux_auto_brightness_worker is not None:
                         self.lux_auto_brightness_worker.stop_requested = True
@@ -5655,19 +5636,20 @@ class LuxAutoController:
                     self.lux_auto_brightness_worker.working.connect(self.main_app.display_lux_auto_indicators)
                     self.lux_auto_brightness_worker.start()
                 self.main_app.display_lux_auto_indicators()  # Refresh indicators immediately
-            except LuxDeviceException as lde:
-                log_error(f"Error setting up lux meter {lde}")
-                alert = MessageBox(QMessageBox.Critical)
-                alert.setText(tr("Error setting up lux meter: {}").format(self.lux_config.get_device_name()))
-                alert.setInformativeText(str(lde))
-                alert.exec()
-        else:
-            log_info("Lux auto-brightness settings refresh - monitoring is off.")  # TODO handle exception
-            if self.lux_auto_brightness_worker is not None:
-                self.lux_auto_brightness_worker.stop_requested = True
-                self.lux_auto_brightness_worker.working.disconnect(self.main_app.display_lux_auto_indicators)
-                self.lux_auto_brightness_worker = None
-                self.main_app.display_lux_auto_indicators()
+            else:
+                log_info("Lux auto-brightness settings refresh - monitoring is off.")  # TODO handle exception
+                if self.lux_auto_brightness_worker is not None:
+                    self.lux_auto_brightness_worker.stop_requested = True
+                    self.lux_auto_brightness_worker.working.disconnect(self.main_app.display_lux_auto_indicators)
+                    self.lux_auto_brightness_worker = None
+                    self.main_app.display_lux_auto_indicators()
+
+        except LuxDeviceException as lde:
+            log_error(f"Error setting up lux meter {lde}")
+            alert = MessageBox(QMessageBox.Critical)
+            alert.setText(tr("Error setting up lux meter: {}").format(self.lux_config.get_device_name()))
+            alert.setInformativeText(str(lde))
+            alert.exec()
         self.lux_button.refresh_icon(self.current_auto_svg())  # Refresh indicators immediately
 
     def is_auto_enabled(self):
