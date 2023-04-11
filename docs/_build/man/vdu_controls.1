@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Mar 26, 2023" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Apr 11, 2023" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.3.1
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -220,7 +220,7 @@ splash\-screen\-enabled = yes|no
 translations\-enabled = yes|no
 weather\-enabled = yes|no
 schedule\-enabled = yes|no
-lux\-meter\-enabled = yes|no
+lux\-options\-enabled = yes|no
 warnings\-enabled = yes|no
 debug\-enabled = yes|no
 syslog\-enabled = yes|no
@@ -621,13 +621,6 @@ behind a succession of clouds, the main panel, context\-menu, and light\-meterin
 each contain Manual/Auto controls for disabling/enabling lux metering.  Additionally,
 you might tune the lux/brightness profile to eliminate the issue.
 .sp
-If light metering and Presets are both being utilised, their combined effects
-may conflict. For example, a Preset may set a reduced brightness, but soon after,
-light metering might increase it.  If you wish to use both Presets and Lux\-metering, it
-might be best to design your lux/brightness profile steps to match the brightness levels
-of specific Presets, for example, a full\-sun Preset and the matching step in a
-lux/brightness Profile might both be assigned the same brightness level.
-.sp
 Light metering settings and profiles are stored in:
 .INDENT 0.0
 .INDENT 3.5
@@ -658,18 +651,44 @@ lg_hdr_4k_8 = [(1, 13), (60, 25), (100, 50), (299, 70), (1000, 90), (10000, 100)
 .fi
 .UNINDENT
 .UNINDENT
-.SS Responsiveness
+.SS Light/Lux Metering and Presets
 .sp
-If your VDU\(aqs are modern, you may find a smaller sleep\-multiplier will speed up the \fBddcutil\fP/VDU protocol
+The Light\-Meter Dialog includes the ability to set a Preset to trigger at
+a lux value.  This feature is accessed by hovering under the bottom axis
+of the Lux Profile Chart.
+.sp
+When a Preset is tied to a lux value, the Preset\(aqs VDU brightness values become
+fixed points on the Lux Profile Chart.  When the specified metered lux value is
+achieved, the metered stepping process will restore the Preset\(aqs brightness
+values and then follow that by triggering the Preset restoration.  This ordering
+of events reduces the likelihood of metered\-stepping, and Preset\-restoration from
+clashing.
+.sp
+If you utilise light\-metered auto\-brightness and Preset\-scheduling together,
+their combined effects may conflict. For example, a scheduled Preset may set a
+reduced brightness, but soon after, light\-metering might increase it.  If you wish
+to use the two together, design your lux/brightness profile steps to match the
+brightness levels of specific Presets, for example, a full\-sun Preset and the
+matching step in a lux/brightness Profile might both be assigned the same brightness
+level.
+.SS Improving Response Time
+.sp
+DDC/I2C is not the speediest form of communication and VDU\(aqs may also be sluggish to respond.  This
+means that the responsiveness and smoothness of \fBvdu_controls\fP is somewhat limited by the underlying
+technologies.
+.sp
+If your VDU\(aqs are modern, you may find a smaller \fBsleep\-multiplier\fP will speed up the \fBddcutil\fP/VDU protocol
 exchanges making both \fBddcutil\fP and \fBvdu_controls\fP much more responsive.  In a multi\-VDU setup where the VDU\(aqs
-are quite different, VDU config files can be used to specify individual multipliers (see previous section).
+are quite different, individual multipliers can be configured (see previous section).  Reducing the multipliers
+will increase the possibility of errors, a bit of experimentation will be required.
 .sp
-Startup speed may be increased by creating VDU config files with \fBcapabilities\-override\fP preset. Using an
-override eliminates the need to run \fBddcutil\fP to retrieve VDU capabilities.  The \fB\-\-create\-config\-files\fP
-of context\-menu settings\-editor will pre\-populate \fBcapabilities\-override\fP for each connected VDU.
+The startup\-speed is increased by caching each VDU\(aqs capabilities and eliminate the need to run \fBddcutil\fP
+to retrieve each VDU\(aqs capabilities.  When the \fIsettings\-editor\fP is used to save a VDU\(aqs configuration, it
+will automatically cache the VDU\(aqs capabilities in the \fBcapabilities\-override\fP field (as will
+the \fB\-\-create\-config\-files\fP command line option).
 .sp
-Reducing the number of enabled controls can speed up the initialisation and reduce the time taken when the
-refresh button is pressed.
+Reducing the number of enabled controls can greatly speed up the initialisation, reduce the time taken when the
+refresh button is pressed, and reduce the time taken to restore presets.
 .SH EXAMPLES
 .INDENT 0.0
 .INDENT 3.5
@@ -740,6 +759,8 @@ ddcutil detect
 .UNINDENT
 .sp
 Read ddcutil readme concerning config of i2c_dev with nvidia GPU\(aqs. Detailed ddcutil info at \fI\%https://www.ddcutil.com/\fP
+.sp
+If you wish to use a serial\-port lux metering device, the \fBpyserial\fP module is a runtime requirement.
 .SH ENVIRONMENT
 .INDENT 0.0
 .INDENT 3.5
