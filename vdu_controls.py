@@ -621,6 +621,7 @@ from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QR
     QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant
 from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QRegExpValidator, \
     QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent
+
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
@@ -1697,7 +1698,7 @@ class VduControlsConfig:
                             help='enable language translations')
         parser.add_argument('--no-schedule', default=False, action='store_true', help='disable preset schedule')
         parser.add_argument('--no-weather', default=False, action='store_true', help='disable weather lookups')
-        parser.add_argument('--lux-meter', default=False, action='store_true', help='enable hardware light metering')
+        parser.add_argument('--lux-options', default=False, action='store_true', help='enable hardware light metering')
         parser.add_argument('--debug', default=False, action='store_true', help='enable debug output to stdout')
         parser.add_argument('--warnings', default=False, action='store_true',
                             help='popup a warning when a VDU lacks an enabled control')
@@ -2293,6 +2294,7 @@ class VduException(Exception):
     def __str__(self):
         return f"VduException: {self.vdu_description} op={self.operation} attr={self.attr_id} {self.cause}"
 
+
 class VduControlBase(QWidget):
     """
     Base GUI control for a DDC attribute.
@@ -2766,10 +2768,6 @@ class Preset:
     def get_step_interval_seconds(self) -> int:
         return self.preset_ini.getint('preset', 'transition-step-interval-seconds', fallback=0)
 
-    def get_lux_value(self) -> int:
-        #return self.preset_ini.get('preset', 'solar-elevation', fallback=None)
-        return self.preset_ini.getint('preset', 'lux-trigger', fallback=0)
-
     def start_timer(self, when_local: datetime, action: Callable):
         if self.timer:
             self.timer.stop()
@@ -2923,6 +2921,7 @@ class ContextMenu(QMenu):
         if self.lux_auto_action.icon() != icon:
             self.lux_auto_action.setIcon(icon)
             self.update()
+
 
 class ToolButton(QToolButton):
 
@@ -3872,7 +3871,7 @@ class PresetChooseElevationChart(QLabel):
 
         painter.fillRect(0, 0, width, origin_iy, QColor(0x5b93c5))
         painter.fillRect(0, origin_iy, width, height, QColor(0x7d5233))
-        painter.setPen(QPen(QColor(0xffffff), std_line_width))  # Horizon
+        painter.setPen(QPen(Qt.white, std_line_width))  # Horizon
         painter.drawLine(0, origin_iy, width, origin_iy)
 
         # Perform computations for today's curve and maxima.
@@ -3908,10 +3907,10 @@ class PresetChooseElevationChart(QLabel):
         painter.drawPoints(curve_points)
 
         # Draw various annotations such the horizon-line, noon-line, E & W, and the current degrees:
-        painter.setPen(QPen(QColor(0xffffff), std_line_width))
+        painter.setPen(QPen(Qt.white, std_line_width))
         painter.drawLine(reverse_x(0), origin_iy, reverse_x(width), origin_iy)
         painter.drawLine(reverse_x(solar_noon_x), origin_iy, reverse_x(solar_noon_x), 0)
-        painter.setPen(QPen(QColor(0xffffff), std_line_width))
+        painter.setPen(QPen(Qt.white, std_line_width))
         painter.setFont(QFont(QApplication.font().family(), width // 20, QFont.Weight.Bold))
         painter.drawText(QPoint(reverse_x(70), origin_iy - 32), tr("E"))
         painter.drawText(QPoint(reverse_x(width - 25), origin_iy - 32), tr("W"))
@@ -3927,7 +3926,7 @@ class PresetChooseElevationChart(QLabel):
         _, radius = self.calc_angle_radius(self.current_pos) if self.current_pos else (0, 21)
         painter.setPen(QPen(QColor(0xffffff if self.current_pos is None or self.in_drag or radius > self.radius_of_deletion else 0xff0000), 2))
         painter.setBrush(QColor(255, 255, 255, 64))
-        span_angle = -(angle_above_horz + 19) # From start angle spanning counterclockwise back toward the right to -19.
+        span_angle = -(angle_above_horz + 19)  # From start angle spanning counterclockwise back toward the right to -19.
         pie_width = pie_height = range_iy * 2
         painter.drawPie(reverse_x(solar_noon_x) - pie_width // 2, origin_iy - pie_height // 2, pie_width, pie_height,
                         angle_above_horz * 16, span_angle * 16)
@@ -3935,23 +3934,23 @@ class PresetChooseElevationChart(QLabel):
         # Draw drag-dot
         painter.setFont(QFont(QApplication.font().family(), 8, QFont.Weight.Normal))
         if self.current_pos is not None or self.in_drag or radius >= self.radius_of_deletion:
-            painter.setPen(QPen(QColor(0xff0000), 6))
-            painter.setBrush(QColor(0xffffff))
+            painter.setPen(QPen(Qt.red, 6))
+            painter.setBrush(Qt.white)
             ddot_radians = math.radians(angle_above_horz if ev_key else -19)
             ddot_x = round(range_iy * math.cos(ddot_radians)) - 8
             ddot_y = round(range_iy * math.sin(ddot_radians)) + 8
             painter.drawEllipse(reverse_x(solar_noon_x - ddot_x), origin_iy - ddot_y, 16, 16)
             if not self.in_drag:
-                painter.setPen(QPen(QColor(0x000000), 1))
+                painter.setPen(QPen(Qt.black, 1))
                 painter.drawText(QPoint(reverse_x(solar_noon_x - ddot_x) + 10, origin_iy - ddot_y - 5), tr("Drag to change."))
 
         # Draw origin-dot
         painter.setPen(QPen(QColor(0xff965b), 2))
         if self.current_pos is not None and not self.in_drag:
             if radius < self.radius_of_deletion:
-                painter.setPen(QPen(QColor(0x000000), 1))
+                painter.setPen(QPen(Qt.black, 1))
                 painter.drawText(QPoint(reverse_x(solar_noon_x + 8) + 10, origin_iy - 8 - 5), tr("Click to delete."))
-                painter.setPen(QPen(QColor(0xff0000), 2))
+                painter.setPen(QPen(Qt.red, 2))
         painter.setBrush(painter.pen().color())
         painter.drawEllipse(reverse_x(solar_noon_x + 8), origin_iy - 8, 16, 16)
 
@@ -3959,7 +3958,7 @@ class PresetChooseElevationChart(QLabel):
             # Draw a line representing the slider degrees and rise/set indicator - may be higher than sun for today:
             sky_line_y = origin_iy - round(math.sin(math.radians(ev_key.elevation)) * range_iy)
             if sky_line_y >= solar_noon_y:
-                sky_line_pen = QPen(QColor(0xffffff), 2)
+                sky_line_pen = QPen(Qt.white, 2)
             else:
                 sky_line_pen = QPen(QColor(0xcccccc), 2)
                 sky_line_pen.setStyle(Qt.DotLine)
@@ -4261,7 +4260,6 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.controls_title_widget.setDisabled(True)
         self.editor_layout.addWidget(self.controls_title_widget)
         self.editor_layout.addWidget(self.editor_controls_widget)
-
 
         self.editor_transitions_widget = PresetChooseTransitionWidget()
         self.editor_layout.addWidget(self.editor_transitions_widget)
@@ -4721,6 +4719,7 @@ class LuxConfigChart(QLabel):
         self.main_app = main_app
         self.range_restrictions = range_restrictions
         self.current_lux = None
+        self.snap_to_margin = 20
         self.current_vdu_id = None if len(profile_data) == 0 else list(profile_data.keys())[0]
         self.pixmap_width = 600
         self.pixmap_height = 550
@@ -4750,10 +4749,11 @@ class LuxConfigChart(QLabel):
         line_colors = {k: v for k, v in zip(self.profile_data.keys(), self.get_line_color_cache(len(self.profile_data)))}
         std_line_width = 4
         preset_color = 0xebfff9
+        triangle = [(-8, 0), (0, -16), (8, 0)]
         pixmap = QPixmap(self.pixmap_width, self.pixmap_height)
         painter = QPainter(pixmap)
         painter.fillRect(0, 0, self.pixmap_width, self.pixmap_height, QColor(0x5b93c5))
-        painter.setPen(QPen(QColor(0xffffff), std_line_width))
+        painter.setPen(QPen(Qt.white, std_line_width))
         painter.drawText(self.pixmap_width // 3, 30, tr("Lux Brightness Response Profiles"))
 
         # Draw x-axis
@@ -4784,17 +4784,17 @@ class LuxConfigChart(QLabel):
         # Draw range restrictions (if not 0..100)
         min_v, max_v = self.range_restrictions[self.current_vdu_id]
         if min_v > 0:
-            painter.setPen(QPen(QColor(0xff0000), std_line_width // 2, Qt.DashLine))
+            painter.setPen(QPen(Qt.red, std_line_width // 2, Qt.DashLine))
             cutoff = self.y_origin - self.y_from_percent(min_v)
             painter.drawLine(self.x_origin, cutoff, self.x_origin + self.plot_width + 25, cutoff)
         if max_v < 100:
-            painter.setPen(QPen(QColor(0xff0000), std_line_width // 2, Qt.DashLine))
+            painter.setPen(QPen(Qt.red, std_line_width // 2, Qt.DashLine))
             cutoff = self.y_origin - self.y_from_percent(max_v)
             painter.drawLine(self.x_origin, cutoff, self.x_origin + self.plot_width + 25, cutoff)
 
         # draw profile per vdu - draw current_profile last/on-top
         for vdu_id, vdu_data in [(k, v) for k, v in self.profile_data.items() if k != self.current_vdu_id] + \
-                              [(self.current_vdu_id, self.profile_data[self.current_vdu_id])]:
+                                [(self.current_vdu_id, self.profile_data[self.current_vdu_id])]:
             last_x, last_y = 0, 0
             for point_data in vdu_data:
                 lux = point_data.lux
@@ -4806,36 +4806,37 @@ class LuxConfigChart(QLabel):
                     x = self.x_origin + self.x_from_lux(lux)
                     y = self.y_origin - self.y_from_percent(percent)
                     if self.current_vdu_id == vdu_id:
-                        if point_data.preset_name is None:
-                            ellipse_diameter = std_line_width * 4
+                        if point_data.preset_name is None:  # Normal point
+                            marker_diameter = std_line_width * 4
                             painter.setPen(QPen(QColor(line_colors[vdu_id]), std_line_width))
-                        else:
-                            ellipse_diameter = std_line_width * 2
+                        else:  # Preset Point - fixed/non-deletable brightness level from Preset
+                            marker_diameter = std_line_width * 2
                             painter.setPen(QPen(QColor(preset_color), std_line_width))
-                        painter.drawEllipse(x - ellipse_diameter // 2, y - ellipse_diameter // 2, ellipse_diameter, ellipse_diameter)
+                        painter.drawEllipse(x - marker_diameter // 2, y - marker_diameter // 2, marker_diameter, marker_diameter)
                         if last_x and last_y:
                             painter.fillRect(last_x, last_y, x - last_x, self.y_origin - last_y, histogram_color)
-                    if last_x and last_y:
+                    if last_x and last_y:  # Join the previous and current point with a line
                         painter.setPen(QPen(QColor(line_colors[vdu_id]), std_line_width))
                         painter.drawLine(last_x, last_y, x, y)
                     last_x, last_y = x, y
-            if self.current_vdu_id == vdu_id and last_x and last_y:
+            if self.current_vdu_id == vdu_id and last_x and last_y:   # Fill steps under the points
                 painter.fillRect(last_x, last_y, 25, self.y_origin - last_y, histogram_color)
 
-        for preset_point in self.preset_points: # draw preset vertical lines
-            painter.setPen(QPen(QColor(preset_color), std_line_width // 2, Qt.DashLine))
+        for preset_point in self.preset_points:  # draw preset vertical lines and white triangle below axis
+            painter.setPen(QPen(Qt.white, std_line_width // 2, Qt.DashLine))
+            painter.setBrush(Qt.white)
             x = self.x_origin + self.x_from_lux(preset_point.lux)
             painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height)
-            ellipse_diameter = std_line_width * 4
-            painter.drawEllipse(x - ellipse_diameter // 2, self.y_origin + ellipse_diameter // 3, ellipse_diameter, ellipse_diameter)
+            painter.drawPolygon([QPoint(x + tx//2, self.y_origin + 16 + ty//2) for tx, ty in triangle])
 
         if self.current_lux is not None:  # Draw vertical line at current lux
             painter.setPen(QPen(QColor(0xfec053), 1, 30))  # fbc21b 0xffdd30 #fec053
             x = self.x_origin + self.x_from_lux(self.current_lux)
             painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height)
 
+        marker_diameter = std_line_width * 4
         mouse_pos = self.mapFromGlobal(self.cursor().pos())  # Draw cross-hairs at mouse pos
-        mouse_x, mouse_y, margin = mouse_pos.x(), mouse_pos.y(), 20
+        mouse_x, mouse_y, margin = mouse_pos.x(), mouse_pos.y(), self.snap_to_margin
         if margin <= mouse_x <= self.width() - margin and margin <= mouse_y <= self.height() - margin:
             x = clamp(mouse_x, self.x_origin, self.x_origin + self.plot_width)
             y = clamp(mouse_y, self.y_origin - self.plot_height, self.y_origin)
@@ -4844,35 +4845,34 @@ class LuxConfigChart(QLabel):
                 x, y, lux, percent, point_data = match[0] + self.x_origin, self.y_origin - match[1], match[2], match[3], match[4]
                 point_preset_name = point_data.preset_name if point_data.preset_name is not None else ''
                 if not point_preset_name:  # Existing normal point: cross-hairs, white for add, red for delete
-                    painter.setPen(QPen(QColor(0xff0000 if match[0] is not None else 0xffffff), 2))
+                    painter.setPen(QPen(Qt.red if match[0] is not None else Qt.white, 2))
+                    if match[0]:  # deletable: add a red circle
+                        painter.setBrush(Qt.white)
+                        painter.drawEllipse(x - marker_diameter // 2, y - marker_diameter // 2, marker_diameter, marker_diameter)
                     painter.drawLine(self.x_origin, y, self.x_origin + self.plot_width + 5, y)
                     painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height - 5)
-                    if match[0]:  # deletable: add a red circle
-                        painter.drawEllipse(x - ellipse_diameter // 2, y - ellipse_diameter // 2, ellipse_diameter,
-                                            ellipse_diameter)
-                else:  # Existing Preset point: vertical line; plus removal hint, a red circle below axis
-                    painter.setPen(QPen(QColor(0xff0000 if y > self.y_origin else 0xffffff), 2))
-                    ellipse_diameter = std_line_width * 4
+                else:  # Existing Preset point: vertical line; plus removal hint, a red triangle below axis
+                    painter.setPen(QPen(Qt.red if mouse_y > self.y_origin else Qt.white, 2))
                     painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height - 5)
-                    painter.setPen(QPen(QColor(0xff0000), 2))
-                    painter.drawEllipse(x - ellipse_diameter // 2, self.y_origin + ellipse_diameter // 3, ellipse_diameter,
-                                        ellipse_diameter)
+                    painter.setPen(QPen(Qt.red, 2))
+                    painter.setBrush(Qt.white)
+                    painter.drawPolygon([QPoint(x + tx, self.y_origin + 18 + ty) for tx, ty in triangle])
                     if mouse_y > self.y_origin:  # Preset remove hint
-                        painter.setPen(QPen(QColor(0x000000), 1))
+                        painter.setPen(QPen(Qt.black, 1))
                         painter.drawText(x + 10, self.y_origin - 35, tr("Click remove preset at {} lux").format(lux))
             else:  # Potential new Point - show precise position for adding a new point
                 lux, percent = self.lux_from_x(x - self.x_origin), self.percent_from_y(y - self.y_origin)
                 point_preset_name = ''
-                painter.setPen(QPen(QColor(0xffffff), 1))
+                painter.setPen(QPen(Qt.white, 1))
                 painter.drawLine(self.x_origin, y, self.x_origin + self.plot_width + 5, y)
                 painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height - 5)
-                if mouse_y > self.y_origin:  # Below axis, show hint for adding a Preset point: draw a red circle below axis
-                    painter.setPen(QPen(QColor(0xff0000), 2))
-                    painter.drawEllipse(x - ellipse_diameter // 2, self.y_origin + ellipse_diameter // 3, ellipse_diameter,
-                                        ellipse_diameter)
-                    painter.setPen(QPen(QColor(0x000000), 1))
+                if mouse_y > self.y_origin:  # Below axis, show hint for adding a Preset point: draw a red triangle below axis
+                    painter.setPen(QPen(Qt.red, 2))
+                    painter.setBrush(Qt.white)
+                    painter.drawPolygon([QPoint(x + tx, self.y_origin + 18 + ty) for tx, ty in triangle])
+                    painter.setPen(QPen(Qt.black, 1))
                     painter.drawText(x + 10, self.y_origin - 35, tr("Click to add preset at {} lux").format(lux))
-            painter.setPen(QPen(QColor(0x000000), 1))
+            painter.setPen(QPen(Qt.black, 1))
             painter.drawText(x + 10, y - 10, f"{lux} lux, {percent}% {point_preset_name}")  # Tooltip lux and percent
 
         painter.end()
@@ -4888,6 +4888,7 @@ class LuxConfigChart(QLabel):
         x = local_pos.x() - self.x_origin
         y = self.y_origin - local_pos.y()
         if event.button() == Qt.LeftButton:
+            print(y)
             if y >= 0:
                 changed = self.lux_point_edit(x, y)
             else:
@@ -4907,17 +4908,10 @@ class LuxConfigChart(QLabel):
             lux = self.lux_from_x(x)
             vdu_data.append(LuxPoint(lux, percent))
             vdu_data.sort()
-        return False
-
-    def find_preset_point(self, lux):
-        for point in self.preset_points:
-            if point.lux == lux:
-                return point
-        return None
+        return True
 
     def lux_preset_edit(self, x) -> bool:
-        lux = self.lux_from_x(x)
-        point = self.find_preset_point(lux)
+        point = self.find_preset_point_close_to(x)
         if point is not None:  # Delete
             self.preset_points.remove(point)
             for profile in self.profile_data.values():
@@ -4931,10 +4925,7 @@ class LuxConfigChart(QLabel):
         rc = ask_preset.exec()
         if rc == QDialog.Accepted:
             preset_name = ask_preset.textValue()
-            preset = presets[preset_name]
-            preset_name = ask_preset.textValue()
-            preset = presets[preset_name]
-            point = LuxPoint(lux, -1, preset_name)
+            point = LuxPoint(self.lux_from_x(x), -1, preset_name)
             self.preset_points.append(point)
             self.preset_points.sort()
             for profile in self.profile_data.values():
@@ -4986,7 +4977,7 @@ class LuxConfigChart(QLabel):
         self.update()
 
     def find_close_to(self, x: int, y: int, vdu_id: str) -> Tuple:
-        r = 5
+        r = self.snap_to_margin
         for point_data in self.profile_data[vdu_id]:
             existing_lux = point_data.lux
             existing_percent = point_data.brightness if point_data.preset_name is None else self.main_app.get_preset_brightness(
@@ -4996,6 +4987,13 @@ class LuxConfigChart(QLabel):
             if existing_x - r <= x <= existing_x + r and (existing_y - r <= y <= existing_y + r or point_data.preset_name is not None):
                 return existing_x, existing_y, existing_lux, existing_percent, point_data
         return None, None, None, None, None
+
+    def find_preset_point_close_to(self, x: int):
+        for point in self.preset_points:
+            point_x = self.x_from_lux(point.lux)
+            if abs(point_x - x) <= self.snap_to_margin:
+                return point
+        return None
 
     def percent_from_y(self, y):
         percent = round(100.0 * abs(y) / self.plot_height)
@@ -5259,7 +5257,7 @@ class LuxAutoWorker(WorkerThread):
                     log_error("Exiting, no lux meter available.")
                     break
                 lux_config = lux_auto_controller.lux_config.load()  # Refresh
-                metered_lux = lux_auto_controller.lux_meter.get_value()
+                metered_lux = round(lux_auto_controller.lux_meter.get_value())
                 self.perform_stepping(lux_config, metered_lux)
                 if not self.stop_requested:
                     if self.step_count == starting_step_count:  # No work done <=> all work is complete
@@ -5299,7 +5297,7 @@ class LuxAutoWorker(WorkerThread):
                         step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
                         log_info(f"LuxAutoBrightnessWorker: lux={metered_lux} stepping {controller.vdu_stable_id}"
                                  f" step={step} current={current_brightness}"
-                                 f" target={profile_brightness}") #if log_debug_enabled else None
+                                 f" target={profile_brightness}")  # TODO if log_debug_enabled else None
                         self._message.emit(tr("Adjusting {}...").format(controller.vdu_stable_id))
                         brightness_control.restore_vdu_attribute(str(current_brightness + step))
                         self._refresh_gui_view.emit(brightness_control)
@@ -5353,8 +5351,7 @@ class LuxConfig(ConfigIni):
     def get_vdu_profile(self, vdu: VduController, main_app: VduAppWindow) -> List[LuxPoint]:
         if self.has_option('lux-profile', vdu.vdu_stable_id):
             lux_points = [LuxPoint(v[0], v[1]) for v in literal_eval(self.get('lux-profile', vdu.vdu_stable_id))]
-        else:
-        # Use a default profile:
+        else:  # Use a default profile:
             range_restriction = vdu.capabilities['10'].values
             min_v, max_v = (0, 100) if len(range_restriction) == 0 else (int(range_restriction[1]), int(range_restriction[2]))
             lux_values = [0, 10, 100, 1_000, 10_000, 100_000]
@@ -6331,7 +6328,7 @@ class VduAppWindow(QMainWindow):
         assert is_running_in_gui_thread()  # Boilerplate in case this is called from the wrong thread.
         if self.main_config.is_set(GlobalOption.LUX_OPTIONS_ENABLED) \
                 and self.lux_auto_controller is not None and self.lux_auto_controller.lux_meter is not None:
-            icon = create_themed_icon_from_svg_bytes(self.lux_auto_controller.current_auto_svg() )
+            icon = create_themed_icon_from_svg_bytes(self.lux_auto_controller.current_auto_svg())
             self.app_context_menu.update_lux_auto_icon(icon)
             self.refresh_tray_menu()
             if self.lux_auto_controller.is_auto_enabled():
