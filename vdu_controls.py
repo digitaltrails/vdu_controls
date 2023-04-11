@@ -4840,29 +4840,40 @@ class LuxConfigChart(QLabel):
             x = clamp(mouse_x, self.x_origin, self.x_origin + self.plot_width)
             y = clamp(mouse_y, self.y_origin - self.plot_height, self.y_origin)
             match = self.find_close_to(x - self.x_origin, self.y_origin - y, self.current_vdu_id)
-            if match[0] is not None:  # Snap to position for deleting the point under the mouse.
-                painter.setPen(QPen(QColor(0xff0000), 2))
+            if match[0] is not None:  # Existing Point: snap to position for deleting the point under the mouse.
                 x, y, lux, percent, point_data = match[0] + self.x_origin, self.y_origin - match[1], match[2], match[3], match[4]
                 point_preset_name = point_data.preset_name if point_data.preset_name is not None else ''
-            else:  # Show precise position for adding a new point
+                if not point_preset_name:  # Existing normal point: cross-hairs, white for add, red for delete
+                    painter.setPen(QPen(QColor(0xff0000 if match[0] is not None else 0xffffff), 2))
+                    painter.drawLine(self.x_origin, y, self.x_origin + self.plot_width + 5, y)
+                    painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height - 5)
+                    if match[0]:  # deletable: add a red circle
+                        painter.drawEllipse(x - ellipse_diameter // 2, y - ellipse_diameter // 2, ellipse_diameter,
+                                            ellipse_diameter)
+                else:  # Existing Preset point: vertical line; plus removal hint, a red circle below axis
+                    painter.setPen(QPen(QColor(0xff0000 if y > self.y_origin else 0xffffff), 2))
+                    ellipse_diameter = std_line_width * 4
+                    painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height - 5)
+                    painter.setPen(QPen(QColor(0xff0000), 2))
+                    painter.drawEllipse(x - ellipse_diameter // 2, self.y_origin + ellipse_diameter // 3, ellipse_diameter,
+                                        ellipse_diameter)
+                    if mouse_y > self.y_origin:  # Preset remove hint
+                        painter.setPen(QPen(QColor(0x000000), 1))
+                        painter.drawText(x + 10, self.y_origin - 35, tr("Click remove preset at {} lux").format(lux))
+            else:  # Potential new Point - show precise position for adding a new point
                 lux, percent = self.lux_from_x(x - self.x_origin), self.percent_from_y(y - self.y_origin)
-                painter.setPen(QPen(QColor(0xffffff), 1))
                 point_preset_name = ''
-            if not point_preset_name:
+                painter.setPen(QPen(QColor(0xffffff), 1))
                 painter.drawLine(self.x_origin, y, self.x_origin + self.plot_width + 5, y)
-            else:
-                ellipse_diameter = std_line_width * 4
-                painter.drawEllipse(x - ellipse_diameter // 2, self.y_origin + ellipse_diameter // 3, ellipse_diameter,
-                                    ellipse_diameter)
-            if not point_preset_name or mouse_y > self.y_origin:
-                painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height - 5)  # Tooltip lux and percent
-            painter.setPen(QPen(QColor(0x000000), 1))
-            if mouse_y > self.y_origin:
-                if match[0] is None:
+                painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height - 5)
+                if mouse_y > self.y_origin:  # Below axis, show hint for adding a Preset point: draw a red circle below axis
+                    painter.setPen(QPen(QColor(0xff0000), 2))
+                    painter.drawEllipse(x - ellipse_diameter // 2, self.y_origin + ellipse_diameter // 3, ellipse_diameter,
+                                        ellipse_diameter)
+                    painter.setPen(QPen(QColor(0x000000), 1))
                     painter.drawText(x + 10, self.y_origin - 35, tr("Click to add preset at {} lux").format(lux))
-                else:
-                    painter.drawText(x + 10, self.y_origin - 35, tr("Click remove preset at {} lux").format(lux))
-            painter.drawText(x + 10, y - 10, f"{lux} lux, {percent}% {point_preset_name}")
+            painter.setPen(QPen(QColor(0x000000), 1))
+            painter.drawText(x + 10, y - 10, f"{lux} lux, {percent}% {point_preset_name}")  # Tooltip lux and percent
 
         painter.end()
         self.setPixmap(pixmap)
