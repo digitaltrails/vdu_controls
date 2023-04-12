@@ -4739,7 +4739,7 @@ class LuxConfigChart(QLabel):
         self.main_app = main_app
         self.range_restrictions = range_restrictions
         self.current_lux = None
-        self.snap_to_margin = 20
+        self.snap_to_margin = 4
         self.current_vdu_id = None if len(profile_data) == 0 else list(profile_data.keys())[0]
         self.pixmap_width = 600
         self.pixmap_height = 550
