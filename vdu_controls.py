@@ -5177,7 +5177,6 @@ class LuxMeterSerialDevice:
         self.lock = Lock()
         self.cached_value = None
         self.cached_time = time.time()
-        self.smoother = LuxSmooth(5, alpha=0.5)
         try:
             self.serial_module = import_module('serial')
         except ModuleNotFoundError as mnf:
@@ -5210,12 +5209,6 @@ class LuxMeterSerialDevice:
                     if self.serial_device is not None:
                         self.serial_device.close()
                     self.serial_device = None
-
-    def get_smoothed_value(self) -> float:  # A smoothed value
-        value = self.get_value()
-        smoothed = self.smoother.smooth(value)
-        log_info(f"lux={value} smoothed-lux={smoothed}")
-        return smoothed
 
     def close(self):
         with self.lock:
@@ -5262,14 +5255,16 @@ class LuxAutoWorker(WorkerThread):
     _refresh_gui_view = pyqtSignal(VduControlBase)
     _message = pyqtSignal(str)
 
-    def __init__(self, main_app: VduAppWindow):
+    def __init__(self, auto_controller: LuxAutoController):
         super().__init__(task_body=self.adjust_for_lux, task_finished=self.finished_callable)
-        self.main_app = main_app
+        self.main_app = auto_controller.main_app
         self.last_value = None
         self.stop_requested = False
         self.step_count = 0  # tracks whether work is in progress
         self.target_brightness: Dict[str, int] = {}
         self.previous_metered_lux = 0
+        self.smoother = LuxSmooth(auto_controller.lux_config.getint('lux-meter', 'smoother-n', fallback=5),
+                                  alpha=auto_controller.lux_config.getfloat('lux-meter', 'smoother-alpha', fallback=0.5))
 
         def refresh_control(control: VduControlBase):
             control.refresh_view()
@@ -5296,7 +5291,7 @@ class LuxAutoWorker(WorkerThread):
                     log_error("Exiting, no lux meter available.")
                     break
                 lux_config = lux_auto_controller.lux_config.load()  # Refresh
-                metered_lux = round(lux_auto_controller.lux_meter.get_smoothed_value())  # Get new smoothed lux value
+                metered_lux = round(self.get_smoothed_value(lux_auto_controller.lux_meter))  # Get new smoothed lux value
                 if self.perform_one_step(lux_config, metered_lux, step_count):  # if some work was done
                     step_count += 1
                 else:   # No work done <=> all work is complete
@@ -5361,6 +5356,12 @@ class LuxAutoWorker(WorkerThread):
         else:
             time.sleep(0.5)  # Let i2c settle down, then continue stepping
         return made_brightness_changes
+
+    def get_smoothed_value(self, meter: LuxMeterSerialDevice) -> float:  # A smoothed value
+        value = meter.get_value()
+        smoothed = self.smoother.smooth(value)
+        log_info(f"LuxAutoWorker metered-lux={value} smoothed-lux={smoothed}")
+        return smoothed
 
     def finished_callable(self):
         if self.vdu_exception:
@@ -5686,7 +5687,7 @@ class LuxAutoController:
                     if self.lux_auto_brightness_worker is not None:
                         self.lux_auto_brightness_worker.stop_requested = True
                         self.lux_auto_brightness_worker.working.disconnect(self.main_app.display_lux_auto_indicators)
-                    self.lux_auto_brightness_worker = LuxAutoWorker(self.main_app)
+                    self.lux_auto_brightness_worker = LuxAutoWorker(self)
                     self.lux_auto_brightness_worker.working.connect(self.main_app.display_lux_auto_indicators)
                     self.lux_auto_brightness_worker.start()
                 self.main_app.display_lux_auto_indicators()  # Refresh indicators immediately
