@@ -5311,12 +5311,12 @@ class LuxAutoWorker(WorkerThread):
         if not made_brightness_changes:
             if step_count != 0:   # Have now finished past work, if a point had a Preset attached, activate it now
                 log_info(f"LuxAutoWorker: stepping completed step={step_count}")  # Only if work was done
-            if profile_preset_name is not None:  # step count might be zero if the Preset had no brightness controls.
-                # Finish by restoring the Preset's non-brightness controls, do it now, while this lux thread is not active.
-                log_info(f"LuxAutoWorker: triggering Preset {profile_preset_name}")
-                preset = self.main_app.find_preset_by_name(profile_preset_name)
-                if preset is not None:
-                    self.main_app.restore_preset_in_gui_thread(preset)
+                if profile_preset_name is not None:
+                    # Finish by restoring the Preset's non-brightness controls, do it now, while this lux thread is not active.
+                    log_info(f"LuxAutoWorker: triggering Preset {profile_preset_name}")
+                    preset = self.main_app.find_preset_by_name(profile_preset_name)
+                    if preset is not None:
+                        self.main_app.restore_preset_in_gui_thread(preset)
         else:
             time.sleep(0.5)  # Let i2c settle down, then continue stepping
         return made_brightness_changes
