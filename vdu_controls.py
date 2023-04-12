@@ -5220,6 +5220,8 @@ class LuxSmooth:
     def __init__(self, n, alpha=0.5):
         self.length = n
         self.values = []
+        self.input = []
+        self.output = []
         self.alpha = alpha
         self.total = sum(self.values)
 
@@ -5239,15 +5241,15 @@ class LuxSmooth:
         # https://stackoverflow.com/questions/4611599/smoothing-data-from-a-sensor
         # https://en.wikipedia.org/wiki/Low-pass_filter#Simple_infinite_impulse_response_filter
         if len(self.values) == self.length:
-            self.total -= self.values[0]
-            self.values.pop(0)
-        self.values.append(v)
-        if len(self.values) == 1:
-            return self.values[0]
-        smoothed = self.values[0] * self.alpha
-        for value in self.values[1:]:
-            smoothed = smoothed + self.alpha * (value - smoothed)
-        return smoothed
+            self.input.pop(0)
+            self.output.pop(0)
+        self.input.append(v)
+        if len(self.input) == 1:
+            self.output.append(v)
+        else:
+            for i in range(1, len(self.input)):
+                self.output[i] = self.output[i-1] + self.alpha * (self.input[i] - self.output[i-1])
+        return self.output[-1]
 
 
 class LuxAutoWorker(WorkerThread):
