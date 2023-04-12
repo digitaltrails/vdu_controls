@@ -5265,6 +5265,7 @@ class LuxAutoWorker(WorkerThread):
         self.previous_metered_lux = 0
         self.smoother = LuxSmooth(auto_controller.lux_config.getint('lux-meter', 'smoother-n', fallback=5),
                                   alpha=auto_controller.lux_config.getfloat('lux-meter', 'smoother-alpha', fallback=0.5))
+        log_info(f"LuxAutoWorker: smoother n={self.smoother.length} alpha={self.smoother.alpha}" )
 
         def refresh_control(control: VduControlBase):
             control.refresh_view()
