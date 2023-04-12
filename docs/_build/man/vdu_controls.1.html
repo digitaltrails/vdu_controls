@@ -447,6 +447,10 @@ metered lux value is achieved, the metered stepping process will restore
 the Preset’s brightness values and then follow that by triggering the
 Preset restoration. This ordering of events reduces the likelihood of
 metered-stepping, and Preset-restoration from clashing.</p>
+<p>If a Preset is attached to a lux value and then detached, the
+Preset’s profile points will be converted to normal (editable) profile
+points. Attach/detach is a quick way to copy VDU brightness values from
+Presets if you don’t want to permanently attach them.</p>
 <p>If you utilise light-metered auto-brightness and Preset-scheduling
 together, their combined effects may conflict. For example, a scheduled
 Preset may set a reduced brightness, but soon after, light-metering

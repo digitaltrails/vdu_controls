@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Apr 11, 2023" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Apr 12, 2023" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.3.1
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -663,6 +663,11 @@ achieved, the metered stepping process will restore the Preset\(aqs brightness
 values and then follow that by triggering the Preset restoration.  This ordering
 of events reduces the likelihood of metered\-stepping, and Preset\-restoration from
 clashing.
+.sp
+If a Preset is attached to a lux value and then detached, the Preset\(aqs profile
+points will be converted to normal (editable) profile points. Attach/detach is
+a quick way to copy VDU brightness values from Presets if you don\(aqt want to
+permanently attach them.
 .sp
 If you utilise light\-metered auto\-brightness and Preset\-scheduling together,
 their combined effects may conflict. For example, a scheduled Preset may set a

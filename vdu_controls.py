@@ -5222,6 +5222,7 @@ class LuxAutoWorker(WorkerThread):
         self.last_value = None
         self.stop_requested = False
         self.step_count = 0  # tracks whether work is in progress
+        self.target_brightness: Dict[str, int] = {}
         self.previous_metered_lux = 0
 
         def refresh_control(control: VduControlBase):
@@ -5236,13 +5237,13 @@ class LuxAutoWorker(WorkerThread):
 
         self._message.connect(lux_message)
 
-    def adjust_for_lux(self):  # TODO could do with simplification
+    def adjust_for_lux(self):
         time.sleep(2.0)  # Give any previous thread a chance to exit
-        log_info(f"LuxAutoBrightnessWorker monitoring commences (Thread={threading.get_ident()})")
+        log_info(f"LuxAutoWorker monitoring commences (Thread={threading.get_ident()})")
         self._message.emit(tr("Brightness auto adjustment monitoring commences."))
         try:
+            step_count = 0  # No zero if work is in progress, zero if there is nothing to do
             while not self.stop_requested:
-                starting_step_count = self.step_count
                 self.working.emit()
                 lux_auto_controller = self.main_app.lux_auto_controller
                 if lux_auto_controller.lux_meter is None:  # In app config change
@@ -5250,66 +5251,74 @@ class LuxAutoWorker(WorkerThread):
                     break
                 lux_config = lux_auto_controller.lux_config.load()  # Refresh
                 metered_lux = round(lux_auto_controller.lux_meter.get_value())
-                self.perform_stepping(lux_config, metered_lux)
-                if not self.stop_requested:
-                    if self.step_count == starting_step_count:  # No work done <=> all work is complete
-                        # Sleep for the intervul between updates - but check for stop requests.
-                        self.step_count = 0
-                        self._message.emit("")
-                        sleep_end_time = time.time() + lux_auto_controller.lux_config.get_interval_minutes() * 60.0 - 0.5
-                        while not self.stop_requested and time.time() < sleep_end_time:
-                            time.sleep(1.0)
+                if self.perform_one_step(lux_config, metered_lux, step_count):  # if some work was done
+                    step_count += 1
+                else:   # No work done <=> all work is complete
+                    step_count = 0
+                    self._message.emit("")
+                    sleep_end_time = time.time() + lux_auto_controller.lux_config.get_interval_minutes() * 60.0 - 0.5
+                    while not self.stop_requested and time.time() < sleep_end_time:
+                        time.sleep(1.0) # Sleep for the lux-check-interval - but check for stop requests.
         finally:
-            log_info(f"LuxAutoBrightnessWorker exiting (stop_requested={self.stop_requested}) (Thread={threading.get_ident()})")
+            log_info(f"LuxAutoWorker exiting (stop_requested={self.stop_requested}) (Thread={threading.get_ident()})")
 
-    def perform_stepping(self, lux_config: LuxConfig, metered_lux: int):
-        starting_step_count = self.step_count
-        profile_preset_name = None
-        for control_panel in self.main_app.main_panel.vdu_control_panels:
+    def perform_one_step(self, lux_config: LuxConfig, metered_lux: int, step_count: int) -> bool:
+        profile_preset_name = None  # should be at most one for a given lux value.
+        made_brightness_changes = False
+        for control_panel in self.main_app.main_panel.vdu_control_panels:  # For each VDU, find its profile and apply it
             if self.stop_requested:
                 break
             controller = control_panel.controller
             profile_brightness = 20  # Just in case we don't get a match
-            for lux_point in lux_config.get_vdu_profile(controller, self.main_app):
+            vdu_id = controller.vdu_stable_id
+            for lux_point in lux_config.get_vdu_profile(controller, self.main_app):  # find the appropriate point in the profile
                 if metered_lux >= lux_point.lux:
-                    if lux_point.preset_name is None:
+                    if lux_point.preset_name is None:  # Normal Point
                         profile_brightness = lux_point.brightness
-                    else:
-                        profile_brightness = self.main_app.get_preset_brightness(lux_point.preset_name, controller.vdu_stable_id)
-                    profile_preset_name = lux_point.preset_name
+                    else:  # Point with a Preset attached at this lux value, might only be this point and not others.
+                        # profile_brightness will be -1 if the Preset doesn't specify a brightness value.
+                        profile_brightness = self.main_app.get_preset_brightness(lux_point.preset_name, vdu_id)
+                        profile_preset_name = lux_point.preset_name
             brightness_control = next((c for c in control_panel.vcp_controls if c.vcp_capability.vcp_code == '10'), None)
-            if brightness_control is not None:
+            if profile_brightness >= 0 and brightness_control is not None:  # can only adjust brightness controls
                 try:
                     current_brightness = int(controller.get_attribute('10')[0])
                     if not self.stop_requested and current_brightness != profile_brightness:
-                        self.step_count += 1
-                        log_info("LuxAutoBrightnessWorker: stepping commences..") if self.step_count == 1 else None
+                        made_brightness_changes = True
+                        if vdu_id not in self.target_brightness or self.target_brightness[vdu_id] != profile_brightness:
+                            if step_count == 0:
+                                log_info(f"LuxAutoWorker: stepping commences vdu={vdu_id} target={profile_brightness}%"
+                                         f" lux={metered_lux} step=1")
+                            else:  # lux level must have changed, so target brightness has changed
+                                log_info(f"LuxAutoWorker: target changed vdu={vdu_id} "
+                                         f" old-target={self.target_brightness[vdu_id]}% new-target={profile_brightness}%"
+                                         f" lux={metered_lux} step={step_count}")
+                            self.target_brightness[vdu_id] = profile_brightness
                         diff = profile_brightness - current_brightness
                         step_size = max(1, abs(diff) // 3)  # 4 if abs(diff) < 8 else 8  # TODO find a good heuristic
                         step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
-                        log_info(f"LuxAutoBrightnessWorker: lux={metered_lux} stepping {controller.vdu_stable_id}"
-                                 f" step={step} current={current_brightness}"
-                                 f" target={profile_brightness}")  # TODO if log_debug_enabled else None
-                        self._message.emit(tr("Adjusting {}...").format(controller.vdu_stable_id))
+                        self._message.emit(tr("Adjusting {}...").format(vdu_id))
                         brightness_control.restore_vdu_attribute(str(current_brightness + step))
                         self._refresh_gui_view.emit(brightness_control)
                 except VduException as ve:
-                    self._message.emit(tr("Error adjusting {}").format(controller.vdu_stable_id))
-                    log_warning(f"Auto lux: Brightness error on {controller.vdu_stable_id}, will sleep and try again: {ve}")
-        if self.step_count == starting_step_count:
-            log_info(f"LuxAutoBrightnessWorker: ..stepping completed") if self.step_count != 0 else None  # Only if work was done
-            if profile_preset_name is not None and self.step_count != 0:
-                # Finish by restoring the preset to restore other controls (non-brightness) - this is less likely to cause conflict.
-                log_info(f"LuxAutoBrightnessWorker: triggering Preset {profile_preset_name}")
+                    self._message.emit(tr("Error adjusting {}").format(vdu_id))
+                    log_warning(f"Auto lux: Brightness error on {vdu_id}, will sleep and try again: {ve}")
+        if not made_brightness_changes:
+            if step_count != 0:   # Have now finished past work, if a point had a Preset attached, activate it now
+                log_info(f"LuxAutoWorker: stepping completed step={step_count}")  # Only if work was done
+            if profile_preset_name is not None:  # step count might be zero if the Preset had no brightness controls.
+                # Finish by restoring the Preset's non-brightness controls, do it now, while this lux thread is not active.
+                log_info(f"LuxAutoWorker: triggering Preset {profile_preset_name}")
                 preset = self.main_app.find_preset_by_name(profile_preset_name)
                 if preset is not None:
                     self.main_app.restore_preset_in_gui_thread(preset)
         else:
             time.sleep(0.5)  # Let i2c settle down, then continue stepping
+        return made_brightness_changes
 
     def finished_callable(self):
         if self.vdu_exception:
-            log_error(f"LuxAutoBrightnessWorker exited with exception={self.vdu_exception}")
+            log_error(f"LuxAutoWorker exited with exception={self.vdu_exception}")
 
 
 class LuxPoint:
