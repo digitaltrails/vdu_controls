@@ -5373,13 +5373,13 @@ class LuxPoint:
         self.lux = lux
         self.brightness = brightness
         self.preset_name = preset_name
-        # TODO check preset vdu brightness still matches given brightness?
 
     def __lt__(self, other):
         return self.lux < other.lux
 
     def __eq__(self, other):
         return self.lux == other.lux and self.preset_name == other.preset_name
+
 
 class LuxConfig(ConfigIni):
 
