@@ -4819,18 +4819,19 @@ class LuxConfigChart(QLabel):
                     brightness = point_data.brightness
                 else:
                     brightness = self.main_app.get_preset_brightness(point_data.preset_name, vdu_id)
-                vdu_line_color = QColor(line_colors[vdu_id])
-                x = self.x_origin + self.x_from_lux(lux)
-                y = self.y_origin - self.y_from_percent(brightness)
-                if last_x and last_y:  # Join the previous and current point with a line
-                    painter.setPen(QPen(vdu_line_color, std_line_width))
-                    painter.drawLine(last_x, last_y, x, y)
-                if self.current_vdu_id == vdu_id:  # Special handling for the current/selected VDU
-                    point_markers.append((point_data, x, y, lux, brightness))  # Save data for drawing markers later
-                    if last_x and last_y:  # draw histogram rectangle
-                        vdu_line_color.setAlpha(50)
-                        painter.fillRect(last_x, last_y, x - last_x, self.y_origin - last_y, vdu_line_color)
-                last_x, last_y = x, y
+                if brightness >= 0:
+                    vdu_line_color = QColor(line_colors[vdu_id])
+                    x = self.x_origin + self.x_from_lux(lux)
+                    y = self.y_origin - self.y_from_percent(brightness)
+                    if last_x and last_y:  # Join the previous and current point with a line
+                        painter.setPen(QPen(vdu_line_color, std_line_width))
+                        painter.drawLine(last_x, last_y, x, y)
+                    if self.current_vdu_id == vdu_id:  # Special handling for the current/selected VDU
+                        point_markers.append((point_data, x, y, lux, brightness))  # Save data for drawing markers later
+                        if last_x and last_y:  # draw histogram rectangle
+                            vdu_line_color.setAlpha(50)
+                            painter.fillRect(last_x, last_y, x - last_x, self.y_origin - last_y, vdu_line_color)
+                    last_x, last_y = x, y
             if self.current_vdu_id == vdu_id and last_x and last_y:   # Fill steps under the points
                 painter.fillRect(last_x, last_y, 25, self.y_origin - last_y, vdu_line_color)
 
@@ -4909,7 +4910,6 @@ class LuxConfigChart(QLabel):
         x = local_pos.x() - self.x_origin
         y = self.y_origin - local_pos.y()
         if event.button() == Qt.LeftButton:
-            print(y)
             if y >= 0:
                 changed = self.lux_point_edit(x, y)
             else:
@@ -4938,8 +4938,13 @@ class LuxConfigChart(QLabel):
             for vdu_id, profile in self.profile_data.items():
                 for profile_point in profile:
                     if profile_point == point:  # Note: these will not be the same object
-                        profile_point.preset_name = None  # Convert to normal point - as a convenience for the user
-                        profile_point.brightness = self.main_app.get_preset_brightness(point.preset_name, vdu_id)
+                        preset_brightness = self.main_app.get_preset_brightness(point.preset_name, vdu_id)
+                        if preset_brightness >= 0: # Convert to normal point - as a convenience for the user
+                            profile_point.preset_name = None
+                            profile_point.brightness = self.main_app.get_preset_brightness(point.preset_name, vdu_id)
+                        else:  # A Preset without a brightness value for this VDU - remove the point
+                            profile.remove(profile_point)
+                        break
             return True
         ask_preset = QInputDialog()
         presets = self.main_app.get_presets()
