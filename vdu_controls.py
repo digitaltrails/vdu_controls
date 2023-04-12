@@ -5177,19 +5177,20 @@ class LuxMeterSerialDevice:
         self.lock = Lock()
         self.cached_value = None
         self.cached_time = time.time()
+        self.smoother = LuxSmooth(5, alpha=0.5)
         try:
             self.serial_module = import_module('serial')
         except ModuleNotFoundError as mnf:
             raise LuxDeviceException(tr("The required pyserial serial-port module is not installed on this system."))
 
-    def get_cached_value(self, age_seconds: float):
+    def get_cached_value(self, age_seconds: float) -> float:  # Used for metering where an up-to-date value is less important
         if self.cached_value is not None and time.time() - self.cached_time <= age_seconds:
             return self.cached_value
         self.cached_value = self.get_value()
         self.cached_time = time.time()
         return self.cached_value
 
-    def get_value(self):
+    def get_value(self) -> float:  # an un-smoothed raw value
         with self.lock:
             backoff_secs = 10
             while True:
@@ -5210,10 +5211,50 @@ class LuxMeterSerialDevice:
                         self.serial_device.close()
                     self.serial_device = None
 
+    def get_smoothed_value(self) -> float:  # A smoothed value
+        value = self.get_value()
+        smoothed = self.smoother.smooth(value)
+        log_info(f"lux={value} smoothed-lux={smoothed}")
+        return smoothed
+
     def close(self):
         with self.lock:
             if self.serial_device is not None:
                 self.serial_device.close()
+
+
+class LuxSmooth:
+    def __init__(self, n, alpha=0.5):
+        self.length = n
+        self.values = []
+        self.alpha = alpha
+        self.total = sum(self.values)
+
+    def smooth(self, v):
+        return self.smooth_lp_filter(v)
+
+    def smooth_simple(self, v):  # Simple moving average - very efficient
+        if len(self.values) == self.length:
+            self.total -= self.values[0]
+            self.values.pop(0)
+        self.values.append(v)
+        self.total += v
+        return self.total / len(self.values)
+
+    def smooth_lp_filter(self, v):  # A low pass filter
+        # The smaller the alpha, the more each previous value affects the following value. Smaller alpha results => more smoothing.
+        # https://stackoverflow.com/questions/4611599/smoothing-data-from-a-sensor
+        # https://en.wikipedia.org/wiki/Low-pass_filter#Simple_infinite_impulse_response_filter
+        if len(self.values) == self.length:
+            self.total -= self.values[0]
+            self.values.pop(0)
+        self.values.append(v)
+        if len(self.values) == 1:
+            return self.values[0]
+        smoothed = self.values[0] * self.alpha
+        for value in self.values[1:]:
+            smoothed = smoothed + self.alpha * (value - smoothed)
+        return smoothed
 
 
 class LuxAutoWorker(WorkerThread):
@@ -5255,7 +5296,7 @@ class LuxAutoWorker(WorkerThread):
                     log_error("Exiting, no lux meter available.")
                     break
                 lux_config = lux_auto_controller.lux_config.load()  # Refresh
-                metered_lux = round(lux_auto_controller.lux_meter.get_value())
+                metered_lux = round(lux_auto_controller.lux_meter.get_smoothed_value())  # Get new smoothed lux value
                 if self.perform_one_step(lux_config, metered_lux, step_count):  # if some work was done
                     step_count += 1
                 else:   # No work done <=> all work is complete
@@ -5339,7 +5380,6 @@ class LuxPoint:
 
     def __eq__(self, other):
         return self.lux == other.lux and self.preset_name == other.preset_name
-
 
 class LuxConfig(ConfigIni):
 
