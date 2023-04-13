@@ -5346,7 +5346,7 @@ class LuxAutoWorker(WorkerThread):
     def get_smoothed_value(self, meter: LuxMeterSerialDevice) -> float:  # A smoothed value
         value = meter.get_value()
         smoothed = self.smoother.smooth(value)
-        log_info(f"LuxAutoWorker metered-lux={value} smoothed-lux={smoothed}")
+        log_info(f"LuxAutoWorker metered-lux={value:.2f} smoothed-lux={smoothed:.2f}")
         return smoothed
 
     def finished_callable(self):
