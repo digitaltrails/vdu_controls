@@ -939,7 +939,7 @@ TRANSITION_ICON_SOURCE = b"""
 
 SWATCH_ICON_SOURCE = b"""
 <svg  xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24">
-  <rect width="16" height="16" rx="12" x="4" y="4" stroke="black" stroke-width="1" fill="#ffffff" />
+  <rect width="20" height="20" rx="4" x="2" y="3" stroke="black" stroke-width="1" fill="#ffffff" />
 </svg>
 """
 
@@ -5217,28 +5217,15 @@ class LuxMeterSerialDevice:
 class LuxSmooth:
     def __init__(self, n, alpha=0.5):
         self.length = n
-        self.values = []
         self.input = []
         self.output = []
         self.alpha = alpha
-        self.total = sum(self.values)
 
-    def smooth(self, v):
-        return self.smooth_lp_filter(v)
-
-    def smooth_simple(self, v):  # Simple moving average - very efficient
-        if len(self.values) == self.length:
-            self.total -= self.values[0]
-            self.values.pop(0)
-        self.values.append(v)
-        self.total += v
-        return self.total / len(self.values)
-
-    def smooth_lp_filter(self, v):  # A low pass filter
+    def smooth(self, v):  # A low pass filter
         # The smaller the alpha, the more each previous value affects the following value. Smaller alpha results => more smoothing.
         # https://stackoverflow.com/questions/4611599/smoothing-data-from-a-sensor
         # https://en.wikipedia.org/wiki/Low-pass_filter#Simple_infinite_impulse_response_filter
-        if len(self.values) == self.length:
+        if len(self.input) == self.length:
             self.input.pop(0)
             self.output.pop(0)
         self.input.append(v)
