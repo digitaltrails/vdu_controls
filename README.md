@@ -32,7 +32,7 @@ dark-theme, KDE, Deepin, GNOME, and others.
 
 ![Default](screen-shots/Screenshot_Large-330.png)  ![Custom](screen-shots/Screenshot_Small-227.png) 
 ![Custom](screen-shots/Screenshot_tray-200.png) ![Custom](screen-shots/Screenshot_settings-300.png)
-![Custom](screen-shots/presets.png) 
+![Custom](screen-shots/presets.png) ![Custom](screen-shots/lux-profiles.png)
 
 Getting Started
 ---------------
