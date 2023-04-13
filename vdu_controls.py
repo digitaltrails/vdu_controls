@@ -937,6 +937,12 @@ TRANSITION_ICON_SOURCE = b"""
 </svg>
 """
 
+SWATCH_ICON_SOURCE = b"""
+<svg  xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24">
+  <rect width="16" height="16" rx="12" x="4" y="4" stroke="black" stroke-width="1" fill="#ffffff" />
+</svg>
+"""
+
 '''Creates a SVG of grey rectangles typical of the sort used for VDU calibration.'''
 GREY_SCALE_SVG = f'''
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1"  width="256" height="152" viewBox="0 0 256 152">
@@ -4730,17 +4736,18 @@ def install_as_desktop_application(uninstall: bool = False):
 
 class LuxConfigChart(QLabel):
 
-    def __init__(self, profile_data: Dict[str, List[LuxPoint]], range_restrictions: Dict[str, Tuple[int, int]],
-                 preset_points: List[LuxPoint], main_app: VduAppWindow, chart_changed_callback: Callable, parent=None):
-        super().__init__(parent=parent)
-        self.chart_changed_callback = chart_changed_callback
-        self.profile_data = profile_data
-        self.preset_points = preset_points
-        self.main_app = main_app
-        self.range_restrictions = range_restrictions
+    def __init__(self, lux_dialog: LuxDialog):
+        super().__init__(parent=lux_dialog)
+        self.lux_dialog = lux_dialog
+        self.chart_changed_callback = lux_dialog.chart_changed_callback
+        self.profile_data = lux_dialog.profile_data
+        self.preset_points = lux_dialog.preset_points
+        self.main_app = lux_dialog.main_app
+        self.vdu_chart_colors = self.lux_dialog.vdu_chart_color
+        self.range_restrictions = lux_dialog.range_restrictions
         self.current_lux = None
         self.snap_to_margin = 4
-        self.current_vdu_id = None if len(profile_data) == 0 else list(profile_data.keys())[0]
+        self.current_vdu_id = None if len(lux_dialog.profile_data) == 0 else list(lux_dialog.profile_data.keys())[0]
         self.pixmap_width = 600
         self.pixmap_height = 550
         self.plot_width, self.plot_height = self.pixmap_width - 200, self.pixmap_height - 150
@@ -4757,16 +4764,7 @@ class LuxConfigChart(QLabel):
         self.pixmap_width, self.pixmap_height = event.size().width(), event.size().height()
         self.create_plot()
 
-    def get_line_color_cache(self, number_of_lines: int):
-        if len(self.possible_colors) < number_of_lines:
-            random.seed(0x543fff)
-            self.possible_colors = [QColor.fromHsl(int(h * 137.508) % 255,
-                                                   random.randint(64, 128),
-                                                   random.randint(192, 200)) for h in range(number_of_lines)]
-        return self.possible_colors
-
     def create_plot(self):
-        line_colors = {k: v for k, v in zip(self.profile_data.keys(), self.get_line_color_cache(len(self.profile_data)))}
         std_line_width = 4
         preset_color = 0xebfff9
         triangle = [(-8, 0), (0, -16), (8, 0)]
@@ -4820,7 +4818,7 @@ class LuxConfigChart(QLabel):
                 else:
                     brightness = self.main_app.get_preset_brightness(point_data.preset_name, vdu_id)
                 if brightness >= 0:
-                    vdu_line_color = QColor(line_colors[vdu_id])
+                    vdu_line_color = QColor(self.vdu_chart_colors[vdu_id])
                     x = self.x_origin + self.x_from_lux(lux)
                     y = self.y_origin - self.y_from_percent(brightness)
                     if last_x and last_y:  # Join the previous and current point with a line
@@ -4838,7 +4836,7 @@ class LuxConfigChart(QLabel):
         for point_data, x, y, lux, brightness in point_markers:  # draw point markers on top of lines and histograms
             if point_data.preset_name is None:  # Normal point
                 marker_diameter = std_line_width * 4
-                painter.setPen(QPen(QColor(line_colors[vdu_id]), std_line_width))
+                painter.setPen(QPen(QColor(self.vdu_chart_colors[vdu_id]), std_line_width))
             else:  # Preset Point - fixed/non-deletable brightness level from Preset
                 marker_diameter = std_line_width * 2
                 painter.setPen(QPen(QColor(preset_color), std_line_width))
@@ -5244,11 +5242,9 @@ class LuxSmooth:
             self.input.pop(0)
             self.output.pop(0)
         self.input.append(v)
-        if len(self.input) == 1:
-            self.output.append(v)
-        else:
-            for i in range(1, len(self.input)):
-                self.output[i] = self.output[i-1] + self.alpha * (self.input[i] - self.output[i-1])
+        self.output.append(v)  # extend to same length - value will be overwritten if there is more than one sample.
+        for i in range(1, len(self.input)):
+            self.output[i] = self.output[i-1] + self.alpha * (self.input[i] - self.output[i-1])
         return self.output[-1]
 
 
@@ -5454,6 +5450,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.profile_data = {}
         self.range_restrictions = {}
         self.preset_points = []
+        self.vdu_chart_color = {}
         self.has_profile_changes = False
         self.setMinimumWidth(800)
 
@@ -5499,8 +5496,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.profile_selector = QComboBox()
         main_layout.addWidget(self.profile_selector)
 
-        self.profile_plot = LuxConfigChart(self.profile_data, self.range_restrictions, self.preset_points, self.main_app,
-                                           self.chart_changed_callback, parent=self)
+        self.profile_plot = LuxConfigChart(self)
         main_layout.addWidget(self.profile_plot, 1)
 
         buttons_widget = QWidget()
@@ -5567,6 +5563,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.has_profile_changes = True
 
     def reinitialise(self):
+
         self.config: LuxConfig = self.main_app.lux_auto_controller.lux_config.duplicate(LuxConfig())
         self.device_name = self.config.get("lux-meter", "lux-device", fallback=None)
         self.enabled_checkbox.setChecked(self.config.is_auto_enabled())
@@ -5590,8 +5587,13 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.profile_selector.blockSignals(True)  # Stop initialization from causing signally until all data is aligned.
         if new_id_list != existing_id_list:  # List of connected VDU's has changed
             self.profile_selector.clear()
+            random.seed(0x543fff)
+            self.vdu_chart_color.clear()
             for index, vdu in enumerate(self.main_app.vdu_controllers):
-                self.profile_selector.addItem(vdu.get_vdu_description(), userData=vdu.vdu_stable_id)
+                color = QColor.fromHsl(int(index * 137.508) % 255, random.randint(64, 128), random.randint(192, 200))
+                self.vdu_chart_color[vdu.vdu_stable_id] = color
+                color_icon = create_themed_icon_from_svg_bytes(SWATCH_ICON_SOURCE.replace(b"#ffffff", bytes(color.name(), 'utf-8')))
+                self.profile_selector.addItem(color_icon, vdu.get_vdu_description(), userData=vdu.vdu_stable_id)
                 if vdu.vdu_stable_id == existing_selected_id:
                     self.profile_selector.setCurrentIndex(index)
                     self.profile_plot.current_vdu_id = existing_selected_id
