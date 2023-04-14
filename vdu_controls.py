@@ -1093,6 +1093,10 @@ class VcpCapability:
         return re.sub('[^A-Za-z0-9_-]', '-', self.name).lower()
 
 
+class DdcUtilDisplayNotFound(Exception):
+    pass
+
+
 class DdcUtil:
     """
     Interface to the command line ddcutil Display Data Channel Utility for interacting with VDU's.
@@ -1126,17 +1130,22 @@ class DdcUtil:
             multiplier_str = str(self.default_sleep_multiplier if sleep_multiplier is None else sleep_multiplier)
             process_args = [DDCUTIL, '--sleep-multiplier', multiplier_str] + self.common_args + list(args)
             try:
-                result = subprocess.run(process_args, stdout=subprocess.PIPE, check=True)
+                result = subprocess.run(process_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
                 if self.debug:  # Shorten EDID to 30 characters when logging it (it will be the only long argument)
                     log_debug("subprocess result: ", [arg if len(arg) < 30 else arg[:30] + "..." for arg in result.args],
                               f"rc={result.returncode}", f"stdout={result.stdout}")
-            except Exception as e:  # Shorten EDID (see similar above)
+            except subprocess.SubprocessError as spe:
+                if spe.stderr.decode('utf-8').lower().find("display not found") >= 0:
+                    raise DdcUtilDisplayNotFound(' '.join(args))
                 log_error("subprocess result: ", [arg if len(arg) < 30 else arg[:30] + "..." for arg in process_args],
-                          f"exception={e}")
+                          f"exception={spe}")
                 raise
             return result
 
-    def detect_monitors(self) -> List[Tuple[str, str, str, str]]:
+    def number_of_active_displays(self):
+        return len(self.detect_monitors(issue_warnings=False))
+
+    def detect_monitors(self, issue_warnings: bool = True) -> List[Tuple[str, str, str, str]]:
         """Return a list of (vdu_id, desc) tuples."""
         display_list = []
         result = self.__run__('detect', '--verbose')
@@ -1173,8 +1182,11 @@ class DdcUtil:
                         else:
                             # log_debug(possibly_unique)
                             key_prospects[possibly_unique] = vdu_id, manufacturer
-            elif len(display_str.strip()) != 0:
-                log_warning(f"Ignoring unparsable {display_str}")
+            elif len(display_str.strip()) != 0 and issue_warnings:
+                if display_str.startswith('Invalid display'):
+                    log_warning(f"Ignoring one display (probably switched off)")
+                else:
+                    log_warning(f"Ignoring unparsable: id='{display_str}'")
 
         # Try and pin down a unique id that won't change even if other monitors are turned off.
         # Ideally this should yield the same result for the same monitor - DisplayNum is the worst
@@ -1862,7 +1874,7 @@ class VduController(QObject):
                 return []
             # raise subprocess.SubprocessError("get_attributes")  # for testing
             return self.ddcutil.get_attributes(self.vdu_id, attributes, sleep_multiplier=self.sleep_multiplier)
-        except (subprocess.SubprocessError, ValueError) as e:
+        except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound) as e:
             raise VduException(vdu_description=self.get_vdu_description(), vcp_code=",".join(attributes), exception=e,
                                operation="get_attributes")
 
@@ -1870,7 +1882,7 @@ class VduController(QObject):
         try:
             # raise subprocess.SubprocessError("get_attribute")  # for testing
             return self.ddcutil.get_attribute(self.vdu_id, vcp_code, sleep_multiplier=self.sleep_multiplier)
-        except (subprocess.SubprocessError, ValueError) as e:
+        except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound) as e:
             raise VduException(vdu_description=self.get_vdu_description(), vcp_code=vcp_code, exception=e,
                                operation="get_attribute")
 
@@ -1879,7 +1891,7 @@ class VduController(QObject):
             # raise subprocess.SubprocessError("set_attribute")  # for testing
             self.ddcutil.set_attribute(self.vdu_id, vcp_code, value, sleep_multiplier=self.sleep_multiplier)
             self.vdu_setting_changed.emit()
-        except (subprocess.SubprocessError, ValueError) as e:
+        except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound) as e:
             raise VduException(vdu_description=self.get_vdu_description(), vcp_code=vcp_code, exception=e,
                                operation="set_attribute")
 
@@ -2317,6 +2329,9 @@ class VduException(Exception):
         self.cause = exception
         self.operation = operation
 
+    def is_display_not_found_error(self):
+        return self.cause is not None and isinstance(self.cause, DdcUtilDisplayNotFound)
+
     def __str__(self):
         return f"VduException: {self.vdu_description} op={self.operation} attr={self.attr_id} {self.cause}"
 
@@ -2369,9 +2384,7 @@ class VduControlBase(QWidget):
                     self.__change_vdu_attribute(new_value)
                     break
                 except VduException as e:
-                    answer = self.controller.vdu_exception_handler(e, buttons=QMessageBox.Retry | QMessageBox.Close,
-                                                                   default_button=QMessageBox.Retry)
-                    if answer == QMessageBox.Close:
+                    if not self.controller.vdu_exception_handler(e, True):
                         # Assume that the configured VDU's have changed
                         self.connected_vdus_changed.emit()
                         break
@@ -3152,18 +3165,33 @@ class VduControlsMainPanel(QWidget):
         if self.bottom_toolbar:
             self.bottom_toolbar.display_active_preset(preset)
 
-    def display_vdu_exception(self, exception: VduException, buttons=QMessageBox.Close, default_button=QMessageBox.Close) -> int:
+    def display_vdu_exception(self, exception: VduException, can_retry: bool = False) -> bool:
         log_error(f"{exception.vdu_description} {exception.operation} {exception.attr_id} {exception.cause}")
-        if self.alert is not None:
-            # Dismiss any existing alert
+        if self.alert is not None:  # Dismiss any existing alert
             self.alert.done(QMessageBox.Close)
-        self.alert = MessageBox(QMessageBox.Critical, buttons=buttons, default=default_button)
-        self.alert.setText(
-            tr("Set value: Failed to communicate with display {}").format(exception.vdu_description))
-        self.alert.setAttribute(Qt.WA_DeleteOnClose)
-        self.alert.setInformativeText(tr('Is the monitor switched off?<br>'
-                                         'Is the sleep-multiplier setting too low?'))
-        answer = self.alert.exec()
+        if exception.is_display_not_found_error():
+            if self.vdu_controllers[0].ddcutil.number_of_active_displays() == 0:
+                log_warning("No displays available - waiting...")
+                try:
+                    self.indicate_busy(True)
+                    while (display_count := self.vdu_controllers[0].ddcutil.number_of_active_displays()) == 0:
+                        QCoreApplication.processEvents()
+                        QThread.sleep(30)  # TODO do somthing better than this
+                finally:
+                    self.indicate_busy(False)
+                log_warning(f"Continuing {display_count} displays available.")
+                return True
+            else:
+                self.alert.setInformativeText(tr('Monitor appears to be switched off or disconnected.'))
+        else:
+            self.alert.setInformativeText(
+                tr('Is the monitor switched off?)') + '<br>' + tr('Is the sleep-multiplier setting too low?'))
+            self.alert = MessageBox(QMessageBox.Critical,
+                                    buttons=QMessageBox.Close | QMessageBox.Retry if can_retry else QMessageBox.Close,
+                                    default=QMessageBox.Retry if can_retry else QMessageBox.Close)
+            self.alert.setText(tr("Set value: Failed to communicate with display {}").format(exception.vdu_description))
+            self.alert.setAttribute(Qt.WA_DeleteOnClose)
+            answer = self.alert.exec()
         self.alert = None
         return answer
 
@@ -5248,6 +5276,7 @@ class LuxAutoWorker(WorkerThread):
         self.step_count = 0  # tracks whether work is in progress
         self.target_brightness: Dict[str, int] = {}
         self.previous_metered_lux = 0
+        self.suspended_session_warning_count = 0
         self.smoother = LuxSmooth(auto_controller.lux_config.getint('lux-meter', 'smoother-n', fallback=5),
                                   alpha=auto_controller.lux_config.getfloat('lux-meter', 'smoother-alpha', fallback=0.5))
         log_info(f"LuxAutoWorker: smoother n={self.smoother.length} alpha={self.smoother.alpha}" )
@@ -5327,9 +5356,15 @@ class LuxAutoWorker(WorkerThread):
                         self._message.emit(tr("Adjusting {}...").format(vdu_id))
                         brightness_control.restore_vdu_attribute(str(current_brightness + step))
                         self._refresh_gui_view.emit(brightness_control)
+                        self.suspended_session_warning_count = 0
                 except VduException as ve:
+                    if ve.is_display_not_found_error() and self.main_app.ddcutil.number_of_active_displays() == 0:
+                        if self.suspended_session_warning_count == 0:
+                            log_info(f"LuxAutoWorker: no VDU's available, session might be suspended, waiting and sleeping.")
+                            self.suspended_session_warning_count += 1
+                        return False  # Report no work done to force a long sleep
                     self._message.emit(tr("Error adjusting {}").format(vdu_id))
-                    log_warning(f"Auto lux: Brightness error on {vdu_id}, will sleep and try again: {ve}")
+                    log_warning(f"LuxAutoWorker: Brightness error on {vdu_id}, will sleep and try again: {ve}")
         if not made_brightness_changes:
             if step_count != 0:   # Have now finished past work, if a point had a Preset attached, activate it now
                 log_info(f"LuxAutoWorker: stepping completed step={step_count}")  # Only if work was done
@@ -6241,7 +6276,7 @@ class VduAppWindow(QMainWindow):
         def refresh_view():
             """Invoke when the GUI worker thread completes. Runs in the GUI thread and can refresh the GUI views."""
             if self.refresh_data_task.vdu_exception is not None:
-                self.main_panel.display_vdu_exception(self.refresh_data_task.vdu_exception)
+                self.main_panel.display_vdu_exception(self.refresh_data_task.vdu_exception, can_retry=False)
             if self.detected_vdu_list != self.previously_detected_vdu_list:
                 self.create_main_control_panel()
                 self.previously_detected_vdu_list = self.detected_vdu_list
@@ -6285,13 +6320,13 @@ class VduAppWindow(QMainWindow):
             nonlocal worker_thread
             self.transitioning_dummy_preset = None
             if worker_thread.vdu_exception is not None:
-                answer = self.main_panel.display_vdu_exception(
-                    worker_thread.vdu_exception,
-                    buttons=QMessageBox.Retry | QMessageBox.Close, default_button=QMessageBox.Retry)
-                if answer == QMessageBox.Retry:
+                if self.main_panel.display_vdu_exception(worker_thread.vdu_exception, can_retry=True):
                     # Try again (recursion) in new thread
                     self.restore_preset(preset, restore_finished=restore_finished, immediately=immediately)
                     return  # Don't do anything more the recursive call will take over from here
+                elif worker_thread.vdu_exception.is_display_not_found_error():
+                    self.main_panel.connected_vdus_changed.emit()
+                    return
             self.main_panel.refresh_view()
             self.main_panel.indicate_busy(False)
             if self.tray is not None:
