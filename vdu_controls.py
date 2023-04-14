@@ -5340,14 +5340,12 @@ class LuxAutoWorker(WorkerThread):
                 if smoothed_lux >= lux_point.lux:
                     if lux_point.preset_name is None:  # Normal Point
                         profile_brightness = lux_point.brightness
-                        break
                     else:  # Point with a Preset attached at this lux value, might only be this point and not others.
                         # profile_brightness will be -1 if the Preset doesn't specify a brightness value.
                         preset = self.main_app.find_preset_by_name(lux_point.preset_name)
                         if preset:
                             profile_brightness = preset.get_brightness(vdu_id)
                             profile_preset_name = lux_point.preset_name
-                        break
             brightness_control = next((c for c in control_panel.vcp_controls if c.vcp_capability.vcp_code == '10'), None)
             if profile_brightness >= 0 and brightness_control is not None:  # can only adjust brightness controls
                 try:
