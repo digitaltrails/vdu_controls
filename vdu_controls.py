@@ -2758,6 +2758,11 @@ class Preset:
         if self.path.exists():
             os.remove(self.path.as_posix())
 
+    def get_brightness(self, vdu_id: str) -> int:
+        if vdu_id in self.preset_ini:
+            return self.preset_ini.getint(vdu_id, 'brightness', fallback=-1)
+        return -1
+
     def get_solar_elevation(self) -> SolarElevationKey | None:
         elevation_spec = self.preset_ini.get('preset', 'solar-elevation', fallback=None)
         if elevation_spec:
@@ -3167,33 +3172,32 @@ class VduControlsMainPanel(QWidget):
 
     def display_vdu_exception(self, exception: VduException, can_retry: bool = False) -> bool:
         log_error(f"{exception.vdu_description} {exception.operation} {exception.attr_id} {exception.cause}")
+        if exception.is_display_not_found_error() and self.vdu_controllers[0].ddcutil.number_of_active_displays() == 0:
+            log_warning("No displays available - waiting...")   # The user's session is probably locked.
+            try:
+                self.indicate_busy(True)
+                while (display_count := self.vdu_controllers[0].ddcutil.number_of_active_displays()) == 0:
+                    QCoreApplication.processEvents()
+                    QThread.sleep(30)  # TODO do somthing better than this
+            finally:
+                self.indicate_busy(False)
+            log_warning(f"Continuing {display_count} displays now available.")
+            return True
         if self.alert is not None:  # Dismiss any existing alert
             self.alert.done(QMessageBox.Close)
+        self.alert = MessageBox(QMessageBox.Critical,
+                                buttons=QMessageBox.Close | QMessageBox.Retry if can_retry else QMessageBox.Close,
+                                default=QMessageBox.Retry if can_retry else QMessageBox.Close)
         if exception.is_display_not_found_error():
-            if self.vdu_controllers[0].ddcutil.number_of_active_displays() == 0:
-                log_warning("No displays available - waiting...")
-                try:
-                    self.indicate_busy(True)
-                    while (display_count := self.vdu_controllers[0].ddcutil.number_of_active_displays()) == 0:
-                        QCoreApplication.processEvents()
-                        QThread.sleep(30)  # TODO do somthing better than this
-                finally:
-                    self.indicate_busy(False)
-                log_warning(f"Continuing {display_count} displays available.")
-                return True
-            else:
-                self.alert.setInformativeText(tr('Monitor appears to be switched off or disconnected.'))
+            self.alert.setInformativeText(tr('Monitor appears to be switched off or disconnected.'))
         else:
             self.alert.setInformativeText(
                 tr('Is the monitor switched off?)') + '<br>' + tr('Is the sleep-multiplier setting too low?'))
-            self.alert = MessageBox(QMessageBox.Critical,
-                                    buttons=QMessageBox.Close | QMessageBox.Retry if can_retry else QMessageBox.Close,
-                                    default=QMessageBox.Retry if can_retry else QMessageBox.Close)
-            self.alert.setText(tr("Set value: Failed to communicate with display {}").format(exception.vdu_description))
-            self.alert.setAttribute(Qt.WA_DeleteOnClose)
-            answer = self.alert.exec()
+        self.alert.setText(tr("Set value: Failed to communicate with display {}").format(exception.vdu_description))
+        self.alert.setAttribute(Qt.WA_DeleteOnClose)
+        answer = self.alert.exec()
         self.alert = None
-        return answer
+        return answer == QMessageBox.Retry
 
 
 class WorkerThread(QThread):
@@ -4844,7 +4848,8 @@ class LuxConfigChart(QLabel):
                 if point_data.preset_name is None:
                     brightness = point_data.brightness
                 else:
-                    brightness = self.main_app.get_preset_brightness(point_data.preset_name, vdu_id)
+                    preset = self.main_app.find_preset_by_name(point_data.preset_name)
+                    brightness = preset.get_brightness(vdu_id) if preset is not None else -1
                 if brightness >= 0:
                     vdu_line_color = QColor(self.vdu_chart_colors[vdu_id])
                     x = self.x_origin + self.x_from_lux(lux)
@@ -4964,10 +4969,11 @@ class LuxConfigChart(QLabel):
             for vdu_id, profile in self.profile_data.items():
                 for profile_point in profile:
                     if profile_point == point:  # Note: these will not be the same object
-                        preset_brightness = self.main_app.get_preset_brightness(point.preset_name, vdu_id)
+                        preset = self.main_app.find_preset_by_name(point.preset)
+                        preset_brightness = preset.get_brightness(vdu_id) if preset is not None else -1
                         if preset_brightness >= 0: # Convert to normal point - as a convenience for the user
                             profile_point.preset_name = None
-                            profile_point.brightness = self.main_app.get_preset_brightness(point.preset_name, vdu_id)
+                            profile_point.brightness = preset_brightness
                         else:  # A Preset without a brightness value for this VDU - remove the point
                             profile.remove(profile_point)
                         break
@@ -5004,7 +5010,11 @@ class LuxConfigChart(QLabel):
             if point_data.preset_name is None:
                 existing_percent = point_data.brightness
             else:
-                existing_percent = self.main_app.get_preset_brightness(point_data.preset_name, vdu_id)
+                preset = self.main_app.find_preset_by_name(point_data.preset_name)
+                if preset is not None:
+                    existing_percent = preset.get_brightness(vdu_id)
+                else:
+                    continue  # Must have been deleted
             existing_x = self.x_from_lux(existing_lux)
             existing_y = self.y_from_percent(existing_percent)
             if existing_x - r <= x <= existing_x + r and (existing_y - r <= y <= existing_y + r or point_data.preset_name is not None):
@@ -5273,10 +5283,8 @@ class LuxAutoWorker(WorkerThread):
         self.main_app = auto_controller.main_app
         self.last_value = None
         self.stop_requested = False
-        self.step_count = 0  # tracks whether work is in progress
         self.target_brightness: Dict[str, int] = {}
         self.previous_metered_lux = 0
-        self.suspended_session_warning_count = 0
         self.smoother = LuxSmooth(auto_controller.lux_config.getint('lux-meter', 'smoother-n', fallback=5),
                                   alpha=auto_controller.lux_config.getfloat('lux-meter', 'smoother-alpha', fallback=0.5))
         log_info(f"LuxAutoWorker: smoother n={self.smoother.length} alpha={self.smoother.alpha}" )
@@ -5306,8 +5314,9 @@ class LuxAutoWorker(WorkerThread):
                     log_error("Exiting, no lux meter available.")
                     break
                 lux_config = lux_auto_controller.lux_config.load()  # Refresh
-                metered_lux = round(self.get_smoothed_value(lux_auto_controller.lux_meter))  # Get new smoothed lux value
-                if self.perform_one_step(lux_config, metered_lux, step_count):  # if some work was done
+                metered_lux = lux_auto_controller.lux_meter.get_value()
+                smoothed_lux = round(self.get_smoothed_value(metered_lux))  # Get new smoothed lux value
+                if self.perform_one_step(lux_config, metered_lux, smoothed_lux, step_count):  # if some work was done
                     step_count += 1
                 else:   # No work done <=> all work is complete
                     step_count = 0
@@ -5318,23 +5327,27 @@ class LuxAutoWorker(WorkerThread):
         finally:
             log_info(f"LuxAutoWorker exiting (stop_requested={self.stop_requested}) (Thread={threading.get_ident()})")
 
-    def perform_one_step(self, lux_config: LuxConfig, metered_lux: int, step_count: int) -> bool:
+    def perform_one_step(self, lux_config: LuxConfig, metered_lux: int, smoothed_lux: int, step_count: int) -> bool:
         profile_preset_name = None  # should be at most one for a given lux value.
         made_brightness_changes = False
         for control_panel in self.main_app.main_panel.vdu_control_panels:  # For each VDU, find its profile and apply it
             if self.stop_requested:
                 break
             controller = control_panel.controller
-            profile_brightness = 20  # Just in case we don't get a match
+            profile_brightness = -1  # Just in case we don't get a match
             vdu_id = controller.vdu_stable_id
             for lux_point in lux_config.get_vdu_profile(controller, self.main_app):  # find the appropriate point in the profile
-                if metered_lux >= lux_point.lux:
+                if smoothed_lux >= lux_point.lux:
                     if lux_point.preset_name is None:  # Normal Point
                         profile_brightness = lux_point.brightness
+                        break
                     else:  # Point with a Preset attached at this lux value, might only be this point and not others.
                         # profile_brightness will be -1 if the Preset doesn't specify a brightness value.
-                        profile_brightness = self.main_app.get_preset_brightness(lux_point.preset_name, vdu_id)
-                        profile_preset_name = lux_point.preset_name
+                        preset = self.main_app.find_preset_by_name(lux_point.preset_name)
+                        if preset:
+                            profile_brightness = preset.get_brightness(vdu_id)
+                            profile_preset_name = lux_point.preset_name
+                        break
             brightness_control = next((c for c in control_panel.vcp_controls if c.vcp_capability.vcp_code == '10'), None)
             if profile_brightness >= 0 and brightness_control is not None:  # can only adjust brightness controls
                 try:
@@ -5342,28 +5355,27 @@ class LuxAutoWorker(WorkerThread):
                     if not self.stop_requested and current_brightness != profile_brightness:
                         made_brightness_changes = True
                         if vdu_id not in self.target_brightness or self.target_brightness[vdu_id] != profile_brightness:
-                            if step_count == 0:
-                                log_info(f"LuxAutoWorker: stepping commences vdu={vdu_id} target={profile_brightness}%"
-                                         f" lux={metered_lux} step=1")
-                            else:  # lux level must have changed, so target brightness has changed
-                                log_info(f"LuxAutoWorker: target changed vdu={vdu_id} "
-                                         f" old-target={self.target_brightness[vdu_id]}% new-target={profile_brightness}%"
-                                         f" lux={metered_lux} step={step_count}")
                             self.target_brightness[vdu_id] = profile_brightness
+                            if step_count == 0:
+                                log_info(f"LuxAutoWorker: stepping commences vdu={vdu_id} current={current_brightness}%"
+                                         f" target={profile_brightness}% lux={metered_lux} smoothed-lux=={smoothed_lux} step=1")
+                            else:  # lux level must have changed, so target brightness has changed
+                                log_info(f"LuxAutoWorker: target changed vdu={vdu_id} current={current_brightness}%" 
+                                         f" target={profile_brightness}% lux={metered_lux} smoothed-lux={smoothed_lux} step={step_count}")
                         diff = profile_brightness - current_brightness
                         step_size = max(1, abs(diff) // 3)  # 4 if abs(diff) < 8 else 8  # TODO find a good heuristic
                         step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
-                        self._message.emit(tr("Adjusting {}...").format(vdu_id))
+                        self._message.emit(tr("Adjusting {} by {}").format(vdu_id, step_size))
+                        if step_count != 0 and log_debug_enabled:
+                            log_debug(f"LuxAutoWorker: vdu={vdu_id} current={current_brightness}% target={profile_brightness}%"
+                                      f" lux={metered_lux} smoothed-lux={smoothed_lux} step={step_count}")
                         brightness_control.restore_vdu_attribute(str(current_brightness + step))
                         self._refresh_gui_view.emit(brightness_control)
-                        self.suspended_session_warning_count = 0
                 except VduException as ve:
                     if ve.is_display_not_found_error() and self.main_app.ddcutil.number_of_active_displays() == 0:
-                        if self.suspended_session_warning_count == 0:
-                            log_info(f"LuxAutoWorker: no VDU's available, session might be suspended, waiting and sleeping.")
-                            self.suspended_session_warning_count += 1
+                        log_info(f"LuxAutoWorker: no VDU's available, session might be suspended, waiting and sleeping.")
                         return False  # Report no work done to force a long sleep
-                    self._message.emit(tr("Error adjusting {}").format(vdu_id))
+                    self._message.emit(tr("Failed to adjust {}, will try again").format(vdu_id))
                     log_warning(f"LuxAutoWorker: Brightness error on {vdu_id}, will sleep and try again: {ve}")
         if not made_brightness_changes:
             if step_count != 0:   # Have now finished past work, if a point had a Preset attached, activate it now
@@ -5378,10 +5390,8 @@ class LuxAutoWorker(WorkerThread):
             time.sleep(0.5)  # Let i2c settle down, then continue stepping
         return made_brightness_changes
 
-    def get_smoothed_value(self, meter: LuxMeterSerialDevice) -> float:  # A smoothed value
-        value = meter.get_value()
-        smoothed = self.smoother.smooth(value)
-        log_info(f"LuxAutoWorker metered-lux={value:.2f} smoothed-lux={smoothed:.2f}")
+    def get_smoothed_value(self, metered_value: float) -> float:  # A smoothed value
+        smoothed = self.smoother.smooth(metered_value)
         return smoothed
 
     def finished_callable(self):
@@ -5599,7 +5609,9 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             self.profile_data[vdu.vdu_stable_id] = self.config.get_vdu_profile(vdu, self.main_app)
             new_id_list.append(vdu.vdu_stable_id)
         self.preset_points.clear()
-        self.preset_points += self.config.get_preset_points()
+        for preset_point in self.config.get_preset_points():  # Edit out deleted presets.
+            if self.main_app.find_preset_by_name(preset_point.preset_name):
+                self.preset_points.append(preset_point)
 
         self.validate_device(self.device_name)
         self.interval_selector.setValue(self.config.get_interval_minutes())
@@ -6396,12 +6408,6 @@ class VduAppWindow(QMainWindow):
 
     def get_presets(self):
         return self.preset_controller.find_presets()
-
-    def get_preset_brightness(self, preset_name: str, vdu_id: str) -> int:
-        preset = self.find_preset_by_name(preset_name)
-        if preset is not None and vdu_id in preset.preset_ini:
-            return preset.preset_ini.getint(vdu_id, 'brightness', fallback=-1)
-        return -1
 
     def display_lux_auto_indicators(self):
         assert is_running_in_gui_thread()  # Boilerplate in case this is called from the wrong thread.
