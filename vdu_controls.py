@@ -1046,7 +1046,6 @@ log_debug_enabled = False
 
 
 def log_wrapper(severity, *args):
-
     with io.StringIO() as output:
         print(*args, file=output, end='')
         message = output.getvalue()
@@ -1088,7 +1087,7 @@ class VcpCapability:
         # Default config enablement
         self.enabled = enabled
         self.can_transition = can_transition
-        # For future use if we want to implement non-continuous types of VCP (VCP types SNC or CNC)
+        # For non-continuous types of VCP (VCP types SNC or CNC). Also for special cases, such as restricted brightness ranges.
         self.values = [] if values is None else values
 
     def property_name(self) -> str:
@@ -1123,9 +1122,7 @@ class DdcUtil:
         self.default_sleep_multiplier = default_sleep_multiplier
 
     def id_key_args(self, display_id: str) -> List[str]:
-        if display_id in self.edid_map:
-            return ['--edid', self.edid_map[display_id]]
-        return ['--display', display_id]
+        return ['--edid', self.edid_map[display_id]] if display_id in self.edid_map else ['--display', display_id]
 
     def __run__(self, *args, sleep_multiplier: float | None = None) -> subprocess.CompletedProcess:
         with self.lock:
@@ -2703,7 +2700,7 @@ class Preset:
         self.preset_ini = ConfigIni()
         self.timer: QTimer | None = None
         self.timer_action: Callable | None = None
-        self.schedule_status = ScheduleStatus.UNSCHEDULED
+        self.schedule_status = PresetScheduleStatus.UNSCHEDULED
         self.elevation_time_today: datetime | None = None
 
     def get_title_name(self):
@@ -2803,7 +2800,7 @@ class Preset:
             result = basic_desc + ' ' + tr("the sun does not rise this high today")
         return result
 
-    def get_transition_type(self) -> TransitionType:
+    def get_transition_type(self) -> PresetTransitionType:
         return parse_transaction_type(self.preset_ini.get('preset', 'transition-type', fallback="NONE"))
 
     def get_step_interval_seconds(self) -> int:
@@ -2819,7 +2816,7 @@ class Preset:
         self.timer.timeout.connect(partial(action, self))  # TODO the action may be running in an inappropriate thread
         millis = round((when_local - zoned_now()) / timedelta(milliseconds=1))
         self.timer.start(millis)
-        self.schedule_status = ScheduleStatus.SCHEDULED
+        self.schedule_status = PresetScheduleStatus.SCHEDULED
         log_info(f"Scheduled preset '{self.name}' for {when_local} in {round(millis / 1000 / 60)} minutes "
                  f"{self.get_solar_elevation()}")
 
@@ -2830,18 +2827,18 @@ class Preset:
             self.timer = None
         if self.elevation_time_today is not None:
             self.elevation_time_today = None
-        self.schedule_status = ScheduleStatus.UNSCHEDULED
+        self.schedule_status = PresetScheduleStatus.UNSCHEDULED
 
     def toggle_timer(self):
         if self.elevation_time_today and self.elevation_time_today > zoned_now():
             if self.timer.remainingTime() > 0:
                 log_info(f"Preset scheduled timer cleared for '{self.name}'")
                 self.timer.stop()
-                self.schedule_status = ScheduleStatus.SUSPENDED
+                self.schedule_status = PresetScheduleStatus.SUSPENDED
             else:
                 log_info(f"Preset scheduled timer restored for '{self.name}'")
                 self.start_timer(self.elevation_time_today, self.timer_action)
-                self.schedule_status = ScheduleStatus.SCHEDULED
+                self.schedule_status = PresetScheduleStatus.SCHEDULED
 
     def get_timer_status(self) -> str:
         if self.elevation_time_today:
@@ -2859,7 +2856,7 @@ class Preset:
     def is_weather_dependent(self):
         return self.get_weather_restriction_filename() is not None
 
-    def check_weather(self, weather: QueryWeather):
+    def check_weather(self, weather: WeatherQuery):
         weather_restriction_filename = self.get_weather_restriction_filename()
         if weather.weather_code is None or weather_restriction_filename is None:
             return True
@@ -3211,7 +3208,7 @@ class WorkerThread(QThread):
         self.finished_work.emit()
 
 
-class TransitionState(Enum):
+class PresetTransitionState(Enum):
     INITIALIZED = 0
     PARTIAL = 1
     FINISHED_STEPPING = 2
@@ -3219,7 +3216,7 @@ class TransitionState(Enum):
     INTERRUPTED = 4
 
 
-class TransitionWorker(WorkerThread):
+class PresetTransitionWorker(WorkerThread):
     progress_signal = pyqtSignal()
     _update_gui_signal = pyqtSignal(VduControlBase)
 
@@ -3239,7 +3236,7 @@ class TransitionWorker(WorkerThread):
         self.final_values: Dict[VduControlBase, str] = {}
         self.expected_values: Dict[VduControlBase, str] = {}
         self.transition_immediately = immediately
-        self.state = TransitionState.FINISHED_STEPPING if self.transition_immediately else TransitionState.INITIALIZED
+        self.state = PresetTransitionState.FINISHED_STEPPING if self.transition_immediately else PresetTransitionState.INITIALIZED
         self.progress_callable = progress_callable
 
         def update_gui(target_widget: VduControlBase):
@@ -3262,7 +3259,7 @@ class TransitionWorker(WorkerThread):
                             self.preset_non_transitioning_controls.append(control)
 
     def task_body(self):
-        while self.state != TransitionState.FINISHED_STEPPING and self.values_are_as_expected():
+        while self.state != PresetTransitionState.FINISHED_STEPPING and self.values_are_as_expected():
             cycle_start = time.time()
             if cycle_start - self.last_step_time > self.step_interval_seconds:
                 self.last_step_time = cycle_start
@@ -3272,11 +3269,11 @@ class TransitionWorker(WorkerThread):
                 if remainder > 0.0:
                     time.sleep(remainder)
             self.progress_signal.emit()
-        if self.state == TransitionState.FINISHED_STEPPING:
+        if self.state == PresetTransitionState.FINISHED_STEPPING:
             for control in self.preset_non_transitioning_controls:  # Finish by doing the non-transitioning controls
                 control.restore_vdu_attribute(self.final_values[control])
                 self._update_gui_signal.emit(control)
-            self.state = TransitionState.FINISHED
+            self.state = PresetTransitionState.FINISHED
             self.end_time = datetime.now()
             log_info(f"Finished {self.preset.name} {round(self.total_elapsed_seconds(), ndigits=2)} seconds")
 
@@ -3299,7 +3296,7 @@ class TransitionWorker(WorkerThread):
                 self.last_progress_time = now
                 self.progress_signal.emit()
         # Some transitioning controls are not at their final values, need to step again
-        self.state = TransitionState.PARTIAL if more_to_do else TransitionState.FINISHED_STEPPING
+        self.state = PresetTransitionState.PARTIAL if more_to_do else PresetTransitionState.FINISHED_STEPPING
 
     def values_are_as_expected(self) -> bool:
         for control_panel in self.main_panel.vdu_control_panels:  # Check that no one else is changing the controls
@@ -3309,16 +3306,16 @@ class TransitionWorker(WorkerThread):
                 if control in self.expected_values:
                     if self.expected_values[control] != current_value:
                         log_warning(f"Interrupted transition to {self.preset.name}")
-                        self.state = TransitionState.INTERRUPTED  # Something else is changing the controls - abandon the task
+                        self.state = PresetTransitionState.INTERRUPTED  # Something else is changing the controls - abandon the task
                 else:
                     self.expected_values[control] = current_value  # must be first time through, initialize value
-        return self.state != TransitionState.INTERRUPTED
+        return self.state != PresetTransitionState.INTERRUPTED
 
     def total_elapsed_seconds(self) -> float:
         return ((self.end_time if self.end_time else datetime.now()) - self.start_time).total_seconds()
 
 
-class TransitioningDummyPreset(Preset):  # A wrapper that creates titles and icons that indicate a transition is in progress.
+class PresetTransitionDummy(Preset):  # A wrapper that creates titles and icons that indicate a transition is in progress.
 
     def __init__(self, wrapped: Preset):
         super().__init__(wrapped.name)
@@ -3499,7 +3496,7 @@ class PresetWidget(QWidget):
                 preset.get_title_name(), preset.get_transition_type().description()))
         preset_transition_button.clicked.connect(partial(restore_action, preset=preset, immediately=False))
         preset_transition_button.setAutoDefault(False)
-        if preset.get_transition_type() == TransitionType.NONE:
+        if preset.get_transition_type() == PresetTransitionType.NONE:
             preset_transition_button.setDisabled(True)
             preset_transition_button.setText('')
         line_layout.addWidget(preset_transition_button)
@@ -3512,9 +3509,9 @@ class PresetWidget(QWidget):
         if preset.get_solar_elevation() is not None:
 
             def format_description() -> str:
-                if preset.schedule_status == ScheduleStatus.SCHEDULED:
+                if preset.schedule_status == PresetScheduleStatus.SCHEDULED:
                     action_desc = tr("Press to skip: ")
-                elif preset.schedule_status == ScheduleStatus.SUSPENDED:
+                elif preset.schedule_status == PresetScheduleStatus.SUSPENDED:
                     action_desc = tr("Press to re-enable: ")
                 else:
                     action_desc = ''
@@ -3528,7 +3525,7 @@ class PresetWidget(QWidget):
             timer_control_button.setText(preset.get_solar_elevation_abbreviation())
             timer_control_button.setToolTip(format_description())
             timer_control_button.clicked.connect(toggle_timer)
-        timer_control_button.setEnabled(preset.schedule_status in (ScheduleStatus.SCHEDULED, ScheduleStatus.SUSPENDED))
+        timer_control_button.setEnabled(preset.schedule_status in (PresetScheduleStatus.SCHEDULED, PresetScheduleStatus.SUSPENDED))
         line_layout.addWidget(timer_control_button)
 
 
@@ -3594,7 +3591,7 @@ class PresetChooseIconButton(QPushButton):
         return super().event(event)
 
 
-class QueryWeather:
+class WeatherQuery:
 
     def __init__(self, location: GeoLocation):
         self.location = location
@@ -3753,7 +3750,7 @@ class PresetChooseWeatherWidget(QWidget):
                     return
         try:
             log_info(f"Verifying weather location by querying {WEATHER_FORECAST_URL}.")
-            weather = QueryWeather(location)
+            weather = WeatherQuery(location)
             weather.run_query()
             if weather.proximity_ok:
                 msg = MessageBox(QMessageBox.Information)
@@ -3808,10 +3805,10 @@ class PresetChooseTransitionWidget(QWidget):
         layout.addWidget(QLabel(tr("Transition smoothly")), alignment=Qt.AlignLeft)
         self.transition_type_widget = QPushButton("None")
         self.button_menu = QMenu()
-        self.transition_type = TransitionType.NONE
+        self.transition_type = PresetTransitionType.NONE
         self.is_setting = False
 
-        for transition_type in TransitionType.ALWAYS.component_values():
+        for transition_type in PresetTransitionType.ALWAYS.component_values():
             action = QAction(transition_type.description(), self.button_menu)
             action.setData(transition_type)
             action.setCheckable(True)
@@ -3837,7 +3834,7 @@ class PresetChooseTransitionWidget(QWidget):
                 self.transition_type ^= act.data()
         self.transition_type_widget.setText(str(self.transition_type.description()))
 
-    def set_transition_type(self, transition_type: TransitionType):
+    def set_transition_type(self, transition_type: PresetTransitionType):
         try:
             self.is_setting = True
             self.transition_type = transition_type
@@ -3850,7 +3847,7 @@ class PresetChooseTransitionWidget(QWidget):
     def set_step_seconds(self, seconds: int):
         self.step_seconds_widget.setValue(seconds)
 
-    def get_transition_type(self) -> TransitionType:
+    def get_transition_type(self) -> PresetTransitionType:
         return self.transition_type
 
     def get_step_seconds(self) -> int:
@@ -5329,12 +5326,8 @@ class LuxAutoWorker(WorkerThread):
                         made_brightness_changes = True
                         if vdu_id not in self.target_brightness or self.target_brightness[vdu_id] != profile_brightness:
                             self.target_brightness[vdu_id] = profile_brightness
-                            if step_count == 0:
-                                log_info(f"LuxAutoWorker: stepping commences vdu={vdu_id} current={current_brightness}%"
-                                         f" target={profile_brightness}% lux={metered_lux} smoothed-lux=={smoothed_lux} step=1")
-                            else:  # lux level must have changed, so target brightness has changed
-                                log_info(f"LuxAutoWorker: target changed vdu={vdu_id} current={current_brightness}%" 
-                                         f" target={profile_brightness}% lux={metered_lux} smoothed-lux={smoothed_lux} step={step_count}")
+                            log_info(f"LuxAutoWorker: step={step_count} vdu={vdu_id}: new target={profile_brightness}%"
+                                     f" current={current_brightness}% lux={metered_lux} smoothed-lux={smoothed_lux}")
                         diff = profile_brightness - current_brightness
                         step_size = max(1, abs(diff) // 3)  # 4 if abs(diff) < 8 else 8  # TODO find a good heuristic
                         step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
@@ -5343,9 +5336,7 @@ class LuxAutoWorker(WorkerThread):
                             log_debug(f"LuxAutoWorker: vdu={vdu_id} current={current_brightness}% target={profile_brightness}%"
                                       f" lux={metered_lux} smoothed-lux={smoothed_lux} step={step_count}")
                         brightness_control.restore_vdu_attribute(str(current_brightness + step))
-                        #raise VduException("test")
                         self._refresh_gui_view.emit(brightness_control)
-                        #raise VduException("test")
                         self.consecutive_errors = 0
                 except VduException as ve:
                     self.consecutive_errors += 1
@@ -5362,7 +5353,7 @@ class LuxAutoWorker(WorkerThread):
         if not made_brightness_changes:
             if step_count != 0:   # Have now finished past work, if a point had a Preset attached, activate it now
                 log_info(f"LuxAutoWorker: stepping completed step={step_count}")  # Only if work was done
-                self._message.emit(tr("Stepping completed"))
+                self._message.emit(tr("Brightness adjustment completed"))
                 if profile_preset_name is not None:
                     # Finish by restoring the Preset's non-brightness controls, do it now, while this lux thread is not active.
                     log_info(f"LuxAutoWorker: triggering Preset {profile_preset_name}")
@@ -5827,7 +5818,7 @@ class HelpDialog(QDialog, DialogSingletonMixin):
         return QSize(1200, 768)
 
 
-class ScheduleStatus(Enum):
+class PresetScheduleStatus(Enum):
     UNSCHEDULED = 0, ' ', QT_TR_NOOP('unscheduled')
     # This hourglass character is too tall - it causes a jump when rendered - but nothing else is quite as appropriate.
     SCHEDULED = 1, TIMER_RUNNING_SYMBOL, QT_TR_NOOP('scheduled')
@@ -5846,7 +5837,7 @@ class ScheduleStatus(Enum):
         return self.value[0]
 
 
-class TransitionType(IntFlag):
+class PresetTransitionType(IntFlag):
     _ignore_ = ['abbreviations', 'descriptions']  # Seems very hacky
 
     NONE = 0
@@ -5869,30 +5860,30 @@ class TransitionType(IntFlag):
         ALWAYS: QT_TR_NOOP('Always')}
 
     def abbreviation(self, abbreviations=abbreviations) -> str:  # Even more hacky
-        if self.value in (TransitionType.NONE, TransitionType.ALWAYS):
+        if self.value in (PresetTransitionType.NONE, PresetTransitionType.ALWAYS):
             return abbreviations[self]
         return TRANSITION_SYMBOL + ''.join([abbreviations[component] for component in self.component_values()])
 
     def description(self, descriptions=descriptions):  # Yuck
-        if self.value in (TransitionType.NONE, TransitionType.ALWAYS):
+        if self.value in (PresetTransitionType.NONE, PresetTransitionType.ALWAYS):
             return descriptions[self]
         return ','.join([descriptions[component] for component in self.component_values()])
 
-    def component_values(self) -> List[TransitionType]:
+    def component_values(self) -> List[PresetTransitionType]:
         # similar to Python 3.11 enum.show_flag_values(self) - list of power of two components for self
-        return [option for option in TransitionType if (option & (option - 1) == 0) and option != 0 and option in self]
+        return [option for option in PresetTransitionType if (option & (option - 1) == 0) and option != 0 and option in self]
 
     def __str__(self):
-        if self.value == TransitionType.NONE:
+        if self.value == PresetTransitionType.NONE:
             return self.name.lower()
         return ','.join([component.name.lower() for component in self.component_values()])
 
 
 def parse_transaction_type(string_value: str):
-    transaction_type = TransitionType.NONE
+    transaction_type = PresetTransitionType.NONE
     string_value = string_value.replace('schedule_or_signal', 'scheduled,signal')  # Backward compatible for unreleased 1.9.2
     for component_value in string_value.split(','):
-        for option in TransitionType:
+        for option in PresetTransitionType:
             if component_value.lower() == option.name.lower():
                 transaction_type |= option
     return transaction_type
@@ -5914,14 +5905,14 @@ class VduAppWindow(QMainWindow):
         self.settings = QSettings('vdu_controls.qt.state', 'vdu_controls')
         self.main_panel: VduControlsMainPanel | None = None
         self.main_config = main_config
-        self.weather_query: QueryWeather | None = None
+        self.weather_query: WeatherQuery | None = None
         self.daily_schedule_next_update = datetime.today()
         self.refresh_data_task: WorkerThread | None = None
         self.restore_preset_thread: WorkerThread | None = None
         self.detected_vdu_list: List[Tuple[str, str, str, str]] = []
         self.vdu_controllers: List[VduController] = []
         self.previously_detected_vdu_list: List[Tuple[str, str, str, str]] = []
-        self.transitioning_dummy_preset: TransitioningDummyPreset | None = None
+        self.transitioning_dummy_preset: PresetTransitionDummy | None = None
         self.ddcutil: DdcUtil | None = None
         self.lux_auto_controller = LuxAutoController(self) if self.main_config.is_set(GlobalOption.LUX_OPTIONS_ENABLED) else None
         gnome_tray_behaviour = main_config.is_set(GlobalOption.SYSTEM_TRAY_ENABLED) and 'gnome' in os.environ.get(
@@ -6053,7 +6044,7 @@ class VduAppWindow(QMainWindow):
                 log_info(f"Signaled for preset {preset.name} transition-type={preset.get_transition_type()}")
                 if preset is not None:
                     # Signals occur outside the GUI thread - initiate the restore in the GUI thread
-                    immediately = TransitionType.SIGNAL not in preset.get_transition_type()
+                    immediately = PresetTransitionType.SIGNAL not in preset.get_transition_type()
                     log_info("initiate_restore_preset", threading.get_ident())  # This method is for use by non-GUI threads.
                     self._restore_preset_in_gui_thread.emit(preset, None, immediately)
                 else:
@@ -6280,10 +6271,10 @@ class VduAppWindow(QMainWindow):
     def restore_preset(self, preset: Preset, restore_finished: Callable | None = None, immediately: bool = False) -> None:
         # Starts the restore, but it will complete in the worker thread
         assert is_running_in_gui_thread()    # Boilerplate in case this is called from the wrong thread.
-        self.transitioning_dummy_preset: TransitioningDummyPreset | None = None
+        self.transitioning_dummy_preset: PresetTransitionDummy | None = None
 
         if not immediately:
-            self.transitioning_dummy_preset = TransitioningDummyPreset(preset)
+            self.transitioning_dummy_preset = PresetTransitionDummy(preset)
             presets_dialog_update_view(tr("Transitioning to preset {}").format(preset.name))
             self.display_active_preset(self.transitioning_dummy_preset)
         self.main_panel.indicate_busy()
@@ -6313,7 +6304,7 @@ class VduAppWindow(QMainWindow):
             self.main_panel.indicate_busy(False)
             if self.tray is not None:
                 self.refresh_tray_menu()
-            if worker_thread.state == TransitionState.FINISHED:
+            if worker_thread.state == PresetTransitionState.FINISHED:
                 with open(PRESET_NAME_FILE, 'w', encoding="utf-8") as cps_file:
                     cps_file.write(preset.name)
                 self.display_active_preset(preset)
@@ -6327,7 +6318,7 @@ class VduAppWindow(QMainWindow):
                 if restore_finished is not None:
                     restore_finished(False)
 
-        worker_thread = TransitionWorker(self.main_panel, preset, update_progress, finished, immediately)
+        worker_thread = PresetTransitionWorker(self.main_panel, preset, update_progress, finished, immediately)
         worker_thread.start()
 
     def find_preset_by_name(self, preset_name: str) -> Preset | None:
@@ -6340,7 +6331,7 @@ class VduAppWindow(QMainWindow):
         preset = self.find_preset_by_name(preset_name)
         if preset is not None:
             # Transition immediately unless the Preset is required to ALWAYS transition.
-            self.restore_preset(preset, immediately=TransitionType.MENU not in preset.get_transition_type())
+            self.restore_preset(preset, immediately=PresetTransitionType.MENU not in preset.get_transition_type())
 
     def save_preset(self, preset: Preset) -> None:
         self.copy_to_preset_ini(preset.preset_ini, update_only=True)
@@ -6462,14 +6453,14 @@ class VduAppWindow(QMainWindow):
             if reset:
                 preset.remove_elevation_trigger(quietly=True)
             elevation_key = preset.get_solar_elevation()
-            if elevation_key is not None and preset.schedule_status == ScheduleStatus.UNSCHEDULED:
+            if elevation_key is not None and preset.schedule_status == PresetScheduleStatus.UNSCHEDULED:
                 if elevation_key in time_map:
                     when_today = time_map[elevation_key].when
                     preset.elevation_time_today = when_today
                     if when_today > local_now:
                         preset.start_timer(when_today, self.activate_scheduled_preset)
                     else:
-                        preset.schedule_status = ScheduleStatus.SKIPPED_SUPERSEDED
+                        preset.schedule_status = PresetScheduleStatus.SKIPPED_SUPERSEDED
                         if when_today > latest_due:
                             # This may be the preset that should be applicable now, check if weather prevents it.
                             # Reuse the weather, don't do multiple weather queries while scheduling.
@@ -6505,7 +6496,7 @@ class VduAppWindow(QMainWindow):
         if preset.is_weather_dependent() and check_weather:
             proceed = self.is_weather_satisfactory(preset)
             if not proceed:
-                preset.schedule_status = ScheduleStatus.WEATHER_CANCELLATION
+                preset.schedule_status = PresetScheduleStatus.WEATHER_CANCELLATION
                 message = tr("Preset {} activation was cancelled due to weather at {}").format(
                     preset.name, now.isoformat(' ', 'seconds'))
                 weather_text = f"({self.weather_query.weather_desc if self.weather_query is not None else ''})"
@@ -6514,7 +6505,7 @@ class VduAppWindow(QMainWindow):
             message = f"{TIME_CLOCK_SYMBOL} {status_text} {preset.schedule_status.symbol()} {weather_text}"
 
             def finished(succeeded: bool):
-                preset.schedule_status = ScheduleStatus.SUCCEEDED if succeeded else ScheduleStatus.SKIPPED_SUPERSEDED
+                preset.schedule_status = PresetScheduleStatus.SUCCEEDED if succeeded else PresetScheduleStatus.SKIPPED_SUPERSEDED
                 self.display_active_preset()
                 presets_dialog_update_view(message + ' - ' + tr("Restored {}").format(preset.name))
 
@@ -6523,7 +6514,7 @@ class VduAppWindow(QMainWindow):
             self.restore_preset(
                 preset,
                 restore_finished=finished,
-                immediately=immediately or TransitionType.SCHEDULED not in preset.get_transition_type())
+                immediately=immediately or PresetTransitionType.SCHEDULED not in preset.get_transition_type())
         presets_dialog_update_view(message)
 
     def is_weather_satisfactory(self, preset, use_cache: bool = False) -> bool:
@@ -6532,14 +6523,14 @@ class VduAppWindow(QMainWindow):
                 if not use_cache or self.weather_query is None:
                     location = self.main_config.get_location()
                     if location is not None:
-                        self.weather_query = QueryWeather(location)
+                        self.weather_query = WeatherQuery(location)
                         self.weather_query.run_query()
                         if not self.weather_query.proximity_ok:
                             log_error(f"Preset {preset.name} weather location is {self.weather_query.proximity_km} km from "
                                       f"Settings Location, check settings.")
                             weather_bad_location_dialog(self.weather_query)
                 if not preset.check_weather(self.weather_query):
-                    preset.schedule_status = ScheduleStatus.WEATHER_CANCELLATION
+                    preset.schedule_status = PresetScheduleStatus.WEATHER_CANCELLATION
                     return False
         except ValueError as e:
             msg = MessageBox(QMessageBox.Warning)
