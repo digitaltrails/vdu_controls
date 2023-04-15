@@ -5464,7 +5464,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.path = get_config_path('AutoLux')
 
         self.device_name = ''
-        self.config: LuxConfig | None = None
+        self.lux_config: LuxConfig | None = None
 
         main_layout = QVBoxLayout()
         self.setLayout(main_layout)
@@ -5529,30 +5529,31 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             if device_name != '':
                 device_name = self.validate_device(device_name)
                 if device_name is not None:
-                    if device_name != self.config.get('lux-meter', 'lux-device', fallback=None):
-                        self.config.set('lux-meter', "lux-device", device_name)
+                    if device_name != self.lux_config.get('lux-meter', 'lux-device', fallback=None):
+                        self.lux_config.set('lux-meter', "lux-device", device_name)
                         self.save_settings()
 
         self.meter_device_selector.pressed.connect(choose_device)
 
         def set_auto_monitoring(checked: int):
-            if (checked == Qt.Checked) != self.config.is_auto_enabled():
-                self.config.set('lux-meter', 'automatic-brightness', 'yes' if checked == Qt.Checked else 'no')
+            if (checked == Qt.Checked) != self.lux_config.is_auto_enabled():
+                self.lux_config.set('lux-meter', 'automatic-brightness', 'yes' if checked == Qt.Checked else 'no')
                 self.save_settings()
 
         self.enabled_checkbox.stateChanged.connect(set_auto_monitoring)
 
         def interval_selector_changed() -> None:
-            self.config.set('lux-meter', 'interval-minutes', str(self.interval_selector.value()))
-            self.save_settings(requires_auto_brightness_restart=False)
+            if self.interval_selector.value() != self.lux_config.get_interval_minutes():
+                self.lux_config.set('lux-meter', 'interval-minutes', str(self.interval_selector.value()))
+                self.save_settings(requires_auto_brightness_restart=False)
 
         self.interval_selector.valueChanged.connect(interval_selector_changed)
 
         def select_profile(index: int):
             if self.profile_plot is not None:
                 self.profile_plot.set_current_profile(list(self.profile_data.keys())[index])
-            if self.config.get('lux-ui', 'selected-profile', fallback=None) != self.profile_selector.itemData(index):
-                self.config.set('lux-ui', 'selected-profile', self.profile_selector.itemData(index))
+            if self.lux_config.get('lux-ui', 'selected-profile', fallback=None) != self.profile_selector.itemData(index):
+                self.lux_config.set('lux-ui', 'selected-profile', self.profile_selector.itemData(index))
                 self.save_settings()
 
         self.profile_selector.currentIndexChanged.connect(select_profile)
@@ -5564,9 +5565,9 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
     def reinitialise(self):
 
-        self.config: LuxConfig = self.main_app.lux_auto_controller.lux_config.duplicate(LuxConfig())
-        self.device_name = self.config.get("lux-meter", "lux-device", fallback=None)
-        self.enabled_checkbox.setChecked(self.config.is_auto_enabled())
+        self.lux_config: LuxConfig = self.main_app.lux_auto_controller.lux_config.duplicate(LuxConfig())
+        self.device_name = self.lux_config.get("lux-meter", "lux-device", fallback=None)
+        self.enabled_checkbox.setChecked(self.lux_config.is_auto_enabled())
         self.has_profile_changes = False
 
         new_id_list = []   # List of all currently connected VDU's
@@ -5574,18 +5575,18 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             range_restriction = vdu.capabilities['10'].values
             min_v, max_v = (0, 100) if len(range_restriction) == 0 else (int(range_restriction[1]), int(range_restriction[2]))
             self.range_restrictions[vdu.vdu_stable_id] = min_v, max_v
-            self.profile_data[vdu.vdu_stable_id] = self.config.get_vdu_profile(vdu, self.main_app)
+            self.profile_data[vdu.vdu_stable_id] = self.lux_config.get_vdu_profile(vdu, self.main_app)
             new_id_list.append(vdu.vdu_stable_id)
         self.preset_points.clear()
-        for preset_point in self.config.get_preset_points():  # Edit out deleted presets.
+        for preset_point in self.lux_config.get_preset_points():  # Edit out deleted presets.
             if self.main_app.find_preset_by_name(preset_point.preset_name):
                 self.preset_points.append(preset_point)
 
         self.validate_device(self.device_name)
-        self.interval_selector.setValue(self.config.get_interval_minutes())
+        self.interval_selector.setValue(self.lux_config.get_interval_minutes())
 
         existing_id_list = [self.profile_selector.itemData(index) for index in range(0, self.profile_selector.count())]
-        existing_selected_id = self.config.get('lux-ui', 'selected-profile', fallback=new_id_list[0] if new_id_list else None)
+        existing_selected_id = self.lux_config.get('lux-ui', 'selected-profile', fallback=new_id_list[0] if new_id_list else None)
         self.profile_selector.blockSignals(True)  # Stop initialization from causing signally until all data is aligned.
         if new_id_list != existing_id_list:  # List of connected VDU's has changed
             self.profile_selector.clear()
@@ -5629,7 +5630,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
     def save_settings(self, requires_auto_brightness_restart: bool = True):
         self.has_profile_changes = False
-        self.config.save(self.path)
+        self.lux_config.save(self.path)
         if requires_auto_brightness_restart:
             self.main_app.lux_auto_controller.refresh_from_config()
             self.lux_meter_widget.stop_metering()
@@ -5638,9 +5639,9 @@ class LuxDialog(QDialog, DialogSingletonMixin):
     def save_profiles(self):
         for vdu_id, profile in self.profile_plot.profile_data.items():
             data = [(lux_point.lux, lux_point.brightness) for lux_point in profile if lux_point.preset_name is None]
-            self.config.set('lux-profile', vdu_id, repr(data))
+            self.lux_config.set('lux-profile', vdu_id, repr(data))
         data = [(lux_point.lux, lux_point.preset_name) for lux_point in self.profile_plot.preset_points]
-        self.config.set('lux-presets', 'lux-preset-points', repr(data))
+        self.lux_config.set('lux-presets', 'lux-preset-points', repr(data))
         self.save_settings(True)
 
     def closeEvent(self, event) -> None:
