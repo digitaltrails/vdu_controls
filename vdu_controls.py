@@ -4311,6 +4311,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         presets_dialog_splitter.addWidget(self.editor_groupbox)
 
         self.status_bar = QStatusBar()
+        self.default_timeout = 3000
         self.close_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), tr('close'))
         self.close_button.clicked.connect(self.close)
         self.status_bar.addPermanentWidget(self.close_button, 0)
@@ -4350,8 +4351,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         # TODO Update preset status display - a bit of an extreme way to do it - consider something better?
         self.reload_data()
 
-    def set_status_message(self, message: str, milli_secs: int = 0):
-        self.status_bar.showMessage(message, msecs=milli_secs)
+    def set_status_message(self, message: str, timeout: int = 0):
+        self.status_bar.showMessage(message, msecs=timeout if timeout >= 0 else self.default_timeout)
 
     def find_preset_widget(self, name) -> PresetWidget | None:
         for i in range(self.preset_widgets_layout.count()):
@@ -4413,8 +4414,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
     def get_presets(self):
         return [self.preset_widgets_layout.itemAt(i).widget()
                 for i in range(0, self.preset_widgets_layout.count() - 1)
-                if isinstance(self.preset_widgets_layout.itemAt(i).widget(), PresetWidget)
-                ]
+                if isinstance(self.preset_widgets_layout.itemAt(i).widget(), PresetWidget)]
 
     def get_presets_name_order(self):
         return [w.name for w in self.get_presets()]
@@ -4432,7 +4432,6 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             target_widget.deleteLater()
             self.main_window.preset_controller.save_order(self.get_presets_name_order())
             self.preset_widgets_scrollarea.updateGeometry()
-        self.set_status_message('')
 
     def down_action(self, preset: Preset, target_widget: QWidget) -> None:
         index = self.preset_widgets_layout.indexOf(target_widget)
@@ -4443,7 +4442,6 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             target_widget.deleteLater()
             self.main_window.preset_controller.save_order(self.get_presets_name_order())
             self.preset_widgets_scrollarea.updateGeometry()
-        self.set_status_message('')
 
     def restore_preset(self, preset: Preset, immediately: bool = True) -> None:
         self.main_window.restore_preset(preset, immediately=immediately)
@@ -4456,18 +4454,16 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             message = tr('Update existing {} preset with current monitor settings?').format(preset.name)
             confirmation.setText(message)
             if confirmation.exec() == QMessageBox.Cancel:
-                self.set_status_message('')
                 return
         self.preset_name_edit.setText('')
         self.main_window.save_preset(preset)
-        self.set_status_message(tr("Saved {}").format(preset.name))
+        self.set_status_message(tr("Saved {}").format(preset.name), self.default_timeout)
 
     def delete_preset(self, preset: Preset, target_widget: QWidget) -> None:
         confirmation = MessageBox(QMessageBox.Question, buttons=QMessageBox.Ok | QMessageBox.Cancel, default=QMessageBox.Cancel)
         confirmation.setText(tr('Delete {}?').format(preset.name))
         rc = confirmation.exec()
         if rc == QMessageBox.Cancel:
-            self.set_status_message('')
             return
         self.main_window.delete_preset(preset)
         self.preset_widgets_layout.removeWidget(target_widget)
@@ -4475,7 +4471,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.main_window.preset_controller.save_order(self.get_presets_name_order())
         self.preset_name_edit.setText('')
         self.preset_widgets_scrollarea.updateGeometry()
-        self.set_status_message(tr("Deleted {}").format(preset.name))
+        self.set_status_message(tr("Deleted {}").format(preset.name), timeout=self.default_timeout)
 
     def change_edit_group_title(self):
         changed_text = self.preset_name_edit.text()
@@ -4515,9 +4511,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                     preset.preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None))
                 self.editor_transitions_widget.set_transition_type(preset.get_transition_type())
                 self.editor_transitions_widget.set_step_seconds(preset.get_step_interval_seconds())
-
         self.main_window.restore_preset(preset, restore_finished=begin_editing, immediately=True)
-        self.set_status_message('')  # Will be shortly followed by a restore message
 
     def save_edited_preset(self) -> None:
         preset_name = self.preset_name_edit.text().strip()
@@ -4528,7 +4522,6 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             confirmation = MessageBox(QMessageBox.Question, buttons=QMessageBox.Save | QMessageBox.Cancel, default=QMessageBox.Save)
             confirmation.setText(tr("Replace existing '{}' preset?").format(preset_name))
             if confirmation.exec() == QMessageBox.Cancel:
-                self.set_status_message('')
                 return
             preset = existing_preset_widget.preset
             preset.clear_content()
@@ -4557,7 +4550,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             self.preset_widgets_scrollarea.updateGeometry()
             QTimer.singleShot(0, scroll_to_bottom)
         self.preset_name_edit.setText('')
-        self.set_status_message(tr("Saved {}").format(preset.name))
+        self.set_status_message(tr("Saved {}").format(preset.name), timeout=self.default_timeout)
 
     def create_preset_widget(self, preset):
         return PresetWidget(
@@ -4588,14 +4581,13 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 self.edit_save_needed.emit()
             else:
                 self.preset_name_edit.setText('')
-        self.set_status_message('')
         super().closeEvent(event)
 
 
 def presets_dialog_update_view(message: str, refresh_view: bool = True):
     presets_dialog = PresetsDialog.get_instance()
     if presets_dialog:
-        presets_dialog.set_status_message(message)
+        presets_dialog.set_status_message(message, timeout=-1)
         if refresh_view:
             presets_dialog.refresh_view()
 
