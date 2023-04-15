@@ -1127,8 +1127,9 @@ class DdcUtil:
 
     def __run__(self, *args, sleep_multiplier: float | None = None) -> subprocess.CompletedProcess:
         with self.lock:
-            multiplier_str = str(self.default_sleep_multiplier if sleep_multiplier is None else sleep_multiplier)
-            process_args = [DDCUTIL, '--sleep-multiplier', multiplier_str] + self.common_args + list(args)
+            multiplier = self.default_sleep_multiplier if sleep_multiplier is None else sleep_multiplier
+            multiplier_args = ['--sleep-multiplier', str(multiplier)] if multiplier > 0.01 else ['--dsa2']
+            process_args = [DDCUTIL] + multiplier_args + self.common_args + list(args)
             try:
                 result = subprocess.run(process_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
                 if self.debug:  # Shorten EDID to 30 characters when logging it (it will be the only long argument)
@@ -1141,9 +1142,6 @@ class DdcUtil:
                           f"exception={spe}")
                 raise
             return result
-
-    def number_of_active_displays(self):
-        return len(self.detect_monitors(issue_warnings=False))
 
     def detect_monitors(self, issue_warnings: bool = True) -> List[Tuple[str, str, str, str]]:
         """Return a list of (vdu_id, desc) tuples."""
@@ -2180,7 +2178,7 @@ class SettingsEditorFloatWidget(SettingsEditorFieldBase):
         self.text_label = QLabel(self.translate_option())
         self.layout().addWidget(self.text_label)
         self.spinbox = QDoubleSpinBox()
-        self.spinbox.setRange(0.1, 4.0)
+        self.spinbox.setRange(0.0, 4.0)   # TODO this should be looked up in the metadata
         self.spinbox.setSingleStep(0.1)
         self.spinbox.setValue(float(section_editor.ini_editable[section][option]))
         self.layout().addWidget(self.spinbox)
@@ -3172,17 +3170,6 @@ class VduControlsMainPanel(QWidget):
 
     def display_vdu_exception(self, exception: VduException, can_retry: bool = False) -> bool:
         log_error(f"{exception.vdu_description} {exception.operation} {exception.attr_id} {exception.cause}")
-        if exception.is_display_not_found_error() and self.vdu_controllers[0].ddcutil.number_of_active_displays() == 0:
-            log_warning("No displays available - waiting...")   # The user's session is probably locked.
-            try:
-                self.indicate_busy(True)
-                while (display_count := self.vdu_controllers[0].ddcutil.number_of_active_displays()) == 0:
-                    QCoreApplication.processEvents()
-                    QThread.sleep(30)  # TODO do somthing better than this
-            finally:
-                self.indicate_busy(False)
-            log_warning(f"Continuing {display_count} displays now available.")
-            return True
         if self.alert is not None:  # Dismiss any existing alert
             self.alert.done(QMessageBox.Close)
         self.alert = MessageBox(QMessageBox.Critical,
@@ -3240,7 +3227,7 @@ class TransitionWorker(WorkerThread):
     def __init__(self, main_panel: VduControlsMainPanel, preset: Preset, progress_callable: Callable, finished_callable: Callable,
                  immediately: bool = False):
         super().__init__(self.task_body, finished_callable)
-        log_info(f"Transition {preset.name} immediately={immediately}")
+        log_info(f"TransitionWorker: transition {preset.name} immediately={immediately}")
         self.start_time = datetime.now()
         self.end_time: datetime | None = None
         self.last_step_time: float = 0.0
@@ -4327,7 +4314,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
 
         presets_dialog_splitter.addWidget(self.editor_groupbox)
 
-        self.bottom_bar_message = QLabel()
+        self.bottom_bar_message = QLabel()  # TODO replace with a status bar
         self.close_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), tr('close'))
         self.close_button.clicked.connect(self.close)
         button_layout.addSpacing(5)
@@ -5280,9 +5267,11 @@ class LuxAutoWorker(WorkerThread):
 
     def __init__(self, auto_controller: LuxAutoController):
         super().__init__(task_body=self.adjust_for_lux, task_finished=self.finished_callable)
+        self.auto_controller = auto_controller
         self.main_app = auto_controller.main_app
         self.last_value = None
         self.stop_requested = False
+        self.consecutive_errors = 0
         self.target_brightness: Dict[str, int] = {}
         self.previous_metered_lux = 0
         self.smoother = LuxSmooth(auto_controller.lux_config.getint('lux-meter', 'smoother-n', fallback=5),
@@ -5318,12 +5307,11 @@ class LuxAutoWorker(WorkerThread):
                 smoothed_lux = round(self.get_smoothed_value(metered_lux))  # Get new smoothed lux value
                 if self.perform_one_step(lux_config, metered_lux, smoothed_lux, step_count):  # if some work was done
                     step_count += 1
-                else:   # No work done <=> all work is complete
+                else:   # No work done this cycle, sleep longer
                     step_count = 0
-                    self._message.emit("")
                     sleep_end_time = time.time() + lux_auto_controller.lux_config.get_interval_minutes() * 60.0 - 0.5
                     while not self.stop_requested and time.time() < sleep_end_time:
-                        time.sleep(1.0) # Sleep for the lux-check-interval - but check for stop requests.
+                        time.sleep(1.0)  # Sleep for the lux-check-interval - but check for stop requests.
         finally:
             log_info(f"LuxAutoWorker exiting (stop_requested={self.stop_requested}) (Thread={threading.get_ident()})")
 
@@ -5368,19 +5356,30 @@ class LuxAutoWorker(WorkerThread):
                             log_debug(f"LuxAutoWorker: vdu={vdu_id} current={current_brightness}% target={profile_brightness}%"
                                       f" lux={metered_lux} smoothed-lux={smoothed_lux} step={step_count}")
                         brightness_control.restore_vdu_attribute(str(current_brightness + step))
+                        raise VduException("test")
                         self._refresh_gui_view.emit(brightness_control)
+                        raise VduException("test")
+                        self.consecutive_errors = 0
                 except VduException as ve:
-                    if ve.is_display_not_found_error() and self.main_app.ddcutil.number_of_active_displays() == 0:
-                        log_info(f"LuxAutoWorker: no VDU's available, session might be suspended, waiting and sleeping.")
-                        return False  # Report no work done to force a long sleep
-                    self._message.emit(tr("Failed to adjust {}, will try again").format(vdu_id))
-                    log_warning(f"LuxAutoWorker: Brightness error on {vdu_id}, will sleep and try again: {ve}")
+                    self.consecutive_errors += 1
+                    if self.consecutive_errors == 1:
+                        self._message.emit(tr("Failed to adjust {}, will try again").format(vdu_id))
+                        log_warning(f"LuxAutoWorker: Brightness error on {vdu_id}, will sleep and try again: {ve}")
+                    elif self.consecutive_errors > 1:
+                        self._message.emit(
+                            tr("Failed to adjust {}, {} errors so far. Sleeping {} minutes.").format(
+                                vdu_id, self.consecutive_errors, self.auto_controller.lux_config.get_interval_minutes()))
+                        if self.consecutive_errors == 2 or log_debug_enabled:
+                            log_info(f"LuxAutoWorker: multiple errors count={self.consecutive_errors}, sleeping and retrying.")
+                        return False  # force a full sleep cycle.
         if not made_brightness_changes:
             if step_count != 0:   # Have now finished past work, if a point had a Preset attached, activate it now
                 log_info(f"LuxAutoWorker: stepping completed step={step_count}")  # Only if work was done
+                self._message.emit(tr("Stepping completed"))
                 if profile_preset_name is not None:
                     # Finish by restoring the Preset's non-brightness controls, do it now, while this lux thread is not active.
                     log_info(f"LuxAutoWorker: triggering Preset {profile_preset_name}")
+                    self._message.emit(tr("Restoring preset {}").format(profile_preset_name))
                     preset = self.main_app.find_preset_by_name(profile_preset_name)
                     if preset is not None:
                         self.main_app.restore_preset_in_gui_thread(preset)
@@ -5552,7 +5551,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         quit_button.clicked.connect(self.close)
         button_layout.addWidget(quit_button, 0, Qt.AlignBottom | Qt.AlignRight)
 
-        main_layout.addWidget(buttons_widget)
+        main_layout.addWidget(buttons_widget)  # TODO Replace with a QStatusBar?
 
         def choose_device():
             device_name = QFileDialog.getOpenFileName(self, tr("Select a tty device or fifo"), "/dev/ttyUSB0")[0]
@@ -6333,10 +6332,7 @@ class VduAppWindow(QMainWindow):
                 if self.main_panel.display_vdu_exception(worker_thread.vdu_exception, can_retry=True):
                     # Try again (recursion) in new thread
                     self.restore_preset(preset, restore_finished=restore_finished, immediately=immediately)
-                    return  # Don't do anything more the recursive call will take over from here
-                elif worker_thread.vdu_exception.is_display_not_found_error():
-                    self.main_panel.connected_vdus_changed.emit()
-                    return
+                    return  # Don't do anything more the semi-recursive call above will take over from here
             self.main_panel.refresh_view()
             self.main_panel.indicate_busy(False)
             if self.tray is not None:
@@ -6546,6 +6542,7 @@ class VduAppWindow(QMainWindow):
                 self.display_active_preset()
                 presets_dialog_update_view(message + ' - ' + tr("Restored {}").format(preset.name))
 
+            log_info(f"Activating scheduled preset {preset.name}")
             # Happens asynchronously in a thread
             self.restore_preset(
                 preset,
