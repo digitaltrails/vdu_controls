@@ -646,7 +646,7 @@ from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
-    QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog
+    QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar
 
 APPNAME = "VDU Controls"
 VDU_CONTROLS_VERSION = '1.10.0'
@@ -1039,17 +1039,19 @@ COMPLEX_NON_CONTINUOUS_TYPE = 'CNC'
 # The GUI treats SNC and CNC the same - only DdcUtil needs to distinguish them.
 GUI_NON_CONTINUOUS_TYPE = SIMPLE_NON_CONTINUOUS_TYPE
 
+LOG_SYSLOG_CAT = {syslog.LOG_INFO: "INFO:", syslog.LOG_ERR: "ERROR:",
+                  syslog.LOG_WARNING: "WARNING:", syslog.LOG_DEBUG: "DEBUG:"}
 log_to_syslog = False
 log_debug_enabled = False
 
 
 def log_wrapper(severity, *args):
-    prefix = {syslog.LOG_INFO: "INFO:", syslog.LOG_ERR: "ERROR:",
-              syslog.LOG_WARNING: "WARNING:", syslog.LOG_DEBUG: "DEBUG:"}[severity]
+
     with io.StringIO() as output:
         print(*args, file=output, end='')
         message = output.getvalue()
-        print(prefix, message)
+        prefix = LOG_SYSLOG_CAT[severity]
+        print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), prefix, message)
         if log_to_syslog:
             syslog_message = prefix + " " + message if severity == syslog.LOG_DEBUG else message
             syslog.syslog(severity, syslog_message)
@@ -2042,24 +2044,21 @@ class SettingsEditorTab(QWidget):
                 decline_save_alert.setText(tr('No unsaved changes for {}.').format(vdu_config.config_name))
                 decline_save_alert.exec()
 
-        buttons_widget = QWidget()
-        button_layout = QHBoxLayout()
-        buttons_widget.setLayout(button_layout)
-
         save_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr("Save {}").format(vdu_config.config_name))
         save_button.clicked.connect(save_clicked)
-        button_layout.addWidget(save_button, 0, Qt.AlignBottom | Qt.AlignLeft)
+        self.status_bar = QStatusBar()
+        self.status_bar.addPermanentWidget(save_button, 0)
 
         save_all_button = QPushButton(si(self, QStyle.SP_DriveFDIcon),
                                       tr("Save All").format(vdu_config.config_name))
         save_all_button.clicked.connect(self.save_all_clicked)
-        button_layout.addWidget(save_all_button, 0, Qt.AlignBottom | Qt.AlignLeft)
+        self.status_bar.addPermanentWidget(save_all_button, 0)
 
         quit_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), tr("Close"))
         quit_button.clicked.connect(parent.close)
-        button_layout.addWidget(quit_button, 0, Qt.AlignBottom | Qt.AlignRight)
+        self.status_bar.addPermanentWidget(quit_button, 0)
 
-        editor_layout.addWidget(buttons_widget)
+        editor_layout.addWidget(self.status_bar)
 
     def save(self, force: bool = False, all_changes: Dict[str, str] | None = None) -> int:
         if self.is_unsaved() or force:
@@ -2824,9 +2823,9 @@ class Preset:
         log_info(f"Scheduled preset '{self.name}' for {when_local} in {round(millis / 1000 / 60)} minutes "
                  f"{self.get_solar_elevation()}")
 
-    def remove_elevation_trigger(self):
+    def remove_elevation_trigger(self, quietly: bool = False):
         if self.timer:
-            log_info(f"Preset timer and schedule status cleared for '{self.name}'")
+            log_info(f"Preset timer and schedule status cleared for '{self.name}'") if not quietly else None
             self.timer.stop()
             self.timer = None
         if self.elevation_time_today is not None:
@@ -4250,10 +4249,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         presets_panel_layout.addWidget(self.preset_widgets_scrollarea)
         presets_dialog_splitter.addWidget(presets_panel)
 
-        button_box = QWidget()
-        button_layout = QHBoxLayout()
-        button_box.setLayout(button_layout)
-        button_box.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        # button_layout.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         main_window.app_context_menu.refresh_preset_menu()
         # Create a temporary holder of preset values
         self.base_ini = ConfigIni()
@@ -4314,20 +4310,18 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
 
         presets_dialog_splitter.addWidget(self.editor_groupbox)
 
-        self.bottom_bar_message = QLabel()  # TODO replace with a status bar
+        self.status_bar = QStatusBar()
         self.close_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), tr('close'))
         self.close_button.clicked.connect(self.close)
-        button_layout.addSpacing(5)
-        button_layout.addWidget(self.bottom_bar_message)
-        button_layout.addSpacing(10)
-        button_layout.addWidget(self.close_button, 0, Qt.AlignRight | Qt.AlignBottom)
+        self.status_bar.addPermanentWidget(self.close_button, 0)
+        layout.addWidget(self.status_bar)
 
         self.edit_choose_icon_button.set_preset(None)
         self.editor_controls_widget.setDisabled(True)
         self.editor_transitions_widget.setDisabled(True)
         self.editor_trigger_widget.setDisabled(True)
         self.edit_save_button.setDisabled(True)
-        layout.addWidget(button_box)
+
         self.make_visible()
 
     def sizeHint(self) -> QSize:
@@ -4356,8 +4350,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         # TODO Update preset status display - a bit of an extreme way to do it - consider something better?
         self.reload_data()
 
-    def set_status_message(self, message: str):
-        self.bottom_bar_message.setText(message)
+    def set_status_message(self, message: str, milli_secs: int = 0):
+        self.status_bar.showMessage(message, msecs=milli_secs)
 
     def find_preset_widget(self, name) -> PresetWidget | None:
         for i in range(self.preset_widgets_layout.count()):
@@ -5286,7 +5280,7 @@ class LuxAutoWorker(WorkerThread):
         def lux_message(message: str):
             if LuxDialog.exists():
                 dialog = LuxDialog.get_instance()
-                dialog.display_message(message)
+                dialog.status_bar.showMessage(message)
 
         self._message.connect(lux_message)
 
@@ -5522,36 +5516,30 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.interval_selector.setMaximum(120)
         grid_layout.addWidget(self.interval_selector, 2, 4, 1, 1)
 
-        self.profile_selector = QComboBox()
+        self.profile_selector = QComboBox(self)
         main_layout.addWidget(self.profile_selector)
 
         self.profile_plot = LuxConfigChart(self)
         main_layout.addWidget(self.profile_plot, 1)
 
-        buttons_widget = QWidget()
-        button_layout = QHBoxLayout()
-        buttons_widget.setLayout(button_layout)
+        self.status_bar = QStatusBar()
 
         save_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr("Apply"))
         save_button.setToolTip(tr("Save and apply charted VDU profiles."))
         save_button.clicked.connect(partial(self.save_profiles))
-        button_layout.addWidget(save_button, 0, Qt.AlignBottom | Qt.AlignLeft)
+        self.status_bar.addPermanentWidget(save_button, 0)
 
         revert_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr("Revert"))
         revert_button.setToolTip(tr("Revert charted VDU profiles to those last saved."))
         revert_button.clicked.connect(self.reinitialise)
-        button_layout.addWidget(revert_button, 0, Qt.AlignBottom | Qt.AlignLeft)
-
-        button_layout.addSpacing(30)
-        self.message_area = QLabel("Lux Meter")
-        button_layout.addWidget(self.message_area)
-        button_layout.addStretch(0)
+        self.status_bar.addPermanentWidget(revert_button, 0)
 
         quit_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), tr("Close"))
         quit_button.clicked.connect(self.close)
-        button_layout.addWidget(quit_button, 0, Qt.AlignBottom | Qt.AlignRight)
+        self.status_bar.addPermanentWidget(quit_button, 0)
 
-        main_layout.addWidget(buttons_widget)  # TODO Replace with a QStatusBar?
+        main_layout.addWidget(self.status_bar)
+
 
         def choose_device():
             device_name = QFileDialog.getOpenFileName(self, tr("Select a tty device or fifo"), "/dev/ttyUSB0")[0]
@@ -5633,7 +5621,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
     def make_visible(self):
         super().make_visible()
-        self.display_message("")
+        self.status_bar.showMessage("")
         self.reinitialise()
 
     def validate_device(self, device):
@@ -5656,9 +5644,6 @@ class LuxDialog(QDialog, DialogSingletonMixin):
                 alert.setInformativeText(tr("You might need to be a member of the {} group.").format(path.group()))
             alert.exec()
         return device
-
-    def display_message(self, message):
-        self.message_area.setText(message)
 
     def save_settings(self, requires_auto_brightness_restart: bool = True):
         self.has_profile_changes = False
@@ -6484,7 +6469,7 @@ class VduAppWindow(QMainWindow):
         latest_due = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
         for preset in self.preset_controller.find_presets().values():
             if reset:
-                preset.remove_elevation_trigger()
+                preset.remove_elevation_trigger(quietly=True)
             elevation_key = preset.get_solar_elevation()
             if elevation_key is not None and preset.schedule_status == ScheduleStatus.UNSCHEDULED:
                 if elevation_key in time_map:
