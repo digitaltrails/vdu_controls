@@ -1132,7 +1132,7 @@ class DdcUtil:
             multiplier = self.default_sleep_multiplier if sleep_multiplier is None else sleep_multiplier
             multiplier_args = ['--sleep-multiplier', str(multiplier)] if multiplier > 0.01 else ['--dsa2']
             process_args = [DDCUTIL] + multiplier_args + self.common_args + list(args)
-            try:
+            try:  # TODO consider tracking errors and raising an exception if all VDU's are unavailable
                 result = subprocess.run(process_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
                 if self.debug:  # Shorten EDID to 30 characters when logging it (it will be the only long argument)
                     log_debug("subprocess result: ", [arg if len(arg) < 30 else arg[:30] + "..." for arg in result.args],
@@ -5269,17 +5269,17 @@ class LuxAutoWorker(WorkerThread):
 
         self._refresh_gui_view.connect(refresh_control)  # Make sure GUI refreshes occur in the GUI thread (this thread).
 
-        def lux_message(message: str):
+        def status_message(message: str, timeout:int = -1):
             if LuxDialog.exists():
                 dialog = LuxDialog.get_instance()
-                dialog.status_bar.showMessage(message)
+                dialog.status_bar.showMessage(message, 3000)
 
-        self._message.connect(lux_message)
+        self._message.connect(status_message)
 
     def adjust_for_lux(self):
         time.sleep(2.0)  # Give any previous thread a chance to exit
         log_info(f"LuxAutoWorker monitoring commences (Thread={threading.get_ident()})")
-        self._message.emit(tr("Brightness auto adjustment monitoring commences."))
+        self._message.emit(tr("Brightness auto adjustment on."))
         try:
             step_count = 0  # No zero if work is in progress, zero if there is nothing to do
             while not self.stop_requested:
@@ -5299,6 +5299,7 @@ class LuxAutoWorker(WorkerThread):
                     while not self.stop_requested and time.time() < sleep_end_time:
                         time.sleep(1.0)  # Sleep for the lux-check-interval - but check for stop requests.
         finally:
+            self._message.emit(tr("Brightness auto adjustment off."))
             log_info(f"LuxAutoWorker exiting (stop_requested={self.stop_requested}) (Thread={threading.get_ident()})")
 
     def perform_one_step(self, lux_config: LuxConfig, metered_lux: int, smoothed_lux: int, step_count: int) -> bool:
@@ -5342,9 +5343,9 @@ class LuxAutoWorker(WorkerThread):
                             log_debug(f"LuxAutoWorker: vdu={vdu_id} current={current_brightness}% target={profile_brightness}%"
                                       f" lux={metered_lux} smoothed-lux={smoothed_lux} step={step_count}")
                         brightness_control.restore_vdu_attribute(str(current_brightness + step))
-                        raise VduException("test")
+                        #raise VduException("test")
                         self._refresh_gui_view.emit(brightness_control)
-                        raise VduException("test")
+                        #raise VduException("test")
                         self.consecutive_errors = 0
                 except VduException as ve:
                     self.consecutive_errors += 1
@@ -5532,7 +5533,6 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
         main_layout.addWidget(self.status_bar)
 
-
         def choose_device():
             device_name = QFileDialog.getOpenFileName(self, tr("Select a tty device or fifo"), "/dev/ttyUSB0")[0]
             if device_name != '':
@@ -5613,7 +5613,6 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
     def make_visible(self):
         super().make_visible()
-        self.status_bar.showMessage("")
         self.reinitialise()
 
     def validate_device(self, device):
