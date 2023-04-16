@@ -4310,7 +4310,6 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         presets_dialog_splitter.addWidget(self.editor_groupbox)
 
         self.status_bar = QStatusBar()
-        self.default_timeout = 3000
         self.close_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), tr('close'))
         self.close_button.clicked.connect(self.close)
         self.status_bar.addPermanentWidget(self.close_button, 0)
@@ -4346,12 +4345,10 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.editor_trigger_widget.configure_for_location(self.main_config.get_location())
 
     def refresh_view(self):
-        # A bit extreme, but it works
-        # TODO Update preset status display - a bit of an extreme way to do it - consider something better?
-        self.reload_data()
+        self.reload_data()  # TODO Update preset status display - a bit of an extreme way to do it - consider something better?
 
-    def set_status_message(self, message: str, timeout: int = 0):
-        self.status_bar.showMessage(message, msecs=timeout if timeout >= 0 else self.default_timeout)
+    def status_message(self, message: str, timeout: int = 0):
+        self.status_bar.showMessage(message, msecs=3000 if timeout == -1 else timeout)
 
     def find_preset_widget(self, name) -> PresetWidget | None:
         for i in range(self.preset_widgets_layout.count()):
@@ -4456,7 +4453,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 return
         self.preset_name_edit.setText('')
         self.main_window.save_preset(preset)
-        self.set_status_message(tr("Saved {}").format(preset.name), self.default_timeout)
+        self.status_message(tr("Saved {}").format(preset.name), timeout=-1)
 
     def delete_preset(self, preset: Preset, target_widget: QWidget) -> None:
         confirmation = MessageBox(QMessageBox.Question, buttons=QMessageBox.Ok | QMessageBox.Cancel, default=QMessageBox.Cancel)
@@ -4470,7 +4467,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.main_window.preset_controller.save_order(self.get_presets_name_order())
         self.preset_name_edit.setText('')
         self.preset_widgets_scrollarea.updateGeometry()
-        self.set_status_message(tr("Deleted {}").format(preset.name), timeout=self.default_timeout)
+        self.status_message(tr("Deleted {}").format(preset.name), timeout=-1)
 
     def change_edit_group_title(self):
         changed_text = self.preset_name_edit.text()
@@ -4549,7 +4546,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             self.preset_widgets_scrollarea.updateGeometry()
             QTimer.singleShot(0, scroll_to_bottom)
         self.preset_name_edit.setText('')
-        self.set_status_message(tr("Saved {}").format(preset.name), timeout=self.default_timeout)
+        self.status_message(tr("Saved {}").format(preset.name), timeout=-1)
 
     def create_preset_widget(self, preset):
         return PresetWidget(
@@ -4586,7 +4583,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
 def presets_dialog_update_view(message: str, refresh_view: bool = True):
     presets_dialog = PresetsDialog.get_instance()
     if presets_dialog:
-        presets_dialog.set_status_message(message, timeout=-1)
+        presets_dialog.status_message(message, timeout=-1)
         if refresh_view:
             presets_dialog.refresh_view()
 
@@ -5268,10 +5265,10 @@ class LuxAutoWorker(WorkerThread):
 
         self._refresh_gui_view.connect(refresh_control)  # Make sure GUI refreshes occur in the GUI thread (this thread).
 
-        def status_message(message: str, timeout:int = -1):
+        def status_message(message: str, timeout: int = -1):
             if LuxDialog.exists():
                 dialog = LuxDialog.get_instance()
-                dialog.status_bar.showMessage(message, 3000)
+                dialog.status_message(message, timeout)
 
         self._message.connect(status_message)
 
@@ -5513,13 +5510,15 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.status_bar = QStatusBar()
 
         save_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr("Apply"))
-        save_button.setToolTip(tr("Save and apply charted VDU profiles."))
+        save_button.setToolTip(tr("Save and apply chart changes."))
         save_button.clicked.connect(partial(self.save_profiles))
+        self.save_button = save_button
         self.status_bar.addPermanentWidget(save_button, 0)
 
         revert_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr("Revert"))
-        revert_button.setToolTip(tr("Revert charted VDU profiles to those last saved."))
+        revert_button.setToolTip(tr("Abandon chart changes, revert to charts last saved."))
         revert_button.clicked.connect(self.reinitialise)
+        self.revert_button = revert_button
         self.status_bar.addPermanentWidget(revert_button, 0)
 
         quit_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), tr("Close"))
@@ -5536,6 +5535,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
                     if device_name != self.lux_config.get('lux-meter', 'lux-device', fallback=None):
                         self.lux_config.set('lux-meter', "lux-device", device_name)
                         self.save_settings()
+                        self.status_message(tr("Meter changed to {}.").format(device_name), timeout=-1)
 
         self.meter_device_selector.pressed.connect(choose_device)
 
@@ -5550,15 +5550,18 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             if self.interval_selector.value() != self.lux_config.get_interval_minutes():
                 self.lux_config.set('lux-meter', 'interval-minutes', str(self.interval_selector.value()))
                 self.save_settings(requires_auto_brightness_restart=False)
+                self.status_message(tr("Interval changed to {} minutes.").format(self.interval_selector.value()), timeout=-1)
 
         self.interval_selector.valueChanged.connect(interval_selector_changed)
 
         def select_profile(index: int):
             if self.profile_plot is not None:
-                self.profile_plot.set_current_profile(list(self.profile_data.keys())[index])
+                profile_name = list(self.profile_data.keys())[index]
+                self.profile_plot.set_current_profile(profile_name)
+                self.status_message(tr("Editing profile {}").format(profile_name), timeout=-1)
             if self.lux_config.get('lux-ui', 'selected-profile', fallback=None) != self.profile_selector.itemData(index):
                 self.lux_config.set('lux-ui', 'selected-profile', self.profile_selector.itemData(index))
-                self.save_settings()
+                self.save_settings(requires_auto_brightness_restart=False)
 
         self.profile_selector.currentIndexChanged.connect(select_profile)
         self.make_visible()
@@ -5566,6 +5569,9 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
     def chart_changed_callback(self):
         self.has_profile_changes = True
+        self.status_message(tr("Use Apply to commit chart changes."), timeout=-1)
+        self.save_button.setEnabled(True)
+        self.revert_button.setEnabled(True)
 
     def reinitialise(self):
 
@@ -5573,6 +5579,8 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.device_name = self.lux_config.get("lux-meter", "lux-device", fallback=None)
         self.enabled_checkbox.setChecked(self.lux_config.is_auto_enabled())
         self.has_profile_changes = False
+        self.save_button.setEnabled(False)
+        self.revert_button.setEnabled(False)
 
         new_id_list = []   # List of all currently connected VDU's
         for index, vdu in enumerate(self.main_app.vdu_controllers):
@@ -5633,7 +5641,6 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         return device
 
     def save_settings(self, requires_auto_brightness_restart: bool = True):
-        self.has_profile_changes = False
         self.lux_config.save(self.path)
         if requires_auto_brightness_restart:
             self.main_app.lux_auto_controller.refresh_from_config()
@@ -5647,6 +5654,9 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         data = [(lux_point.lux, lux_point.preset_name) for lux_point in self.profile_plot.preset_points]
         self.lux_config.set('lux-presets', 'lux-preset-points', repr(data))
         self.save_settings(True)
+        self.has_profile_changes = False
+        self.save_button.setEnabled(False)
+        self.revert_button.setEnabled(False)
 
     def closeEvent(self, event) -> None:
         if self.has_profile_changes:
@@ -5661,6 +5671,9 @@ class LuxDialog(QDialog, DialogSingletonMixin):
                 return
         self.lux_meter_widget.stop_metering()
         super().closeEvent(event)
+
+    def status_message(self, message: str, timeout: int = 0):
+        self.status_bar.showMessage(message, 3000 if timeout == -1 else timeout)
 
 
 class LuxDeviceException(Exception):
