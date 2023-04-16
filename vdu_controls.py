@@ -1135,10 +1135,11 @@ class DdcUtil:
                     log_debug("subprocess result: ", [arg if len(arg) < 30 else arg[:30] + "..." for arg in result.args],
                               f"rc={result.returncode}", f"stdout={result.stdout}")
             except subprocess.SubprocessError as spe:
-                if spe.stderr.decode('utf-8').lower().find("display not found") >= 0:
-                    raise DdcUtilDisplayNotFound(' '.join(args))
+                error_text = spe.stderr.decode('utf-8')
                 log_error("subprocess result: ", [arg if len(arg) < 30 else arg[:30] + "..." for arg in process_args],
-                          f"exception={spe}")
+                          f"stderr='{error_text}', exception={str(spe)}")
+                if error_text.lower().find("display not found") >= 0:
+                    raise DdcUtilDisplayNotFound(' '.join(args))
                 raise
             return result
 
@@ -3189,7 +3190,7 @@ class WorkerThread(QThread):
     def __init__(self, task_body: Callable, task_finished: Callable | None = None) -> None:
         """Init should always be called from the GUI thread - for easy access to the GUI thread"""
         super().__init__()
-        log_debug(f"WorkerThread init in thread = {threading.get_ident()} {self.__class__.__name__}")
+        log_debug(f"WorkerThread: going to start a {self.__class__.__name__} from thread = {threading.get_ident()}")
         # Background is always initiated from the GUI thread to grant the worker's __init__ easy access to the GUI thread.
         assert is_running_in_gui_thread()
         self.task_body = task_body
@@ -3201,10 +3202,11 @@ class WorkerThread(QThread):
     def run(self):
         """Long-running task, runs in a separate non-GUI thread"""
         try:
-            log_debug(f"WorkerThread run in thread = {threading.get_ident()} {self.task_body}")
+            log_debug(f"WorkerThread: {self.__class__.__name__} running in thread = {threading.get_ident()} {self.task_body}")
             self.task_body()
         except VduException as e:
             self.vdu_exception = e
+        log_debug(f"WorkerThread: {self.__class__.__name__} thread terminating = {threading.get_ident()}")
         self.finished_work.emit()
 
 
@@ -5291,6 +5293,8 @@ class LuxAutoWorker(WorkerThread):
                 if self.perform_one_step(lux_config, metered_lux, smoothed_lux, step_count):  # if some work was done
                     step_count += 1
                 else:   # No work done this cycle, sleep longer
+                    if log_debug_enabled:
+                        log_debug(f"LuxAutoWorker: sleeping {lux_auto_controller.lux_config.get_interval_minutes()} minutes.")
                     step_count = 0
                     sleep_end_time = time.time() + lux_auto_controller.lux_config.get_interval_minutes() * 60.0 - 0.5
                     while not self.stop_requested and time.time() < sleep_end_time:
