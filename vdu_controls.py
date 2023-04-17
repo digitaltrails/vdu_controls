@@ -1136,10 +1136,10 @@ class DdcUtil:
                               f"rc={result.returncode}", f"stdout={result.stdout}")
             except subprocess.SubprocessError as spe:
                 error_text = spe.stderr.decode('utf-8')
+                if error_text.lower().find("display not found") >= 0:  # raise DdcUtilDisplayNotFound and stay quiet
+                    raise DdcUtilDisplayNotFound(' '.join(args))
                 log_error("subprocess result: ", [arg if len(arg) < 30 else arg[:30] + "..." for arg in process_args],
                           f"stderr='{error_text}', exception={str(spe)}")
-                if error_text.lower().find("display not found") >= 0:
-                    raise DdcUtilDisplayNotFound(' '.join(args))
                 raise
             return result
 
