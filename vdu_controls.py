@@ -3435,7 +3435,7 @@ class PresetWidget(QWidget):
         line_layout.addSpacing(20)
 
         edit_button = QPushButton()
-        edit_button.setIcon(si(self, QStyle.SP_FileIcon))
+        edit_button.setIcon(si(self, QStyle.SP_FileDialogDetailedView))
         edit_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
         edit_button.setFlat(True)
         edit_button.setToolTip(tr('Edit the options for this preset.'))
@@ -4949,7 +4949,7 @@ class LuxConfigChart(QLabel):
             for vdu_id, profile in self.profile_data.items():
                 for profile_point in profile:
                     if profile_point == point:  # Note: these will not be the same object
-                        preset = self.main_app.find_preset_by_name(point.preset)
+                        preset = self.main_app.find_preset_by_name(point.preset_name)
                         preset_brightness = preset.get_brightness(vdu_id) if preset is not None else -1
                         if preset_brightness >= 0: # Convert to normal point - as a convenience for the user
                             profile_point.preset_name = None
