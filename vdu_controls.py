@@ -424,16 +424,27 @@ include typical lux values, for example:
         living-room        50
         night               5
 
-Due to the limitations of DDC protocol, gradual/stepping changes in brightness
-are quite likely to noticeable and potentially annoying.  For this reason lux/brightness
-profiles define set steps of brightness values so that brightness levels remain constant
-over set ranges of lux values.  Achieving an acceptable profile will require some
-experimentation with the step lux-thresholds and lux-ranges.
+Due to VDU hardware and DDC protocal limitations, gradual/stepping changes in
+brightness are quite likely to noticeable and potentially annoying.
+The auto-brightness  adjustment feature includes several measures to dampen
+minimise the amount of stepping:
+
+    * Lux/Brightness Profiles define brightness-steps so that
+      brightness levels remain constant over set ranges of lux values.
+    * Adjustments are only made at intervals of one or more minutes.
+    * Large adjustments are made with larger step sizes to shorten the transition period.
+    * The adjustment task passes lux values through a smoothing low-pass filter.
 
 If light-levels are changing frequently and extremely, for example, as the sun passes
 behind a succession of clouds, the main panel, context-menu, and light-metering dialog
 each contain Manual/Auto controls for disabling/enabling lux metering.  Additionally,
-you might tune the lux/brightness profile to eliminate the issue.
+you might tune the lux/brightness profile to eliminate the issue.  Achieving an
+acceptable profile will require some experimentation.
+
+The Light Meter dialog includes an option to enable interpolation of brightness values
+with each Profile step.  Enabling this option doesn't change the frequency of
+lux-measurements, but during periods where ambient light levels are changing,
+the option may generate more adjustments.
 
 Light metering settings and profiles are stored in::
 
@@ -445,6 +456,9 @@ A typical example follows::
     automatic-brightness = yes
     lux-device = /dev/ttyUSB0
     interval-minutes = 2
+    interpolate-brightness = no
+    smoother-n = 5
+    smoother-alpha = 0.5
 
     [lux-profile]
     hp_zr24w_cnt008 = [(1, 90), (29, 90), (926, 100), (8414, 100), (100000, 100)]
@@ -476,6 +490,13 @@ to use the two together, design your lux/brightness profile steps to match the
 brightness levels of specific Presets, for example, a full-sun Preset and the
 matching step in a lux/brightness Profile might both be assigned the same brightness
 level.
+
+If you choose to have auto-brightness interpolate intermediate values, this
+may further conflict with attached Presets, causing the the Presets not
+to trigger.   Should interpolation get with with 5% of an attached Preset,
+the Preset will be triggered.  Exactly how such combinations play out may
+also vary if more than one VDU is connected, especially if the VDU's have
+greatly differing brightness profiles.
 
 Improving Response Time
 -----------------------
@@ -5270,6 +5291,7 @@ class LuxAutoWorker(WorkerThread):
         self.previous_metered_lux = 0
         self.smoother = LuxSmooth(auto_controller.lux_config.getint('lux-meter', 'smoother-n', fallback=5),
                                   alpha=auto_controller.lux_config.getfloat('lux-meter', 'smoother-alpha', fallback=0.5))
+        self.interpolation_enabled = auto_controller.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True)
         log_info(f"LuxAutoWorker: smoother n={self.smoother.length} alpha={self.smoother.alpha}" )
 
         def refresh_control(control: VduControlBase):
@@ -5321,7 +5343,7 @@ class LuxAutoWorker(WorkerThread):
             controller = control_panel.controller
             vdu_id = controller.vdu_stable_id
             lux_profile = lux_config.get_vdu_profile(controller, self.main_app)
-            profile_brightness, profile_preset_name = self.find_brightness(vdu_id, smoothed_lux, lux_profile)
+            profile_brightness, profile_preset_name = self.calculate_brightness(vdu_id, smoothed_lux, lux_profile)
             brightness_control = next((c for c in control_panel.vcp_controls if c.vcp_capability.vcp_code == '10'), None)
             if profile_brightness >= 0 and brightness_control is not None:  # can only adjust brightness controls
                 try:
@@ -5369,21 +5391,41 @@ class LuxAutoWorker(WorkerThread):
             time.sleep(0.5)  # Let i2c settle down, then continue stepping
         return made_brightness_changes
 
-    def find_brightness(self, vdu_id: str, smoothed_lux: int, lux_profile: List[LuxPoint]):
-        profile_preset_name = None  # should be at most one for a given lux value.
-        profile_brightness = -1  # Just in case we don't get a match
-        for lux_point in lux_profile:  # find the appropriate point in the profile
-            if smoothed_lux >= lux_point.lux:
-                if lux_point.preset_name is None:
-                    profile_brightness = lux_point.brightness
-                else:  # Preset attached at this lux value: brightness will be -1 if the Preset doesn't have a brightness value.
-                    preset = self.main_app.find_preset_by_name(lux_point.preset_name)
-                    if preset:
-                        profile_brightness = preset.get_brightness(vdu_id)
-                        profile_preset_name = lux_point.preset_name
-            else:
+    def calculate_brightness(self, vdu_id: str, smoothed_lux: int, lux_profile: List[LuxPoint]):
+        result_point = LuxPoint(0, 0)  # Only used for interpolation if not profile point is found
+        result_preset_name = None  # should be at most one for a given lux value.
+        result_brightness = -1  # Just in case we don't get a match
+        for current_point in lux_profile:  # find the appropriate point in the profile
+            if smoothed_lux >= current_point.lux:  # moving up the profile lux/brightness steps
+                result_point = current_point
+                result_brightness, result_preset_name = self.get_profile_values(current_point, vdu_id)
+            else:  # next step is too high, optionally interpolate from the prior step to this next one.
+                if self.interpolation_enabled:
+                    next_point = current_point
+                    next_brightness, next_preset_name = self.get_profile_values(next_point, vdu_id)
+                    if result_brightness != next_brightness and next_point.lux > result_point.lux:
+                        interpolated_brightness = \
+                            result_brightness + \
+                            (next_brightness - result_brightness) * \
+                            math.log10(smoothed_lux - result_point.lux) / math.log10(next_point.lux - result_point.lux)
+                        log_debug(f"profile_brightness={result_brightness} interpolated_brightness={interpolated_brightness}")
+                        if abs(result_brightness - interpolated_brightness) > 5:  # Override with interpolated value
+                            result_brightness = interpolated_brightness
+                            result_preset_name = None
                 break
-        return round(profile_brightness), profile_preset_name
+        return round(result_brightness), result_preset_name
+
+    def get_profile_values(self, lux_point, vdu_id):
+        profile_brightness = -1
+        profile_preset_name = None
+        if lux_point.preset_name is None:
+            profile_brightness = lux_point.brightness
+        else:  # Preset attached at this lux value: brightness will be -1 if the Preset doesn't have a brightness value.
+            preset = self.main_app.find_preset_by_name(lux_point.preset_name)
+            if preset:
+                profile_brightness = preset.get_brightness(vdu_id)
+                profile_preset_name = lux_point.preset_name
+        return profile_brightness, profile_preset_name
 
     def get_smoothed_value(self, metered_value: float) -> float:  # A smoothed value
         smoothed = self.smoother.smooth(metered_value)
@@ -5503,7 +5545,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
         self.lux_meter_widget = LuxMeterWidget(lux_changed, parent=self)
         self.lux_meter_widget.display_lux(0)
-        grid_layout.addWidget(self.lux_meter_widget, 0, 0, 3, 3, alignment=Qt.AlignLeft | Qt.AlignTop)
+        grid_layout.addWidget(self.lux_meter_widget, 0, 0, 4, 3, alignment=Qt.AlignLeft | Qt.AlignTop)
 
         self.meter_device_selector = PushButtonLeftJustified()
         self.meter_device_selector.setText(tr("No metering source selected"))
@@ -5519,6 +5561,9 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.interval_selector.setMinimum(1)
         self.interval_selector.setMaximum(120)
         grid_layout.addWidget(self.interval_selector, 2, 4, 1, 1)
+
+        self.interpolate_checkbox = QCheckBox(tr("Interpolate brightness values"))
+        grid_layout.addWidget(self.interpolate_checkbox, 3, 2, 1, 3)
 
         self.profile_selector = QComboBox(self)
         main_layout.addWidget(self.profile_selector)
@@ -5573,6 +5618,13 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
         self.interval_selector.valueChanged.connect(interval_selector_changed)
 
+        def set_interpolation(checked: int):
+            if (checked == Qt.Checked) != self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=False):
+                self.lux_config.set('lux-meter', 'interpolate-brightness', 'yes' if checked == Qt.Checked else 'no')
+                self.save_settings()
+
+        self.interpolate_checkbox.stateChanged.connect(set_interpolation)
+
         def select_profile(index: int):
             if self.profile_plot is not None:
                 profile_name = list(self.profile_data.keys())[index]
@@ -5597,6 +5649,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.lux_config: LuxConfig = self.main_app.lux_auto_controller.lux_config.duplicate(LuxConfig())
         self.device_name = self.lux_config.get("lux-meter", "lux-device", fallback=None)
         self.enabled_checkbox.setChecked(self.lux_config.is_auto_enabled())
+        self.interpolate_checkbox.setChecked(self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=False))
         self.has_profile_changes = False
         self.save_button.setEnabled(False)
         self.revert_button.setEnabled(False)
