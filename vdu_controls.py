@@ -5299,7 +5299,7 @@ class LuxAutoWorker(WorkerThread):
                 lux_config = lux_auto_controller.lux_config.load()  # Refresh
                 metered_lux = lux_auto_controller.lux_meter.get_value()
                 smoothed_lux = round(self.get_smoothed_value(metered_lux))  # Get new smoothed lux value
-                if self.perform_one_step(lux_config, metered_lux, smoothed_lux, step_count):  # if some work was done
+                if self.step_brightness(lux_config, metered_lux, smoothed_lux, step_count):  # if some work was done
                     step_count += 1
                 else:   # No work done this cycle, sleep longer
                     if log_debug_enabled:
@@ -5312,7 +5312,7 @@ class LuxAutoWorker(WorkerThread):
             self._message.emit(tr("Brightness auto adjustment off."))
             log_info(f"LuxAutoWorker exiting (stop_requested={self.stop_requested}) (Thread={threading.get_ident()})")
 
-    def perform_one_step(self, lux_config: LuxConfig, metered_lux: int, smoothed_lux: int, step_count: int) -> bool:
+    def step_brightness(self, lux_config: LuxConfig, metered_lux: int, smoothed_lux: int, step_count: int) -> bool:
         made_brightness_changes = False
         profile_preset_name = None
         for control_panel in self.main_app.main_panel.vdu_control_panels:  # For each VDU, find its profile and apply it
@@ -5321,7 +5321,7 @@ class LuxAutoWorker(WorkerThread):
             controller = control_panel.controller
             vdu_id = controller.vdu_stable_id
             lux_profile = lux_config.get_vdu_profile(controller, self.main_app)
-            profile_brightness, profile_preset_name = self.decide_brightness(lux_profile, smoothed_lux, vdu_id)
+            profile_brightness, profile_preset_name = self.find_brightness(vdu_id, smoothed_lux, lux_profile)
             brightness_control = next((c for c in control_panel.vcp_controls if c.vcp_capability.vcp_code == '10'), None)
             if profile_brightness >= 0 and brightness_control is not None:  # can only adjust brightness controls
                 try:
@@ -5369,29 +5369,21 @@ class LuxAutoWorker(WorkerThread):
             time.sleep(0.5)  # Let i2c settle down, then continue stepping
         return made_brightness_changes
 
-    def decide_brightness(self, lux_profile, smoothed_lux, vdu_id):
+    def find_brightness(self, vdu_id: str, smoothed_lux: int, lux_profile: List[LuxPoint]):
         profile_preset_name = None  # should be at most one for a given lux value.
         profile_brightness = -1  # Just in case we don't get a match
         for lux_point in lux_profile:  # find the appropriate point in the profile
             if smoothed_lux >= lux_point.lux:
-                profile_brightness, profile_preset_name = self.get_brightness_and_preset_name(vdu_id, lux_point)
+                if lux_point.preset_name is None:
+                    profile_brightness = lux_point.brightness
+                else:  # Preset attached at this lux value: brightness will be -1 if the Preset doesn't have a brightness value.
+                    preset = self.main_app.find_preset_by_name(lux_point.preset_name)
+                    if preset:
+                        profile_brightness = preset.get_brightness(vdu_id)
+                        profile_preset_name = lux_point.preset_name
             else:
                 break
         return round(profile_brightness), profile_preset_name
-
-    def get_brightness_and_preset_name(self, vdu_id, lux_point):
-        source = None
-        brightness = -1
-        if lux_point.preset_name is None:
-            brightness = lux_point.brightness
-        else:
-            # Point with a Preset attached at this lux value, might only be this point and not others.
-            # profile_brightness will be -1 if the Preset doesn't specify a brightness value.
-            preset = self.main_app.find_preset_by_name(lux_point.preset_name)
-            if preset:
-                brightness = preset.get_brightness(vdu_id)
-                source = lux_point.preset_name
-        return brightness, source
 
     def get_smoothed_value(self, metered_value: float) -> float:  # A smoothed value
         smoothed = self.smoother.smooth(metered_value)
@@ -5400,9 +5392,6 @@ class LuxAutoWorker(WorkerThread):
     def finished_callable(self):
         if self.vdu_exception:
             log_error(f"LuxAutoWorker exited with exception={self.vdu_exception}")
-
-    def interploate_brightness(self, param: List[LuxPoint]):
-        pass
 
 
 class LuxPoint:
