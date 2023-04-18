@@ -4273,16 +4273,6 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
 
         self.edit_preset_layout.addWidget(self.preset_name_edit)
 
-        self.edit_save_button = QPushButton()
-        self.edit_save_button.setIcon(si(self, QStyle.SP_DriveFDIcon))
-        self.edit_save_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
-        self.edit_save_button.setFlat(True)
-        self.edit_save_button.setToolTip(tr('Save current VDU settings to a new preset.'))
-        self.edit_preset_layout.addWidget(self.edit_save_button)
-
-        self.edit_save_button.clicked.connect(self.save_edited_preset)
-        self.edit_save_needed.connect(self.save_edited_preset)
-
         self.editor_groupbox = QGroupBox()
         self.editor_groupbox.setFlat(True)
         self.editor_groupbox.setMinimumHeight(768)
@@ -4310,7 +4300,25 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         presets_dialog_splitter.addWidget(self.editor_groupbox)
 
         self.status_bar = QStatusBar()
-        self.close_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), tr('close'))
+        self.edit_save_button = QPushButton(si(self, QStyle.SP_DialogSaveButton), tr('Save'))
+        self.edit_save_button.clicked.connect(self.save_edited_preset)
+        self.edit_save_needed.connect(self.save_edited_preset)
+        self.status_bar.addPermanentWidget(self.edit_save_button)
+
+        self.edit_revert_button = QPushButton(si(self, QStyle.SP_DialogResetButton), tr('Revert'))
+
+        def revert_callable():
+            preset_name = self.preset_name_edit.text().strip()
+            preset_widget = self.find_preset_widget(preset_name)
+            if preset_widget is None:
+                self.preset_name_edit.setText('')
+            else:
+                self.edit_preset(preset_widget.preset)
+
+        self.edit_revert_button.clicked.connect(revert_callable)
+        self.status_bar.addPermanentWidget(self.edit_revert_button)
+
+        self.close_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), tr('Close'))
         self.close_button.clicked.connect(self.close)
         self.status_bar.addPermanentWidget(self.close_button, 0)
         layout.addWidget(self.status_bar)
@@ -4320,6 +4328,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.editor_transitions_widget.setDisabled(True)
         self.editor_trigger_widget.setDisabled(True)
         self.edit_save_button.setDisabled(True)
+        self.edit_revert_button.setDisabled(True)
 
         self.make_visible()
 
@@ -4476,6 +4485,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             self.editor_transitions_widget.setDisabled(True)
             self.editor_trigger_widget.setDisabled(True)
             self.edit_save_button.setDisabled(True)
+            self.edit_revert_button.setDisabled(True)
             self.editor_title.setText(tr("Create new preset:"))
             self.editor_controls_prompt.setText(tr("Controls to include:"))
             self.controls_title_widget.setDisabled(True)
@@ -4493,6 +4503,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             self.controls_title_widget.setDisabled(False)
             self.editor_transitions_widget.setDisabled(False)
             self.edit_save_button.setDisabled(False)
+            self.edit_revert_button.setDisabled(False)
 
     def edit_preset(self, preset: Preset) -> None:
         def begin_editing(succeeded: bool):
@@ -5030,16 +5041,17 @@ class LuxMeterWidget(QWidget):
         big_font.setPointSize(big_font.pointSize() + 8)
         self.current_lux_display.setFont(big_font)
         self.layout().addWidget(self.current_lux_display)
-        self.history = [0] * 50
+        self.max_history = 200
+        self.history = [0] * (self.max_history // 5)
         self.lux_plot = QLabel()
-        self.lux_plot.setFixedWidth(200)
+        self.lux_plot.setFixedWidth(self.max_history)
         self.lux_plot.setFixedHeight(100)
         self.layout().addWidget(self.lux_plot)
         self.lux_meter_worker: LuxMeterWidgetThread | None = None
 
     def display_lux(self, lux: int):
         self.current_lux_display.setText(tr("Lux: {}".format(lux)))
-        self.history = self.history[-100:]
+        self.history = self.history[-self.max_history:]
         self.history.append(lux)
         pixmap = QPixmap(self.lux_plot.width(), self.lux_plot.height())
         painter = QPainter(pixmap)
@@ -5301,24 +5313,15 @@ class LuxAutoWorker(WorkerThread):
             log_info(f"LuxAutoWorker exiting (stop_requested={self.stop_requested}) (Thread={threading.get_ident()})")
 
     def perform_one_step(self, lux_config: LuxConfig, metered_lux: int, smoothed_lux: int, step_count: int) -> bool:
-        profile_preset_name = None  # should be at most one for a given lux value.
         made_brightness_changes = False
+        profile_preset_name = None
         for control_panel in self.main_app.main_panel.vdu_control_panels:  # For each VDU, find its profile and apply it
             if self.stop_requested:
                 break
             controller = control_panel.controller
-            profile_brightness = -1  # Just in case we don't get a match
             vdu_id = controller.vdu_stable_id
-            for lux_point in lux_config.get_vdu_profile(controller, self.main_app):  # find the appropriate point in the profile
-                if smoothed_lux >= lux_point.lux:
-                    if lux_point.preset_name is None:  # Normal Point
-                        profile_brightness = lux_point.brightness
-                    else:  # Point with a Preset attached at this lux value, might only be this point and not others.
-                        # profile_brightness will be -1 if the Preset doesn't specify a brightness value.
-                        preset = self.main_app.find_preset_by_name(lux_point.preset_name)
-                        if preset:
-                            profile_brightness = preset.get_brightness(vdu_id)
-                            profile_preset_name = lux_point.preset_name
+            lux_profile = lux_config.get_vdu_profile(controller, self.main_app)
+            profile_brightness, profile_preset_name = self.decide_brightness(lux_profile, smoothed_lux, vdu_id)
             brightness_control = next((c for c in control_panel.vcp_controls if c.vcp_capability.vcp_code == '10'), None)
             if profile_brightness >= 0 and brightness_control is not None:  # can only adjust brightness controls
                 try:
@@ -5366,6 +5369,30 @@ class LuxAutoWorker(WorkerThread):
             time.sleep(0.5)  # Let i2c settle down, then continue stepping
         return made_brightness_changes
 
+    def decide_brightness(self, lux_profile, smoothed_lux, vdu_id):
+        profile_preset_name = None  # should be at most one for a given lux value.
+        profile_brightness = -1  # Just in case we don't get a match
+        for lux_point in lux_profile:  # find the appropriate point in the profile
+            if smoothed_lux >= lux_point.lux:
+                profile_brightness, profile_preset_name = self.get_brightness_and_preset_name(vdu_id, lux_point)
+            else:
+                break
+        return round(profile_brightness), profile_preset_name
+
+    def get_brightness_and_preset_name(self, vdu_id, lux_point):
+        source = None
+        brightness = -1
+        if lux_point.preset_name is None:
+            brightness = lux_point.brightness
+        else:
+            # Point with a Preset attached at this lux value, might only be this point and not others.
+            # profile_brightness will be -1 if the Preset doesn't specify a brightness value.
+            preset = self.main_app.find_preset_by_name(lux_point.preset_name)
+            if preset:
+                brightness = preset.get_brightness(vdu_id)
+                source = lux_point.preset_name
+        return brightness, source
+
     def get_smoothed_value(self, metered_value: float) -> float:  # A smoothed value
         smoothed = self.smoother.smooth(metered_value)
         return smoothed
@@ -5373,6 +5400,9 @@ class LuxAutoWorker(WorkerThread):
     def finished_callable(self):
         if self.vdu_exception:
             log_error(f"LuxAutoWorker exited with exception={self.vdu_exception}")
+
+    def interploate_brightness(self, param: List[LuxPoint]):
+        pass
 
 
 class LuxPoint:
@@ -5515,7 +5545,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.save_button = save_button
         self.status_bar.addPermanentWidget(save_button, 0)
 
-        revert_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr("Revert"))
+        revert_button = QPushButton(si(self, QStyle.SP_DialogResetButton), tr("Revert"))
         revert_button.setToolTip(tr("Abandon chart changes, revert to charts last saved."))
         revert_button.clicked.connect(self.reinitialise)
         self.revert_button = revert_button
