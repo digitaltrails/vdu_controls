@@ -5403,7 +5403,7 @@ class LuxAutoWorker(WorkerThread):
                                                                                         result_point, step_point,
                                                                                         result_brightness, result_preset_name)
                 break
-        log_debug(f"LuxAutoWorker: determine_brightness {vdu_id=} {result_brightness=}% {result_preset_name=}") if log_debug_enabled else None
+        log_debug(f"LuxAutoWorker: determine_brightness {vdu_id=} {result_brightness=:.2f}% {result_preset_name=}") if log_debug_enabled else None
         return round(result_brightness), result_preset_name
 
     def interpolate_brightness(self, vdu_id, smoothed_lux, result_point, next_point, result_brightness, result_preset_name):
@@ -5412,19 +5412,22 @@ class LuxAutoWorker(WorkerThread):
                   f"{result_brightness=}% {next_brightness=}% {result_preset_name=}") if log_debug_enabled else None
         if result_preset_name is not None and abs(
                 smoothed_lux - result_point.lux) <= result_point.lux * self.lux_proximity_ratio:
-            log_debug(f"LuxAutoWorker: interpolation: Preset proximity, using result_point's Preset {result_preset_name}") if log_debug_enabled else None
+            log_debug(f"LuxAutoWorker: interpolation: Preset proximity: {result_preset_name}") if log_debug_enabled else None
             pass  # Close enough to just use the existing result's Preset
         elif next_preset_name is not None and abs(smoothed_lux - next_point.lux) <= next_point.lux * self.lux_proximity_ratio:
-            log_debug(f"LuxAutoWorker: interpolation: Preset proximity, using next_point's {next_preset_name}") if log_debug_enabled else None
+            log_debug(f"LuxAutoWorker: interpolation: next_pt Preset proximity: {next_preset_name}") if log_debug_enabled else None
             result_brightness = next_brightness
             result_preset_name = next_preset_name  # Close enough to use the next point's Preset.
         else:  # Not close to a Preset, interpolate a value - no idea if the log10 approach is perfectly correct
-            if result_brightness != next_brightness and next_point.lux > result_point.lux:  # only if there is a slope...
+            if result_brightness != next_brightness and smoothed_lux != result_point.lux and next_point.lux > result_point.lux:  # only if there is a slope...
+                log_debug(f"LuxAutoWorker: interpolation: {result_brightness=} {next_brightness=}" 
+                          f" {smoothed_lux=} {result_point.lux=} {next_point.lux=}") if log_debug_enabled else None
                 interpolated_brightness = \
                     result_brightness + \
                     (next_brightness - result_brightness) * \
                     math.log10(smoothed_lux - result_point.lux) / math.log10(next_point.lux - result_point.lux)
-                log_debug(f"LuxAutoWorker: interpolation: {vdu_id=} {interpolated_brightness=:.2f}% originally={result_brightness}%") if log_debug_enabled else None
+                log_debug(f"LuxAutoWorker: interpolation: {vdu_id=} {interpolated_brightness=:.2f}% " 
+                          f"originally={result_brightness}%") if log_debug_enabled else None
                 if abs(result_brightness - interpolated_brightness) > 5:  # Override result with interpolated value
                     result_brightness = interpolated_brightness
                     result_preset_name = None  # definitely between any Presets if we reach here
@@ -5735,7 +5738,10 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             self.main_app.lux_auto_controller.refresh_from_config()
             self.lux_meter_widget.stop_metering()
             self.lux_meter_widget.start_metering(self.main_app.lux_auto_controller.lux_meter)
-            self.status_message(tr("Restarted brightness auto adjustment"), -1)
+            if self.lux_config.is_auto_enabled():
+                self.status_message(tr("Restarted brightness auto adjustment"), -1)
+            else:
+                self.status_message(tr("Brightness auto adjustment is disabled."), -1)
 
     def save_profiles(self):
         for vdu_id, profile in self.profile_plot.profile_data.items():
