@@ -5390,10 +5390,11 @@ class LuxAutoWorker(WorkerThread):
         return made_brightness_changes
 
     def determine_brightness(self, vdu_id: str, smoothed_lux: int, lux_profile: List[LuxPoint]):
-        result_point = LuxPoint(0, 0)  # Only used for interpolation if not profile point is found
+        result_point = None
         result_preset_name = None  # should be at most one for a given lux value.
         result_brightness = -1  # Just in case we don't get a match
-        for step_point in lux_profile:  # Moving up the lux steps, seeking the step immediately below smoothed_lux
+        for step_point in [LuxPoint(0, 0)] + lux_profile + [LuxPoint(100000, 100)]:
+            # Moving up the lux steps, seeking the step below smoothed_lux
             if smoothed_lux >= step_point.lux:  # Possible result, there may be something higher, keep going...
                 result_point = step_point
                 result_brightness, result_preset_name = self.get_profile_values(step_point, vdu_id)
@@ -5419,12 +5420,12 @@ class LuxAutoWorker(WorkerThread):
             result_brightness = next_brightness
             result_preset_name = next_preset_name  # Close enough to use the next point's Preset.
         else:  # Not close to a Preset, interpolate a value - no idea if the log10 approach is perfectly correct
+            # Only interpolate if 1) there is a slope in brightness, 2) lux is somewhere beyond its base point, 3)
             if result_brightness != next_brightness and smoothed_lux != result_point.lux and next_point.lux > result_point.lux:  # only if there is a slope...
                 log_debug(f"LuxAutoWorker: interpolation: {result_brightness=} {next_brightness=}" 
                           f" {smoothed_lux=} {result_point.lux=} {next_point.lux=}") if log_debug_enabled else None
                 interpolated_brightness = \
-                    result_brightness + \
-                    (next_brightness - result_brightness) * \
+                    result_brightness + (next_brightness - result_brightness) * \
                     math.log10(smoothed_lux - result_point.lux) / math.log10(next_point.lux - result_point.lux)
                 log_debug(f"LuxAutoWorker: interpolation: {vdu_id=} {interpolated_brightness=:.2f}% " 
                           f"originally={result_brightness}%") if log_debug_enabled else None
