@@ -1126,9 +1126,8 @@ class DdcUtil:
     corrective action such as increasing the sleep_multiplier).
     """
 
-    def __init__(self, debug: bool = False, common_args=None, default_sleep_multiplier: float = 1.0) -> None:
+    def __init__(self, common_args=None, default_sleep_multiplier: float = 1.0) -> None:
         super().__init__()
-        self.debug = debug
         self.supported_codes: Dict[str, str] | None = None
         self.default_sleep_multiplier = default_sleep_multiplier
         self.common_args = [] if common_args is None else common_args
@@ -1138,8 +1137,7 @@ class DdcUtil:
         self.edid_map: Dict[str, str] = {}
         self.lock = Lock()
 
-    def change_settings(self, debug: bool, default_sleep_multiplier: float):
-        self.debug = debug
+    def change_settings(self, default_sleep_multiplier: float):
         self.default_sleep_multiplier = default_sleep_multiplier
 
     def id_key_args(self, display_id: str) -> List[str]:
@@ -1152,9 +1150,9 @@ class DdcUtil:
             process_args = [DDCUTIL] + multiplier_args + self.common_args + list(args)
             try:  # TODO consider tracking errors and raising an exception if all VDU's are unavailable
                 result = subprocess.run(process_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-                if self.debug:  # Shorten EDID to 30 characters when logging it (it will be the only long argument)
-                    log_debug("subprocess result: ", [arg if len(arg) < 30 else arg[:30] + "..." for arg in result.args],
-                              f"rc={result.returncode}", f"stdout={result.stdout}")
+                # Shorten EDID to 30 characters when logging it (it will be the only long argument)
+                log_debug("subprocess result: ", [arg if len(arg) < 30 else arg[:30] + "..." for arg in result.args],
+                          f"rc={result.returncode}", f"stdout={result.stdout}") if log_debug_enabled else None
             except subprocess.SubprocessError as spe:
                 error_text = spe.stderr.decode('utf-8')
                 if error_text.lower().find("display not found") >= 0:  # raise DdcUtilDisplayNotFound and stay quiet
@@ -1228,7 +1226,7 @@ class DdcUtil:
         edid_match = re.search(r'EDID hex dump:\n[^\n]+(\n([ \t]+[+]0).+)+', display_str)
         if edid_match:
             edid = "".join(re.findall('((?: [0-9a-f][0-9a-f]){16})', edid_match.group(0))).replace(' ', '')
-            log_info(f"EDID={edid}") if self.debug else None
+            log_debug(f"{edid=}") if log_debug_enabled else None
             return edid
         return None
 
@@ -5310,7 +5308,6 @@ class LuxAutoWorker(WorkerThread):
     def adjust_for_lux(self):
         time.sleep(2.0)  # Give any previous thread a chance to exit
         log_info(f"LuxAutoWorker monitoring commences (Thread={threading.get_ident()})")
-        self._message.emit(tr("Brightness auto adjustment on."))
         try:
             step_count = 0  # No zero if work is in progress, zero if there is nothing to do
             while not self.stop_requested:
@@ -5332,7 +5329,6 @@ class LuxAutoWorker(WorkerThread):
                     while not self.stop_requested and time.time() < sleep_end_time:
                         time.sleep(1.0)  # Sleep for the lux-check-interval - but check for stop requests.
         finally:
-            self._message.emit(tr("Brightness auto adjustment off."))
             log_info(f"LuxAutoWorker exiting (stop_requested={self.stop_requested}) (Thread={threading.get_ident()})")
 
     def step_brightness(self, lux_config: LuxConfig, metered_lux: int, smoothed_lux: int, step_count: int) -> bool:
@@ -5705,6 +5701,8 @@ class LuxDialog(QDialog, DialogSingletonMixin):
                     self.profile_plot.current_vdu_id = existing_selected_id
         self.profile_selector.blockSignals(False)
         self.lux_meter_widget.start_metering(self.main_app.lux_auto_controller.lux_meter)
+        self.profile_plot.create_plot()
+        self.status_message(tr("Read {} lux/brightness profiles.").format(len(new_id_list)), -1)
 
     def make_visible(self):
         super().make_visible()
@@ -5737,6 +5735,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             self.main_app.lux_auto_controller.refresh_from_config()
             self.lux_meter_widget.stop_metering()
             self.lux_meter_widget.start_metering(self.main_app.lux_auto_controller.lux_meter)
+            self.status_message(tr("Restarted brightness auto adjustment"), -1)
 
     def save_profiles(self):
         for vdu_id, profile in self.profile_plot.profile_data.items():
@@ -6047,8 +6046,7 @@ class VduAppWindow(QMainWindow):
                                            "vdu_controls to restart.").format(setting))
                     return
             main_config.reload()
-            self.ddcutil.change_settings(debug=main_config.is_set(GlobalOption.DEBUG_ENABLED),
-                                         default_sleep_multiplier=main_config.get_sleep_multiplier())
+            self.ddcutil.change_settings(default_sleep_multiplier=main_config.get_sleep_multiplier())
             self.create_main_control_panel()
             self.schedule_presets(reset=True)
             presets_dialog = PresetsDialog.get_instance()
@@ -6236,7 +6234,7 @@ class VduAppWindow(QMainWindow):
         ddcutil_problem = None
         try:
             ddcutil_common_args = ['--force', ] if self.is_non_standard_enabled() else []
-            self.ddcutil = DdcUtil(debug=self.main_config.is_set(GlobalOption.DEBUG_ENABLED), common_args=ddcutil_common_args,
+            self.ddcutil = DdcUtil(common_args=ddcutil_common_args,
                                    default_sleep_multiplier=self.main_config.get_sleep_multiplier())
             self.detected_vdu_list = []
             log_debug("Detecting connected monitors, looping detection until it stabilises.")
