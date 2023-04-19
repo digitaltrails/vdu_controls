@@ -457,12 +457,17 @@ A typical example follows::
     lux-device = /dev/ttyUSB0
     interval-minutes = 2
     interpolate-brightness = no
+    interpolation-min-percent-change = 5
+    interpolation-lux-preset-proximity-ratio = 0.1
     smoother-n = 5
     smoother-alpha = 0.5
 
     [lux-profile]
     hp_zr24w_cnt008 = [(1, 90), (29, 90), (926, 100), (8414, 100), (100000, 100)]
     lg_hdr_4k_8 = [(1, 13), (60, 25), (100, 50), (299, 70), (1000, 90), (10000, 100), (100000, 100)]
+
+    [lux-presets]
+    lux-preset-points = [(0, 'Night'), (60, 'Brighter-Night'), (250, 'Cloudy'), (1000, 'Sunny')]
 
 Light/Lux Metering and Presets
 -------------------------------
@@ -5282,6 +5287,7 @@ class LuxAutoWorker(WorkerThread):
 
     def __init__(self, auto_controller: LuxAutoController):
         super().__init__(task_body=self.adjust_for_lux, task_finished=self.finished_callable)
+
         self.auto_controller = auto_controller
         self.main_app = auto_controller.main_app
         self.last_value = None
@@ -5292,7 +5298,10 @@ class LuxAutoWorker(WorkerThread):
         self.smoother = LuxSmooth(auto_controller.lux_config.getint('lux-meter', 'smoother-n', fallback=5),
                                   alpha=auto_controller.lux_config.getfloat('lux-meter', 'smoother-alpha', fallback=0.5))
         self.interpolation_enabled = auto_controller.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True)
-        self.lux_proximity_ratio = auto_controller.lux_config.getboolean('lux-presets', 'lux-proximity-ratio', fallback=0.1)
+        self.min_brightness_change = auto_controller.lux_config.getboolean('lux-meter', 'interpolation-min-percent-change',
+                                                                           fallback=5)
+        self.lux_proximity_ratio = auto_controller.lux_config.getboolean('lux-presets', 'interpolation-lux-preset-proximity-ratio',
+                                                                         fallback=0.1)
         log_info(f"LuxAutoWorker: smoother n={self.smoother.length} alpha={self.smoother.alpha}")
 
         def refresh_control(control: VduControlBase):
@@ -5349,20 +5358,24 @@ class LuxAutoWorker(WorkerThread):
                 try:
                     current_brightness = int(controller.get_attribute('10')[0])
                     if not self.stop_requested and current_brightness != profile_brightness:
-                        made_brightness_changes = True
                         if vdu_id not in self.target_brightness or self.target_brightness[vdu_id] != profile_brightness:
                             self.target_brightness[vdu_id] = profile_brightness
                             log_info(f"LuxAutoWorker: {vdu_id=}: new target={profile_brightness}%"
                                      f" {current_brightness=}% {metered_lux=} {smoothed_lux=} {step_count=}")
                         diff = profile_brightness - current_brightness
-                        step_size = max(1, abs(diff) // 3)  # 4 if abs(diff) < 8 else 8  # TODO find a good heuristic
-                        step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
-                        self._message.emit(tr("Adjusting {} by {}").format(vdu_id, step_size))
-                        if step_count != 0 and log_debug_enabled:
-                            log_debug(f"LuxAutoWorker: {vdu_id=} target={profile_brightness}%"
-                                      f" {current_brightness=}% {metered_lux=} {smoothed_lux=} {step=} {step_count=}")
-                        brightness_control.restore_vdu_attribute(str(current_brightness + step))
-                        self._refresh_gui_view.emit(brightness_control)
+                        if step_count == 0 and abs(diff) < self.min_brightness_change and profile_preset_name is None:
+                            log_info(f"LuxAutoWorker: {vdu_id=}: {current_brightness=}% target={profile_brightness}% "
+                                     f" {step_count=}, new change too small to bother with.")
+                        else:
+                            made_brightness_changes = True
+                            step_size = max(1, abs(diff) // 3)  # 4 if abs(diff) < 8 else 8  # TODO find a good heuristic
+                            step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
+                            self._message.emit(tr("Adjusting {} by {}").format(vdu_id, step_size))
+                            if step_count != 0 and log_debug_enabled:
+                                log_debug(f"LuxAutoWorker: {vdu_id=} target={profile_brightness}%"
+                                          f" {current_brightness=}% {metered_lux=} {smoothed_lux=} {step=} {step_count=}")
+                            brightness_control.restore_vdu_attribute(str(current_brightness + step))
+                            self._refresh_gui_view.emit(brightness_control)
                         self.consecutive_errors = 0
                 except VduException as ve:
                     self.consecutive_errors += 1
