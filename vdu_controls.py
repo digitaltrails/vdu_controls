@@ -4842,6 +4842,10 @@ class LuxConfigChart(QLabel):
         for vdu_id, vdu_data in [(vid, data) for vid, data in self.profile_data.items() if vid != self.current_vdu_id] + \
                                 [(self.current_vdu_id, self.profile_data[self.current_vdu_id])]:
             last_x, last_y = 0, 0
+            vdu_color_num = self.vdu_chart_colors[vdu_id]
+            vdu_line_color = QColor(vdu_color_num)
+            histogram_bar_color = QColor(vdu_line_color)
+            histogram_bar_color.setAlpha(50)
             for point_data in vdu_data:
                 lux = point_data.lux
                 if point_data.preset_name is None:
@@ -4850,25 +4854,23 @@ class LuxConfigChart(QLabel):
                     preset = self.main_app.find_preset_by_name(point_data.preset_name)
                     brightness = preset.get_brightness(vdu_id) if preset is not None else -1
                 if brightness >= 0:
-                    vdu_line_color = QColor(self.vdu_chart_colors[vdu_id])
                     x = self.x_origin + self.x_from_lux(lux)
                     y = self.y_origin - self.y_from_percent(brightness)
                     if last_x and last_y:  # Join the previous and current point with a line
                         painter.setPen(QPen(vdu_line_color, std_line_width))
                         painter.drawLine(last_x, last_y, x, y)
                     if self.current_vdu_id == vdu_id:  # Special handling for the current/selected VDU
-                        point_markers.append((point_data, x, y, lux, brightness))  # Save data for drawing markers later
+                        point_markers.append((point_data, x, y, lux, brightness, vdu_color_num))  # Save data for drawing markers
                         if last_x and last_y:  # draw histogram rectangle
-                            vdu_line_color.setAlpha(50)
-                            painter.fillRect(last_x, last_y, x - last_x, self.y_origin - last_y, vdu_line_color)
+                            painter.fillRect(last_x, last_y, x - last_x, self.y_origin - last_y, histogram_bar_color)
                     last_x, last_y = x, y
             if self.current_vdu_id == vdu_id and last_x and last_y:   # Fill steps under the points
-                painter.fillRect(last_x, last_y, 25, self.y_origin - last_y, vdu_line_color)
+                painter.fillRect(last_x, last_y, 25, self.y_origin - last_y, histogram_bar_color)
 
-        for point_data, x, y, lux, brightness in point_markers:  # draw point markers on top of lines and histograms
+        for point_data, x, y, lux, brightness, vdu_color_num in point_markers:  # draw point markers on top of lines and histograms
             if point_data.preset_name is None:  # Normal point
                 marker_diameter = std_line_width * 4
-                painter.setPen(QPen(QColor(self.vdu_chart_colors[vdu_id]), std_line_width))
+                painter.setPen(QPen(QColor(vdu_color_num), std_line_width))
             else:  # Preset Point - fixed/non-deletable brightness level from Preset
                 marker_diameter = std_line_width * 2
                 painter.setPen(QPen(QColor(preset_color), std_line_width))
@@ -4970,7 +4972,7 @@ class LuxConfigChart(QLabel):
                     if profile_point == point:  # Note: these will not be the same object
                         preset = self.main_app.find_preset_by_name(point.preset_name)
                         preset_brightness = preset.get_brightness(vdu_id) if preset is not None else -1
-                        if preset_brightness >= 0: # Convert to normal point - as a convenience for the user
+                        if preset_brightness >= 0:  # Convert to normal point - as a convenience for the user
                             profile_point.preset_name = None
                             profile_point.brightness = preset_brightness
                         else:  # A Preset without a brightness value for this VDU - remove the point
@@ -5291,7 +5293,7 @@ class LuxAutoWorker(WorkerThread):
                                   alpha=auto_controller.lux_config.getfloat('lux-meter', 'smoother-alpha', fallback=0.5))
         self.interpolation_enabled = auto_controller.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True)
         self.lux_proximity_ratio = auto_controller.lux_config.getboolean('lux-presets', 'lux-proximity-ratio', fallback=0.1)
-        log_info(f"LuxAutoWorker: smoother n={self.smoother.length} alpha={self.smoother.alpha}" )
+        log_info(f"LuxAutoWorker: smoother n={self.smoother.length} alpha={self.smoother.alpha}")
 
         def refresh_control(control: VduControlBase):
             control.refresh_view()
@@ -5331,7 +5333,7 @@ class LuxAutoWorker(WorkerThread):
         finally:
             log_info(f"LuxAutoWorker exiting (stop_requested={self.stop_requested}) (Thread={threading.get_ident()})")
 
-    def step_brightness(self, lux_config: LuxConfig, metered_lux: int, smoothed_lux: int, step_count: int) -> bool:
+    def step_brightness(self, lux_config: LuxConfig, metered_lux: float, smoothed_lux: float, step_count: int) -> bool:
         made_brightness_changes = False
         profile_preset_name = None
         for control_panel in self.main_app.main_panel.vdu_control_panels:  # For each VDU, find its profile and apply it
@@ -5339,7 +5341,7 @@ class LuxAutoWorker(WorkerThread):
                 break
             controller = control_panel.controller
             vdu_id = controller.vdu_stable_id
-            lux_profile = lux_config.get_vdu_profile(controller, self.main_app)
+            lux_profile = lux_config.get_vdu_profile(controller)
             # In case the lux reading changes, reevaluate target brightness every time...
             profile_brightness, profile_preset_name = self.determine_brightness(vdu_id, smoothed_lux, lux_profile)
             brightness_control = next((c for c in control_panel.vcp_controls if c.vcp_capability.vcp_code == '10'), None)
@@ -5389,7 +5391,7 @@ class LuxAutoWorker(WorkerThread):
             time.sleep(0.5)  # Let i2c settle down, then continue stepping
         return made_brightness_changes
 
-    def determine_brightness(self, vdu_id: str, smoothed_lux: int, lux_profile: List[LuxPoint]):
+    def determine_brightness(self, vdu_id: str, smoothed_lux: float, lux_profile: List[LuxPoint]):
         result_point = None
         result_preset_name = None  # should be at most one for a given lux value.
         result_brightness = -1  # Just in case we don't get a match
@@ -5482,7 +5484,7 @@ class LuxConfig(ConfigIni):
     def set_device_name(self, device_name: str):
         self.set("lux-meter", "lux-device", device_name)
 
-    def get_vdu_profile(self, vdu: VduController, main_app: VduAppWindow) -> List[LuxPoint]:
+    def get_vdu_profile(self, vdu: VduController) -> List[LuxPoint]:
         if self.has_option('lux-profile', vdu.vdu_stable_id):
             lux_points = [LuxPoint(v[0], v[1]) for v in literal_eval(self.get('lux-profile', vdu.vdu_stable_id))]
         else:  # Use a default profile:
@@ -5674,12 +5676,12 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.revert_button.setEnabled(False)
 
         new_id_list = []   # List of all currently connected VDU's
-        for index, vdu in enumerate(self.main_app.vdu_controllers):
-            range_restriction = vdu.capabilities['10'].values
+        for index, vdu_controller in enumerate(self.main_app.vdu_controllers):
+            range_restriction = vdu_controller.capabilities['10'].values
             min_v, max_v = (0, 100) if len(range_restriction) == 0 else (int(range_restriction[1]), int(range_restriction[2]))
-            self.range_restrictions[vdu.vdu_stable_id] = min_v, max_v
-            self.profile_data[vdu.vdu_stable_id] = self.lux_config.get_vdu_profile(vdu, self.main_app)
-            new_id_list.append(vdu.vdu_stable_id)
+            self.range_restrictions[vdu_controller.vdu_stable_id] = min_v, max_v
+            self.profile_data[vdu_controller.vdu_stable_id] = self.lux_config.get_vdu_profile(vdu_controller)
+            new_id_list.append(vdu_controller.vdu_stable_id)
         self.preset_points.clear()
         for preset_point in self.lux_config.get_preset_points():  # Edit out deleted presets.
             if self.main_app.find_preset_by_name(preset_point.preset_name):
@@ -5695,12 +5697,12 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             self.profile_selector.clear()
             random.seed(0x543fff)
             self.vdu_chart_color.clear()
-            for index, vdu in enumerate(self.main_app.vdu_controllers):
+            for index, vdu_controller in enumerate(self.main_app.vdu_controllers):
                 color = QColor.fromHsl(int(index * 137.508) % 255, random.randint(64, 128), random.randint(192, 200))
-                self.vdu_chart_color[vdu.vdu_stable_id] = color
+                self.vdu_chart_color[vdu_controller.vdu_stable_id] = color
                 color_icon = create_themed_icon_from_svg_bytes(SWATCH_ICON_SOURCE.replace(b"#ffffff", bytes(color.name(), 'utf-8')))
-                self.profile_selector.addItem(color_icon, vdu.get_vdu_description(), userData=vdu.vdu_stable_id)
-                if vdu.vdu_stable_id == existing_selected_id:
+                self.profile_selector.addItem(color_icon, vdu_controller.get_vdu_description(), userData=vdu_controller.vdu_stable_id)
+                if vdu_controller.vdu_stable_id == existing_selected_id:
                     self.profile_selector.setCurrentIndex(index)
                     self.profile_plot.current_vdu_id = existing_selected_id
         self.profile_selector.blockSignals(False)
@@ -5984,7 +5986,7 @@ class PresetTransitionType(IntFlag):
             return descriptions[self]
         return ','.join([descriptions[component] for component in self.component_values()])
 
-    def component_values(self) -> List[PresetTransitionType]:
+    def component_values(self) -> list[Type[PresetTransitionType]]:
         # similar to Python 3.11 enum.show_flag_values(self) - list of power of two components for self
         return [option for option in PresetTransitionType if (option & (option - 1) == 0) and option != 0 and option in self]
 
@@ -6606,6 +6608,7 @@ class VduAppWindow(QMainWindow):
             return
         now = zoned_now()
         weather_text = ''
+        message = ''
         proceed = True
         if preset.is_weather_dependent() and check_weather:
             proceed = self.is_weather_satisfactory(preset)
