@@ -498,10 +498,10 @@ level.
 
 The Preset Diolog includes an option to enable auto-brightness interpolation.
 When enabled, this option will attempt to compute values between steps in
-the profiles. During interpolation, if the smoothed metered lux value is
-found to be within 5% of any adjacent Preset's lux value, the Preset will
-be preferred over interpolation, this will result in the Preset being
-restored.
+the profiles. Interpolation won't change the auto-brightness value if the
+change would be less than 5%.  During interpolation, if the smoothed metered
+lux value is found to be in proximity to any attached Preset, the Preset
+will be preferred over interpolation.
 
 Improving Response Time
 -----------------------
