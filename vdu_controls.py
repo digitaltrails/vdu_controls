@@ -1216,7 +1216,7 @@ class DdcUtil:
             if vdu_id not in key_already_assigned:
                 model_name, main_id = model_and_main_id
                 log_debug(
-                    f"Unique key for display={vdu_id} mfg={manufacturer} is (model={model_name} id={main_id})") if log_debug_enabled else None
+                    f"Unique key for {vdu_id=} {manufacturer=} is ({model_name=} {main_id=})") if log_debug_enabled else None
                 display_list.append((vdu_id, manufacturer, model_name, main_id))
                 key_already_assigned[vdu_id] = 1
 
@@ -1828,7 +1828,7 @@ class VduController(QObject):
                  ignore_monitor: bool = False, assume_standard_controls: bool = False) -> None:
         super().__init__()
         self.vdu_stable_id = proper_name(vdu_model_name, vdu_unique_text_id)
-        log_info(f"Initializing controls for monitor={vdu_id} model={vdu_model_name} text_id={self.vdu_stable_id}")
+        log_info(f"Initializing controls for {vdu_id=} {vdu_model_name=} {self.vdu_stable_id=}")
         self.vdu_id = vdu_id
         self.model_name = vdu_model_name
         self.serial = vdu_unique_text_id
@@ -3246,7 +3246,7 @@ class PresetTransitionWorker(WorkerThread):
     def __init__(self, main_panel: VduControlsMainPanel, preset: Preset, progress_callable: Callable, finished_callable: Callable,
                  immediately: bool = False):
         super().__init__(self.task_body, finished_callable)
-        log_info(f"TransitionWorker: transition {preset.name} immediately={immediately}")
+        log_info(f"TransitionWorker: transition {preset.name} {immediately=}")
         self.start_time = datetime.now()
         self.end_time: datetime | None = None
         self.last_step_time: float = 0.0
@@ -5354,15 +5354,15 @@ class LuxAutoWorker(WorkerThread):
                         made_brightness_changes = True
                         if vdu_id not in self.target_brightness or self.target_brightness[vdu_id] != profile_brightness:
                             self.target_brightness[vdu_id] = profile_brightness
-                            log_info(f"LuxAutoWorker: step={step_count} vdu={vdu_id}: new target={profile_brightness}%"
-                                     f" current={current_brightness}% lux={metered_lux} smoothed-lux={smoothed_lux}")
+                            log_info(f"LuxAutoWorker: {vdu_id=}: new target={profile_brightness}%"
+                                     f" {current_brightness=}% {metered_lux=} {smoothed_lux=} {step_count=}")
                         diff = profile_brightness - current_brightness
                         step_size = max(1, abs(diff) // 3)  # 4 if abs(diff) < 8 else 8  # TODO find a good heuristic
                         step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
                         self._message.emit(tr("Adjusting {} by {}").format(vdu_id, step_size))
                         if step_count != 0 and log_debug_enabled:
-                            log_debug(f"LuxAutoWorker: vdu={vdu_id} current={current_brightness}% target={profile_brightness}%"
-                                      f" lux={metered_lux} smoothed-lux={smoothed_lux} step={step_count}")
+                            log_debug(f"LuxAutoWorker: {vdu_id=} target={profile_brightness}%"
+                                      f" {current_brightness=}% {metered_lux=} {smoothed_lux=} {step=} {step_count=}")
                         brightness_control.restore_vdu_attribute(str(current_brightness + step))
                         self._refresh_gui_view.emit(brightness_control)
                         self.consecutive_errors = 0
@@ -5380,7 +5380,7 @@ class LuxAutoWorker(WorkerThread):
                         return False  # force a full sleep cycle.
         if not made_brightness_changes:
             if step_count != 0:   # Have now finished past work, if a point had a Preset attached, activate it now
-                log_info(f"LuxAutoWorker: stepping completed step={step_count}")  # Only if work was done
+                log_info(f"LuxAutoWorker: stepping completed {step_count=}")  # Only if work was done
                 self._message.emit(tr("Brightness adjustment completed"))
                 if profile_preset_name is not None:
                     # Finish by restoring the Preset's non-brightness controls, do it now, while this lux thread is not active.
@@ -5407,18 +5407,19 @@ class LuxAutoWorker(WorkerThread):
                                                                                         result_point, step_point,
                                                                                         result_brightness, result_preset_name)
                 break
-        log_debug(f"LuxAutoWorker: {vdu_id} determine_brightness result={result_brightness}% preset={result_preset_name}")
+        log_debug(f"LuxAutoWorker: determine_brightness {vdu_id=} {result_brightness=}% {result_preset_name=}") if log_debug_enabled else None
         return round(result_brightness), result_preset_name
 
     def interpolate_brightness(self, vdu_id, smoothed_lux, result_point, next_point, result_brightness, result_preset_name):
         next_brightness, next_preset_name = self.get_profile_values(next_point, vdu_id)
-        log_debug(vdu_id, smoothed_lux, result_point.lux, next_point.lux, result_brightness, next_brightness, result_preset_name)
+        log_debug(f"{vdu_id=} {smoothed_lux=}  {result_point.lux=} {next_point.lux=}" 
+                  f"{result_brightness=}% {next_brightness=}% {result_preset_name=}") if log_debug_enabled else None
         if result_preset_name is not None and abs(
                 smoothed_lux - result_point.lux) <= result_point.lux * self.lux_proximity_ratio:
-            log_debug(f"LuxAutoWorker: interpolation, Preset proximity, using result_point's Preset {result_preset_name}")
+            log_debug(f"LuxAutoWorker: interpolation: Preset proximity, using result_point's Preset {result_preset_name}") if log_debug_enabled else None
             pass  # Close enough to just use the existing result's Preset
         elif next_preset_name is not None and abs(smoothed_lux - next_point.lux) <= next_point.lux * self.lux_proximity_ratio:
-            log_debug(f"LuxAutoWorker: interpolation, Preset proximity, using next_point's {next_preset_name}")
+            log_debug(f"LuxAutoWorker: interpolation: Preset proximity, using next_point's {next_preset_name}") if log_debug_enabled else None
             result_brightness = next_brightness
             result_preset_name = next_preset_name  # Close enough to use the next point's Preset.
         else:  # Not close to a Preset, interpolate a value - no idea if the log10 approach is perfectly correct
@@ -5427,7 +5428,7 @@ class LuxAutoWorker(WorkerThread):
                     result_brightness + \
                     (next_brightness - result_brightness) * \
                     math.log10(smoothed_lux - result_point.lux) / math.log10(next_point.lux - result_point.lux)
-                log_debug(f"LuxAutoWorker: {vdu_id} interpolation={interpolated_brightness}% originally={result_brightness}%")
+                log_debug(f"LuxAutoWorker: interpolation: {vdu_id=} {interpolated_brightness=:.2f}% originally={result_brightness}%") if log_debug_enabled else None
                 if abs(result_brightness - interpolated_brightness) > 5:  # Override result with interpolated value
                     result_brightness = interpolated_brightness
                     result_preset_name = None  # definitely between any Presets if we reach here
@@ -6552,7 +6553,7 @@ class VduAppWindow(QMainWindow):
         location = self.main_config.get_location()
         if location is None:
             return None
-        log_info(f"Scheduling presets reset={reset}")
+        log_info(f"Scheduling presets {reset=}")
         time_map = create_todays_elevation_time_map(latitude=location.latitude, longitude=location.longitude)
         most_recent_overdue = None
         local_now = zoned_now()
@@ -6946,7 +6947,7 @@ def main():
         main_window.create_config_files()
 
     rc = app.exec_()
-    log_info(f"App exit rc={rc} {'EXIT_CODE_FOR_RESTART' if rc == EXIT_CODE_FOR_RESTART else ''}")
+    log_info(f"App exit {rc=} {'EXIT_CODE_FOR_RESTART' if rc == EXIT_CODE_FOR_RESTART else ''}")
     if rc == EXIT_CODE_FOR_RESTART:
         log_info(f"Trying to restart - this only works if {app.arguments()[0]} is executable and on your PATH): ", )
         restart_status = QProcess.startDetached(app.arguments()[0], app.arguments()[1:])
