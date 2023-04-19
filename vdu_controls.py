@@ -491,12 +491,12 @@ brightness levels of specific Presets, for example, a full-sun Preset and the
 matching step in a lux/brightness Profile might both be assigned the same brightness
 level.
 
-If you choose to have auto-brightness interpolate intermediate values, this
-may further conflict with attached Presets, causing the the Presets not
-to trigger.   Should interpolation get with with 5% of an attached Preset,
-the Preset will be triggered.  Exactly how such combinations play out may
-also vary if more than one VDU is connected, especially if the VDU's have
-greatly differing brightness profiles.
+The Preset Diolog includes an option to enable auto-brightness interpolation.
+When enabled, this option will attempt to compute values between steps in
+the profiles. During interpolation, if the smoothed metered lux value is
+found to be within 5% of any adjacent Preset's lux value, the Preset will
+be preferred over interpolation, this will result in the Preset being
+restored.
 
 Improving Response Time
 -----------------------
