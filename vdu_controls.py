@@ -699,6 +699,8 @@ MENU_SYMBOL = '\u2630'  # TRIGRAM FOR HEAVEN - hamburger menu
 TRANSITION_SYMBOL = '\u25b9'  # WHITE RIGHT POINTING SMALL TRIANGLE
 TRANSITION_ALWAYS_SYMBOL = '\u25b8\u2732'  # BLACK RIGHT POINTING SMALL TRIANGLE + OPEN CENTER ASTERIX
 SIGNAL_SYMBOL = '\u26a1'  # HIGH VOLTAGE - lightning bolt
+RIGHT_ARROW_SYMBOL = '\u290f'  # RIGHTWARDS TRIPLE DASH ARROW
+ALMOST_EQUAL_SYMBOL = '\u2248' # ALMOST EQUAL TO
 
 SolarElevationKey = namedtuple('SolarElevationKey', ['direction', 'elevation'])
 SolarElevationData = namedtuple('SolarElevationData', ['azimuth', 'zenith', 'when'])
@@ -5282,8 +5284,8 @@ class LuxSmooth:
 
 class LuxAutoWorker(WorkerThread):
     working = pyqtSignal()
-    _refresh_gui_view = pyqtSignal(VduControlBase)
-    _message = pyqtSignal(str)
+    _update_gui_control = pyqtSignal(VduControlBase)
+    _lux_dialog_message = pyqtSignal(str, int)
 
     def __init__(self, auto_controller: LuxAutoController):
         super().__init__(task_body=self.adjust_for_lux, task_finished=self.finished_callable)
@@ -5304,17 +5306,15 @@ class LuxAutoWorker(WorkerThread):
                                                                          fallback=0.1)
         log_info(f"LuxAutoWorker: smoother n={self.smoother.length} alpha={self.smoother.alpha}")
 
-        def refresh_control(control: VduControlBase):
+        def update_gui_control(control: VduControlBase):
             control.refresh_view()
 
-        self._refresh_gui_view.connect(refresh_control)  # Make sure GUI refreshes occur in the GUI thread (this thread).
+        # Using Qt signals to ensure GUI activity occurs in the GUI thread (this thread).
+        self._update_gui_control.connect(update_gui_control)
+        self._lux_dialog_message.connect(LuxDialog.lux_dialog_message)
 
-        def status_message(message: str, timeout: int = -1):
-            if LuxDialog.exists():
-                dialog = LuxDialog.get_instance()
-                dialog.status_message(message, timeout)
-
-        self._message.connect(status_message)
+    def status_message(self, message:str):
+        self._lux_dialog_message.emit(message, 5000)
 
     def adjust_for_lux(self):
         time.sleep(2.0)  # Give any previous thread a chance to exit
@@ -5336,9 +5336,13 @@ class LuxAutoWorker(WorkerThread):
                     if log_debug_enabled:
                         log_debug(f"LuxAutoWorker: sleeping {lux_auto_controller.lux_config.get_interval_minutes()} minutes.")
                     step_count = 0
-                    sleep_end_time = time.time() + lux_auto_controller.lux_config.get_interval_minutes() * 60.0 - 0.5
-                    while not self.stop_requested and time.time() < sleep_end_time:
-                        time.sleep(1.0)  # Sleep for the lux-check-interval - but check for stop requests.
+                    sleep_seconds = lux_auto_controller.lux_config.get_interval_minutes() * 60
+                    for second in range(sleep_seconds, 0, -1):
+                        if self.stop_requested:
+                            break
+                        time.sleep(1)
+                        if second < sleep_seconds - 5:
+                            self.status_message(f"{TIMER_RUNNING_SYMBOL} {second // 60:02d}:{second % 60:02d}")
         finally:
             log_info(f"LuxAutoWorker exiting (stop_requested={self.stop_requested}) (Thread={threading.get_ident()})")
 
@@ -5357,49 +5361,54 @@ class LuxAutoWorker(WorkerThread):
             if profile_brightness >= 0 and brightness_control is not None:  # can only adjust brightness controls
                 try:
                     current_brightness = int(controller.get_attribute('10')[0])
-                    if not self.stop_requested and current_brightness != profile_brightness:
+                    if current_brightness != profile_brightness:
                         if vdu_id not in self.target_brightness or self.target_brightness[vdu_id] != profile_brightness:
-                            self.target_brightness[vdu_id] = profile_brightness
+                            self.target_brightness[vdu_id] = profile_brightness   # target has changed
                             log_info(f"LuxAutoWorker: {vdu_id=}: new target={profile_brightness}%"
                                      f" {current_brightness=}% {metered_lux=} {smoothed_lux=} {step_count=}")
                         diff = profile_brightness - current_brightness
-                        if step_count == 0 and abs(diff) < self.min_brightness_change and profile_preset_name is None:
-                            log_info(f"LuxAutoWorker: {vdu_id=}: {current_brightness=}% target={profile_brightness}% "
-                                     f" {step_count=}, new change too small to bother with.")
+                        if step_count == 0 and profile_preset_name is None and abs(diff) < self.min_brightness_change:
+                            # At the start, no Preset involved, and close enough to not bother with a change.
+                            self.status_message(f"{SUN_SYMBOL}: {current_brightness=}% {ALMOST_EQUAL_SYMBOL}"
+                                                f" {profile_brightness}% {vdu_id}")
+                            log_info(f"LuxAutoWorker: {vdu_id=}: {current_brightness=}%->{profile_brightness}% ignored, too small")
                         else:
                             made_brightness_changes = True
                             step_size = max(1, abs(diff) // 3)  # 4 if abs(diff) < 8 else 8  # TODO find a good heuristic
                             step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
-                            self._message.emit(tr("Adjusting {} by {}").format(vdu_id, step_size))
-                            if step_count != 0 and log_debug_enabled:
-                                log_debug(f"LuxAutoWorker: {vdu_id=} target={profile_brightness}%"
-                                          f" {current_brightness=}% {metered_lux=} {smoothed_lux=} {step=} {step_count=}")
                             brightness_control.restore_vdu_attribute(str(current_brightness + step))
-                            self._refresh_gui_view.emit(brightness_control)
+                            self._update_gui_control.emit(brightness_control)
+                            int_lux = round(metered_lux)
+                            self.status_message(
+                                f"{SUN_SYMBOL} {current_brightness}% {RIGHT_ARROW_SYMBOL} {profile_brightness}% {vdu_id}" +
+                                (f" ({int_lux} \u21dd {smoothed_lux} lux)" if int_lux != smoothed_lux else f" ({int_lux} lux)") +
+                                (' ' + profile_preset_name if profile_preset_name is not None else ''))
                         self.consecutive_errors = 0
                 except VduException as ve:
                     self.consecutive_errors += 1
                     if self.consecutive_errors == 1:
-                        self._message.emit(tr("Failed to adjust {}, will try again").format(vdu_id))
-                        log_warning(f"LuxAutoWorker: Brightness error on {vdu_id}, will sleep and try again: {ve}")
+                        self.status_message(tr("Failed to adjust {}, will try again").format(vdu_id))
+                        log_warning(f"LuxAutoWorker: Brightness error on {vdu_id}, will sleep and try again: {ve}", -1)
                     elif self.consecutive_errors > 1:
-                        self._message.emit(
+                        self.status_message(
                             tr("Failed to adjust {}, {} errors so far. Sleeping {} minutes.").format(
                                 vdu_id, self.consecutive_errors, self.auto_controller.lux_config.get_interval_minutes()))
                         if self.consecutive_errors == 2 or log_debug_enabled:
                             log_info(f"LuxAutoWorker: multiple errors count={self.consecutive_errors}, sleeping and retrying.")
                         return False  # force a full sleep cycle.
-        if not made_brightness_changes:
-            if step_count != 0:   # Have now finished past work, if a point had a Preset attached, activate it now
+        if not made_brightness_changes:  # No work to do
+            if step_count != 0:   # If any work was done previously, if a point had a Preset attached, activate it now
                 log_info(f"LuxAutoWorker: stepping completed {step_count=}")  # Only if work was done
-                self._message.emit(tr("Brightness adjustment completed"))
+                self.status_message(tr("Brightness adjustment completed"))
                 if profile_preset_name is not None:
                     # Finish by restoring the Preset's non-brightness controls, do it now, while this lux thread is not active.
                     log_info(f"LuxAutoWorker: triggering Preset {profile_preset_name}")
-                    self._message.emit(tr("Restoring preset {}").format(profile_preset_name))
+                    self.status_message(tr("Restoring preset {}").format(profile_preset_name))
                     preset = self.main_app.find_preset_by_name(profile_preset_name)
                     if preset is not None:
                         self.main_app.restore_preset_in_gui_thread(preset)
+            else:
+                self.status_message(SUN_SYMBOL)
         else:
             time.sleep(0.5)  # Let i2c settle down, then continue stepping
         return made_brightness_changes
@@ -5546,6 +5555,12 @@ class LuxDialog(QDialog, DialogSingletonMixin):
     def invoke(main_app: VduAppWindow) -> None:
         LuxDialog.show_existing_dialog() if LuxDialog.exists() else LuxDialog(main_app)
 
+    @staticmethod
+    def lux_dialog_message(message: str, timeout: int):
+        lux_dialog = LuxDialog.get_instance()
+        if lux_dialog is not None:
+            lux_dialog.status_message(message, timeout)
+
     def __init__(self, main_app: VduAppWindow):
         super().__init__()
         self.setWindowTitle(tr('Light-Meter'))
@@ -5632,7 +5647,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
                 if device_name is not None:
                     if device_name != self.lux_config.get('lux-meter', 'lux-device', fallback=None):
                         self.lux_config.set('lux-meter', "lux-device", device_name)
-                        self.save_settings()
+                        self.apply_settings()
                         self.status_message(tr("Meter changed to {}.").format(device_name), timeout=-1)
 
         self.meter_device_selector.pressed.connect(choose_device)
@@ -5640,14 +5655,14 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         def set_auto_monitoring(checked: int):
             if (checked == Qt.Checked) != self.lux_config.is_auto_enabled():
                 self.lux_config.set('lux-meter', 'automatic-brightness', 'yes' if checked == Qt.Checked else 'no')
-                self.save_settings()
+                self.apply_settings()
 
         self.enabled_checkbox.stateChanged.connect(set_auto_monitoring)
 
         def interval_selector_changed() -> None:
             if self.interval_selector.value() != self.lux_config.get_interval_minutes():
                 self.lux_config.set('lux-meter', 'interval-minutes', str(self.interval_selector.value()))
-                self.save_settings(requires_auto_brightness_restart=False)
+                self.apply_settings(requires_auto_brightness_restart=False)
                 self.status_message(tr("Interval changed to {} minutes.").format(self.interval_selector.value()), timeout=-1)
 
         self.interval_selector.valueChanged.connect(interval_selector_changed)
@@ -5655,7 +5670,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         def set_interpolation(checked: int):
             if (checked == Qt.Checked) != self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=False):
                 self.lux_config.set('lux-meter', 'interpolate-brightness', 'yes' if checked == Qt.Checked else 'no')
-                self.save_settings()
+                self.apply_settings()
 
         self.interpolate_checkbox.stateChanged.connect(set_interpolation)
 
@@ -5666,7 +5681,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
                 self.status_message(tr("Editing profile {}").format(profile_name), timeout=-1)
             if self.lux_config.get('lux-ui', 'selected-profile', fallback=None) != self.profile_selector.itemData(index):
                 self.lux_config.set('lux-ui', 'selected-profile', self.profile_selector.itemData(index))
-                self.save_settings(requires_auto_brightness_restart=False)
+                self.apply_settings(requires_auto_brightness_restart=False)
 
         self.profile_selector.currentIndexChanged.connect(select_profile)
         self.make_visible()
@@ -5748,10 +5763,10 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             alert.exec()
         return device
 
-    def save_settings(self, requires_auto_brightness_restart: bool = True):
+    def apply_settings(self, requires_auto_brightness_restart: bool = True):
         self.lux_config.save(self.path)
         if requires_auto_brightness_restart:
-            self.main_app.lux_auto_controller.refresh_from_config()
+            self.main_app.lux_auto_controller.initialize_from_config()
             self.lux_meter_widget.stop_metering()
             self.lux_meter_widget.start_metering(self.main_app.lux_auto_controller.lux_meter)
             if self.lux_config.is_auto_enabled():
@@ -5765,7 +5780,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             self.lux_config.set('lux-profile', vdu_id, repr(data))
         data = [(lux_point.lux, lux_point.preset_name) for lux_point in self.profile_plot.preset_points]
         self.lux_config.set('lux-presets', 'lux-preset-points', repr(data))
-        self.save_settings(True)
+        self.apply_settings(True)
         self.has_profile_changes = False
         self.save_button.setEnabled(False)
         self.revert_button.setEnabled(False)
@@ -5808,7 +5823,7 @@ class LuxAutoController:
         self.lux_button.pressed.connect(self.toggle_auto)
         return self.lux_button
 
-    def refresh_from_config(self):
+    def initialize_from_config(self):
         assert(is_running_in_gui_thread())
         self.lux_config = LuxConfig().load()
         try:
@@ -5850,7 +5865,7 @@ class LuxAutoController:
         enabled = self.is_auto_enabled()
         self.lux_config.set('lux-meter', 'automatic-brightness', 'no' if enabled else 'yes')
         self.lux_config.save(get_config_path('AutoLux'))
-        self.refresh_from_config()
+        self.initialize_from_config()
         lux_dialog = LuxDialog.get_instance()
         if lux_dialog is not None:
             lux_dialog.reinitialise()
@@ -6191,7 +6206,7 @@ class VduAppWindow(QMainWindow):
         self.app_restore_state()
 
         if self.main_config.is_set(GlobalOption.LUX_OPTIONS_ENABLED) and self.lux_auto_controller is not None:
-            self.lux_auto_controller.refresh_from_config()
+            self.lux_auto_controller.initialize_from_config()
 
         if self.tray is not None:
             def show_window():
