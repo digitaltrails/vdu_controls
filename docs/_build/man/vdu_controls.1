@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Apr 12, 2023" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Apr 19, 2023" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.3.1
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -610,16 +610,36 @@ night               5
 .UNINDENT
 .UNINDENT
 .sp
-Due to the limitations of DDC protocol, gradual/stepping changes in brightness
-are quite likely to noticeable and potentially annoying.  For this reason lux/brightness
-profiles define set steps of brightness values so that brightness levels remain constant
-over set ranges of lux values.  Achieving an acceptable profile will require some
-experimentation with the step lux\-thresholds and lux\-ranges.
+Due to VDU hardware and DDC protocal limitations, gradual/stepping changes in
+brightness are quite likely to noticeable and potentially annoying.
+The auto\-brightness  adjustment feature includes several measures to dampen
+minimise the amount of stepping:
+.INDENT 0.0
+.INDENT 3.5
+.INDENT 0.0
+.IP \(bu 2
+Lux/Brightness Profiles define brightness\-steps so that
+brightness levels remain constant over set ranges of lux values.
+.IP \(bu 2
+Adjustments are only made at intervals of one or more minutes.
+.IP \(bu 2
+Large adjustments are made with larger step sizes to shorten the transition period.
+.IP \(bu 2
+The adjustment task passes lux values through a smoothing low\-pass filter.
+.UNINDENT
+.UNINDENT
+.UNINDENT
 .sp
 If light\-levels are changing frequently and extremely, for example, as the sun passes
 behind a succession of clouds, the main panel, context\-menu, and light\-metering dialog
 each contain Manual/Auto controls for disabling/enabling lux metering.  Additionally,
-you might tune the lux/brightness profile to eliminate the issue.
+you might tune the lux/brightness profile to eliminate the issue.  Achieving an
+acceptable profile will require some experimentation.
+.sp
+The Light Meter dialog includes an option to enable interpolation of brightness values
+with each Profile step.  Enabling this option doesn\(aqt change the frequency of
+lux\-measurements, but during periods where ambient light levels are changing,
+the option may generate more adjustments.
 .sp
 Light metering settings and profiles are stored in:
 .INDENT 0.0
@@ -643,10 +663,18 @@ A typical example follows:
 automatic\-brightness = yes
 lux\-device = /dev/ttyUSB0
 interval\-minutes = 2
+interpolate\-brightness = no
+interpolation\-min\-percent\-change = 5
+interpolation\-lux\-preset\-proximity\-ratio = 0.1
+smoother\-n = 5
+smoother\-alpha = 0.5
 
 [lux\-profile]
 hp_zr24w_cnt008 = [(1, 90), (29, 90), (926, 100), (8414, 100), (100000, 100)]
 lg_hdr_4k_8 = [(1, 13), (60, 25), (100, 50), (299, 70), (1000, 90), (10000, 100), (100000, 100)]
+
+[lux\-presets]
+lux\-preset\-points = [(0, \(aqNight\(aq), (60, \(aqBrighter\-Night\(aq), (250, \(aqCloudy\(aq), (1000, \(aqSunny\(aq)]
 .ft P
 .fi
 .UNINDENT
@@ -676,6 +704,13 @@ to use the two together, design your lux/brightness profile steps to match the
 brightness levels of specific Presets, for example, a full\-sun Preset and the
 matching step in a lux/brightness Profile might both be assigned the same brightness
 level.
+.sp
+The Preset Diolog includes an option to enable auto\-brightness interpolation.
+When enabled, this option will attempt to compute values between steps in
+the profiles. Interpolation won\(aqt change the auto\-brightness value if the
+change would be less than 5%.  During interpolation, if the smoothed metered
+lux value is found to be in proximity to any attached Preset, the Preset
+will be preferred over interpolation.
 .SS Improving Response Time
 .sp
 DDC/I2C is not the speediest form of communication and VDU\(aqs may also be sluggish to respond.  This
