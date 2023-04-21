@@ -5324,6 +5324,7 @@ class LuxAutoWorker(WorkerThread):
         # Using Qt signals to ensure GUI activity occurs in the GUI thread (this thread).
         self._update_gui_control.connect(update_gui_control)
         self._lux_dialog_message.connect(LuxDialog.lux_dialog_message)
+        self.status_message(f"{SUN_SYMBOL} 00:00", 'countdown')
 
     def status_message(self, message: str, destination: str = 'status'):
         self._lux_dialog_message.emit(message, 5000, destination)
@@ -5813,7 +5814,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         if requires_auto_brightness_restart:
             self.main_app.get_lux_auto_controller().initialize_from_config()
             self.lux_meter_widget.stop_metering()
-            meter_device = self.main_app.get_lux_auto_controller().lux_meter is not None
+            meter_device = self.main_app.get_lux_auto_controller().lux_meter
             assert meter_device is not None
             self.lux_meter_widget.start_metering(meter_device)
             if self.lux_config.is_auto_enabled():
