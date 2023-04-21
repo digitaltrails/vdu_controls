@@ -4203,14 +4203,15 @@ class PresetChooseElevationWidget(QWidget):
         self.set_elevation_key(None)
 
     def set_elevation_key(self, elevation_key: SolarElevationKey | None):
-        if self.elevation_chart.has_elevation_key(elevation_key):
-            self.elevation_key = elevation_key
-            self.slider.setValue(self.elevation_chart.elevation_steps.index(self.elevation_key))
-            self.slider.setToolTip(f"{self.elevation_key.elevation}{DEGREE_SYMBOL}")
-            self.elevation_chart.set_elevation_key(self.elevation_key)
-            self.weather_widget.setEnabled(True)
-            self.display_elevation_description()
-            return
+        if elevation_key is not None:
+            if self.elevation_chart.has_elevation_key(elevation_key):
+                self.elevation_key = elevation_key
+                self.slider.setValue(self.elevation_chart.elevation_steps.index(self.elevation_key))
+                self.slider.setToolTip(f"{self.elevation_key.elevation}{DEGREE_SYMBOL}")
+                self.elevation_chart.set_elevation_key(self.elevation_key)
+                self.weather_widget.setEnabled(True)
+                self.display_elevation_description()
+                return
         self.elevation_key = None
         self.slider.setValue(-1)
         self.elevation_chart.set_elevation_key(None)
