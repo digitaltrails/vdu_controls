@@ -2082,27 +2082,31 @@ class SettingsEditorTab(QWidget):
 
     def save(self, force: bool = False, all_changes: Dict[str, str] | None = None) -> int:
         if self.is_unsaved() or force:
-            confirmation = MessageBox(QMessageBox.Question,
-                                      buttons=QMessageBox.Save | QMessageBox.Cancel | QMessageBox.Discard, default=QMessageBox.Save)
-            message = tr('Update existing {}?') if self.config_path.exists() else tr("Create new {}?")
-            message = message.format(self.config_path.as_posix())
-            confirmation.setText(message)
-            answer = confirmation.exec()
-            if answer == QMessageBox.Save:
-                self.ini_editable.save(self.config_path)
-                copy = pickle.dumps(self.ini_editable)
-                self.ini_before = pickle.loads(copy)
-                # After file is closed...
-                if all_changes is None:
-                    self.change_callback(self.changed)
-                else:
-                    all_changes.update(self.changed)
-                self.changed = {}
-            elif answer == QMessageBox.Discard:
-                copy = pickle.dumps(self.ini_before)
-                self.ini_editable = pickle.loads(copy)
-                self.reset()
-            return answer
+            try:
+                self.setEnabled(False)  # Saving may take a while, give some feedback by disabling and enabling when done
+                confirmation = MessageBox(QMessageBox.Question,
+                                          buttons=QMessageBox.Save | QMessageBox.Cancel | QMessageBox.Discard, default=QMessageBox.Save)
+                message = tr('Update existing {}?') if self.config_path.exists() else tr("Create new {}?")
+                message = message.format(self.config_path.as_posix())
+                confirmation.setText(message)
+                answer = confirmation.exec()
+                if answer == QMessageBox.Save:
+                    self.ini_editable.save(self.config_path)
+                    copy = pickle.dumps(self.ini_editable)
+                    self.ini_before = pickle.loads(copy)
+                    # After file is closed...
+                    if all_changes is None:
+                        self.change_callback(self.changed)
+                    else:
+                        all_changes.update(self.changed)
+                    self.changed = {}
+                elif answer == QMessageBox.Discard:
+                    copy = pickle.dumps(self.ini_before)
+                    self.ini_editable = pickle.loads(copy)
+                    self.reset()
+                return answer
+            finally:
+                self.setEnabled(True)
         return QMessageBox.Cancel
 
     def reset(self):
@@ -2431,11 +2435,10 @@ class VduControlSlider(VduControlBase):
         layout = QHBoxLayout()
         self.setLayout(layout)
         self.svg_icon: QSvgWidget | None = None
-
-        if vcp_capability.vcp_code in VDU_SUPPORTED_CONTROLS.by_code and \
-                VDU_SUPPORTED_CONTROLS.by_code[vcp_capability.vcp_code].icon_source is not None:
+        icon_source = VDU_SUPPORTED_CONTROLS.by_code[vcp_capability.vcp_code].icon_source
+        if vcp_capability.vcp_code in VDU_SUPPORTED_CONTROLS.by_code and icon_source is not None:
             svg_icon = QSvgWidget()
-            svg_icon.load(handle_theme(VDU_SUPPORTED_CONTROLS.by_code[vcp_capability.vcp_code].icon_source))
+            svg_icon.load(handle_theme(icon_source))
             svg_icon.setFixedSize(50, 50)
             svg_icon.setToolTip(tr(vcp_capability.name))
             self.svg_icon = svg_icon
@@ -2456,7 +2459,7 @@ class VduControlSlider(VduControlBase):
         slider.setPageStep(10)
         slider.setTickInterval(10)
         slider.setTickPosition(QSlider.TicksBelow)
-        slider.setOrientation(Qt.Horizontal)
+        slider.setOrientation(Qt.Horizontal)  # type: ignore
         # Don't rewrite the ddc value too often - not sure of the implications
         slider.setTracking(False)
         layout.addWidget(slider)
@@ -3575,7 +3578,7 @@ class PresetActivationButton(QPushButton):
 
 class PresetChooseIconButton(QPushButton):
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.setIcon(si(self, PresetsDialog.no_icon_icon_number))
         self.setToolTip(tr('Choose a preset icon.'))
@@ -3585,10 +3588,10 @@ class PresetChooseIconButton(QPushButton):
         self.last_icon_dir = Path("/usr/share/icons")
         if not self.last_icon_dir.exists():
             self.last_icon_dir = Path.home()
-        self.preset = None
+        self.preset: Preset | None = None
         self.clicked.connect(self.choose_preset_icon_action)
 
-    def set_preset(self, preset: Preset | None):
+    def set_preset(self, preset: Preset | None) -> None:
         self.preset = preset
         if preset is not None:
             self.last_selected_icon_path = preset.get_icon_path()
@@ -3605,7 +3608,7 @@ class PresetChooseIconButton(QPushButton):
             self.last_icon_dir = self.last_selected_icon_path.parent
         self.update_icon()
 
-    def update_icon(self):
+    def update_icon(self) -> None:
         if self.last_selected_icon_path:
             self.setIcon(create_icon_from_path(self.last_selected_icon_path))
         elif self.preset:
@@ -5187,7 +5190,7 @@ class LuxMeterFifoDevice:
     def close(self):
         with self.lock:
             if self.fifo is not None:
-                os.close(self.fifo)
+                self.fifo.close()
 
 
 class LuxMeterRunnableDevice:
@@ -5310,10 +5313,10 @@ class LuxAutoWorker(WorkerThread):
         self.smoother = LuxSmooth(lux_config.getint('lux-meter', 'smoother-n', fallback=5),
                                   alpha=lux_config.getfloat('lux-meter', 'smoother-alpha', fallback=0.5))
         self.interpolation_enabled = lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True)
-        self.min_brightness_change = lux_config.getboolean('lux-meter', 'interpolation-min-percent-change',
+        self.min_brightness_change = lux_config.getint('lux-meter', 'interpolation-min-percent-change',
                                                        fallback=10)
-        self.lux_proximity_ratio = lux_config.getboolean('lux-presets', 'interpolation-lux-preset-proximity-ratio',
-                                                     fallback=0.1)
+        self.lux_proximity_ratio = lux_config.getfloat('lux-presets', 'interpolation-lux-preset-proximity-ratio',
+                                                       fallback=0.1)
         self.sleep_seconds = lux_config.get_interval_minutes() * 60
         self.sampling_interval_seconds = 60 // lux_config.getint('lux-meter', 'samples-per-minute', fallback=3)
         log_info(f"LuxAutoWorker: smoother n={self.smoother.length} alpha={self.smoother.alpha}")
@@ -5327,7 +5330,7 @@ class LuxAutoWorker(WorkerThread):
         self.status_message(f"{SUN_SYMBOL} 00:00", 'countdown')
 
     def status_message(self, message: str, destination: str = 'status'):
-        self._lux_dialog_message.emit(message, 5000, destination)
+        self._lux_dialog_message.emit(message, 0, destination)
 
     def adjust_for_lux(self):
         time.sleep(2.0)  # Give any previous thread a chance to exit
@@ -5685,11 +5688,11 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             device_name = QFileDialog.getOpenFileName(self, tr("Select a tty device or fifo"), "/dev/ttyUSB0")[0]
             if device_name != '':
                 device_name = self.validate_device(device_name)
-                if device_name is not None:
-                    if device_name != self.lux_config.get('lux-meter', 'lux-device', fallback=None):
+                if device_name != '':
+                    if device_name != self.lux_config.get('lux-meter', 'lux-device', fallback=''):
                         self.lux_config.set('lux-meter', "lux-device", device_name)
                         self.apply_settings()
-                        self.status_message(tr("Meter changed to {}.").format(device_name), timeout=-1)
+                        self.status_message(tr("Meter changed to {}.").format(device_name))
 
         self.meter_device_selector.pressed.connect(choose_device)
 
@@ -5704,7 +5707,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             if self.interval_selector.value() != self.lux_config.get_interval_minutes():
                 self.lux_config.set('lux-meter', 'interval-minutes', str(self.interval_selector.value()))
                 self.apply_settings(requires_auto_brightness_restart=False)
-                self.status_message(tr("Interval changed to {} minutes.").format(self.interval_selector.value()), timeout=-1)
+                self.status_message(tr("Interval changed to {} minutes.").format(self.interval_selector.value()))
 
         self.interval_selector.valueChanged.connect(interval_selector_changed)
 
@@ -5719,7 +5722,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             if self.profile_plot is not None:
                 profile_name = list(self.profile_data.keys())[index]
                 self.profile_plot.set_current_profile(profile_name)
-                self.status_message(tr("Editing profile {}").format(profile_name), timeout=-1)
+                self.status_message(tr("Editing profile {}").format(profile_name))
             if self.lux_config.get('lux-ui', 'selected-profile', fallback=None) != self.profile_selector.itemData(index):
                 self.lux_config.set('lux-ui', 'selected-profile', self.profile_selector.itemData(index))
                 self.apply_settings(requires_auto_brightness_restart=False)
@@ -5730,14 +5733,14 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
     def chart_changed_callback(self):
         self.has_profile_changes = True
-        self.status_message(tr("Use Apply to commit chart changes."), timeout=-1)
+        self.status_message(tr("Use Apply to commit chart changes."))
         self.save_button.setEnabled(True)
         self.revert_button.setEnabled(True)
 
     def reinitialise(self) -> None:
         assert self.profile_plot is not None
         self.lux_config = self.main_app.get_lux_auto_controller().get_lux_config().duplicate(LuxConfig())
-        self.device_name = self.lux_config.get("lux-meter", "lux-device", fallback=None)
+        self.device_name = self.lux_config.get("lux-meter", "lux-device", fallback='')
         self.enabled_checkbox.setChecked(self.lux_config.is_auto_enabled())
         self.interpolate_checkbox.setChecked(self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=False))
         self.has_profile_changes = False
@@ -5777,9 +5780,9 @@ class LuxDialog(QDialog, DialogSingletonMixin):
                     self.profile_selector.setCurrentIndex(index)
                     self.profile_plot.current_vdu_id = existing_selected_id
         self.profile_selector.blockSignals(False)
-        self.lux_meter_widget.start_metering(self.main_app.get_lux_auto_controller().lux_meter)
+        self.configure_ui(self.main_app.get_lux_auto_controller().lux_meter)
         self.profile_plot.create_plot()
-        self.status_message(tr("Read {} lux/brightness profiles.").format(len(new_id_list)), -1)
+        self.status_message(tr("Read {} lux/brightness profiles.").format(len(new_id_list)), 3000)
 
     def make_visible(self):
         super().make_visible()
@@ -5788,9 +5791,9 @@ class LuxDialog(QDialog, DialogSingletonMixin):
     def is_interpolating(self) -> bool:
         return self.interpolate_checkbox.isChecked()
 
-    def validate_device(self, device):
+    def validate_device(self, device) -> str:
         if device is None or device.strip() == '':
-            return None
+            return ''
         path = pathlib.Path(device)
         if path.is_char_device():
             self.meter_device_selector.setText(tr(" Device {}").format(device))
@@ -5800,7 +5803,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             self.meter_device_selector.setText(tr(" Run {}").format(device))
         else:
             self.meter_device_selector.setText(tr(" Not available {}").format(device))
-            return None
+            return ''
         if not os.access(device, os.R_OK):
             alert = MessageBox(QMessageBox.Critical)
             alert.setText(tr("No read access to {}").format(device))
@@ -5815,14 +5818,28 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             self.main_app.get_lux_auto_controller().initialize_from_config()
             self.lux_meter_widget.stop_metering()
             meter_device = self.main_app.get_lux_auto_controller().lux_meter
-            assert meter_device is not None
+            self.configure_ui(meter_device)
+
+            if meter_device is not None:
+                if self.lux_config.is_auto_enabled():
+                    self.status_message(tr("Restarted brightness auto adjustment"))
+                else:
+                    self.status_message(tr("Brightness auto adjustment is disabled."))
+            else:
+                self.status_message(tr("No metering device set."))
+
+    def configure_ui(self, meter_device: LuxMeterSerialDevice | None):
+        if meter_device is not None:
             self.lux_meter_widget.start_metering(meter_device)
+            self.enabled_checkbox.setEnabled(True)
             if self.lux_config.is_auto_enabled():
                 self.refresh_now_button.show()
-                self.status_message(tr("Restarted brightness auto adjustment"), -1)
             else:
-                self.status_message(tr("Brightness auto adjustment is disabled."), -1)
                 self.refresh_now_button.hide()
+        else:
+            self.enabled_checkbox.setChecked(False)
+            self.enabled_checkbox.setEnabled(False)
+            self.refresh_now_button.hide()
 
     def save_profiles(self):
         for vdu_id, profile in self.profile_plot.profile_data.items():
@@ -5854,7 +5871,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             self.refresh_now_button.show()
             self.refresh_now_button.setText(message)
         else:
-            self.status_bar.showMessage(message, 3000 if timeout == -1 else timeout)
+            self.status_bar.showMessage(message, timeout)
 
 
 class LuxDeviceException(Exception):
