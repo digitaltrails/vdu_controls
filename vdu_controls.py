@@ -1554,7 +1554,7 @@ class GlobalOption(Enum):
     WARNINGS_ENABLED = QT_TR_NOOP('warnings-enabled'), 'no', ''
     DEBUG_ENABLED = QT_TR_NOOP('debug-enabled'), 'no', ''
     SYSLOG_ENABLED = QT_TR_NOOP('syslog-enabled'), 'no', ''
-    LOCATION = QT_TR_NOOP('location'), ''
+    LOCATION = QT_TR_NOOP('location'), '', ''
 
     def ini_name(self) -> str:
         return self.value[0]
