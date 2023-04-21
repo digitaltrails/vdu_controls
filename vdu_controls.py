@@ -2536,6 +2536,7 @@ class VduControlSlider(VduControlBase):
         if event.type() == QEvent.PaletteChange:
             icon_source = VDU_SUPPORTED_CONTROLS.by_code[self.vcp_capability.vcp_code].icon_source
             if icon_source is not None:
+                assert self.svg_icon is not None  # Because it must have been loaded from source earlier
                 self.svg_icon.load(handle_theme(icon_source))
         return super().event(event)
 
@@ -3139,6 +3140,7 @@ class VduControlsMainPanel(QWidget):
         self.setContextMenuPolicy(Qt.CustomContextMenu)
 
         def open_context_menu(position: QPoint) -> None:
+            assert self.context_menu is not None
             self.context_menu.exec(self.mapToGlobal(position))
 
         self.customContextMenuRequested.connect(open_context_menu)
@@ -3714,6 +3716,7 @@ class PresetChooseWeatherWidget(QWidget):
             if self.chooser.itemData(index) is None:
                 self.info_label.setText('')
             else:
+                assert self.location is not None
                 self.verify_weather_location(self.location)
                 path = self.chooser.itemData(index)
                 if path.exists():
@@ -3885,7 +3888,7 @@ class PresetChooseElevationChart(QLabel):
 
     selected_elevation_signal = pyqtSignal(object)
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.setMinimumHeight(150)
         self.setMinimumWidth(200)
@@ -3910,6 +3913,7 @@ class PresetChooseElevationChart(QLabel):
         return key in self.elevation_steps
 
     def get_elevation_data(self, elevation_key: SolarElevationKey):
+        assert self.elevation_time_map is not None
         return self.elevation_time_map[elevation_key] if elevation_key in self.elevation_time_map else None
 
     def set_elevation_key(self, elevation_key: SolarElevationKey | None):
@@ -3918,10 +3922,11 @@ class PresetChooseElevationChart(QLabel):
 
     def configure_for_location(self, location: GeoLocation | None):
         self.location = location
-        self.elevation_time_map = create_todays_elevation_time_map(latitude=location.latitude,
-                                                                   longitude=location.longitude)
-        self.elevation_key = None
-        self.create_plot()
+        if location is not None:
+            self.elevation_time_map = create_todays_elevation_time_map(latitude=location.latitude,
+                                                                       longitude=location.longitude)
+            self.elevation_key = None
+            self.create_plot()
 
     def create_plot(self):
         ev_key = self.elevation_key
@@ -3942,111 +3947,112 @@ class PresetChooseElevationChart(QLabel):
         painter.setPen(QPen(Qt.white, std_line_width))  # Horizon
         painter.drawLine(0, origin_iy, width, origin_iy)
 
-        # Perform computations for today's curve and maxima.
-        today = zoned_now().replace(hour=0, minute=0)
-        sun_plot_x, sun_plot_y, sun_plot_time = None, None, None
-        max_sun_height = -90.0
-        solar_noon_x, solar_noon_y = 0, 0  # Solar noon
-        t = today
-        curve_points = []
-        while t.day == today.day:
-            second_of_day = (t - today).total_seconds()
-            x = round(width * second_of_day / (60.0 * 60.0 * 24.0))
-            a, z = calc_solar_azimuth_zenith(t, self.location.latitude, self.location.longitude)
-            sun_height = math.sin(math.radians(90.0 - z)) * range_iy
-            y = origin_iy - round(sun_height)
-            curve_points.append(QPoint(reverse_x(x), y))  # Save the plot points to a list
-            if sun_height > max_sun_height:
-                max_sun_height = sun_height
-                solar_noon_x, solar_noon_y = x, y
-            if sun_plot_time is None and ev_key and round(90.0 - z) == ev_key.elevation:
-                if (ev_key.direction == EASTERN_SKY and round(a) <= 180) or (
-                        ev_key.direction == WESTERN_SKY and round(a) >= 180):
-                    sun_plot_x, sun_plot_y = x, y
-                    sun_plot_time = t
-            t += timedelta(minutes=1)
-        if sun_plot_x is None:  # ev_key is for an elevation that does not occur today - draw sun at noon elev.
-            sun_plot_x, sun_plot_y = solar_noon_x, solar_noon_y
-        self.noon_x = reverse_x(solar_noon_x)
-        self.noon_y = solar_noon_y
+        if self.location is not None:
+            # Perform computations for today's curve and maxima.
+            today = zoned_now().replace(hour=0, minute=0)
+            sun_plot_x, sun_plot_y, sun_plot_time = None, None, None
+            max_sun_height = -90.0
+            solar_noon_x, solar_noon_y = 0, 0  # Solar noon
+            t = today
+            curve_points = []
+            while t.day == today.day:
+                second_of_day = (t - today).total_seconds()
+                x = round(width * second_of_day / (60.0 * 60.0 * 24.0))
+                a, z = calc_solar_azimuth_zenith(t, self.location.latitude, self.location.longitude)
+                sun_height = math.sin(math.radians(90.0 - z)) * range_iy
+                y = origin_iy - round(sun_height)
+                curve_points.append(QPoint(reverse_x(x), y))  # Save the plot points to a list
+                if sun_height > max_sun_height:
+                    max_sun_height = sun_height
+                    solar_noon_x, solar_noon_y = x, y
+                if sun_plot_time is None and ev_key and round(90.0 - z) == ev_key.elevation:
+                    if (ev_key.direction == EASTERN_SKY and round(a) <= 180) or (
+                            ev_key.direction == WESTERN_SKY and round(a) >= 180):
+                        sun_plot_x, sun_plot_y = x, y
+                        sun_plot_time = t
+                t += timedelta(minutes=1)
+            if sun_plot_x is None:  # ev_key is for an elevation that does not occur today - draw sun at noon elev.
+                sun_plot_x, sun_plot_y = solar_noon_x, solar_noon_y
+            self.noon_x = reverse_x(solar_noon_x)
+            self.noon_y = solar_noon_y
 
-        # Draw elevation curve for today from the accumulated plot points:
-        painter.setPen(QPen(QColor(0xff965b), std_line_width))
-        painter.drawPoints(curve_points)
+            # Draw elevation curve for today from the accumulated plot points:
+            painter.setPen(QPen(QColor(0xff965b), std_line_width))
+            painter.drawPoints(curve_points)
 
-        # Draw various annotations such the horizon-line, noon-line, E & W, and the current degrees:
-        painter.setPen(QPen(Qt.white, std_line_width))
-        painter.drawLine(reverse_x(0), origin_iy, reverse_x(width), origin_iy)
-        painter.drawLine(reverse_x(solar_noon_x), origin_iy, reverse_x(solar_noon_x), 0)
-        painter.setPen(QPen(Qt.white, std_line_width))
-        painter.setFont(QFont(QApplication.font().family(), width // 20, QFont.Weight.Bold))
-        painter.drawText(QPoint(reverse_x(70), origin_iy - 32), tr("E"))
-        painter.drawText(QPoint(reverse_x(width - 25), origin_iy - 32), tr("W"))
-        time_text = sun_plot_time.strftime("%H:%M") if sun_plot_time else "____"
-        painter.drawText(reverse_x(solar_noon_x + width // 4), origin_iy + int(height / 2.75),
-                         f"{ev_key.elevation if ev_key else 0:3d}{DEGREE_SYMBOL} {time_text}")
+            # Draw various annotations such the horizon-line, noon-line, E & W, and the current degrees:
+            painter.setPen(QPen(Qt.white, std_line_width))
+            painter.drawLine(reverse_x(0), origin_iy, reverse_x(width), origin_iy)
+            painter.drawLine(reverse_x(solar_noon_x), origin_iy, reverse_x(solar_noon_x), 0)
+            painter.setPen(QPen(Qt.white, std_line_width))
+            painter.setFont(QFont(QApplication.font().family(), width // 20, QFont.Weight.Bold))
+            painter.drawText(QPoint(reverse_x(70), origin_iy - 32), tr("E"))
+            painter.drawText(QPoint(reverse_x(width - 25), origin_iy - 32), tr("W"))
+            time_text = sun_plot_time.strftime("%H:%M") if sun_plot_time else "____"
+            painter.drawText(reverse_x(solar_noon_x + width // 4), origin_iy + int(height / 2.75),
+                             f"{ev_key.elevation if ev_key else 0:3d}{DEGREE_SYMBOL} {time_text}")
 
-        # Draw pie/compas angle
-        if ev_key:
-            angle_above_horz = ev_key.elevation if ev_key.direction == EASTERN_SKY else (180 - ev_key.elevation)  # anticlockwise from 0
-        else:
-            angle_above_horz = 180 + 19
-        _, radius = self.calc_angle_radius(self.current_pos) if self.current_pos else (0, 21)
-        painter.setPen(QPen(QColor(0xffffff if self.current_pos is None or self.in_drag or radius > self.radius_of_deletion else 0xff0000), 2))
-        painter.setBrush(QColor(255, 255, 255, 64))
-        span_angle = -(angle_above_horz + 19)  # From start angle spanning counterclockwise back toward the right to -19.
-        pie_width = pie_height = range_iy * 2
-        painter.drawPie(reverse_x(solar_noon_x) - pie_width // 2, origin_iy - pie_height // 2, pie_width, pie_height,
-                        angle_above_horz * 16, span_angle * 16)
-
-        # Draw drag-dot
-        painter.setFont(QFont(QApplication.font().family(), 8, QFont.Weight.Normal))
-        if self.current_pos is not None or self.in_drag or radius >= self.radius_of_deletion:
-            painter.setPen(QPen(Qt.red, 6))
-            painter.setBrush(Qt.white)
-            ddot_radians = math.radians(angle_above_horz if ev_key else -19)
-            ddot_x = round(range_iy * math.cos(ddot_radians)) - 8
-            ddot_y = round(range_iy * math.sin(ddot_radians)) + 8
-            painter.drawEllipse(reverse_x(solar_noon_x - ddot_x), origin_iy - ddot_y, 16, 16)
-            if not self.in_drag:
-                painter.setPen(QPen(Qt.black, 1))
-                painter.drawText(QPoint(reverse_x(solar_noon_x - ddot_x) + 10, origin_iy - ddot_y - 5), tr("Drag to change."))
-
-        # Draw origin-dot
-        painter.setPen(QPen(QColor(0xff965b), 2))
-        if self.current_pos is not None and not self.in_drag:
-            if radius < self.radius_of_deletion:
-                painter.setPen(QPen(Qt.black, 1))
-                painter.drawText(QPoint(reverse_x(solar_noon_x + 8) + 10, origin_iy - 8 - 5), tr("Click to delete."))
-                painter.setPen(QPen(Qt.red, 2))
-        painter.setBrush(painter.pen().color())
-        painter.drawEllipse(reverse_x(solar_noon_x + 8), origin_iy - 8, 16, 16)
-
-        if ev_key:
-            # Draw a line representing the slider degrees and rise/set indicator - may be higher than sun for today:
-            sky_line_y = origin_iy - round(math.sin(math.radians(ev_key.elevation)) * range_iy)
-            if sky_line_y >= solar_noon_y:
-                sky_line_pen = QPen(Qt.white, 2)
+            # Draw pie/compas angle
+            if ev_key:
+                angle_above_horz = ev_key.elevation if ev_key.direction == EASTERN_SKY else (180 - ev_key.elevation)  # anticlockwise from 0
             else:
-                sky_line_pen = QPen(QColor(0xcccccc), 2)
-                sky_line_pen.setStyle(Qt.DotLine)
-            painter.setPen(sky_line_pen)
+                angle_above_horz = 180 + 19
+            _, radius = self.calc_angle_radius(self.current_pos) if self.current_pos else (0, 21)
+            painter.setPen(QPen(QColor(0xffffff if self.current_pos is None or self.in_drag or radius > self.radius_of_deletion else 0xff0000), 2))
+            painter.setBrush(QColor(255, 255, 255, 64))
+            span_angle = -(angle_above_horz + 19)  # From start angle spanning counterclockwise back toward the right to -19.
+            pie_width = pie_height = range_iy * 2
+            painter.drawPie(reverse_x(solar_noon_x) - pie_width // 2, origin_iy - pie_height // 2, pie_width, pie_height,
+                            angle_above_horz * 16, span_angle * 16)
+
+            # Draw drag-dot
+            painter.setFont(QFont(QApplication.font().family(), 8, QFont.Weight.Normal))
+            if self.current_pos is not None or self.in_drag or radius >= self.radius_of_deletion:
+                painter.setPen(QPen(Qt.red, 6))
+                painter.setBrush(Qt.white)
+                ddot_radians = math.radians(angle_above_horz if ev_key else -19)
+                ddot_x = round(range_iy * math.cos(ddot_radians)) - 8
+                ddot_y = round(range_iy * math.sin(ddot_radians)) + 8
+                painter.drawEllipse(reverse_x(solar_noon_x - ddot_x), origin_iy - ddot_y, 16, 16)
+                if not self.in_drag:
+                    painter.setPen(QPen(Qt.black, 1))
+                    painter.drawText(QPoint(reverse_x(solar_noon_x - ddot_x) + 10, origin_iy - ddot_y - 5), tr("Drag to change."))
+
+            # Draw origin-dot
+            painter.setPen(QPen(QColor(0xff965b), 2))
+            if self.current_pos is not None and not self.in_drag:
+                if radius < self.radius_of_deletion:
+                    painter.setPen(QPen(Qt.black, 1))
+                    painter.drawText(QPoint(reverse_x(solar_noon_x + 8) + 10, origin_iy - 8 - 5), tr("Click to delete."))
+                    painter.setPen(QPen(Qt.red, 2))
             painter.setBrush(painter.pen().color())
-            if ev_key.direction == EASTERN_SKY:
-                painter.drawLine(reverse_x(0), sky_line_y, reverse_x(solar_noon_x), sky_line_y)
-                painter.setPen(QPen(painter.pen().color(), 1))
-                painter.drawPolygon([QPoint(reverse_x(0) - 20 + tx, sky_line_y - 10 + ty) for tx, ty in [(-8, 0), (0, -16), (8, 0)]])
-            else:
-                painter.drawLine(reverse_x(solar_noon_x), sky_line_y, reverse_x(width), sky_line_y)
-                painter.setPen(QPen(painter.pen().color(), 1))
-                painter.drawPolygon([QPoint(reverse_x(width - 18) + tx, sky_line_y + 10 + ty) for tx, ty in [(-8, 0), (0, 16), (8, 0)]])
+            painter.drawEllipse(reverse_x(solar_noon_x + 8), origin_iy - 8, 16, 16)
 
-            # Draw the sun
-            painter.setPen(QPen(QColor(0xff4a23), std_line_width))
-            if self.sun_image is None:
-                self.sun_image = create_themed_image_from_svg_bytes(BRIGHTNESS_SVG.replace(SVG_LIGHT_THEME_COLOR, b"#ffdd30"))
-            painter.drawImage(QPoint(reverse_x(sun_plot_x) - self.sun_image.width() // 2,
-                                     sun_plot_y - self.sun_image.height() // 2), self.sun_image)
+            if ev_key:
+                # Draw a line representing the slider degrees and rise/set indicator - may be higher than sun for today:
+                sky_line_y = origin_iy - round(math.sin(math.radians(ev_key.elevation)) * range_iy)
+                if sky_line_y >= solar_noon_y:
+                    sky_line_pen = QPen(Qt.white, 2)
+                else:
+                    sky_line_pen = QPen(QColor(0xcccccc), 2)
+                    sky_line_pen.setStyle(Qt.DotLine)
+                painter.setPen(sky_line_pen)
+                painter.setBrush(painter.pen().color())
+                if ev_key.direction == EASTERN_SKY:
+                    painter.drawLine(reverse_x(0), sky_line_y, reverse_x(solar_noon_x), sky_line_y)
+                    painter.setPen(QPen(painter.pen().color(), 1))
+                    painter.drawPolygon([QPoint(reverse_x(0) - 20 + tx, sky_line_y - 10 + ty) for tx, ty in [(-8, 0), (0, -16), (8, 0)]])
+                else:
+                    painter.drawLine(reverse_x(solar_noon_x), sky_line_y, reverse_x(width), sky_line_y)
+                    painter.setPen(QPen(painter.pen().color(), 1))
+                    painter.drawPolygon([QPoint(reverse_x(width - 18) + tx, sky_line_y + 10 + ty) for tx, ty in [(-8, 0), (0, 16), (8, 0)]])
+
+                # Draw the sun
+                painter.setPen(QPen(QColor(0xff4a23), std_line_width))
+                if self.sun_image is None:
+                    self.sun_image = create_themed_image_from_svg_bytes(BRIGHTNESS_SVG.replace(SVG_LIGHT_THEME_COLOR, b"#ffdd30"))
+                painter.drawImage(QPoint(reverse_x(sun_plot_x) - self.sun_image.width() // 2,
+                                         sun_plot_y - self.sun_image.height() // 2), self.sun_image)
 
         painter.end()
         self.setPixmap(pixmap)
@@ -4785,7 +4791,7 @@ class LuxProfileChart(QLabel):
         self.range_restrictions = lux_dialog.range_restrictions
         self.current_lux = 0
         self.snap_to_margin = 4
-        self.current_vdu_id = None if len(lux_dialog.profile_data) == 0 else list(lux_dialog.profile_data.keys())[0]
+        self.current_vdu_id = '' if len(lux_dialog.profile_data) == 0 else list(lux_dialog.profile_data.keys())[0]
         self.pixmap_width = 600
         self.pixmap_height = 550
         self.plot_width, self.plot_height = self.pixmap_width - 200, self.pixmap_height - 150
@@ -4830,7 +4836,7 @@ class LuxProfileChart(QLabel):
         painter.drawText(0, 0, tr("Brightness %"))
         painter.restore()
 
-        if self.current_vdu_id is None:  # Nothing to draw
+        if self.current_vdu_id == '':  # Nothing to draw
             painter.end()
             self.setPixmap(pixmap)
             return
@@ -4958,6 +4964,7 @@ class LuxProfileChart(QLabel):
         event.accept()
 
     def lux_point_edit(self, x, y) -> bool:
+        assert self.current_vdu_id is not ''
         vdu_data = self.profile_data[self.current_vdu_id]
         _, _, existing_lux, existing_percent, existing_point = self.find_close_to(x, y, self.current_vdu_id)
         if existing_lux is not None:  # Remove
@@ -5096,7 +5103,7 @@ class LuxMeterWidget(QWidget):
         if len(self.history) > 1:
             self.history = (self.history + [0] * 10)[-100:]
 
-    def start_metering(self, lux_meter):
+    def start_metering(self, lux_meter: LuxMeterSerialDevice):
         self.stop_metering()
         self.lux_meter_worker = LuxMeterWidgetThread(lux_meter)
         self.lux_meter_worker.new_lux_value.connect(self.display_lux)
@@ -5221,8 +5228,8 @@ class LuxMeterSerialDevice:
         self.device_name = device_name
         self.serial_device = None
         self.lock = Lock()
-        self.cached_value: float | None = None
-        self.cached_time = time.time()
+        self.cached_value: float = 0.0
+        self.cached_time = 0.0
         try:
             self.serial_module = import_module('serial')
         except ModuleNotFoundError as mnf:
@@ -5299,15 +5306,16 @@ class LuxAutoWorker(WorkerThread):
         self.target_brightness: Dict[str, int] = {}
         self.previous_metered_lux = 0
         self.refresh_now_requested = False
-        self.smoother = LuxSmooth(auto_controller.lux_config.getint('lux-meter', 'smoother-n', fallback=5),
-                                  alpha=auto_controller.lux_config.getfloat('lux-meter', 'smoother-alpha', fallback=0.5))
-        self.interpolation_enabled = auto_controller.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True)
-        self.min_brightness_change = auto_controller.lux_config.getboolean('lux-meter', 'interpolation-min-percent-change',
-                                                                           fallback=10)
-        self.lux_proximity_ratio = auto_controller.lux_config.getboolean('lux-presets', 'interpolation-lux-preset-proximity-ratio',
-                                                                         fallback=0.1)
-        self.sleep_seconds = auto_controller.lux_config.get_interval_minutes() * 60
-        self.sampling_interval_seconds = 60 // auto_controller.lux_config.getint('lux-meter', 'samples-per-minute', fallback=3)
+        lux_config = auto_controller.get_lux_config()
+        self.smoother = LuxSmooth(lux_config.getint('lux-meter', 'smoother-n', fallback=5),
+                                  alpha=lux_config.getfloat('lux-meter', 'smoother-alpha', fallback=0.5))
+        self.interpolation_enabled = lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True)
+        self.min_brightness_change = lux_config.getboolean('lux-meter', 'interpolation-min-percent-change',
+                                                       fallback=10)
+        self.lux_proximity_ratio = lux_config.getboolean('lux-presets', 'interpolation-lux-preset-proximity-ratio',
+                                                     fallback=0.1)
+        self.sleep_seconds = lux_config.get_interval_minutes() * 60
+        self.sampling_interval_seconds = 60 // lux_config.getint('lux-meter', 'samples-per-minute', fallback=3)
         log_info(f"LuxAutoWorker: smoother n={self.smoother.length} alpha={self.smoother.alpha}")
 
         def update_gui_control(control: VduControlBase):
@@ -5359,7 +5367,7 @@ class LuxAutoWorker(WorkerThread):
         profile_preset_name = None
         lux_summary_text = self.lux_summary(metered_lux, smoothed_lux)
         self.status_message(f"{SUN_SYMBOL} {lux_summary_text} {PROCESSING_LUX_SYMBOL}") if step_count == 0 else None
-        for vdu_control_panel in self.main_app.main_panel.vdu_control_panels:  # For each VDU, find its profile and apply it
+        for vdu_control_panel in self.main_app.get_main_panel().vdu_control_panels:  # For each VDU, find its profile and apply it
             if self.stop_requested:
                 break
             controller = vdu_control_panel.controller
@@ -5428,10 +5436,10 @@ class LuxAutoWorker(WorkerThread):
                     self.status_message(tr("{} Failed to adjust {}, will try again").format(ERROR_SYMBOL, vdu_id))
                     log_warning(f"LuxAutoWorker: Brightness error on {vdu_id}, will sleep and try again: {ve}", -1)
                 elif self.consecutive_errors > 1:
-                    assert self.auto_controller.lux_config is not None
                     self.status_message(
                         tr("{} Failed to adjust {}, {} errors so far. Sleeping {} minutes.").format(
-                            ERROR_SYMBOL, vdu_id, self.consecutive_errors, self.auto_controller.lux_config.get_interval_minutes()))
+                            ERROR_SYMBOL, vdu_id,
+                            self.consecutive_errors, self.auto_controller.get_lux_config().get_interval_minutes()))
                     if self.consecutive_errors == 2 or log_debug_enabled:
                         log_info(f"LuxAutoWorker: multiple errors count={self.consecutive_errors}, sleeping and retrying.")
                     return False  # force a full sleep cycle.
@@ -5599,7 +5607,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.path = get_config_path('AutoLux')
 
         self.device_name = ''
-        self.lux_config: LuxConfig | None = None
+        self.lux_config = main_app.get_lux_auto_controller().get_lux_config()
 
         main_layout = QVBoxLayout()
         self.setLayout(main_layout)
@@ -5664,8 +5672,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.status_bar.addPermanentWidget(quit_button, 0)
 
         self.refresh_now_button = QPushButton()
-        assert self.main_app.lux_auto_controller is not None
-        self.refresh_now_button.clicked.connect(self.main_app.lux_auto_controller.refresh_brightness_now)
+        self.refresh_now_button.clicked.connect(self.main_app.get_lux_auto_controller().refresh_brightness_now)
 
         self.status_layout = QHBoxLayout()
         main_layout.addLayout(self.status_layout)
@@ -5728,10 +5735,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
     def reinitialise(self) -> None:
         assert self.profile_plot is not None
-        assert self.main_app.lux_auto_controller is not None
-        assert self.main_app.lux_auto_controller.lux_config is not None
-        self.lux_config = self.main_app.lux_auto_controller.lux_config.duplicate(LuxConfig())
-        assert self.lux_config is not None
+        self.lux_config = self.main_app.get_lux_auto_controller().get_lux_config().duplicate(LuxConfig())
         self.device_name = self.lux_config.get("lux-meter", "lux-device", fallback=None)
         self.enabled_checkbox.setChecked(self.lux_config.is_auto_enabled())
         self.interpolate_checkbox.setChecked(self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=False))
@@ -5772,7 +5776,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
                     self.profile_selector.setCurrentIndex(index)
                     self.profile_plot.current_vdu_id = existing_selected_id
         self.profile_selector.blockSignals(False)
-        self.lux_meter_widget.start_metering(self.main_app.lux_auto_controller.lux_meter)
+        self.lux_meter_widget.start_metering(self.main_app.get_lux_auto_controller().lux_meter)
         self.profile_plot.create_plot()
         self.status_message(tr("Read {} lux/brightness profiles.").format(len(new_id_list)), -1)
 
@@ -5807,9 +5811,11 @@ class LuxDialog(QDialog, DialogSingletonMixin):
     def apply_settings(self, requires_auto_brightness_restart: bool = True):
         self.lux_config.save(self.path)
         if requires_auto_brightness_restart:
-            self.main_app.lux_auto_controller.initialize_from_config()
+            self.main_app.get_lux_auto_controller().initialize_from_config()
             self.lux_meter_widget.stop_metering()
-            self.lux_meter_widget.start_metering(self.main_app.lux_auto_controller.lux_meter)
+            meter_device = self.main_app.get_lux_auto_controller().lux_meter is not None
+            assert meter_device is not None
+            self.lux_meter_widget.start_metering(meter_device)
             if self.lux_config.is_auto_enabled():
                 self.refresh_now_button.show()
                 self.status_message(tr("Restarted brightness auto adjustment"), -1)
@@ -5871,7 +5877,7 @@ class LuxAutoController:
         return self.lux_button
 
     def initialize_from_config(self):
-        assert(is_running_in_gui_thread())
+        assert is_running_in_gui_thread()
         self.lux_config = LuxConfig().load()
         try:
             if self.lux_config.get_device_name() is not None and self.lux_config.get_device_name().strip() != '':
@@ -5907,6 +5913,10 @@ class LuxAutoController:
 
     def current_auto_svg(self):
         return AUTO_LUX_ON_SVG if self.is_auto_enabled() else AUTO_LUX_OFF_SVG
+
+    def get_lux_config(self) -> LuxConfig:
+        assert self.lux_config is not None
+        return self.lux_config
 
     def toggle_auto(self):
         enabled = self.is_auto_enabled()
@@ -6129,6 +6139,7 @@ class VduAppWindow(QMainWindow):
             main_window_action = main_window_action_implemenation
 
         def settings_changed(changed_settings: List):
+            assert self.ddcutil is not None
             for setting in GlobalOption:
                 if ('vdu-controls-globals', setting.ini_name()) in changed_settings and setting.requires_restart():
                     restart_application(tr("The change to the {} option requires "
@@ -6143,7 +6154,7 @@ class VduAppWindow(QMainWindow):
                 presets_dialog.reload_data()
 
         def edit_config() -> None:
-            SettingsEditor.invoke(main_config, [vdu.config for vdu in self.main_panel.vdu_controllers], settings_changed)
+            SettingsEditor.invoke(main_config, [vdu.config for vdu in self.get_main_panel().vdu_controllers], settings_changed)
 
         def refresh_from_vdus() -> None:
             self.start_refresh()
@@ -6346,12 +6357,15 @@ class VduAppWindow(QMainWindow):
         self.previously_detected_vdu_list = self.detected_vdu_list
         self.vdu_controllers = []
 
+        assert self.ddcutil is not None
+        main_panel = self.get_main_panel()
+
         for vdu_id, manufacturer, vdu_model_name, vdu_serial in self.detected_vdu_list:
             controller = None
             while True:
                 try:
                     controller = VduController(vdu_id, vdu_model_name, vdu_serial, manufacturer, self.main_config,
-                                               self.ddcutil, self.main_panel.display_vdu_exception)
+                                               self.ddcutil, main_panel.display_vdu_exception)
                 except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:  # TODO figure out all possible Exceptions:
                     # Catch any kind of parse related error
                     log_error(f"Problem creating controller for {vdu_id} {vdu_model_name} {vdu_serial} exception={e}")
@@ -6367,7 +6381,7 @@ class VduAppWindow(QMainWindow):
                     choice = no_auto.exec()
                     if choice == QMessageBox.Ignore:
                         controller = VduController(vdu_id, vdu_model_name, vdu_serial, manufacturer, self.main_config,
-                                                   self.ddcutil, self.main_panel.display_vdu_exception, ignore_monitor=True)
+                                                   self.ddcutil, main_panel.display_vdu_exception, ignore_monitor=True)
                         controller.write_template_config_files()
                         warn = MessageBox(QMessageBox.Information)
                         warn.setText(tr('Ignoring {} monitor.').format(vdu_model_name))
@@ -6376,7 +6390,7 @@ class VduAppWindow(QMainWindow):
                         warn.exec()
                     if choice == QMessageBox.Apply:
                         controller = VduController(vdu_id, vdu_model_name, vdu_serial, manufacturer, self.main_config,
-                                                   self.ddcutil, self.main_panel.display_vdu_exception,
+                                                   self.ddcutil, main_panel.display_vdu_exception,
                                                    assume_standard_controls=True)
                         controller.write_template_config_files()
                         warn = MessageBox(QMessageBox.Information)
@@ -6436,11 +6450,15 @@ class VduAppWindow(QMainWindow):
                 "Reticulating Splines" if self.main_config.is_set(GlobalOption.DEBUG_ENABLED) else tr("Checking Presets"))
             self.display_active_preset()
         finally:
-            self.main_panel.indicate_busy(False)
+            self.get_main_panel().indicate_busy(False)
+
+    def get_main_panel(self) -> VduControlsMainPanel:
+        assert self.main_panel is not None
+        return self.main_panel
 
     def start_refresh(self) -> None:
         assert is_running_in_gui_thread()
-        self.main_panel.indicate_busy()
+        self.get_main_panel().indicate_busy()
 
         def refresh_data():
             # Called in a non-GUI thread, cannot do any GUI op's.
@@ -6469,19 +6487,19 @@ class VduAppWindow(QMainWindow):
     def restore_preset(self, preset: Preset, restore_finished: Callable | None = None, immediately: bool = False) -> None:
         # Starts the restore, but it will complete in the worker thread
         assert is_running_in_gui_thread()    # Boilerplate in case this is called from the wrong thread.
-        self.transitioning_dummy_preset: PresetTransitionDummy | None = None
+        self.transitioning_dummy_preset = None
 
         if not immediately:
             self.transitioning_dummy_preset = PresetTransitionDummy(preset)
             presets_dialog_update_view(tr("Transitioning to preset {}").format(preset.name))
             self.display_active_preset(self.transitioning_dummy_preset)
-        self.main_panel.indicate_busy()
+        self.get_main_panel().indicate_busy()
         preset.load()
 
         def update_progress():
             nonlocal worker_thread
             if self.main_panel.busy:
-                self.main_panel.indicate_busy(False)
+                self.get_main_panel().indicate_busy(False)
                 if self.tray is not None:
                     self.refresh_tray_menu()
             presets_dialog_update_view(
@@ -6541,7 +6559,7 @@ class VduAppWindow(QMainWindow):
         self.schedule_presets()
 
     def copy_to_preset_ini(self, preset_ini: ConfigIni, update_only: bool = False) -> None:
-        for control_panel in self.main_panel.vdu_control_panels:
+        for control_panel in self.get_main_panel().vdu_control_panels:
             control_panel.copy_state(preset_ini, update_only)
 
     def delete_preset(self, preset: Preset) -> None:
@@ -6552,21 +6570,26 @@ class VduAppWindow(QMainWindow):
 
     def which_preset_is_active(self) -> Preset | None:
         # See if we have a record of which was last active, and see if it still is active
+        main_panel = self.get_main_panel()
         if PRESET_NAME_FILE.exists():
             with open(PRESET_NAME_FILE, encoding="utf-8") as cps_file:
                 preset_name = cps_file.read()
                 if preset_name.strip() != '':
                     preset = self.preset_controller.presets.get(preset_name)  # will be None if it has been deleted
-                    if preset is not None and self.main_panel.is_preset_active(preset):
+                    if preset is not None and main_panel.is_preset_active(preset):
                         return preset
         # Guess by testing each possible preset against the current VDU settings
         for preset in self.preset_controller.find_presets().values():
-            if self.main_panel.is_preset_active(preset):
+            if main_panel.is_preset_active(preset):
                 return preset
         return None
 
     def get_presets(self):
         return self.preset_controller.find_presets()
+
+    def get_lux_auto_controller(self) -> LuxAutoController:
+        assert self.lux_auto_controller is not None
+        return self.lux_auto_controller
 
     def display_lux_auto_indicators(self):
         assert is_running_in_gui_thread()  # Boilerplate in case this is called from the wrong thread.
@@ -6587,11 +6610,11 @@ class VduAppWindow(QMainWindow):
         if preset is None:
             preset = self.which_preset_is_active()
         if preset is None:
-            self.main_panel.display_active_preset(None)
+            self.get_main_panel().display_active_preset(None)
             self.set_app_icon_and_title()
             self.display_lux_auto_indicators()  # Check in case both schedule and lux auto are active
         else:
-            self.main_panel.display_active_preset(preset)
+            self.get_main_panel().display_active_preset(preset)
             self.set_app_icon_and_title(preset.create_icon(), preset.get_title_name())
         self.app_context_menu.refresh_preset_menu()
 
