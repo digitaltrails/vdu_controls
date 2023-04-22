@@ -3045,7 +3045,6 @@ class VduPanelBottomToolBar(QToolBar):
 
     def indicate_busy(self, is_busy: bool = True) -> None:
         for button in self.tool_buttons:
-            print(button.text())
             button.setDisabled(is_busy)
         self.preset_action.setDisabled(is_busy)
         self.progress_bar.setDisabled(not is_busy)
@@ -3630,8 +3629,8 @@ class WeatherQuery:
     def __init__(self, location: GeoLocation) -> None:
         self.location = location
         self.maximum_distance_km = int(os.getenv("VDU_CONTROLS_WEATHER_KM", default='200'))
-        loc = locale.getlocale()
-        lang = loc[0][:2] if loc is not None else 'C'
+        local_local = locale.getlocale()
+        lang = local_local[0][:2] if local_local is not None and local_local[0] is not None else 'C'
         self.url = f"{WEATHER_FORECAST_URL}/{location.place_name}?" + urllib.parse.urlencode({'lang': lang, 'format': 'j1'})
         self.weather_data = None
         self.proximity_km = 0
@@ -3643,7 +3642,8 @@ class WeatherQuery:
 
     def run_query(self) -> None:
         location_name = self.location.place_name
-        lang = locale.getlocale()[0][:2]
+        local_local = locale.getlocale()
+        lang = local_local[0][:2] if local_local is not None and local_local[0] is not None else 'C'
         if location_name is None or location_name.strip() == '':
             location_name = ''
 
@@ -3653,25 +3653,27 @@ class WeatherQuery:
             with urllib.request.urlopen(self.url, timeout=15) as request:
                 json_content = request.read()
                 self.weather_data = json.loads(json_content)
-                current_conditions = self.weather_data['current_condition'][0]
-                self.weather_code = current_conditions['weatherCode']
-                lang_key = f"lang_{lang}"
-                if lang_key in current_conditions:
-                    self.weather_desc = current_conditions[lang_key][0]['value']
-                else:
-                    self.weather_desc = current_conditions['weatherDesc'][0]['value']
-                self.visibility = current_conditions['visibility']
-                self.cloud_cover = current_conditions['cloudcover']
-                nearest_area = self.weather_data['nearest_area'][0]
-                self.area_name = nearest_area['areaName'][0]['value']
-                self.country_name = nearest_area['country'][0]['value']
-                self.latitude = nearest_area['latitude']
-                self.longitude = nearest_area['longitude']
-                self.proximity_km = round(spherical_kilometers(float(self.latitude), float(self.longitude),
-                                                               self.location.latitude, self.location.longitude))
-                self.proximity_ok = self.proximity_km <= self.maximum_distance_km
-                self.query_succeeded = True
-                log_info(f"QueryWeather result: {self}")
+                if self.weather_data is not None:
+                    current_conditions = self.weather_data['current_condition'][0]
+                    self.weather_code = current_conditions['weatherCode']
+                    lang_key = f"lang_{lang}"
+                    if lang_key in current_conditions:
+                        self.weather_desc = current_conditions[lang_key][0]['value']
+                    else:
+                        self.weather_desc = current_conditions['weatherDesc'][0]['value']
+                    self.visibility = current_conditions['visibility']
+                    self.cloud_cover = current_conditions['cloudcover']
+                    nearest_area = self.weather_data['nearest_area'][0]
+                    self.area_name = nearest_area['areaName'][0]['value']
+                    self.country_name = nearest_area['country'][0]['value']
+                    self.latitude = nearest_area['latitude']
+                    self.longitude = nearest_area['longitude']
+                    self.proximity_km = round(spherical_kilometers(float(self.latitude), float(self.longitude),
+                                                                   self.location.latitude, self.location.longitude))
+                    self.proximity_ok = self.proximity_km <= self.maximum_distance_km
+                    self.query_succeeded = True
+                    log_info(f"QueryWeather result: {self}")
+                    return
         except urllib.error.HTTPError as e:
             if e.code == 404:
                 raise ValueError(tr("Unknown location {}").format(location_name),
@@ -3680,6 +3682,7 @@ class WeatherQuery:
         except Exception as ue:
             # Can't afford to fall over because of a problem with a remote site
             raise ValueError(tr("Failed to get weather from {}").format(self.url), str(ue))
+        raise ValueError(tr("Failed to get weather from {}").format(self.url))
 
     def __str__(self) -> str:
         if self.weather_data is None:
@@ -4993,6 +4996,7 @@ class LuxProfileChart(QLabel):
             for vdu_id, profile in self.profile_data.items():
                 for profile_point in profile:
                     if profile_point == point:  # Note: these will not be the same object
+                        assert point.preset_name is not None
                         preset = self.main_app.find_preset_by_name(point.preset_name)
                         preset_brightness = preset.get_brightness(vdu_id) if preset is not None else -1
                         if preset_brightness >= 0:  # Convert to normal point - as a convenience for the user
@@ -5346,10 +5350,11 @@ class LuxAutoWorker(WorkerThread):
             while not self.stop_requested:
                 self.working.emit()
                 lux_auto_controller = self.main_app.lux_auto_controller
+                assert lux_auto_controller is not None
                 if lux_auto_controller.lux_meter is None:  # In app config change
                     log_error("Exiting, no lux meter available.")
                     break
-                lux_config = lux_auto_controller.lux_config.load()  # Refresh
+                lux_config = lux_auto_controller.get_lux_config().load()  # Refresh
                 metered_lux = lux_auto_controller.lux_meter.get_value()
                 smoothed_lux = round(self.get_smoothed_value(metered_lux))  # Get new smoothed lux value
                 if self.step_brightness(lux_config, metered_lux, smoothed_lux, step_count):  # if some work was done, count it
@@ -5600,7 +5605,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
     @staticmethod
     def lux_dialog_message(message: str, timeout: int, destination: str = 'status') -> None:
-        lux_dialog: LuxDialog = LuxDialog.get_instance()
+        lux_dialog: LuxDialog = LuxDialog.get_instance()  # type: ignore
         if lux_dialog is not None:
             lux_dialog.status_message(message, timeout, destination)
 
@@ -5679,7 +5684,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.status_bar.addPermanentWidget(revert_button, 0)
 
         quit_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), tr("Close"))
-        quit_button.clicked.connect(self.close)
+        quit_button.clicked.connect(self.close)  # type: ignore
         self.status_bar.addPermanentWidget(quit_button, 0)
 
         self.refresh_now_button = QPushButton()
@@ -5947,7 +5952,7 @@ class LuxAutoController:
         self.lux_config.set('lux-meter', 'automatic-brightness', 'no' if enabled else 'yes')
         self.lux_config.save(get_config_path('AutoLux'))
         self.initialize_from_config()
-        lux_dialog: LuxDialog = LuxDialog.get_instance()
+        lux_dialog: LuxDialog = LuxDialog.get_instance()  # type: ignore
         if lux_dialog is not None:
             lux_dialog.reinitialise()
 
@@ -6172,7 +6177,7 @@ class VduAppWindow(QMainWindow):
             self.ddcutil.change_settings(default_sleep_multiplier=main_config.get_sleep_multiplier())
             self.create_main_control_panel()
             self.schedule_presets(reset=True)
-            presets_dialog: PresetsDialog = PresetsDialog.get_instance()
+            presets_dialog: PresetsDialog = PresetsDialog.get_instance()  # type: ignore
             if presets_dialog:
                 presets_dialog.reload_data()
 
@@ -6487,20 +6492,24 @@ class VduAppWindow(QMainWindow):
 
         def refresh_data() -> None:
             # Called in a non-GUI thread, cannot do any GUI op's.
+            assert self.ddcutil is not None
             self.detected_vdu_list = self.ddcutil.detect_monitors()
-            self.main_panel.refresh_data(self.detected_vdu_list)
+            self.get_main_panel().refresh_data(self.detected_vdu_list)
 
         def refresh_view() -> None:
             """Invoke when the GUI worker thread completes. Runs in the GUI thread and can refresh the GUI views."""
+            assert self.refresh_data_task is not None
+            main_panel = self.get_main_panel()
             if self.refresh_data_task.vdu_exception is not None:
-                self.main_panel.display_vdu_exception(self.refresh_data_task.vdu_exception, can_retry=False)
+                main_panel.display_vdu_exception(self.refresh_data_task.vdu_exception, can_retry=False)
             if self.detected_vdu_list != self.previously_detected_vdu_list:
                 self.create_main_control_panel()
                 self.previously_detected_vdu_list = self.detected_vdu_list
-            self.main_panel.refresh_view()
-            self.main_panel.indicate_busy(False)
+            main_panel.refresh_view()
+            main_panel.indicate_busy(False)
             if self.main_config.is_set(GlobalOption.LUX_OPTIONS_ENABLED) and LuxDialog.exists():
-                LuxDialog.get_instance().reinitialise()  # in case the number of connected monitors have changed.
+                lux_dialog:LuxDialog = LuxDialog.get_instance()  # type: ignore
+                lux_dialog.reinitialise()  # in case the number of connected monitors have changed.
             self.display_active_preset()
 
         self.refresh_data_task = WorkerThread(task_body=refresh_data, task_finished=refresh_view)
@@ -6522,8 +6531,8 @@ class VduAppWindow(QMainWindow):
         preset.load()
 
         def update_progress() -> None:
-            nonlocal worker_thread
-            if self.main_panel.busy:
+            nonlocal worker_thread  # type: ignore
+            if self.get_main_panel().busy:
                 self.get_main_panel().indicate_busy(False)
                 if self.tray is not None:
                     self.refresh_tray_menu()
@@ -6534,15 +6543,16 @@ class VduAppWindow(QMainWindow):
             self.display_active_preset(self.transitioning_dummy_preset)
 
         def finished() -> None:
-            nonlocal worker_thread
+            nonlocal worker_thread  # type: ignore
+            main_panel = self.get_main_panel()
             self.transitioning_dummy_preset = None
             if worker_thread.vdu_exception is not None:
-                if self.main_panel.display_vdu_exception(worker_thread.vdu_exception, can_retry=True):
+                if main_panel.display_vdu_exception(worker_thread.vdu_exception, can_retry=True):
                     # Try again (recursion) in new thread
                     self.restore_preset(preset, restore_finished=restore_finished, immediately=immediately)
                     return  # Don't do anything more the semi-recursive call above will take over from here
-            self.main_panel.refresh_view()
-            self.main_panel.indicate_busy(False)
+            main_panel.refresh_view()
+            main_panel.indicate_busy(False)
             if self.tray is not None:
                 self.refresh_tray_menu()
             if worker_thread.state == PresetTransitionState.FINISHED:
@@ -6559,7 +6569,7 @@ class VduAppWindow(QMainWindow):
                 if restore_finished is not None:
                     restore_finished(False)
 
-        worker_thread = PresetTransitionWorker(self.main_panel, preset, update_progress, finished, immediately)
+        worker_thread = PresetTransitionWorker(self.get_main_panel(), preset, update_progress, finished, immediately)
         worker_thread.start()
 
     def find_preset_by_name(self, preset_name: str) -> Preset | None:
@@ -6659,7 +6669,7 @@ class VduAppWindow(QMainWindow):
                 event.accept()  # let the window close
 
     def create_config_files(self) -> None:
-        for vdu_model in self.main_panel.vdu_controllers:
+        for vdu_model in self.get_main_panel().vdu_controllers:
             vdu_model.write_template_config_files()
 
     def app_save_state(self) -> None:
@@ -6725,7 +6735,7 @@ class VduAppWindow(QMainWindow):
             # Testing: QTimer.singleShot(int(1000*30), partial(self.schedule_presets, True))
             self.daily_schedule_next_update = tomorrow
         if reset:
-            presets_dialog: PresetsDialog = PresetsDialog.get_instance()
+            presets_dialog: PresetsDialog = PresetsDialog.get_instance()  # type: ignore
             if presets_dialog:
                 presets_dialog.refresh_view()
         return most_recent_overdue
