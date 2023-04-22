@@ -4996,8 +4996,8 @@ class LuxProfileChart(QLabel):
             for vdu_id, profile in self.profile_data.items():
                 for profile_point in profile:
                     if profile_point == point:  # Note: these will not be the same object
-                        assert point.preset_name is not None
-                        preset = self.main_app.find_preset_by_name(point.preset_name)
+                        # May not have a preset_name if not yet committed/saved.
+                        preset = self.main_app.find_preset_by_name(point.preset_name) if point.preset_name else None
                         preset_brightness = preset.get_brightness(vdu_id) if preset is not None else -1
                         if preset_brightness >= 0:  # Convert to normal point - as a convenience for the user
                             profile_point.preset_name = None
