@@ -705,7 +705,7 @@ SolarElevationData = namedtuple('SolarElevationData', ['azimuth', 'zenith', 'whe
 gui_thread: QThread | None = None
 
 
-def is_running_in_gui_thread():
+def is_running_in_gui_thread() -> bool:
     return QThread.currentThread() == gui_thread
 
 
@@ -724,11 +724,11 @@ def format_solar_elevation_description(elevation: SolarElevationKey) -> str:
     return f"{direction_text} {elevation.elevation}{DEGREE_SYMBOL}"
 
 
-def format_solar_elevation_ini_text(elevation: SolarElevationKey | None):
+def format_solar_elevation_ini_text(elevation: SolarElevationKey | None) -> str:
     return f"{elevation.direction} {elevation.elevation}" if elevation is not None else ''
 
 
-def parse_solar_elevation_ini_text(ini_text: str):
+def parse_solar_elevation_ini_text(ini_text: str) -> SolarElevationKey:
     parts = ini_text.strip().split(' ')
     if len(parts) != 2:
         raise ValueError(f"Invalid SolarElevation: '{ini_text}'")
@@ -738,11 +738,11 @@ def parse_solar_elevation_ini_text(ini_text: str):
     return solar_elevation
 
 
-def proper_name(*args):
+def proper_name(*args) -> str:
     return re.sub(r'[^A-Za-z0-9._-]', '_', '_'.join([arg.strip() for arg in args]))
 
 
-def tr(source_text: str, disambiguation: str | None = None):
+def tr(source_text: str, disambiguation: str | None = None) -> str:
     """
     This function is named tr() so that it matches what pylupdate5 is looking for.
     If this method is ever renamed to something other than tr(), then you must
@@ -775,7 +775,7 @@ def tr(source_text: str, disambiguation: str | None = None):
     return QCoreApplication.translate('@default', source_text, disambiguation=disambiguation)
 
 
-def translate_option(option_text):
+def translate_option(option_text) -> str:
     # We can't be sure of the case in capability descriptions retrieved from the monitors.
     # If there is no direct translation, we try canonical version of the name (all lowercase
     # with '-' replaced with ' ').
@@ -846,7 +846,7 @@ https://github.com/digitaltrails/vdu_controls/releases/tag/v{VERSION}</a>
 PRESET_SIGNAL_MIN = 40
 PRESET_SIGNAL_MAX = 55
 
-signal_wakeup_handler: Callable | None = None
+signal_wakeup_handler: Callable[[int], None] | None = None
 
 # On Plasma Wayland the system tray may not be immediately available at login - so keep trying for...
 SYSTEM_TRAY_WAIT_SECONDS = 20
@@ -1032,7 +1032,7 @@ ASSUMED_CONTROLS_CONFIG_TEXT = ('\n'
                                 '	   Feature: 60 (Input Source)')
 
 
-def is_dark_theme():
+def is_dark_theme() -> bool:
     # Heuristic for checking for a dark theme.
     # Is the sample text lighter than the background?
     label = QLabel("am I in the dark?")
@@ -1053,7 +1053,7 @@ def get_splash_image() -> QPixmap:
     return pixmap
 
 
-def clamp(v, min_v, max_v):
+def clamp(v:int, min_v: int, max_v: int) -> int:
     return max(min(max_v, v), min_v)
 
 
@@ -1070,7 +1070,7 @@ log_to_syslog = False
 log_debug_enabled = False
 
 
-def log_wrapper(severity, *args):
+def log_wrapper(severity, *args) -> None:
     with io.StringIO() as output:
         print(*args, file=output, end='')
         message = output.getvalue()
@@ -1081,20 +1081,20 @@ def log_wrapper(severity, *args):
             syslog.syslog(severity, syslog_message)
 
 
-def log_debug(*args):
+def log_debug(*args) -> None:
     if log_debug_enabled:
         log_wrapper(syslog.LOG_DEBUG, *args)
 
 
-def log_info(*args):
+def log_info(*args) -> None:
     log_wrapper(syslog.LOG_INFO, *args)
 
 
-def log_warning(*args):
+def log_warning(*args) -> None:
     log_wrapper(syslog.LOG_WARNING, *args)
 
 
-def log_error(*args):
+def log_error(*args) -> None:
     log_wrapper(syslog.LOG_ERR, *args)
 
 
@@ -1141,7 +1141,7 @@ class DdcUtil:
         self.edid_map: Dict[str, str] = {}
         self.lock = Lock()
 
-    def change_settings(self, default_sleep_multiplier: float):
+    def change_settings(self, default_sleep_multiplier: float) -> None:
         self.default_sleep_multiplier = default_sleep_multiplier
 
     def id_key_args(self, display_id: str) -> List[str]:
@@ -1240,7 +1240,7 @@ class DdcUtil:
         capability_text = result.stdout.decode('utf-8')
         return capability_text
 
-    def get_type(self, vcp_code):
+    def get_type(self, vcp_code) -> str | None:
         return self.vcp_type_map[vcp_code] if vcp_code in self.vcp_type_map else None
 
     def get_attribute(self, vdu_id: str, vcp_code: str, sleep_multiplier: float | None = None) -> Tuple[str, str]:
@@ -1354,7 +1354,7 @@ class DdcUtil:
         return None
 
 
-def si(widget: QWidget, icon_number: QStyle.StandardPixmap):
+def si(widget: QWidget, icon_number: QStyle.StandardPixmap) -> QIcon:
     return widget.style().standardIcon(icon_number)
 
 
@@ -1386,7 +1386,7 @@ class DialogSingletonMixin:
             del DialogSingletonMixin._dialogs_map[class_name]
         event.accept()
 
-    def make_visible(self):
+    def make_visible(self) -> None:
         """ If the dialog exists(), call this to make it visible by raising it.
         Internal, used by the class method show_existing_dialog()"""
         self.show()
@@ -1394,7 +1394,7 @@ class DialogSingletonMixin:
         self.activateWindow()
 
     @classmethod
-    def show_existing_dialog(cls: Type):
+    def show_existing_dialog(cls: Type) -> None:
         """If the dialog exists(), call this to make it visible by raising it."""
         class_name = cls.__name__
         if DialogSingletonMixin.debug:
@@ -1411,7 +1411,7 @@ class DialogSingletonMixin:
         return class_name in DialogSingletonMixin._dialogs_map
 
     @classmethod
-    def get_instance(cls: Type):
+    def get_instance(cls: Type) -> DialogSingletonMixin | None:
         class_name = cls.__name__
         if class_name in DialogSingletonMixin._dialogs_map:
             return DialogSingletonMixin._dialogs_map[class_name]
@@ -1479,7 +1479,7 @@ class ConfigIni(configparser.ConfigParser):
     METADATA_VERSION_OPTION = "version"
     METADATA_TIMESTAMP_OPTION = "timestamp"
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         if not self.has_section(ConfigIni.METADATA_SECTION):
             self.add_section(ConfigIni.METADATA_SECTION)
@@ -1497,7 +1497,7 @@ class ConfigIni(configparser.ConfigParser):
                 log_error(f"Illegal version number {version} should be i.j.k where i, j and k are integers.")
         return 1, 6, 0
 
-    def is_version_ge(self, version_text: str = VDU_CONTROLS_VERSION):
+    def is_version_ge(self, version_text: str = VDU_CONTROLS_VERSION) -> bool:
         major, minor, release = [int(i) for i in version_text.split(".")]
         current_major, current_minor, current_release = self.get_version()
         if current_major < major:
@@ -1517,7 +1517,7 @@ class ConfigIni(configparser.ConfigParser):
             self.write(config_file)
         log_info(f"Wrote config to {config_path.as_posix()}")
 
-    def duplicate(self, new_ini=None):
+    def duplicate(self, new_ini=None) -> ConfigIni:
         if new_ini is None:
             new_ini = ConfigIni()
         for section in self:
@@ -1529,12 +1529,12 @@ class ConfigIni(configparser.ConfigParser):
 
 
 class GeoLocation:
-    def __init__(self, latitude: float, longitude: float, place_name: str | None):
+    def __init__(self, latitude: float, longitude: float, place_name: str | None) -> None:
         self.latitude: float = latitude
         self.longitude: float = longitude
         self.place_name: str | None = place_name
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         if other is None:
             return False
         if not isinstance(other, GeoLocation):
@@ -1565,7 +1565,7 @@ class GlobalOption(Enum):
     def is_bool(self) -> bool:
         return self.ini_name().endswith("-enabled")
 
-    def requires_restart(self):
+    def requires_restart(self) -> bool:
         return self.value[2] == 'restart'
 
     def default_value(self) -> str:
@@ -1632,7 +1632,7 @@ class VduControlsConfig:
     def is_set(self, option: GlobalOption) -> bool:
         return self.ini_content.getboolean('vdu-controls-globals', option.ini_name())
 
-    def set_global(self, option: GlobalOption, value):
+    def set_global(self, option: GlobalOption, value) -> None:
         self.ini_content['vdu-controls-globals'][option.ini_name()] = value
 
     def get_sleep_multiplier(self) -> float:
@@ -1697,7 +1697,7 @@ class VduControlsConfig:
         alt_text = inspect.cleandoc(alt_text)
         self.ini_content['ddcutil-capabilities']['capabilities-override'] = alt_text
 
-    def reload(self):
+    def reload(self) -> None:
         log_info(f"Reloading config: {self.file_path}")
         if self.file_path:
             for section in list(self.ini_content.data_sections()):
@@ -1888,7 +1888,7 @@ class VduController(QObject):
         """Return a tuple that defines this VDU: (vdu_id, manufacturer, model, serial-number)."""
         return self.vdu_id, self.manufacturer, self.model_name, self.serial
 
-    def get_attributes(self, attributes: List[str]):
+    def get_attributes(self, attributes: List[str]) -> List[Tuple[str, str]] | None:
         try:
             if len(attributes) == 0:
                 return []
@@ -1982,7 +1982,7 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
         # .show() is non-modal, .exec() is modal
         self.make_visible()
 
-    def save_all(self, warn_if_nothing_to_save: bool = True):
+    def save_all(self, warn_if_nothing_to_save: bool = True) -> int:
         all_changes: Dict[str, str] = {}
         try:
             nothing_to_save = True
@@ -2109,7 +2109,7 @@ class SettingsEditorTab(QWidget):
                 self.setEnabled(True)
         return QMessageBox.Cancel
 
-    def reset(self):
+    def reset(self) -> None:
         for field in self.field_list:
             field.reset()
 
@@ -2131,7 +2131,7 @@ class SettingsEditorFieldBase(QWidget):
         self.option = option
         self.has_error = False
 
-    def translate_option(self):
+    def translate_option(self) -> str:
         return translate_option(self.option)
 
 
@@ -2149,7 +2149,7 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
         self.layout().addWidget(checkbox)
         self.checkbox = checkbox
 
-    def reset(self):
+    def reset(self) -> None:
         self.checkbox.setChecked(self.section_editor.ini_before.getboolean(self.section, self.option))
 
 
@@ -2178,18 +2178,15 @@ class SettingsEditorLineBase(SettingsEditorFieldBase):
             self.has_error = self.validator.validate(text, 0)[0] != QValidator.Acceptable
             self.set_error_indication(self.has_error)
         if not self.has_error:
-            internal_value = self.internalize_value(text)
+            internal_value = str(text)   # Why did I do this - it text not really a string?
             if not self.has_error:
                 self.section_editor.ini_editable[self.section][self.option] = internal_value
 
-    def internalize_value(self, text: str) -> str | None:
-        return str(text)
-
-    def set_error_indication(self, has_error: bool):
+    def set_error_indication(self, has_error: bool) -> None:
         self.has_error = has_error
         self.text_input.setPalette(self.error_palette if has_error else self.valid_palette)
 
-    def reset(self):
+    def reset(self) -> None:
         self.text_input.setText(self.section_editor.ini_before[self.section][self.option])
 
 
@@ -2211,7 +2208,7 @@ class SettingsEditorFloatWidget(SettingsEditorFieldBase):
 
         self.spinbox.valueChanged.connect(spinbox_value_changed)
 
-    def reset(self):
+    def reset(self) -> None:
         self.spinbox.setValue(float(self.section_editor.ini_before.get(self.section, self.option)))
 
 
@@ -2228,7 +2225,7 @@ class SettingsEditorCsvWidget(SettingsEditorLineBase):
 
 class LatitudeLongitudeValidator(QRegExpValidator):
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(QRegExp(r"^([+-]*[0-9.,]+[,;][+-]*[0-9.,]+)([,;]\w+)?|$"))
 
     def validate(self, text: str, pos: int) -> Tuple[QValidator.State, str, int]:
@@ -2256,7 +2253,7 @@ class SettingsEditorLocationWidget(SettingsEditorLineBase):
         self.text_input.setText(section_editor.ini_editable[section][option])
         self.text_input.setToolTip(tr("Latitude,Longitude for solar elevation calculations."))
 
-        def detection_location():
+        def detection_location() -> None:
             data_csv = self.location_dialog()
             if data_csv:
                 self.text_input.setText(data_csv)
@@ -2323,7 +2320,7 @@ class SettingsEditorTextEditorWidget(SettingsEditorFieldBase):
         layout.addWidget(text_editor)
         self.text_editor = text_editor
 
-    def reset(self):
+    def reset(self) -> None:
         self.text_editor.setPlainText(self.section_editor.ini_before[self.section][self.option])
 
 
@@ -2350,10 +2347,10 @@ class VduException(Exception):
         self.cause = exception
         self.operation = operation
 
-    def is_display_not_found_error(self):
+    def is_display_not_found_error(self) -> bool:
         return self.cause is not None and isinstance(self.cause, DdcUtilDisplayNotFound)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"VduException: {self.vdu_description} op={self.operation} attr={self.attr_id} {self.cause}"
 
 
@@ -2369,13 +2366,13 @@ class VduControlBase(QWidget):
         """Used in conjunction with a with-statement to wrap operations when the
         physical VDU and data are in sync, indicating there is no need to call ddcutil"""
 
-        def __init__(self, ui_control: VduControlBase):
+        def __init__(self, ui_control: VduControlBase) -> None:
             self.ui_control = ui_control
 
-        def __enter__(self):
+        def __enter__(self) -> None:
             self.ui_control.is_physical_vdu_uptodate = True
 
-        def __exit__(self, exc_type, exc_value, exc_tb):
+        def __exit__(self, exc_type, exc_value, exc_tb) -> None:
             self.ui_control.is_physical_vdu_uptodate = False
 
     def __init__(self, controller: VduController, vcp_capability: VcpCapability) -> None:
@@ -2386,7 +2383,7 @@ class VduControlBase(QWidget):
         self.is_physical_vdu_uptodate = False
         self.current_value: str | None = None
 
-    def restore_vdu_attribute(self, new_value: str):
+    def restore_vdu_attribute(self, new_value: str) -> None:
         # Used when restoring a Preset
         # The with VduControlBase.VduUptodate stops any resultant signal/slot propagation (within this control)
         # from causing further ddcutil requests. Any UI updates will just update the UI.
@@ -2394,7 +2391,7 @@ class VduControlBase(QWidget):
             self.__change_vdu_attribute(new_value)
         self.current_value = new_value
 
-    def ui_change_vdu_attribute(self, new_value):
+    def ui_change_vdu_attribute(self, new_value) -> None:
         # Used when the user manipulates a control.
         # If the physical VDU is already uptodate, there is no need to issue any ddcutil commands
         # If the physical VDU is not uptodate, the user must be changing a slider/combo, we need to update the physical VDU
@@ -2410,13 +2407,13 @@ class VduControlBase(QWidget):
                         self.connected_vdus_changed.emit()
                         break
 
-    def __change_vdu_attribute(self, new_value):
+    def __change_vdu_attribute(self, new_value) -> None:
         self.controller.set_attribute(self.vcp_capability.vcp_code, new_value)
         if self.vcp_capability.vcp_code in VDU_SUPPORTED_CONTROLS.by_code and \
                 VDU_SUPPORTED_CONTROLS.by_code[self.vcp_capability.vcp_code].causes_config_change:
             self.connected_vdus_changed.emit()
 
-    def refresh_view(self):
+    def refresh_view(self) -> None:
         pass
 
 
@@ -2574,7 +2571,7 @@ class VduControlComboBox(VduControlBase):
 
         combo_box.currentIndexChanged.connect(index_changed)
 
-    def translate_label(self, source: str):
+    def translate_label(self, source: str) -> str:
         canonical = source.lower()
         maybe = tr(canonical)
         result = maybe if maybe != canonical else source
@@ -2591,7 +2588,7 @@ class VduControlComboBox(VduControlBase):
             self.validate_value()
             self.combo_box.setCurrentIndex(self.keys.index(self.current_value))
 
-    def validate_value(self):
+    def validate_value(self) -> None:
         if self.current_value not in self.keys:
             self.keys.append(self.current_value)
             self.combo_box.addItem('UNKNOWN-' + str(self.current_value), self.current_value)
@@ -2676,7 +2673,7 @@ class VduControlPanel(QWidget):
         except VduException as e:
             self.vdu_exception_handler(e)
 
-    def get_control(self, vcp_code: str):
+    def get_control(self, vcp_code: str) -> VduControlBase | None:
         return next((c for c in self.vcp_controls if c.vcp_capability.vcp_code == vcp_code), None)
 
     def refresh_data(self) -> None:
@@ -2724,16 +2721,16 @@ class Preset:
     A config/ini file of user-created settings presets - such as Sunny, Cloudy, Night, etc.
     """
 
-    def __init__(self, name):
+    def __init__(self, name) -> None:
         self.name = name
         self.path = get_config_path(proper_name('Preset', name))
         self.preset_ini = ConfigIni()
         self.timer: QTimer | None = None
-        self.timer_action: Callable | None = None
+        self.timer_action: Callable[[Preset], None] | None = None
         self.schedule_status = PresetScheduleStatus.UNSCHEDULED
         self.elevation_time_today: datetime | None = None
 
-    def get_title_name(self):
+    def get_title_name(self) -> str:
         return self.name
 
     def get_icon_path(self) -> Path | None:
@@ -2742,7 +2739,7 @@ class Preset:
             return Path(path_text) if path_text else None
         return None
 
-    def set_icon_path(self, icon_path: Path | None):
+    def set_icon_path(self, icon_path: Path | None) -> None:
         if icon_path:
             if not self.preset_ini.has_section("preset"):
                 self.preset_ini.add_section("preset")
@@ -2769,14 +2766,14 @@ class Preset:
         self.preset_ini = preset_ini
         return self.preset_ini
 
-    def clear_content(self):
+    def clear_content(self) -> None:
         self.remove_elevation_trigger()
         self.preset_ini = ConfigIni()
 
-    def save(self):
+    def save(self) -> None:
         self.preset_ini.save(self.path)
 
-    def delete(self):
+    def delete(self) -> None:
         log_info(f"Deleting preset file '{self.path.as_posix()}'")
         self.remove_elevation_trigger()
         if self.path.exists():
@@ -2831,26 +2828,26 @@ class Preset:
         return result
 
     def get_transition_type(self) -> PresetTransitionFlag:
-        return parse_transaction_type(self.preset_ini.get('preset', 'transition-type', fallback="NONE"))
+        return parse_transition_type(self.preset_ini.get('preset', 'transition-type', fallback="NONE"))
 
     def get_step_interval_seconds(self) -> int:
         return self.preset_ini.getint('preset', 'transition-step-interval-seconds', fallback=0)
 
-    def start_timer(self, when_local: datetime, action: Callable):
+    def start_timer(self, when_local: datetime, preset_action: Callable[[Preset], None]) -> None:
         if self.timer:
             self.timer.stop()
         else:
             self.timer = QTimer()
         self.timer.setSingleShot(True)
-        self.timer_action = action
-        self.timer.timeout.connect(partial(action, self))  # TODO the action may be running in an inappropriate thread
+        self.timer_action = preset_action
+        self.timer.timeout.connect(partial(preset_action, self))  # TODO the action may be running in an inappropriate thread
         millis = round((when_local - zoned_now()) / timedelta(milliseconds=1))
         self.timer.start(millis)
         self.schedule_status = PresetScheduleStatus.SCHEDULED
         log_info(f"Scheduled preset '{self.name}' for {when_local} in {round(millis / 1000 / 60)} minutes "
                  f"{self.get_solar_elevation()}")
 
-    def remove_elevation_trigger(self, quietly: bool = False):
+    def remove_elevation_trigger(self, quietly: bool = False) -> None:
         if self.timer:
             log_info(f"Preset timer and schedule status cleared for '{self.name}'") if not quietly else None
             self.timer.stop()
@@ -2859,16 +2856,18 @@ class Preset:
             self.elevation_time_today = None
         self.schedule_status = PresetScheduleStatus.UNSCHEDULED
 
-    def toggle_timer(self):
+    def toggle_timer(self) -> None:
         if self.elevation_time_today and self.elevation_time_today > zoned_now():
-            if self.timer.remainingTime() > 0:
-                log_info(f"Preset scheduled timer cleared for '{self.name}'")
-                self.timer.stop()
-                self.schedule_status = PresetScheduleStatus.SUSPENDED
-            else:
-                log_info(f"Preset scheduled timer restored for '{self.name}'")
-                self.start_timer(self.elevation_time_today, self.timer_action)
-                self.schedule_status = PresetScheduleStatus.SCHEDULED
+            if self.timer is not None:
+                if self.timer.remainingTime() > 0:
+                    log_info(f"Preset scheduled timer cleared for '{self.name}'")
+                    self.timer.stop()
+                    self.schedule_status = PresetScheduleStatus.SUSPENDED
+                else:
+                    log_info(f"Preset scheduled timer restored for '{self.name}'")
+                    assert self.timer_action is not None
+                    self.start_timer(self.elevation_time_today, self.timer_action)
+                    self.schedule_status = PresetScheduleStatus.SCHEDULED
 
     def get_timer_status(self) -> str:
         if self.elevation_time_today:
@@ -2883,10 +2882,10 @@ class Preset:
                     return "suspended"
         return "unscheduled"
 
-    def is_weather_dependent(self):
+    def is_weather_dependent(self) -> bool:
         return self.get_weather_restriction_filename() is not None
 
-    def check_weather(self, weather: WeatherQuery):
+    def check_weather(self, weather: WeatherQuery) -> bool:
         weather_restriction_filename = self.get_weather_restriction_filename()
         if weather.weather_code is None or weather_restriction_filename is None:
             return True
@@ -2906,7 +2905,7 @@ class Preset:
                  f"{weather.area_name} {weather.weather_code} {weather.weather_desc}")
         return False
 
-    def get_weather_restriction_filename(self):
+    def get_weather_restriction_filename(self) -> str | None:
         weather_restriction_filename = \
             self.preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None)
         return weather_restriction_filename
@@ -2952,7 +2951,7 @@ class ContextMenu(QMenu):
         self.insertAction(self.presets_separator, action)
         self.update()
 
-    def remove_preset_menu_action(self, preset: Preset):
+    def remove_preset_menu_action(self, preset: Preset) -> None:
         action = self.get_preset_menu_action(preset.name)
         self.removeAction(action) if action is not None else None
 
@@ -2980,7 +2979,7 @@ class ContextMenu(QMenu):
                 return action
         return None
 
-    def indicate_busy(self, is_busy: bool = True):
+    def indicate_busy(self, is_busy: bool = True) -> None:
         for action in self.actions():
             if action.property(self.busy_disable_prop):
                 action.setDisabled(is_busy)
@@ -2993,14 +2992,14 @@ class ContextMenu(QMenu):
 
 class ToolButton(QToolButton):
 
-    def __init__(self, svg_source: bytes, tip: str | None = None, parent: QWidget | None = None):
+    def __init__(self, svg_source: bytes, tip: str | None = None, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         if tip is not None:
             self.setToolTip(tip)
         self.svg_source = svg_source
         self.refresh_icon()
 
-    def refresh_icon(self, svg_source: bytes | None = None):  # may refresh the theme (coloring light/dark) of the icon
+    def refresh_icon(self, svg_source: bytes | None = None) -> None:  # may refresh the theme (coloring light/dark) of the icon
         if svg_source is not None:
             self.svg_source = svg_source
         self.setIcon(create_themed_icon_from_svg_bytes(self.svg_source))  # this may alter the SVG for light/dark theme
@@ -3008,7 +3007,7 @@ class ToolButton(QToolButton):
 
 class VduPanelBottomToolBar(QToolBar):
 
-    def __init__(self, tool_buttons: List[ToolButton], app_context_menu: ContextMenu, parent: VduControlsMainPanel):
+    def __init__(self, tool_buttons: List[ToolButton], app_context_menu: ContextMenu, parent: VduControlsMainPanel) -> None:
         super().__init__(parent=parent)
 
         self.tool_buttons = tool_buttons
@@ -3044,15 +3043,16 @@ class VduPanelBottomToolBar(QToolBar):
             self.menu_button.refresh_icon()
         return super().eventFilter(target, event)
 
-    def indicate_busy(self, is_busy: bool = True):
+    def indicate_busy(self, is_busy: bool = True) -> None:
         for button in self.tool_buttons:
+            print(button.text())
             button.setDisabled(is_busy)
         self.preset_action.setDisabled(is_busy)
         self.progress_bar.setDisabled(not is_busy)
         # Setting range to 0,0 cause the progress bar to pulsate left/right - used as a busy spinner.
         self.progress_bar.setRange(0, 0 if is_busy else 1)
 
-    def display_active_preset(self, preset: Preset | None):
+    def display_active_preset(self, preset: Preset | None) -> None:
         if preset is not None:
             self.preset_action.setToolTip(f"{preset.get_title_name()} preset")
             self.preset_action.setIcon(preset.create_icon())
@@ -3148,17 +3148,17 @@ class VduControlsMainPanel(QWidget):
 
         self.customContextMenuRequested.connect(open_context_menu)
 
-    def refresh_data(self, detected_vdu_list: List[Tuple[str, str, str, str]]):
+    def refresh_data(self, detected_vdu_list: List[Tuple[str, str, str, str]]) -> None:
         for control_panel in self.vdu_control_panels:
             if control_panel.controller.get_full_id() in detected_vdu_list:
                 control_panel.refresh_data()
 
-    def refresh_view(self):
+    def refresh_view(self) -> None:
         """Invoke when the GUI worker thread completes. Runs in the GUI thread and can refresh the GUI views."""
         for control_panel in self.vdu_control_panels:
             control_panel.refresh_view()
 
-    def restore_preset_data(self, preset: Preset):
+    def restore_preset_data(self, preset: Preset) -> None:
         # Called in a non-GUI thread, cannot do any GUI op's.
         for section in preset.preset_ini:
             for control_panel in self.vdu_control_panels:
@@ -3166,14 +3166,14 @@ class VduControlsMainPanel(QWidget):
                     log_info(f"Restoring preset '{preset.name}' monitor {control_panel.controller.vdu_stable_id}")
                     control_panel.restore_vdu_state(preset.preset_ini)
 
-    def restore_preset_view(self, preset: Preset):
+    def restore_preset_view(self, preset: Preset) -> None:
         # Called in a GUI thread, can do GUI op's.
         for section in preset.preset_ini:
             for control_panel in self.vdu_control_panels:
                 if section == control_panel.controller.vdu_stable_id:
                     control_panel.refresh_view()
 
-    def indicate_busy(self, is_busy: bool = True):
+    def indicate_busy(self, is_busy: bool = True) -> None:
         self.busy = is_busy
         if self.bottom_toolbar is not None:
             self.bottom_toolbar.indicate_busy(is_busy)
@@ -3191,7 +3191,7 @@ class VduControlsMainPanel(QWidget):
                             return False
         return True
 
-    def display_active_preset(self, preset: Preset | None):
+    def display_active_preset(self, preset: Preset | None) -> None:
         if self.bottom_toolbar:
             self.bottom_toolbar.display_active_preset(preset)
 
@@ -3217,7 +3217,7 @@ class VduControlsMainPanel(QWidget):
 class WorkerThread(QThread):
     finished_work = pyqtSignal()
 
-    def __init__(self, task_body: Callable, task_finished: Callable | None = None) -> None:
+    def __init__(self, task_body: Callable, task_finished: Callable[[], None] | None = None) -> None:
         """Init should always be called from the GUI thread - for easy access to the GUI thread"""
         super().__init__()
         log_debug(f"WorkerThread: going to start a {self.__class__.__name__} from thread = {threading.get_ident()}")
@@ -3226,10 +3226,10 @@ class WorkerThread(QThread):
         self.task_body = task_body
         self.task_finished = task_finished
         if self.task_finished is not None:
-            self.finished_work.connect(task_finished)
+            self.finished_work.connect(self.task_finished)
         self.vdu_exception: VduException | None = None
 
-    def run(self):
+    def run(self) -> None:
         """Long-running task, runs in a separate non-GUI thread"""
         try:
             log_debug(f"WorkerThread: {self.__class__.__name__} running in thread = {threading.get_ident()} {self.task_body}")
@@ -3271,7 +3271,7 @@ class PresetTransitionWorker(WorkerThread):
         self.state = PresetTransitionState.FINISHED_STEPPING if self.transition_immediately else PresetTransitionState.INITIALIZED
         self.progress_callable = progress_callable
 
-        def update_gui(target_widget: VduControlBase):
+        def update_gui(target_widget: VduControlBase) -> None:
             target_widget.refresh_view()  # Cause the control to refresh and show the latest value.
 
         # Make sure these signals execute in the GUI thread by connecting them here (this __init__ runs in the GUI thread).
@@ -3290,7 +3290,7 @@ class PresetTransitionWorker(WorkerThread):
                         else:
                             self.preset_non_transitioning_controls.append(control)
 
-    def task_body(self):
+    def task_body(self) -> None:
         while self.state != PresetTransitionState.FINISHED_STEPPING and self.values_are_as_expected():
             cycle_start = time.time()
             if cycle_start - self.last_step_time > self.step_interval_seconds:
@@ -3309,16 +3309,18 @@ class PresetTransitionWorker(WorkerThread):
             self.end_time = datetime.now()
             log_info(f"Finished {self.preset.name} {round(self.total_elapsed_seconds(), ndigits=2)} seconds")
 
-    def step(self):
+    def step(self) -> None:
         more_to_do = False
         for control in self.preset_transitioning_controls:  # Step each control by 1 or -1...
-            int_val = int(self.expected_values[control])
             final_value = self.final_values[control]
-            diff = int(final_value) - int_val
+            final_int_value = int(final_value)
+            expected_value = self.expected_values[control]
+            expected_int_value = int(expected_value if expected_value is not None else max(0, (final_int_value - 1)))
+            diff = final_int_value - expected_int_value
             if diff != 0:
                 step_size = 5
                 step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
-                str_value = str(int_val + step)
+                str_value = str(expected_int_value + step)
                 self.expected_values[control] = str_value  # revise to new value
                 control.restore_vdu_attribute(str_value)
                 self._update_gui_signal.emit(control)
@@ -3349,17 +3351,17 @@ class PresetTransitionWorker(WorkerThread):
 
 class PresetTransitionDummy(Preset):  # A wrapper that creates titles and icons that indicate a transition is in progress.
 
-    def __init__(self, wrapped: Preset):
+    def __init__(self, wrapped: Preset) -> None:
         super().__init__(wrapped.name)
         self.count = 1
         # self.clocks = ('\u25F7','\u25F6', '\u25F5', '\u25F4') self.arrows_big = ('\u25B6', '\u25B7')
         self.arrows = ('\u25B8', '\u25B9')
         self.icons = (wrapped.create_icon(), create_themed_icon_from_svg_bytes(TRANSITION_ICON_SOURCE))
 
-    def update_progress(self):
+    def update_progress(self) -> None:
         self.count += 1
 
-    def get_title_name(self):
+    def get_title_name(self) -> str:
         return self.arrows[self.count % 2] + self.name
 
     def create_icon(self) -> QIcon:
@@ -3367,7 +3369,7 @@ class PresetTransitionDummy(Preset):  # A wrapper that creates titles and icons 
 
 
 class PresetController:
-    def __init__(self):
+    def __init__(self) -> None:
         self.presets = {}
         pass
 
@@ -3396,7 +3398,7 @@ class PresetController:
                 self.presets[preset.name] = preset
         return self.presets
 
-    def save_order(self, ordering):
+    def save_order(self, ordering: List[str]) -> None:
         order_presets_path = CONFIG_DIR_PATH.joinpath("Order_Presets.conf")
         order_presets_path.write_text(','.join(ordering))
 
@@ -3424,7 +3426,7 @@ class MessageBox(QMessageBox):
 
 
 class PushButtonLeftJustified(QPushButton):
-    def __init__(self, text: str | None = None, parent: QWidget | None = None):
+    def __init__(self, text: str | None = None, parent: QWidget | None = None) -> None:
         super().__init__(parent=parent)
         self.label = QLabel()
         layout = QVBoxLayout()
@@ -3549,7 +3551,7 @@ class PresetWidget(QWidget):
                     action_desc = ''
                 return f"{action_desc}{SUN_SYMBOL} {preset.get_solar_elevation_description()}"
 
-            def toggle_timer(arg):
+            def toggle_timer(arg) -> None:
                 preset.toggle_timer()
                 timer_control_button.setText(preset.get_solar_elevation_abbreviation())
                 timer_control_button.setToolTip(format_description())
@@ -3562,7 +3564,7 @@ class PresetWidget(QWidget):
 
 
 class PresetActivationButton(QPushButton):
-    def __init__(self, preset: Preset):
+    def __init__(self, preset: Preset) -> None:
         super().__init__()
         self.preset = preset
         self.setIcon(preset.create_icon())
@@ -3625,7 +3627,7 @@ class PresetChooseIconButton(QPushButton):
 
 class WeatherQuery:
 
-    def __init__(self, location: GeoLocation):
+    def __init__(self, location: GeoLocation) -> None:
         self.location = location
         self.maximum_distance_km = int(os.getenv("VDU_CONTROLS_WEATHER_KM", default='200'))
         loc = locale.getlocale()
@@ -3639,7 +3641,7 @@ class WeatherQuery:
         self.when: datetime | None = None
         self.query_succeeded = False
 
-    def run_query(self):
+    def run_query(self) -> None:
         location_name = self.location.place_name
         lang = locale.getlocale()[0][:2]
         if location_name is None or location_name.strip() == '':
@@ -3651,20 +3653,22 @@ class WeatherQuery:
             with urllib.request.urlopen(self.url, timeout=15) as request:
                 json_content = request.read()
                 self.weather_data = json.loads(json_content)
-                self.weather_code = self.weather_data['current_condition'][0]['weatherCode']
+                current_conditions = self.weather_data['current_condition'][0]
+                self.weather_code = current_conditions['weatherCode']
                 lang_key = f"lang_{lang}"
-                if lang_key in self.weather_data['current_condition'][0]:
-                    self.weather_desc = self.weather_data['current_condition'][0][lang_key][0]['value']
+                if lang_key in current_conditions:
+                    self.weather_desc = current_conditions[lang_key][0]['value']
                 else:
-                    self.weather_desc = self.weather_data['current_condition'][0]['weatherDesc'][0]['value']
-                self.visibility = self.weather_data['current_condition'][0]['visibility']
-                self.cloud_cover = self.weather_data['current_condition'][0]['cloudcover']
-                self.area_name = self.weather_data['nearest_area'][0]['areaName'][0]['value']
-                self.country_name = self.weather_data['nearest_area'][0]['country'][0]['value']
-                self.latitude = self.weather_data['nearest_area'][0]['latitude']
-                self.longitude = self.weather_data['nearest_area'][0]['longitude']
-                self.proximity_km = spherical_kilometers(float(self.latitude), float(self.longitude),
-                                                         self.location.latitude, self.location.longitude)
+                    self.weather_desc = current_conditions['weatherDesc'][0]['value']
+                self.visibility = current_conditions['visibility']
+                self.cloud_cover = current_conditions['cloudcover']
+                nearest_area = self.weather_data['nearest_area'][0]
+                self.area_name = nearest_area['areaName'][0]['value']
+                self.country_name = nearest_area['country'][0]['value']
+                self.latitude = nearest_area['latitude']
+                self.longitude = nearest_area['longitude']
+                self.proximity_km = round(spherical_kilometers(float(self.latitude), float(self.longitude),
+                                                               self.location.latitude, self.location.longitude))
                 self.proximity_ok = self.proximity_km <= self.maximum_distance_km
                 self.query_succeeded = True
                 log_info(f"QueryWeather result: {self}")
@@ -3677,7 +3681,7 @@ class WeatherQuery:
             # Can't afford to fall over because of a problem with a remote site
             raise ValueError(tr("Failed to get weather from {}").format(self.url), str(ue))
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.weather_data is None:
             return ""
         return f"{self.area_name}, {self.country_name}, {self.weather_desc} ({self.weather_code})," \
@@ -3685,7 +3689,7 @@ class WeatherQuery:
                f"location={self.latitude},{self.longitude}"
 
 
-def weather_bad_location_dialog(weather):
+def weather_bad_location_dialog(weather) -> None:
     kilometres = weather.proximity_km
     use_km = QLocale.system().measurementSystem() == QLocale.MetricSystem
     msg = MessageBox(QMessageBox.Warning)
@@ -3701,7 +3705,7 @@ def weather_bad_location_dialog(weather):
 
 class PresetChooseWeatherWidget(QWidget):
 
-    def __init__(self, location: GeoLocation | None):
+    def __init__(self, location: GeoLocation | None) -> None:
         super().__init__()
         self.location = location
         self.init_weather()
@@ -3714,7 +3718,7 @@ class PresetChooseWeatherWidget(QWidget):
         self.chooser = QComboBox()
         self.warned: GeoLocation | None = None
 
-        def select_action(index: int):
+        def select_action(index: int) -> None:
             self.required_weather_filepath = self.chooser.itemData(index)
             if self.chooser.itemData(index) is None:
                 self.info_label.setText('')
@@ -3743,7 +3747,7 @@ class PresetChooseWeatherWidget(QWidget):
         scroll_area.setWidgetResizable(True)
         self.layout().addWidget(scroll_area)
 
-    def init_weather(self):
+    def init_weather(self) -> None:
         if len(list(CONFIG_DIR_PATH.glob("*.weather"))) == 0:
             log_info(f"Making good, bad and all weather in {CONFIG_DIR_PATH}")
             with open(CONFIG_DIR_PATH.joinpath('good.weather'), 'w', encoding="utf-8") as weather_file:
@@ -3773,7 +3777,7 @@ class PresetChooseWeatherWidget(QWidget):
                     "Light Sleet Showers\n377 Light Sleet\n386 Thundery Showers\n389 Thundery Heavy Rain\n392 "
                     "Thundery Snow Showers\n395 Heavy Snow Showers\n")
 
-    def verify_weather_location(self, location: GeoLocation):
+    def verify_weather_location(self, location: GeoLocation) -> None:
         place_name = location.place_name if location.place_name is not None else 'IP-address'
         # Only do this check if the location has changed.
         vf_file_path = CONFIG_DIR_PATH.joinpath('verified_weather_location.txt')
@@ -3800,7 +3804,7 @@ class PresetChooseWeatherWidget(QWidget):
             msg.setInformativeText(e.args[1])
             msg.exec()
 
-    def populate(self):
+    def populate(self) -> None:
         if self.chooser.count() == 0:
             self.chooser.addItem("None", None)
         existing_paths = [self.chooser.itemData(i) for i in range(1, self.chooser.count())]
@@ -3812,7 +3816,7 @@ class PresetChooseWeatherWidget(QWidget):
     def get_required_weather_filepath(self) -> Path | None:
         return self.required_weather_filepath if self.required_weather_filepath is not None else None
 
-    def set_required_weather_filepath(self, weather_filename: str | None):
+    def set_required_weather_filepath(self, weather_filename: str | None) -> None:
         if weather_filename is None:
             self.required_weather_filepath = None
             self.chooser.setCurrentIndex(0)
@@ -3824,14 +3828,14 @@ class PresetChooseWeatherWidget(QWidget):
                 self.chooser.setCurrentIndex(i)
                 return
 
-    def update_location(self, location: GeoLocation):
+    def update_location(self, location: GeoLocation) -> None:
         self.location = location
         self.verify_weather_location(self.location)
 
 
 class PresetChooseTransitionWidget(QWidget):
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         layout = QHBoxLayout()
         self.setLayout(layout)
@@ -3857,7 +3861,7 @@ class PresetChooseTransitionWidget(QWidget):
         layout.addWidget(self.step_seconds_widget, alignment=Qt.AlignRight)
         layout.addWidget(QLabel(tr("sec.")), alignment=Qt.AlignRight)
 
-    def update_value(self):
+    def update_value(self) -> None:
         if self.is_setting:
             return
         for act in self.button_menu.actions():
@@ -3867,7 +3871,7 @@ class PresetChooseTransitionWidget(QWidget):
                 self.transition_type ^= act.data()
         self.transition_type_widget.setText(str(self.transition_type.description()))
 
-    def set_transition_type(self, transition_type: PresetTransitionFlag):
+    def set_transition_type(self, transition_type: PresetTransitionFlag) -> None:
         try:
             self.is_setting = True
             self.transition_type = transition_type
@@ -3877,7 +3881,7 @@ class PresetChooseTransitionWidget(QWidget):
         finally:
             self.is_setting = False
 
-    def set_step_seconds(self, seconds: int):
+    def set_step_seconds(self, seconds: int) -> None:
         self.step_seconds_widget.setValue(seconds)
 
     def get_transition_type(self) -> PresetTransitionFlag:
@@ -3898,8 +3902,8 @@ class PresetChooseElevationChart(QLabel):
         self.sun_image: QImage | None = None
         self.setMouseTracking(True)
         self.in_drag = False
-        self.current_pos = None
-        self.elevation_time_map: Dict[SolarElevationKey, SolarElevationData] | None = None
+        self.current_pos: QPoint | None = None
+        self.elevation_time_map: Dict[SolarElevationKey, SolarElevationData] = {}
         self.elevation_key: SolarElevationKey | None = None
         self.location: GeoLocation | None = None
         self.elevation_steps: List[SolarElevationKey] = []
@@ -3912,18 +3916,18 @@ class PresetChooseElevationChart(QLabel):
         self.horizon_y: int = 75
         self.radius_of_deletion = self.minimumWidth() // 10
 
-    def has_elevation_key(self, key: SolarElevationKey):
+    def has_elevation_key(self, key: SolarElevationKey) -> bool:
         return key in self.elevation_steps
 
-    def get_elevation_data(self, elevation_key: SolarElevationKey):
+    def get_elevation_data(self, elevation_key: SolarElevationKey) -> SolarElevationData | None:
         assert self.elevation_time_map is not None
         return self.elevation_time_map[elevation_key] if elevation_key in self.elevation_time_map else None
 
-    def set_elevation_key(self, elevation_key: SolarElevationKey | None):
+    def set_elevation_key(self, elevation_key: SolarElevationKey | None) -> None:
         self.elevation_key = elevation_key
         self.create_plot()
 
-    def configure_for_location(self, location: GeoLocation | None):
+    def configure_for_location(self, location: GeoLocation | None) -> None:
         self.location = location
         if location is not None:
             self.elevation_time_map = create_todays_elevation_time_map(latitude=location.latitude,
@@ -3931,7 +3935,7 @@ class PresetChooseElevationChart(QLabel):
             self.elevation_key = None
             self.create_plot()
 
-    def create_plot(self):
+    def create_plot(self) -> None:
         ev_key = self.elevation_key
         width, height = self.width(), self.height()
         origin_iy, range_iy = round(height / 2), round(self.height() / 2.5)
@@ -3953,7 +3957,8 @@ class PresetChooseElevationChart(QLabel):
         if self.location is not None:
             # Perform computations for today's curve and maxima.
             today = zoned_now().replace(hour=0, minute=0)
-            sun_plot_x, sun_plot_y, sun_plot_time = None, None, None
+            sun_plot_x = sun_plot_y = sys.maxsize  # initialize to out of bounds value
+            sun_plot_time: datetime | None = None
             max_sun_height = -90.0
             solar_noon_x, solar_noon_y = 0, 0  # Solar noon
             t = today
@@ -3974,7 +3979,7 @@ class PresetChooseElevationChart(QLabel):
                         sun_plot_x, sun_plot_y = x, y
                         sun_plot_time = t
                 t += timedelta(minutes=1)
-            if sun_plot_x is None:  # ev_key is for an elevation that does not occur today - draw sun at noon elev.
+            if sun_plot_x == sys.maxsize:  # ev_key is for an elevation that does not occur today - draw sun at noon elev.
                 sun_plot_x, sun_plot_y = solar_noon_x, solar_noon_y
             self.noon_x = reverse_x(solar_noon_x)
             self.noon_y = solar_noon_y
@@ -4060,7 +4065,7 @@ class PresetChooseElevationChart(QLabel):
         painter.end()
         self.setPixmap(pixmap)
 
-    def calc_angle_radius(self, pos: QPoint):
+    def calc_angle_radius(self, pos: QPoint) -> Tuple[int, int]:
         x, y = pos.x(), pos.y()
         adjacent = x - self.noon_x
         opposite = self.horizon_y - y
@@ -4068,19 +4073,20 @@ class PresetChooseElevationChart(QLabel):
         radius = round(math.sqrt(adjacent ** 2 + opposite ** 2))
         return angle, radius
 
-    def update_current_pos(self, global_pos: QPoint):
+    def update_current_pos(self, global_pos: QPoint) -> QPoint | None:
         local_pos = self.mapFromGlobal(global_pos)
         self.current_pos = local_pos if (0 < local_pos.x() < self.width() and 0 <= local_pos.y() < self.height()) else None
         return self.current_pos
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         pos = self.update_current_pos(event.globalPos())
-        angle, radius = self.calc_angle_radius(pos)
-        if radius <= self.radius_of_deletion:
-            self.set_elevation_key(None)
-            self.selected_elevation_signal.emit(None)
-        else:
-            self.in_drag = True
+        if pos is not None:
+            angle, radius = self.calc_angle_radius(pos)
+            if radius <= self.radius_of_deletion:
+                self.set_elevation_key(None)
+                self.selected_elevation_signal.emit(None)
+            else:
+                self.in_drag = True
         event.accept()
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
@@ -4113,7 +4119,7 @@ class PresetChooseElevationWidget(QWidget):
 
     _slider_select_elevation = pyqtSignal(object)
 
-    def __init__(self, location: GeoLocation | None):
+    def __init__(self, location: GeoLocation | None) -> None:
         super().__init__()
         self.elevation_key: SolarElevationKey | None = None
         self.location: GeoLocation | None = location
@@ -4153,7 +4159,7 @@ class PresetChooseElevationWidget(QWidget):
         self.setMinimumWidth(400)
         self.sun_image: QImage | None = None
 
-    def sliding(self):
+    def sliding(self) -> None:
         value = self.slider.value()
         if value == -1:
             self._slider_select_elevation.emit(None)
@@ -4161,7 +4167,7 @@ class PresetChooseElevationWidget(QWidget):
         chart = self.elevation_chart
         self._slider_select_elevation.emit(chart.elevation_steps[value] if 0 <= value < len(chart.elevation_steps) else None)
 
-    def display_elevation_description(self):
+    def display_elevation_description(self) -> None:
         if self.elevation_key is None:
             self.title_label.setText(self.title_prefix)
             return
@@ -4186,7 +4192,7 @@ class PresetChooseElevationWidget(QWidget):
         if display_text != self.title_label.text():
             self.title_label.setText(display_text)
 
-    def configure_for_location(self, location: GeoLocation | None):
+    def configure_for_location(self, location: GeoLocation | None) -> None:
         self.elevation_chart.configure_for_location(location)
         self.location = location
         if location is None:
@@ -4203,15 +4209,15 @@ class PresetChooseElevationWidget(QWidget):
         super().resizeEvent(event)
         self.elevation_chart.set_elevation_key(self.elevation_key)
 
-    def set_elevation_from_text(self, elevation_text: str):
-        if elevation_text and len(self.elevation_chart.elevation_steps) != 0:
+    def set_elevation_from_text(self, elevation_text: str | None) -> None:
+        if elevation_text is not None and len(self.elevation_chart.elevation_steps) != 0:
             elevation_key = parse_solar_elevation_ini_text(elevation_text)
             if self.elevation_chart.has_elevation_key(elevation_key):
                 self.set_elevation_key(elevation_key)
                 return
         self.set_elevation_key(None)
 
-    def set_elevation_key(self, elevation_key: SolarElevationKey | None):
+    def set_elevation_key(self, elevation_key: SolarElevationKey | None) -> None:
         if elevation_key is not None:
             if self.elevation_chart.has_elevation_key(elevation_key):
                 self.elevation_key = elevation_key
@@ -4232,7 +4238,7 @@ class PresetChooseElevationWidget(QWidget):
         path = self.weather_widget.get_required_weather_filepath()
         return path.as_posix() if path else None
 
-    def set_required_weather_filename(self, weather_filename: str | None):
+    def set_required_weather_filename(self, weather_filename: str | None) -> None:
         self.weather_widget.set_required_weather_filepath(weather_filename)
 
 
@@ -4342,7 +4348,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
 
         self.edit_revert_button = QPushButton(si(self, QStyle.SP_DialogResetButton), tr('Revert'))
 
-        def revert_callable():
+        def revert_callable() -> None:
             preset_name = self.preset_name_edit.text().strip()
             preset_widget = self.find_preset_widget(preset_name)
             if preset_widget is None:
@@ -4370,13 +4376,13 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
     def sizeHint(self) -> QSize:
         return QSize(1200, 768)
 
-    def populate_presets_layout(self):
+    def populate_presets_layout(self) -> None:
         for preset_def in self.main_window.preset_controller.find_presets().values():
             preset_widget = self.create_preset_widget(preset_def)
             self.preset_widgets_layout.addWidget(preset_widget)
         self.preset_widgets_layout.addStretch(1)
 
-    def reload_data(self):
+    def reload_data(self) -> None:
         for i in range(self.preset_widgets_layout.count() - 1, -1, -1):
             w = self.preset_widgets_layout.itemAt(i).widget()
             if isinstance(w, PresetWidget):
@@ -4388,10 +4394,10 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.preset_name_edit.setText('')
         self.editor_trigger_widget.configure_for_location(self.main_config.get_location())
 
-    def refresh_view(self):
+    def refresh_view(self) -> None:
         self.reload_data()  # TODO Update preset status display - a bit of an extreme way to do it - consider something better?
 
-    def status_message(self, message: str, timeout: int = 0):
+    def status_message(self, message: str, timeout: int = 0) -> None:
         self.status_bar.showMessage(message, msecs=3000 if timeout == -1 else timeout)
 
     def find_preset_widget(self, name) -> PresetWidget | None:
@@ -4428,7 +4434,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         widget.show()
         return container
 
-    def initialise_preset_from_controls(self, preset: Preset):
+    def initialise_preset_from_controls(self, preset: Preset) -> None:
         preset_ini = preset.preset_ini
         for key, checkbox in self.content_controls.items():
             if checkbox.isChecked():
@@ -4451,15 +4457,15 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         preset_ini.set('preset', 'transition-type', str(self.editor_transitions_widget.get_transition_type()))
         preset_ini.set('preset', 'transition-step-interval-seconds', str(self.editor_transitions_widget.get_step_seconds()))
 
-    def get_presets(self):
+    def get_presets(self) -> List[Preset]:
         return [self.preset_widgets_layout.itemAt(i).widget()
                 for i in range(0, self.preset_widgets_layout.count() - 1)
                 if isinstance(self.preset_widgets_layout.itemAt(i).widget(), PresetWidget)]
 
-    def get_presets_name_order(self):
+    def get_preset_names_in_order(self) -> List[str]:
         return [w.name for w in self.get_presets()]
 
-    def add_preset_widget(self, preset_widget: PresetWidget):
+    def add_preset_widget(self, preset_widget: PresetWidget) -> None:
         # Insert before trailing stretch item
         self.preset_widgets_layout.insertWidget(self.preset_widgets_layout.count() - 1, preset_widget)
 
@@ -4470,7 +4476,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             new_preset_widget = self.create_preset_widget(preset)
             self.preset_widgets_layout.insertWidget(index - 1, new_preset_widget)
             target_widget.deleteLater()
-            self.main_window.preset_controller.save_order(self.get_presets_name_order())
+            self.main_window.preset_controller.save_order(self.get_preset_names_in_order())
             self.preset_widgets_scrollarea.updateGeometry()
 
     def down_action(self, preset: Preset, target_widget: QWidget) -> None:
@@ -4480,7 +4486,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             new_preset_widget = self.create_preset_widget(preset)
             self.preset_widgets_layout.insertWidget(index + 1, new_preset_widget)
             target_widget.deleteLater()
-            self.main_window.preset_controller.save_order(self.get_presets_name_order())
+            self.main_window.preset_controller.save_order(self.get_preset_names_in_order())
             self.preset_widgets_scrollarea.updateGeometry()
 
     def restore_preset(self, preset: Preset, immediately: bool = True) -> None:
@@ -4508,12 +4514,12 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.main_window.delete_preset(preset)
         self.preset_widgets_layout.removeWidget(target_widget)
         target_widget.deleteLater()
-        self.main_window.preset_controller.save_order(self.get_presets_name_order())
+        self.main_window.preset_controller.save_order(self.get_preset_names_in_order())
         self.preset_name_edit.setText('')
         self.preset_widgets_scrollarea.updateGeometry()
         self.status_message(tr("Deleted {}").format(preset.name), timeout=-1)
 
-    def change_edit_group_title(self):
+    def change_edit_group_title(self) -> None:
         changed_text = self.preset_name_edit.text()
         if changed_text.strip() == "":
             self.editor_controls_widget.setDisabled(True)
@@ -4541,7 +4547,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             self.edit_revert_button.setDisabled(False)
 
     def edit_preset(self, preset: Preset) -> None:
-        def begin_editing(succeeded: bool):
+        def begin_editing(succeeded: bool) -> None:
             self.preset_name_edit.setText(preset.name)
             self.edit_choose_icon_button.set_preset(preset)
             for key, item in self.content_controls.items():
@@ -4580,9 +4586,9 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             self.make_visible()
         else:
             self.add_preset_widget(new_preset_widget)
-            self.main_window.preset_controller.save_order(self.get_presets_name_order())
+            self.main_window.preset_controller.save_order(self.get_preset_names_in_order())
 
-            def scroll_to_bottom():
+            def scroll_to_bottom() -> None:
                 # TODO figure out why this does not work
                 self.preset_widgets_scrollarea.updateGeometry()
                 self.preset_widgets_scrollarea.verticalScrollBar().setValue(
@@ -4594,7 +4600,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.preset_name_edit.setText('')
         self.status_message(tr("Saved {}").format(preset.name), timeout=-1)
 
-    def create_preset_widget(self, preset):
+    def create_preset_widget(self, preset) -> PresetWidget:
         return PresetWidget(
             preset,
             restore_action=self.restore_preset,
@@ -4626,15 +4632,15 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         super().closeEvent(event)
 
 
-def presets_dialog_update_view(message: str, refresh_view: bool = True):
-    presets_dialog = PresetsDialog.get_instance()
+def presets_dialog_update_view(message: str, refresh_view: bool = True) -> None:
+    presets_dialog: PresetsDialog = PresetsDialog.get_instance()
     if presets_dialog:
         presets_dialog.status_message(message, timeout=-1)
         if refresh_view:
             presets_dialog.refresh_view()
 
 
-def exception_handler(e_type, e_value, e_traceback):
+def exception_handler(e_type, e_value, e_traceback) -> None:
     """Overarching error handler in case something unexpected happens."""
     log_error("\n" + ''.join(traceback.format_exception(e_type, e_value, e_traceback)))
     alert = MessageBox(QMessageBox.Critical)
@@ -4653,7 +4659,7 @@ def handle_theme(svg_str: bytes) -> bytes:
     return svg_str
 
 
-def create_themed_pixmap_from_svg_bytes(svg_bytes: bytes):
+def create_themed_pixmap_from_svg_bytes(svg_bytes: bytes) -> QPixmap:
     """There is no QIcon option for loading SVG from a string, only from a SVG file, so roll our own."""
     image = create_themed_image_from_svg_bytes(svg_bytes)
     return QPixmap.fromImage(image)
@@ -4714,7 +4720,7 @@ def create_merged_icon(base_icon: QIcon, overlay_icon: QIcon) -> QIcon:
     return overlay_icon
 
 
-def install_as_desktop_application(uninstall: bool = False):
+def install_as_desktop_application(uninstall: bool = False) -> None:
     """Self install this script in the current Linux user's bin directory and desktop applications->settings menu."""
     desktop_dir = Path.home().joinpath('.local', 'share', 'applications')
     icon_dir = Path.home().joinpath('.local', 'share', 'icons')
@@ -4783,7 +4789,7 @@ def install_as_desktop_application(uninstall: bool = False):
 
 class LuxProfileChart(QLabel):
 
-    def __init__(self, lux_dialog: LuxDialog):
+    def __init__(self, lux_dialog: LuxDialog) -> None:
         super().__init__(parent=lux_dialog)
         self.lux_dialog = lux_dialog
         self.chart_changed_callback = lux_dialog.chart_changed_callback
@@ -4810,7 +4816,7 @@ class LuxProfileChart(QLabel):
         self.pixmap_width, self.pixmap_height = event.size().width(), event.size().height()
         self.create_plot()
 
-    def create_plot(self):
+    def create_plot(self) -> None:
         std_line_width = 4
         interpolating = self.lux_dialog.is_interpolating()
         preset_color = 0xebfff9
@@ -4951,7 +4957,7 @@ class LuxProfileChart(QLabel):
         painter.end()
         self.setPixmap(pixmap)
 
-    def set_current_profile(self, name: str):
+    def set_current_profile(self, name: str) -> None:
         self.current_vdu_id = name
         self.create_plot()
 
@@ -4967,7 +4973,7 @@ class LuxProfileChart(QLabel):
         event.accept()
 
     def lux_point_edit(self, x, y) -> bool:
-        assert self.current_vdu_id is not ''
+        assert self.current_vdu_id != ''
         vdu_data = self.profile_data[self.current_vdu_id]
         _, _, existing_lux, existing_percent, existing_point = self.find_close_to(x, y, self.current_vdu_id)
         if existing_lux is not None:  # Remove
@@ -5012,7 +5018,7 @@ class LuxProfileChart(QLabel):
             return True
         return False
 
-    def show_changes(self):
+    def show_changes(self) -> None:
         self.create_plot()
         self.update()
         self.chart_changed_callback()
@@ -5039,14 +5045,14 @@ class LuxProfileChart(QLabel):
                 return existing_x, existing_y, existing_lux, existing_percent, point_data
         return None, None, None, None, None
 
-    def find_preset_point_close_to(self, x: int):
+    def find_preset_point_close_to(self, x: int) -> LuxPoint | None:
         for point in self.preset_points:
             point_x = self.x_from_lux(point.lux)
             if abs(point_x - x) <= self.snap_to_margin:
                 return point
         return None
 
-    def percent_from_y(self, y):
+    def percent_from_y(self, y) -> int:
         percent = round(100.0 * abs(y) / self.plot_height)
         min_v, max_v = self.range_restrictions[self.current_vdu_id]
         if percent > max_v:
@@ -5055,10 +5061,10 @@ class LuxProfileChart(QLabel):
             return min_v
         return percent
 
-    def y_from_percent(self, percent):
+    def y_from_percent(self, percent) -> int:
         return round(self.plot_height * percent / 100)
 
-    def lux_from_x(self, x):
+    def lux_from_x(self, x) -> int:
         lux = 0 if x <= 0 else round(10.0 ** (math.log10(1) + (x / self.plot_width) * (math.log10(100_000) - math.log10(1))))
         if lux > 100_000:
             return 100_000
@@ -5072,7 +5078,7 @@ class LuxMeterWidget(QWidget):
 
     lux_changed_signal = pyqtSignal(int)
 
-    def __init__(self, parent: LuxDialog | None = None):
+    def __init__(self, parent: LuxDialog | None = None) -> None:
         super().__init__(parent=parent)
         self.setLayout(QVBoxLayout())
         self.current_lux_display = QLabel()
@@ -5088,7 +5094,7 @@ class LuxMeterWidget(QWidget):
         self.layout().addWidget(self.lux_plot)
         self.lux_meter_worker: LuxMeterWidgetThread | None = None
 
-    def display_lux(self, lux: int):
+    def display_lux(self, lux: int) -> None:
         self.current_lux_display.setText(tr("Lux: {}".format(lux)))
         self.history = self.history[-self.max_history:]
         self.history.append(lux)
@@ -5102,17 +5108,17 @@ class LuxMeterWidget(QWidget):
         self.lux_plot.setPixmap(pixmap)
         self.lux_changed_signal.emit(lux)
 
-    def interrupt_history(self):
+    def interrupt_history(self) -> None:
         if len(self.history) > 1:
             self.history = (self.history + [0] * 10)[-100:]
 
-    def start_metering(self, lux_meter: LuxMeterSerialDevice):
+    def start_metering(self, lux_meter: LuxMeterSerialDevice | LuxMeterFifoDevice | LuxMeterRunnableDevice) -> None:
         self.stop_metering()
         self.lux_meter_worker = LuxMeterWidgetThread(lux_meter)
         self.lux_meter_worker.new_lux_value.connect(self.display_lux)
         self.lux_meter_worker.start()
 
-    def stop_metering(self):
+    def stop_metering(self) -> None:
         if self.lux_meter_worker is not None:
             self.lux_meter_worker.stop_requested = True
             self.lux_meter_worker.new_lux_value.disconnect(self.display_lux)
@@ -5127,12 +5133,12 @@ class LuxMeterWidget(QWidget):
 class LuxMeterWidgetThread(WorkerThread):
     new_lux_value = pyqtSignal(int)
 
-    def __init__(self, lux_meter: LuxMeterSerialDevice):
-        super().__init__(task_body=self.read_meter)
+    def __init__(self, lux_meter: LuxMeterSerialDevice | LuxMeterFifoDevice | LuxMeterRunnableDevice) -> None:
+        super().__init__(task_body=self.read_loop)
         self.lux_meter = lux_meter
         self.stop_requested = False
 
-    def read_meter(self):
+    def read_loop(self) -> None:
         while not self.stop_requested:
             if self.lux_meter is None:
                 return
@@ -5140,7 +5146,7 @@ class LuxMeterWidgetThread(WorkerThread):
             time.sleep(5.0)
 
 
-def lux_create_device(device_name: str):
+def lux_create_device(device_name: str) -> LuxMeterSerialDevice | LuxMeterFifoDevice | LuxMeterRunnableDevice:
     if not pathlib.Path(device_name).exists():
         raise LuxDeviceException(tr("Failed to setup {} - path does not exist.").format(device_name))
     if not os.access(device_name, os.R_OK):
@@ -5156,7 +5162,7 @@ def lux_create_device(device_name: str):
 
 class LuxMeterFifoDevice:
 
-    def __init__(self, device_name: str, thread: QThread | None = None):
+    def __init__(self, device_name: str, thread: QThread | None = None) -> None:
         super().__init__()
         self.device_name = device_name
         self.fifo: io.TextIOBase | None = None
@@ -5187,7 +5193,7 @@ class LuxMeterFifoDevice:
                     log_warning(f"Retry read of {self.device_name}, will retry feed in 10 seconds", se)
                     time.sleep(10)
 
-    def close(self):
+    def close(self) -> None:
         with self.lock:
             if self.fifo is not None:
                 self.fifo.close()
@@ -5195,7 +5201,7 @@ class LuxMeterFifoDevice:
 
 class LuxMeterRunnableDevice:
 
-    def __init__(self, device_name: str, thread: QThread | None = None):
+    def __init__(self, device_name: str, thread: QThread | None = None) -> None:
         super().__init__()
         self.runnable = device_name
         self.lock = Lock()
@@ -5220,13 +5226,13 @@ class LuxMeterRunnableDevice:
                     log_warning(f"Error running {self.runnable}, will retry in 10 seconds", se)
                     time.sleep(10)
 
-    def close(self):
+    def close(self) -> None:
         pass
 
 
 class LuxMeterSerialDevice:
 
-    def __init__(self, device_name: str):
+    def __init__(self, device_name: str) -> None:
         super().__init__()
         self.device_name = device_name
         self.serial_device = None
@@ -5267,20 +5273,20 @@ class LuxMeterSerialDevice:
                         self.serial_device.close()
                     self.serial_device = None
 
-    def close(self):
+    def close(self) -> None:
         with self.lock:
             if self.serial_device is not None:
                 self.serial_device.close()
 
 
 class LuxSmooth:
-    def __init__(self, n, alpha=0.5):
-        self.length = n
-        self.input = []
-        self.output = []
-        self.alpha = alpha
+    def __init__(self, n: int, alpha: float = 0.5) -> None:
+        self.length: int = n
+        self.input: List[float] = []
+        self.output: List[float] = []
+        self.alpha: float = alpha
 
-    def smooth(self, v):  # A low pass filter
+    def smooth(self, v: float) -> float:  # A low pass filter
         # The smaller the alpha, the more each previous value affects the following value. Smaller alpha results => more smoothing.
         # https://stackoverflow.com/questions/4611599/smoothing-data-from-a-sensor
         # https://en.wikipedia.org/wiki/Low-pass_filter#Simple_infinite_impulse_response_filter
@@ -5299,7 +5305,7 @@ class LuxAutoWorker(WorkerThread):
     _update_gui_control = pyqtSignal(VduControlBase)
     _lux_dialog_message = pyqtSignal(str, int, str)
 
-    def __init__(self, auto_controller: LuxAutoController):
+    def __init__(self, auto_controller: LuxAutoController) -> None:
         super().__init__(task_body=self.adjust_for_lux, task_finished=self.finished_callable)
         self.auto_controller = auto_controller
         self.main_app = auto_controller.main_app
@@ -5321,7 +5327,7 @@ class LuxAutoWorker(WorkerThread):
         self.sampling_interval_seconds = 60 // lux_config.getint('lux-meter', 'samples-per-minute', fallback=3)
         log_info(f"LuxAutoWorker: smoother n={self.smoother.length} alpha={self.smoother.alpha}")
 
-        def update_gui_control(control: VduControlBase):
+        def update_gui_control(control: VduControlBase) -> None:
             control.refresh_view()
 
         # Using Qt signals to ensure GUI activity occurs in the GUI thread (this thread).
@@ -5329,10 +5335,10 @@ class LuxAutoWorker(WorkerThread):
         self._lux_dialog_message.connect(LuxDialog.lux_dialog_message)
         self.status_message(f"{SUN_SYMBOL} 00:00", 'countdown')
 
-    def status_message(self, message: str, destination: str = 'status'):
+    def status_message(self, message: str, destination: str = 'status') -> None:
         self._lux_dialog_message.emit(message, 0, destination)
 
-    def adjust_for_lux(self):
+    def adjust_for_lux(self) -> None:
         time.sleep(2.0)  # Give any previous thread a chance to exit
         log_info(f"LuxAutoWorker monitoring commences (Thread={threading.get_ident()})")
         try:
@@ -5396,7 +5402,7 @@ class LuxAutoWorker(WorkerThread):
             time.sleep(0.5)  # Let i2c settle down, then continue stepping
         return made_brightness_changes
 
-    def lux_summary(self, metered_lux, smoothed_lux):
+    def lux_summary(self, metered_lux, smoothed_lux) -> str:
         return f"{metered_lux:.0f} {SMOOTHING_SYMBOL} {smoothed_lux} lux" if round(
             metered_lux) != smoothed_lux else f"{metered_lux:.0f} lux"
 
@@ -5449,10 +5455,10 @@ class LuxAutoWorker(WorkerThread):
                     return False  # force a full sleep cycle.
         return made_brightness_changes
 
-    def determine_brightness(self, vdu_id: str, smoothed_lux: float, lux_profile: List[LuxPoint]):
+    def determine_brightness(self, vdu_id: str, smoothed_lux: float, lux_profile: List[LuxPoint]) -> Tuple[int, str | None]:
         result_point = None
         result_preset_name = None  # should be at most one for a given lux value.
-        result_brightness = -1  # Just in case we don't get a match
+        result_brightness = -1.0  # Just in case we don't get a match
         for step_point in [LuxPoint(0, 0)] + lux_profile + [LuxPoint(100000, 100)]:
             # Moving up the lux steps, seeking the step below smoothed_lux
             if smoothed_lux >= step_point.lux:  # Possible result, there may be something higher, keep going...
@@ -5467,7 +5473,8 @@ class LuxAutoWorker(WorkerThread):
         log_debug(f"LuxAutoWorker: determine_brightness {vdu_id=} {result_brightness=:.2f}% {result_preset_name=}") if log_debug_enabled else None
         return round(result_brightness), result_preset_name
 
-    def interpolate_brightness(self, vdu_id, smoothed_lux, result_point, next_point, result_brightness, result_preset_name):
+    def interpolate_brightness(self, vdu_id, smoothed_lux, result_point, next_point,
+                               result_brightness, result_preset_name) -> Tuple[float, str]:
         next_brightness, next_preset_name = self.get_profile_values(next_point, vdu_id)
         log_debug(f"{vdu_id=} {smoothed_lux=}  {result_point.lux=} {next_point.lux=}" 
                   f"{result_brightness=}% {next_brightness=}% {result_preset_name=}") if log_debug_enabled else None
@@ -5481,7 +5488,7 @@ class LuxAutoWorker(WorkerThread):
             result_preset_name = next_preset_name  # Close enough to use the next point's Preset.
         else:  # Not close to a Preset, interpolate a value - no idea if the log10 approach is perfectly correct
             # Only interpolate if 1) there is a slope in brightness, 2) lux is somewhere beyond its base point, 3)
-            if result_brightness != next_brightness and smoothed_lux != result_point.lux and next_point.lux > result_point.lux:  # only if there is a slope...
+            if result_brightness != next_brightness and smoothed_lux != result_point.lux and next_point.lux > result_point.lux:
                 log_debug(f"LuxAutoWorker: interpolation: {result_brightness=} {next_brightness=}" 
                           f" {smoothed_lux=} {result_point.lux=} {next_point.lux=}") if log_debug_enabled else None
                 interpolated_brightness = \
@@ -5494,7 +5501,7 @@ class LuxAutoWorker(WorkerThread):
                     result_preset_name = None  # definitely between any Presets if we reach here
         return result_brightness, result_preset_name
 
-    def get_profile_values(self, lux_point, vdu_id):
+    def get_profile_values(self, lux_point, vdu_id) -> Tuple[int, str | None]:
         profile_brightness = -1
         profile_preset_name = None
         if lux_point.preset_name is None:
@@ -5510,36 +5517,36 @@ class LuxAutoWorker(WorkerThread):
         smoothed = self.smoother.smooth(metered_value)
         return smoothed
 
-    def finished_callable(self):
+    def finished_callable(self) -> None:
         if self.vdu_exception:
             log_error(f"LuxAutoWorker exited with exception={self.vdu_exception}")
 
 
 class LuxPoint:
 
-    def __init__(self, lux: int, brightness: int, preset_name: str | None = None):
+    def __init__(self, lux: int, brightness: int, preset_name: str | None = None) -> None:
         self.lux = lux
         self.brightness = brightness
         self.preset_name = preset_name
 
-    def __lt__(self, other):
+    def __lt__(self, other) -> bool:
         return self.lux < other.lux
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return self.lux == other.lux and self.preset_name == other.preset_name
 
 
 class LuxConfig(ConfigIni):
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.path = get_config_path('AutoLux')
         self.last_modified_time = 0.0
 
-    def get_device_name(self):
-        return self.get("lux-meter", "lux-device", fallback=None)
+    def get_device_name(self) -> str:
+        return self.get("lux-meter", "lux-device", fallback='')
 
-    def set_device_name(self, device_name: str):
+    def set_device_name(self, device_name: str) -> None:
         self.set("lux-meter", "lux-device", device_name)
 
     def get_vdu_profile(self, vdu_controller: VduController) -> List[LuxPoint]:
@@ -5559,7 +5566,7 @@ class LuxConfig(ConfigIni):
             lux_points.sort()
         return lux_points
 
-    def get_preset_points(self):
+    def get_preset_points(self) -> List[LuxPoint]:
         lux_preset_points = []
         if self.has_option('lux-presets', 'lux-preset-points'):
             for value in literal_eval(self.get('lux-presets', 'lux-preset-points')):
@@ -5569,7 +5576,7 @@ class LuxConfig(ConfigIni):
     def get_interval_minutes(self) -> int:
         return self.getint('lux-meter', 'interval-minutes', fallback=1)
 
-    def is_auto_enabled(self):
+    def is_auto_enabled(self) -> bool:
         return self.getboolean("lux-meter", "automatic-brightness", fallback=False)
 
     def load(self, force: bool = False) -> LuxConfig:
@@ -5592,12 +5599,12 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         LuxDialog.show_existing_dialog() if LuxDialog.exists() else LuxDialog(main_app)
 
     @staticmethod
-    def lux_dialog_message(message: str, timeout: int, destination: str = 'status'):
-        lux_dialog = LuxDialog.get_instance()
+    def lux_dialog_message(message: str, timeout: int, destination: str = 'status') -> None:
+        lux_dialog: LuxDialog = LuxDialog.get_instance()
         if lux_dialog is not None:
             lux_dialog.status_message(message, timeout, destination)
 
-    def __init__(self, main_app: VduAppWindow):
+    def __init__(self, main_app: VduAppWindow) -> None:
         super().__init__()
         self.setWindowTitle(tr('Light-Meter'))
         self.main_app: VduAppWindow = main_app
@@ -5648,7 +5655,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
         self.profile_plot = LuxProfileChart(self)
 
-        def lux_changed(lux: int):
+        def lux_changed(lux: int) -> None:
             if self.profile_plot:
                 self.profile_plot.current_lux = lux
                 self.profile_plot.create_plot()
@@ -5684,7 +5691,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.refresh_now_button.hide()
         self.status_layout.addWidget(self.status_bar)
 
-        def choose_device():
+        def choose_device() -> None:
             device_name = QFileDialog.getOpenFileName(self, tr("Select a tty device or fifo"), "/dev/ttyUSB0")[0]
             if device_name != '':
                 device_name = self.validate_device(device_name)
@@ -5696,7 +5703,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
         self.meter_device_selector.pressed.connect(choose_device)
 
-        def set_auto_monitoring(checked: int):
+        def set_auto_monitoring(checked: int) -> None:
             if (checked == Qt.Checked) != self.lux_config.is_auto_enabled():
                 self.lux_config.set('lux-meter', 'automatic-brightness', 'yes' if checked == Qt.Checked else 'no')
                 self.apply_settings()
@@ -5711,14 +5718,14 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
         self.interval_selector.valueChanged.connect(interval_selector_changed)
 
-        def set_interpolation(checked: int):
+        def set_interpolation(checked: int) -> None:
             if (checked == Qt.Checked) != self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=False):
                 self.lux_config.set('lux-meter', 'interpolate-brightness', 'yes' if checked == Qt.Checked else 'no')
                 self.apply_settings()
 
         self.interpolate_checkbox.stateChanged.connect(set_interpolation)
 
-        def select_profile(index: int):
+        def select_profile(index: int) -> None:
             if self.profile_plot is not None:
                 profile_name = list(self.profile_data.keys())[index]
                 self.profile_plot.set_current_profile(profile_name)
@@ -5731,7 +5738,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.make_visible()
         self.in_constructor = False
 
-    def chart_changed_callback(self):
+    def chart_changed_callback(self) -> None:
         self.has_profile_changes = True
         self.status_message(tr("Use Apply to commit chart changes."))
         self.save_button.setEnabled(True)
@@ -5756,9 +5763,9 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             self.range_restrictions[vdu_controller.vdu_stable_id] = min_v, max_v
             self.profile_data[vdu_controller.vdu_stable_id] = self.lux_config.get_vdu_profile(vdu_controller)
             new_id_list.append(vdu_controller.vdu_stable_id)
-        self.preset_points.clear()
-        for preset_point in self.lux_config.get_preset_points():  # Edit out deleted presets.
-            if self.main_app.find_preset_by_name(preset_point.preset_name):
+        self.preset_points.clear()  # Edit out deleted presets by starting from scratch
+        for preset_point in self.lux_config.get_preset_points():
+            if preset_point.preset_name is not None and self.main_app.find_preset_by_name(preset_point.preset_name):
                 self.preset_points.append(preset_point)
 
         self.validate_device(self.device_name)
@@ -5784,7 +5791,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.profile_plot.create_plot()
         self.status_message(tr("Read {} lux/brightness profiles.").format(len(new_id_list)), 3000)
 
-    def make_visible(self):
+    def make_visible(self) -> None:
         super().make_visible()
         self.reinitialise()
 
@@ -5812,14 +5819,13 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             alert.exec()
         return device
 
-    def apply_settings(self, requires_auto_brightness_restart: bool = True):
+    def apply_settings(self, requires_auto_brightness_restart: bool = True) -> None:
         self.lux_config.save(self.path)
         if requires_auto_brightness_restart:
             self.main_app.get_lux_auto_controller().initialize_from_config()
             self.lux_meter_widget.stop_metering()
             meter_device = self.main_app.get_lux_auto_controller().lux_meter
             self.configure_ui(meter_device)
-
             if meter_device is not None:
                 if self.lux_config.is_auto_enabled():
                     self.status_message(tr("Restarted brightness auto adjustment"))
@@ -5828,7 +5834,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             else:
                 self.status_message(tr("No metering device set."))
 
-    def configure_ui(self, meter_device: LuxMeterSerialDevice | None):
+    def configure_ui(self, meter_device: LuxMeterSerialDevice | LuxMeterFifoDevice | LuxMeterRunnableDevice | None) -> None:
         if meter_device is not None:
             self.lux_meter_widget.start_metering(meter_device)
             self.enabled_checkbox.setEnabled(True)
@@ -5841,7 +5847,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             self.enabled_checkbox.setEnabled(False)
             self.refresh_now_button.hide()
 
-    def save_profiles(self):
+    def save_profiles(self) -> None:
         for vdu_id, profile in self.profile_plot.profile_data.items():
             data = [(lux_point.lux, lux_point.brightness) for lux_point in profile if lux_point.preset_name is None]
             self.lux_config.set('lux-profile', vdu_id, repr(data))
@@ -5866,7 +5872,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.lux_meter_widget.stop_metering()
         super().closeEvent(event)
 
-    def status_message(self, message: str, timeout: int = 0, destination: str = 'status'):
+    def status_message(self, message: str, timeout: int = 0, destination: str = 'status') -> None:
         if destination == 'countdown':
             self.refresh_now_button.show()
             self.refresh_now_button.setText(message)
@@ -5884,21 +5890,20 @@ class LuxAutoController:
         super().__init__()
         self.main_app = main_app
         self.lux_config: LuxConfig | None = None
-        self.lux_meter: LuxMeterSerialDevice | None = None
+        self.lux_meter: LuxMeterSerialDevice | LuxMeterFifoDevice | LuxMeterRunnableDevice | None = None
         self.lux_auto_brightness_worker: LuxAutoWorker | None = None
-        self.lux_button: ToolButton | None = None
-        self.create_tool_button()
+        self.lux_tool_button = self.create_tool_button()
 
-    def create_tool_button(self) -> ToolButton:
-        self.lux_button = ToolButton(AUTO_LUX_ON_SVG, tr("Toggle automatic brightness control"))
-        self.lux_button.pressed.connect(self.toggle_auto)
-        return self.lux_button
+    def create_tool_button(self) -> ToolButton:  # Used when the application UI has to reinitialize
+        self.lux_tool_button = ToolButton(AUTO_LUX_ON_SVG, tr("Toggle automatic brightness control"))
+        self.lux_tool_button.pressed.connect(self.toggle_auto)
+        return self.lux_tool_button
 
-    def initialize_from_config(self):
+    def initialize_from_config(self) -> None:
         assert is_running_in_gui_thread()
         self.lux_config = LuxConfig().load()
         try:
-            if self.lux_config.get_device_name() is not None and self.lux_config.get_device_name().strip() != '':
+            if self.lux_config.get_device_name().strip() != '':
                 self.lux_meter = lux_create_device(self.lux_config.get_device_name())
             if self.lux_config.is_auto_enabled():
                 log_info("Lux auto-brightness settings refresh - restart monitoring.")
@@ -5917,36 +5922,35 @@ class LuxAutoController:
                     self.lux_auto_brightness_worker.working.disconnect(self.main_app.display_lux_auto_indicators)
                     self.lux_auto_brightness_worker = None
                     self.main_app.display_lux_auto_indicators()
-
         except LuxDeviceException as lde:
             log_error(f"Error setting up lux meter {lde}")
             alert = MessageBox(QMessageBox.Critical)
             alert.setText(tr("Error setting up lux meter: {}").format(self.lux_config.get_device_name()))
             alert.setInformativeText(str(lde))
             alert.exec()
-        self.lux_button.refresh_icon(self.current_auto_svg())  # Refresh indicators immediately
+        self.lux_tool_button.refresh_icon(self.current_auto_svg())  # Refresh indicators immediately
 
-    def is_auto_enabled(self):
+    def is_auto_enabled(self) -> bool:
         return self.lux_config is not None and self.lux_config.is_auto_enabled()
 
-    def current_auto_svg(self):
+    def current_auto_svg(self) -> bytes:
         return AUTO_LUX_ON_SVG if self.is_auto_enabled() else AUTO_LUX_OFF_SVG
 
     def get_lux_config(self) -> LuxConfig:
         assert self.lux_config is not None
         return self.lux_config
 
-    def toggle_auto(self):
+    def toggle_auto(self) -> None:
         enabled = self.is_auto_enabled()
+        assert self.lux_config is not None
         self.lux_config.set('lux-meter', 'automatic-brightness', 'no' if enabled else 'yes')
         self.lux_config.save(get_config_path('AutoLux'))
         self.initialize_from_config()
-        lux_dialog = LuxDialog.get_instance()
+        lux_dialog: LuxDialog = LuxDialog.get_instance()
         if lux_dialog is not None:
             lux_dialog.reinitialise()
-        return enabled
 
-    def refresh_brightness_now(self):
+    def refresh_brightness_now(self) -> None:
         if self.lux_auto_brightness_worker is not None:
             self.lux_auto_brightness_worker.refresh_now_requested = True
 
@@ -5959,7 +5963,7 @@ class GreyScaleDialog(QDialog):
     # which would achieve the same thing - but would alter where the dialog appears.
     _active_list: List[QDialog] = []
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         GreyScaleDialog._active_list.append(self)
         layout = QVBoxLayout()
@@ -5993,10 +5997,10 @@ class GreyScaleDialog(QDialog):
 class AboutDialog(QMessageBox, DialogSingletonMixin):
 
     @staticmethod
-    def invoke():
+    def invoke() -> None:
         AboutDialog.show_existing_dialog() if AboutDialog.exists() else AboutDialog()
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle(tr('About'))
         self.setTextFormat(Qt.AutoText)
@@ -6021,10 +6025,10 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
 class HelpDialog(QDialog, DialogSingletonMixin):
 
     @staticmethod
-    def invoke():
+    def invoke() -> None:
         HelpDialog.show_existing_dialog() if HelpDialog.exists() else HelpDialog()
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle(tr('Help'))
         layout = QVBoxLayout()
@@ -6054,11 +6058,11 @@ class PresetScheduleStatus(Enum):
     def symbol(self) -> str:
         return self.value[1]
 
-    def description(self):
+    def description(self) -> str:
         return self.value[2]
 
-    def __str__(self):
-        return self.value[0]
+    def __str__(self) -> str:
+        return str(self.value[0])
 
 
 class PresetTransitionFlag(IntFlag):
@@ -6088,7 +6092,7 @@ class PresetTransitionFlag(IntFlag):
             return abbreviations[self]
         return TRANSITION_SYMBOL + ''.join([abbreviations[component] for component in self.component_values()])
 
-    def description(self, descriptions=descriptions):  # Yuck
+    def description(self, descriptions=descriptions) -> str:  # Yuck
         if self.value in (PresetTransitionFlag.NONE, PresetTransitionFlag.ALWAYS):
             return descriptions[self]
         return ','.join([descriptions[component] for component in self.component_values()])
@@ -6097,28 +6101,28 @@ class PresetTransitionFlag(IntFlag):
         # similar to Python 3.11 enum.show_flag_values(self) - list of power of two components for self
         return [option for option in PresetTransitionFlag if (option & (option - 1) == 0) and option != 0 and option in self]
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.value == PresetTransitionFlag.NONE:
             return self.name.lower()
         return ','.join([component.name.lower() for component in self.component_values()])
 
 
-def parse_transaction_type(string_value: str):
-    transaction_type = PresetTransitionFlag.NONE
+def parse_transition_type(string_value: str) -> PresetTransitionFlag:
+    transition_type = PresetTransitionFlag.NONE
     string_value = string_value.replace('schedule_or_signal', 'scheduled,signal')  # Backward compatible for unreleased 1.9.2
     for component_value in string_value.split(','):
         for option in PresetTransitionFlag:
             assert option.name is not None
             if component_value.lower() == option.name.lower():
-                transaction_type |= option
-    return transaction_type
+                transition_type |= option
+    return transition_type
 
 
 class VduAppWindow(QMainWindow):
     splash_message_signal = pyqtSignal(str)
     _restore_preset_in_gui_thread = pyqtSignal(Preset, object, bool)
 
-    def __init__(self, main_config: VduControlsConfig, app: QApplication):
+    def __init__(self, main_config: VduControlsConfig, app: QApplication) -> None:
         super().__init__()
         global gui_thread
         gui_thread = app.thread()
@@ -6145,7 +6149,7 @@ class VduAppWindow(QMainWindow):
 
         self._restore_preset_in_gui_thread.connect(self.restore_preset)
 
-        main_window_action: Callable | None = None
+        main_window_action: Callable[[], None] | None = None
 
         if gnome_tray_behaviour:
             # Gnome tray doesn't normally provide a way to bring up the main app.
@@ -6156,7 +6160,7 @@ class VduAppWindow(QMainWindow):
 
             main_window_action = main_window_action_implemenation
 
-        def settings_changed(changed_settings: List):
+        def settings_changed(changed_settings: List) -> None:
             assert self.ddcutil is not None
             for setting in GlobalOption:
                 if ('vdu-controls-globals', setting.ini_name()) in changed_settings and setting.requires_restart():
@@ -6167,12 +6171,14 @@ class VduAppWindow(QMainWindow):
             self.ddcutil.change_settings(default_sleep_multiplier=main_config.get_sleep_multiplier())
             self.create_main_control_panel()
             self.schedule_presets(reset=True)
-            presets_dialog = PresetsDialog.get_instance()
+            presets_dialog: PresetsDialog = PresetsDialog.get_instance()
             if presets_dialog:
                 presets_dialog.reload_data()
 
         def edit_config() -> None:
-            SettingsEditor.invoke(main_config, [vdu.config for vdu in self.get_main_panel().vdu_controllers], settings_changed)
+            SettingsEditor.invoke(main_config,
+                                  [vdu.config for vdu in self.get_main_panel().vdu_controllers if vdu.config is not None],
+                                  settings_changed)
 
         def refresh_from_vdus() -> None:
             self.start_refresh()
@@ -6263,7 +6269,7 @@ class VduAppWindow(QMainWindow):
                     f"\n\nVDU Controls {VDU_CONTROLS_VERSION}\n{message}",
                     Qt.AlignTop | Qt.AlignHCenter)
 
-        def respond_to_unix_signal(signal_number: int):
+        def respond_to_unix_signal(signal_number: int) -> None:
             if signal_number == signal.SIGHUP:
                 self.start_refresh()
             elif PRESET_SIGNAL_MIN <= signal_number <= PRESET_SIGNAL_MAX:
@@ -6292,7 +6298,7 @@ class VduAppWindow(QMainWindow):
             self.lux_auto_controller.initialize_from_config()
 
         if self.tray is not None:
-            def show_window():
+            def show_window() -> None:
                 if self.isVisible():
                     self.hide()
                 else:
@@ -6339,7 +6345,7 @@ class VduAppWindow(QMainWindow):
             # Stops the release notes from being repeated.
             main_config.write_file(get_config_path('vdu_controls'), overwrite=True)
 
-    def set_app_icon_and_title(self, icon: QIcon | None = None, title_prefix: str | None = None):
+    def set_app_icon_and_title(self, icon: QIcon | None = None, title_prefix: str | None = None) -> None:
         assert is_running_in_gui_thread()
         title = f"{title_prefix} {PRESET_APP_SEPARATOR_SYMBOL} {self.app_name}" if title_prefix else self.app_name
         if self.windowTitle() != title:
@@ -6478,12 +6484,12 @@ class VduAppWindow(QMainWindow):
         assert is_running_in_gui_thread()
         self.get_main_panel().indicate_busy()
 
-        def refresh_data():
+        def refresh_data() -> None:
             # Called in a non-GUI thread, cannot do any GUI op's.
             self.detected_vdu_list = self.ddcutil.detect_monitors()
             self.main_panel.refresh_data(self.detected_vdu_list)
 
-        def refresh_view():
+        def refresh_view() -> None:
             """Invoke when the GUI worker thread completes. Runs in the GUI thread and can refresh the GUI views."""
             if self.refresh_data_task.vdu_exception is not None:
                 self.main_panel.display_vdu_exception(self.refresh_data_task.vdu_exception, can_retry=False)
@@ -6499,10 +6505,10 @@ class VduAppWindow(QMainWindow):
         self.refresh_data_task = WorkerThread(task_body=refresh_data, task_finished=refresh_view)
         self.refresh_data_task.start()
 
-    def restore_preset_in_gui_thread(self, preset: Preset, immediately: bool = False):
+    def restore_preset_in_gui_thread(self, preset: Preset, immediately: bool = False) -> None:
         self._restore_preset_in_gui_thread.emit(preset, None, immediately)
 
-    def restore_preset(self, preset: Preset, restore_finished: Callable | None = None, immediately: bool = False) -> None:
+    def restore_preset(self, preset: Preset, restore_finished: Callable[[bool], None] | None = None, immediately: bool = False) -> None:
         # Starts the restore, but it will complete in the worker thread
         assert is_running_in_gui_thread()    # Boilerplate in case this is called from the wrong thread.
         self.transitioning_dummy_preset = None
@@ -6514,7 +6520,7 @@ class VduAppWindow(QMainWindow):
         self.get_main_panel().indicate_busy()
         preset.load()
 
-        def update_progress():
+        def update_progress() -> None:
             nonlocal worker_thread
             if self.main_panel.busy:
                 self.get_main_panel().indicate_busy(False)
@@ -6526,7 +6532,7 @@ class VduAppWindow(QMainWindow):
             self.transitioning_dummy_preset.update_progress() if self.transitioning_dummy_preset else None
             self.display_active_preset(self.transitioning_dummy_preset)
 
-        def finished():
+        def finished() -> None:
             nonlocal worker_thread
             self.transitioning_dummy_preset = None
             if worker_thread.vdu_exception is not None:
@@ -6602,14 +6608,14 @@ class VduAppWindow(QMainWindow):
                 return preset
         return None
 
-    def get_presets(self):
+    def get_presets(self) -> Dict[str, Preset]:
         return self.preset_controller.find_presets()
 
     def get_lux_auto_controller(self) -> LuxAutoController:
         assert self.lux_auto_controller is not None
         return self.lux_auto_controller
 
-    def display_lux_auto_indicators(self):
+    def display_lux_auto_indicators(self) -> None:
         assert is_running_in_gui_thread()  # Boilerplate in case this is called from the wrong thread.
         if self.main_config.is_set(GlobalOption.LUX_OPTIONS_ENABLED) \
                 and self.lux_auto_controller is not None and self.lux_auto_controller.lux_meter is not None:
@@ -6636,11 +6642,11 @@ class VduAppWindow(QMainWindow):
             self.set_app_icon_and_title(preset.create_icon(), preset.get_title_name())
         self.app_context_menu.refresh_preset_menu()
 
-    def refresh_tray_menu(self):
+    def refresh_tray_menu(self) -> None:
         assert is_running_in_gui_thread()
         self.app_context_menu.update()
 
-    def closeEvent(self, event):
+    def closeEvent(self, event) -> None:
         self.app_save_state()
         # Despite what you find on Google, the following seems unnecessary, and causes vdu_controls to veto logout/shutdown
         # if it's window is present on the desktop.  Leaving the code here for one more version.
@@ -6651,15 +6657,15 @@ class VduAppWindow(QMainWindow):
             else:
                 event.accept()  # let the window close
 
-    def create_config_files(self):
+    def create_config_files(self) -> None:
         for vdu_model in self.main_panel.vdu_controllers:
             vdu_model.write_template_config_files()
 
-    def app_save_state(self):
+    def app_save_state(self) -> None:
         self.settings.setValue(self.geometry_key, self.saveGeometry())
         self.settings.setValue(self.state_key, self.saveState())
 
-    def app_restore_state(self):
+    def app_restore_state(self) -> None:
         geometry = self.settings.value(self.geometry_key, None)
         if geometry is not None:
             self.restoreGeometry(geometry)
@@ -6718,12 +6724,12 @@ class VduAppWindow(QMainWindow):
             # Testing: QTimer.singleShot(int(1000*30), partial(self.schedule_presets, True))
             self.daily_schedule_next_update = tomorrow
         if reset:
-            presets_dialog = PresetsDialog.get_instance()
+            presets_dialog: PresetsDialog = PresetsDialog.get_instance()
             if presets_dialog:
                 presets_dialog.refresh_view()
         return most_recent_overdue
 
-    def activate_scheduled_preset(self, preset: Preset, check_weather: bool = True, immediately: bool = False):
+    def activate_scheduled_preset(self, preset: Preset, check_weather: bool = True, immediately: bool = False) -> None:
         assert is_running_in_gui_thread()
         if not self.main_config.is_set(GlobalOption.SCHEDULE_ENABLED):
             log_info(f"Schedule is disabled - not activating preset {preset.name}")
@@ -6743,7 +6749,7 @@ class VduAppWindow(QMainWindow):
             status_text = tr("Preset {} activating at {}").format(preset.name, now.isoformat(' ', 'seconds'))
             message = f"{TIME_CLOCK_SYMBOL} {status_text} {preset.schedule_status.symbol()} {weather_text}"
 
-            def finished(succeeded: bool):
+            def finished(succeeded: bool) -> None:
                 preset.schedule_status = PresetScheduleStatus.SUCCEEDED if succeeded else PresetScheduleStatus.SKIPPED_SUPERSEDED
                 self.display_active_preset()
                 presets_dialog_update_view(message + ' - ' + tr("Restored {}").format(preset.name))
@@ -6815,7 +6821,7 @@ class SignalWakeupHandler(QtNetwork.QAbstractSocket):
 
     signalReceived = pyqtSignal(int)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None) -> None:
         super().__init__(QtNetwork.QAbstractSocket.UdpSocket, parent)
         self.old_fd = None
         # Create a socket pair
@@ -6831,12 +6837,12 @@ class SignalWakeupHandler(QtNetwork.QAbstractSocket):
         # Second handler does the real handling
         self.readyRead.connect(self._readSignal)
 
-    def __del__(self):
+    def __del__(self) -> None:
         # Restore any old handler on deletion
         if self.old_fd is not None and signal and signal.set_wakeup_fd:
             signal.set_wakeup_fd(self.old_fd)
 
-    def _readSignal(self):
+    def _readSignal(self) -> None:
         # Read the written byte.
         # Note: readyRead is blocked from occurring again until readData()
         # was called, so call it, even if you don't need the value.
@@ -6927,7 +6933,7 @@ def calc_solar_azimuth_zenith(localised_time: datetime, latitude: float, longitu
 
 # Spherical distance from
 # https://stackoverflow.com/a/21623206/609575
-def spherical_kilometers(lat1, lon1, lat2, lon2):
+def spherical_kilometers(lat1, lon1, lat2, lon2) -> float:
     p = math.pi / 180
     a = 0.5 - math.cos((lat2 - lat1) * p) / 2 + math.cos(lat1 * p) * math.cos(lat2 * p) * (
             1 - math.cos((lon2 - lon1) * p)) / 2
@@ -6969,7 +6975,7 @@ translator: QTranslator | None = None
 ts_translations: Dict[str, str] = {}
 
 
-def initialise_locale_translations(app: QApplication):
+def initialise_locale_translations(app: QApplication) -> None:
     # Has to be put somewhere it won't be garbage collected when this function goes out of scope.
     global translator
     translator = QTranslator()
@@ -7002,12 +7008,12 @@ def initialise_locale_translations(app: QApplication):
             log_info(tr("Using {} translations from {}").format(locale_name, qm_path.as_posix()))
 
 
-def main():
+def main() -> None:
     """vdu_controls application main."""
     # Allow control-c to terminate the program
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-    def signal_handler(x, y):
+    def signal_handler(x, y) -> None:
         log_info("Signal received", x, y)
 
     signal.signal(signal.SIGHUP, signal_handler)
