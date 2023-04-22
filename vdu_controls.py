@@ -5491,20 +5491,22 @@ class LuxAutoWorker(WorkerThread):
             log_debug(f"LuxAutoWorker: interpolation: next_pt Preset proximity: {next_preset_name}") if log_debug_enabled else None
             result_brightness = next_brightness
             result_preset_name = next_preset_name  # Close enough to use the next point's Preset.
-        else:  # Not close to a Preset, interpolate a value - no idea if the log10 approach is perfectly correct
+        else:  # Not close to a Preset, interpolate a value
             # Only interpolate if 1) there is a slope in brightness, 2) lux is somewhere beyond its base point, 3)
             if result_brightness != next_brightness and smoothed_lux != result_point.lux and next_point.lux > result_point.lux:
                 log_debug(f"LuxAutoWorker: interpolation: {result_brightness=} {next_brightness=}" 
                           f" {smoothed_lux=} {result_point.lux=} {next_point.lux=}") if log_debug_enabled else None
-                interpolated_brightness = \
-                    result_brightness + (next_brightness - result_brightness) * \
-                    math.log10(smoothed_lux - result_point.lux) / math.log10(next_point.lux - result_point.lux)
-                log_debug(f"LuxAutoWorker: interpolation: {vdu_id=} {interpolated_brightness=:.2f}% " 
-                          f"originally={result_brightness}%") if log_debug_enabled else None
-                if abs(result_brightness - interpolated_brightness) > 5:  # Override result with interpolated value
-                    result_brightness = interpolated_brightness
-                    result_preset_name = None  # definitely between any Presets if we reach here
+                x_smoothed = self.x_from_lux(smoothed_lux)
+                x_result_point = self.x_from_lux(result_point.lux)
+                x_next_point = self.x_from_lux(next_point.lux)
+                interpolated_brightness = result_brightness + (next_brightness - result_brightness) * \
+                                          (x_smoothed - x_result_point) / (x_next_point - x_result_point)
+                result_preset_name = None
+                result_brightness = interpolated_brightness
         return result_brightness, result_preset_name
+
+    def x_from_lux(self, lux: int) -> float:
+        return ((math.log10(lux) - math.log10(1)) / (math.log10(100000) - math.log10(1))) if lux > 0 else 0
 
     def get_profile_values(self, lux_point, vdu_id) -> Tuple[int, str | None]:
         profile_brightness = -1
