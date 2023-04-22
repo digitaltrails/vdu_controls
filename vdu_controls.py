@@ -5789,7 +5789,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.profile_selector.blockSignals(False)
         self.configure_ui(self.main_app.get_lux_auto_controller().lux_meter)
         self.profile_plot.create_plot()
-        self.status_message(tr("Read {} lux/brightness profiles.").format(len(new_id_list)), 3000)
+        # self.status_message(tr("Read {} lux/brightness profiles.").format(len(new_id_list)), 3000)
 
     def make_visible(self) -> None:
         super().make_visible()
@@ -5826,13 +5826,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             self.lux_meter_widget.stop_metering()
             meter_device = self.main_app.get_lux_auto_controller().lux_meter
             self.configure_ui(meter_device)
-            if meter_device is not None:
-                if self.lux_config.is_auto_enabled():
-                    self.status_message(tr("Restarted brightness auto adjustment"))
-                else:
-                    self.status_message(tr("Brightness auto adjustment is disabled."))
-            else:
-                self.status_message(tr("No metering device set."))
+
 
     def configure_ui(self, meter_device: LuxMeterSerialDevice | LuxMeterFifoDevice | LuxMeterRunnableDevice | None) -> None:
         if meter_device is not None:
@@ -5846,6 +5840,13 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             self.enabled_checkbox.setChecked(False)
             self.enabled_checkbox.setEnabled(False)
             self.refresh_now_button.hide()
+        if meter_device is not None:
+            if self.lux_config.is_auto_enabled():
+                self.status_message(tr("Restarted brightness auto adjustment"))
+            else:
+                self.status_message(tr("Brightness auto adjustment is disabled."))
+        else:
+            self.status_message(tr("No metering device set."))
 
     def save_profiles(self) -> None:
         for vdu_id, profile in self.profile_plot.profile_data.items():
