@@ -3218,7 +3218,7 @@ class VduControlsMainPanel(QWidget):
             self.alert.setInformativeText(tr('Monitor appears to be switched off or disconnected.'))
         else:
             self.alert.setInformativeText(
-                tr('Is the monitor switched off?)') + '<br>' + tr('Is the sleep-multiplier setting too low?'))
+                tr('Is the monitor switched off?') + '<br>' + tr('Is the sleep-multiplier setting too low?'))
         self.alert.setText(tr("Set value: Failed to communicate with display {}").format(exception.vdu_description))
         self.alert.setAttribute(Qt.WA_DeleteOnClose)
         answer = self.alert.exec()
@@ -4669,7 +4669,7 @@ def exception_handler(e_type, e_value, e_traceback) -> None:
     log_error("\n" + ''.join(traceback.format_exception(e_type, e_value, e_traceback)))
     alert = MessageBox(QMessageBox.Critical)
     alert.setText(tr('Error: {}').format(''.join(traceback.format_exception_only(e_type, e_value))))
-    alert.setInformativeText(tr('Is --sleep-multiplier set too low?') +
+    alert.setInformativeText(tr('Is the sleep-multiplier setting too low?') +
                              '<br>_______________________________________________________<br>')
     alert.setDetailedText(
         tr('Details: {}').format(''.join(traceback.format_exception(e_type, e_value, e_traceback))))
@@ -5450,6 +5450,7 @@ class LuxAutoWorker(WorkerThread):
                 if current_brightness != profile_brightness:
                     if vdu_id not in self.target_brightness or self.target_brightness[vdu_id] != profile_brightness:
                         self.target_brightness[vdu_id] = profile_brightness  # target has changed
+                        # None 256 bit char in lux_summary_text can cause issues if stdout not utf8 (force utf8 for stdout)
                         log_info(f"LuxAutoWorker: {vdu_id=}: new target={profile_brightness}%"
                                  f" {current_brightness=}% {lux_summary_text} {step_count=}")
                     diff = profile_brightness - current_brightness
@@ -5700,13 +5701,13 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.status_bar = QStatusBar()
 
         save_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr("Apply"))
-        save_button.setToolTip(tr("Save and apply chart changes."))
+        save_button.setToolTip(tr("Apply and save profile-chart changes."))
         save_button.clicked.connect(partial(self.save_profiles))
         self.save_button = save_button
         self.status_bar.addPermanentWidget(save_button, 0)
 
         revert_button = QPushButton(si(self, QStyle.SP_DialogResetButton), tr("Revert"))
-        revert_button.setToolTip(tr("Abandon chart changes, revert to charts last saved."))
+        revert_button.setToolTip(tr("Abandon profile-chart changes, revert to last saved."))
         revert_button.clicked.connect(self.reinitialise)
         self.revert_button = revert_button
         self.status_bar.addPermanentWidget(revert_button, 0)
@@ -7069,6 +7070,8 @@ def main() -> None:
     """vdu_controls application main."""
     # Allow control-c to terminate the program
     signal.signal(signal.SIGINT, signal.SIG_DFL)
+
+    sys.stdout = open(sys.stdout.fileno(), mode='w', encoding='utf8', buffering=1)  # Force UTF-8, just in case it isn't
 
     def signal_handler(x, y) -> None:
         log_info("Signal received", x, y)
