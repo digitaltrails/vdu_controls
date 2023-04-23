@@ -1989,7 +1989,7 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
         self.change_callback = change_callback
         for config in [default_config, ] + vdu_config_list:
             tab = SettingsEditorTab(self, config, change_callback)
-            tab.save_all_clicked.connect(self.save_all)
+            tab.save_all_clicked.connect(self.save_all)  # type: ignore
             tabs.addTab(tab, config.get_config_name())
             self.editor_tab_list.append(tab)
         # .show() is non-modal, .exec() is modal
@@ -2088,7 +2088,7 @@ class SettingsEditorTab(QWidget):
         self.status_bar.addPermanentWidget(save_all_button, 0)
 
         quit_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), tr("Close"))
-        quit_button.clicked.connect(parent.close)
+        quit_button.clicked.connect(parent.close)  # type: ignore
         self.status_bar.addPermanentWidget(quit_button, 0)
 
         editor_layout.addWidget(self.status_bar)
@@ -5331,7 +5331,7 @@ class LuxAutoWorker(WorkerThread):
     _lux_dialog_message = pyqtSignal(str, int, str)
 
     def __init__(self, auto_controller: LuxAutoController) -> None:
-        super().__init__(task_body=self.adjust_for_lux, task_finished=self.finished_callable)
+        super().__init__(task_body=self.adjust_for_lux, task_finished=self.finished_callable)  # type: ignore
         self.auto_controller = auto_controller
         self.main_app = auto_controller.main_app
         self.last_value = None
@@ -5883,8 +5883,8 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         for vdu_id, profile in self.profile_plot.profile_data.items():
             data = [(lux_point.lux, lux_point.brightness) for lux_point in profile if lux_point.preset_name is None]
             self.lux_config.set('lux-profile', vdu_id, repr(data))
-        data = [(lux_point.lux, lux_point.preset_name) for lux_point in self.profile_plot.preset_points]
-        self.lux_config.set('lux-presets', 'lux-preset-points', repr(data))
+        preset_data = [(lux_point.lux, lux_point.preset_name) for lux_point in self.profile_plot.preset_points]
+        self.lux_config.set('lux-presets', 'lux-preset-points', repr(preset_data))
         self.apply_settings(True)
         self.has_profile_changes = False
         self.save_button.setEnabled(False)
