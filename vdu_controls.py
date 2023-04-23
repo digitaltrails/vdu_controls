@@ -3343,7 +3343,7 @@ class PresetTransitionWorker(WorkerThread):
             now = datetime.now()
             if (now - self.last_progress_time).total_seconds() >= 1.0:
                 self.last_progress_time = now
-                self.progress_signal.emit()
+                self.progress_signal.emit(self)
         # Some transitioning controls are not at their final values, need to step again
         self.work_state = PresetTransitionState.PARTIAL if more_to_do else PresetTransitionState.STEPPING_COMPLETED
 
