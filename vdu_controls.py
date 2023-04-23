@@ -5746,7 +5746,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         def interval_selector_changed() -> None:
             if self.interval_selector.value() != self.lux_config.get_interval_minutes():
                 self.lux_config.set('lux-meter', 'interval-minutes', str(self.interval_selector.value()))
-                self.apply_settings(requires_auto_brightness_restart=False)
+                self.apply_settings()
                 self.status_message(tr("Interval changed to {} minutes.").format(self.interval_selector.value()))
 
         self.interval_selector.valueChanged.connect(interval_selector_changed)
