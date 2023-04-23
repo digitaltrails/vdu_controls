@@ -5749,7 +5749,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
                 self.apply_settings()
                 self.status_message(tr("Interval changed to {} minutes.").format(self.interval_selector.value()))
 
-        self.interval_selector.valueChanged.connect(interval_selector_changed)
+        self.interval_selector.editingFinished.connect(interval_selector_changed)
 
         def set_interpolation(checked: int) -> None:
             if (checked == Qt.Checked) != self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=False):
