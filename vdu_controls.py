@@ -1068,12 +1068,25 @@ LOG_SYSLOG_CAT = {syslog.LOG_INFO: "INFO:", syslog.LOG_ERR: "ERROR:",
                   syslog.LOG_WARNING: "WARNING:", syslog.LOG_DEBUG: "DEBUG:"}
 log_to_syslog = False
 log_debug_enabled = False
+log_last_message = ''
+log_last_message_count = 0
 
 
 def log_wrapper(severity, *args) -> None:
     with io.StringIO() as output:
         print(*args, file=output, end='')
         message = output.getvalue()
+        global log_last_message, log_last_message_count
+        if not log_debug_enabled:  # suppress repeat messages, report count after a different messages comes in
+            if message == log_last_message:
+                log_last_message_count += 1
+                return
+            if log_last_message_count > 0:
+                print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), f"INFO: Last message repeated {log_last_message_count} times")
+                if log_to_syslog:
+                    syslog.syslog(syslog.LOG_INFO, f"Last message repeated {log_last_message_count} times")
+            log_last_message = message
+            log_last_message_count = 0
         prefix = LOG_SYSLOG_CAT[severity]
         print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), prefix, message)
         if log_to_syslog:
@@ -2757,7 +2770,7 @@ class Preset:
 
     def load(self) -> ConfigIni:
         if self.path.exists():
-            log_info(f"Reading preset file '{self.path.as_posix()}'")
+            log_debug(f"Reading preset file '{self.path.as_posix()}'") if log_debug_enabled else None
             preset_text = Path(self.path).read_text()
             preset_ini = ConfigIni()
             preset_ini.read_string(preset_text)
@@ -3214,9 +3227,9 @@ class VduControlsMainPanel(QWidget):
 
 
 class WorkerThread(QThread):
-    finished_work = pyqtSignal()
+    finished_work = pyqtSignal(object)
 
-    def __init__(self, task_body: Callable, task_finished: Callable[[], None] | None = None) -> None:
+    def __init__(self, task_body: Callable[[], None], task_finished: Callable[[WorkerThread], None] | None = None) -> None:
         """Init should always be called from the GUI thread - for easy access to the GUI thread"""
         super().__init__()
         log_debug(f"WorkerThread: going to start a {self.__class__.__name__} from thread = {threading.get_ident()}")
@@ -3236,25 +3249,27 @@ class WorkerThread(QThread):
         except VduException as e:
             self.vdu_exception = e
         log_debug(f"WorkerThread: {self.__class__.__name__} thread terminating = {threading.get_ident()}")
-        self.finished_work.emit()
+        self.finished_work.emit(self)
 
 
 class PresetTransitionState(Enum):
     INITIALIZED = 0
     PARTIAL = 1
-    FINISHED_STEPPING = 2
+    STEPPING_COMPLETED = 2
     FINISHED = 3
     INTERRUPTED = 4
 
 
 class PresetTransitionWorker(WorkerThread):
-    progress_signal = pyqtSignal()
+    progress_signal = pyqtSignal(object)
     _update_gui_signal = pyqtSignal(VduControlBase)
 
-    def __init__(self, main_panel: VduControlsMainPanel, preset: Preset, progress_callable: Callable, finished_callable: Callable,
-                 immediately: bool = False):
-        super().__init__(self.task_body, finished_callable)
-        log_info(f"TransitionWorker: transition {preset.name} {immediately=}")
+    def __init__(self, main_panel: VduControlsMainPanel, preset: Preset,
+                 progress_callable: Callable[[PresetTransitionWorker], None],
+                 finished_callable: Callable[[PresetTransitionWorker], None],
+                 immediately: bool = False, scheduled_activity: bool = False):
+        super().__init__(self.task_body, finished_callable)  # type: ignore
+        log_debug(f"TransitionWorker: transition {preset.name} {immediately=} {scheduled_activity=}") if log_debug_enabled else None
         self.start_time = datetime.now()
         self.end_time: datetime | None = None
         self.last_step_time: float = 0.0
@@ -3267,7 +3282,8 @@ class PresetTransitionWorker(WorkerThread):
         self.final_values: Dict[VduControlBase, str] = {}
         self.expected_values: Dict[VduControlBase, str | None] = {}
         self.transition_immediately = immediately
-        self.state = PresetTransitionState.FINISHED_STEPPING if self.transition_immediately else PresetTransitionState.INITIALIZED
+        self.work_state = PresetTransitionState.STEPPING_COMPLETED if self.transition_immediately else PresetTransitionState.INITIALIZED
+        self.scheduled_activity = scheduled_activity
         self.progress_callable = progress_callable
 
         def update_gui(target_widget: VduControlBase) -> None:
@@ -3290,7 +3306,7 @@ class PresetTransitionWorker(WorkerThread):
                             self.preset_non_transitioning_controls.append(control)
 
     def task_body(self) -> None:
-        while self.state != PresetTransitionState.FINISHED_STEPPING and self.values_are_as_expected():
+        while self.work_state != PresetTransitionState.STEPPING_COMPLETED and self.values_are_as_expected():
             cycle_start = time.time()
             if cycle_start - self.last_step_time > self.step_interval_seconds:
                 self.last_step_time = cycle_start
@@ -3299,14 +3315,14 @@ class PresetTransitionWorker(WorkerThread):
                 remainder = 1.0 - time.time() - cycle_start
                 if remainder > 0.0:
                     time.sleep(remainder)
-            self.progress_signal.emit()
-        if self.state == PresetTransitionState.FINISHED_STEPPING:
+            self.progress_signal.emit(self)
+        if self.work_state == PresetTransitionState.STEPPING_COMPLETED:
             for control in self.preset_non_transitioning_controls:  # Finish by doing the non-transitioning controls
                 control.restore_vdu_attribute(self.final_values[control])
                 self._update_gui_signal.emit(control)
-            self.state = PresetTransitionState.FINISHED
+            self.work_state = PresetTransitionState.FINISHED
             self.end_time = datetime.now()
-            log_info(f"Finished {self.preset.name} {round(self.total_elapsed_seconds(), ndigits=2)} seconds")
+            log_info(f"Successfully restored {self.preset.name}, elapsed time: {round(self.total_elapsed_seconds()):.2f} seconds")
 
     def step(self) -> None:
         more_to_do = False
@@ -3329,7 +3345,7 @@ class PresetTransitionWorker(WorkerThread):
                 self.last_progress_time = now
                 self.progress_signal.emit()
         # Some transitioning controls are not at their final values, need to step again
-        self.state = PresetTransitionState.PARTIAL if more_to_do else PresetTransitionState.FINISHED_STEPPING
+        self.work_state = PresetTransitionState.PARTIAL if more_to_do else PresetTransitionState.STEPPING_COMPLETED
 
     def values_are_as_expected(self) -> bool:
         for control_panel in self.main_panel.vdu_control_panels:  # Check that no one else is changing the controls
@@ -3339,10 +3355,10 @@ class PresetTransitionWorker(WorkerThread):
                 if control in self.expected_values:
                     if self.expected_values[control] != current_value:
                         log_warning(f"Interrupted transition to {self.preset.name}")
-                        self.state = PresetTransitionState.INTERRUPTED  # Something else is changing the controls - abandon the task
+                        self.work_state = PresetTransitionState.INTERRUPTED  # Something else is changing the controls - abandon the task
                 else:
                     self.expected_values[control] = current_value  # must be first time through, initialize value
-        return self.state != PresetTransitionState.INTERRUPTED
+        return self.work_state != PresetTransitionState.INTERRUPTED
 
     def total_elapsed_seconds(self) -> float:
         return ((self.end_time if self.end_time else datetime.now()) - self.start_time).total_seconds()
@@ -4550,18 +4566,23 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             self.edit_revert_button.setDisabled(False)
 
     def edit_preset(self, preset: Preset) -> None:
-        def begin_editing(succeeded: bool) -> None:
-            self.preset_name_edit.setText(preset.name)
-            self.edit_choose_icon_button.set_preset(preset)
-            for key, item in self.content_controls.items():
-                item.setChecked(preset.preset_ini.has_option(key[0], key[1]))
-            if preset.preset_ini.has_section('preset'):
-                self.editor_trigger_widget.set_elevation_from_text(
-                    preset.preset_ini.get('preset', 'solar-elevation', fallback=None))
-                self.editor_trigger_widget.set_required_weather_filename(
-                    preset.preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None))
-                self.editor_transitions_widget.set_transition_type(preset.get_transition_type())
-                self.editor_transitions_widget.set_step_seconds(preset.get_step_interval_seconds())
+
+        def begin_editing(worker: PresetTransitionWorker) -> None:
+            if worker.work_state == PresetTransitionState.FINISHED:
+                self.preset_name_edit.setText(preset.name)
+                self.edit_choose_icon_button.set_preset(preset)
+                for key, item in self.content_controls.items():
+                    item.setChecked(preset.preset_ini.has_option(key[0], key[1]))
+                if preset.preset_ini.has_section('preset'):
+                    self.editor_trigger_widget.set_elevation_from_text(
+                        preset.preset_ini.get('preset', 'solar-elevation', fallback=None))
+                    self.editor_trigger_widget.set_required_weather_filename(
+                        preset.preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None))
+                    self.editor_transitions_widget.set_transition_type(preset.get_transition_type())
+                    self.editor_transitions_widget.set_step_seconds(preset.get_step_interval_seconds())
+            else:
+                self.status_message(tr(f"Failed to restore {preset.name} for editing."))
+
         self.main_window.restore_preset(preset, restore_finished=begin_editing, immediately=True)
 
     def save_edited_preset(self) -> None:
@@ -4635,10 +4656,10 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         super().closeEvent(event)
 
 
-def presets_dialog_update_view(message: str, refresh_view: bool = True) -> None:
-    presets_dialog: PresetsDialog = PresetsDialog.get_instance()
+def presets_dialog_update_view(message: str, refresh_view: bool = True, timeout: int = 0) -> None:
+    presets_dialog: PresetsDialog = PresetsDialog.get_instance()  # type: ignore
     if presets_dialog:
-        presets_dialog.status_message(message, timeout=-1)
+        presets_dialog.status_message(message, timeout=timeout)
         if refresh_view:
             presets_dialog.refresh_view()
 
@@ -5402,7 +5423,10 @@ class LuxAutoWorker(WorkerThread):
                     self.status_message(tr("Restoring preset {}").format(profile_preset_name))
                     preset = self.main_app.find_preset_by_name(profile_preset_name)
                     if preset is not None:
-                        self.main_app.restore_preset_in_gui_thread(preset)
+                        self.main_app.restore_preset_in_gui_thread(
+                            preset,
+                            immediately=PresetTransitionFlag.SCHEDULED not in preset.get_transition_type(),
+                            scheduled_activity=True)
         else:
             time.sleep(0.5)  # Let i2c settle down, then continue stepping
         return made_brightness_changes
@@ -5444,17 +5468,19 @@ class LuxAutoWorker(WorkerThread):
                             self.status_message(
                                 f"{SUN_SYMBOL} {current_brightness}% {STEPPING_SYMBOL} {profile_brightness}% {vdu_id}" +
                                 f" ({lux_summary_text}) {profile_preset_name if profile_preset_name is not None else ''}")
-                    self.consecutive_errors = 0
+                        self.consecutive_errors = 0
             except VduException as ve:
                 self.consecutive_errors += 1
                 if self.consecutive_errors == 1:
-                    self.status_message(tr("{} Failed to adjust {}, will try again").format(ERROR_SYMBOL, vdu_id))
                     log_warning(f"LuxAutoWorker: Brightness error on {vdu_id}, will sleep and try again: {ve}", -1)
+                    self.status_message(tr("{} Failed to adjust {}, will try again").format(ERROR_SYMBOL, vdu_id))
+                    time.sleep(2)  # TODO do something better than this to make the message visible.
                 elif self.consecutive_errors > 1:
                     self.status_message(
                         tr("{} Failed to adjust {}, {} errors so far. Sleeping {} minutes.").format(
-                            ERROR_SYMBOL, vdu_id,
-                            self.consecutive_errors, self.auto_controller.get_lux_config().get_interval_minutes()))
+                            ERROR_SYMBOL, vdu_id, self.consecutive_errors,
+                            self.auto_controller.get_lux_config().get_interval_minutes()))
+                    time.sleep(2)  # TODO do something better than this to make the message visible.
                     if self.consecutive_errors == 2 or log_debug_enabled:
                         log_info(f"LuxAutoWorker: multiple errors count={self.consecutive_errors}, sleeping and retrying.")
                     return False  # force a full sleep cycle.
@@ -5524,7 +5550,7 @@ class LuxAutoWorker(WorkerThread):
         smoothed = self.smoother.smooth(metered_value)
         return smoothed
 
-    def finished_callable(self) -> None:
+    def finished_callable(self, task: LuxAutoWorker) -> None:
         if self.vdu_exception:
             log_error(f"LuxAutoWorker exited with exception={self.vdu_exception}")
 
@@ -6128,7 +6154,7 @@ def parse_transition_type(string_value: str) -> PresetTransitionFlag:
 
 class VduAppWindow(QMainWindow):
     splash_message_signal = pyqtSignal(str)
-    _restore_preset_in_gui_thread = pyqtSignal(Preset, object, bool)
+    _restore_preset_in_gui_thread = pyqtSignal(Preset, object, bool, bool)
 
     def __init__(self, main_config: VduControlsConfig, app: QApplication) -> None:
         super().__init__()
@@ -6283,11 +6309,11 @@ class VduAppWindow(QMainWindow):
             elif PRESET_SIGNAL_MIN <= signal_number <= PRESET_SIGNAL_MAX:
                 preset = self.preset_controller.get_preset(signal_number - PRESET_SIGNAL_MIN)
                 if preset is not None:
-                    log_info(f"Signaled for preset {preset.name} transition-type={preset.get_transition_type()}")
-                    # Signals occur outside the GUI thread - initiate the restore in the GUI thread
                     immediately = PresetTransitionFlag.SIGNAL not in preset.get_transition_type()
-                    log_info("initiate_restore_preset", threading.get_ident())  # This method is for use by non-GUI threads.
-                    self._restore_preset_in_gui_thread.emit(preset, None, immediately)
+                    log_info(f"Signaled for preset {preset.name} transition-type={preset.get_transition_type()}"
+                             f"transition={immediately} thread={threading.get_ident()}")
+                    # Signals occur outside the GUI thread - initiate the restore in the GUI thread
+                    self.restore_preset_in_gui_thread(preset, immediately)
                 else:
                     # Cannot raise a Qt alert inside the signal handler in case another signal comes in.
                     log_warning(f"ignoring signal {signal_number}, no preset associated with that signal number.")
@@ -6498,7 +6524,7 @@ class VduAppWindow(QMainWindow):
             self.detected_vdu_list = self.ddcutil.detect_monitors()
             self.get_main_panel().refresh_data(self.detected_vdu_list)
 
-        def refresh_view() -> None:
+        def refresh_view(worker_thread: WorkerThread) -> None:
             """Invoke when the GUI worker thread completes. Runs in the GUI thread and can refresh the GUI views."""
             assert self.refresh_data_task is not None
             main_panel = self.get_main_panel()
@@ -6517,10 +6543,11 @@ class VduAppWindow(QMainWindow):
         self.refresh_data_task = WorkerThread(task_body=refresh_data, task_finished=refresh_view)
         self.refresh_data_task.start()
 
-    def restore_preset_in_gui_thread(self, preset: Preset, immediately: bool = False) -> None:
-        self._restore_preset_in_gui_thread.emit(preset, None, immediately)
+    def restore_preset_in_gui_thread(self, preset: Preset, immediately: bool = False, scheduled_activity=False) -> None:
+        self._restore_preset_in_gui_thread.emit(preset, None, immediately, scheduled_activity)
 
-    def restore_preset(self, preset: Preset, restore_finished: Callable[[bool], None] | None = None, immediately: bool = False) -> None:
+    def restore_preset(self, preset: Preset, restore_finished: Callable[[PresetTransitionWorker], None] | None = None,
+                       immediately: bool = False, scheduled_activity: bool = False) -> None:
         # Starts the restore, but it will complete in the worker thread
         assert is_running_in_gui_thread()    # Boilerplate in case this is called from the wrong thread.
         self.transitioning_dummy_preset = None
@@ -6532,8 +6559,7 @@ class VduAppWindow(QMainWindow):
         self.get_main_panel().indicate_busy()
         preset.load()
 
-        def update_progress() -> None:
-            nonlocal worker_thread  # type: ignore
+        def update_progress(worker_thread: PresetTransitionWorker) -> None:
             if self.get_main_panel().busy:
                 self.get_main_panel().indicate_busy(False)
                 if self.tray is not None:
@@ -6544,11 +6570,10 @@ class VduAppWindow(QMainWindow):
             self.transitioning_dummy_preset.update_progress() if self.transitioning_dummy_preset else None
             self.display_active_preset(self.transitioning_dummy_preset)
 
-        def finished() -> None:
-            nonlocal worker_thread  # type: ignore
+        def finished_callback(worker_thread: PresetTransitionWorker) -> None:
             main_panel = self.get_main_panel()
             self.transitioning_dummy_preset = None
-            if worker_thread.vdu_exception is not None:
+            if worker_thread.vdu_exception is not None and not scheduled_activity:  # if it's a GUI request - ask if we should retry
                 if main_panel.display_vdu_exception(worker_thread.vdu_exception, can_retry=True):
                     # Try again (recursion) in new thread
                     self.restore_preset(preset, restore_finished=restore_finished, immediately=immediately)
@@ -6557,22 +6582,23 @@ class VduAppWindow(QMainWindow):
             main_panel.indicate_busy(False)
             if self.tray is not None:
                 self.refresh_tray_menu()
-            if worker_thread.state == PresetTransitionState.FINISHED:
+            if worker_thread.work_state == PresetTransitionState.FINISHED:
                 with open(PRESET_NAME_FILE, 'w', encoding="utf-8") as cps_file:
                     cps_file.write(preset.name)
                 self.display_active_preset(preset)
                 presets_dialog_update_view(tr("Restored {} (elapsed time {} seconds)").format(
                     preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=1)))
                 if restore_finished is not None:
-                    restore_finished(True)
+                    restore_finished(worker_thread)
             else:  # Interrupted or exception:
                 self.display_active_preset()
                 presets_dialog_update_view(tr("Interrupted restoration of {}").format(preset.name))
                 if restore_finished is not None:
-                    restore_finished(False)
+                    restore_finished(worker_thread)
 
-        worker_thread = PresetTransitionWorker(self.get_main_panel(), preset, update_progress, finished, immediately)
-        worker_thread.start()
+        PresetTransitionWorker(self.get_main_panel(), preset,
+                               update_progress, finished_callback,
+                               immediately, scheduled_activity).start()
 
     def find_preset_by_name(self, preset_name: str) -> Preset | None:
         presets = self.preset_controller.find_presets()
@@ -6733,7 +6759,7 @@ class VduAppWindow(QMainWindow):
             millis = (tomorrow - zoned_now()) / timedelta(milliseconds=1)
             log_info(f"Will update solar elevation activations tomorrow at "
                      f" {tomorrow} (in {round(millis / 1000 / 60)} minutes)")
-            QTimer.singleShot(int(millis), partial(self.schedule_presets, True))
+            QTimer.singleShot(int(millis), partial(self.schedule_presets, True))  # type: ignore
             # Testing: QTimer.singleShot(int(1000*30), partial(self.schedule_presets, True))
             self.daily_schedule_next_update = tomorrow
         if reset:
@@ -6742,12 +6768,14 @@ class VduAppWindow(QMainWindow):
                 presets_dialog.refresh_view()
         return most_recent_overdue
 
-    def activate_scheduled_preset(self, preset: Preset, check_weather: bool = True, immediately: bool = False) -> None:
+    def activate_scheduled_preset(self, preset: Preset, check_weather: bool = True, immediately: bool = False,
+                                  activation_time: datetime | None = None) -> None:
         assert is_running_in_gui_thread()
         if not self.main_config.is_set(GlobalOption.SCHEDULE_ENABLED):
             log_info(f"Schedule is disabled - not activating preset {preset.name}")
             return
-        now = zoned_now()
+        now = zoned_now() if activation_time is None else activation_time
+        is_first_attempt = activation_time is None
         weather_text = ''
         message = ''
         proceed = True
@@ -6762,17 +6790,35 @@ class VduAppWindow(QMainWindow):
             status_text = tr("Preset {} activating at {}").format(preset.name, now.isoformat(' ', 'seconds'))
             message = f"{TIME_CLOCK_SYMBOL} {status_text} {preset.schedule_status.symbol()} {weather_text}"
 
-            def finished(succeeded: bool) -> None:
-                preset.schedule_status = PresetScheduleStatus.SUCCEEDED if succeeded else PresetScheduleStatus.SKIPPED_SUPERSEDED
+            def finished(worker: PresetTransitionWorker) -> None:
+                assert preset.elevation_time_today is not None
+                if worker.vdu_exception is not None:
+                    secs = self.main_config.ini_content.getint('vdu-controls-globals', 'restore-error-sleep-seconds', fallback=60)
+                    too_close = zoned_now() + timedelta(seconds=secs + 60)  # retry if more than a minute before any others
+                    for other in self.preset_controller.find_presets().values():  # Skip retry if another is due soon
+                        if other != preset and other.elevation_time_today is not None \
+                                and preset.elevation_time_today < other.elevation_time_today <= too_close:
+                            log_info(f"Schedule restoration skipped {preset.name}, too close to {other.name}")
+                            preset.schedule_status = PresetScheduleStatus.SKIPPED_SUPERSEDED
+                            presets_dialog_update_view(message + ' - ' + tr("Skipped, superseded"))
+                            return
+                    presets_dialog_update_view(message + ' - ' + tr("Error, trying again in {} seconds").format(secs))
+                    if is_first_attempt:
+                        log_warning(f"Error during restoration of {preset.name}, retrying every {secs} seconds.")
+                    QTimer.singleShot(int(secs * 1000),
+                                      partial(self.activate_scheduled_preset, preset, check_weather, immediately, now))
+                    return
+                preset.schedule_status = PresetScheduleStatus.SUCCEEDED
                 self.display_active_preset()
                 presets_dialog_update_view(message + ' - ' + tr("Restored {}").format(preset.name))
 
-            log_info(f"Activating scheduled preset {preset.name}")
+            log_info(f"Activating scheduled preset {preset.name} transition={immediately}") if is_first_attempt else None
             # Happens asynchronously in a thread
             self.restore_preset(
                 preset,
                 restore_finished=finished,
-                immediately=immediately or PresetTransitionFlag.SCHEDULED not in preset.get_transition_type())
+                immediately=immediately or PresetTransitionFlag.SCHEDULED not in preset.get_transition_type(),
+                scheduled_activity=True)
         presets_dialog_update_view(message)
 
     def is_weather_satisfactory(self, preset, use_cache: bool = False) -> bool:
