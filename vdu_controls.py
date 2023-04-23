@@ -5358,7 +5358,7 @@ class LuxAutoWorker(WorkerThread):
         # Using Qt signals to ensure GUI activity occurs in the GUI thread (this thread).
         self._update_gui_control.connect(update_gui_control)
         self._lux_dialog_message.connect(LuxDialog.lux_dialog_message)
-        self.status_message(f"{SUN_SYMBOL} 00:00", 'countdown')
+        self.status_message(f"{TIMER_RUNNING_SYMBOL} 00:00", 'countdown')
 
     def status_message(self, message: str, destination: str = 'status') -> None:
         self._lux_dialog_message.emit(message, 0, destination)
@@ -5769,7 +5769,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
         self.profile_selector.currentIndexChanged.connect(select_profile)
         self.make_visible()
-        self.in_constructor = False
+        self.reinitialise()
 
     def chart_changed_callback(self) -> None:
         self.has_profile_changes = True
@@ -5779,15 +5779,15 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
     def reinitialise(self) -> None:
         assert self.profile_plot is not None
-        self.lux_config = self.main_app.get_lux_auto_controller().get_lux_config().duplicate(LuxConfig())
+        self.lux_config = self.main_app.get_lux_auto_controller().get_lux_config().duplicate(LuxConfig())  # type: ignore
         self.device_name = self.lux_config.get("lux-meter", "lux-device", fallback='')
         self.enabled_checkbox.setChecked(self.lux_config.is_auto_enabled())
         self.interpolate_checkbox.setChecked(self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=False))
         self.has_profile_changes = False
         self.save_button.setEnabled(False)
         self.revert_button.setEnabled(False)
-        if not self.lux_config.is_auto_enabled():
-            self.refresh_now_button.hide()
+        self.refresh_now_button.setText(f"{TIMER_RUNNING_SYMBOL} 00:00")
+        self.refresh_now_button.show() if self.lux_config.is_auto_enabled() else self.refresh_now_button.hide()
 
         new_id_list = []   # List of all currently connected VDU's
         for index, vdu_controller in enumerate(self.main_app.vdu_controllers):
@@ -5822,11 +5822,9 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.profile_selector.blockSignals(False)
         self.configure_ui(self.main_app.get_lux_auto_controller().lux_meter)
         self.profile_plot.create_plot()
-        # self.status_message(tr("Read {} lux/brightness profiles.").format(len(new_id_list)), 3000)
 
     def make_visible(self) -> None:
         super().make_visible()
-        self.reinitialise()
 
     def is_interpolating(self) -> bool:
         return self.interpolate_checkbox.isChecked()
