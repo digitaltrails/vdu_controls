@@ -1068,25 +1068,12 @@ LOG_SYSLOG_CAT = {syslog.LOG_INFO: "INFO:", syslog.LOG_ERR: "ERROR:",
                   syslog.LOG_WARNING: "WARNING:", syslog.LOG_DEBUG: "DEBUG:"}
 log_to_syslog = False
 log_debug_enabled = False
-log_last_message = ''
-log_last_message_count = 0
 
 
 def log_wrapper(severity, *args) -> None:
     with io.StringIO() as output:
         print(*args, file=output, end='')
         message = output.getvalue()
-        global log_last_message, log_last_message_count
-        if not log_debug_enabled:  # suppress repeat messages, report count after a different messages comes in
-            if message == log_last_message:
-                log_last_message_count += 1
-                return
-            if log_last_message_count > 0:
-                print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), f"INFO: Last message repeated {log_last_message_count} times")
-                if log_to_syslog:
-                    syslog.syslog(syslog.LOG_INFO, f"Last message repeated {log_last_message_count} times")
-            log_last_message = message
-            log_last_message_count = 0
         prefix = LOG_SYSLOG_CAT[severity]
         print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), prefix, message)
         if log_to_syslog:
@@ -5338,6 +5325,7 @@ class LuxAutoWorker(WorkerThread):
         self.stop_requested = False
         self.consecutive_errors = 0
         self.target_brightness: Dict[str, int] = {}
+        self.too_small: Dict[str, (int, int)] = {}
         self.previous_metered_lux = 0
         self.refresh_now_requested = False
         lux_config = auto_controller.get_lux_config()
@@ -5381,7 +5369,6 @@ class LuxAutoWorker(WorkerThread):
                 if self.step_brightness(lux_config, metered_lux, smoothed_lux, step_count):  # if some work was done, count it
                     step_count += 1
                 else:   # No work done this cycle, reset work-step counter to zero, sleep longer
-
                     if log_debug_enabled:
                         log_debug(f"LuxAutoWorker: sleeping {self.sleep_seconds} seconds.")
                     step_count = 0
@@ -5415,7 +5402,7 @@ class LuxAutoWorker(WorkerThread):
                                                             step_count, lux_summary_text) or made_brightness_changes
         if not made_brightness_changes:  # No work has been done in this step
             if step_count != 0:  # If any work was done in previous steps, finish up the remaining work
-                log_info(f"LuxAutoWorker: stepping completed {step_count=}")
+                log_info(f"LuxAutoWorker: adjustment completed {step_count=}")
                 self.status_message(tr("Brightness adjustment completed"))
                 if profile_preset_name is not None:  # if a point had a Preset attached, activate it now
                     # Finish by restoring the Preset's non-brightness controls, do it now, while this lux thread is not active.
@@ -5458,14 +5445,21 @@ class LuxAutoWorker(WorkerThread):
                         # At the start, no Preset involved, and close enough to not bother with a change.
                         self.status_message(f"{SUN_SYMBOL} {current_brightness}% {ALMOST_EQUAL_SYMBOL}"
                                             f" {profile_brightness}% {vdu_id} ({lux_summary_text})")
-                        log_info(f"LuxAutoWorker: {vdu_id=}: {current_brightness=}%->{profile_brightness}% ignored, too small")
+                        too_small_from_to = (current_brightness, self.target_brightness[vdu_id])
+                        if vdu_id not in self.too_small or self.too_small[vdu_id] != too_small_from_to:
+                            log_info(f"LuxAutoWorker: {vdu_id=}: {current_brightness=}%->{profile_brightness}% ignored, too small")
+                        self.too_small[vdu_id] = too_small_from_to
                     else:  # The change is big enough to apply to the VDU
+                        if vdu_id in self.too_small:
+                            del self.too_small[vdu_id]
                         made_brightness_changes = True
                         step_size = max(1, abs(diff) // 3)  # 4 if abs(diff) < 8 else 8  # TODO find a good heuristic
                         step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
                         brightness_control.restore_vdu_attribute(str(current_brightness + step))  # Apply to physical VDU
                         self._update_gui_control.emit(brightness_control)  # Update the GUI control in the GUI thread
-                        if step_count > 0:
+                        if step_count == 0:
+                            log_info(f"LuxAutoWorker: {vdu_id=}: start adjusting {current_brightness}%->{profile_brightness}%")
+                        else:
                             self.status_message(
                                 f"{SUN_SYMBOL} {current_brightness}% {STEPPING_SYMBOL} {profile_brightness}% {vdu_id}" +
                                 f" ({lux_summary_text}) {profile_preset_name if profile_preset_name is not None else ''}")
