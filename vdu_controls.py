@@ -5332,10 +5332,10 @@ class LuxAutoWorker(WorkerThread):
         self.smoother = LuxSmooth(lux_config.getint('lux-meter', 'smoother-n', fallback=5),
                                   alpha=lux_config.getfloat('lux-meter', 'smoother-alpha', fallback=0.5))
         self.interpolation_enabled = lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True)
-        self.min_brightness_change = lux_config.getint('lux-meter', 'interpolation-min-percent-change',
-                                                       fallback=10)
-        self.lux_proximity_ratio = lux_config.getfloat('lux-presets', 'interpolation-lux-preset-proximity-ratio',
-                                                       fallback=0.1)
+        self.interpolation_min_percent_change = lux_config.getint('lux-meter', 'interpolation-min-percent-change',
+                                                                  fallback=10)
+        self.lux_preset_proximity_ratio = lux_config.getfloat('lux-presets', 'interpolation-lux-preset-proximity-ratio',
+                                                              fallback=0.1)
         self.sleep_seconds = lux_config.get_interval_minutes() * 60
         self.sampling_interval_seconds = 60 // lux_config.getint('lux-meter', 'samples-per-minute', fallback=3)
         log_info(f"LuxAutoWorker: smoother n={self.smoother.length} alpha={self.smoother.alpha}")
@@ -5441,8 +5441,9 @@ class LuxAutoWorker(WorkerThread):
                         log_info(f"LuxAutoWorker: {vdu_id=}: new target={profile_brightness}%"
                                  f" {current_brightness=}% {lux_summary_text} {step_count=}")
                     diff = profile_brightness - current_brightness
-                    if step_count == 0 and profile_preset_name is None and abs(diff) < self.min_brightness_change:
-                        # At the start, no Preset involved, and close enough to not bother with a change.
+                    if step_count == 0 and self.interpolation_enabled \
+                            and profile_preset_name is None and abs(diff) < self.interpolation_min_percent_change:
+                        # At the start, interpolating, no Preset involved, and close enough to not bother with a change.
                         self.status_message(f"{SUN_SYMBOL} {current_brightness}% {ALMOST_EQUAL_SYMBOL}"
                                             f" {profile_brightness}% {vdu_id} ({lux_summary_text})")
                         too_small_from_to = (current_brightness, self.target_brightness[vdu_id])
@@ -5505,10 +5506,10 @@ class LuxAutoWorker(WorkerThread):
         log_debug(f"{vdu_id=} {smoothed_lux=}  {result_point.lux=} {next_point.lux=}" 
                   f"{result_brightness=}% {next_brightness=}% {result_preset_name=}") if log_debug_enabled else None
         if result_preset_name is not None and abs(
-                smoothed_lux - result_point.lux) <= result_point.lux * self.lux_proximity_ratio:
+                smoothed_lux - result_point.lux) <= result_point.lux * self.lux_preset_proximity_ratio:
             log_debug(f"LuxAutoWorker: interpolation: Preset proximity: {result_preset_name}") if log_debug_enabled else None
             pass  # Close enough to just use the existing result's Preset
-        elif next_preset_name is not None and abs(smoothed_lux - next_point.lux) <= next_point.lux * self.lux_proximity_ratio:
+        elif next_preset_name is not None and abs(smoothed_lux - next_point.lux) <= next_point.lux * self.lux_preset_proximity_ratio:
             log_debug(f"LuxAutoWorker: interpolation: next_pt Preset proximity: {next_preset_name}") if log_debug_enabled else None
             result_brightness = next_brightness
             result_preset_name = next_preset_name  # Close enough to use the next point's Preset.
