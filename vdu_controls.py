@@ -4810,7 +4810,7 @@ class LuxProfileChart(QLabel):
         self.vdu_chart_colors = self.lux_dialog.vdu_chart_color
         self.range_restrictions = lux_dialog.range_restrictions
         self.current_lux = 0
-        self.snap_to_margin = 4
+        self.snap_to_margin = lux_dialog.lux_config.getint('lux-ui', 'snap-to-margin-pixels', fallback=4)
         self.current_vdu_id = '' if len(lux_dialog.profile_data) == 0 else list(lux_dialog.profile_data.keys())[0]
         self.pixmap_width = 600
         self.pixmap_height = 550
@@ -5332,10 +5332,8 @@ class LuxAutoWorker(WorkerThread):
         self.smoother = LuxSmooth(lux_config.getint('lux-meter', 'smoother-n', fallback=5),
                                   alpha=lux_config.getfloat('lux-meter', 'smoother-alpha', fallback=0.5))
         self.interpolation_enabled = lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True)
-        self.interpolation_min_percent_change = lux_config.getint('lux-meter', 'interpolation-min-percent-change',
-                                                                  fallback=10)
-        self.lux_preset_proximity_ratio = lux_config.getfloat('lux-presets', 'interpolation-lux-preset-proximity-ratio',
-                                                              fallback=0.1)
+        self.sensitivity_percent = lux_config.getint('lux-meter', 'interpolation-sensitivity-percent', fallback=10)
+        self.sensitivity_ratio = self.sensitivity_percent / 100.0
         self.sleep_seconds = lux_config.get_interval_minutes() * 60
         self.sampling_interval_seconds = 60 // lux_config.getint('lux-meter', 'samples-per-minute', fallback=3)
         log_info(f"LuxAutoWorker: smoother n={self.smoother.length} alpha={self.smoother.alpha}")
@@ -5442,7 +5440,7 @@ class LuxAutoWorker(WorkerThread):
                                  f" {current_brightness=}% {lux_summary_text} {step_count=}")
                     diff = profile_brightness - current_brightness
                     if step_count == 0 and self.interpolation_enabled \
-                            and profile_preset_name is None and abs(diff) < self.interpolation_min_percent_change:
+                            and profile_preset_name is None and abs(diff) < self.sensitivity_percent:
                         # At the start, interpolating, no Preset involved, and close enough to not bother with a change.
                         self.status_message(f"{SUN_SYMBOL} {current_brightness}% {ALMOST_EQUAL_SYMBOL}"
                                             f" {profile_brightness}% {vdu_id} ({lux_summary_text})")
@@ -5505,11 +5503,10 @@ class LuxAutoWorker(WorkerThread):
         next_brightness, next_preset_name = self.get_profile_values(next_point, vdu_id)
         log_debug(f"{vdu_id=} {smoothed_lux=}  {result_point.lux=} {next_point.lux=}" 
                   f"{result_brightness=}% {next_brightness=}% {result_preset_name=}") if log_debug_enabled else None
-        if result_preset_name is not None and abs(
-                smoothed_lux - result_point.lux) <= result_point.lux * self.lux_preset_proximity_ratio:
+        if result_preset_name is not None and abs(smoothed_lux - result_point.lux) <= result_point.lux * self.sensitivity_ratio:
             log_debug(f"LuxAutoWorker: interpolation: Preset proximity: {result_preset_name}") if log_debug_enabled else None
             pass  # Close enough to just use the existing result's Preset
-        elif next_preset_name is not None and abs(smoothed_lux - next_point.lux) <= next_point.lux * self.lux_preset_proximity_ratio:
+        elif next_preset_name is not None and abs(smoothed_lux - next_point.lux) <= next_point.lux * self.sensitivity_ratio:
             log_debug(f"LuxAutoWorker: interpolation: next_pt Preset proximity: {next_preset_name}") if log_debug_enabled else None
             result_brightness = next_brightness
             result_preset_name = next_preset_name  # Close enough to use the next point's Preset.
@@ -5521,10 +5518,9 @@ class LuxAutoWorker(WorkerThread):
                 x_smoothed = self.x_from_lux(smoothed_lux)
                 x_result_point = self.x_from_lux(result_point.lux)
                 x_next_point = self.x_from_lux(next_point.lux)
-                interpolated_brightness = result_brightness + (next_brightness - result_brightness) * \
-                                          (x_smoothed - x_result_point) / (x_next_point - x_result_point)
+                result_brightness += ((next_brightness - result_brightness) *
+                                      (x_smoothed - x_result_point) / (x_next_point - x_result_point))
                 result_preset_name = None
-                result_brightness = interpolated_brightness
         return result_brightness, result_preset_name
 
     def x_from_lux(self, lux: int) -> float:
