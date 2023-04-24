@@ -5718,6 +5718,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
         self.refresh_now_button = QPushButton()
         self.refresh_now_button.clicked.connect(self.main_app.get_lux_auto_controller().refresh_brightness_now)
+        self.refresh_now_button.setToolTip(tr("Press to expire the timer and immediately evaluate brightness."))
 
         self.status_layout = QHBoxLayout()
         main_layout.addLayout(self.status_layout)
