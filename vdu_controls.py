@@ -1075,10 +1075,11 @@ def log_wrapper(severity, *args) -> None:
         print(*args, file=output, end='')
         message = output.getvalue()
         prefix = LOG_SYSLOG_CAT[severity]
-        print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), prefix, message)
         if log_to_syslog:
             syslog_message = prefix + " " + message if severity == syslog.LOG_DEBUG else message
             syslog.syslog(severity, syslog_message)
+        else:
+            print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), prefix, message)
 
 
 def log_debug(*args) -> None:
@@ -3372,8 +3373,7 @@ class PresetTransitionDummy(Preset):  # A wrapper that creates titles and icons 
 
 class PresetController:
     def __init__(self) -> None:
-        self.presets = {}
-        pass
+        self.presets: Dict[str, Preset] = {}
 
     def find_presets(self) -> Dict[str, Preset]:
         presets_still_present = []
@@ -5325,7 +5325,7 @@ class LuxAutoWorker(WorkerThread):
         self.stop_requested = False
         self.consecutive_errors = 0
         self.target_brightness: Dict[str, int] = {}
-        self.too_small: Dict[str, (int, int)] = {}
+        self.message_tracker: Dict[str, Tuple[int, int]] = {}  # Used to prevent repeat messages
         self.previous_metered_lux = 0
         self.refresh_now_requested = False
         lux_config = auto_controller.get_lux_config()
@@ -5376,24 +5376,28 @@ class LuxAutoWorker(WorkerThread):
                     if self.stop_requested or self.refresh_now_requested:  # Respond to stop requests while sleeping
                         self.refresh_now_requested = False
                         break
+                    # Update the smoother every n seconds, but not at the start or end of the period.
                     if (0 < second < self.sleep_seconds) and second % self.sampling_interval_seconds == 0:
                         metered_lux = lux_meter.get_value()  # Update the smoothing while sleeping
-                        smoothed_lux = round(self.get_smoothed_value(metered_lux))
-                        self.status_message(f"{SUN_SYMBOL} {self.lux_summary(metered_lux, smoothed_lux)}")
+                        smoothed = self.smoother.smooth(metered_lux)
+                        smoothed_lux = round(smoothed)
+                        self.status_message(f"{SUN_SYMBOL} {self.lux_summary(round(metered_lux), smoothed_lux)}")
                     self.status_message(f"{TIMER_RUNNING_SYMBOL} {second // 60:02d}:{second % 60:02d}", 'countdown')
                     time.sleep(1)
         finally:
             log_info(f"LuxAutoWorker exiting (stop_requested={self.stop_requested}) (Thread={threading.get_ident()})")
 
     def step_brightness(self, lux_config: LuxConfig, lux_meter: LuxMeterSerialDevice | LuxMeterFifoDevice | LuxMeterRunnableDevice) -> bool:
+        last_step_count = -1
         step_count = 0
         made_brightness_changes = True
-        while not self.stop_requested and made_brightness_changes:  # keep going while brightness keeps being stepped/changed
+        while not self.stop_requested and step_count != last_step_count:  # keep going while brightness keeps being stepped/changed
+            last_step_count = step_count
             made_brightness_changes = False
-            metered_lux = lux_meter.get_value()  # type: ignore
-            smoothed_lux = round(self.get_smoothed_value(metered_lux))  # Get new smoothed lux value
-            profile_preset_name = None
-            lux_summary_text = self.lux_summary(metered_lux, smoothed_lux)
+            metered_lux = lux_meter.get_value()
+            smoothed_lux = round(self.smoother.smooth(metered_lux))
+            lux_summary_text = self.lux_summary(round(metered_lux), smoothed_lux)
+            profile_preset_name: str | None = None
             self.status_message(f"{SUN_SYMBOL} {lux_summary_text} {PROCESSING_LUX_SYMBOL}") if step_count == 0 else None
             for vdu_control_panel in self.main_app.get_main_panel().vdu_control_panels:  # For each VDU, do one step of its profile
                 if self.stop_requested:
@@ -5403,12 +5407,11 @@ class LuxAutoWorker(WorkerThread):
                 profile_brightness, profile_preset_name = self.determine_brightness(controller.vdu_stable_id, smoothed_lux,
                                                                                     lux_config.get_vdu_profile(controller))
                 # if profile_brightness is zero, the profile has an attached preset with no brightness, it may have been
-                # attached to trigger other, non-brightness settings at a given lux value (triggered after the loop).
-                if profile_brightness >= 0:
-                    made_brightness_changes = self.step_one_vdu(vdu_control_panel, profile_brightness, profile_preset_name,
-                                                                step_count, lux_summary_text) or made_brightness_changes
+                # attached to trigger non-brightness settings at a given lux value (triggered below, after the loop).
+                if profile_brightness >= 0 and self.step_one_vdu(vdu_control_panel, profile_brightness, profile_preset_name,
+                                                                 step_count, lux_summary_text):
+                    step_count += 1  # Increment if any changes were made
             time.sleep(0.5)  # Let i2c settle down, then continue stepping
-            step_count += 1 if made_brightness_changes else 0  # Not zero if work is in progress, zero if there is nothing to do
         if step_count != 0:  # If any work was done in previous steps, finish up the remaining tasks
             log_info(f"LuxAutoWorker: stepping completed {step_count=}, profile_preset={profile_preset_name}")
             self.status_message(tr("Brightness adjustment completed"))
@@ -5423,9 +5426,8 @@ class LuxAutoWorker(WorkerThread):
                         scheduled_activity=True)
         return made_brightness_changes
 
-    def lux_summary(self, metered_lux, smoothed_lux) -> str:
-        return f"{metered_lux:.0f} {SMOOTHING_SYMBOL} {smoothed_lux} lux" if round(
-            metered_lux) != smoothed_lux else f"{metered_lux:.0f} lux"
+    def lux_summary(self, metered_lux: int, smoothed_lux: int) -> str:
+        return f"{metered_lux:.0f} {SMOOTHING_SYMBOL} {smoothed_lux} lux" if metered_lux != smoothed_lux else f"{metered_lux} lux"
 
     def step_one_vdu(self, vdu_control_panel: VduControlPanel, profile_brightness: int, profile_preset_name: str | None,
                      step_count: int, lux_summary_text: str) -> bool:
@@ -5446,18 +5448,18 @@ class LuxAutoWorker(WorkerThread):
                         log_info(f"LuxAutoWorker: {vdu_id=}: new target={profile_brightness}% preset={profile_preset_name}"
                                  f" {current_brightness=}% {lux_summary_text} {step_count=}")
                     diff = profile_brightness - current_brightness
-                    if step_count == 0 and self.interpolation_enabled \
+                    if self.interpolation_enabled and step_count == 0 \
                             and profile_preset_name is None and abs(diff) < self.sensitivity_percent:
-                        # At the start, interpolating, no Preset involved, and close enough to not bother with a change.
+                        # Interpolating, at the start, no Preset involved, and close enough to not bother with a change.
                         self.status_message(f"{SUN_SYMBOL} {current_brightness}% {ALMOST_EQUAL_SYMBOL}"
                                             f" {profile_brightness}% {vdu_id} ({lux_summary_text})")
                         too_small_from_to = (current_brightness, self.target_brightness[vdu_id])
-                        if vdu_id not in self.too_small or self.too_small[vdu_id] != too_small_from_to:
+                        if vdu_id not in self.message_tracker or self.message_tracker[vdu_id] != too_small_from_to:
                             log_info(f"LuxAutoWorker: {vdu_id=}: {current_brightness=}%->{profile_brightness}% ignored, too small")
-                        self.too_small[vdu_id] = too_small_from_to
-                    else:  # The change is big enough to apply to the VDU, or an attached preset needs to be actioned
-                        if vdu_id in self.too_small:
-                            del self.too_small[vdu_id]
+                        self.message_tracker[vdu_id] = too_small_from_to
+                    else:  # Not-interpolating OR interpolating and changes need to be applied
+                        if vdu_id in self.message_tracker:
+                            del self.message_tracker[vdu_id]
                         made_brightness_changes = True
                         step_size = max(1, abs(diff) // 3)  # 4 if abs(diff) < 8 else 8  # TODO find a good heuristic
                         step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
@@ -5488,10 +5490,10 @@ class LuxAutoWorker(WorkerThread):
                     return False  # force a full sleep cycle.
         return made_brightness_changes
 
-    def determine_brightness(self, vdu_id: str, smoothed_lux: float, lux_profile: List[LuxPoint]) -> Tuple[int, str | None]:
-        result_point = None
+    def determine_brightness(self, vdu_id: str, smoothed_lux: int, lux_profile: List[LuxPoint]) -> Tuple[int, str | None]:
+        result_point = LuxPoint(0, 0)
         result_preset_name = None  # should be at most one for a given lux value.
-        result_brightness = -1.0  # Just in case we don't get a match
+        result_brightness = -1  # Just in case we don't get a match
         for step_point in [LuxPoint(0, 0)] + lux_profile + [LuxPoint(100000, 100)]:
             # Moving up the lux steps, seeking the step below smoothed_lux
             if smoothed_lux >= step_point.lux:  # Possible result, there may be something higher, keep going...
@@ -5503,11 +5505,11 @@ class LuxAutoWorker(WorkerThread):
                                                                                         result_point, step_point,
                                                                                         result_brightness, result_preset_name)
                 break
-        log_debug(f"LuxAutoWorker: determine_brightness {vdu_id=} {result_brightness=:.2f}% {result_preset_name=}") if log_debug_enabled else None
-        return round(result_brightness), result_preset_name
+        log_debug(f"LuxAutoWorker: determine_brightness {vdu_id=} {result_brightness=}% {result_preset_name=}") if log_debug_enabled else None
+        return result_brightness, result_preset_name
 
-    def interpolate_brightness(self, vdu_id, smoothed_lux, result_point, next_point,
-                               result_brightness, result_preset_name) -> Tuple[float, str]:
+    def interpolate_brightness(self, vdu_id: str, smoothed_lux: int, result_point: LuxPoint, next_point: LuxPoint,
+                               result_brightness: int, result_preset_name: str | None) -> Tuple[int, str | None]:
         next_brightness, next_preset_name = self.get_profile_values(next_point, vdu_id)
         log_debug(f"{vdu_id=} {smoothed_lux=}  {result_point.lux=} {next_point.lux=}" 
                   f" {result_brightness=}% {next_brightness=}% {result_preset_name=}"
@@ -5518,23 +5520,23 @@ class LuxAutoWorker(WorkerThread):
             x_smoothed = self.x_from_lux(smoothed_lux)
             x_result_point = self.x_from_lux(result_point.lux)
             x_next_point = self.x_from_lux(next_point.lux)
-            interpolated_brightness = result_brightness + (next_brightness - result_brightness) * \
-                                      (x_smoothed - x_result_point) / (x_next_point - x_result_point)
+            interpolated_brightness = round(result_brightness + (next_brightness - result_brightness) *
+                                            (x_smoothed - x_result_point) / (x_next_point - x_result_point))
             log_debug(f"{vdu_id} interpolate {result_brightness}%..{next_brightness}% -> {interpolated_brightness}%") if log_debug_enabled else None
         else:  # Can't interpolate meaningfully use the result as is
             interpolated_brightness = result_brightness
             log_debug(f"{vdu_id} interpolate {result_brightness}%..{next_brightness}% - no slope") if log_debug_enabled else None
 
         if result_preset_name is not None and abs(interpolated_brightness - result_brightness) < self.sensitivity_percent:
-            # Interpolated close enough to the result preset to use its settings
-            log_debug(f"{vdu_id} interpolate use result preset {result_preset_name} {result_brightness=} {interpolated_brightness=} ") if log_debug_enabled else None
+            # Interpolated value is close to the result preset, use its settings
+            log_debug(f"{vdu_id} interpolate: use result preset {result_preset_name} {result_brightness=} {interpolated_brightness=} ") if log_debug_enabled else None
         elif next_preset_name is not None and abs(interpolated_brightness - next_brightness) < self.sensitivity_percent:
-            # Interpolated close enough to the next preset to use its settings
-            log_debug(f"{vdu_id} interpolate use next preset {next_preset_name} {next_brightness=} {interpolated_brightness=} ") if log_debug_enabled else None
+            # Interpolated value is close to the next preset, use its settings
+            log_debug(f"{vdu_id} interpolate: use next preset {next_preset_name} {next_brightness=} {interpolated_brightness=} ") if log_debug_enabled else None
             result_preset_name = next_preset_name
             result_brightness = next_brightness
         else:  # Not close to any preset, use interpolated result
-            log_debug(f"{vdu_id} interpolate no-preset  result_brightness={interpolated_brightness} original result={result_brightness}") if log_debug_enabled else None
+            log_debug(f"{vdu_id} interpolate: no-preset  result_brightness={interpolated_brightness} original result={result_brightness}") if log_debug_enabled else None
             result_preset_name = None
             result_brightness = interpolated_brightness
 
@@ -5554,10 +5556,6 @@ class LuxAutoWorker(WorkerThread):
                 profile_brightness = preset.get_brightness(vdu_id)
                 profile_preset_name = lux_point.preset_name
         return profile_brightness, profile_preset_name
-
-    def get_smoothed_value(self, metered_value: float) -> float:  # A smoothed value
-        smoothed = self.smoother.smooth(metered_value)
-        return smoothed
 
     def finished_callable(self, task: LuxAutoWorker) -> None:
         if self.vdu_exception:
