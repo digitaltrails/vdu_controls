@@ -5326,7 +5326,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         self.target_brightness: Dict[str, int] = {}
         self.message_tracker: Dict[str, Tuple[int, int]] = {}  # Used to prevent repeat messages
         self.previous_metered_lux = 0
-        self.refresh_now_requested = False
+        self.adjust_now_requested = False
         lux_config = auto_controller.get_lux_config()
         interval_minutes = lux_config.get_interval_minutes()
         self.sleep_seconds = interval_minutes * 60
@@ -5371,9 +5371,9 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
     def idle_sampling(self, lux_meter):
         if log_debug_enabled:
             log_debug(f"LuxAutoWorker: sleeping {self.sleep_seconds} seconds.")
-        for second in range(self.sleep_seconds, -1, -1):  # Sleep at the end of each cycle
-            if self.stop_requested or self.refresh_now_requested:  # Respond to stop requests while sleeping
-                self.refresh_now_requested = False
+        for second in range(self.sleep_seconds, -1, -1):  # Short sleeps, checking for requests in between
+            if self.stop_requested or self.adjust_now_requested:  # Respond to stop requests while sleeping
+                self.adjust_now_requested = False
                 break
             # Update the smoother every n seconds, but not at the start or end of the period.
             if (0 < second < self.sleep_seconds) and second % self.sampling_interval_seconds == 0:
@@ -5415,7 +5415,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
             if profile_preset_name is not None:  # if a point had a Preset attached, activate it now
                 # Finish by restoring the Preset's non-brightness settings, invoke now, so it will happen while this thread sleeps.
                 self.status_message(tr("Restoring preset {}").format(profile_preset_name))
-                preset = self.main_app.find_preset_by_name(profile_preset_name)
+                preset = self.main_app.find_preset_by_name(profile_preset_name)  # Check that it still exists
                 if preset is not None:
                     self.main_app.restore_preset_in_gui_thread(
                         preset,
@@ -5515,7 +5515,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
             log_debug(f"LuxAutoWorker: interpolation: next_pt Preset proximity: {next_preset_name}") if log_debug_enabled else None
             result_brightness = next_brightness
             result_preset_name = next_preset_name  # Close enough to use the next point's Preset.
-        else:  # Not close to a Preset, interpolate a value
+        else:  # Not close to a Profile attached Preset, interpolate a value
             # Only interpolate if 1) there is a slope in brightness, 2) lux is somewhere beyond its base point, 3)
             # TODO Why are we checking if next is to the left, maybe it's on top of the existing lux point, should that be allowed?
             if result_brightness != next_brightness and smoothed_lux != result_point.lux and next_point.lux > result_point.lux:
@@ -5551,6 +5551,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
     def lux_summary(self, metered_lux: int, smoothed_lux: int) -> str:
         return f"{metered_lux:.0f}{SMOOTHING_SYMBOL}{smoothed_lux} lux" if metered_lux != smoothed_lux else f"{metered_lux} lux"
 
+
 class LuxPoint:
 
     def __init__(self, lux: int, brightness: int, preset_name: str | None = None) -> None:
@@ -5580,8 +5581,6 @@ class LuxConfig(ConfigIni):
         self.set("lux-meter", "lux-device", device_name)
 
     def get_vdu_profile(self, vdu_controller: VduController) -> List[LuxPoint]:
-        if vdu_controller.vdu_stable_id in self.cached_profiles:
-            return self.cached_profiles[vdu_controller.vdu_stable_id]
         if self.has_option('lux-profile', vdu_controller.vdu_stable_id):
             lux_points = [LuxPoint(v[0], v[1]) for v in literal_eval(self.get('lux-profile', vdu_controller.vdu_stable_id))]
         else:  # Use a default profile:
@@ -5592,7 +5591,6 @@ class LuxConfig(ConfigIni):
             preset_points = [LuxPoint(lux, -1, name) for lux, name in literal_eval(self.get('lux-presets', 'lux-preset-points'))]
             lux_points = lux_points + preset_points
             lux_points.sort()
-        self.cached_profiles[vdu_controller.vdu_stable_id] = lux_points
         return lux_points
 
     def get_preset_points(self) -> List[LuxPoint]:
@@ -5712,14 +5710,14 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         quit_button.clicked.connect(self.close)  # type: ignore
         self.status_bar.addPermanentWidget(quit_button, 0)
 
-        self.refresh_now_button = QPushButton()
-        self.refresh_now_button.clicked.connect(self.main_app.get_lux_auto_controller().refresh_brightness_now)
-        self.refresh_now_button.setToolTip(tr("Press to expire the timer and immediately evaluate brightness."))
+        self.adjust_now_button = QPushButton()
+        self.adjust_now_button.clicked.connect(self.main_app.get_lux_auto_controller().adjust_brightness_now)
+        self.adjust_now_button.setToolTip(tr("Press to expire the timer and immediately evaluate brightness."))
 
         self.status_layout = QHBoxLayout()
         main_layout.addLayout(self.status_layout)
-        self.status_layout.addWidget(self.refresh_now_button, 0)
-        self.refresh_now_button.hide()
+        self.status_layout.addWidget(self.adjust_now_button, 0)
+        self.adjust_now_button.hide()
         self.status_layout.addWidget(self.status_bar)
 
         def choose_device() -> None:
@@ -5784,8 +5782,8 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.has_profile_changes = False
         self.save_button.setEnabled(False)
         self.revert_button.setEnabled(False)
-        self.refresh_now_button.setText(f"{TIMER_RUNNING_SYMBOL} 00:00")
-        self.refresh_now_button.show() if self.lux_config.is_auto_enabled() else self.refresh_now_button.hide()
+        self.adjust_now_button.setText(f"{TIMER_RUNNING_SYMBOL} 00:00")
+        self.adjust_now_button.show() if self.lux_config.is_auto_enabled() else self.adjust_now_button.hide()
 
         new_id_list = []   # List of all currently connected VDU's
         for index, vdu_controller in enumerate(self.main_app.vdu_controllers):
@@ -5862,13 +5860,13 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             self.lux_meter_widget.start_metering(meter_device)
             self.enabled_checkbox.setEnabled(True)
             if self.lux_config.is_auto_enabled():
-                self.refresh_now_button.show()
+                self.adjust_now_button.show()
             else:
-                self.refresh_now_button.hide()
+                self.adjust_now_button.hide()
         else:
             self.enabled_checkbox.setChecked(False)
             self.enabled_checkbox.setEnabled(False)
-            self.refresh_now_button.hide()
+            self.adjust_now_button.hide()
         if meter_device is not None:
             if self.lux_config.is_auto_enabled():
                 self.status_message(tr("Restarted brightness auto adjustment"))
@@ -5904,8 +5902,8 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
     def status_message(self, message: str, timeout: int = 0, destination: str = 'status') -> None:
         if destination == 'countdown':
-            self.refresh_now_button.show()
-            self.refresh_now_button.setText(message)
+            self.adjust_now_button.show()
+            self.adjust_now_button.setText(message)
         else:
             self.status_bar.showMessage(message, timeout)
 
@@ -5977,9 +5975,9 @@ class LuxAutoController:
         if lux_dialog is not None:
             lux_dialog.reinitialise()
 
-    def refresh_brightness_now(self) -> None:
+    def adjust_brightness_now(self) -> None:
         if self.lux_auto_brightness_worker is not None:
-            self.lux_auto_brightness_worker.refresh_now_requested = True
+            self.lux_auto_brightness_worker.adjust_now_requested = True
 
 
 class GreyScaleDialog(QDialog):
