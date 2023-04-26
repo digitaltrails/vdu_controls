@@ -5514,32 +5514,26 @@ class LuxAutoWorker(WorkerThread):
         log_debug(f"{vdu_id=} {smoothed_lux=}  {result_point.lux=} {next_point.lux=}" 
                   f" {result_brightness=}% {next_brightness=}% {result_preset_name=}"
                   f" {self.sensitivity_ratio=}") if log_debug_enabled else None
-        # TODO Why are we checking if next is to the left - maybe it's on top of the existing lux point - should that be allowed??
-        # Only interpolate if 1) there is a slope in brightness, 2) lux is somewhere beyond its base point, 3) next is to the left
-        if result_brightness != next_brightness and smoothed_lux != result_point.lux and next_point.lux > result_point.lux:
-            x_smoothed = self.x_from_lux(smoothed_lux)
-            x_result_point = self.x_from_lux(result_point.lux)
-            x_next_point = self.x_from_lux(next_point.lux)
-            interpolated_brightness = round(result_brightness + (next_brightness - result_brightness) *
-                                            (x_smoothed - x_result_point) / (x_next_point - x_result_point))
-            log_debug(f"{vdu_id} interpolate {result_brightness}%..{next_brightness}% -> {interpolated_brightness}%") if log_debug_enabled else None
-        else:  # Can't interpolate meaningfully use the result as is
-            interpolated_brightness = result_brightness
-            log_debug(f"{vdu_id} interpolate {result_brightness}%..{next_brightness}% - no slope") if log_debug_enabled else None
-
-        if result_preset_name is not None and abs(interpolated_brightness - result_brightness) < self.sensitivity_percent:
-            # Interpolated value is close to the result preset, use its settings
-            log_debug(f"{vdu_id} interpolate: use result preset {result_preset_name} {result_brightness=} {interpolated_brightness=} ") if log_debug_enabled else None
-        elif next_preset_name is not None and abs(interpolated_brightness - next_brightness) < self.sensitivity_percent:
-            # Interpolated value is close to the next preset, use its settings
-            log_debug(f"{vdu_id} interpolate: use next preset {next_preset_name} {next_brightness=} {interpolated_brightness=} ") if log_debug_enabled else None
-            result_preset_name = next_preset_name
+        # Use lux-proximity over brightness-proximity - greater range => more discriminating, less oscillating.
+        if result_preset_name is not None and abs(smoothed_lux - result_point.lux) <= result_point.lux * self.sensitivity_ratio:
+            log_debug(f"LuxAutoWorker: interpolation: Preset proximity: {result_preset_name}") if log_debug_enabled else None
+            pass  # Close enough to just use the existing result's Preset
+        elif next_preset_name is not None and abs(smoothed_lux - next_point.lux) <= next_point.lux * self.sensitivity_ratio:
+            log_debug(f"LuxAutoWorker: interpolation: next_pt Preset proximity: {next_preset_name}") if log_debug_enabled else None
             result_brightness = next_brightness
-        else:  # Not close to any preset, use interpolated result
-            log_debug(f"{vdu_id} interpolate: no-preset  result_brightness={interpolated_brightness} original result={result_brightness}") if log_debug_enabled else None
-            result_preset_name = None
-            result_brightness = interpolated_brightness
-
+            result_preset_name = next_preset_name  # Close enough to use the next point's Preset.
+        else:  # Not close to a Preset, interpolate a value
+            # Only interpolate if 1) there is a slope in brightness, 2) lux is somewhere beyond its base point, 3)
+            # TODO Why are we checking if next is to the left, maybe it's on top of the existing lux point, should that be allowed?
+            if result_brightness != next_brightness and smoothed_lux != result_point.lux and next_point.lux > result_point.lux:
+                log_debug(f"LuxAutoWorker: interpolation: {result_brightness=} {next_brightness=}"
+                          f" {smoothed_lux=} {result_point.lux=} {next_point.lux=}") if log_debug_enabled else None
+                x_smoothed = self.x_from_lux(smoothed_lux)
+                x_result_point = self.x_from_lux(result_point.lux)
+                x_next_point = self.x_from_lux(next_point.lux)
+                result_brightness += round((next_brightness - result_brightness) *
+                                           (x_smoothed - x_result_point) / (x_next_point - x_result_point))
+                result_preset_name = None
         return result_brightness, result_preset_name
 
     def x_from_lux(self, lux: int) -> float:
