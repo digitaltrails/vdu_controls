@@ -5337,7 +5337,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                                   alpha=lux_config.getfloat('lux-meter', 'smoother-alpha', fallback=0.5))
         log_info(f"LuxAutoWorker: lux-meter.smoother-n={self.smoother.length} lux-meter.smoother-alpha={self.smoother.alpha}")
         self.interpolation_enabled = lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True)
-        self.sensitivity_percent = lux_config.getint('lux-meter', 'interpolation-sensitivity-percent', fallback=5)
+        self.sensitivity_percent = lux_config.getint('lux-meter', 'interpolation-sensitivity-percent', fallback=10)
         self.sensitivity_ratio = self.sensitivity_percent / 100.0
         log_info(f"LuxAutoWorker: lux-meter.interpolation-sensitivity-percent={self.sensitivity_percent}")
 
