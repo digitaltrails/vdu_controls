@@ -5312,8 +5312,7 @@ class LuxSmooth:
         return self.output[-1]
 
 
-class LuxAutoWorker(WorkerThread):
-    # working = pyqtSignal()  TODO redundant?
+class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
     _update_gui_control = pyqtSignal(VduControlBase)
     _lux_dialog_message = pyqtSignal(str, int, str)
 
@@ -5338,7 +5337,7 @@ class LuxAutoWorker(WorkerThread):
                                   alpha=lux_config.getfloat('lux-meter', 'smoother-alpha', fallback=0.5))
         log_info(f"LuxAutoWorker: lux-meter.smoother-n={self.smoother.length} lux-meter.smoother-alpha={self.smoother.alpha}")
         self.interpolation_enabled = lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True)
-        self.sensitivity_percent = lux_config.getint('lux-meter', 'interpolation-sensitivity-percent', fallback=10)
+        self.sensitivity_percent = lux_config.getint('lux-meter', 'interpolation-sensitivity-percent', fallback=5)
         self.sensitivity_ratio = self.sensitivity_percent / 100.0
         log_info(f"LuxAutoWorker: lux-meter.interpolation-sensitivity-percent={self.sensitivity_percent}")
 
@@ -5359,46 +5358,44 @@ class LuxAutoWorker(WorkerThread):
         try:
             lux_auto_controller = self.main_app.lux_auto_controller
             assert lux_auto_controller is not None
-
             while not self.stop_requested:
-                # self.working.emit()  TODO redundant
                 lux_meter = lux_auto_controller.lux_meter
                 if lux_meter is None:  # In app config change
                     log_error("Exiting, no lux meter available.")
                     break
-                lux_config = lux_auto_controller.get_lux_config().load()  # Refresh
-
-                self.step_brightness(lux_config, lux_meter)  # Main work
-
-                if log_debug_enabled:
-                    log_debug(f"LuxAutoWorker: sleeping {self.sleep_seconds} seconds.")
-                for second in range(self.sleep_seconds, -1, -1):  # Sleep at the end of each cycle
-                    if self.stop_requested or self.refresh_now_requested:  # Respond to stop requests while sleeping
-                        self.refresh_now_requested = False
-                        break
-                    # Update the smoother every n seconds, but not at the start or end of the period.
-                    if (0 < second < self.sleep_seconds) and second % self.sampling_interval_seconds == 0:
-                        metered_lux = lux_meter.get_value()  # Update the smoothing while sleeping
-                        smoothed = self.smoother.smooth(metered_lux)
-                        smoothed_lux = round(smoothed)
-                        self.status_message(f"{SUN_SYMBOL} {self.lux_summary(round(metered_lux), smoothed_lux)}")
-                    self.status_message(f"{TIMER_RUNNING_SYMBOL} {second // 60:02d}:{second % 60:02d}", 'countdown')
-                    time.sleep(1)
+                self.stepping_brightness(self.auto_controller.lux_config, lux_meter)
+                self.idle_sampling(lux_meter)  # Sleep and sample for rest of cycle
         finally:
             log_info(f"LuxAutoWorker exiting (stop_requested={self.stop_requested}) (Thread={threading.get_ident()})")
 
-    def step_brightness(self, lux_config: LuxConfig, lux_meter: LuxMeterSerialDevice | LuxMeterFifoDevice | LuxMeterRunnableDevice) -> bool:
+    def idle_sampling(self, lux_meter):
+        if log_debug_enabled:
+            log_debug(f"LuxAutoWorker: sleeping {self.sleep_seconds} seconds.")
+        for second in range(self.sleep_seconds, -1, -1):  # Sleep at the end of each cycle
+            if self.stop_requested or self.refresh_now_requested:  # Respond to stop requests while sleeping
+                self.refresh_now_requested = False
+                break
+            # Update the smoother every n seconds, but not at the start or end of the period.
+            if (0 < second < self.sleep_seconds) and second % self.sampling_interval_seconds == 0:
+                metered_lux = lux_meter.get_value()  # Update the smoothing while sleeping
+                smoothed = self.smoother.smooth(metered_lux)
+                smoothed_lux = round(smoothed)
+                self.status_message(f"{SUN_SYMBOL} {self.lux_summary(round(metered_lux), smoothed_lux)}")
+            self.status_message(f"{TIMER_RUNNING_SYMBOL} {second // 60:02d}:{second % 60:02d}", 'countdown')
+            time.sleep(1)
+
+    def stepping_brightness(self, lux_config: LuxConfig, lux_meter: LuxMeterSerialDevice | LuxMeterFifoDevice | LuxMeterRunnableDevice) -> None:
         last_step_count = -1
         step_count = 0
-        made_brightness_changes = True
+        profile_preset_name = None
         while not self.stop_requested and step_count != last_step_count:  # keep going while brightness keeps being stepped/changed
             last_step_count = step_count
-            made_brightness_changes = False
             metered_lux = lux_meter.get_value()
             smoothed_lux = round(self.smoother.smooth(metered_lux))
             lux_summary_text = self.lux_summary(round(metered_lux), smoothed_lux)
-            profile_preset_name: str | None = None
-            self.status_message(f"{SUN_SYMBOL} {lux_summary_text} {PROCESSING_LUX_SYMBOL}") if step_count == 0 else None
+            # If interpolating, it may be that each VDU profile is closer to a different attached preset, if this happens,
+            # chose the preset associated with the brightest value.
+            self.status_message(f"{SUN_SYMBOL} {lux_summary_text}{PROCESSING_LUX_SYMBOL}") if step_count == 0 else None
             for vdu_control_panel in self.main_app.get_main_panel().vdu_control_panels:  # For each VDU, do one step of its profile
                 if self.stop_requested:
                     break
@@ -5424,10 +5421,6 @@ class LuxAutoWorker(WorkerThread):
                         preset,
                         immediately=PresetTransitionFlag.SCHEDULED not in preset.get_transition_type(),
                         scheduled_activity=True)
-        return made_brightness_changes
-
-    def lux_summary(self, metered_lux: int, smoothed_lux: int) -> str:
-        return f"{metered_lux:.0f} {SMOOTHING_SYMBOL} {smoothed_lux} lux" if metered_lux != smoothed_lux else f"{metered_lux} lux"
 
     def step_one_vdu(self, vdu_control_panel: VduControlPanel, profile_brightness: int, profile_preset_name: str | None,
                      step_count: int, lux_summary_text: str) -> bool:
@@ -5436,7 +5429,7 @@ class LuxAutoWorker(WorkerThread):
         brightness_control = vdu_control_panel.get_control(VDU_SUPPORTED_CONTROLS.brightness.vcp_code)
         if step_count == 0:
             self.status_message(
-                f"{SUN_SYMBOL} {lux_summary_text} {PROCESSING_LUX_SYMBOL} {profile_brightness}% {controller.vdu_stable_id}")
+                f"{SUN_SYMBOL} {lux_summary_text}{PROCESSING_LUX_SYMBOL}{profile_brightness}% {controller.vdu_stable_id}")
         if brightness_control is not None:  # can only adjust brightness controls
             vdu_id = vdu_control_panel.controller.vdu_stable_id
             try:
@@ -5470,7 +5463,7 @@ class LuxAutoWorker(WorkerThread):
                                      f" preset={profile_preset_name}")
                         else:
                             self.status_message(
-                                f"{SUN_SYMBOL} {current_brightness}% {STEPPING_SYMBOL} {profile_brightness}% {vdu_id}" +
+                                f"{SUN_SYMBOL} {current_brightness}%{STEPPING_SYMBOL}{profile_brightness}% {vdu_id}" +
                                 f" ({lux_summary_text}) {profile_preset_name if profile_preset_name is not None else ''}")
                         self.consecutive_errors = 0
             except VduException as ve:
@@ -5536,9 +5529,6 @@ class LuxAutoWorker(WorkerThread):
                 result_preset_name = None
         return result_brightness, result_preset_name
 
-    def x_from_lux(self, lux: int) -> float:
-        return ((math.log10(lux) - math.log10(1)) / (math.log10(100000) - math.log10(1))) if lux > 0 else 0
-
     def get_profile_values(self, lux_point, vdu_id) -> Tuple[int, str | None]:
         profile_brightness = -1
         profile_preset_name = None
@@ -5555,6 +5545,11 @@ class LuxAutoWorker(WorkerThread):
         if self.vdu_exception:
             log_error(f"LuxAutoWorker exited with exception={self.vdu_exception}")
 
+    def x_from_lux(self, lux: int) -> float:
+        return ((math.log10(lux) - math.log10(1)) / (math.log10(100000) - math.log10(1))) if lux > 0 else 0
+
+    def lux_summary(self, metered_lux: int, smoothed_lux: int) -> str:
+        return f"{metered_lux:.0f}{SMOOTHING_SYMBOL}{smoothed_lux} lux" if metered_lux != smoothed_lux else f"{metered_lux} lux"
 
 class LuxPoint:
 
@@ -5576,6 +5571,7 @@ class LuxConfig(ConfigIni):
         super().__init__()
         self.path = get_config_path('AutoLux')
         self.last_modified_time = 0.0
+        self.cached_profiles: Dict[str, List[LuxPoint]] = {}
 
     def get_device_name(self) -> str:
         return self.get("lux-meter", "lux-device", fallback='')
@@ -5584,20 +5580,19 @@ class LuxConfig(ConfigIni):
         self.set("lux-meter", "lux-device", device_name)
 
     def get_vdu_profile(self, vdu_controller: VduController) -> List[LuxPoint]:
+        if vdu_controller.vdu_stable_id in self.cached_profiles:
+            return self.cached_profiles[vdu_controller.vdu_stable_id]
         if self.has_option('lux-profile', vdu_controller.vdu_stable_id):
             lux_points = [LuxPoint(v[0], v[1]) for v in literal_eval(self.get('lux-profile', vdu_controller.vdu_stable_id))]
         else:  # Use a default profile:
             range_restriction = vdu_controller.capabilities['10'].values
-            min_v, max_v = (0, 100) if len(range_restriction) == 0 else (int(range_restriction[1]), int(range_restriction[2]))
-            lux_values = [0, 10, 100, 1_000, 10_000, 100_000]
-            brightness_values = [15, 15, 70, 90, 95, 100]
-            brightness_values = [v if v >= min_v else min_v for v in brightness_values]
-            brightness_values = [v if v <= max_v else max_v for v in brightness_values]
-            lux_points = [LuxPoint(lux, brightness) for lux, brightness in  zip(lux_values, brightness_values)]
+            min_v, max_v = (10, 90) if len(range_restriction) == 0 else (int(range_restriction[1]), int(range_restriction[2]))
+            lux_points = [LuxPoint(0, min_v), LuxPoint(10_000, max_v)]
         if self.has_option('lux-presets', 'lux-preset-points'):
             preset_points = [LuxPoint(lux, -1, name) for lux, name in literal_eval(self.get('lux-presets', 'lux-preset-points'))]
             lux_points = lux_points + preset_points
             lux_points.sort()
+        self.cached_profiles[vdu_controller.vdu_stable_id] = lux_points
         return lux_points
 
     def get_preset_points(self) -> List[LuxPoint]:
@@ -5614,6 +5609,7 @@ class LuxConfig(ConfigIni):
         return self.getboolean("lux-meter", "automatic-brightness", fallback=False)
 
     def load(self, force: bool = False) -> LuxConfig:
+        self.cached_profiles.clear()
         if self.path.exists():
             if Path.stat(self.path).st_mtime > self.last_modified_time or force:
                 log_info(f"Reading autolux file '{self.path.as_posix()}'")
@@ -5923,7 +5919,7 @@ class LuxAutoController:
     def __init__(self, main_app: VduAppWindow) -> None:
         super().__init__()
         self.main_app = main_app
-        self.lux_config: LuxConfig | None = None
+        self.lux_config = LuxConfig()
         self.lux_meter: LuxMeterSerialDevice | LuxMeterFifoDevice | LuxMeterRunnableDevice | None = None
         self.lux_auto_brightness_worker: LuxAutoWorker | None = None
         self.lux_tool_button = self.create_tool_button()
@@ -5935,7 +5931,7 @@ class LuxAutoController:
 
     def initialize_from_config(self) -> None:
         assert is_running_in_gui_thread()
-        self.lux_config = LuxConfig().load()
+        self.lux_config.load()
         try:
             if self.lux_config.get_device_name().strip() != '':
                 self.lux_meter = lux_create_device(self.lux_config.get_device_name())
@@ -5944,16 +5940,13 @@ class LuxAutoController:
                 if self.lux_meter is not None:
                     if self.lux_auto_brightness_worker is not None:
                         self.lux_auto_brightness_worker.stop_requested = True
-                        # self.lux_auto_brightness_worker.working.disconnect(self.main_app.display_lux_auto_indicators)  # TODO redundant
                     self.lux_auto_brightness_worker = LuxAutoWorker(self)
-                    # self.lux_auto_brightness_worker.working.connect(self.main_app.display_lux_auto_indicators)  # TODO redundant
                     self.lux_auto_brightness_worker.start()
                 self.main_app.display_lux_auto_indicators()  # Refresh indicators immediately
             else:
                 log_info("Lux auto-brightness settings refresh - monitoring is off.")  # TODO handle exception
                 if self.lux_auto_brightness_worker is not None:
                     self.lux_auto_brightness_worker.stop_requested = True
-                    # self.lux_auto_brightness_worker.working.disconnect(self.main_app.display_lux_auto_indicators) # TODO redundant
                     self.lux_auto_brightness_worker = None
                     self.main_app.display_lux_auto_indicators()
         except LuxDeviceException as lde:
