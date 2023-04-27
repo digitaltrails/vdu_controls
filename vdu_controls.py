@@ -4894,13 +4894,13 @@ class LuxProfileChart(QLabel):
                         painter.drawLine(last_x, last_y, x, y)
                     if self.current_vdu_id == vdu_id:  # Special handling for the current/selected VDU
                         point_markers.append((point_data, x, y, lux, brightness, vdu_color_num))  # Save data for drawing markers
-                        if last_x and last_y:  # draw histogram-step, or if interpolating, the area under the line
-                            painter.setBrush(histogram_bar_color)
-                            painter.setPen(Qt.NoPen)
-                            painter.drawPolygon([QPoint(last_x, last_y), QPoint(x, y if interpolating else last_y),
-                                                 QPoint(x, self.y_origin), QPoint(last_x, self.y_origin), QPoint(last_x, last_y)])
+                    if last_x and last_y:  # draw histogram-step, or if interpolating, the area under the line
+                        painter.setBrush(histogram_bar_color)
+                        painter.setPen(Qt.NoPen)
+                        painter.drawPolygon([QPoint(last_x, last_y), QPoint(x, y if interpolating else last_y),
+                                             QPoint(x, self.y_origin), QPoint(last_x, self.y_origin), QPoint(last_x, last_y)])
                     last_x, last_y = x, y
-            if not interpolating and self.current_vdu_id == vdu_id and last_x and last_y:   # Show last step
+            if not interpolating and last_x and last_y:   # Show last step
                 painter.fillRect(last_x, last_y, 15, self.y_origin - last_y, histogram_bar_color)
 
         for point_data, x, y, lux, brightness, vdu_color_num in point_markers:  # draw point markers on top of lines and histograms
@@ -4918,6 +4918,13 @@ class LuxProfileChart(QLabel):
             x = self.x_origin + self.x_from_lux(preset_point.lux)
             painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height)
             painter.drawPolygon([QPoint(x + tx//2, self.y_origin + 16 + ty//2) for tx, ty in triangle])
+
+        for vdu_id, brightness in self.lux_dialog.vdu_current_brightness.items():  # Draw selected brightness
+            vdu_color_num = self.vdu_chart_colors[vdu_id]
+            vdu_line_color = QColor(vdu_color_num)
+            painter.setPen(QPen(vdu_line_color, std_line_width // 2, Qt.DotLine))
+            y = self.y_origin - self.y_from_percent(brightness)
+            painter.drawLine(self.x_origin, y, self.x_origin + self.plot_width, y)
 
         if self.current_lux is not None:  # Draw vertical line at current lux
             painter.setPen(QPen(QColor(0xfec053), 2))  # fbc21b 0xffdd30 #fec053
@@ -5313,6 +5320,7 @@ class LuxSmooth:
 
 
 class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
+    _notify_brightness_change = pyqtSignal(str, int)
     _update_gui_control = pyqtSignal(VduControlBase)
     _lux_dialog_message = pyqtSignal(str, int, str)
 
@@ -5347,6 +5355,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         # Using Qt signals to ensure GUI activity occurs in the GUI thread (this thread).
         self._update_gui_control.connect(update_gui_control)
         self._lux_dialog_message.connect(LuxDialog.lux_dialog_message)
+        self._notify_brightness_change.connect(LuxDialog.lux_dialog_notify_brightness)
         self.status_message(f"{TIMER_RUNNING_SYMBOL} 00:00", 'countdown')
 
     def status_message(self, message: str, destination: str = 'status') -> None:
@@ -5434,6 +5443,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
             vdu_id = vdu_control_panel.controller.vdu_stable_id
             try:
                 current_brightness = int(controller.get_attribute(VDU_SUPPORTED_CONTROLS.brightness.vcp_code)[0])
+                self._notify_brightness_change.emit(vdu_id, current_brightness)
                 if current_brightness != profile_brightness:
                     if vdu_id not in self.target_brightness or self.target_brightness[vdu_id] != profile_brightness:
                         self.target_brightness[vdu_id] = profile_brightness  # target has changed
@@ -5456,7 +5466,8 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                         made_brightness_changes = True
                         step_size = max(1, abs(diff) // 3)  # 4 if abs(diff) < 8 else 8  # TODO find a good heuristic
                         step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
-                        brightness_control.restore_vdu_attribute(str(current_brightness + step))  # Apply to physical VDU
+                        new_brightness = current_brightness + step
+                        brightness_control.restore_vdu_attribute(str(new_brightness))  # Apply to physical VDU
                         self._update_gui_control.emit(brightness_control)  # Update the GUI control in the GUI thread
                         if step_count == 0:
                             log_info(f"LuxAutoWorker: {vdu_id=}: start adjusting {current_brightness}%->{profile_brightness}%"
@@ -5485,61 +5496,57 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
 
     def determine_brightness(self, vdu_id: str, smoothed_lux: int, lux_profile: List[LuxPoint]) -> Tuple[int, str | None]:
         result_point = LuxPoint(0, 0)
-        result_preset_name = None  # should be at most one for a given lux value.
-        result_brightness = -1  # Just in case we don't get a match
         for step_point in [LuxPoint(0, 0)] + lux_profile + [LuxPoint(100000, 100)]:
             # Moving up the lux steps, seeking the step below smoothed_lux
             if smoothed_lux >= step_point.lux:  # Possible result, there may be something higher, keep going...
-                result_point = step_point
-                result_brightness, result_preset_name = self.get_profile_values(step_point, vdu_id)
+                result_point = self.get_profile_point(step_point, vdu_id)
             else:  # Step is too high, can stop searching now, the previous match is the result.
                 if self.interpolation_enabled:  # Optionally interpolate from the prior matched step to this next one.
-                    result_brightness, result_preset_name = self.interpolate_brightness(vdu_id, smoothed_lux,
-                                                                                        result_point, step_point,
-                                                                                        result_brightness, result_preset_name)
+                    next_point = self.get_profile_point(step_point, vdu_id)
+                    # TODO Why are we checking if next is to the left, maybe it's on top of the existing lux point, should that be allowed?
+                    # Only interpolate if 1) there is a slope in brightness, 2) lux is somewhere beyond its base point, 3)
+                    if result_point.brightness != next_point.brightness and smoothed_lux != result_point.lux and next_point.lux > result_point.lux:
+                        interpolated_brightness = self.interpolate_brightness(smoothed_lux, result_point, next_point)
+                        result_point = self.assess_preset_proximity(smoothed_lux, interpolated_brightness, result_point, next_point)
                 break
-        log_debug(f"LuxAutoWorker: determine_brightness {vdu_id=} {result_brightness=}% {result_preset_name=}") if log_debug_enabled else None
-        return result_brightness, result_preset_name
+        log_debug(f"LuxAutoWorker: determine_brightness {vdu_id=} {result_point.brightness=}% {result_point.preset_name=}") if log_debug_enabled else None
+        return result_point.brightness, result_point.preset_name
 
-    def interpolate_brightness(self, vdu_id: str, smoothed_lux: int, result_point: LuxPoint, next_point: LuxPoint,
-                               result_brightness: int, result_preset_name: str | None) -> Tuple[int, str | None]:
-        next_brightness, next_preset_name = self.get_profile_values(next_point, vdu_id)
-        log_debug(f"{vdu_id=} {smoothed_lux=}  {result_point.lux=} {next_point.lux=}" 
-                  f" {result_brightness=}% {next_brightness=}% {result_preset_name=}"
-                  f" {self.sensitivity_ratio=}") if log_debug_enabled else None
-        # Use lux-proximity over brightness-proximity - greater range => more discriminating, less oscillating.
-        if result_preset_name is not None and abs(smoothed_lux - result_point.lux) <= result_point.lux * self.sensitivity_ratio:
-            log_debug(f"LuxAutoWorker: interpolation: Preset proximity: {result_preset_name}") if log_debug_enabled else None
-            pass  # Close enough to just use the existing result's Preset
-        elif next_preset_name is not None and abs(smoothed_lux - next_point.lux) <= next_point.lux * self.sensitivity_ratio:
-            log_debug(f"LuxAutoWorker: interpolation: next_pt Preset proximity: {next_preset_name}") if log_debug_enabled else None
-            result_brightness = next_brightness
-            result_preset_name = next_preset_name  # Close enough to use the next point's Preset.
-        else:  # Not close to a Profile attached Preset, interpolate a value
-            # Only interpolate if 1) there is a slope in brightness, 2) lux is somewhere beyond its base point, 3)
-            # TODO Why are we checking if next is to the left, maybe it's on top of the existing lux point, should that be allowed?
-            if result_brightness != next_brightness and smoothed_lux != result_point.lux and next_point.lux > result_point.lux:
-                log_debug(f"LuxAutoWorker: interpolation: {result_brightness=} {next_brightness=}"
-                          f" {smoothed_lux=} {result_point.lux=} {next_point.lux=}") if log_debug_enabled else None
-                x_smoothed = self.x_from_lux(smoothed_lux)
-                x_result_point = self.x_from_lux(result_point.lux)
-                x_next_point = self.x_from_lux(next_point.lux)
-                result_brightness += round((next_brightness - result_brightness) *
-                                           (x_smoothed - x_result_point) / (x_next_point - x_result_point))
-                result_preset_name = None
-        return result_brightness, result_preset_name
+    def interpolate_brightness(self, smoothed_lux: int, result_point: LuxPoint, next_point: LuxPoint) -> float:
+        interpolated_brightness = float(result_point.brightness)
+        x_smoothed = self.x_from_lux(smoothed_lux)
+        x_result_point = self.x_from_lux(result_point.lux)
+        x_next_point = self.x_from_lux(next_point.lux)
+        interpolated_brightness += (next_point.brightness - result_point.brightness) * (
+                x_smoothed - x_result_point) / (x_next_point - x_result_point)
+        return interpolated_brightness
 
-    def get_profile_values(self, lux_point, vdu_id) -> Tuple[int, str | None]:
+    def assess_preset_proximity(self, smoothed_lux: int, interpolated_brightness: float, result_point: LuxPoint, next_point: LuxPoint):
+        diff_result = abs(interpolated_brightness - result_point.brightness)
+        diff_next = abs(interpolated_brightness - next_point.brightness)
+        print(f"{diff_result=} {diff_next=} {result_point.preset_name=} {next_point.preset_name=}")
+        if result_point.preset_name is not None and next_point.preset_name is not None:
+            if diff_result > diff_next:  # Closer to next_point
+                diff_result = self.sensitivity_percent + 1  # veto result_point by making it ineligible
+        if result_point.preset_name is not None and diff_result <= self.sensitivity_percent:
+            return result_point
+        # Either no next point or closer to next_point
+        if next_point.preset_name is not None and diff_next <= self.sensitivity_percent:
+            return next_point
+        return LuxPoint(smoothed_lux, round(interpolated_brightness), None)
+
+    def get_profile_point(self, lux_point, vdu_id) -> LuxPoint:
         profile_brightness = -1
         profile_preset_name = None
         if lux_point.preset_name is None:
             profile_brightness = lux_point.brightness
         else:  # Preset attached at this lux value: brightness will be -1 if the Preset doesn't have a brightness value.
             preset = self.main_app.find_preset_by_name(lux_point.preset_name)
-            if preset:
-                profile_brightness = preset.get_brightness(vdu_id)
+            if preset is not None:   # still exists
+                profile_brightness = preset.get_brightness(vdu_id)  # current brightness for preset
                 profile_preset_name = lux_point.preset_name
-        return profile_brightness, profile_preset_name
+        # TODO Do we need to consider lux proximity
+        return LuxPoint(lux_point.lux, profile_brightness, profile_preset_name)  # actual current values
 
     def finished_callable(self, task: LuxAutoWorker) -> None:
         if self.vdu_exception:
@@ -5632,6 +5639,12 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         if lux_dialog is not None:
             lux_dialog.status_message(message, timeout, destination)
 
+    @staticmethod
+    def lux_dialog_notify_brightness(vdu_stable_id: str, brightness: int) -> None:
+        lux_dialog: LuxDialog = LuxDialog.get_instance()  # type: ignore
+        if lux_dialog is not None:
+            lux_dialog.vdu_current_brightness[vdu_stable_id] = brightness
+
     def __init__(self, main_app: VduAppWindow) -> None:
         super().__init__()
         self.setWindowTitle(tr('Light-Meter'))
@@ -5640,6 +5653,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.range_restrictions: Dict[str, Tuple[int, int]] = {}
         self.preset_points: List[LuxPoint] = []
         self.vdu_chart_color: Dict[str, QColor] = {}
+        self.vdu_current_brightness: Dict[str, int] = {}
         self.has_profile_changes = False
         self.setMinimumWidth(950)
 
@@ -5780,6 +5794,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.enabled_checkbox.setChecked(self.lux_config.is_auto_enabled())
         self.interpolate_checkbox.setChecked(self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=False))
         self.has_profile_changes = False
+        self.vdu_current_brightness.clear()
         self.save_button.setEnabled(False)
         self.revert_button.setEnabled(False)
         self.adjust_now_button.setText(f"{TIMER_RUNNING_SYMBOL} 00:00")
@@ -5816,6 +5831,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
                     self.profile_selector.setCurrentIndex(index)
                     self.profile_plot.current_vdu_id = existing_selected_id
         self.profile_selector.blockSignals(False)
+
         self.configure_ui(self.main_app.get_lux_auto_controller().lux_meter)
         self.profile_plot.create_plot()
 
