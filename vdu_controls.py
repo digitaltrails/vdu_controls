@@ -3720,10 +3720,11 @@ def weather_bad_location_dialog(weather) -> None:
 
 class PresetChooseWeatherWidget(QWidget):
 
-    def __init__(self, location: GeoLocation | None) -> None:
+    def __init__(self, location: GeoLocation | None, main_config: VduControlsConfig) -> None:
         super().__init__()
         self.location = location
         self.init_weather()
+        self.main_config = main_config
         self.required_weather_filepath: Path | None = None
         self.setLayout(QVBoxLayout())
         self.label = QLabel(tr("Additional weather requirements"))
@@ -3793,6 +3794,8 @@ class PresetChooseWeatherWidget(QWidget):
                     "Thundery Snow Showers\n395 Heavy Snow Showers\n")
 
     def verify_weather_location(self, location: GeoLocation) -> None:
+        if not self.main_config.is_set(GlobalOption.WEATHER_ENABLED):
+            return
         place_name = location.place_name if location.place_name is not None else 'IP-address'
         # Only do this check if the location has changed.
         vf_file_path = CONFIG_DIR_PATH.joinpath('verified_weather_location.txt')
@@ -4134,10 +4137,10 @@ class PresetChooseElevationWidget(QWidget):
 
     _slider_select_elevation = pyqtSignal(object)
 
-    def __init__(self, location: GeoLocation | None) -> None:
+    def __init__(self, main_config: VduControlsConfig) -> None:
         super().__init__()
         self.elevation_key: SolarElevationKey | None = None
-        self.location: GeoLocation | None = location
+        self.location: GeoLocation | None = main_config.get_location()
 
         layout = QVBoxLayout()
         self.setLayout(layout)
@@ -4166,9 +4169,9 @@ class PresetChooseElevationWidget(QWidget):
         chart_slider_layout.addWidget(self.slider)
         bottom_layout.addLayout(chart_slider_layout, 1)
 
-        self.weather_widget = PresetChooseWeatherWidget(location)
+        self.weather_widget = PresetChooseWeatherWidget(self.location, main_config)
         bottom_layout.addWidget(self.weather_widget, 0)
-        self.configure_for_location(location)
+        self.configure_for_location(self.location)
         self.slider.valueChanged.connect(self.sliding)
 
         self.setMinimumWidth(400)
@@ -4350,7 +4353,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.editor_transitions_widget = PresetChooseTransitionWidget()
         self.editor_layout.addWidget(self.editor_transitions_widget)
 
-        self.editor_trigger_widget = PresetChooseElevationWidget(self.main_config.get_location())
+        self.editor_trigger_widget = PresetChooseElevationWidget(self.main_config)
         self.editor_layout.addWidget(self.editor_trigger_widget)
 
         presets_dialog_splitter.addWidget(self.editor_groupbox)
