@@ -1548,7 +1548,7 @@ class GeoLocation:
 class GlobalOption(Enum):
     SYSTEM_TRAY_ENABLED = QT_TR_NOOP('system-tray-enabled'), 'no', 'restart'
     TRANSLATIONS_ENABLED = QT_TR_NOOP('translations-enabled'), 'no', 'restart'
-    WEATHER_ENABLED = QT_TR_NOOP('weather-enabled'), 'yes', ''
+    WEATHER_ENABLED = QT_TR_NOOP('weather-enabled'), 'no', ''
     SCHEDULE_ENABLED = QT_TR_NOOP('schedule-enabled'), 'yes', ''
     LUX_OPTIONS_ENABLED = QT_TR_NOOP('lux-options-enabled'), 'no', 'restart'
     SPLASH_SCREEN_ENABLED = QT_TR_NOOP('splash-screen-enabled'), 'yes', ''
