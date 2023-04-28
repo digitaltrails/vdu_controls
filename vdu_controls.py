@@ -1916,6 +1916,14 @@ class VduController(QObject):
             raise VduException(vdu_description=self.get_vdu_description(), vcp_code=vcp_code, exception=e,
                                operation="set_attribute")
 
+    def get_range_restrictions(self, vcp_code):
+        if vcp_code in self.capabilities:
+            range_restriction = self.capabilities[vcp_code].values
+            min_v, max_v = (0, 100) if len(range_restriction) == 0 else (int(range_restriction[1]), int(range_restriction[2]))
+        else:
+            min_v, max_v = (0, 0)
+        return min_v, max_v
+
     def _parse_capabilities(self, capabilities_text=None) -> Dict[str, VcpCapability]:
         """Return a map of vpc capabilities keyed by vcp code."""
 
@@ -1951,6 +1959,7 @@ class VduController(QObject):
                                            can_transition=vcp_type == CONTINUOUS_TYPE)
                 feature_map[vcp_code] = capability
         return feature_map
+
 
 
 class SettingsEditor(QDialog, DialogSingletonMixin):
@@ -5440,10 +5449,10 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                      step_count: int, lux_summary_text: str) -> bool:
         made_brightness_changes = False
         controller = vdu_control_panel.controller
-        brightness_control = vdu_control_panel.get_control(VDU_SUPPORTED_CONTROLS.brightness.vcp_code)
         if step_count == 0:
             self.status_message(
                 f"{SUN_SYMBOL} {lux_summary_text}{PROCESSING_LUX_SYMBOL}{profile_brightness}% {controller.vdu_stable_id}")
+        brightness_control = vdu_control_panel.get_control(VDU_SUPPORTED_CONTROLS.brightness.vcp_code)
         if brightness_control is not None:  # can only adjust brightness controls
             vdu_id = vdu_control_panel.controller.vdu_stable_id
             try:
@@ -5596,8 +5605,7 @@ class LuxConfig(ConfigIni):
             lux_points = [LuxPoint(v[0], v[1]) for v in literal_eval(self.get('lux-profile', vdu_controller.vdu_stable_id))]
         else:  # Use a default profile:
             if VDU_SUPPORTED_CONTROLS.brightness.vcp_code in vdu_controller.capabilities:
-                range_restriction = vdu_controller.capabilities[VDU_SUPPORTED_CONTROLS.brightness.vcp_code].values
-                min_v, max_v = (10, 90) if len(range_restriction) == 0 else (int(range_restriction[1]), int(range_restriction[2]))
+                min_v, max_v = vdu_controller.get_range_restrictions(VDU_SUPPORTED_CONTROLS.brightness.vcp_code)
                 lux_points = [LuxPoint(0, min_v), LuxPoint(10_000, max_v)]
         if self.has_option('lux-presets', 'lux-preset-points'):
             preset_points = [LuxPoint(lux, -1, name) for lux, name in literal_eval(self.get('lux-presets', 'lux-preset-points'))]
@@ -5809,9 +5817,8 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         new_id_list = []   # List of all currently connected VDU's
         for index, vdu_controller in enumerate(self.main_app.vdu_controllers):
             if VDU_SUPPORTED_CONTROLS.brightness.vcp_code in vdu_controller.capabilities:
-                range_restriction = vdu_controller.capabilities[VDU_SUPPORTED_CONTROLS.brightness.vcp_code].values
-                min_v, max_v = (0, 100) if len(range_restriction) == 0 else (int(range_restriction[1]), int(range_restriction[2]))
-                self.range_restrictions[vdu_controller.vdu_stable_id] = min_v, max_v
+                self.range_restrictions[vdu_controller.vdu_stable_id] = vdu_controller.get_range_restrictions(
+                    VDU_SUPPORTED_CONTROLS.brightness.vcp_code)
                 self.vdu_current_brightness[vdu_controller.vdu_stable_id] = int(vdu_controller.get_attribute(
                     VDU_SUPPORTED_CONTROLS.brightness.vcp_code)[0])
             self.profile_data[vdu_controller.vdu_stable_id] = self.lux_config.get_vdu_profile(vdu_controller)
