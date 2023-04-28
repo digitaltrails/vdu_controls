@@ -1823,7 +1823,7 @@ class VduController(QObject):
     two Display-Port inputs, and it only has one.
     """
 
-    vdu_setting_changed = pyqtSignal()
+    vdu_set_attribute_signal = pyqtSignal(str, str, str)
 
     def __init__(self, vdu_id: str, vdu_model_name: str, vdu_unique_text_id: str, manufacturer: str,
                  default_config: VduControlsConfig, ddcutil: DdcUtil, vdu_exception_handler: Callable,
@@ -1911,7 +1911,7 @@ class VduController(QObject):
         try:
             # raise subprocess.SubprocessError("set_attribute")  # for testing
             self.ddcutil.set_attribute(self.vdu_id, vcp_code, value, sleep_multiplier=self.sleep_multiplier)
-            self.vdu_setting_changed.emit()
+            self.vdu_set_attribute_signal.emit(self.vdu_stable_id, vcp_code, value)
         except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound) as e:
             raise VduException(vdu_description=self.get_vdu_description(), vcp_code=vcp_code, exception=e,
                                operation="set_attribute")
@@ -2360,7 +2360,7 @@ class VduControlBase(QWidget):
     Base GUI control for a DDC attribute.
     """
 
-    connected_vdus_changed = pyqtSignal()
+    connected_vdus_changed_signal = pyqtSignal()
     current_msgbox: MessageBox | None = None
 
     class VduUptodate(object):
@@ -2405,14 +2405,14 @@ class VduControlBase(QWidget):
                 except VduException as e:
                     if not self.controller.vdu_exception_handler(e, True):
                         # Assume that the configured VDU's have changed
-                        self.connected_vdus_changed.emit()
+                        self.connected_vdus_changed_signal.emit()
                         break
 
     def __change_vdu_attribute(self, new_value) -> None:
         self.controller.set_attribute(self.vcp_capability.vcp_code, new_value)
         if self.vcp_capability.vcp_code in VDU_SUPPORTED_CONTROLS.by_code and \
                 VDU_SUPPORTED_CONTROLS.by_code[self.vcp_capability.vcp_code].causes_config_change:
-            self.connected_vdus_changed.emit()
+            self.connected_vdus_changed_signal.emit()
 
     def refresh_view(self) -> None:
         pass
@@ -2618,7 +2618,7 @@ class VduControlPanel(QWidget):
     The widget maintains a list of GUI "controls" that are duck-typed and will have refresh_data() and refresh_view()
     methods.
     """
-    connected_vdus_changed = pyqtSignal()
+    connected_vdus_changed_signal = pyqtSignal()
 
     def __init__(self, controller: VduController, warnings: bool, vdu_exception_handler) -> None:
         super().__init__()
@@ -2654,7 +2654,7 @@ class VduControlPanel(QWidget):
                 else:
                     raise TypeError(f'No GUI support for VCP type {capability.vcp_type} for vcp_code {vcp_code}')
                 if control is not None:
-                    control.connected_vdus_changed.connect(self.connected_vdus_changed)
+                    control.connected_vdus_changed_signal.connect(self.connected_vdus_changed_signal)
                     layout.addWidget(control)
                     self.vcp_controls.append(control)
             elif warnings:
@@ -3067,7 +3067,7 @@ class VduPanelBottomToolBar(QToolBar):
 class VduControlsMainPanel(QWidget):
     """GUI for detected VDU's, it will construct and contain a control panel for each VDU."""
 
-    vdu_setting_changed = pyqtSignal()
+    vdu_set_attribute_signal = pyqtSignal(str, str, str)
     connected_vdus_changed = pyqtSignal()
 
     def __init__(self) -> None:
@@ -3109,8 +3109,8 @@ class VduControlsMainPanel(QWidget):
         for controller in self.vdu_controllers:
             splash_message_signal.emit(f"DDC ID {controller.vdu_id}\n{controller.get_vdu_description()}")
             vdu_control_panel = VduControlPanel(controller, warnings_enabled, self.display_vdu_exception)
-            vdu_control_panel.connected_vdus_changed.connect(self.connected_vdus_changed)
-            controller.vdu_setting_changed.connect(self.vdu_setting_changed)
+            vdu_control_panel.connected_vdus_changed_signal.connect(self.connected_vdus_changed)
+            controller.vdu_set_attribute_signal.connect(self.vdu_set_attribute_signal)
             if vdu_control_panel.number_of_controls() != 0:
                 self.vdu_control_panels.append(vdu_control_panel)
                 controllers_layout.addWidget(vdu_control_panel)
@@ -4831,7 +4831,7 @@ class LuxProfileChart(QLabel):
         std_line_width = 4
         interpolating = self.lux_dialog.is_interpolating()
         preset_color = 0xebfff9
-        triangle = [(-8, 0), (0, -16), (8, 0)]
+        pyramid = [(-8, 0), (0, -16), (8, 0)]
         pixmap = QPixmap(self.pixmap_width, self.pixmap_height)
         painter = QPainter(pixmap)
         painter.fillRect(0, 0, self.pixmap_width, self.pixmap_height, QColor(0x5b93c5))
@@ -4849,6 +4849,7 @@ class LuxProfileChart(QLabel):
         for brightness in range(0, 101, 10):  # Draw y-axis ticks
             y = self.y_from_percent(brightness)
             painter.drawLine(self.x_origin - 5, self.y_origin - y, self.x_origin + 5, self.y_origin - y)
+            #painter.drawText(self.x_origin - 20 - 16 * len(str(brightness)), self.y_origin - y + 5, str(brightness))
             painter.drawText(self.x_origin - 50, self.y_origin - y + 5, str(brightness))
         painter.save()
         painter.translate(self.x_origin - 70, self.y_origin - self.plot_height // 2 + 6 * len(tr("Brightness %")))
@@ -4917,19 +4918,25 @@ class LuxProfileChart(QLabel):
             painter.setBrush(Qt.white)
             x = self.x_origin + self.x_from_lux(preset_point.lux)
             painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height)
-            painter.drawPolygon([QPoint(x + tx//2, self.y_origin + 16 + ty//2) for tx, ty in triangle])
+            painter.drawPolygon([QPoint(x + tx//2, self.y_origin + 16 + ty//2) for tx, ty in pyramid])
 
-        for vdu_id, brightness in self.lux_dialog.vdu_current_brightness.items():  # Draw selected brightness
+        lux_color = QColor(0xfec053)
+        if self.current_lux is not None:  # Draw vertical line at current lux
+            painter.setPen(QPen(lux_color, 2))  # fbc21b 0xffdd30 #fec053
+            x_current_lux = self.x_origin + self.x_from_lux(self.current_lux)
+            painter.drawLine(x_current_lux, self.y_origin + 10, x_current_lux, self.y_origin - self.plot_height - 10)
+
+        current_brightness_pointer = [(0, 0), (-24, 12), (-24, -12)]
+        for vdu_id, brightness in self.lux_dialog.vdu_current_brightness.items():  # Indicate current brightness
             vdu_color_num = self.vdu_chart_colors[vdu_id]
             vdu_line_color = QColor(vdu_color_num)
-            painter.setPen(QPen(vdu_line_color, std_line_width // 2, Qt.DotLine))
             y = self.y_origin - self.y_from_percent(brightness)
-            painter.drawLine(self.x_origin, y, self.x_origin + self.plot_width, y)
-
-        if self.current_lux is not None:  # Draw vertical line at current lux
-            painter.setPen(QPen(QColor(0xfec053), 2))  # fbc21b 0xffdd30 #fec053
-            x = self.x_origin + self.x_from_lux(self.current_lux)
-            painter.drawLine(x, self.y_origin + 10, x, self.y_origin - self.plot_height - 10)
+            painter.setPen(QPen(vdu_line_color, std_line_width // 2, Qt.SolidLine))
+            painter.setBrush(vdu_line_color)
+            painter.drawPolygon([QPoint(x_current_lux - 2 + tx // 2, y + 0 + ty // 2) for tx, ty in current_brightness_pointer])
+            # painter.drawPolygon([QPoint(self.x_origin - 10 + tx // 2, y + 0 + ty // 2) for tx, ty in current_brightness_pointer])
+            # painter.setPen(QPen(vdu_line_color, std_line_width / 2, Qt.DotLine))
+            # painter.drawLine(self.x_origin, y, x_current_lux, y)
 
         marker_diameter = std_line_width * 4
         mouse_pos = self.mapFromGlobal(self.cursor().pos())  # Draw cross-hairs at mouse pos
@@ -4953,7 +4960,7 @@ class LuxProfileChart(QLabel):
                     painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height - 5)
                     painter.setPen(QPen(Qt.red, 2))
                     painter.setBrush(Qt.white)
-                    painter.drawPolygon([QPoint(x + tx, self.y_origin + 18 + ty) for tx, ty in triangle])
+                    painter.drawPolygon([QPoint(x + tx, self.y_origin + 18 + ty) for tx, ty in pyramid])
                     if mouse_y > self.y_origin:  # Preset remove hint
                         painter.setPen(QPen(Qt.black, 1))
                         painter.drawText(x + 10, self.y_origin - 35, tr("Click remove preset at {} lux").format(lux))
@@ -4966,7 +4973,7 @@ class LuxProfileChart(QLabel):
                 if mouse_y > self.y_origin:  # Below axis, show hint for adding a Preset point: draw a red triangle below axis
                     painter.setPen(QPen(Qt.red, 2))
                     painter.setBrush(Qt.white)
-                    painter.drawPolygon([QPoint(x + tx, self.y_origin + 18 + ty) for tx, ty in triangle])
+                    painter.drawPolygon([QPoint(x + tx, self.y_origin + 18 + ty) for tx, ty in pyramid])
                     painter.setPen(QPen(Qt.black, 1))
                     painter.drawText(x + 10, self.y_origin - 35, tr("Click to add preset at {} lux").format(lux))
             painter.setPen(QPen(Qt.black, 1))
@@ -5320,7 +5327,6 @@ class LuxSmooth:
 
 
 class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
-    _notify_brightness_change = pyqtSignal(str, int)
     _update_gui_control = pyqtSignal(VduControlBase)
     _lux_dialog_message = pyqtSignal(str, int, str)
 
@@ -5355,7 +5361,6 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         # Using Qt signals to ensure GUI activity occurs in the GUI thread (this thread).
         self._update_gui_control.connect(update_gui_control)
         self._lux_dialog_message.connect(LuxDialog.lux_dialog_message)
-        self._notify_brightness_change.connect(LuxDialog.lux_dialog_notify_brightness)
         self.status_message(f"{TIMER_RUNNING_SYMBOL} 00:00", 'countdown')
 
     def status_message(self, message: str, destination: str = 'status') -> None:
@@ -5443,7 +5448,6 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
             vdu_id = vdu_control_panel.controller.vdu_stable_id
             try:
                 current_brightness = int(controller.get_attribute(VDU_SUPPORTED_CONTROLS.brightness.vcp_code)[0])
-                self._notify_brightness_change.emit(vdu_id, current_brightness)
                 if current_brightness != profile_brightness:
                     if vdu_id not in self.target_brightness or self.target_brightness[vdu_id] != profile_brightness:
                         self.target_brightness[vdu_id] = profile_brightness  # target has changed
@@ -5524,7 +5528,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
     def assess_preset_proximity(self, smoothed_lux: int, interpolated_brightness: float, result_point: LuxPoint, next_point: LuxPoint):
         diff_result = abs(interpolated_brightness - result_point.brightness)
         diff_next = abs(interpolated_brightness - next_point.brightness)
-        print(f"{diff_result=} {diff_next=} {result_point.preset_name=} {next_point.preset_name=}")
+        # print(f"{diff_result=} {diff_next=} {result_point.preset_name=} {next_point.preset_name=}")
         if result_point.preset_name is not None and next_point.preset_name is not None:
             if diff_result > diff_next:  # Closer to next_point
                 diff_result = self.sensitivity_percent + 1  # veto result_point by making it ineligible
@@ -5591,9 +5595,10 @@ class LuxConfig(ConfigIni):
         if self.has_option('lux-profile', vdu_controller.vdu_stable_id):
             lux_points = [LuxPoint(v[0], v[1]) for v in literal_eval(self.get('lux-profile', vdu_controller.vdu_stable_id))]
         else:  # Use a default profile:
-            range_restriction = vdu_controller.capabilities['10'].values
-            min_v, max_v = (10, 90) if len(range_restriction) == 0 else (int(range_restriction[1]), int(range_restriction[2]))
-            lux_points = [LuxPoint(0, min_v), LuxPoint(10_000, max_v)]
+            if VDU_SUPPORTED_CONTROLS.brightness.vcp_code in vdu_controller.capabilities:
+                range_restriction = vdu_controller.capabilities[VDU_SUPPORTED_CONTROLS.brightness.vcp_code].values
+                min_v, max_v = (10, 90) if len(range_restriction) == 0 else (int(range_restriction[1]), int(range_restriction[2]))
+                lux_points = [LuxPoint(0, min_v), LuxPoint(10_000, max_v)]
         if self.has_option('lux-presets', 'lux-preset-points'):
             preset_points = [LuxPoint(lux, -1, name) for lux, name in literal_eval(self.get('lux-presets', 'lux-preset-points'))]
             lux_points = lux_points + preset_points
@@ -5640,10 +5645,11 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             lux_dialog.status_message(message, timeout, destination)
 
     @staticmethod
-    def lux_dialog_notify_brightness(vdu_stable_id: str, brightness: int) -> None:
+    def lux_dialog_display_brightness(vdu_stable_id: str, brightness: int) -> None:
         lux_dialog: LuxDialog = LuxDialog.get_instance()  # type: ignore
         if lux_dialog is not None:
             lux_dialog.vdu_current_brightness[vdu_stable_id] = brightness
+            lux_dialog.profile_plot.show_changes()
 
     def __init__(self, main_app: VduAppWindow) -> None:
         super().__init__()
@@ -5802,9 +5808,12 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
         new_id_list = []   # List of all currently connected VDU's
         for index, vdu_controller in enumerate(self.main_app.vdu_controllers):
-            range_restriction = vdu_controller.capabilities['10'].values
-            min_v, max_v = (0, 100) if len(range_restriction) == 0 else (int(range_restriction[1]), int(range_restriction[2]))
-            self.range_restrictions[vdu_controller.vdu_stable_id] = min_v, max_v
+            if VDU_SUPPORTED_CONTROLS.brightness.vcp_code in vdu_controller.capabilities:
+                range_restriction = vdu_controller.capabilities[VDU_SUPPORTED_CONTROLS.brightness.vcp_code].values
+                min_v, max_v = (0, 100) if len(range_restriction) == 0 else (int(range_restriction[1]), int(range_restriction[2]))
+                self.range_restrictions[vdu_controller.vdu_stable_id] = min_v, max_v
+                self.vdu_current_brightness[vdu_controller.vdu_stable_id] = int(vdu_controller.get_attribute(
+                    VDU_SUPPORTED_CONTROLS.brightness.vcp_code)[0])
             self.profile_data[vdu_controller.vdu_stable_id] = self.lux_config.get_vdu_profile(vdu_controller)
             new_id_list.append(vdu_controller.vdu_stable_id)
         self.preset_points.clear()  # Edit out deleted presets by starting from scratch
@@ -6490,14 +6499,20 @@ class VduAppWindow(QMainWindow):
                 self.main_panel.indicate_busy(True)
                 # Remove any existing control panel - which may now be incorrect for the config.
                 self.main_panel.width()
-                self.main_panel.vdu_setting_changed.disconnect(self.display_active_preset)
-                self.main_panel.connected_vdus_changed.disconnect(self.create_main_control_panel)
+                # self.main_panel.vdu_set_attribute_signal.disconnect(self.display_active_preset)
+                # self.main_panel.connected_vdus_changed.disconnect(self.create_main_control_panel)
                 self.main_panel.deleteLater()
                 self.main_panel = None
             self.main_panel = VduControlsMainPanel()
             # Write up the signal/slots first
 
-            self.main_panel.vdu_setting_changed.connect(self.display_active_preset)
+            def vdu_set_attribute_signal_handler(vdu_stable_id: str, attr: str, value: str):
+                self.display_active_preset()
+                if self.main_config.is_set(GlobalOption.LUX_OPTIONS_ENABLED) and self.lux_auto_controller is not None:
+                    if attr == VDU_SUPPORTED_CONTROLS.brightness.vcp_code:
+                        LuxDialog.lux_dialog_display_brightness(vdu_stable_id, int(value))
+
+            self.main_panel.vdu_set_attribute_signal.connect(vdu_set_attribute_signal_handler)
             self.main_panel.connected_vdus_changed.connect(self.create_main_control_panel)
             # Then initialise the control panel display
             self.create_controllers()
