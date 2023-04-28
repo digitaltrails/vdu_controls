@@ -5606,7 +5606,8 @@ class LuxConfig(ConfigIni):
         else:  # Use a default profile:
             if VDU_SUPPORTED_CONTROLS.brightness.vcp_code in vdu_controller.capabilities:
                 min_v, max_v = vdu_controller.get_range_restrictions(VDU_SUPPORTED_CONTROLS.brightness.vcp_code)
-                lux_points = [LuxPoint(0, min_v), LuxPoint(10_000, max_v)]
+                lux_points = [LuxPoint(lux, brightness) for brightness, lux in
+                              [(10, 0), (20, 10), (40, 100), (60, 1_000), (80, 10_000), (100, 100_000)]]
         if self.has_option('lux-presets', 'lux-preset-points'):
             preset_points = [LuxPoint(lux, -1, name) for lux, name in literal_eval(self.get('lux-presets', 'lux-preset-points'))]
             lux_points = lux_points + preset_points
@@ -5776,7 +5777,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.interval_selector.editingFinished.connect(interval_selector_changed)
 
         def set_interpolation(checked: int) -> None:
-            if (checked == Qt.Checked) != self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=False):
+            if (checked == Qt.Checked) != self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True):
                 self.lux_config.set('lux-meter', 'interpolate-brightness', 'yes' if checked == Qt.Checked else 'no')
                 self.apply_settings()
 
@@ -5806,7 +5807,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.lux_config = self.main_app.get_lux_auto_controller().get_lux_config().duplicate(LuxConfig())  # type: ignore
         self.device_name = self.lux_config.get("lux-meter", "lux-device", fallback='')
         self.enabled_checkbox.setChecked(self.lux_config.is_auto_enabled())
-        self.interpolate_checkbox.setChecked(self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=False))
+        self.interpolate_checkbox.setChecked(self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True))
         self.has_profile_changes = False
         self.vdu_current_brightness.clear()
         self.save_button.setEnabled(False)
