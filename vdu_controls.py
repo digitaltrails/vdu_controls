@@ -4225,7 +4225,7 @@ class PresetChooseElevationWidget(QWidget):
         self.elevation_chart.set_elevation_key(self.elevation_key)
 
     def set_elevation_from_text(self, elevation_text: str | None) -> None:
-        if elevation_text is not None and len(self.elevation_chart.elevation_steps) != 0:
+        if elevation_text is not None and elevation_text.strip() != '' and len(self.elevation_chart.elevation_steps) != 0:
             elevation_key = parse_solar_elevation_ini_text(elevation_text)
             if self.elevation_chart.has_elevation_key(elevation_key):
                 self.set_elevation_key(elevation_key)
