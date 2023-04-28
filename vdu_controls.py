@@ -4934,18 +4934,17 @@ class LuxProfileChart(QLabel):
             painter.setPen(QPen(lux_color, 2))  # fbc21b 0xffdd30 #fec053
             x_current_lux = self.x_origin + self.x_from_lux(self.current_lux)
             painter.drawLine(x_current_lux, self.y_origin + 10, x_current_lux, self.y_origin - self.plot_height - 10)
-
-        current_brightness_pointer = [(0, 0), (-24, 12), (-24, -12)]
-        for vdu_id, brightness in self.lux_dialog.vdu_current_brightness.items():  # Indicate current brightness
-            vdu_color_num = self.vdu_chart_colors[vdu_id]
-            vdu_line_color = QColor(vdu_color_num)
-            y = self.y_origin - self.y_from_percent(brightness)
-            painter.setPen(QPen(vdu_line_color, std_line_width // 2, Qt.SolidLine))
-            painter.setBrush(vdu_line_color)
-            painter.drawPolygon([QPoint(x_current_lux - 2 + tx // 2, y + 0 + ty // 2) for tx, ty in current_brightness_pointer])
-            # painter.drawPolygon([QPoint(self.x_origin - 10 + tx // 2, y + 0 + ty // 2) for tx, ty in current_brightness_pointer])
-            # painter.setPen(QPen(vdu_line_color, std_line_width / 2, Qt.DotLine))
-            # painter.drawLine(self.x_origin, y, x_current_lux, y)
+            for brightness in range(10, 101, 10):  # Draw y-axis ticks on lux current lux
+                y = self.y_from_percent(brightness)
+                painter.drawLine(x_current_lux - 2, self.y_origin - y, x_current_lux + 2, self.y_origin - y)
+            current_brightness_pointer = [(0, 0), (-32, 16), (-32, -16)]  # Indicate current brightness at current lux
+            for vdu_id, brightness in self.lux_dialog.vdu_current_brightness.items():
+                vdu_color_num = self.vdu_chart_colors[vdu_id]
+                vdu_line_color = QColor(vdu_color_num)
+                y = self.y_origin - self.y_from_percent(brightness)
+                painter.setPen(QPen(Qt.black, 1)) #QPen(vdu_line_color, std_line_width // 2, Qt.SolidLine))
+                painter.setBrush(vdu_line_color)
+                painter.drawPolygon([QPoint(x_current_lux - 2 + tx // 2, y + 0 + ty // 2) for tx, ty in current_brightness_pointer])
 
         marker_diameter = std_line_width * 4
         mouse_pos = self.mapFromGlobal(self.cursor().pos())  # Draw cross-hairs at mouse pos
@@ -5837,7 +5836,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.profile_selector.blockSignals(True)  # Stop initialization from causing signally until all data is aligned.
         if new_id_list != existing_id_list:  # List of connected VDU's has changed
             self.profile_selector.clear()
-            random.seed(0x543fff)
+            random.seed(int(self.lux_config.get("lux-ui", "vdu_color_seed", fallback='0x543fff'), 16))
             self.vdu_chart_color.clear()
             for index, vdu_controller in enumerate(self.main_app.vdu_controllers):
                 color = QColor.fromHsl(int(index * 137.508) % 255, random.randint(64, 128), random.randint(192, 200))
