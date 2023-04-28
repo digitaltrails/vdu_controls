@@ -5053,10 +5053,11 @@ class LuxProfileChart(QLabel):
             return True
         return False
 
-    def show_changes(self) -> None:
+    def show_changes(self, profile_changes=True) -> None:
         self.create_plot()
         self.update()
-        self.chart_changed_callback()
+        if profile_changes:
+            self.chart_changed_callback()
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         self.create_plot()
@@ -5657,7 +5658,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         lux_dialog: LuxDialog = LuxDialog.get_instance()  # type: ignore
         if lux_dialog is not None:
             lux_dialog.vdu_current_brightness[vdu_stable_id] = brightness
-            lux_dialog.profile_plot.show_changes()
+            lux_dialog.profile_plot.show_changes(profile_changes=False)
 
     def __init__(self, main_app: VduAppWindow) -> None:
         super().__init__()
