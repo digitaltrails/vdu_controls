@@ -5609,8 +5609,10 @@ class LuxConfig(ConfigIni):
         else:  # Use a default profile:
             if VDU_SUPPORTED_CONTROLS.brightness.vcp_code in vdu_controller.capabilities:
                 min_v, max_v = vdu_controller.get_range_restrictions(VDU_SUPPORTED_CONTROLS.brightness.vcp_code)
-                lux_points = [LuxPoint(lux, brightness) for brightness, lux in
-                              [(10, 0), (20, 10), (40, 100), (60, 1_000), (80, 10_000), (100, 100_000)]]
+                if min_v < 10:
+                    min_v = 10
+                lux_points = [LuxPoint(10**lux, brightness) for lux, brightness in zip(range(0, 5),
+                                                                                       range(min_v, max_v + 1, (max_v - min_v)//4))]
         if self.has_option('lux-presets', 'lux-preset-points'):
             preset_points = [LuxPoint(lux, -1, name) for lux, name in literal_eval(self.get('lux-presets', 'lux-preset-points'))]
             lux_points = lux_points + preset_points
