@@ -1053,7 +1053,7 @@ def get_splash_image() -> QPixmap:
     return pixmap
 
 
-def clamp(v:int, min_v: int, max_v: int) -> int:
+def clamp(v: int, min_v: int, max_v: int) -> int:
     return max(min(max_v, v), min_v)
 
 
@@ -1079,7 +1079,7 @@ def log_wrapper(severity, *args) -> None:
             syslog_message = prefix + " " + message if severity == syslog.LOG_DEBUG else message
             syslog.syslog(severity, syslog_message)
         else:
-            print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), prefix, message)
+            print(datetime.now().strftime("%H:%M:%S"), prefix, message)
 
 
 def log_debug(*args) -> None:
@@ -1390,9 +1390,9 @@ class DialogSingletonMixin:
     def make_visible(self) -> None:
         """ If the dialog exists(), call this to make it visible by raising it.
         Internal, used by the class method show_existing_dialog()"""
-        self.show()
-        self.raise_()
-        self.activateWindow()
+        self.show()  # type: ignore
+        self.raise_()  # type: ignore
+        self.activateWindow()  # type: ignore
 
     @classmethod
     def show_existing_dialog(cls: Type) -> None:
@@ -1959,7 +1959,6 @@ class VduController(QObject):
                                            can_transition=vcp_type == CONTINUOUS_TYPE)
                 feature_map[vcp_code] = capability
         return feature_map
-
 
 
 class SettingsEditor(QDialog, DialogSingletonMixin):
@@ -4861,7 +4860,7 @@ class LuxProfileChart(QLabel):
         for brightness in range(0, 101, 10):  # Draw y-axis ticks
             y = self.y_from_percent(brightness)
             painter.drawLine(self.x_origin - 5, self.y_origin - y, self.x_origin + 5, self.y_origin - y)
-            #painter.drawText(self.x_origin - 20 - 16 * len(str(brightness)), self.y_origin - y + 5, str(brightness))
+            # painter.drawText(self.x_origin - 20 - 16 * len(str(brightness)), self.y_origin - y + 5, str(brightness))
             painter.drawText(self.x_origin - 50, self.y_origin - y + 5, str(brightness))
         painter.save()
         painter.translate(self.x_origin - 70, self.y_origin - self.plot_height // 2 + 6 * len(tr("Brightness %")))
@@ -4945,7 +4944,7 @@ class LuxProfileChart(QLabel):
                 vdu_color_num = self.vdu_chart_colors[vdu_id]
                 vdu_line_color = QColor(vdu_color_num)
                 y = self.y_origin - self.y_from_percent(brightness)
-                painter.setPen(QPen(Qt.black, 1)) #QPen(vdu_line_color, std_line_width // 2, Qt.SolidLine))
+                painter.setPen(QPen(Qt.black, 1))  # QPen(vdu_line_color, std_line_width // 2, Qt.SolidLine))
                 painter.setBrush(vdu_line_color)
                 painter.drawPolygon([QPoint(x_current_lux - 2 + tx // 2, y + 0 + ty // 2) for tx, ty in current_brightness_pointer])
 
@@ -5243,7 +5242,7 @@ class LuxMeterRunnableDevice:
         super().__init__()
         self.runnable = device_name
         self.lock = Lock()
-        self.cached_value : float | None = None
+        self.cached_value: float | None = None
         self.cached_time = time.time()
         self.thread = thread
 
@@ -5419,9 +5418,10 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
             metered_lux = lux_meter.get_value()
             smoothed_lux = round(self.smoother.smooth(metered_lux))
             lux_summary_text = self.lux_summary(round(metered_lux), smoothed_lux)
+            if step_count == 0:
+                self.status_message(f"{SUN_SYMBOL} {lux_summary_text} {PROCESSING_LUX_SYMBOL} ?")
             # If interpolating, it may be that each VDU profile is closer to a different attached preset, if this happens,
             # chose the preset associated with the brightest value.
-            self.status_message(f"{SUN_SYMBOL} {lux_summary_text}{PROCESSING_LUX_SYMBOL}") if step_count == 0 else None
             for vdu_control_panel in self.main_app.get_main_panel().vdu_control_panels:  # For each VDU, do one step of its profile
                 if self.stop_requested:
                     break
@@ -5435,7 +5435,9 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                                                                  step_count, lux_summary_text):
                     step_count += 1  # Increment if any changes were made
             time.sleep(0.5)  # Let i2c settle down, then continue stepping
-        if step_count != 0:  # If any work was done in previous steps, finish up the remaining tasks
+        if step_count == 0:
+            self.status_message(f"{SUN_SYMBOL} {lux_summary_text}")
+        else:  # If any work was done in previous steps, finish up the remaining tasks
             log_info(f"LuxAutoWorker: stepping completed {step_count=}, profile_preset={profile_preset_name}")
             self.status_message(tr("Brightness adjustment completed"))
             if profile_preset_name is not None:  # if a point had a Preset attached, activate it now
@@ -5452,9 +5454,6 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                      step_count: int, lux_summary_text: str) -> bool:
         made_brightness_changes = False
         controller = vdu_control_panel.controller
-        if step_count == 0:
-            self.status_message(
-                f"{SUN_SYMBOL} {lux_summary_text}{PROCESSING_LUX_SYMBOL}{profile_brightness}% {controller.vdu_stable_id}")
         brightness_control = vdu_control_panel.get_control(VDU_SUPPORTED_CONTROLS.brightness.vcp_code)
         if brightness_control is not None:  # can only adjust brightness controls
             vdu_id = vdu_control_panel.controller.vdu_stable_id
@@ -6571,7 +6570,7 @@ class VduAppWindow(QMainWindow):
             main_panel.refresh_view()
             main_panel.indicate_busy(False)
             if self.main_config.is_set(GlobalOption.LUX_OPTIONS_ENABLED) and LuxDialog.exists():
-                lux_dialog:LuxDialog = LuxDialog.get_instance()  # type: ignore
+                lux_dialog: LuxDialog = LuxDialog.get_instance()  # type: ignore
                 lux_dialog.reinitialise()  # in case the number of connected monitors have changed.
             self.display_active_preset()
 
