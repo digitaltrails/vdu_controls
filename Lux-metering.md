@@ -1,19 +1,22 @@
 Lux metering - sample scripts
 =============================
 
-For lux metering I use a simple light meter built using an Arduino and 
-a __GY30/BH1750__ sensor.  
+As of v1.10 `vdu_controls` supports hardware light/lux metering for
+automatic brightness adjustment. 
 
-I've also written a couple of alternative webcam based light metering 
-scripts that use my Logitech Webcam C270 to achieve an approximate 
-metering value.
+In order to support a variety of
+light metering hardware, v1.10 can read metered
+values from tty's, named-pipes (FIFO's) and executable programs/scripts.
+I currently use a simple light meter built using an __Arduino__ and 
+a __GY30/BH1750__ sensor.  I've also written a couple of example scripts 
+that uses a __Logitech Webcam C270__ to achieve an approximate metering value.
 
 Introduction
 ------------
 
-The `Vdu_controls` `Light Meter Dialog` provides for mapping from measured
-lux values to VDU monitor brightness and can be set to periodically
-adjust VDU brightness based on the most recent lux reading:
+The `Vdu_controls` `Light Meter Dialog` includes controls for setting
+up a light meter, setting the brightness auto-adjustment interval, and
+defining each VDU's mapping of lux values to VDU brightness:
 
 ![Default](screen-shots/lux-profiles.png)
 
@@ -183,8 +186,8 @@ all major Linux distributions.
 
 Both scripts are similar in their approach:
 1. capture a still image, 
-2. compute the average brightness for the captured image (0..255), 
-3. consult a table of brightness to lux mappings, 
+2. compute the average image-brightness for the captured image (0..255), 
+3. consult a table of image-brightness to lux mappings, 
 4. interpolate (log10) between the matched mapping entries,
 5. output a single lux value (typically 0 to 10000 on a log10 scale).
 
@@ -212,13 +215,16 @@ They both read the same two config files:
      LIVING_ROOM        50   5
      NIGHT               5   0  
     ```
-    In the data above, the name in the 1st column is a human-readable hint at the 
-    circumstances that might result in the lux value in the 2nd column.
-    The 3rd column is the camera brightness reading that corresponds
-    to the preceding lux value.  The data file can have any number of rows
-    of descending values.  The above defaults shown are from a mapping 
-    for a study with access to a large amount of natural daylight.  They're unlikely 
-    to be suitable for other situations.
+    * In the data above, the name in the 1st column is a comment
+    noting the circumstances that might result in the lux value 
+    in the 2nd column. This comment field is ignored by the script.
+    * The 2nd column is the lux value to output.
+    * The 3rd column is the camera image-brightness reading that corresponds
+    to the 2nd column lux value.  
+ 
+The data file can have any number of rows of descending values.  The above 
+defaults shown are from a mapping for a study with access to a large amount 
+of natural daylight.  They're unlikely to be suitable for other situations.
   
 You can use either the bash script or the python script, or even switch from one 
 to the other.  The bash script is slightly faster.
@@ -281,15 +287,12 @@ three options for utilizing a light meter:
  * An executable: provide one value on one linefeed terminated line each time 
    it is run.
 
-A custom light meter need not supply accurate or realistic values, the 
-values just have to be useful for setting up mappings 
-in the ``Light Metering Dialog``. 
-
-Any scale of values ranging from 0 to 10000 would be usable because ``vdu_controls`` 
-allows you to chart out a custom mapping from lux to VDU brightness. If you 
-want to map pitch dark to 1000 "lux", that's fine: within ``vdu_controls``
-just map 1000 "lux" to an appropriate VDU brightness. Within this closed
-system, lux can mean what ever you want it to mean.
+A custom light meter need not supply accurate or realistic values. A 
+custom meter can produce any useful sequence or set or values in the 
+range 0 to 10000. Within this closed system, a "lux" value can mean 
+what ever you want it to mean.  The ``Light Metering Dialog`` can be 
+used to map the custom measured values to an appropriate brightness 
+levels. 
 
 See the  [vdu_controls(1) man page](https://htmlpreview.github.io/?https://raw.githubusercontent.com/digitaltrails/vdu_controls/master/docs/_build/man/vdu_controls.1.html)
 for further infor on Lux Metering.
