@@ -492,11 +492,32 @@ matching step in a lux/brightness Profile might both be assigned the same bright
 level.
 
 The Preset Diolog includes an option to enable auto-brightness interpolation.
-When enabled, this option will attempt to compute values between steps in
+When enabled, this option will calculate values between steps in
 the profiles. Interpolation won't change the auto-brightness value if the
-change would be less than 5%.  During interpolation, if the smoothed metered
-lux value is found to be in proximity to any attached Preset, the Preset
+change would be less than 10%.  During interpolation, if the smoothed metered
+lux value is found to be in proximity to any profile-attached Preset, the Preset
 will be preferred over interpolation.
+
+Lux Metering Internal Parameters
+--------------------------------
+
+The following internal constants can be altered by manually editing
+`~/.config/vdu_controls/AutoLux.conf`.  They guide the various metering
+and auto-adjustment heuristics::
+
+      [lux-meter]
+      # How many times per minute to sample from the Lux meter (for auto-adjustment)
+      samples-per-minute=3
+      # How many samples to include in the smoothing process
+      smoother-n=5
+      # How heavily should past values smooth the present value (smaller = more smoothing)
+      # See: https://en.wikipedia.org/wiki/Low-pass_filter#Simple_infinite_impulse_response_filter
+      smoother-alpha=0.5
+      # If an interpolated value yields a change in brightness, how big should the change
+      # be to trigger an actual VDU change in brightness? Also determines how close
+      # an interpolated value needs to be to a an attached Preset's brightness in order
+      # to prefer triggering the preset over applying the interpolated value.
+      interpolation-sensitivity-percent=10
 
 Improving Response Time
 -----------------------

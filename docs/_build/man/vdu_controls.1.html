@@ -1,7 +1,7 @@
-<p>2023-04-19 21:02:02 INFO: Python locale (‘en_NZ’, ‘UTF-8’) 2023-04-19
-21:02:02 INFO: Looking for config file
-‘/home/michael/.config/vdu_controls/vdu_controls.conf’ 2023-04-19
-21:02:02 INFO: Using config file
+<p>10:50:46 INFO: Python locale (‘en_NZ’, ‘UTF-8’) 10:50:46 INFO:
+Looking for config file
+‘/home/michael/.config/vdu_controls/vdu_controls.conf’ 10:50:46 INFO:
+Using config file
 ‘/home/michael/.config/vdu_controls/vdu_controls.conf’</p>
 <h1 id="vdu_controls---a-ddc-control-panel-for-monitors">vdu_controls -
 a DDC control panel for monitors</h1>
@@ -446,11 +446,6 @@ adjustments.</p>
 automatic-brightness = yes
 lux-device = /dev/ttyUSB0
 interval-minutes = 2
-interpolate-brightness = no
-interpolation-min-percent-change = 5
-interpolation-lux-preset-proximity-ratio = 0.1
-smoother-n = 5
-smoother-alpha = 0.5
 
 [lux-profile]
 hp_zr24w_cnt008 = [(1, 90), (29, 90), (926, 100), (8414, 100), (100000, 100)]
@@ -482,12 +477,30 @@ Presets, for example, a full-sun Preset and the matching step in a
 lux/brightness Profile might both be assigned the same brightness
 level.</p>
 <p>The Preset Diolog includes an option to enable auto-brightness
-interpolation. When enabled, this option will attempt to compute values
-between steps in the profiles. Interpolation won’t change the
-auto-brightness value if the change would be less than 5%. During
-interpolation, if the smoothed metered lux value is found to be in
-proximity to any attached Preset, the Preset will be preferred over
+interpolation. When enabled, this option will calculate values between
+steps in the profiles. Interpolation won’t change the auto-brightness
+value if the change would be less than 10%. During interpolation, if the
+smoothed metered lux value is found to be in proximity to any
+profile-attached Preset, the Preset will be preferred over
 interpolation.</p>
+<h2 id="lux-metering-internal-parameters">Lux Metering Internal
+Parameters</h2>
+<p>The following internal constants can be altered by manually editing
+<code>~/.config/vdu_controls/AutoLux.conf</code>. They guide the various
+metering and auto-adjustment heuristics::</p>
+<pre><code>  [lux-meter]
+  # How many times per minute to sample from the Lux meter (for auto-adjustment)
+  samples-per-minute=3
+  # How many samples to include in the smoothing process
+  smoother-n=5
+  # How heavily should past values smooth the present value (smaller = more smoothing)
+  # See: https://en.wikipedia.org/wiki/Low-pass_filter#Simple_infinite_impulse_response_filter
+  smoother-alpha=0.5
+  # If an interpolated value yields a change in brightness, how big should the change
+  # be to trigger an actual VDU change in brightness? Also determines how close
+  # an interpolated value needs to be to a an attached Preset&#39;s brightness in order
+  # to prefer triggering the preset over applying the interpolated value.
+  interpolation-sensitivity-percent=10</code></pre>
 <h2 id="improving-response-time">Improving Response Time</h2>
 <p>DDC/I2C is not the speediest form of communication and VDU’s may also
 be sluggish to respond. This means that the responsiveness and

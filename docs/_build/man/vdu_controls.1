@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Apr 19, 2023" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "May 04, 2023" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.3.1
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -663,11 +663,6 @@ A typical example follows:
 automatic\-brightness = yes
 lux\-device = /dev/ttyUSB0
 interval\-minutes = 2
-interpolate\-brightness = no
-interpolation\-min\-percent\-change = 5
-interpolation\-lux\-preset\-proximity\-ratio = 0.1
-smoother\-n = 5
-smoother\-alpha = 0.5
 
 [lux\-profile]
 hp_zr24w_cnt008 = [(1, 90), (29, 90), (926, 100), (8414, 100), (100000, 100)]
@@ -706,11 +701,38 @@ matching step in a lux/brightness Profile might both be assigned the same bright
 level.
 .sp
 The Preset Diolog includes an option to enable auto\-brightness interpolation.
-When enabled, this option will attempt to compute values between steps in
+When enabled, this option will calculate values between steps in
 the profiles. Interpolation won\(aqt change the auto\-brightness value if the
-change would be less than 5%.  During interpolation, if the smoothed metered
-lux value is found to be in proximity to any attached Preset, the Preset
+change would be less than 10%.  During interpolation, if the smoothed metered
+lux value is found to be in proximity to any profile\-attached Preset, the Preset
 will be preferred over interpolation.
+.SS Lux Metering Internal Parameters
+.sp
+The following internal constants can be altered by manually editing
+\fI~/.config/vdu_controls/AutoLux.conf\fP\&.  They guide the various metering
+and auto\-adjustment heuristics:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+[lux\-meter]
+# How many times per minute to sample from the Lux meter (for auto\-adjustment)
+samples\-per\-minute=3
+# How many samples to include in the smoothing process
+smoother\-n=5
+# How heavily should past values smooth the present value (smaller = more smoothing)
+# See: https://en.wikipedia.org/wiki/Low\-pass_filter#Simple_infinite_impulse_response_filter
+smoother\-alpha=0.5
+# If an interpolated value yields a change in brightness, how big should the change
+# be to trigger an actual VDU change in brightness? Also determines how close
+# an interpolated value needs to be to a an attached Preset\(aqs brightness in order
+# to prefer triggering the preset over applying the interpolated value.
+interpolation\-sensitivity\-percent=10
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
 .SS Improving Response Time
 .sp
 DDC/I2C is not the speediest form of communication and VDU\(aqs may also be sluggish to respond.  This
