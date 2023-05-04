@@ -690,7 +690,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar
 
 APPNAME = "VDU Controls"
-VDU_CONTROLS_VERSION = '1.10.0'
+VDU_CONTROLS_VERSION = '1.10.1'
 
 WESTERN_SKY = 'western-sky'
 EASTERN_SKY = 'eastern-sky'

@@ -248,6 +248,9 @@ Michael Hamilton
 
 Version History
 ---------------
+* 1.10.1
+  * To be decided. 
+
 * 1.10.0
   * Added hardware lux metering options (GY30/BH1750+Arduino, UNIX-fifo, or executable-script).
   * Added lux-to-brightness profiles per VDU.
