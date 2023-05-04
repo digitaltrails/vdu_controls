@@ -77,6 +77,7 @@ install -m 0644 docs/_build/man/vdu_controls.1 %{buildroot}%{_mandir}/man1/
 %license LICENSE.md
 %dir %{_datadir}/vdu_controls
 %dir %{_datadir}/vdu_controls/translations
+%dir %{_datadir}/vdu_controls/sample-scripts
 %{_bindir}/%{name}
 %{_datadir}/applications/%{name}.desktop
 %{_datadir}/icons/hicolor/256x256/apps/%{name}.png
