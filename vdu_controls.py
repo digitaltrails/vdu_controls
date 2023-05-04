@@ -5318,9 +5318,8 @@ class LuxMeterSerialDevice:
                         log_info(f"Initialising character device {self.device_name} - waiting on data.")
                         self.serial_device = self.serial_module.Serial(self.device_name)
                     if self.serial_device is not None:
-                        self.serial_device.flushInput()
-                        time.sleep(0.1)
-                        buffer = self.serial_device.readline()
+                        self.serial_device.reset_input_buffer()
+                        buffer = self.serial_device.read_until()
                         value = float(buffer.decode('utf-8').replace("\r\n", ''))
                         return value
                 except (self.serial_module.SerialException, termios.error, FileNotFoundError, ValueError) as se:
@@ -5384,7 +5383,6 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         log_info(f"LuxAutoWorker: lux-meter.smoother-n={self.smoother.length} lux-meter.smoother-alpha={self.smoother.alpha}")
         self.interpolation_enabled = lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True)
         self.sensitivity_percent = lux_config.getint('lux-meter', 'interpolation-sensitivity-percent', fallback=10)
-        self.sensitivity_ratio = self.sensitivity_percent / 100.0
         log_info(f"LuxAutoWorker: lux-meter.interpolation-sensitivity-percent={self.sensitivity_percent}")
 
         def update_gui_control(control: VduControlBase) -> None:
@@ -5456,9 +5454,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                                                                  step_count, lux_summary_text):
                     step_count += 1  # Increment if any changes were made
             time.sleep(0.5)  # Let i2c settle down, then continue stepping
-        if step_count == 0:
-            self.status_message(f"{SUN_SYMBOL} {lux_summary_text}")
-        else:  # If any work was done in previous steps, finish up the remaining tasks
+        if step_count != 0:  # If any work was done in previous steps, finish up the remaining tasks
             log_info(f"LuxAutoWorker: stepping completed {step_count=}, profile_preset={profile_preset_name}")
             self.status_message(tr("Brightness adjustment completed"))
             if profile_preset_name is not None:  # if a point had a Preset attached, activate it now
@@ -5487,9 +5483,11 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                         log_info(f"LuxAutoWorker: {vdu_id=}: new target={profile_brightness}% preset={profile_preset_name}"
                                  f" {current_brightness=}% {lux_summary_text} {step_count=}")
                     diff = profile_brightness - current_brightness
+                    print(f"{self.interpolation_enabled=} {step_count=} {profile_preset_name=} {diff=} {self.sensitivity_percent=}")
                     if self.interpolation_enabled and step_count == 0 \
                             and profile_preset_name is None and abs(diff) < self.sensitivity_percent:
                         # Interpolating, at the start, no Preset involved, and close enough to not bother with a change.
+                        print("close enough")
                         self.status_message(f"{SUN_SYMBOL} {current_brightness}% {ALMOST_EQUAL_SYMBOL}"
                                             f" {profile_brightness}% {vdu_id} ({lux_summary_text})")
                         too_small_from_to = (current_brightness, self.target_brightness[vdu_id])
@@ -5631,8 +5629,8 @@ class LuxConfig(ConfigIni):
                 min_v, max_v = vdu_controller.get_range_restrictions(VDU_SUPPORTED_CONTROLS.brightness.vcp_code)
                 if min_v < 10:
                     min_v = 10
-                lux_points = [LuxPoint(10**lux, brightness) for lux, brightness in zip(range(0, 5),
-                                                                                       range(min_v, max_v + 1, (max_v - min_v)//4))]
+                lux_points = [LuxPoint(10**lux, brightness) for lux, brightness in zip(range(0, 6),
+                                                                                       range(min_v, max_v + 1, (max_v - min_v)//5))]
         if self.has_option('lux-presets', 'lux-preset-points'):
             preset_points = [LuxPoint(lux, -1, name) for lux, name in literal_eval(self.get('lux-presets', 'lux-preset-points'))]
             lux_points = lux_points + preset_points
@@ -5911,7 +5909,6 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             self.lux_meter_widget.stop_metering()
             meter_device = self.main_app.get_lux_auto_controller().lux_meter
             self.configure_ui(meter_device)
-
 
     def configure_ui(self, meter_device: LuxMeterSerialDevice | LuxMeterFifoDevice | LuxMeterRunnableDevice | None) -> None:
         if meter_device is not None:

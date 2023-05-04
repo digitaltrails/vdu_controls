@@ -33,6 +33,7 @@ Requires:       noto-sans-math-fonts
 Requires:       noto-sans-symbols2-fonts
 Requires:       python3
 Requires:       python3-qt5
+Requires:       python3-pyserial
 %endif
 %if 0%{?fedora_version}
 %define ext_man *
@@ -41,6 +42,7 @@ Requires:       google-noto-sans-math-fonts
 Requires:       google-noto-sans-symbols2-fonts
 Requires:       python3
 Requires:       python3-qt5
+Requires:       python3-pyserial
 %endif
 
 %description
