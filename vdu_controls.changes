@@ -10,6 +10,7 @@ Sun 26 Mar 2023 07:34:00 UTC - Michael Hamilton <michael@actrix.gen.nz>
   * Added drag-to-change, click-to-delete, to the elevation chart component.
   * Added a setting to quickly disable weather and another for elevation-scheduling.
   * Cleanup of thread handling - clarification of GUI/non-GUI thread operations.
+  * Reduced logging and eliminated popup dialogs when monitors are suspended or powered off.
 
 -------------------------------------------------------------------
 Sat 18 Feb 2023 23:18:56 UTC - Michael Hamilton <michael@actrix.gen.nz>

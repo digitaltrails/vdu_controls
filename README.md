@@ -257,6 +257,7 @@ Version History
   * Added drag-to-change, click-to-delete, to the elevation chart component.
   * Added a setting to quickly disable weather and another for elevation-scheduling.
   * Cleanup of thread handling - clarification of GUI/non-GUI thread operations.
+  * Reduced logging and eliminated popup dialogs when monitors are suspended or powered off.
 * 1.9.2
   * Optional _Smooth Transitions_ for presets:
     * The Presets Dialog now includes an option to set a Preset to _Transition Smoothly_.
