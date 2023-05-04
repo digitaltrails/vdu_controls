@@ -5483,11 +5483,9 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                         log_info(f"LuxAutoWorker: {vdu_id=}: new target={profile_brightness}% preset={profile_preset_name}"
                                  f" {current_brightness=}% {lux_summary_text} {step_count=}")
                     diff = profile_brightness - current_brightness
-                    print(f"{self.interpolation_enabled=} {step_count=} {profile_preset_name=} {diff=} {self.sensitivity_percent=}")
                     if self.interpolation_enabled and step_count == 0 \
                             and profile_preset_name is None and abs(diff) < self.sensitivity_percent:
                         # Interpolating, at the start, no Preset involved, and close enough to not bother with a change.
-                        print("close enough")
                         self.status_message(f"{SUN_SYMBOL} {current_brightness}% {ALMOST_EQUAL_SYMBOL}"
                                             f" {profile_brightness}% {vdu_id} ({lux_summary_text})")
                         too_small_from_to = (current_brightness, self.target_brightness[vdu_id])
