@@ -5391,10 +5391,10 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         # Using Qt signals to ensure GUI activity occurs in the GUI thread (this thread).
         self._update_gui_control.connect(update_gui_control)
         self._lux_dialog_message.connect(LuxDialog.lux_dialog_message)
-        self.status_message(f"{TIMER_RUNNING_SYMBOL} 00:00", 'countdown')
+        self.status_message(f"{TIMER_RUNNING_SYMBOL} 00:00", LuxDialog.countdown_status)
 
-    def status_message(self, message: str, destination: str = 'status') -> None:
-        self._lux_dialog_message.emit(message, 0, destination)
+    def status_message(self, message: str, destination: str = 'status', timeout: int = 0) -> None:
+        self._lux_dialog_message.emit(message, timeout, destination)
 
     def adjust_for_lux(self) -> None:
         time.sleep(2.0)  # Give any previous thread a chance to exit
@@ -5425,7 +5425,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                 smoothed = self.smoother.smooth(metered_lux)
                 smoothed_lux = round(smoothed)
                 self.status_message(f"{SUN_SYMBOL} {self.lux_summary(round(metered_lux), smoothed_lux)}")
-            self.status_message(f"{TIMER_RUNNING_SYMBOL} {second // 60:02d}:{second % 60:02d}", 'countdown')
+            self.status_message(f"{TIMER_RUNNING_SYMBOL} {second // 60:02d}:{second % 60:02d}", LuxDialog.countdown_status)
             time.sleep(1)
 
     def stepping_brightness(self, lux_config: LuxConfig, lux_meter: LuxMeterSerialDevice | LuxMeterFifoDevice | LuxMeterRunnableDevice) -> None:
@@ -5438,7 +5438,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
             smoothed_lux = round(self.smoother.smooth(metered_lux))
             lux_summary_text = self.lux_summary(round(metered_lux), smoothed_lux)
             if step_count == 0:
-                self.status_message(f"{SUN_SYMBOL} {lux_summary_text} {PROCESSING_LUX_SYMBOL} ?")
+                self.status_message(f"{SUN_SYMBOL} {lux_summary_text} {PROCESSING_LUX_SYMBOL}", timeout=3000)
             # If interpolating, it may be that each VDU profile is closer to a different attached preset, if this happens,
             # chose the preset associated with the brightest value.
             for vdu_control_panel in self.main_app.get_main_panel().vdu_control_panels:  # For each VDU, do one step of its profile
@@ -5456,10 +5456,10 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
             time.sleep(0.5)  # Let i2c settle down, then continue stepping
         if step_count != 0:  # If any work was done in previous steps, finish up the remaining tasks
             log_info(f"LuxAutoWorker: stepping completed {step_count=}, profile_preset={profile_preset_name}")
-            self.status_message(tr("Brightness adjustment completed"))
+            self.status_message(tr("Brightness adjustment completed"), timeout=5000)
             if profile_preset_name is not None:  # if a point had a Preset attached, activate it now
                 # Finish by restoring the Preset's non-brightness settings, invoke now, so it will happen while this thread sleeps.
-                self.status_message(tr("Restoring preset {}").format(profile_preset_name))
+                self.status_message(tr("Restoring preset {}").format(profile_preset_name), timeout=5000)
                 preset = self.main_app.find_preset_by_name(profile_preset_name)  # Check that it still exists
                 if preset is not None:
                     self.main_app.restore_preset_in_gui_thread(
@@ -5664,6 +5664,8 @@ class LuxConfig(ConfigIni):
 
 class LuxDialog(QDialog, DialogSingletonMixin):
 
+    countdown_status = 'countdown'
+
     @staticmethod
     def invoke(main_app: VduAppWindow) -> None:
         LuxDialog.show_existing_dialog() if LuxDialog.exists() else LuxDialog(main_app)
@@ -5706,9 +5708,9 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         grid_layout = QGridLayout()
         top_box.setLayout(grid_layout)
 
-        self.lux_meter_widget = LuxMeterWidget(parent=self)
-        self.lux_meter_widget.display_lux(0)
-        grid_layout.addWidget(self.lux_meter_widget, 0, 0, 4, 3, alignment=Qt.AlignLeft | Qt.AlignTop)
+        self.lux_display_widget = LuxMeterWidget(parent=self)
+        self.lux_display_widget.display_lux(0)
+        grid_layout.addWidget(self.lux_display_widget, 0, 0, 4, 3, alignment=Qt.AlignLeft | Qt.AlignTop)
 
         self.meter_device_selector = PushButtonLeftJustified()
         self.meter_device_selector.setText(tr("No metering source selected"))
@@ -5738,7 +5740,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
                 self.profile_plot.current_lux = lux
                 self.profile_plot.create_plot()
 
-        self.lux_meter_widget.lux_changed_signal.connect(lux_changed)
+        self.lux_display_widget.lux_changed_signal.connect(lux_changed)
 
         main_layout.addWidget(self.profile_plot, 1)
 
@@ -5903,14 +5905,16 @@ class LuxDialog(QDialog, DialogSingletonMixin):
     def apply_settings(self, requires_auto_brightness_restart: bool = True) -> None:
         self.lux_config.save(self.path)
         if requires_auto_brightness_restart:
-            self.main_app.get_lux_auto_controller().initialize_from_config()
-            self.lux_meter_widget.stop_metering()
+            self.main_app.get_lux_auto_controller().initialize_from_config()  # Causes the LuxAutoWorker to restart
+            self.lux_display_widget.stop_metering()  # Stop the lux-display metering thread
             meter_device = self.main_app.get_lux_auto_controller().lux_meter
-            self.configure_ui(meter_device)
+            self.configure_ui(meter_device)  # Use the new meter for a new lux-display metering thread
+            if meter_device is not None and self.lux_config.is_auto_enabled():
+                self.status_message(tr("Restarted brightness auto adjustment"), timeout=5000)
 
     def configure_ui(self, meter_device: LuxMeterSerialDevice | LuxMeterFifoDevice | LuxMeterRunnableDevice | None) -> None:
         if meter_device is not None:
-            self.lux_meter_widget.start_metering(meter_device)
+            self.lux_display_widget.start_metering(meter_device)
             self.enabled_checkbox.setEnabled(True)
             if self.lux_config.is_auto_enabled():
                 self.adjust_now_button.show()
@@ -5920,13 +5924,10 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             self.enabled_checkbox.setChecked(False)
             self.enabled_checkbox.setEnabled(False)
             self.adjust_now_button.hide()
-        if meter_device is not None:
-            if self.lux_config.is_auto_enabled():
-                self.status_message(tr("Restarted brightness auto adjustment"))
-            else:
-                self.status_message(tr("Brightness auto adjustment is disabled."))
-        else:
-            self.status_message(tr("No metering device set."))
+        if meter_device is None:
+            self.status_message(tr("No metering device set."))  # Remind user why metering and auto is not working
+        elif not self.lux_config.is_auto_enabled():
+            self.status_message(tr("Brightness auto adjustment is disabled."))  # Remind user why auto is not working
 
     def save_profiles(self) -> None:
         for vdu_id, profile in self.profile_plot.profile_data.items():
@@ -5950,11 +5951,11 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             elif answer == QMessageBox.Cancel:
                 event.ignore()
                 return
-        self.lux_meter_widget.stop_metering()
+        self.lux_display_widget.stop_metering()
         super().closeEvent(event)
 
     def status_message(self, message: str, timeout: int = 0, destination: str = 'status') -> None:
-        if destination == 'countdown':
+        if destination == LuxDialog.countdown_status:
             self.adjust_now_button.show()
             self.adjust_now_button.setText(message)
         else:
