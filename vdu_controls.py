@@ -5508,6 +5508,8 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                             self.status_message(
                                 f"{SUN_SYMBOL} {current_brightness}%{STEPPING_SYMBOL}{profile_brightness}% {vdu_id}" +
                                 f" ({lux_summary_text}) {profile_preset_name if profile_preset_name is not None else ''}")
+                        if self.consecutive_errors > 0:
+                            log_info(f"LuxAutoWorker: DDC command succeeded after {self.consecutive_errors} consecutive errors.")
                         self.consecutive_errors = 0
             except VduException as ve:
                 self.consecutive_errors += 1
