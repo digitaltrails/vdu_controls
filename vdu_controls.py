@@ -5879,6 +5879,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
     def make_visible(self) -> None:
         super().make_visible()
+        self.configure_ui(self.main_app.get_lux_auto_controller().lux_meter)
 
     def is_interpolating(self) -> bool:
         return self.interpolate_checkbox.isChecked()
