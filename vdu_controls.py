@@ -706,9 +706,9 @@ SUN_SYMBOL = '\u2600'  # BLACK SUN WITH RAYS
 WEST_ELEVATION_SYMBOL = '\u29A9'  # MEASURED ANGLE WITH OPEN ARM ENDING IN ARROW POINTING UP AND RIGHT
 EAST_ELEVATION_SYMBOL = '\u29A8'  # MEASURED ANGLE WITH OPEN ARM ENDING IN ARROW POINTING UP AND LEFT
 TIMER_RUNNING_SYMBOL = '\u23F3'  # HOURGLASS WITH FLOWING SAND
-WEATHER_CANCELLATION_SYMBOL = '\u2744'  # HEAVY CHECK MARK
+WEATHER_CANCELLATION_SYMBOL = '\u2744'  # SNOWFLAKE
 SKIPPED_SYMBOL = '\u2718'  # HEAVY BALLOT X
-SUCCESS_SYMBOL = '\u2714'  # SNOWFLAKE
+SUCCESS_SYMBOL = '\u2714'  # CHECKMARK
 PRESET_APP_SEPARATOR_SYMBOL = '\u2014'  # EM DASH
 MENU_SYMBOL = '\u2630'  # TRIGRAM FOR HEAVEN - hamburger menu
 TRANSITION_SYMBOL = '\u25b9'  # WHITE RIGHT POINTING SMALL TRIANGLE
@@ -5466,6 +5466,8 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                         preset,
                         immediately=PresetTransitionFlag.SCHEDULED not in preset.get_transition_type(),
                         scheduled_activity=True)
+        else:  # No work done, no adjustment necessary
+            self.status_message(f"{SUN_SYMBOL} {SUCCESS_SYMBOL}", timeout=3000)
 
     def step_one_vdu(self, vdu_control_panel: VduControlPanel, profile_brightness: int, profile_preset_name: str | None,
                      step_count: int, lux_summary_text: str) -> bool:
