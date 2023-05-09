@@ -57,7 +57,8 @@ All the following runtime dependencies are likely to be pre-packaged on any mode
 
 It's best to confirm that ``ddcutil`` is functioning before using ``vdu_controls``:
 
-* See [https://www.ddcutil.com/config/](https://www.ddcutil.com/config/) for instructions on configuring ``ddcutil``.
+* See [https://www.ddcutil.com/config/](https://www.ddcutil.com/config/) for instructions on configuring ``ddcutil``
+  (including some extra steps for Nvidia GPU users).
 * See [https://www.ddcutil.com/i2c_permissions/](https://www.ddcutil.com/i2c_permissions/) for instructions on setting 
   and testing the required permissions.  
 
