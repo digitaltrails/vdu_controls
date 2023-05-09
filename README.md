@@ -49,11 +49,11 @@ Dependencies
 All the following runtime dependencies are likely to be pre-packaged on any modern Linux distribution 
 (``vdu_controls`` was originally developed on OpenSUSE Tumbleweed).
 
-* ddcutil >= 1.3: the command line utility that interfaces to VDU's via DDC over i2c-dev or USB. (If 
+* **ddcutil >= 1.3, >= 1.4 recommended**: the command line utility that interfaces to VDU's via DDC over i2c-dev or USB. (If 
   anyone requires support for versions of ddcutil prior to v1.3 please contact me directly.)
-* i2c-dev: the i2c-dev kernel module normally shipped with all Linux distributions and required by [ddcutil](https://www.ddcutil.com)
-* python >=3.8: ``vdu_controls`` is written in python and may depend on some features present only in 3.8 onward.
-* python >=3.8 QtPy: the python GUI library used by ``vdu_controls``.
+* **i2c-dev**: the i2c-dev kernel module normally shipped with all Linux distributions and required by [ddcutil](https://www.ddcutil.com)
+* **python >=3.8**: ``vdu_controls`` is written in python and may depend on some features present only in 3.8 onward.
+* **python >=3.8 QtPy**: the python GUI library used by ``vdu_controls``.
 
 It's best to confirm that ``ddcutil`` is functioning before using ``vdu_controls``:
 
@@ -61,49 +61,9 @@ It's best to confirm that ``ddcutil`` is functioning before using ``vdu_controls
 * See [https://www.ddcutil.com/i2c_permissions/](https://www.ddcutil.com/i2c_permissions/) for instructions on setting 
   and testing the required permissions.  
 
-The steps to obtaining the necessary rw permissions on ``/dev/i2c-[0-9]`` varies from one Linux distribution to 
-another. It may be necessary to follow all the steps described at www.ddcutil.com.  
-
-For the impatient the following steps can be followed to perform an unsecure quick test (they grant anyone on the 
-target machine access to the i2c devices):
-
-1. Load i2c-dev: ``sudo modprobe i2c-dev``
-2. Temporarily grant rw to everyone: ``sudo chmod a+rw /dev/i2c-*``
-3. See if ddcutil works in a normal user's account: ``ddcutil detect``
-4. See if vdu_controls now works in a normal user's account: ``python3 vdu_controls.py``
-
-If this works, then following the longer series of steps detailed by the links in the previous comment 
-would be the key to getting permissions set permanently.  
-
-For the record, on my own OpenSUSE systems I diverge a little from the ddcutil documentation and
-use a variation of udev based approach described there.  Rather than setting up an i2c
-group, I set up udev rules to restrict i2c access to who ever is currently logged in (and 
-no one else).  Either approach should work.  These are the steps I employ to set up my own 
-local udev rule:
-
-Use an editor, echo, or cat to create a rule file and then activate it:
-```
-cat > /etc/udev/rules.d/60-ddcutil.rules <<EOF
-# local ddcutil udev rules
-# User I2C/DDC/CI Access
-KERNEL=="i2c-[0-99]*", TAG+="uaccess"
-EOF
-udevadm control --reload-rules
-udevadm trigger
-```
-Now udevadm should report the uaccess TAG:
-```
-udevadm info /dev/i2c-1
-...
-E: TAGS=:uaccess:seat:
-```
-And getfacl should report an access control list entry for the current graphical session owner:
-```
-getfacl /dev/i2c-1
-...
-user:alice:rw-
-```
-From now on, graphical login and logout will reassign i2c access to the session owner.
+As of ddcutil 1.4, installing a pre-packaged ddcutil will most likely set the correct udev rules to 
+grant users access to the required devices.  If you are using an earlier ddcutil, it may be necessary to follow 
+all the steps detailed in the links above.  
 
 Installing
 ----------
@@ -249,8 +209,9 @@ Michael Hamilton
 Version History
 ---------------
 * 1.10.1
-  * To be decided. 
-
+  * Restore lux meter displayed-value when restoring LuxDialog window.
+  * Minor fixes to reduce and improve displayed and logged messages.
+  * Rollup release prior to downtime for ToTK
 * 1.10.0
   * Added hardware lux metering options (GY30/BH1750+Arduino, UNIX-fifo, or executable-script).
   * Added lux-to-brightness profiles per VDU.

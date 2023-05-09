@@ -2,7 +2,9 @@
 Thu 04 May 2023 07:44:00 UTC - Michael Hamilton <michael@actrix.gen.nz>
 
 - Version 1.10.1
-  * To be decided.
+  * Restore lux meter displayed-value when restoring LuxDialog window.
+  * Minor fixes to reduce and improve displayed and logged messages.
+  * Rollup release prior to downtime for ToTK
 
 -------------------------------------------------------------------
 Sun 26 Mar 2023 07:34:00 UTC - Michael Hamilton <michael@actrix.gen.nz>
