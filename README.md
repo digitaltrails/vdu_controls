@@ -209,6 +209,8 @@ Michael Hamilton
 
 Version History
 ---------------
+* 1.10.2
+  * Fix Preset non-zero transition-step-seconds, so it works properly.
 * 1.10.1
   * Restore lux meter displayed-value when restoring LuxDialog window.
   * Minor fixes to reduce and improve displayed and logged messages.

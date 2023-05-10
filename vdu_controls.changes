@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Thu 11 May 2023 23:56:00 UTC - Michael Hamilton <michael@actrix.gen.nz>
+
+- Version 1.10.2
+  * Fix Preset non-zero transition-step-seconds, so it works properly.
+
+-------------------------------------------------------------------
 Thu 04 May 2023 07:44:00 UTC - Michael Hamilton <michael@actrix.gen.nz>
 
 - Version 1.10.1
