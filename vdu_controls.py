@@ -3289,7 +3289,7 @@ class PresetTransitionWorker(WorkerThread):
         log_debug(f"TransitionWorker: transition {preset.name} {immediately=} {scheduled_activity=}") if log_debug_enabled else None
         self.start_time = datetime.now()
         self.end_time: datetime | None = None
-        self.last_step_time: float = 0.0
+        self.previous_step_start_time: float = 0.0
         self.last_progress_time = datetime.now()
         self.main_panel = main_panel
         self.preset = preset
@@ -3324,14 +3324,13 @@ class PresetTransitionWorker(WorkerThread):
 
     def task_body(self) -> None:
         while self.work_state != PresetTransitionState.STEPPING_COMPLETED and self.values_are_as_expected():
-            cycle_start = time.time()
-            if cycle_start - self.last_step_time > self.step_interval_seconds:
-                self.last_step_time = cycle_start
-                self.step()
-            if self.step_interval_seconds > 0:
-                remainder = 1.0 - time.time() - cycle_start
-                if remainder > 0.0:
-                    time.sleep(remainder)
+            now = time.time()
+            if self.step_interval_seconds > 0:  # Delay if previous duration was too short due to speed or interruption/exception
+                previous_duration = now - self.previous_step_start_time
+                if previous_duration < self.step_interval_seconds:
+                    time.sleep(self.step_interval_seconds - previous_duration)
+            self.previous_step_start_time = time.time()
+            self.step()
             self.progress_signal.emit(self)
         if self.work_state == PresetTransitionState.STEPPING_COMPLETED:
             for control in self.preset_non_transitioning_controls:  # Finish by doing the non-transitioning controls
