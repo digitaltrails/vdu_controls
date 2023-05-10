@@ -5367,7 +5367,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         self.main_app = auto_controller.main_app
         self.last_value = None
         self.stop_requested = False
-        self.consecutive_errors = 0
+        self.consecutive_errors: Dict[str, int] = {}
         self.target_brightness: Dict[str, int] = {}
         self.message_tracker: Dict[str, Tuple[int, int]] = {}  # Used to prevent repeat messages
         self.previous_metered_lux = 0
@@ -5510,23 +5510,23 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                             self.status_message(
                                 f"{SUN_SYMBOL} {current_brightness}%{STEPPING_SYMBOL}{profile_brightness}% {vdu_id}" +
                                 f" ({lux_summary_text}) {profile_preset_name if profile_preset_name is not None else ''}")
-                        if self.consecutive_errors > 0:
-                            log_info(f"LuxAutoWorker: DDC command succeeded after {self.consecutive_errors} consecutive errors.")
-                        self.consecutive_errors = 0
+                        if self.consecutive_errors.get(vdu_id, 0) > 0:
+                            log_info(f"LuxAutoWorker: DDC command to {vdu_id} succeeded after {self.consecutive_errors[vdu_id]} consecutive errors.")
+                        self.consecutive_errors[vdu_id] = 0
             except VduException as ve:
-                self.consecutive_errors += 1
-                if self.consecutive_errors == 1:
+                self.consecutive_errors[vdu_id] = self.consecutive_errors.get(vdu_id, 0) + 1
+                if self.consecutive_errors[vdu_id] == 1:
                     log_warning(f"LuxAutoWorker: Brightness error on {vdu_id}, will sleep and try again: {ve}", -1)
                     self.status_message(tr("{} Failed to adjust {}, will try again").format(ERROR_SYMBOL, vdu_id))
                     time.sleep(2)  # TODO do something better than this to make the message visible.
-                elif self.consecutive_errors > 1:
+                elif self.consecutive_errors[vdu_id] > 1:
                     self.status_message(
                         tr("{} Failed to adjust {}, {} errors so far. Sleeping {} minutes.").format(
-                            ERROR_SYMBOL, vdu_id, self.consecutive_errors,
+                            ERROR_SYMBOL, vdu_id, self.consecutive_errors[vdu_id],
                             self.auto_controller.get_lux_config().get_interval_minutes()))
                     time.sleep(2)  # TODO do something better than this to make the message visible.
-                    if self.consecutive_errors == 2 or log_debug_enabled:
-                        log_info(f"LuxAutoWorker: multiple errors count={self.consecutive_errors}, sleeping and retrying.")
+                    if self.consecutive_errors[vdu_id] == 2 or log_debug_enabled:
+                        log_info(f"LuxAutoWorker: multiple errors on {vdu_id} count={self.consecutive_errors[vdu_id]}, sleeping and retrying.")
                     return False  # force a full sleep cycle.
         return made_brightness_changes
 
