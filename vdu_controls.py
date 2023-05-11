@@ -5998,13 +5998,12 @@ class LuxAutoController:
                         self.lux_auto_brightness_worker.stop_requested = True
                     self.lux_auto_brightness_worker = LuxAutoWorker(self)
                     self.lux_auto_brightness_worker.start()
-                self.main_app.display_lux_auto_indicators()  # Refresh indicators immediately
             else:
                 log_info("Lux auto-brightness settings refresh - monitoring is off.")  # TODO handle exception
                 if self.lux_auto_brightness_worker is not None:
                     self.lux_auto_brightness_worker.stop_requested = True
                     self.lux_auto_brightness_worker = None
-                    self.main_app.display_lux_auto_indicators()
+            self.main_app.display_lux_auto_indicators()  # Refresh indicators immediately
         except LuxDeviceException as lde:
             log_error(f"Error setting up lux meter {lde}")
             alert = MessageBox(QMessageBox.Critical)

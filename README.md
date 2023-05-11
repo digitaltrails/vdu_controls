@@ -212,6 +212,7 @@ Version History
 * 1.10.2
   * Fix Preset non-zero transition-step-seconds, so it works properly.
   * Changes to log-to-syslog and log-debug-enabled no longer require a restart.
+  * Fix Lux Auto menu icon when starting with Auto disabled.
 * 1.10.1
   * Restore lux meter displayed-value when restoring LuxDialog window.
   * Minor fixes to reduce and improve displayed and logged messages.
