@@ -6251,6 +6251,10 @@ class VduAppWindow(QMainWindow):
                                            "vdu_controls to restart.").format(setting))
                     return
             main_config.reload()
+            global log_debug_enabled
+            global log_to_syslog
+            log_to_syslog = main_config.is_set(GlobalOption.SYSLOG_ENABLED)
+            log_debug_enabled = main_config.is_set(GlobalOption.DEBUG_ENABLED)
             self.ddcutil.change_settings(default_sleep_multiplier=main_config.get_sleep_multiplier())
             self.create_main_control_panel()
             self.schedule_presets(reset=True)
