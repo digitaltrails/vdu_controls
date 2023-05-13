@@ -2974,6 +2974,15 @@ class ContextMenu(QMenu):
         self.addSeparator()
         self.addAction(si(self, QStyle.SP_DialogCloseButton), tr('Quit'), quit_action)
 
+    def get_preset_menu_action(self, name: str) -> QAction | None:
+        for action in self.actions():
+            if action == self.presets_separator:
+                break
+            if action.text() == name:
+                assert action.property(self.preset_prop) is not None
+                return action
+        return None
+
     def insert_preset_menu_action(self, preset: Preset) -> None:
         # Have to add it first and then move it (otherwise it won't appear - weird).
 
@@ -2983,36 +2992,22 @@ class ContextMenu(QMenu):
         action = self.addAction(preset.create_icon(), preset.name, restore_preset)
         action.setProperty(self.busy_disable_prop, QVariant(True))
         action.setProperty(self.preset_prop, QVariant(True))
-        self.insertAction(self.presets_separator, action)
+        self.insertAction(self.presets_separator, action)  # insert before the presets_separator
         self.update()
 
-    def remove_preset_menu_action(self, preset: Preset) -> None:
-        action = self.get_preset_menu_action(preset.name)
-        self.removeAction(action) if action is not None else None
+    def remove_preset_menu_action(self, name: str) -> None:
+        menu_action = self.get_preset_menu_action(name)
+        if menu_action is not None:
+            self.removeAction(menu_action)
 
     def refresh_preset_menu(self, palette_change: bool = False) -> None:
         for name, preset in self.main_window.preset_controller.find_presets().items():
             # Allow for presets with the same name as existing non-preset menu items
-            if not self.has_preset_menu_action(name) or not self.get_preset_menu_action(name).property(self.preset_prop):
+            menu_action = self.get_preset_menu_action(name)
+            if menu_action is None or not menu_action.property(self.preset_prop):
                 self.insert_preset_menu_action(preset)
             elif palette_change:  # Must redraw icons in case desktop theme changed between light/dark.
-                self.get_preset_menu_action(name).setIcon(preset.create_icon())
-
-    def has_preset_menu_action(self, name: str) -> bool:
-        for action in self.actions():
-            if action == self.presets_separator:
-                break
-            if action.text() == name:
-                return True
-        return False
-
-    def get_preset_menu_action(self, name: str) -> QAction | None:
-        for action in self.actions():
-            if action == self.presets_separator:
-                break
-            if action.text() == name:
-                return action
-        return None
+                menu_action.setIcon(preset.create_icon())
 
     def indicate_busy(self, is_busy: bool = True) -> None:
         for action in self.actions():
@@ -6191,9 +6186,10 @@ class PresetTransitionFlag(IntFlag):
         return [option for option in PresetTransitionFlag if (option & (option - 1) == 0) and option != 0 and option in self]
 
     def __str__(self) -> str:
+        assert self.name is not None
         if self.value == PresetTransitionFlag.NONE:
             return self.name.lower()
-        return ','.join([component.name.lower() for component in self.component_values()])
+        return ','.join([component.name.lower() for component in self.component_values()])  # type: ignore
 
 
 def parse_transition_type(string_value: str) -> PresetTransitionFlag:
@@ -6684,7 +6680,7 @@ class VduAppWindow(QMainWindow):
     def save_preset(self, preset: Preset) -> None:
         self.copy_to_preset_ini(preset.preset_ini, update_only=True)
         self.preset_controller.save_preset(preset)
-        if not self.app_context_menu.has_preset_menu_action(preset.name):
+        if self.app_context_menu.get_preset_menu_action(preset.name) is None:
             self.app_context_menu.insert_preset_menu_action(preset)
         self.display_active_preset()
         preset.remove_elevation_trigger()
@@ -6696,8 +6692,7 @@ class VduAppWindow(QMainWindow):
 
     def delete_preset(self, preset: Preset) -> None:
         self.preset_controller.delete_preset(preset)
-        if self.app_context_menu.has_preset_menu_action(preset.name):
-            self.app_context_menu.remove_preset_menu_action(preset)
+        self.app_context_menu.remove_preset_menu_action(preset.name)
         self.display_active_preset()
 
     def which_preset_is_active(self) -> Preset | None:
@@ -6972,7 +6967,7 @@ class SignalWakeupHandler(QtNetwork.QAbstractSocket):
 
     def __del__(self) -> None:
         # Restore any old handler on deletion
-        if self.old_fd is not None and signal and signal.set_wakeup_fd:
+        if self.old_fd is not None and signal is not None and signal.set_wakeup_fd is not None:
             signal.set_wakeup_fd(self.old_fd)
 
     def _readSignal(self) -> None:
