@@ -1490,6 +1490,11 @@ LOCALE_TRANSLATIONS_PATHS = [
     Path("/usr/share/vdu_controls/translations"), ]
 
 
+class MsgDestination(Enum):
+    DEFAULT = 0
+    COUNTDOWN = 1
+
+
 def get_config_path(config_name: str) -> Path:
     return CONFIG_DIR_PATH.joinpath(config_name + '.conf')
 
@@ -3046,12 +3051,9 @@ class VduPanelBottomToolBar(QToolBar):
 
         self.setIconSize(QSize(32, 32))
 
-        self.progress_bar = QProgressBar(self)
-        # Disable text percentage label on the spinner progress-bar
-        self.progress_bar.setTextVisible(False)
-        self.progress_bar.setRange(0, 1)
-        self.progress_bar.setDisabled(True)
-        self.addWidget(self.progress_bar)
+        self.progress_bar: QProgressBar | None = None
+        self.status_area = QStatusBar()
+        self.addWidget(self.status_area)
 
         self.menu_button = ToolButton(MENU_ICON_SOURCE, tr("Context and Preset Menu"), self)
         self.menu_button.setMenu(app_context_menu)
@@ -3074,12 +3076,15 @@ class VduPanelBottomToolBar(QToolBar):
         return super().eventFilter(target, event)
 
     def indicate_busy(self, is_busy: bool = True) -> None:
-        for button in self.tool_buttons:
-            button.setDisabled(is_busy)
-        self.preset_action.setDisabled(is_busy)
-        self.progress_bar.setDisabled(not is_busy)
-        # Setting range to 0,0 cause the progress bar to pulsate left/right - used as a busy spinner.
-        self.progress_bar.setRange(0, 0 if is_busy else 1)
+        if is_busy:
+            self.status_area.clearMessage()
+            self.progress_bar = QProgressBar(self)
+            self.progress_bar.setTextVisible(False)  # Disable text percentage label on the spinner progress-bar
+            self.progress_bar.setRange(0, 0)  # 0,0 causes the progress bar to pulsate left/right - used as a busy spinner.
+            self.status_area.addWidget(self.progress_bar, 1)
+            self.progress_bar.show()  # According to the Qt docs, this is necessary because removing it just hides it.
+        elif self.progress_bar is not None:
+            self.status_area.removeWidget(self.progress_bar)
 
     def display_active_preset(self, preset: Preset | None) -> None:
         if preset is not None:
@@ -3097,7 +3102,7 @@ class VduControlsMainPanel(QWidget):
     """GUI for detected VDU's, it will construct and contain a control panel for each VDU."""
 
     vdu_set_attribute_signal = pyqtSignal(str, str, str)
-    connected_vdus_changed = pyqtSignal()
+    connected_vdus_changed_signal = pyqtSignal()
 
     def __init__(self) -> None:
         super().__init__()
@@ -3138,7 +3143,7 @@ class VduControlsMainPanel(QWidget):
         for controller in self.vdu_controllers:
             splash_message_signal.emit(f"DDC ID {controller.vdu_id}\n{controller.get_vdu_description()}")
             vdu_control_panel = VduControlPanel(controller, warnings_enabled, self.display_vdu_exception)
-            vdu_control_panel.connected_vdus_changed_signal.connect(self.connected_vdus_changed)
+            vdu_control_panel.connected_vdus_changed_signal.connect(self.connected_vdus_changed_signal)
             controller.vdu_set_attribute_signal.connect(self.vdu_set_attribute_signal)
             if vdu_control_panel.number_of_controls() != 0:
                 self.vdu_control_panels.append(vdu_control_panel)
@@ -3241,6 +3246,9 @@ class VduControlsMainPanel(QWidget):
         answer = self.alert.exec()
         self.alert = None
         return answer == QMessageBox.Retry
+
+    def status_message(self, message: str, timeout: int):
+        self.bottom_toolbar.status_area.showMessage(message, timeout) if self.bottom_toolbar else None
 
 
 class WorkerThread(QThread):
@@ -5358,7 +5366,7 @@ class LuxSmooth:
 
 class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
     _update_gui_control = pyqtSignal(VduControlBase)
-    _lux_dialog_message = pyqtSignal(str, int, str)
+    _lux_dialog_message = pyqtSignal(str, int, MsgDestination)
 
     def __init__(self, auto_controller: LuxAutoController) -> None:
         super().__init__(task_body=self.adjust_for_lux, task_finished=self.finished_callable)  # type: ignore
@@ -5390,9 +5398,10 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         # Using Qt signals to ensure GUI activity occurs in the GUI thread (this thread).
         self._update_gui_control.connect(update_gui_control)
         self._lux_dialog_message.connect(LuxDialog.lux_dialog_message)
-        self.status_message(f"{TIMER_RUNNING_SYMBOL} 00:00", LuxDialog.countdown_status)
+        self._lux_dialog_message.connect(self.main_app.status_message)
+        self.status_message(f"{TIMER_RUNNING_SYMBOL} 00:00", 0, MsgDestination.COUNTDOWN)
 
-    def status_message(self, message: str, destination: str = 'status', timeout: int = 0) -> None:
+    def status_message(self, message: str, timeout: int = 0, destination: MsgDestination = MsgDestination.DEFAULT) -> None:
         self._lux_dialog_message.emit(message, timeout, destination)
 
     def adjust_for_lux(self) -> None:
@@ -5423,8 +5432,8 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                 metered_lux = lux_meter.get_value()  # Update the smoothing while sleeping
                 smoothed = self.smoother.smooth(metered_lux)
                 smoothed_lux = round(smoothed)
-                self.status_message(f"{SUN_SYMBOL} {self.lux_summary(round(metered_lux), smoothed_lux)}")
-            self.status_message(f"{TIMER_RUNNING_SYMBOL} {second // 60:02d}:{second % 60:02d}", LuxDialog.countdown_status)
+                self.status_message(f"{SUN_SYMBOL} {self.lux_summary(round(metered_lux), smoothed_lux)}", timeout=3000)
+            self.status_message(f"{TIMER_RUNNING_SYMBOL} {second // 60:02d}:{second % 60:02d}", 0, MsgDestination.COUNTDOWN)
             time.sleep(1)
 
     def stepping_brightness(self, lux_config: LuxConfig, lux_meter: LuxMeterSerialDevice | LuxMeterFifoDevice | LuxMeterRunnableDevice) -> None:
@@ -5667,14 +5676,12 @@ class LuxConfig(ConfigIni):
 
 class LuxDialog(QDialog, DialogSingletonMixin):
 
-    countdown_status = 'countdown'
-
     @staticmethod
     def invoke(main_app: VduAppWindow) -> None:
         LuxDialog.show_existing_dialog() if LuxDialog.exists() else LuxDialog(main_app)
 
     @staticmethod
-    def lux_dialog_message(message: str, timeout: int, destination: str = 'status') -> None:
+    def lux_dialog_message(message: str, timeout: int, destination: MsgDestination = MsgDestination.DEFAULT) -> None:
         lux_dialog: LuxDialog = LuxDialog.get_instance()  # type: ignore
         if lux_dialog is not None:
             lux_dialog.status_message(message, timeout, destination)
@@ -5958,8 +5965,8 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.lux_display_widget.stop_metering()
         super().closeEvent(event)
 
-    def status_message(self, message: str, timeout: int = 0, destination: str = 'status') -> None:
-        if destination == LuxDialog.countdown_status:
+    def status_message(self, message: str, timeout: int = 0, destination: MsgDestination = MsgDestination.DEFAULT) -> None:
+        if destination == MsgDestination.COUNTDOWN:
             self.adjust_now_button.show()
             self.adjust_now_button.setText(message)
         else:
@@ -6549,7 +6556,7 @@ class VduAppWindow(QMainWindow):
                         LuxDialog.lux_dialog_display_brightness(vdu_stable_id, int(value))
 
             self.main_panel.vdu_set_attribute_signal.connect(vdu_set_attribute_signal_handler)
-            self.main_panel.connected_vdus_changed.connect(self.create_main_control_panel)
+            self.main_panel.connected_vdus_changed_signal.connect(self.create_main_control_panel)
             # Then initialise the control panel display
             self.create_controllers()
             refresh_button = ToolButton(REFRESH_ICON_SOURCE, tr("Refresh settings from monitors"))
@@ -6612,7 +6619,7 @@ class VduAppWindow(QMainWindow):
 
         if not immediately:
             self.transitioning_dummy_preset = PresetTransitionDummy(preset)
-            presets_dialog_update_view(tr("Transitioning to preset {}").format(preset.name))
+            self.display_preset_status(tr("Transitioning to preset {}").format(preset.name))
             self.display_active_preset(self.transitioning_dummy_preset)
         self.get_main_panel().indicate_busy()
         preset.load()
@@ -6622,7 +6629,7 @@ class VduAppWindow(QMainWindow):
                 self.get_main_panel().indicate_busy(False)
                 if self.tray is not None:
                     self.refresh_tray_menu()
-            presets_dialog_update_view(
+            self.display_preset_status(
                 tr("Transitioning to preset {} (elapsed time {} seconds)...").format(
                     preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=1)))
             self.transitioning_dummy_preset.update_progress() if self.transitioning_dummy_preset else None
@@ -6644,19 +6651,23 @@ class VduAppWindow(QMainWindow):
                 with open(PRESET_NAME_FILE, 'w', encoding="utf-8") as cps_file:
                     cps_file.write(preset.name)
                 self.display_active_preset(preset)
-                presets_dialog_update_view(tr("Restored {} (elapsed time {} seconds)").format(
+                self.display_preset_status(tr("Restored {} (elapsed time {} seconds)").format(
                     preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=1)))
                 if restore_finished is not None:
                     restore_finished(worker_thread)
             else:  # Interrupted or exception:
                 self.display_active_preset()
-                presets_dialog_update_view(tr("Interrupted restoration of {}").format(preset.name))
+                self.display_preset_status(tr("Interrupted restoration of {}").format(preset.name))
                 if restore_finished is not None:
                     restore_finished(worker_thread)
 
         PresetTransitionWorker(self.get_main_panel(), preset,
                                update_progress, finished_callback,
                                immediately, scheduled_activity).start()
+
+    def display_preset_status(self, message: str, timeout: int = 3000):
+        presets_dialog_update_view(message)
+        self.status_message(message, timeout=timeout, destination=MsgDestination.DEFAULT)
 
     def find_preset_by_name(self, preset_name: str) -> Preset | None:
         presets = self.preset_controller.find_presets()
@@ -6769,6 +6780,11 @@ class VduAppWindow(QMainWindow):
             window_state = self.settings.value(self.state_key, None)
             self.restoreState(window_state)
 
+    def status_message(self, message: str, timeout: int, destination: MsgDestination):
+        assert(self.main_panel is not None)
+        if destination == MsgDestination.DEFAULT:
+            self.main_panel.status_message(message, timeout)
+
     def event(self, event: QEvent) -> bool:
         # PalletChange happens after the new style sheet is in use.
         if event.type() == QEvent.PaletteChange:
@@ -6858,9 +6874,9 @@ class VduAppWindow(QMainWindow):
                                 and preset.elevation_time_today < other.elevation_time_today <= too_close:
                             log_info(f"Schedule restoration skipped {preset.name}, too close to {other.name}")
                             preset.schedule_status = PresetScheduleStatus.SKIPPED_SUPERSEDED
-                            presets_dialog_update_view(message + ' - ' + tr("Skipped, superseded"))
+                            self.display_preset_status(message + ' - ' + tr("Skipped, superseded"))
                             return
-                    presets_dialog_update_view(message + ' - ' + tr("Error, trying again in {} seconds").format(secs))
+                    self.display_preset_status(message + ' - ' + tr("Error, trying again in {} seconds").format(secs))
                     if is_first_attempt:
                         log_warning(f"Error during restoration of {preset.name}, retrying every {secs} seconds.")
                     QTimer.singleShot(int(secs * 1000),
@@ -6868,7 +6884,7 @@ class VduAppWindow(QMainWindow):
                     return
                 preset.schedule_status = PresetScheduleStatus.SUCCEEDED
                 self.display_active_preset()
-                presets_dialog_update_view(message + ' - ' + tr("Restored {}").format(preset.name))
+                self.display_preset_status(message + ' - ' + tr("Restored {}").format(preset.name))
 
             log_info(f"Activating scheduled preset {preset.name} transition={immediately}") if is_first_attempt else None
             # Happens asynchronously in a thread
@@ -6877,7 +6893,7 @@ class VduAppWindow(QMainWindow):
                 restore_finished=finished,
                 immediately=immediately or PresetTransitionFlag.SCHEDULED not in preset.get_transition_type(),
                 scheduled_activity=True)
-        presets_dialog_update_view(message)
+        self.display_preset_status(message)
 
     def is_weather_satisfactory(self, preset, use_cache: bool = False) -> bool:
         try:

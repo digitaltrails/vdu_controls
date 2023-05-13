@@ -5,6 +5,7 @@ Thu 11 May 2023 23:56:00 UTC - Michael Hamilton <michael@actrix.gen.nz>
   * Fix Preset non-zero transition-step-seconds, so it works properly.
   * Changes to log-to-syslog and log-debug-enabled no longer require a restart.
   * Fix Lux Auto menu icon when starting with Auto disabled.
+  * Use the progress bar area on the main panel for status messages.
 
 -------------------------------------------------------------------
 Thu 04 May 2023 07:44:00 UTC - Michael Hamilton <michael@actrix.gen.nz>
