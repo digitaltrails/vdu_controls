@@ -5386,6 +5386,8 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         self.interpolation_enabled = lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True)
         self.sensitivity_percent = lux_config.getint('lux-meter', 'interpolation-sensitivity-percent', fallback=10)
         log_info(f"LuxAutoWorker: lux-meter.interpolation-sensitivity-percent={self.sensitivity_percent}")
+        self.convergence_divisor = lux_config.getint('lux-meter', 'convergence-divisor', fallback=2)
+        log_info(f"LuxAutoWorker: lux-meter.convergence-divisor={self.convergence_divisor}")
 
         def update_gui_control(control: VduControlBase) -> None:
             control.refresh_view()
@@ -5501,7 +5503,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                         if vdu_id in self.message_tracker:
                             del self.message_tracker[vdu_id]
                         made_brightness_changes = True
-                        step_size = max(1, abs(diff) // 3)  # 4 if abs(diff) < 8 else 8  # TODO find a good heuristic
+                        step_size = max(1, abs(diff) // self.convergence_divisor)  # TODO find a good heuristic
                         step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
                         new_brightness = current_brightness + step
                         brightness_control.restore_vdu_attribute(str(new_brightness))  # Apply to physical VDU
