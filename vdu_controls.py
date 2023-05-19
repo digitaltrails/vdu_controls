@@ -5551,7 +5551,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                         result_point = self.assess_preset_proximity(smoothed_lux, interpolated_brightness, result_point, next_point)
                 break
         log_debug(f"LuxAutoWorker: determine_brightness {vdu_id=} {result_point.brightness=}% {result_point.preset_name=}") if log_debug_enabled else None
-        return result_point.brightness, result_point.preset_name
+        return result_point.brightness, result_point.preset_name  # brightness will be -1 if attached preset has no brightness
 
     def interpolate_brightness(self, smoothed_lux: int, result_point: LuxPoint, next_point: LuxPoint) -> float:
         interpolated_brightness = float(result_point.brightness)
@@ -5565,7 +5565,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
     def assess_preset_proximity(self, smoothed_lux: int, interpolated_brightness: float, result_point: LuxPoint, next_point: LuxPoint):
         diff_result = abs(interpolated_brightness - result_point.brightness)
         diff_next = abs(interpolated_brightness - next_point.brightness)
-        # print(f"{diff_result=} {diff_next=} {result_point.preset_name=} {next_point.preset_name=}")
+        log_debug(f"LuxAutoWorker: assess_preset_proximity {diff_result=} {diff_next=} result_point={result_point} next_point={next_point}") if log_debug_enabled else None
         if result_point.preset_name is not None and next_point.preset_name is not None:
             if diff_result > diff_next:  # Closer to next_point
                 diff_result = self.sensitivity_percent + 1  # veto result_point by making it ineligible
@@ -5584,7 +5584,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         else:  # Preset attached at this lux value: brightness will be -1 if the Preset doesn't have a brightness value.
             preset = self.main_app.find_preset_by_name(lux_point.preset_name)
             if preset is not None:   # still exists
-                profile_brightness = preset.get_brightness(vdu_id)  # current brightness for preset
+                profile_brightness = preset.get_brightness(vdu_id)  # brightness for preset
                 profile_preset_name = lux_point.preset_name
         # TODO Do we need to consider lux proximity
         return LuxPoint(lux_point.lux, profile_brightness, profile_preset_name)  # actual current values
@@ -5612,6 +5612,9 @@ class LuxPoint:
 
     def __eq__(self, other) -> bool:
         return self.lux == other.lux and self.preset_name == other.preset_name
+
+    def __str__(self):
+        return f"({self.lux} lux, {self.brightness}%, preset={self.preset_name})"
 
 
 class LuxConfig(ConfigIni):
