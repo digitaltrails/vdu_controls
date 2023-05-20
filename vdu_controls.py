@@ -5462,6 +5462,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         if step_count != 0:  # If any work was done in previous steps, finish up the remaining tasks
             log_info(f"LuxAutoWorker: stepping completed {step_count=}, profile_preset={profile_preset_name}")
             self.status_message(tr("Brightness adjustment completed"), timeout=5000)
+            self.target_brightness.clear()
             if profile_preset_name is not None:  # if a point had a Preset attached, activate it now
                 # Finish by restoring the Preset's non-brightness settings, invoke now, so it will happen while this thread sleeps.
                 self.status_message(tr("Restoring preset {}").format(profile_preset_name), timeout=5000)
@@ -5485,10 +5486,9 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                 current_brightness = int(controller.get_attribute(VDU_SUPPORTED_CONTROLS.brightness.vcp_code)[0])
                 if current_brightness != profile_brightness:
                     if vdu_id not in self.target_brightness or self.target_brightness[vdu_id] != profile_brightness:
+                        log_info(f"LuxAutoWorker: {vdu_id=}: new target {current_brightness}%->{profile_brightness}% preset={profile_preset_name}"
+                                 f" {lux_summary_text} {step_count=}")
                         self.target_brightness[vdu_id] = profile_brightness  # target has changed
-                        # None 256 bit char in lux_summary_text can cause issues if stdout not utf8 (force utf8 for stdout)
-                        log_info(f"LuxAutoWorker: {vdu_id=}: new target={profile_brightness}% preset={profile_preset_name}"
-                                 f" {current_brightness=}% {lux_summary_text} {step_count=}")
                     diff = profile_brightness - current_brightness
                     if self.interpolation_enabled and step_count == 0 \
                             and profile_preset_name is None and abs(diff) < self.sensitivity_percent:
@@ -5499,7 +5499,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                         if vdu_id not in self.message_tracker or self.message_tracker[vdu_id] != too_small_from_to:
                             log_info(f"LuxAutoWorker: {vdu_id=}: {current_brightness=}%->{profile_brightness}% ignored, too small")
                         self.message_tracker[vdu_id] = too_small_from_to
-                    else:  # Not-interpolating OR interpolating and changes need to be applied
+                    else:  # Not-interpolating OR interpolating and brightness change is large enough to be applied
                         if vdu_id in self.message_tracker:
                             del self.message_tracker[vdu_id]
                         made_brightness_changes = True
@@ -5508,13 +5508,9 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                         new_brightness = current_brightness + step
                         brightness_control.restore_vdu_attribute(str(new_brightness))  # Apply to physical VDU
                         self._update_gui_control.emit(brightness_control)  # Update the GUI control in the GUI thread
-                        if step_count == 0:
-                            log_info(f"LuxAutoWorker: {vdu_id=}: start adjusting {current_brightness}%->{profile_brightness}%"
-                                     f" preset={profile_preset_name}")
-                        else:
-                            self.status_message(
-                                f"{SUN_SYMBOL} {current_brightness}%{STEPPING_SYMBOL}{profile_brightness}% {vdu_id}" +
-                                f" ({lux_summary_text}) {profile_preset_name if profile_preset_name is not None else ''}")
+                        self.status_message(
+                            f"{SUN_SYMBOL} {current_brightness}%{STEPPING_SYMBOL}{profile_brightness}% {vdu_id}" +
+                            f" ({lux_summary_text}) {profile_preset_name if profile_preset_name is not None else ''}")
                         if self.consecutive_errors.get(vdu_id, 0) > 0:
                             log_info(f"LuxAutoWorker: DDC command to {vdu_id} succeeded after {self.consecutive_errors[vdu_id]} consecutive errors.")
                         self.consecutive_errors[vdu_id] = 0
@@ -5597,6 +5593,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         return ((math.log10(lux) - math.log10(1)) / (math.log10(100000) - math.log10(1))) if lux > 0 else 0
 
     def lux_summary(self, metered_lux: int, smoothed_lux: int) -> str:
+        # None 256 bit char in lux_summary_text can cause issues if stdout not utf8 (force utf8 for stdout)
         return f"{metered_lux:.0f}{SMOOTHING_SYMBOL}{smoothed_lux} lux" if metered_lux != smoothed_lux else f"{metered_lux} lux"
 
 
