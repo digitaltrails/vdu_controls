@@ -5536,13 +5536,12 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         for step_point in [LuxPoint(0, 0)] + lux_profile + [LuxPoint(100000, 100)]:
             # Moving up the lux steps, seeking the step below smoothed_lux
             if smoothed_lux >= step_point.lux:  # Possible result, there may be something higher, keep going...
-                result_point = self.get_profile_point(step_point, vdu_id)
+                result_point = self.refresh_point_preset(step_point, vdu_id)
             else:  # Step is too high, can stop searching now, the previous match is the result.
                 if self.interpolation_enabled:  # Optionally interpolate from the prior matched step to this next one.
-                    next_point = self.get_profile_point(step_point, vdu_id)
-                    # TODO Why are we checking if next is to the left, maybe it's on top of the existing lux point, should that be allowed?
-                    # Only interpolate if 1) there is a slope in brightness, 2) lux is somewhere beyond its base point, 3)
-                    if result_point.brightness != next_point.brightness and smoothed_lux != result_point.lux and next_point.lux > result_point.lux:
+                    next_point = self.refresh_point_preset(step_point, vdu_id)
+                    # Only interpolate if lux is not an exact match
+                    if smoothed_lux != result_point.lux:
                         interpolated_brightness = self.interpolate_brightness(smoothed_lux, result_point, next_point)
                         result_point = self.assess_preset_proximity(smoothed_lux, interpolated_brightness, result_point, next_point)
                 break
@@ -5572,7 +5571,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
             return next_point
         return LuxPoint(smoothed_lux, round(interpolated_brightness), None)
 
-    def get_profile_point(self, lux_point, vdu_id) -> LuxPoint:
+    def refresh_point_preset(self, lux_point, vdu_id) -> LuxPoint:
         profile_brightness = -1
         profile_preset_name = None
         if lux_point.preset_name is None:

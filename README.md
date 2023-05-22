@@ -214,6 +214,7 @@ Version History
   * Changes to log-to-syslog and log-debug-enabled no longer require a restart.
   * Fix Lux Auto menu icon when starting with Auto disabled.
   * Use the progress bar area on the main panel for status messages.
+  * Relax constraints on interpolating brightness when auto light metering.
 * 1.10.1
   * Restore lux meter displayed-value when restoring LuxDialog window.
   * Minor fixes to reduce and improve displayed and logged messages.
