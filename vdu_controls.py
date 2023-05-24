@@ -6719,7 +6719,7 @@ class VduAppWindow(QMainWindow):
         assert self.lux_auto_controller is not None
         return self.lux_auto_controller
 
-    def display_lux_auto_indicators(self) -> None:
+    def display_lux_auto_indicators(self, blank_if_off: bool = True) -> None:
         assert is_running_in_gui_thread()  # Boilerplate in case this is called from the wrong thread.
         if self.main_config.is_set(GlobalOption.LUX_OPTIONS_ENABLED) \
                 and self.lux_auto_controller is not None and self.lux_auto_controller.lux_meter is not None:
@@ -6728,7 +6728,7 @@ class VduAppWindow(QMainWindow):
             self.refresh_tray_menu()
             if self.lux_auto_controller.is_auto_enabled():
                 self.set_app_icon_and_title(icon, tr('Auto'))
-            else:
+            elif blank_if_off:
                 self.set_app_icon_and_title()
 
     def display_active_preset(self, preset=None) -> None:
@@ -6744,6 +6744,7 @@ class VduAppWindow(QMainWindow):
         else:
             self.get_main_panel().display_active_preset(preset)
             self.set_app_icon_and_title(preset.create_icon(), preset.get_title_name())
+            QTimer.singleShot(5000, partial(self.display_lux_auto_indicators, False))  # Replace with auto indicator if auto enabled
         self.app_context_menu.refresh_preset_menu()
 
     def refresh_tray_menu(self) -> None:
