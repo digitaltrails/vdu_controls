@@ -46,6 +46,8 @@ headers pre-fitted, in which case assembly on a solderless
 breadboard would be extremely easy.  Power and tty communication 
 is via the USB connection to the PC.
 
+### The Arduino-Sketch (that runs on the Arduino)
+
 A simple [_Arduino Sketch_](https://docs.arduino.cc/learn/programming/sketches)  using 
 [Christopher Laws' BH1750 library](https://github.com/claws/BH1750) 
 will allow a GY30/BH1750 equipped Arduino to produce a feed 
@@ -69,13 +71,22 @@ void loop() {
 ```
 
 This sketch produces a feed of Lux values to the Nano's USB tty
-output. On a Linux host, the corresponding input tty device 
+output. 
+
+#### Accessing the running Arduino from it's Linux tty
+
+On a Linux host, the corresponding input tty device 
 would typically be `/dev/ttyUSB0`, `/dev/ttyUSB1`, ...  
 
+#### Linux tty permissions
+
 The permissions on the Linux system may need to be configured to allow
-the desktop user access to the USB tty device.  On many systems this 
-would mean adding the desktop user's username to an appropriate group. 
-The `ls` command can be used to see what user and group owns the device:
+the desktop user access to the USB tty device.  You may need to research 
+how to set permissions for your choice of distro.
+
+On some systems this would mean adding the desktop user's username to an 
+appropriate group.  The `ls` command can be used to see what user and group 
+owns the device:
 
 ```
 % ls -l /dev/ttyUSB0                                                                              1 ↵  10269  08:45:34
@@ -97,6 +108,40 @@ whole desktop session hierarchy takes on the change.
 Once the sketch is running and the permissions have been set up, the tty 
 feed can be directly read by ``vdu_controls``, just configure the correct 
 device path in the ``Light Metering Dialog``. 
+
+#### Avoiding tty device hot-plug reassignment issues
+
+You may find the `/dev/ttyUSB` device number may change as a result of 
+hot-plugging other USB devices.  If you encounter this problem, you can add udev 
+rules to create a fixed-name symlink to your arduino device. For example:
+
+1) Find out some unique attributes of your arduino such as `ID_MODEL_ID` and `ID_VENDOR_ID`::
+
+       % udevadm info  /dev/ttyUSB1 | egrep  'ID_USB_VENDOR_ID|ID_USB_MODEL_ID'                      0|1 ↵  10054  17:57:36
+       E: ID_USB_MODEL_ID=7523
+       E: ID_USB_VENDOR_ID=1a86
+
+2) Use an editor to create a udev rule such as `/etc/udev/rules.d/99-local-arduino.rules`
+
+       % sudo vi /etc/udev/rules.d/99-local-arduino.rules
+
+   The text of the rule should match the id's from above, for example: I use the following rule:
+          
+       SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", SYMLINK+="arduino"
+
+   The rule causes the matched `/dev/ttyUSB[0-9]` to be symbolic linked to the fixed
+   name `/dev/arduino`.
+
+3) Activate the rule and check that it works:
+
+       % sudo udevadm control --reload-rules
+       % sudo udevadm trigger
+       % ls -l /dev/ttyUSB1 /dev/arduino
+       lrwxrwxrwx 1 root root         7 Jun  3 17:35 /dev/arduino -> ttyUSB1
+       crw-rw---- 1 root dialout 188, 1 Jun  3 17:35 /dev/ttyUSB1
+
+In `vdu_controls`, set the lux device to new fixed-name `/dev/arduino` instead 
+of `/dev/ttyUSB[0-9]`
 
 Manual exposure webcam approximate Lux metering
 -----------------------------------------------
