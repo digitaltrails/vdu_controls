@@ -38,7 +38,7 @@ from pathlib import Path
 import signal
 import sys
 
-import cv2
+import cv2  # type: ignore
 
 CAMERA_DEVICE = '/dev/video0'
 

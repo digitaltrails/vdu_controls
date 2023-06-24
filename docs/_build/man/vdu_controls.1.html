@@ -1,6 +1,6 @@
-<p>10:50:46 INFO: Python locale (‘en_NZ’, ‘UTF-8’) 10:50:46 INFO:
+<p>11:26:04 INFO: Python locale (‘en_NZ’, ‘UTF-8’) 11:26:04 INFO:
 Looking for config file
-‘/home/michael/.config/vdu_controls/vdu_controls.conf’ 10:50:46 INFO:
+‘/home/michael/.config/vdu_controls/vdu_controls.conf’ 11:26:04 INFO:
 Using config file
 ‘/home/michael/.config/vdu_controls/vdu_controls.conf’</p>
 <h1 id="vdu_controls---a-ddc-control-panel-for-monitors">vdu_controls -
@@ -92,6 +92,8 @@ example, setting a monitor to a specific picture-profile might result in
 the contrast-control being disabled, but <code>vdu_controls</code> will
 not be aware of the restriction resulting in its contrast-control erring
 or appearing to do nothing.</p>
+<p>For further information, including screenshots, see
+https://github.com/digitaltrails/vdu_controls .</p>
 <h1 id="configuration">Configuration</h1>
 <p>Configuration changes can be made via the <code>Settings</code>
 dialog or via command line parameters (or by editing the config-files
@@ -501,28 +503,32 @@ metering and auto-adjustment heuristics::</p>
   # an interpolated value needs to be to a an attached Preset&#39;s brightness in order
   # to prefer triggering the preset over applying the interpolated value.
   interpolation-sensitivity-percent=10</code></pre>
-<h2 id="improving-response-time">Improving Response Time</h2>
-<p>DDC/I2C is not the speediest form of communication and VDU’s may also
-be sluggish to respond. This means that the responsiveness and
-smoothness of <code>vdu_controls</code> is somewhat limited by the
-underlying technologies.</p>
-<p>If your VDU’s are modern, you may find a smaller
-<code>sleep-multiplier</code> will speed up the <code>ddcutil</code>/VDU
-protocol exchanges making both <code>ddcutil</code> and
-<code>vdu_controls</code> much more responsive. In a multi-VDU setup
-where the VDU’s are quite different, individual multipliers can be
-configured (see previous section). Reducing the multipliers will
-increase the possibility of errors, a bit of experimentation will be
-required.</p>
-<p>The startup-speed is increased by caching each VDU’s capabilities and
-eliminate the need to run <code>ddcutil</code> to retrieve each VDU’s
-capabilities. When the <code>settings-editor</code> is used to save a
-VDU’s configuration, it will automatically cache the VDU’s capabilities
-in the <code>capabilities-override</code> field (as will the
-<code>--create-config-files</code> command line option).</p>
-<p>Reducing the number of enabled controls can greatly speed up the
-initialisation, reduce the time taken when the refresh button is
-pressed, and reduce the time taken to restore presets.</p>
+<h2 id="improving-response-time-and-reliability">Improving Response Time
+and Reliability</h2>
+<p><code>DDC/I2C</code> is not the speediest or most reliable form of
+communication. VDU’s may vary in their responsiveness and compliance.
+GPU’s, GPU drivers, and types of connection may affect the reliability.
+If you have the choice, <code>DisplayPort</code> can be more reliable
+than <code>DVI</code> or <code>HDMI</code>.</p>
+<p>If you are using <code>ddcutil</code> version 2 or greater,
+<code>vdu_controls</code> will use the <code>ddcutil</code> dynamic
+sleep optimiser (<code>ddcutil --enable-dynamic-sleep</code> argument)
+to automatically tune the sleep times required to prevent protocol
+errors. Those upgrading to <code>ddcutil</code> version 2 can switch to
+using dynamic sleep by setting each VDU’s sleep multiplier to zero.
+During initial use of dynamic sleep some errors may be logged until
+suitable sleep settings are established. For earlier versions of
+<code>ddcutil</code>, you can manually set the <code>vdu_control</code>
+<code>sleep-multiplier</code> that is passed to <code>ddcutil</code>. In
+a multi-VDU setup where the VDU’s are quite different, individual
+multipliers can be configured (see previous section). Reducing the
+multipliers will increase the possibility of errors, a bit of
+experimentation will be required.</p>
+<p>Reducing the number of enabled controls can speed up initialisation,
+reduce the time taken when the refresh button is pressed, and reduce the
+time taken to restore presets.</p>
+<p>There’s plenty of useful info for getting the best out of
+<code>ddcutil</code> at https://www.ddcutil.com/.</p>
 <h1 id="examples">Examples</h1>
 <pre><code>vdu_controls
     All default controls.

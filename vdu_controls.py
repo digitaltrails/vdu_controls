@@ -89,6 +89,8 @@ Note that some VDU settings may disable or enable other settings. For example, s
 picture-profile might result in the contrast-control being disabled, but ``vdu_controls`` will not be aware of
 the restriction resulting in its contrast-control erring or appearing to do nothing.
 
+For further information, including screenshots, see https://github.com/digitaltrails/vdu_controls .
+
 Configuration
 =============
 
@@ -519,25 +521,28 @@ and auto-adjustment heuristics::
       # to prefer triggering the preset over applying the interpolated value.
       interpolation-sensitivity-percent=10
 
-Improving Response Time
------------------------
+Improving Response Time and Reliability
+---------------------------------------
 
-DDC/I2C is not the speediest form of communication and VDU's may also be sluggish to respond.  This
-means that the responsiveness and smoothness of ``vdu_controls`` is somewhat limited by the underlying
-technologies.
+``DDC/I2C`` is not the speediest or most reliable form of communication. VDU's may
+vary in their responsiveness and compliance.  GPU's, GPU drivers, and types
+of connection may affect the reliability. If you have the choice, ``DisplayPort``
+can be more reliable than ``DVI`` or ``HDMI``.
 
-If your VDU's are modern, you may find a smaller ``sleep-multiplier`` will speed up the ``ddcutil``/VDU protocol
-exchanges making both ``ddcutil`` and ``vdu_controls`` much more responsive.  In a multi-VDU setup where the VDU's
-are quite different, individual multipliers can be configured (see previous section).  Reducing the multipliers
-will increase the possibility of errors, a bit of experimentation will be required.
+If you are using ``ddcutil`` version 2 or greater, ``vdu_controls`` will use the ``ddcutil`` dynamic
+sleep optimiser (``ddcutil --enable-dynamic-sleep`` argument) to automatically tune the sleep
+times required to prevent protocol errors.  Those upgrading to ``ddcutil`` version 2 can switch
+to using dynamic sleep by setting each VDU's sleep multiplier to zero.  During initial use of dynamic
+sleep some errors may be logged until suitable sleep settings are established.  For earlier
+versions of ``ddcutil``, you can manually set the ``vdu_control`` ``sleep-multiplier`` that is
+passed to ``ddcutil``.  In a multi-VDU setup where the VDU's are quite different, individual
+multipliers can be configured (see previous section).  Reducing the multipliers will increase
+the possibility of errors, a bit of experimentation will be required.
 
-The startup-speed is increased by caching each VDU's capabilities and eliminate the need to run ``ddcutil``
-to retrieve each VDU's capabilities.  When the `settings-editor` is used to save a VDU's configuration, it
-will automatically cache the VDU's capabilities in the ``capabilities-override`` field (as will
-the ``--create-config-files`` command line option).
-
-Reducing the number of enabled controls can greatly speed up the initialisation, reduce the time taken when the
+Reducing the number of enabled controls can speed up initialisation, reduce the time taken when the
 refresh button is pressed, and reduce the time taken to restore presets.
+
+There's plenty of useful info for getting the best out of ``ddcutil`` at https://www.ddcutil.com/.
 
 Examples
 ========
@@ -690,7 +695,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar
 
 APPNAME = "VDU Controls"
-VDU_CONTROLS_VERSION = '1.10.2'
+VDU_CONTROLS_VERSION = '1.10.3'
 
 WESTERN_SKY = 'western-sky'
 EASTERN_SKY = 'eastern-sky'
@@ -1156,12 +1161,19 @@ class DdcUtil:
         super().__init__()
         self.supported_codes: Dict[str, str] | None = None
         self.default_sleep_multiplier = default_sleep_multiplier
-        self.common_args = [] if common_args is None else common_args
+        self.common_args = [ ] if common_args is None else common_args
         self.vcp_type_map: Dict[str, str] = {}
         self.use_edid = os.getenv('VDU_CONTROLS_USE_EDID', default="yes") == 'yes'
         log_info(f"Use_edid={self.use_edid} (to disable it: export VDU_CONTROLS_USE_EDID=no)")
         self.edid_map: Dict[str, str] = {}
         self.lock = Lock()
+        version_result = self.__run__('--version')
+        self.version_info = version_result.stdout.decode('utf-8')
+        log_info(self.version_info.split('\n')[0])
+        if re.match(r'ddcutil [23456789]', self.version_info):
+            log_info("ddcutil version >= 2 (defaulting to --enable-dynamic-sleep)")
+            self.common_args.append('--disable-displays-cache')
+            self.default_sleep_multiplier = 0.0  # forces passing of --enable-dynamic-sleep
 
     def change_settings(self, default_sleep_multiplier: float) -> None:
         self.default_sleep_multiplier = default_sleep_multiplier
@@ -1169,29 +1181,35 @@ class DdcUtil:
     def id_key_args(self, display_id: str) -> List[str]:
         return ['--edid', self.edid_map[display_id]] if display_id in self.edid_map else ['--display', display_id]
 
+    def format_args_diagnostic(self, args: List[str]):
+        return ' '.join([arg if len(arg) < 30 else arg[:30] + "..." for arg in args])
+
     def __run__(self, *args, sleep_multiplier: float | None = None) -> subprocess.CompletedProcess:
         with self.lock:
             multiplier = self.default_sleep_multiplier if sleep_multiplier is None else sleep_multiplier
-            multiplier_args = ['--sleep-multiplier', str(multiplier)] if multiplier > 0.01 else ['--dsa2']
+            multiplier_args = ['--sleep-multiplier', str(multiplier)] if multiplier > 0.01 else ['--enable-dynamic-sleep']
             process_args = [DDCUTIL] + multiplier_args + self.common_args + list(args)
             try:  # TODO consider tracking errors and raising an exception if all VDU's are unavailable
                 result = subprocess.run(process_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
                 # Shorten EDID to 30 characters when logging it (it will be the only long argument)
-                log_debug("subprocess result: ", [arg if len(arg) < 30 else arg[:30] + "..." for arg in result.args],
+                log_debug("subprocess result: ", self.format_args_diagnostic(result.args),
                           f"rc={result.returncode}", f"stdout={result.stdout.decode('utf-8')}") if log_debug_enabled else None
             except subprocess.SubprocessError as spe:
                 error_text = spe.stderr.decode('utf-8')
                 if error_text.lower().find("display not found") >= 0:  # raise DdcUtilDisplayNotFound and stay quiet
-                    raise DdcUtilDisplayNotFound(' '.join(args))
-                log_error("subprocess result: ", [arg if len(arg) < 30 else arg[:30] + "..." for arg in process_args],
+                    log_debug("subprocess result: ", self.format_args_diagnostic(process_args),
+                              f"stderr='{error_text}', exception={str(spe)}") if log_debug_enabled else None
+                    raise DdcUtilDisplayNotFound(' '.join(args)) from spe
+                log_error("subprocess result: ", self.format_args_diagnostic(process_args),
                           f"stderr='{error_text}', exception={str(spe)}")
                 raise
             return result
 
+
     def detect_monitors(self, issue_warnings: bool = True) -> List[Tuple[str, str, str, str]]:
         """Return a list of (vdu_id, desc) tuples."""
         display_list = []
-        result = self.__run__('detect', '--verbose')
+        result = self.__run__('detect', '--verbose', '--disable-displays-cache')
         # Going to get rid of anything that is not a-z A-Z 0-9 as potential rubbish
         rubbish = re.compile('[^a-zA-Z0-9]+')
         # This isn't efficient, it doesn't need to be, so I'm keeping re-defs close to where they are used.
@@ -1923,7 +1941,7 @@ class VduController(QObject):
             return self.ddcutil.get_attributes(self.vdu_id, attributes, sleep_multiplier=self.sleep_multiplier)
         except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound) as e:
             raise VduException(vdu_description=self.get_vdu_description(), vcp_code=",".join(attributes), exception=e,
-                               operation="get_attributes")
+                               operation="get_attributes") from e
 
     def get_attribute(self, vcp_code: str) -> Tuple[str, str]:
         try:
@@ -1931,7 +1949,7 @@ class VduController(QObject):
             return self.ddcutil.get_attribute(self.vdu_id, vcp_code, sleep_multiplier=self.sleep_multiplier)
         except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound) as e:
             raise VduException(vdu_description=self.get_vdu_description(), vcp_code=vcp_code, exception=e,
-                               operation="get_attribute")
+                               operation="get_attribute") from e
 
     def set_attribute(self, vcp_code: str, value: str) -> None:
         try:
@@ -1940,7 +1958,7 @@ class VduController(QObject):
             self.vdu_set_attribute_signal.emit(self.vdu_stable_id, vcp_code, value)
         except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound) as e:
             raise VduException(vdu_description=self.get_vdu_description(), vcp_code=vcp_code, exception=e,
-                               operation="set_attribute")
+                               operation="set_attribute") from e
 
     def get_range_restrictions(self, vcp_code):
         if vcp_code in self.capabilities:
@@ -3711,11 +3729,11 @@ class WeatherQuery:
         except urllib.error.HTTPError as e:
             if e.code == 404:
                 raise ValueError(tr("Unknown location {}").format(location_name),
-                                 tr("Please check Location in Settings"))
-            raise ValueError(tr("Failed to get weather from {}").format(self.url), str(e))
+                                 tr("Please check Location in Settings")) from e
+            raise ValueError(tr("Failed to get weather from {}").format(self.url), str(e)) from e
         except Exception as ue:
             # Can't afford to fall over because of a problem with a remote site
-            raise ValueError(tr("Failed to get weather from {}").format(self.url), str(ue))
+            raise ValueError(tr("Failed to get weather from {}").format(self.url), str(ue)) from ue
         raise ValueError(tr("Failed to get weather from {}").format(self.url))
 
     def __str__(self) -> str:
@@ -4910,6 +4928,8 @@ class LuxProfileChart(QLabel):
         for vdu_id, vdu_data in [(vid, data) for vid, data in self.profile_data.items() if vid != self.current_vdu_id] + \
                                 [(self.current_vdu_id, self.profile_data[self.current_vdu_id])]:
             last_x, last_y = 0, 0
+            if vdu_id not in self.vdu_chart_colors:
+                continue  # must have been turned off
             vdu_color_num = self.vdu_chart_colors[vdu_id]
             vdu_line_color = QColor(vdu_color_num)
             histogram_bar_color = QColor(vdu_line_color)
@@ -4964,6 +4984,8 @@ class LuxProfileChart(QLabel):
                 painter.drawLine(x_current_lux - 2, self.y_origin - y, x_current_lux + 2, self.y_origin - y)
             current_brightness_pointer = [(0, 0), (-32, 16), (-32, -16)]  # Indicate current brightness at current lux
             for vdu_id, brightness in self.lux_dialog.vdu_current_brightness.items():
+                if vdu_id not in self.vdu_chart_colors:
+                    continue  # must have been turned off
                 vdu_color_num = self.vdu_chart_colors[vdu_id]
                 vdu_line_color = QColor(vdu_color_num)
                 y = self.y_origin - self.y_from_percent(brightness)
@@ -5302,7 +5324,7 @@ class LuxMeterSerialDevice:
         try:
             self.serial_module = import_module('serial')
         except ModuleNotFoundError as mnf:
-            raise LuxDeviceException(tr("The required pyserial serial-port module is not installed on this system."))
+            raise LuxDeviceException(tr("The required pyserial serial-port module is not installed on this system.")) from mnf
 
     def get_cached_value(self, age_seconds: float) -> float:  # Used for metering where an up-to-date value is less important
         if self.cached_value is not None and time.time() - self.cached_time <= age_seconds:
