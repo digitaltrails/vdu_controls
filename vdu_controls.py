@@ -1209,7 +1209,7 @@ class DdcUtil:
     def detect_monitors(self, issue_warnings: bool = True) -> List[Tuple[str, str, str, str]]:
         """Return a list of (vdu_id, desc) tuples."""
         display_list = []
-        result = self.__run__('detect', '--verbose', '--disable-displays-cache')
+        result = self.__run__('detect', '--verbose')
         # Going to get rid of anything that is not a-z A-Z 0-9 as potential rubbish
         rubbish = re.compile('[^a-zA-Z0-9]+')
         # This isn't efficient, it doesn't need to be, so I'm keeping re-defs close to where they are used.
