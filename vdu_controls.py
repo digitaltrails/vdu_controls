@@ -3089,7 +3089,7 @@ class VduPanelBottomToolBar(QToolBar):
         return super().eventFilter(target, event)
 
     def indicate_busy(self, is_busy: bool = True) -> None:
-        if is_busy:
+        if is_busy and self.progress_bar is None:
             self.status_area.clearMessage()
             self.progress_bar = QProgressBar(self)
             self.progress_bar.setTextVisible(False)  # Disable text percentage label on the spinner progress-bar
@@ -3098,6 +3098,7 @@ class VduPanelBottomToolBar(QToolBar):
             self.progress_bar.show()  # According to the Qt docs, this is necessary because removing it just hides it.
         elif self.progress_bar is not None:
             self.status_area.removeWidget(self.progress_bar)
+            self.progress_bar = None
 
     def display_active_preset(self, preset: Preset | None) -> None:
         if preset is not None:
@@ -6600,7 +6601,7 @@ class VduAppWindow(QMainWindow):
 
     def start_refresh(self) -> None:
         assert is_running_in_gui_thread()
-        self.get_main_panel().indicate_busy()
+        self.get_main_panel().indicate_busy(True)
 
         def refresh_data() -> None:
             # Called in a non-GUI thread, cannot do any GUI op's.
@@ -6640,12 +6641,12 @@ class VduAppWindow(QMainWindow):
             self.transitioning_dummy_preset = PresetTransitionDummy(preset)
             self.display_preset_status(tr("Transitioning to preset {}").format(preset.name))
             self.display_active_preset(self.transitioning_dummy_preset)
-        self.get_main_panel().indicate_busy()
+        self.get_main_panel().indicate_busy(True)
         preset.load()
 
         def update_progress(worker_thread: PresetTransitionWorker) -> None:
             if self.get_main_panel().busy:
-                self.get_main_panel().indicate_busy(False)
+                self.get_main_panel().indicate_busy(False)  # TODO why is this here?
                 if self.tray is not None:
                     self.refresh_tray_menu()
             self.display_preset_status(
