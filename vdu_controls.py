@@ -3359,7 +3359,7 @@ class PresetTransitionWorker(WorkerThread):
                 self._update_gui_signal.emit(control)
             self.work_state = PresetTransitionState.FINISHED
             self.end_time = datetime.now()
-            log_info(f"Successfully restored {self.preset.name}, elapsed time: {round(self.total_elapsed_seconds()):.2f} seconds")
+            log_info(f"Successfully restored {self.preset.name}, elapsed time: {self.total_elapsed_seconds():.2f} seconds")
 
     def step(self) -> None:
         more_to_do = False
@@ -3398,7 +3398,7 @@ class PresetTransitionWorker(WorkerThread):
         return self.work_state != PresetTransitionState.INTERRUPTED
 
     def total_elapsed_seconds(self) -> float:
-        return ((self.end_time if self.end_time else datetime.now()) - self.start_time).total_seconds()
+        return ((self.end_time if self.end_time is not None else datetime.now()) - self.start_time).total_seconds()
 
 
 class PresetTransitionDummy(Preset):  # A wrapper that creates titles and icons that indicate a transition is in progress.
@@ -6650,7 +6650,7 @@ class VduAppWindow(QMainWindow):
                     self.refresh_tray_menu()
             self.display_preset_status(
                 tr("Transitioning to preset {} (elapsed time {} seconds)...").format(
-                    preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=1)))
+                    preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=2)))
             self.transitioning_dummy_preset.update_progress() if self.transitioning_dummy_preset else None
             self.display_active_preset(self.transitioning_dummy_preset)
 
@@ -6671,7 +6671,7 @@ class VduAppWindow(QMainWindow):
                     cps_file.write(preset.name)
                 self.display_active_preset(preset)
                 self.display_preset_status(tr("Restored {} (elapsed time {} seconds)").format(
-                    preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=1)))
+                    preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=2)))
                 if restore_finished is not None:
                     restore_finished(worker_thread)
             else:  # Interrupted or exception:
