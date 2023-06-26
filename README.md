@@ -213,6 +213,7 @@ Version History
   * Support for ddcutil 2.0 --enable-dynamic-sleep (if sleep multipliers are set to zero).
   * Prevent some crashes due to incorrect exception chain handling.
   * Fix a potential crash if a VDU goes offline while the light meter graph is updating.
+  * Properly clear/reset the main panel progress bar after DDC errors.
 * 1.10.2
   * Fix Preset non-zero transition-step-seconds, so it works properly.
   * Changing log-to-syslog or log-debug-enabled no longer requires a restart.
