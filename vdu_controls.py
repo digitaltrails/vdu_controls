@@ -1205,7 +1205,6 @@ class DdcUtil:
                 raise
             return result
 
-
     def detect_monitors(self, issue_warnings: bool = True) -> List[Tuple[str, str, str, str]]:
         """Return a list of (vdu_id, desc) tuples."""
         display_list = []
@@ -6470,11 +6469,16 @@ class VduAppWindow(QMainWindow):
             self.tray.setIcon(icon)
 
     def create_controllers(self) -> None:
-        ddcutil_problem = None
         try:
             ddcutil_common_args = ['--force', ] if self.is_non_standard_enabled() else []
             self.ddcutil = DdcUtil(common_args=ddcutil_common_args,
                                    default_sleep_multiplier=self.main_config.get_sleep_multiplier())
+        except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
+            self.no_controllers_error_dialog(e)
+            return
+
+        ddcutil_problem = None
+        try:
             self.detected_vdu_list = []
             log_debug("Detecting connected monitors, looping detection until it stabilises.")
             # Loop in case the session is initialising/restoring which can make detection unreliable.
@@ -6494,7 +6498,6 @@ class VduAppWindow(QMainWindow):
         self.previously_detected_vdu_list = self.detected_vdu_list
         self.vdu_controllers = []
 
-        assert self.ddcutil is not None
         main_panel = self.get_main_panel()
 
         for vdu_id, manufacturer, vdu_model_name, vdu_serial in self.detected_vdu_list:
@@ -6543,14 +6546,17 @@ class VduAppWindow(QMainWindow):
                 self.vdu_controllers.append(controller)
         if len(self.vdu_controllers) == 0:
             if self.main_config.is_set(GlobalOption.WARNINGS_ENABLED):
-                error_no_monitors = MessageBox(QMessageBox.Critical)
-                error_no_monitors.setText(tr('No controllable monitors found.'))
-                extra_text = tr("(Most recent ddcutil error: {})").format(str(ddcutil_problem)) if ddcutil_problem else ''
-                error_no_monitors.setInformativeText(
-                    tr("Is ddcutil installed?  Is i2c installed and configured?\n\n"
-                       "Run vdu_controls --debug in a console and check for "
-                       "additional messages.\n\n{}").format(extra_text))
-                error_no_monitors.exec()
+                self.no_controllers_error_dialog(ddcutil_problem)
+
+    def no_controllers_error_dialog(self, ddcutil_problem):
+        error_no_monitors = MessageBox(QMessageBox.Critical)
+        error_no_monitors.setText(tr('No controllable monitors found.'))
+        extra_text = tr("(Most recent ddcutil error: {})").format(str(ddcutil_problem)) if ddcutil_problem else ''
+        error_no_monitors.setInformativeText(
+            tr("Is ddcutil installed?  Is i2c installed and configured?\n\n"
+               "Run vdu_controls --debug in a console and check for "
+               "additional messages.\n\n{}").format(extra_text))
+        error_no_monitors.exec()
 
     def create_main_control_panel(self) -> None:
         # Call on initialisation and whenever the number of connected VDU's changes.
