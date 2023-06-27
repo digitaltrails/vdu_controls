@@ -6,6 +6,7 @@ Sun 24 Jun 2023 21:50:00 UTC - Michael Hamilton <michael@actrix.gen.nz>
   * Prevent some crashes due to incorrect exception chain handling.
   * Fix a potential crash if a VDU goes offline while the light meter graph is updating.
   * Properly clear/reset the main panel progress bar after DDC errors.
+  * Fix error handling of missing ddcutil at startup.
 
 -------------------------------------------------------------------
 Thu 11 May 2023 23:56:00 UTC - Michael Hamilton <michael@actrix.gen.nz>
