@@ -1167,12 +1167,12 @@ class DdcUtil:
         log_info(f"Use_edid={self.use_edid} (to disable it: export VDU_CONTROLS_USE_EDID=no)")
         self.edid_map: Dict[str, str] = {}
         self.lock = Lock()
-        version_result = self.__run__('--version')
-        self.version_info = version_result.stdout.decode('utf-8')
-        log_info(self.version_info.split('\n')[0])
-        if re.match(r'ddcutil [23456789]', self.version_info):
-            log_info("ddcutil version >= 2 (defaulting to --enable-dynamic-sleep)")
-            self.common_args.append('--disable-displays-cache')
+        version_info = self.__run__('--version').stdout.decode('utf-8')
+        version_match = re.match(r'[a-z]+ ([0-9]+).([0-9]+).([0-9]+)-([^\n]*)', version_info)
+        self.version = version_match.groups() if version_match is not None else ()
+        log_info(f"ddcutil version info: {version_match.group(0)} {self.version}")
+        if len(self.version) > 0 and int(self.version[0]) >= 2:
+            log_info("ddcutil version >= 2.0, enabling --enable-dynamic-sleep for any zero sleep-multipliers")
             self.default_sleep_multiplier = 0.0  # forces passing of --enable-dynamic-sleep
 
     def change_settings(self, default_sleep_multiplier: float) -> None:
@@ -3255,6 +3255,7 @@ class VduControlsMainPanel(QWidget):
             self.alert.setInformativeText(
                 tr('Is the monitor switched off?') + '<br>' + tr('Is the sleep-multiplier setting too low?'))
         self.alert.setText(tr("Set value: Failed to communicate with display {}").format(exception.vdu_description))
+        self.alert.setDetailedText(str(exception.cause))
         self.alert.setAttribute(Qt.WA_DeleteOnClose)
         answer = self.alert.exec()
         self.alert = None
@@ -6469,12 +6470,13 @@ class VduAppWindow(QMainWindow):
             self.tray.setIcon(icon)
 
     def create_controllers(self) -> None:
+        assert is_running_in_gui_thread()
         try:
             ddcutil_common_args = ['--force', ] if self.is_non_standard_enabled() else []
             self.ddcutil = DdcUtil(common_args=ddcutil_common_args,
                                    default_sleep_multiplier=self.main_config.get_sleep_multiplier())
         except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
-            self.no_controllers_error_dialog(e)
+            self.display_no_controllers_error_dialog(e)
             return
 
         ddcutil_problem = None
@@ -6546,16 +6548,17 @@ class VduAppWindow(QMainWindow):
                 self.vdu_controllers.append(controller)
         if len(self.vdu_controllers) == 0:
             if self.main_config.is_set(GlobalOption.WARNINGS_ENABLED):
-                self.no_controllers_error_dialog(ddcutil_problem)
+                self.display_no_controllers_error_dialog(ddcutil_problem)
 
-    def no_controllers_error_dialog(self, ddcutil_problem):
+    def display_no_controllers_error_dialog(self, ddcutil_problem):
         error_no_monitors = MessageBox(QMessageBox.Critical)
         error_no_monitors.setText(tr('No controllable monitors found.'))
-        extra_text = tr("(Most recent ddcutil error: {})").format(str(ddcutil_problem)) if ddcutil_problem else ''
         error_no_monitors.setInformativeText(
             tr("Is ddcutil installed?  Is i2c installed and configured?\n\n"
                "Run vdu_controls --debug in a console and check for "
-               "additional messages.\n\n{}").format(extra_text))
+               "additional messages.\n\n{}").format(''))
+        if ddcutil_problem is not None:
+            error_no_monitors.setDetailedText(tr("(Most recent ddcutil error: {})").format(str(ddcutil_problem)))
         error_no_monitors.exec()
 
     def create_main_control_panel(self) -> None:
@@ -6611,17 +6614,21 @@ class VduAppWindow(QMainWindow):
 
         def refresh_data() -> None:
             # Called in a non-GUI thread, cannot do any GUI op's.
-            assert self.ddcutil is not None
-            self.detected_vdu_list = self.ddcutil.detect_monitors()
-            self.get_main_panel().refresh_data(self.detected_vdu_list)
+            if self.ddcutil is not None:
+                try:
+                    self.detected_vdu_list = self.ddcutil.detect_monitors()
+                    self.get_main_panel().refresh_data(self.detected_vdu_list)
+                except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
+                    if self.refresh_data_task.vdu_exception is None:
+                        self.refresh_data_task.vdu_exception = VduException(vdu_description="unknown", operation="unknown", exception=e)
 
         def refresh_view(worker_thread: WorkerThread) -> None:
             """Invoke when the GUI worker thread completes. Runs in the GUI thread and can refresh the GUI views."""
-            assert self.refresh_data_task is not None
+            assert self.refresh_data_task is not None and is_running_in_gui_thread()
             main_panel = self.get_main_panel()
             if self.refresh_data_task.vdu_exception is not None:
                 main_panel.display_vdu_exception(self.refresh_data_task.vdu_exception, can_retry=False)
-            if self.detected_vdu_list != self.previously_detected_vdu_list:
+            if len(self.detected_vdu_list) == 0 or self.detected_vdu_list != self.previously_detected_vdu_list:
                 self.create_main_control_panel()
                 self.previously_detected_vdu_list = self.detected_vdu_list
             main_panel.refresh_view()
