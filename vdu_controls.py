@@ -1173,6 +1173,7 @@ class DdcUtil:
         log_info(f"ddcutil version info: {version_match.group(0)} {self.version}")
         if len(self.version) > 0 and int(self.version[0]) >= 2:
             log_info("ddcutil version >= 2.0, enabling --enable-dynamic-sleep for any zero sleep-multipliers")
+            self.common_args = ['--disable-displays-cache']
             self.default_sleep_multiplier = 0.0  # forces passing of --enable-dynamic-sleep
 
     def change_settings(self, default_sleep_multiplier: float) -> None:
@@ -5872,8 +5873,11 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             if VDU_SUPPORTED_CONTROLS.brightness.vcp_code in vdu_controller.capabilities:
                 self.range_restrictions[vdu_controller.vdu_stable_id] = vdu_controller.get_range_restrictions(
                     VDU_SUPPORTED_CONTROLS.brightness.vcp_code)
-                self.vdu_current_brightness[vdu_controller.vdu_stable_id] = int(vdu_controller.get_attribute(
-                    VDU_SUPPORTED_CONTROLS.brightness.vcp_code)[0])
+                try:
+                    self.vdu_current_brightness[vdu_controller.vdu_stable_id] = int(vdu_controller.get_attribute(
+                        VDU_SUPPORTED_CONTROLS.brightness.vcp_code)[0])
+                except VduException as ve:
+                    log_warning("VDU may not be available:", str(ve))
             self.profile_data[vdu_controller.vdu_stable_id] = self.lux_config.get_vdu_profile(vdu_controller)
             new_id_list.append(vdu_controller.vdu_stable_id)
         self.preset_points.clear()  # Edit out deleted presets by starting from scratch
