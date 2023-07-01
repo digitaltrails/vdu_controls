@@ -534,7 +534,7 @@ sleep optimiser (``ddcutil --enable-dynamic-sleep`` argument) to automatically t
 times required to prevent protocol errors.  Those upgrading to ``ddcutil`` version 2 can switch
 to using dynamic sleep by setting each VDU's sleep multiplier to zero.  During initial use of dynamic
 sleep some errors may be logged until suitable sleep settings are established.  For earlier
-versions of ``ddcutil``, you can manually set the ``vdu_control`` ``sleep-multiplier`` that is
+versions of ``ddcutil``, you can manually set the ``vdu_control`` ``sleep-multiplier``
 passed to ``ddcutil``.  In a multi-VDU setup where the VDU's are quite different, individual
 multipliers can be configured (see previous section).  Reducing the multipliers will increase
 the possibility of errors, a bit of experimentation will be required.
