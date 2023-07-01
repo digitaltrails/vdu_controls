@@ -5877,6 +5877,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
                     self.vdu_current_brightness[vdu_controller.vdu_stable_id] = int(vdu_controller.get_attribute(
                         VDU_SUPPORTED_CONTROLS.brightness.vcp_code)[0])
                 except VduException as ve:
+                    self.vdu_current_brightness[vdu_controller.vdu_stable_id] = 0
                     log_warning("VDU may not be available:", str(ve))
             self.profile_data[vdu_controller.vdu_stable_id] = self.lux_config.get_vdu_profile(vdu_controller)
             new_id_list.append(vdu_controller.vdu_stable_id)
