@@ -1167,13 +1167,15 @@ class DdcUtil:
         log_info(f"Use_edid={self.use_edid} (to disable it: export VDU_CONTROLS_USE_EDID=no)")
         self.edid_map: Dict[str, str] = {}
         self.lock = Lock()
+        self.version = (0, 0, 0, '')
         version_info = self.__run__('--version').stdout.decode('utf-8')
-        version_match = re.match(r'[a-z]+ ([0-9]+).([0-9]+).([0-9]+)-([^\n]*)', version_info)
-        self.version = version_match.groups() if version_match is not None else ()
+        version_match = re.match(r'[a-z]+ ([0-9]+).([0-9]+).([0-9]+)-?([^\n]*)', version_info)
+        if version_match is not None:
+            self.version = version_match.groups()
         log_info(f"ddcutil version info: {version_match.group(0)} {self.version}")
         if len(self.version) > 0 and int(self.version[0]) >= 2:
             log_info("ddcutil version >= 2.0, enabling --enable-dynamic-sleep for any zero sleep-multipliers")
-            self.common_args = ['--disable-displays-cache']
+            # self.common_args = ['--disable-displays-cache']
             self.default_sleep_multiplier = 0.0  # forces passing of --enable-dynamic-sleep
 
     def change_settings(self, default_sleep_multiplier: float) -> None:
@@ -1188,7 +1190,12 @@ class DdcUtil:
     def __run__(self, *args, sleep_multiplier: float | None = None) -> subprocess.CompletedProcess:
         with self.lock:
             multiplier = self.default_sleep_multiplier if sleep_multiplier is None else sleep_multiplier
-            multiplier_args = ['--sleep-multiplier', str(multiplier)] if multiplier > 0.01 else ['--enable-dynamic-sleep']
+            if multiplier >= 0.01:
+                multiplier_args = ['--sleep-multiplier', f"{multiplier:.2f}"]
+            elif int(self.version[0]) >= 2:
+                multiplier_args = ['--enable-dynamic-sleep']
+            else:
+                multiplier_args = []
             process_args = [DDCUTIL] + multiplier_args + self.common_args + list(args)
             try:  # TODO consider tracking errors and raising an exception if all VDU's are unavailable
                 result = subprocess.run(process_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
@@ -3256,7 +3263,10 @@ class VduControlsMainPanel(QWidget):
             self.alert.setInformativeText(
                 tr('Is the monitor switched off?') + '<br>' + tr('Is the sleep-multiplier setting too low?'))
         self.alert.setText(tr("Set value: Failed to communicate with display {}").format(exception.vdu_description))
-        self.alert.setDetailedText(str(exception.cause))
+        if isinstance(exception.cause, subprocess.SubprocessError):
+            self.alert.setDetailedText(exception.cause.stderr.decode('utf-8') + '\n' + str(exception.cause))
+        else:
+            self.alert.setDetailedText(str(exception.cause))
         self.alert.setAttribute(Qt.WA_DeleteOnClose)
         answer = self.alert.exec()
         self.alert = None
@@ -6563,7 +6573,11 @@ class VduAppWindow(QMainWindow):
                "Run vdu_controls --debug in a console and check for "
                "additional messages.\n\n{}").format(''))
         if ddcutil_problem is not None:
-            error_no_monitors.setDetailedText(tr("(Most recent ddcutil error: {})").format(str(ddcutil_problem)))
+            if isinstance(ddcutil_problem, subprocess.SubprocessError):
+                problem_text = ddcutil_problem.stderr.decode('utf-8') + '\n' + str(ddcutil_problem)
+            else:
+                problem_text = str(ddcutil_problem)
+            error_no_monitors.setDetailedText(tr("(Most recent ddcutil error: {})").format(problem_text))
         error_no_monitors.exec()
 
     def create_main_control_panel(self) -> None:
