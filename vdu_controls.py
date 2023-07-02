@@ -1213,10 +1213,10 @@ class DdcUtil:
                 raise
             return result
 
-    def detect_monitors(self, issue_warnings: bool = True) -> List[Tuple[str, str, str, str]]:
+    def detect_monitors(self, issue_warnings: bool = True, sleep_multiplier: float = 0.0) -> List[Tuple[str, str, str, str]]:
         """Return a list of (vdu_id, desc) tuples."""
         display_list = []
-        result = self.__run__('detect', '--verbose')
+        result = self.__run__('detect', '--verbose', sleep_multiplier=sleep_multiplier)
         # Going to get rid of anything that is not a-z A-Z 0-9 as potential rubbish
         rubbish = re.compile('[^a-zA-Z0-9]+')
         # This isn't efficient, it doesn't need to be, so I'm keeping re-defs close to where they are used.
@@ -6502,7 +6502,7 @@ class VduAppWindow(QMainWindow):
             # Limit to a reasonable number of iterations.
             for i in range(1, 11):
                 prev_num = len(self.detected_vdu_list)
-                self.detected_vdu_list = self.ddcutil.detect_monitors()
+                self.detected_vdu_list = self.ddcutil.detect_monitors(sleep_multiplier=self.main_config.get_sleep_multiplier())
                 if prev_num == len(self.detected_vdu_list):
                     log_info(f"Number of detected monitors is stable at {len(self.detected_vdu_list)} (loop={i})")
                     break
@@ -6635,7 +6635,7 @@ class VduAppWindow(QMainWindow):
             # Called in a non-GUI thread, cannot do any GUI op's.
             if self.ddcutil is not None:
                 try:
-                    self.detected_vdu_list = self.ddcutil.detect_monitors()
+                    self.detected_vdu_list = self.ddcutil.detect_monitors(sleep_multiplier=self.main_config.get_sleep_multiplier())
                     self.get_main_panel().refresh_data(self.detected_vdu_list)
                 except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
                     if self.refresh_data_task.vdu_exception is None:
