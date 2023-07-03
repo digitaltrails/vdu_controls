@@ -1024,6 +1024,9 @@ GET_ATTRIBUTES_RETRIES = 3
 # All kinds of startup slowness may cause problems - how many times to wait and retry
 SLIDER_REFRESH_RETRIES = 4
 
+# Use a slight hack to make QMessageBox resizable.
+RESIZABLE_QMESSAGEBOX_HACK = True
+
 DANGER_AGREEMENT_NON_STANDARD_VCP_CODES = """
 If you are attempting to enable non-standard VCP-codes for write, you must read and
 consider this notice before proceeding any further.
@@ -1161,7 +1164,7 @@ class DdcUtil:
         super().__init__()
         self.supported_codes: Dict[str, str] | None = None
         self.default_sleep_multiplier = default_sleep_multiplier
-        self.common_args = [ ] if common_args is None else common_args
+        self.common_args = [] if common_args is None else common_args
         self.vcp_type_map: Dict[str, str] = {}
         self.use_edid = os.getenv('VDU_CONTROLS_USE_EDID', default="yes") == 'yes'
         log_info(f"Use_edid={self.use_edid} (to disable it: export VDU_CONTROLS_USE_EDID=no)")
@@ -3486,6 +3489,21 @@ class MessageBox(QMessageBox):
         super().__init__(icon, APPNAME, '', buttons=buttons)
         if default is not None:
             self.setDefaultButton(default)
+        if RESIZABLE_QMESSAGEBOX_HACK:
+            self.setMouseTracking(True)
+            self.setSizeGripEnabled(True)
+
+    def event(self, event: QEvent):
+        # https://www.qtcentre.org/threads/24888-Resizing-a-QMessageBox?p=251312#post251312
+        # The "least evil" way to make QMessageBox resizable, by ArmanS
+        result = super().event(event)
+        if RESIZABLE_QMESSAGEBOX_HACK:
+            if event.type() == QEvent.MouseMove or event == QEvent.MouseButtonPress:
+                self.setMaximumSize(1200, 800)
+                text_edit_field = self.findChild(QTextEdit)
+                if text_edit_field is not None:
+                    text_edit_field.setMaximumHeight(600)
+        return result
 
 
 class PushButtonLeftJustified(QPushButton):
