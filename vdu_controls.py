@@ -1204,7 +1204,7 @@ class DdcUtil:
                 result = subprocess.run(process_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
                 # Shorten EDID to 30 characters when logging it (it will be the only long argument)
                 log_debug("subprocess result: ", self.format_args_diagnostic(result.args),
-                          f"rc={result.returncode}", f"stdout={result.stdout.decode('utf-8')}") if log_debug_enabled else None
+                          f"rc={result.returncode}", f"stdout={result.stdout.decode('utf-8', errors='replace')}") if log_debug_enabled else None
             except subprocess.SubprocessError as spe:
                 error_text = spe.stderr.decode('utf-8')
                 if error_text.lower().find("display not found") >= 0:  # raise DdcUtilDisplayNotFound and stay quiet
@@ -1224,7 +1224,7 @@ class DdcUtil:
         rubbish = re.compile('[^a-zA-Z0-9]+')
         # This isn't efficient, it doesn't need to be, so I'm keeping re-defs close to where they are used.
         key_prospects: Dict[Tuple[str, str], Tuple[str, str]] = {}
-        for display_str in re.split("\n\n", result.stdout.decode('utf-8')):
+        for display_str in re.split("\n\n", result.stdout.decode('utf-8', errors='replace')):
             display_match = re.search(r'Display ([0-9]+)', display_str)
             if display_match is not None:
                 vdu_id = display_match.group(1)
