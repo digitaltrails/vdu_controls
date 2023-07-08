@@ -1171,7 +1171,7 @@ class DdcUtil:
         self.edid_map: Dict[str, str] = {}
         self.lock = Lock()
         self.version = (0, 0, 0, '')
-        version_info = self.__run__('--version').stdout.decode('utf-8')
+        version_info = self.__run__('--version').stdout.decode('utf-8', errors='surrogateescape')
         version_match = re.match(r'[a-z]+ ([0-9]+).([0-9]+).([0-9]+)-?([^\n]*)', version_info)
         if version_match is not None:
             self.version = version_match.groups()
@@ -1204,9 +1204,9 @@ class DdcUtil:
                 result = subprocess.run(process_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
                 # Shorten EDID to 30 characters when logging it (it will be the only long argument)
                 log_debug("subprocess result: ", self.format_args_diagnostic(result.args),
-                          f"rc={result.returncode}", f"stdout={result.stdout.decode('utf-8', errors='replace')}") if log_debug_enabled else None
+                          f"rc={result.returncode}", f"stdout={result.stdout.decode('utf-8', errors='surrogateescape')}") if log_debug_enabled else None
             except subprocess.SubprocessError as spe:
-                error_text = spe.stderr.decode('utf-8')
+                error_text = spe.stderr.decode('utf-8', errors='surrogateescape')
                 if error_text.lower().find("display not found") >= 0:  # raise DdcUtilDisplayNotFound and stay quiet
                     log_debug("subprocess result: ", self.format_args_diagnostic(process_args),
                               f"stderr='{error_text}', exception={str(spe)}") if log_debug_enabled else None
@@ -1224,7 +1224,7 @@ class DdcUtil:
         rubbish = re.compile('[^a-zA-Z0-9]+')
         # This isn't efficient, it doesn't need to be, so I'm keeping re-defs close to where they are used.
         key_prospects: Dict[Tuple[str, str], Tuple[str, str]] = {}
-        for display_str in re.split("\n\n", result.stdout.decode('utf-8', errors='replace')):
+        for display_str in re.split("\n\n", result.stdout.decode('utf-8', errors='surrogateescape')):
             display_match = re.search(r'Display ([0-9]+)', display_str)
             if display_match is not None:
                 vdu_id = display_match.group(1)
@@ -1287,7 +1287,7 @@ class DdcUtil:
     def query_capabilities(self, vdu_id: str) -> str:
         """Return a vpc capabilities string."""
         result = self.__run__(*['capabilities'] + self.id_key_args(vdu_id))
-        capability_text = result.stdout.decode('utf-8')
+        capability_text = result.stdout.decode('utf-8', errors='surrogateescape')
         return capability_text
 
     def get_type(self, vcp_code) -> str | None:
@@ -1315,7 +1315,7 @@ class DdcUtil:
 
     def vcp_info(self) -> str:
         """Returns info about all codes known to ddcutil, whether supported or not."""
-        return self.__run__('--verbose', 'vcpinfo').stdout.decode('utf-8')
+        return self.__run__('--verbose', 'vcpinfo').stdout.decode('utf-8', errors='surrogateescape')
 
     def get_supported_vcp_codes(self) -> Dict[str, str]:
         """Returns a map of descriptions keyed by vcp_code, the codes that ddcutil appears to support."""
@@ -1353,7 +1353,7 @@ class DdcUtil:
                 from_ddcutil = self.__run__(*args, sleep_multiplier=sleep_multiplier)
                 unordered_results: Dict[str, str] = {}
                 for line in from_ddcutil.stdout.split(b"\n"):
-                    line_utf8 = line.decode('utf-8') + '\n'
+                    line_utf8 = line.decode('utf-8', errors='surrogateescape') + '\n'
                     vcp_code_match = vcp_code_regexp.match(line_utf8)
                     if vcp_code_match is not None:
                         unordered_results[vcp_code_match.group(1)] = line_utf8
@@ -3267,7 +3267,7 @@ class VduControlsMainPanel(QWidget):
                 tr('Is the monitor switched off?') + '<br>' + tr('Is the sleep-multiplier setting too low?'))
         self.alert.setText(tr("Set value: Failed to communicate with display {}").format(exception.vdu_description))
         if isinstance(exception.cause, subprocess.SubprocessError):
-            self.alert.setDetailedText(exception.cause.stderr.decode('utf-8') + '\n' + str(exception.cause))
+            self.alert.setDetailedText(exception.cause.stderr.decode('utf-8', errors='surrogateescape') + '\n' + str(exception.cause))
         else:
             self.alert.setDetailedText(str(exception.cause))
         self.alert.setAttribute(Qt.WA_DeleteOnClose)
@@ -5374,7 +5374,7 @@ class LuxMeterSerialDevice:
                     if self.serial_device is not None:
                         self.serial_device.reset_input_buffer()
                         buffer = self.serial_device.read_until()
-                        value = float(buffer.decode('utf-8').replace("\r\n", ''))
+                        value = float(buffer.decode('utf-8', errors='surrogateescape').replace("\r\n", ''))
                         return value
                 except (self.serial_module.SerialException, termios.error, FileNotFoundError, ValueError) as se:
                     log_warning(f"Retry read of {self.device_name}, will reopen feed in {backoff_secs} seconds", se)
@@ -6592,7 +6592,7 @@ class VduAppWindow(QMainWindow):
                "additional messages.\n\n{}").format(''))
         if ddcutil_problem is not None:
             if isinstance(ddcutil_problem, subprocess.SubprocessError):
-                problem_text = ddcutil_problem.stderr.decode('utf-8') + '\n' + str(ddcutil_problem)
+                problem_text = ddcutil_problem.stderr.decode('utf-8', errors='surrogateescape') + '\n' + str(ddcutil_problem)
             else:
                 problem_text = str(ddcutil_problem)
             error_no_monitors.setDetailedText(tr("(Most recent ddcutil error: {})").format(problem_text))
