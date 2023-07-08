@@ -56,7 +56,7 @@ from PyQt5.QtCore import QSettings, pyqtSignal, QThread, QCoreApplication, QTran
 from PyQt5.QtGui import QGuiApplication, QPixmap, QIcon, QCursor, QImage, QPainter, QPalette
 from PyQt5.QtSvg import QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QMainWindow, QSystemTrayIcon, QMenu, QStyle, QWidget, QLabel, QVBoxLayout, QToolButton, \
-    QToolBar, QStatusBar
+    QToolBar, QStatusBar, QHBoxLayout
 
 APPNAME = "Vlux Meter"
 VLUX_METER_VERSION = '1.0.0'
@@ -465,7 +465,7 @@ class VduPanelBottomToolBar(QStatusBar):
         self.menu_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         self.menu_button.setAutoRaise(True)
         self.menu_button.setIconSize(QSize(32, 32))
-        self.addPermanentWidget(self.menu_button, stretch=0)
+        self.addPermanentWidget(self.menu_button, stretch=1)
         self.installEventFilter(self)
 
 
@@ -541,14 +541,14 @@ class VluxMeterWindow(QMainWindow):
                 log_error("no system tray - cannot run in system tray.")
 
         main_widget = QWidget()
-        main_widget.setLayout(QVBoxLayout())
-        self.lux_display = QLabel("0")
-        main_widget.layout().addWidget(self.lux_display)
-
-        # main_widget.setMinimumWidth(1024)
+        layout = QHBoxLayout()
+        main_widget.setLayout(layout)
+        self.lux_display = QLabel(tr("Waiting for fifo consumer"))
+        layout.addWidget(self.lux_display, stretch=1)
 
         self.setCentralWidget(main_widget)
         self.setStatusBar(VduPanelBottomToolBar(app_context_menu=self.context_menu, parent=self))
+        self.setMaximumSize(300, 200)
         self.app_restore_state()
 
         if self.tray is not None:
@@ -575,6 +575,9 @@ class VluxMeterWindow(QMainWindow):
             self.tray.setVisible(True)
         else:
             self.show()
+
+    def display_lux(self, lux: int):
+        self.lux_display.setText(f"{lux} lux")
 
     def closeEvent(self, event) -> None:
         self.app_save_state()
@@ -634,8 +637,7 @@ class MeterThread(QThread):
                 camera = cv2.VideoCapture(global_config['camera']['device'])
                 original_auto_exposure_option = camera.get(cv2.CAP_PROP_AUTO_EXPOSURE)
                 original_exposure = camera.get(cv2.CAP_PROP_EXPOSURE)
-                print(f"INFO: existing values: auto-exposure={original_auto_exposure_option} exposure={original_exposure}",
-                      file=sys.stderr) if VERBOSE else None
+                log_info(f"existing values: auto-exposure={original_auto_exposure_option} exposure={original_exposure}")
                 auto_exposure_option = global_config.getint("camera", "auto_exposure_option")
                 manual_exposure_time = global_config.getint("camera", "manual_exposure_time")
                 try:
@@ -643,16 +645,12 @@ class MeterThread(QThread):
                     camera.set(cv2.CAP_PROP_EXPOSURE, manual_exposure_time)
                     new_auto_exposure = camera.get(cv2.CAP_PROP_AUTO_EXPOSURE)
                     new_exposure = camera.get(cv2.CAP_PROP_EXPOSURE)
-                    log_info(f"new values: auto-exposure={new_auto_exposure} exposure={new_exposure}",
-                             file=sys.stderr) if VERBOSE else None
-
+                    log_info(f"new values: auto-exposure={new_auto_exposure} exposure={new_exposure}")
                     result, image = camera.read()
                     cv2.imwrite(IMAGE_LOCATION, image) if SAVE_IMAGE else None  # uncomment to check the image exposure etc.
                     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
                     cv2.imwrite(IMAGE_LOCATION + "-gray", gray_image) if SAVE_IMAGE else None
-
                     brightness = cv2.mean(gray_image)[0]
-
                     previous_lux, previous_value = None, None
                     for value, (name, lux) in global_config.get_brightness_map().items():
                         if brightness >= value:
@@ -721,12 +719,7 @@ def main():
 
     main_window = VluxMeterWindow(global_config, app)
     worker = MeterThread()
-
-    def show_lux(value: int):
-        log_info(f"value={value}")
-        main_window.lux_display.setText(str(value))
-
-    worker.new_lux_value_signal.connect(show_lux)
+    worker.new_lux_value_signal.connect(main_window.display_lux)
     worker.start()
 
     rc = app.exec_()
