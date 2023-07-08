@@ -192,7 +192,7 @@ Acknowlegements
 
 * [rockowitz](https://github.com/rockowitz), for the robust [ddcutil](https://github.com/rockowitz/ddcutil) utility
 * [yochananmarqos](https://github.com/yochananmarqos), for Gnome related suggestions and AUR port.
-* [denilsonsa](https://github.com/denilsonsa), for several issues, tests and fixes that contributed to version 1.9.0.
+* [denilsonsa](https://github.com/denilsonsa), for several issues, tests and fixes that contributed to version 1.9.0 and 1.10.3.
 * [crashmatt](https://github.com/crashmatt), [lowne](https://github.com/lowne), [usr](https://github.com/usr)3, for contributing fixes to code and documentation.
 * [Jakeler](https://github.com/Jakeler), [kupiqu](https://github.com/kupiqu), for suggestions for enhancements. 
 * [malcolmlewis](https://github.com/malcolmlewis) for assistance with the OpenSUSE Open Build Service submissions.
@@ -216,6 +216,7 @@ Version History
   * Properly clear/reset the main panel progress bar after DDC errors.
   * Fix error handling of missing ddcutil at startup.
   * Make message box popups resizable for increased readability.
+  * Handle utf-8 decoding errors for EDID's and capabilities (#49).
 * 1.10.2
   * Fix Preset non-zero transition-step-seconds, so it works properly.
   * Changing log-to-syslog or log-debug-enabled no longer requires a restart.
