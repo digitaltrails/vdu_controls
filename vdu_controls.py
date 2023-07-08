@@ -1206,6 +1206,7 @@ class DdcUtil:
                 log_debug("subprocess result: ", self.format_args_diagnostic(result.args),
                           f"rc={result.returncode}", f"stdout={result.stdout.decode('utf-8', errors='surrogateescape')}") if log_debug_enabled else None
             except subprocess.SubprocessError as spe:
+                log_debug("TRACEBACK:", traceback.format_stack()) if log_debug_enabled else None
                 error_text = spe.stderr.decode('utf-8', errors='surrogateescape')
                 if error_text.lower().find("display not found") >= 0:  # raise DdcUtilDisplayNotFound and stay quiet
                     log_debug("subprocess result: ", self.format_args_diagnostic(process_args),
@@ -6303,7 +6304,6 @@ class VduAppWindow(QMainWindow):
             main_window_action = main_window_action_implemenation
 
         def settings_changed(changed_settings: List) -> None:
-            assert self.ddcutil is not None
             for setting in GlobalOption:
                 if ('vdu-controls-globals', setting.ini_name()) in changed_settings and setting.requires_restart():
                     restart_application(tr("The change to the {} option requires "
@@ -6314,7 +6314,8 @@ class VduAppWindow(QMainWindow):
             global log_to_syslog
             log_to_syslog = main_config.is_set(GlobalOption.SYSLOG_ENABLED)
             log_debug_enabled = main_config.is_set(GlobalOption.DEBUG_ENABLED)
-            self.ddcutil.change_settings(default_sleep_multiplier=main_config.get_sleep_multiplier())
+            if self.ddcutil is not None:
+                self.ddcutil.change_settings(default_sleep_multiplier=main_config.get_sleep_multiplier())
             self.create_main_control_panel()
             self.schedule_presets(reset=True)
             presets_dialog: PresetsDialog = PresetsDialog.get_instance()  # type: ignore
