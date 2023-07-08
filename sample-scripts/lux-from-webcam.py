@@ -139,6 +139,7 @@ def main():
         if auto_exposure != AUTO_EXPOSURE_SETTING:  # Can only set exposure if not on auto_exposure
             camera.set(cv2.CAP_PROP_EXPOSURE, exposure)
         camera.release()
+        camera = None
 
 
 if __name__ == '__main__':
