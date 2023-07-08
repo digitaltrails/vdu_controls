@@ -89,7 +89,8 @@ MENU_ICON_SOURCE = b"""
 </svg>
 """
 
-BRIGHTNESS_ICON_SVG = b"""<svg height="22" viewBox="0 0 22 22" width="22" xmlns="http://www.w3.org/2000/svg"><g 
+# Icon copyright libraoffice (Mozilla license)
+VLUX_METER_ICON_SVG = b"""<svg height="22" viewBox="0 0 22 22" width="22" xmlns="http://www.w3.org/2000/svg"><g 
 transform="matrix(1 0 0 -1 0 22)"><g fill="#ed8733"><rect height="3" ry=".5" width="1" x="11"/><rect height="4" ry=".5" 
 transform="rotate(90)" width="1" x="9" y="-22"/><rect height="4" ry=".5" transform="rotate(90)" width="1" x="9" y="-4"/><path 
 d="m11 4a6 6 0 0 0 -6 6 6 6 0 0 0 1.0136719 3.330078l-.0136719-.001953c.038162.051.064392.07662.1015625.125a6 6 0 0 0 
@@ -220,11 +221,12 @@ def is_running_in_gui_thread() -> bool:
 
 def get_splash_image() -> QPixmap:
     """Get the splash pixmap from the installed png, failing that, the internal splash png."""
-    pixmap = QPixmap()
+
     if os.path.isfile(DEFAULT_SPLASH_PNG) and os.access(DEFAULT_SPLASH_PNG, os.R_OK):
+        pixmap = QPixmap()
         pixmap.load(DEFAULT_SPLASH_PNG)
     else:
-        pixmap.loadFromData(base64.decodebytes(FALLBACK_SPLASH_PNG_BASE64), 'PNG')
+        pixmap = create_themed_pixmap_from_svg_bytes(VLUX_METER_ICON_SVG)
     return pixmap
 
 
@@ -456,7 +458,7 @@ class ToolButton(QToolButton):
         self.setIcon(create_themed_icon_from_svg_bytes(self.svg_source))  # this may alter the SVG for light/dark theme
 
 
-class VduPanelBottomToolBar(QStatusBar):
+class StatusBar(QStatusBar):
 
     def __init__(self, app_context_menu: QMenu, parent: QWidget) -> None:
         super().__init__(parent=parent)
@@ -476,7 +478,7 @@ class VluxMeterWindow(QMainWindow):
         global gui_thread
         gui_thread = app.thread()
         self.app = app
-        self.app_icon = create_themed_icon_from_svg_bytes(BRIGHTNESS_ICON_SVG)
+        self.app_icon = create_themed_icon_from_svg_bytes(VLUX_METER_ICON_SVG)
         splash_pixmap = get_splash_image()
         self.app_icon.addPixmap(splash_pixmap)
         self.setObjectName('main_window')
@@ -536,19 +538,24 @@ class VluxMeterWindow(QMainWindow):
                 app.setQuitOnLastWindowClosed(False)
                 self.tray = QSystemTrayIcon(parent=self)
                 self.tray.setContextMenu(self.context_menu)
-                self.tray.setIcon(create_themed_icon_from_svg_bytes(BRIGHTNESS_ICON_SVG))
+                self.tray.setIcon(create_themed_icon_from_svg_bytes(VLUX_METER_ICON_SVG))
             else:
                 log_error("no system tray - cannot run in system tray.")
 
         main_widget = QWidget()
         layout = QHBoxLayout()
+        self.setContentsMargins(8, 0, 0, 0)
         main_widget.setLayout(layout)
-        self.lux_display = QLabel(tr("Waiting for fifo consumer"))
+        self.lux_display = QLabel(tr(""))
+        big_font = self.lux_display.font()
+        big_font.setPointSize(big_font.pointSize() + 8)
+        self.lux_display.setFont(big_font)
         layout.addWidget(self.lux_display, stretch=1)
 
         self.setCentralWidget(main_widget)
-        self.setStatusBar(VduPanelBottomToolBar(app_context_menu=self.context_menu, parent=self))
-        self.setMaximumSize(300, 200)
+        self.setStatusBar(StatusBar(app_context_menu=self.context_menu, parent=self))
+        self.status_message("Waiting for FIFO consumer", 0)
+        self.setBaseSize(200,600)
         self.app_restore_state()
 
         if self.tray is not None:
@@ -577,7 +584,8 @@ class VluxMeterWindow(QMainWindow):
             self.show()
 
     def display_lux(self, lux: int):
-        self.lux_display.setText(f"{lux} lux")
+        self.status_message('',0)
+        self.lux_display.setText(f"{datetime.now().strftime('%I:%M')}:  {lux} lux")
 
     def closeEvent(self, event) -> None:
         self.app_save_state()
@@ -605,8 +613,7 @@ class VluxMeterWindow(QMainWindow):
             self.restoreState(window_state)
 
     def status_message(self, message: str, timeout: int):
-        assert (self.main_panel is not None)
-        self.main_panel.status_message(message, timeout)
+        self.statusBar().showMessage(message, timeout)
 
 
 class MeterThread(QThread):
