@@ -1099,7 +1099,9 @@ log_to_syslog = False
 log_debug_enabled = False
 
 
-def log_wrapper(severity, *args) -> None:
+def log_wrapper(severity, *args, exception=None) -> None:
+    if log_debug_enabled and exception is not None:
+        log_debug("TRACEBACK:", traceback.format_stack())
     with io.StringIO() as output:
         print(*args, file=output, end='')
         message = output.getvalue()
@@ -1111,21 +1113,21 @@ def log_wrapper(severity, *args) -> None:
             print(datetime.now().strftime("%H:%M:%S"), prefix, message)
 
 
-def log_debug(*args) -> None:
+def log_debug(*args, exception=None) -> None:
     if log_debug_enabled:
-        log_wrapper(syslog.LOG_DEBUG, *args)
+        log_wrapper(syslog.LOG_DEBUG, *args, exception=exception)
 
 
-def log_info(*args) -> None:
-    log_wrapper(syslog.LOG_INFO, *args)
+def log_info(*args, exception=None) -> None:
+    log_wrapper(syslog.LOG_INFO, *args, exception=exception)
 
 
-def log_warning(*args) -> None:
-    log_wrapper(syslog.LOG_WARNING, *args)
+def log_warning(*args, exception=None) -> None:
+    log_wrapper(syslog.LOG_WARNING, *args, exception=exception)
 
 
-def log_error(*args) -> None:
-    log_wrapper(syslog.LOG_ERR, *args)
+def log_error(*args, exception=None) -> None:
+    log_wrapper(syslog.LOG_ERR, *args, exception=exception)
 
 
 class VcpCapability:
@@ -1206,14 +1208,13 @@ class DdcUtil:
                 log_debug("subprocess result: ", self.format_args_diagnostic(result.args),
                           f"rc={result.returncode}", f"stdout={result.stdout.decode('utf-8', errors='surrogateescape')}") if log_debug_enabled else None
             except subprocess.SubprocessError as spe:
-                log_debug("TRACEBACK:", traceback.format_stack()) if log_debug_enabled else None
                 error_text = spe.stderr.decode('utf-8', errors='surrogateescape')
                 if error_text.lower().find("display not found") >= 0:  # raise DdcUtilDisplayNotFound and stay quiet
                     log_debug("subprocess result: ", self.format_args_diagnostic(process_args),
-                              f"stderr='{error_text}', exception={str(spe)}") if log_debug_enabled else None
+                              f"stderr='{error_text}', exception={str(spe)}", exception=spe) if log_debug_enabled else None
                     raise DdcUtilDisplayNotFound(' '.join(args)) from spe
                 log_error("subprocess result: ", self.format_args_diagnostic(process_args),
-                          f"stderr='{error_text}', exception={str(spe)}")
+                          f"stderr='{error_text}', exception={str(spe)}", exception=spe)
                 raise
             return result
 
@@ -1550,7 +1551,7 @@ class ConfigIni(configparser.ConfigParser):
             try:
                 return tuple([int(i) for i in version.split('.')])
             except ValueError:
-                log_error(f"Illegal version number {version} should be i.j.k where i, j and k are integers.")
+                log_error(f"Illegal version number {version} should be i.j.k where i, j and k are integers.", exception=ValueError)
         return 1, 6, 0
 
     def is_version_ge(self, version_text: str = VDU_CONTROLS_VERSION) -> bool:
@@ -3887,7 +3888,7 @@ class PresetChooseWeatherWidget(QWidget):
             else:
                 weather_bad_location_dialog(weather)
         except ValueError as e:
-            log_error(f"Failed to validate location: {e}")
+            log_error(f"Failed to validate location: {e}", exception=e)
             msg = MessageBox(QMessageBox.Critical)
             msg.setText(tr("Failed to validate weather location: {}").format(e.args[0]))
             msg.setInformativeText(e.args[1])
@@ -5303,7 +5304,7 @@ class LuxMeterFifoDevice:
                         if len(select.select([self.fifo], [], [], 0.0)[0]) == 0 and buffer is not None:  # Buffer has been flushed
                             return float(buffer.replace('\n', ''))
                 except (OSError, ValueError) as se:
-                    log_warning(f"Retry read of {self.device_name}, will retry feed in 10 seconds", se)
+                    log_warning(f"Retry read of {self.device_name}, will retry feed in 10 seconds", se, exception=se)
                     time.sleep(10)
 
     def close(self) -> None:
@@ -5336,7 +5337,7 @@ class LuxMeterRunnableDevice:
                     result = subprocess.run([self.runnable], stdout=subprocess.PIPE, check=True)
                     return float(result.stdout)
                 except (OSError, ValueError, subprocess.CalledProcessError) as se:
-                    log_warning(f"Error running {self.runnable}, will retry in 10 seconds", se)
+                    log_warning(f"Error running {self.runnable}, will retry in 10 seconds", se, exception=se)
                     time.sleep(10)
 
     def close(self) -> None:
@@ -5378,7 +5379,7 @@ class LuxMeterSerialDevice:
                         value = float(buffer.decode('utf-8', errors='surrogateescape').replace("\r\n", ''))
                         return value
                 except (self.serial_module.SerialException, termios.error, FileNotFoundError, ValueError) as se:
-                    log_warning(f"Retry read of {self.device_name}, will reopen feed in {backoff_secs} seconds", se)
+                    log_warning(f"Retry read of {self.device_name}, will reopen feed in {backoff_secs} seconds", se, exception=se)
                     time.sleep(backoff_secs)
                     backoff_secs = backoff_secs * 2 if backoff_secs < 300 else 300
                     if self.serial_device is not None:
@@ -5907,7 +5908,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
                         VDU_SUPPORTED_CONTROLS.brightness.vcp_code)[0])
                 except VduException as ve:
                     self.vdu_current_brightness[vdu_controller.vdu_stable_id] = 0
-                    log_warning("VDU may not be available:", str(ve))
+                    log_warning("VDU may not be available:", str(ve), exception=ve)
             self.profile_data[vdu_controller.vdu_stable_id] = self.lux_config.get_vdu_profile(vdu_controller)
             new_id_list.append(vdu_controller.vdu_stable_id)
         self.preset_points.clear()  # Edit out deleted presets by starting from scratch
@@ -6065,7 +6066,7 @@ class LuxAutoController:
                     self.lux_auto_brightness_worker = None
             self.main_app.display_lux_auto_indicators()  # Refresh indicators immediately
         except LuxDeviceException as lde:
-            log_error(f"Error setting up lux meter {lde}")
+            log_error(f"Error setting up lux meter {lde}", exception=lde)
             alert = MessageBox(QMessageBox.Critical)
             alert.setText(tr("Error setting up lux meter: {}").format(self.lux_config.get_device_name()))
             alert.setInformativeText(str(lde))
@@ -6544,7 +6545,7 @@ class VduAppWindow(QMainWindow):
                                                self.ddcutil, main_panel.display_vdu_exception)
                 except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:  # TODO figure out all possible Exceptions:
                     # Catch any kind of parse related error
-                    log_error(f"Problem creating controller for {vdu_id} {vdu_model_name} {vdu_serial} exception={e}")
+                    log_error(f"Problem creating controller for {vdu_id} {vdu_model_name} {vdu_serial} exception={e}", exception=e)
                     no_auto = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Ignore | QMessageBox.Apply | QMessageBox.Retry)
                     no_auto.setText(
                         tr('Failed to obtain capabilities for monitor {} {} {}.').format(vdu_id, vdu_model_name, vdu_serial))
@@ -7234,8 +7235,8 @@ def main() -> None:
     # but LANG=da_DK.UTF-8 should work. For our purposes failure is not important.
     try:
         locale.setlocale(locale.LC_ALL, '')
-    except locale.Error:
-        log_warning("Could not set the default locale - may not be an issue...")
+    except locale.Error as le:
+        log_warning("Could not set the default locale - may not be an issue...", exception=le)
     log_info("Python locale", locale.getlocale())
 
     # Call QApplication before parsing arguments, it will parse and remove Qt session restoration arguments.
