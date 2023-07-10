@@ -45,9 +45,11 @@ import sys
 from typing import List, Tuple, Mapping, Callable, Dict
 
 import cv2  # type: ignore
-from PyQt5 import QtNetwork
-from PyQt5.QtCore import QSettings, pyqtSignal, QThread, QCoreApplication, QTranslator, QLocale, QPoint, QSize
-from PyQt5.QtGui import QGuiApplication, QPixmap, QIcon, QCursor, QImage, QPainter, QPalette
+import qtpy.QtWebEngineWidgets
+from PyQt5 import QtNetwork, QtCore
+from PyQt5.QtCore import QSettings, pyqtSignal, QThread, QCoreApplication, QTranslator, QLocale, QPoint, QSize, QEvent, Qt, QObject
+from PyQt5.QtGui import QGuiApplication, QPixmap, QIcon, QCursor, QImage, QPainter, QPalette, QResizeEvent, QMouseEvent, QPen, \
+    QColor
 from PyQt5.QtSvg import QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QMainWindow, QSystemTrayIcon, QMenu, QStyle, QWidget, QLabel, QVBoxLayout, QToolButton, \
     QToolBar, QStatusBar, QHBoxLayout
@@ -122,10 +124,7 @@ DEFAULT_SETTINGS = {
         'manual_exposure_option': 1,
         'manual_exposure_time': 64,
         'auto_exposure_option': 3,
-        'crop_at_x': 0,
-        'crop_at_y': 0,
-        'crop_height': 0,
-        'crop_width': 0,
+        'crop': '0.0,0.0,1.0,1.0'
     },
     'brightness_to_lux': {
         'sunlight': brightness_lux_str(250, 100000),
@@ -139,7 +138,8 @@ DEFAULT_SETTINGS = {
     'global': {
         'system_tray_enabled': 'yes',
         'fifo_path': '~/.cache/vlux_fifo',
-        'update_frequency_seconds': 60,
+        'display_frequency_millis': 1000,
+        'dispatch_frequency_seconds': 60,
         'translations_enabled': 'no',
     },
 
@@ -465,15 +465,111 @@ class StatusBar(QStatusBar):
         self.installEventFilter(self)
 
 
+class LuxDisplay(QLabel):
+
+    def __init__(self, parent):
+        super().__init__("", parent=parent)
+        big_font = self.font()
+        big_font.setPointSize(big_font.pointSize() + 8)
+        self.setFont(big_font)
+
+
+class CameraDisplay(QLabel):
+    def __init__(self, parent):
+        super().__init__("", parent=parent)
+        self.pixmap_width = 600
+        self.pixmap_height = 550
+        self.painter = None
+        self.current_image = None
+        self.drawing_with_mouse = False
+        self.x_start = 0
+        self.y_start = 0
+        self.x_end = 0
+        self.y_end = 0
+        self.setToolTip(tr("Click and drag to define the brightness sampling area."))
+        self.setMouseTracking(True)  # Enable mouse move events
+
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        super().resizeEvent(event)
+        self.pixmap_width, self.pixmap_height = event.size().width(), event.size().height()
+        self.display_image(self.current_image)
+
+    def display_image(self, image: QImage):
+        if image is not None and self.isVisible():
+            log_info("Drawing")
+            self.current_image = image
+            self.display_refresh()
+
+    def display_refresh(self):
+        scaled = self.current_image.scaled(self.pixmap_width, self.pixmap_height)
+        pixmap = QPixmap.fromImage(scaled)
+        self.painter = QPainter(pixmap)
+        self.painter.drawPixmap(0, self.pixmap_height, self.pixmap_width, self.pixmap_height, pixmap)
+        x1, y1, x2, y2 = (float(v) for v in global_config['camera']['crop'].split(','))
+        existing_x, existing_y = round(x1 * pixmap.width()), round(y1 * pixmap.height())
+        existing_w, existing_h = round((x2 - x1) * pixmap.width()), round((y2 - y1) * pixmap.height())
+        self.painter.setPen(QPen(QColor(0x5Aff5A), 1))
+        self.painter.drawRect(existing_x, existing_y, existing_w, existing_h)
+        self.painter.setPen(QPen(QColor(0xff0000), 1))
+        self.painter.drawRect(self.x_start, self.y_start, self.x_end - self.x_start, -(self.y_start - self.y_end))
+        self.painter.end()
+        self.setPixmap(pixmap)
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        changed = False
+        local_pos = self.mapFromGlobal(event.globalPos())
+        self.x_start = local_pos.x()
+        self.y_start = local_pos.y()
+        if event.button() == Qt.LeftButton:
+            self.drawing_with_mouse = True
+        if changed:
+            self.show_changes()
+        event.accept()
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        if self.drawing_with_mouse:
+            local_pos = self.mapFromGlobal(event.globalPos())
+            self.x_end = local_pos.x()
+            self.y_end = local_pos.y()
+            self.display_refresh()
+        self.update()
+
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        changed = False
+        local_pos = self.mapFromGlobal(event.globalPos())
+        self.set_rectangle()
+        if event.button() == Qt.LeftButton:
+            self.drawing_with_mouse = False
+        if changed:
+            self.show_changes()
+        event.accept()
+
+    def set_rectangle(self):
+        if self.x_start < self.x_end:
+            rec_x_start = self.x_start / self.width()
+            rec_x_end = self.x_end / self.width()
+        else:
+            rec_x_start = self.x_end / self.width()
+            rec_x_end = self.x_start / self.width()
+        if self.y_start < self.y_end:
+            rec_y_start = self.y_end / self.height()
+            rec_y_end = self.y_start / self.height()
+        else:
+            rec_y_start = self.y_start / self.height()
+            rec_y_end = self.y_start / self.height()
+        global_config['camera']['crop'] = f"{rec_x_start},{rec_y_end},{rec_x_end},{rec_y_start}"
+        global_config.save(CONFIG_PATH)
+
 class VluxMeterWindow(QMainWindow):
 
-    def __init__(self, config: ConfigIni, app: QApplication) -> None:
+    def __init__(self, config: ConfigIni, app: QApplication, meter_thread: 'MeterThread') -> None:
         super().__init__()
         global gui_thread
         gui_thread = app.thread()
         self.app = app
         self.app_icon = create_themed_icon_from_svg_bytes(VLUX_METER_ICON_SVG)
         splash_pixmap = get_splash_image()
+        self.lux_dispatcher = None if config.getboolean("global", "fifo_disabled", fallback=False) else LuxFifoDispatcher()
         self.app_icon.addPixmap(splash_pixmap)
         self.setObjectName('main_window')
         self.geometry_key = self.objectName() + "_geometry"
@@ -481,6 +577,8 @@ class VluxMeterWindow(QMainWindow):
         self.settings = QSettings('vlux_meter.qt.state', 'vlux_meter')
         self.config = config
         self.tray = None
+        self.meter_thread = meter_thread
+        app.installEventFilter(self)
 
         gnome_tray_behaviour = config.getboolean("global", "system_tray_enabled") and 'gnome' in os.environ.get(
             'XDG_CURRENT_DESKTOP', default='unknown').lower()
@@ -537,19 +635,20 @@ class VluxMeterWindow(QMainWindow):
                 log_error("no system tray - cannot run in system tray.")
 
         main_widget = QWidget()
-        layout = QHBoxLayout()
+        layout = QVBoxLayout()
         self.setContentsMargins(8, 0, 0, 0)
         main_widget.setLayout(layout)
-        self.lux_display = QLabel(tr(""))
-        big_font = self.lux_display.font()
-        big_font.setPointSize(big_font.pointSize() + 8)
-        self.lux_display.setFont(big_font)
-        layout.addWidget(self.lux_display, stretch=1)
+
+        self.lux_display = LuxDisplay(parent=self)
+        layout.addWidget(self.lux_display)
+
+        self.camera_display = CameraDisplay(parent=self)
+        layout.addWidget(self.camera_display, stretch=1)
 
         self.setCentralWidget(main_widget)
         self.setStatusBar(StatusBar(app_context_menu=self.context_menu, parent=self))
         self.status_message("Waiting for FIFO consumer", 0)
-        self.setBaseSize(200,600)
+        self.setBaseSize(200, 600)
         self.app_restore_state()
 
         if self.tray is not None:
@@ -570,16 +669,30 @@ class VluxMeterWindow(QMainWindow):
                     # Attempt to force it to the top with raise and activate
                     self.raise_()
                     self.activateWindow()
-
             self.hide()
             self.tray.activated.connect(show_window)
             self.tray.setVisible(True)
         else:
             self.show()
 
-    def display_lux(self, lux: int):
-        self.status_message('',0)
-        self.lux_display.setText(f"{datetime.now().strftime('%I:%M')}:  {lux} lux")
+    def display_lux_value(self, lux: int):
+        self.status_message('', 0)
+        if self.lux_dispatcher is not None:
+            self.lux_dispatcher.dispatch_lux_value(lux)
+        self.lux_display.setText(f"{datetime.now().strftime('%X')} - {lux} lux")
+
+    def display_camera_image(self, image: QImage):
+        self.camera_display.display_image(image)
+
+    def eventFilter(self, obj: QObject, event: QEvent):
+        if obj == self.app:
+            if event.type() == QEvent.ApplicationActivate:
+                log_info(f"Switch refresh rate to fast")
+                self.meter_thread.fast_fresh = True
+            elif event.type() == QEvent.ApplicationDeactivate:  # Minimised or not focused
+                log_info(f"Switch refresh rate to slow")
+                self.meter_thread.fast_fresh = False
+        return super().eventFilter(obj, event)
 
     def closeEvent(self, event) -> None:
         self.app_save_state()
@@ -612,6 +725,7 @@ class VluxMeterWindow(QMainWindow):
 
 class MeterThread(QThread):
     new_lux_value_signal = pyqtSignal(int)
+    new_image_signal = pyqtSignal(QImage)
 
     def __init__(self) -> None:
 
@@ -619,7 +733,7 @@ class MeterThread(QThread):
         super().__init__()
         log_info(f"MeterThread: going to start from thread = {threading.get_ident()}")
         # Background is always initiated from the GUI thread to grant the worker's __init__ easy access to the GUI thread.
-        assert is_running_in_gui_thread()
+        self.fast_fresh = False
 
     def run(self) -> None:
         """Long-running task, runs in a separate non-GUI thread"""
@@ -630,55 +744,100 @@ class MeterThread(QThread):
             pass
 
     def measure_lux(self):
-        fifo_path = Path(os.path.expanduser(global_config.get('global', 'fifo_path')))
-        if not fifo_path.exists():
-            os.mkfifo(fifo_path)
-        with open(fifo_path, 'w') as fifo:
+        while True:
+            camera = cv2.VideoCapture(global_config['camera']['device'])
+            original_auto_exposure_option = camera.get(cv2.CAP_PROP_AUTO_EXPOSURE)
+            original_exposure = camera.get(cv2.CAP_PROP_EXPOSURE)
+            log_info(f"existing values: auto-exposure={original_auto_exposure_option} exposure={original_exposure}")
+            auto_exposure_option = global_config.getint("camera", "auto_exposure_option")
+            manual_exposure_time = global_config.getint("camera", "manual_exposure_time")
+            try:
+                camera.set(cv2.CAP_PROP_AUTO_EXPOSURE, auto_exposure_option)
+                camera.set(cv2.CAP_PROP_EXPOSURE, manual_exposure_time)
+                new_auto_exposure = camera.get(cv2.CAP_PROP_AUTO_EXPOSURE)
+                new_exposure = camera.get(cv2.CAP_PROP_EXPOSURE)
+                log_info(f"new values: auto-exposure={new_auto_exposure} exposure={new_exposure}")
+                result, image = camera.read()
+                self.signal_new_image(image)
+                cv2.imwrite(IMAGE_LOCATION, image) if SAVE_IMAGE else None  # uncomment to check the image exposure etc.
+                x1, y1, x2, y2 = (float(v) for v in global_config['camera']['crop'].split(','))
+                h, w = image.shape[0:2]
+                crop_x1, crop_y1, crop_x2, crop_y2 = round(x1 * w), round(y1 * h), round(x2 * w), round(y2 * h)
+                print(crop_x1, crop_y1, crop_x2, crop_y2)
+                gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)[crop_y1:crop_y2,crop_x1:crop_x2]
+                cv2.imwrite(IMAGE_LOCATION + "-gray", gray_image) #if SAVE_IMAGE else None
+                brightness = cv2.mean(gray_image)[0]
+                previous_lux, previous_value = None, None
+                for value, (name, lux) in global_config.get_brightness_map().items():
+                    if brightness >= value:
+                        if previous_lux:
+                            # Interpolate on a log10 scale - at least that's what I think this is (idea from chatgpt)
+                            print(
+                                f"INFO: log10 interpolating {brightness} over {value}..{previous_value} to lux {lux}..{previous_lux}") if VERBOSE else None
+                            lux = lux + 10 ** (
+                                    (brightness - value) / (previous_value - value) * math.log10((previous_lux - lux)))
+                        log_info(f"brightness={brightness}, value={value}, lux={lux}, name={name}")
+                        int_lux = round(lux)
+                        self.new_lux_value_signal.emit(int_lux)
+                        break
+                    previous_lux, previous_value = lux, value
+            finally:
+                log_info(
+                    f"Restoring auto-exposure={original_auto_exposure_option} exposure={original_exposure}") if VERBOSE else None
+                camera.set(cv2.CAP_PROP_AUTO_EXPOSURE, original_auto_exposure_option)
+                if original_auto_exposure_option != auto_exposure_option:  # Can only set exposure if not on auto_exposure
+                    camera.set(cv2.CAP_PROP_EXPOSURE, original_exposure)
+                camera.release()
+                camera = None
+            sleep_seconds = 1 if self.fast_fresh else global_config.getint('global', 'dispatch_frequency_seconds')
+            log_info(f"Meter Sleeping {sleep_seconds} seconds")
+            for _ in range(0, sleep_seconds):
+                time.sleep(1)
+                if self.fast_fresh:
+                    break
+
+    def signal_new_image(self, image):
+        height, width, channel = image.shape
+        bytes_per_line = 3 * width
+        q_img = QImage(image.data, width, height, bytes_per_line, QImage.Format_RGB888).rgbSwapped()
+        self.new_image_signal.emit(q_img)
+
+
+class LuxFifoDispatcher(QThread):
+
+    def __init__(self):
+        super().__init__()
+        self.fifo = None
+        self.last_time = 0
+        self.lux_value = -1
+
+    def run(self) -> None:
+        """Long-running task, runs in a separate non-GUI thread"""
+        try:
+            log_info(f"LuxFifoDispatcher: thread = {threading.get_ident()} {is_running_in_gui_thread()}")
+            while self.lux_value == -1:  # Initialising, wait for a value
+                time.sleep(1)
             while True:
-                camera = cv2.VideoCapture(global_config['camera']['device'])
-                original_auto_exposure_option = camera.get(cv2.CAP_PROP_AUTO_EXPOSURE)
-                original_exposure = camera.get(cv2.CAP_PROP_EXPOSURE)
-                log_info(f"existing values: auto-exposure={original_auto_exposure_option} exposure={original_exposure}")
-                auto_exposure_option = global_config.getint("camera", "auto_exposure_option")
-                manual_exposure_time = global_config.getint("camera", "manual_exposure_time")
-                try:
-                    camera.set(cv2.CAP_PROP_AUTO_EXPOSURE, auto_exposure_option)
-                    camera.set(cv2.CAP_PROP_EXPOSURE, manual_exposure_time)
-                    new_auto_exposure = camera.get(cv2.CAP_PROP_AUTO_EXPOSURE)
-                    new_exposure = camera.get(cv2.CAP_PROP_EXPOSURE)
-                    log_info(f"new values: auto-exposure={new_auto_exposure} exposure={new_exposure}")
-                    result, image = camera.read()
-                    cv2.imwrite(IMAGE_LOCATION, image) if SAVE_IMAGE else None  # uncomment to check the image exposure etc.
-                    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-                    cv2.imwrite(IMAGE_LOCATION + "-gray", gray_image) if SAVE_IMAGE else None
-                    brightness = cv2.mean(gray_image)[0]
-                    previous_lux, previous_value = None, None
-                    for value, (name, lux) in global_config.get_brightness_map().items():
-                        if brightness >= value:
-                            if previous_lux:
-                                # Interpolate on a log10 scale - at least that's what I think this is (idea from chatgpt)
-                                print(
-                                    f"INFO: log10 interpolating {brightness} over {value}..{previous_value} to lux {lux}..{previous_lux}") if VERBOSE else None
-                                lux = lux + 10 ** (
-                                        (brightness - value) / (previous_value - value) * math.log10((previous_lux - lux)))
-                            log_info(f"brightness={brightness}, value={value}, lux={lux}, name={name}")
-                            int_lux = round(lux)
-                            fifo.write(f"{int_lux}\n")
-                            fifo.flush()
-                            self.new_lux_value_signal.emit(int_lux)
-                            break
-                        previous_lux, previous_value = lux, value
-                finally:
-                    log_info(
-                        f"Restoring auto-exposure={original_auto_exposure_option} exposure={original_exposure}") if VERBOSE else None
-                    camera.set(cv2.CAP_PROP_AUTO_EXPOSURE, original_auto_exposure_option)
-                    if original_auto_exposure_option != auto_exposure_option:  # Can only set exposure if not on auto_exposure
-                        camera.set(cv2.CAP_PROP_EXPOSURE, original_exposure)
-                    camera.release()
-                    camera = None
-                sleep_seconds = global_config.getint('global', 'update_frequency_seconds')
-                log_info(f"Sleeping {sleep_seconds}")
-                time.sleep(sleep_seconds)
+                if self.lux_value > -1:
+                    if self.fifo is None:
+                        fifo_path = Path(os.path.expanduser(global_config.get('global', 'fifo_path')))
+                        if not fifo_path.exists():
+                            os.mkfifo(fifo_path)
+                        self.fifo = open(fifo_path, 'w')
+                    log_info(f"Dispatcher writing {self.lux_value} to FIFO")
+                    self.fifo.write(f"{self.lux_value}\n")
+                    self.fifo.flush()
+                dispatch_frequency_seconds = global_config.getint('global', 'dispatch_frequency_seconds', fallback=60)
+                log_info(f"Dispatcher sleeping {dispatch_frequency_seconds} seconds")
+                time.sleep(dispatch_frequency_seconds)
+
+        finally:
+            self.fifo.close()
+            self.fifo = None
+
+    def dispatch_lux_value(self, lux: int):
+        log_info(f"Dispatcher received new value {lux}")
+        self.lux_value = lux
 
 
 def main():
@@ -712,16 +871,22 @@ def main():
     if Path.is_file(CONFIG_PATH) and os.access(CONFIG_PATH, os.R_OK):
         if not global_config.read(CONFIG_PATH):
             log_error(f"Error loading {CONFIG_PATH}")
-    print(global_config['camera'])
+    print(global_config['camera'], global_config['camera']['crop'])
 
     # Assign to variable to stop it being reclaimed as garbage
     if global_config.getboolean('global', 'translations_enabled'):
         initialise_locale_translations(app)
 
-    main_window = VluxMeterWindow(global_config, app)
-    worker = MeterThread()
-    worker.new_lux_value_signal.connect(main_window.display_lux)
-    worker.start()
+    meter_thread = MeterThread()
+    main_window = VluxMeterWindow(global_config, app, meter_thread)
+
+    meter_thread.new_lux_value_signal.connect(main_window.display_lux_value)
+    meter_thread.new_image_signal.connect(main_window.display_camera_image)
+    meter_thread.start()
+
+    fifo_thread = LuxFifoDispatcher()
+    meter_thread.new_lux_value_signal.connect(fifo_thread.dispatch_lux_value)
+    fifo_thread.start()
 
     rc = app.exec_()
     log_info(f"App exit {rc=}")
