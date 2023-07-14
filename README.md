@@ -217,6 +217,7 @@ Version History
   * Fix error handling of missing ddcutil at startup.
   * Make message box popups resizable for increased readability.
   * Handle utf-8 decoding errors for EDID's and capabilities (#49).
+  * Fix: only match a VDU's lux profile to a Preset if the VDU's brightness-control participates in the Preset.
 * 1.10.2
   * Fix Preset non-zero transition-step-seconds, so it works properly.
   * Changing log-to-syslog or log-debug-enabled no longer requires a restart.
