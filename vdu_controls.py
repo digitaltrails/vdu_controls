@@ -4504,7 +4504,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         layout = QVBoxLayout()
         widget.setLayout(layout)
         for count, section in enumerate(self.base_ini.data_sections()):
-            if count > 1:
+            if count > 0:
                 line = QFrame()
                 line.setFrameShape(QFrame.HLine)
                 line.setFrameShadow(QFrame.Sunken)
