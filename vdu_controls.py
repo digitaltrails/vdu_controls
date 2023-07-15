@@ -5590,12 +5590,14 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         for step_point in [LuxPoint(0, 0)] + lux_profile + [LuxPoint(100000, 100)]:
             # Moving up the lux steps, seeking the step below smoothed_lux
             if smoothed_lux >= step_point.lux:  # Possible result, there may be something higher, keep going...
-                result_point = self.refresh_point_preset(step_point, vdu_id)
+                preset_point = self.refresh_preset_luxpoint_for_vdu(step_point, vdu_id)
+                result_point = step_point if preset_point is None else preset_point
             else:  # Step is too high, can stop searching now, the previous match is the result.
                 if self.interpolation_enabled:  # Optionally interpolate from the prior matched step to this next one.
-                    next_point = self.refresh_point_preset(step_point, vdu_id)
-                    # Only interpolate if lux is not an exact match and the next_point actually has a value for this VDU
-                    if smoothed_lux != result_point.lux and next_point.brightness >= 0:
+                    preset_point = self.refresh_preset_luxpoint_for_vdu(step_point, vdu_id)
+                    next_point = step_point if preset_point is None else preset_point
+                    # Only interpolate if lux is not an exact match
+                    if smoothed_lux != result_point.lux:
                         interpolated_brightness = self.interpolate_brightness(smoothed_lux, result_point, next_point)
                         result_point = self.assess_preset_proximity(smoothed_lux, interpolated_brightness, result_point, next_point)
                 break
@@ -5625,20 +5627,18 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
             return next_point
         return LuxPoint(smoothed_lux, round(interpolated_brightness), None)
 
-    def refresh_point_preset(self, lux_point, vdu_id) -> LuxPoint:
-        profile_brightness = -1
-        profile_preset_name = None
-        if lux_point.preset_name is None:
-            profile_brightness = lux_point.brightness
-        else:  # Preset attached at this lux value:
+    def refresh_preset_luxpoint_for_vdu(self, lux_point, vdu_id) -> LuxPoint | None:
+        if lux_point.preset_name is not None:
+            # Preset attached at this lux value:
             # Brightness will be -1 if the Preset doesn't have a brightness value or this VDU's brightness-control
             # doesn't participate in the Preset.
             preset = self.main_app.find_preset_by_name(lux_point.preset_name)
             if preset is not None:   # still exists
                 profile_brightness = preset.get_brightness(vdu_id)  # brightness for preset, -1 if not participating
-                profile_preset_name = lux_point.preset_name
-        # TODO Do we need to consider lux proximity
-        return LuxPoint(lux_point.lux, profile_brightness, profile_preset_name)  # actual current values
+                if profile_brightness != -1:
+                    profile_preset_name = lux_point.preset_name
+                    return LuxPoint(lux_point.lux, profile_brightness, profile_preset_name)  # actual current values
+        return None
 
     def finished_callable(self, task: LuxAutoWorker) -> None:
         if self.vdu_exception:
