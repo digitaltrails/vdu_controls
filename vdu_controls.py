@@ -5900,6 +5900,9 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.adjust_now_button.setText(f"{TIMER_RUNNING_SYMBOL} 00:00")
         self.adjust_now_button.show() if self.lux_config.is_auto_enabled() else self.adjust_now_button.hide()
 
+        self.status_message(tr("Initializing Light Meter Dialog..."))
+        QApplication.processEvents()  # Next bit is slow
+
         new_id_list = []   # List of all currently connected VDU's
         for index, vdu_controller in enumerate(self.main_app.vdu_controllers):
             if VDU_SUPPORTED_CONTROLS.brightness.vcp_code in vdu_controller.capabilities:
@@ -5923,7 +5926,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
         existing_id_list = [self.profile_selector.itemData(index) for index in range(0, self.profile_selector.count())]
         existing_selected_id = self.lux_config.get('lux-ui', 'selected-profile', fallback=new_id_list[0] if new_id_list else None)
-        self.profile_selector.blockSignals(True)  # Stop initialization from causing signally until all data is aligned.
+        self.profile_selector.blockSignals(True)  # Stop initialization from causing signal until all data is aligned.
         if new_id_list != existing_id_list:  # List of connected VDU's has changed
             self.profile_selector.clear()
             random.seed(int(self.lux_config.get("lux-ui", "vdu_color_seed", fallback='0x543fff'), 16))
@@ -5937,9 +5940,9 @@ class LuxDialog(QDialog, DialogSingletonMixin):
                     self.profile_selector.setCurrentIndex(index)
                     self.profile_plot.current_vdu_id = existing_selected_id
         self.profile_selector.blockSignals(False)
-
         self.configure_ui(self.main_app.get_lux_auto_controller().lux_meter)
         self.profile_plot.create_plot()
+        self.status_message('')
 
     def make_visible(self) -> None:
         super().make_visible()
