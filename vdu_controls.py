@@ -14,7 +14,7 @@ Usage:
                      [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                      [--enable-vcp-code vcp_code] [--system-tray] [--debug] [--warnings] [--syslog]
                      [--location latitude,longitude] [--translations] [--lux-meter]
-                     [--no-schedule] [--no-weather] [--no-splash]
+                     [--no-prefer-dynamic-sleep] [--no-schedule] [--no-weather] [--no-splash]
                      [--sleep-multiplier multiplier]
                      [--create-config-files] [--install] [--uninstall]
 
@@ -35,6 +35,8 @@ Optional arguments:
                             local latitude and longitude for triggering presets by solar elevation
       --translations
                             enable language translations
+      --no-prefer-dynamic-sleep
+                            don't prefer dynamic-sleep for ddcutil versions greater than 2.0, use set sleep multipliers
       --no-schedule         disable preset schedule
       --no-weather          disable weather lookups
       --lux-meter           enable hardware light metering
@@ -131,6 +133,7 @@ The config files are in INI-format divided into a number of sections as outlined
     # The vdu-controls-globals section is only required in $HOME/.config/vdu_controls/vdu_controls.conf
     system-tray-enabled = yes|no
     splash-screen-enabled = yes|no
+    prefer-dynamic-sleep-enabled = yes|no
     translations-enabled = yes|no
     weather-enabled = yes|no
     schedule-enabled = yes|no
@@ -533,18 +536,24 @@ vary in their responsiveness and compliance.  GPU's, GPU drivers, and types
 of connection may affect the reliability. If you have the choice, ``DisplayPort``
 can be more reliable than ``DVI`` or ``HDMI``.
 
-If you are using ``ddcutil`` version 2 or greater, ``vdu_controls`` will use the ``ddcutil`` dynamic
-sleep optimiser (``ddcutil --enable-dynamic-sleep`` argument) to automatically tune the sleep
-times required to prevent protocol errors.  Those upgrading to ``ddcutil`` version 2 can switch
-to using dynamic sleep by setting each VDU's sleep multiplier to zero.  During initial use of dynamic
-sleep some errors may be logged until suitable sleep settings are established.  For earlier
-versions of ``ddcutil``, you can manually set the ``vdu_control`` ``sleep-multiplier``
-passed to ``ddcutil``.  In a multi-VDU setup where the VDU's are quite different, individual
-multipliers can be configured (see previous section).  Reducing the multipliers will increase
-the possibility of errors, a bit of experimentation will be required.
+For versions of ``ddcutil`` prior to 2.0, you can manually set the ``vdu_control``
+``sleep-multiplier`` passed to ``ddcutil``.  A sleep multiplier less than one will
+speed up the i2c protocol interactions at the risk of increased protocol errors.
+The default sleep multiplier of 1.0 has to be quite conservative, many VDU's
+can cope with smaller multipliers. A bit of experimentation with multiplier values
+may greatly speed up responsiveness. In a multi-VDU setup individual multipliers
+can be configured (see previous section).
 
-Reducing the number of enabled controls can speed up initialisation, reduce the time taken when the
-refresh button is pressed, and reduce the time taken to restore presets.
+If you are using ``ddcutil`` version 2.0 or greater, ``vdu_controls`` will prefer to use
+the ``ddcutil`` dynamic sleep optimiser (``ddcutil --enable-dynamic-sleep`` argument).
+The optimiser automatically tunes the sleep times for the targeted VDU each time
+``ddcutil`` is run.  If optimiser proves problematic for any of your VDU's, the
+preference for dynamic sleep may be disabled in the global settings (or via
+the command line), at which point individual VDU's may be set to use dynamic
+sleep by setting their sleep multipliers to zero.
+
+Reducing the number of enabled controls can speed up initialisation, reduce the time
+taken when the refresh button is pressed, and reduce the time taken to restore presets.
 
 There's plenty of useful info for getting the best out of ``ddcutil`` at https://www.ddcutil.com/.
 
@@ -568,9 +577,6 @@ Examples
 
     vdu_controls --enable-vcp-code 63 --enable-vcp-code 93 --warnings --debug
         All default controls, plus controls for VCP_CODE 63 and 93, show any warnings, output debugging info.
-
-    vdu_controls --sleep-multiplier 0.4
-        All default controls, speed up ddcutil-VDU interaction by passing a sleep multiplier.
 
 This script often refers to displays and monitors as VDU's in order to
 disambiguate the noun/verb duality of "display" and "monitor"
@@ -1165,7 +1171,7 @@ class DdcUtil:
     corrective action such as increasing the sleep_multiplier).
     """
 
-    def __init__(self, common_args=None, default_sleep_multiplier: float = 1.0) -> None:
+    def __init__(self, common_args=None, default_sleep_multiplier: float = 1.0, prefer_dynamic_sleep=True) -> None:
         super().__init__()
         self.supported_codes: Dict[str, str] | None = None
         self.default_sleep_multiplier = default_sleep_multiplier
@@ -1181,10 +1187,8 @@ class DdcUtil:
         if version_match is not None:
             self.version = version_match.groups()
         log_info(f"ddcutil version info: {version_match.group(0)} {self.version}")
-        if len(self.version) > 0 and int(self.version[0]) >= 2:
-            log_info("ddcutil version >= 2.0, enabling --enable-dynamic-sleep for any zero sleep-multipliers")
-            # self.common_args = ['--disable-displays-cache']
-            self.default_sleep_multiplier = 0.0  # forces passing of --enable-dynamic-sleep
+        self.prefer_dynamic_sleep = len(self.version) > 0 and int(self.version[0]) >= 2 and prefer_dynamic_sleep
+        log_info(f"Prefer dynamic sleep = {self.prefer_dynamic_sleep}")
 
     def change_settings(self, default_sleep_multiplier: float) -> None:
         self.default_sleep_multiplier = default_sleep_multiplier
@@ -1195,10 +1199,11 @@ class DdcUtil:
     def format_args_diagnostic(self, args: List[str]):
         return ' '.join([arg if len(arg) < 30 else arg[:30] + "..." for arg in args])
 
-    def __run__(self, *args, sleep_multiplier: float | None = None) -> subprocess.CompletedProcess:
+    def __run__(self, *args, sleep_multiplier: float | None = None, log_id='') -> subprocess.CompletedProcess:
         with self.lock:
+            log_id = f"Display-{log_id}" if log_id != '' else ''  # Make it easier to tell - eid is a bit much
             multiplier = self.default_sleep_multiplier if sleep_multiplier is None else sleep_multiplier
-            if multiplier >= 0.01:
+            if multiplier >= 0.01 and not self.prefer_dynamic_sleep:
                 multiplier_args = ['--sleep-multiplier', f"{multiplier:.2f}"]
             elif int(self.version[0]) >= 2:
                 multiplier_args = ['--enable-dynamic-sleep']
@@ -1208,15 +1213,15 @@ class DdcUtil:
             try:  # TODO consider tracking errors and raising an exception if all VDU's are unavailable
                 result = subprocess.run(process_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
                 # Shorten EDID to 30 characters when logging it (it will be the only long argument)
-                log_debug("subprocess result: ", self.format_args_diagnostic(result.args),
+                log_debug("subprocess result: ", log_id, self.format_args_diagnostic(result.args),
                           f"rc={result.returncode}", f"stdout={result.stdout.decode('utf-8', errors='surrogateescape')}") if log_debug_enabled else None
             except subprocess.SubprocessError as spe:
                 error_text = spe.stderr.decode('utf-8', errors='surrogateescape')
                 if error_text.lower().find("display not found") >= 0:  # raise DdcUtilDisplayNotFound and stay quiet
-                    log_debug("subprocess result: ", self.format_args_diagnostic(process_args),
+                    log_debug("subprocess result: ", log_id, self.format_args_diagnostic(process_args),
                               f"stderr='{error_text}', exception={str(spe)}", trace=True) if log_debug_enabled else None
                     raise DdcUtilDisplayNotFound(' '.join(args)) from spe
-                log_error("subprocess result: ", self.format_args_diagnostic(process_args),
+                log_error("subprocess result: ", log_id, self.format_args_diagnostic(process_args),
                           f"stderr='{error_text}', exception={str(spe)}", trace=True)
                 raise
             return result
@@ -1291,7 +1296,7 @@ class DdcUtil:
 
     def query_capabilities(self, vdu_id: str) -> str:
         """Return a vpc capabilities string."""
-        result = self.__run__(*['capabilities'] + self.id_key_args(vdu_id))
+        result = self.__run__(*['capabilities'] + self.id_key_args(vdu_id), log_id=vdu_id)
         capability_text = result.stdout.decode('utf-8', errors='surrogateescape')
         return capability_text
 
@@ -1316,7 +1321,7 @@ class DdcUtil:
         """Send a new value to a specific VDU and vcp_code."""
         if self.get_type(vcp_code) == COMPLEX_NON_CONTINUOUS_TYPE:
             new_value = 'x' + new_value
-        self.__run__(*['setvcp', vcp_code, new_value] + self.id_key_args(vdu_id), sleep_multiplier=sleep_multiplier)
+        self.__run__(*['setvcp', vcp_code, new_value] + self.id_key_args(vdu_id), sleep_multiplier=sleep_multiplier, log_id=vdu_id)
 
     def vcp_info(self) -> str:
         """Returns info about all codes known to ddcutil, whether supported or not."""
@@ -1355,7 +1360,7 @@ class DdcUtil:
         for i in range(GET_ATTRIBUTES_RETRIES):
             args = ['--brief', 'getvcp'] + vcp_code_list + self.id_key_args(vdu_id)
             try:
-                from_ddcutil = self.__run__(*args, sleep_multiplier=sleep_multiplier)
+                from_ddcutil = self.__run__(*args, sleep_multiplier=sleep_multiplier, log_id=vdu_id)
                 unordered_results: Dict[str, str] = {}
                 for line in from_ddcutil.stdout.split(b"\n"):
                     line_utf8 = line.decode('utf-8', errors='surrogateescape') + '\n'
@@ -1607,6 +1612,7 @@ class GeoLocation:
 class GlobalOption(Enum):
     SYSTEM_TRAY_ENABLED = QT_TR_NOOP('system-tray-enabled'), 'no', 'restart'
     TRANSLATIONS_ENABLED = QT_TR_NOOP('translations-enabled'), 'no', 'restart'
+    PREFER_DYNAMIC_SLEEP_ENABLED = QT_TR_NOOP('prefer-dynamic-sleep-enabled'), 'yes', 'restart'
     WEATHER_ENABLED = QT_TR_NOOP('weather-enabled'), 'no', ''
     SCHEDULE_ENABLED = QT_TR_NOOP('schedule-enabled'), 'yes', ''
     LUX_OPTIONS_ENABLED = QT_TR_NOOP('lux-options-enabled'), 'no', 'restart'
@@ -1811,6 +1817,8 @@ class VduControlsConfig:
         # Python 3.9 parser.add_argument('--debug',  action=argparse.BooleanOptionalAction, help='enable debugging')
         parser.add_argument('--system-tray', default=False, action='store_true',
                             help='start up as an entry in the system tray')
+        parser.add_argument('--no-prefer-dynamic-sleep', default=False, action='store_true',
+                            help='do not prefer dynamic sleep for ddcutil version greater than 2.0')
         parser.add_argument('--location', default=None, type=str, help='latitude,longitude')
         parser.add_argument('--translations', default=False, action='store_true',
                             help='enable language translations')
@@ -6515,7 +6523,8 @@ class VduAppWindow(QMainWindow):
         try:
             ddcutil_common_args = ['--force', ] if self.is_non_standard_enabled() else []
             self.ddcutil = DdcUtil(common_args=ddcutil_common_args,
-                                   default_sleep_multiplier=self.main_config.get_sleep_multiplier())
+                                   default_sleep_multiplier=self.main_config.get_sleep_multiplier(),
+                                   prefer_dynamic_sleep=self.main_config.is_set(GlobalOption.PREFER_DYNAMIC_SLEEP_ENABLED))
         except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
             self.display_no_controllers_error_dialog(e)
             return

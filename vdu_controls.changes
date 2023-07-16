@@ -2,7 +2,8 @@
 Sun 24 Jun 2023 21:50:00 UTC - Michael Hamilton <michael@actrix.gen.nz>
 
 - Version 1.10.3
-  * Support for ddcutil 2.0 --enable-dynamic-sleep (if sleep multipliers are set to zero).
+  * For ddcutil versions greater than 2.0, dynamic-sleep is preferred over any existing sleep multipliers.
+  * Added prefer-dynamic-sleep setting to control whether dynamic-sleep may override any existing sleep multipliers.
   * Prevent some crashes due to incorrect exception chain handling.
   * Fix a potential crash if a VDU goes offline while the light meter graph is updating.
   * Improve error handling of missing ddcutil at startup.
