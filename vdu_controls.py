@@ -476,9 +476,13 @@ of the Lux Profile Chart.
 When a Preset is tied to a lux value, the Preset's VDU brightness values become
 fixed points on the Lux Profile Chart.  When the specified metered lux value is
 achieved, the metered stepping process will restore the Preset's brightness
-values and then follow that by triggering the Preset restoration.  This ordering
+values and then follow that by triggering the Preset's full restoration.  This ordering
 of events reduces the likelihood of metered-stepping, and Preset-restoration from
 clashing.
+
+A Preset that does not include a VDU's brightness may be attached to a lux point
+to restore one or more non-brightness controls.  For example, on reaching a
+particular lux level, an attached Preset might restore a contrast setting.
 
 If a Preset is attached to a lux value and then detached, the Preset's profile
 points will be converted to normal (editable) profile points. Attach/detach is
@@ -2469,6 +2473,7 @@ class VduControlBase(QWidget):
                 except VduException as e:
                     if not self.controller.vdu_exception_handler(e, True):
                         # Assume that the configured VDU's have changed
+                        log_info("Connected VDU's may have changed", e)
                         self.connected_vdus_changed_signal.emit()
                         break
 
@@ -5590,12 +5595,15 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         for step_point in self.create_complete_profile(lux_profile, vdu_id):
             # Moving up the lux steps, seeking the step below smoothed_lux
             if smoothed_lux >= step_point.lux:  # Possible result, there may be something higher, keep going...
-                result_point = step_point
+                # if step_point.brightness is -1, this is a Preset that doesn't change the VDU's brightness control
+                result_point = LuxPoint(step_point.lux,
+                                        step_point.brightness if step_point.brightness >= 0 else result_point.brightness,
+                                        step_point.preset_name)
             else:  # Step is too high, can stop searching now, the previous match is the result.
                 if self.interpolation_enabled:  # Optionally interpolate from the prior matched step to this next one.
                     next_point = step_point
-                    # Only interpolate if lux is not an exact match
-                    if smoothed_lux != result_point.lux:
+                    # Only interpolate if lux is not an exact match and next_point actually has a brightness
+                    if smoothed_lux != result_point.lux and next_point.brightness >= 0:
                         interpolated_brightness = self.interpolate_brightness(smoothed_lux, result_point, next_point)
                         result_point = self.assess_preset_proximity(smoothed_lux, interpolated_brightness, result_point, next_point)
                 break
@@ -5630,12 +5638,10 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         for lux_point in profile_points:
             if lux_point.preset_name is None:
                 completed_profile.append(lux_point)
-            else:  # Lookup the Profile's brightness for this particular VDU - get latest/current value from the actual Profile.
+            else:  # Lookup the Preset's brightness for this particular VDU - get latest/current value from the actual Preset.
                 preset = self.main_app.find_preset_by_name(lux_point.preset_name)
                 # Profile brightness for this VDU will be -1 if this VDU's brightness-control doesn't participate in the Preset.
-                preset_brightness_for_vdu = preset.get_brightness(vdu_id)
-                if preset_brightness_for_vdu != -1:  # Append a point containing the specific Profile point brightness for this VDU.
-                    completed_profile.append(LuxPoint(lux_point.lux, preset_brightness_for_vdu, lux_point.preset_name))
+                completed_profile.append(LuxPoint(lux_point.lux, preset.get_brightness(vdu_id), lux_point.preset_name))
         completed_profile.append(LuxPoint(100000, 100))  # make sure we hava point at the end of the scale.
         return completed_profile
 
