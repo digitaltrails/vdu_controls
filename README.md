@@ -216,7 +216,7 @@ Version History
   * Improve error handling of missing ddcutil at startup.
   * Make message box popups resizable for increased readability.
   * Handle utf-8 decoding errors for EDID's and capabilities (issue #49).
-  * Only match a VDU's Lux-Profile to a Preset if it includes the VDU's brightness-control.
+  * When a Preset is attached to a Lux Profile, fix brightness for VDU's that aren't in the Preset.
   * Minor UI enhancements and fixes.
 * 1.10.2
   * Fix Preset non-zero transition-step-seconds, so it works properly.
