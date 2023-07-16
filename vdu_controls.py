@@ -1104,8 +1104,6 @@ log_debug_enabled = False
 
 
 def log_wrapper(severity, *args, trace=False) -> None:
-    if log_debug_enabled and trace:
-        log_debug("TRACEBACK:", traceback.format_stack())
     with io.StringIO() as output:
         print(*args, file=output, end='')
         message = output.getvalue()
@@ -1115,7 +1113,8 @@ def log_wrapper(severity, *args, trace=False) -> None:
             syslog.syslog(severity, syslog_message)
         else:
             print(datetime.now().strftime("%H:%M:%S"), prefix, message)
-
+    if log_debug_enabled and trace:
+        log_debug("TRACEBACK:", ''.join(traceback.format_stack()))
 
 def log_debug(*args, trace=False) -> None:
     if log_debug_enabled:
