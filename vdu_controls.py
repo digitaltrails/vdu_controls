@@ -5587,15 +5587,13 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
 
     def determine_brightness(self, vdu_id: str, smoothed_lux: int, lux_profile: List[LuxPoint]) -> Tuple[int, str | None]:
         result_point = LuxPoint(0, 0)
-        for step_point in [LuxPoint(0, 0)] + lux_profile + [LuxPoint(100000, 100)]:
+        for step_point in self.create_complete_profile(lux_profile, vdu_id):
             # Moving up the lux steps, seeking the step below smoothed_lux
             if smoothed_lux >= step_point.lux:  # Possible result, there may be something higher, keep going...
-                preset_point = self.refresh_preset_luxpoint_for_vdu(step_point, vdu_id)
-                result_point = step_point if preset_point is None else preset_point
+                result_point = step_point
             else:  # Step is too high, can stop searching now, the previous match is the result.
                 if self.interpolation_enabled:  # Optionally interpolate from the prior matched step to this next one.
-                    preset_point = self.refresh_preset_luxpoint_for_vdu(step_point, vdu_id)
-                    next_point = step_point if preset_point is None else preset_point
+                    next_point = step_point
                     # Only interpolate if lux is not an exact match
                     if smoothed_lux != result_point.lux:
                         interpolated_brightness = self.interpolate_brightness(smoothed_lux, result_point, next_point)
@@ -5627,18 +5625,19 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
             return next_point
         return LuxPoint(smoothed_lux, round(interpolated_brightness), None)
 
-    def refresh_preset_luxpoint_for_vdu(self, lux_point, vdu_id) -> LuxPoint | None:
-        if lux_point.preset_name is not None:
-            # Preset attached at this lux value:
-            # Brightness will be -1 if the Preset doesn't have a brightness value or this VDU's brightness-control
-            # doesn't participate in the Preset.
-            preset = self.main_app.find_preset_by_name(lux_point.preset_name)
-            if preset is not None:   # still exists
-                profile_brightness = preset.get_brightness(vdu_id)  # brightness for preset, -1 if not participating
-                if profile_brightness != -1:
-                    profile_preset_name = lux_point.preset_name
-                    return LuxPoint(lux_point.lux, profile_brightness, profile_preset_name)  # actual current values
-        return None
+    def create_complete_profile(self, profile_points: List[LuxPoint], vdu_id: str):
+        completed_profile = [LuxPoint(0, 0)]  # make sure we have a point at the origin of the scale
+        for lux_point in profile_points:
+            if lux_point.preset_name is None:
+                completed_profile.append(lux_point)
+            else:  # Lookup the Profile's brightness for this particular VDU - get latest/current value from the actual Profile.
+                preset = self.main_app.find_preset_by_name(lux_point.preset_name)
+                # Profile brightness for this VDU will be -1 if this VDU's brightness-control doesn't participate in the Preset.
+                preset_brightness_for_vdu = preset.get_brightness(vdu_id)
+                if preset_brightness_for_vdu != -1:  # Append a point containing the specific Profile point brightness for this VDU.
+                    completed_profile.append(LuxPoint(lux_point.lux, preset_brightness_for_vdu, lux_point.preset_name))
+        completed_profile.append(LuxPoint(100000, 100))  # make sure we hava point at the end of the scale.
+        return completed_profile
 
     def finished_callable(self, task: LuxAutoWorker) -> None:
         if self.vdu_exception:
@@ -5694,17 +5693,14 @@ class LuxConfig(ConfigIni):
                 lux_points = [LuxPoint(10**lux, brightness) for lux, brightness in zip(range(0, 6),
                                                                                        range(min_v, max_v + 1, (max_v - min_v)//5))]
         if self.has_option('lux-presets', 'lux-preset-points'):
-            preset_points = [LuxPoint(lux, -1, name) for lux, name in literal_eval(self.get('lux-presets', 'lux-preset-points'))]
-            lux_points = lux_points + preset_points
+            lux_points = lux_points + self.get_preset_points()
             lux_points.sort()
         return lux_points
 
     def get_preset_points(self) -> List[LuxPoint]:
-        lux_preset_points = []
         if self.has_option('lux-presets', 'lux-preset-points'):
-            for value in literal_eval(self.get('lux-presets', 'lux-preset-points')):
-                lux_preset_points.append(LuxPoint(value[0], -1, value[1]))
-        return lux_preset_points
+            return [LuxPoint(lux, -1, name) for lux, name in literal_eval(self.get('lux-presets', 'lux-preset-points'))]
+        return []
 
     def get_interval_minutes(self) -> int:
         return self.getint('lux-meter', 'interval-minutes', fallback=1)
