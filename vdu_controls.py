@@ -1214,15 +1214,15 @@ class DdcUtil:
             try:  # TODO consider tracking errors and raising an exception if all VDU's are unavailable
                 result = subprocess.run(process_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
                 # Shorten EDID to 30 characters when logging it (it will be the only long argument)
-                log_debug("subprocess result: ", log_id, self.format_args_diagnostic(result.args),
+                log_debug("subprocess result: success ", log_id, self.format_args_diagnostic(result.args),
                           f"rc={result.returncode}", f"stdout={result.stdout.decode('utf-8', errors='surrogateescape')}") if log_debug_enabled else None
             except subprocess.SubprocessError as spe:
                 error_text = spe.stderr.decode('utf-8', errors='surrogateescape')
                 if error_text.lower().find("display not found") >= 0:  # raise DdcUtilDisplayNotFound and stay quiet
-                    log_debug("subprocess result: display not found ", log_id, self.format_args_diagnostic(process_args),
+                    log_debug("subprocess result: display-not-found ", log_id, self.format_args_diagnostic(process_args),
                               f"stderr='{error_text}', exception={str(spe)}", trace=True) if log_debug_enabled else None
                     raise DdcUtilDisplayNotFound(' '.join(args)) from spe
-                log_error("subprocess result: ", log_id, self.format_args_diagnostic(process_args),
+                log_debug("subprocess result: error ", log_id, self.format_args_diagnostic(process_args),
                           f"stderr='{error_text}', exception={str(spe)}", trace=True)
                 raise
             return result
