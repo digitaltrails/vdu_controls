@@ -1181,6 +1181,7 @@ class DdcUtil:
         log_info(f"Use_edid={self.use_edid} (to disable it: export VDU_CONTROLS_USE_EDID=no)")
         self.edid_map: Dict[str, str] = {}
         self.lock = Lock()
+        self.prefer_dynamic_sleep = False
         self.version = (0, 0, 0, '')
         version_info = self.__run__('--version').stdout.decode('utf-8', errors='surrogateescape')
         version_match = re.match(r'[a-z]+ ([0-9]+).([0-9]+).([0-9]+)-?([^\n]*)', version_info)
@@ -1203,7 +1204,7 @@ class DdcUtil:
         with self.lock:
             log_id = f"Display-{log_id}" if log_id != '' else ''  # Make it easier to tell - eid is a bit much
             multiplier = self.default_sleep_multiplier if sleep_multiplier is None else sleep_multiplier
-            if multiplier >= 0.01 and not self.prefer_dynamic_sleep:
+            if not math.isclose(multiplier, 0.0) and not self.prefer_dynamic_sleep:
                 multiplier_args = ['--sleep-multiplier', f"{multiplier:.2f}"]
             elif int(self.version[0]) >= 2:
                 multiplier_args = ['--enable-dynamic-sleep']
@@ -1218,7 +1219,7 @@ class DdcUtil:
             except subprocess.SubprocessError as spe:
                 error_text = spe.stderr.decode('utf-8', errors='surrogateescape')
                 if error_text.lower().find("display not found") >= 0:  # raise DdcUtilDisplayNotFound and stay quiet
-                    log_debug("subprocess result: ", log_id, self.format_args_diagnostic(process_args),
+                    log_debug("subprocess result: display not found ", log_id, self.format_args_diagnostic(process_args),
                               f"stderr='{error_text}', exception={str(spe)}", trace=True) if log_debug_enabled else None
                     raise DdcUtilDisplayNotFound(' '.join(args)) from spe
                 log_error("subprocess result: ", log_id, self.format_args_diagnostic(process_args),
@@ -1384,7 +1385,8 @@ class DdcUtil:
                 # log_warning("Subprocess error: ", args, str(e))  # duplicates existing logging
                 if i + 1 == GET_ATTRIBUTES_RETRIES:
                     raise  # Too many failures, pass the buck upstairs
-            log_warning(f"ddcutil maybe running too fast for monitor {vdu_id}, try increasing --sleep-multiplier.")
+            if not math.isclose(sleep_multiplier, 0.0) and not self.prefer_dynamic_sleep:
+                log_warning(f"ddcutil maybe running too fast for monitor {vdu_id}, try increasing --sleep-multiplier.")
             time.sleep(2)
         return None
 
