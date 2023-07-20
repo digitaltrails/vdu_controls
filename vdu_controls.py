@@ -1212,10 +1212,13 @@ class DdcUtil:
                 multiplier_args = []
             process_args = [DDCUTIL] + multiplier_args + self.common_args + list(args)
             try:  # TODO consider tracking errors and raising an exception if all VDU's are unavailable
+                now = time.time()
                 result = subprocess.run(process_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+                elapsed = time.time() - now
                 # Shorten EDID to 30 characters when logging it (it will be the only long argument)
-                log_debug("subprocess result: success ", log_id, self.format_args_diagnostic(result.args),
-                          f"rc={result.returncode}", f"stdout={result.stdout.decode('utf-8', errors='surrogateescape')}") if log_debug_enabled else None
+                log_debug(f"subprocess result: success {log_id} [{self.format_args_diagnostic(result.args)}] "
+                          f"rc={result.returncode} elapsed={elapsed:.2f} "
+                          f"stdout={result.stdout.decode('utf-8', errors='surrogateescape')}") if log_debug_enabled else None
             except subprocess.SubprocessError as spe:
                 error_text = spe.stderr.decode('utf-8', errors='surrogateescape')
                 if error_text.lower().find("display not found") >= 0:  # raise DdcUtilDisplayNotFound and stay quiet
