@@ -2056,7 +2056,7 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
         self.editor_tab_list = []
         self.change_callback = change_callback
         for config in [default_config, ] + vdu_config_list:
-            tab = SettingsEditorTab(self, config, change_callback)
+            tab = SettingsEditorTab(self, config, change_callback, parent=tabs)
             tab.save_all_clicked.connect(self.save_all)  # type: ignore
             tabs.addTab(tab, config.get_config_name())
             self.editor_tab_list.append(tab)
@@ -2100,9 +2100,10 @@ class SettingsEditorTab(QWidget):
 
     save_all_clicked = pyqtSignal()
 
-    def __init__(self, parent: QWidget, vdu_config: VduControlsConfig, change_callback: Callable) -> None:
-        super().__init__()
+    def __init__(self, editor_dialog: SettingsEditor, vdu_config: VduControlsConfig, change_callback: Callable, parent: QTabWidget) -> None:
+        super().__init__(parent=parent)
         editor_layout = QVBoxLayout()
+
         self.change_callback = change_callback
         self.changed: Dict[Tuple[str, str], Tuple[str, str]] = {}
         self.setLayout(editor_layout)
@@ -2147,6 +2148,7 @@ class SettingsEditorTab(QWidget):
 
         save_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr("Save {}").format(vdu_config.config_name))
         save_button.clicked.connect(save_clicked)
+
         self.status_bar = QStatusBar()
         self.status_bar.addPermanentWidget(save_button, 0)
 
@@ -2156,7 +2158,7 @@ class SettingsEditorTab(QWidget):
         self.status_bar.addPermanentWidget(save_all_button, 0)
 
         quit_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), tr("Close"))
-        quit_button.clicked.connect(parent.close)  # type: ignore
+        quit_button.clicked.connect(editor_dialog.close)  # type: ignore
         self.status_bar.addPermanentWidget(quit_button, 0)
 
         editor_layout.addWidget(self.status_bar)
@@ -2172,6 +2174,8 @@ class SettingsEditorTab(QWidget):
                 confirmation.setText(message)
                 answer = confirmation.exec()
                 if answer == QMessageBox.Save:
+                    self.status_message(tr("Saving {} ...").format(self.config_path.name))
+                    QApplication.processEvents()
                     self.ini_editable.save(self.config_path)
                     copy = pickle.dumps(self.ini_editable)
                     self.ini_before = pickle.loads(copy)
@@ -2181,7 +2185,9 @@ class SettingsEditorTab(QWidget):
                     else:
                         all_changes.update(self.changed)
                     self.changed = {}
+                    self.status_message(tr("Saved {}").format(self.config_path.name), msecs=5000)
                 elif answer == QMessageBox.Discard:
+                    self.status_message(tr("Discarded changes to {}").format(self.config_path.name), msecs=5000)
                     copy = pickle.dumps(self.ini_before)
                     self.ini_editable = pickle.loads(copy)
                     self.reset()
@@ -2189,6 +2195,9 @@ class SettingsEditorTab(QWidget):
             finally:
                 self.setEnabled(True)
         return QMessageBox.Cancel
+
+    def status_message(self, message: str, msecs: int = 0):  # Display a message on the visible tab.
+        self.parent().currentWidget().status_bar.showMessage(message, msecs)
 
     def reset(self) -> None:
         for field in self.field_list:
