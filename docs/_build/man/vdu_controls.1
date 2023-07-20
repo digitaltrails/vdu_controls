@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Jul 20, 2023" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Jul 21, 2023" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.11.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -743,28 +743,35 @@ interpolation\-sensitivity\-percent=10
 .fi
 .UNINDENT
 .UNINDENT
-.SS Improving Response Time and Reliability
-.sp
-\fBDDC/I2C\fP is not the speediest or most reliable form of communication. VDU\(aqs may
-vary in their responsiveness and compliance.  GPU\(aqs, GPU drivers, and types
-of connection may affect the reliability. If you have the choice, \fBDisplayPort\fP
-can be more reliable than \fBDVI\fP or \fBHDMI\fP\&.
+.SS Improving Response Time: Dynamic Optimization and Sleep Multipliers
 .sp
 For versions of \fBddcutil\fP prior to 2.0, you can manually set the \fBvdu_control\fP
 \fBsleep\-multiplier\fP passed to \fBddcutil\fP\&.  A sleep multiplier less than one will
 speed up the i2c protocol interactions at the risk of increased protocol errors.
 The default sleep multiplier of 1.0 has to be quite conservative, many VDU\(aqs
 can cope with smaller multipliers. A bit of experimentation with multiplier values
-may greatly speed up responsiveness. In a multi\-VDU setup individual multipliers
-can be configured (see previous section).
+may greatly speed up responsiveness. In a multi\-VDU setup individual sleep
+multipliers can be configured (see previous section).
 .sp
-If you are using \fBddcutil\fP version 2.0 or greater, \fBvdu_controls\fP will prefer to use
-the \fBddcutil\fP dynamic sleep optimiser (\fBddcutil \-\-enable\-dynamic\-sleep\fP argument).
-The optimiser automatically tunes the sleep times for the targeted VDU each time
-\fBddcutil\fP is run.  If optimiser proves problematic for any of your VDU\(aqs, the
-preference for dynamic sleep may be disabled in the global settings (or via
-the command line), at which point individual VDU\(aqs may be set to use dynamic
-sleep by setting their sleep multipliers to zero.
+If you are using \fBddcutil\fP version 2.0 or greater, \fBvdu_controls\fP will default
+to using the \fBddcutil\fP dynamic sleep optimiser.  The optimiser automatically tunes
+and caches VDU specific timings when ever \fBddcutil\fP is run.  Should you encounter
+any reliability\-issues or errors, they may well be automatically resolved as
+\fIddcutil\fP refines it\(aqs cached timings.
+.sp
+If dynamic sleep is available, \fIvdu_controls\fP will override any existing
+existing global or VDU\-specific sleep multipliers specified in the \fISettings Dialog\fP,
+these multipliers will now only be applied if the \fIddcutil\fP version is less than 2.0.
+This behavior may be countermanded by disabling dynamic sleep in the \fIvdu_controls\fP
+global settings.  If countermanded, each VDU\(aqs set sleep multiplier will be
+be used for all versions of \fIddcutil\fP, but dynamic sleep may still be selectively
+applied to each VDU by setting its multiplier to zero.
+.SS Improving Response Time: Connections and Controls
+.sp
+\fBDDC/I2C\fP is not the speediest or most reliable form of communication. VDU\(aqs may
+vary in their responsiveness and compliance.  GPU\(aqs, GPU drivers, and types
+of connection may affect the reliability. If you have the choice, \fBDisplayPort\fP
+can be more reliable than \fBDVI\fP or \fBHDMI\fP\&.
 .sp
 Reducing the number of enabled controls can speed up initialisation, reduce the time
 taken when the refresh button is pressed, and reduce the time taken to restore presets.

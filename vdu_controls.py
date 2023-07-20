@@ -528,29 +528,38 @@ and auto-adjustment heuristics::
       # to prefer triggering the preset over applying the interpolated value.
       interpolation-sensitivity-percent=10
 
-Improving Response Time and Reliability
----------------------------------------
-
-``DDC/I2C`` is not the speediest or most reliable form of communication. VDU's may
-vary in their responsiveness and compliance.  GPU's, GPU drivers, and types
-of connection may affect the reliability. If you have the choice, ``DisplayPort``
-can be more reliable than ``DVI`` or ``HDMI``.
+Improving Response Time: Dynamic Optimization and Sleep Multipliers
+-------------------------------------------------------------------
 
 For versions of ``ddcutil`` prior to 2.0, you can manually set the ``vdu_control``
 ``sleep-multiplier`` passed to ``ddcutil``.  A sleep multiplier less than one will
 speed up the i2c protocol interactions at the risk of increased protocol errors.
 The default sleep multiplier of 1.0 has to be quite conservative, many VDU's
 can cope with smaller multipliers. A bit of experimentation with multiplier values
-may greatly speed up responsiveness. In a multi-VDU setup individual multipliers
-can be configured (see previous section).
+may greatly speed up responsiveness. In a multi-VDU setup individual sleep
+multipliers can be configured (see previous section).
 
-If you are using ``ddcutil`` version 2.0 or greater, ``vdu_controls`` will prefer to use
-the ``ddcutil`` dynamic sleep optimiser (``ddcutil --enable-dynamic-sleep`` argument).
-The optimiser automatically tunes the sleep times for the targeted VDU each time
-``ddcutil`` is run.  If optimiser proves problematic for any of your VDU's, the
-preference for dynamic sleep may be disabled in the global settings (or via
-the command line), at which point individual VDU's may be set to use dynamic
-sleep by setting their sleep multipliers to zero.
+If you are using ``ddcutil`` version 2.0 or greater, ``vdu_controls`` will default
+to using the ``ddcutil`` dynamic sleep optimiser.  The optimiser automatically tunes
+and caches VDU specific timings when ever ``ddcutil`` is run.  Should you encounter
+any reliability-issues or errors, they may well be automatically resolved as
+`ddcutil` refines it's cached timings.
+
+If dynamic sleep is available, `vdu_controls` will override any existing
+existing global or VDU-specific sleep multipliers specified in the `Settings Dialog`,
+these multipliers will now only be applied if the `ddcutil` version is less than 2.0.
+This behavior may be countermanded by disabling dynamic sleep in the `vdu_controls`
+global settings.  If countermanded, each VDU's set sleep multiplier will be
+be used for all versions of `ddcutil`, but dynamic sleep may still be selectively
+applied to each VDU by setting its multiplier to zero.
+
+Improving Response Time: Connections and Controls
+-------------------------------------------------
+
+``DDC/I2C`` is not the speediest or most reliable form of communication. VDU's may
+vary in their responsiveness and compliance.  GPU's, GPU drivers, and types
+of connection may affect the reliability. If you have the choice, ``DisplayPort``
+can be more reliable than ``DVI`` or ``HDMI``.
 
 Reducing the number of enabled controls can speed up initialisation, reduce the time
 taken when the refresh button is pressed, and reduce the time taken to restore presets.

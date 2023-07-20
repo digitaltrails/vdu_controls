@@ -1,6 +1,6 @@
-<p>13:34:23 INFO: Python locale (‘en_NZ’, ‘UTF-8’) 13:34:24 INFO:
+<p>09:26:00 INFO: Python locale (‘en_NZ’, ‘UTF-8’) 09:26:00 INFO:
 Looking for config file
-‘/home/michael/.config/vdu_controls/vdu_controls.conf’ 13:34:24 INFO:
+‘/home/michael/.config/vdu_controls/vdu_controls.conf’ 09:26:00 INFO:
 Using config file
 ‘/home/michael/.config/vdu_controls/vdu_controls.conf’</p>
 <h1 id="vdu_controls---a-ddc-control-panel-for-monitors">vdu_controls -
@@ -511,13 +511,9 @@ metering and auto-adjustment heuristics::</p>
   # an interpolated value needs to be to a an attached Preset&#39;s brightness in order
   # to prefer triggering the preset over applying the interpolated value.
   interpolation-sensitivity-percent=10</code></pre>
-<h2 id="improving-response-time-and-reliability">Improving Response Time
-and Reliability</h2>
-<p><code>DDC/I2C</code> is not the speediest or most reliable form of
-communication. VDU’s may vary in their responsiveness and compliance.
-GPU’s, GPU drivers, and types of connection may affect the reliability.
-If you have the choice, <code>DisplayPort</code> can be more reliable
-than <code>DVI</code> or <code>HDMI</code>.</p>
+<h2
+id="improving-response-time-dynamic-optimization-and-sleep-multipliers">Improving
+Response Time: Dynamic Optimization and Sleep Multipliers</h2>
 <p>For versions of <code>ddcutil</code> prior to 2.0, you can manually
 set the <code>vdu_control</code> <code>sleep-multiplier</code> passed to
 <code>ddcutil</code>. A sleep multiplier less than one will speed up the
@@ -525,17 +521,31 @@ i2c protocol interactions at the risk of increased protocol errors. The
 default sleep multiplier of 1.0 has to be quite conservative, many VDU’s
 can cope with smaller multipliers. A bit of experimentation with
 multiplier values may greatly speed up responsiveness. In a multi-VDU
-setup individual multipliers can be configured (see previous
+setup individual sleep multipliers can be configured (see previous
 section).</p>
 <p>If you are using <code>ddcutil</code> version 2.0 or greater,
-<code>vdu_controls</code> will prefer to use the <code>ddcutil</code>
-dynamic sleep optimiser (<code>ddcutil --enable-dynamic-sleep</code>
-argument). The optimiser automatically tunes the sleep times for the
-targeted VDU each time <code>ddcutil</code> is run. If optimiser proves
-problematic for any of your VDU’s, the preference for dynamic sleep may
-be disabled in the global settings (or via the command line), at which
-point individual VDU’s may be set to use dynamic sleep by setting their
-sleep multipliers to zero.</p>
+<code>vdu_controls</code> will default to using the <code>ddcutil</code>
+dynamic sleep optimiser. The optimiser automatically tunes and caches
+VDU specific timings when ever <code>ddcutil</code> is run. Should you
+encounter any reliability-issues or errors, they may well be
+automatically resolved as <code>ddcutil</code> refines it’s cached
+timings.</p>
+<p>If dynamic sleep is available, <code>vdu_controls</code> will
+override any existing existing global or VDU-specific sleep multipliers
+specified in the <code>Settings Dialog</code>, these multipliers will
+now only be applied if the <code>ddcutil</code> version is less than
+2.0. This behavior may be countermanded by disabling dynamic sleep in
+the <code>vdu_controls</code> global settings. If countermanded, each
+VDU’s set sleep multiplier will be be used for all versions of
+<code>ddcutil</code>, but dynamic sleep may still be selectively applied
+to each VDU by setting its multiplier to zero.</p>
+<h2 id="improving-response-time-connections-and-controls">Improving
+Response Time: Connections and Controls</h2>
+<p><code>DDC/I2C</code> is not the speediest or most reliable form of
+communication. VDU’s may vary in their responsiveness and compliance.
+GPU’s, GPU drivers, and types of connection may affect the reliability.
+If you have the choice, <code>DisplayPort</code> can be more reliable
+than <code>DVI</code> or <code>HDMI</code>.</p>
 <p>Reducing the number of enabled controls can speed up initialisation,
 reduce the time taken when the refresh button is pressed, and reduce the
 time taken to restore presets.</p>
