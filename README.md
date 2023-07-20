@@ -192,7 +192,7 @@ Acknowlegements
 
 * [rockowitz](https://github.com/rockowitz), for the robust [ddcutil](https://github.com/rockowitz/ddcutil) utility
 * [yochananmarqos](https://github.com/yochananmarqos), for Gnome related suggestions and AUR port.
-* [denilsonsa](https://github.com/denilsonsa), for several issues, tests and fixes that contributed to version 1.9.0 and 1.10.3.
+* [denilsonsa](https://github.com/denilsonsa), for several issues, tests and fixes that contributed to version 1.9.0 and 1.11.0.
 * [crashmatt](https://github.com/crashmatt), [lowne](https://github.com/lowne), [usr](https://github.com/usr)3, for contributing fixes to code and documentation.
 * [Jakeler](https://github.com/Jakeler), [kupiqu](https://github.com/kupiqu), for suggestions for enhancements. 
 * [malcolmlewis](https://github.com/malcolmlewis) for assistance with the OpenSUSE Open Build Service submissions.
@@ -209,7 +209,7 @@ Michael Hamilton
 
 Version History
 ---------------
-* 1.10.3
+* 1.11.0
   * For ddcutil versions greater than 2.0, dynamic-sleep is preferred over any existing sleep multipliers.
   * Added prefer-dynamic-sleep setting to control whether dynamic-sleep may override any existing sleep multipliers.
   * Prevent some crashes due to incorrect exception chain handling.

@@ -1,5 +1,5 @@
 pkgname=vdu_controls
-pkgver=1.10.3
+pkgver=1.11.0
 pkgrel=1
 pkgdesc="Visual Display Unit virtual control panel"
 arch=('i686' 'x86_64')

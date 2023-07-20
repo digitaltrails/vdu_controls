@@ -1,6 +1,6 @@
-<p>12:52:58 INFO: Python locale (‘en_NZ’, ‘UTF-8’) 12:52:58 INFO:
+<p>13:34:23 INFO: Python locale (‘en_NZ’, ‘UTF-8’) 13:34:24 INFO:
 Looking for config file
-‘/home/michael/.config/vdu_controls/vdu_controls.conf’ 12:52:58 INFO:
+‘/home/michael/.config/vdu_controls/vdu_controls.conf’ 13:34:24 INFO:
 Using config file
 ‘/home/michael/.config/vdu_controls/vdu_controls.conf’</p>
 <h1 id="vdu_controls---a-ddc-control-panel-for-monitors">vdu_controls -
@@ -14,7 +14,7 @@ Units</em>).</p>
                  [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                  [--enable-vcp-code vcp_code] [--system-tray] [--debug] [--warnings] [--syslog]
                  [--location latitude,longitude] [--translations] [--lux-meter]
-                 [--no-schedule] [--no-weather] [--no-splash]
+                 [--no-prefer-dynamic-sleep] [--no-schedule] [--no-weather] [--no-splash]
                  [--sleep-multiplier multiplier]
                  [--create-config-files] [--install] [--uninstall]</code></pre>
 <h2 id="optional-arguments">Optional arguments:</h2>
@@ -32,6 +32,8 @@ Units</em>).</p>
                         local latitude and longitude for triggering presets by solar elevation
   --translations
                         enable language translations
+  --no-prefer-dynamic-sleep
+                        don&#39;t prefer dynamic-sleep for ddcutil versions greater than 2.0, use set sleep multipliers
   --no-schedule         disable preset schedule
   --no-weather          disable weather lookups
   --lux-meter           enable hardware light metering
@@ -140,6 +142,7 @@ as outlined below::</p>
 # The vdu-controls-globals section is only required in $HOME/.config/vdu_controls/vdu_controls.conf
 system-tray-enabled = yes|no
 splash-screen-enabled = yes|no
+prefer-dynamic-sleep-enabled = yes|no
 translations-enabled = yes|no
 weather-enabled = yes|no
 schedule-enabled = yes|no
@@ -464,8 +467,13 @@ bottom axis of the Lux Profile Chart.</p>
 values become fixed points on the Lux Profile Chart. When the specified
 metered lux value is achieved, the metered stepping process will restore
 the Preset’s brightness values and then follow that by triggering the
-Preset restoration. This ordering of events reduces the likelihood of
-metered-stepping, and Preset-restoration from clashing.</p>
+Preset’s full restoration. This ordering of events reduces the
+likelihood of metered-stepping, and Preset-restoration from
+clashing.</p>
+<p>A Preset that does not include a VDU’s brightness may be attached to
+a lux point to restore one or more non-brightness controls. For example,
+on reaching a particular lux level, an attached Preset might restore a
+contrast setting.</p>
 <p>If a Preset is attached to a lux value and then detached, the
 Preset’s profile points will be converted to normal (editable) profile
 points. Attach/detach is a quick way to copy VDU brightness values from
@@ -510,20 +518,24 @@ communication. VDU’s may vary in their responsiveness and compliance.
 GPU’s, GPU drivers, and types of connection may affect the reliability.
 If you have the choice, <code>DisplayPort</code> can be more reliable
 than <code>DVI</code> or <code>HDMI</code>.</p>
-<p>If you are using <code>ddcutil</code> version 2 or greater,
-<code>vdu_controls</code> will use the <code>ddcutil</code> dynamic
-sleep optimiser (<code>ddcutil --enable-dynamic-sleep</code> argument)
-to automatically tune the sleep times required to prevent protocol
-errors. Those upgrading to <code>ddcutil</code> version 2 can switch to
-using dynamic sleep by setting each VDU’s sleep multiplier to zero.
-During initial use of dynamic sleep some errors may be logged until
-suitable sleep settings are established. For earlier versions of
-<code>ddcutil</code>, you can manually set the <code>vdu_control</code>
-<code>sleep-multiplier</code> passed to <code>ddcutil</code>. In a
-multi-VDU setup where the VDU’s are quite different, individual
-multipliers can be configured (see previous section). Reducing the
-multipliers will increase the possibility of errors, a bit of
-experimentation will be required.</p>
+<p>For versions of <code>ddcutil</code> prior to 2.0, you can manually
+set the <code>vdu_control</code> <code>sleep-multiplier</code> passed to
+<code>ddcutil</code>. A sleep multiplier less than one will speed up the
+i2c protocol interactions at the risk of increased protocol errors. The
+default sleep multiplier of 1.0 has to be quite conservative, many VDU’s
+can cope with smaller multipliers. A bit of experimentation with
+multiplier values may greatly speed up responsiveness. In a multi-VDU
+setup individual multipliers can be configured (see previous
+section).</p>
+<p>If you are using <code>ddcutil</code> version 2.0 or greater,
+<code>vdu_controls</code> will prefer to use the <code>ddcutil</code>
+dynamic sleep optimiser (<code>ddcutil --enable-dynamic-sleep</code>
+argument). The optimiser automatically tunes the sleep times for the
+targeted VDU each time <code>ddcutil</code> is run. If optimiser proves
+problematic for any of your VDU’s, the preference for dynamic sleep may
+be disabled in the global settings (or via the command line), at which
+point individual VDU’s may be set to use dynamic sleep by setting their
+sleep multipliers to zero.</p>
 <p>Reducing the number of enabled controls can speed up initialisation,
 reduce the time taken when the refresh button is pressed, and reduce the
 time taken to restore presets.</p>
@@ -546,10 +558,7 @@ vdu_controls --create-config-files --system-tray --no-splash --show brightness -
     Create template config files in $HOME/.config/vdu_controls/ that include the other settings.
 
 vdu_controls --enable-vcp-code 63 --enable-vcp-code 93 --warnings --debug
-    All default controls, plus controls for VCP_CODE 63 and 93, show any warnings, output debugging info.
-
-vdu_controls --sleep-multiplier 0.4
-    All default controls, speed up ddcutil-VDU interaction by passing a sleep multiplier.</code></pre>
+    All default controls, plus controls for VCP_CODE 63 and 93, show any warnings, output debugging info.</code></pre>
 <p>This script often refers to displays and monitors as VDU’s in order
 to disambiguate the noun/verb duality of “display” and “monitor”</p>
 <h1 id="prerequisites">Prerequisites</h1>

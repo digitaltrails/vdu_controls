@@ -27,9 +27,9 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Jul 01, 2023" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Jul 20, 2023" "" "vdu_controls"
 .SH NAME
-vdu_controls \- vdu_controls 1.3.1
+vdu_controls \- vdu_controls 1.11.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
 .sp
 A control panel for external monitors (\fIVisual Display Units\fP).
@@ -44,7 +44,7 @@ A control panel for external monitors (\fIVisual Display Units\fP).
 [\-\-hide {brightness,contrast,audio\-volume,input\-source,power\-mode,osd\-language}]
 [\-\-enable\-vcp\-code vcp_code] [\-\-system\-tray] [\-\-debug] [\-\-warnings] [\-\-syslog]
 [\-\-location latitude,longitude] [\-\-translations] [\-\-lux\-meter]
-[\-\-no\-schedule] [\-\-no\-weather] [\-\-no\-splash]
+[\-\-no\-prefer\-dynamic\-sleep] [\-\-no\-schedule] [\-\-no\-weather] [\-\-no\-splash]
 [\-\-sleep\-multiplier multiplier]
 [\-\-create\-config\-files] [\-\-install] [\-\-uninstall]
 .UNINDENT
@@ -85,6 +85,9 @@ local latitude and longitude for triggering presets by solar elevation
 .TP
 .B  \-\-translations
 enable language translations
+.TP
+.B  \-\-no\-prefer\-dynamic\-sleep
+don\(aqt prefer dynamic\-sleep for ddcutil versions greater than 2.0, use set sleep multipliers
 .TP
 .B  \-\-no\-schedule
 disable preset schedule
@@ -219,6 +222,7 @@ The config files are in INI\-format divided into a number of sections as outline
 # The vdu\-controls\-globals section is only required in $HOME/.config/vdu_controls/vdu_controls.conf
 system\-tray\-enabled = yes|no
 splash\-screen\-enabled = yes|no
+prefer\-dynamic\-sleep\-enabled = yes|no
 translations\-enabled = yes|no
 weather\-enabled = yes|no
 schedule\-enabled = yes|no
@@ -685,9 +689,13 @@ of the Lux Profile Chart.
 When a Preset is tied to a lux value, the Preset\(aqs VDU brightness values become
 fixed points on the Lux Profile Chart.  When the specified metered lux value is
 achieved, the metered stepping process will restore the Preset\(aqs brightness
-values and then follow that by triggering the Preset restoration.  This ordering
+values and then follow that by triggering the Preset\(aqs full restoration.  This ordering
 of events reduces the likelihood of metered\-stepping, and Preset\-restoration from
 clashing.
+.sp
+A Preset that does not include a VDU\(aqs brightness may be attached to a lux point
+to restore one or more non\-brightness controls.  For example, on reaching a
+particular lux level, an attached Preset might restore a contrast setting.
 .sp
 If a Preset is attached to a lux value and then detached, the Preset\(aqs profile
 points will be converted to normal (editable) profile points. Attach/detach is
@@ -742,18 +750,24 @@ vary in their responsiveness and compliance.  GPU\(aqs, GPU drivers, and types
 of connection may affect the reliability. If you have the choice, \fBDisplayPort\fP
 can be more reliable than \fBDVI\fP or \fBHDMI\fP\&.
 .sp
-If you are using \fBddcutil\fP version 2 or greater, \fBvdu_controls\fP will use the \fBddcutil\fP dynamic
-sleep optimiser (\fBddcutil \-\-enable\-dynamic\-sleep\fP argument) to automatically tune the sleep
-times required to prevent protocol errors.  Those upgrading to \fBddcutil\fP version 2 can switch
-to using dynamic sleep by setting each VDU\(aqs sleep multiplier to zero.  During initial use of dynamic
-sleep some errors may be logged until suitable sleep settings are established.  For earlier
-versions of \fBddcutil\fP, you can manually set the \fBvdu_control\fP \fBsleep\-multiplier\fP
-passed to \fBddcutil\fP\&.  In a multi\-VDU setup where the VDU\(aqs are quite different, individual
-multipliers can be configured (see previous section).  Reducing the multipliers will increase
-the possibility of errors, a bit of experimentation will be required.
+For versions of \fBddcutil\fP prior to 2.0, you can manually set the \fBvdu_control\fP
+\fBsleep\-multiplier\fP passed to \fBddcutil\fP\&.  A sleep multiplier less than one will
+speed up the i2c protocol interactions at the risk of increased protocol errors.
+The default sleep multiplier of 1.0 has to be quite conservative, many VDU\(aqs
+can cope with smaller multipliers. A bit of experimentation with multiplier values
+may greatly speed up responsiveness. In a multi\-VDU setup individual multipliers
+can be configured (see previous section).
 .sp
-Reducing the number of enabled controls can speed up initialisation, reduce the time taken when the
-refresh button is pressed, and reduce the time taken to restore presets.
+If you are using \fBddcutil\fP version 2.0 or greater, \fBvdu_controls\fP will prefer to use
+the \fBddcutil\fP dynamic sleep optimiser (\fBddcutil \-\-enable\-dynamic\-sleep\fP argument).
+The optimiser automatically tunes the sleep times for the targeted VDU each time
+\fBddcutil\fP is run.  If optimiser proves problematic for any of your VDU\(aqs, the
+preference for dynamic sleep may be disabled in the global settings (or via
+the command line), at which point individual VDU\(aqs may be set to use dynamic
+sleep by setting their sleep multipliers to zero.
+.sp
+Reducing the number of enabled controls can speed up initialisation, reduce the time
+taken when the refresh button is pressed, and reduce the time taken to restore presets.
 .sp
 There\(aqs plenty of useful info for getting the best out of \fBddcutil\fP at \fI\%https://www.ddcutil.com/\fP\&.
 .SH EXAMPLES
@@ -778,9 +792,6 @@ Create template config files in $HOME/.config/vdu_controls/ that include the oth
 .TP
 .B vdu_controls \-\-enable\-vcp\-code 63 \-\-enable\-vcp\-code 93 \-\-warnings \-\-debug
 All default controls, plus controls for VCP_CODE 63 and 93, show any warnings, output debugging info.
-.TP
-.B vdu_controls \-\-sleep\-multiplier 0.4
-All default controls, speed up ddcutil\-VDU interaction by passing a sleep multiplier.
 .UNINDENT
 .UNINDENT
 .UNINDENT
