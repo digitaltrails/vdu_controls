@@ -6688,7 +6688,7 @@ class VduAppWindow(QMainWindow):
                     self.get_main_panel().refresh_data(self.detected_vdu_list)
                 except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
                     if self.refresh_data_task.vdu_exception is None:
-                        self.refresh_data_task.vdu_exception = VduException(vdu_description="unknown", operation="unknown", trace=True)
+                        self.refresh_data_task.vdu_exception = VduException(vdu_description="unknown", operation="unknown")
 
         def refresh_view(worker_thread: WorkerThread) -> None:
             """Invoke when the GUI worker thread completes. Runs in the GUI thread and can refresh the GUI views."""
