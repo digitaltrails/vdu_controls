@@ -1396,7 +1396,7 @@ class DdcUtil:
                 return result_list
             except subprocess.SubprocessError as e:
                 if i + 1 == GET_ATTRIBUTES_RETRIES:
-                    log_warning(f"get_attributes failed {GET_ATTRIBUTES_RETRIES} times, re-raising the exception.")
+                    # Don't log here - creates too much noise in the logs - pass the buck instead
                     raise  # Too many failures, pass the buck upstairs
             if not math.isclose(sleep_multiplier, 0.0) and not self.prefer_dynamic_sleep:
                 log_warning(f"ddcutil maybe running too fast for monitor {vdu_id}, try increasing --sleep-multiplier.")
