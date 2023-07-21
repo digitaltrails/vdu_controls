@@ -1395,8 +1395,8 @@ class DdcUtil:
                     result_list.append(value_max_pair)
                 return result_list
             except subprocess.SubprocessError as e:
-                # log_warning("Subprocess error: ", args, str(e))  # duplicates existing logging
                 if i + 1 == GET_ATTRIBUTES_RETRIES:
+                    log_warning(f"get_attributes failed {GET_ATTRIBUTES_RETRIES} times, re-raising the exception.")
                     raise  # Too many failures, pass the buck upstairs
             if not math.isclose(sleep_multiplier, 0.0) and not self.prefer_dynamic_sleep:
                 log_warning(f"ddcutil maybe running too fast for monitor {vdu_id}, try increasing --sleep-multiplier.")
@@ -5632,23 +5632,27 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
 
     def determine_brightness(self, vdu_id: str, smoothed_lux: int, lux_profile: List[LuxPoint]) -> Tuple[int, str | None]:
         result_point = LuxPoint(0, 0)
+        result_brightness = 0
+        result_preset_name = None
         for step_point in self.create_complete_profile(lux_profile, vdu_id):
             # Moving up the lux steps, seeking the step below smoothed_lux
-            if smoothed_lux >= step_point.lux:  # Possible result, there may be something higher, keep going...
-                # if step_point.brightness is -1, this is a Preset that doesn't change the VDU's brightness control
-                result_point = LuxPoint(step_point.lux,
-                                        step_point.brightness if step_point.brightness >= 0 else result_point.brightness,
-                                        step_point.preset_name)
-            else:  # Step is too high, can stop searching now, the previous match is the result.
-                if self.interpolation_enabled:  # Optionally interpolate from the prior matched step to this next one.
-                    next_point = step_point
-                    # Only interpolate if lux is not an exact match and next_point actually has a brightness
-                    if smoothed_lux != result_point.lux and next_point.brightness >= 0:
-                        interpolated_brightness = self.interpolate_brightness(smoothed_lux, result_point, next_point)
-                        result_point = self.assess_preset_proximity(smoothed_lux, interpolated_brightness, result_point, next_point)
-                break
+            if step_point.brightness >= 0:
+                if smoothed_lux >= step_point.lux:  # Possible result, there may be something higher, keep going...
+                    # if step_point.brightness is -1, this is a Preset that doesn't change the VDU's brightness control
+                    result_brightness = step_point.brightness
+                    result_point = step_point
+                    result_preset_name = step_point.preset_name
+                else:  # Step is too high, can stop searching now, the previous match is the result.
+                    if self.interpolation_enabled:  # Optionally interpolate from the prior matched step to this next one.
+                        next_point = step_point
+                        # Only interpolate if lux is not an exact match and next_point actually has a brightness
+                        if smoothed_lux != result_point.lux:
+                            interpolated_brightness = self.interpolate_brightness(smoothed_lux, result_point, next_point)
+                            result_brightness = round(interpolated_brightness)
+                            result_preset_name = self.assess_preset_proximity(interpolated_brightness, result_point, next_point)
+                    break
         log_debug(f"LuxAutoWorker: determine_brightness {vdu_id=} {result_point.brightness=}% {result_point.preset_name=}") if log_debug_enabled else None
-        return result_point.brightness, result_point.preset_name  # brightness will be -1 if attached preset has no brightness
+        return result_brightness, result_preset_name  # brightness will be -1 if attached preset has no brightness
 
     def interpolate_brightness(self, smoothed_lux: int, result_point: LuxPoint, next_point: LuxPoint) -> float:
         interpolated_brightness = float(result_point.brightness)
@@ -5659,7 +5663,8 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                 x_smoothed - x_result_point) / (x_next_point - x_result_point)
         return interpolated_brightness
 
-    def assess_preset_proximity(self, smoothed_lux: int, interpolated_brightness: float, result_point: LuxPoint, next_point: LuxPoint):
+    def assess_preset_proximity(self, interpolated_brightness: float, result_point: LuxPoint, next_point: LuxPoint):
+        # Brightness is a better indicator of nearness for deciding whether to activate a preset
         diff_result = abs(interpolated_brightness - result_point.brightness)
         diff_next = abs(interpolated_brightness - next_point.brightness)
         log_debug(f"LuxAutoWorker: assess_preset_proximity {diff_result=} {diff_next=} result_point={result_point} next_point={next_point}") if log_debug_enabled else None
@@ -5667,11 +5672,11 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
             if diff_result > diff_next:  # Closer to next_point
                 diff_result = self.sensitivity_percent + 1  # veto result_point by making it ineligible
         if result_point.preset_name is not None and diff_result <= self.sensitivity_percent:
-            return result_point
+            return result_point.preset_name
         # Either no next point or closer to next_point
         if next_point.preset_name is not None and diff_next <= self.sensitivity_percent:
-            return next_point
-        return LuxPoint(smoothed_lux, round(interpolated_brightness), None)
+            return next_point.preset_name
+        return None
 
     def create_complete_profile(self, profile_points: List[LuxPoint], vdu_id: str):
         completed_profile = [LuxPoint(0, 0)]  # make sure we have a point at the origin of the scale
