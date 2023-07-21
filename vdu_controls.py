@@ -743,6 +743,7 @@ ERROR_SYMBOL = '\u274e'  # NEGATIVE SQUARED CROSS MARK
 ALMOST_EQUAL_SYMBOL = '\u2248'  # ALMOST EQUAL TO
 SMOOTHING_SYMBOL = '\u21dd'  # RIGHT POINTING SQUIGGLY ARROW
 STEPPING_SYMBOL = '\u279f'  # DASHED TRIANGLE-HEADED RIGHTWARDS ARROW
+RAISED_HAND_SYMBOL = '\u270b'  # RAISED HAND
 
 SolarElevationKey = namedtuple('SolarElevationKey', ['direction', 'elevation'])
 SolarElevationData = namedtuple('SolarElevationData', ['azimuth', 'zenith', 'when'])
@@ -5460,6 +5461,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         self.stop_requested = False
         self.consecutive_errors: Dict[str, int] = {}
         self.target_brightness: Dict[str, int] = {}
+        self.expected_brightness: Dict[str, int] = {}
         self.message_tracker: Dict[str, Tuple[int, int]] = {}  # Used to prevent repeat messages
         self.previous_metered_lux = 0
         self.adjust_now_requested = False
@@ -5497,6 +5499,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
             lux_auto_controller = self.main_app.lux_auto_controller
             assert lux_auto_controller is not None
             while not self.stop_requested:
+                self.expected_brightness.clear()
                 lux_meter = lux_auto_controller.lux_meter
                 if lux_meter is None:  # In app config change
                     log_error("Exiting, no lux meter available.")
@@ -5589,20 +5592,27 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                             log_info(f"LuxAutoWorker: {vdu_id=}: {current_brightness=}%->{profile_brightness}% ignored, too small")
                         self.message_tracker[vdu_id] = too_small_from_to
                     else:  # Not-interpolating OR interpolating and brightness change is large enough to be applied
-                        if vdu_id in self.message_tracker:
-                            del self.message_tracker[vdu_id]
-                        made_brightness_changes = True
-                        step_size = max(1, abs(diff) // self.convergence_divisor)  # TODO find a good heuristic
-                        step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
-                        new_brightness = current_brightness + step
-                        brightness_control.restore_vdu_attribute(str(new_brightness))  # Apply to physical VDU
-                        self._update_gui_control.emit(brightness_control)  # Update the GUI control in the GUI thread
-                        self.status_message(
-                            f"{SUN_SYMBOL} {current_brightness}%{STEPPING_SYMBOL}{profile_brightness}% {vdu_id}" +
-                            f" ({lux_summary_text}) {profile_preset_name if profile_preset_name is not None else ''}")
-                        if self.consecutive_errors.get(vdu_id, 0) > 0:
-                            log_info(f"LuxAutoWorker: DDC command to {vdu_id} succeeded after {self.consecutive_errors[vdu_id]} consecutive errors.")
-                        self.consecutive_errors[vdu_id] = 0
+                        if vdu_id in self.expected_brightness and self.expected_brightness[vdu_id] != current_brightness:
+                            # Something else is changing the brightness, or maybe there was a ddcutil error
+                            log_info(f"LuxAutoWorker: {vdu_id=}: {current_brightness=}% != step value {self.expected_brightness[vdu_id]}% " 
+                                     f"something else altered the brightness - stopped stepping VDU.")
+                            self.status_message(f"{SUN_SYMBOL} {ERROR_SYMBOL} {RAISED_HAND_SYMBOL} {vdu_id}")
+                        else:
+                            if vdu_id in self.message_tracker:
+                                del self.message_tracker[vdu_id]
+                            made_brightness_changes = True
+                            step_size = max(1, abs(diff) // self.convergence_divisor)  # TODO find a good heuristic
+                            step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
+                            new_brightness = current_brightness + step
+                            brightness_control.restore_vdu_attribute(str(new_brightness))  # Apply to physical VDU
+                            self._update_gui_control.emit(brightness_control)  # Update the GUI control in the GUI thread
+                            self.expected_brightness[vdu_id] = new_brightness
+                            self.status_message(
+                                f"{SUN_SYMBOL} {current_brightness}%{STEPPING_SYMBOL}{profile_brightness}% {vdu_id}" +
+                                f" ({lux_summary_text}) {profile_preset_name if profile_preset_name is not None else ''}")
+                            if self.consecutive_errors.get(vdu_id, 0) > 0:
+                                log_info(f"LuxAutoWorker: DDC command to {vdu_id} succeeded after {self.consecutive_errors[vdu_id]} consecutive errors.")
+                            self.consecutive_errors[vdu_id] = 0
             except VduException as ve:
                 self.consecutive_errors[vdu_id] = self.consecutive_errors.get(vdu_id, 0) + 1
                 if self.consecutive_errors[vdu_id] == 1:
