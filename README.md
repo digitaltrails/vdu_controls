@@ -212,7 +212,7 @@ Version History
 * 1.11.0
   * For ddcutil versions greater than 2.0, dynamic-sleep is preferred over any existing sleep multipliers.
   * Added prefer-dynamic-sleep setting to control whether dynamic-sleep may override any existing sleep multipliers.
-  * Prevent some crashes due to incorrect exception chain handling.
+  * Prevent some crashes due to incorrect exception chain handling and threading issues.
   * Fix a potential crash if a VDU goes offline while the light meter graph is updating.
   * Improve error handling of missing ddcutil at startup.
   * Make message box popups resizable for increased readability.

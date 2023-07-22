@@ -3342,6 +3342,7 @@ class WorkerThread(QThread):
         log_debug(f"WorkerThread: going to start a {self.__class__.__name__} from thread = {threading.get_ident()}")
         # Background is always initiated from the GUI thread to grant the worker's __init__ easy access to the GUI thread.
         assert is_running_in_gui_thread()
+        self.stop_requested = False
         self.task_body = task_body
         self.task_finished = task_finished
         if self.task_finished is not None:
@@ -3357,6 +3358,11 @@ class WorkerThread(QThread):
             self.vdu_exception = e
         log_debug(f"WorkerThread: {self.__class__.__name__} thread terminating = {threading.get_ident()}")
         self.finished_work.emit(self)
+
+    def stop(self) -> None:
+        self.stop_requested = True
+        while self.isRunning():
+            time.sleep(0.1)
 
 
 class PresetTransitionState(Enum):
@@ -3420,10 +3426,14 @@ class PresetTransitionWorker(WorkerThread):
                 if previous_duration < self.step_interval_seconds:
                     time.sleep(self.step_interval_seconds - previous_duration)
             self.previous_step_start_time = time.time()
+            if self.stop_requested:
+                return
             self.step()
             self.progress_signal.emit(self)
         if self.work_state == PresetTransitionState.STEPPING_COMPLETED:
             for control in self.preset_non_transitioning_controls:  # Finish by doing the non-transitioning controls
+                if self.stop_requested:
+                    return
                 control.restore_vdu_attribute(self.final_values[control])
                 self._update_gui_signal.emit(control)
             self.work_state = PresetTransitionState.FINISHED
@@ -3433,6 +3443,8 @@ class PresetTransitionWorker(WorkerThread):
     def step(self) -> None:
         more_to_do = False
         for control in self.preset_transitioning_controls:  # Step each control by 1 or -1...
+            if self.stop_requested:
+                return
             final_value = self.final_values[control]
             final_int_value = int(final_value)
             expected_value = self.expected_values[control]
@@ -3455,6 +3467,8 @@ class PresetTransitionWorker(WorkerThread):
 
     def values_are_as_expected(self) -> bool:
         for control_panel in self.main_panel.vdu_control_panels:  # Check that no one else is changing the controls
+            if self.stop_requested:
+                return True
             control_panel.refresh_data()  # Update the values of all the controls
             for control in control_panel.vcp_controls:
                 current_value = control.current_value  # play safe, get a constant copy now
@@ -3468,6 +3482,10 @@ class PresetTransitionWorker(WorkerThread):
 
     def total_elapsed_seconds(self) -> float:
         return ((self.end_time if self.end_time is not None else datetime.now()) - self.start_time).total_seconds()
+
+    def stop(self) -> None:
+        super().stop()
+        log_info("PresetTransitionWorker stopped on request")
 
 
 class PresetTransitionDummy(Preset):  # A wrapper that creates titles and icons that indicate a transition is in progress.
@@ -5474,7 +5492,6 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         self.auto_controller = auto_controller
         self.main_app = auto_controller.main_app
         self.last_value = None
-        self.stop_requested = False
         self.consecutive_errors: Dict[str, int] = {}
         self.target_brightness: Dict[str, int] = {}
         self.expected_brightness: Dict[str, int] = {}
@@ -5716,6 +5733,10 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
     def lux_summary(self, metered_lux: int, smoothed_lux: int) -> str:
         # None 256 bit char in lux_summary_text can cause issues if stdout not utf8 (force utf8 for stdout)
         return f"{metered_lux:.0f}{SMOOTHING_SYMBOL}{smoothed_lux} lux" if metered_lux != smoothed_lux else f"{metered_lux} lux"
+
+    def stop(self) -> None:
+        super().stop()
+        log_info("LuxAutoWorker stopped on request")
 
 
 class LuxPoint:
@@ -6114,6 +6135,19 @@ class LuxAutoController:
         self.lux_tool_button.pressed.connect(self.toggle_auto)
         return self.lux_tool_button
 
+    def stop_worker(self):
+        if self.lux_auto_brightness_worker is not None:
+            self.lux_auto_brightness_worker.stop()
+            self.lux_auto_brightness_worker = None
+
+    def start_worker(self):
+        if self.lux_config.is_auto_enabled():
+            if self.lux_meter is not None:
+                if self.lux_auto_brightness_worker is not None:
+                    self.stop_worker()
+                self.lux_auto_brightness_worker = LuxAutoWorker(self)
+                self.lux_auto_brightness_worker.start()
+
     def initialize_from_config(self) -> None:
         assert is_running_in_gui_thread()
         self.lux_config.load()
@@ -6122,16 +6156,10 @@ class LuxAutoController:
                 self.lux_meter = lux_create_device(self.lux_config.get_device_name())
             if self.lux_config.is_auto_enabled():
                 log_info("Lux auto-brightness settings refresh - restart monitoring.")
-                if self.lux_meter is not None:
-                    if self.lux_auto_brightness_worker is not None:
-                        self.lux_auto_brightness_worker.stop_requested = True
-                    self.lux_auto_brightness_worker = LuxAutoWorker(self)
-                    self.lux_auto_brightness_worker.start()
+                self.start_worker()
             else:
                 log_info("Lux auto-brightness settings refresh - monitoring is off.")  # TODO handle exception
-                if self.lux_auto_brightness_worker is not None:
-                    self.lux_auto_brightness_worker.stop_requested = True
-                    self.lux_auto_brightness_worker = None
+                self.stop_worker()
             self.main_app.display_lux_auto_indicators()  # Refresh indicators immediately
         except LuxDeviceException as lde:
             log_error(f"Error setting up lux meter {lde}", trace=True)
@@ -6355,7 +6383,8 @@ class VduAppWindow(QMainWindow):
         self.previously_detected_vdu_list: List[Tuple[str, str, str, str]] = []
         self.transitioning_dummy_preset: PresetTransitionDummy | None = None
         self.ddcutil: DdcUtil | None = None
-        self.lux_auto_controller = LuxAutoController(self) if self.main_config.is_set(GlobalOption.LUX_OPTIONS_ENABLED) else None
+        self.preset_transition_worker : PresetTransitionWorker | None = None
+        self.lux_auto_controller: LuxAutoController | None = None
         gnome_tray_behaviour = main_config.is_set(GlobalOption.SYSTEM_TRAY_ENABLED) and 'gnome' in os.environ.get(
             'XDG_CURRENT_DESKTOP', default='unknown').lower()
 
@@ -6382,14 +6411,16 @@ class VduAppWindow(QMainWindow):
                                            "vdu_controls to restart.").format(setting))
                     return
             main_config.reload()
+
             global log_debug_enabled
             global log_to_syslog
             log_to_syslog = main_config.is_set(GlobalOption.SYSLOG_ENABLED)
             log_debug_enabled = main_config.is_set(GlobalOption.DEBUG_ENABLED)
             if self.ddcutil is not None:
                 self.ddcutil.change_settings(default_sleep_multiplier=main_config.get_sleep_multiplier())
-            self.create_main_control_panel()
+            self.configure_application()
             self.schedule_presets(reset=True)
+
             presets_dialog: PresetsDialog = PresetsDialog.get_instance()  # type: ignore
             if presets_dialog:
                 presets_dialog.reload_data()
@@ -6510,11 +6541,11 @@ class VduAppWindow(QMainWindow):
 
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
 
-        self.create_main_control_panel()
-        self.app_restore_state()
+        if self.main_config.is_set(GlobalOption.LUX_OPTIONS_ENABLED):
+            self.lux_auto_controller = LuxAutoController(self)
 
-        if self.main_config.is_set(GlobalOption.LUX_OPTIONS_ENABLED) and self.lux_auto_controller is not None:
-            self.lux_auto_controller.initialize_from_config()
+        self.configure_application()
+        self.app_restore_state()
 
         if self.tray is not None:
             def show_window() -> None:
@@ -6672,6 +6703,17 @@ class VduAppWindow(QMainWindow):
             error_no_monitors.setDetailedText(tr("(Most recent ddcutil error: {})").format(problem_text))
         error_no_monitors.exec()
 
+    def configure_application(self):
+        if self.lux_auto_controller is not None:
+            self.lux_auto_controller.stop_worker()
+        if self.preset_transition_worker is not None:
+            self.preset_transition_worker.stop()
+            self.preset_transition_worker = None
+        self.create_main_control_panel()
+        if self.lux_auto_controller is not None:
+            self.lux_auto_controller.initialize_from_config()
+
+
     def create_main_control_panel(self) -> None:
         # Call on initialisation and whenever the number of connected VDU's changes.
         try:
@@ -6696,13 +6738,13 @@ class VduAppWindow(QMainWindow):
                         LuxDialog.lux_dialog_display_brightness(vdu_stable_id, int(value))
 
             self.main_panel.vdu_set_attribute_signal.connect(vdu_set_attribute_signal_handler)
-            self.main_panel.connected_vdus_changed_signal.connect(self.create_main_control_panel)
+            self.main_panel.connected_vdus_changed_signal.connect(self.configure_application)
             # Then initialise the control panel display
             self.create_controllers()
             refresh_button = ToolButton(REFRESH_ICON_SOURCE, tr("Refresh settings from monitors"))
             refresh_button.pressed.connect(self.start_refresh)
             tool_buttons = [refresh_button]
-            if self.main_config.is_set(GlobalOption.LUX_OPTIONS_ENABLED) and self.lux_auto_controller is not None:
+            if self.lux_auto_controller is not None:
                 tool_buttons.append(self.lux_auto_controller.create_tool_button())
             self.main_panel.initialise_control_panels(self.app_context_menu, self.main_config, self.vdu_controllers,
                                                       tool_buttons, self.splash_message_signal)
@@ -6740,7 +6782,7 @@ class VduAppWindow(QMainWindow):
             if self.refresh_data_task.vdu_exception is not None:
                 main_panel.display_vdu_exception(self.refresh_data_task.vdu_exception, can_retry=False)
             if len(self.detected_vdu_list) == 0 or self.detected_vdu_list != self.previously_detected_vdu_list:
-                self.create_main_control_panel()
+                self.configure_application()
                 self.previously_detected_vdu_list = self.detected_vdu_list
             main_panel.refresh_view()
             main_panel.indicate_busy(False)
@@ -6805,9 +6847,9 @@ class VduAppWindow(QMainWindow):
                 if restore_finished is not None:
                     restore_finished(worker_thread)
 
-        PresetTransitionWorker(self.get_main_panel(), preset,
-                               update_progress, finished_callback,
-                               immediately, scheduled_activity).start()
+        self.preset_transition_worker = PresetTransitionWorker(self.get_main_panel(), preset,
+                                                               update_progress, finished_callback,
+                                                               immediately, scheduled_activity).start()
 
     def display_preset_status(self, message: str, timeout: int = 3000):
         presets_dialog_update_view(message)
