@@ -2070,7 +2070,6 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
             tab.save_all_clicked.connect(self.save_all)  # type: ignore
             tabs.addTab(tab, config.get_config_name())
             self.editor_tab_list.append(tab)
-        # .show() is non-modal, .exec() is modal
         self.make_visible()
 
     def save_all(self, warn_if_nothing_to_save: bool = True) -> int:
@@ -2156,10 +2155,9 @@ class SettingsEditorTab(QWidget):
                 decline_save_alert.setText(tr('No unsaved changes for {}.').format(vdu_config.config_name))
                 decline_save_alert.exec()
 
+        self.status_bar = QStatusBar()
         save_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr("Save {}").format(vdu_config.config_name))
         save_button.clicked.connect(save_clicked)
-
-        self.status_bar = QStatusBar()
         self.status_bar.addPermanentWidget(save_button, 0)
 
         save_all_button = QPushButton(si(self, QStyle.SP_DriveFDIcon),
@@ -2171,9 +2169,25 @@ class SettingsEditorTab(QWidget):
         quit_button.clicked.connect(editor_dialog.close)  # type: ignore
         self.status_bar.addPermanentWidget(quit_button, 0)
 
+        def settings_reset() -> None:
+            confirmation = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Reset | QMessageBox.Cancel)
+            confirmation.setDefaultButton(QMessageBox.Cancel)
+            confirmation.setText(tr('Reset settings under the {} tab?').format(vdu_config.config_name))
+            confirmation.setInformativeText(tr("All existing settings under the {} tab will be removed.").format(vdu_config.config_name))
+            if confirmation.exec() == QMessageBox.Cancel:
+                return
+            os.remove(self.config_path) if self.config_path.exists() else None
+            self.change_callback(None)
+
+        reset_button = QPushButton(si(self, QStyle.SP_BrowserReload), tr("Reset").format(vdu_config.config_name))
+        reset_button.clicked.connect(settings_reset)
+        reset_button.setToolTip(tr("Reset/remove existing settings under the {} tab.").format(vdu_config.config_name))
+        self.status_bar.addWidget(reset_button, 0)
+
         editor_layout.addWidget(self.status_bar)
 
     def save(self, force: bool = False, all_changes: Dict[str, str] | None = None) -> int:
+        # all_changes is an output parameter, if passed, it will be updated with what has changed.
         if self.is_unsaved() or force:
             try:
                 self.setEnabled(False)  # Saving may take a while, give some feedback by disabling and enabling when done
@@ -2190,14 +2204,14 @@ class SettingsEditorTab(QWidget):
                     copy = pickle.dumps(self.ini_editable)
                     self.ini_before = pickle.loads(copy)
                     # After file is closed...
-                    if all_changes is None:
+                    if all_changes is None:  # Not accumulating what has changed, implement change now.
                         self.change_callback(self.changed)
-                    else:
+                    else:  # Accumulating what has changed, just add to the dictionary.
                         all_changes.update(self.changed)
                     self.changed = {}
-                    self.status_message(tr("Saved {}").format(self.config_path.name), msecs=5000)
+                    self.status_message(tr("Saved {}").format(self.config_path.name), msecs=3000)
                 elif answer == QMessageBox.Discard:
-                    self.status_message(tr("Discarded changes to {}").format(self.config_path.name), msecs=5000)
+                    self.status_message(tr("Discarded changes to {}").format(self.config_path.name), msecs=3000)
                     copy = pickle.dumps(self.ini_before)
                     self.ini_editable = pickle.loads(copy)
                     self.reset()
@@ -2214,6 +2228,8 @@ class SettingsEditorTab(QWidget):
             field.reset()
 
     def is_unsaved(self) -> bool:
+        if not self.config_path.exists():
+            return True
         self.changed = {}
         for section in self.ini_before:
             for option in self.ini_before[section]:
@@ -6357,6 +6373,9 @@ class VduAppWindow(QMainWindow):
             main_window_action = main_window_action_implemenation
 
         def settings_changed(changed_settings: List) -> None:
+            if changed_settings is None:  # Special value - means settings have been reset/removed - needs restart.
+                restart_application(tr("A settings reset requires vdu_controls to restart."))
+                return
             for setting in GlobalOption:
                 if ('vdu-controls-globals', setting.ini_name()) in changed_settings and setting.requires_restart():
                     restart_application(tr("The change to the {} option requires "
