@@ -3442,13 +3442,13 @@ class PresetTransitionWorker(WorkerThread):
 
     def step(self) -> None:
         more_to_do = False
-        for control in self.preset_transitioning_controls:  # Step each control by 1 or -1...
+        for control in self.preset_transitioning_controls:  # Step each control by step or negative step...
             if self.stop_requested:
                 return
             final_value = self.final_values[control]
             final_int_value = int(final_value)
             expected_value = self.expected_values[control]
-            expected_int_value = int(expected_value if expected_value is not None else max(0, (final_int_value - 1)))
+            expected_int_value = int(expected_value)
             diff = final_int_value - expected_int_value
             if diff != 0:
                 step_size = 5
@@ -3474,7 +3474,7 @@ class PresetTransitionWorker(WorkerThread):
                 current_value = control.current_value  # play safe, get a constant copy now
                 if control in self.expected_values:
                     if self.expected_values[control] != current_value:
-                        log_warning(f"Interrupted transition to {self.preset.name}")
+                        log_warning(f"Interrupted transition to {self.preset.name} {self.expected_values[control]=} != {current_value=}")
                         self.work_state = PresetTransitionState.INTERRUPTED  # Something else is changing the controls - abandon the task
                 else:
                     self.expected_values[control] = current_value  # must be first time through, initialize value
@@ -5584,21 +5584,22 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                                                                  step_count, lux_summary_text):
                     step_count += 1  # Increment if any changes were made
             time.sleep(0.5)  # Let i2c settle down, then continue stepping
-        if step_count != 0:  # If any work was done in previous steps, finish up the remaining tasks
-            log_info(f"LuxAutoWorker: stepping completed {step_count=}, profile_preset={profile_preset_name}")
-            self.status_message(tr("Brightness adjustment completed"), timeout=5000)
-            self.target_brightness.clear()
-            if profile_preset_name is not None:  # if a point had a Preset attached, activate it now
-                # Finish by restoring the Preset's non-brightness settings, invoke now, so it will happen while this thread sleeps.
-                self.status_message(tr("Restoring preset {}").format(profile_preset_name), timeout=5000)
-                preset = self.main_app.find_preset_by_name(profile_preset_name)  # Check that it still exists
-                if preset is not None:
-                    self.main_app.restore_preset_in_gui_thread(
-                        preset,
-                        immediately=PresetTransitionFlag.SCHEDULED not in preset.get_transition_type(),
-                        scheduled_activity=True)
-        else:  # No work done, no adjustment necessary
-            self.status_message(f"{SUN_SYMBOL} {SUCCESS_SYMBOL}", timeout=3000)
+        if not self.stop_requested:
+            if step_count != 0:  # If any work was done in previous steps, finish up the remaining tasks
+                log_info(f"LuxAutoWorker: stepping completed {step_count=}, profile_preset={profile_preset_name}")
+                self.status_message(tr("Brightness adjustment completed"), timeout=5000)
+                self.target_brightness.clear()
+                if profile_preset_name is not None:  # if a point had a Preset attached, activate it now
+                    # Finish by restoring the Preset's non-brightness settings, invoke now, so it will happen while this thread sleeps.
+                    self.status_message(tr("Restoring preset {}").format(profile_preset_name), timeout=5000)
+                    preset = self.main_app.find_preset_by_name(profile_preset_name)  # Check that it still exists
+                    if preset is not None:
+                        self.main_app.restore_preset_in_gui_thread(
+                            preset,
+                            immediately=PresetTransitionFlag.SCHEDULED not in preset.get_transition_type(),
+                            scheduled_activity=True)
+            else:  # No work done, no adjustment necessary
+                self.status_message(f"{SUN_SYMBOL} {SUCCESS_SYMBOL}", timeout=3000)
 
     def step_one_vdu(self, vdu_control_panel: VduControlPanel, profile_brightness: int, profile_preset_name: str | None,
                      step_count: int, lux_summary_text: str) -> bool:
@@ -6367,6 +6368,7 @@ class VduAppWindow(QMainWindow):
         global gui_thread
         gui_thread = app.thread()
         self.app = app
+        self.lock = Lock()
         self.displayed_preset_name = None
         self.setObjectName('main_window')
         self.geometry_key = self.objectName() + "_geometry"
@@ -6704,15 +6706,15 @@ class VduAppWindow(QMainWindow):
         error_no_monitors.exec()
 
     def configure_application(self):
-        if self.lux_auto_controller is not None:
-            self.lux_auto_controller.stop_worker()
-        if self.preset_transition_worker is not None:
-            self.preset_transition_worker.stop()
-            self.preset_transition_worker = None
-        self.create_main_control_panel()
-        if self.lux_auto_controller is not None:
-            self.lux_auto_controller.initialize_from_config()
-
+        with self.lock:
+            if self.lux_auto_controller is not None:
+                self.lux_auto_controller.stop_worker()
+            if self.preset_transition_worker is not None:
+                self.preset_transition_worker.stop()
+                self.preset_transition_worker = None
+            self.create_main_control_panel()
+            if self.lux_auto_controller is not None:
+                self.lux_auto_controller.initialize_from_config()
 
     def create_main_control_panel(self) -> None:
         # Call on initialisation and whenever the number of connected VDU's changes.
@@ -6801,55 +6803,57 @@ class VduAppWindow(QMainWindow):
                        immediately: bool = False, scheduled_activity: bool = False) -> None:
         # Starts the restore, but it will complete in the worker thread
         assert is_running_in_gui_thread()    # Boilerplate in case this is called from the wrong thread.
-        self.transitioning_dummy_preset = None
+        with self.lock:  # The lock prevents a transition firing when the GUI/app is reconfiguring
+            self.transitioning_dummy_preset = None
 
-        if not immediately:
-            self.transitioning_dummy_preset = PresetTransitionDummy(preset)
-            self.display_preset_status(tr("Transitioning to preset {}").format(preset.name))
-            self.display_active_preset(self.transitioning_dummy_preset)
-        self.get_main_panel().indicate_busy(True)
-        preset.load()
+            if not immediately:
+                self.transitioning_dummy_preset = PresetTransitionDummy(preset)
+                self.display_preset_status(tr("Transitioning to preset {}").format(preset.name))
+                self.display_active_preset(self.transitioning_dummy_preset)
+            self.get_main_panel().indicate_busy(True)
+            preset.load()
 
-        def update_progress(worker_thread: PresetTransitionWorker) -> None:
-            if self.get_main_panel().busy:
-                self.get_main_panel().indicate_busy(False)  # TODO why is this here?
+            def update_progress(worker_thread: PresetTransitionWorker) -> None:
+                if self.get_main_panel().busy:
+                    self.get_main_panel().indicate_busy(False)  # TODO why is this here?
+                    if self.tray is not None:
+                        self.refresh_tray_menu()
+                self.display_preset_status(
+                    tr("Transitioning to preset {} (elapsed time {} seconds)...").format(
+                        preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=2)))
+                self.transitioning_dummy_preset.update_progress() if self.transitioning_dummy_preset else None
+                self.display_active_preset(self.transitioning_dummy_preset)
+
+            def finished_callback(worker_thread: PresetTransitionWorker) -> None:
+                main_panel = self.get_main_panel()
+                self.transitioning_dummy_preset = None
+                if worker_thread.vdu_exception is not None and not scheduled_activity:  # if it's a GUI request - ask if we should retry
+                    if main_panel.display_vdu_exception(worker_thread.vdu_exception, can_retry=True):
+                        # Try again (recursion) in new thread
+                        self.restore_preset(preset, restore_finished=restore_finished, immediately=immediately)
+                        return  # Don't do anything more the semi-recursive call above will take over from here
+                main_panel.refresh_view()
+                main_panel.indicate_busy(False)
                 if self.tray is not None:
                     self.refresh_tray_menu()
-            self.display_preset_status(
-                tr("Transitioning to preset {} (elapsed time {} seconds)...").format(
-                    preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=2)))
-            self.transitioning_dummy_preset.update_progress() if self.transitioning_dummy_preset else None
-            self.display_active_preset(self.transitioning_dummy_preset)
+                if worker_thread.work_state == PresetTransitionState.FINISHED:
+                    with open(PRESET_NAME_FILE, 'w', encoding="utf-8") as cps_file:
+                        cps_file.write(preset.name)
+                    self.display_active_preset(preset)
+                    self.display_preset_status(tr("Restored {} (elapsed time {} seconds)").format(
+                        preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=2)))
+                    if restore_finished is not None:
+                        restore_finished(worker_thread)
+                else:  # Interrupted or exception:
+                    self.display_active_preset()
+                    self.display_preset_status(tr("Interrupted restoration of {}").format(preset.name))
+                    if restore_finished is not None:
+                        restore_finished(worker_thread)
 
-        def finished_callback(worker_thread: PresetTransitionWorker) -> None:
-            main_panel = self.get_main_panel()
-            self.transitioning_dummy_preset = None
-            if worker_thread.vdu_exception is not None and not scheduled_activity:  # if it's a GUI request - ask if we should retry
-                if main_panel.display_vdu_exception(worker_thread.vdu_exception, can_retry=True):
-                    # Try again (recursion) in new thread
-                    self.restore_preset(preset, restore_finished=restore_finished, immediately=immediately)
-                    return  # Don't do anything more the semi-recursive call above will take over from here
-            main_panel.refresh_view()
-            main_panel.indicate_busy(False)
-            if self.tray is not None:
-                self.refresh_tray_menu()
-            if worker_thread.work_state == PresetTransitionState.FINISHED:
-                with open(PRESET_NAME_FILE, 'w', encoding="utf-8") as cps_file:
-                    cps_file.write(preset.name)
-                self.display_active_preset(preset)
-                self.display_preset_status(tr("Restored {} (elapsed time {} seconds)").format(
-                    preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=2)))
-                if restore_finished is not None:
-                    restore_finished(worker_thread)
-            else:  # Interrupted or exception:
-                self.display_active_preset()
-                self.display_preset_status(tr("Interrupted restoration of {}").format(preset.name))
-                if restore_finished is not None:
-                    restore_finished(worker_thread)
-
-        self.preset_transition_worker = PresetTransitionWorker(self.get_main_panel(), preset,
-                                                               update_progress, finished_callback,
-                                                               immediately, scheduled_activity).start()
+            self.preset_transition_worker = PresetTransitionWorker(self.get_main_panel(), preset,
+                                                                   update_progress, finished_callback,
+                                                                   immediately, scheduled_activity)
+            self.preset_transition_worker.start()
 
     def display_preset_status(self, message: str, timeout: int = 3000):
         presets_dialog_update_view(message)
