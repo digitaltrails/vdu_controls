@@ -1201,9 +1201,6 @@ class DdcUtil:
         self.prefer_dynamic_sleep = len(self.version) > 0 and int(self.version[0]) >= 2 and prefer_dynamic_sleep
         log_info(f"Prefer dynamic sleep = {self.prefer_dynamic_sleep}")
 
-    def change_settings(self, default_sleep_multiplier: float) -> None:
-        self.default_sleep_multiplier = default_sleep_multiplier
-
     def id_key_args(self, display_id: str) -> List[str]:
         return ['--edid', self.edid_map[display_id]] if display_id in self.edid_map else ['--display', display_id]
 
@@ -1627,7 +1624,7 @@ class GeoLocation:
 class GlobalOption(Enum):
     SYSTEM_TRAY_ENABLED = QT_TR_NOOP('system-tray-enabled'), 'no', 'restart'
     TRANSLATIONS_ENABLED = QT_TR_NOOP('translations-enabled'), 'no', 'restart'
-    PREFER_DYNAMIC_SLEEP_ENABLED = QT_TR_NOOP('prefer-dynamic-sleep-enabled'), 'yes', 'restart'
+    PREFER_DYNAMIC_SLEEP_ENABLED = QT_TR_NOOP('prefer-dynamic-sleep-enabled'), 'yes', ''
     WEATHER_ENABLED = QT_TR_NOOP('weather-enabled'), 'no', ''
     SCHEDULE_ENABLED = QT_TR_NOOP('schedule-enabled'), 'yes', ''
     LUX_OPTIONS_ENABLED = QT_TR_NOOP('lux-options-enabled'), 'no', 'restart'
@@ -6368,7 +6365,7 @@ class VduAppWindow(QMainWindow):
         global gui_thread
         gui_thread = app.thread()
         self.app = app
-        self.lock = Lock()
+        self.application_configuration_lock = Lock()
         self.displayed_preset_name = None
         self.setObjectName('main_window')
         self.geometry_key = self.objectName() + "_geometry"
@@ -6413,19 +6410,11 @@ class VduAppWindow(QMainWindow):
                                            "vdu_controls to restart.").format(setting))
                     return
             main_config.reload()
-
             global log_debug_enabled
             global log_to_syslog
             log_to_syslog = main_config.is_set(GlobalOption.SYSLOG_ENABLED)
             log_debug_enabled = main_config.is_set(GlobalOption.DEBUG_ENABLED)
-            if self.ddcutil is not None:
-                self.ddcutil.change_settings(default_sleep_multiplier=main_config.get_sleep_multiplier())
             self.configure_application()
-            self.schedule_presets(reset=True)
-
-            presets_dialog: PresetsDialog = PresetsDialog.get_instance()  # type: ignore
-            if presets_dialog:
-                presets_dialog.reload_data()
 
         def edit_config() -> None:
             SettingsEditor.invoke(main_config,
@@ -6547,6 +6536,7 @@ class VduAppWindow(QMainWindow):
             self.lux_auto_controller = LuxAutoController(self)
 
         self.configure_application()
+
         self.app_restore_state()
 
         if self.tray is not None:
@@ -6574,15 +6564,6 @@ class VduAppWindow(QMainWindow):
         else:
             self.show()
 
-        overdue = self.schedule_presets()
-        if overdue:
-            # Start of run - this preset is the one that should be running now
-            log_info(f"Restoring preset '{overdue.name}' "
-                     f"because its scheduled to be active at this time ({zoned_now()}).")
-            self.splash_message_signal.emit(tr("Restoring Preset\n{}").format(overdue.name))
-            # Weather check will have succeeded inside schedule_presets() above, don't do it again.
-            self.activate_scheduled_preset(overdue, check_weather=False, immediately=True)
-
         if splash is not None:
             splash.finish(self)
 
@@ -6608,8 +6589,7 @@ class VduAppWindow(QMainWindow):
             self.tray.setToolTip(title)
             self.tray.setIcon(icon)
 
-    def create_controllers(self) -> None:
-        assert is_running_in_gui_thread()
+    def create_ddcutil(self) -> bool:
         try:
             ddcutil_common_args = ['--force', ] if self.is_non_standard_enabled() else []
             self.ddcutil = DdcUtil(common_args=ddcutil_common_args,
@@ -6617,8 +6597,12 @@ class VduAppWindow(QMainWindow):
                                    prefer_dynamic_sleep=self.main_config.is_set(GlobalOption.PREFER_DYNAMIC_SLEEP_ENABLED))
         except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
             self.display_no_controllers_error_dialog(e)
-            return
+            self.ddcutil = None
 
+    def create_controllers(self) -> None:
+        assert is_running_in_gui_thread()
+        if self.ddcutil is None:
+            return
         ddcutil_problem = None
         try:
             self.detected_vdu_list = []
@@ -6706,15 +6690,31 @@ class VduAppWindow(QMainWindow):
         error_no_monitors.exec()
 
     def configure_application(self):
-        with self.lock:
+        with self.application_configuration_lock:
+            log_info("Configuring application...")
             if self.lux_auto_controller is not None:
                 self.lux_auto_controller.stop_worker()
             if self.preset_transition_worker is not None:
                 self.preset_transition_worker.stop()
                 self.preset_transition_worker = None
+            self.create_ddcutil()
             self.create_main_control_panel()
             if self.lux_auto_controller is not None:
                 self.lux_auto_controller.initialize_from_config()
+            overdue = self.schedule_presets(reset=True)
+        # restore_preset tries to acquire the same lock, safe to unlock and let it relock...
+        if overdue is not None:
+            # This preset is the one that should be running now
+            log_info(f"Restoring preset '{overdue.name}' "
+                     f"because its scheduled to be active at this time ({zoned_now()}).")
+            self.splash_message_signal.emit(tr("Restoring Preset\n{}").format(overdue.name))
+            # Weather check will have succeeded inside schedule_presets() above, don't do it again.
+            self.activate_scheduled_preset(overdue, check_weather=False, immediately=True)
+        if self.main_config.is_set(GlobalOption.LUX_OPTIONS_ENABLED):
+            lux_dialog = LuxDialog.get_instance()  # type: ignore
+            if lux_dialog is not None:
+                lux_dialog.reinitialise()
+        log_info("Completed configuring application")
 
     def create_main_control_panel(self) -> None:
         # Call on initialisation and whenever the number of connected VDU's changes.
@@ -6803,7 +6803,7 @@ class VduAppWindow(QMainWindow):
                        immediately: bool = False, scheduled_activity: bool = False) -> None:
         # Starts the restore, but it will complete in the worker thread
         assert is_running_in_gui_thread()    # Boilerplate in case this is called from the wrong thread.
-        with self.lock:  # The lock prevents a transition firing when the GUI/app is reconfiguring
+        with self.application_configuration_lock:  # The lock prevents a transition firing when the GUI/app is reconfiguring
             self.transitioning_dummy_preset = None
 
             if not immediately:
@@ -7028,7 +7028,7 @@ class VduAppWindow(QMainWindow):
             self.daily_schedule_next_update = tomorrow
         if reset:
             presets_dialog: PresetsDialog = PresetsDialog.get_instance()  # type: ignore
-            if presets_dialog:
+            if presets_dialog is not None:
                 presets_dialog.refresh_view()
         return most_recent_overdue
 
