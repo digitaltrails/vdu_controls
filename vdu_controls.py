@@ -5440,7 +5440,7 @@ class LuxMeterSerialDevice:
             while True:
                 try:
                     if self.serial_device is None:
-                        log_info(f"Initialising character device {self.device_name} - waiting on data.")
+                        log_info(f"LuxMeterSerialDevice: Initialising character device {self.device_name}")
                         self.serial_device = self.serial_module.Serial(self.device_name)
                     if self.serial_device is not None:
                         self.serial_device.reset_input_buffer()
