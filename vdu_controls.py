@@ -6695,74 +6695,69 @@ class VduAppWindow(QMainWindow):
         error_no_monitors.exec()
 
     def configure_application(self):
-        with self.application_configuration_lock:
+        try:
             log_info("Configuring application...")
-            if self.lux_auto_controller is not None:
-                self.lux_auto_controller.stop_worker()
-            if self.preset_transition_worker is not None:
-                self.preset_transition_worker.stop()
-                self.preset_transition_worker = None
-            self.create_ddcutil()
-            self.create_main_control_panel()
-            if self.lux_auto_controller is not None:
-                self.lux_auto_controller.initialize_from_config()
-            overdue = self.schedule_presets(reset=True)
-        # restore_preset tries to acquire the same lock, safe to unlock and let it relock...
-        if overdue is not None:
-            # This preset is the one that should be running now
-            log_info(f"Restoring preset '{overdue.name}' "
-                     f"because its scheduled to be active at this time ({zoned_now()}).")
-            self.splash_message_signal.emit(tr("Restoring Preset\n{}").format(overdue.name))
-            # Weather check will have succeeded inside schedule_presets() above, don't do it again.
-            self.activate_scheduled_preset(overdue, check_weather=False, immediately=True)
-        if self.main_config.is_set(GlobalOption.LUX_OPTIONS_ENABLED):
-            lux_dialog = LuxDialog.get_instance()  # type: ignore
-            if lux_dialog is not None:
-                lux_dialog.reinitialise()
+            if self.main_panel is not None:
+                self.main_panel.indicate_busy(True)
+                QApplication.processEvents()
+            with self.application_configuration_lock:
+                if self.lux_auto_controller is not None:
+                    self.lux_auto_controller.stop_worker()
+                if self.preset_transition_worker is not None:
+                    self.preset_transition_worker.stop()
+                    self.preset_transition_worker = None
+                global log_to_syslog
+                log_to_syslog = self.main_config.is_set(GlobalOption.SYSLOG_ENABLED)
+                self.create_ddcutil()
+                self.create_main_control_panel()
+                if self.lux_auto_controller is not None:
+                    self.lux_auto_controller.initialize_from_config()
+                overdue = self.schedule_presets(reset=True)
+            # restore_preset tries to acquire the same lock, safe to unlock and let it relock...
+            if overdue is not None:
+                # This preset is the one that should be running now
+                log_info(f"Restoring preset '{overdue.name}' "
+                         f"because its scheduled to be active at this time ({zoned_now()}).")
+                self.splash_message_signal.emit(tr("Restoring Preset\n{}").format(overdue.name))
+                # Weather check will have succeeded inside schedule_presets() above, don't do it again.
+                self.activate_scheduled_preset(overdue, check_weather=False, immediately=True)
+            if self.main_config.is_set(GlobalOption.LUX_OPTIONS_ENABLED):
+                lux_dialog = LuxDialog.get_instance()  # type: ignore
+                if lux_dialog is not None:
+                    lux_dialog.reinitialise()
+        finally:
+            self.get_main_panel().indicate_busy(False)
         log_info("Completed configuring application")
 
     def create_main_control_panel(self) -> None:
         # Call on initialisation and whenever the number of connected VDU's changes.
-        try:
-            global log_to_syslog
-            log_to_syslog = self.main_config.is_set(GlobalOption.SYSLOG_ENABLED)
-            existing_width = 0
-            if self.main_panel is not None:
-                self.main_panel.indicate_busy(True)
-                # Remove any existing control panel - which may now be incorrect for the config.
-                self.main_panel.width()
-                # self.main_panel.vdu_set_attribute_signal.disconnect(self.display_active_preset)
-                # self.main_panel.connected_vdus_changed.disconnect(self.create_main_control_panel)
-                self.main_panel.deleteLater()
-                self.main_panel = None
-            self.main_panel = VduControlsMainPanel()
-            # Write up the signal/slots first
+        if self.main_panel is not None:
+            self.main_panel.deleteLater()
+            self.main_panel = None
+        self.main_panel = VduControlsMainPanel()
 
-            def vdu_set_attribute_signal_handler(vdu_stable_id: str, attr: str, value: str):
-                self.display_active_preset()
-                if self.main_config.is_set(GlobalOption.LUX_OPTIONS_ENABLED) and self.lux_auto_controller is not None:
-                    if attr == VDU_SUPPORTED_CONTROLS.brightness.vcp_code:
-                        LuxDialog.lux_dialog_display_brightness(vdu_stable_id, int(value))
-
-            self.main_panel.vdu_set_attribute_signal.connect(vdu_set_attribute_signal_handler)
-            self.main_panel.connected_vdus_changed_signal.connect(self.configure_application)
-            # Then initialise the control panel display
-            self.create_controllers()
-            refresh_button = ToolButton(REFRESH_ICON_SOURCE, tr("Refresh settings from monitors"))
-            refresh_button.pressed.connect(self.start_refresh)
-            tool_buttons = [refresh_button]
-            if self.lux_auto_controller is not None:
-                tool_buttons.append(self.lux_auto_controller.create_tool_button())
-            self.main_panel.initialise_control_panels(self.app_context_menu, self.main_config, self.vdu_controllers,
-                                                      tool_buttons, self.splash_message_signal)
-            self.main_panel.indicate_busy(True)
-            self.setCentralWidget(self.main_panel)
-            self.setMinimumWidth(existing_width)
-            self.splash_message_signal.emit(
-                "Reticulating Splines" if self.main_config.is_set(GlobalOption.DEBUG_ENABLED) else tr("Checking Presets"))
+        def vdu_set_attribute_signal_handler(vdu_stable_id: str, attr: str, value: str):
             self.display_active_preset()
-        finally:
-            self.get_main_panel().indicate_busy(False)
+            if self.main_config.is_set(GlobalOption.LUX_OPTIONS_ENABLED) and self.lux_auto_controller is not None:
+                if attr == VDU_SUPPORTED_CONTROLS.brightness.vcp_code:
+                    LuxDialog.lux_dialog_display_brightness(vdu_stable_id, int(value))
+
+        self.main_panel.vdu_set_attribute_signal.connect(vdu_set_attribute_signal_handler)  # Wire up the signal/slots first
+        self.main_panel.connected_vdus_changed_signal.connect(self.configure_application)
+        self.create_controllers()  # Then initialise the control panel display
+        refresh_button = ToolButton(REFRESH_ICON_SOURCE, tr("Refresh settings from monitors"))
+        refresh_button.pressed.connect(self.start_refresh)
+        tool_buttons = [refresh_button]
+        if self.lux_auto_controller is not None:
+            tool_buttons.append(self.lux_auto_controller.create_tool_button())
+        self.main_panel.initialise_control_panels(self.app_context_menu, self.main_config, self.vdu_controllers,
+                                                  tool_buttons, self.splash_message_signal)
+        self.main_panel.indicate_busy(True)
+        self.setCentralWidget(self.main_panel)
+        self.splash_message_signal.emit(
+            "Reticulating Splines" if self.main_config.is_set(GlobalOption.DEBUG_ENABLED) else tr("Checking Presets"))
+        self.display_active_preset()
+
 
     def get_main_panel(self) -> VduControlsMainPanel:
         assert self.main_panel is not None
