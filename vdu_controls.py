@@ -5420,6 +5420,7 @@ class LuxMeterSerialDevice:
         self.lock = Lock()
         self.cached_value: float = 0.0
         self.cached_time = 0.0
+        self.line_matcher = re.compile(r'\A([0-9]+[.][0-9]+)\r\n\Z', re.DOTALL)  # Be precise to try and catch errors
         try:
             self.serial_module = import_module('serial')
         except ModuleNotFoundError as mnf:
@@ -5443,8 +5444,10 @@ class LuxMeterSerialDevice:
                     if self.serial_device is not None:
                         self.serial_device.reset_input_buffer()
                         buffer = self.serial_device.read_until()
-                        value = float(buffer.decode('utf-8', errors='surrogateescape').replace("\r\n", ''))
-                        return value
+                        decoded = buffer.decode('utf-8', errors='surrogateescape')
+                        if (match := self.line_matcher.match(decoded)) is not None:  # only accept correctly formatted output
+                            return float(match.group(1))
+                        log_info(f"LuxMeterSerialDevice: skipping over value that failed to parse: [{decoded}]")  # if log_debug_enabled else None
                 except (self.serial_module.SerialException, termios.error, FileNotFoundError, ValueError) as se:
                     log_warning(f"Retry read of {self.device_name}, will reopen feed in {backoff_secs} seconds", se, trace=True)
                     time.sleep(backoff_secs)
