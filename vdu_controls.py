@@ -5435,6 +5435,7 @@ class LuxMeterSerialDevice:
 
     def get_value(self) -> float:  # an un-smoothed raw value
         with self.lock:
+            cause = None
             backoff_secs = 10
             while True:
                 try:
@@ -5447,14 +5448,15 @@ class LuxMeterSerialDevice:
                         decoded = buffer.decode('utf-8', errors='surrogateescape')
                         if (match := self.line_matcher.match(decoded)) is not None:  # only accept correctly formatted output
                             return float(match.group(1))
-                        log_info(f"LuxMeterSerialDevice: skipping over value that failed to parse: [{decoded}]")  # if log_debug_enabled else None
+                        cause = f"value that failed to parse: {decoded.encode('unicode_escape')}"
                 except (self.serial_module.SerialException, termios.error, FileNotFoundError, ValueError) as se:
-                    log_warning(f"Retry read of {self.device_name}, will reopen feed in {backoff_secs} seconds", se, trace=True)
-                    time.sleep(backoff_secs)
-                    backoff_secs = backoff_secs * 2 if backoff_secs < 300 else 300
-                    if self.serial_device is not None:
-                        self.serial_device.close()
-                    self.serial_device = None
+                    cause = se
+                log_warning(f"Retry read of {self.device_name}, will reopen feed in {backoff_secs} seconds. Cause:", cause, trace=True)
+                time.sleep(backoff_secs)
+                backoff_secs = backoff_secs * 2 if backoff_secs < 300 else 300
+                if self.serial_device is not None:
+                    self.serial_device.close()
+                self.serial_device = None
 
     def close(self) -> None:
         with self.lock:
