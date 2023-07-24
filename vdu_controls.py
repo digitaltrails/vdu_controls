@@ -5535,7 +5535,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         self._lux_dialog_message.emit(message, timeout, destination)
 
     def adjust_for_lux(self) -> None:
-        time.sleep(2.0)  # Give any previous thread a chance to exit
+        time.sleep(10.0)  # Give any previous thread a chance to exit, plus let the GUI and presets settle down
         log_info(f"LuxAutoWorker monitoring commences (Thread={threading.get_ident()})")
         try:
             lux_auto_controller = self.main_app.lux_auto_controller
