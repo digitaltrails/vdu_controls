@@ -740,6 +740,7 @@ TRANSITION_ALWAYS_SYMBOL = '\u25b8\u2732'  # BLACK RIGHT POINTING SMALL TRIANGLE
 PROCESSING_LUX_SYMBOL = '\u25b9' * 3  # WHITE RIGHT POINTING SMALL TRIANGLE * 3
 SIGNAL_SYMBOL = '\u26a1'  # HIGH VOLTAGE - lightning bolt
 ERROR_SYMBOL = '\u274e'  # NEGATIVE SQUARED CROSS MARK
+WARNING_SYMBOL = '\u26a0'  # WARNING SIGN
 ALMOST_EQUAL_SYMBOL = '\u2248'  # ALMOST EQUAL TO
 SMOOTHING_SYMBOL = '\u21dd'  # RIGHT POINTING SQUIGGLY ARROW
 STEPPING_SYMBOL = '\u279f'  # DASHED TRIANGLE-HEADED RIGHTWARDS ARROW
@@ -3963,7 +3964,7 @@ class PresetChooseWeatherWidget(QWidget):
 
     def populate(self) -> None:
         if self.chooser.count() == 0:
-            self.chooser.addItem("None", None)
+            self.chooser.addItem(tr("None"), None)
         existing_paths = [self.chooser.itemData(i) for i in range(1, self.chooser.count())]
         for path in sorted(CONFIG_DIR_PATH.glob("*.weather")):
             if path not in existing_paths:
@@ -3996,8 +3997,8 @@ class PresetChooseTransitionWidget(QWidget):
         super().__init__()
         layout = QHBoxLayout()
         self.setLayout(layout)
-        layout.addWidget(QLabel(tr("Transition smoothly")), alignment=Qt.AlignLeft)
-        self.transition_type_widget = QPushButton("None")
+        layout.addWidget(QLabel(tr("Transition")), alignment=Qt.AlignLeft)
+        self.transition_type_widget = QPushButton(PresetTransitionFlag.NONE.description())
         self.button_menu = QMenu()
         self.transition_type = PresetTransitionFlag.NONE
         self.is_setting = False
@@ -4527,7 +4528,6 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.editor_trigger_widget.setDisabled(True)
         self.edit_save_button.setDisabled(True)
         self.edit_revert_button.setDisabled(True)
-
         self.make_visible()
 
     def sizeHint(self) -> QSize:
@@ -4797,7 +4797,14 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
 def presets_dialog_update_view(message: str, refresh_view: bool = True, timeout: int = 0) -> None:
     presets_dialog: PresetsDialog = PresetsDialog.get_instance()  # type: ignore
     if presets_dialog:
-        presets_dialog.status_message(message, timeout=timeout)
+        if message != '':
+            presets_dialog.status_message(message, timeout=timeout)
+        elif not presets_dialog.main_config.is_set(GlobalOption.SCHEDULE_ENABLED):
+            presets_dialog.status_message(WARNING_SYMBOL + ' ' + tr('Solar-trigger scheduling is disabled in the Setting-Dialog.'))
+        elif not presets_dialog.main_config.is_set(GlobalOption.WEATHER_ENABLED):
+            presets_dialog.status_message(WARNING_SYMBOL + ' ' + tr('Weather lookup is disabled in the Setting-Dialog.'))
+        else:
+            presets_dialog.status_message('')
         if refresh_view:
             presets_dialog.refresh_view()
 
@@ -6323,11 +6330,11 @@ class PresetTransitionFlag(IntFlag):
                      ALWAYS: TRANSITION_ALWAYS_SYMBOL}
 
     descriptions = {
-        NONE: QT_TR_NOOP('Never'),
-        SCHEDULED: QT_TR_NOOP('On schedule'),
-        MENU: QT_TR_NOOP('On menu'),
-        SIGNAL: QT_TR_NOOP('On signal'),
-        ALWAYS: QT_TR_NOOP('Always')}
+        NONE: QT_TR_NOOP('Always immediately'),
+        SCHEDULED: QT_TR_NOOP('Smoothly on solar'),
+        MENU: QT_TR_NOOP('Smoothly on menu'),
+        SIGNAL: QT_TR_NOOP('Smoothy on signal'),
+        ALWAYS: QT_TR_NOOP('Always smoothly')}
 
     def abbreviation(self, abbreviations=abbreviations) -> str:  # Even more hacky
         if self.value in (PresetTransitionFlag.NONE, PresetTransitionFlag.ALWAYS):
@@ -6337,7 +6344,7 @@ class PresetTransitionFlag(IntFlag):
     def description(self, descriptions=descriptions) -> str:  # Yuck
         if self.value in (PresetTransitionFlag.NONE, PresetTransitionFlag.ALWAYS):
             return descriptions[self]
-        return ','.join([descriptions[component] for component in self.component_values()])
+        return ', '.join([descriptions[component] for component in self.component_values()])
 
     def component_values(self) -> list[PresetTransitionFlag]:
         # similar to Python 3.11 enum.show_flag_values(self) - list of power of two components for self
