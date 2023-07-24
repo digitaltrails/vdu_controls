@@ -901,6 +901,7 @@ SYSTEM_TRAY_WAIT_SECONDS = 20
 SVG_LIGHT_THEME_COLOR = b"#232629"
 SVG_DARK_THEME_COLOR = b"#f3f3f3"
 
+# modified brightness icon from breeze5-icons: LGPL-3.0-only
 BRIGHTNESS_SVG = b"""
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24">
   <defs>
@@ -928,6 +929,7 @@ BRIGHTNESS_SVG = b"""
 </svg>
 """
 
+# modified contrast icon from breeze5-icons: LGPL-3.0-only
 CONTRAST_SVG = b"""
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24">
   <defs>
@@ -944,6 +946,7 @@ CONTRAST_SVG = b"""
 AUTO_LUX_ON_SVG = BRIGHTNESS_SVG.replace(b'viewBox="0 0 24 24"', b'viewBox="3 3 18 18"').replace(b'#232629', b'#ff8500')
 AUTO_LUX_OFF_SVG = BRIGHTNESS_SVG.replace(b'viewBox="0 0 24 24"', b'viewBox="3 3 18 18"').replace(b'#232629', b'#84888c')
 
+# adjustrgb icon from breeze5-icons: LGPL-3.0-only
 COLOR_TEMPERATURE_SVG = b"""
 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
   <defs>
@@ -959,6 +962,7 @@ COLOR_TEMPERATURE_SVG = b"""
 </svg>
 """
 
+# audio-volume-high icon from breeze5-icons: LGPL-3.0-only
 VOLUME_SVG = b"""
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="-7 -7 40 40" width="24" height="24">
   <style id="current-color-scheme" type="text/css">
@@ -975,6 +979,7 @@ VOLUME_SVG = b"""
 </svg>
 """
 
+# application-menu icon from breeze5-icons: LGPL-3.0-only
 MENU_ICON_SOURCE = b"""
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
   <defs id="defs3051">
@@ -990,6 +995,7 @@ MENU_ICON_SOURCE = b"""
 </svg>
 """
 
+# view-refresh icon from breeze5-icons: LGPL-3.0-only
 REFRESH_ICON_SOURCE = b"""
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24">
   <defs>
@@ -1015,7 +1021,7 @@ SWATCH_ICON_SOURCE = b"""
 </svg>
 """
 
-'''Creates a SVG of grey rectangles typical of the sort used for VDU calibration.'''
+# Creates a SVG of grey rectangles typical of the sort used for VDU calibration.
 GREY_SCALE_SVG = f'''
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1"  width="256" height="152" viewBox="0 0 256 152">
     <rect width="256" height="152" x="0" y="0" style="fill:rgb(128,128,128);stroke-width:0;" />
@@ -7429,6 +7435,7 @@ def main() -> None:
 
 
 # A fallback in case the hard coded splash screen PNG doesn't exist (which probably means KDE is not installed).
+# Based on video-display.png from oxygen5-icon-theme-5: LGPL-3.0-only
 FALLBACK_SPLASH_PNG_BASE64 = b"""
 iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAYAAABccqhmAAAgAElEQVR42u19PYxdx5XmJzdPBX2BweuAD7t4Crp3Mb1BcwF1QgZi0g4kB5xgHVgO6AFMBX
 JgDzB0QC1gMpAdSAEZiA6sQJxACqTFQA7cgaXADExjISYNLMhge4PuQJ08YtAPGNyGcA7IneC+9/r+1L236t66f6/rDDSW+t2fulXn+85PnaoCvHjx4sWL
