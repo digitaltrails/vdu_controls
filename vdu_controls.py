@@ -5627,8 +5627,11 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                 current_brightness = int(controller.get_attribute(VDU_SUPPORTED_CONTROLS.brightness.vcp_code)[0])
                 if current_brightness != profile_brightness:
                     if vdu_id not in self.target_brightness or self.target_brightness[vdu_id] != profile_brightness:
-                        log_info(f"LuxAutoWorker: {vdu_id=}: new target {current_brightness}%->{profile_brightness}% preset={profile_preset_name}"
-                                 f" {lux_summary_text} {step_count=}")
+                        if vdu_id not in self.target_brightness:
+                            log_info(f"LuxAutoWorker: {vdu_id=} New target {profile_brightness=}%", f" {lux_summary_text}")
+                        else:
+                            log_info(f"LuxAutoWorker: {vdu_id=} Changed target {profile_brightness=}%"
+                                     f" previous-target={self.target_brightness[vdu_id]}%", f" {lux_summary_text} {step_count=}")
                         self.target_brightness[vdu_id] = profile_brightness  # target has changed
                     diff = profile_brightness - current_brightness
                     if self.interpolation_enabled and step_count == 0 \
