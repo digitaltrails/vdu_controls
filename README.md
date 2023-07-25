@@ -184,8 +184,7 @@ Coverage testing is assisted by [Coverage.py](https://coverage.readthedocs.io/).
 Type checking is assisted by [Mypy](https://mypy.readthedocs.io/).
 
 My development Linux desktop is [OpenSUSE Tumbleweed](https://get.opensuse.org/tumbleweed/). The python3
-interpreter and python3 libraries are from the standard OpenSUSE Tumbleweed repositories (Tumbleweed currently
-defaults python3 to [python 3.8](https://www.python.org/downloads/release/python-380/)). 
+interpreter and python3 libraries are from the standard Tumbleweed repositories. 
 
 Acknowlegements
 ---------------
