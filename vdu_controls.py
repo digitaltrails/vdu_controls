@@ -1188,25 +1188,28 @@ class DdcUtil:
     corrective action such as increasing the sleep_multiplier).
     """
 
-    def __init__(self, common_args=None, default_sleep_multiplier: float = 1.0, prefer_dynamic_sleep=True) -> None:
+    def __init__(self, common_args=[], default_sleep_multiplier: float = 1.0, prefer_dynamic_sleep=True) -> None:
         super().__init__()
         self.supported_codes: Dict[str, str] | None = None
         self.default_sleep_multiplier = default_sleep_multiplier
-        self.common_args = [] if common_args is None else common_args
+        self.common_args = common_args
         self.vcp_type_map: Dict[str, str] = {}
         self.use_edid = os.getenv('VDU_CONTROLS_USE_EDID', default="yes") == 'yes'
         log_info(f"Use_edid={self.use_edid} (to disable it: export VDU_CONTROLS_USE_EDID=no)")
         self.edid_map: Dict[str, str] = {}
         self.lock = Lock()
         self.prefer_dynamic_sleep = False
-        self.version = (0, 0, 0, '')
+        self.version = (0, 0, 0)
         version_info = self.__run__('--version').stdout.decode('utf-8', errors='surrogateescape')
         version_match = re.match(r'[a-z]+ ([0-9]+).([0-9]+).([0-9]+)-?([^\n]*)', version_info)
         if version_match is not None:
-            self.version = version_match.groups()
+            self.version = [int(i) for i in version_match.groups()[0:3]]
+            self.version_suffix = version_match.groups()[3]
         log_info(f"ddcutil version info: {version_match.group(0)} {self.version}")
-        self.prefer_dynamic_sleep = len(self.version) > 0 and int(self.version[0]) >= 2 and prefer_dynamic_sleep
+        self.prefer_dynamic_sleep = self.version[0] >= 2 and prefer_dynamic_sleep
         log_info(f"Prefer dynamic sleep = {self.prefer_dynamic_sleep}")
+        if self.version[0] >= 2:
+            common_args += [arg for arg in os.getenv('VDU_CONTROLS_DDCUTIL_ARGS', default='').split(' ') if arg != '']
 
     def id_key_args(self, display_id: str) -> List[str]:
         return ['--edid', self.edid_map[display_id]] if display_id in self.edid_map else ['--display', display_id]
@@ -1217,13 +1220,17 @@ class DdcUtil:
     def __run__(self, *args, sleep_multiplier: float | None = None, log_id='') -> subprocess.CompletedProcess:
         with self.lock:
             log_id = f"Display-{log_id}" if log_id != '' else ''  # Make it easier to tell - eid is a bit much
+            multiplier_args = []
             multiplier = self.default_sleep_multiplier if sleep_multiplier is None else sleep_multiplier
-            if not math.isclose(multiplier, 0.0) and not self.prefer_dynamic_sleep:
-                multiplier_args = ['--sleep-multiplier', f"{multiplier:.2f}"]
-            elif int(self.version[0]) >= 2:
-                multiplier_args = ['--enable-dynamic-sleep']
-            else:
-                multiplier_args = []
+            if self.version[0] >= 2:
+                if self.prefer_dynamic_sleep or math.isclose(multiplier, 0.0):
+                    multiplier_args += ['--enable-dynamic-sleep']
+                else:
+                    multiplier_args += ['--disable-dynamic-sleep']
+                    if not math.isclose(multiplier, 0.0):
+                        multiplier_args += ['--sleep-multiplier', f"{multiplier:.2f}"]
+            elif not math.isclose(multiplier, 0.0):
+                multiplier_args += ['--sleep-multiplier', f"{multiplier:.2f}"]
             process_args = [DDCUTIL] + multiplier_args + self.common_args + list(args)
             try:  # TODO consider tracking errors and raising an exception if all VDU's are unavailable
                 now = time.time()
