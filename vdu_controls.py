@@ -1139,6 +1139,7 @@ def log_wrapper(severity, *args, trace=False) -> None:
     if log_debug_enabled and trace:
         log_debug("TRACEBACK:", ''.join(traceback.format_stack()))
 
+
 def log_debug(*args, trace=False) -> None:
     if log_debug_enabled:
         log_wrapper(syslog.LOG_DEBUG, *args, trace=trace)
@@ -4433,7 +4434,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         presets_dialog_display_message('')
 
     @staticmethod
-    def reinitialize_instance(main_config: ConfigIni) -> None:
+    def reinitialize_instance(main_config: VduControlsConfig) -> None:
         presets_dialog: PresetsDialog = PresetsDialog.get_instance()  # type: ignore
         if presets_dialog:
             presets_dialog.reinitialize_from_data(main_config)
@@ -4563,7 +4564,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             self.preset_widgets_layout.addWidget(preset_widget)
         self.preset_widgets_layout.addStretch(1)
 
-    def reinitialize_from_data(self, main_config: ConfigIni) -> None:
+    def reinitialize_from_data(self, main_config: VduControlsConfig) -> None:
         self.main_config = main_config
         for i in range(self.preset_widgets_layout.count() - 1, -1, -1):
             w = self.preset_widgets_layout.itemAt(i).widget()
@@ -5729,7 +5730,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                 x_smoothed - x_result_point) / (x_next_point - x_result_point)
         return round(interpolated_brightness)
 
-    def assess_preset_proximity(self, interpolated_brightness: float, result_point: LuxPoint, next_point: LuxPoint) -> Str:
+    def assess_preset_proximity(self, interpolated_brightness: float, result_point: LuxPoint, next_point: LuxPoint) -> str | None:
         # Brightness is a better indicator of nearness for deciding whether to activate a preset
         diff_result = abs(interpolated_brightness - result_point.brightness)
         diff_next = abs(interpolated_brightness - next_point.brightness)
@@ -5813,6 +5814,8 @@ class LuxConfig(ConfigIni):
                     min_v = 10
                 lux_points = [LuxPoint(10**lux, brightness) for lux, brightness in zip(range(0, 6),
                                                                                        range(min_v, max_v + 1, (max_v - min_v)//5))]
+            else:
+                lux_points = []
         if self.has_option('lux-presets', 'lux-preset-points'):
             lux_points = lux_points + self.get_preset_points()
             lux_points.sort()
@@ -6423,7 +6426,7 @@ class VduAppWindow(QMainWindow):
         self.previously_detected_vdu_list: List[Tuple[str, str, str, str]] = []
         self.transitioning_dummy_preset: PresetTransitionDummy | None = None
         self.ddcutil: DdcUtil | None = None
-        self.preset_transition_worker : PresetTransitionWorker | None = None
+        self.preset_transition_worker: PresetTransitionWorker | None = None
         self.lux_auto_controller: LuxAutoController | None = None
         gnome_tray_behaviour = main_config.is_set(GlobalOption.SYSTEM_TRAY_ENABLED) and 'gnome' in os.environ.get(
             'XDG_CURRENT_DESKTOP', default='unknown').lower()
@@ -6485,6 +6488,7 @@ class VduAppWindow(QMainWindow):
             self.app_save_state()
             app.quit()
 
+        global log_debug_enabled
         if log_debug_enabled:
             for screen in app.screens():
                 log_info("Screen", screen.name())
@@ -6630,7 +6634,7 @@ class VduAppWindow(QMainWindow):
             self.tray.setToolTip(title)
             self.tray.setIcon(icon)
 
-    def create_ddcutil(self) -> bool:
+    def create_ddcutil(self):
         try:
             ddcutil_common_args = ['--force', ] if self.is_non_standard_enabled() else []
             self.ddcutil = DdcUtil(common_args=ddcutil_common_args,
@@ -6748,7 +6752,7 @@ class VduAppWindow(QMainWindow):
                 self.create_ddcutil()
                 self.preset_controller.reinitialize()
                 self.create_main_control_panel()
-                #time.sleep(2.0)  # Wait a bit for threads to do their thing and fully populate data - TODO this is dodgy
+                # time.sleep(2.0)  # Wait a bit for threads to do their thing and fully populate data - TODO this is dodgy
                 log_debug("released application_configuration_lock")
             PresetsDialog.reinitialize_instance(self.main_config)
             LuxDialog.reinitialize_instance() if self.main_config.is_set(GlobalOption.LUX_OPTIONS_ENABLED) else None
@@ -7097,7 +7101,7 @@ class VduAppWindow(QMainWindow):
                     secs = self.main_config.ini_content.getint('vdu-controls-globals', 'restore-error-sleep-seconds', fallback=60)
                     too_close = zoned_now() + timedelta(seconds=secs + 60)  # retry if more than a minute before any others
                     for other in self.preset_controller.find_presets().values():  # Skip retry if another is due soon
-                        if other != preset and other.elevation_time_today is not None \
+                        if other != preset and other.elevation_time_today is not None and other.elevation_time_today is not None \
                                 and preset.elevation_time_today < other.elevation_time_today <= too_close:
                             log_info(f"Schedule restoration skipped {preset.name}, too close to {other.name}")
                             preset.schedule_status = PresetScheduleStatus.SKIPPED_SUPERSEDED
