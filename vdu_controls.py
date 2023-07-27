@@ -1157,6 +1157,10 @@ def log_error(*args, trace=False) -> None:
     log_wrapper(syslog.LOG_ERR, *args, trace=trace)
 
 
+def thread_pid():
+    return threading.get_native_id()  # More unique than get_ident (internal ID's get recycled immediately) - see with htop -H.
+
+
 class VcpCapability:
     """Representation of a VCP (Virtual Control Panel) capability for a VDU."""
 
@@ -1198,7 +1202,7 @@ class DdcUtil:
         self.use_edid = os.getenv('VDU_CONTROLS_USE_EDID', default="yes") == 'yes'
         log_info(f"Use_edid={self.use_edid} (to disable it: export VDU_CONTROLS_USE_EDID=no)")
         self.edid_map: Dict[str, str] = {}
-        self.lock = Lock()
+        self.ddcutil_access_lock = Lock()
         self.prefer_dynamic_sleep = False
         self.version = (0, 0, 0)
         version_info = self.__run__('--version').stdout.decode('utf-8', errors='surrogateescape')
@@ -1219,7 +1223,7 @@ class DdcUtil:
         return ' '.join([arg if len(arg) < 30 else arg[:30] + "..." for arg in args])
 
     def __run__(self, *args, sleep_multiplier: float | None = None, log_id='') -> subprocess.CompletedProcess:
-        with self.lock:
+        with self.ddcutil_access_lock:
             log_id = f"Display-{log_id}" if log_id != '' else ''  # Make it easier to tell - eid is a bit much
             multiplier_args = []
             multiplier = self.default_sleep_multiplier if sleep_multiplier is None else sleep_multiplier
@@ -1565,7 +1569,7 @@ def get_config_path(config_name: str) -> Path:
 
 
 class ConfigIni(configparser.ConfigParser):
-    """ConfigParser is a little messy and its classname is a bit misleading, wrap it and bend it to our needs."""
+    """ConfigParser is a little messy and its class name is a bit misleading, wrap it and bend it to our needs."""
 
     METADATA_SECTION = "metadata"
     METADATA_VERSION_OPTION = "version"
@@ -2394,9 +2398,7 @@ class SettingsEditorLocationWidget(SettingsEditorLineBase):
         self.layout().addStretch(1)
 
     def retrieve_ipinfo(self) -> Mapping:
-        """
-        https://stackoverflow.com/a/55432323/609575
-        """
+        #  https://stackoverflow.com/a/55432323/609575
         from urllib.request import urlopen
         from json import load
         with urlopen(IP_ADDRESS_INFO_URL) as res:
@@ -2453,12 +2455,7 @@ class SettingsEditorTextEditorWidget(SettingsEditorFieldBase):
 
 
 def restart_application(reason: str) -> None:
-    """
-    Force a restart of the application.
-
-    To be invoked when part of the GUI executes a VCP command that changes the number of connected monitors or
-    when the GUI detects the number of monitors has changes.
-    """
+    # Force a restart of the application.  Some settings changes need this (run in system tray).
     alert = MessageBox(QMessageBox.Warning)
     alert.setText(reason)
     alert.setInformativeText(tr('When this message is dismissed, vdu_controls will restart.'))
@@ -3351,7 +3348,7 @@ class WorkerThread(QThread):
     def __init__(self, task_body: Callable[[], None], task_finished: Callable[[WorkerThread], None] | None = None) -> None:
         """Init should always be called from the GUI thread - for easy access to the GUI thread"""
         super().__init__()
-        log_debug(f"WorkerThread: going to start a {self.__class__.__name__} from thread = {threading.get_ident()}")
+        log_debug(f"WorkerThread: going to start a {self.__class__.__name__} from {thread_pid()=}")
         # Background is always initiated from the GUI thread to grant the worker's __init__ easy access to the GUI thread.
         assert is_running_in_gui_thread()
         self.stop_requested = False
@@ -3364,11 +3361,11 @@ class WorkerThread(QThread):
     def run(self) -> None:
         """Long-running task, runs in a separate non-GUI thread"""
         try:
-            log_debug(f"WorkerThread: {self.__class__.__name__} running in thread = {threading.get_ident()} {self.task_body}")
+            log_debug(f"WorkerThread: {self.__class__.__name__} running in {thread_pid()=} {self.task_body}")
             self.task_body()
         except VduException as e:
             self.vdu_exception = e
-        log_debug(f"WorkerThread: {self.__class__.__name__} thread terminating = {threading.get_ident()}")
+        log_debug(f"WorkerThread: {self.__class__.__name__} terminating {thread_pid()=}")
         self.finished_work.emit(self)
 
     def stop(self) -> None:
@@ -5518,8 +5515,8 @@ class LuxSmooth:
 
 
 class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
-    _update_gui_control = pyqtSignal(VduControlBase, str)
-    _lux_dialog_message = pyqtSignal(str, int, MsgDestination)
+    _update_gui_control_signal = pyqtSignal(VduControlBase, str)
+    _lux_dialog_message_signal = pyqtSignal(str, int, MsgDestination)
 
     def __init__(self, auto_controller: LuxAutoController) -> None:
         super().__init__(task_body=self.adjust_for_lux, task_finished=self.finished_callable)  # type: ignore
@@ -5553,17 +5550,17 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                 log_warning(f'Unexpected component {control} {context=}', trace=True)  # Weird error here - timing/threading perhaps.
 
         # Using Qt signals to ensure GUI activity occurs in the GUI thread (this thread).
-        self._update_gui_control.connect(update_gui_control)
-        self._lux_dialog_message.connect(LuxDialog.lux_dialog_message)
-        self._lux_dialog_message.connect(self.main_app.status_message)
+        self._update_gui_control_signal.connect(update_gui_control)
+        self._lux_dialog_message_signal.connect(LuxDialog.lux_dialog_message)
+        self._lux_dialog_message_signal.connect(self.main_app.status_message)
         self.status_message(f"{TIMER_RUNNING_SYMBOL} 00:00", 0, MsgDestination.COUNTDOWN)
 
     def status_message(self, message: str, timeout: int = 0, destination: MsgDestination = MsgDestination.DEFAULT) -> None:
-        self._lux_dialog_message.emit(message, timeout, destination)
+        self._lux_dialog_message_signal.emit(message, timeout, destination)
 
     def adjust_for_lux(self) -> None:
         time.sleep(10.0)  # Give any previous thread a chance to exit, plus let the GUI and presets settle down
-        log_info(f"LuxAutoWorker monitoring commences (Thread={threading.get_ident()})")
+        log_info(f"LuxAutoWorker monitoring commences {thread_pid()=}")
         try:
             lux_auto_controller = self.main_app.lux_auto_controller
             assert lux_auto_controller is not None
@@ -5576,7 +5573,9 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                 self.stepping_brightness(self.auto_controller.lux_config, lux_meter)
                 self.idle_sampling(lux_meter)  # Sleep and sample for rest of cycle
         finally:
-            log_info(f"LuxAutoWorker exiting (stop_requested={self.stop_requested}) (Thread={threading.get_ident()})")
+            self._update_gui_control_signal.disconnect()
+            self._lux_dialog_message_signal.disconnect()
+            log_info(f"LuxAutoWorker exiting (stop_requested={self.stop_requested}) {thread_pid()=}")
 
     def idle_sampling(self, lux_meter):
         if log_debug_enabled:
@@ -5670,7 +5669,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                 step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
                 new_brightness = current_brightness + step
                 brightness_control.restore_vdu_attribute(str(new_brightness))  # Apply to physical VDU
-                self._update_gui_control.emit(brightness_control, f" {vdu_id} component {brightness_control}")  # Update the GUI control in the GUI thread
+                self._update_gui_control_signal.emit(brightness_control, f"{vdu_id=} {thread_pid()=}")  # send to GUI thread
                 self.expected_brightness[vdu_id] = new_brightness
                 self.status_message(
                     f"{SUN_SYMBOL} {current_brightness}%{STEPPING_SYMBOL}{profile_brightness}% {vdu_id}" +
@@ -6437,12 +6436,12 @@ class VduAppWindow(QMainWindow):
 
         if gnome_tray_behaviour:
             # Gnome tray doesn't normally provide a way to bring up the main app.
-            def main_window_action_implemenation() -> None:
+            def main_window_action_implementation() -> None:
                 self.show()
                 self.raise_()
                 self.activateWindow()
 
-            main_window_action = main_window_action_implemenation
+            main_window_action = main_window_action_implementation
 
         def settings_changed(changed_settings: List) -> None:
             if changed_settings is None:  # Special value - means settings have been reset/removed - needs restart.
@@ -6562,13 +6561,12 @@ class VduAppWindow(QMainWindow):
                 preset = self.preset_controller.get_preset(signal_number - PRESET_SIGNAL_MIN)
                 if preset is not None:
                     immediately = PresetTransitionFlag.SIGNAL not in preset.get_transition_type()
-                    log_info(f"Signaled for preset {preset.name} transition-type={preset.get_transition_type()}"
-                             f"transition={immediately} thread={threading.get_ident()}")
+                    log_info(f"Signaled for {preset.name=} {preset.get_transition_type()=} {immediately=} {thread_pid()=}")
                     # Signals occur outside the GUI thread - initiate the restore in the GUI thread
                     self.restore_preset_in_gui_thread(preset, immediately)
                 else:
                     # Cannot raise a Qt alert inside the signal handler in case another signal comes in.
-                    log_warning(f"ignoring signal {signal_number}, no preset associated with that signal number.")
+                    log_warning(f"ignoring {signal_number=}, no preset associated with that signal number.")
 
         global signal_wakeup_handler
         signal_wakeup_handler.signalReceived.connect(respond_to_unix_signal)
