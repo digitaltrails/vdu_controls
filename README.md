@@ -157,10 +157,16 @@ it on the [issues page](https://github.com/digitaltrails/vdu_controls/issues).
 Development
 -----------
 
-I've set up the ``vdu_controls`` source with a typical Python development, but there is only one real source
+The ``vdu_controls`` development is **trunk-based**.  It is my intent that the trunk should 
+always be usable as my daily-driver.  That being said, trunk is likely to be less stable 
+than the periodic [releases](https://github.com/digitaltrails/vdu_controls/releases) and 
+the packages that appear in various distros.
+
+I've set up the ``vdu_controls`` source as a typical Python development, but there is only one real source
 file, ``vdu_controls.py``, so the file hierarchy is rather over the top.  A standard python distributable 
 can be built by issuing the following commands at the top of the project hierarchy:
 ```
+% python3 -m pip install build
 % python3 -m build
 ...
 % ls -1 dist/
@@ -176,6 +182,11 @@ The following commands will extract documentation from ``vdu_controls.py``:
 % cd docs
 % make man
 % make html
+```
+I prefer [Pandoc](https://pandoc.org/)'s HTML generation. There is a util script that generates the
+Sphinx outputs and then pandoc for the html:
+```commandline
+% ./util/make-man
 ```
 
 My IDE for this project is [PyCharm Community Edition](https://www.jetbrains.com/pycharm/).
