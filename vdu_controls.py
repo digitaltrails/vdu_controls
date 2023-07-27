@@ -3522,6 +3522,9 @@ class PresetController:
     def __init__(self) -> None:
         self.presets: Dict[str, Preset] = {}
 
+    def reinitialize(self):
+        self.presets = {}
+
     def find_presets(self) -> Dict[str, Preset]:
         presets_still_present = []
         # Use a stable order for the files - alphabetical filename.
@@ -4423,8 +4426,17 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
 
     @staticmethod
     def invoke(main_window: 'VduAppWindow', main_config: VduControlsConfig) -> None:
-        PresetsDialog.show_existing_dialog() if PresetsDialog.exists() else PresetsDialog(main_window, main_config)
-        presets_dialog_update_view('', refresh_view=False)
+        if PresetsDialog.exists():
+            PresetsDialog.show_existing_dialog()
+        else:
+            PresetsDialog(main_window, main_config)
+        presets_dialog_display_message('')
+
+    @staticmethod
+    def reinitialize_instance(main_config: ConfigIni) -> None:
+        presets_dialog: PresetsDialog = PresetsDialog.get_instance()  # type: ignore
+        if presets_dialog:
+            presets_dialog.reinitialize_from_data(main_config)
 
     def __init__(self, main_window: 'VduAppWindow', main_config: VduControlsConfig) -> None:
         super().__init__()
@@ -4460,10 +4472,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         presets_panel_layout.addWidget(self.preset_widgets_scrollarea)
         presets_dialog_splitter.addWidget(presets_panel)
 
-        # button_layout.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         main_window.app_context_menu.refresh_preset_menu()
-        # Create a temporary holder of preset values
-        self.base_ini = ConfigIni()
+        self.base_ini = ConfigIni()  # Create a temporary holder of preset values
         main_window.copy_to_preset_ini(self.base_ini)
 
         self.populate_presets_layout()
@@ -4495,7 +4505,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.editor_layout.addWidget(self.editor_title)
         self.editor_groupbox.setLayout(self.editor_layout)
 
-        self.editor_controls_widget = self.create_preset_content_controls()
+        self.editor_controls_widget = QScrollArea(parent=self)
+        self.populate_editor_controls_widget()
         self.editor_layout.addWidget(self.edit_preset_widget)
 
         self.controls_title_widget = self.editor_controls_prompt = QLabel(tr("Controls to include:"))
@@ -4552,7 +4563,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             self.preset_widgets_layout.addWidget(preset_widget)
         self.preset_widgets_layout.addStretch(1)
 
-    def reload_data(self) -> None:
+    def reinitialize_from_data(self, main_config: ConfigIni) -> None:
+        self.main_config = main_config
         for i in range(self.preset_widgets_layout.count() - 1, -1, -1):
             w = self.preset_widgets_layout.itemAt(i).widget()
             if isinstance(w, PresetWidget):
@@ -4560,12 +4572,14 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 w.deleteLater()
             else:
                 self.preset_widgets_layout.removeItem(self.preset_widgets_layout.itemAt(i))
+        existing_content = self.editor_controls_widget.takeWidget()
+        existing_content.deleteLater() if existing_content is not None else None
+        self.base_ini = ConfigIni()
+        self.main_window.copy_to_preset_ini(self.base_ini)
+        self.populate_editor_controls_widget()
         self.populate_presets_layout()
         self.preset_name_edit.setText('')
         self.editor_trigger_widget.configure_for_location(self.main_config.get_location())
-
-    def refresh_view(self) -> None:
-        self.reload_data()  # TODO Update preset status display - a bit of an extreme way to do it - consider something better?
 
     def status_message(self, message: str, timeout: int = 0) -> None:
         self.status_bar.showMessage(message, msecs=3000 if timeout == -1 else timeout)
@@ -4578,11 +4592,12 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                     return w
         return None
 
-    def create_preset_content_controls(self) -> QWidget:
-        container = QScrollArea(parent=self)
+    def populate_editor_controls_widget(self):
+        container = self.editor_controls_widget
         widget = QWidget()
         layout = QVBoxLayout()
         widget.setLayout(layout)
+        self.content_controls = {}
         for count, section in enumerate(self.base_ini.data_sections()):
             if count > 0:
                 line = QFrame()
@@ -4601,8 +4616,6 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
                 option_control.setChecked(True)
             layout.addWidget(group_box)
         container.setWidget(widget)
-        widget.show()
-        return container
 
     def initialise_preset_from_controls(self, preset: Preset) -> None:
         preset_ini = preset.preset_ini
@@ -4807,7 +4820,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         super().closeEvent(event)
 
 
-def presets_dialog_update_view(message: str, refresh_view: bool = True, timeout: int = 0) -> None:
+def presets_dialog_display_message(message: str = '', timeout: int = 0) -> None:
     presets_dialog: PresetsDialog = PresetsDialog.get_instance()  # type: ignore
     if presets_dialog:
         if message != '':
@@ -4818,8 +4831,6 @@ def presets_dialog_update_view(message: str, refresh_view: bool = True, timeout:
             presets_dialog.status_message(WARNING_SYMBOL + ' ' + tr('Weather lookup is disabled in the Setting-Dialog.'))
         else:
             presets_dialog.status_message('')
-        if refresh_view:
-            presets_dialog.refresh_view()
 
 
 def exception_handler(e_type, e_value, e_traceback) -> None:
@@ -5506,7 +5517,7 @@ class LuxSmooth:
 
 
 class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
-    _update_gui_control = pyqtSignal(VduControlBase)
+    _update_gui_control = pyqtSignal(VduControlBase, str)
     _lux_dialog_message = pyqtSignal(str, int, MsgDestination)
 
     def __init__(self, auto_controller: LuxAutoController) -> None:
@@ -5534,8 +5545,11 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         self.convergence_divisor = lux_config.getint('lux-meter', 'convergence-divisor', fallback=2)
         log_info(f"LuxAutoWorker: lux-meter.convergence-divisor={self.convergence_divisor}")
 
-        def update_gui_control(control: VduControlBase) -> None:
-            control.refresh_view()
+        def update_gui_control(control: VduControlBase, context: str) -> None:
+            if isinstance(control, VduControlBase):
+                control.refresh_view()
+            else:
+                log_warning(f'Unexpected component {control} {context=}', trace=True)  # Weird error here - timing/threading perhaps.
 
         # Using Qt signals to ensure GUI activity occurs in the GUI thread (this thread).
         self._update_gui_control.connect(update_gui_control)
@@ -5607,10 +5621,10 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
             time.sleep(0.5)  # Let i2c settle down, then continue stepping
         if not self.stop_requested:
             if step_count != 0:  # If any work was done in previous steps, finish up the remaining tasks
-                log_info(f"LuxAutoWorker: stepping completed {step_count=}, profile_preset={profile_preset_name}")
+                log_info(f"LuxAutoWorker: stepping completed {step_count=}, {profile_preset_name=}")
                 self.status_message(tr("Brightness adjustment completed"), timeout=5000)
                 if profile_preset_name is not None:  # if a point had a Preset attached, activate it now
-                    # Finish by restoring the Preset's non-brightness settings, invoke now, so it will happen while this thread sleeps.
+                    # Restoring the Preset's non-brightness settings. Invoke now, so it will happen in this thread's sleep period.
                     self.status_message(tr("Restoring preset {}").format(profile_preset_name), timeout=5000)
                     preset = self.main_app.find_preset_by_name(profile_preset_name)  # Check that it still exists
                     if preset is not None:
@@ -5642,7 +5656,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                                 log_info(f"LuxAutoWorker: {vdu_id=} {current_brightness=} {profile_brightness=} ignored, too small")
                             return False
                 if step_count == 0:
-                    log_info(f"LuxAutoWorker: step 0 {vdu_id=} {current_brightness=} {profile_brightness=} {lux_summary_text}")
+                    log_info(f"LuxAutoWorker: step 0 {vdu_id=} {current_brightness=} {profile_brightness=} {profile_preset_name=} {lux_summary_text}")
                 # See if something else is changing the brightness, or maybe there was a ddcutil error
                 if vdu_id in self.expected_brightness and self.expected_brightness[vdu_id] != current_brightness:
 
@@ -5655,7 +5669,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                 step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
                 new_brightness = current_brightness + step
                 brightness_control.restore_vdu_attribute(str(new_brightness))  # Apply to physical VDU
-                self._update_gui_control.emit(brightness_control)  # Update the GUI control in the GUI thread
+                self._update_gui_control.emit(brightness_control, f" {vdu_id} component {brightness_control}")  # Update the GUI control in the GUI thread
                 self.expected_brightness[vdu_id] = new_brightness
                 self.status_message(
                     f"{SUN_SYMBOL} {current_brightness}%{STEPPING_SYMBOL}{profile_brightness}% {vdu_id}" +
@@ -5700,7 +5714,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                             preset_name = self.assess_preset_proximity(result_brightness, result_point, step_point)
                     break
         if preset_name is not None:   # Lookup preset brightness. Might be -1 if the preset doesn't have a brightness for this VDU
-            presets = self.main_app.get_presets()
+            presets = self.main_app.get_presets()  # TODO check
             if preset_name in presets:  # Change the result to the preset's current brightness value
                 result_brightness = presets[preset_name].get_brightness(vdu_id)
         log_debug(f"LuxAutoWorker: determine_brightness {vdu_id=} {result_brightness=}% {preset_name=}") if log_debug_enabled else None
@@ -5836,6 +5850,12 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         LuxDialog.show_existing_dialog() if LuxDialog.exists() else LuxDialog(main_app)
 
     @staticmethod
+    def reinitialize_instance():
+        lux_dialog = LuxDialog.get_instance()  # type: ignore
+        if lux_dialog is not None:
+            lux_dialog.reinitialise_from_data()
+
+    @staticmethod
     def lux_dialog_message(message: str, timeout: int, destination: MsgDestination = MsgDestination.DEFAULT) -> None:
         lux_dialog: LuxDialog = LuxDialog.get_instance()  # type: ignore
         if lux_dialog is not None:
@@ -5919,7 +5939,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
         revert_button = QPushButton(si(self, QStyle.SP_DialogResetButton), tr("Revert"))
         revert_button.setToolTip(tr("Abandon profile-chart changes, revert to last saved."))
-        revert_button.clicked.connect(self.reinitialise)
+        revert_button.clicked.connect(self.reinitialise_from_data)
         self.revert_button = revert_button
         self.status_bar.addPermanentWidget(revert_button, 0)
 
@@ -5982,7 +6002,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
         self.profile_selector.currentIndexChanged.connect(select_profile)
         self.make_visible()
-        self.reinitialise()
+        self.reinitialise_from_data()
 
     def chart_changed_callback(self) -> None:
         self.has_profile_changes = True
@@ -5990,7 +6010,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.save_button.setEnabled(True)
         self.revert_button.setEnabled(True)
 
-    def reinitialise(self) -> None:
+    def reinitialise_from_data(self) -> None:
         assert self.profile_plot is not None
         self.lux_config = self.main_app.get_lux_auto_controller().get_lux_config().duplicate(LuxConfig())  # type: ignore
         self.device_name = self.lux_config.get("lux-meter", "lux-device", fallback='')
@@ -6206,7 +6226,7 @@ class LuxAutoController:
         self.initialize_from_config()
         lux_dialog: LuxDialog = LuxDialog.get_instance()  # type: ignore
         if lux_dialog is not None:
-            lux_dialog.reinitialise()
+            lux_dialog.reinitialise_from_data()
 
     def adjust_brightness_now(self) -> None:
         if self.lux_auto_brightness_worker is not None:
@@ -6717,6 +6737,7 @@ class VduAppWindow(QMainWindow):
                 self.main_panel.indicate_busy(True)
                 QApplication.processEvents()
             with self.application_configuration_lock:
+                log_debug("holding application_configuration_lock")
                 if self.lux_auto_controller is not None:
                     self.lux_auto_controller.stop_worker()
                 if self.preset_transition_worker is not None:
@@ -6725,10 +6746,13 @@ class VduAppWindow(QMainWindow):
                 global log_to_syslog
                 log_to_syslog = self.main_config.is_set(GlobalOption.SYSLOG_ENABLED)
                 self.create_ddcutil()
+                self.preset_controller.reinitialize()
                 self.create_main_control_panel()
-                if self.lux_auto_controller is not None:
-                    self.lux_auto_controller.initialize_from_config()
-                overdue = self.schedule_presets(reset=True)
+                #time.sleep(2.0)  # Wait a bit for threads to do their thing and fully populate data - TODO this is dodgy
+                log_debug("released application_configuration_lock")
+            PresetsDialog.reinitialize_instance(self.main_config)
+            LuxDialog.reinitialize_instance() if self.main_config.is_set(GlobalOption.LUX_OPTIONS_ENABLED) else None
+            overdue = self.schedule_presets(PresetsDialog.get_instance() is None)
             # restore_preset tries to acquire the same lock, safe to unlock and let it relock...
             if overdue is not None:
                 # This preset is the one that should be running now
@@ -6738,9 +6762,9 @@ class VduAppWindow(QMainWindow):
                 # Weather check will have succeeded inside schedule_presets() above, don't do it again.
                 self.activate_scheduled_preset(overdue, check_weather=False, immediately=True)
             if self.main_config.is_set(GlobalOption.LUX_OPTIONS_ENABLED):
-                lux_dialog = LuxDialog.get_instance()  # type: ignore
-                if lux_dialog is not None:
-                    lux_dialog.reinitialise()
+                if self.lux_auto_controller is not None:
+                    self.lux_auto_controller.initialize_from_config()
+
         finally:
             self.get_main_panel().indicate_busy(False)
         log_info("Completed configuring application")
@@ -6774,7 +6798,6 @@ class VduAppWindow(QMainWindow):
             "Reticulating Splines" if self.main_config.is_set(GlobalOption.DEBUG_ENABLED) else tr("Checking Presets"))
         self.display_active_preset()
 
-
     def get_main_panel(self) -> VduControlsMainPanel:
         assert self.main_panel is not None
         return self.main_panel
@@ -6806,7 +6829,7 @@ class VduAppWindow(QMainWindow):
             main_panel.indicate_busy(False)
             if self.main_config.is_set(GlobalOption.LUX_OPTIONS_ENABLED) and LuxDialog.exists():
                 lux_dialog: LuxDialog = LuxDialog.get_instance()  # type: ignore
-                lux_dialog.reinitialise()  # in case the number of connected monitors have changed.
+                lux_dialog.reinitialise_from_data()  # in case the number of connected monitors have changed.
             self.display_active_preset()
 
         self.refresh_data_task = WorkerThread(task_body=refresh_data, task_finished=refresh_view)
@@ -6872,7 +6895,7 @@ class VduAppWindow(QMainWindow):
             self.preset_transition_worker.start()
 
     def display_preset_status(self, message: str, timeout: int = 3000):
-        presets_dialog_update_view(message)
+        presets_dialog_display_message(message=message, timeout=timeout)
         self.status_message(message, timeout=timeout, destination=MsgDestination.DEFAULT)
 
     def find_preset_by_name(self, preset_name: str) -> Preset | None:
@@ -6912,7 +6935,7 @@ class VduAppWindow(QMainWindow):
             with open(PRESET_NAME_FILE, encoding="utf-8") as cps_file:
                 preset_name = cps_file.read()
                 if preset_name.strip() != '':
-                    preset = self.preset_controller.presets.get(preset_name)  # will be None if it has been deleted
+                    preset = self.preset_controller.find_presets().get(preset_name)  # will be None if it has been deleted
                     if preset is not None and main_panel.is_preset_active(preset):
                         return preset
         # Guess by testing each possible preset against the current VDU settings
@@ -7043,9 +7066,7 @@ class VduAppWindow(QMainWindow):
             # Testing: QTimer.singleShot(int(1000*30), partial(self.schedule_presets, True))
             self.daily_schedule_next_update = tomorrow
         if reset:
-            presets_dialog: PresetsDialog = PresetsDialog.get_instance()  # type: ignore
-            if presets_dialog is not None:
-                presets_dialog.refresh_view()
+            PresetsDialog.reinitialize_instance(self.main_config)
         return most_recent_overdue
 
     def activate_scheduled_preset(self, preset: Preset, check_weather: bool = True, immediately: bool = False,
@@ -7391,6 +7412,7 @@ def main() -> None:
     args = main_config.parse_global_args()
     global log_debug_enabled
     global log_to_syslog
+    log_info(f"Logging to {'syslog' if main_config.is_set(GlobalOption.SYSLOG_ENABLED) else 'stdout'}")
     log_to_syslog = main_config.is_set(GlobalOption.SYSLOG_ENABLED)
     log_debug_enabled = main_config.is_set(GlobalOption.DEBUG_ENABLED)
     if args.syslog:
