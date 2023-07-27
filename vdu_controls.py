@@ -5500,7 +5500,7 @@ class LuxSmooth:
         self.output: List[float] = []
         self.alpha: float = alpha
 
-    def smooth(self, v: float) -> float:  # A low pass filter
+    def smooth(self, v: float) -> int:  # A low pass filter
         # The smaller the alpha, the more each previous value affects the following value. Smaller alpha results => more smoothing.
         # https://stackoverflow.com/questions/4611599/smoothing-data-from-a-sensor
         # https://en.wikipedia.org/wiki/Low-pass_filter#Simple_infinite_impulse_response_filter
@@ -5511,7 +5511,7 @@ class LuxSmooth:
         self.output.append(v)  # extend to same length - value will be overwritten if there is more than one sample.
         for i in range(1, len(self.input)):
             self.output[i] = self.output[i-1] + self.alpha * (self.input[i] - self.output[i-1])
-        return self.output[-1]
+        return round(self.output[-1])
 
 
 class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
@@ -5575,8 +5575,6 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                 self.stepping_brightness(self.auto_controller.lux_config, lux_meter)
                 self.idle_sampling(lux_meter)  # Sleep and sample for rest of cycle
         finally:
-            self._update_gui_control_signal.disconnect()
-            self._lux_dialog_message_signal.disconnect()
             log_info(f"LuxAutoWorker exiting (stop_requested={self.stop_requested}) {thread_pid()=}")
 
     def idle_sampling(self, lux_meter):
@@ -5589,9 +5587,8 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
             # Update the smoother every n seconds, but not at the start or end of the period.
             if (0 < second < self.sleep_seconds) and second % self.sampling_interval_seconds == 0:
                 metered_lux = lux_meter.get_value()  # Update the smoothing while sleeping
-                smoothed = self.smoother.smooth(metered_lux)
-                smoothed_lux = round(smoothed)
-                self.status_message(f"{SUN_SYMBOL} {self.lux_summary(round(metered_lux), smoothed_lux)}", timeout=3000)
+                smoothed_lux = self.smoother.smooth(metered_lux)
+                self.status_message(f"{SUN_SYMBOL} {self.lux_summary(metered_lux, smoothed_lux)}", timeout=3000)
             self.status_message(f"{TIMER_RUNNING_SYMBOL} {second // 60:02d}:{second % 60:02d}", 0, MsgDestination.COUNTDOWN)
             time.sleep(1)
 
@@ -5599,18 +5596,18 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         last_step_count = -1
         step_count = 0
         profile_preset_name = None
-        while not self.stop_requested and step_count != last_step_count:  # keep going while brightness keeps being stepped/changed
+        while step_count != last_step_count:  # while brightness changing
             last_step_count = step_count
             metered_lux = lux_meter.get_value()
-            smoothed_lux = round(self.smoother.smooth(metered_lux))
-            lux_summary_text = self.lux_summary(round(metered_lux), smoothed_lux)
+            smoothed_lux = self.smoother.smooth(metered_lux)
+            lux_summary_text = self.lux_summary(metered_lux, smoothed_lux)
             if step_count == 0:
                 self.status_message(f"{SUN_SYMBOL} {lux_summary_text} {PROCESSING_LUX_SYMBOL}", timeout=3000)
             # If interpolating, it may be that each VDU profile is closer to a different attached preset, if this happens,
             # chose the preset associated with the brightest value.
             for vdu_control_panel in self.main_app.get_main_panel().vdu_control_panels:  # For each VDU, do one step of its profile
-                if self.stop_requested:
-                    break
+                if self.stop_requested or self.unexpected_change:
+                    return
                 controller = vdu_control_panel.controller
                 # In case the lux reading changes, reevaluate target brightness every time...
                 profile_brightness, profile_preset_name = self.determine_brightness(controller.vdu_stable_id, smoothed_lux,
@@ -5620,24 +5617,21 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                 if profile_brightness >= 0 and self.step_one_vdu(vdu_control_panel, profile_brightness, profile_preset_name,
                                                                  step_count, lux_summary_text):
                     step_count += 1  # Increment if any changes were made
-                if self.stop_requested or self.unexpected_change:
-                    break
             time.sleep(0.5)  # Let i2c settle down, then continue stepping
-        if not self.stop_requested and not self.unexpected_change:
-            if step_count != 0:  # If any work was done in previous steps, finish up the remaining tasks
-                log_info(f"LuxAutoWorker: stepping completed {step_count=}, {profile_preset_name=}")
-                self.status_message(tr("Brightness adjustment completed"), timeout=5000)
-                if profile_preset_name is not None:  # if a point had a Preset attached, activate it now
-                    # Restoring the Preset's non-brightness settings. Invoke now, so it will happen in this thread's sleep period.
-                    self.status_message(tr("Restoring preset {}").format(profile_preset_name), timeout=5000)
-                    preset = self.main_app.find_preset_by_name(profile_preset_name)  # Check that it still exists
-                    if preset is not None:
-                        self.main_app.restore_preset_in_gui_thread(
-                            preset,
-                            immediately=PresetTransitionFlag.SCHEDULED not in preset.get_transition_type(),
-                            scheduled_activity=True)
-            else:  # No work done, no adjustment necessary
-                self.status_message(f"{SUN_SYMBOL} {SUCCESS_SYMBOL}", timeout=3000)
+        if step_count != 0:  # If any work was done in previous steps, finish up the remaining tasks
+            log_info(f"LuxAutoWorker: stepping completed {step_count=}, {profile_preset_name=}")
+            self.status_message(tr("Brightness adjustment completed"), timeout=5000)
+            if profile_preset_name is not None:  # if a point had a Preset attached, activate it now
+                # Restoring the Preset's non-brightness settings. Invoke now, so it will happen in this thread's sleep period.
+                self.status_message(tr("Restoring preset {}").format(profile_preset_name), timeout=5000)
+                preset = self.main_app.find_preset_by_name(profile_preset_name)  # Check that it still exists
+                if preset is not None:
+                    self.main_app.restore_preset_in_gui_thread(
+                        preset,
+                        immediately=PresetTransitionFlag.SCHEDULED not in preset.get_transition_type(),
+                        scheduled_activity=True)
+        else:  # No work done, no adjustment necessary
+            self.status_message(f"{SUN_SYMBOL} {SUCCESS_SYMBOL}", timeout=3000)
 
     def step_one_vdu(self, vdu_control_panel: VduControlPanel, profile_brightness: int, profile_preset_name: str | None,
                      step_count: int, lux_summary_text: str) -> bool:
@@ -5663,7 +5657,6 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                     log_info(f"LuxAutoWorker: step 0 {vdu_id=} {current_brightness=} {profile_brightness=} {profile_preset_name=} {lux_summary_text}")
                 # See if something else is changing the brightness, or maybe there was a ddcutil error
                 if vdu_id in self.expected_brightness and self.expected_brightness[vdu_id] != current_brightness:
-
                     log_info(f"LuxAutoWorker: {vdu_id=}: {current_brightness=}% != step value {self.expected_brightness[vdu_id]}% " 
                              f"something else altered the brightness - stopped stepping VDU.")
                     self.status_message(f"{SUN_SYMBOL} {ERROR_SYMBOL} {RAISED_HAND_SYMBOL} {vdu_id}")
@@ -5768,12 +5761,15 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
     def x_from_lux(self, lux: int) -> float:
         return ((math.log10(lux) - math.log10(1)) / (math.log10(100000) - math.log10(1))) if lux > 0 else 0
 
-    def lux_summary(self, metered_lux: int, smoothed_lux: int) -> str:
+    def lux_summary(self, metered_lux: float, smoothed_lux: int) -> str:
         # None 256 bit char in lux_summary_text can cause issues if stdout not utf8 (force utf8 for stdout)
-        return f"{metered_lux:.0f}{SMOOTHING_SYMBOL}{smoothed_lux} lux" if metered_lux != smoothed_lux else f"{metered_lux} lux"
+        return f"{round(metered_lux)}{SMOOTHING_SYMBOL}{smoothed_lux} lux" if metered_lux != smoothed_lux else f"{metered_lux} lux"
 
     def stop(self) -> None:
         super().stop()
+        assert is_running_in_gui_thread()
+        self._update_gui_control_signal.disconnect()
+        self._lux_dialog_message_signal.disconnect()
         log_info("LuxAutoWorker stopped on request")
 
 
