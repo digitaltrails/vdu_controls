@@ -5528,6 +5528,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         self.message_tracker: Dict[str, Tuple[int, int]] = {}  # Used to prevent repeat messages
         self.previous_metered_lux = 0
         self.adjust_now_requested = False
+        self.unexpected_change = False
         lux_config = auto_controller.get_lux_config()
         interval_minutes = lux_config.get_interval_minutes()
         self.sleep_seconds = interval_minutes * 60
@@ -5565,6 +5566,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
             lux_auto_controller = self.main_app.lux_auto_controller
             assert lux_auto_controller is not None
             while not self.stop_requested:
+                self.unexpected_change = False
                 self.expected_brightness.clear()
                 lux_meter = lux_auto_controller.lux_meter
                 if lux_meter is None:  # In app config change
@@ -5618,8 +5620,10 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                 if profile_brightness >= 0 and self.step_one_vdu(vdu_control_panel, profile_brightness, profile_preset_name,
                                                                  step_count, lux_summary_text):
                     step_count += 1  # Increment if any changes were made
+                if self.stop_requested or self.unexpected_change:
+                    break
             time.sleep(0.5)  # Let i2c settle down, then continue stepping
-        if not self.stop_requested:
+        if not self.stop_requested and not self.unexpected_change:
             if step_count != 0:  # If any work was done in previous steps, finish up the remaining tasks
                 log_info(f"LuxAutoWorker: stepping completed {step_count=}, {profile_preset_name=}")
                 self.status_message(tr("Brightness adjustment completed"), timeout=5000)
@@ -5663,6 +5667,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                     log_info(f"LuxAutoWorker: {vdu_id=}: {current_brightness=}% != step value {self.expected_brightness[vdu_id]}% " 
                              f"something else altered the brightness - stopped stepping VDU.")
                     self.status_message(f"{SUN_SYMBOL} {ERROR_SYMBOL} {RAISED_HAND_SYMBOL} {vdu_id}")
+                    self.unexpected_change = True
                     return False
                 # Not-interpolating OR interpolating and brightness change is large enough to be applied
                 step_size = max(1, abs(diff) // self.convergence_divisor)  # TODO find a good heuristic
