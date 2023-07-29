@@ -5760,8 +5760,8 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         return ((math.log10(lux) - math.log10(1)) / (math.log10(100000) - math.log10(1))) if lux > 0 else 0
 
     def lux_summary(self, metered_lux: float, smoothed_lux: int) -> str:
-        # None 256 bit char in lux_summary_text can cause issues if stdout not utf8 (force utf8 for stdout)
-        return f"{round(metered_lux)}{SMOOTHING_SYMBOL}{smoothed_lux} lux" if metered_lux != smoothed_lux else f"{metered_lux} lux"
+        lux_int = round(metered_lux) # 256 bit char in lux_summary_text can cause issues if stdout not utf8 (force utf8 for stdout)
+        return f"{lux_int}{SMOOTHING_SYMBOL}{smoothed_lux} lux" if lux_int != smoothed_lux else f"{lux_int} lux"
 
     def stop(self) -> None:
         super().stop()
