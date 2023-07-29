@@ -5376,7 +5376,7 @@ class LuxMeterFifoDevice:
         super().__init__()
         self.device_name = device_name
         self.fifo: io.TextIOBase | None = None
-        self.lock = Lock()
+        self.meter_access_lock = Lock()
         self.cached_value: float | None = None
         self.cached_time = time.time()
         self.thread = thread
@@ -5389,7 +5389,7 @@ class LuxMeterFifoDevice:
         return self.cached_value
 
     def get_value(self) -> float:
-        with self.lock:
+        with self.meter_access_lock:
             while True:
                 try:
                     if self.fifo is None:
@@ -5404,7 +5404,7 @@ class LuxMeterFifoDevice:
                     time.sleep(10)
 
     def close(self) -> None:
-        with self.lock:
+        with self.meter_access_lock:
             if self.fifo is not None:
                 self.fifo.close()
 
@@ -5543,6 +5543,8 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         log_info(f"LuxAutoWorker: lux-meter.interpolation-sensitivity-percent={self.sensitivity_percent}")
         self.convergence_divisor = lux_config.getint('lux-meter', 'convergence-divisor', fallback=2)
         log_info(f"LuxAutoWorker: lux-meter.convergence-divisor={self.convergence_divisor}")
+        self.step_pause_millis = lux_config.getint('lux-meter', 'step_pause_millis', fallback=100)
+        log_info(f"LuxAutoWorker: lux-meter.step_pause_millis={self.step_pause_millis}")
 
         def update_gui_control(control: VduControlBase, context: str) -> None:
             if isinstance(control, VduControlBase):
@@ -5615,7 +5617,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                 if self.step_one_vdu(vdu_control_panel, profile_brightness, profile_preset_name, lux_summary_text, start_of_cycle):
                     change_count += 1
             start_of_cycle = False
-            time.sleep(0.5)  # Let i2c settle down, then continue stepping
+            time.sleep(self.step_pause_millis/1000.0)  # Let i2c settle down, then continue - TODO is this really necessary?
         if change_count != 0:  # If any work was done in previous steps, finish up the remaining tasks
             log_info(f"LuxAutoWorker: stepping completed in {change_count} stepped adjustments, {profile_preset_name=}")
             self.status_message(tr("Brightness adjustment completed"), timeout=5000)
@@ -5691,23 +5693,23 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         return True
 
     def determine_brightness(self, vdu_id: str, smoothed_lux: int, lux_profile: List[LuxPoint]) -> Tuple[int, str | None]:
-        result_point = LuxPoint(0, 0)
+        matched_point = LuxPoint(0, 0)
         result_brightness = 0
         preset_name = None
-        for step_point in self.create_complete_profile(lux_profile, vdu_id):
+        for profile_point in self.create_complete_profile(lux_profile, vdu_id):
             # Moving up the lux steps, seeking the step below smoothed_lux
-            if step_point.brightness >= 0:
-                if smoothed_lux >= step_point.lux:  # Possible result, there may be something higher, keep going...
+            if profile_point.brightness >= 0:
+                if smoothed_lux >= profile_point.lux:  # Possible result, there may be something higher, keep going...
                     # if step_point.brightness is -1, this is a Preset that doesn't change the VDU's brightness control
-                    result_brightness = step_point.brightness
-                    result_point = step_point
-                    if step_point.preset_name is not None:
-                        preset_name = step_point.preset_name
+                    result_brightness = profile_point.brightness
+                    matched_point = profile_point
+                    if matched_point.preset_name is not None:
+                        preset_name = profile_point.preset_name
                 else:  # Step is too high, if interpolating check against next point, if not, the previous match is the result.
                     if self.interpolation_enabled:  # Only interpolate if lux is not an exact match and next_point has a brightness
-                        if smoothed_lux != result_point.lux and step_point.brightness >= 0:
-                            result_brightness = self.interpolate_brightness(smoothed_lux, result_point, step_point)
-                            preset_name = self.assess_preset_proximity(result_brightness, result_point, step_point)
+                        if smoothed_lux != matched_point.lux and profile_point.brightness >= 0:
+                            result_brightness = self.interpolate_brightness(smoothed_lux, matched_point, profile_point)
+                            preset_name = self.assess_preset_proximity(result_brightness, matched_point, profile_point)
                     break
         if preset_name is not None:   # Lookup preset brightness. Might be -1 if the preset doesn't have a brightness for this VDU
             presets = self.main_app.get_presets()  # TODO check
@@ -5716,25 +5718,25 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         log_debug(f"LuxAutoWorker: determine_brightness {vdu_id=} {result_brightness=}% {preset_name=}") if log_debug_enabled else None
         return result_brightness, preset_name  # Brightness will be -1 if attached preset has no brightness
 
-    def interpolate_brightness(self, smoothed_lux: int, result_point: LuxPoint, next_point: LuxPoint) -> int:
-        interpolated_brightness = float(result_point.brightness)
+    def interpolate_brightness(self, smoothed_lux: int, current_point: LuxPoint, next_point: LuxPoint) -> int:
+        interpolated_brightness = float(current_point.brightness)
         x_smoothed = self.x_from_lux(smoothed_lux)
-        x_result_point = self.x_from_lux(result_point.lux)
+        x_current_point = self.x_from_lux(current_point.lux)
         x_next_point = self.x_from_lux(next_point.lux)
-        interpolated_brightness += (next_point.brightness - result_point.brightness) * (
-                x_smoothed - x_result_point) / (x_next_point - x_result_point)
+        interpolated_brightness += (next_point.brightness - current_point.brightness) * (
+                x_smoothed - x_current_point) / (x_next_point - x_current_point)
         return round(interpolated_brightness)
 
-    def assess_preset_proximity(self, interpolated_brightness: float, result_point: LuxPoint, next_point: LuxPoint) -> str | None:
+    def assess_preset_proximity(self, interpolated_brightness: float, current_point: LuxPoint, next_point: LuxPoint) -> str | None:
         # Brightness is a better indicator of nearness for deciding whether to activate a preset
-        diff_result = abs(interpolated_brightness - result_point.brightness)
+        diff_current = abs(interpolated_brightness - current_point.brightness)
         diff_next = abs(interpolated_brightness - next_point.brightness)
-        log_debug(f"LuxAutoWorker: assess_preset_proximity {diff_result=} {diff_next=} {result_point=} {next_point=}") if log_debug_enabled else None
-        if result_point.preset_name is not None and next_point.preset_name is not None:
-            if diff_result > diff_next:  # Closer to next_point
-                diff_result = self.sensitivity_percent + 1  # veto result_point by making it ineligible
-        if result_point.preset_name is not None and diff_result <= self.sensitivity_percent:
-            return result_point.preset_name
+        log_debug(f"LuxAutoWorker: assess_preset_proximity {diff_current=} {diff_next=} {current_point=} {next_point=}") if log_debug_enabled else None
+        if current_point.preset_name is not None and next_point.preset_name is not None:
+            if diff_current > diff_next:  # Closer to next_point
+                diff_current = self.sensitivity_percent + 1  # veto result_point by making it ineligible
+        if current_point.preset_name is not None and diff_current <= self.sensitivity_percent:
+            return current_point.preset_name
         # Either no next point or closer to next_point
         if next_point.preset_name is not None and diff_next <= self.sensitivity_percent:
             return next_point.preset_name
@@ -6737,8 +6739,9 @@ class VduAppWindow(QMainWindow):
             if self.main_panel is not None:
                 self.main_panel.indicate_busy(True)
                 QApplication.processEvents()
+            log_debug("attempting to lock application_configuration_lock", trace=False) if log_debug_enabled else None
             with self.application_configuration_lock:
-                log_debug("holding application_configuration_lock")
+                log_debug("holding application_configuration_lock") if log_debug_enabled else None
                 if self.lux_auto_controller is not None:
                     self.lux_auto_controller.stop_worker()
                 if self.preset_transition_worker is not None:
