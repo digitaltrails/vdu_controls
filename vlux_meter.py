@@ -52,7 +52,7 @@ from PyQt5.QtGui import QGuiApplication, QPixmap, QIcon, QCursor, QImage, QPaint
     QColor
 from PyQt5.QtSvg import QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QMainWindow, QSystemTrayIcon, QMenu, QStyle, QWidget, QLabel, QVBoxLayout, QToolButton, \
-    QToolBar, QStatusBar, QHBoxLayout
+    QToolBar, QStatusBar, QHBoxLayout, QSizePolicy
 
 APPNAME = "Vlux Meter"
 VLUX_METER_VERSION = '1.0.0'
@@ -480,7 +480,7 @@ class CameraDisplay(QLabel):
         self.pixmap_width = 600
         self.pixmap_height = 550
         self.painter = None
-        self.current_image = None
+        self.current_image: QImage | None = None
         self.drawing_with_mouse = False
         self.x_start = 0
         self.y_start = 0
@@ -488,32 +488,45 @@ class CameraDisplay(QLabel):
         self.y_end = 0
         self.setToolTip(tr("Click and drag to define the brightness sampling area."))
         self.setMouseTracking(True)  # Enable mouse move events
+        self.setMinimumSize(400, 300)  # Must set, otherwise cannot be shrunk via resize.
+        #self.setMaximumSize(1200, 900)
+        self.aspect_ratio = 16 / 9
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
-        self.pixmap_width, self.pixmap_height = event.size().width(), event.size().height()
+        log_info("Resize", event.size().width(), event.size().height())
+        smaller_dim = min(event.size().width() - 100, event.size().height() - 100)
+        self.pixmap_width, self.pixmap_height = int(smaller_dim * self.aspect_ratio), smaller_dim
+        # log_info("Resize ", self.pixmap_width, self.pixmap_height)
         self.display_image(self.current_image)
 
     def display_image(self, image: QImage):
         if image is not None and self.isVisible():
             log_info("Drawing")
+            start_time = datetime.now()
             self.current_image = image
             self.display_refresh()
+            log_info(f"Drawing {datetime.now() - start_time}")
 
     def display_refresh(self):
-        scaled = self.current_image.scaled(self.pixmap_width, self.pixmap_height)
-        pixmap = QPixmap.fromImage(scaled)
-        self.painter = QPainter(pixmap)
-        self.painter.drawPixmap(0, self.pixmap_height, self.pixmap_width, self.pixmap_height, pixmap)
-        x1, y1, x2, y2 = (float(v) for v in global_config['camera']['crop'].split(','))
-        existing_x, existing_y = round(x1 * pixmap.width()), round(y1 * pixmap.height())
-        existing_w, existing_h = round((x2 - x1) * pixmap.width()), round((y2 - y1) * pixmap.height())
-        self.painter.setPen(QPen(QColor(0x5Aff5A), 1))
-        self.painter.drawRect(existing_x, existing_y, existing_w, existing_h)
-        self.painter.setPen(QPen(QColor(0xff0000), 1))
-        self.painter.drawRect(self.x_start, self.y_start, self.x_end - self.x_start, -(self.y_start - self.y_end))
-        self.painter.end()
-        self.setPixmap(pixmap)
+        log_info("Refresh")
+        start_time = datetime.now()
+        if self.current_image is not None:
+            scaled = self.current_image.scaled(self.pixmap_width, self.pixmap_height)
+            pixmap = QPixmap.fromImage(scaled)
+            self.aspect_ratio = pixmap.height() / pixmap.width()
+            self.painter = QPainter(pixmap)
+            self.painter.drawPixmap(0, self.pixmap_height, self.pixmap_width, self.pixmap_height, pixmap)
+            x1, y1, x2, y2 = (float(v) for v in global_config['camera']['crop'].split(','))
+            existing_x, existing_y = round(x1 * pixmap.width()), round(y1 * pixmap.height())
+            existing_w, existing_h = round((x2 - x1) * pixmap.width()), round((y2 - y1) * pixmap.height())
+            self.painter.setPen(QPen(QColor(0x5Aff5A), 1))
+            self.painter.drawRect(existing_x, existing_y, existing_w, existing_h)
+            self.painter.setPen(QPen(QColor(0xff0000), 1))
+            self.painter.drawRect(self.x_start, self.y_start, self.x_end - self.x_start, -(self.y_start - self.y_end))
+            self.painter.end()
+            self.setPixmap(pixmap)
+        log_info(f"Refresh {datetime.now() - start_time}")
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         changed = False
@@ -560,6 +573,7 @@ class CameraDisplay(QLabel):
         global_config['camera']['crop'] = f"{rec_x_start},{rec_y_end},{rec_x_end},{rec_y_start}"
         global_config.save(CONFIG_PATH)
 
+
 class VluxMeterWindow(QMainWindow):
 
     def __init__(self, config: ConfigIni, app: QApplication, meter_thread: 'MeterThread') -> None:
@@ -569,7 +583,7 @@ class VluxMeterWindow(QMainWindow):
         self.app = app
         self.app_icon = create_themed_icon_from_svg_bytes(VLUX_METER_ICON_SVG)
         splash_pixmap = get_splash_image()
-        self.lux_dispatcher = None if config.getboolean("global", "fifo_disabled", fallback=False) else LuxFifoDispatcher()
+        self.lux_dispatcher = None if config.getboolean("global", "fifo_disabled", fallback=True) else LuxFifoDispatcher()
         self.app_icon.addPixmap(splash_pixmap)
         self.setObjectName('main_window')
         self.geometry_key = self.objectName() + "_geometry"
@@ -745,7 +759,7 @@ class MeterThread(QThread):
 
     def measure_lux(self):
         while True:
-            camera = cv2.VideoCapture(global_config['camera']['device'])
+            camera = cv2.VideoCapture(global_config['camera']['device']) #, cv2.CAP_V4L2)
             original_auto_exposure_option = camera.get(cv2.CAP_PROP_AUTO_EXPOSURE)
             original_exposure = camera.get(cv2.CAP_PROP_EXPOSURE)
             log_info(f"existing values: auto-exposure={original_auto_exposure_option} exposure={original_exposure}")
