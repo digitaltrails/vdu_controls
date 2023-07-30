@@ -5688,8 +5688,8 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                         self.auto_controller.get_lux_config().get_interval_minutes()))
                     time.sleep(2)  # TODO do something better than this to make the message visible.
                     if self.consecutive_errors[vdu_id] == 2 or log_debug_enabled:
-                        log_info(f"LuxAutoWorker: {self.consecutive_errors[vdu_id]} errors on {vdu_id}, sleeping and retrying.")
-                    return False  # force a full sleep cycle.
+                        log_info(f"LuxAutoWorker: {self.consecutive_errors[vdu_id]} errors on {vdu_id}, let this lux cycle end.")
+                    return False  # Report no changes, this allows the current adjustment cycle to end, will try again next cycle.
         return True
 
     def determine_brightness(self, vdu_id: str, smoothed_lux: int, lux_profile: List[LuxPoint]) -> Tuple[int, str | None]:
