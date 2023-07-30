@@ -7074,26 +7074,28 @@ class VduAppWindow(QMainWindow):
         return most_recent_overdue
 
     def activate_scheduled_preset(self, preset: Preset, check_weather: bool = True, immediately: bool = False,
-                                  activation_time: datetime | None = None) -> None:
+                                  activation_time: datetime | None = None, count=1) -> None:
         assert is_running_in_gui_thread()
         if not self.main_config.is_set(GlobalOption.SCHEDULE_ENABLED):
             log_info(f"Schedule is disabled - not activating preset {preset.name}")
             return
-        now = zoned_now() if activation_time is None else activation_time
-        is_first_attempt = activation_time is None
-        weather_text = ''
-        message = ''
+        if activation_time is None:
+            activation_time = zoned_now()
+        weather_text = message = ''
         proceed = True
         if preset.is_weather_dependent() and check_weather:
-            proceed = self.is_weather_satisfactory(preset)
-            if not proceed:
+            if not self.is_weather_satisfactory(preset):
+                proceed = False
                 preset.schedule_status = PresetScheduleStatus.WEATHER_CANCELLATION
                 message = tr("Preset {} activation was cancelled due to weather at {}").format(
-                    preset.name, now.isoformat(' ', 'seconds'))
+                    preset.name, activation_time.isoformat(' ', 'seconds'))
                 weather_text = f"({self.weather_query.weather_desc if self.weather_query is not None else ''})"
+                self.display_preset_status(message)
         if proceed:
-            status_text = tr("Preset {} activating at {}").format(preset.name, now.isoformat(' ', 'seconds'))
-            message = f"{TIME_CLOCK_SYMBOL} {status_text} {preset.schedule_status.symbol()} {weather_text}"
+
+            def status_message(msg: str):
+                self.display_preset_status(f"{TIME_CLOCK_SYMBOL} " + tr("Preset {} activating at {}").format(
+                    preset.name, f"{activation_time:%H:%M}") + f" - {msg}")
 
             def finished(worker: PresetTransitionWorker) -> None:
                 assert preset.elevation_time_today is not None
@@ -7101,30 +7103,32 @@ class VduAppWindow(QMainWindow):
                     secs = self.main_config.ini_content.getint('vdu-controls-globals', 'restore-error-sleep-seconds', fallback=60)
                     too_close = zoned_now() + timedelta(seconds=secs + 60)  # retry if more than a minute before any others
                     for other in self.preset_controller.find_presets().values():  # Skip retry if another is due soon
-                        if other != preset and other.elevation_time_today is not None and other.elevation_time_today is not None \
+                        if other.name != preset.name \
+                                and other.elevation_time_today is not None and other.elevation_time_today is not None \
                                 and preset.elevation_time_today < other.elevation_time_today <= too_close:
                             log_info(f"Schedule restoration skipped {preset.name}, too close to {other.name}")
                             preset.schedule_status = PresetScheduleStatus.SKIPPED_SUPERSEDED
-                            self.display_preset_status(message + ' - ' + tr("Skipped, superseded"))
+                            status_message(tr("Skipped, superseded"))
                             return
-                    self.display_preset_status(message + ' - ' + tr("Error, trying again in {} seconds").format(secs))
-                    if is_first_attempt:
+                    status_message(tr("Error, trying again in {} seconds").format(secs))
+                    if count == 1:
                         log_warning(f"Error during restoration of {preset.name}, retrying every {secs} seconds.")
-                    QTimer.singleShot(int(secs * 1000),
-                                      partial(self.activate_scheduled_preset, preset, check_weather, immediately, now))
+                    QTimer.singleShot(
+                        int(secs * 1000),
+                        partial(self.activate_scheduled_preset, preset, check_weather, immediately, activation_time, count+1))
                     return
                 preset.schedule_status = PresetScheduleStatus.SUCCEEDED
                 self.display_active_preset()
-                self.display_preset_status(message + ' - ' + tr("Restored {}").format(preset.name))
+                status_message(tr("Restored {}").format(preset.name))
+                log_info(f"Restored preset {preset.name} on try {count=}") if count > 1 else None
 
-            log_info(f"Activating scheduled preset {preset.name} transition={immediately}") if is_first_attempt else None
+            log_info(f"Activating scheduled preset {preset.name} transition={immediately}") if count == 1 else None
             # Happens asynchronously in a thread
             self.restore_preset(
                 preset,
                 restore_finished=finished,
                 immediately=immediately or PresetTransitionFlag.SCHEDULED not in preset.get_transition_type(),
                 scheduled_activity=True)
-        self.display_preset_status(message)
 
     def is_weather_satisfactory(self, preset, use_cache: bool = False) -> bool:
         try:
