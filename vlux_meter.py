@@ -27,32 +27,29 @@ more details.
 You should have received a copy of the GNU General Public License along
 with this program. If not, see https://www.gnu.org/licenses/.
 """
-import base64
 import configparser
 import io
 import locale
 import math
 import os
+import signal
 import socket
+import sys
 import syslog
 import threading
 import time
-from ast import literal_eval
 from datetime import datetime
 from pathlib import Path
-import signal
-import sys
 from typing import List, Tuple, Mapping, Callable, Dict
 
 import cv2  # type: ignore
-import qtpy.QtWebEngineWidgets
-from PyQt5 import QtNetwork, QtCore
+from PyQt5 import QtNetwork
 from PyQt5.QtCore import QSettings, pyqtSignal, QThread, QCoreApplication, QTranslator, QLocale, QPoint, QSize, QEvent, Qt, QObject
 from PyQt5.QtGui import QGuiApplication, QPixmap, QIcon, QCursor, QImage, QPainter, QPalette, QResizeEvent, QMouseEvent, QPen, \
     QColor
 from PyQt5.QtSvg import QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QMainWindow, QSystemTrayIcon, QMenu, QStyle, QWidget, QLabel, QVBoxLayout, QToolButton, \
-    QToolBar, QStatusBar, QHBoxLayout, QSizePolicy
+    QStatusBar
 
 APPNAME = "Vlux Meter"
 VLUX_METER_VERSION = '1.0.0'
@@ -124,7 +121,7 @@ DEFAULT_SETTINGS = {
         'manual_exposure_option': 1,
         'manual_exposure_time': 64,
         'auto_exposure_option': 3,
-        'crop': '0.0,0.0,1.0,1.0'
+        'crop': '0.0,0.0,100.0,100.0'
     },
     'brightness_to_lux': {
         'sunlight': brightness_lux_str(250, 100000),
@@ -477,8 +474,6 @@ class LuxDisplay(QLabel):
 class CameraDisplay(QLabel):
     def __init__(self, parent):
         super().__init__("", parent=parent)
-        self.pixmap_width = 600
-        self.pixmap_height = 550
         self.painter = None
         self.current_image: QImage | None = None
         self.drawing_with_mouse = False
@@ -486,47 +481,52 @@ class CameraDisplay(QLabel):
         self.y_start = 0
         self.x_end = 0
         self.y_end = 0
+        self.selected_relative_all = self.mouse_selection_relative_rectangle = (0.0, 0.0, 100.0, 100.0)
         self.setToolTip(tr("Click and drag to define the brightness sampling area."))
         self.setMouseTracking(True)  # Enable mouse move events
         self.setMinimumSize(400, 300)  # Must set, otherwise cannot be shrunk via resize.
-        #self.setMaximumSize(1200, 900)
-        self.aspect_ratio = 16 / 9
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
-        log_info("Resize", event.size().width(), event.size().height())
-        smaller_dim = min(event.size().width() - 100, event.size().height() - 100)
-        self.pixmap_width, self.pixmap_height = int(smaller_dim * self.aspect_ratio), smaller_dim
-        # log_info("Resize ", self.pixmap_width, self.pixmap_height)
         self.display_image(self.current_image)
 
     def display_image(self, image: QImage):
         if image is not None and self.isVisible():
-            log_info("Drawing")
-            start_time = datetime.now()
             self.current_image = image
             self.display_refresh()
-            log_info(f"Drawing {datetime.now() - start_time}")
 
     def display_refresh(self):
-        log_info("Refresh")
-        start_time = datetime.now()
         if self.current_image is not None:
-            scaled = self.current_image.scaled(self.pixmap_width, self.pixmap_height)
+            scaled = self.current_image.scaled(self.width(), self.height(), Qt.AspectRatioMode.KeepAspectRatio)
             pixmap = QPixmap.fromImage(scaled)
-            self.aspect_ratio = pixmap.height() / pixmap.width()
             self.painter = QPainter(pixmap)
-            self.painter.drawPixmap(0, self.pixmap_height, self.pixmap_width, self.pixmap_height, pixmap)
-            x1, y1, x2, y2 = (float(v) for v in global_config['camera']['crop'].split(','))
-            existing_x, existing_y = round(x1 * pixmap.width()), round(y1 * pixmap.height())
-            existing_w, existing_h = round((x2 - x1) * pixmap.width()), round((y2 - y1) * pixmap.height())
-            self.painter.setPen(QPen(QColor(0x5Aff5A), 1))
-            self.painter.drawRect(existing_x, existing_y, existing_w, existing_h)
+            self.painter.drawTiledPixmap(0, 0, self.width(), self.height(), pixmap)
+            # Existing selection from config file:
+            existing_relative_selection = (float(v) for v in global_config['camera']['crop'].split(','))
+            existing_absolute_selection = self.calc_absolute_rectangle(*existing_relative_selection)
+            self.painter.setPen(QPen(QColor(0x000000), 1))
+            self.painter.drawRect(*existing_absolute_selection)
             self.painter.setPen(QPen(QColor(0xff0000), 1))
-            self.painter.drawRect(self.x_start, self.y_start, self.x_end - self.x_start, -(self.y_start - self.y_end))
-            self.painter.end()
+            # New selection from mouse:
+            absolute_mouse_selection = self.calc_absolute_rectangle(*self.mouse_selection_relative_rectangle)
+            if existing_absolute_selection != absolute_mouse_selection:
+                self.painter.drawRect(*absolute_mouse_selection)
             self.setPixmap(pixmap)
-        log_info(f"Refresh {datetime.now() - start_time}")
+            self.painter.end()
+
+    def calc_relative_rectangle(self, x: int, y: int, w: int, h: int) -> Tuple[float, float, float, float]:
+        x_percent = 100 * x / self.width()
+        y_percent = 100 * y / self.height()
+        h_percent = 100 * h / self.height()
+        w_percent = 100 * w / self.width()
+        return x_percent, y_percent, w_percent, h_percent
+
+    def calc_absolute_rectangle(self, x_percent: float, y_percent: float, w_percent: float, h_percent: float) -> Tuple[int, int, int, int]:
+        x = int(int(x_percent/100 * self.width()))
+        y = int(int(y_percent/100 * self.height()))
+        w = int(w_percent/100 * self.width())
+        h = int(h_percent/100 * self.height())
+        return x, y, w, h
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         changed = False
@@ -545,38 +545,27 @@ class CameraDisplay(QLabel):
             self.x_end = local_pos.x()
             self.y_end = local_pos.y()
             self.display_refresh()
+            self.mouse_selection_relative_rectangle = self.calc_relative_rectangle(
+                self.x_start, self.y_start, self.x_end - self.x_start, self.y_end - self.y_start)
         self.update()
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
-        changed = False
-        local_pos = self.mapFromGlobal(event.globalPos())
-        self.set_rectangle()
+        self.set_measurement_relative_rectangle()
         if event.button() == Qt.LeftButton:
             self.drawing_with_mouse = False
-        if changed:
-            self.show_changes()
         event.accept()
 
-    def set_rectangle(self):
-        if self.x_start < self.x_end:
-            rec_x_start = self.x_start / self.width()
-            rec_x_end = self.x_end / self.width()
-        else:
-            rec_x_start = self.x_end / self.width()
-            rec_x_end = self.x_start / self.width()
-        if self.y_start < self.y_end:
-            rec_y_start = self.y_end / self.height()
-            rec_y_end = self.y_start / self.height()
-        else:
-            rec_y_start = self.y_start / self.height()
-            rec_y_end = self.y_start / self.height()
-        global_config['camera']['crop'] = f"{rec_x_start},{rec_y_end},{rec_x_end},{rec_y_start}"
-        global_config.save(CONFIG_PATH)
+    def set_measurement_relative_rectangle(self):
+        if self.pixmap() is not None:
+            x, y, w, h = self.calc_relative_rectangle(
+                self.x_start, self.y_start, self.x_end - self.x_start, self.y_end - self.y_start)
+            global_config['camera']['crop'] = f"{x},{y},{w},{h}"
+            global_config.save(CONFIG_PATH)
 
 
 class VluxMeterWindow(QMainWindow):
 
-    def __init__(self, config: ConfigIni, app: QApplication, meter_thread: 'MeterThread') -> None:
+    def __init__(self, config: ConfigIni, app: QApplication, meter_thread: 'CameraMeterThread') -> None:
         super().__init__()
         global gui_thread
         gui_thread = app.thread()
@@ -737,7 +726,7 @@ class VluxMeterWindow(QMainWindow):
         self.statusBar().showMessage(message, timeout)
 
 
-class MeterThread(QThread):
+class CameraMeterThread(QThread):
     new_lux_value_signal = pyqtSignal(int)
     new_image_signal = pyqtSignal(QImage)
 
@@ -759,7 +748,7 @@ class MeterThread(QThread):
 
     def measure_lux(self):
         while True:
-            camera = cv2.VideoCapture(global_config['camera']['device']) #, cv2.CAP_V4L2)
+            camera = cv2.VideoCapture(global_config['camera']['device'], cv2.CAP_V4L2)
             original_auto_exposure_option = camera.get(cv2.CAP_PROP_AUTO_EXPOSURE)
             original_exposure = camera.get(cv2.CAP_PROP_EXPOSURE)
             log_info(f"existing values: auto-exposure={original_auto_exposure_option} exposure={original_exposure}")
@@ -773,21 +762,18 @@ class MeterThread(QThread):
                 log_info(f"new values: auto-exposure={new_auto_exposure} exposure={new_exposure}")
                 result, image = camera.read()
                 self.signal_new_image(image)
-                cv2.imwrite(IMAGE_LOCATION, image) if SAVE_IMAGE else None  # uncomment to check the image exposure etc.
+                # cv2.imwrite(IMAGE_LOCATION, image) if SAVE_IMAGE else None  # uncomment to check the image exposure etc.
                 x1, y1, x2, y2 = (float(v) for v in global_config['camera']['crop'].split(','))
                 h, w = image.shape[0:2]
                 crop_x1, crop_y1, crop_x2, crop_y2 = round(x1 * w), round(y1 * h), round(x2 * w), round(y2 * h)
-                print(crop_x1, crop_y1, crop_x2, crop_y2)
                 gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)[crop_y1:crop_y2,crop_x1:crop_x2]
-                cv2.imwrite(IMAGE_LOCATION + "-gray", gray_image) #if SAVE_IMAGE else None
+                # cv2.imwrite(IMAGE_LOCATION + "-gray", gray_image) #if SAVE_IMAGE else None
                 brightness = cv2.mean(gray_image)[0]
                 previous_lux, previous_value = None, None
                 for value, (name, lux) in global_config.get_brightness_map().items():
                     if brightness >= value:
                         if previous_lux:
                             # Interpolate on a log10 scale - at least that's what I think this is (idea from chatgpt)
-                            print(
-                                f"INFO: log10 interpolating {brightness} over {value}..{previous_value} to lux {lux}..{previous_lux}") if VERBOSE else None
                             lux = lux + 10 ** (
                                     (brightness - value) / (previous_value - value) * math.log10((previous_lux - lux)))
                         log_info(f"brightness={brightness}, value={value}, lux={lux}, name={name}")
@@ -885,13 +871,13 @@ def main():
     if Path.is_file(CONFIG_PATH) and os.access(CONFIG_PATH, os.R_OK):
         if not global_config.read(CONFIG_PATH):
             log_error(f"Error loading {CONFIG_PATH}")
-    print(global_config['camera'], global_config['camera']['crop'])
+    log_info(f"{global_config['camera']=} {global_config['camera']['crop']=}")
 
     # Assign to variable to stop it being reclaimed as garbage
     if global_config.getboolean('global', 'translations_enabled'):
         initialise_locale_translations(app)
 
-    meter_thread = MeterThread()
+    meter_thread = CameraMeterThread()
     main_window = VluxMeterWindow(global_config, app, meter_thread)
 
     meter_thread.new_lux_value_signal.connect(main_window.display_lux_value)
