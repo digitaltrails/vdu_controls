@@ -39,6 +39,7 @@ import syslog
 import threading
 import time
 from datetime import datetime
+from functools import partial
 from pathlib import Path
 from typing import List, Tuple, Mapping, Callable, Dict
 
@@ -46,17 +47,16 @@ import cv2  # type: ignore
 from PyQt5 import QtNetwork
 from PyQt5.QtCore import QSettings, pyqtSignal, QThread, QCoreApplication, QTranslator, QLocale, QPoint, QSize, QEvent, Qt, QObject
 from PyQt5.QtGui import QGuiApplication, QPixmap, QIcon, QCursor, QImage, QPainter, QPalette, QResizeEvent, QMouseEvent, QPen, \
-    QColor
+    QColor, QIntValidator
 from PyQt5.QtSvg import QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QMainWindow, QSystemTrayIcon, QMenu, QStyle, QWidget, QLabel, QVBoxLayout, QToolButton, \
-    QStatusBar, QHBoxLayout, QSlider, QGridLayout, QLineEdit
+    QStatusBar, QHBoxLayout, QSlider, QGridLayout, QLineEdit, QSpinBox
 
 APPNAME = "Vlux Meter"
 VLUX_METER_VERSION = '1.0.0'
 
 IMAGE_LOCATION = Path('/tmp').joinpath('lux-from-webcam.jpg').as_posix()
 SAVE_IMAGE = False
-VERBOSE = False
 
 #: A high resolution image, will fall back to an internal SVG if this file isn't found on the local system
 DEFAULT_SPLASH_PNG = "/usr/share/icons/hicolor/256x256/apps/vlux_meter.png"
@@ -124,13 +124,13 @@ DEFAULT_SETTINGS = {
         'crop': '0.0,0.0,100.0,100.0'
     },
     'brightness_to_lux': {
-        'sunlight': brightness_lux_str(250, 100000),
-        'daylight': brightness_lux_str(160, 10000),
-        'overcast': brightness_lux_str(110, 1000),
-        'rise-set': brightness_lux_str(50, 400),
-        'dusk': brightness_lux_str(20, 100),
-        'livingrm': brightness_lux_str(5, 50),
-        'night': brightness_lux_str(0, 5),
+        'Sunlight': brightness_lux_str(250, 100000),
+        'Daylight': brightness_lux_str(160, 10000),
+        'Overcast': brightness_lux_str(110, 1000),
+        'Rise/set': brightness_lux_str(50, 400),
+        'Dusk': brightness_lux_str(20, 100),
+        'Room': brightness_lux_str(5, 50),
+        'Night': brightness_lux_str(0, 5),
     },
     'global': {
         'system_tray_enabled': 'yes',
@@ -370,6 +370,7 @@ class ConfigIni(configparser.ConfigParser):
 
     def __init__(self) -> None:
         super().__init__()
+        self.optionxform = partial(str)  # Retain case in property names
         if not self.has_section(ConfigIni.METADATA_SECTION):
             self.add_section(ConfigIni.METADATA_SECTION)
         self.read_dict(DEFAULT_SETTINGS)
@@ -407,7 +408,7 @@ class ConfigIni(configparser.ConfigParser):
             self[ConfigIni.METADATA_SECTION][ConfigIni.METADATA_VERSION_OPTION] = VLUX_METER_VERSION
             self[ConfigIni.METADATA_SECTION][ConfigIni.METADATA_TIMESTAMP_OPTION] = str(zoned_now())
             self.write(config_file)
-        log_info(f"Wrote config to {config_path.as_posix()}")
+        log_debug(f"Wrote config to {config_path.as_posix()}")
 
 
 global_config: ConfigIni = ConfigIni()
@@ -460,15 +461,6 @@ class StatusBar(QStatusBar):
         self.menu_button.setIconSize(QSize(32, 32))
         self.addPermanentWidget(self.menu_button, stretch=1)
         self.installEventFilter(self)
-
-
-class LuxDisplay(QLabel):
-
-    def __init__(self, parent):
-        super().__init__("", parent=parent)
-        big_font = self.font()
-        big_font.setPointSize(big_font.pointSize() + 8)
-        self.setFont(big_font)
 
 
 class CameraDisplay(QLabel):
@@ -566,28 +558,47 @@ class CameraDisplay(QLabel):
             global_config.save(CONFIG_PATH)
 
 
-class BrightnessLuxMappingDisplay(QWidget):
+def make_heading(heading_text: str, parent: QWidget = None):
+    heading = QLabel(parent=parent)
+    big_font = heading.font()
+    big_font.setPointSize(big_font.pointSize() + 4)
+    heading.setFont(big_font)
+    heading.setText(heading_text)
+    return heading
+
+
+class BrightnessMappingDisplay(QWidget):
     def __init__(self):
         super().__init__()
         layout = QGridLayout()
         self.setLayout(layout)
-        layout.addWidget(QLabel("Brightness Value Mapping"), 0, 0, 1, -1)
-        for col, (value, (name, lux)) in enumerate(reversed(global_config.get_brightness_map().items())):
-            input = QLineEdit()
-            input.setText(str(value))
-            layout.addWidget(input, 1, col, 1, 1)
-            lux_label = QLabel(f"{lux}\n{name}")
-            layout.addWidget(lux_label, 2, col, 1, 1)
+        heading = make_heading(tr("Brightness-to-Lux Mapping"), self)
+        layout.addWidget(heading, 0, 0, 1, -1, Qt.AlignTop)
+
+        self.input_widgets: Dict[QWidget, QSpinBox] = {}
+        for col, (brightness, (name, lux)) in enumerate(reversed(global_config.get_brightness_map().items())):
+            lux_label = QLabel(f"{lux:n}\n{name}")
+            layout.addWidget(lux_label, 1, col, 1, 1)
+            brightness_input = QSpinBox()
+            self.input_widgets[name] = brightness_input
+            brightness_input.setRange(0, 255)
+            brightness_input.setValue(brightness)
+            layout.addWidget(brightness_input, 2, col, 1, 1)
             slider = QSlider(Qt.Orientation.Vertical)
             slider.setToolTip(f"{name} ({lux})")
-            slider.setMinimum(0)
-            slider.setMaximum(255)
-            slider.setValue(int(value))
+            slider.setRange(0, 255)
+            slider.setValue(brightness)
+            slider.sliderMoved.connect(brightness_input.setValue)
+            brightness_input.valueChanged.connect(slider.setValue)
+            brightness_input.valueChanged.connect(partial(self.save_value, name, lux))
             # slider.setTickInterval(20)
-            # slider.setTickPosition(QSlider.TicksBothSides)
-            layout.addWidget(slider, 3, col, -1, 1)
+            slider.setTickPosition(QSlider.TicksLeft)
+            layout.addWidget(slider, 3, col, -1, 1, Qt.AlignRight)
         self.show()
 
+    def save_value(self, name: str, lux: int, brightness: int):
+        global_config['brightness_to_lux'][name] = f"{brightness} {lux}"
+        global_config.save(CONFIG_PATH)
 
 class VluxMeterWindow(QMainWindow):
 
@@ -668,14 +679,14 @@ class VluxMeterWindow(QMainWindow):
         self.setContentsMargins(8, 0, 0, 0)
         main_widget.setLayout(layout)
 
-        self.lux_display = LuxDisplay(parent=self)
+        self.lux_display = make_heading(tr('Lux:'), parent=self)
         layout.addWidget(self.lux_display, 0, 0, 1, 2)
 
         self.camera_display = CameraDisplay(parent=self)
         layout.addWidget(self.camera_display, 1, 0, 1, 2, Qt.AlignTop|Qt.AlignLeft)
 
-        self.brightness_lux_mapping_display = BrightnessLuxMappingDisplay()
-        self.brightness_lux_mapping_display.setDisabled(True)
+        self.brightness_lux_mapping_display = BrightnessMappingDisplay()
+        #self.brightness_lux_mapping_display.setDisabled(True)
         layout.addWidget(self.brightness_lux_mapping_display, 0, 2, -1, 1)
 
         self.setCentralWidget(main_widget)
@@ -712,7 +723,7 @@ class VluxMeterWindow(QMainWindow):
         self.status_message('', 0)
         if self.lux_dispatcher is not None:
             self.lux_dispatcher.dispatch_lux_value(lux)
-        self.lux_display.setText(f"{datetime.now().strftime('%X')} - {lux} lux (brightness={brightness})")
+        self.lux_display.setText(f"Lux: {lux:n} (brightness={brightness}) {datetime.now().strftime('%X')}")
 
     def display_camera_image(self, image: QImage):
         self.camera_display.display_image(image)
@@ -720,10 +731,10 @@ class VluxMeterWindow(QMainWindow):
     def eventFilter(self, obj: QObject, event: QEvent):
         if obj == self.app:
             if event.type() == QEvent.ApplicationActivate:
-                log_info(f"Switch refresh rate to fast")
+                log_info(f"GUI Visible: Switch image refresh rate to fast")
                 self.meter_thread.fast_fresh = True
             elif event.type() == QEvent.ApplicationDeactivate:  # Minimised or not focused
-                log_info(f"Switch refresh rate to slow")
+                log_info(f"Minimised or not focused: Switch image refresh rate to slow")
                 self.meter_thread.fast_fresh = False
         return super().eventFilter(obj, event)
 
@@ -781,7 +792,7 @@ class CameraMeterThread(QThread):
             camera = cv2.VideoCapture(global_config['camera']['device'], cv2.CAP_V4L2)
             original_auto_exposure_option = camera.get(cv2.CAP_PROP_AUTO_EXPOSURE)
             original_exposure = camera.get(cv2.CAP_PROP_EXPOSURE)
-            log_info(f"existing values: auto-exposure={original_auto_exposure_option} exposure={original_exposure}")
+            log_debug(f"existing values: auto-exposure={original_auto_exposure_option} exposure={original_exposure}") if log_debug_enabled else None
             auto_exposure_option = global_config.getint("camera", "auto_exposure_option")
             manual_exposure_time = global_config.getint("camera", "manual_exposure_time")
             try:
@@ -789,7 +800,7 @@ class CameraMeterThread(QThread):
                 camera.set(cv2.CAP_PROP_EXPOSURE, manual_exposure_time)
                 new_auto_exposure = camera.get(cv2.CAP_PROP_AUTO_EXPOSURE)
                 new_exposure = camera.get(cv2.CAP_PROP_EXPOSURE)
-                log_info(f"new values: auto-exposure={new_auto_exposure} exposure={new_exposure}")
+                log_debug(f"new values: auto-exposure={new_auto_exposure} exposure={new_exposure}") if log_debug_enabled else None
                 result, image = camera.read()
                 self.signal_new_image(image)
                 xp, yp, wp, hp = (float(v) for v in global_config['camera']['crop'].split(','))
@@ -807,21 +818,21 @@ class CameraMeterThread(QThread):
                             # Interpolate on a log10 scale - at least that's what I think this is (idea from chatgpt)
                             lux = lux + 10 ** (
                                     (brightness - value) / (previous_value - value) * math.log10((previous_lux - lux)))
-                        log_info(f"brightness={brightness}, value={value}, lux={lux}, name={name}")
+                        log_debug(f"brightness={brightness}, value={value}, lux={lux}, name={name}") if log_debug_enabled else None
                         int_lux = round(lux)
                         self.new_lux_value_signal.emit(int_lux, round(brightness))
                         break
                     previous_lux, previous_value = lux, value
             finally:
-                log_info(
-                    f"Restoring auto-exposure={original_auto_exposure_option} exposure={original_exposure}") if VERBOSE else None
+                log_debug(f"Restoring auto-exposure={original_auto_exposure_option} exposure={original_exposure}"
+                          )  if log_debug_enabled else None
                 camera.set(cv2.CAP_PROP_AUTO_EXPOSURE, original_auto_exposure_option)
                 if original_auto_exposure_option != auto_exposure_option:  # Can only set exposure if not on auto_exposure
                     camera.set(cv2.CAP_PROP_EXPOSURE, original_exposure)
                 camera.release()
                 camera = None
             sleep_seconds = 1 if self.fast_fresh else global_config.getint('global', 'dispatch_frequency_seconds')
-            log_info(f"Meter Sleeping {sleep_seconds} seconds")
+            log_debug(f"Meter Sleeping {sleep_seconds} seconds") if log_debug_enabled else None
             for _ in range(0, sleep_seconds):
                 time.sleep(1)
                 if self.fast_fresh:
@@ -859,7 +870,7 @@ class LuxFifoDispatcher(QThread):
                     self.fifo.write(f"{self.lux_value}\n")
                     self.fifo.flush()
                 dispatch_frequency_seconds = global_config.getint('global', 'dispatch_frequency_seconds', fallback=60)
-                log_info(f"Dispatcher sleeping {dispatch_frequency_seconds} seconds")
+                log_debug(f"Dispatcher sleeping {dispatch_frequency_seconds} seconds") if log_debug_enabled else None
                 time.sleep(dispatch_frequency_seconds)
 
         finally:
@@ -867,7 +878,7 @@ class LuxFifoDispatcher(QThread):
             self.fifo = None
 
     def dispatch_lux_value(self, lux: int, _: int):
-        log_info(f"Dispatcher received new value {lux}")
+        log_debug(f"Dispatcher received new value {lux}") if log_debug_enabled else None
         self.lux_value = lux
 
 
