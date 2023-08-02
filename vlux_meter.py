@@ -32,6 +32,7 @@ import io
 import locale
 import math
 import os
+import pathlib
 import signal
 import socket
 import sys
@@ -50,7 +51,7 @@ from PyQt5.QtGui import QGuiApplication, QPixmap, QIcon, QCursor, QImage, QPaint
     QColor, QIntValidator
 from PyQt5.QtSvg import QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QMainWindow, QSystemTrayIcon, QMenu, QStyle, QWidget, QLabel, QVBoxLayout, QToolButton, \
-    QStatusBar, QHBoxLayout, QSlider, QGridLayout, QLineEdit, QSpinBox
+    QStatusBar, QHBoxLayout, QSlider, QGridLayout, QLineEdit, QSpinBox, QPushButton, QFileDialog, QCheckBox, QComboBox
 
 APPNAME = "Vlux Meter"
 VLUX_METER_VERSION = '1.0.0'
@@ -554,7 +555,7 @@ class CameraDisplay(QLabel):
     def set_measurement_relative_rectangle(self):
         if self.pixmap() is not None:
             x, y, w, h = self.calc_relative_rectangle(self.x_start, self.y_start, self.x_end, self.y_end)
-            global_config['camera']['crop'] = f"{x},{y},{w},{h}"
+            global_config['camera']['crop'] = f"{x:0.4f},{y:0.4f},{w:0.4f},{h:0.4f}"
             global_config.save(CONFIG_PATH)
 
 
@@ -599,6 +600,47 @@ class BrightnessMappingDisplay(QWidget):
     def save_value(self, name: str, lux: int, brightness: int):
         global_config['brightness_to_lux'][name] = f"{brightness} {lux}"
         global_config.save(CONFIG_PATH)
+
+class PushButtonLeftJustified(QPushButton):
+    def __init__(self, text: str | None = None, parent: QWidget | None = None) -> None:
+        super().__init__(parent=parent)
+        self.label = QLabel()
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+        self.layout().addWidget(self.label)
+        # Not sure if this helps:
+        self.setContentsMargins(0, 0, 0, 0)
+        # Seems to fix top/bottom clipping on openbox and xfce:
+        layout.setContentsMargins(0, 0, 0, 0)
+        if text is not None:
+            self.setText(text)
+
+    def setText(self, text: str) -> None:
+        self.label.setText(text)
+class CameraControls(QWidget):
+    def __init__(self):
+        super().__init__()
+        layout = QHBoxLayout()
+        self.setLayout(layout)
+        self.camera_device_selector = PushButtonLeftJustified()
+        self.camera_device_selector.setText(global_config.get('camera', 'device', fallback=''))
+        layout.addWidget(self.camera_device_selector)
+        self.toggle_manual_control = QComboBox()
+        self.toggle_manual_control.addItem("Manual Exposure")
+        self.toggle_manual_control.addItem("Auto Exposure")
+        self.toggle_manual_control.setDisabled(True)
+        layout.addWidget(self.toggle_manual_control)
+
+        def choose_device() -> None:
+            device_name = QFileDialog.getOpenFileName(self, tr("Select a camera device"), "/dev/video0")[0]
+            if device_name != '':
+                path = pathlib.Path(device_name)
+                if path.is_char_device():
+                    global_config['camera']['device'] = device_name
+                    global_config.save(CONFIG_PATH)
+
+        self.camera_device_selector.pressed.connect(choose_device)
+
 
 class VluxMeterWindow(QMainWindow):
 
@@ -688,6 +730,9 @@ class VluxMeterWindow(QMainWindow):
         self.brightness_lux_mapping_display = BrightnessMappingDisplay()
         #self.brightness_lux_mapping_display.setDisabled(True)
         layout.addWidget(self.brightness_lux_mapping_display, 0, 2, -1, 1)
+
+        self.camera_controls = CameraControls()
+        layout.addWidget(self.camera_controls, 2, 0, 1, 2)
 
         self.setCentralWidget(main_widget)
         self.setStatusBar(StatusBar(app_context_menu=self.context_menu, parent=self))
