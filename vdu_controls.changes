@@ -10,7 +10,9 @@ Sun 24 Jun 2023 21:50:00 UTC - Michael Hamilton <michael@actrix.gen.nz>
   * Make message box popups resizable for increased readability.
   * Handle utf-8 decoding errors for EDID's and capabilities (issue #49).
   * When a Preset is attached to a Lux Profile, fix brightness for VDU's that aren't in the Preset.
+  * Fixed --sleep-multiplier command line option.
   * Minor UI enhancements and fixes.
+
 
 -------------------------------------------------------------------
 Thu 11 May 2023 23:56:00 UTC - Michael Hamilton <michael@actrix.gen.nz>

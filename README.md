@@ -228,6 +228,7 @@ Version History
   * Make message box popups resizable for increased readability.
   * Handle utf-8 decoding errors for EDID's and capabilities (issue #49).
   * When a Preset is attached to a Lux Profile, fix brightness for VDU's that aren't in the Preset.
+  * Fixed --sleep-multiplier command line option.
   * Minor UI enhancements and fixes.
 * 1.10.2
   * Fix Preset non-zero transition-step-seconds, so it works properly.
