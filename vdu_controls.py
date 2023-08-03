@@ -1414,12 +1414,6 @@ class DdcUtil:
                 if i + 1 == GET_ATTRIBUTES_RETRIES:
                     # Don't log here - creates too much noise in the logs - pass the buck instead
                     raise  # Too many failures, pass the buck upstairs
-            if self.version[0] >= 2 and (
-                    self.prefer_dynamic_sleep or (sleep_multiplier is not None and math.isclose(sleep_multiplier, 0.0))):
-                log_warning(f"ddcutil might be running too fast for {vdu_id=}, perhaps try disabling dynamic-sleep for this VDU.")
-            else:
-                log_warning(f"ddcutil might be running too fast for {vdu_id=}, current sleep-multiplier is "
-                            f"{sleep_multiplier}, perhaps try increasing it.")
             time.sleep(2)
         return None
 
