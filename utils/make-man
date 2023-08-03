@@ -1,5 +1,5 @@
 #!/bin/bash
 # hacky - pandoc is better at html
-python3 vdu_controls.py --detailed-help | egrep -v '^INFO: ' | pandoc --from markdown --to html > docs/_build/man/vdu_controls.1.html
+python3 vdu_controls.py --detailed-help | egrep -v '^..:..:.. INFO: ' | pandoc --from markdown --to html > docs/_build/man/vdu_controls.1.html
 cd docs
 make man
