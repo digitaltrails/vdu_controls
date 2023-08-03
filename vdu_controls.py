@@ -44,7 +44,7 @@ Optional arguments:
       --warnings            popup a warning when a VDU lacks an enabled control
       --syslog              repeat diagnostic output to the syslog (journald)
       --no-splash           don't show the splash screen
-      --sleep-multiplier multiplier
+      --sleep-multiplier    multiplier
                             protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 1.0)
       --create-config-files  if they do not exist, create template config INI files in $HOME/.config/vdu_controls/
       --install             installs the vdu_controls in the current user's path and desktop application menu.
@@ -1414,8 +1414,12 @@ class DdcUtil:
                 if i + 1 == GET_ATTRIBUTES_RETRIES:
                     # Don't log here - creates too much noise in the logs - pass the buck instead
                     raise  # Too many failures, pass the buck upstairs
-            if sleep_multiplier is not None and not math.isclose(sleep_multiplier, 0.0) and not self.prefer_dynamic_sleep:
-                log_warning(f"ddcutil maybe running too fast for monitor {vdu_id}, try increasing --sleep-multiplier.")
+            if self.version[0] >= 2 and (
+                    self.prefer_dynamic_sleep or (sleep_multiplier is not None and math.isclose(sleep_multiplier, 0.0))):
+                log_warning(f"ddcutil might be running too fast for {vdu_id=}, perhaps try disabling dynamic-sleep for this VDU.")
+            else:
+                log_warning(f"ddcutil might be running too fast for {vdu_id=}, current sleep-multiplier is "
+                            f"{sleep_multiplier}, perhaps try increasing it.")
             time.sleep(2)
         return None
 
@@ -1652,6 +1656,10 @@ class GlobalOption(Enum):
     DEBUG_ENABLED = QT_TR_NOOP('debug-enabled'), 'no', ''
     SYSLOG_ENABLED = QT_TR_NOOP('syslog-enabled'), 'no', ''
     LOCATION = QT_TR_NOOP('location'), '', ''
+    # SLEEP_MULTIPLIER = QT_TR_NOOP('sleep-multiplier'), '', '', 'ddcutil-parameters'  # Could eventually do something like this
+
+    def ini_section(self) -> str:
+        return 'vdu-controls-globals' if len(self.value) == 3 else self.value[3]
 
     def ini_name(self) -> str:
         return self.value[0]
@@ -1688,7 +1696,7 @@ class VduControlsConfig:
         if include_globals:
             self.ini_content[QT_TR_NOOP('vdu-controls-globals')] = {}
             for option in GlobalOption:
-                self.ini_content[QT_TR_NOOP('vdu-controls-globals')][option.ini_name()] = option.default_value()
+                self.ini_content[option.ini_section()][option.ini_name()] = option.default_value()
 
         self.ini_content[QT_TR_NOOP('vdu-controls-widgets')] = {}
         self.ini_content[QT_TR_NOOP('ddcutil-parameters')] = {}
@@ -1729,8 +1737,8 @@ class VduControlsConfig:
     def is_set(self, option: GlobalOption) -> bool:
         return self.ini_content.getboolean('vdu-controls-globals', option.ini_name())
 
-    def set_global(self, option: GlobalOption, value) -> None:
-        self.ini_content['vdu-controls-globals'][option.ini_name()] = value
+    def set_from_command_line_option(self, option: GlobalOption, value: str) -> None:
+        self.ini_content[option.ini_section()][option.ini_name()] = value
 
     def get_sleep_multiplier(self) -> float:
         return self.ini_content.getfloat('ddcutil-parameters', 'sleep-multiplier', fallback=1.0)
@@ -1884,11 +1892,14 @@ class VduControlsConfig:
         for option in GlobalOption:
             if option.is_bool():
                 if option.arg_name() in arg_values and arg_values[option.arg_name()]:
-                    self.set_global(option, "yes")
+                    self.set_from_command_line_option(option, "yes")
                 if option.arg_name(with_prefix_no=True) in arg_values and arg_values[option.arg_name(with_prefix_no=True)]:
-                    self.set_global(option, "no")
+                    self.set_from_command_line_option(option, "no")
             elif option.arg_name() in arg_values and arg_values[option.arg_name()] is not None:
-                self.set_global(option, arg_values[option.arg_name()])
+                self.set_from_command_line_option(option, str(arg_values[option.arg_name()]))
+
+        if 'sleep_multiplier' in arg_values and arg_values['sleep_multiplier'] is not None:  # TODO - how to generalise with globals
+            self.ini_content['ddcutil-parameters']['sleep-multiplier'] = str(arg_values['sleep_multiplier'])
 
         if len(parsed_args.show) != 0:
             for control_def in VDU_SUPPORTED_CONTROLS.by_arg_name.values():
@@ -1935,7 +1946,7 @@ class VduController(QObject):
         self.manufacturer = manufacturer
         self.ddcutil = ddcutil
         self.vdu_exception_handler = vdu_exception_handler
-        self.sleep_multiplier: float | None = None
+        self.sleep_multiplier: float | None = default_config.get_sleep_multiplier()
         self.enabled_vcp_codes = default_config.get_all_enabled_vcp_codes()
         self.vdu_model_id = proper_name(vdu_model_name.strip())
         self.capabilities_text: str | None = None
@@ -2332,7 +2343,11 @@ class SettingsEditorFloatWidget(SettingsEditorFieldBase):
         self.spinbox = QDoubleSpinBox()
         self.spinbox.setRange(0.0, 4.0)   # TODO this should be looked up in the metadata
         self.spinbox.setSingleStep(0.1)
-        self.spinbox.setValue(float(section_editor.ini_editable[section][option]))
+        try:
+            value = float(section_editor.ini_editable[section][option])
+        except ValueError:  # Just in case - rather not fall over
+            value = 0.0
+        self.spinbox.setValue(value)
         self.layout().addWidget(self.spinbox)
 
         def spinbox_value_changed() -> None:
@@ -6449,7 +6464,7 @@ class VduAppWindow(QMainWindow):
                 restart_application(tr("A settings reset requires vdu_controls to restart."))
                 return
             for setting in GlobalOption:
-                if ('vdu-controls-globals', setting.ini_name()) in changed_settings and setting.requires_restart():
+                if (setting.ini_section(), setting.ini_name()) in changed_settings and setting.requires_restart():
                     restart_application(tr("The change to the {} option requires "
                                            "vdu_controls to restart.").format(setting))
                     return
