@@ -49,8 +49,8 @@ Dependencies
 All the following runtime dependencies are likely to be pre-packaged on any modern Linux distribution 
 (``vdu_controls`` was originally developed on OpenSUSE Tumbleweed).
 
-* **ddcutil >= 1.3, >= 1.4 recommended**: the command line utility that interfaces to VDU's via DDC over i2c-dev or USB. (If 
-  anyone requires support for versions of ddcutil prior to v1.3 please contact me directly.)
+* **ddcutil >= 1.2, >= 1.4 recommended**: the command line utility that interfaces to VDU's via DDC over i2c-dev or USB. (If 
+  anyone requires support for versions of ddcutil prior to v1.2 please contact me directly.)
 * **i2c-dev**: the i2c-dev kernel module normally shipped with all Linux distributions and required by [ddcutil](https://www.ddcutil.com)
 * **python >=3.8**: ``vdu_controls`` is written in python and may depend on some features present only in 3.8 onward.
 * **python >=3.8 QtPy**: the python GUI library used by ``vdu_controls``.
@@ -230,6 +230,7 @@ Version History
   * When a Preset is attached to a Lux Profile, fix brightness for VDU's that aren't in the Preset.
   * Fixed --sleep-multiplier command line option.
   * Minor UI enhancements and fixes.
+  * Support ddcutil versions earlier than 1.3.
 * 1.10.2
   * Fix Preset non-zero transition-step-seconds, so it works properly.
   * Changing log-to-syslog or log-debug-enabled no longer requires a restart.

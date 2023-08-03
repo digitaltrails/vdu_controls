@@ -670,6 +670,7 @@ import configparser
 import glob
 import inspect
 import io
+import itertools
 import json
 import locale
 import math
@@ -1210,6 +1211,7 @@ class DdcUtil:
         if version_match is not None:
             self.version = [int(i) for i in version_match.groups()[0:3]]
             self.version_suffix = version_match.groups()[3]
+        # self.version = [1,2,2]  # for testing for 1.2.2 compatibility
         log_info(f"ddcutil version info: {version_match.group(0)} {self.version}")
         self.prefer_dynamic_sleep = self.version[0] >= 2 and prefer_dynamic_sleep
         log_info(f"Prefer dynamic sleep = {self.prefer_dynamic_sleep}")
@@ -1342,7 +1344,7 @@ class DdcUtil:
         for "Non-Continuous" attributes.
         """
         result = self.get_attributes(vdu_id, [vcp_code], sleep_multiplier=sleep_multiplier)
-        if result is not None:
+        if result and result[0] is not None:
             return result[0]
         raise ValueError(
             f"ddcutil returned an invalid value for monitor {vdu_id} vcp_code {vcp_code}, try increasing --sleep-multiplier")
@@ -1380,7 +1382,19 @@ class DdcUtil:
     def get_attributes(self,
                        vdu_id: str,
                        vcp_code_list: List[str],
-                       sleep_multiplier: float | None = None) -> List[Tuple[str, str]] | None:
+                       sleep_multiplier: float | None = None) -> List[Tuple[str, str]]:
+        if self.version[0] > 1 or self.version[1] > 3:
+            return self._get_attributes_implementation(vdu_id, vcp_code_list, sleep_multiplier)
+        else:
+            result = []
+            for vcp_code in vcp_code_list:
+                result += self._get_attributes_implementation(vdu_id, [vcp_code], sleep_multiplier)
+            return result
+
+    def _get_attributes_implementation(self,
+                       vdu_id: str,
+                       vcp_code_list: List[str],
+                       sleep_multiplier: float | None = None) -> List[Tuple[str, str]]:
         """
         Returns None if there is an error communicating with the VDU
         """
@@ -1415,7 +1429,7 @@ class DdcUtil:
                     # Don't log here - creates too much noise in the logs - pass the buck instead
                     raise  # Too many failures, pass the buck upstairs
             time.sleep(2)
-        return None
+        return []
 
     def __parse_value(self, vdu_id: str, vcp_code: str, result: str) -> Tuple[str, str] | None:
         value_pattern = re.compile(r'VCP ' + vcp_code + r' ([A-Z]+) (.+)\n')
@@ -1992,7 +2006,7 @@ class VduController(QObject):
         """Return a tuple that defines this VDU: (vdu_id, manufacturer, model, serial-number)."""
         return self.vdu_id, self.manufacturer, self.model_name, self.serial
 
-    def get_attributes(self, attributes: List[str]) -> List[Tuple[str, str]] | None:
+    def get_attributes(self, attributes: List[str]) -> List[Tuple[str, str]]:
         try:
             if len(attributes) == 0:
                 return []
@@ -2814,7 +2828,7 @@ class VduControlPanel(QWidget):
     def refresh_data(self) -> None:
         """Tell the control widgets to get fresh VDU data (maybe called from a task thread, so no GUI op's here)."""
         values = self.controller.get_attributes([control.vcp_capability.vcp_code for control in self.vcp_controls])
-        if values is not None:
+        if values:
             for control, value in zip(self.vcp_controls, values):
                 control.refresh_data(value=value)
 
