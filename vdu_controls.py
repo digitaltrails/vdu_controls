@@ -670,7 +670,6 @@ import configparser
 import glob
 import inspect
 import io
-import itertools
 import json
 import locale
 import math
@@ -700,7 +699,7 @@ from functools import partial
 from importlib import import_module
 from pathlib import Path
 from threading import Lock
-from typing import List, Tuple, Mapping, Type, Dict, Callable
+from typing import List, Tuple, Mapping, Type, Dict, Callable, Any
 from urllib.error import URLError
 
 from PyQt5 import QtNetwork
@@ -1194,11 +1193,12 @@ class DdcUtil:
     corrective action such as increasing the sleep_multiplier).
     """
 
-    def __init__(self, common_args=[], default_sleep_multiplier: float = 1.0, prefer_dynamic_sleep=True) -> None:
+    def __init__(self, common_args: List[str] | None = None,
+                 default_sleep_multiplier: float | None = None, prefer_dynamic_sleep=True) -> None:
         super().__init__()
         self.supported_codes: Dict[str, str] | None = None
         self.default_sleep_multiplier = default_sleep_multiplier
-        self.common_args = common_args
+        self.common_args = common_args if common_args else []
         self.vcp_type_map: Dict[str, str] = {}
         self.use_edid = os.getenv('VDU_CONTROLS_USE_EDID', default="yes") == 'yes'
         log_info(f"Use_edid={self.use_edid} (to disable it: export VDU_CONTROLS_USE_EDID=no)")
@@ -1230,13 +1230,13 @@ class DdcUtil:
             multiplier_args = []
             multiplier = self.default_sleep_multiplier if sleep_multiplier is None else sleep_multiplier
             if self.version[0] >= 2:
-                if self.prefer_dynamic_sleep or math.isclose(multiplier, 0.0):
+                if self.prefer_dynamic_sleep or multiplier is None:
                     multiplier_args += ['--enable-dynamic-sleep']
                 else:
                     multiplier_args += ['--disable-dynamic-sleep']
                     if not math.isclose(multiplier, 0.0):
                         multiplier_args += ['--sleep-multiplier', f"{multiplier:.2f}"]
-            elif not math.isclose(multiplier, 0.0):
+            elif multiplier is not None:
                 multiplier_args += ['--sleep-multiplier', f"{multiplier:.2f}"]
             process_args = [DDCUTIL] + multiplier_args + self.common_args + list(args)
             try:  # TODO consider tracking errors and raising an exception if all VDU's are unavailable
@@ -1392,9 +1392,9 @@ class DdcUtil:
             return result
 
     def _get_attributes_implementation(self,
-                       vdu_id: str,
-                       vcp_code_list: List[str],
-                       sleep_multiplier: float | None = None) -> List[Tuple[str, str]]:
+                                       vdu_id: str,
+                                       vcp_code_list: List[str],
+                                       sleep_multiplier: float | None = None) -> List[Tuple[str, str]]:
         """
         Returns None if there is an error communicating with the VDU
         """
@@ -1653,21 +1653,25 @@ class GeoLocation:
 
 
 class GlobalOption(Enum):
-    SYSTEM_TRAY_ENABLED = QT_TR_NOOP('system-tray-enabled'), 'no', 'restart'
-    TRANSLATIONS_ENABLED = QT_TR_NOOP('translations-enabled'), 'no', 'restart'
-    PREFER_DYNAMIC_SLEEP_ENABLED = QT_TR_NOOP('prefer-dynamic-sleep-enabled'), 'yes', ''
-    WEATHER_ENABLED = QT_TR_NOOP('weather-enabled'), 'no', ''
-    SCHEDULE_ENABLED = QT_TR_NOOP('schedule-enabled'), 'yes', ''
-    LUX_OPTIONS_ENABLED = QT_TR_NOOP('lux-options-enabled'), 'no', 'restart'
-    SPLASH_SCREEN_ENABLED = QT_TR_NOOP('splash-screen-enabled'), 'yes', ''
-    WARNINGS_ENABLED = QT_TR_NOOP('warnings-enabled'), 'no', ''
-    DEBUG_ENABLED = QT_TR_NOOP('debug-enabled'), 'no', ''
-    SYSLOG_ENABLED = QT_TR_NOOP('syslog-enabled'), 'no', ''
-    LOCATION = QT_TR_NOOP('location'), '', ''
-    # SLEEP_MULTIPLIER = QT_TR_NOOP('sleep-multiplier'), '', '', 'ddcutil-parameters'  # Could eventually do something like this
+
+    # vdu-controls-globals
+    SYSTEM_TRAY_ENABLED = QT_TR_NOOP('system-tray-enabled'), 'no', 'restart', 'vdu-controls-globals'
+    TRANSLATIONS_ENABLED = QT_TR_NOOP('translations-enabled'), 'no', 'restart', 'vdu-controls-globals'
+    PREFER_DYNAMIC_SLEEP_ENABLED = QT_TR_NOOP('prefer-dynamic-sleep-enabled'), 'yes', None, 'vdu-controls-globals'
+    WEATHER_ENABLED = QT_TR_NOOP('weather-enabled'), 'no', None, 'vdu-controls-globals'
+    SCHEDULE_ENABLED = QT_TR_NOOP('schedule-enabled'), 'yes', None, 'vdu-controls-globals'
+    LUX_OPTIONS_ENABLED = QT_TR_NOOP('lux-options-enabled'), 'no', 'restart', 'vdu-controls-globals'
+    SPLASH_SCREEN_ENABLED = QT_TR_NOOP('splash-screen-enabled'), 'yes', None, 'vdu-controls-globals'
+    WARNINGS_ENABLED = QT_TR_NOOP('warnings-enabled'), 'no', None, 'vdu-controls-globals'
+    DEBUG_ENABLED = QT_TR_NOOP('debug-enabled'), 'no', None, 'vdu-controls-globals'
+    SYSLOG_ENABLED = QT_TR_NOOP('syslog-enabled'), 'no', None, 'vdu-controls-globals'
+    LOCATION = QT_TR_NOOP('location'), None, '', 'vdu-controls-globals'
+
+    # ddcutil-parameters
+    SLEEP_MULTIPLIER = QT_TR_NOOP('sleep-multiplier'), None, None, 'ddcutil-parameters'
 
     def ini_section(self) -> str:
-        return 'vdu-controls-globals' if len(self.value) == 3 else self.value[3]
+        return self.value[3]
 
     def ini_name(self) -> str:
         return self.value[0]
@@ -1696,7 +1700,8 @@ class VduControlsConfig:
         self.ini_content = ConfigIni()
         # augment the configparser with type-info for run-time widget selection (default type is 'boolean')
         self.config_type_map = {
-            QT_TR_NOOP('enable-vcp-codes'): 'csv', QT_TR_NOOP('sleep-multiplier'): 'float',
+            QT_TR_NOOP('enable-vcp-codes'): 'csv',
+            QT_TR_NOOP('sleep-multiplier'): 'float',
             QT_TR_NOOP('capabilities-override'): 'text',
             QT_TR_NOOP('location'): 'location',
         }
@@ -1704,7 +1709,8 @@ class VduControlsConfig:
         if include_globals:
             self.ini_content[QT_TR_NOOP('vdu-controls-globals')] = {}
             for option in GlobalOption:
-                self.ini_content[option.ini_section()][option.ini_name()] = option.default_value()
+                if option.ini_section() == 'vdu-controls-globals' and option.default_value() is not None:
+                    self.ini_content[option.ini_section()][option.ini_name()] = str(option.default_value())
 
         self.ini_content[QT_TR_NOOP('vdu-controls-widgets')] = {}
         self.ini_content[QT_TR_NOOP('ddcutil-parameters')] = {}
@@ -1714,7 +1720,7 @@ class VduControlsConfig:
             self.ini_content['vdu-controls-widgets'][item.property_name()] = 'yes' if item.enabled else 'no'
 
         self.ini_content['vdu-controls-widgets']['enable-vcp-codes'] = ''
-        self.ini_content['ddcutil-parameters']['sleep-multiplier'] = str(1.0)
+        self.ini_content['ddcutil-parameters']['sleep-multiplier'] = str(0.0)
         self.ini_content['ddcutil-capabilities']['capabilities-override'] = ''
 
         if default_enabled_vcp_codes is not None:
@@ -1745,11 +1751,18 @@ class VduControlsConfig:
     def is_set(self, option: GlobalOption) -> bool:
         return self.ini_content.getboolean('vdu-controls-globals', option.ini_name())
 
-    def set_from_command_line_option(self, option: GlobalOption, value: str) -> None:
-        self.ini_content[option.ini_section()][option.ini_name()] = value
+    def set_option_from_args(self, option: GlobalOption, arg_values: Dict[str, Any]):
+        if option.is_bool():
+            if option.arg_name() in arg_values and arg_values[option.arg_name()]:
+                self.ini_content[option.ini_section()][option.ini_name()] = "yes"
+            if option.arg_name(with_prefix_no=True) in arg_values and arg_values[option.arg_name(with_prefix_no=True)]:
+                self.ini_content[option.ini_section()][option.ini_name()] = "no"
+        elif option.arg_name() in arg_values and arg_values[option.arg_name()] is not None:
+            self.ini_content[option.ini_section()][option.ini_name()] = str(arg_values[option.arg_name()])
 
-    def get_sleep_multiplier(self) -> float:
-        return self.ini_content.getfloat('ddcutil-parameters', 'sleep-multiplier', fallback=1.0)
+    def get_sleep_multiplier(self) -> float | None:
+        value = self.ini_content.getfloat('ddcutil-parameters', 'sleep-multiplier', fallback=0.0)
+        return None if math.isclose(value, 0.0) else value
 
     def get_capabilities_alt_text(self) -> str:
         return self.ini_content['ddcutil-capabilities']['capabilities-override']
@@ -1877,8 +1890,8 @@ class VduControlsConfig:
                             help='popup a warning when a VDU lacks an enabled control')
         parser.add_argument('--syslog', default=False, action='store_true', help='enable diagnostic output to syslog')
         parser.add_argument('--no-splash', default=False, action='store_true', help="don't show the splash screen")
-        parser.add_argument('--sleep-multiplier', type=float, default="1.0",
-                            help='protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 1.0)')
+        parser.add_argument('--sleep-multiplier', type=float, default="0.0",
+                            help='protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is no multiplier)')
         parser.add_argument('--create-config-files', action='store_true',
                             help="create template config files, one global file and one for each detected VDU.")
         parser.add_argument('--install', action='store_true',
@@ -1898,16 +1911,7 @@ class VduControlsConfig:
 
         arg_values = vars(parsed_args)
         for option in GlobalOption:
-            if option.is_bool():
-                if option.arg_name() in arg_values and arg_values[option.arg_name()]:
-                    self.set_from_command_line_option(option, "yes")
-                if option.arg_name(with_prefix_no=True) in arg_values and arg_values[option.arg_name(with_prefix_no=True)]:
-                    self.set_from_command_line_option(option, "no")
-            elif option.arg_name() in arg_values and arg_values[option.arg_name()] is not None:
-                self.set_from_command_line_option(option, str(arg_values[option.arg_name()]))
-
-        if 'sleep_multiplier' in arg_values and arg_values['sleep_multiplier'] is not None:  # TODO - how to generalise with globals
-            self.ini_content['ddcutil-parameters']['sleep-multiplier'] = str(arg_values['sleep_multiplier'])
+            self.set_option_from_args(option, arg_values)
 
         if len(parsed_args.show) != 0:
             for control_def in VDU_SUPPORTED_CONTROLS.by_arg_name.values():
@@ -2581,10 +2585,10 @@ class VduControlSlider(VduControlBase):
         layout = QHBoxLayout()
         self.setLayout(layout)
         self.svg_icon: QSvgWidget | None = None
-        icon_source = VDU_SUPPORTED_CONTROLS.by_code[vcp_capability.vcp_code].icon_source
-        if vcp_capability.vcp_code in VDU_SUPPORTED_CONTROLS.by_code and icon_source is not None:
+        if (vcp_capability.vcp_code in VDU_SUPPORTED_CONTROLS.by_code
+                and VDU_SUPPORTED_CONTROLS.by_code[vcp_capability.vcp_code].icon_source is not None):
             svg_icon = QSvgWidget()
-            svg_icon.load(handle_theme(icon_source))
+            svg_icon.load(handle_theme(VDU_SUPPORTED_CONTROLS.by_code[vcp_capability.vcp_code].icon_source))
             svg_icon.setFixedSize(50, 50)
             svg_icon.setToolTip(tr(vcp_capability.name))
             self.svg_icon = svg_icon
@@ -5785,7 +5789,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         return ((math.log10(lux) - math.log10(1)) / (math.log10(100000) - math.log10(1))) if lux > 0 else 0
 
     def lux_summary(self, metered_lux: float, smoothed_lux: int) -> str:
-        lux_int = round(metered_lux) # 256 bit char in lux_summary_text can cause issues if stdout not utf8 (force utf8 for stdout)
+        lux_int = round(metered_lux)  # 256 bit char in lux_summary_text can cause issues if stdout not utf8 (force utf8 for stdout)
         return f"{lux_int}{SMOOTHING_SYMBOL}{smoothed_lux} lux" if lux_int != smoothed_lux else f"{lux_int} lux"
 
     def stop(self) -> None:
