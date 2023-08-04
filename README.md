@@ -159,8 +159,7 @@ Development
 
 The ``vdu_controls`` development is **trunk-based**.  It is my intent that the trunk should 
 always be usable as my daily-driver.  That being said, trunk is likely to be less stable 
-than the periodic [releases](https://github.com/digitaltrails/vdu_controls/releases) and 
-the packages that appear in various distros.
+than the periodic [releases](https://github.com/digitaltrails/vdu_controls/releases) and the packages that appear in various distros.
 
 I've set up the ``vdu_controls`` source as a typical Python development, but there is only one real source
 file, ``vdu_controls.py``, so the file hierarchy is rather over the top.  A standard python distributable 
