@@ -4501,7 +4501,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.base_ini = ConfigIni()  # Create a temporary holder of preset values
         main_window.copy_to_preset_ini(self.base_ini)
 
-        self.populate_presets_layout()
+        self.populate_presets_display_list()
 
         self.edit_preset_widget = QWidget(parent=self)
         self.edit_preset_layout = QHBoxLayout()
@@ -4582,7 +4582,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
     def sizeHint(self) -> QSize:
         return QSize(1200, 768)
 
-    def populate_presets_layout(self) -> None:
+    def populate_presets_display_list(self) -> None:
         for preset_def in self.main_window.preset_controller.find_presets().values():
             preset_widget = self.create_preset_widget(preset_def)
             self.preset_widgets_layout.addWidget(preset_widget)
@@ -4602,7 +4602,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
         self.base_ini = ConfigIni()
         self.main_window.copy_to_preset_ini(self.base_ini)
         self.populate_editor_controls_widget()
-        self.populate_presets_layout()
+        self.populate_presets_display_list()
         self.preset_name_edit.setText('')
         self.editor_trigger_widget.configure_for_location(self.main_config.get_location())
 
@@ -6781,9 +6781,8 @@ class VduAppWindow(QMainWindow):
                 self.create_main_control_panel()
                 # time.sleep(2.0)  # Wait a bit for threads to do their thing and fully populate data - TODO this is dodgy
                 log_debug("released application_configuration_lock")
-            PresetsDialog.reinitialize_instance(self.main_config)
             LuxDialog.reinitialize_instance() if self.main_config.is_set(GlobalOption.LUX_OPTIONS_ENABLED) else None
-            overdue = self.schedule_presets(PresetsDialog.get_instance() is None)
+            overdue = self.schedule_presets(True)
             # restore_preset tries to acquire the same lock, safe to unlock and let it relock...
             if overdue is not None:
                 # This preset is the one that should be running now
