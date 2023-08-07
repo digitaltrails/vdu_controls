@@ -3539,7 +3539,7 @@ class PresetTransitionDummy(Preset):  # A wrapper that creates titles and icons 
     def get_title_name(self) -> str:
         return self.arrows[self.count % 2] + self.name
 
-    def create_icon(self) -> QIcon:
+    def create_icon(self, themed: bool = False) -> QIcon:
         return self.icons[self.count % 2]
 
 
