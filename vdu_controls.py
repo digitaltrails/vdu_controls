@@ -3531,7 +3531,7 @@ class PresetTransitionDummy(Preset):  # A wrapper that creates titles and icons 
         self.count = 1
         # self.clocks = ('\u25F7','\u25F6', '\u25F5', '\u25F4') self.arrows_big = ('\u25B6', '\u25B7')
         self.arrows = ('\u25B8', '\u25B9')
-        self.icons = (wrapped.create_icon(), create_icon_from_svg_bytes(TRANSITION_ICON_SOURCE))
+        self.icons = (wrapped.create_icon(themed=False), create_icon_from_svg_bytes(TRANSITION_ICON_SOURCE))
 
     def update_progress(self) -> None:
         self.count += 1
@@ -4914,7 +4914,7 @@ def create_icon_from_text(text: str, themed: bool = True) -> QIcon:
     painter.setFont(QApplication.font())
     painter.setOpacity(1.0)
     painter.setPen(QColor((SVG_DARK_THEME_COLOR if themed and is_dark_theme() else SVG_LIGHT_THEME_COLOR).decode("utf-8")))
-    painter.drawText(pixmap.rect(), Qt.AlignCenter, text)
+    painter.drawText(pixmap.rect(), Qt.AlignTop, text)
     painter.end()
     return QIcon(pixmap)
 
@@ -4927,8 +4927,7 @@ def create_merged_icon(base_icon: QIcon, overlay_icon: QIcon) -> QIcon:
     overlay_pixmap = overlay_icon.pixmap(base_size, QIcon.Mode.Normal, QIcon.State.On)
     painter = QPainter(combined_pixmap)
     painter.drawPixmap(0, 0, base_pixmap)
-    painter.drawPixmap(base_size.width() // 4, base_size.height() // 8, base_size.width() // 2, base_size.height() // 2,
-                       overlay_pixmap)
+    painter.drawPixmap(base_size.width()//4, base_size.height()//8, base_size.width()//2, base_size.height()//2, overlay_pixmap)
     painter.end()
     overlay_icon = QIcon()
     overlay_icon.addPixmap(combined_pixmap)
