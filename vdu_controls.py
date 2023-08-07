@@ -1382,7 +1382,7 @@ class DdcUtil:
                        vdu_id: str,
                        vcp_code_list: List[str],
                        sleep_multiplier: float | None = None) -> List[Tuple[str, str]]:
-        if self.version[0] > 1 or self.version[1] > 3:
+        if self.version[0] > 1 or self.version[1] >= 3:
             return self._get_attributes_implementation(vdu_id, vcp_code_list, sleep_multiplier)
         else:
             result = []
@@ -7006,7 +7006,7 @@ class VduAppWindow(QMainWindow):
             self.display_lux_auto_indicators()  # Check in case both schedule and lux auto are active
         else:
             self.get_main_panel().display_active_preset(preset)
-            self.set_app_icon_and_title(preset.create_icon(), preset.get_title_name())
+            self.set_app_icon_and_title(preset.create_icon(), preset.get_title_name())  # TODO force dark theme
             QTimer.singleShot(5000, partial(self.display_lux_auto_indicators, False))  # Replace with auto indicator if auto enabled
         self.app_context_menu.refresh_preset_menu()
 
