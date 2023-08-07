@@ -1089,13 +1089,11 @@ ASSUMED_CONTROLS_CONFIG_TEXT = ('\n'
 
 
 def is_dark_theme() -> bool:
-    # Heuristic for checking for a dark theme.
-    # Is the sample text lighter than the background?
+    # Heuristic for checking for a dark theme. Is the sample text lighter than the background?
     label = QLabel("am I in the dark?")
     text_hsv_value = label.palette().color(QPalette.WindowText).value()
     bg_hsv_value = label.palette().color(QPalette.Background).value()
     dark_theme_found = text_hsv_value > bg_hsv_value
-    # debug(f"is_dark_them text={text_hsv_value} bg={bg_hsv_value} is_dark={dark_theme_found}") if debugging else None
     return dark_theme_found
 
 
@@ -2900,15 +2898,15 @@ class Preset:
                 self.preset_ini.add_section("preset")
             self.preset_ini.set("preset", "icon", icon_path.as_posix())
 
-    def create_icon(self) -> QIcon:
+    def create_icon(self, themed: bool = True) -> QIcon:
         icon_path = self.get_icon_path()
         if icon_path and icon_path.exists():
-            return create_icon_from_path(icon_path)
+            return create_icon_from_path(icon_path, themed)
         else:
             # Only room for two letters at most - use first and last if more than one word.
             full_acronym = [word[0] for word in re.split(r"[ _-]", self.name) if word != '']
             abbreviation = full_acronym[0] if len(full_acronym) == 1 else full_acronym[0] + full_acronym[-1]
-            return create_themed_icon_from_text(abbreviation)
+            return create_icon_from_text(abbreviation, themed)
 
     def load(self) -> ConfigIni:
         if self.path.exists():
@@ -3152,7 +3150,7 @@ class ToolButton(QToolButton):
     def refresh_icon(self, svg_source: bytes | None = None) -> None:  # may refresh the theme (coloring light/dark) of the icon
         if svg_source is not None:
             self.svg_source = svg_source
-        self.setIcon(create_themed_icon_from_svg_bytes(self.svg_source))  # this may alter the SVG for light/dark theme
+        self.setIcon(create_icon_from_svg_bytes(self.svg_source))  # this may alter the SVG for light/dark theme
 
 
 class VduPanelBottomToolBar(QToolBar):
@@ -3533,7 +3531,7 @@ class PresetTransitionDummy(Preset):  # A wrapper that creates titles and icons 
         self.count = 1
         # self.clocks = ('\u25F7','\u25F6', '\u25F5', '\u25F4') self.arrows_big = ('\u25B6', '\u25B7')
         self.arrows = ('\u25B8', '\u25B9')
-        self.icons = (wrapped.create_icon(), create_themed_icon_from_svg_bytes(TRANSITION_ICON_SOURCE))
+        self.icons = (wrapped.create_icon(), create_icon_from_svg_bytes(TRANSITION_ICON_SOURCE))
 
     def update_progress(self) -> None:
         self.count += 1
@@ -4259,7 +4257,7 @@ class PresetChooseElevationChart(QLabel):
                 # Draw the sun
                 painter.setPen(QPen(QColor(0xff4a23), std_line_width))
                 if self.sun_image is None:
-                    self.sun_image = create_themed_image_from_svg_bytes(BRIGHTNESS_SVG.replace(SVG_LIGHT_THEME_COLOR, b"#ffdd30"))
+                    self.sun_image = create_image_from_svg_bytes(BRIGHTNESS_SVG.replace(SVG_LIGHT_THEME_COLOR, b"#ffdd30"))
                 painter.drawImage(QPoint(reverse_x(sun_plot_x) - self.sun_image.width() // 2,
                                          sun_plot_y - self.sun_image.height() // 2), self.sun_image)
 
@@ -4874,19 +4872,16 @@ def exception_handler(e_type, e_value, e_traceback) -> None:
 
 
 def handle_theme(svg_str: bytes) -> bytes:
-    if is_dark_theme():
-        svg_str = svg_str.replace(SVG_LIGHT_THEME_COLOR, SVG_DARK_THEME_COLOR)
-    return svg_str
+    return svg_str.replace(SVG_LIGHT_THEME_COLOR, SVG_DARK_THEME_COLOR) if is_dark_theme() else svg_str
 
 
-def create_themed_pixmap_from_svg_bytes(svg_bytes: bytes) -> QPixmap:
+def create_pixmap_from_svg_bytes(svg_bytes: bytes, themed: bool = True) -> QPixmap:
     """There is no QIcon option for loading SVG from a string, only from a SVG file, so roll our own."""
-    image = create_themed_image_from_svg_bytes(svg_bytes)
-    return QPixmap.fromImage(image)
+    return QPixmap.fromImage(create_image_from_svg_bytes(svg_bytes, themed))
 
 
-def create_themed_image_from_svg_bytes(svg_bytes) -> QImage:
-    renderer = QSvgRenderer(handle_theme(svg_bytes))
+def create_image_from_svg_bytes(svg_bytes, themed: bool = True) -> QImage:
+    renderer = QSvgRenderer(handle_theme(svg_bytes) if themed else svg_bytes)
     image = QImage(64, 64, QImage.Format_ARGB32)
     image.fill(0x0)
     painter = QPainter(image)
@@ -4895,30 +4890,30 @@ def create_themed_image_from_svg_bytes(svg_bytes) -> QImage:
     return image
 
 
-def create_themed_icon_from_svg_bytes(svg_bytes: bytes) -> QIcon:
+def create_icon_from_svg_bytes(svg_bytes: bytes, themed: bool = True) -> QIcon:
     """There is no QIcon option for loading SVG from a string, only from a SVG file, so roll our own."""
-    return QIcon(create_themed_pixmap_from_svg_bytes(svg_bytes))
+    return QIcon(create_pixmap_from_svg_bytes(svg_bytes, themed))
 
 
-def create_icon_from_path(path: Path) -> QIcon:
+def create_icon_from_path(path: Path, themed: bool = True) -> QIcon:
     if path.exists():
         if path.suffix == '.svg':
             with open(path, 'rb') as icon_file:
                 icon_bytes = icon_file.read()
-                return create_themed_icon_from_svg_bytes(icon_bytes)
+                return create_icon_from_svg_bytes(icon_bytes, themed)
         if path.suffix == '.png':
             return QIcon(path.as_posix())
     # Copes with the case where the path has been deleted.
     return QApplication.style().standardIcon(QStyle.SP_MessageBoxQuestion)
 
 
-def create_themed_icon_from_text(text: str) -> QIcon:
+def create_icon_from_text(text: str, themed: bool = True) -> QIcon:
     pixmap = QPixmap(32, 32)
     pixmap.fill(Qt.transparent)
     painter = QPainter(pixmap)
     painter.setFont(QApplication.font())
     painter.setOpacity(1.0)
-    painter.setPen(QColor((SVG_DARK_THEME_COLOR if is_dark_theme() else SVG_LIGHT_THEME_COLOR).decode("utf-8")))
+    painter.setPen(QColor((SVG_DARK_THEME_COLOR if themed and is_dark_theme() else SVG_LIGHT_THEME_COLOR).decode("utf-8")))
     painter.drawText(pixmap.rect(), Qt.AlignCenter, text)
     painter.end()
     return QIcon(pixmap)
@@ -6089,7 +6084,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             for index, vdu_controller in enumerate(self.main_app.vdu_controllers):
                 color = QColor.fromHsl(int(index * 137.508) % 255, random.randint(64, 128), random.randint(192, 200))
                 self.vdu_chart_color[vdu_controller.vdu_stable_id] = color
-                color_icon = create_themed_icon_from_svg_bytes(SWATCH_ICON_SOURCE.replace(b"#ffffff", bytes(color.name(), 'utf-8')))
+                color_icon = create_icon_from_svg_bytes(SWATCH_ICON_SOURCE.replace(b"#ffffff", bytes(color.name(), 'utf-8')))
                 self.profile_selector.addItem(color_icon, vdu_controller.get_vdu_description(), userData=vdu_controller.vdu_stable_id)
                 if vdu_controller.vdu_stable_id == existing_selected_id:
                     self.profile_selector.setCurrentIndex(index)
@@ -6986,7 +6981,7 @@ class VduAppWindow(QMainWindow):
         assert is_running_in_gui_thread()  # Boilerplate in case this is called from the wrong thread.
         if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) \
                 and self.lux_auto_controller is not None and self.lux_auto_controller.lux_meter is not None:
-            icon = create_themed_icon_from_svg_bytes(self.lux_auto_controller.current_auto_svg())
+            icon = create_icon_from_svg_bytes(self.lux_auto_controller.current_auto_svg())
             self.app_context_menu.update_lux_auto_icon(icon)
             self.refresh_tray_menu()
             if self.lux_auto_controller.is_auto_enabled():
@@ -7006,7 +7001,7 @@ class VduAppWindow(QMainWindow):
             self.display_lux_auto_indicators()  # Check in case both schedule and lux auto are active
         else:
             self.get_main_panel().display_active_preset(preset)
-            self.set_app_icon_and_title(preset.create_icon(), preset.get_title_name())  # TODO force dark theme
+            self.set_app_icon_and_title(preset.create_icon(themed=False), preset.get_title_name())
             QTimer.singleShot(5000, partial(self.display_lux_auto_indicators, False))  # Replace with auto indicator if auto enabled
         self.app_context_menu.refresh_preset_menu()
 
