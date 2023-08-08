@@ -5976,8 +5976,8 @@ class LuxDialog(QDialog, DialogSingletonMixin):
                 self.apply_settings(requires_auto_brightness_restart=False)
 
         self.profile_selector.currentIndexChanged.connect(select_profile)
-        self.make_visible()
         self.reinitialise_from_data()
+        self.make_visible()
 
     def chart_changed_callback(self) -> None:
         self.has_profile_changes = True
