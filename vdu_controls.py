@@ -6434,11 +6434,14 @@ class VduAppWindow(QMainWindow):
             self.start_refresh()
 
         def lux_auto_action() -> bool:
-            if self.lux_auto_controller is not None:
-                self.lux_auto_controller.toggle_auto()
-                self.display_lux_auto_indicators()
-                return self.lux_auto_controller.is_auto_enabled()
-            return False
+            if self.lux_auto_controller is None:
+                return False
+            self.lux_auto_controller.toggle_auto()
+            self.display_lux_auto_indicators()
+            if not self.lux_auto_controller.is_auto_enabled():
+                self.display_active_preset()  # Restore normal icon - which might include a preset
+                return False
+            return True
 
         def lux_meter_action() -> None:
             LuxDialog.invoke(self)
@@ -6915,8 +6918,6 @@ class VduAppWindow(QMainWindow):
             self.refresh_tray_menu()
             if self.lux_auto_controller.is_auto_enabled():
                 self.set_app_icon_and_title(icon, tr('Auto'))
-            elif not from_display_preset:  # Hack - put back preset icon (if not being called from display preset)
-                self.set_app_icon_and_title()
 
     def display_active_preset(self, preset=None) -> None:
         assert is_running_in_gui_thread()  # Boilerplate in case this is called from the wrong thread.
