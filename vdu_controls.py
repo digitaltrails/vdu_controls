@@ -6916,7 +6916,7 @@ class VduAppWindow(QMainWindow):
             if self.lux_auto_controller.is_auto_enabled():
                 self.set_app_icon_and_title(icon, tr('Auto'))
             elif not from_display_preset:  # Hack - put back preset icon (if not being called from display preset)
-                self.display_active_preset()
+                self.set_app_icon_and_title()
 
     def display_active_preset(self, preset=None) -> None:
         assert is_running_in_gui_thread()  # Boilerplate in case this is called from the wrong thread.
