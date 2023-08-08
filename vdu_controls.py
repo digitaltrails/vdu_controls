@@ -6677,8 +6677,7 @@ class VduAppWindow(QMainWindow):
         error_no_monitors.setText(tr('No controllable monitors found.'))
         error_no_monitors.setInformativeText(
             tr("Is ddcutil installed?  Is i2c installed and configured?\n\n"
-               "Run vdu_controls --debug in a console and check for "
-               "additional messages.\n\n{}").format(''))
+               "Run vdu_controls --debug in a console and check for additional messages.\n\n{}").format(''))
         if ddcutil_problem is not None:
             if isinstance(ddcutil_problem, subprocess.SubprocessError):
                 problem_text = ddcutil_problem.stderr.decode('utf-8', errors='surrogateescape') + '\n' + str(ddcutil_problem)
