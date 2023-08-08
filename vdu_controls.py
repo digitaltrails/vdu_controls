@@ -3065,6 +3065,8 @@ class Preset:
 
 
 class ContextMenu(QMenu):
+    PRESET_NAME_PROP = 'preset_name'
+    BUSY_DISABLE_PROP = 'busy_disable'
 
     def __init__(self,
                  main_window,
@@ -3077,15 +3079,13 @@ class ContextMenu(QMenu):
             self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Control Panel'), main_window_action)
             self.addSeparator()
         self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Presets'), presets_action)
-        self.presets_separator = self.addSeparator()
-        self.busy_disable_prop = "busy_disable"
-        self.preset_prop = "is_preset"
+        self.presets_separator = self.addSeparator()  # Important for finding where to add a preset
         self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Grey Scale'), chart_action)
         if lux_meter_action is not None:
             self.lux_auto_action = self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Auto/Manual'), lux_auto_action)
             self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Light-Meter'), lux_meter_action)
         self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Settings'), settings_action)
-        self.addAction(si(self, QStyle.SP_BrowserReload), tr('Refresh'), refresh_action).setProperty(self.busy_disable_prop,
+        self.addAction(si(self, QStyle.SP_BrowserReload), tr('Refresh'), refresh_action).setProperty(ContextMenu.BUSY_DISABLE_PROP,
                                                                                                      QVariant(True))
         self.addAction(si(self, QStyle.SP_MessageBoxInformation), tr('About'), about_action)
         self.addAction(si(self, QStyle.SP_DialogHelpButton), tr('Help'), help_action)
@@ -3094,10 +3094,7 @@ class ContextMenu(QMenu):
 
     def get_preset_menu_action(self, name: str) -> QAction | None:
         for action in self.actions():
-            if action == self.presets_separator:
-                break
-            if action.text() == name:
-                assert action.property(self.preset_prop) is not None
+            if action.property(ContextMenu.PRESET_NAME_PROP) == name:
                 return action
         return None
 
@@ -3108,8 +3105,9 @@ class ContextMenu(QMenu):
             self.main_window.restore_named_preset(self.sender().text())
 
         action = self.addAction(preset.create_icon(), preset.name, restore_preset)
-        action.setProperty(self.busy_disable_prop, QVariant(True))
-        action.setProperty(self.preset_prop, QVariant(True))
+        action.setProperty(ContextMenu.BUSY_DISABLE_PROP, QVariant(True))
+        assert preset.name
+        action.setProperty(ContextMenu.PRESET_NAME_PROP, preset.name)
         self.insertAction(self.presets_separator, action)  # insert before the presets_separator
         self.update()
 
@@ -3120,16 +3118,25 @@ class ContextMenu(QMenu):
 
     def refresh_preset_menu(self, palette_change: bool = False) -> None:
         for name, preset in self.main_window.preset_controller.find_presets().items():
-            # Allow for presets with the same name as existing non-preset menu items
             menu_action = self.get_preset_menu_action(name)
-            if menu_action is None or not menu_action.property(self.preset_prop):
+            if menu_action is None or not menu_action.property(ContextMenu.PRESET_NAME_PROP):
                 self.insert_preset_menu_action(preset)
             elif palette_change:  # Must redraw icons in case desktop theme changed between light/dark.
                 menu_action.setIcon(preset.create_icon())
 
+    def indicate_preset_active(self, preset: Preset | None) -> None:
+        for action in self.actions():
+            action_preset_name = action.property(ContextMenu.PRESET_NAME_PROP)
+            if action_preset_name:
+                if preset is not None and preset.name == action_preset_name:
+                    action.setText(action_preset_name + ' ' + SUCCESS_SYMBOL)  # Add check mark
+                elif action.text() != action_preset_name:  # Remove check mark
+                    action.setText(action_preset_name)
+        self.update()
+
     def indicate_busy(self, is_busy: bool = True) -> None:
         for action in self.actions():
-            if action.property(self.busy_disable_prop):
+            if action.property(ContextMenu.BUSY_DISABLE_PROP):
                 action.setDisabled(is_busy)
 
     def update_lux_auto_icon(self, icon: QIcon) -> None:
@@ -3162,7 +3169,7 @@ class VduPanelBottomToolBar(QToolBar):
         for button in self.tool_buttons:
             self.addWidget(button)
 
-        self.setIconSize(QSize(32, 32))
+        self.setIconSize(QSize(32, 32))  # Why 32x32 ???
 
         self.progress_bar: QProgressBar | None = None
         self.status_area = QStatusBar()
@@ -3238,8 +3245,7 @@ class VduControlsMainPanel(QWidget):
 
         if self.layout():
             # Already laid out, must be responding to a configuration change requiring re-layout.
-            # Remove all existing widgets.
-            for i in range(0, self.layout().count()):
+            for i in range(0, self.layout().count()):  # Remove all existing widgets.
                 item = self.layout().itemAt(i)
                 if isinstance(item, QWidget):
                     self.layout().removeWidget(item)
@@ -3264,9 +3270,8 @@ class VduControlsMainPanel(QWidget):
                 controllers_layout.addWidget(vdu_control_panel)
             elif warnings_enabled:
                 warn_omitted = MessageBox(QMessageBox.Warning)
-                warn_omitted.setText(
-                    tr('Monitor {} {} lacks any accessible controls.').format(controller.vdu_id,
-                                                                              controller.get_vdu_description()))
+                warn_omitted.setText(tr('Monitor {} {} lacks any accessible controls.').format(controller.vdu_id,
+                                                                                               controller.get_vdu_description()))
                 warn_omitted.setInformativeText(tr('The monitor will be omitted from the control panel.'))
                 warn_omitted.exec()
         if len(self.vdu_control_panels) == 0:
@@ -3342,6 +3347,7 @@ class VduControlsMainPanel(QWidget):
     def display_active_preset(self, preset: Preset | None) -> None:
         if self.bottom_toolbar:
             self.bottom_toolbar.display_active_preset(preset)
+        self.context_menu.indicate_preset_active(preset)
 
     def display_vdu_exception(self, exception: VduException, can_retry: bool = False) -> bool:
         log_error(f"{exception.vdu_description} {exception.operation} {exception.attr_id} {exception.cause}")
@@ -3624,10 +3630,8 @@ class PushButtonLeftJustified(QPushButton):
         layout = QVBoxLayout()
         self.setLayout(layout)
         self.layout().addWidget(self.label)
-        # Not sure if this helps:
-        self.setContentsMargins(0, 0, 0, 0)
-        # Seems to fix top/bottom clipping on openbox and xfce:
-        layout.setContentsMargins(0, 0, 0, 0)
+        self.setContentsMargins(0, 0, 0, 0)  # Not sure if this helps
+        layout.setContentsMargins(0, 0, 0, 0)  # Seems to fix top/bottom clipping on openbox and xfce
         if text is not None:
             self.setText(text)
 
@@ -3774,7 +3778,7 @@ class PresetChooseIconButton(QPushButton):
 
     def __init__(self) -> None:
         super().__init__()
-        self.setIcon(si(self, PresetsDialog.no_icon_icon_number))
+        self.setIcon(si(self, PresetsDialog.NO_ICON_INCON_NUMBER))
         self.setToolTip(tr('Choose a preset icon.'))
         self.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
         self.setAutoDefault(False)
@@ -3794,8 +3798,7 @@ class PresetChooseIconButton(QPushButton):
         self.update_icon()
 
     def choose_preset_icon_action(self) -> None:
-        icon_file = QFileDialog.getOpenFileName(self, tr('Icon SVG or PNG file'),
-                                                self.last_icon_dir.as_posix(),
+        icon_file = QFileDialog.getOpenFileName(self, tr('Icon SVG or PNG file'), self.last_icon_dir.as_posix(),
                                                 tr('SVG or PNG (*.svg *.png)'))
         self.last_selected_icon_path = Path(icon_file[0]) if icon_file[0] != '' else None
         if self.last_selected_icon_path:
@@ -3808,7 +3811,7 @@ class PresetChooseIconButton(QPushButton):
         elif self.preset:
             self.setIcon(self.preset.create_icon())
         else:
-            self.setIcon(si(self, PresetsDialog.no_icon_icon_number))
+            self.setIcon(si(self, PresetsDialog.NO_ICON_INCON_NUMBER))
 
     def event(self, event: QEvent) -> bool:
         # PalletChange happens after the new style sheet is in use.
@@ -3869,8 +3872,7 @@ class WeatherQuery:
                     return
         except urllib.error.HTTPError as e:
             if e.code == 404:
-                raise ValueError(tr("Unknown location {}").format(location_name),
-                                 tr("Please check Location in Settings")) from e
+                raise ValueError(tr("Unknown location {}").format(location_name), tr("Please check Location in Settings")) from e
             raise ValueError(tr("Failed to get weather from {}").format(self.url), str(e)) from e
         except Exception as ue:
             # Can't afford to fall over because of a problem with a remote site
@@ -3881,8 +3883,7 @@ class WeatherQuery:
         if self.weather_data is None:
             return ""
         return f"{self.area_name}, {self.country_name}, {self.weather_desc} ({self.weather_code})," \
-               f"cloud_cover {self.cloud_cover}, visibility {self.visibility}, " \
-               f"location={self.latitude},{self.longitude}"
+               f"cloud_cover {self.cloud_cover}, visibility {self.visibility}, location={self.latitude},{self.longitude}"
 
 
 def weather_bad_location_dialog(weather) -> None:
@@ -4441,12 +4442,9 @@ class PresetChooseElevationWidget(QWidget):
         self.weather_widget.set_required_weather_filepath(weather_filename)
 
 
-class PresetsDialog(QDialog, DialogSingletonMixin):
+class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather complex - break into parts?
     """A dialog for creating/updating/removing presets."""
-    # TODO has become rather complex - break into parts?
-
-    no_icon_icon_number = QStyle.SP_ComputerIcon
-
+    NO_ICON_INCON_NUMBER = QStyle.SP_ComputerIcon
     edit_save_needed = pyqtSignal()
 
     @staticmethod
@@ -4801,8 +4799,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):
             self.add_preset_widget(new_preset_widget)
             self.main_window.preset_controller.save_order(self.get_preset_names_in_order())
 
-            def scroll_to_bottom() -> None:
-                # TODO figure out why this does not work
+            def scroll_to_bottom() -> None:  # TODO figure out why this does not work
                 self.preset_widgets_scrollarea.updateGeometry()
                 self.preset_widgets_scrollarea.verticalScrollBar().setValue(
                     self.preset_widgets_scrollarea.verticalScrollBar().maximum())
@@ -4865,8 +4862,7 @@ def exception_handler(e_type, e_value, e_traceback) -> None:
     alert.setText(tr('Error: {}').format(''.join(traceback.format_exception_only(e_type, e_value))))
     alert.setInformativeText(tr('Is the sleep-multiplier setting too low?') +
                              '<br>_______________________________________________________<br>')
-    alert.setDetailedText(
-        tr('Details: {}').format(''.join(traceback.format_exception(e_type, e_value, e_traceback))))
+    alert.setDetailedText(tr('Details: {}').format(''.join(traceback.format_exception(e_type, e_value, e_traceback))))
     alert.exec()
     QApplication.quit()
 
