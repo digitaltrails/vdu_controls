@@ -6707,7 +6707,10 @@ class VduAppWindow(QMainWindow):
                 self.create_main_control_panel()
                 # time.sleep(2.0)  # Wait a bit for threads to do their thing and fully populate data - TODO this is dodgy
                 log_debug("released application_configuration_lock")
-            LuxDialog.reinitialize_instance() if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) else None
+            if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED):
+                LuxDialog.reinitialize_instance()
+                if self.lux_auto_controller is not None:
+                    self.lux_auto_controller.initialize_from_config()
             overdue = self.schedule_presets(True)
             # restore_preset tries to acquire the same lock, safe to unlock and let it relock...
             if overdue is not None:
@@ -6717,10 +6720,6 @@ class VduAppWindow(QMainWindow):
                 self.splash_message_signal.emit(tr("Restoring Preset\n{}").format(overdue.name))
                 # Weather check will have succeeded inside schedule_presets() above, don't do it again.
                 self.activate_scheduled_preset(overdue, check_weather=False, immediately=True)
-            if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED):
-                if self.lux_auto_controller is not None:
-                    self.lux_auto_controller.initialize_from_config()
-
         finally:
             self.get_main_panel().indicate_busy(False)
         log_info("Completed configuring application")
@@ -6752,7 +6751,7 @@ class VduAppWindow(QMainWindow):
         self.setCentralWidget(self.main_panel)
         self.splash_message_signal.emit(
             "Reticulating Splines" if self.main_config.is_set(ConfOption.DEBUG_ENABLED) else tr("Checking Presets"))
-        self.display_active_preset()
+        ### self.display_active_preset()  # ??? Probably not needed 2023-08-08
 
     def get_main_panel(self) -> VduControlsMainPanel:
         assert self.main_panel is not None
@@ -6907,7 +6906,7 @@ class VduAppWindow(QMainWindow):
         assert self.lux_auto_controller is not None
         return self.lux_auto_controller
 
-    def display_lux_auto_indicators(self, blank_if_off: bool = True) -> None:
+    def display_lux_auto_indicators(self, from_display_preset: bool = False) -> None:
         assert is_running_in_gui_thread()  # Boilerplate in case this is called from the wrong thread.
         if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) \
                 and self.lux_auto_controller is not None and self.lux_auto_controller.lux_meter is not None:
@@ -6916,8 +6915,8 @@ class VduAppWindow(QMainWindow):
             self.refresh_tray_menu()
             if self.lux_auto_controller.is_auto_enabled():
                 self.set_app_icon_and_title(icon, tr('Auto'))
-            elif blank_if_off:
-                self.set_app_icon_and_title()
+            elif not from_display_preset:  # Hack - put back preset icon (if not being called from display preset)
+                self.display_active_preset()
 
     def display_active_preset(self, preset=None) -> None:
         assert is_running_in_gui_thread()  # Boilerplate in case this is called from the wrong thread.
@@ -6932,7 +6931,8 @@ class VduAppWindow(QMainWindow):
         else:
             self.get_main_panel().display_active_preset(preset)
             self.set_app_icon_and_title(preset.create_icon(themed=False), preset.get_title_name())
-            QTimer.singleShot(5000, partial(self.display_lux_auto_indicators, False))  # Replace with auto indicator if auto enabled
+            if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) and self.lux_auto_controller.is_auto_enabled():
+                QTimer.singleShot(5000, partial(self.display_lux_auto_indicators, True))  # Replace with auto icon if auto enabled
         self.app_context_menu.refresh_preset_menu()
 
     def refresh_tray_menu(self) -> None:
