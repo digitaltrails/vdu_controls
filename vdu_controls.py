@@ -1734,8 +1734,8 @@ class VduControlsConfig:
     def get_config_name(self) -> str:
         return self.config_name
 
-    def is_set(self, option: ConfOption) -> bool:
-        return self.ini_content.getboolean(option.conf_section, option.conf_name)
+    def is_set(self, option: ConfOption, fallback=False) -> bool:
+        return self.ini_content.getboolean(option.conf_section, option.conf_name, fallback=False)
 
     def set_option_from_args(self, option: ConfOption, arg_values: Dict[str, Any]):
         if option.conf_type == ConfType.BOOL:
@@ -1941,9 +1941,11 @@ class VduController(QObject):
         self.vdu_exception_handler = vdu_exception_handler
         self.sleep_multiplier: float | None = default_config.get_sleep_multiplier()
         default_enabled_vcp_codes = default_config.get_all_enabled_vcp_codes()
+        self.enabled_vcp_codes = default_enabled_vcp_codes
         self.vdu_model_id = proper_name(vdu_model_name.strip())
         self.capabilities_text: str | None = None
         self.config = None
+        self.enabled_vcp_codes = []
         for config_name in (self.vdu_stable_id, self.vdu_model_id):
             config_path = get_config_path(config_name)
             log_debug("checking for config file '" + config_path.as_posix() + "'") if log_debug_enabled else None
