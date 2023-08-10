@@ -1945,7 +1945,6 @@ class VduController(QObject):
         self.vdu_model_id = proper_name(vdu_model_name.strip())
         self.capabilities_text: str | None = None
         self.config = None
-        self.enabled_vcp_codes = []
         for config_name in (self.vdu_stable_id, self.vdu_model_id):
             config_path = get_config_path(config_name)
             log_debug("checking for config file '" + config_path.as_posix() + "'") if log_debug_enabled else None
