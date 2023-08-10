@@ -1581,25 +1581,27 @@ def conf_opt_def(name: str, section: str = 'vdu-controls-globals', conf_type: Co
 
 
 class ConfOption(Enum):
-    SYSTEM_TRAY_ENABLED = conf_opt_def(name=QT_TR_NOOP('system-tray-enabled'), restart=True,
+    SYSTEM_TRAY_ENABLED = conf_opt_def(name=QT_TR_NOOP('system-tray-enabled'),  default="no", restart=True,
                                        help=QT_TR_NOOP('start up in the system tray'))
-    TRANSLATIONS_ENABLED = conf_opt_def(name=QT_TR_NOOP('translations-enabled'), help=QT_TR_NOOP('enable language translations'))
+    TRANSLATIONS_ENABLED = conf_opt_def(name=QT_TR_NOOP('translations-enabled'),  default="no",
+                                        help=QT_TR_NOOP('enable language translations'))
     PREFER_DYNAMIC_SLEEP_ENABLED = conf_opt_def(name=QT_TR_NOOP('prefer-dynamic-sleep-enabled'), default='yes',
                                                 help=QT_TR_NOOP('do not prefer dynamic sleep (for ddcutil >= 2.0)'))
     WEATHER_ENABLED = conf_opt_def(name=QT_TR_NOOP('weather-enabled'), default='yes', help=QT_TR_NOOP('disable weather lookups'))
     SCHEDULE_ENABLED = conf_opt_def(name=QT_TR_NOOP('schedule-enabled'), default='yes', help=QT_TR_NOOP('disable preset schedule'))
-    LUX_OPTIONS_ENABLED = conf_opt_def(name=QT_TR_NOOP('lux-options-enabled'), restart=True,
+    LUX_OPTIONS_ENABLED = conf_opt_def(name=QT_TR_NOOP('lux-options-enabled'), default="no", restart=True,
                                        help=QT_TR_NOOP('start up in the system tray'))
     SPLASH_SCREEN_ENABLED = conf_opt_def(name=QT_TR_NOOP('splash-screen-enabled'), default='yes', cmdline_arg='--no-splash',
                                          help=QT_TR_NOOP('disable the startup splash screen'))
-    WARNINGS_ENABLED = conf_opt_def(name=QT_TR_NOOP('warnings-enabled'),
+    WARNINGS_ENABLED = conf_opt_def(name=QT_TR_NOOP('warnings-enabled'), default="no",
                                     help=QT_TR_NOOP('popup warnings if a VDU lacks an enabled control'))
-    DEBUG_ENABLED = conf_opt_def(name=QT_TR_NOOP('debug-enabled'), help=QT_TR_NOOP('enable extra debug output'))
-    SYSLOG_ENABLED = conf_opt_def(name=QT_TR_NOOP('syslog-enabled'), help=QT_TR_NOOP('enable diagnostic output to syslog'))
-    LOCATION = conf_opt_def(name=QT_TR_NOOP('location'), section='vdu-controls-globals', conf_type=ConfType.LOCATION, default=None,
+    DEBUG_ENABLED = conf_opt_def(name=QT_TR_NOOP('debug-enabled'), default="no", help=QT_TR_NOOP('enable extra debug output'))
+    SYSLOG_ENABLED = conf_opt_def(name=QT_TR_NOOP('syslog-enabled'), default="no",
+                                  help=QT_TR_NOOP('enable diagnostic output to syslog'))
+    LOCATION = conf_opt_def(name=QT_TR_NOOP('location'), section='vdu-controls-globals', conf_type=ConfType.LOCATION, default='',
                             help=QT_TR_NOOP('latitude,longitude'))
     SLEEP_MULTIPLIER = conf_opt_def(name=QT_TR_NOOP('sleep-multiplier'), section='ddcutil-parameters', conf_type=ConfType.FLOAT,
-                                    help=QT_TR_NOOP('ddcutil --sleep-multiplier (0.1 .. 2.0, default none)'))
+                                    default='0.0', help=QT_TR_NOOP('ddcutil --sleep-multiplier (0.1 .. 2.0, default none)'))
     ENABLE_VCP_CODES = conf_opt_def(name=QT_TR_NOOP('enable-vcp-codes'), section='vdu-controls-widgets', conf_type=ConfType.CSV,
                                     cmdline_arg='DISALLOWED', help='CSV list of VCP Hex-code capabilities to enable')
     CAPABILITIES_OVERRIDE = conf_opt_def(name=QT_TR_NOOP('capabilities-override'), section='ddcutil-capabilities',
@@ -1695,7 +1697,7 @@ class VduControlsConfig:
         if include_globals:
             self.ini_content[QT_TR_NOOP('vdu-controls-globals')] = {}
             for option in ConfOption:
-                if option.conf_section == 'vdu-controls-globals' and option.default_value is not None:
+                if option.conf_section == 'vdu-controls-globals':  # and option.default_value is not None:
                     self.ini_content[option.conf_section][option.conf_name] = str(option.default_value)
 
         self.ini_content[QT_TR_NOOP('vdu-controls-widgets')] = {}
