@@ -52,7 +52,9 @@ def main():
     if "--edid" in sys.argv:
         display_num = sys.argv[sys.argv.index("--edid") + 1][:20]
 
-    if "detect" in sys.argv:
+    if "--version" in sys.argv:
+        answer = 'ddcutil 1.2.0'
+    elif "detect" in sys.argv:
         answer_path = BASE_PATH / SIMULATOR_DATA_DIR / ANSWER_LINK / 'detect'
         print(f"answer_path={answer_path}")
         with open(answer_path, 'r') as answer_file:
