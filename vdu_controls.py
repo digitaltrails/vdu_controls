@@ -3744,9 +3744,11 @@ class PresetChooseIconButton(QPushButton):
         self.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
         self.setAutoDefault(False)
         self.last_selected_icon_path: Path | None = None
-        self.last_icon_dir = Path("/usr/share/icons")
-        if not self.last_icon_dir.exists():
-            self.last_icon_dir = Path.home()
+        self.last_icon_dir = Path.home()
+        for path in (Path("/usr/share/vdu_controls/icons"), Path("/usr/share/icons/breeze/actions/24"), Path("/usr/share/icons"),):
+            if path.exists():
+                self.last_icon_dir = path
+                break
         self.preset: Preset | None = None
         self.clicked.connect(self.choose_preset_icon_action)
 
@@ -3759,12 +3761,19 @@ class PresetChooseIconButton(QPushButton):
         self.update_icon()
 
     def choose_preset_icon_action(self) -> None:
-        icon_file = QFileDialog.getOpenFileName(self, tr('Icon SVG or PNG file'), self.last_icon_dir.as_posix(),
-                                                tr('SVG or PNG (*.svg *.png)'))
-        self.last_selected_icon_path = Path(icon_file[0]) if icon_file[0] != '' else None
-        if self.last_selected_icon_path:
-            self.last_icon_dir = self.last_selected_icon_path.parent
-        self.update_icon()
+        try:
+            PresetsDialog.get_instance().setDisabled(True)
+            PresetsDialog.get_instance().status_message(TIME_CLOCK_SYMBOL + ' ' + tr("Creating icon preview..."))
+            QApplication.processEvents()
+            icon_file = QFileDialog.getOpenFileName(self, tr('Icon SVG or PNG file'), self.last_icon_dir.as_posix(),
+                                                    'SVG or PNG (*.svg *.png)')
+            self.last_selected_icon_path = Path(icon_file[0]) if icon_file[0] != '' else None
+            if self.last_selected_icon_path:
+                self.last_icon_dir = self.last_selected_icon_path.parent
+            self.update_icon()
+        finally:
+            PresetsDialog.get_instance().status_message('')
+            PresetsDialog.get_instance().setDisabled(False)
 
     def update_icon(self) -> None:
         if self.last_selected_icon_path:

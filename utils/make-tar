@@ -42,6 +42,7 @@ vdu_controls-$version/translations/about_de_DE.txt
 vdu_controls-$version/sample-scripts/lux-from-webcam.bash
 vdu_controls-$version/sample-scripts/lux-from-webcam.py
 vdu_controls-$version/vdu_controls.desktop
+vdu_controls-$version/icons/
 EOF
 
 rm vdu_controls-$version

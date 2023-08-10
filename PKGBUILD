@@ -28,9 +28,11 @@ package() {
     mkdir -p /usr/bin
     mkdir -p /usr/share/applications
     mkdir -p /usr/share/man/man1
+    mkdir -p /usr/share/vdu_controls/icons
     mkdir -p /usr/share/vdu_controls/translations
     mkdir -p /usr/share/vdu_controls/sample-scripts
     install vdu_controls.py  /usr/bin/%{name}
+    install -m644 icons/* /usr/share/vdu_controls/icons
     install -m644 translations/*.ts /usr/share/vdu_controls/translations
     install -m755 sample-scripts/* /usr/share/vdu_controls/sample-scripts
 

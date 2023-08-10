@@ -230,6 +230,7 @@ Version History
   * Fixed --sleep-multiplier command line option.
   * Minor UI enhancements and fixes.
   * Support ddcutil versions earlier than 1.3.
+  * Add a starter set of icons for Presets (a selection from KDE breeze5-icons).
 * 1.10.2
   * Fix Preset non-zero transition-step-seconds, so it works properly.
   * Changing log-to-syslog or log-debug-enabled no longer requires a restart.
