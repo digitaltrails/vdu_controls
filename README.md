@@ -42,6 +42,10 @@ check that the dependencies described below are in place.  Alternatively, should
 for all users, rpm's are available for **OpenSUSE**, **Fedora**, and there is an  **archlinux** AUR package
 which also works in **Manjaro**.  See the *Install* section below. 
 
+> Development is **trunk-based**.  It is my intent that the trunk should 
+> always be usable as a daily-driver.  That being said, a download of trunk is likely to 
+> be less stable than downloading one of the formal [releases](https://github.com/digitaltrails/vdu_controls/releases) 
+> or installing one of the packages that available in various distros.
 
 Dependencies
 ------------
@@ -156,10 +160,6 @@ it on the [issues page](https://github.com/digitaltrails/vdu_controls/issues).
 
 Development
 -----------
-
-The ``vdu_controls`` development is **trunk-based**.  It is my intent that the trunk should 
-always be usable as my daily-driver.  That being said, trunk is likely to be less stable 
-than the periodic [releases](https://github.com/digitaltrails/vdu_controls/releases) and the packages that appear in various distros.
 
 I've set up the ``vdu_controls`` source as a typical Python development, but there is only one real source
 file, ``vdu_controls.py``, so the file hierarchy is rather over the top.  A standard python distributable 
