@@ -3724,6 +3724,7 @@ class PresetActivationButton(QPushButton):
     def __init__(self, preset: Preset) -> None:
         super().__init__()
         self.preset = preset
+        self.setIconSize(QSize(24, 24))
         self.setIcon(preset.create_icon())
         self.setText(preset.get_title_name())
         self.setToolTip(tr("Restore {} (immediately)").format(preset.get_title_name()))
@@ -3739,8 +3740,9 @@ class PresetChooseIconButton(QPushButton):
 
     def __init__(self) -> None:
         super().__init__()
-        self.setIcon(si(self, PresetsDialog.NO_ICON_INCON_NUMBER))
+        self.setIcon(si(self, PresetsDialog.NO_ICON_ICON_NUMBER))
         self.setToolTip(tr('Choose a preset icon.'))
+        self.setIconSize(QSize(32, 32))
         self.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
         self.setAutoDefault(False)
         self.last_selected_icon_path: Path | None = None
@@ -3781,7 +3783,7 @@ class PresetChooseIconButton(QPushButton):
         elif self.preset:
             self.setIcon(self.preset.create_icon())
         else:
-            self.setIcon(si(self, PresetsDialog.NO_ICON_INCON_NUMBER))
+            self.setIcon(si(self, PresetsDialog.NO_ICON_ICON_NUMBER))
 
     def event(self, event: QEvent) -> bool:
         # PalletChange happens after the new style sheet is in use.
@@ -4411,7 +4413,7 @@ class PresetChooseElevationWidget(QWidget):
 
 class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather complex - break into parts?
     """A dialog for creating/updating/removing presets."""
-    NO_ICON_INCON_NUMBER = QStyle.SP_ComputerIcon
+    NO_ICON_ICON_NUMBER = QStyle.SP_ComputerIcon
     edit_save_needed = pyqtSignal()
 
     @staticmethod
