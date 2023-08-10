@@ -1697,8 +1697,9 @@ class VduControlsConfig:
         if include_globals:
             self.ini_content[QT_TR_NOOP('vdu-controls-globals')] = {}
             for option in ConfOption:
-                if option.conf_section == 'vdu-controls-globals':  # and option.default_value is not None:
-                    self.ini_content[option.conf_section][option.conf_name] = str(option.default_value)
+                if option.conf_section == 'vdu-controls-globals':
+                    default_str = str(option.default_value) if option.default_value is not None else ''
+                    self.ini_content[option.conf_section][option.conf_name] = default_str
 
         self.ini_content[QT_TR_NOOP('vdu-controls-widgets')] = {}
         self.ini_content[QT_TR_NOOP('ddcutil-parameters')] = {}
