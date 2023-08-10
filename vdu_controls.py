@@ -1598,7 +1598,7 @@ class ConfOption(Enum):
     DEBUG_ENABLED = conf_opt_def(name=QT_TR_NOOP('debug-enabled'), default="no", help=QT_TR_NOOP('enable extra debug output'))
     SYSLOG_ENABLED = conf_opt_def(name=QT_TR_NOOP('syslog-enabled'), default="no",
                                   help=QT_TR_NOOP('enable diagnostic output to syslog'))
-    LOCATION = conf_opt_def(name=QT_TR_NOOP('location'), section='vdu-controls-globals', conf_type=ConfType.LOCATION, default='',
+    LOCATION = conf_opt_def(name=QT_TR_NOOP('location'), section='vdu-controls-globals', conf_type=ConfType.LOCATION,
                             help=QT_TR_NOOP('latitude,longitude'))
     SLEEP_MULTIPLIER = conf_opt_def(name=QT_TR_NOOP('sleep-multiplier'), section='ddcutil-parameters', conf_type=ConfType.FLOAT,
                                     default='0.0', help=QT_TR_NOOP('ddcutil --sleep-multiplier (0.1 .. 2.0, default none)'))
@@ -6725,6 +6725,7 @@ class VduAppWindow(QMainWindow):
                 self.preset_controller.reinitialize()
                 self.create_main_control_panel()
                 # time.sleep(2.0)  # Wait a bit for threads to do their thing and fully populate data - TODO this is dodgy
+                self.display_active_preset()
                 log_debug("released application_configuration_lock")
             if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED):
                 LuxDialog.reinitialize_instance()
