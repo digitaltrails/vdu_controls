@@ -5215,13 +5215,11 @@ class LuxProfileChart(QLabel):
 
     def show_changes(self, profile_changes=True) -> None:
         self.create_plot()
-        self.update()
         if profile_changes:
             self.chart_changed_callback()
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         self.create_plot()
-        self.update()
 
     def find_close_to(self, x: int, y: int, vdu_id: str) -> Tuple:
         r = self.snap_to_margin
@@ -6015,7 +6013,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.status_message(tr("Initializing Light Meter Dialog..."))
         QApplication.processEvents()  # Next bit is slow
 
-        new_id_list = []   # List of all currently connected VDU's
+        connected_id_list = []   # List of all currently connected VDU's
         for index, vdu_controller in enumerate(self.main_app.vdu_controllers):
             if VDU_SUPPORTED_CONTROLS.brightness.vcp_code in vdu_controller.capabilities:
                 self.range_restrictions[vdu_controller.vdu_stable_id] = vdu_controller.get_range_restrictions(
@@ -6027,7 +6025,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
                     self.vdu_current_brightness[vdu_controller.vdu_stable_id] = 0
                     log_warning("VDU may not be available:", str(ve), trace=True)
             self.profile_data[vdu_controller.vdu_stable_id] = self.lux_config.get_vdu_profile(vdu_controller)
-            new_id_list.append(vdu_controller.vdu_stable_id)
+            connected_id_list.append(vdu_controller.vdu_stable_id)
         self.preset_points.clear()  # Edit out deleted presets by starting from scratch
         for preset_point in self.lux_config.get_preset_points():
             if preset_point.preset_name is not None and self.main_app.find_preset_by_name(preset_point.preset_name):
@@ -6037,21 +6035,25 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.interval_selector.setValue(self.lux_config.get_interval_minutes())
 
         existing_id_list = [self.profile_selector.itemData(index) for index in range(0, self.profile_selector.count())]
-        existing_selected_id = self.lux_config.get('lux-ui', 'selected-profile', fallback=new_id_list[0] if new_id_list else None)
-        self.profile_selector.blockSignals(True)  # Stop initialization from causing signal until all data is aligned.
-        if new_id_list != existing_id_list:  # List of connected VDU's has changed
-            self.profile_selector.clear()
-            random.seed(int(self.lux_config.get("lux-ui", "vdu_color_seed", fallback='0x543fff'), 16))
-            self.vdu_chart_color.clear()
-            for index, vdu_controller in enumerate(self.main_app.vdu_controllers):
-                color = QColor.fromHsl(int(index * 137.508) % 255, random.randint(64, 128), random.randint(192, 200))
-                self.vdu_chart_color[vdu_controller.vdu_stable_id] = color
-                color_icon = create_icon_from_svg_bytes(SWATCH_ICON_SOURCE.replace(b"#ffffff", bytes(color.name(), 'utf-8')))
-                self.profile_selector.addItem(color_icon, vdu_controller.get_vdu_description(), userData=vdu_controller.vdu_stable_id)
-                if vdu_controller.vdu_stable_id == existing_selected_id:
-                    self.profile_selector.setCurrentIndex(index)
-                    self.profile_plot.current_vdu_id = existing_selected_id
-        self.profile_selector.blockSignals(False)
+        candidate_id = self.lux_config.get('lux-ui', 'selected-profile', fallback=None)
+        if connected_id_list and (candidate_id is None or candidate_id not in connected_id_list):
+            candidate_id = connected_id_list[0]
+        try:
+            self.profile_selector.blockSignals(True)  # Stop initialization from causing signal until all data is aligned.
+            if connected_id_list != existing_id_list:  # List of connected VDU's has changed
+                self.profile_selector.clear()
+                random.seed(int(self.lux_config.get("lux-ui", "vdu_color_seed", fallback='0x543fff'), 16))
+                self.vdu_chart_color.clear()
+                for index, vdu_controller in enumerate(self.main_app.vdu_controllers):
+                    color = QColor.fromHsl(int(index * 137.508) % 255, random.randint(64, 128), random.randint(192, 200))
+                    self.vdu_chart_color[vdu_controller.vdu_stable_id] = color
+                    color_icon = create_icon_from_svg_bytes(SWATCH_ICON_SOURCE.replace(b"#ffffff", bytes(color.name(), 'utf-8')))
+                    self.profile_selector.addItem(color_icon, vdu_controller.get_vdu_description(), userData=vdu_controller.vdu_stable_id)
+                    if vdu_controller.vdu_stable_id == candidate_id:
+                        self.profile_selector.setCurrentIndex(index)
+                        self.profile_plot.current_vdu_id = candidate_id
+        finally:
+            self.profile_selector.blockSignals(False)
         self.configure_ui(self.main_app.get_lux_auto_controller().lux_meter)
         self.profile_plot.create_plot()
         self.status_message('')
