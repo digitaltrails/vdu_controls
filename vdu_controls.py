@@ -3763,7 +3763,7 @@ class PresetChooseIconButton(QPushButton):
     def choose_preset_icon_action(self) -> None:
         try:
             PresetsDialog.get_instance().setDisabled(True)
-            PresetsDialog.get_instance().status_message(TIME_CLOCK_SYMBOL + ' ' + tr("Creating icon preview..."))
+            PresetsDialog.get_instance().status_message(TIME_CLOCK_SYMBOL + ' ' + tr("Select an icon..."))
             QApplication.processEvents()
             icon_file = QFileDialog.getOpenFileName(self, tr('Icon SVG or PNG file'), self.last_icon_dir.as_posix(),
                                                     'SVG or PNG (*.svg *.png)')
