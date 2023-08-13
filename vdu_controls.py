@@ -749,6 +749,8 @@ RAISED_HAND_SYMBOL = '\u270b'  # RAISED HAND
 SolarElevationKey = namedtuple('SolarElevationKey', ['direction', 'elevation'])
 SolarElevationData = namedtuple('SolarElevationData', ['azimuth', 'zenith', 'when'])
 
+Shortcut = namedtuple('Shortcut', ['letter', 'annotated_word'])
+
 gui_thread: QThread | None = None
 
 
@@ -3042,28 +3044,44 @@ class Preset:
 
 class ContextMenu(QMenu):
     PRESET_NAME_PROP = 'preset_name'
+    PRESET_SHORTCUT_PROP = 'preset_shortcut'
     BUSY_DISABLE_PROP = 'busy_disable'
 
-    def __init__(self, main_window, main_window_action, about_action, help_action, chart_action,
+    menu_changed = pyqtSignal(str)
+    preset_list_changed = pyqtSignal()
+
+    def __init__(self, main_window: VduAppWindow, main_window_action, about_action, help_action, chart_action,
                  lux_auto_action, lux_meter_action, settings_action, presets_action, refresh_action, quit_action) -> None:
-        super().__init__()
+        super().__init__(parent=main_window)
         self.main_window = main_window
+        self.initial_unreserved_shortcuts = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+        self.available_shortcuts = list(self.initial_unreserved_shortcuts)
         if main_window_action is not None:
-            self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Control Panel'), main_window_action)
+            self._add_action(QStyle.SP_ComputerIcon, tr('&Control Panel'), main_window_action)
             self.addSeparator()
-        self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Presets'), presets_action)
+        self._add_action(QStyle.SP_ComputerIcon, tr('&Presets'), presets_action)
         self.presets_separator = self.addSeparator()  # Important for finding where to add a preset
-        self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Grey Scale'), chart_action)
+        self._add_action(QStyle.SP_ComputerIcon, tr('&Grey Scale'), chart_action)
         if lux_meter_action is not None:
-            self.lux_auto_action = self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Auto/Manual'), lux_auto_action)
-            self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Light-Meter'), lux_meter_action)
-        self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Settings'), settings_action)
-        self.addAction(si(self, QStyle.SP_BrowserReload), tr('Refresh'), refresh_action).setProperty(ContextMenu.BUSY_DISABLE_PROP,
-                                                                                                     QVariant(True))
-        self.addAction(si(self, QStyle.SP_MessageBoxInformation), tr('About'), about_action)
-        self.addAction(si(self, QStyle.SP_DialogHelpButton), tr('Help'), help_action)
-        self.addSeparator()
-        self.addAction(si(self, QStyle.SP_DialogCloseButton), tr('Quit'), quit_action)
+            self.lux_auto_action = self._add_action(QStyle.SP_ComputerIcon, tr('&Auto/Manual'), lux_auto_action)
+            self._add_action(QStyle.SP_ComputerIcon, tr('&Light-Meter'), lux_meter_action)
+        self._add_action(QStyle.SP_ComputerIcon, tr('&Settings'), settings_action, 'Ctrl+Shift+,')
+        self._add_action(QStyle.SP_BrowserReload, tr('&Refresh'), refresh_action, 'F5').setProperty(
+            ContextMenu.BUSY_DISABLE_PROP, QVariant(True))
+        self._add_action(QStyle.SP_MessageBoxInformation, tr('Abou&t'), about_action)
+        self._add_action(QStyle.SP_DialogHelpButton, tr('&Help'), help_action, 'F1')
+        self._add_action(QStyle.SP_DialogCloseButton, tr('&Quit'), quit_action)
+        self.initial_unreserved_shortcuts = ''.join(self.available_shortcuts)  # Prune after building menu - reserves base menu
+        self.auto_lux_icon = None
+
+    def _add_action(self, qt_icon_number: QIcon, text: str, func: Callable, extra_shortcut: str | None = None) -> QAction:
+        shortcut_letter = self.reserve_shortcut(text[text.index('&') + 1])
+        action = self.addAction(si(self, qt_icon_number), text, func)
+        primary_shortcut = self.shortcut_seq(shortcut_letter)
+        # Empty string causes shortcuts to be hidden.
+        action.setShortcuts(['', primary_shortcut, extra_shortcut] if extra_shortcut else ['', primary_shortcut])
+        action.setShortcutContext(Qt.ApplicationShortcut)
+        return action
 
     def get_preset_menu_action(self, name: str) -> QAction | None:
         for action in self.actions():
@@ -3071,51 +3089,136 @@ class ContextMenu(QMenu):
                 return action
         return None
 
-    def insert_preset_menu_action(self, preset: Preset) -> None:
-        # Have to add it first and then move it (otherwise it won't appear - weird).
+    def insert_preset_menu_action(self, preset: Preset, emit_change: bool = True) -> None:
 
         def restore_preset() -> None:
-            self.main_window.restore_named_preset(self.sender().text())
+            print("ping", self.sender().text())
+            self.main_window.restore_named_preset(self.sender().property(ContextMenu.PRESET_NAME_PROP))
 
-        action = self.addAction(preset.create_icon(), preset.name, restore_preset)
-        action.setProperty(ContextMenu.BUSY_DISABLE_PROP, QVariant(True))
         assert preset.name
+        shortcut = self.allocate_shortcut(preset.name)
+        action_name = shortcut.annotated_word if shortcut else preset.name
+        action = self.addAction(preset.create_icon(), action_name, restore_preset)  # Have to add it first and then move it.
+        action.setProperty(ContextMenu.BUSY_DISABLE_PROP, QVariant(True))
         action.setProperty(ContextMenu.PRESET_NAME_PROP, preset.name)
-        self.insertAction(self.presets_separator, action)  # insert before the presets_separator
-        self.update()
+        if shortcut:
+            action.setProperty(ContextMenu.PRESET_SHORTCUT_PROP, shortcut)
+            action.setShortcuts(['', self.shortcut_seq(shortcut.letter)])  # Empty string causes shortcuts to be hidden.
+            action.setShortcutContext(Qt.ApplicationShortcut)
+        else:
+            log_warning(f"Failed to allocate shortcut for {preset.name} available shortcuts={self.available_shortcuts}")
+        self.insertAction(self.presets_separator, action)  # Insert before the presets_separator
+
+        if emit_change:
+            self.update()
+            self.preset_list_changed.emit()
 
     def remove_preset_menu_action(self, name: str) -> None:
         menu_action = self.get_preset_menu_action(name)
         if menu_action is not None:
+            shortcut = menu_action.property(ContextMenu.PRESET_SHORTCUT_PROP)
+            if shortcut:
+                self.available_shortcuts.append(shortcut.letter)
             self.removeAction(menu_action)
+            self.update()
+            self.preset_list_changed.emit()
 
     def refresh_preset_menu(self, palette_change: bool = False) -> None:
+        changed = 0
+        self.available_shortcuts = list(self.initial_unreserved_shortcuts)
         for name, preset in self.main_window.preset_controller.find_presets().items():
             menu_action = self.get_preset_menu_action(name)
             if menu_action is None or not menu_action.property(ContextMenu.PRESET_NAME_PROP):
-                self.insert_preset_menu_action(preset)
+                self.insert_preset_menu_action(preset, False)
+                changed += 1
             elif palette_change:  # Must redraw icons in case desktop theme changed between light/dark.
                 menu_action.setIcon(preset.create_icon())
+                changed += 1
+        if changed > 0:
+            self.update()
+            self.preset_list_changed.emit()
 
     def indicate_preset_active(self, preset: Preset | None) -> None:
+        changed = 0
         for action in self.actions():
             action_preset_name = action.property(ContextMenu.PRESET_NAME_PROP)
             if action_preset_name:
-                if preset is not None and preset.name == action_preset_name:
-                    action.setText(action_preset_name + ' ' + SUCCESS_SYMBOL)  # Add check mark
-                elif action.text() != action_preset_name:  # Remove check mark
-                    action.setText(action_preset_name)
-        self.update()
+                shortcut = action.property(ContextMenu.PRESET_SHORTCUT_PROP)
+                suffix = (' ' + SUCCESS_SYMBOL) if preset is not None and preset.name == action_preset_name else ''
+                new_text = (shortcut.annotated_word if shortcut else action_preset_name) + suffix
+                if new_text != action.text():
+                    action.setText(new_text)
+                    changed += 1
+        if changed > 0:
+            self.update()
+            self.menu_changed.emit("indicate_preset_active")
 
     def indicate_busy(self, is_busy: bool = True) -> None:
+        changed = 0
         for action in self.actions():
             if action.property(ContextMenu.BUSY_DISABLE_PROP):
-                action.setDisabled(is_busy)
+                if (is_busy and action.isEnabled()) or (not is_busy and not action.isEnabled()):
+                    action.setDisabled(is_busy)
+                    changed += 1
+        if changed > 0:
+            self.update()
+            self.menu_changed.emit("indicate_busy")
 
     def update_lux_auto_icon(self, icon: QIcon) -> None:
-        if self.lux_auto_action.icon() != icon:
+        if self.auto_lux_icon != icon:
+            self.auto_lux_icon = icon
             self.lux_auto_action.setIcon(icon)
             self.update()
+            self.menu_changed.emit("update_auto_lux_icon")
+
+    def allocate_shortcut(self, word: str) -> Shortcut | None:
+        for letter in list(word):
+            upper_letter = letter.upper()
+            if upper_letter in self.available_shortcuts:
+                self.available_shortcuts.remove(upper_letter)
+                return Shortcut(letter=upper_letter, annotated_word=word[:word.index(letter)] + '&' + word[word.index(letter):])
+        return None
+
+    def reserve_shortcut(self, letter: str) -> str:
+        if letter in self.available_shortcuts:
+            self.available_shortcuts.remove(letter)
+        else:
+            log_error("Tried to reserve an already allocated shortcut", trace=True)
+        return letter
+
+    def shortcut_seq(self, letter:str) -> str:
+        return 'Alt+' + letter
+
+
+class TrayContextMenu(QMenu):  # Same as ContextMenu without the shortcuts.
+    def __init__(self, wrapped_menu: ContextMenu) -> None:
+        super().__init__(parent=wrapped_menu.parent())
+        self.original_menu: ContextMenu = wrapped_menu
+        self._clone_original_menu()
+        self.original_menu.menu_changed.connect(self._update_menu)
+        self.original_menu.preset_list_changed.connect(self._clone_original_menu)  # Could be more efficient, but the menu is small.
+
+    def _update_menu(self, reason: str):
+        log_debug(f"_wrapped_menu_change: {reason}") if log_debug_enabled else None
+        for original_action, action in zip(self.original_menu.actions(), self.actions()):
+            if not action.isSeparator():
+                action.setText(original_action.text()) if action.text() != original_action.text() else None
+                action.setIcon(original_action.icon()) if action.icon() != original_action.icon() else None
+                action.setEnabled(original_action.isEnabled()) if action.isEnabled() != original_action.isEnabled() else None
+        self.update()
+
+    def _clone_original_menu(self):  # Clone without the shortcuts - they don't work from the tray
+        log_debug("cloning menu") if log_debug_enabled else None
+        self.clear()
+        for original_action in self.original_menu.actions():
+            self.addSeparator() if original_action.isSeparator() else self._add_cloned_action(original_action)
+        self.update()
+
+    def _add_cloned_action(self, original_action):
+        cloned_action = self.addAction(original_action.icon(), original_action.text(), original_action.trigger)
+        if not original_action.isEnabled():
+            cloned_action.setDisabled(True)
+        return cloned_action
 
 
 class ToolButton(QToolButton):
@@ -4854,9 +4957,17 @@ def create_image_from_svg_bytes(svg_bytes, themed: bool = True) -> QImage:
     return image
 
 
+svg_icon_cache: Dict[Tuple[bytes, bool], QIcon] = {}
+
+
 def create_icon_from_svg_bytes(svg_bytes: bytes, themed: bool = True) -> QIcon:
     """There is no QIcon option for loading SVG from a string, only from a SVG file, so roll our own."""
-    return QIcon(create_pixmap_from_svg_bytes(svg_bytes, themed))
+    key = svg_bytes, themed
+    if key in svg_icon_cache:
+        return svg_icon_cache[key]
+    icon = QIcon(create_pixmap_from_svg_bytes(svg_bytes, themed))
+    svg_icon_cache[key] = icon
+    return icon
 
 
 def create_icon_from_path(path: Path, themed: bool = True) -> QIcon:
@@ -6410,6 +6521,7 @@ class VduAppWindow(QMainWindow):
         self.ddcutil: DdcUtil | None = None
         self.preset_transition_worker: PresetTransitionWorker | None = None
         self.lux_auto_controller: LuxAutoController | None = None
+        self.hide_shortcuts_in_tray = True
         gnome_tray_behaviour = main_config.is_set(ConfOption.SYSTEM_TRAY_ENABLED) and 'gnome' in os.environ.get(
             'XDG_CURRENT_DESKTOP', default='unknown').lower()
 
@@ -6512,7 +6624,8 @@ class VduAppWindow(QMainWindow):
                 # This next call appears to be automatic on KDE, but not on gnome.
                 app.setQuitOnLastWindowClosed(False)
                 self.tray = QSystemTrayIcon(parent=self)
-                self.tray.setContextMenu(self.app_context_menu)
+                self.tray.setContextMenu(
+                    TrayContextMenu(self.app_context_menu) if self.hide_shortcuts_in_tray else self.app_context_menu)
             else:
                 log_error("no system tray - cannot run in system tray.")
 
@@ -6573,13 +6686,12 @@ class VduAppWindow(QMainWindow):
                         y = p.y() - wg.height() if p.y() > wg.height() else p.y()
                         self.setGeometry(x, y, wg.width(), wg.height())
                     self.show()
-                    # Attempt to force it to the top with raise and activate
-                    self.raise_()
+                    self.raise_()  # Attempt to force it to the top with raise and activate
                     self.activateWindow()
 
             self.hide()
             self.tray.activated.connect(show_window)
-            self.tray.setVisible(True)
+            self.tray.show()
         else:
             self.show()
 
