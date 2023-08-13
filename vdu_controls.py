@@ -3072,12 +3072,14 @@ class ContextMenu(QMenu):
         self.auto_lux_icon = None
 
     def _add_action(self, qt_icon_number: QIcon, text: str, func: Callable, extra_shortcut: str | None = None) -> QAction:
-        shortcut_letter = text[text.index('&') + 1].upper() if text.find('&') >= 0 else ''
-        log_debug(f"Reserve shortcut '{shortcut_letter}'")  # might be foreign
-        self.reserved_shortcuts.append(shortcut_letter) if shortcut_letter is not '' else None
         action = self.addAction(si(self, qt_icon_number), text, func)
-        action.setShortcuts(self.shortcut_list(ContextMenu.ALT.format(shortcut_letter.upper()), extra_shortcut))
-        action.setShortcutContext(Qt.ApplicationShortcut)
+        shortcut_letter = text[text.index('&') + 1].upper() if text.find('&') >= 0 else None
+        if shortcut_letter is not None:
+            log_info(f"Reserve shortcut '{shortcut_letter}'")
+            assert shortcut_letter not in self.reserved_shortcuts
+            self.reserved_shortcuts.append(shortcut_letter)
+            action.setShortcuts(self.shortcut_list(ContextMenu.ALT.format(shortcut_letter.upper()), extra_shortcut))
+            action.setShortcutContext(Qt.ApplicationShortcut)
         return action
 
     def get_preset_menu_action(self, name: str) -> QAction | None:
