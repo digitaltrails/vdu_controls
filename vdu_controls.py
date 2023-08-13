@@ -3077,9 +3077,9 @@ class ContextMenu(QMenu):
     def _add_action(self, qt_icon_number: QIcon, text: str, func: Callable, extra_shortcut: str | None = None) -> QAction:
         shortcut_letter = self.reserve_shortcut(text[text.index('&') + 1])
         action = self.addAction(si(self, qt_icon_number), text, func)
-        primary_shortcut = self.shortcut_seq(shortcut_letter)
+        primary_shortcut = self.shortcut_alt(shortcut_letter)
         # Empty string causes shortcuts to be hidden.
-        action.setShortcuts(['', primary_shortcut, extra_shortcut] if extra_shortcut else ['', primary_shortcut])
+        action.setShortcuts(self.shortcut_list([primary_shortcut, extra_shortcut] if extra_shortcut else primary_shortcut))
         action.setShortcutContext(Qt.ApplicationShortcut)
         return action
 
@@ -3103,7 +3103,7 @@ class ContextMenu(QMenu):
         action.setProperty(ContextMenu.PRESET_NAME_PROP, preset.name)
         if shortcut:
             action.setProperty(ContextMenu.PRESET_SHORTCUT_PROP, shortcut)
-            action.setShortcuts(['', self.shortcut_seq(shortcut.letter)])  # Empty string causes shortcuts to be hidden.
+            action.setShortcuts(self.shortcut_list(self.shortcut_alt(shortcut.letter)))
             action.setShortcutContext(Qt.ApplicationShortcut)
         else:
             log_warning(f"Failed to allocate shortcut for {preset.name} available shortcuts={self.available_shortcuts}")
@@ -3175,50 +3175,24 @@ class ContextMenu(QMenu):
         for letter in list(word):
             upper_letter = letter.upper()
             if upper_letter in self.available_shortcuts:
-                self.available_shortcuts.remove(upper_letter)
+                self.reserve_shortcut(upper_letter)
                 return Shortcut(letter=upper_letter, annotated_word=word[:word.index(letter)] + '&' + word[word.index(letter):])
         return None
 
     def reserve_shortcut(self, letter: str) -> str:
+        letter = letter.upper()
         if letter in self.available_shortcuts:
             self.available_shortcuts.remove(letter)
         else:
             log_error("Tried to reserve an already allocated shortcut", trace=True)
         return letter
 
-    def shortcut_seq(self, letter:str) -> str:
-        return 'Alt+' + letter
+    def shortcut_alt(self, letter:str) -> str:
+        return 'Alt+' + letter.upper()
 
-
-class TrayContextMenu(QMenu):  # Same as ContextMenu without the shortcuts.
-    def __init__(self, wrapped_menu: ContextMenu) -> None:
-        super().__init__(parent=wrapped_menu.parent())
-        self.original_menu: ContextMenu = wrapped_menu
-        self._clone_original_menu()
-        self.original_menu.menu_changed.connect(self._update_menu)
-        self.original_menu.preset_list_changed.connect(self._clone_original_menu)  # Could be more efficient, but the menu is small.
-
-    def _update_menu(self, reason: str):
-        log_debug(f"_wrapped_menu_change: {reason}") if log_debug_enabled else None
-        for original_action, action in zip(self.original_menu.actions(), self.actions()):
-            if not action.isSeparator():
-                action.setText(original_action.text()) if action.text() != original_action.text() else None
-                action.setIcon(original_action.icon()) if action.icon() != original_action.icon() else None
-                action.setEnabled(original_action.isEnabled()) if action.isEnabled() != original_action.isEnabled() else None
-        self.update()
-
-    def _clone_original_menu(self):  # Clone without the shortcuts - they don't work from the tray
-        log_debug("cloning menu") if log_debug_enabled else None
-        self.clear()
-        for original_action in self.original_menu.actions():
-            self.addSeparator() if original_action.isSeparator() else self._add_cloned_action(original_action)
-        self.update()
-
-    def _add_cloned_action(self, original_action):
-        cloned_action = self.addAction(original_action.icon(), original_action.text(), original_action.trigger)
-        if not original_action.isEnabled():
-            cloned_action.setDisabled(True)
-        return cloned_action
+    def shortcut_list(self, shortcuts: List[str] | str): # Empty string causes shortcuts to be hidden.
+        shortcuts = shortcuts if isinstance(shortcuts, list) else [shortcuts]
+        return [''] + shortcuts if self.main_window.hide_shortcuts_in_tray else shortcuts
 
 
 class ToolButton(QToolButton):
@@ -6624,8 +6598,7 @@ class VduAppWindow(QMainWindow):
                 # This next call appears to be automatic on KDE, but not on gnome.
                 app.setQuitOnLastWindowClosed(False)
                 self.tray = QSystemTrayIcon(parent=self)
-                self.tray.setContextMenu(
-                    TrayContextMenu(self.app_context_menu) if self.hide_shortcuts_in_tray else self.app_context_menu)
+                self.tray.setContextMenu(self.app_context_menu)
             else:
                 log_error("no system tray - cannot run in system tray.")
 
