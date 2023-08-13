@@ -706,7 +706,7 @@ from PyQt5 import QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
     QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant
 from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QRegExpValidator, \
-    QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent
+    QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
@@ -1531,7 +1531,7 @@ class VduGuiSupportedControls:
     }
 
     # Purely here to force inclusion of additional messages in the output of pylupdate5 (internationalisation).
-    aliases = { 'audio volume': [QT_TR_NOOP('audio speaker volume'), ], }
+    aliases = {'audio volume': [QT_TR_NOOP('audio speaker volume'), ], }
 
     by_arg_name = {c.property_name(): c for c in by_code.values()}
     brightness = by_code['10']
@@ -2103,7 +2103,7 @@ class SettingsEditor(QDialog, DialogSingletonMixin):
             for editor in save_order:
                 if editor.is_unsaved():
                     nothing_to_save = False
-                    if editor.save(what_changed) == QMessageBox.Cancel:
+                    if editor.save(what_changed=what_changed) == QMessageBox.Cancel:
                         return QMessageBox.Cancel
             if warn_if_nothing_to_save and nothing_to_save:
                 alert = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Yes | QMessageBox.No, default=QMessageBox.No)
@@ -3046,16 +3046,13 @@ class ContextMenu(QMenu):
     PRESET_NAME_PROP = 'preset_name'
     PRESET_SHORTCUT_PROP = 'preset_shortcut'
     BUSY_DISABLE_PROP = 'busy_disable'
-
-    menu_changed = pyqtSignal(str)
-    preset_list_changed = pyqtSignal()
+    ALT = 'Alt+{}'
 
     def __init__(self, main_window: VduAppWindow, main_window_action, about_action, help_action, chart_action,
                  lux_auto_action, lux_meter_action, settings_action, presets_action, refresh_action, quit_action) -> None:
         super().__init__(parent=main_window)
         self.main_window = main_window
-        self.initial_unreserved_shortcuts = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-        self.available_shortcuts = list(self.initial_unreserved_shortcuts)
+        self.available_shortcuts = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890')
         if main_window_action is not None:
             self._add_action(QStyle.SP_ComputerIcon, tr('&Control Panel'), main_window_action)
             self.addSeparator()
@@ -3066,20 +3063,19 @@ class ContextMenu(QMenu):
             self.lux_auto_action = self._add_action(QStyle.SP_ComputerIcon, tr('&Auto/Manual'), lux_auto_action)
             self._add_action(QStyle.SP_ComputerIcon, tr('&Light-Meter'), lux_meter_action)
         self._add_action(QStyle.SP_ComputerIcon, tr('&Settings'), settings_action, 'Ctrl+Shift+,')
-        self._add_action(QStyle.SP_BrowserReload, tr('&Refresh'), refresh_action, 'F5').setProperty(
+        self._add_action(QStyle.SP_BrowserReload, tr('&Refresh'), refresh_action, QKeySequence.Refresh).setProperty(
             ContextMenu.BUSY_DISABLE_PROP, QVariant(True))
         self._add_action(QStyle.SP_MessageBoxInformation, tr('Abou&t'), about_action)
-        self._add_action(QStyle.SP_DialogHelpButton, tr('&Help'), help_action, 'F1')
-        self._add_action(QStyle.SP_DialogCloseButton, tr('&Quit'), quit_action)
-        self.initial_unreserved_shortcuts = ''.join(self.available_shortcuts)  # Prune after building menu - reserves base menu
+        self._add_action(QStyle.SP_DialogHelpButton, tr('&Help'), help_action, QKeySequence.HelpContents)
+        self._add_action(QStyle.SP_DialogCloseButton, tr('&Quit'), quit_action, QKeySequence.Quit)
         self.auto_lux_icon = None
 
     def _add_action(self, qt_icon_number: QIcon, text: str, func: Callable, extra_shortcut: str | None = None) -> QAction:
-        shortcut_letter = self.reserve_shortcut(text[text.index('&') + 1])
+        shortcut_letter = text[text.index('&') + 1].upper()
+        assert shortcut_letter in self.available_shortcuts
+        self.available_shortcuts.remove(shortcut_letter)
         action = self.addAction(si(self, qt_icon_number), text, func)
-        primary_shortcut = self.shortcut_alt(shortcut_letter)
-        # Empty string causes shortcuts to be hidden.
-        action.setShortcuts(self.shortcut_list([primary_shortcut, extra_shortcut] if extra_shortcut else primary_shortcut))
+        action.setShortcuts(self.shortcut_list(ContextMenu.ALT.format(shortcut_letter.upper()), extra_shortcut))
         action.setShortcutContext(Qt.ApplicationShortcut)
         return action
 
@@ -3089,29 +3085,26 @@ class ContextMenu(QMenu):
                 return action
         return None
 
-    def insert_preset_menu_action(self, preset: Preset, emit_change: bool = True) -> None:
+    def insert_preset_menu_action(self, preset: Preset, issue_update: bool = True) -> None:
 
         def restore_preset() -> None:
             print("ping", self.sender().text())
             self.main_window.restore_named_preset(self.sender().property(ContextMenu.PRESET_NAME_PROP))
 
         assert preset.name
-        shortcut = self.allocate_shortcut(preset.name)
+        shortcut = self.allocate_preset_shortcut(preset.name)
         action_name = shortcut.annotated_word if shortcut else preset.name
-        action = self.addAction(preset.create_icon(), action_name, restore_preset)  # Have to add it first and then move it.
+        action = self.addAction(preset.create_icon(), action_name, restore_preset)  # Have to add it first and then move/insert it.
+        self.insertAction(self.presets_separator, action)  # Insert before the presets_separator
         action.setProperty(ContextMenu.BUSY_DISABLE_PROP, QVariant(True))
         action.setProperty(ContextMenu.PRESET_NAME_PROP, preset.name)
         if shortcut:
             action.setProperty(ContextMenu.PRESET_SHORTCUT_PROP, shortcut)
-            action.setShortcuts(self.shortcut_list(self.shortcut_alt(shortcut.letter)))
+            action.setShortcuts(self.shortcut_list(ContextMenu.ALT.format(shortcut.letter.upper())))
             action.setShortcutContext(Qt.ApplicationShortcut)
         else:
             log_warning(f"Failed to allocate shortcut for {preset.name} available shortcuts={self.available_shortcuts}")
-        self.insertAction(self.presets_separator, action)  # Insert before the presets_separator
-
-        if emit_change:
-            self.update()
-            self.preset_list_changed.emit()
+        self.update() if issue_update else None
 
     def remove_preset_menu_action(self, name: str) -> None:
         menu_action = self.get_preset_menu_action(name)
@@ -3121,11 +3114,9 @@ class ContextMenu(QMenu):
                 self.available_shortcuts.append(shortcut.letter)
             self.removeAction(menu_action)
             self.update()
-            self.preset_list_changed.emit()
 
     def refresh_preset_menu(self, palette_change: bool = False) -> None:
         changed = 0
-        self.available_shortcuts = list(self.initial_unreserved_shortcuts)
         for name, preset in self.main_window.preset_controller.find_presets().items():
             menu_action = self.get_preset_menu_action(name)
             if menu_action is None or not menu_action.property(ContextMenu.PRESET_NAME_PROP):
@@ -3134,9 +3125,7 @@ class ContextMenu(QMenu):
             elif palette_change:  # Must redraw icons in case desktop theme changed between light/dark.
                 menu_action.setIcon(preset.create_icon())
                 changed += 1
-        if changed > 0:
-            self.update()
-            self.preset_list_changed.emit()
+        self.update() if changed else None
 
     def indicate_preset_active(self, preset: Preset | None) -> None:
         changed = 0
@@ -3149,9 +3138,7 @@ class ContextMenu(QMenu):
                 if new_text != action.text():
                     action.setText(new_text)
                     changed += 1
-        if changed > 0:
-            self.update()
-            self.menu_changed.emit("indicate_preset_active")
+        self.update() if changed else None
 
     def indicate_busy(self, is_busy: bool = True) -> None:
         changed = 0
@@ -3160,39 +3147,25 @@ class ContextMenu(QMenu):
                 if (is_busy and action.isEnabled()) or (not is_busy and not action.isEnabled()):
                     action.setDisabled(is_busy)
                     changed += 1
-        if changed > 0:
-            self.update()
-            self.menu_changed.emit("indicate_busy")
+        self.update() if changed else None
 
     def update_lux_auto_icon(self, icon: QIcon) -> None:
         if self.auto_lux_icon != icon:
             self.auto_lux_icon = icon
             self.lux_auto_action.setIcon(icon)
             self.update()
-            self.menu_changed.emit("update_auto_lux_icon")
 
-    def allocate_shortcut(self, word: str) -> Shortcut | None:
+    def allocate_preset_shortcut(self, word: str) -> Shortcut | None:
         for letter in list(word):
             upper_letter = letter.upper()
             if upper_letter in self.available_shortcuts:
-                self.reserve_shortcut(upper_letter)
+                self.available_shortcuts.remove(upper_letter)
                 return Shortcut(letter=upper_letter, annotated_word=word[:word.index(letter)] + '&' + word[word.index(letter):])
         return None
 
-    def reserve_shortcut(self, letter: str) -> str:
-        letter = letter.upper()
-        if letter in self.available_shortcuts:
-            self.available_shortcuts.remove(letter)
-        else:
-            log_error("Tried to reserve an already allocated shortcut", trace=True)
-        return letter
-
-    def shortcut_alt(self, letter:str) -> str:
-        return 'Alt+' + letter.upper()
-
-    def shortcut_list(self, shortcuts: List[str] | str): # Empty string causes shortcuts to be hidden.
-        shortcuts = shortcuts if isinstance(shortcuts, list) else [shortcuts]
-        return [''] + shortcuts if self.main_window.hide_shortcuts_in_tray else shortcuts
+    def shortcut_list(self, primary: str | QKeySequence, extra: str | QKeySequence | None = None) -> List[str|QKeySequence]:
+        shortcuts = [primary] + ([extra] if extra else [])
+        return ([''] + shortcuts) if self.main_window.hide_shortcuts else shortcuts  # Empty string causes shortcuts to be hidden.
 
 
 class ToolButton(QToolButton):
@@ -4536,13 +4509,13 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
         presets_panel_title = QLabel(tr("Presets"))
         presets_panel_title.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
         presets_panel_layout.addWidget(presets_panel_title)
-        self.preset_widgets_scrollarea = QScrollArea(parent=self)
+        self.preset_widgets_scroll_area = QScrollArea(parent=self)
         preset_widgets_content = QWidget()
         self.preset_widgets_layout = QVBoxLayout()
         preset_widgets_content.setLayout(self.preset_widgets_layout)
-        self.preset_widgets_scrollarea.setWidget(preset_widgets_content)
-        self.preset_widgets_scrollarea.setWidgetResizable(True)
-        presets_panel_layout.addWidget(self.preset_widgets_scrollarea)
+        self.preset_widgets_scroll_area.setWidget(preset_widgets_content)
+        self.preset_widgets_scroll_area.setWidgetResizable(True)
+        presets_panel_layout.addWidget(self.preset_widgets_scroll_area)
         presets_dialog_splitter.addWidget(presets_panel)
 
         main_window.app_context_menu.refresh_preset_menu()
@@ -4733,7 +4706,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
             self.preset_widgets_layout.insertWidget(index - 1, new_preset_widget)
             target_widget.deleteLater()
             self.main_window.preset_controller.save_order(self.get_preset_names_in_order())
-            self.preset_widgets_scrollarea.updateGeometry()
+            self.preset_widgets_scroll_area.updateGeometry()
 
     def down_action(self, preset: Preset, target_widget: QWidget) -> None:
         index = self.preset_widgets_layout.indexOf(target_widget)
@@ -4743,7 +4716,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
             self.preset_widgets_layout.insertWidget(index + 1, new_preset_widget)
             target_widget.deleteLater()
             self.main_window.preset_controller.save_order(self.get_preset_names_in_order())
-            self.preset_widgets_scrollarea.updateGeometry()
+            self.preset_widgets_scroll_area.updateGeometry()
 
     def restore_preset(self, preset: Preset, immediately: bool = True) -> None:
         self.main_window.restore_preset(preset, immediately=immediately)
@@ -4772,7 +4745,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
         target_widget.deleteLater()
         self.main_window.preset_controller.save_order(self.get_preset_names_in_order())
         self.preset_name_edit.setText('')
-        self.preset_widgets_scrollarea.updateGeometry()
+        self.preset_widgets_scroll_area.updateGeometry()
         self.status_message(tr("Deleted {}").format(preset.name), timeout=-1)
 
     def change_edit_group_title(self) -> None:
@@ -4850,12 +4823,12 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
             self.main_window.preset_controller.save_order(self.get_preset_names_in_order())
 
             def scroll_to_bottom() -> None:  # TODO figure out why this does not work
-                self.preset_widgets_scrollarea.updateGeometry()
-                self.preset_widgets_scrollarea.verticalScrollBar().setValue(
-                    self.preset_widgets_scrollarea.verticalScrollBar().maximum())
-                self.preset_widgets_scrollarea.ensureWidgetVisible(new_preset_widget)
+                self.preset_widgets_scroll_area.updateGeometry()
+                self.preset_widgets_scroll_area.verticalScrollBar().setValue(
+                    self.preset_widgets_scroll_area.verticalScrollBar().maximum())
+                self.preset_widgets_scroll_area.ensureWidgetVisible(new_preset_widget)
 
-            self.preset_widgets_scrollarea.updateGeometry()
+            self.preset_widgets_scroll_area.updateGeometry()
             QTimer.singleShot(0, scroll_to_bottom)
         self.preset_name_edit.setText('')
         self.status_message(tr("Saved {}").format(preset.name), timeout=-1)
@@ -6495,7 +6468,7 @@ class VduAppWindow(QMainWindow):
         self.ddcutil: DdcUtil | None = None
         self.preset_transition_worker: PresetTransitionWorker | None = None
         self.lux_auto_controller: LuxAutoController | None = None
-        self.hide_shortcuts_in_tray = True
+        self.hide_shortcuts = True
         gnome_tray_behaviour = main_config.is_set(ConfOption.SYSTEM_TRAY_ENABLED) and 'gnome' in os.environ.get(
             'XDG_CURRENT_DESKTOP', default='unknown').lower()
 
@@ -6857,7 +6830,7 @@ class VduAppWindow(QMainWindow):
         self.setCentralWidget(self.main_panel)
         self.splash_message_signal.emit(
             "Reticulating Splines" if self.main_config.is_set(ConfOption.DEBUG_ENABLED) else tr("Checking Presets"))
-        ### self.display_active_preset()  # ??? Probably not needed 2023-08-08
+        # XXX self.display_active_preset()  # ??? Probably not needed 2023-08-08
 
     def get_main_panel(self) -> VduControlsMainPanel:
         assert self.main_panel is not None
