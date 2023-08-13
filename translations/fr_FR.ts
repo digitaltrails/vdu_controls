@@ -140,8 +140,8 @@
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3049"/>
-        <source>Settings</source>
-        <translation>Paramètres </translation>
+        <source>&amp;Settings</source>
+        <translation>&amp;Paramètres </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="2087"/>
@@ -260,38 +260,38 @@
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3039"/>
-        <source>Control Panel</source>
-        <translation>Panneau de contrôle</translation>
+        <source>&amp;Control Panel</source>
+        <translation>Panneau de &amp;contrôle</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="4438"/>
-        <source>Presets</source>
-        <translation>Préconfigurations  </translation>
+        <source>&amp;Presets</source>
+        <translation>Préconfigura&amp;tions  </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3045"/>
-        <source>Grey Scale</source>
-        <translation>Échelle de gris </translation>
+        <source>&amp;Grey Scale</source>
+        <translation>Échelle de &amp;gris </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3050"/>
-        <source>Refresh</source>
-        <translation>Rafraîchissement </translation>
+        <source>&amp;Refresh</source>
+        <translation>&amp;Rafraîchissement </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="6254"/>
-        <source>About</source>
-        <translation>A propos de </translation>
+        <source>Abou&amp;t</source>
+        <translation>A propos &amp;de </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="6282"/>
-        <source>Help</source>
-        <translation>Aide </translation>
+        <source>&amp;Help</source>
+        <translation>&amp;Aide </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3055"/>
-        <source>Quit</source>
-        <translation>Quitter </translation>
+        <source>&amp;Quit</source>
+        <translation>&amp;Quitter </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="6651"/>
@@ -790,13 +790,13 @@ Recherche de moniteurs DDC...
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3047"/>
-        <source>Auto/Manual</source>
-        <translation>Automatique/Manuel</translation>
+        <source>&amp;Auto/Manual</source>
+        <translation>Automatique/&amp;Manuel</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="5844"/>
-        <source>Light-Meter</source>
-        <translation>Luxmètre</translation>
+        <source>&amp;Light-Meter</source>
+        <translation>&amp;Luxmètre</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3133"/>

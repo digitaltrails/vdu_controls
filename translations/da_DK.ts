@@ -5,8 +5,8 @@
     <name>@default</name>
     <message>
         <location filename="../vdu_controls.py" line="3049"/>
-        <source>Settings</source>
-        <translation>Indstillinger </translation>
+        <source>&amp;Settings</source>
+        <translation>&amp;Indstillinger </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="2087"/>
@@ -130,33 +130,33 @@
     </message>
     <message>
         <location filename="../vdu_controls.py" line="4438"/>
-        <source>Presets</source>
-        <translation>Forudindstillinger</translation>
+        <source>&amp;Presets</source>
+        <translation>&amp;Forudindstillinger</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3045"/>
-        <source>Grey Scale</source>
-        <translation>Gråskala </translation>
+        <source>&amp;Grey Scale</source>
+        <translation>&amp;Gråskala </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3050"/>
-        <source>Refresh</source>
-        <translation>Opdater  </translation>
+        <source>&amp;Refresh</source>
+        <translation>&amp;Opdater  </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="6254"/>
-        <source>About</source>
-        <translation>Om  </translation>
+        <source>Abou&amp;t</source>
+        <translation>O&amp;m  </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="6282"/>
-        <source>Help</source>
-        <translation>Hjælp  </translation>
+        <source>&amp;Help</source>
+        <translation>&amp;Hjælp  </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3055"/>
-        <source>Quit</source>
-        <translation>Afslut </translation>
+        <source>&amp;Quit</source>
+        <translation>Afsl&amp;ut </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="6651"/>
@@ -795,13 +795,13 @@ Leder efter DDC-skærme...
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3047"/>
-        <source>Auto/Manual</source>
-        <translation>Auto/Manuel </translation>
+        <source>&amp;Auto/Manual</source>
+        <translation>&amp;Auto/Manuel </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="5844"/>
-        <source>Light-Meter</source>
-        <translation>Lysmåler </translation>
+        <source>&amp;Light-Meter</source>
+        <translation>&amp;Lysmåler </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3133"/>
