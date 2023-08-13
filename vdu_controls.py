@@ -3052,7 +3052,7 @@ class ContextMenu(QMenu):
                  lux_auto_action, lux_meter_action, settings_action, presets_action, refresh_action, quit_action) -> None:
         super().__init__(parent=main_window)
         self.main_window = main_window
-        self.available_shortcuts = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890')
+        self.reserved_shortcuts = []
         if main_window_action is not None:
             self._add_action(QStyle.SP_ComputerIcon, tr('&Control Panel'), main_window_action)
             self.addSeparator()
@@ -3068,12 +3068,13 @@ class ContextMenu(QMenu):
         self._add_action(QStyle.SP_MessageBoxInformation, tr('Abou&t'), about_action)
         self._add_action(QStyle.SP_DialogHelpButton, tr('&Help'), help_action, QKeySequence.HelpContents)
         self._add_action(QStyle.SP_DialogCloseButton, tr('&Quit'), quit_action, QKeySequence.Quit)
+        self.reserved_shortcuts_basic = self.reserved_shortcuts.copy()
         self.auto_lux_icon = None
 
     def _add_action(self, qt_icon_number: QIcon, text: str, func: Callable, extra_shortcut: str | None = None) -> QAction:
-        shortcut_letter = text[text.index('&') + 1].upper()
-        assert shortcut_letter in self.available_shortcuts
-        self.available_shortcuts.remove(shortcut_letter)
+        shortcut_letter = text[text.index('&') + 1].upper() if text.find('&') >= 0 else ''
+        log_debug(f"Reserve shortcut '{shortcut_letter}'")  # might be foreign
+        self.reserved_shortcuts.append(shortcut_letter) if shortcut_letter is not '' else None
         action = self.addAction(si(self, qt_icon_number), text, func)
         action.setShortcuts(self.shortcut_list(ContextMenu.ALT.format(shortcut_letter.upper()), extra_shortcut))
         action.setShortcutContext(Qt.ApplicationShortcut)
@@ -3103,15 +3104,15 @@ class ContextMenu(QMenu):
             action.setShortcuts(self.shortcut_list(ContextMenu.ALT.format(shortcut.letter.upper())))
             action.setShortcutContext(Qt.ApplicationShortcut)
         else:
-            log_warning(f"Failed to allocate shortcut for {preset.name} available shortcuts={self.available_shortcuts}")
+            log_warning(f"Failed to allocate shortcut for {preset.name} reserved shortcuts={self.reserved_shortcuts}")
         self.update() if issue_update else None
 
     def remove_preset_menu_action(self, name: str) -> None:
         menu_action = self.get_preset_menu_action(name)
         if menu_action is not None:
             shortcut = menu_action.property(ContextMenu.PRESET_SHORTCUT_PROP)
-            if shortcut:
-                self.available_shortcuts.append(shortcut.letter)
+            if shortcut and shortcut in self.reserved_shortcuts:
+                self.reserved_shortcuts.remove(shortcut.letter)
             self.removeAction(menu_action)
             self.update()
 
@@ -3158,8 +3159,8 @@ class ContextMenu(QMenu):
     def allocate_preset_shortcut(self, word: str) -> Shortcut | None:
         for letter in list(word):
             upper_letter = letter.upper()
-            if upper_letter in self.available_shortcuts:
-                self.available_shortcuts.remove(upper_letter)
+            if upper_letter not in self.reserved_shortcuts:
+                self.reserved_shortcuts.append(upper_letter)
                 return Shortcut(letter=upper_letter, annotated_word=word[:word.index(letter)] + '&' + word[word.index(letter):])
         return None
 
