@@ -227,6 +227,7 @@ Version History
   * Handle utf-8 decoding errors for EDID's and capabilities (issue #49).
   * Make message box popups resizable for increased readability.
   * Add a starter set of icons for Presets (a selection from KDE breeze5-icons).
+  * Alt-key keyboard shortcuts in the application and menus.
   * Minor UI enhancements and fixes.
 * 1.10.2
   * Fix Preset non-zero transition-step-seconds, so it works properly.
