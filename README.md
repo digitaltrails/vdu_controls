@@ -228,7 +228,7 @@ Version History
   * Make message box popups resizable for increased readability.
   * Add a starter set of icons for Presets (a selection from KDE breeze5-icons).
   * Alt-key keyboard shortcuts in the application and menus.
-  * Minor UI enhancements and fixes.
+  * Numerous minor UI enhancements and fixes.
 * 1.10.2
   * Fix Preset non-zero transition-step-seconds, so it works properly.
   * Changing log-to-syslog or log-debug-enabled no longer requires a restart.

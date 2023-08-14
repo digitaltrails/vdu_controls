@@ -3120,7 +3120,7 @@ class ContextMenu(QMenu):
 
     def refresh_preset_menu(self, palette_change: bool = False, reorder: bool = False) -> None:
         changed = 0
-        if reorder:  # Remove them all to get them reinserted.
+        if reorder:  # Remove them all to get them reinserted, icons updated, names updated, etc.
             self.reserved_shortcuts = self.reserved_shortcuts_basic.copy()  # Reset shortcuts
             for action in self.actions():
                 self.removeAction(action) if action.property(ContextMenu.PRESET_NAME_PROP) is not None else None
