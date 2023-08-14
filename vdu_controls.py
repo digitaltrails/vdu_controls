@@ -829,8 +829,7 @@ def translate_option(option_text) -> str:
     # If there is no direct translation, we try canonical version of the name (all lowercase
     # with '-' replaced with ' ').
     result = tr(option_text)
-    if result != option_text:
-        # Probably a command line option
+    if result != option_text:  # Probably a command line option
         return result.replace('-', ' ')
     canonical = option_text.lower().replace('-', ' ')
     result = tr(canonical)
@@ -3048,7 +3047,7 @@ class ContextMenu(QMenu):
     BUSY_DISABLE_PROP = 'busy_disable'
     ALT = 'Alt+{}'
 
-    def __init__(self, main_window: VduAppWindow, main_window_action, about_action, help_action, chart_action,
+    def __init__(self, main_window: VduAppWindow, main_window_action, about_action, help_action, gray_scale_action,
                  lux_auto_action, lux_meter_action, settings_action, presets_action, refresh_action, quit_action) -> None:
         super().__init__(parent=main_window)
         self.main_window = main_window
@@ -3058,7 +3057,7 @@ class ContextMenu(QMenu):
             self.addSeparator()
         self._add_action(QStyle.SP_ComputerIcon, tr('&Presets'), presets_action)
         self.presets_separator = self.addSeparator()  # Important for finding where to add a preset
-        self._add_action(QStyle.SP_ComputerIcon, tr('&Grey Scale'), chart_action)
+        self._add_action(QStyle.SP_ComputerIcon, tr('&Grey Scale'), gray_scale_action)
         if lux_meter_action is not None:
             self.lux_auto_action = self._add_action(QStyle.SP_ComputerIcon, tr('&Auto/Manual'), lux_auto_action)
             self._add_action(QStyle.SP_ComputerIcon, tr('&Light-Meter'), lux_meter_action)
@@ -3075,7 +3074,7 @@ class ContextMenu(QMenu):
         action = self.addAction(si(self, qt_icon_number), text, func)
         shortcut_letter = text[text.index('&') + 1].upper() if text.find('&') >= 0 else None
         if shortcut_letter is not None:
-            log_info(f"Reserve shortcut '{shortcut_letter}'")
+            log_debug(f"Reserve shortcut '{shortcut_letter}'") if log_debug_enabled else None
             assert shortcut_letter not in self.reserved_shortcuts
             self.reserved_shortcuts.append(shortcut_letter)
             action.setShortcuts(self.shortcut_list(ContextMenu.ALT.format(shortcut_letter.upper()), extra_shortcut))
@@ -3091,7 +3090,6 @@ class ContextMenu(QMenu):
     def insert_preset_menu_action(self, preset: Preset, issue_update: bool = True) -> None:
 
         def restore_preset() -> None:
-            print("ping", self.sender().text())
             self.main_window.restore_named_preset(self.sender().property(ContextMenu.PRESET_NAME_PROP))
 
         assert preset.name
@@ -3138,7 +3136,7 @@ class ContextMenu(QMenu):
         changed = 0
         for action in self.actions():
             action_preset_name = action.property(ContextMenu.PRESET_NAME_PROP)
-            if action_preset_name:
+            if action_preset_name:  # Mark active preset or un-mark previous active preset
                 shortcut = action.property(ContextMenu.PRESET_SHORTCUT_PROP)
                 suffix = (' ' + SUCCESS_SYMBOL) if preset is not None and preset.name == action_preset_name else ''
                 new_text = (shortcut.annotated_word if shortcut else action_preset_name) + suffix
@@ -3170,7 +3168,7 @@ class ContextMenu(QMenu):
                 return Shortcut(letter=upper_letter, annotated_word=word[:word.index(letter)] + '&' + word[word.index(letter):])
         return None
 
-    def shortcut_list(self, primary: str | QKeySequence, extra: str | QKeySequence | None = None) -> List[str|QKeySequence]:
+    def shortcut_list(self, primary: str | QKeySequence, extra: str | QKeySequence | None = None) -> List[str | QKeySequence]:
         shortcuts = [primary] + ([extra] if extra else [])
         return ([''] + shortcuts) if self.main_window.hide_shortcuts else shortcuts  # Empty string causes shortcuts to be hidden.
 
@@ -5986,7 +5984,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
         save_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr("Apply"))
         save_button.setToolTip(tr("Apply and save profile-chart changes."))
-        save_button.clicked.connect(partial(self.save_profiles))
+        save_button.clicked.connect(self.save_profiles)
         self.save_button = save_button
         self.status_bar.addPermanentWidget(save_button, 0)
 
@@ -6548,7 +6546,7 @@ class VduAppWindow(QMainWindow):
 
         self.app_context_menu = ContextMenu(
             main_window=self, main_window_action=main_window_action, about_action=AboutDialog.invoke,
-            help_action=HelpDialog.invoke, chart_action=grey_scale,
+            help_action=HelpDialog.invoke, gray_scale_action=grey_scale,
             lux_auto_action=lux_auto_action if main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) else None,
             lux_meter_action=lux_meter_action if main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) else None,
             settings_action=edit_config, presets_action=edit_presets, refresh_action=refresh_from_vdus, quit_action=quit_app)
@@ -6593,7 +6591,7 @@ class VduAppWindow(QMainWindow):
 
         def splash_message_action(message) -> None:
             if splash is not None:
-                log_info(f"Splash {message}")
+                log_info(f"splash_message: {repr(message)}")
                 splash.showMessage(f"\n\nVDU Controls {VDU_CONTROLS_VERSION}\n{message}", Qt.AlignTop | Qt.AlignHCenter)
 
         def respond_to_unix_signal(signal_number: int) -> None:
@@ -7121,7 +7119,6 @@ class VduAppWindow(QMainWindow):
             return
         if activation_time is None:
             activation_time = zoned_now()
-        weather_text = message = ''
         proceed = True
         if preset.is_weather_dependent() and check_weather:
             if not self.is_weather_satisfactory(preset):
@@ -7129,7 +7126,6 @@ class VduAppWindow(QMainWindow):
                 preset.schedule_status = PresetScheduleStatus.WEATHER_CANCELLATION
                 message = tr("Preset {} activation was cancelled due to weather at {}").format(
                     preset.name, activation_time.isoformat(' ', 'seconds'))
-                weather_text = f"({self.weather_query.weather_desc if self.weather_query is not None else ''})"
                 self.display_preset_status(message)
         if proceed:
 
