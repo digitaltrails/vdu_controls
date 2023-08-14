@@ -3118,8 +3118,12 @@ class ContextMenu(QMenu):
             self.removeAction(menu_action)
             self.update()
 
-    def refresh_preset_menu(self, palette_change: bool = False) -> None:
+    def refresh_preset_menu(self, palette_change: bool = False, reorder: bool = False) -> None:
         changed = 0
+        if reorder:  # Remove them all to get them reinserted.
+            self.reserved_shortcuts = self.reserved_shortcuts_basic.copy()  # Reset shortcuts
+            for action in self.actions():
+                self.removeAction(action) if action.property(ContextMenu.PRESET_NAME_PROP) is not None else None
         for name, preset in self.main_window.preset_controller.find_presets().items():
             menu_action = self.get_preset_menu_action(name)
             if menu_action is None or not menu_action.property(ContextMenu.PRESET_NAME_PROP):
@@ -4708,7 +4712,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
             new_preset_widget = self.create_preset_widget(preset)
             self.preset_widgets_layout.insertWidget(index - 1, new_preset_widget)
             target_widget.deleteLater()
-            self.main_window.preset_controller.save_order(self.get_preset_names_in_order())
+            self.main_window.save_preset_order(self.get_preset_names_in_order())
             self.preset_widgets_scroll_area.updateGeometry()
 
     def down_action(self, preset: Preset, target_widget: QWidget) -> None:
@@ -4718,7 +4722,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
             new_preset_widget = self.create_preset_widget(preset)
             self.preset_widgets_layout.insertWidget(index + 1, new_preset_widget)
             target_widget.deleteLater()
-            self.main_window.preset_controller.save_order(self.get_preset_names_in_order())
+            self.main_window.save_preset_order(self.get_preset_names_in_order())
             self.preset_widgets_scroll_area.updateGeometry()
 
     def restore_preset(self, preset: Preset, immediately: bool = True) -> None:
@@ -4746,7 +4750,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
         self.main_window.delete_preset(preset)
         self.preset_widgets_layout.removeWidget(target_widget)
         target_widget.deleteLater()
-        self.main_window.preset_controller.save_order(self.get_preset_names_in_order())
+        self.main_window.save_preset_order(self.get_preset_names_in_order())
         self.preset_name_edit.setText('')
         self.preset_widgets_scroll_area.updateGeometry()
         self.status_message(tr("Deleted {}").format(preset.name), timeout=-1)
@@ -4823,7 +4827,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
             self.make_visible()
         else:
             self.add_preset_widget(new_preset_widget)
-            self.main_window.preset_controller.save_order(self.get_preset_names_in_order())
+            self.main_window.save_preset_order(self.get_preset_names_in_order())
 
             def scroll_to_bottom() -> None:  # TODO figure out why this does not work
                 self.preset_widgets_scroll_area.updateGeometry()
@@ -6955,6 +6959,10 @@ class VduAppWindow(QMainWindow):
         self.display_active_preset()
         preset.remove_elevation_trigger()
         self.schedule_presets()
+        
+    def save_preset_order(self, name_order: List[str]):
+        self.preset_controller.save_order(name_order)
+        self.app_context_menu.refresh_preset_menu(reorder=True)
 
     def copy_to_preset_ini(self, preset_ini: ConfigIni, update_only: bool = False) -> None:
         for control_panel in self.get_main_panel().vdu_control_panels:
