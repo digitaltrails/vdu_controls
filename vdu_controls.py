@@ -636,6 +636,10 @@ Environment
         distance (in kilometres) between the ``Settings`` ``Location``
         and ``wttr.in`` reported location (``200 km``, 124 miles).
 
+    VDU_CONTROLS_DDCUTIL_ARGS
+        This variable adds to the list of arguments passed to each exec of
+        ddcutil.
+
     VDU_CONTROLS_DEVELOPER
         This variable changes some search paths to be more convenient in
         a development scenario. (``no`` or yes)
@@ -1236,9 +1240,12 @@ class DdcUtil:
     def __run__(self, *args, sleep_multiplier: float | None = None, log_id='') -> subprocess.CompletedProcess:
         with self.ddcutil_access_lock:
             log_id = f"Display-{log_id}" if log_id != '' else ''  # Make it easier to tell - eid is a bit much
+            syslog_args = []
             multiplier_args = []
             multiplier_value = self.default_sleep_multiplier if sleep_multiplier is None else sleep_multiplier
             if self.version[0] >= 2:
+                if log_to_syslog and '--syslog' not in self.common_args:
+                    syslog_args = ['--syslog', 'DEBUG' if log_debug_enabled else 'ERROR']
                 if self.prefer_dynamic_sleep or multiplier_value is None:
                     multiplier_args += ['--enable-dynamic-sleep']
                     multiplier_value = None
@@ -1246,7 +1253,7 @@ class DdcUtil:
                     multiplier_args += ['--disable-dynamic-sleep']
             if multiplier_value is not None and not math.isclose(multiplier_value, 0.0):
                 multiplier_args += ['--sleep-multiplier', f"{multiplier_value:.2f}"]
-            process_args = [DDCUTIL] + multiplier_args + self.common_args + list(args)
+            process_args = [DDCUTIL] + syslog_args + multiplier_args + self.common_args + list(args)
             try:
                 now = time.time()
                 result = subprocess.run(process_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
