@@ -75,6 +75,9 @@ install -m 0644 translations/about_*.txt %{buildroot}%{_datadir}/vdu_controls/tr
 install -m 0755 sample-scripts/* %{buildroot}%{_datadir}/vdu_controls/sample-scripts/
 install -m 0644 docs/_build/man/vdu_controls.1 %{buildroot}%{_mandir}/man1/
 
+%post
+ln -s -f %{_datadir}/icons %{_datadir}/vdu_controls/icons/system-icons
+
 %files
 %license LICENSE.md
 %dir %{_datadir}/vdu_controls
@@ -94,5 +97,6 @@ install -m 0644 docs/_build/man/vdu_controls.1 %{buildroot}%{_mandir}/man1/
 %{_datadir}/vdu_controls/translations/about_de_DE.txt
 %{_datadir}/vdu_controls/sample-scripts/lux-from-webcam.bash
 %{_datadir}/vdu_controls/sample-scripts/lux-from-webcam.py
+%ghost %{_datadir}/vdu_controls/icons/system-icons
 
 %changelog
