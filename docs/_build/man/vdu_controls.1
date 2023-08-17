@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Aug 03, 2023" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Aug 16, 2023" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.11.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -870,6 +870,10 @@ This variable overrides default weather service URL (\fBhttps://wttr.in\fP).
 This variable overrides the default maximum permissible spherical
 distance (in kilometres) between the \fBSettings\fP \fBLocation\fP
 and \fBwttr.in\fP reported location (\fB200 km\fP, 124 miles).
+.TP
+.B VDU_CONTROLS_DDCUTIL_ARGS
+This variable adds to the list of arguments passed to each exec of
+ddcutil.
 .TP
 .B VDU_CONTROLS_DEVELOPER
 This variable changes some search paths to be more convenient in
