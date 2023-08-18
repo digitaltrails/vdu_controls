@@ -1231,8 +1231,8 @@ class DdcUtil:
         if self.version[0] >= 2:  # Won't know real version until around here
             self.common_args += [arg for arg in os.getenv('VDU_CONTROLS_DDCUTIL_ARGS', default='').split(' ') if arg != '']
 
-    def id_key_args(self, display_id: str) -> List[str]:
-        return ['--edid', self.edid_map[display_id]] if display_id in self.edid_map else ['--display', display_id]
+    def id_key_args(self, vdu_number: str) -> List[str]:
+        return ['--edid', self.edid_map[vdu_number]] if vdu_number in self.edid_map else ['--display', vdu_number]
 
     def format_args_diagnostic(self, args: List[str]):
         return ' '.join([arg if len(arg) < 30 else arg[:30] + "..." for arg in args])
@@ -1322,7 +1322,8 @@ class DdcUtil:
             vdu_number, manufacturer = vdu_number_and_manufacturer
             if vdu_number not in key_already_assigned:
                 model_name, main_id = model_and_main_id
-                log_debug(f"Unique key for {vdu_number=} {manufacturer=} is ({model_name=} {main_id=})") if log_debug_enabled else None
+                log_debug(
+                    f"Unique key for {vdu_number=} {manufacturer=} is ({model_name=} {main_id=})") if log_debug_enabled else None
                 display_list.append((vdu_number, manufacturer, model_name, main_id))
                 key_already_assigned[vdu_number] = 1
         # display_list.append(("3", "maker_y", "model_z", "1234")) # For testing bad VDU's:
@@ -1363,7 +1364,8 @@ class DdcUtil:
         """Send a new value to a specific VDU and vcp_code."""
         if self.get_type(vcp_code) != CONTINUOUS_TYPE:
             new_value = 'x' + new_value
-        self.__run__(*['setvcp', vcp_code, new_value] + self.id_key_args(vdu_number), sleep_multiplier=sleep_multiplier, log_id=vdu_number)
+        self.__run__(
+            *['setvcp', vcp_code, new_value] + self.id_key_args(vdu_number), sleep_multiplier=sleep_multiplier, log_id=vdu_number)
 
     def vcp_info(self) -> str:
         """Returns info about all codes known to ddcutil, whether supported or not."""
@@ -1557,7 +1559,7 @@ class VduGuiSupportedControls:
 
 
 VDU_SUPPORTED_CONTROLS = VduGuiSupportedControls()
-
+BRIGHTNESS_VCP_CODE = VDU_SUPPORTED_CONTROLS.brightness.vcp_code
 
 class GeoLocation:
     def __init__(self, latitude: float, longitude: float, place_name: str | None) -> None:
@@ -2032,13 +2034,12 @@ class VduController(QObject):
             raise VduException(vdu_description=self.get_vdu_description(), vcp_code=vcp_code, exception=e,
                                operation="set_attribute") from e
 
-    def get_range_restrictions(self, vcp_code):
+    def get_range_restrictions(self, vcp_code, fallback: Tuple[int, int] | None = None) -> Tuple[int, int] | None:
         if vcp_code in self.capabilities:
             range_restriction = self.capabilities[vcp_code].values
-            min_v, max_v = (0, 100) if len(range_restriction) == 0 else (int(range_restriction[1]), int(range_restriction[2]))
-        else:
-            min_v, max_v = (0, 0)
-        return min_v, max_v
+            if len(range_restriction) != 0:
+                return int(range_restriction[1]), int(range_restriction[2])
+        return fallback
 
     def _parse_capabilities(self, capabilities_text=None) -> Dict[str, VcpCapability]:
         """Return a map of vpc capabilities keyed by vcp code."""
@@ -2218,7 +2219,7 @@ class SettingsEditorTab(QWidget):
         editor_layout.addWidget(self.status_bar)
 
     def save(self, force: bool = False, what_changed: Dict[str, str] | None = None) -> int:
-        # all_changes is an output parameter, if passed, it will be updated with what has changed.
+        # what_changed is an output parameter, if passed, it will be updated with what has changed.
         if self.is_unsaved() or force:
             try:
                 self.setEnabled(False)  # Saving may take a while, give some feedback by disabling and enabling when done
@@ -3061,7 +3062,6 @@ class ContextMenu(QMenu):
     def __init__(self, app_controller: VduAppController, main_window_action, about_action, help_action, gray_scale_action,
                  lux_auto_action, lux_meter_action, settings_action, presets_action, refresh_action, quit_action,
                  hide_shortcuts: bool, parent: QWidget) -> None:
-
         super().__init__(parent=parent)
         self.app_controller = app_controller
         self.reserved_shortcuts = []
@@ -3206,27 +3206,20 @@ class VduPanelBottomToolBar(QToolBar):
 
     def __init__(self, tool_buttons: List[ToolButton], app_context_menu: ContextMenu, parent: VduControlsMainPanel) -> None:
         super().__init__(parent=parent)
-
         self.tool_buttons = tool_buttons
         for button in self.tool_buttons:
             self.addWidget(button)
-
         self.setIconSize(QSize(32, 32))  # Why 32x32 ???
-
         self.progress_bar: QProgressBar | None = None
         self.status_area = QStatusBar()
         self.addWidget(self.status_area)
-
         self.menu_button = ToolButton(MENU_ICON_SOURCE, tr("Context and Preset Menu"), self)
         self.menu_button.setMenu(app_context_menu)
         self.menu_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-
         self.preset_action = self.addAction(QIcon(), "")
         self.preset_action.setVisible(False)
         self.preset_action.triggered.connect(self.menu_button.click)
-
         self.addWidget(self.menu_button)
-
         self.installEventFilter(self)
 
     def eventFilter(self, target: QObject, event: QEvent) -> bool:
@@ -3278,7 +3271,6 @@ class VduControlsMainPanel(QWidget):
 
     def initialise_control_panels(self, vdu_controllers, app_context_menu: ContextMenu, main_config: VduControlsConfig,
                                   tool_buttons: List[ToolButton], splash_message_signal: pyqtSignal) -> None:
-
         if self.layout():
             # Already laid out, must be responding to a configuration change requiring re-layout.
             for i in range(0, self.layout().count()):  # Remove all existing widgets.
@@ -3289,9 +3281,9 @@ class VduControlsMainPanel(QWidget):
                 elif isinstance(item, QWidgetItem):
                     self.layout().removeItem(item)
                     item.widget().deleteLater()
+        controllers_layout = QVBoxLayout()
+        self.setLayout(controllers_layout)
 
-        self.setLayout(QVBoxLayout())
-        controllers_layout = self.layout()
         warnings_enabled = main_config.is_set(ConfOption.WARNINGS_ENABLED)
 
         for controller in vdu_controllers:
@@ -3308,6 +3300,7 @@ class VduControlsMainPanel(QWidget):
                                                                                                controller.get_vdu_description()))
                 warn_omitted.setInformativeText(tr('The monitor will be omitted from the control panel.'))
                 warn_omitted.exec()
+
         if len(self.vdu_control_panels) == 0:
             no_vdu_widget = QWidget()
             no_vdu_layout = QHBoxLayout()
@@ -3355,6 +3348,7 @@ class VduControlsMainPanel(QWidget):
 
     def restore_preset_view(self, preset: Preset) -> None:
         # Called in a GUI thread, can do GUI op's.
+        assert is_running_in_gui_thread()
         for section in preset.preset_ini:
             for control_panel in self.vdu_control_panels:
                 if section == control_panel.controller.vdu_stable_id:
@@ -5043,7 +5037,7 @@ class LuxProfileChart(QLabel):
         self.preset_points = lux_dialog.preset_points
         self.main_app: VduAppWindow = lux_dialog.main_controller
         self.vdu_chart_colors = self.lux_dialog.vdu_chart_color
-        self.range_restrictions = lux_dialog.range_restrictions
+        self.range_restrictions = lux_dialog.range_restrictions  # Passed to chart
         self.current_lux = 0
         self.snap_to_margin = lux_dialog.lux_config.getint('lux-ui', 'snap-to-margin-pixels', fallback=4)
         self.current_vdu_sid = '' if len(lux_dialog.lux_profile_data) == 0 else list(lux_dialog.lux_profile_data.keys())[0]
@@ -5097,7 +5091,7 @@ class LuxProfileChart(QLabel):
             self.setPixmap(pixmap)
             return
 
-        min_v, max_v = self.range_restrictions[self.current_vdu_sid]   # Draw range restrictions (if not 0..100)
+        min_v, max_v = self.range_restrictions.get(self.current_vdu_sid, (0,100))   # Draw range restrictions (if not 0..100)
         if min_v > 0:
             painter.setPen(QPen(Qt.red, std_line_width // 2, Qt.DashLine))
             cutoff = self.y_origin - self.y_from_percent(min_v)
@@ -5663,10 +5657,9 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                 if self.stop_requested or self.unexpected_change:
                     return
                 # In case the lux reading changes, reevaluate target brightness every time...
-                profile_brightness, profile_preset_name = self.determine_brightness(
-                    vdu_sid, smoothed_lux,
-                    lux_config.get_vdu_lux_profile(
-                        vdu_sid, self.main_controller.get_range(vdu_sid, VDU_SUPPORTED_CONTROLS.brightness.vcp_code)))
+                value_range = self.main_controller.get_range(vdu_sid, BRIGHTNESS_VCP_CODE, fallback=(0, 100))
+                lux_profile = lux_config.get_vdu_lux_profile(vdu_sid, value_range)
+                profile_brightness, profile_preset_name = self.determine_brightness(vdu_sid, smoothed_lux, lux_profile)
                 if self.step_one_vdu(vdu_sid, profile_brightness, profile_preset_name, lux_summary_text, start_of_cycle):
                     change_count += 1
             start_of_cycle = False
@@ -5691,9 +5684,9 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         # attached to trigger non-brightness settings at a given lux value (triggered below, after the loop).
         if profile_brightness < 0:
             return False
-        if self.main_controller.has_vcp_code(vdu_sid, VDU_SUPPORTED_CONTROLS.brightness.vcp_code):  # can only adjust brightness controls
+        if self.main_controller.has_vcp_code(vdu_sid, BRIGHTNESS_VCP_CODE):  # can only adjust brightness controls
             try:
-                current_brightness = int(self.main_controller.get_value(vdu_sid, VDU_SUPPORTED_CONTROLS.brightness.vcp_code)[0])
+                current_brightness = int(self.main_controller.get_value(vdu_sid, BRIGHTNESS_VCP_CODE)[0])
                 diff = profile_brightness - current_brightness
                 # Check if already at the correct brightness.
                 if diff == 0:
@@ -5715,7 +5708,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                 step_size = max(1, abs(diff) // self.convergence_divisor)  # TODO find a good heuristic
                 step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
                 new_brightness = current_brightness + step
-                self.main_controller.set_value(vdu_sid, VDU_SUPPORTED_CONTROLS.brightness.vcp_code, str(new_brightness))
+                self.main_controller.set_value(vdu_sid, BRIGHTNESS_VCP_CODE, str(new_brightness))
                 self.expected_brightness[vdu_sid] = new_brightness
                 log_info(f"LuxAutoWorker: Start stepping {vdu_sid=} {current_brightness=} to {profile_brightness=} "
                          f" {profile_preset_name=} {lux_summary_text}") if first_step else None
@@ -5856,7 +5849,7 @@ class LuxConfig(ConfigIni):
     def get_vdu_lux_profile(self, vdu_stable_id: str, brightness_range) -> List[LuxPoint]:
         if self.has_option('lux-profile', vdu_stable_id):
             lux_points = [LuxPoint(v[0], v[1]) for v in literal_eval(self.get('lux-profile', vdu_stable_id))]
-        else:  # Use a default profile:
+        else:  # Create a default profile:
             if brightness_range is not None:
                 min_v, max_v = brightness_range
                 if min_v < 10:
@@ -6080,17 +6073,17 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
         connected_id_list = []   # List of all currently connected VDU's
         for index, vdu_sid in enumerate(self.main_controller.get_vdu_stable_id_list()):
-            if self.main_controller.has_vcp_code(vdu_sid, VDU_SUPPORTED_CONTROLS.brightness.vcp_code):  # VDU_SUPPORTED_CONTROLS.brightness.vcp_code in vdu_controller.capabilities:
-                self.range_restrictions[vdu_sid] = self.main_controller.get_range(
-                    vdu_sid, VDU_SUPPORTED_CONTROLS.brightness.vcp_code)
+            value_range = (0, 100)
+            if self.main_controller.has_vcp_code(vdu_sid, BRIGHTNESS_VCP_CODE):
+                value_range = self.main_controller.get_range(vdu_sid, BRIGHTNESS_VCP_CODE, fallback=value_range)
+                self.range_restrictions[vdu_sid] = value_range
                 try:
-                    self.vdu_current_brightness[vdu_sid] = int(
-                        self.main_controller.get_value(vdu_sid, VDU_SUPPORTED_CONTROLS.brightness.vcp_code)[0])
+                    self.vdu_current_brightness[vdu_sid] = int(self.main_controller.get_value(vdu_sid, BRIGHTNESS_VCP_CODE)[0])
                 except VduException as ve:
                     self.vdu_current_brightness[vdu_sid] = 0
                     log_warning("VDU may not be available:", str(ve), trace=True)
-            self.lux_profile_data[vdu_sid] = self.lux_config.get_vdu_lux_profile(
-                vdu_sid, self.main_controller.get_range(vdu_sid, VDU_SUPPORTED_CONTROLS.brightness.vcp_code))
+            # All vdu's have a profile, even if they have no brightness control bcause a preset may be attached to a lux value.
+            self.lux_profile_data[vdu_sid] = self.lux_config.get_vdu_lux_profile(vdu_sid, value_range)
             connected_id_list.append(vdu_sid)
         self.preset_points.clear()  # Edit out deleted presets by starting from scratch
         for preset_point in self.lux_config.get_preset_points():
@@ -6914,17 +6907,17 @@ class VduAppController():
     def get_vdu_stable_id_list(self):
         return [cp.vdu_stable_id for cp in self.vdu_controllers]
 
-    def get_range(self, vdu_stable_id: str, vcp_code: str) -> Tuple[int, int]:
+    def get_range(self, vdu_stable_id: str, vcp_code: str, fallback:Tuple[int, int] | None = None) -> Tuple[int, int] | None:
         for controller in self.vdu_controllers:
             if controller.vdu_stable_id == vdu_stable_id:
-                return controller.get_range_restrictions(vcp_code)
+                return controller.get_range_restrictions(vcp_code, fallback)
         log_error(f"get_range: No controller for {vdu_stable_id}")
-        return 0, 0
+        return fallback
 
     def get_value(self, vdu_stable_id, vcp_code):
         for controller in self.vdu_controllers:
             if controller.vdu_stable_id == vdu_stable_id:
-                return controller.get_attribute(VDU_SUPPORTED_CONTROLS.brightness.vcp_code)
+                return controller.get_attribute(BRIGHTNESS_VCP_CODE)
         log_error(f"get_value: No controller for {vdu_stable_id}")
         return ['0']
 
@@ -7113,10 +7106,10 @@ class VduAppWindow(QMainWindow):
             self.main_panel = None
         self.main_panel = VduControlsMainPanel()
 
-        def vdu_set_attribute_signal_handler(vdu_stable_id: str, attr: str, value: str):
+        def vdu_set_attribute_signal_handler(vdu_stable_id: str, vcp_code: str, value: str):
             self.display_active_preset()
             if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) and self.main_controller.lux_auto_controller is not None:
-                if attr == VDU_SUPPORTED_CONTROLS.brightness.vcp_code:
+                if vcp_code == BRIGHTNESS_VCP_CODE:
                     LuxDialog.lux_dialog_display_brightness(vdu_stable_id, int(value))
 
         self.main_panel.vdu_set_attribute_signal.connect(vdu_set_attribute_signal_handler)  # Wire up the signal/slots first
