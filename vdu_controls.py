@@ -1936,17 +1936,21 @@ class VduController(QObject):
     two Display-Port inputs, and it only has one.
     """
 
+    NORMAL_VDU = 0
+    IGNORE_VDU = 1
+    ASSUME_STANDARD_CONTROLS = 2
+
     vdu_set_attribute_signal = pyqtSignal(str, str, str)
 
-    def __init__(self, vdu_id: str, vdu_model_name: str, vdu_unique_text_id: str, manufacturer: str,
+    def __init__(self, vdu_number: str, vdu_model_name: str, serial_number: str, manufacturer: str,
                  default_config: VduControlsConfig, ddcutil: DdcUtil, vdu_exception_handler: Callable,
-                 ignore_monitor: bool = False, assume_standard_controls: bool = False) -> None:
+                 option: int = 0) -> None:
         super().__init__()
-        self.vdu_stable_id = proper_name(vdu_model_name, vdu_unique_text_id)
-        log_info(f"Initializing controls for {vdu_id=} {vdu_model_name=} {self.vdu_stable_id=}")
-        self.vdu_id = vdu_id
+        self.vdu_stable_id = proper_name(vdu_model_name, serial_number)
+        log_info(f"Initializing controls for {vdu_number=} {vdu_model_name=} {self.vdu_stable_id=}")
+        self.vdu_number = vdu_number
         self.model_name = vdu_model_name
-        self.serial = vdu_unique_text_id
+        self.serial_number = serial_number
         self.manufacturer = manufacturer
         self.ddcutil = ddcutil
         self.vdu_exception_handler = vdu_exception_handler
@@ -1970,13 +1974,13 @@ class VduController(QObject):
                 self.config = config
                 break
         if self.capabilities_text is None:
-            if ignore_monitor:
+            if option == VduController.IGNORE_VDU:
                 self.capabilities_text = ''
-            elif assume_standard_controls:
+            elif option == VduController.ASSUME_STANDARD_CONTROLS:
                 self.enabled_vcp_codes = ASSUMED_CONTROLS_CONFIG_VCP_CODES
                 self.capabilities_text = ASSUMED_CONTROLS_CONFIG_TEXT
             else:
-                self.capabilities_text = ddcutil.query_capabilities(vdu_id)
+                self.capabilities_text = ddcutil.query_capabilities(vdu_number)
         self.capabilities = self._parse_capabilities(self.capabilities_text)
         if self.config is None:
             # In memory only config - in case it's needed by a future config editor
@@ -1995,18 +1999,18 @@ class VduController(QObject):
 
     def get_vdu_description(self) -> str:
         """Return a unique description using the serial-number (if defined) or vdu_id."""
-        return self.model_name + ':' + (self.serial if len(self.serial) != 0 else self.vdu_id)
+        return self.model_name + ':' + (self.serial_number if len(self.serial_number) != 0 else self.vdu_number)
 
     def get_full_id(self) -> Tuple[str, str, str, str]:
         """Return a tuple that defines this VDU: (vdu_id, manufacturer, model, serial-number)."""
-        return self.vdu_id, self.manufacturer, self.model_name, self.serial
+        return self.vdu_number, self.manufacturer, self.model_name, self.serial_number
 
     def get_attributes(self, attributes: List[str]) -> List[Tuple[str, str]]:
         try:
             if len(attributes) == 0:
                 return []
             # raise subprocess.SubprocessError("get_attributes")  # for testing
-            return self.ddcutil.get_attributes(self.vdu_id, attributes, sleep_multiplier=self.sleep_multiplier)
+            return self.ddcutil.get_attributes(self.vdu_number, attributes, sleep_multiplier=self.sleep_multiplier)
         except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound) as e:
             raise VduException(vdu_description=self.get_vdu_description(), vcp_code=",".join(attributes), exception=e,
                                operation="get_attributes") from e
@@ -2014,7 +2018,7 @@ class VduController(QObject):
     def get_attribute(self, vcp_code: str) -> Tuple[str, str]:
         try:
             # raise subprocess.SubprocessError("get_attribute")  # for testing
-            return self.ddcutil.get_attribute(self.vdu_id, vcp_code, sleep_multiplier=self.sleep_multiplier)
+            return self.ddcutil.get_attribute(self.vdu_number, vcp_code, sleep_multiplier=self.sleep_multiplier)
         except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound) as e:
             raise VduException(vdu_description=self.get_vdu_description(), vcp_code=vcp_code, exception=e,
                                operation="get_attribute") from e
@@ -2022,7 +2026,7 @@ class VduController(QObject):
     def set_attribute(self, vcp_code: str, value: str) -> None:
         try:
             # raise subprocess.SubprocessError("set_attribute")  # for testing
-            self.ddcutil.set_attribute(self.vdu_id, vcp_code, value, sleep_multiplier=self.sleep_multiplier)
+            self.ddcutil.set_attribute(self.vdu_number, vcp_code, value, sleep_multiplier=self.sleep_multiplier)
             self.vdu_set_attribute_signal.emit(self.vdu_stable_id, vcp_code, value)
         except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound) as e:
             raise VduException(vdu_description=self.get_vdu_description(), vcp_code=vcp_code, exception=e,
@@ -2738,7 +2742,7 @@ class VduControlComboBox(VduControlBase):
             alert.setText(
                 tr("Display {vnum} {vdesc} feature {code} '({cdesc})' has an undefined value '{value}'. "
                    "Valid values are {valid}.").format(
-                    vdesc=self.controller.get_vdu_description(), vnum=self.controller.vdu_id,
+                    vdesc=self.controller.get_vdu_description(), vnum=self.controller.vdu_number,
                     code=self.vcp_capability.vcp_code, cdesc=self.vcp_capability.name, value=self.current_value, valid=self.keys))
             alert.setInformativeText(
                 tr('If you want to extend the set of permitted values, you can edit the metadata '
@@ -2760,9 +2764,9 @@ class VduControlPanel(QWidget):
         super().__init__()
         layout = QVBoxLayout()
         label = QLabel()
-        label.setText(tr('Monitor {}: {}').format(controller.vdu_id, controller.get_vdu_description()))
+        label.setText(tr('Monitor {}: {}').format(controller.vdu_number, controller.get_vdu_description()))
         layout.addWidget(label)
-        self.controller = controller
+        self.controller: VduController = controller
         self.vcp_controls: List[VduControlBase] = []
         self.vdu_exception_handler = vdu_exception_handler
 
@@ -3265,7 +3269,6 @@ class VduControlsMainPanel(QWidget):
 
     def __init__(self) -> None:
         super().__init__()
-        self.vdu_controllers: List[VduController] = []
         self.bottom_toolbar: VduPanelBottomToolBar | None = None
         self.refresh_data_task = None
         self.setObjectName("vdu_controls_main_panel")
@@ -3273,10 +3276,8 @@ class VduControlsMainPanel(QWidget):
         self.alert: QMessageBox | None = None
         self.busy = False
 
-    def initialise_control_panels(self, app_context_menu: ContextMenu, main_config: VduControlsConfig,
-                                  vdu_controllers: List[VduController], tool_buttons: List[ToolButton],
-                                  splash_message_signal: pyqtSignal) -> None:
-        self.vdu_controllers = vdu_controllers
+    def initialise_control_panels(self, vdu_controllers, app_context_menu: ContextMenu, main_config: VduControlsConfig,
+                                  tool_buttons: List[ToolButton], splash_message_signal: pyqtSignal) -> None:
 
         if self.layout():
             # Already laid out, must be responding to a configuration change requiring re-layout.
@@ -3293,8 +3294,8 @@ class VduControlsMainPanel(QWidget):
         controllers_layout = self.layout()
         warnings_enabled = main_config.is_set(ConfOption.WARNINGS_ENABLED)
 
-        for controller in self.vdu_controllers:
-            splash_message_signal.emit(f"DDC ID {controller.vdu_id}\n{controller.get_vdu_description()}")
+        for controller in vdu_controllers:
+            splash_message_signal.emit(f"DDC ID {controller.vdu_number}\n{controller.get_vdu_description()}")
             vdu_control_panel = VduControlPanel(controller, warnings_enabled, self.display_vdu_exception)
             vdu_control_panel.connected_vdus_changed_signal.connect(self.connected_vdus_changed_signal)
             controller.vdu_set_attribute_signal.connect(self.vdu_set_attribute_signal)
@@ -3303,7 +3304,7 @@ class VduControlsMainPanel(QWidget):
                 controllers_layout.addWidget(vdu_control_panel)
             elif warnings_enabled:
                 warn_omitted = MessageBox(QMessageBox.Warning)
-                warn_omitted.setText(tr('Monitor {} {} lacks any accessible controls.').format(controller.vdu_id,
+                warn_omitted.setText(tr('Monitor {} {} lacks any accessible controls.').format(controller.vdu_number,
                                                                                                controller.get_vdu_description()))
                 warn_omitted.setInformativeText(tr('The monitor will be omitted from the control panel.'))
                 warn_omitted.exec()
@@ -5658,14 +5659,15 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                 self.status_message(f"{SUN_SYMBOL} {lux_summary_text} {PROCESSING_LUX_SYMBOL}", timeout=3000)
             # If interpolating, it may be that each VDU profile is closer to a different attached preset, if this happens,
             # chose the preset associated with the brightest value.
-            for vdu_control_panel in self.main_controller.get_vdu_control_panels():  # For each VDU, do one step of its profile
+            for vdu_stable_id in self.main_controller.get_vdu_stable_id_list():  # For each VDU, do one step of its profile
                 if self.stop_requested or self.unexpected_change:
                     return
-                controller = vdu_control_panel.controller
                 # In case the lux reading changes, reevaluate target brightness every time...
                 profile_brightness, profile_preset_name = self.determine_brightness(
-                    controller.vdu_stable_id, smoothed_lux, lux_config.get_vdu_lux_profile(controller))
-                if self.step_one_vdu(vdu_control_panel, profile_brightness, profile_preset_name, lux_summary_text, start_of_cycle):
+                    vdu_stable_id, smoothed_lux,
+                    lux_config.get_vdu_lux_profile(
+                        vdu_stable_id, self.main_controller.get_range(vdu_stable_id, VDU_SUPPORTED_CONTROLS.brightness.vcp_code)))
+                if self.step_one_vdu(vdu_stable_id, profile_brightness, profile_preset_name, lux_summary_text, start_of_cycle):
                     change_count += 1
             start_of_cycle = False
             time.sleep(self.step_pause_millis/1000.0)  # Let i2c settle down, then continue - TODO is this really necessary?
@@ -5683,18 +5685,15 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         else:  # No work done, no adjustment necessary
             self.status_message(f"{SUN_SYMBOL} {SUCCESS_SYMBOL}", timeout=3000)
 
-    def step_one_vdu(self, vdu_control_panel: VduControlPanel, profile_brightness: int, profile_preset_name: str | None,
+    def step_one_vdu(self, vdu_stable_id: str, profile_brightness: int, profile_preset_name: str | None,
                      lux_summary_text: str, first_step: bool) -> bool:
         # if profile_brightness is -1, the profile has an attached preset with no brightness, it may have been
         # attached to trigger non-brightness settings at a given lux value (triggered below, after the loop).
         if profile_brightness < 0:
             return False
-        controller = vdu_control_panel.controller
-        brightness_control = vdu_control_panel.get_control(VDU_SUPPORTED_CONTROLS.brightness.vcp_code)
-        if brightness_control is not None:  # can only adjust brightness controls
-            vdu_id = vdu_control_panel.controller.vdu_stable_id
+        if self.main_controller.has_vcp_code(vdu_stable_id, VDU_SUPPORTED_CONTROLS.brightness.vcp_code):  # can only adjust brightness controls
             try:
-                current_brightness = int(controller.get_attribute(VDU_SUPPORTED_CONTROLS.brightness.vcp_code)[0])
+                current_brightness = int(self.main_controller.get_value(vdu_stable_id, VDU_SUPPORTED_CONTROLS.brightness.vcp_code)[0])
                 diff = profile_brightness - current_brightness
                 # Check if already at the correct brightness.
                 if diff == 0:
@@ -5702,44 +5701,43 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                 # Check for interpolating, at the start, no Preset involved, and close enough to not bother with a change.
                 if self.interpolation_enabled and first_step and profile_preset_name is None and abs(diff) < self.sensitivity_percent:
                     self.status_message(f"{SUN_SYMBOL} {current_brightness}% {ALMOST_EQUAL_SYMBOL}"
-                                        f" {profile_brightness}% {vdu_id} ({lux_summary_text})")
-                    log_info(f"LuxAutoWorker: {vdu_id=} {current_brightness=} {profile_brightness=} ignored, too small")
+                                        f" {profile_brightness}% {vdu_stable_id} ({lux_summary_text})")
+                    log_info(f"LuxAutoWorker: {vdu_stable_id=} {current_brightness=} {profile_brightness=} ignored, too small")
                     return False
                 # Check if something else is changing the brightness, or maybe there was a ddcutil error
-                if vdu_id in self.expected_brightness and self.expected_brightness[vdu_id] != current_brightness:
-                    log_info(f"LuxAutoWorker: {vdu_id=}: {current_brightness=}% != step value {self.expected_brightness[vdu_id]}%" 
+                if vdu_stable_id in self.expected_brightness and self.expected_brightness[vdu_stable_id] != current_brightness:
+                    log_info(f"LuxAutoWorker: {vdu_stable_id=}: {current_brightness=}% != step value {self.expected_brightness[vdu_stable_id]}%" 
                              f" something else altered the brightness - stop adjusting for lux.")
-                    self.status_message(f"{SUN_SYMBOL} {ERROR_SYMBOL} {RAISED_HAND_SYMBOL} {vdu_id}")
+                    self.status_message(f"{SUN_SYMBOL} {ERROR_SYMBOL} {RAISED_HAND_SYMBOL} {vdu_stable_id}")
                     self.unexpected_change = True
                     return False
                 # Definitely not-interpolating OR interpolating and brightness change is significant OR we have to activate a Preset
                 step_size = max(1, abs(diff) // self.convergence_divisor)  # TODO find a good heuristic
                 step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
                 new_brightness = current_brightness + step
-                brightness_control.restore_vdu_attribute(str(new_brightness))  # Apply to physical VDU
-                self._update_gui_control_signal.emit(brightness_control, f"{vdu_id=} {thread_pid()=}")  # send to GUI thread
-                self.expected_brightness[vdu_id] = new_brightness
-                log_info(f"LuxAutoWorker: Start stepping {vdu_id=} {current_brightness=} to {profile_brightness=} "
+                self.main_controller.set_value(vdu_stable_id, VDU_SUPPORTED_CONTROLS.brightness.vcp_code, str(new_brightness))
+                self.expected_brightness[vdu_stable_id] = new_brightness
+                log_info(f"LuxAutoWorker: Start stepping {vdu_stable_id=} {current_brightness=} to {profile_brightness=} "
                          f" {profile_preset_name=} {lux_summary_text}") if first_step else None
                 self.status_message(
-                    f"{SUN_SYMBOL} {current_brightness}%{STEPPING_SYMBOL}{profile_brightness}% {vdu_id}" +
+                    f"{SUN_SYMBOL} {current_brightness}%{STEPPING_SYMBOL}{profile_brightness}% {vdu_stable_id}" +
                     f" ({lux_summary_text}) {profile_preset_name if profile_preset_name is not None else ''}")
-                if self.consecutive_errors.get(vdu_id, 0) > 0:
-                    log_info(f"LuxAutoWorker: ddcutil to {vdu_id} succeeded after {self.consecutive_errors[vdu_id]} errors.")
-                self.consecutive_errors[vdu_id] = 0
+                if self.consecutive_errors.get(vdu_stable_id, 0) > 0:
+                    log_info(f"LuxAutoWorker: ddcutil to {vdu_stable_id} succeeded after {self.consecutive_errors[vdu_stable_id]} errors.")
+                self.consecutive_errors[vdu_stable_id] = 0
             except VduException as ve:
-                self.consecutive_errors[vdu_id] = self.consecutive_errors.get(vdu_id, 0) + 1
-                if self.consecutive_errors[vdu_id] == 1:
-                    log_warning(f"LuxAutoWorker: Brightness error on {vdu_id}, will sleep and try again: {ve}", -1)
-                    self.status_message(tr("{} Failed to adjust {}, will try again").format(ERROR_SYMBOL, vdu_id))
+                self.consecutive_errors[vdu_stable_id] = self.consecutive_errors.get(vdu_stable_id, 0) + 1
+                if self.consecutive_errors[vdu_stable_id] == 1:
+                    log_warning(f"LuxAutoWorker: Brightness error on {vdu_stable_id}, will sleep and try again: {ve}", -1)
+                    self.status_message(tr("{} Failed to adjust {}, will try again").format(ERROR_SYMBOL, vdu_stable_id))
                     time.sleep(2)  # TODO do something better than this to make the message visible.
-                elif self.consecutive_errors[vdu_id] > 1:
+                elif self.consecutive_errors[vdu_stable_id] > 1:
                     self.status_message(tr("{} Failed to adjust {}, {} errors so far. Sleeping {} minutes.").format(
-                        ERROR_SYMBOL, vdu_id, self.consecutive_errors[vdu_id],
+                        ERROR_SYMBOL, vdu_stable_id, self.consecutive_errors[vdu_stable_id],
                         self.main_controller.get_lux_auto_controller().get_lux_config().get_interval_minutes()))  # TODO seems dodgy
                     time.sleep(2)  # TODO do something better than this to make the message visible.
-                    if self.consecutive_errors[vdu_id] == 2 or log_debug_enabled:
-                        log_info(f"LuxAutoWorker: {self.consecutive_errors[vdu_id]} errors on {vdu_id}, let this lux cycle end.")
+                    if self.consecutive_errors[vdu_stable_id] == 2 or log_debug_enabled:
+                        log_info(f"LuxAutoWorker: {self.consecutive_errors[vdu_stable_id]} errors on {vdu_stable_id}, let this lux cycle end.")
                     return False  # Report no changes, this allows the current adjustment cycle to end, will try again next cycle.
         return True
 
@@ -5855,16 +5853,16 @@ class LuxConfig(ConfigIni):
     def set_device_name(self, device_name: str) -> None:
         self.set("lux-meter", "lux-device", device_name)
 
-    def get_vdu_lux_profile(self, vdu_controller: VduController) -> List[LuxPoint]:
-        if self.has_option('lux-profile', vdu_controller.vdu_stable_id):
-            lux_points = [LuxPoint(v[0], v[1]) for v in literal_eval(self.get('lux-profile', vdu_controller.vdu_stable_id))]
+    def get_vdu_lux_profile(self, vdu_stable_id: str, brightness_range) -> List[LuxPoint]:
+        if self.has_option('lux-profile', vdu_stable_id):
+            lux_points = [LuxPoint(v[0], v[1]) for v in literal_eval(self.get('lux-profile', vdu_stable_id))]
         else:  # Use a default profile:
-            if VDU_SUPPORTED_CONTROLS.brightness.vcp_code in vdu_controller.capabilities:
-                min_v, max_v = vdu_controller.get_range_restrictions(VDU_SUPPORTED_CONTROLS.brightness.vcp_code)
+            if brightness_range is not None:
+                min_v, max_v = brightness_range
                 if min_v < 10:
                     min_v = 10
-                lux_points = [LuxPoint(10**lux, brightness) for lux, brightness in zip(range(0, 6),
-                                                                                       range(min_v, max_v + 1, (max_v - min_v)//5))]
+                lux_points = [LuxPoint(10**lux, brightness)
+                              for lux, brightness in zip(range(0, 6), range(min_v, max_v + 1, (max_v - min_v)//5))]
             else:
                 lux_points = []
         if self.has_option('lux-presets', 'lux-preset-points'):
@@ -6081,18 +6079,19 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         QApplication.processEvents()  # Next bit is slow
 
         connected_id_list = []   # List of all currently connected VDU's
-        for index, vdu_controller in enumerate(self.main_controller.get_vdu_controllers()):
-            if VDU_SUPPORTED_CONTROLS.brightness.vcp_code in vdu_controller.capabilities:
-                self.range_restrictions[vdu_controller.vdu_stable_id] = vdu_controller.get_range_restrictions(
-                    VDU_SUPPORTED_CONTROLS.brightness.vcp_code)
+        for index, vdu_stable_id in enumerate(self.main_controller.get_vdu_stable_id_list()):
+            if self.main_controller.has_vcp_code(vdu_stable_id, VDU_SUPPORTED_CONTROLS.brightness.vcp_code):  # VDU_SUPPORTED_CONTROLS.brightness.vcp_code in vdu_controller.capabilities:
+                self.range_restrictions[vdu_stable_id] = self.main_controller.get_range(
+                    vdu_stable_id, VDU_SUPPORTED_CONTROLS.brightness.vcp_code)
                 try:
-                    self.vdu_current_brightness[vdu_controller.vdu_stable_id] = int(vdu_controller.get_attribute(
-                        VDU_SUPPORTED_CONTROLS.brightness.vcp_code)[0])
+                    self.vdu_current_brightness[vdu_stable_id] = int(
+                        self.main_controller.get_value(vdu_stable_id, VDU_SUPPORTED_CONTROLS.brightness.vcp_code)[0])
                 except VduException as ve:
-                    self.vdu_current_brightness[vdu_controller.vdu_stable_id] = 0
+                    self.vdu_current_brightness[vdu_stable_id] = 0
                     log_warning("VDU may not be available:", str(ve), trace=True)
-            self.lux_profile_data[vdu_controller.vdu_stable_id] = self.lux_config.get_vdu_lux_profile(vdu_controller)
-            connected_id_list.append(vdu_controller.vdu_stable_id)
+            self.lux_profile_data[vdu_stable_id] = self.lux_config.get_vdu_lux_profile(
+                vdu_stable_id, self.main_controller.get_range(vdu_stable_id, VDU_SUPPORTED_CONTROLS.brightness.vcp_code))
+            connected_id_list.append(vdu_stable_id)
         self.preset_points.clear()  # Edit out deleted presets by starting from scratch
         for preset_point in self.lux_config.get_preset_points():
             if preset_point.preset_name is not None and self.main_controller.find_preset_by_name(preset_point.preset_name):
@@ -6111,12 +6110,13 @@ class LuxDialog(QDialog, DialogSingletonMixin):
                 self.profile_selector.clear()
                 random.seed(int(self.lux_config.get("lux-ui", "vdu_color_seed", fallback='0x543fff'), 16))
                 self.vdu_chart_color.clear()
-                for index, vdu_controller in enumerate(self.main_controller.get_vdu_controllers()):
+                for index, vdu_stable_id in enumerate(self.main_controller.get_vdu_stable_id_list()):
                     color = QColor.fromHsl(int(index * 137.508) % 255, random.randint(64, 128), random.randint(192, 200))
-                    self.vdu_chart_color[vdu_controller.vdu_stable_id] = color
+                    self.vdu_chart_color[vdu_stable_id] = color
                     color_icon = create_icon_from_svg_bytes(SWATCH_ICON_SOURCE.replace(b"#ffffff", bytes(color.name(), 'utf-8')))
-                    self.profile_selector.addItem(color_icon, vdu_controller.get_vdu_description(), userData=vdu_controller.vdu_stable_id)
-                    if vdu_controller.vdu_stable_id == candidate_id:
+                    self.profile_selector.addItem(
+                        color_icon, self.main_controller.get_vdu_description(vdu_stable_id), userData=vdu_stable_id)
+                    if vdu_stable_id == candidate_id:
                         self.profile_selector.setCurrentIndex(index)
                         self.profile_plot.current_vdu_id = candidate_id
         finally:
@@ -6455,6 +6455,7 @@ class VduAppController():
         self.main_config = main_config
         self.ddcutil: DdcUtil | None = None
         self.main_window: VduAppWindow = None
+        self.vdu_controllers: List[VduController] = []  # for 1 to 6 VDU's a list is in the same ballpark as a dict.
         self.preset_controller = PresetController()
         self.detected_vdu_list: List[Tuple[str, str, str, str]] = []
         self.previously_detected_vdu_list: List[Tuple[str, str, str, str]] = []
@@ -6563,6 +6564,37 @@ class VduAppController():
         self.previously_detected_vdu_list = self.detected_vdu_list
         return self.detected_vdu_list, ddcutil_problem
 
+    def create_vdu_controllers(self) -> List[VduController]:
+        assert is_running_in_gui_thread()
+        ddcutil = self.ddcutil
+        if ddcutil is None:
+            return
+        detected_vdu_list, ddcutil_problem = self.detect_vdus()
+        self.vdu_controllers = []
+        main_panel_error_handler = self.main_window.get_main_panel().display_vdu_exception
+        for vdu_number, manufacturer, model_name, vdu_serial in detected_vdu_list:
+            controller = None
+            while True:
+                try:
+                    controller = VduController(vdu_number, model_name, vdu_serial, manufacturer, self.main_config,
+                                               ddcutil, main_panel_error_handler, VduController.NORMAL_VDU)
+                except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:  # TODO figure out all possible Exceptions:
+                    # Catch any kind of parse related error
+                    log_error(f"Problem creating controller for {vdu_number=} {model_name=} {vdu_serial=} exception={e}", trace=True)
+                    choice = VduAppWindow.ask_for_vdu_controller_remedy(vdu_number, model_name, vdu_serial)
+                    if choice == VduController.NORMAL_VDU:
+                        continue
+                    controller = VduController(vdu_number, model_name, vdu_serial, manufacturer, self.main_config,
+                                               ddcutil, main_panel_error_handler, choice)
+                    controller.write_template_config_files()
+                break
+            if controller is not None:
+                self.vdu_controllers.append(controller)
+        if len(self.vdu_controllers) == 0:
+            if self.main_config.is_set(ConfOption.WARNINGS_ENABLED):
+                self.main_window.display_no_controllers_error_dialog(ddcutil_problem)
+        return self.vdu_controllers
+
     def is_non_standard_enabled(self) -> bool:
         path = get_config_path("danger")
         if path.exists():
@@ -6576,10 +6608,6 @@ class VduAppController():
                                 f"{DANGER_AGREEMENT_NON_STANDARD_VCP_CODES}")
                     return True
         return False
-
-    def quit_app(self) -> None:
-        self.main_window.app_save_state()
-        self.main_window.app.quit()
 
     def settings_changed(self, changed_settings: List) -> None:
         if changed_settings is None:  # Special value - means settings have been reset/removed - needs restart.
@@ -6599,7 +6627,7 @@ class VduAppController():
 
     def edit_config(self) -> None:
         SettingsEditor.invoke(self.main_config,
-                              [vdu.config for vdu in self.main_window.get_main_panel().vdu_controllers if vdu.config is not None],
+                              [vdu.config for vdu in self.vdu_controllers if vdu.config is not None],
                               self.settings_changed)
 
     def lux_auto_action(self) -> bool:
@@ -6883,19 +6911,54 @@ class VduAppController():
         assert self.lux_auto_controller is not None
         return self.lux_auto_controller
 
-    def get_vdu_controllers(self):
-        return self.main_window.vdu_controllers
+    def get_vdu_stable_id_list(self):
+        return [cp.vdu_stable_id for cp in self.vdu_controllers]
 
-    def get_vdu_control_panels(self):
-        return self.main_window.get_main_panel().vdu_control_panels
+    def get_range(self, vdu_stable_id: str, vcp_code: str) -> Tuple[int, int]:
+        for controller in self.vdu_controllers:
+            if controller.vdu_stable_id == vdu_stable_id:
+                return controller.get_range_restrictions(vcp_code)
+        log_error(f"get_range: No controller for {vdu_stable_id}")
+        return 0, 0
+
+    def get_value(self, vdu_stable_id, vcp_code):
+        for controller in self.vdu_controllers:
+            if controller.vdu_stable_id == vdu_stable_id:
+                return controller.get_attribute(VDU_SUPPORTED_CONTROLS.brightness.vcp_code)
+        log_error(f"get_value: No controller for {vdu_stable_id}")
+        return ['0']
+
+    def set_value(self, vdu_stable_id: str, vcp_code: str, value_str: str):
+        for control_panel in self.main_window.get_main_panel().vdu_control_panels:
+            if control_panel.controller.vdu_stable_id == vdu_stable_id:
+                control = control_panel.get_control(vcp_code)
+                control.restore_vdu_attribute(value_str)  # Apply to physical VDU
+                self.main_window.update_control_in_gui_thread.emit(control, f"{vdu_stable_id=} {thread_pid()=}")  # send to GUI thread
+                return
+        log_error(f"set_value: No controller for {vdu_stable_id}")
+
+    def has_vcp_code(self, vdu_stable_id, vcp_code: str) -> bool:
+        for control_panel in self.main_window.get_main_panel().vdu_control_panels:
+            if control_panel.controller.vdu_stable_id == vdu_stable_id:
+                if control_panel.get_control(vcp_code) is not None:
+                    return True
+        return False
 
     def display_lux_auto_indicators(self):
         self.main_window.display_lux_auto_indicators()
+
+    def get_vdu_description(self, vdu_stable_id: str):
+        for controller in self.vdu_controllers:
+            if controller.vdu_stable_id == vdu_stable_id:
+                return controller.get_vdu_description()
+        log_error(f"get_vdu_description: No controller for {vdu_stable_id}")
+        return vdu_stable_id
 
 
 class VduAppWindow(QMainWindow):
     splash_message_signal = pyqtSignal(str)
     restore_preset_in_gui_thread = pyqtSignal(Preset, object, bool, bool)
+    update_control_in_gui_thread = pyqtSignal(VduControlBase, str)
 
     def __init__(self, main_config: VduControlsConfig, app: QApplication, main_controller: VduAppController) -> None:
         super().__init__()
@@ -6910,7 +6973,6 @@ class VduAppWindow(QMainWindow):
         self.settings = QSettings('vdu_controls.qt.state', 'vdu_controls')
         self.main_panel: VduControlsMainPanel | None = None
         self.main_config = main_config
-        self.vdu_controllers: List[VduController] = []
         self.transitioning_dummy_preset: PresetTransitionDummy | None = None
         self.hide_shortcuts = True
         gnome_tray_behaviour = main_config.is_set(ConfOption.SYSTEM_TRAY_ENABLED) and 'gnome' in os.environ.get(
@@ -6924,7 +6986,8 @@ class VduAppWindow(QMainWindow):
                 log_info("Screen", screen.name())
 
         self.app_context_menu = ContextMenu(
-            app_controller=main_controller, main_window_action=partial(self.show_main_window, True) if gnome_tray_behaviour else None,
+            app_controller=main_controller,
+            main_window_action=partial(self.show_main_window, True) if gnome_tray_behaviour else None,
             about_action=AboutDialog.invoke, help_action=HelpDialog.invoke, gray_scale_action=GreyScaleDialog,
             lux_auto_action=self.main_controller.lux_auto_action if main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) else None,
             lux_meter_action=partial(LuxDialog.invoke, self.main_controller) if main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) else None,
@@ -6939,7 +7002,7 @@ class VduAppWindow(QMainWindow):
 
         if splash is not None:
             splash.show()
-            splash.raise_() # Attempt to force it to the top with raise and activate
+            splash.raise_()  # Attempt to force it to the top with raise and activate
             splash.activateWindow()
 
         self.app_icon = QIcon()
@@ -6978,6 +7041,15 @@ class VduAppWindow(QMainWindow):
 
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
 
+        def update_gui_control(control: VduControlBase, context: str) -> None:
+            if isinstance(control, VduControlBase):
+                control.refresh_view()
+            else:
+                log_warning(f'Unexpected component {control} {context=}', trace=True)  # Weird error here - timing/threading perhaps.
+
+        # Using Qt signals to ensure GUI activity occurs in the GUI thread (this thread).
+        self.update_control_in_gui_thread.connect(update_gui_control)
+
         self.main_controller.configure_application(self)
 
         self.app_restore_state()
@@ -7000,8 +7072,7 @@ class VduAppWindow(QMainWindow):
             release_alert.setText(RELEASE_ANNOUNCEMENT.format(WELCOME=welcome, NOTE=note, VERSION=VDU_CONTROLS_VERSION))
             release_alert.setTextFormat(Qt.RichText)
             release_alert.exec()
-            # Stops the release notes from being repeated.
-            main_config.write_file(get_config_path('vdu_controls'), overwrite=True)
+            main_config.write_file(get_config_path('vdu_controls'), overwrite=True) # Stops the release notes from being repeated.
 
     def show_main_window(self, toggle: bool = False) -> None:
         if toggle and self.isVisible():
@@ -7035,74 +7106,6 @@ class VduAppWindow(QMainWindow):
         self.app_save_state()
         self.app.quit()
 
-    def create_controllers(self) -> None:
-        assert is_running_in_gui_thread()
-        ddcutil = self.main_controller.ddcutil
-        if ddcutil is None:
-            return
-        detected_vdu_list, ddcutil_problem = self.main_controller.detect_vdus()
-        self.vdu_controllers = []
-        main_panel_error_handler = self.get_main_panel().display_vdu_exception
-        for vdu_id, manufacturer, vdu_model_name, vdu_serial in detected_vdu_list:
-            controller = None
-            while True:
-                try:
-                    controller = VduController(vdu_id, vdu_model_name, vdu_serial, manufacturer, self.main_config,
-                                               ddcutil, main_panel_error_handler)
-                    break
-                except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:  # TODO figure out all possible Exceptions:
-                    # Catch any kind of parse related error
-                    log_error(f"Problem creating controller for {vdu_id} {vdu_model_name} {vdu_serial} exception={e}", trace=True)
-                    no_auto = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Ignore | QMessageBox.Apply | QMessageBox.Retry)
-                    no_auto.setText(
-                        tr('Failed to obtain capabilities for monitor {} {} {}.').format(vdu_id, vdu_model_name, vdu_serial))
-                    no_auto.setInformativeText(tr(
-                        'Cannot automatically configure this monitor.'
-                        '\n You can choose to:'
-                        '\n 1: Retry obtaining the capabilities.'
-                        '\n 2: Ignore this monitor.'
-                        '\n 3: Apply standard brightness and contrast controls.'))
-                    choice = no_auto.exec()
-                    if choice == QMessageBox.Ignore:
-                        controller = VduController(vdu_id, vdu_model_name, vdu_serial, manufacturer, self.main_config,
-                                                   ddcutil, main_panel_error_handler, ignore_monitor=True)
-                        controller.write_template_config_files()
-                        warn = MessageBox(QMessageBox.Information)
-                        warn.setText(tr('Ignoring {} monitor.').format(vdu_model_name))
-                        warn.setInformativeText(tr('Wrote {} config files to {}.').format(vdu_model_name, CONFIG_DIR_PATH))
-                        warn.exec()
-                        break
-                    elif choice == QMessageBox.Apply:
-                        controller = VduController(vdu_id, vdu_model_name, vdu_serial, manufacturer, self.main_config,
-                                                   ddcutil, main_panel_error_handler, assume_standard_controls=True)
-                        controller.write_template_config_files()
-                        warn = MessageBox(QMessageBox.Information)
-                        warn.setText(tr('Assuming {} has brightness and contrast controls.').format(vdu_model_name))
-                        warn.setInformativeText(tr('Wrote {} config files to {}.').format(vdu_model_name, CONFIG_DIR_PATH) +
-                                                tr('\nPlease check these files and edit or remove them if they '
-                                                   'cause further issues.'))
-                        warn.exec()
-                        break
-            if controller is not None:
-                self.vdu_controllers.append(controller)
-        if len(self.vdu_controllers) == 0:
-            if self.main_config.is_set(ConfOption.WARNINGS_ENABLED):
-                self.display_no_controllers_error_dialog(ddcutil_problem)
-
-    def display_no_controllers_error_dialog(self, ddcutil_problem):
-        error_no_monitors = MessageBox(QMessageBox.Critical)
-        error_no_monitors.setText(tr('No controllable monitors found.'))
-        error_no_monitors.setInformativeText(
-            tr("Is ddcutil installed?  Is i2c installed and configured?\n\n"
-               "Run vdu_controls --debug in a console and check for additional messages.\n\n{}").format(''))
-        if ddcutil_problem is not None:
-            if isinstance(ddcutil_problem, subprocess.SubprocessError):
-                problem_text = ddcutil_problem.stderr.decode('utf-8', errors='surrogateescape') + '\n' + str(ddcutil_problem)
-            else:
-                problem_text = str(ddcutil_problem)
-            error_no_monitors.setDetailedText(tr("(Most recent ddcutil error: {})").format(problem_text))
-        error_no_monitors.exec()
-
     def create_main_control_panel(self) -> None:
         # Call on initialisation and whenever the number of connected VDU's changes.
         if self.main_panel is not None:
@@ -7118,14 +7121,14 @@ class VduAppWindow(QMainWindow):
 
         self.main_panel.vdu_set_attribute_signal.connect(vdu_set_attribute_signal_handler)  # Wire up the signal/slots first
         self.main_panel.connected_vdus_changed_signal.connect(self.main_controller.configure_application)
-        self.create_controllers()  # Then initialise the control panel display
+        vdu_controllers = self.main_controller.create_vdu_controllers()  # Then initialise the control panel display
         refresh_button = ToolButton(REFRESH_ICON_SOURCE, tr("Refresh settings from monitors"))
         refresh_button.pressed.connect(self.main_controller.start_refresh)
         tool_buttons = [refresh_button]
         if self.main_controller.lux_auto_controller is not None:
             tool_buttons.append(self.main_controller.lux_auto_controller.create_tool_button())
         self.refresh_preset_menu()
-        self.main_panel.initialise_control_panels(self.app_context_menu, self.main_config, self.vdu_controllers,
+        self.main_panel.initialise_control_panels(vdu_controllers, self.app_context_menu, self.main_config,
                                                   tool_buttons, self.splash_message_signal)
         self.indicate_busy(True)
         self.setCentralWidget(self.main_panel)
@@ -7217,6 +7220,49 @@ class VduAppWindow(QMainWindow):
 
     def refresh_preset_menu(self, palette_change: bool = False, reorder: bool = False):
         self.app_context_menu.refresh_preset_menu(palette_change=palette_change, reorder=reorder)
+
+    @staticmethod
+    def display_no_controllers_error_dialog(self, ddcutil_problem):
+        error_no_monitors = MessageBox(QMessageBox.Critical)
+        error_no_monitors.setText(tr('No controllable monitors found.'))
+        error_no_monitors.setInformativeText(
+            tr("Is ddcutil installed?  Is i2c installed and configured?\n\n"
+               "Run vdu_controls --debug in a console and check for additional messages.\n\n{}").format(''))
+        if ddcutil_problem is not None:
+            if isinstance(ddcutil_problem, subprocess.SubprocessError):
+                problem_text = ddcutil_problem.stderr.decode('utf-8', errors='surrogateescape') + '\n' + str(ddcutil_problem)
+            else:
+                problem_text = str(ddcutil_problem)
+            error_no_monitors.setDetailedText(tr("(Most recent ddcutil error: {})").format(problem_text))
+        error_no_monitors.exec()
+
+    @staticmethod
+    def ask_for_vdu_controller_remedy(vdu_number: str, model_name: str, vdu_serial: str):
+        no_auto = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Ignore | QMessageBox.Apply | QMessageBox.Retry)
+        no_auto.setText(
+            tr('Failed to obtain capabilities for monitor {} {} {}.').format(vdu_number, model_name, vdu_serial))
+        no_auto.setInformativeText(tr(
+            'Cannot automatically configure this monitor.'
+            '\n You can choose to:'
+            '\n 1: Retry obtaining the capabilities.'
+            '\n 2: Ignore this monitor.'
+            '\n 3: Apply standard brightness and contrast controls.'))
+        choice = no_auto.exec()
+        if choice == QMessageBox.Ignore:
+            warn = MessageBox(QMessageBox.Information)
+            warn.setText(tr('Ignoring {} monitor.').format(model_name))
+            warn.setInformativeText(tr('Wrote {} config files to {}.').format(model_name, CONFIG_DIR_PATH))
+            warn.exec()
+            return VduController.IGNORE_VDU
+        elif choice == QMessageBox.Apply:
+            warn = MessageBox(QMessageBox.Information)
+            warn.setText(tr('Assuming {} has brightness and contrast controls.').format(model_name))
+            warn.setInformativeText(tr('Wrote {} config files to {}.').format(model_name, CONFIG_DIR_PATH) +
+                                    tr('\nPlease check these files and edit or remove them if they '
+                                       'cause further issues.'))
+            warn.exec()
+            return VduController.ASSUME_STANDARD_CONTROLS
+        return VduController.NORMAL_VDU
 
 
 class SignalWakeupHandler(QtNetwork.QAbstractSocket):
