@@ -1274,7 +1274,7 @@ class DdcUtil:
             return result
 
     def detect_monitors(self, issue_warnings: bool = True, sleep_multiplier: float = 0.0) -> List[Tuple[str, str, str, str]]:
-        """Return a list of (vdu_id, desc) tuples."""
+        """Return a list of (vdu_number, desc) tuples."""
         display_list = []
         result = self.__run__('detect', '--verbose', sleep_multiplier=sleep_multiplier)
         # Going to get rid of anything that is not a-z A-Z 0-9 as potential rubbish
@@ -1284,8 +1284,8 @@ class DdcUtil:
         for display_str in re.split("\n\n", result.stdout.decode('utf-8', errors='surrogateescape')):
             display_match = re.search(r'Display ([0-9]+)', display_str)
             if display_match is not None:
-                vdu_id = display_match.group(1)
-                log_debug(f"checking possible ID's for display {vdu_id}") if log_debug_enabled else None
+                vdu_number = display_match.group(1)
+                log_debug(f"checking possible ID's for display {vdu_number}") if log_debug_enabled else None
                 fields = {fm.group(1).strip(): fm.group(2).strip() for fm in re.finditer(r'[ \t]*([^:\n]+):[ \t]+([^\n]*)',
                                                                                          display_str)}
                 model_name = rubbish.sub('_', fields.get('Model', 'unknown_model'))
@@ -1298,17 +1298,17 @@ class DdcUtil:
                     edid = self.parse_edid(display_str)
                     # check for duplicate edid, any duplicate will use the display Num
                     if edid is not None and edid not in self.edid_map.values():
-                        self.edid_map[vdu_id] = edid
-                for candidate in serial_number, bin_serial_number, man_date, i2c_bus_id, f"DisplayNum{vdu_id}":
+                        self.edid_map[vdu_number] = edid
+                for candidate in serial_number, bin_serial_number, man_date, i2c_bus_id, f"DisplayNum{vdu_number}":
                     if candidate.strip() != '':
                         possibly_unique = (model_name, candidate)
                         if possibly_unique in key_prospects:
                             # Not unique - it's already been encountered.
                             log_info(f"Ignoring non-unique key {possibly_unique[0]}_{possibly_unique[1]}"
-                                     f" - it matches displays {vdu_id} and {key_prospects[possibly_unique][0]}")
+                                     f" - it matches displays {vdu_number} and {key_prospects[possibly_unique][0]}")
                             del key_prospects[possibly_unique]
                         else:
-                            key_prospects[possibly_unique] = vdu_id, manufacturer
+                            key_prospects[possibly_unique] = vdu_number, manufacturer
             elif len(display_str.strip()) != 0 and issue_warnings:
                 if display_str.startswith('Invalid display'):
                     log_warning(f"Ignoring one display (probably switched off)")
@@ -1318,13 +1318,13 @@ class DdcUtil:
         # Try and pin down a unique id that won't change even if other monitors are turned off. Ideally this should
         # yield the same result for the same monitor - DisplayNum is the worst for that, so it's the fallback.
         key_already_assigned = {}
-        for model_and_main_id, vdu_id_and_manufacturer in key_prospects.items():
-            vdu_id, manufacturer = vdu_id_and_manufacturer
-            if vdu_id not in key_already_assigned:
+        for model_and_main_id, vdu_number_and_manufacturer in key_prospects.items():
+            vdu_number, manufacturer = vdu_number_and_manufacturer
+            if vdu_number not in key_already_assigned:
                 model_name, main_id = model_and_main_id
-                log_debug(f"Unique key for {vdu_id=} {manufacturer=} is ({model_name=} {main_id=})") if log_debug_enabled else None
-                display_list.append((vdu_id, manufacturer, model_name, main_id))
-                key_already_assigned[vdu_id] = 1
+                log_debug(f"Unique key for {vdu_number=} {manufacturer=} is ({model_name=} {main_id=})") if log_debug_enabled else None
+                display_list.append((vdu_number, manufacturer, model_name, main_id))
+                key_already_assigned[vdu_number] = 1
         # display_list.append(("3", "maker_y", "model_z", "1234")) # For testing bad VDU's:
         return display_list
 
@@ -1336,16 +1336,16 @@ class DdcUtil:
             return edid
         return None
 
-    def query_capabilities(self, vdu_id: str) -> str:
+    def query_capabilities(self, vdu_number: str) -> str:
         """Return a vpc capabilities string."""
-        result = self.__run__(*['capabilities'] + self.id_key_args(vdu_id), log_id=vdu_id)
+        result = self.__run__(*['capabilities'] + self.id_key_args(vdu_number), log_id=vdu_number)
         capability_text = result.stdout.decode('utf-8', errors='surrogateescape')
         return capability_text
 
     def get_type(self, vcp_code) -> str | None:
         return self.vcp_type_map[vcp_code] if vcp_code in self.vcp_type_map else None
 
-    def get_attribute(self, vdu_id: str, vcp_code: str, sleep_multiplier: float | None = None) -> Tuple[str, str]:
+    def get_attribute(self, vdu_number: str, vcp_code: str, sleep_multiplier: float | None = None) -> Tuple[str, str]:
         """
         Given a VDU id and vcp_code, retrieve the attribute's current value from the VDU.
 
@@ -1353,17 +1353,17 @@ class DdcUtil:
         attributes with "Continuous" values have a maximum, for consistency the method will return a zero maximum
         for "Non-Continuous" attributes.
         """
-        result = self.get_attributes(vdu_id, [vcp_code], sleep_multiplier=sleep_multiplier)
+        result = self.get_attributes(vdu_number, [vcp_code], sleep_multiplier=sleep_multiplier)
         if result and result[0] is not None:
             return result[0]
         raise ValueError(
-            f"ddcutil returned an invalid value for monitor {vdu_id} vcp_code {vcp_code}, try increasing --sleep-multiplier")
+            f"ddcutil returned an invalid value for monitor {vdu_number} vcp_code {vcp_code}, try increasing --sleep-multiplier")
 
-    def set_attribute(self, vdu_id: str, vcp_code: str, new_value: str, sleep_multiplier: float | None = None) -> None:
+    def set_attribute(self, vdu_number: str, vcp_code: str, new_value: str, sleep_multiplier: float | None = None) -> None:
         """Send a new value to a specific VDU and vcp_code."""
         if self.get_type(vcp_code) != CONTINUOUS_TYPE:
             new_value = 'x' + new_value
-        self.__run__(*['setvcp', vcp_code, new_value] + self.id_key_args(vdu_id), sleep_multiplier=sleep_multiplier, log_id=vdu_id)
+        self.__run__(*['setvcp', vcp_code, new_value] + self.id_key_args(vdu_number), sleep_multiplier=sleep_multiplier, log_id=vdu_number)
 
     def vcp_info(self) -> str:
         """Returns info about all codes known to ddcutil, whether supported or not."""
@@ -1389,16 +1389,16 @@ class DdcUtil:
                     self.supported_codes[vcp_code] = vcp_name
         return self.supported_codes
 
-    def get_attributes(self, vdu_id: str, vcp_code_list: List[str], sleep_multiplier: float | None = None) -> List[Tuple[str, str]]:
+    def get_attributes(self, vdu_number: str, vcp_code_list: List[str], sleep_multiplier: float | None = None) -> List[Tuple[str, str]]:
         if self.version[0] > 1 or self.version[1] >= 3:
-            return self._get_attributes_implementation(vdu_id, vcp_code_list, sleep_multiplier)
+            return self._get_attributes_implementation(vdu_number, vcp_code_list, sleep_multiplier)
         else:
             result = []
             for vcp_code in vcp_code_list:
-                result += self._get_attributes_implementation(vdu_id, [vcp_code], sleep_multiplier)
+                result += self._get_attributes_implementation(vdu_number, [vcp_code], sleep_multiplier)
             return result
 
-    def _get_attributes_implementation(self, vdu_id: str,
+    def _get_attributes_implementation(self, vdu_number: str,
                                        vcp_code_list: List[str], sleep_multiplier: float | None = None) -> List[Tuple[str, str]]:
         """
         Returns None if there is an error communicating with the VDU
@@ -1407,9 +1407,9 @@ class DdcUtil:
         # Should we loop here, or higher up - maybe it doesn't matter.
         vcp_code_regexp = re.compile(r"^VCP ([0-9A-F]{2}) ")  # VCP 2-digit-hex
         for i in range(GET_ATTRIBUTES_RETRIES):
-            args = ['--brief', 'getvcp'] + vcp_code_list + self.id_key_args(vdu_id)
+            args = ['--brief', 'getvcp'] + vcp_code_list + self.id_key_args(vdu_number)
             try:
-                from_ddcutil = self.__run__(*args, sleep_multiplier=sleep_multiplier, log_id=vdu_id)
+                from_ddcutil = self.__run__(*args, sleep_multiplier=sleep_multiplier, log_id=vdu_number)
                 unordered_results: Dict[str, str] = {}
                 for line in from_ddcutil.stdout.split(b"\n"):
                     line_utf8 = line.decode('utf-8', errors='surrogateescape') + '\n'
@@ -1422,7 +1422,7 @@ class DdcUtil:
                     if vcp_code not in unordered_results:
                         log_warning(f"getvcp '{vcp_code}' missing result, try {i + 1}, will try again.")
                         continue
-                    value_max_pair: Tuple[str, str] | None = self.__parse_value(vdu_id, vcp_code, unordered_results[vcp_code])
+                    value_max_pair: Tuple[str, str] | None = self.__parse_value(vdu_number, vcp_code, unordered_results[vcp_code])
                     if value_max_pair is None:
                         log_warning(
                             f"getvcp '{vcp_code}' parse failed '{unordered_results[vcp_code]}', try {i + 1}, will try again.")
@@ -1436,7 +1436,7 @@ class DdcUtil:
             time.sleep(2)
         return []
 
-    def __parse_value(self, vdu_id: str, vcp_code: str, result: str) -> Tuple[str, str] | None:
+    def __parse_value(self, vdu_number: str, vcp_code: str, result: str) -> Tuple[str, str] | None:
         value_pattern = re.compile(r'VCP ' + vcp_code + r' ([A-Z]+) (.+)\n')
         c_pattern = re.compile(r'([0-9]+) ([0-9]+)')
         snc_pattern = re.compile(r'x([0-9a-f]+)')
@@ -1458,7 +1458,7 @@ class DdcUtil:
                 if cnc_match is not None:
                     return '{:02x}'.format(int(cnc_match.group(3), 16) << 8 | int(cnc_match.group(4), 16)), '0'
             else:
-                raise TypeError(f'Unsupported VCP type {type_indicator} for monitor {vdu_id} vcp_code {vcp_code}')
+                raise TypeError(f'Unsupported VCP type {type_indicator} for monitor {vdu_number} vcp_code {vcp_code}')
         return None
 
 
@@ -1998,11 +1998,11 @@ class VduController(QObject):
             self.config = config
 
     def get_vdu_description(self) -> str:
-        """Return a unique description using the serial-number (if defined) or vdu_id."""
+        """Return a unique description using the serial-number (if defined) or vdu_number."""
         return self.model_name + ':' + (self.serial_number if len(self.serial_number) != 0 else self.vdu_number)
 
     def get_full_id(self) -> Tuple[str, str, str, str]:
-        """Return a tuple that defines this VDU: (vdu_id, manufacturer, model, serial-number)."""
+        """Return a tuple that defines this VDU: (vdu_number, manufacturer, model, serial-number)."""
         return self.vdu_number, self.manufacturer, self.model_name, self.serial_number
 
     def get_attributes(self, attributes: List[str]) -> List[Tuple[str, str]]:
@@ -2920,9 +2920,9 @@ class Preset:
         if self.path.exists():
             os.remove(self.path.as_posix())
 
-    def get_brightness(self, vdu_id: str) -> int:
-        if vdu_id in self.preset_ini:
-            return self.preset_ini.getint(vdu_id, 'brightness', fallback=-1)
+    def get_brightness(self, vdu_stable_id: str) -> int:
+        if vdu_stable_id in self.preset_ini:
+            return self.preset_ini.getint(vdu_stable_id, 'brightness', fallback=-1)
         return -1
 
     def get_solar_elevation(self) -> SolarElevationKey | None:
@@ -5046,7 +5046,7 @@ class LuxProfileChart(QLabel):
         self.range_restrictions = lux_dialog.range_restrictions
         self.current_lux = 0
         self.snap_to_margin = lux_dialog.lux_config.getint('lux-ui', 'snap-to-margin-pixels', fallback=4)
-        self.current_vdu_id = '' if len(lux_dialog.lux_profile_data) == 0 else list(lux_dialog.lux_profile_data.keys())[0]
+        self.current_vdu_sid = '' if len(lux_dialog.lux_profile_data) == 0 else list(lux_dialog.lux_profile_data.keys())[0]
         self.pixmap_width = 600
         self.pixmap_height = 550
         self.plot_width, self.plot_height = self.pixmap_width - 200, self.pixmap_height - 150
@@ -5092,12 +5092,12 @@ class LuxProfileChart(QLabel):
         painter.drawText(0, 0, tr("Brightness %"))
         painter.restore()
 
-        if self.current_vdu_id == '':  # Nothing to draw
+        if self.current_vdu_sid == '':  # Nothing to draw
             painter.end()
             self.setPixmap(pixmap)
             return
 
-        min_v, max_v = self.range_restrictions[self.current_vdu_id]   # Draw range restrictions (if not 0..100)
+        min_v, max_v = self.range_restrictions[self.current_vdu_sid]   # Draw range restrictions (if not 0..100)
         if min_v > 0:
             painter.setPen(QPen(Qt.red, std_line_width // 2, Qt.DashLine))
             cutoff = self.y_origin - self.y_from_percent(min_v)
@@ -5108,12 +5108,12 @@ class LuxProfileChart(QLabel):
             painter.drawLine(self.x_origin, cutoff, self.x_origin + self.plot_width + 25, cutoff)
 
         point_markers = []  # Draw profile lines/histogram per vdu, current_profile last/on-top, collect point marker locations
-        for vdu_id, vdu_data in [(vid, data) for vid, data in self.profile_data.items() if vid != self.current_vdu_id] + \
-                                [(self.current_vdu_id, self.profile_data[self.current_vdu_id])]:
+        for vdu_sid, vdu_data in [(vid, data) for vid, data in self.profile_data.items() if vid != self.current_vdu_sid] + \
+                                [(self.current_vdu_sid, self.profile_data[self.current_vdu_sid])]:
             last_x, last_y = 0, 0
-            if vdu_id not in self.vdu_chart_colors:
+            if vdu_sid not in self.vdu_chart_colors:
                 continue  # must have been turned off
-            vdu_color_num = self.vdu_chart_colors[vdu_id]
+            vdu_color_num = self.vdu_chart_colors[vdu_sid]
             vdu_line_color = QColor(vdu_color_num)
             histogram_bar_color = QColor(vdu_line_color)
             histogram_bar_color.setAlpha(50)
@@ -5123,14 +5123,14 @@ class LuxProfileChart(QLabel):
                     brightness = point_data.brightness
                 else:
                     preset = self.main_app.find_preset_by_name(point_data.preset_name)
-                    brightness = preset.get_brightness(vdu_id) if preset is not None else -1
+                    brightness = preset.get_brightness(vdu_sid) if preset is not None else -1
                 if brightness >= 0:
                     x = self.x_origin + self.x_from_lux(lux)
                     y = self.y_origin - self.y_from_percent(brightness)
                     if last_x and last_y:  # Join the previous and current point with a line
                         painter.setPen(QPen(vdu_line_color, std_line_width))
                         painter.drawLine(last_x, last_y, x, y)
-                    if self.current_vdu_id == vdu_id:  # Special handling for the current/selected VDU
+                    if self.current_vdu_sid == vdu_sid:  # Special handling for the current/selected VDU
                         point_markers.append((point_data, x, y, lux, brightness, vdu_color_num))  # Save data for drawing markers
                     if last_x and last_y:  # draw histogram-step, or if interpolating, the area under the line
                         painter.setBrush(histogram_bar_color)
@@ -5166,10 +5166,10 @@ class LuxProfileChart(QLabel):
                 y = self.y_from_percent(brightness)
                 painter.drawLine(x_current_lux - 2, self.y_origin - y, x_current_lux + 2, self.y_origin - y)
             current_brightness_pointer = [(0, 0), (-32, 16), (-32, -16)]  # Indicate current brightness at current lux
-            for vdu_id, brightness in self.lux_dialog.vdu_current_brightness.items():
-                if vdu_id not in self.vdu_chart_colors:
+            for vdu_sid, brightness in self.lux_dialog.vdu_current_brightness.items():
+                if vdu_sid not in self.vdu_chart_colors:
                     continue  # must have been turned off
-                vdu_color_num = self.vdu_chart_colors[vdu_id]
+                vdu_color_num = self.vdu_chart_colors[vdu_sid]
                 vdu_line_color = QColor(vdu_color_num)
                 y = self.y_origin - self.y_from_percent(brightness)
                 painter.setPen(QPen(Qt.black, 1))  # QPen(vdu_line_color, std_line_width // 2, Qt.SolidLine))
@@ -5182,7 +5182,7 @@ class LuxProfileChart(QLabel):
         if margin <= mouse_x <= self.width() - margin and margin <= mouse_y <= self.height() - margin:
             x = clamp(mouse_x, self.x_origin, self.x_origin + self.plot_width)
             y = clamp(mouse_y, self.y_origin - self.plot_height, self.y_origin)
-            match = self.find_close_to(x - self.x_origin, self.y_origin - y, self.current_vdu_id)
+            match = self.find_close_to(x - self.x_origin, self.y_origin - y, self.current_vdu_sid)
             if match[0] is not None:  # Existing Point: snap to position for deleting the point under the mouse.
                 x, y, lux, brightness, point_data = match[0] + self.x_origin, self.y_origin - match[1], match[2], match[3], match[4]
                 point_preset_name = point_data.preset_name if point_data.preset_name is not None else ''
@@ -5221,7 +5221,7 @@ class LuxProfileChart(QLabel):
         self.setPixmap(pixmap)
 
     def set_current_profile(self, name: str) -> None:
-        self.current_vdu_id = name
+        self.current_vdu_sid = name
         self.create_plot()
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
@@ -5236,9 +5236,9 @@ class LuxProfileChart(QLabel):
         event.accept()
 
     def lux_point_edit(self, x, y) -> bool:
-        assert self.current_vdu_id != ''
-        vdu_data = self.profile_data[self.current_vdu_id]
-        _, _, existing_lux, existing_percent, existing_point = self.find_close_to(x, y, self.current_vdu_id)
+        assert self.current_vdu_sid != ''
+        vdu_data = self.profile_data[self.current_vdu_sid]
+        _, _, existing_lux, existing_percent, existing_point = self.find_close_to(x, y, self.current_vdu_sid)
         if existing_lux is not None:  # Remove
             if existing_point.preset_name is None:
                 vdu_data.remove(existing_point)
@@ -5253,12 +5253,12 @@ class LuxProfileChart(QLabel):
         point = self.find_preset_point_close_to(x)
         if point is not None:  # Delete
             self.preset_points.remove(point)
-            for vdu_id, profile in self.profile_data.items():
+            for vdu_sid, profile in self.profile_data.items():
                 for profile_point in profile:
                     if profile_point == point:  # Note: these will not be the same object
                         # May not have a preset_name if not yet committed/saved.
                         preset = self.main_app.find_preset_by_name(point.preset_name) if point.preset_name else None
-                        preset_brightness = preset.get_brightness(vdu_id) if preset is not None else -1
+                        preset_brightness = preset.get_brightness(vdu_sid) if preset is not None else -1
                         if preset_brightness >= 0:  # Convert to normal point - as a convenience for the user
                             profile_point.preset_name = None
                             profile_point.brightness = preset_brightness
@@ -5290,16 +5290,16 @@ class LuxProfileChart(QLabel):
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         self.create_plot()
 
-    def find_close_to(self, x: int, y: int, vdu_id: str) -> Tuple:
+    def find_close_to(self, x: int, y: int, vdu_sid: str) -> Tuple:
         r = self.snap_to_margin
-        for point_data in self.profile_data[vdu_id]:
+        for point_data in self.profile_data[vdu_sid]:
             existing_lux = point_data.lux
             if point_data.preset_name is None:
                 existing_percent = point_data.brightness
             else:
                 preset = self.main_app.find_preset_by_name(point_data.preset_name)
                 if preset is not None:
-                    existing_percent = preset.get_brightness(vdu_id)
+                    existing_percent = preset.get_brightness(vdu_sid)
                 else:
                     continue  # Must have been deleted
             existing_x = self.x_from_lux(existing_lux)
@@ -5317,7 +5317,7 @@ class LuxProfileChart(QLabel):
 
     def percent_from_y(self, y) -> int:
         percent = round(100.0 * abs(y) / self.plot_height)
-        min_v, max_v = self.range_restrictions[self.current_vdu_id]
+        min_v, max_v = self.range_restrictions[self.current_vdu_sid]
         if percent > max_v:
             return max_v
         if percent < min_v:
@@ -5659,15 +5659,15 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                 self.status_message(f"{SUN_SYMBOL} {lux_summary_text} {PROCESSING_LUX_SYMBOL}", timeout=3000)
             # If interpolating, it may be that each VDU profile is closer to a different attached preset, if this happens,
             # chose the preset associated with the brightest value.
-            for vdu_stable_id in self.main_controller.get_vdu_stable_id_list():  # For each VDU, do one step of its profile
+            for vdu_sid in self.main_controller.get_vdu_stable_id_list():  # For each VDU, do one step of its profile
                 if self.stop_requested or self.unexpected_change:
                     return
                 # In case the lux reading changes, reevaluate target brightness every time...
                 profile_brightness, profile_preset_name = self.determine_brightness(
-                    vdu_stable_id, smoothed_lux,
+                    vdu_sid, smoothed_lux,
                     lux_config.get_vdu_lux_profile(
-                        vdu_stable_id, self.main_controller.get_range(vdu_stable_id, VDU_SUPPORTED_CONTROLS.brightness.vcp_code)))
-                if self.step_one_vdu(vdu_stable_id, profile_brightness, profile_preset_name, lux_summary_text, start_of_cycle):
+                        vdu_sid, self.main_controller.get_range(vdu_sid, VDU_SUPPORTED_CONTROLS.brightness.vcp_code)))
+                if self.step_one_vdu(vdu_sid, profile_brightness, profile_preset_name, lux_summary_text, start_of_cycle):
                     change_count += 1
             start_of_cycle = False
             time.sleep(self.step_pause_millis/1000.0)  # Let i2c settle down, then continue - TODO is this really necessary?
@@ -5685,15 +5685,15 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         else:  # No work done, no adjustment necessary
             self.status_message(f"{SUN_SYMBOL} {SUCCESS_SYMBOL}", timeout=3000)
 
-    def step_one_vdu(self, vdu_stable_id: str, profile_brightness: int, profile_preset_name: str | None,
+    def step_one_vdu(self, vdu_sid: str, profile_brightness: int, profile_preset_name: str | None,
                      lux_summary_text: str, first_step: bool) -> bool:
         # if profile_brightness is -1, the profile has an attached preset with no brightness, it may have been
         # attached to trigger non-brightness settings at a given lux value (triggered below, after the loop).
         if profile_brightness < 0:
             return False
-        if self.main_controller.has_vcp_code(vdu_stable_id, VDU_SUPPORTED_CONTROLS.brightness.vcp_code):  # can only adjust brightness controls
+        if self.main_controller.has_vcp_code(vdu_sid, VDU_SUPPORTED_CONTROLS.brightness.vcp_code):  # can only adjust brightness controls
             try:
-                current_brightness = int(self.main_controller.get_value(vdu_stable_id, VDU_SUPPORTED_CONTROLS.brightness.vcp_code)[0])
+                current_brightness = int(self.main_controller.get_value(vdu_sid, VDU_SUPPORTED_CONTROLS.brightness.vcp_code)[0])
                 diff = profile_brightness - current_brightness
                 # Check if already at the correct brightness.
                 if diff == 0:
@@ -5701,51 +5701,51 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                 # Check for interpolating, at the start, no Preset involved, and close enough to not bother with a change.
                 if self.interpolation_enabled and first_step and profile_preset_name is None and abs(diff) < self.sensitivity_percent:
                     self.status_message(f"{SUN_SYMBOL} {current_brightness}% {ALMOST_EQUAL_SYMBOL}"
-                                        f" {profile_brightness}% {vdu_stable_id} ({lux_summary_text})")
-                    log_info(f"LuxAutoWorker: {vdu_stable_id=} {current_brightness=} {profile_brightness=} ignored, too small")
+                                        f" {profile_brightness}% {vdu_sid} ({lux_summary_text})")
+                    log_info(f"LuxAutoWorker: {vdu_sid=} {current_brightness=} {profile_brightness=} ignored, too small")
                     return False
                 # Check if something else is changing the brightness, or maybe there was a ddcutil error
-                if vdu_stable_id in self.expected_brightness and self.expected_brightness[vdu_stable_id] != current_brightness:
-                    log_info(f"LuxAutoWorker: {vdu_stable_id=}: {current_brightness=}% != step value {self.expected_brightness[vdu_stable_id]}%" 
+                if vdu_sid in self.expected_brightness and self.expected_brightness[vdu_sid] != current_brightness:
+                    log_info(f"LuxAutoWorker: {vdu_sid=}: {current_brightness=}% != step value {self.expected_brightness[vdu_sid]}%" 
                              f" something else altered the brightness - stop adjusting for lux.")
-                    self.status_message(f"{SUN_SYMBOL} {ERROR_SYMBOL} {RAISED_HAND_SYMBOL} {vdu_stable_id}")
+                    self.status_message(f"{SUN_SYMBOL} {ERROR_SYMBOL} {RAISED_HAND_SYMBOL} {vdu_sid}")
                     self.unexpected_change = True
                     return False
                 # Definitely not-interpolating OR interpolating and brightness change is significant OR we have to activate a Preset
                 step_size = max(1, abs(diff) // self.convergence_divisor)  # TODO find a good heuristic
                 step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
                 new_brightness = current_brightness + step
-                self.main_controller.set_value(vdu_stable_id, VDU_SUPPORTED_CONTROLS.brightness.vcp_code, str(new_brightness))
-                self.expected_brightness[vdu_stable_id] = new_brightness
-                log_info(f"LuxAutoWorker: Start stepping {vdu_stable_id=} {current_brightness=} to {profile_brightness=} "
+                self.main_controller.set_value(vdu_sid, VDU_SUPPORTED_CONTROLS.brightness.vcp_code, str(new_brightness))
+                self.expected_brightness[vdu_sid] = new_brightness
+                log_info(f"LuxAutoWorker: Start stepping {vdu_sid=} {current_brightness=} to {profile_brightness=} "
                          f" {profile_preset_name=} {lux_summary_text}") if first_step else None
                 self.status_message(
-                    f"{SUN_SYMBOL} {current_brightness}%{STEPPING_SYMBOL}{profile_brightness}% {vdu_stable_id}" +
+                    f"{SUN_SYMBOL} {current_brightness}%{STEPPING_SYMBOL}{profile_brightness}% {vdu_sid}" +
                     f" ({lux_summary_text}) {profile_preset_name if profile_preset_name is not None else ''}")
-                if self.consecutive_errors.get(vdu_stable_id, 0) > 0:
-                    log_info(f"LuxAutoWorker: ddcutil to {vdu_stable_id} succeeded after {self.consecutive_errors[vdu_stable_id]} errors.")
-                self.consecutive_errors[vdu_stable_id] = 0
+                if self.consecutive_errors.get(vdu_sid, 0) > 0:
+                    log_info(f"LuxAutoWorker: ddcutil to {vdu_sid} succeeded after {self.consecutive_errors[vdu_sid]} errors.")
+                self.consecutive_errors[vdu_sid] = 0
             except VduException as ve:
-                self.consecutive_errors[vdu_stable_id] = self.consecutive_errors.get(vdu_stable_id, 0) + 1
-                if self.consecutive_errors[vdu_stable_id] == 1:
-                    log_warning(f"LuxAutoWorker: Brightness error on {vdu_stable_id}, will sleep and try again: {ve}", -1)
-                    self.status_message(tr("{} Failed to adjust {}, will try again").format(ERROR_SYMBOL, vdu_stable_id))
+                self.consecutive_errors[vdu_sid] = self.consecutive_errors.get(vdu_sid, 0) + 1
+                if self.consecutive_errors[vdu_sid] == 1:
+                    log_warning(f"LuxAutoWorker: Brightness error on {vdu_sid}, will sleep and try again: {ve}", -1)
+                    self.status_message(tr("{} Failed to adjust {}, will try again").format(ERROR_SYMBOL, vdu_sid))
                     time.sleep(2)  # TODO do something better than this to make the message visible.
-                elif self.consecutive_errors[vdu_stable_id] > 1:
+                elif self.consecutive_errors[vdu_sid] > 1:
                     self.status_message(tr("{} Failed to adjust {}, {} errors so far. Sleeping {} minutes.").format(
-                        ERROR_SYMBOL, vdu_stable_id, self.consecutive_errors[vdu_stable_id],
+                        ERROR_SYMBOL, vdu_sid, self.consecutive_errors[vdu_sid],
                         self.main_controller.get_lux_auto_controller().get_lux_config().get_interval_minutes()))  # TODO seems dodgy
                     time.sleep(2)  # TODO do something better than this to make the message visible.
-                    if self.consecutive_errors[vdu_stable_id] == 2 or log_debug_enabled:
-                        log_info(f"LuxAutoWorker: {self.consecutive_errors[vdu_stable_id]} errors on {vdu_stable_id}, let this lux cycle end.")
+                    if self.consecutive_errors[vdu_sid] == 2 or log_debug_enabled:
+                        log_info(f"LuxAutoWorker: {self.consecutive_errors[vdu_sid]} errors on {vdu_sid}, let this lux cycle end.")
                     return False  # Report no changes, this allows the current adjustment cycle to end, will try again next cycle.
         return True
 
-    def determine_brightness(self, vdu_id: str, smoothed_lux: int, lux_profile: List[LuxPoint]) -> Tuple[int, str | None]:
+    def determine_brightness(self, vdu_sid: str, smoothed_lux: int, lux_profile: List[LuxPoint]) -> Tuple[int, str | None]:
         matched_point = LuxPoint(0, 0)
         result_brightness = 0
         preset_name = None
-        for profile_point in self.create_complete_profile(lux_profile, vdu_id):
+        for profile_point in self.create_complete_profile(lux_profile, vdu_sid):
             # Moving up the lux steps, seeking the step below smoothed_lux
             if profile_point.brightness >= 0:
                 if smoothed_lux >= profile_point.lux:  # Possible result, there may be something higher, keep going...
@@ -5763,8 +5763,8 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         if preset_name is not None:   # Lookup preset brightness. Might be -1 if the preset doesn't have a brightness for this VDU
             presets = self.main_controller.get_presets()  # TODO check
             if preset_name in presets:  # Change the result to the preset's current brightness value
-                result_brightness = presets[preset_name].get_brightness(vdu_id)
-        log_debug(f"LuxAutoWorker: determine_brightness {vdu_id=} {result_brightness=}% {preset_name=}") if log_debug_enabled else None
+                result_brightness = presets[preset_name].get_brightness(vdu_sid)
+        log_debug(f"LuxAutoWorker: determine_brightness {vdu_sid=} {result_brightness=}% {preset_name=}") if log_debug_enabled else None
         return result_brightness, preset_name  # Brightness will be -1 if attached preset has no brightness
 
     def interpolate_brightness(self, smoothed_lux: int, current_point: LuxPoint, next_point: LuxPoint) -> int:
@@ -5791,7 +5791,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
             return next_point.preset_name
         return None
 
-    def create_complete_profile(self, profile_points: List[LuxPoint], vdu_id: str):
+    def create_complete_profile(self, profile_points: List[LuxPoint], vdu_sid: str):
         completed_profile = [LuxPoint(0, 0)]  # make sure we have a point at the origin of the scale
         for lux_point in profile_points:
             if lux_point.preset_name is None:
@@ -5799,7 +5799,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
             else:  # Lookup the Preset's brightness for this particular VDU - get latest/current value from the actual Preset.
                 preset = self.main_controller.find_preset_by_name(lux_point.preset_name)
                 # Profile brightness for this VDU will be -1 if this VDU's brightness-control doesn't participate in the Preset.
-                completed_profile.append(LuxPoint(lux_point.lux, preset.get_brightness(vdu_id), lux_point.preset_name))
+                completed_profile.append(LuxPoint(lux_point.lux, preset.get_brightness(vdu_sid), lux_point.preset_name))
         completed_profile.append(LuxPoint(100000, 100))  # make sure we hava point at the end of the scale.
         return completed_profile
 
@@ -6079,19 +6079,19 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         QApplication.processEvents()  # Next bit is slow
 
         connected_id_list = []   # List of all currently connected VDU's
-        for index, vdu_stable_id in enumerate(self.main_controller.get_vdu_stable_id_list()):
-            if self.main_controller.has_vcp_code(vdu_stable_id, VDU_SUPPORTED_CONTROLS.brightness.vcp_code):  # VDU_SUPPORTED_CONTROLS.brightness.vcp_code in vdu_controller.capabilities:
-                self.range_restrictions[vdu_stable_id] = self.main_controller.get_range(
-                    vdu_stable_id, VDU_SUPPORTED_CONTROLS.brightness.vcp_code)
+        for index, vdu_sid in enumerate(self.main_controller.get_vdu_stable_id_list()):
+            if self.main_controller.has_vcp_code(vdu_sid, VDU_SUPPORTED_CONTROLS.brightness.vcp_code):  # VDU_SUPPORTED_CONTROLS.brightness.vcp_code in vdu_controller.capabilities:
+                self.range_restrictions[vdu_sid] = self.main_controller.get_range(
+                    vdu_sid, VDU_SUPPORTED_CONTROLS.brightness.vcp_code)
                 try:
-                    self.vdu_current_brightness[vdu_stable_id] = int(
-                        self.main_controller.get_value(vdu_stable_id, VDU_SUPPORTED_CONTROLS.brightness.vcp_code)[0])
+                    self.vdu_current_brightness[vdu_sid] = int(
+                        self.main_controller.get_value(vdu_sid, VDU_SUPPORTED_CONTROLS.brightness.vcp_code)[0])
                 except VduException as ve:
-                    self.vdu_current_brightness[vdu_stable_id] = 0
+                    self.vdu_current_brightness[vdu_sid] = 0
                     log_warning("VDU may not be available:", str(ve), trace=True)
-            self.lux_profile_data[vdu_stable_id] = self.lux_config.get_vdu_lux_profile(
-                vdu_stable_id, self.main_controller.get_range(vdu_stable_id, VDU_SUPPORTED_CONTROLS.brightness.vcp_code))
-            connected_id_list.append(vdu_stable_id)
+            self.lux_profile_data[vdu_sid] = self.lux_config.get_vdu_lux_profile(
+                vdu_sid, self.main_controller.get_range(vdu_sid, VDU_SUPPORTED_CONTROLS.brightness.vcp_code))
+            connected_id_list.append(vdu_sid)
         self.preset_points.clear()  # Edit out deleted presets by starting from scratch
         for preset_point in self.lux_config.get_preset_points():
             if preset_point.preset_name is not None and self.main_controller.find_preset_by_name(preset_point.preset_name):
@@ -6110,15 +6110,15 @@ class LuxDialog(QDialog, DialogSingletonMixin):
                 self.profile_selector.clear()
                 random.seed(int(self.lux_config.get("lux-ui", "vdu_color_seed", fallback='0x543fff'), 16))
                 self.vdu_chart_color.clear()
-                for index, vdu_stable_id in enumerate(self.main_controller.get_vdu_stable_id_list()):
+                for index, vdu_sid in enumerate(self.main_controller.get_vdu_stable_id_list()):
                     color = QColor.fromHsl(int(index * 137.508) % 255, random.randint(64, 128), random.randint(192, 200))
-                    self.vdu_chart_color[vdu_stable_id] = color
+                    self.vdu_chart_color[vdu_sid] = color
                     color_icon = create_icon_from_svg_bytes(SWATCH_ICON_SOURCE.replace(b"#ffffff", bytes(color.name(), 'utf-8')))
                     self.profile_selector.addItem(
-                        color_icon, self.main_controller.get_vdu_description(vdu_stable_id), userData=vdu_stable_id)
-                    if vdu_stable_id == candidate_id:
+                        color_icon, self.main_controller.get_vdu_description(vdu_sid), userData=vdu_sid)
+                    if vdu_sid == candidate_id:
                         self.profile_selector.setCurrentIndex(index)
-                        self.profile_plot.current_vdu_id = candidate_id
+                        self.profile_plot.current_vdu_sid = candidate_id
         finally:
             self.profile_selector.blockSignals(False)
         self.configure_ui(self.main_controller.get_lux_auto_controller().lux_meter)
@@ -6181,9 +6181,9 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             self.status_message(tr("Brightness auto adjustment is disabled."))  # Remind user why auto is not working
 
     def save_profiles(self) -> None:
-        for vdu_id, profile in self.profile_plot.profile_data.items():
+        for vdu_sid, profile in self.profile_plot.profile_data.items():
             data = [(lux_point.lux, lux_point.brightness) for lux_point in profile if lux_point.preset_name is None]
-            self.lux_config.set('lux-profile', vdu_id, repr(data))
+            self.lux_config.set('lux-profile', vdu_sid, repr(data))
         preset_data = [(lux_point.lux, lux_point.preset_name) for lux_point in self.profile_plot.preset_points]
         self.lux_config.set('lux-presets', 'lux-preset-points', repr(preset_data))
         self.apply_settings(True)
