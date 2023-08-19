@@ -1199,6 +1199,9 @@ class DdcUtilDisplayNotFound(Exception):
     pass
 
 
+VcpValue = namedtuple('VcpValue', ['current', 'max', 'vcp_type'])
+
+
 class DdcUtil:
     """
     Interface to the command line ddcutil Display Data Channel Utility for interacting with VDU's.
@@ -1346,7 +1349,7 @@ class DdcUtil:
     def get_type(self, vcp_code) -> str | None:
         return self.vcp_type_map[vcp_code] if vcp_code in self.vcp_type_map else None
 
-    def get_attribute(self, vdu_number: str, vcp_code: str, sleep_multiplier: float | None = None) -> Tuple[str, str]:
+    def get_attribute(self, vdu_number: str, vcp_code: str, sleep_multiplier: float | None = None) -> VcpValue:
         """
         Given a VDU id and vcp_code, retrieve the attribute's current value from the VDU.
 
@@ -1391,7 +1394,7 @@ class DdcUtil:
                     self.supported_codes[vcp_code] = vcp_name
         return self.supported_codes
 
-    def get_attributes(self, vdu_number: str, vcp_code_list: List[str], sleep_multiplier: float | None = None) -> List[Tuple[str, str]]:
+    def get_attributes(self, vdu_number: str, vcp_code_list: List[str], sleep_multiplier: float | None = None) -> List[VcpValue]:
         if self.version[0] > 1 or self.version[1] >= 3:
             return self._get_attributes_implementation(vdu_number, vcp_code_list, sleep_multiplier)
         else:
@@ -1419,17 +1422,17 @@ class DdcUtil:
                     if vcp_code_match is not None:
                         unordered_results[vcp_code_match.group(1)] = line_utf8
                 # Order results into vcp_code_list order:
-                result_list: List[Tuple[str, str]] = []
+                result_list: List[VcpValue] = []
                 for vcp_code in vcp_code_list:
                     if vcp_code not in unordered_results:
                         log_warning(f"getvcp '{vcp_code}' missing result, try {i + 1}, will try again.")
                         continue
-                    value_max_pair: Tuple[str, str] | None = self.__parse_value(vdu_number, vcp_code, unordered_results[vcp_code])
-                    if value_max_pair is None:
+                    value: VcpValue | None = self.__parse_value(vdu_number, vcp_code, unordered_results[vcp_code])
+                    if value is None:
                         log_warning(
                             f"getvcp '{vcp_code}' parse failed '{unordered_results[vcp_code]}', try {i + 1}, will try again.")
                         continue
-                    result_list.append(value_max_pair)
+                    result_list.append(value)
                 return result_list
             except subprocess.SubprocessError as e:
                 if i + 1 == GET_ATTRIBUTES_RETRIES:
@@ -1438,7 +1441,7 @@ class DdcUtil:
             time.sleep(2)
         return []
 
-    def __parse_value(self, vdu_number: str, vcp_code: str, result: str) -> Tuple[str, str] | None:
+    def __parse_value(self, vdu_number: str, vcp_code: str, result: str) -> VcpValue | None:
         value_pattern = re.compile(r'VCP ' + vcp_code + r' ([A-Z]+) (.+)\n')
         c_pattern = re.compile(r'([0-9]+) ([0-9]+)')
         snc_pattern = re.compile(r'x([0-9a-f]+)')
@@ -1450,15 +1453,16 @@ class DdcUtil:
             if type_indicator == CONTINUOUS_TYPE:
                 c_match = c_pattern.match(value_match.group(2))
                 if c_match is not None:
-                    return c_match.group(1), c_match.group(2)
+                    return VcpValue(current=c_match.group(1), max=c_match.group(2), vcp_type=CONTINUOUS_TYPE)
             elif type_indicator == SIMPLE_NON_CONTINUOUS_TYPE:
                 snc_match = snc_pattern.match(value_match.group(2))
                 if snc_match is not None:
-                    return snc_match.group(1), '0'
+                    return VcpValue(current=snc_match.group(1), max='0', vcp_type=SIMPLE_NON_CONTINUOUS_TYPE)
             elif type_indicator == COMPLEX_NON_CONTINUOUS_TYPE:
                 cnc_match = cnc_pattern.match(value_match.group(2))
                 if cnc_match is not None:
-                    return '{:02x}'.format(int(cnc_match.group(3), 16) << 8 | int(cnc_match.group(4), 16)), '0'
+                    return VcpValue(current='{:02x}'.format(int(cnc_match.group(3), 16) << 8 | int(cnc_match.group(4), 16)),
+                                    max='0', vcp_type=COMPLEX_NON_CONTINUOUS_TYPE)
             else:
                 raise TypeError(f'Unsupported VCP type {type_indicator} for monitor {vdu_number} vcp_code {vcp_code}')
         return None
@@ -1522,44 +1526,35 @@ class DialogSingletonMixin:
         return None
 
 
-class VduGuiSupportedControls:
-    """Maps of controls supported by name on the command line and in config files."""
-    by_code = {
-        '10': VcpCapability('10', QT_TR_NOOP('brightness'), 'C', icon_source=BRIGHTNESS_SVG, enabled=True, can_transition=True),
-        '12': VcpCapability('12', QT_TR_NOOP('contrast'), 'C', icon_source=CONTRAST_SVG, enabled=True, can_transition=True),
-        '62': VcpCapability('62', QT_TR_NOOP('audio volume'), 'C', icon_source=VOLUME_SVG, can_transition=True),
-        '8D': VcpCapability('8D', QT_TR_NOOP('audio mute'), 'SNC', icon_source=VOLUME_SVG),
-        '8F': VcpCapability('8F', QT_TR_NOOP('audio treble'), 'C', icon_source=VOLUME_SVG, can_transition=True),
-        '91': VcpCapability('91', QT_TR_NOOP('audio bass'), 'C', icon_source=VOLUME_SVG, can_transition=True),
-        '64': VcpCapability('91', QT_TR_NOOP('audio mic volume'), 'C', icon_source=VOLUME_SVG, can_transition=True),
-        '60': VcpCapability('60', QT_TR_NOOP('input source'), 'SNC', causes_config_change=True),
-        'D6': VcpCapability('D6', QT_TR_NOOP('power mode'), 'SNC', causes_config_change=True),
-        'CC': VcpCapability('CC', QT_TR_NOOP('OSD language'), 'SNC'),
-        '0C': VcpCapability('0C', QT_TR_NOOP('color temperature'), 'CNC', icon_source=COLOR_TEMPERATURE_SVG, enabled=True),
-    }
+# Enabling this would enable anything supported by ddcutil - but that isn't safe for the hardware
+# given the weird settings that appear to be available and the sometimes dodgy VDU-vendor DDC
+# implementations.  Plus the user might not be able to reset to factory for some of them?
+SUPPORT_ALL_VCP = False
 
-    # Purely here to force inclusion of additional messages in the output of pylupdate5 (internationalisation).
-    aliases = {'audio volume': [QT_TR_NOOP('audio speaker volume'), ], }
+BRIGHTNESS_VCP_CODE = BRT = '10'
+CON = CONTINUOUS_TYPE
+SNC = SIMPLE_NON_CONTINUOUS_TYPE
+CNC = COMPLEX_NON_CONTINUOUS_TYPE
 
-    by_arg_name = {c.property_name(): c for c in by_code.values()}
-    brightness = by_code['10']
-    ddcutil_supported = None
+# Maps of controls supported by name on the command line and in config files.
+SUPPORTED_VCP_BY_CODE = {
+    **{code: VcpCapability(code, name) for code, name in (DdcUtil().get_supported_vcp_codes().items() if SUPPORT_ALL_VCP else [])},
+    **{
+        '10': VcpCapability(BRT, QT_TR_NOOP('brightness'), CON, icon_source=BRIGHTNESS_SVG, enabled=True, can_transition=True),
+        '12': VcpCapability('12', QT_TR_NOOP('contrast'), CON, icon_source=CONTRAST_SVG, enabled=True, can_transition=True),
+        '62': VcpCapability('62', QT_TR_NOOP('audio volume'), CON, icon_source=VOLUME_SVG, can_transition=True),
+        '8D': VcpCapability('8D', QT_TR_NOOP('audio mute'), SNC, icon_source=VOLUME_SVG),
+        '8F': VcpCapability('8F', QT_TR_NOOP('audio treble'), CON, icon_source=VOLUME_SVG, can_transition=True),
+        '91': VcpCapability('91', QT_TR_NOOP('audio bass'), CON, icon_source=VOLUME_SVG, can_transition=True),
+        '64': VcpCapability('91', QT_TR_NOOP('audio mic volume'), CON, icon_source=VOLUME_SVG, can_transition=True),
+        '60': VcpCapability('60', QT_TR_NOOP('input source'), SNC, causes_config_change=True),
+        'D6': VcpCapability('D6', QT_TR_NOOP('power mode'), SNC, causes_config_change=True),
+        'CC': VcpCapability('CC', QT_TR_NOOP('OSD language'), SNC),
+        '0C': VcpCapability('0C', QT_TR_NOOP('color temperature'), CON, icon_source=COLOR_TEMPERATURE_SVG, enabled=True),
+    }}
 
-    def __init__(self) -> None:
-        # Enabling this would enable anything supported by ddcutil - but that isn't safe for the hardware
-        # given the weird settings that appear to be available and the sometimes dodgy VDU-vendor DDC
-        # implementations.  Plus the user might not be able to reset to factory for some of them?
-        if False and self.ddcutil_supported is None:  # DISABLED ON PURPOSE - NOT SAFE
-            ddcutil = DdcUtil()
-            self.ddcutil_supported = ddcutil.get_supported_vcp_codes()
-            for code, name in self.ddcutil_supported.items():
-                if code not in self.by_code:
-                    self.by_code[code] = VcpCapability(code, name)
-                    self.by_arg_name = {c.property_name(): c for c in self.by_code.values()}
+SUPPORTED_VCP_BY_PROPERTY_NAME = {c.property_name(): c for c in SUPPORTED_VCP_BY_CODE.values()}
 
-
-VDU_SUPPORTED_CONTROLS = VduGuiSupportedControls()
-BRIGHTNESS_VCP_CODE = VDU_SUPPORTED_CONTROLS.brightness.vcp_code
 
 class GeoLocation:
     def __init__(self, latitude: float, longitude: float, place_name: str | None) -> None:
@@ -1715,7 +1710,7 @@ class VduControlsConfig:
         self.ini_content[QT_TR_NOOP('ddcutil-parameters')] = {}
         self.ini_content[QT_TR_NOOP('ddcutil-capabilities')] = {}
 
-        for item in VDU_SUPPORTED_CONTROLS.by_code.values():
+        for item in SUPPORTED_VCP_BY_CODE.values():
             self.ini_content['vdu-controls-widgets'][item.property_name()] = 'yes' if item.enabled else 'no'
 
         self.ini_content['vdu-controls-widgets']['enable-vcp-codes'] = ''
@@ -1724,7 +1719,7 @@ class VduControlsConfig:
 
         if default_enabled_vcp_codes is not None:
             for code in default_enabled_vcp_codes:
-                if code in VDU_SUPPORTED_CONTROLS.by_code:
+                if code in SUPPORTED_VCP_BY_CODE:
                     self.enable_supported_vcp_code(code)
                 else:
                     self.enable_unsupported_vcp_code(code)
@@ -1738,11 +1733,13 @@ class VduControlsConfig:
     def restrict_to_actual_capabilities(self, vdu_capabilities: Dict[str, VcpCapability]) -> None:
         for option_name in self.ini_content['vdu-controls-widgets']:
             if self.get_config_option(option_name).conf_type == ConfType.BOOL:
-                if option_name in VDU_SUPPORTED_CONTROLS.by_arg_name and \
-                        VDU_SUPPORTED_CONTROLS.by_arg_name[option_name].vcp_code not in vdu_capabilities:
+                if option_name in SUPPORTED_VCP_BY_PROPERTY_NAME and \
+                        SUPPORTED_VCP_BY_PROPERTY_NAME[option_name].vcp_code not in vdu_capabilities:
                     del self.ini_content['vdu-controls-widgets'][option_name]
+                    log_info(f"Removed {self.config_name} {option_name} - not supported by VDU")
                 elif option_name.startswith('unsupported-') and option_name[len('unsupported-'):] not in vdu_capabilities:
                     del self.ini_content['vdu-controls-widgets'][option_name]
+                    log_info(f"Removed {self.config_name} {option_name} - not supported by VDU")
 
     def get_config_name(self) -> str:
         return self.config_name
@@ -1769,18 +1766,18 @@ class VduControlsConfig:
         self.ini_content['ddcutil-capabilities']['capabilities-override'] = alt_text.replace("%", "%%")
 
     def enable_supported_vcp_code(self, vcp_code: str) -> None:
-        self.ini_content['vdu-controls-widgets'][VDU_SUPPORTED_CONTROLS.by_code[vcp_code].property_name()] = 'yes'
+        self.ini_content['vdu-controls-widgets'][SUPPORTED_VCP_BY_CODE[vcp_code].property_name()] = 'yes'
 
     def enable_unsupported_vcp_code(self, vcp_code: str) -> None:
         self.ini_content['vdu-controls-widgets'][f'unsupported-{vcp_code}'] = 'yes'
 
     def disable_supported_vcp_code(self, vcp_code: str) -> None:
-        self.ini_content['vdu-controls-widgets'][VDU_SUPPORTED_CONTROLS.by_code[vcp_code].property_name()] = 'no'
+        self.ini_content['vdu-controls-widgets'][SUPPORTED_VCP_BY_CODE[vcp_code].property_name()] = 'no'
 
     def get_all_enabled_vcp_codes(self) -> List[str]:
         # No very efficient
         enabled_vcp_codes = []
-        for control_name, control_def in VDU_SUPPORTED_CONTROLS.by_arg_name.items():
+        for control_name, control_def in SUPPORTED_VCP_BY_PROPERTY_NAME.items():
             if self.ini_content['vdu-controls-widgets'].getboolean(control_name, fallback=False):
                 enabled_vcp_codes.append(control_def.vcp_code)
         enable_codes_str = self.ini_content['vdu-controls-widgets']['enable-vcp-codes']
@@ -1867,10 +1864,10 @@ class VduControlsConfig:
         parser.add_argument('--detailed-help', default=False, action='store_true', help='Detailed help (in markdown format).')
         parser.add_argument('--about', default=False, action='store_true', help='about vdu_controls window')
         parser.add_argument('--show', default=[], action='append',
-                            choices=[vcp.property_name() for vcp in VDU_SUPPORTED_CONTROLS.by_code.values()],
+                            choices=[vcp.property_name() for vcp in SUPPORTED_VCP_BY_CODE.values()],
                             help='show specified control only (--show may be specified multiple times)')
         parser.add_argument('--hide', default=[], action='append',
-                            choices=[vcp.property_name() for vcp in VDU_SUPPORTED_CONTROLS.by_code.values()],
+                            choices=[vcp.property_name() for vcp in SUPPORTED_VCP_BY_CODE.values()],
                             help='hide/disable a control (--hide may be specified multiple times)')
         parser.add_argument('--enable-vcp-code', type=str, action='append',
                             help='enable controls for an unsupported vcp-code hex value (may be specified multiple times)')
@@ -1908,13 +1905,13 @@ class VduControlsConfig:
                 self.set_option_from_args(option, arg_values)
 
         if len(parsed_args.show) != 0:
-            for control_def in VDU_SUPPORTED_CONTROLS.by_arg_name.values():
+            for control_def in SUPPORTED_VCP_BY_CODE.values():
                 if control_def.property_name() in parsed_args.show:
                     self.enable_supported_vcp_code(control_def.vcp_code)
                 else:
                     self.disable_supported_vcp_code(control_def.vcp_code)
         if len(parsed_args.hide) != 0:
-            for control_def in VDU_SUPPORTED_CONTROLS.by_code.values():
+            for control_def in SUPPORTED_VCP_BY_CODE.values():
                 if control_def.property_name() in parsed_args.hide:
                     self.disable_supported_vcp_code(control_def.vcp_code)
 
@@ -1957,21 +1954,20 @@ class VduController(QObject):
         self.ddcutil = ddcutil
         self.vdu_exception_handler = vdu_exception_handler
         self.sleep_multiplier: float | None = default_config.get_sleep_multiplier()
-        default_enabled_vcp_codes = default_config.get_all_enabled_vcp_codes()
-        self.enabled_vcp_codes = default_enabled_vcp_codes
         self.vdu_model_id = proper_name(vdu_model_name.strip())
         self.capabilities_text: str | None = None
         self.config = None
+        enabled_vcp_codes = default_config.get_all_enabled_vcp_codes()
         for config_name in (self.vdu_stable_id, self.vdu_model_id):
             config_path = get_config_path(config_name)
             log_debug("checking for config file '" + config_path.as_posix() + "'") if log_debug_enabled else None
             if os.path.isfile(config_path) and os.access(config_path, os.R_OK):
-                config = VduControlsConfig(config_name, default_enabled_vcp_codes=default_enabled_vcp_codes)
+                config = VduControlsConfig(config_name) #, default_enabled_vcp_codes=default_enabled_vcp_codes)
                 config.parse_file(config_path)
                 if default_config.is_set(ConfOption.DEBUG_ENABLED):
                     config.debug_dump()
                 self.sleep_multiplier = config.get_sleep_multiplier()
-                self.enabled_vcp_codes = config.get_all_enabled_vcp_codes()
+                enabled_vcp_codes = config.get_all_enabled_vcp_codes()
                 self.capabilities_text = config.get_capabilities_alt_text()
                 self.config = config
                 break
@@ -1979,22 +1975,26 @@ class VduController(QObject):
             if option == VduController.IGNORE_VDU:
                 self.capabilities_text = ''
             elif option == VduController.ASSUME_STANDARD_CONTROLS:
-                self.enabled_vcp_codes = ASSUMED_CONTROLS_CONFIG_VCP_CODES
+                enabled_vcp_codes = ASSUMED_CONTROLS_CONFIG_VCP_CODES
                 self.capabilities_text = ASSUMED_CONTROLS_CONFIG_TEXT
             else:
                 self.capabilities_text = ddcutil.query_capabilities(vdu_number)
-        self.capabilities = self._parse_capabilities(self.capabilities_text)
+        self.capabilities_dict = self._parse_capabilities(self.capabilities_text)
+        # Find those capabilities supported by this VDU AND enabled in the GUI:
+        self.enabled_capabilities = [c for c in self.capabilities_dict.values() if c.vcp_code in enabled_vcp_codes]
+
         if self.config is None:
             # In memory only config - in case it's needed by a future config editor
-            self.config = VduControlsConfig(self.vdu_stable_id, default_enabled_vcp_codes=self.enabled_vcp_codes)
+            self.config = VduControlsConfig(self.vdu_stable_id,
+                                            default_enabled_vcp_codes=[c.vcp_code for c in self.enabled_capabilities])
             self.config.set_capabilities_alt_text(self.capabilities_text)
-        self.config.restrict_to_actual_capabilities(self.capabilities)
+        self.config.restrict_to_actual_capabilities(self.capabilities_dict)  # TODO Might be possible to make this redundant now.
 
     def write_template_config_files(self) -> None:
         """Write template config files to $HOME/.config/vdu_controls/"""
         for config_name in (self.vdu_stable_id, self.vdu_model_id):
             save_config_path = get_config_path(config_name)
-            config = VduControlsConfig(config_name, default_enabled_vcp_codes=self.enabled_vcp_codes)
+            config = VduControlsConfig(config_name, default_enabled_vcp_codes=[c.vcp_code for c in self.enabled_capabilities])
             config.set_capabilities_alt_text(self.capabilities_text if self.capabilities_text is not None else '')
             config.write_file(save_config_path)
             self.config = config
@@ -2017,7 +2017,7 @@ class VduController(QObject):
             raise VduException(vdu_description=self.get_vdu_description(), vcp_code=",".join(attributes), exception=e,
                                operation="get_attributes") from e
 
-    def get_attribute(self, vcp_code: str) -> Tuple[str, str]:
+    def get_attribute(self, vcp_code: str) -> VcpValue:
         try:
             # raise subprocess.SubprocessError("get_attribute")  # for testing
             return self.ddcutil.get_attribute(self.vdu_number, vcp_code, sleep_multiplier=self.sleep_multiplier)
@@ -2035,8 +2035,8 @@ class VduController(QObject):
                                operation="set_attribute") from e
 
     def get_range_restrictions(self, vcp_code, fallback: Tuple[int, int] | None = None) -> Tuple[int, int] | None:
-        if vcp_code in self.capabilities:
-            range_restriction = self.capabilities[vcp_code].values
+        if vcp_code in self.capabilities_dict:
+            range_restriction = self.capabilities_dict[vcp_code].values
             if len(range_restriction) != 0:
                 return int(range_restriction[1]), int(range_restriction[2])
         return fallback
@@ -2070,7 +2070,16 @@ class VduController(QObject):
                 vcp_name = feature_match.group(2)
                 values = parse_values(feature_match.group(3))
                 # Guess type from existence or not of value list
-                vcp_type = CONTINUOUS_TYPE if len(values) == 0 or values[0] == "%%Range%%" else GUI_NON_CONTINUOUS_TYPE
+                if len(values) == 0:
+                    vcp_type = CONTINUOUS_TYPE
+                    if vcp_code in SUPPORTED_VCP_BY_CODE:  # Override if we know better
+                        vcp_type = SUPPORTED_VCP_BY_CODE[vcp_code].vcp_type
+                elif values[0] == "%%Range%%":  # Special vdu_controls hacked config spec to specify range
+                    vcp_type = CONTINUOUS_TYPE
+                else:
+                    vcp_type = GUI_NON_CONTINUOUS_TYPE
+                if vcp_type == COMPLEX_NON_CONTINUOUS_TYPE or vcp_type == SIMPLE_NON_CONTINUOUS_TYPE:
+                    vcp_type = GUI_NON_CONTINUOUS_TYPE  # Treat them the same in the GUI
                 capability = VcpCapability(vcp_code, vcp_name, vcp_type=vcp_type, values=values, icon_source=None,
                                            can_transition=vcp_type == CONTINUOUS_TYPE)
                 feature_map[vcp_code] = capability
@@ -2556,8 +2565,8 @@ class VduControlBase(QWidget):
 
     def __change_vdu_attribute(self, new_value) -> None:
         self.controller.set_attribute(self.vcp_capability.vcp_code, new_value)
-        if self.vcp_capability.vcp_code in VDU_SUPPORTED_CONTROLS.by_code and \
-                VDU_SUPPORTED_CONTROLS.by_code[self.vcp_capability.vcp_code].causes_config_change:
+        if self.vcp_capability.vcp_code in SUPPORTED_VCP_BY_CODE and \
+                SUPPORTED_VCP_BY_CODE[self.vcp_capability.vcp_code].causes_config_change:
             self.connected_vdus_changed_signal.emit()
 
     def refresh_view(self) -> None:
@@ -2579,10 +2588,10 @@ class VduControlSlider(VduControlBase):
         layout = QHBoxLayout()
         self.setLayout(layout)
         self.svg_icon: QSvgWidget | None = None
-        if (vcp_capability.vcp_code in VDU_SUPPORTED_CONTROLS.by_code
-                and VDU_SUPPORTED_CONTROLS.by_code[vcp_capability.vcp_code].icon_source is not None):
+        if (vcp_capability.vcp_code in SUPPORTED_VCP_BY_CODE
+                and SUPPORTED_VCP_BY_CODE[vcp_capability.vcp_code].icon_source is not None):
             svg_icon = QSvgWidget()
-            svg_icon.load(handle_theme(VDU_SUPPORTED_CONTROLS.by_code[vcp_capability.vcp_code].icon_source))
+            svg_icon.load(handle_theme(SUPPORTED_VCP_BY_CODE[vcp_capability.vcp_code].icon_source))
             svg_icon.setFixedSize(50, 50)
             svg_icon.setToolTip(tr(vcp_capability.name))
             self.svg_icon = svg_icon
@@ -2639,23 +2648,22 @@ class VduControlSlider(VduControlBase):
 
         self.spinbox.valueChanged.connect(spinbox_value_changed)
 
-    def refresh_data(self, value: Tuple[str, str] | None = None) -> None:
+    def refresh_data(self, value: VcpValue | None = None) -> None:
         """Query the VDU for a new data value and cache it (maybe called from a task thread, so no GUI op's here)."""
         new_value_str, max_value_str = None, None
         for _ in range(SLIDER_REFRESH_RETRIES):
             try:
-                new_value_str, max_value_str = value if value is not None else self.controller.get_attribute(
-                    self.vcp_capability.vcp_code)
-                if self.max_value is None:
-                    # Validate as integer
-                    _, int_max = int(new_value_str), int(max_value_str)
-                    self.current_value, self.max_value = new_value_str, max_value_str
+                if value is None:
+                    value = self.controller.get_attribute(self.vcp_capability.vcp_code)
+                int(value.current)  # Validate as integer
+                if value.max != '0':
+                    int_max = int(value.max)
+                    self.current_value, self.max_value = value.current, value.max
                     if len(self.range_restriction) == 0:
                         self.spinbox.setRange(0, int_max)
                         self.slider.setRange(0, int_max)
                 else:
-                    int(new_value_str)
-                    self.current_value = new_value_str
+                    self.current_value = value.current
                 return
             except ValueError:
                 # Might be initializing at login - can cause transient errors due to X11 talking to
@@ -2681,7 +2689,7 @@ class VduControlSlider(VduControlBase):
     def event(self, event: QEvent) -> bool:
         # PalletChange happens after the new style sheet is in use.
         if event.type() == QEvent.PaletteChange:
-            icon_source = VDU_SUPPORTED_CONTROLS.by_code[self.vcp_capability.vcp_code].icon_source
+            icon_source = SUPPORTED_VCP_BY_CODE[self.vcp_capability.vcp_code].icon_source
             if icon_source is not None:
                 assert self.svg_icon is not None  # Because it must have been loaded from source earlier
                 self.svg_icon.load(handle_theme(icon_source))
@@ -2724,9 +2732,11 @@ class VduControlComboBox(VduControlBase):
         # Default to capitalized version of each word
         return ' '.join(w[:1].upper() + w[1:] for w in result.split(' '))
 
-    def refresh_data(self, value: Tuple[str, str] | None = None) -> None:
+    def refresh_data(self, value: VcpValue | None = None) -> None:
         """Query the VDU for a new data value and cache it (maybe called from a task thread, so no GUI op's here)."""
-        self.current_value, _ = value if value is not None else self.controller.get_attribute(self.vcp_capability.vcp_code)
+        if value is None:
+            value = self.controller.get_attribute(self.vcp_capability.vcp_code)
+        self.current_value = value.current
 
     def refresh_view(self) -> None:
         """Copy the internally cached current value onto the GUI view."""
@@ -2771,44 +2781,35 @@ class VduControlPanel(QWidget):
         self.vcp_controls: List[VduControlBase] = []
         self.vdu_exception_handler = vdu_exception_handler
 
-        for vcp_code in controller.enabled_vcp_codes:
-            if vcp_code in controller.capabilities:
-                control = None
-                capability = controller.capabilities[vcp_code]
-                if capability.vcp_type == CONTINUOUS_TYPE:
-                    try:
-                        control = VduControlSlider(controller, capability)
-                    except ValueError as valueError:
-                        alert = MessageBox(QMessageBox.Critical)
-                        alert.setText(str(valueError))
-                        alert.exec()
-                elif capability.vcp_type == GUI_NON_CONTINUOUS_TYPE:
-                    try:
-                        control = VduControlComboBox(controller, capability)
-                    except ValueError as valueError:
-                        alert = MessageBox(QMessageBox.Critical)
-                        alert.setText(valueError.args[0])
-                        alert.setInformativeText(
-                            tr('If you want to extend the set of permitted values, see the man page concerning '
-                               'VDU/VDU-model config files .').format(capability.vcp_code, capability.name))
-                        alert.exec()
-                else:
-                    raise TypeError(f'No GUI support for VCP type {capability.vcp_type} for vcp_code {vcp_code}')
-                if control is not None:
-                    control.connected_vdus_changed_signal.connect(self.connected_vdus_changed_signal)
-                    layout.addWidget(control)
-                    self.vcp_controls.append(control)
-            elif warnings:
-                missing_vcp = VDU_SUPPORTED_CONTROLS.by_code[
-                    vcp_code].name if vcp_code in VDU_SUPPORTED_CONTROLS.by_code else vcp_code
-                alert = MessageBox(QMessageBox.Warning)
-                alert.setText(
-                    tr('Monitor {} lacks a VCP control for {}.').format(
-                        controller.get_vdu_description(), tr(missing_vcp)))
-                alert.setInformativeText(tr('No read/write ability for vcp_code {}.').format(vcp_code))
-                alert.exec()
+        for capability in controller.enabled_capabilities:
+            control = None
+            if capability.vcp_type == CONTINUOUS_TYPE:
+                try:
+                    control = VduControlSlider(controller, capability)
+                except ValueError as valueError:
+                    alert = MessageBox(QMessageBox.Critical)
+                    alert.setText(str(valueError))
+                    alert.exec()
+            elif capability.vcp_type == GUI_NON_CONTINUOUS_TYPE:
+                try:
+                    control = VduControlComboBox(controller, capability)
+                except ValueError as valueError:
+                    alert = MessageBox(QMessageBox.Critical)
+                    alert.setText(valueError.args[0])
+                    alert.setInformativeText(
+                        tr('If you want to extend the set of permitted values, see the man page concerning '
+                           'VDU/VDU-model config files .').format(capability.vcp_code, capability.name))
+                    alert.exec()
+            else:
+                raise TypeError(f'No GUI support for VCP type {capability.vcp_type} for vcp_code {capability.vcp_code}')
+            if control is not None:
+                control.connected_vdus_changed_signal.connect(self.connected_vdus_changed_signal)
+                layout.addWidget(control)
+                self.vcp_controls.append(control)
+
         if len(self.vcp_controls) != 0:
             self.setLayout(layout)
+
         try:
             self.refresh_data()
             self.refresh_view()
@@ -3440,11 +3441,13 @@ class PresetTransitionState(Enum):
     INTERRUPTED = 4
 
 
+TransitionValueKey = namedtuple('TransitionValueKey', ['vdu_stable_id', 'vcp_code'])
+
+
 class PresetTransitionWorker(WorkerThread):
     progress_signal = pyqtSignal(object)
-    _update_gui_signal = pyqtSignal(VduControlBase)
 
-    def __init__(self, main_panel: VduControlsMainPanel, preset: Preset,
+    def __init__(self, main_controller: VduAppController, preset: Preset,
                  progress_callable: Callable[[PresetTransitionWorker], None],
                  finished_callable: Callable[[PresetTransitionWorker], None],
                  immediately: bool = False, scheduled_activity: bool = False):
@@ -3454,36 +3457,29 @@ class PresetTransitionWorker(WorkerThread):
         self.end_time: datetime | None = None
         self.previous_step_start_time: float = 0.0
         self.last_progress_time = datetime.now()
-        self.main_panel = main_panel
+        self.main_controller = main_controller
         self.preset = preset
         self.step_interval_seconds = self.preset.get_step_interval_seconds()
-        self.preset_non_transitioning_controls: List[VduControlBase] = []  # specific to this preset
-        self.preset_transitioning_controls: List[VduControlBase] = []  # specific to this preset
-        self.final_values: Dict[VduControlBase, str] = {}
-        self.expected_values: Dict[VduControlBase, str | None] = {}
+        self.preset_non_transitioning_controls: List[TransitionValueKey] = []  # specific to this preset
+        self.preset_transitioning_controls: List[TransitionValueKey] = []  # specific to this preset
+        self.final_values: Dict[TransitionValueKey, str] = {}
+        self.expected_values: Dict[TransitionValueKey, str | None] = {}
         self.transition_immediately = immediately
         self.work_state = PresetTransitionState.STEPPING_COMPLETED if self.transition_immediately else PresetTransitionState.INITIALIZED
         self.scheduled_activity = scheduled_activity
         self.progress_callable = progress_callable
-
-        def update_gui(target_widget: VduControlBase) -> None:
-            target_widget.refresh_view()  # Cause the control to refresh and show the latest value.
-
-        # Make sure these signals execute in the GUI thread by connecting them here (this __init__ runs in the GUI thread).
-        self._update_gui_signal.connect(update_gui)
         self.progress_signal.connect(self.progress_callable)
-
-        for control_panel in self.main_panel.vdu_control_panels:
-            section = control_panel.controller.vdu_stable_id
-            if section in self.preset.preset_ini:
-                for control in control_panel.vcp_controls:
-                    property_name = control.vcp_capability.property_name()
-                    if property_name in self.preset.preset_ini[section]:
-                        self.final_values[control] = self.preset.preset_ini[section][property_name]
-                        if control.vcp_capability.can_transition and not self.transition_immediately:
-                            self.preset_transitioning_controls.append(control)
+        for vdu_stable_id in main_controller.get_vdu_stable_id_list():
+            if vdu_stable_id in self.preset.preset_ini:
+                for vcp_capability in main_controller.get_enabled_capabilities(vdu_stable_id):
+                    property_name = vcp_capability.property_name()
+                    if property_name in self.preset.preset_ini[vdu_stable_id]:
+                        key = TransitionValueKey(vdu_stable_id=vdu_stable_id, vcp_code=vcp_capability.vcp_code)
+                        self.final_values[key] = self.preset.preset_ini[vdu_stable_id][property_name]
+                        if vcp_capability.can_transition and not self.transition_immediately:
+                            self.preset_transitioning_controls.append(key)
                         else:
-                            self.preset_non_transitioning_controls.append(control)
+                            self.preset_non_transitioning_controls.append(key)
 
     def task_body(self) -> None:
         while self.work_state != PresetTransitionState.STEPPING_COMPLETED and self.values_are_as_expected():
@@ -3498,32 +3494,30 @@ class PresetTransitionWorker(WorkerThread):
             self.step()
             self.progress_signal.emit(self)
         if self.work_state == PresetTransitionState.STEPPING_COMPLETED:
-            for control in self.preset_non_transitioning_controls:  # Finish by doing the non-transitioning controls
+            for key in self.preset_non_transitioning_controls:  # Finish by doing the non-transitioning controls
                 if self.stop_requested:
                     return
-                control.restore_vdu_attribute(self.final_values[control])
-                self._update_gui_signal.emit(control)
+                self.main_controller.set_value(key.vdu_stable_id, key.vcp_code, self.final_values[key])
             self.work_state = PresetTransitionState.FINISHED
             self.end_time = datetime.now()
             log_info(f"Successfully restored {self.preset.name}, elapsed time: {self.total_elapsed_seconds():.2f} seconds")
 
     def step(self) -> None:
         more_to_do = False
-        for control in self.preset_transitioning_controls:  # Step each control by step or negative step...
+        for key in self.preset_transitioning_controls:  # Step each control by step or negative step...
             if self.stop_requested:
                 return
-            final_value = self.final_values[control]
+            final_value = self.final_values[key]
             final_int_value = int(final_value)
-            expected_value = self.expected_values[control]
+            expected_value = self.expected_values[key]
             expected_int_value = int(expected_value)
             diff = final_int_value - expected_int_value
             if diff != 0:
                 step_size = 5
                 step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
                 str_value = str(expected_int_value + step)
-                self.expected_values[control] = str_value  # revise to new value
-                control.restore_vdu_attribute(str_value)
-                self._update_gui_signal.emit(control)
+                self.expected_values[key] = str_value  # revise to new value
+                self.main_controller.set_value(key.vdu_stable_id, key.vcp_code, str_value)  # update the GUI and VDU
                 more_to_do = more_to_do or str_value != final_value
             now = datetime.now()
             if (now - self.last_progress_time).total_seconds() >= 1.0:
@@ -3533,18 +3527,21 @@ class PresetTransitionWorker(WorkerThread):
         self.work_state = PresetTransitionState.PARTIAL if more_to_do else PresetTransitionState.STEPPING_COMPLETED
 
     def values_are_as_expected(self) -> bool:
-        for control_panel in self.main_panel.vdu_control_panels:  # Check that no one else is changing the controls
+        for vdu_stable_id in self.main_controller.get_vdu_stable_id_list():  # Check that no one else is changing the controls
             if self.stop_requested:
                 return True
-            control_panel.refresh_data()  # Update the values of all the controls
-            for control in control_panel.vcp_controls:
-                current_value = control.current_value  # play safe, get a constant copy now
-                if control in self.expected_values:
-                    if self.expected_values[control] != current_value:
-                        log_warning(f"Interrupted transition to {self.preset.name} {self.expected_values[control]=} != {current_value=}")
-                        self.work_state = PresetTransitionState.INTERRUPTED  # Something else is changing the controls - abandon the task
+            self.main_controller.refresh_data(vdu_stable_id)  # Update the values of all the controls
+            for vcp_capability in self.main_controller.get_enabled_capabilities(vdu_stable_id):
+                if self.stop_requested:
+                    return True
+                key = TransitionValueKey(vdu_stable_id=vdu_stable_id, vcp_code=vcp_capability.vcp_code)
+                current_value = self.main_controller.get_value(key.vdu_stable_id, key.vcp_code)  # get a constant copy now
+                if key in self.expected_values:
+                    if self.expected_values[key] != current_value:
+                        log_warning(f"Interrupted transition to {self.preset.name} {self.expected_values[key]=} != {current_value=}")
+                        self.work_state = PresetTransitionState.INTERRUPTED  # Something else is changing the controls, stop work
                 else:
-                    self.expected_values[control] = current_value  # must be first time through, initialize value
+                    self.expected_values[key] = current_value  # must be first time through, initialize value
         return self.work_state != PresetTransitionState.INTERRUPTED
 
     def total_elapsed_seconds(self) -> float:
@@ -5035,7 +5032,7 @@ class LuxProfileChart(QLabel):
         self.chart_changed_callback = lux_dialog.chart_changed_callback
         self.profile_data = lux_dialog.lux_profile_data
         self.preset_points = lux_dialog.preset_points
-        self.main_app: VduAppWindow = lux_dialog.main_controller
+        self.main_controller: VduAppController = lux_dialog.main_controller
         self.vdu_chart_colors = self.lux_dialog.vdu_chart_color
         self.range_restrictions = lux_dialog.range_restrictions  # Passed to chart
         self.current_lux = 0
@@ -5116,7 +5113,7 @@ class LuxProfileChart(QLabel):
                 if point_data.preset_name is None:
                     brightness = point_data.brightness
                 else:
-                    preset = self.main_app.find_preset_by_name(point_data.preset_name)
+                    preset = self.main_controller.find_preset_by_name(point_data.preset_name)
                     brightness = preset.get_brightness(vdu_sid) if preset is not None else -1
                 if brightness >= 0:
                     x = self.x_origin + self.x_from_lux(lux)
@@ -5251,7 +5248,7 @@ class LuxProfileChart(QLabel):
                 for profile_point in profile:
                     if profile_point == point:  # Note: these will not be the same object
                         # May not have a preset_name if not yet committed/saved.
-                        preset = self.main_app.find_preset_by_name(point.preset_name) if point.preset_name else None
+                        preset = self.main_controller.find_preset_by_name(point.preset_name) if point.preset_name else None
                         preset_brightness = preset.get_brightness(vdu_sid) if preset is not None else -1
                         if preset_brightness >= 0:  # Convert to normal point - as a convenience for the user
                             profile_point.preset_name = None
@@ -5260,20 +5257,26 @@ class LuxProfileChart(QLabel):
                             profile.remove(profile_point)
                         break
             return True
-        ask_preset = QInputDialog()
-        presets = self.main_app.get_presets()
-        ask_preset.setComboBoxItems(list(presets.keys()))
-        ask_preset.setOption(QInputDialog.UseListViewForComboBoxItems)
-        rc = ask_preset.exec()
-        if rc == QDialog.Accepted:
-            preset_name = ask_preset.textValue()
-            point = LuxPoint(self.lux_from_x(x), -1, preset_name)
-            self.preset_points.append(point)
-            self.preset_points.sort()
-            for profile in self.profile_data.values():
-                profile.append(point)
-                profile.sort()
-            return True
+        presets = self.main_controller.get_presets()
+        if len(presets):
+            ask_preset = QInputDialog()
+            ask_preset.setComboBoxItems(list(presets.keys()))
+            ask_preset.setOption(QInputDialog.UseListViewForComboBoxItems)
+            rc = ask_preset.exec()
+            if rc == QDialog.Accepted:
+                preset_name = ask_preset.textValue()
+                point = LuxPoint(self.lux_from_x(x), -1, preset_name)
+                self.preset_points.append(point)
+                self.preset_points.sort()
+                for profile in self.profile_data.values():
+                    profile.append(point)
+                    profile.sort()
+                return True
+        else:
+            alert = MessageBox(QMessageBox.Information)
+            alert.setText(tr("There are not Presets."))
+            alert.setInformativeText(tr("Use the Presets Dialog to create some."))
+            alert.exec()
         return False
 
     def show_changes(self, profile_changes=True) -> None:
@@ -5291,7 +5294,7 @@ class LuxProfileChart(QLabel):
             if point_data.preset_name is None:
                 existing_percent = point_data.brightness
             else:
-                preset = self.main_app.find_preset_by_name(point_data.preset_name)
+                preset = self.main_controller.find_preset_by_name(point_data.preset_name)
                 if preset is not None:
                     existing_percent = preset.get_brightness(vdu_sid)
                 else:
@@ -5684,9 +5687,9 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         # attached to trigger non-brightness settings at a given lux value (triggered below, after the loop).
         if profile_brightness < 0:
             return False
-        if self.main_controller.has_vcp_code(vdu_sid, BRIGHTNESS_VCP_CODE):  # can only adjust brightness controls
+        if self.main_controller.is_vcp_code_enabled(vdu_sid, BRIGHTNESS_VCP_CODE):  # can only adjust brightness controls
             try:
-                current_brightness = int(self.main_controller.get_value(vdu_sid, BRIGHTNESS_VCP_CODE)[0])
+                current_brightness = int(self.main_controller.get_value(vdu_sid, BRIGHTNESS_VCP_CODE))
                 diff = profile_brightness - current_brightness
                 # Check if already at the correct brightness.
                 if diff == 0:
@@ -5791,8 +5794,9 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                 completed_profile.append(lux_point)
             else:  # Lookup the Preset's brightness for this particular VDU - get latest/current value from the actual Preset.
                 preset = self.main_controller.find_preset_by_name(lux_point.preset_name)
-                # Profile brightness for this VDU will be -1 if this VDU's brightness-control doesn't participate in the Preset.
-                completed_profile.append(LuxPoint(lux_point.lux, preset.get_brightness(vdu_sid), lux_point.preset_name))
+                if preset is not None:
+                    # Profile brightness for this VDU will be -1 if this VDU's brightness-control doesn't participate in the Preset.
+                    completed_profile.append(LuxPoint(lux_point.lux, preset.get_brightness(vdu_sid), lux_point.preset_name))
         completed_profile.append(LuxPoint(100000, 100))  # make sure we hava point at the end of the scale.
         return completed_profile
 
@@ -5891,8 +5895,8 @@ class LuxConfig(ConfigIni):
 class LuxDialog(QDialog, DialogSingletonMixin):
 
     @staticmethod
-    def invoke(main_app: VduAppWindow) -> None:
-        LuxDialog.show_existing_dialog() if LuxDialog.exists() else LuxDialog(main_app)
+    def invoke(main_controller: VduAppController) -> None:
+        LuxDialog.show_existing_dialog() if LuxDialog.exists() else LuxDialog(main_controller)
 
     @staticmethod
     def reinitialize_instance():
@@ -6074,11 +6078,11 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         connected_id_list = []   # List of all currently connected VDU's
         for index, vdu_sid in enumerate(self.main_controller.get_vdu_stable_id_list()):
             value_range = (0, 100)
-            if self.main_controller.has_vcp_code(vdu_sid, BRIGHTNESS_VCP_CODE):
+            if self.main_controller.is_vcp_code_enabled(vdu_sid, BRIGHTNESS_VCP_CODE):
                 value_range = self.main_controller.get_range(vdu_sid, BRIGHTNESS_VCP_CODE, fallback=value_range)
                 self.range_restrictions[vdu_sid] = value_range
                 try:
-                    self.vdu_current_brightness[vdu_sid] = int(self.main_controller.get_value(vdu_sid, BRIGHTNESS_VCP_CODE)[0])
+                    self.vdu_current_brightness[vdu_sid] = int(self.main_controller.get_value(vdu_sid, BRIGHTNESS_VCP_CODE))
                 except VduException as ve:
                     self.vdu_current_brightness[vdu_sid] = 0
                     log_warning("VDU may not be available:", str(ve), trace=True)
@@ -6481,7 +6485,7 @@ class VduAppController():
     def configure_application(self, main_window: VduAppWindow | None = None):
         try:
             log_info("Configuring application...")
-            if main_window is not None:
+            if main_window is not None:  # First time through
                 assert self.main_window is None
                 self.main_window = main_window
             if self.main_window.main_panel is not None:
@@ -6490,7 +6494,6 @@ class VduAppController():
             log_debug("attempting to lock application_configuration_lock", trace=False) if log_debug_enabled else None
             with self.application_configuration_lock:
                 log_debug("holding application_configuration_lock") if log_debug_enabled else None
-
                 if self.lux_auto_controller is not None:
                     self.lux_auto_controller.stop_worker()
                 if self.preset_transition_worker is not None:
@@ -6557,7 +6560,7 @@ class VduAppController():
         self.previously_detected_vdu_list = self.detected_vdu_list
         return self.detected_vdu_list, ddcutil_problem
 
-    def create_vdu_controllers(self) -> List[VduController]:
+    def initialize_vdu_controllers(self) -> None:
         assert is_running_in_gui_thread()
         ddcutil = self.ddcutil
         if ddcutil is None:
@@ -6576,7 +6579,7 @@ class VduAppController():
                     log_error(f"Problem creating controller for {vdu_number=} {model_name=} {vdu_serial=} exception={e}", trace=True)
                     choice = VduAppWindow.ask_for_vdu_controller_remedy(vdu_number, model_name, vdu_serial)
                     if choice == VduController.NORMAL_VDU:
-                        continue
+                        continue  # Try again
                     controller = VduController(vdu_number, model_name, vdu_serial, manufacturer, self.main_config,
                                                ddcutil, main_panel_error_handler, choice)
                     controller.write_template_config_files()
@@ -6586,7 +6589,6 @@ class VduAppController():
         if len(self.vdu_controllers) == 0:
             if self.main_config.is_set(ConfOption.WARNINGS_ENABLED):
                 self.main_window.display_no_controllers_error_dialog(ddcutil_problem)
-        return self.vdu_controllers
 
     def is_non_standard_enabled(self) -> bool:
         path = get_config_path("danger")
@@ -6715,9 +6717,8 @@ class VduAppController():
                     if restore_finished is not None:
                         restore_finished(worker_thread)
 
-            self.preset_transition_worker = PresetTransitionWorker(self.main_window.get_main_panel(), preset,
-                                                                   update_progress, finished_callback,
-                                                                   immediately, scheduled_activity)
+            self.preset_transition_worker = PresetTransitionWorker(
+                self, preset, update_progress, finished_callback, immediately, scheduled_activity)
             self.preset_transition_worker.start()
 
     def schedule_presets(self, reset: bool = False) -> Preset | None:
@@ -6907,6 +6908,12 @@ class VduAppController():
     def get_vdu_stable_id_list(self):
         return [cp.vdu_stable_id for cp in self.vdu_controllers]
 
+    def get_enabled_capabilities(self, vdu_stable_id: str) -> List[VcpCapability]:
+        for controller in self.vdu_controllers:
+            if controller.vdu_stable_id == vdu_stable_id:
+                return controller.enabled_capabilities
+        return []
+
     def get_range(self, vdu_stable_id: str, vcp_code: str, fallback:Tuple[int, int] | None = None) -> Tuple[int, int] | None:
         for controller in self.vdu_controllers:
             if controller.vdu_stable_id == vdu_stable_id:
@@ -6917,9 +6924,9 @@ class VduAppController():
     def get_value(self, vdu_stable_id, vcp_code):
         for controller in self.vdu_controllers:
             if controller.vdu_stable_id == vdu_stable_id:
-                return controller.get_attribute(BRIGHTNESS_VCP_CODE)
+                return controller.get_attribute(vcp_code).current
         log_error(f"get_value: No controller for {vdu_stable_id}")
-        return ['0']
+        return '0'
 
     def set_value(self, vdu_stable_id: str, vcp_code: str, value_str: str):
         for control_panel in self.main_window.get_main_panel().vdu_control_panels:
@@ -6930,11 +6937,17 @@ class VduAppController():
                 return
         log_error(f"set_value: No controller for {vdu_stable_id}")
 
-    def has_vcp_code(self, vdu_stable_id, vcp_code: str) -> bool:
+    def refresh_data(self, vdu_stable_id:str):
         for control_panel in self.main_window.get_main_panel().vdu_control_panels:
             if control_panel.controller.vdu_stable_id == vdu_stable_id:
-                if control_panel.get_control(vcp_code) is not None:
-                    return True
+                control_panel.refresh_data()
+
+    def is_vcp_code_enabled(self, vdu_stable_id, vcp_code: str) -> bool:
+        for controller in self.vdu_controllers:
+            if controller.vdu_stable_id == vdu_stable_id:
+                for capability in controller.enabled_capabilities:
+                    if capability.vcp_code == vcp_code:
+                        return True
         return False
 
     def display_lux_auto_indicators(self):
@@ -7114,19 +7127,18 @@ class VduAppWindow(QMainWindow):
 
         self.main_panel.vdu_set_attribute_signal.connect(vdu_set_attribute_signal_handler)  # Wire up the signal/slots first
         self.main_panel.connected_vdus_changed_signal.connect(self.main_controller.configure_application)
-        vdu_controllers = self.main_controller.create_vdu_controllers()  # Then initialise the control panel display
+        self.main_controller.initialize_vdu_controllers()  # Then initialise the VDU controllers and VDU control panel displays
         refresh_button = ToolButton(REFRESH_ICON_SOURCE, tr("Refresh settings from monitors"))
         refresh_button.pressed.connect(self.main_controller.start_refresh)
         tool_buttons = [refresh_button]
         if self.main_controller.lux_auto_controller is not None:
             tool_buttons.append(self.main_controller.lux_auto_controller.create_tool_button())
         self.refresh_preset_menu()
-        self.main_panel.initialise_control_panels(vdu_controllers, self.app_context_menu, self.main_config,
+        self.main_panel.initialise_control_panels(self.main_controller.vdu_controllers, self.app_context_menu, self.main_config,
                                                   tool_buttons, self.splash_message_signal)
         self.indicate_busy(True)
         self.setCentralWidget(self.main_panel)
-        self.splash_message_signal.emit(
-            "Reticulating Splines" if self.main_config.is_set(ConfOption.DEBUG_ENABLED) else tr("Checking Presets"))
+        self.splash_message_signal.emit(tr("Checking Presets"))
         # XXX self.display_active_preset()  # ??? Probably not needed 2023-08-08
 
     def get_main_panel(self) -> VduControlsMainPanel:
