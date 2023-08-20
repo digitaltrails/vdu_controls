@@ -706,6 +706,7 @@ from threading import Lock
 from typing import List, Tuple, Mapping, Type, Dict, Callable, Any
 from urllib.error import URLError
 
+import pytz
 from PyQt5 import QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
     QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant
@@ -726,6 +727,7 @@ EASTERN_SKY = 'eastern-sky'
 
 IP_ADDRESS_INFO_URL = os.getenv('VDU_CONTROLS_IPINFO_URL', default='https://ipinfo.io/json')
 WEATHER_FORECAST_URL = os.getenv('VDU_CONTROLS_WTTR_URL', default='https://wttr.in')
+TESTING_TIME_ZONE = None  # for example 'Europe/Berlin'
 
 TIME_CLOCK_SYMBOL = '\u25F4'  # WHITE CIRCLE WITH UPPER LEFT QUADRANT
 WEATHER_RESTRICTION_SYMBOL = '\u2614'  # UMBRELLA WITH RAIN DROPS
@@ -767,6 +769,8 @@ def is_running_in_gui_thread() -> bool:
 
 
 def zoned_now() -> datetime:
+    if TESTING_TIME_ZONE is not None:
+        return datetime.now(pytz.timezone(TESTING_TIME_ZONE))  # for testing scheduling
     return datetime.now().astimezone()
 
 
@@ -1404,7 +1408,7 @@ class DdcUtil:
             return result
 
     def _get_attributes_implementation(self, vdu_number: str,
-                                       vcp_code_list: List[str], sleep_multiplier: float | None = None) -> List[Tuple[str, str]]:
+                                       vcp_code_list: List[str], sleep_multiplier: float | None = None) -> List[VcpValue]:
         """
         Returns None if there is an error communicating with the VDU
         """
@@ -1434,7 +1438,7 @@ class DdcUtil:
                         continue
                     result_list.append(vcp_value)
                 return result_list
-            except subprocess.SubprocessError as e:
+            except subprocess.SubprocessError:
                 if i + 1 == GET_ATTRIBUTES_RETRIES:
                     # Don't log here - creates too much noise in the logs - pass the buck instead
                     raise  # Too many failures, pass the buck upstairs
@@ -1732,22 +1736,22 @@ class VduControlsConfig:
             return option
         return ConfOption.UNKNOWN
 
-    def restrict_to_actual_capabilities(self, capabilities_supported_by_this_vdu: Dict[str, VcpCapability]) -> None:
+    def restrict_to_actual_capabilities(self, supported_by_this_vdu: Dict[str, VcpCapability]) -> None:
         for option_name in self.ini_content['vdu-controls-widgets']:
             if self.get_config_option(option_name).conf_type == ConfType.BOOL:
                 if option_name in SUPPORTED_VCP_BY_PROPERTY_NAME and \
-                        SUPPORTED_VCP_BY_PROPERTY_NAME[option_name].vcp_code not in capabilities_supported_by_this_vdu:
+                        SUPPORTED_VCP_BY_PROPERTY_NAME[option_name].vcp_code not in supported_by_this_vdu:
                     del self.ini_content['vdu-controls-widgets'][option_name]
-                    log_info(f"Removed {self.config_name} {option_name} - not supported by VDU")
-                elif option_name.startswith('unsupported-') and option_name[len('unsupported-'):] not in capabilities_supported_by_this_vdu:
+                    log_debug(f"Removed {self.config_name} {option_name} - not supported by VDU") if log_debug_enabled else None
+                elif option_name.startswith('unsupported-') and option_name[len('unsupported-'):] not in supported_by_this_vdu:
                     del self.ini_content['vdu-controls-widgets'][option_name]
-                    log_info(f"Removed {self.config_name} {option_name} - not supported by VDU")
+                    log_debug(f"Removed {self.config_name} {option_name} - not supported by VDU") if log_debug_enabled else None
 
     def get_config_name(self) -> str:
         return self.config_name
 
     def is_set(self, option: ConfOption, fallback=False) -> bool:
-        return self.ini_content.getboolean(option.conf_section, option.conf_name, fallback=False)
+        return self.ini_content.getboolean(option.conf_section, option.conf_name, fallback=fallback)
 
     def set_option_from_args(self, option: ConfOption, arg_values: Dict[str, Any]):
         if option.conf_type == ConfType.BOOL:
@@ -2525,27 +2529,28 @@ class VduControlBase(QWidget):
         super().__init__()
         self.controller = controller
         self.vcp_capability = vcp_capability
-        self.current_value: VcpValue | None = None
+        self.current_value: str | None = None
         # Using Qt signals to ensure GUI activity occurs in the GUI thread (this thread).
         self._refresh_ui_view_in_gui_thread_qtsignal.connect(self._refresh_ui_view_task)
         self.refresh_ui_only = False
+        self.debug = False  # Local debug switch because this is very noisy and only needed rarely.
 
     def update_from_vdu(self, vcp_value: VcpValue):  # Used for updating from the results of get_attributes() -> List[VcpValue]
-        log_info("update_from_vdu")
+        log_info("update_from_vdu") if self.debug else None
         self.current_value = vcp_value.current
         self.refresh_ui_view()
 
     def set_value(self, new_value: str) -> None:  # Used by controllers for changing the physical VDU attribute
-        log_info("set value")
+        log_info("set value") if self.debug else None
         self._change_physical_vdu(new_value)
         self.current_value = new_value
         self.refresh_ui_view()
 
-    def ui_change_vdu_attribute(self, new_value) -> None:  # Used by UI controls to change values
-        log_info("ui_change_vdu_attribute")
+    def ui_change_vdu_attribute(self, new_value: str) -> None:  # Used by UI controls to change values
+        log_info("ui_change_vdu_attribute") if self.debug else None
         if self.refresh_ui_only:  # Called from a GUI control when it was already responding to a vdu attribute change.
-            log_info(f"Skip change {self.refresh_ui_only=}")  # Avoid repeating a setvcp by skipping the physical change
-            return
+            log_info(f"Skip change {self.refresh_ui_only=}") if self.debug else None
+            return   # Avoid repeating a setvcp by skipping the physical change
         # Update VDU with what ever the user has changed in the GUI
         while True:  # loop on error at the user's discretion.
             try:
@@ -2558,8 +2563,8 @@ class VduControlBase(QWidget):
                     self.connected_vdus_changed_qtsignal.emit()
                     break
 
-    def _change_physical_vdu(self, new_value) -> None:
-        log_info(f"_change_physical_vdu {self.refresh_ui_only=} {self.vcp_capability.vcp_code=}")
+    def _change_physical_vdu(self, new_value: str) -> None:
+        log_info(f"_change_physical_vdu {self.refresh_ui_only=} {self.vcp_capability.vcp_code=}") if self.debug else None
         self.controller.set_vdu_value(self.vcp_capability.vcp_code, new_value)
         if self.vcp_capability.vcp_code in SUPPORTED_VCP_BY_CODE and \
                 SUPPORTED_VCP_BY_CODE[self.vcp_capability.vcp_code].causes_config_change:
@@ -2704,7 +2709,7 @@ class VduControlComboBox(VduControlBase):
             self.keys.append(value)
             combo_box.addItem(self.translate_label(desc), value)
 
-        def index_changed(index: int) -> None:
+        def index_changed(_: int) -> None:
             self.current_value = self.combo_box.currentData()
             self.validate_value()
             self.ui_change_vdu_attribute(self.current_value)
@@ -2722,7 +2727,6 @@ class VduControlComboBox(VduControlBase):
         """Copy the internally cached current value onto the GUI view."""
         self.validate_value()
         self.combo_box.setCurrentIndex(self.keys.index(self.current_value))
-
 
     def validate_value(self) -> None:
         if self.current_value not in self.keys:
@@ -3197,6 +3201,8 @@ class VduPanelBottomToolBar(QToolBar):
         elif self.progress_bar is not None:
             self.status_area.removeWidget(self.progress_bar)
             self.progress_bar = None
+        QApplication.sendPostedEvents(self, 0)  # Flush any change events before resetting the flag
+        QApplication.processEvents()  # Force the flushed events to be processed now
 
     def display_active_preset(self, preset: Preset | None) -> None:
         if preset is not None:
@@ -3466,7 +3472,7 @@ class PresetTransitionWorker(WorkerThread):
                 if key in self.expected_values:
                     if self.expected_values[key] != current_value:
                         log_warning(f"Interrupted transition to {self.preset.name} {key.vdu_stable_id=} " 
-                                    f"something else change the VDU: {self.expected_values[key]=} != {current_value=}")
+                                    f"something else changed the VDU: {self.expected_values[key]=} != {current_value=}")
                         self.work_state = PresetTransitionState.INTERRUPTED  # Something else is changing the controls, stop work
                         return False
                 else:
@@ -3691,7 +3697,7 @@ class PresetWidget(QWidget):
                     action_desc = ''
                 return f"{action_desc}{SUN_SYMBOL} {preset.get_solar_elevation_description()}"
 
-            def toggle_timer(arg) -> None:
+            def toggle_timer(_) -> None:
                 preset.toggle_timer()
                 timer_control_button.setText(preset.get_solar_elevation_abbreviation())
                 timer_control_button.setToolTip(format_description())
@@ -5015,7 +5021,7 @@ class LuxProfileChart(QLabel):
             self.setPixmap(pixmap)
             return
 
-        min_v, max_v = self.range_restrictions.get(self.current_vdu_sid, (0,100))   # Draw range restrictions (if not 0..100)
+        min_v, max_v = self.range_restrictions.get(self.current_vdu_sid, (0, 100))   # Draw range restrictions (if not 0..100)
         if min_v > 0:
             painter.setPen(QPen(Qt.red, std_line_width // 2, Qt.DashLine))
             cutoff = self.y_origin - self.y_from_percent(min_v)
@@ -5027,7 +5033,7 @@ class LuxProfileChart(QLabel):
 
         point_markers = []  # Draw profile lines/histogram per vdu, current_profile last/on-top, collect point marker locations
         for vdu_sid, vdu_data in [(vid, data) for vid, data in self.profile_data.items() if vid != self.current_vdu_sid] + \
-                                [(self.current_vdu_sid, self.profile_data[self.current_vdu_sid])]:
+                                 [(self.current_vdu_sid, self.profile_data[self.current_vdu_sid])]:
             last_x, last_y = 0, 0
             if vdu_sid not in self.vdu_chart_colors:
                 continue  # must have been turned off
@@ -5715,7 +5721,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         completed_profile.append(LuxPoint(100000, 100))  # make sure we hava point at the end of the scale.
         return completed_profile
 
-    def finished_callable(self, task: LuxAutoWorker) -> None:
+    def finished_callable(self, _: LuxAutoWorker) -> None:
         if self.vdu_exception:
             log_error(f"LuxAutoWorker exited with exception={self.vdu_exception}")
 
@@ -6342,7 +6348,7 @@ class PresetTransitionFlag(IntFlag):
         return [option for option in PresetTransitionFlag if (option & (option - 1) == 0) and option != 0 and option in self]
 
     def __str__(self) -> str:
-        assert self.name is not None
+        assert self.name is not None  #  TODO this failed once - get to repeat
         if self.value == PresetTransitionFlag.NONE:
             return self.name.lower()
         return ','.join([component.name.lower() for component in self.component_values()])  # type: ignore
@@ -6365,7 +6371,7 @@ class VduAppController:   # Main controller containing methods for high level op
         self.application_configuration_lock = Lock()
         self.main_config = main_config
         self.ddcutil: DdcUtil | None = None
-        self.main_window: VduAppWindow = None
+        self.main_window: VduAppWindow | None = None
         self.vdu_controllers: List[VduController] = []  # for 1 to 6 VDU's a list is in the same ballpark as a dict.
         self.preset_controller = PresetController()
         self.detected_vdu_list: List[Tuple[str, str, str, str]] = []
@@ -6489,7 +6495,7 @@ class VduAppController:   # Main controller containing methods for high level op
                 except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:  # TODO figure out all possible Exceptions:
                     # Catch any kind of parse related error
                     log_error(f"Problem creating controller for {vdu_number=} {model_name=} {vdu_serial=} exception={e}", trace=True)
-                    choice = VduAppWindow.ask_for_vdu_controller_remedy(vdu_number, model_name, vdu_serial)
+                    choice = self.main_window.ask_for_vdu_controller_remedy(vdu_number, model_name, vdu_serial)
                     if choice == VduController.NORMAL_VDU:
                         continue  # Try again
                     controller = VduController(vdu_number, model_name, vdu_serial, manufacturer, self.main_config,
@@ -6537,6 +6543,10 @@ class VduAppController:   # Main controller containing methods for high level op
                               [vdu.config for vdu in self.vdu_controllers if vdu.config is not None],
                               self.settings_changed)
 
+    def create_config_files(self) -> None:
+        for vdu_model in self.vdu_controllers:
+            vdu_model.write_template_config_files()
+
     def lux_auto_action(self) -> bool:
         if self.lux_auto_controller is None:
             return False
@@ -6560,9 +6570,10 @@ class VduAppController:   # Main controller containing methods for high level op
                             control_panel.refresh_from_vdu()
                 except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
                     if self.refresh_data_task.vdu_exception is None:
-                        self.refresh_data_task.vdu_exception = VduException(vdu_description="unknown", operation="unknown")
+                        self.refresh_data_task.vdu_exception = VduException(vdu_description="unknown", operation="unknown",
+                                                                            exception=e)
 
-        def update_ui_view(worker_thread: WorkerThread) -> None:
+        def update_ui_view(_: WorkerThread) -> None:
             # Invoke when the worker thread completes. Runs in the GUI thread and can refresh remaining UI views.
             try:
                 assert self.refresh_data_task is not None and is_running_in_gui_thread()
@@ -6586,7 +6597,7 @@ class VduAppController:   # Main controller containing methods for high level op
                        immediately: bool = False, scheduled_activity: bool = False) -> None:
         # Starts the restore, but it will complete in the worker thread
         if not is_running_in_gui_thread():  # Transfer this request into the GUI thread
-            log_info(f"restore_preset {preset.name} transferring task to GUI thread")
+            log_debug(f"restore_preset {preset.name} transferring task to GUI thread") if log_debug_enabled else None
             self.main_window.run_in_gui_thread(
                 partial(self.restore_preset, preset, restore_finished, immediately, scheduled_activity))
             return
@@ -6828,7 +6839,7 @@ class VduAppController:   # Main controller containing methods for high level op
                 return controller.enabled_capabilities
         return []
 
-    def get_range(self, vdu_stable_id: str, vcp_code: str, fallback:Tuple[int, int] | None = None) -> Tuple[int, int] | None:
+    def get_range(self, vdu_stable_id: str, vcp_code: str, fallback: Tuple[int, int] | None = None) -> Tuple[int, int] | None:
         for controller in self.vdu_controllers:
             if controller.vdu_stable_id == vdu_stable_id:
                 return controller.get_range_restrictions(vcp_code, fallback)
@@ -6977,7 +6988,7 @@ class VduAppWindow(QMainWindow):
             release_alert.setText(RELEASE_ANNOUNCEMENT.format(WELCOME=welcome, NOTE=note, VERSION=VDU_CONTROLS_VERSION))
             release_alert.setTextFormat(Qt.RichText)
             release_alert.exec()
-            main_config.write_file(get_config_path('vdu_controls'), overwrite=True) # Stops the release notes from being repeated.
+            main_config.write_file(get_config_path('vdu_controls'), overwrite=True)  # Stops the release notes from being repeated.
 
     def show_main_window(self, toggle: bool = False) -> None:
         if toggle and self.isVisible():
@@ -7044,7 +7055,7 @@ class VduAppWindow(QMainWindow):
         return self.main_panel
 
     def indicate_busy(self, is_busy: bool):
-        log_info(f"indicate_busy={is_busy}")
+        log_debug(f"indicate_busy={is_busy}") if log_debug_enabled else None
         self.get_main_panel().indicate_busy(is_busy)
         self.app_context_menu.indicate_busy(is_busy)
 
@@ -7076,7 +7087,8 @@ class VduAppWindow(QMainWindow):
             self.get_main_panel().display_active_preset(preset)
             self.app_context_menu.indicate_preset_active(preset)
             self.set_app_icon_and_title(preset.create_icon(themed=False), preset.get_title_name())
-            if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) and self.main_controller.lux_auto_controller.is_auto_enabled():
+            if (self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) and
+                    self.main_controller.lux_auto_controller.is_auto_enabled()):
                 QTimer.singleShot(5000, self.display_lux_auto_indicators)  # Replace with auto icon if auto enabled
         if (preset is not None and preset != self.transitioning_dummy_preset) or palette_change:
             self.refresh_preset_menu(palette_change=palette_change)
@@ -7095,10 +7107,6 @@ class VduAppWindow(QMainWindow):
                 event.ignore()  # hide the window
             else:
                 event.accept()  # let the window close
-
-    def create_config_files(self) -> None:
-        for vdu_model in self.get_main_panel().vdu_controllers:
-            vdu_model.write_template_config_files()
 
     def app_save_state(self) -> None:
         self.settings.setValue(self.geometry_key, self.saveGeometry())
@@ -7125,7 +7133,6 @@ class VduAppWindow(QMainWindow):
     def refresh_preset_menu(self, palette_change: bool = False, reorder: bool = False):
         self.app_context_menu.refresh_preset_menu(palette_change=palette_change, reorder=reorder)
 
-    @staticmethod
     def display_no_controllers_error_dialog(self, ddcutil_problem):
         error_no_monitors = MessageBox(QMessageBox.Critical)
         error_no_monitors.setText(tr('No controllable monitors found.'))
@@ -7140,8 +7147,7 @@ class VduAppWindow(QMainWindow):
             error_no_monitors.setDetailedText(tr("(Most recent ddcutil error: {})").format(problem_text))
         error_no_monitors.exec()
 
-    @staticmethod
-    def ask_for_vdu_controller_remedy(vdu_number: str, model_name: str, vdu_serial: str):
+    def ask_for_vdu_controller_remedy(self, vdu_number: str, model_name: str, vdu_serial: str):
         no_auto = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Ignore | QMessageBox.Apply | QMessageBox.Retry)
         no_auto.setText(
             tr('Failed to obtain capabilities for monitor {} {} {}.').format(vdu_number, model_name, vdu_serial))
@@ -7400,8 +7406,8 @@ def main() -> None:
     # but LANG=da_DK.UTF-8 should work. For our purposes failure is not important.
     try:
         locale.setlocale(locale.LC_ALL, '')
-    except locale.Error as le:
-        log_warning("Could not set the default locale - may not be an issue...", trace=True)
+    except locale.Error:
+        log_warning(f"Could not set the default locale - may not be an issue...", trace=True)
 
     # Call QApplication before parsing arguments, it will parse and remove Qt session restoration arguments.
     app = QApplication(sys.argv)
@@ -7454,7 +7460,7 @@ def main() -> None:
     main_window = VduAppWindow(main_config, app, main_controller)
 
     if args.create_config_files:
-        main_window.create_config_files()
+        main_controller.create_config_files()
 
     rc = app.exec_()
     log_info(f"App exit {rc=} {'EXIT_CODE_FOR_RESTART' if rc == EXIT_CODE_FOR_RESTART else ''}")
