@@ -190,14 +190,14 @@ Sphinx outputs and then pandoc for the html:
 
 My IDE for this project is [PyCharm Community Edition](https://www.jetbrains.com/pycharm/).
 
-Coverage testing is assisted by [Coverage.py](https://coverage.readthedocs.io/). 
+Coverage testing is assisted by [Coverage.py](https://coverage.readthedocs.io/) and [Vulture](https://pypi.org/project/vulture/).
 Type checking is assisted by [Mypy](https://mypy.readthedocs.io/).
 
 My development Linux desktop is [OpenSUSE Tumbleweed](https://get.opensuse.org/tumbleweed/). The python3
 interpreter and python3 libraries are from the standard Tumbleweed repositories. 
 
-Acknowlegements
----------------
+Acknowledgements
+----------------
 
 * [rockowitz](https://github.com/rockowitz), for the robust [ddcutil](https://github.com/rockowitz/ddcutil) utility
 * [yochananmarqos](https://github.com/yochananmarqos), for Gnome related suggestions and AUR port.
