@@ -220,15 +220,12 @@ Version History
 ---------------
 * 1.11.0
   * Support for ddcutil 2.0 dynamic-sleep for improved response (in some cases VDU response time is halved).
-  * Added prefer-dynamic-sleep setting to control whether dynamic-sleep may override any existing sleep multipliers.
   * Support ddcutil versions earlier than 1.3.
-  * Fixed --sleep-multiplier when passed on the command line option.
-  * Prevent some crashes due to incorrect exception handling and threading issues.
+  * Alt-key keyboard shortcuts in the application and menus (issue #13).
   * Handle utf-8 decoding errors for EDID's and capabilities (issue #49).
   * Make message box popups resizable for increased readability.
   * Add a starter set of icons for Presets (a selection from KDE breeze5-icons).
-  * Alt-key keyboard shortcuts in the application and menus.
-  * Numerous minor UI enhancements and fixes.
+  * Numerous other minor enhancements and fixes.
 * 1.10.2
   * Fix Preset non-zero transition-step-seconds, so it works properly.
   * Changing log-to-syslog or log-debug-enabled no longer requires a restart.
