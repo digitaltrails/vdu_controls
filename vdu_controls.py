@@ -1601,8 +1601,8 @@ class ConfOption(Enum):
     WEATHER_ENABLED = conf_opt_def(name=QT_TR_NOOP('weather-enabled'), default='yes', help=QT_TR_NOOP('disable weather lookups'))
     SCHEDULE_ENABLED = conf_opt_def(name=QT_TR_NOOP('schedule-enabled'), default='yes', help=QT_TR_NOOP('disable preset schedule'))
     LUX_OPTIONS_ENABLED = conf_opt_def(name=QT_TR_NOOP('lux-options-enabled'), default="no", restart=True,
-                                       help=QT_TR_NOOP('start up in the system tray'))
-    SPLASH_SCREEN_ENABLED = conf_opt_def(name=QT_TR_NOOP('splash-screen-enabled'), default='yes', cmdline_arg='--no-splash',
+                                       help=QT_TR_NOOP('enable light metering options'))
+    SPLASH_SCREEN_ENABLED = conf_opt_def(name=QT_TR_NOOP('splash-screen-enabled'), default='yes', cmdline_arg='splash',
                                          help=QT_TR_NOOP('disable the startup splash screen'))
     WARNINGS_ENABLED = conf_opt_def(name=QT_TR_NOOP('warnings-enabled'), default="no",
                                     help=QT_TR_NOOP('popup warnings if a VDU lacks an enabled control'))
@@ -1625,14 +1625,22 @@ class ConfOption(Enum):
         self.conf_name, self.conf_section, self.conf_type, self.default_value = name, section, conf_type, default
         self.restart_required = restart_required
         self.help = help_text
-        if cmdline_arg == 'DISALLOWED':
-            self.cmdline_arg = None
-        elif cmdline_arg == 'DEFAULT':
-            cmdline_prefix = "--no-" if (self.conf_type == ConfType.BOOL and self.default_value == 'yes') else "--"
-            self.cmdline_arg = cmdline_prefix + self.conf_name.replace("-enabled", "")
-        else:
-            self.cmdline_arg = cmdline_arg
-        self.cmdline_var = self.cmdline_arg.replace('--', '').replace('-', '_') if self.cmdline_arg else None
+        self.cmdline_arg = self.conf_name.replace("-enabled", "") if cmdline_arg == 'DEFAULT' else cmdline_arg
+        self.cmdline_var = None
+        self.default_value = default
+
+    def add_cmdline_arg(self, parser: argparse.ArgumentParser) -> None:
+        if self.cmdline_arg != "DISALLOWED":
+            arg_var = self.cmdline_var = self.conf_name.replace('-enabled', '').replace('-', '_')
+            if self.conf_type == ConfType.BOOL:  # Store strings for bools, allows us to differentiate yes/no and not supplied.
+                parser.add_argument(f"--{self.cmdline_arg}", dest=arg_var, action='store_const', const='yes',
+                                    help=argparse.SUPPRESS if self.default_value == 'yes' else self.help)
+                parser.add_argument(f"--no-{self.cmdline_arg}", dest=arg_var, action='store_const', const='no',
+                                    help=self.help if self.default_value == 'yes' else argparse.SUPPRESS)
+            elif self.conf_type == ConfType.FLOAT:
+                parser.add_argument(f"--{self.cmdline_arg}", type=float, default=self.default_value, help=self.help)
+            else:
+                parser.add_argument(f"--{self.cmdline_arg}", type=str, default=self.default_value, help=self.help)
 
 
 def get_config_path(config_name: str) -> Path:
@@ -1754,12 +1762,12 @@ class VduControlsConfig:
         return self.ini_content.getboolean(option.conf_section, option.conf_name, fallback=fallback)
 
     def set_option_from_args(self, option: ConfOption, arg_values: Dict[str, Any]):
-        if option.conf_type == ConfType.BOOL:
-            if option.cmdline_var in arg_values and arg_values[option.cmdline_var]:
-                value = "no" if option.default_value == 'yes' else 'yes'  # cmdline arg overriding default
-                self.ini_content[option.conf_section][option.conf_name] = value
-        elif option.cmdline_var in arg_values and arg_values[option.cmdline_var] is not None:
-            self.ini_content[option.conf_section][option.conf_name] = str(arg_values[option.cmdline_var])
+        if option.cmdline_var is not None and option.cmdline_var in arg_values and arg_values[option.cmdline_var] is not None:
+            str_value = str(arg_values[option.cmdline_var])
+            if str_value != self.ini_content[option.conf_section][option.conf_name]:
+                log_warning(f"Command line {option.cmdline_arg}={str_value} overrides {option.conf_section}.{option.conf_name}="
+                            f"{self.ini_content[option.conf_section][option.conf_name]} (in {self.file_path})")
+                self.ini_content[option.conf_section][option.conf_name] = str_value
 
     def get_sleep_multiplier(self) -> float | None:
         value = self.ini_content.getfloat('ddcutil-parameters', 'sleep-multiplier', fallback=0.0)
@@ -1820,9 +1828,8 @@ class VduControlsConfig:
             return
         self.ini_content.read_string(config_text)
         # Manually extract the text preserving meaningful indentation
-        preserve_indents_match = \
-            re.search(r'\[ddcutil-capabilities](?:.|\n)*\ncapabilities-override[ \t]*[:=]((.*)(\n[ \t].+)*)',
-                      config_text)
+        preserve_indents_match = re.search(
+            r'\[ddcutil-capabilities](?:.|\n)*\ncapabilities-override[ \t]*[:=]((.*)(\n[ \t].+)*)', config_text)
         alt_text = preserve_indents_match.group(1) if preserve_indents_match is not None else ''
         # Remove excess indentation while preserving the minimum existing indentation.
         alt_text = inspect.cleandoc(alt_text)
@@ -1877,17 +1884,9 @@ class VduControlsConfig:
                             help='hide/disable a control (--hide may be specified multiple times)')
         parser.add_argument('--enable-vcp-code', type=str, action='append',
                             help='enable controls for an unsupported vcp-code hex value (may be specified multiple times)')
-        # Python 3.9 parser.add_argument('--debug',  action=argparse.BooleanOptionalAction, help='enable debugging')
-
         for option in ConfOption:
             if option.cmdline_arg is not None:
-                if option.conf_type == ConfType.BOOL:  # bools on command invert the normal defaults, so they default to False.
-                    parser.add_argument(option.cmdline_arg, default=False, action='store_true', help=option.help)
-                elif option.conf_type == ConfType.FLOAT:  # TODO need to fully investigate default
-                    parser.add_argument(option.cmdline_arg, type=float, default="0.0", help=option.help)
-                else:
-                    parser.add_argument(option.cmdline_arg, type=str, default=option.default_value, help=option.help)
-
+                option.add_cmdline_arg(parser)
         parser.add_argument('--create-config-files', action='store_true',
                             help="create template config files, one global file and one for each detected VDU.")
         parser.add_argument('--install', action='store_true',
@@ -1909,7 +1908,6 @@ class VduControlsConfig:
         for option in ConfOption:
             if option.cmdline_arg is not None:
                 self.set_option_from_args(option, arg_values)
-
         if len(parsed_args.show) != 0:
             for control_def in SUPPORTED_VCP_BY_CODE.values():
                 if control_def.property_name() in parsed_args.show:
@@ -1920,7 +1918,6 @@ class VduControlsConfig:
             for control_def in SUPPORTED_VCP_BY_CODE.values():
                 if control_def.property_name() in parsed_args.hide:
                     self.disable_supported_vcp_code(control_def.vcp_code)
-
         if parsed_args.enable_vcp_code is not None:
             for code in parsed_args.enable_vcp_code:
                 self.enable_unsupported_vcp_code(code)
