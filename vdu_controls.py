@@ -769,8 +769,8 @@ def is_running_in_gui_thread() -> bool:
 
 def zoned_now() -> datetime:
     if TESTING_TIME_ZONE is not None:
-        import pytz
-        return datetime.now(pytz.timezone(TESTING_TIME_ZONE))  # for testing scheduling
+        from zoneinfo import ZoneInfo
+        return datetime.now(ZoneInfo(TESTING_TIME_ZONE))  # for testing scheduling
     return datetime.now().astimezone()
 
 
