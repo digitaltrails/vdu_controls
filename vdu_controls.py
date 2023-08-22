@@ -706,7 +706,6 @@ from threading import Lock
 from typing import List, Tuple, Mapping, Type, Dict, Callable, Any
 from urllib.error import URLError
 
-import pytz
 from PyQt5 import QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
     QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant
@@ -770,6 +769,7 @@ def is_running_in_gui_thread() -> bool:
 
 def zoned_now() -> datetime:
     if TESTING_TIME_ZONE is not None:
+        import pytz
         return datetime.now(pytz.timezone(TESTING_TIME_ZONE))  # for testing scheduling
     return datetime.now().astimezone()
 
