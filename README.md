@@ -220,11 +220,21 @@ Version History
 ---------------
 * 1.11.0
   * Support for ddcutil 2.0 dynamic-sleep for improved response (in some cases VDU response time is halved).
-  * Support ddcutil versions earlier than 1.3.
+  * Support ddcutil versions earlier than 1.3 (issue #43, #53).
   * Alt-key keyboard shortcuts in the application and menus (issue #13).
   * Handle utf-8 decoding errors for EDID's and capabilities (issue #49).
+  * Add a currently active Preset indicator to the Context-Menu (issue #55).
+  * Made the app icon un-themed so that overlaid text is more visible (issue #55)
+  * Supply a starter set of Prest icons - a selection of KDE breeze5-icons (issue #56).
+  * If debugging is on, log error stack traces (issue #49).
+  * Provide a Reset/Un-ignore button for a VDU's capabilities (issue #51).
+  * Better handle ddcutil not found (issue #48).
+  * Some refactoring for maintainability (issue #52).
+  * Made boolean config-settings and command-line arguments more consistent, command line take precedence (issue #52).
+  * Fixed command line arg --sleep-multiplier (issue #54).
+  * Added config-settings tool tips.
+  * Reordering of Presets no longer requires a restart to become apparent in the Context-Menu.
   * Make message box popups resizable for increased readability.
-  * Add a starter set of icons for Presets (a selection from KDE breeze5-icons).
   * Numerous other minor enhancements and fixes.
 * 1.10.2
   * Fix Preset non-zero transition-step-seconds, so it works properly.
