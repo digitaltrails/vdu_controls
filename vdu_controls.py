@@ -12,39 +12,51 @@ Usage:
                      [--about] [--detailed-help]
                      [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                      [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
-                     [--enable-vcp-code vcp_code] [--system-tray] [--debug] [--warnings] [--syslog]
-                     [--location latitude,longitude] [--translations] [--lux-meter]
-                     [--no-prefer-dynamic-sleep] [--no-schedule] [--no-weather] [--no-splash]
+                     [--enable-vcp-code vcp_code] [--system-tray|--no-system-tray] [--debug|--no-debug] [--warnings|--no-warnings]
+                     [--syslog|--no-syslog] [--location latitude,longitude] [--translations|--no-translations]
+                     [--lux-options|--no-lux-options] [--prefer-dynamic-sleep|--no-prefer-dynamic-sleep]
+                     [--schedule|--no-schedule] [--weather|--no-weather] [--splash|--no-splash]
                      [--sleep-multiplier multiplier]
                      [--create-config-files] [--install] [--uninstall]
 
 Optional arguments:
 -------------------
 
+Arguments supplied on the command line override config file equivalent settings.
+
       -h, --help            show this help message and exit
       --detailed-help       full help in Markdown format
-      --about               about vdu_controls
+      --about               info about vdu_controls
       --show control_name
-                            show specified control only (--show may be specified multiple times)
+                            show specified control only (``--show`` may be specified multiple times)
       --hide control_name
-                            hide/disable a control (--hide may be specified multiple times)
+                            hide/disable a control (``--hide`` may be specified multiple times)
       --enable-vcp-code vcp_code
                             enable a control for a vcp-code unavailable via hide/show (maybe specified multiple times)
-      --system-tray         start up as an entry in the system tray
+      --system-tray|--no-system-tray
+                            start up as an entry in the system tray.  ``--no-system-tray`` is the default.
       --location latitude,longitude
                             local latitude and longitude for triggering presets by solar elevation
-      --translations
-                            enable language translations
-      --no-prefer-dynamic-sleep
-                            don't prefer dynamic-sleep for ddcutil versions greater than 2.0, use set sleep multipliers
-      --no-schedule         disable preset schedule
-      --no-weather          disable weather lookups
-      --lux-meter           enable hardware light metering
-      --debug               enable debug output to stdout
-      --warnings            popup a warning when a VDU lacks an enabled control
-      --syslog              repeat diagnostic output to the syslog (journald)
-      --no-splash           don't show the splash screen
-      --sleep-multiplier    multiplier
+      --translations|--no-translations
+                            enable/disable language translations. ``--no-translations`` is the default.
+      --prefer-dynamic-sleep|--no-prefer-dynamic-sleep
+                            enable/disable prefer dynamic-sleep for ddcutil versions greater than 2.0. ``--prefer-dynamic-sleep``
+                            is the default.
+      --schedule|--no-schedule
+                            enable/disable preset scheduling. ``--schedule`` is the default.
+      --weather|--no-weather
+                            enable/disable weather lookups. ``--weather`` is the default.
+      --lux-options|--no-lux-options
+                            enable/disable hardware light metering options. ``--no-lux-options`` is the default.
+      --debug|--no-debug
+                            enable/disable additional debug information.  ``--no-debug`` is the default.
+      --warnings--no-warnings
+                            popup a warning when a VDU lacks an enabled control. ``--no-warnings`` is the default.
+      --syslog|-no-syslog
+                            divert diagnostic output to the syslog (journald).  ``--no-syslog`` is the default.
+      --splash|--no-splash
+                            show the splash screen.  ``--splash`` is the default.
+      --sleep-multiplier    set the default ddcutil sleep multiplier
                             protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 1.0)
       --create-config-files  if they do not exist, create template config INI files in $HOME/.config/vdu_controls/
       --install             installs the vdu_controls in the current user's path and desktop application menu.
@@ -1597,18 +1609,18 @@ class ConfOption(Enum):
     TRANSLATIONS_ENABLED = conf_opt_def(name=QT_TR_NOOP('translations-enabled'),  default="no",
                                         help=QT_TR_NOOP('enable language translations'))
     PREFER_DYNAMIC_SLEEP_ENABLED = conf_opt_def(name=QT_TR_NOOP('prefer-dynamic-sleep-enabled'), default='yes',
-                                                help=QT_TR_NOOP('do not prefer dynamic sleep (for ddcutil >= 2.0)'))
-    WEATHER_ENABLED = conf_opt_def(name=QT_TR_NOOP('weather-enabled'), default='yes', help=QT_TR_NOOP('disable weather lookups'))
-    SCHEDULE_ENABLED = conf_opt_def(name=QT_TR_NOOP('schedule-enabled'), default='yes', help=QT_TR_NOOP('disable preset schedule'))
+                                                help=QT_TR_NOOP('prefer dynamic-sleep over sleep-multipliers for ddcutil >= 2.0'))
+    WEATHER_ENABLED = conf_opt_def(name=QT_TR_NOOP('weather-enabled'), default='yes', help=QT_TR_NOOP('enable weather lookups'))
+    SCHEDULE_ENABLED = conf_opt_def(name=QT_TR_NOOP('schedule-enabled'), default='yes', help=QT_TR_NOOP('enable preset schedule'))
     LUX_OPTIONS_ENABLED = conf_opt_def(name=QT_TR_NOOP('lux-options-enabled'), default="no", restart=True,
                                        help=QT_TR_NOOP('enable light metering options'))
     SPLASH_SCREEN_ENABLED = conf_opt_def(name=QT_TR_NOOP('splash-screen-enabled'), default='yes', cmdline_arg='splash',
-                                         help=QT_TR_NOOP('disable the startup splash screen'))
+                                         help=QT_TR_NOOP('enable the startup splash screen'))
     WARNINGS_ENABLED = conf_opt_def(name=QT_TR_NOOP('warnings-enabled'), default="no",
                                     help=QT_TR_NOOP('popup warnings if a VDU lacks an enabled control'))
-    DEBUG_ENABLED = conf_opt_def(name=QT_TR_NOOP('debug-enabled'), default="no", help=QT_TR_NOOP('enable extra debug output'))
+    DEBUG_ENABLED = conf_opt_def(name=QT_TR_NOOP('debug-enabled'), default="no", help=QT_TR_NOOP('output extra debug information'))
     SYSLOG_ENABLED = conf_opt_def(name=QT_TR_NOOP('syslog-enabled'), default="no",
-                                  help=QT_TR_NOOP('enable diagnostic output to syslog'))
+                                  help=QT_TR_NOOP('divert diagnostic output to the syslog'))
     LOCATION = conf_opt_def(name=QT_TR_NOOP('location'), section='vdu-controls-globals', conf_type=ConfType.LOCATION,
                             help=QT_TR_NOOP('latitude,longitude'))
     SLEEP_MULTIPLIER = conf_opt_def(name=QT_TR_NOOP('sleep-multiplier'), section='ddcutil-parameters', conf_type=ConfType.FLOAT,
@@ -1634,9 +1646,9 @@ class ConfOption(Enum):
             arg_var = self.cmdline_var = self.conf_name.replace('-enabled', '').replace('-', '_')
             if self.conf_type == ConfType.BOOL:  # Store strings for bools, allows us to differentiate yes/no and not supplied.
                 parser.add_argument(f"--{self.cmdline_arg}", dest=arg_var, action='store_const', const='yes',
-                                    help=argparse.SUPPRESS if self.default_value == 'yes' else self.help)
+                                    help=self.help + (tr(' (default)') if self.default_value == 'yes' else ''))
                 parser.add_argument(f"--no-{self.cmdline_arg}", dest=arg_var, action='store_const', const='no',
-                                    help=self.help if self.default_value == 'yes' else argparse.SUPPRESS)
+                                    help=tr('(default)') if self.default_value == 'no' else '')
             elif self.conf_type == ConfType.FLOAT:
                 parser.add_argument(f"--{self.cmdline_arg}", type=float, default=self.default_value, help=self.help)
             else:
@@ -2291,7 +2303,7 @@ class SettingsEditorFieldBase(QWidget):
         self.option = option
         self.tip_text = tooltip
         self.has_error = False
-        self.setToolTip(tooltip) if tooltip != '' and False else None  # TODO Disabled, needs more work/thought
+        self.setToolTip(tooltip) if tooltip != '' else None
 
     def translate_option(self) -> str:
         return translate_option(self.option)

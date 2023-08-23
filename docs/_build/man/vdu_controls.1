@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Aug 16, 2023" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Aug 23, 2023" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.11.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -42,15 +42,18 @@ A control panel for external monitors (\fIVisual Display Units\fP).
 [\-\-about] [\-\-detailed\-help]
 [\-\-show {brightness,contrast,audio\-volume,input\-source,power\-mode,osd\-language}]
 [\-\-hide {brightness,contrast,audio\-volume,input\-source,power\-mode,osd\-language}]
-[\-\-enable\-vcp\-code vcp_code] [\-\-system\-tray] [\-\-debug] [\-\-warnings] [\-\-syslog]
-[\-\-location latitude,longitude] [\-\-translations] [\-\-lux\-meter]
-[\-\-no\-prefer\-dynamic\-sleep] [\-\-no\-schedule] [\-\-no\-weather] [\-\-no\-splash]
+[\-\-enable\-vcp\-code vcp_code] [\-\-system\-tray|\-\-no\-system\-tray] [\-\-debug|\-\-no\-debug] [\-\-warnings|\-\-no\-warnings]
+[\-\-syslog|\-\-no\-syslog] [\-\-location latitude,longitude] [\-\-translations|\-\-no\-translations]
+[\-\-lux\-options|\-\-no\-lux\-options] [\-\-prefer\-dynamic\-sleep|\-\-no\-prefer\-dynamic\-sleep]
+[\-\-schedule|\-\-no\-schedule] [\-\-weather|\-\-no\-weather] [\-\-splash|\-\-no\-splash]
 [\-\-sleep\-multiplier multiplier]
 [\-\-create\-config\-files] [\-\-install] [\-\-uninstall]
 .UNINDENT
 .UNINDENT
 .UNINDENT
 .SS Optional arguments:
+.sp
+Arguments supplied on the command line override config file equivalent settings.
 .INDENT 0.0
 .INDENT 3.5
 .INDENT 0.0
@@ -62,56 +65,61 @@ show this help message and exit
 full help in Markdown format
 .TP
 .B  \-\-about
-about vdu_controls
+info about vdu_controls
 .TP
 .BI \-\-show \ control_name
-show specified control only (\-\-show may be specified multiple times)
+show specified control only (\fB\-\-show\fP may be specified multiple times)
 .TP
 .BI \-\-hide \ control_name
-hide/disable a control (\-\-hide may be specified multiple times)
+hide/disable a control (\fB\-\-hide\fP may be specified multiple times)
 .TP
 .BI \-\-enable\-vcp\-code \ vcp_code
 enable a control for a vcp\-code unavailable via hide/show (maybe specified multiple times)
-.TP
-.B  \-\-system\-tray
-start up as an entry in the system tray
 .UNINDENT
 .INDENT 0.0
+.TP
+.B \-\-system\-tray|\-\-no\-system\-tray
+start up as an entry in the system tray.  \fB\-\-no\-system\-tray\fP is the default.
 .TP
 .B \-\-location latitude,longitude
 local latitude and longitude for triggering presets by solar elevation
+.TP
+.B \-\-translations|\-\-no\-translations
+enable/disable language translations. \fB\-\-no\-translations\fP is the default.
+.TP
+.B \-\-prefer\-dynamic\-sleep|\-\-no\-prefer\-dynamic\-sleep
+enable/disable prefer dynamic\-sleep for ddcutil versions greater than 2.0. \fB\-\-prefer\-dynamic\-sleep\fP
+is the default.
+.TP
+.B \-\-schedule|\-\-no\-schedule
+enable/disable preset scheduling. \fB\-\-no\-schedule\fP is the default.
+.TP
+.B \-\-weather|\-\-no\-weather
+enable/disable weather lookups. \fB\-\-no\-weather\fP is the default.
+.TP
+.B \-\-lux\-options|\-\-no\-lux\-options
+enable/disable hardware light metering options. \fB\-\-no\-lux\-options\fP is the default.
+.TP
+.B \-\-debug|\-\-no\-debug
+enable/disable additional debug output.  \fB\-\-no\-debug\fP is the default.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B  \-\-translations
-enable language translations
+.B  \-\-warnings\-\-no\-warnings
+popup a warning when a VDU lacks an enabled control. \fB\-\-no\-warnings\fP is the default.
+.UNINDENT
+.INDENT 0.0
 .TP
-.B  \-\-no\-prefer\-dynamic\-sleep
-don\(aqt prefer dynamic\-sleep for ddcutil versions greater than 2.0, use set sleep multipliers
+.B \-\-syslog|\-no\-syslog
+repeat diagnostic output to the syslog (journald).  \fB\-\-no\-syslog\fP is the default.
 .TP
-.B  \-\-no\-schedule
-disable preset schedule
-.TP
-.B  \-\-no\-weather
-disable weather lookups
-.TP
-.B  \-\-lux\-meter
-enable hardware light metering
-.TP
-.B  \-\-debug
-enable debug output to stdout
-.TP
-.B  \-\-warnings
-popup a warning when a VDU lacks an enabled control
-.TP
-.B  \-\-syslog
-repeat diagnostic output to the syslog (journald)
-.TP
-.B  \-\-no\-splash
-don\(aqt show the splash screen
+.B \-\-splash|\-\-no\-splash
+don\(aqt show the splash screen.  \fB\-\-splash\fP is the default.
+.UNINDENT
+.INDENT 0.0
 .TP
 .B  \-\-sleep\-multiplier
-multiplier
+set the default ddcutil sleep multiplier
 protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 1.0)
 .TP
 .B  \-\-create\-config\-files

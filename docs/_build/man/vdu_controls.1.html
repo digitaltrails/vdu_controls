@@ -7,36 +7,48 @@ Units</em>).</p>
                  [--about] [--detailed-help]
                  [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                  [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
-                 [--enable-vcp-code vcp_code] [--system-tray] [--debug] [--warnings] [--syslog]
-                 [--location latitude,longitude] [--translations] [--lux-meter]
-                 [--no-prefer-dynamic-sleep] [--no-schedule] [--no-weather] [--no-splash]
+                 [--enable-vcp-code vcp_code] [--system-tray|--no-system-tray] [--debug|--no-debug] [--warnings|--no-warnings]
+                 [--syslog|--no-syslog] [--location latitude,longitude] [--translations|--no-translations]
+                 [--lux-options|--no-lux-options] [--prefer-dynamic-sleep|--no-prefer-dynamic-sleep]
+                 [--schedule|--no-schedule] [--weather|--no-weather] [--splash|--no-splash]
                  [--sleep-multiplier multiplier]
                  [--create-config-files] [--install] [--uninstall]</code></pre>
 <h2 id="optional-arguments">Optional arguments:</h2>
+<p>Arguments supplied on the command line override config file
+equivalent settings.</p>
 <pre><code>  -h, --help            show this help message and exit
   --detailed-help       full help in Markdown format
-  --about               about vdu_controls
+  --about               info about vdu_controls
   --show control_name
-                        show specified control only (--show may be specified multiple times)
+                        show specified control only (``--show`` may be specified multiple times)
   --hide control_name
-                        hide/disable a control (--hide may be specified multiple times)
+                        hide/disable a control (``--hide`` may be specified multiple times)
   --enable-vcp-code vcp_code
                         enable a control for a vcp-code unavailable via hide/show (maybe specified multiple times)
-  --system-tray         start up as an entry in the system tray
+  --system-tray|--no-system-tray
+                        start up as an entry in the system tray.  ``--no-system-tray`` is the default.
   --location latitude,longitude
                         local latitude and longitude for triggering presets by solar elevation
-  --translations
-                        enable language translations
-  --no-prefer-dynamic-sleep
-                        don&#39;t prefer dynamic-sleep for ddcutil versions greater than 2.0, use set sleep multipliers
-  --no-schedule         disable preset schedule
-  --no-weather          disable weather lookups
-  --lux-meter           enable hardware light metering
-  --debug               enable debug output to stdout
-  --warnings            popup a warning when a VDU lacks an enabled control
-  --syslog              repeat diagnostic output to the syslog (journald)
-  --no-splash           don&#39;t show the splash screen
-  --sleep-multiplier    multiplier
+  --translations|--no-translations
+                        enable/disable language translations. ``--no-translations`` is the default.
+  --prefer-dynamic-sleep|--no-prefer-dynamic-sleep
+                        enable/disable prefer dynamic-sleep for ddcutil versions greater than 2.0. ``--prefer-dynamic-sleep``
+                        is the default.
+  --schedule|--no-schedule
+                        enable/disable preset scheduling. ``--no-schedule`` is the default.
+  --weather|--no-weather
+                        enable/disable weather lookups. ``--no-weather`` is the default.
+  --lux-options|--no-lux-options
+                        enable/disable hardware light metering options. ``--no-lux-options`` is the default.
+  --debug|--no-debug
+                        enable/disable additional debug output.  ``--no-debug`` is the default.
+  --warnings--no-warnings
+                        popup a warning when a VDU lacks an enabled control. ``--no-warnings`` is the default.
+  --syslog|-no-syslog
+                        repeat diagnostic output to the syslog (journald).  ``--no-syslog`` is the default.
+  --splash|--no-splash
+                        don&#39;t show the splash screen.  ``--splash`` is the default.
+  --sleep-multiplier    set the default ddcutil sleep multiplier
                         protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 1.0)
   --create-config-files  if they do not exist, create template config INI files in $HOME/.config/vdu_controls/
   --install             installs the vdu_controls in the current user&#39;s path and desktop application menu.
