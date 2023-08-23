@@ -1646,7 +1646,7 @@ class ConfOption(Enum):
             arg_var = self.cmdline_var = self.conf_name.replace('-enabled', '').replace('-', '_')
             if self.conf_type == ConfType.BOOL:  # Store strings for bools, allows us to differentiate yes/no and not supplied.
                 parser.add_argument(f"--{self.cmdline_arg}", dest=arg_var, action='store_const', const='yes',
-                                    help=self.help + (tr(' (default)') if self.default_value == 'yes' else ''))
+                                    help=self.help + ' ' + (tr('(default)') if self.default_value == 'yes' else ''))
                 parser.add_argument(f"--no-{self.cmdline_arg}", dest=arg_var, action='store_const', const='no',
                                     help=tr('(default)') if self.default_value == 'no' else '')
             elif self.conf_type == ConfType.FLOAT:
