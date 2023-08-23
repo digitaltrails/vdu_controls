@@ -726,7 +726,7 @@ EASTERN_SKY = 'eastern-sky'
 
 IP_ADDRESS_INFO_URL = os.getenv('VDU_CONTROLS_IPINFO_URL', default='https://ipinfo.io/json')
 WEATHER_FORECAST_URL = os.getenv('VDU_CONTROLS_WTTR_URL', default='https://wttr.in')
-TESTING_TIME_ZONE = None  # for example 'Europe/Berlin'
+TESTING_TIME_ZONE = None  # for example 'Europe/Berlin' 'Asia/Shanghai'
 
 TIME_CLOCK_SYMBOL = '\u25F4'  # WHITE CIRCLE WITH UPPER LEFT QUADRANT
 WEATHER_RESTRICTION_SYMBOL = '\u2614'  # UMBRELLA WITH RAIN DROPS
@@ -4072,6 +4072,7 @@ class PresetChooseElevationChart(QLabel):
         self.noon_y: int = 25
         self.horizon_y: int = 75
         self.radius_of_deletion = self.minimumWidth() // 10
+        self.solar_max_t: datetime | None = None
 
     def has_elevation_key(self, key: SolarElevationKey) -> bool:
         return key in self.elevation_steps
@@ -4129,6 +4130,7 @@ class PresetChooseElevationChart(QLabel):
                 if sun_height > max_sun_height:
                     max_sun_height = sun_height
                     solar_noon_x, solar_noon_y = x, y
+                    self.solar_max_t = t
                 if sun_plot_time is None and ev_key and round(90.0 - z) == ev_key.elevation:
                     if (ev_key.direction == EASTERN_SKY and round(a) <= 180) or (
                             ev_key.direction == WESTERN_SKY and round(a) >= 180):
@@ -4156,7 +4158,7 @@ class PresetChooseElevationChart(QLabel):
             painter.drawText(reverse_x(solar_noon_x + width // 4), origin_iy + int(height / 2.75),
                              f"{ev_key.elevation if ev_key else 0:3d}{DEGREE_SYMBOL} {time_text}")
 
-            # Draw pie/compas angle
+            # Draw pie/compass angle
             if ev_key:
                 angle_above_horz = ev_key.elevation if ev_key.direction == EASTERN_SKY else (180 - ev_key.elevation)  # anticlockwise from 0
             else:
@@ -4358,6 +4360,10 @@ class PresetChooseElevationWidget(QWidget):
         self.slider.setValue(-1)
         self.sliding()
         self.weather_widget.update_location(location)
+        if self.elevation_chart.solar_max_t is not None:
+            snt = self.elevation_chart.solar_max_t
+            if snt.hour > (15 if snt.tzname() == 'CST' else 14) or snt.hour < 10:  # Solar midday seems too far from 12:00 midday.
+                log_warning(f"Location {location.longitude},{location.latitude} and timezone {snt.tzname()} seem mismatched.")
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
