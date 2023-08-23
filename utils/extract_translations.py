@@ -59,7 +59,7 @@ def main():
             line_index[line_key] = True
             print(f"[[{line_key}]]")
             print(source.text, '.')
-    tree.write('translations/test-edited.ts')
+    #tree.write('translations/test-edited.ts')
 
 
 if __name__ == '__main__':
