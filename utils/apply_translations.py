@@ -15,7 +15,9 @@ def main():
     source_map = {}
     for item in source_text.split('[['):
         if item:
+
             source_match = re.match(r'^([0-9]+)\]\]\n(.*)', item, flags=re.DOTALL)
+            key = source_match.group(1)
             source_map[source_match.group(1)] = source_match.group(2)[:-2]
 
     with open(sys.argv[2]) as translation_file:
@@ -42,24 +44,21 @@ def main():
         s = message_node.find('source')
         location = message_node.find('location')
         line_key = location.attrib['line']
-        while line_key in lines_done:
-            line_key = '0' + line_key
-        lines_done[line_key] = True
-        # print(s.text)
         if line_key in translation_map:
             # print(s.text, subs[s.text])
             translation = message_node.find('translation')
-            new_text = translation_map[line_key]
-            if new_text != source_map[line_key] and new_text.strip() != '':
-                print("Found", line_key)
-                translation.text = new_text
-                translation.set('type', None)
-                del (translation.attrib['type'])
-            else:
-                missing += f"[[{line_key}]]\n{source_map[line_key]} .\n"
+            if 'type' in translation.attrib and translation.attrib['type'] == 'unfinished':
+                new_text = translation_map[line_key]
+                if new_text != source_map[line_key] and new_text.strip() != '':
+                    print("Found", line_key, translation.text, translation.attrib, new_text)
+                    translation.text = new_text
+                    translation.set('type', None)
+                    del (translation.attrib['type'])
+                else:
+                    missing += f"[[{line_key}]]\n{source_map[line_key]} .\n"
 
     output_filename = sys.argv[3]
-    print(f"Updating {output_filename}")
+    print(f"Updating {output_filename }")
 
     tree.write(output_filename)
     if missing != '':

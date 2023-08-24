@@ -1626,10 +1626,10 @@ class ConfOption(Enum):
     SLEEP_MULTIPLIER = conf_opt_def(name=QT_TR_NOOP('sleep-multiplier'), section='ddcutil-parameters', conf_type=ConfType.FLOAT,
                                     default='0.0', help=QT_TR_NOOP('ddcutil --sleep-multiplier (0.1 .. 2.0, default none)'))
     ENABLE_VCP_CODES = conf_opt_def(name=QT_TR_NOOP('enable-vcp-codes'), section='vdu-controls-widgets', conf_type=ConfType.CSV,
-                                    cmdline_arg='DISALLOWED', help='CSV list of VCP Hex-code capabilities to enable')
+                                    cmdline_arg='DISALLOWED', help=QT_TR_NOOP('CSV list of VCP Hex-code capabilities to enable'))
     CAPABILITIES_OVERRIDE = conf_opt_def(name=QT_TR_NOOP('capabilities-override'), section='ddcutil-capabilities',
                                          conf_type=ConfType.TEXT, cmdline_arg='DISALLOWED',
-                                         help='override/cache for ddcutil capabilities text')
+                                         help=QT_TR_NOOP('override/cache for ddcutil capabilities text'))
     UNKNOWN = conf_opt_def(name="UNKNOWN", section="UNKNOWN", conf_type=ConfType.BOOL, cmdline_arg='DISALLOWED', help='')
 
     def __init__(self, name: str, section: str, cmdline_arg: str, conf_type: ConfType, default: str | None,

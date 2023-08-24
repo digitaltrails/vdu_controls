@@ -507,7 +507,7 @@ Leder efter DDC-sk&#230;rme...
     <message>
         <location filename="../vdu_controls.py" line="1628" />
         <source>enable-vcp-codes</source>
-        <translation>aktiver vcp-koder</translation>
+        <translation>CSV-liste over VCP Hex-kode-funktioner for at aktivere </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1626" />
@@ -517,7 +517,7 @@ Leder efter DDC-sk&#230;rme...
     <message>
         <location filename="../vdu_controls.py" line="1630" />
         <source>capabilities-override</source>
-        <translation>evner-tilsides&#230;ttelse</translation>
+        <translation>override/cache for ddcutil-funktioner tekst </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1624" />
@@ -1151,62 +1151,62 @@ Translated with www.DeepL.com/Translator (free version</translation>
     <message>
         <location filename="../vdu_controls.py" line="1607" />
         <source>start up in the system tray</source>
-        <translation type="unfinished" />
+        <translation>start i proceslinjen</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1609" />
         <source>enable language translations</source>
-        <translation type="unfinished" />
+        <translation>aktivere sprogovers&#230;ttelser</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1611" />
         <source>prefer dynamic-sleep over sleep-multipliers for ddcutil &gt;= 2.0</source>
-        <translation type="unfinished" />
+        <translation>foretr&#230;kker dynamisk-sleep frem for sleep-multiplikatorer for ddcutil &gt;= 2.0</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1613" />
         <source>enable weather lookups</source>
-        <translation type="unfinished" />
+        <translation>aktivere vejropslag</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1614" />
         <source>enable preset schedule</source>
-        <translation type="unfinished" />
+        <translation>aktiver forudindstillet tidsplan</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1615" />
         <source>enable light metering options</source>
-        <translation type="unfinished" />
+        <translation>aktivere lysm&#229;lingsmuligheder</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1617" />
         <source>enable the startup splash screen</source>
-        <translation type="unfinished" />
+        <translation>aktiver startsk&#230;rmen</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1619" />
         <source>popup warnings if a VDU lacks an enabled control</source>
-        <translation type="unfinished" />
+        <translation>popup-advarsler, hvis en VDU mangler en aktiveret kontrol</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1621" />
         <source>output extra debug information</source>
-        <translation type="unfinished" />
+        <translation>output ekstra debug information</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1622" />
         <source>divert diagnostic output to the syslog</source>
-        <translation type="unfinished" />
+        <translation>omdiriger diagnostisk output til syslog</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1624" />
         <source>latitude,longitude</source>
-        <translation type="unfinished" />
+        <translation>breddegrad, l&#230;ngdegrad</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1626" />
         <source>ddcutil --sleep-multiplier (0.1 .. 2.0, default none)</source>
-        <translation type="unfinished" />
+        <translation>ddcutil --sleep-multiplikator (0.1 .. 2.0, standard ingen) </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1650" />
@@ -1252,6 +1252,16 @@ Translated with www.DeepL.com/Translator (free version</translation>
         <location filename="../vdu_controls.py" line="6300" />
         <source>Help</source>
         <translation>Hj&#230;lp </translation>
+    </message>
+    <message>
+        <location filename="../vdu_controls.py" line="1628" />
+        <source>CSV list of VCP Hex-code capabilities to enable</source>
+        <translation>CSV-liste over VCP Hex-kode-funktioner for at aktivere </translation>
+    </message>
+    <message>
+        <location filename="../vdu_controls.py" line="1630" />
+        <source>override/cache for ddcutil capabilities text</source>
+        <translation>override/cache for ddcutil-funktioner tekst </translation>
     </message>
 </context>
 </TS>

@@ -1149,62 +1149,62 @@ Recherche de moniteurs DDC...
     <message>
         <location filename="../vdu_controls.py" line="1607" />
         <source>start up in the system tray</source>
-        <translation type="unfinished" />
+        <translation>d&#233;marrez dans la barre d'&#233;tat syst&#232;me</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1609" />
         <source>enable language translations</source>
-        <translation type="unfinished" />
+        <translation>activer les traductions de langue</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1611" />
         <source>prefer dynamic-sleep over sleep-multipliers for ddcutil &gt;= 2.0</source>
-        <translation type="unfinished" />
+        <translation>pr&#233;f&#233;rez le sommeil dynamique aux multiplicateurs de sommeil pour ddcutil &gt;= 2.0 </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1613" />
         <source>enable weather lookups</source>
-        <translation type="unfinished" />
+        <translation>activer les recherches m&#233;t&#233;o</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1614" />
         <source>enable preset schedule</source>
-        <translation type="unfinished" />
+        <translation>activer le calendrier pr&#233;d&#233;fini</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1615" />
         <source>enable light metering options</source>
-        <translation type="unfinished" />
+        <translation>activer les options de mesure de la lumi&#232;re</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1617" />
         <source>enable the startup splash screen</source>
-        <translation type="unfinished" />
+        <translation>activez l'&#233;cran de d&#233;marrage de d&#233;marrage</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1619" />
         <source>popup warnings if a VDU lacks an enabled control</source>
-        <translation type="unfinished" />
+        <translation>avertissements contextuels si un &#233;cran de visualisation ne dispose pas d'un contr&#244;le activ&#233;</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1621" />
         <source>output extra debug information</source>
-        <translation type="unfinished" />
+        <translation>afficher des informations de d&#233;bogage suppl&#233;mentaires</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1622" />
         <source>divert diagnostic output to the syslog</source>
-        <translation type="unfinished" />
+        <translation>d&#233;tourner la sortie de diagnostic vers le syslog</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1624" />
         <source>latitude,longitude</source>
-        <translation type="unfinished" />
+        <translation>latitude Longitude </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1626" />
         <source>ddcutil --sleep-multiplier (0.1 .. 2.0, default none)</source>
-        <translation type="unfinished" />
+        <translation>ddcutil --sleep-multiplier (0.1 .. 2.0, aucun par d&#233;faut) </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1650" />

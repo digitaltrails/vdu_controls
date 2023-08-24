@@ -69,7 +69,7 @@
     <message>
         <location filename="../vdu_controls.py" line="1628" />
         <source>enable-vcp-codes</source>
-        <translation>vcp-codes aktivieren </translation>
+        <translation>CSV-Liste der VCP-Hex-Code-Funktionen zur Aktivierung</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1626" />
@@ -79,7 +79,7 @@
     <message>
         <location filename="../vdu_controls.py" line="1630" />
         <source>capabilities-override</source>
-        <translation>F&#228;higkeiten &#252;berschreiben </translation>
+        <translation>Override/Cache f&#252;r ddcutil-Funktionen text </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1624" />
@@ -1149,62 +1149,62 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="1607" />
         <source>start up in the system tray</source>
-        <translation type="unfinished" />
+        <translation>Starten Sie in der Taskleiste</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1609" />
         <source>enable language translations</source>
-        <translation type="unfinished" />
+        <translation>Sprach&#252;bersetzungen aktivieren</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1611" />
         <source>prefer dynamic-sleep over sleep-multipliers for ddcutil &gt;= 2.0</source>
-        <translation type="unfinished" />
+        <translation>Bevorzugen Sie Dynamic-Sleep gegen&#252;ber Sleep-Multipliers f&#252;r ddcutil &gt;= 2.0 </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1613" />
         <source>enable weather lookups</source>
-        <translation type="unfinished" />
+        <translation>Aktivieren Sie die Wettersuche</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1614" />
         <source>enable preset schedule</source>
-        <translation type="unfinished" />
+        <translation>Aktivieren Sie den voreingestellten Zeitplan</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1615" />
         <source>enable light metering options</source>
-        <translation type="unfinished" />
+        <translation>Aktivieren Sie die Lichtmessoptionen</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1617" />
         <source>enable the startup splash screen</source>
-        <translation type="unfinished" />
+        <translation>Aktivieren Sie den Startbildschirm</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1619" />
         <source>popup warnings if a VDU lacks an enabled control</source>
-        <translation type="unfinished" />
+        <translation>Popup-Warnungen, wenn auf einem Bildschirm kein aktiviertes Steuerelement vorhanden ist</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1621" />
         <source>output extra debug information</source>
-        <translation type="unfinished" />
+        <translation>Gibt zus&#228;tzliche Debug-Informationen aus</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1622" />
         <source>divert diagnostic output to the syslog</source>
-        <translation type="unfinished" />
+        <translation>Leiten Sie die Diagnoseausgabe in das Syslog um</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1624" />
         <source>latitude,longitude</source>
-        <translation type="unfinished" />
+        <translation>Breitengrad, L&#228;ngengrad</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1626" />
         <source>ddcutil --sleep-multiplier (0.1 .. 2.0, default none)</source>
-        <translation type="unfinished" />
+        <translation>ddcutil --sleep-multiplier (0.1 .. 2.0, Standard keine) </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1650" />
@@ -1250,6 +1250,16 @@ Suche nach DDC-Monitoren...
         <location filename="../vdu_controls.py" line="6300" />
         <source>Help</source>
         <translation>Helfen </translation>
+    </message>
+    <message>
+        <location filename="../vdu_controls.py" line="1628" />
+        <source>CSV list of VCP Hex-code capabilities to enable</source>
+        <translation>CSV-Liste der VCP-Hex-Code-Funktionen zur Aktivierung</translation>
+    </message>
+    <message>
+        <location filename="../vdu_controls.py" line="1630" />
+        <source>override/cache for ddcutil capabilities text</source>
+        <translation>Override/Cache f&#252;r ddcutil-Funktionen text </translation>
     </message>
 </context>
 </TS>
