@@ -3196,10 +3196,11 @@ class VduControlsMainPanel(QWidget):
         self.bottom_toolbar: VduPanelBottomToolBar | None = None
         self.refresh_data_task = None
         self.setObjectName("vdu_controls_main_panel")
-        self.vdu_control_panels: List[VduControlPanel] = []
+        self.vdu_control_panels: Dict[str, VduControlPanel] = {}
         self.alert: QMessageBox | None = None
 
-    def initialise_control_panels(self, vdu_controllers, app_context_menu: ContextMenu, main_config: VduControlsConfig,
+    def initialise_control_panels(self, vdu_controllers: Dict[str, VduController],
+                                  app_context_menu: ContextMenu, main_config: VduControlsConfig,
                                   tool_buttons: List[ToolButton], splash_message_qtsignal: pyqtSignal) -> None:
         if self.layout():
             # Already laid out, must be responding to a configuration change requiring re-layout.
@@ -3216,13 +3217,13 @@ class VduControlsMainPanel(QWidget):
 
         warnings_enabled = main_config.is_set(ConfOption.WARNINGS_ENABLED)
 
-        for controller in vdu_controllers:
+        for controller in vdu_controllers.values():
             splash_message_qtsignal.emit(f"DDC ID {controller.vdu_number}\n{controller.get_vdu_description()}")
             vdu_control_panel = VduControlPanel(controller, self.display_vdu_exception)
             vdu_control_panel.connected_vdus_changed_qtsignal.connect(self.connected_vdus_changed_qtsignal)
             controller.respond_to_changes_qtsignal.connect(self.respond_to_changes_qtsignal)
             if vdu_control_panel.number_of_controls() != 0:
-                self.vdu_control_panels.append(vdu_control_panel)
+                self.vdu_control_panels[controller.vdu_stable_id] = vdu_control_panel
                 controllers_layout.addWidget(vdu_control_panel)
             elif warnings_enabled:
                 warn_omitted = MessageBox(QMessageBox.Warning)
@@ -3261,16 +3262,13 @@ class VduControlsMainPanel(QWidget):
     def indicate_busy(self, is_busy: bool = True) -> None:
         if self.bottom_toolbar is not None:
             self.bottom_toolbar.indicate_busy(is_busy)
-        for control_panel in self.vdu_control_panels:
+        for control_panel in self.vdu_control_panels.values():
             control_panel.setDisabled(is_busy)
 
     def is_preset_active(self, preset: Preset) -> bool:
         for section in preset.preset_ini:
-            if section != 'vdu_controls':
-                for control_panel in self.vdu_control_panels:
-                    if section == control_panel.controller.vdu_stable_id:
-                        if not control_panel.is_preset_active(preset.preset_ini):
-                            return False
+            if section not in ('metadata', 'preset') and (panel := self.vdu_control_panels.get(section, None)):
+                return panel.is_preset_active(preset.preset_ini)
         return True
 
     def display_active_preset(self, preset: Preset | None) -> None:
@@ -5688,8 +5686,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
             if lux_point.preset_name is None:
                 completed_profile.append(lux_point)
             else:  # Lookup the Preset's brightness for this particular VDU - get latest/current value from the actual Preset.
-                preset = self.main_controller.find_preset_by_name(lux_point.preset_name)
-                if preset is not None:
+                if preset := self.main_controller.find_preset_by_name(lux_point.preset_name):
                     # Profile brightness for this VDU will be -1 if this VDU's brightness-control doesn't participate in the Preset.
                     completed_profile.append(LuxPoint(lux_point.lux, preset.get_brightness(vdu_sid), lux_point.preset_name))
         completed_profile.append(LuxPoint(100000, 100))  # make sure we hava point at the end of the scale.
@@ -5750,10 +5747,10 @@ class LuxConfig(ConfigIni):
         else:  # Create a default profile:
             if brightness_range is not None:
                 min_v, max_v = brightness_range
-                if min_v < 10:
-                    min_v = 10
+                min_v = max(10, min_v)  # Don't go all the way down to zero.
+                segments = 5
                 lux_points = [LuxPoint(10**lux, brightness)
-                              for lux, brightness in zip(range(0, 6), range(min_v, max_v + 1, (max_v - min_v)//5))]
+                              for lux, brightness in zip(range(0, 6), range(min_v, max_v + 1, (max_v - min_v) // segments))]
             else:
                 lux_points = []
         if self.has_option('lux-presets', 'lux-preset-points'):
@@ -5902,13 +5899,12 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
         def choose_device() -> None:
             device_name = QFileDialog.getOpenFileName(self, tr("Select a tty device or fifo"), "/dev/ttyUSB0")[0]
+            device_name = self.validate_device(device_name)
             if device_name != '':
-                device_name = self.validate_device(device_name)
-                if device_name != '':
-                    if device_name != self.lux_config.get('lux-meter', 'lux-device', fallback=''):
-                        self.lux_config.set('lux-meter', "lux-device", device_name)
-                        self.apply_settings()
-                        self.status_message(tr("Meter changed to {}.").format(device_name))
+                if device_name != self.lux_config.get('lux-meter', 'lux-device', fallback=''):
+                    self.lux_config.set('lux-meter', "lux-device", device_name)
+                    self.apply_settings()
+                    self.status_message(tr("Meter changed to {}.").format(device_name))
 
         self.meter_device_selector.pressed.connect(choose_device)
 
@@ -5980,7 +5976,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
                 except VduException as ve:
                     self.vdu_current_brightness[vdu_sid] = 0
                     log_warning("VDU may not be available:", str(ve), trace=True)
-            # All vdu's have a profile, even if they have no brightness control bcause a preset may be attached to a lux value.
+            # All vdu's have a profile, even if they have no brightness control - because a preset may be attached to a lux value.
             self.lux_profile_data[vdu_sid] = self.lux_config.get_vdu_lux_profile(vdu_sid, value_range)
             connected_id_list.append(vdu_sid)
         self.preset_points.clear()  # Edit out deleted presets by starting from scratch
@@ -6346,7 +6342,7 @@ class VduAppController:   # Main controller containing methods for high level op
         self.main_config = main_config
         self.ddcutil: DdcUtil | None = None
         self.main_window: VduAppWindow | None = None
-        self.vdu_controllers: List[VduController] = []  # for 1 to 6 VDU's a list is in the same ballpark as a dict.
+        self.vdu_controllers: Dict[str, VduController] = {}  # for 1 to 6 VDU's a list is in the same performance ballpark as a dict.
         self.preset_controller = PresetController()
         self.detected_vdu_list: List[Tuple[str, str, str, str]] = []
         self.previously_detected_vdu_list: List[Tuple[str, str, str, str]] = []
@@ -6425,8 +6421,7 @@ class VduAppController:   # Main controller containing methods for high level op
             self.ddcutil = None
 
     def detect_vdus(self) -> Tuple[List[Tuple[str, str, str, str]], Exception | None]:
-        ddcutil = self.ddcutil
-        if ddcutil is None:
+        if self.ddcutil is None:
             return [], None
         ddcutil_problem = None
         try:
@@ -6436,7 +6431,7 @@ class VduAppController:   # Main controller containing methods for high level op
             # Limit to a reasonable number of iterations.
             for i in range(1, 11):
                 prev_num = len(self.detected_vdu_list)
-                self.detected_vdu_list = ddcutil.detect_monitors(sleep_multiplier=self.main_config.get_sleep_multiplier())
+                self.detected_vdu_list = self.ddcutil.detect_monitors(sleep_multiplier=self.main_config.get_sleep_multiplier())
                 if prev_num == len(self.detected_vdu_list):
                     log_info(f"Number of detected monitors is stable at {len(self.detected_vdu_list)} (loop={i})")
                     break
@@ -6451,18 +6446,17 @@ class VduAppController:   # Main controller containing methods for high level op
 
     def initialize_vdu_controllers(self) -> None:
         assert is_running_in_gui_thread()
-        ddcutil = self.ddcutil
-        if ddcutil is None:
+        if self.ddcutil is None:
             return
         detected_vdu_list, ddcutil_problem = self.detect_vdus()
-        self.vdu_controllers = []
+        self.vdu_controllers = {}
         main_panel_error_handler = self.main_window.get_main_panel().display_vdu_exception
         for vdu_number, manufacturer, model_name, vdu_serial in detected_vdu_list:
             controller = None
             while True:
                 try:
                     controller = VduController(vdu_number, model_name, vdu_serial, manufacturer, self.main_config,
-                                               ddcutil, main_panel_error_handler, VduController.NORMAL_VDU)
+                                               self.ddcutil, main_panel_error_handler, VduController.NORMAL_VDU)
                 except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:  # TODO figure out all possible Exceptions:
                     # Catch any kind of parse related error
                     log_error(f"Problem creating controller for {vdu_number=} {model_name=} {vdu_serial=} exception={e}", trace=True)
@@ -6470,11 +6464,11 @@ class VduAppController:   # Main controller containing methods for high level op
                     if choice == VduController.NORMAL_VDU:
                         continue  # Try again
                     controller = VduController(vdu_number, model_name, vdu_serial, manufacturer, self.main_config,
-                                               ddcutil, main_panel_error_handler, choice)
+                                               self.ddcutil, main_panel_error_handler, choice)
                     controller.write_template_config_files()
                 break
             if controller is not None:
-                self.vdu_controllers.append(controller)
+                self.vdu_controllers[controller.vdu_stable_id] = controller
         if len(self.vdu_controllers) == 0:
             if self.main_config.is_set(ConfOption.WARNINGS_ENABLED):
                 self.main_window.display_no_controllers_error_dialog(ddcutil_problem)
@@ -6497,12 +6491,12 @@ class VduAppController:   # Main controller containing methods for high level op
 
     def edit_config(self) -> None:
         SettingsEditor.invoke(self.main_config,
-                              [vdu.config for vdu in self.vdu_controllers if vdu.config is not None],
+                              [vdu.config for vdu in self.vdu_controllers.values() if vdu.config is not None],
                               self.settings_changed)
 
     def create_config_files(self) -> None:
-        for vdu_model in self.vdu_controllers:
-            vdu_model.write_template_config_files()
+        for controller in self.vdu_controllers.values():
+            controller.write_template_config_files()
 
     def lux_auto_action(self) -> bool:
         if self.lux_auto_controller is None:
@@ -6522,7 +6516,7 @@ class VduAppController:   # Main controller containing methods for high level op
             if self.ddcutil is not None:
                 try:
                     self.detected_vdu_list = self.ddcutil.detect_monitors(sleep_multiplier=self.main_config.get_sleep_multiplier())
-                    for control_panel in self.main_window.get_main_panel().vdu_control_panels:
+                    for control_panel in self.main_window.get_main_panel().vdu_control_panels.values():
                         if control_panel.controller.get_full_id() in self.detected_vdu_list:
                             control_panel.refresh_from_vdu()
                 except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
@@ -6623,8 +6617,8 @@ class VduAppController:   # Main controller containing methods for high level op
                 preset.remove_elevation_trigger(quietly=True)
             elevation_key = preset.get_solar_elevation()
             if elevation_key is not None and preset.schedule_status == PresetScheduleStatus.UNSCHEDULED:
-                if elevation_key in time_map:
-                    when_today = time_map[elevation_key].when
+                if elevation_data := time_map.get(elevation_key, None):
+                    when_today = elevation_data.when
                     preset.elevation_time_today = when_today
                     if when_today > local_now:
                         preset.start_timer(when_today, self.activate_scheduled_preset)
@@ -6728,10 +6722,7 @@ class VduAppController:   # Main controller containing methods for high level op
         return True
 
     def find_preset_by_name(self, preset_name: str) -> Preset | None:
-        presets = self.preset_controller.find_presets()
-        if preset_name in presets:
-            return presets[preset_name]
-        return None
+        return self.preset_controller.find_presets().get(preset_name, None)
 
     def restore_named_preset(self, preset_name: str) -> None:
         preset = self.find_preset_by_name(preset_name)
@@ -6753,7 +6744,7 @@ class VduAppController:   # Main controller containing methods for high level op
         self.refresh_preset_menu(reorder=True)
 
     def copy_to_preset_ini(self, preset_ini: ConfigIni, update_only: bool = False) -> None:
-        for control_panel in self.main_window.get_main_panel().vdu_control_panels:
+        for control_panel in self.main_window.get_main_panel().vdu_control_panels.values():
             control_panel.copy_state(preset_ini, update_only)
 
     def delete_preset(self, preset: Preset) -> None:
@@ -6787,60 +6778,54 @@ class VduAppController:   # Main controller containing methods for high level op
         assert self.lux_auto_controller is not None
         return self.lux_auto_controller
 
-    def get_vdu_stable_id_list(self):
-        return [cp.vdu_stable_id for cp in self.vdu_controllers]
+    def get_vdu_stable_id_list(self) -> List[str]:
+        return list(self.vdu_controllers.keys())
 
     def get_vdu_current_values(self, vdu_stable_id: str):
-        for controller in self.vdu_controllers:
-            if controller.vdu_stable_id == vdu_stable_id:
-                vcp_codes = [capability.vcp_code for capability in controller.enabled_capabilities]
-                return [(code, value) for code, value in zip(vcp_codes, controller.get_vcp_values(vcp_codes))]
+        if controller := self.vdu_controllers.get(vdu_stable_id, None):
+            vcp_codes = [capability.vcp_code for capability in controller.enabled_capabilities]
+            return [(code, value) for code, value in zip(vcp_codes, controller.get_vcp_values(vcp_codes))]
+        return []
 
     def get_enabled_capabilities(self, vdu_stable_id: str) -> List[VcpCapability]:
-        for controller in self.vdu_controllers:
-            if controller.vdu_stable_id == vdu_stable_id:
-                return controller.enabled_capabilities
+        if controller := self.vdu_controllers.get(vdu_stable_id, None):
+            return controller.enabled_capabilities
         return []
 
     def get_range(self, vdu_stable_id: str, vcp_code: str, fallback: Tuple[int, int] | None = None) -> Tuple[int, int] | None:
-        for controller in self.vdu_controllers:
-            if controller.vdu_stable_id == vdu_stable_id:
-                return controller.get_range_restrictions(vcp_code, fallback)
+        if controller := self.vdu_controllers.get(vdu_stable_id, None):
+            return controller.get_range_restrictions(vcp_code, fallback)
         log_error(f"get_range: No controller for {vdu_stable_id}")
         return fallback
 
     def get_value(self, vdu_stable_id, vcp_code):
-        for controller in self.vdu_controllers:
-            if controller.vdu_stable_id == vdu_stable_id:
-                value = controller.get_vcp_values([vcp_code])
-                if len(value) == 1:
-                    return value[0].current
+        if controller := self.vdu_controllers.get(vdu_stable_id, None):
+            value = controller.get_vcp_values([vcp_code])
+            if len(value) == 1:  # This could probably be an assertion
+                return value[0].current
         log_error(f"get_value: No controller for {vdu_stable_id}")
         return '0'
 
     def set_value(self, vdu_stable_id: str, vcp_code: str, value_str: str):
-        for control_panel in self.main_window.get_main_panel().vdu_control_panels:
-            if control_panel.controller.vdu_stable_id == vdu_stable_id:
-                if control := control_panel.get_control(vcp_code):
-                    control.set_value(value_str)  # Apply to physical VDU
-                    return
+        if panel := self.main_window.get_main_panel().vdu_control_panels.get(vdu_stable_id, None):
+            if control := panel.get_control(vcp_code):
+                control.set_value(value_str)  # Apply to physical VDU
+                return
         log_error(f"set_value: No controller for {vdu_stable_id=} {vcp_code=}")
 
     def is_vcp_code_enabled(self, vdu_stable_id, vcp_code: str) -> bool:
-        for controller in self.vdu_controllers:
-            if controller.vdu_stable_id == vdu_stable_id:
-                for capability in controller.enabled_capabilities:
-                    if capability.vcp_code == vcp_code:
-                        return True
+        if controller := self.vdu_controllers.get(vdu_stable_id, None):
+            for capability in controller.enabled_capabilities:
+                if capability.vcp_code == vcp_code:
+                    return True
         return False
 
     def display_lux_auto_indicators(self):
         self.main_window.display_lux_auto_indicators()
 
     def get_vdu_description(self, vdu_stable_id: str):
-        for controller in self.vdu_controllers:
-            if controller.vdu_stable_id == vdu_stable_id:
-                return controller.get_vdu_description()
+        if controller := self.vdu_controllers.get(vdu_stable_id, None):
+            return controller.get_vdu_description()
         log_error(f"get_vdu_description: No controller for {vdu_stable_id}")
         return vdu_stable_id
 
