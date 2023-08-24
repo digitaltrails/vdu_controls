@@ -14,9 +14,9 @@ Usage:
                      [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                      [--enable-vcp-code vcp_code] [--system-tray|--no-system-tray] [--debug|--no-debug] [--warnings|--no-warnings]
                      [--syslog|--no-syslog] [--location latitude,longitude] [--translations|--no-translations]
-                     [--lux-options|--no-lux-options] [--prefer-dynamic-sleep|--no-prefer-dynamic-sleep]
+                     [--lux-options|--no-lux-options]
                      [--schedule|--no-schedule] [--weather|--no-weather] [--splash|--no-splash]
-                     [--sleep-multiplier multiplier]
+                     [--sleep-multiplier multiplier] [--ddcutil-extra-args 'extra args']
                      [--create-config-files] [--install] [--uninstall]
 
 Optional arguments:
@@ -39,9 +39,6 @@ Arguments supplied on the command line override config file equivalent settings.
                             local latitude and longitude for triggering presets by solar elevation
       --translations|--no-translations
                             enable/disable language translations. ``--no-translations`` is the default.
-      --prefer-dynamic-sleep|--no-prefer-dynamic-sleep
-                            enable/disable prefer dynamic-sleep for ddcutil versions greater than 2.0. ``--prefer-dynamic-sleep``
-                            is the default.
       --schedule|--no-schedule
                             enable/disable preset scheduling. ``--schedule`` is the default.
       --weather|--no-weather
@@ -58,7 +55,8 @@ Arguments supplied on the command line override config file equivalent settings.
                             show the splash screen.  ``--splash`` is the default.
       --sleep-multiplier    set the default ddcutil sleep multiplier
                             protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 1.0)
-      --create-config-files  if they do not exist, create template config INI files in $HOME/.config/vdu_controls/
+      --ddcutil-extra-args  extra arguments to pass to ddcutil (enclosed in single quotes)
+      --create-config-files if they do not exist, create template config INI files in $HOME/.config/vdu_controls/
       --install             installs the vdu_controls in the current user's path and desktop application menu.
       --uninstall           uninstalls the vdu_controls application menu file and script for the current user.
 
@@ -145,7 +143,6 @@ The config files are in INI-format divided into a number of sections as outlined
     # The vdu-controls-globals section is only required in $HOME/.config/vdu_controls/vdu_controls.conf
     system-tray-enabled = yes|no
     splash-screen-enabled = yes|no
-    prefer-dynamic-sleep-enabled = yes|no
     translations-enabled = yes|no
     weather-enabled = yes|no
     schedule-enabled = yes|no
@@ -1088,26 +1085,6 @@ GET_ATTRIBUTES_RETRIES = 3
 # Use a slight hack to make QMessageBox resizable.
 RESIZABLE_QMESSAGEBOX_HACK = True
 
-DANGER_AGREEMENT_NON_STANDARD_VCP_CODES = """
-If you are attempting to enable non-standard VCP-codes for write, you must read and
-consider this notice before proceeding any further.
-
-Enabling ddcutil for VCP-codes not in the Display Data Channel (DDC) Virtual Control
-Panel (VCP) standard may result in irreversible damage to any connected monitors and
-any devices they are connected to (including the driving PC).  Before enabling
-non-standard codes one should consider that these codes may need to be operated
-in conjunction with other settings or codes. One should also be mindful that some
-settings or combinations of settings may cause physical effects including and not
-limited to overheating, screen-burn-in, shortened backlight lifetime, and cease
-of function (bricking).
-
-It is your responsibility to assess and ensure the safety and wisdom of enabling
-unsupported VCP codes and your responsibility for dealing with the consequences.
-
-Note that this software is licenced under the GPL Version 3 WITHOUT ANY WARRANTY;
-without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-PURPOSE.
-"""
 ASSUMED_CONTROLS_CONFIG_VCP_CODES = ['10', '12']
 ASSUMED_CONTROLS_CONFIG_TEXT = ('\n'
                                 'capabilities-override = Model: unknown\n'
@@ -1225,18 +1202,16 @@ class DdcUtil:
     corrective action such as increasing the sleep_multiplier).
     """
 
-    def __init__(self, common_args: List[str] | None = None, default_sleep_multiplier: float | None = None,
-                 prefer_dynamic_sleep: bool = True) -> None:
+    def __init__(self, default_sleep_multiplier: float | None = None) -> None:
         super().__init__()
+        self.common_args = []
         self.supported_codes: Dict[str, str] | None = None
         self.default_sleep_multiplier = default_sleep_multiplier
-        self.common_args = common_args if common_args else []
         self.vcp_type_map: Dict[str, str] = {}
         self.use_edid = os.getenv('VDU_CONTROLS_USE_EDID', default="yes") == 'yes'
         log_info(f"Use_edid={self.use_edid} (to disable it: export VDU_CONTROLS_USE_EDID=no)")
         self.edid_map: Dict[str, str] = {}
         self.ddcutil_access_lock = Lock()
-        self.prefer_dynamic_sleep = False
         self.version = (0, 0, 0)  # Dummy version for bootstrapping
         version_info = self.__run__('--version').stdout.decode('utf-8', errors='surrogateescape')
         version_match = re.match(r'[a-z]+ ([0-9]+).([0-9]+).([0-9]+)-?([^\n]*)', version_info)
@@ -1245,9 +1220,7 @@ class DdcUtil:
             self.version_suffix = version_match.groups()[3]
         # self.version = [1,2,2]  # for testing for 1.2.2 compatibility
         log_info(f"ddcutil version info: {version_match.group(0)} {self.version}")
-        self.prefer_dynamic_sleep = self.version[0] >= 2 and prefer_dynamic_sleep
-        log_info(f"Prefer dynamic sleep = {self.prefer_dynamic_sleep}")
-        if self.version[0] >= 2:  # Won't know real version until around here
+        if self.version[0] >= 2:  # Won't know real version until around here  TODO is this test needed?
             self.common_args += [arg for arg in os.getenv('VDU_CONTROLS_DDCUTIL_ARGS', default='').split(' ') if arg != '']
 
     def id_key_args(self, vdu_number: str) -> List[str]:
@@ -1263,16 +1236,14 @@ class DdcUtil:
             multiplier_args = []
             multiplier_value = self.default_sleep_multiplier if sleep_multiplier is None else sleep_multiplier
             if self.version[0] >= 2:
-                if log_to_syslog and '--syslog' not in self.common_args:
+                if log_to_syslog and '--syslog' not in args:
                     syslog_args = ['--syslog', 'DEBUG' if log_debug_enabled else 'ERROR']
-                if self.prefer_dynamic_sleep or multiplier_value is None:
+                if '--enable-dynamic-sleep' not in args and '--disable-dynamic-sleep' not in args:
                     multiplier_args += ['--enable-dynamic-sleep']
                     multiplier_value = None
-                else:
-                    multiplier_args += ['--disable-dynamic-sleep']
             if multiplier_value is not None and not math.isclose(multiplier_value, 0.0):
                 multiplier_args += ['--sleep-multiplier', f"{multiplier_value:.2f}"]
-            process_args = [DDCUTIL] + syslog_args + multiplier_args + self.common_args + list(args)
+            process_args = [DDCUTIL] + self.common_args + syslog_args + multiplier_args + list(args)
             try:
                 now = time.time()
                 result = subprocess.run(process_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
@@ -1365,25 +1336,12 @@ class DdcUtil:
     def get_type(self, vcp_code) -> str | None:
         return self.vcp_type_map[vcp_code] if vcp_code in self.vcp_type_map else None
 
-    def get_attribute(self, vdu_number: str, vcp_code: str, sleep_multiplier: float | None = None) -> VcpValue:
-        """
-        Given a VDU id and vcp_code, retrieve the attribute's current value from the VDU.
-
-        Two values are returned, the monitor reported current value, and the monitor reported maximum value. Only
-        attributes with "Continuous" values have a maximum, for consistency the method will return a zero maximum
-        for "Non-Continuous" attributes.
-        """
-        result = self.get_attributes(vdu_number, [vcp_code], sleep_multiplier=sleep_multiplier)
-        if result and result[0] is not None:
-            return result[0]
-        raise ValueError(
-            f"ddcutil returned an invalid value for monitor {vdu_number} vcp_code {vcp_code}, try increasing --sleep-multiplier")
-
-    def set_attribute(self, vdu_number: str, vcp_code: str, new_value: str, sleep_multiplier: float | None = None) -> None:
+    def set_vcp(self, vdu_number: str, vcp_code: str, new_value: str,
+                sleep_multiplier: float | None = None, extra_args: List[str] = []) -> None:
         """Send a new value to a specific VDU and vcp_code."""
         if self.get_type(vcp_code) != CONTINUOUS_TYPE:
             new_value = 'x' + new_value
-        args_list = ['setvcp', vcp_code, new_value] + self.id_key_args(vdu_number)
+        args_list = extra_args + ['setvcp', vcp_code, new_value] + self.id_key_args(vdu_number)
         self.__run__(*args_list, sleep_multiplier=sleep_multiplier, log_id=vdu_number)
 
     def vcp_info(self) -> str:
@@ -1410,52 +1368,42 @@ class DdcUtil:
                     self.supported_codes[vcp_code] = vcp_name
         return self.supported_codes
 
-    def get_attributes(self, vdu_number: str, vcp_code_list: List[str], sleep_multiplier: float | None = None) -> List[VcpValue]:
+    def get_vcp_values(self, vdu_number: str, vcp_code_list: List[str],
+                       sleep_multiplier: float | None = None, extra_args: List[str] = []) -> List[VcpValue]:
         if self.version[0] > 1 or self.version[1] >= 3:
-            return self._get_attributes_implementation(vdu_number, vcp_code_list, sleep_multiplier)
+            return self._get_vcp_values_implementation(vdu_number, vcp_code_list, sleep_multiplier, extra_args)
         else:
-            result = []
-            for vcp_code in vcp_code_list:
-                result += self._get_attributes_implementation(vdu_number, [vcp_code], sleep_multiplier)
-            return result
+            return [self._get_vcp_values_implementation(vdu_number, [cd], sleep_multiplier, extra_args)[0] for cd in vcp_code_list]
 
-    def _get_attributes_implementation(self, vdu_number: str,
-                                       vcp_code_list: List[str], sleep_multiplier: float | None = None) -> List[VcpValue]:
+    def _get_vcp_values_implementation(self, vdu_number: str, vcp_code_list: List[str],
+                                       sleep_multiplier: float | None = None, extra_args: List[str] = []) -> List[VcpValue]:
         """
         Returns None if there is an error communicating with the VDU
         """
         # Try a few times in case there is a glitch due to a monitor being turned-off/on or slow to respond
         # Should we loop here, or higher up - maybe it doesn't matter.
         vcp_code_regexp = re.compile(r"^VCP ([0-9A-F]{2}) ")  # VCP 2-digit-hex
+        results_dict : Dict[str, VcpValue | None] = {vcp_code: None for vcp_code in vcp_code_list}  # Force vcp_code_list ordering
         for i in range(GET_ATTRIBUTES_RETRIES):
-            args = ['--brief', 'getvcp'] + vcp_code_list + self.id_key_args(vdu_number)
+            args = extra_args + ['--brief', 'getvcp'] + vcp_code_list + self.id_key_args(vdu_number)
             try:
                 from_ddcutil = self.__run__(*args, sleep_multiplier=sleep_multiplier, log_id=vdu_number)
-                unordered_results: Dict[str, str] = {}
                 for line in from_ddcutil.stdout.split(b"\n"):
                     line_utf8 = line.decode('utf-8', errors='surrogateescape') + '\n'
                     vcp_code_match = vcp_code_regexp.match(line_utf8)
                     if vcp_code_match is not None:
-                        unordered_results[vcp_code_match.group(1)] = line_utf8
-                # Order results into vcp_code_list order:
-                result_list: List[VcpValue] = []
-                for vcp_code in vcp_code_list:
-                    if vcp_code not in unordered_results:
-                        log_warning(f"getvcp '{vcp_code}' missing result, try {i + 1}, will try again.")
-                        continue
-                    vcp_value: VcpValue | None = self.__parse_vcp_value(vdu_number, vcp_code, unordered_results[vcp_code])
-                    if vcp_value is None:
-                        log_warning(
-                            f"getvcp '{vcp_code}' parse failed '{unordered_results[vcp_code]}', try {i + 1}, will try again.")
-                        continue
-                    result_list.append(vcp_value)
-                return result_list
-            except subprocess.SubprocessError:
+                        vcp_code = vcp_code_match.group(1)
+                        vcp_value = self.__parse_vcp_value(vdu_number, vcp_code, line_utf8)
+                        results_dict[vcp_code] = vcp_value
+                for vcp_code, str_value in results_dict.items():
+                    if str_value is None:
+                        raise ValueError(f"getvcp: VDU {vdu_number} - failed to obtain value for vcp_code {vcp_code}")
+                return list(results_dict.values())
+            except (subprocess.SubprocessError, ValueError):  # Don't log here, it creates too much noise in the logs
                 if i + 1 == GET_ATTRIBUTES_RETRIES:
-                    # Don't log here - creates too much noise in the logs - pass the buck instead
                     raise  # Too many failures, pass the buck upstairs
             time.sleep(2)
-        return []
+        raise ValueError("getvcp: reached unreachable code.")
 
     def __parse_vcp_value(self, vdu_number: str, vcp_code: str, result: str) -> VcpValue | None:
         value_pattern = re.compile(r'VCP ' + vcp_code + r' ([A-Z]+) (.+)\n')
@@ -1481,7 +1429,7 @@ class DdcUtil:
                                     max='0', vcp_type=COMPLEX_NON_CONTINUOUS_TYPE)
             else:
                 raise TypeError(f'Unsupported VCP type {type_indicator} for monitor {vdu_number} vcp_code {vcp_code}')
-        return None
+        raise ValueError(f"VDU {vdu_number} vcp_code {vcp_code} failed to parse vcp value '{result}'")
 
 
 def si(widget: QWidget, icon_number: QStyle.StandardPixmap) -> QIcon:  # Qt bundled standard icons (which are themed)
@@ -1594,7 +1542,8 @@ class ConfType(str, Enum):
     BOOL = 'bool'
     FLOAT = 'float'
     CSV = 'csv'
-    TEXT = 'text'
+    LONG_TEXT = 'long_text'
+    TEXT = 'mediumtext'
     LOCATION = 'location'
 
 
@@ -1608,8 +1557,6 @@ class ConfOption(Enum):
                                        help=QT_TR_NOOP('start up in the system tray'))
     TRANSLATIONS_ENABLED = conf_opt_def(name=QT_TR_NOOP('translations-enabled'),  default="no",
                                         help=QT_TR_NOOP('enable language translations'))
-    PREFER_DYNAMIC_SLEEP_ENABLED = conf_opt_def(name=QT_TR_NOOP('prefer-dynamic-sleep-enabled'), default='yes',
-                                                help=QT_TR_NOOP('prefer dynamic-sleep over sleep-multipliers for ddcutil >= 2.0'))
     WEATHER_ENABLED = conf_opt_def(name=QT_TR_NOOP('weather-enabled'), default='yes', help=QT_TR_NOOP('enable weather lookups'))
     SCHEDULE_ENABLED = conf_opt_def(name=QT_TR_NOOP('schedule-enabled'), default='yes', help=QT_TR_NOOP('enable preset schedule'))
     LUX_OPTIONS_ENABLED = conf_opt_def(name=QT_TR_NOOP('lux-options-enabled'), default="no", restart=True,
@@ -1624,11 +1571,13 @@ class ConfOption(Enum):
     LOCATION = conf_opt_def(name=QT_TR_NOOP('location'), section='vdu-controls-globals', conf_type=ConfType.LOCATION,
                             help=QT_TR_NOOP('latitude,longitude'))
     SLEEP_MULTIPLIER = conf_opt_def(name=QT_TR_NOOP('sleep-multiplier'), section='ddcutil-parameters', conf_type=ConfType.FLOAT,
-                                    default='0.0', help=QT_TR_NOOP('ddcutil --sleep-multiplier (0.1 .. 2.0, default none)'))
+                                    help=QT_TR_NOOP('ddcutil --sleep-multiplier (0.1 .. 2.0, default none)'))
+    DDCUTIL_ARGS = conf_opt_def(name=QT_TR_NOOP('ddcutil-extra-args'), section='ddcutil-parameters', conf_type=ConfType.TEXT,
+                                help=QT_TR_NOOP('ddcutil extra arguments (default none)'))
     ENABLE_VCP_CODES = conf_opt_def(name=QT_TR_NOOP('enable-vcp-codes'), section='vdu-controls-widgets', conf_type=ConfType.CSV,
                                     cmdline_arg='DISALLOWED', help=QT_TR_NOOP('CSV list of VCP Hex-code capabilities to enable'))
     CAPABILITIES_OVERRIDE = conf_opt_def(name=QT_TR_NOOP('capabilities-override'), section='ddcutil-capabilities',
-                                         conf_type=ConfType.TEXT, cmdline_arg='DISALLOWED',
+                                         conf_type=ConfType.LONG_TEXT, cmdline_arg='DISALLOWED',
                                          help=QT_TR_NOOP('override/cache for ddcutil capabilities text'))
     UNKNOWN = conf_opt_def(name="UNKNOWN", section="UNKNOWN", conf_type=ConfType.BOOL, cmdline_arg='DISALLOWED', help='')
 
@@ -1741,6 +1690,7 @@ class VduControlsConfig:
 
         self.ini_content['vdu-controls-widgets']['enable-vcp-codes'] = ''
         self.ini_content['ddcutil-parameters']['sleep-multiplier'] = str(0.0)
+        self.ini_content['ddcutil-parameters']['ddcutil-extra-args'] = ''
         self.ini_content['ddcutil-capabilities']['capabilities-override'] = ''
 
         if default_enabled_vcp_codes is not None:
@@ -1781,9 +1731,13 @@ class VduControlsConfig:
                             f"{self.ini_content[option.conf_section][option.conf_name]} (in {self.file_path})")
                 self.ini_content[option.conf_section][option.conf_name] = str_value
 
-    def get_sleep_multiplier(self) -> float | None:
+    def get_sleep_multiplier(self, fallback: float = None) -> float | None:
         value = self.ini_content.getfloat('ddcutil-parameters', 'sleep-multiplier', fallback=0.0)
-        return None if math.isclose(value, 0.0) else value
+        return fallback if math.isclose(value, 0.0) else value
+
+    def get_ddcutil_extra_args(self, fallback: List[str] = []) -> List[str]:
+        value = self.ini_content.get('ddcutil-parameters', 'ddcutil-extra-args', fallback=None)
+        return fallback if value is None or value.strip() == '' else value.split(' ')
 
     def get_capabilities_alt_text(self) -> str:
         return self.ini_content['ddcutil-capabilities']['capabilities-override']
@@ -1969,6 +1923,7 @@ class VduController(QObject):
         self.ddcutil = ddcutil
         self.vdu_exception_handler = vdu_exception_handler
         self.sleep_multiplier: float | None = default_config.get_sleep_multiplier()
+        self.ddcutil_extra_args: List[str] = default_config.get_ddcutil_extra_args()
         self.vdu_model_id = proper_name(vdu_model_name.strip())
         self.capabilities_text: str | None = None
         self.config = None
@@ -1981,7 +1936,8 @@ class VduController(QObject):
                 config.parse_file(config_path)
                 if default_config.is_set(ConfOption.DEBUG_ENABLED):
                     config.debug_dump()
-                self.sleep_multiplier = config.get_sleep_multiplier()
+                self.sleep_multiplier = config.get_sleep_multiplier(fallback=self.sleep_multiplier)
+                self.ddcutil_extra_args = config.get_ddcutil_extra_args(fallback=self.ddcutil_extra_args)
                 enabled_vcp_codes = config.get_all_enabled_vcp_codes()
                 self.capabilities_text = config.get_capabilities_alt_text()
                 self.config = config
@@ -2022,28 +1978,22 @@ class VduController(QObject):
         """Return a tuple that defines this VDU: (vdu_number, manufacturer, model, serial-number)."""
         return self.vdu_number, self.manufacturer, self.model_name, self.serial_number
 
-    def get_vdu_values(self, vcp_codes: List[str]) -> List[VcpValue]:
+    def get_vcp_values(self, vcp_codes: List[str]) -> List[VcpValue]:
         try:
             if len(vcp_codes) == 0:
                 return []
             # raise subprocess.SubprocessError("get_attributes")  # for testing
-            return self.ddcutil.get_attributes(self.vdu_number, vcp_codes, sleep_multiplier=self.sleep_multiplier)
+            return self.ddcutil.get_vcp_values(self.vdu_number, vcp_codes,
+                                               sleep_multiplier=self.sleep_multiplier, extra_args=self.ddcutil_extra_args)
         except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound) as e:
             raise VduException(vdu_description=self.get_vdu_description(), vcp_code=",".join(vcp_codes), exception=e,
                                operation="get_attributes") from e
 
-    def get_vdu_value(self, vcp_code: str) -> VcpValue:
-        try:
-            # raise subprocess.SubprocessError("get_attribute")  # for testing
-            return self.ddcutil.get_attribute(self.vdu_number, vcp_code, sleep_multiplier=self.sleep_multiplier)
-        except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound) as e:
-            raise VduException(vdu_description=self.get_vdu_description(), vcp_code=vcp_code, exception=e,
-                               operation="get_attribute") from e
-
-    def set_vdu_value(self, vcp_code: str, value: str) -> None:
+    def set_vcp_value(self, vcp_code: str, value: str) -> None:
         try:
             # raise subprocess.SubprocessError("set_attribute")  # for testing
-            self.ddcutil.set_attribute(self.vdu_number, vcp_code, value, sleep_multiplier=self.sleep_multiplier)
+            self.ddcutil.set_vcp(self.vdu_number, vcp_code, value,
+                                 sleep_multiplier=self.sleep_multiplier, extra_args=self.ddcutil_extra_args)
             self.respond_to_changes_qtsignal.emit(self.vdu_stable_id, vcp_code, value)
         except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound) as e:
             raise VduException(vdu_description=self.get_vdu_description(), vcp_code=vcp_code, exception=e,
@@ -2198,8 +2148,10 @@ class SettingsEditorTab(QWidget):
                     bool_count += 1
                 elif option_def.conf_type == ConfType.FLOAT:
                     editor_layout.addWidget(field(SettingsEditorFloatWidget(self, option_name, section_name, option_def.help)))
+                elif option_def.conf_type == ConfType.LONG_TEXT:
+                    editor_layout.addWidget(field(SettingsEditorLongTextWidget(self, option_name, section_name, option_def.help)))
                 elif option_def.conf_type == ConfType.TEXT:
-                    editor_layout.addWidget(field(SettingsEditorTextEditorWidget(self, option_name, section_name, option_def.help)))
+                    editor_layout.addWidget(field(SettingsEditorTextWidget(self, option_name, section_name, option_def.help)))
                 elif option_def.conf_type == ConfType.CSV:
                     editor_layout.addWidget(field(SettingsEditorCsvWidget(self, option_name, section_name, option_def.help)))
                 elif option_def.conf_type == ConfType.LOCATION:
@@ -2480,7 +2432,7 @@ class SettingsEditorLocationWidget(SettingsEditorLineBase):
         return ''
 
 
-class SettingsEditorTextEditorWidget(SettingsEditorFieldBase):
+class SettingsEditorLongTextWidget(SettingsEditorFieldBase):
     def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
         super().__init__(section_editor, option, section, tooltip)
         layout = QVBoxLayout()
@@ -2498,6 +2450,13 @@ class SettingsEditorTextEditorWidget(SettingsEditorFieldBase):
 
     def reset(self) -> None:
         self.text_editor.setPlainText(self.section_editor.ini_before[self.section][self.option])
+
+
+class SettingsEditorTextWidget(SettingsEditorLongTextWidget):
+
+    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
+        super().__init__(section_editor, option, section, tooltip)
+        self.setMaximumHeight(100)
 
 
 def restart_application(reason: str) -> None:
@@ -2574,7 +2533,7 @@ class VduControlBase(QWidget):
 
     def _change_physical_vdu(self, new_value: str) -> None:
         log_info(f"_change_physical_vdu {self.refresh_ui_only=} {self.vcp_capability.vcp_code=}") if self.debug else None
-        self.controller.set_vdu_value(self.vcp_capability.vcp_code, new_value)
+        self.controller.set_vcp_value(self.vcp_capability.vcp_code, new_value)
         if self.vcp_capability.vcp_code in SUPPORTED_VCP_BY_CODE and \
                 SUPPORTED_VCP_BY_CODE[self.vcp_capability.vcp_code].causes_config_change:
             self.connected_vdus_changed_qtsignal.emit()  # Special case, such as a power control causing the VDU to go offline.
@@ -2813,7 +2772,7 @@ class VduControlPanel(QWidget):
 
     def refresh_from_vdu(self) -> None:
         """Tell the control widgets to get fresh VDU data (maybe called from a task thread, so no GUI op's here)."""
-        values = self.controller.get_vdu_values([control.vcp_capability.vcp_code for control in self.vcp_controls])
+        values = self.controller.get_vcp_values([control.vcp_capability.vcp_code for control in self.vcp_controls])
         if values:
             for control, value in zip(self.vcp_controls, values):
                 control.update_from_vdu(value)
@@ -3473,19 +3432,18 @@ class PresetTransitionWorker(WorkerThread):
         for vdu_stable_id in self.main_controller.get_vdu_stable_id_list():  # Check that no one else is changing the controls
             if self.stop_requested:
                 return True
-            for vcp_capability in self.main_controller.get_enabled_capabilities(vdu_stable_id):
+            for vcp_code, vcp_value in self.main_controller.get_vdu_current_values(vdu_stable_id):
                 if self.stop_requested:
                     return True
-                key = TransitionValueKey(vdu_stable_id=vdu_stable_id, vcp_code=vcp_capability.vcp_code)
-                current_value = self.main_controller.get_value(key.vdu_stable_id, key.vcp_code)  # get a constant copy now
+                key = TransitionValueKey(vdu_stable_id=vdu_stable_id, vcp_code=vcp_code)
                 if key in self.expected_values:
-                    if self.expected_values[key] != current_value:
-                        log_warning(f"Interrupted transition to {self.preset.name} {key.vdu_stable_id=} " 
-                                    f"something else changed the VDU: {self.expected_values[key]=} != {current_value=}")
+                    if self.expected_values[key] != vcp_value.current:
+                        log_warning(f"Interrupted transition to {self.preset.name} {key.vdu_stable_id=} "
+                                    f"something else changed the VDU: {self.expected_values[key]=} != {vcp_value.current=}")
                         self.work_state = PresetTransitionState.INTERRUPTED  # Something else is changing the controls, stop work
                         return False
                 else:
-                    self.expected_values[key] = current_value  # must be first time through, initialize value
+                    self.expected_values[key] = vcp_value.current  # must be first time through, initialize value
         return self.work_state != PresetTransitionState.INTERRUPTED
 
     def total_elapsed_seconds(self) -> float:
@@ -6460,10 +6418,7 @@ class VduAppController:   # Main controller containing methods for high level op
 
     def create_ddcutil(self):
         try:
-            ddcutil_common_args = ['--force', ] if self.is_non_standard_enabled() else []
-            self.ddcutil = DdcUtil(common_args=ddcutil_common_args,
-                                   default_sleep_multiplier=self.main_config.get_sleep_multiplier(),
-                                   prefer_dynamic_sleep=self.main_config.is_set(ConfOption.PREFER_DYNAMIC_SLEEP_ENABLED))
+            self.ddcutil = DdcUtil(default_sleep_multiplier=self.main_config.get_sleep_multiplier())
         except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
             self.main_window.display_no_controllers_error_dialog(e)
             self.ddcutil = None
@@ -6522,20 +6477,6 @@ class VduAppController:   # Main controller containing methods for high level op
         if len(self.vdu_controllers) == 0:
             if self.main_config.is_set(ConfOption.WARNINGS_ENABLED):
                 self.main_window.display_no_controllers_error_dialog(ddcutil_problem)
-
-    def is_non_standard_enabled(self) -> bool:
-        path = get_config_path("danger")
-        if path.exists():
-            with open(path, encoding="utf-8") as f:
-                text = f.read()
-                if text.strip() == DANGER_AGREEMENT_NON_STANDARD_VCP_CODES.strip():
-                    log_warning(f"\n"
-                                f"Non standard features may be enabled for write.\n"
-                                f"ENABLING NON_STANDARD FEATURES COULD DAMAGE YOUR HARDWARE.\n"
-                                f"To disable non-standard features delete the file {path}.\n"
-                                f"{DANGER_AGREEMENT_NON_STANDARD_VCP_CODES}")
-                    return True
-        return False
 
     def settings_changed(self, changed_settings: List) -> None:
         if changed_settings is None:  # Special value - means settings have been reset/removed - needs restart.
@@ -6848,6 +6789,12 @@ class VduAppController:   # Main controller containing methods for high level op
     def get_vdu_stable_id_list(self):
         return [cp.vdu_stable_id for cp in self.vdu_controllers]
 
+    def get_vdu_current_values(self, vdu_stable_id: str):
+        for controller in self.vdu_controllers:
+            if controller.vdu_stable_id == vdu_stable_id:
+                vcp_codes = [capability.vcp_code for capability in controller.enabled_capabilities]
+                return [(code, value) for code, value in zip(vcp_codes, controller.get_vcp_values(vcp_codes))]
+
     def get_enabled_capabilities(self, vdu_stable_id: str) -> List[VcpCapability]:
         for controller in self.vdu_controllers:
             if controller.vdu_stable_id == vdu_stable_id:
@@ -6864,7 +6811,9 @@ class VduAppController:   # Main controller containing methods for high level op
     def get_value(self, vdu_stable_id, vcp_code):
         for controller in self.vdu_controllers:
             if controller.vdu_stable_id == vdu_stable_id:
-                return controller.get_vdu_value(vcp_code).current
+                value = controller.get_vcp_values([vcp_code])
+                if len(value) == 1:
+                    return value[0].current
         log_error(f"get_value: No controller for {vdu_stable_id}")
         return '0'
 
@@ -7472,7 +7421,7 @@ def main() -> None:
         AboutDialog.invoke()
 
     main_controller = VduAppController(main_config)
-    main_window = VduAppWindow(main_config, app, main_controller)
+    VduAppWindow(main_config, app, main_controller)
 
     if args.create_config_files:
         main_controller.create_config_files()
