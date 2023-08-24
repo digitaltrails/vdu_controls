@@ -727,9 +727,9 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
     QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar
 
-
 APPNAME = "VDU Controls"
 VDU_CONTROLS_VERSION = '1.11.0'
+assert sys.version_info >= (3, 8), f'{APPNAME} utilises python version 3.8 or greater (your {sys.version}).'
 
 WESTERN_SKY = 'western-sky'
 EASTERN_SKY = 'eastern-sky'
@@ -848,14 +848,11 @@ def tr(source_text: str, disambiguation: str | None = None) -> str:
 
 def translate_option(option_text) -> str:
     # We can't be sure of the case in capability descriptions retrieved from the monitors.
-    # If there is no direct translation, we try canonical version of the name (all lowercase
-    # with '-' replaced with ' ').
-    result = tr(option_text)
-    if result != option_text:  # Probably a command line option
-        return result.replace('-', ' ')
+    # If there is no direct translation, we try canonical version of the name (all lowercase with '-' replaced with ' ').
+    if (translation := tr(option_text)) != option_text:  # Probably a command line option
+        return translation.replace('-', ' ')
     canonical = option_text.lower().replace('-', ' ')
-    result = tr(canonical)
-    return result
+    return tr(canonical)
 
 
 ABOUT_TEXT = f"""
@@ -1202,9 +1199,15 @@ class DdcUtil:
     The exception callback can return True if we should retry after errors (after the callback takes
     corrective action such as increasing the sleep_multiplier).
     """
+    _VCP_CODE_REGEXP = re.compile(r"^VCP ([0-9A-F]{2}) ")  # VCP 2-digit-hex
+    _C_PATTERN = re.compile(r'([0-9]+) ([0-9]+)')  # Match Continuous-Type getvcp result
+    _SNC_PATTERN = re.compile(r'x([0-9a-f]+)')  # Match Simple Non-Continuous-Type getvcp result
+    _CNC_PATTERN = re.compile(r'x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+)')  # Match Complex Non-Continuous-Type result
+    _SPECIFIC_VCP_VALUE_PATTERN_CACHE: Dict[str, re.Pattern] = {}
 
     def __init__(self, default_sleep_multiplier: float | None = None) -> None:
         super().__init__()
+
         self.common_args = []
         self.supported_codes: Dict[str, str] | None = None
         self.default_sleep_multiplier = default_sleep_multiplier
@@ -1214,14 +1217,14 @@ class DdcUtil:
         self.edid_map: Dict[str, str] = {}
         self.ddcutil_access_lock = Lock()
         self.version = (0, 0, 0)  # Dummy version for bootstrapping
+        self.version_suffix = ''
         version_info = self.__run__('--version').stdout.decode('utf-8', errors='surrogateescape')
-        version_match = re.match(r'[a-z]+ ([0-9]+).([0-9]+).([0-9]+)-?([^\n]*)', version_info)
-        if version_match is not None:
-            self.version = [int(i) for i in version_match.groups()[0:3]]
+        if version_match := re.match(r'[a-z]+ ([0-9]+).([0-9]+).([0-9]+)-?([^\n]*)', version_info):
+            self.version = tuple(int(i) for i in version_match.groups()[0:3])
             self.version_suffix = version_match.groups()[3]
-        # self.version = [1,2,2]  # for testing for 1.2.2 compatibility
-        log_info(f"ddcutil version info: {version_match.group(0)} {self.version}")
-        if self.version[0] >= 2:  # Won't know real version until around here  TODO is this test needed?
+        # self.version = (1, 2, 2)  # for testing for 1.2.2 compatibility
+        log_info(f"ddcutil version info: {self.version} {self.version_suffix} (dynamic-sleep-support={self.version >= (2, 0, 0)})")
+        if self.version >= (2, 0, 0):  # Won't know real version until around here  TODO is this test needed?
             self.common_args += [arg for arg in os.getenv('VDU_CONTROLS_DDCUTIL_ARGS', default='').split(' ') if arg != '']
 
     def id_key_args(self, vdu_number: str) -> List[str]:
@@ -1273,8 +1276,7 @@ class DdcUtil:
         # This isn't efficient, it doesn't need to be, so I'm keeping re-defs close to where they are used.
         key_prospects: Dict[Tuple[str, str], Tuple[str, str]] = {}
         for display_str in re.split("\n\n", result.stdout.decode('utf-8', errors='surrogateescape')):
-            display_match = re.search(r'Display ([0-9]+)', display_str)
-            if display_match is not None:
+            if display_match := re.search(r'Display ([0-9]+)', display_str):
                 vdu_number = display_match.group(1)
                 log_debug(f"checking possible ID's for display {vdu_number}") if log_debug_enabled else None
                 ds_parts = {fm.group(1).strip(): fm.group(2).strip()
@@ -1321,8 +1323,7 @@ class DdcUtil:
         return display_list
 
     def parse_edid(self, display_str: str) -> str | None:
-        edid_match = re.search(r'EDID hex dump:\n[^\n]+(\n([ \t]+[+]0).+)+', display_str)
-        if edid_match:
+        if edid_match := re.search(r'EDID hex dump:\n[^\n]+(\n([ \t]+[+]0).+)+', display_str):
             edid = "".join(re.findall('((?: [0-9a-f][0-9a-f]){16})', edid_match.group(0))).replace(' ', '')
             log_debug(f"{edid=}") if log_debug_enabled else None
             return edid
@@ -1338,8 +1339,9 @@ class DdcUtil:
         return self.vcp_type_map[vcp_code] if vcp_code in self.vcp_type_map else None
 
     def set_vcp(self, vdu_number: str, vcp_code: str, new_value: str,
-                sleep_multiplier: float | None = None, extra_args: List[str] = []) -> None:
+                sleep_multiplier: float | None = None, extra_args: List[str] | None = None) -> None:
         """Send a new value to a specific VDU and vcp_code."""
+        extra_args = [] if extra_args is None else extra_args
         if self.get_type(vcp_code) != CONTINUOUS_TYPE:
             new_value = 'x' + new_value
         args_list = extra_args + ['setvcp', vcp_code, new_value] + self.id_key_args(vdu_number)
@@ -1370,29 +1372,28 @@ class DdcUtil:
         return self.supported_codes
 
     def get_vcp_values(self, vdu_number: str, vcp_code_list: List[str],
-                       sleep_multiplier: float | None = None, extra_args: List[str] = []) -> List[VcpValue]:
-        if self.version[0] > 1 or self.version[1] >= 3:
+                       sleep_multiplier: float | None = None, extra_args: List[str] | None = None) -> List[VcpValue]:
+        if self.version > (1, 3, 0):
             return self._get_vcp_values_implementation(vdu_number, vcp_code_list, sleep_multiplier, extra_args)
         else:
             return [self._get_vcp_values_implementation(vdu_number, [cd], sleep_multiplier, extra_args)[0] for cd in vcp_code_list]
 
-    def _get_vcp_values_implementation(self, vdu_number: str, vcp_code_list: List[str],
-                                       sleep_multiplier: float | None = None, extra_args: List[str] = []) -> List[VcpValue]:
+    def _get_vcp_values_implementation(self, vdu_number: str, vcp_code_list: List[str], sleep_multiplier: float | None = None,
+                                       extra_args: List[str] | None = None) -> List[VcpValue]:
         """
         Returns None if there is an error communicating with the VDU
         """
         # Try a few times in case there is a glitch due to a monitor being turned-off/on or slow to respond
         # Should we loop here, or higher up - maybe it doesn't matter.
-        vcp_code_regexp = re.compile(r"^VCP ([0-9A-F]{2}) ")  # VCP 2-digit-hex
-        results_dict : Dict[str, VcpValue | None] = {vcp_code: None for vcp_code in vcp_code_list}  # Force vcp_code_list ordering
+        extra_args = [] if extra_args is None else extra_args
+        results_dict: Dict[str, VcpValue | None] = {vcp_code: None for vcp_code in vcp_code_list}  # Force vcp_code_list ordering
         for i in range(GET_ATTRIBUTES_RETRIES):
             args = extra_args + ['--brief', 'getvcp'] + vcp_code_list + self.id_key_args(vdu_number)
             try:
                 from_ddcutil = self.__run__(*args, sleep_multiplier=sleep_multiplier, log_id=vdu_number)
                 for line in from_ddcutil.stdout.split(b"\n"):
                     line_utf8 = line.decode('utf-8', errors='surrogateescape') + '\n'
-                    vcp_code_match = vcp_code_regexp.match(line_utf8)
-                    if vcp_code_match is not None:
+                    if vcp_code_match := DdcUtil._VCP_CODE_REGEXP.match(line_utf8):
                         vcp_code = vcp_code_match.group(1)
                         vcp_value = self.__parse_vcp_value(vdu_number, vcp_code, line_utf8)
                         results_dict[vcp_code] = vcp_value
@@ -1407,25 +1408,20 @@ class DdcUtil:
         raise ValueError("getvcp: reached unreachable code.")
 
     def __parse_vcp_value(self, vdu_number: str, vcp_code: str, result: str) -> VcpValue | None:
-        value_pattern = re.compile(r'VCP ' + vcp_code + r' ([A-Z]+) (.+)\n')
-        c_pattern = re.compile(r'([0-9]+) ([0-9]+)')  # Match Continuous-Type getvcp result
-        snc_pattern = re.compile(r'x([0-9a-f]+)')  # Match Simple Non-Continuous-Type getvcp result
-        cnc_pattern = re.compile(r'x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+)')  # Match Complex Non-Continuous-Type result
-        value_match = value_pattern.match(result)
-        if value_match is not None:
+        if not (specific_vcp_value_pattern := DdcUtil._SPECIFIC_VCP_VALUE_PATTERN_CACHE.get(vcp_code, None)):
+            specific_vcp_value_pattern = re.compile(r'VCP ' + vcp_code + r' ([A-Z]+) (.+)\n')
+            DdcUtil._SPECIFIC_VCP_VALUE_PATTERN_CACHE[vcp_code] = specific_vcp_value_pattern
+        if value_match := specific_vcp_value_pattern.match(result):
             type_indicator = value_match.group(1)
             self.vcp_type_map[vcp_code] = type_indicator
             if type_indicator == CONTINUOUS_TYPE:
-                c_match = c_pattern.match(value_match.group(2))
-                if c_match is not None:
+                if c_match := DdcUtil._C_PATTERN.match(value_match.group(2)):
                     return VcpValue(current=c_match.group(1), max=c_match.group(2), vcp_type=CONTINUOUS_TYPE)
             elif type_indicator == SIMPLE_NON_CONTINUOUS_TYPE:
-                snc_match = snc_pattern.match(value_match.group(2))
-                if snc_match is not None:
+                if snc_match := DdcUtil._SNC_PATTERN.match(value_match.group(2)):
                     return VcpValue(current=snc_match.group(1), max='0', vcp_type=SIMPLE_NON_CONTINUOUS_TYPE)
             elif type_indicator == COMPLEX_NON_CONTINUOUS_TYPE:
-                cnc_match = cnc_pattern.match(value_match.group(2))
-                if cnc_match is not None:
+                if cnc_match := DdcUtil._CNC_PATTERN.match(value_match.group(2)):
                     return VcpValue(current='{:02x}'.format(int(cnc_match.group(3), 16) << 8 | int(cnc_match.group(4), 16)),
                                     max='0', vcp_type=COMPLEX_NON_CONTINUOUS_TYPE)
             else:
@@ -1736,7 +1732,8 @@ class VduControlsConfig:
         value = self.ini_content.getfloat('ddcutil-parameters', 'sleep-multiplier', fallback=0.0)
         return fallback if math.isclose(value, 0.0) else value
 
-    def get_ddcutil_extra_args(self, fallback: List[str] = []) -> List[str]:
+    def get_ddcutil_extra_args(self, fallback: List[str] | None = None) -> List[str]:
+        fallback = [] if fallback is None else fallback
         value = self.ini_content.get('ddcutil-parameters', 'ddcutil-extra-args', fallback=None)
         return fallback if value is None or value.strip() == '' else value.split(' ')
 
@@ -1908,6 +1905,8 @@ class VduController(QObject):
     NORMAL_VDU = 0
     IGNORE_VDU = 1
     ASSUME_STANDARD_CONTROLS = 2
+    _RANGE_PATTERN = re.compile(r'Values:\s+([0-9]+)..([0-9]+)')
+    _FEATURE_PATTERN = re.compile(r'([0-9A-F]{2})\s+[(]([^)]+)[)]\s(.*)', re.DOTALL | re.MULTILINE)
 
     respond_to_changes_qtsignal = pyqtSignal(str, str, str)
 
@@ -2016,9 +2015,7 @@ class VduController(QObject):
             if len(stripped) != 0:
                 lines_list = stripped.split('\n')
                 if len(lines_list) == 1:
-                    range_pattern = re.compile(r'Values:\s+([0-9]+)..([0-9]+)')
-                    range_match = range_pattern.match(lines_list[0])
-                    if range_match:
+                    if range_match := VduController._RANGE_PATTERN.match(lines_list[0]):
                         values_list = ["%%Range%%", range_match.group(1), range_match.group(2)]
                     else:
                         space_separated = lines_list[0].replace('(interpretation unavailable)', '').strip().split(' ')
@@ -2027,11 +2024,9 @@ class VduController(QObject):
                     values_list = [(key, desc) for key, desc in (v.strip().split(": ", 1) for v in lines_list[1:])]
             return values_list
 
-        feature_pattern = re.compile(r'([0-9A-F]{2})\s+[(]([^)]+)[)]\s(.*)', re.DOTALL | re.MULTILINE)
         feature_map = {}
         for feature_text in capabilities_text.split(' Feature: '):
-            feature_match = feature_pattern.match(feature_text)
-            if feature_match:
+            if feature_match := VduController._FEATURE_PATTERN.match(feature_text):
                 vcp_code = feature_match.group(1)
                 vcp_name = feature_match.group(2)
                 values = parse_values(feature_match.group(3))
@@ -2869,47 +2864,44 @@ class Preset:
         return -1
 
     def get_solar_elevation(self) -> SolarElevationKey | None:
-        elevation_spec = self.preset_ini.get('preset', 'solar-elevation', fallback=None)
-        if elevation_spec:
+        if elevation_spec := self.preset_ini.get('preset', 'solar-elevation', fallback=None):
             solar_elevation = parse_solar_elevation_ini_text(elevation_spec)
             return solar_elevation
         return None
 
     def get_solar_elevation_abbreviation(self) -> str:
-        elevation = self.get_solar_elevation()
-        if elevation is None:
-            return ''
-        result = format_solar_elevation_abbreviation(elevation)
-        if self.elevation_time_today:
-            result += f" {TIME_CLOCK_SYMBOL} {self.elevation_time_today.strftime('%H:%M')}"
-        else:
-            # Not possible today - sun doesn't get that high
-            result += ' ' + TOO_HIGH_SYMBOL
-        if self.get_weather_restriction_filename() is not None:
-            result += ' ' + WEATHER_RESTRICTION_SYMBOL
-        result += ' ' + self.schedule_status.symbol()
-        return result
+        if elevation := self.get_solar_elevation():
+            result = format_solar_elevation_abbreviation(elevation)
+            if self.elevation_time_today:
+                result += f" {TIME_CLOCK_SYMBOL} {self.elevation_time_today.strftime('%H:%M')}"
+            else:
+                # Not possible today - sun doesn't get that high
+                result += ' ' + TOO_HIGH_SYMBOL
+            if self.get_weather_restriction_filename() is not None:
+                result += ' ' + WEATHER_RESTRICTION_SYMBOL
+            result += ' ' + self.schedule_status.symbol()
+            return result
+        return ''
 
     def get_solar_elevation_description(self) -> str:
-        elevation = self.get_solar_elevation()
-        if elevation is None:
-            return ''
-        basic_desc = format_solar_elevation_description(elevation)
-        weather_fn = self.get_weather_restriction_filename()
-        weather_suffix = tr(" (subject to {} weather)").format(
-            Path(weather_fn).stem.replace('_', ' ')) if weather_fn is not None else ''
-        # This might not work too well in translation - rethink?
-        if self.elevation_time_today:
-            if self.timer and self.timer.remainingTime() > 0:
-                template = tr("{} later today at {}") + weather_suffix
-            elif self.elevation_time_today < zoned_now():
-                template = tr("{} earlier today at {}") + weather_suffix + f" ({self.schedule_status.description()})"
+        if elevation := self.get_solar_elevation():
+            basic_desc = format_solar_elevation_description(elevation)
+            weather_fn = self.get_weather_restriction_filename()
+            weather_suffix = tr(" (subject to {} weather)").format(
+                Path(weather_fn).stem.replace('_', ' ')) if weather_fn is not None else ''
+            # This might not work too well in translation - rethink?
+            if self.elevation_time_today:
+                if self.timer and self.timer.remainingTime() > 0:
+                    template = tr("{} later today at {}") + weather_suffix
+                elif self.elevation_time_today < zoned_now():
+                    template = tr("{} earlier today at {}") + weather_suffix + f" ({self.schedule_status.description()})"
+                else:
+                    template = tr("{} suspended for  {}")
+                result = template.format(basic_desc, self.elevation_time_today.strftime("%H:%M"))
             else:
-                template = tr("{} suspended for  {}")
-            result = template.format(basic_desc, self.elevation_time_today.strftime("%H:%M"))
-        else:
-            result = basic_desc + ' ' + tr("the sun does not rise this high today")
-        return result
+                result = basic_desc + ' ' + tr("the sun does not rise this high today")
+            return result
+        return ''
 
     def get_transition_type(self) -> PresetTransitionFlag:
         return parse_transition_type(self.preset_ini.get('preset', 'transition-type', fallback="NONE"))
@@ -3051,8 +3043,7 @@ class ContextMenu(QMenu):
         self.update() if issue_update else None
 
     def remove_preset_menu_action(self, name: str) -> None:
-        menu_action = self.get_preset_menu_action(name)
-        if menu_action is not None:
+        if menu_action := self.get_preset_menu_action(name):
             shortcut = menu_action.property(ContextMenu.PRESET_SHORTCUT_PROP)
             if shortcut and shortcut in self.reserved_shortcuts:
                 self.reserved_shortcuts.remove(shortcut.letter)
@@ -3539,8 +3530,7 @@ class MessageBox(QMessageBox):
         if RESIZABLE_QMESSAGEBOX_HACK:
             if event.type() == QEvent.MouseMove or event == QEvent.MouseButtonPress:
                 self.setMaximumSize(1200, 800)
-                text_edit_field = self.findChild(QTextEdit)
-                if text_edit_field is not None:
+                if text_edit_field := self.findChild(QTextEdit):
                     text_edit_field.setMaximumHeight(600)
         return result
 
@@ -4206,8 +4196,7 @@ class PresetChooseElevationChart(QLabel):
         return self.current_pos
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
-        pos = self.update_current_pos(event.globalPos())
-        if pos is not None:
+        if pos := self.update_current_pos(event.globalPos()):
             angle, radius = self.calc_angle_radius(pos)
             if radius <= self.radius_of_deletion:
                 self.set_elevation_key(None)
@@ -4378,16 +4367,12 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
 
     @staticmethod
     def invoke(main_controller: VduAppController, main_config: VduControlsConfig) -> None:
-        if PresetsDialog.exists():
-            PresetsDialog.show_existing_dialog()
-        else:
-            PresetsDialog(main_controller, main_config)
+        PresetsDialog.show_existing_dialog() if PresetsDialog.exists() else PresetsDialog(main_controller, main_config)
         presets_dialog_display_message('')
 
     @staticmethod
     def reinitialize_instance(main_config: VduControlsConfig) -> None:
-        presets_dialog: PresetsDialog = PresetsDialog.get_instance()  # type: ignore
-        if presets_dialog:
+        if presets_dialog := PresetsDialog.get_instance():  # type: ignore
             presets_dialog.reinitialize_from_data(main_config)
 
     def __init__(self, main_controller: VduAppController, main_config: VduControlsConfig) -> None:
@@ -4581,14 +4566,11 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
                         preset_ini.add_section(section)
                     preset_ini.set(section, option, value)
         preset.set_icon_path(self.edit_choose_icon_button.last_selected_icon_path)
-        elevation_ini_text = format_solar_elevation_ini_text(self.editor_trigger_widget.elevation_key)
-        if elevation_ini_text is not None:
-            if not preset_ini.has_section('preset'):
-                preset_ini.add_section('preset')
-            preset_ini.set('preset', 'solar-elevation', elevation_ini_text)
-            weather_filename = self.editor_trigger_widget.get_required_weather_filename()
-            if weather_filename is not None:
-                preset_ini.set('preset', 'solar-elevation-weather-restriction', weather_filename)
+        if not preset_ini.has_section('preset'):
+            preset_ini.add_section('preset')
+        preset_ini.set('preset', 'solar-elevation', format_solar_elevation_ini_text(self.editor_trigger_widget.elevation_key))
+        if weather_filename := self.editor_trigger_widget.get_required_weather_filename():
+            preset_ini.set('preset', 'solar-elevation-weather-restriction', weather_filename)
         preset_ini.set('preset', 'transition-type', str(self.editor_transitions_widget.get_transition_type()))
         preset_ini.set('preset', 'transition-step-interval-seconds', str(self.editor_transitions_widget.get_step_seconds()))
 
@@ -5146,8 +5128,7 @@ class LuxProfileChart(QLabel):
         return True
 
     def lux_preset_edit(self, x) -> bool:
-        point = self.find_preset_point_close_to(x)
-        if point is not None:  # Delete
+        if point := self.find_preset_point_close_to(x):  # Delete
             self.preset_points.remove(point)
             for vdu_sid, profile in self.profile_data.items():
                 for profile_point in profile:
@@ -5194,20 +5175,19 @@ class LuxProfileChart(QLabel):
 
     def find_close_to(self, x: int, y: int, vdu_sid: str) -> Tuple:
         r = self.snap_to_margin
-        for point_data in self.profile_data[vdu_sid]:
-            existing_lux = point_data.lux
-            if point_data.preset_name is None:
-                existing_percent = point_data.brightness
+        for vdu_pd in self.profile_data[vdu_sid]:
+            existing_lux = vdu_pd.lux
+            if vdu_pd.preset_name is None:
+                existing_percent = vdu_pd.brightness
             else:
-                preset = self.main_controller.find_preset_by_name(point_data.preset_name)
-                if preset is not None:
+                if preset := self.main_controller.find_preset_by_name(vdu_pd.preset_name):
                     existing_percent = preset.get_brightness(vdu_sid)
                 else:
                     continue  # Must have been deleted
             existing_x = self.x_from_lux(existing_lux)
             existing_y = self.y_from_percent(existing_percent)
-            if existing_x - r <= x <= existing_x + r and (existing_y - r <= y <= existing_y + r or point_data.preset_name is not None):
-                return existing_x, existing_y, existing_lux, existing_percent, point_data
+            if existing_x - r <= x <= existing_x + r and (existing_y - r <= y <= existing_y + r or vdu_pd.preset_name is not None):
+                return existing_x, existing_y, existing_lux, existing_percent, vdu_pd
         return None, None, None, None, None
 
     def find_preset_point_close_to(self, x: int) -> LuxPoint | None:
@@ -5430,7 +5410,7 @@ class LuxMeterSerialDevice:
                         self.serial_device.reset_input_buffer()
                         buffer = self.serial_device.read_until()
                         decoded = buffer.decode('utf-8', errors='surrogateescape')
-                        if (match := self.line_matcher.match(decoded)) is not None:  # only accept correctly formatted output
+                        if match := self.line_matcher.match(decoded):  # only accept correctly formatted output
                             return float(match.group(1))
                         cause = f"value that failed to parse: {decoded.encode('unicode_escape')}"
                 except (self.serial_module.SerialException, termios.error, FileNotFoundError, ValueError) as se:
@@ -5791,20 +5771,17 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
     @staticmethod
     def reinitialize_instance():
-        lux_dialog = LuxDialog.get_instance()  # type: ignore
-        if lux_dialog is not None:
+        if lux_dialog := LuxDialog.get_instance():  # type: ignore
             lux_dialog.reinitialise_from_data()
 
     @staticmethod
     def lux_dialog_message(message: str, timeout: int, destination: MsgDestination = MsgDestination.DEFAULT) -> None:
-        lux_dialog: LuxDialog = LuxDialog.get_instance()  # type: ignore
-        if lux_dialog is not None:
+        if lux_dialog := LuxDialog.get_instance():  # type: ignore
             lux_dialog.status_message(message, timeout, destination)
 
     @staticmethod
     def lux_dialog_display_brightness(vdu_stable_id: str, brightness: int) -> None:
-        lux_dialog: LuxDialog = LuxDialog.get_instance()  # type: ignore
-        if lux_dialog is not None:
+        if lux_dialog := LuxDialog.get_instance():  # type: ignore
             lux_dialog.vdu_current_brightness[vdu_stable_id] = brightness
             lux_dialog.profile_plot.show_changes(profile_changes=False)
 
@@ -6358,8 +6335,7 @@ class VduAppController:   # Main controller containing methods for high level op
             if signal_number == signal.SIGHUP:
                 self.start_refresh()
             elif PRESET_SIGNAL_MIN <= signal_number <= PRESET_SIGNAL_MAX:
-                preset = self.preset_controller.get_preset(signal_number - PRESET_SIGNAL_MIN)
-                if preset is not None:
+                if preset := self.preset_controller.get_preset(signal_number - PRESET_SIGNAL_MIN):
                     immediately = PresetTransitionFlag.SIGNAL not in preset.get_transition_type()
                     log_info(f"Signaled for {preset.name=} {preset.get_transition_type()=} {immediately=} {thread_pid()=}")
                     # Signals occur outside the GUI thread - initiate the restore in the GUI thread
@@ -6399,9 +6375,8 @@ class VduAppController:   # Main controller containing methods for high level op
                 LuxDialog.reinitialize_instance()
                 if self.lux_auto_controller is not None:
                     self.lux_auto_controller.initialize_from_config()
-            overdue = self.schedule_presets(True)
             # restore_preset tries to acquire the same lock, safe to unlock and let it relock...
-            if overdue is not None:
+            if overdue := self.schedule_presets(True):
                 # This preset is the one that should be running now
                 log_info(f"Restoring preset '{overdue.name}' "
                          f"because its scheduled to be active at this time ({zoned_now()}).")
@@ -6555,7 +6530,6 @@ class VduAppController:   # Main controller containing methods for high level op
 
         with self.application_configuration_lock:  # The lock prevents a transition firing when the GUI/app is reconfiguring
             self.transitioning_dummy_preset = None
-
             if not immediately:
                 self.transitioning_dummy_preset = PresetTransitionDummy(preset)
                 self.main_window.display_preset_status(tr("Transitioning to preset {}").format(preset.name))
@@ -6653,57 +6627,54 @@ class VduAppController:   # Main controller containing methods for high level op
             return
         if activation_time is None:
             activation_time = zoned_now()
-        proceed = True
         if preset.is_weather_dependent() and check_weather:
             if not self.is_weather_satisfactory(preset):
-                proceed = False
                 preset.schedule_status = PresetScheduleStatus.WEATHER_CANCELLATION
                 message = tr("Preset {} activation was cancelled due to weather at {}").format(
                     preset.name, activation_time.isoformat(' ', 'seconds'))
                 self.main_window.display_preset_status(message)
-        if proceed:
+                return
 
-            def status_message(msg: str):
-                self.main_window.display_preset_status(f"{TIME_CLOCK_SYMBOL} " + tr("Preset {} activating at {}").format(
-                    preset.name, f"{activation_time:%H:%M}") + f" - {msg}")
+        def status_message(msg: str):
+            self.main_window.display_preset_status(f"{TIME_CLOCK_SYMBOL} " + tr("Preset {} activating at {}").format(
+                preset.name, f"{activation_time:%H:%M}") + f" - {msg}")
 
-            def finished(worker: PresetTransitionWorker) -> None:
-                assert preset.elevation_time_today is not None
-                if worker.vdu_exception is not None:
-                    secs = self.main_config.ini_content.getint('vdu-controls-globals', 'restore-error-sleep-seconds', fallback=60)
-                    too_close = zoned_now() + timedelta(seconds=secs + 60)  # retry if more than a minute before any others
-                    for other in self.preset_controller.find_presets().values():  # Skip retry if another is due soon
-                        if (other.name != preset.name
-                                and other.elevation_time_today is not None and other.elevation_time_today is not None
-                                and preset.elevation_time_today < other.elevation_time_today <= too_close):
-                            log_info(f"Schedule restoration skipped {preset.name}, too close to {other.name}")
-                            preset.schedule_status = PresetScheduleStatus.SKIPPED_SUPERSEDED
-                            status_message(tr("Skipped, superseded"))
-                            return
-                    status_message(tr("Error, trying again in {} seconds").format(secs))
-                    if count == 1:
-                        log_warning(f"Error during restoration of {preset.name}, retrying every {secs} seconds.")
-                    QTimer.singleShot(
-                        int(secs * 1000),
-                        partial(self.activate_scheduled_preset, preset, check_weather, immediately, activation_time, count+1))
-                    return
-                preset.schedule_status = PresetScheduleStatus.SUCCEEDED
-                self.main_window.display_active_preset()
-                status_message(tr("Restored {}").format(preset.name))
-                log_info(f"Restored preset {preset.name} on try {count=}") if count > 1 else None
+        def finished(worker: PresetTransitionWorker) -> None:
+            assert preset.elevation_time_today is not None
+            if worker.vdu_exception is not None:
+                secs = self.main_config.ini_content.getint('vdu-controls-globals', 'restore-error-sleep-seconds', fallback=60)
+                too_close = zoned_now() + timedelta(seconds=secs + 60)  # retry if more than a minute before any others
+                for other in self.preset_controller.find_presets().values():  # Skip retry if another is due soon
+                    if (other.name != preset.name
+                            and other.elevation_time_today is not None and other.elevation_time_today is not None
+                            and preset.elevation_time_today < other.elevation_time_today <= too_close):
+                        log_info(f"Schedule restoration skipped {preset.name}, too close to {other.name}")
+                        preset.schedule_status = PresetScheduleStatus.SKIPPED_SUPERSEDED
+                        status_message(tr("Skipped, superseded"))
+                        return
+                status_message(tr("Error, trying again in {} seconds").format(secs))
+                if count == 1:
+                    log_warning(f"Error during restoration of {preset.name}, retrying every {secs} seconds.")
+                QTimer.singleShot(
+                    int(secs * 1000),
+                    partial(self.activate_scheduled_preset, preset, check_weather, immediately, activation_time, count+1))
+                return
+            preset.schedule_status = PresetScheduleStatus.SUCCEEDED
+            self.main_window.display_active_preset()
+            status_message(tr("Restored {}").format(preset.name))
+            log_info(f"Restored preset {preset.name} on try {count=}") if count > 1 else None
 
-            log_info(f"Activating scheduled preset {preset.name} transition={immediately}") if count == 1 else None
-            # Happens asynchronously in a thread
-            self.restore_preset(preset, restore_finished=finished,
-                                immediately=immediately or PresetTransitionFlag.SCHEDULED not in preset.get_transition_type(),
-                                scheduled_activity=True)
+        log_info(f"Activating scheduled preset {preset.name} transition={immediately}") if count == 1 else None
+        # Happens asynchronously in a thread
+        self.restore_preset(preset, restore_finished=finished,
+                            immediately=immediately or PresetTransitionFlag.SCHEDULED not in preset.get_transition_type(),
+                            scheduled_activity=True)
 
     def is_weather_satisfactory(self, preset, use_cache: bool = False) -> bool:
         try:
             if preset.is_weather_dependent() and self.main_config.is_set(ConfOption.WEATHER_ENABLED):
                 if not use_cache or self.weather_query is None:
-                    location = self.main_config.get_location()
-                    if location is not None:
+                    if location := self.main_config.get_location():
                         self.weather_query = WeatherQuery(location)
                         self.weather_query.run_query()
                         if not self.weather_query.proximity_ok:
@@ -6725,8 +6696,7 @@ class VduAppController:   # Main controller containing methods for high level op
         return self.preset_controller.find_presets().get(preset_name, None)
 
     def restore_named_preset(self, preset_name: str) -> None:
-        preset = self.find_preset_by_name(preset_name)
-        if preset is not None:
+        if preset := self.find_preset_by_name(preset_name):
             # Transition immediately unless the Preset is required to ALWAYS transition.
             self.restore_preset(preset, immediately=PresetTransitionFlag.MENU not in preset.get_transition_type())
 
@@ -7063,8 +7033,7 @@ class VduAppWindow(QMainWindow):
         self.settings.setValue(self.state_key, self.saveState())
 
     def app_restore_state(self) -> None:
-        geometry = self.settings.value(self.geometry_key, None)
-        if geometry is not None:
+        if geometry := self.settings.value(self.geometry_key, None):
             self.restoreGeometry(geometry)
             window_state = self.settings.value(self.state_key, None)
             self.restoreState(window_state)
@@ -7278,8 +7247,7 @@ def create_todays_elevation_time_map(latitude: float, longitude: float) -> Dict[
     while local_when.day == local_now.day:
         a, z = calc_solar_azimuth_zenith(local_when, latitude, longitude)
         e = round(90.0 - z)
-        direction = EASTERN_SKY if a < 180 else WESTERN_SKY
-        key = SolarElevationKey(elevation=round(e), direction=direction)
+        key = SolarElevationKey(elevation=round(e), direction=(EASTERN_SKY if a < 180 else WESTERN_SKY))
         if key not in elevation_time_map:
             elevation_time_map[key] = SolarElevationData(azimuth=a, zenith=z, when=local_when)
         local_when += timedelta(minutes=1)
@@ -7317,8 +7285,7 @@ def initialise_locale_translations(app: QApplication) -> None:
         log_info(tr("Using newer .ts file {} translations from {}").format(locale_name, ts_path.as_posix()))
         import xml.etree.ElementTree as XmlElementTree
         global ts_translations
-        context = XmlElementTree.parse(ts_path).find('context')
-        if context is not None:
+        if context := XmlElementTree.parse(ts_path).find('context'):
             for message in context.findall('message'):
                 translation = message.find('translation')
                 source = message.find('source')
@@ -7335,7 +7302,6 @@ def initialise_locale_translations(app: QApplication) -> None:
 
 
 def main() -> None:
-    """vdu_controls application main."""
     # Allow control-c to terminate the program
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
