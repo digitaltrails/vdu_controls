@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Aug 23, 2023" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Aug 24, 2023" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.11.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -44,9 +44,9 @@ A control panel for external monitors (\fIVisual Display Units\fP).
 [\-\-hide {brightness,contrast,audio\-volume,input\-source,power\-mode,osd\-language}]
 [\-\-enable\-vcp\-code vcp_code] [\-\-system\-tray|\-\-no\-system\-tray] [\-\-debug|\-\-no\-debug] [\-\-warnings|\-\-no\-warnings]
 [\-\-syslog|\-\-no\-syslog] [\-\-location latitude,longitude] [\-\-translations|\-\-no\-translations]
-[\-\-lux\-options|\-\-no\-lux\-options] [\-\-prefer\-dynamic\-sleep|\-\-no\-prefer\-dynamic\-sleep]
+[\-\-lux\-options|\-\-no\-lux\-options]
 [\-\-schedule|\-\-no\-schedule] [\-\-weather|\-\-no\-weather] [\-\-splash|\-\-no\-splash]
-[\-\-sleep\-multiplier multiplier]
+[\-\-sleep\-multiplier multiplier] [\-\-ddcutil\-extra\-args \(aqextra args\(aq]
 [\-\-create\-config\-files] [\-\-install] [\-\-uninstall]
 .UNINDENT
 .UNINDENT
@@ -87,21 +87,17 @@ local latitude and longitude for triggering presets by solar elevation
 .B \-\-translations|\-\-no\-translations
 enable/disable language translations. \fB\-\-no\-translations\fP is the default.
 .TP
-.B \-\-prefer\-dynamic\-sleep|\-\-no\-prefer\-dynamic\-sleep
-enable/disable prefer dynamic\-sleep for ddcutil versions greater than 2.0. \fB\-\-prefer\-dynamic\-sleep\fP
-is the default.
-.TP
 .B \-\-schedule|\-\-no\-schedule
-enable/disable preset scheduling. \fB\-\-no\-schedule\fP is the default.
+enable/disable preset scheduling. \fB\-\-schedule\fP is the default.
 .TP
 .B \-\-weather|\-\-no\-weather
-enable/disable weather lookups. \fB\-\-no\-weather\fP is the default.
+enable/disable weather lookups. \fB\-\-weather\fP is the default.
 .TP
 .B \-\-lux\-options|\-\-no\-lux\-options
 enable/disable hardware light metering options. \fB\-\-no\-lux\-options\fP is the default.
 .TP
 .B \-\-debug|\-\-no\-debug
-enable/disable additional debug output.  \fB\-\-no\-debug\fP is the default.
+enable/disable additional debug information.  \fB\-\-no\-debug\fP is the default.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -111,16 +107,19 @@ popup a warning when a VDU lacks an enabled control. \fB\-\-no\-warnings\fP is t
 .INDENT 0.0
 .TP
 .B \-\-syslog|\-no\-syslog
-repeat diagnostic output to the syslog (journald).  \fB\-\-no\-syslog\fP is the default.
+divert diagnostic output to the syslog (journald).  \fB\-\-no\-syslog\fP is the default.
 .TP
 .B \-\-splash|\-\-no\-splash
-don\(aqt show the splash screen.  \fB\-\-splash\fP is the default.
+show the splash screen.  \fB\-\-splash\fP is the default.
 .UNINDENT
 .INDENT 0.0
 .TP
 .B  \-\-sleep\-multiplier
 set the default ddcutil sleep multiplier
 protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 1.0)
+.TP
+.B  \-\-ddcutil\-extra\-args
+extra arguments to pass to ddcutil (enclosed in single quotes)
 .TP
 .B  \-\-create\-config\-files
 if they do not exist, create template config INI files in $HOME/.config/vdu_controls/
@@ -231,7 +230,6 @@ The config files are in INI\-format divided into a number of sections as outline
 # The vdu\-controls\-globals section is only required in $HOME/.config/vdu_controls/vdu_controls.conf
 system\-tray\-enabled = yes|no
 splash\-screen\-enabled = yes|no
-prefer\-dynamic\-sleep\-enabled = yes|no
 translations\-enabled = yes|no
 weather\-enabled = yes|no
 schedule\-enabled = yes|no

@@ -56,7 +56,8 @@ Arguments supplied on the command line override config file equivalent settings.
       --sleep-multiplier    set the default ddcutil sleep multiplier
                             protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 1.0)
       --ddcutil-extra-args  extra arguments to pass to ddcutil (enclosed in single quotes)
-      --create-config-files if they do not exist, create template config INI files in $HOME/.config/vdu_controls/
+      --create-config-files
+                            if they do not exist, create template config INI files in $HOME/.config/vdu_controls/
       --install             installs the vdu_controls in the current user's path and desktop application menu.
       --uninstall           uninstalls the vdu_controls application menu file and script for the current user.
 

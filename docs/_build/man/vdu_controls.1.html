@@ -9,9 +9,9 @@ Units</em>).</p>
                  [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                  [--enable-vcp-code vcp_code] [--system-tray|--no-system-tray] [--debug|--no-debug] [--warnings|--no-warnings]
                  [--syslog|--no-syslog] [--location latitude,longitude] [--translations|--no-translations]
-                 [--lux-options|--no-lux-options] [--prefer-dynamic-sleep|--no-prefer-dynamic-sleep]
+                 [--lux-options|--no-lux-options]
                  [--schedule|--no-schedule] [--weather|--no-weather] [--splash|--no-splash]
-                 [--sleep-multiplier multiplier]
+                 [--sleep-multiplier multiplier] [--ddcutil-extra-args &#39;extra args&#39;]
                  [--create-config-files] [--install] [--uninstall]</code></pre>
 <h2 id="optional-arguments">Optional arguments:</h2>
 <p>Arguments supplied on the command line override config file
@@ -31,26 +31,25 @@ equivalent settings.</p>
                         local latitude and longitude for triggering presets by solar elevation
   --translations|--no-translations
                         enable/disable language translations. ``--no-translations`` is the default.
-  --prefer-dynamic-sleep|--no-prefer-dynamic-sleep
-                        enable/disable prefer dynamic-sleep for ddcutil versions greater than 2.0. ``--prefer-dynamic-sleep``
-                        is the default.
   --schedule|--no-schedule
-                        enable/disable preset scheduling. ``--no-schedule`` is the default.
+                        enable/disable preset scheduling. ``--schedule`` is the default.
   --weather|--no-weather
-                        enable/disable weather lookups. ``--no-weather`` is the default.
+                        enable/disable weather lookups. ``--weather`` is the default.
   --lux-options|--no-lux-options
                         enable/disable hardware light metering options. ``--no-lux-options`` is the default.
   --debug|--no-debug
-                        enable/disable additional debug output.  ``--no-debug`` is the default.
+                        enable/disable additional debug information.  ``--no-debug`` is the default.
   --warnings--no-warnings
                         popup a warning when a VDU lacks an enabled control. ``--no-warnings`` is the default.
   --syslog|-no-syslog
-                        repeat diagnostic output to the syslog (journald).  ``--no-syslog`` is the default.
+                        divert diagnostic output to the syslog (journald).  ``--no-syslog`` is the default.
   --splash|--no-splash
-                        don&#39;t show the splash screen.  ``--splash`` is the default.
+                        show the splash screen.  ``--splash`` is the default.
   --sleep-multiplier    set the default ddcutil sleep multiplier
                         protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 1.0)
-  --create-config-files  if they do not exist, create template config INI files in $HOME/.config/vdu_controls/
+  --ddcutil-extra-args  extra arguments to pass to ddcutil (enclosed in single quotes)
+  --create-config-files
+                        if they do not exist, create template config INI files in $HOME/.config/vdu_controls/
   --install             installs the vdu_controls in the current user&#39;s path and desktop application menu.
   --uninstall           uninstalls the vdu_controls application menu file and script for the current user.</code></pre>
 <h1 id="description">Description</h1>
@@ -149,7 +148,6 @@ as outlined below::</p>
 # The vdu-controls-globals section is only required in $HOME/.config/vdu_controls/vdu_controls.conf
 system-tray-enabled = yes|no
 splash-screen-enabled = yes|no
-prefer-dynamic-sleep-enabled = yes|no
 translations-enabled = yes|no
 weather-enabled = yes|no
 schedule-enabled = yes|no
