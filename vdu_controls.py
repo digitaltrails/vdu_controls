@@ -4368,12 +4368,30 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
     @staticmethod
     def invoke(main_controller: VduAppController, main_config: VduControlsConfig) -> None:
         PresetsDialog.show_existing_dialog() if PresetsDialog.exists() else PresetsDialog(main_controller, main_config)
-        presets_dialog_display_message('')
+        PresetsDialog.display_status_message('')
 
     @staticmethod
-    def reinitialize_instance(main_config: VduControlsConfig) -> None:
+    def display_status_message(message: str = '', timeout: int = 0) -> None:
         if presets_dialog := PresetsDialog.get_instance():  # type: ignore
-            presets_dialog.reinitialize_from_data(main_config)
+            if message != '':
+                presets_dialog.status_message(message, timeout=timeout)
+            elif not presets_dialog.main_config.is_set(ConfOption.SCHEDULE_ENABLED):
+                presets_dialog.status_message(
+                    WARNING_SYMBOL + ' ' + tr('Solar-trigger scheduling is disabled in the Setting-Dialog.'))
+            elif not presets_dialog.main_config.is_set(ConfOption.WEATHER_ENABLED):
+                presets_dialog.status_message(WARNING_SYMBOL + ' ' + tr('Weather lookup is disabled in the Setting-Dialog.'))
+            else:
+                presets_dialog.status_message('')
+
+    @staticmethod
+    def refresh_view() -> None:
+        if presets_dialog := PresetsDialog.get_instance():  # type: ignore
+            presets_dialog.reinitialize_from_data()  # TODO a bit of an extreme way to do it, consider something better?
+
+    @staticmethod
+    def reconfigure() -> None:
+        if presets_dialog := PresetsDialog.get_instance():  # type: ignore
+            presets_dialog.reinitialize_from_data()
 
     def __init__(self, main_controller: VduAppController, main_config: VduControlsConfig) -> None:
         super().__init__()
@@ -4495,26 +4513,25 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
         return QSize(1200, 768)
 
     def populate_presets_display_list(self) -> None:
-        for preset_def in self.main_controller.preset_controller.find_presets().values():
-            preset_widget = self.create_preset_widget(preset_def)
-            self.preset_widgets_layout.addWidget(preset_widget)
-        self.preset_widgets_layout.addStretch(1)
-
-    def reinitialize_from_data(self, main_config: VduControlsConfig) -> None:
-        self.main_config = main_config
-        for i in range(self.preset_widgets_layout.count() - 1, -1, -1):
+        for i in range(self.preset_widgets_layout.count() - 1, -1, -1):  # Remove existing entries
             w = self.preset_widgets_layout.itemAt(i).widget()
             if isinstance(w, PresetWidget):
                 self.preset_widgets_layout.removeWidget(w)
                 w.deleteLater()
             else:
                 self.preset_widgets_layout.removeItem(self.preset_widgets_layout.itemAt(i))
+        for preset_def in self.main_controller.preset_controller.find_presets().values():  # Populate new entries
+            preset_widget = self.create_preset_widget(preset_def)
+            self.preset_widgets_layout.addWidget(preset_widget)
+        self.preset_widgets_layout.addStretch(1)
+
+    def reinitialize_from_data(self) -> None:
+        self.populate_presets_display_list()
         existing_content = self.editor_controls_widget.takeWidget()
         existing_content.deleteLater() if existing_content is not None else None
         self.base_ini = ConfigIni()
         self.main_controller.copy_to_preset_ini(self.base_ini)
         self.populate_editor_controls_widget()
-        self.populate_presets_display_list()
         self.preset_name_edit.setText('')
         self.editor_trigger_widget.configure_for_location(self.main_config.get_location())
 
@@ -4746,19 +4763,6 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
             else:
                 self.preset_name_edit.setText('')
         super().closeEvent(event)
-
-
-def presets_dialog_display_message(message: str = '', timeout: int = 0) -> None:
-    presets_dialog: PresetsDialog = PresetsDialog.get_instance()  # type: ignore
-    if presets_dialog:
-        if message != '':
-            presets_dialog.status_message(message, timeout=timeout)
-        elif not presets_dialog.main_config.is_set(ConfOption.SCHEDULE_ENABLED):
-            presets_dialog.status_message(WARNING_SYMBOL + ' ' + tr('Solar-trigger scheduling is disabled in the Setting-Dialog.'))
-        elif not presets_dialog.main_config.is_set(ConfOption.WEATHER_ENABLED):
-            presets_dialog.status_message(WARNING_SYMBOL + ' ' + tr('Weather lookup is disabled in the Setting-Dialog.'))
-        else:
-            presets_dialog.status_message('')
 
 
 def exception_handler(e_type, e_value, e_traceback) -> None:
@@ -6572,7 +6576,7 @@ class VduAppController:   # Main controller containing methods for high level op
                 self, preset, update_progress, finished_callback, immediately, scheduled_activity)
             self.preset_transition_worker.start()
 
-    def schedule_presets(self, reset: bool = False) -> Preset | None:
+    def schedule_presets(self, reconfiguring: bool = False) -> Preset | None:
         # As well as scheduling, this method finds and returns the preset that should be applied at this time.
         assert is_running_in_gui_thread()  # Needs to be run in the GUI thread so the timers also run in the GUI thread
         if not self.main_config.is_set(ConfOption.SCHEDULE_ENABLED):
@@ -6581,13 +6585,13 @@ class VduAppController:   # Main controller containing methods for high level op
         location = self.main_config.get_location()
         if location is None:
             return None
-        log_info(f"Scheduling presets {reset=}")
+        log_info(f"Scheduling presets {reconfiguring=}")
         time_map = create_todays_elevation_time_map(latitude=location.latitude, longitude=location.longitude)
         most_recent_overdue = None
         local_now = zoned_now()
         latest_due = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
         for preset in self.preset_controller.find_presets().values():
-            if reset:
+            if reconfiguring:
                 preset.remove_elevation_trigger(quietly=True)
             elevation_key = preset.get_solar_elevation()
             if elevation_key is not None and preset.schedule_status == PresetScheduleStatus.UNSCHEDULED:
@@ -6615,8 +6619,8 @@ class VduAppController:   # Main controller containing methods for high level op
             QTimer.singleShot(int(millis), partial(self.schedule_presets, True))  # type: ignore
             # Testing: QTimer.singleShot(int(1000*30), partial(self.schedule_presets, True))
             self.daily_schedule_next_update = tomorrow
-        if reset:
-            PresetsDialog.reinitialize_instance(self.main_config)
+        if reconfiguring:
+            PresetsDialog.reconfigure()
         return most_recent_overdue
 
     def activate_scheduled_preset(self, preset: Preset, check_weather: bool = True, immediately: bool = False,
@@ -6980,7 +6984,8 @@ class VduAppWindow(QMainWindow):
         self.app_context_menu.indicate_busy(is_busy)
 
     def display_preset_status(self, message: str, timeout: int = 3000):
-        presets_dialog_display_message(message=message, timeout=timeout)
+        PresetsDialog.refresh_view()
+        PresetsDialog.display_status_message(message=message, timeout=timeout)
         self.status_message(message, timeout=timeout, destination=MsgDestination.DEFAULT)
 
     def display_lux_auto_indicators(self) -> None:
