@@ -3564,18 +3564,10 @@ class PresetWidget(QWidget):
         preset_name_button = PresetActivationButton(preset)
 
         line_layout.addWidget(preset_name_button)
-        preset_name_button.clicked.connect(partial(restore_action, preset=preset))
+        preset_name_button.clicked.connect(partial(edit_action, preset=preset))
+        preset_name_button.setToolTip(tr('Activate this Preset and edit its options.'))
         preset_name_button.setAutoDefault(False)
         line_layout.addSpacing(20)
-
-        edit_button = QPushButton()
-        edit_button.setIcon(si(self, QStyle.SP_FileDialogDetailedView))
-        edit_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
-        edit_button.setFlat(True)
-        edit_button.setToolTip(tr('Edit the options for this preset.'))
-        line_layout.addWidget(edit_button)
-        edit_button.clicked.connect(partial(edit_action, preset=preset))
-        edit_button.setAutoDefault(False)
 
         save_button = QPushButton()
         save_button.setIcon(si(self, QStyle.SP_DriveFDIcon))
