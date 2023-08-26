@@ -5253,7 +5253,7 @@ class LuxMeterWidget(QWidget):
         if len(self.history) > 1:
             self.history = (self.history + [0] * 10)[-100:]
 
-    def start_metering(self, lux_meter: LuxMeterSerialDevice | LuxMeterFifoDevice | LuxMeterRunnableDevice) -> None:
+    def start_metering(self, lux_meter: LuxMeterDevice) -> None:
         self.stop_metering()
         self.lux_meter_worker = LuxMeterWidgetThread(lux_meter)
         self.lux_meter_worker.new_lux_value.connect(self.display_lux)
@@ -5274,7 +5274,7 @@ class LuxMeterWidget(QWidget):
 class LuxMeterWidgetThread(WorkerThread):
     new_lux_value = pyqtSignal(int)
 
-    def __init__(self, lux_meter: LuxMeterSerialDevice | LuxMeterFifoDevice | LuxMeterRunnableDevice) -> None:
+    def __init__(self, lux_meter: LuxMeterDevice) -> None:
         super().__init__(task_body=self.read_loop)
         self.lux_meter = lux_meter
         self.stop_requested = False
@@ -5287,7 +5287,7 @@ class LuxMeterWidgetThread(WorkerThread):
             time.sleep(5.0)
 
 
-def lux_create_device(device_name: str) -> LuxMeterSerialDevice | LuxMeterFifoDevice | LuxMeterRunnableDevice:
+def lux_create_device(device_name: str) -> LuxMeterDevice:
     if not pathlib.Path(device_name).exists():
         raise LuxDeviceException(tr("Failed to setup {} - path does not exist.").format(device_name))
     if not os.access(device_name, os.R_OK):
@@ -5301,7 +5301,18 @@ def lux_create_device(device_name: str) -> LuxMeterSerialDevice | LuxMeterFifoDe
     raise LuxDeviceException(tr("Failed to setup {} - not an recognised kind of device or not executable.").format(device_name))
 
 
-class LuxMeterFifoDevice:
+class LuxMeterDevice:
+    def get_cached_value(self, age_seconds: float) -> float:
+        pass
+
+    def get_value(self) -> float:
+        pass
+
+    def close(self) -> None:
+        pass
+
+
+class LuxMeterFifoDevice(LuxMeterDevice):
 
     def __init__(self, device_name: str, thread: QThread | None = None) -> None:
         super().__init__()
@@ -5338,9 +5349,10 @@ class LuxMeterFifoDevice:
         with self.meter_access_lock:
             if self.fifo is not None:
                 self.fifo.close()
+                self.fifo = None
 
 
-class LuxMeterRunnableDevice:
+class LuxMeterRunnableDevice(LuxMeterDevice):
 
     def __init__(self, device_name: str, thread: QThread | None = None) -> None:
         super().__init__()
@@ -5371,7 +5383,7 @@ class LuxMeterRunnableDevice:
         pass
 
 
-class LuxMeterSerialDevice:
+class LuxMeterSerialDevice(LuxMeterDevice):
 
     def __init__(self, device_name: str) -> None:
         super().__init__()
@@ -5422,6 +5434,7 @@ class LuxMeterSerialDevice:
         with self.lock:
             if self.serial_device is not None:
                 self.serial_device.close()
+                self.serial_device = None
 
 
 class LuxSmooth:
@@ -5511,7 +5524,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
             self.status_message(f"{TIMER_RUNNING_SYMBOL} {second // 60:02d}:{second % 60:02d}", 0, MsgDestination.COUNTDOWN)
             time.sleep(1)
 
-    def stepping_brightness(self, lux_config: LuxConfig, lux_meter: LuxMeterSerialDevice | LuxMeterFifoDevice | LuxMeterRunnableDevice) -> None:
+    def stepping_brightness(self, lux_config: LuxConfig, lux_meter: LuxMeterDevice) -> None:
         change_count, last_change_count = 0, -1
         start_of_cycle = True
         profile_preset_name = None
@@ -6023,7 +6036,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             if meter_device is not None and self.lux_config.is_auto_enabled():
                 self.status_message(tr("Restarted brightness auto adjustment"), timeout=5000)
 
-    def configure_ui(self, meter_device: LuxMeterSerialDevice | LuxMeterFifoDevice | LuxMeterRunnableDevice | None) -> None:
+    def configure_ui(self, meter_device: LuxMeterDevice | None) -> None:
         if meter_device is not None:
             self.lux_display_widget.start_metering(meter_device)
             self.enabled_checkbox.setEnabled(True)
@@ -6083,7 +6096,7 @@ class LuxAutoController:
         super().__init__()
         self.main_controller = main_controller
         self.lux_config = LuxConfig()
-        self.lux_meter: LuxMeterSerialDevice | LuxMeterFifoDevice | LuxMeterRunnableDevice | None = None
+        self.lux_meter: LuxMeterDevice | None = None
         self.lux_auto_brightness_worker: LuxAutoWorker | None = None
         self.lux_tool_button = self.create_tool_button()
 
