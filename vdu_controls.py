@@ -689,7 +689,6 @@ import locale
 import math
 import os
 import pathlib
-import pickle
 import random
 import re
 import select
@@ -713,7 +712,7 @@ from functools import partial
 from importlib import import_module
 from pathlib import Path
 from threading import Lock
-from typing import List, Tuple, Mapping, Type, Dict, Callable, Any
+from typing import List, Tuple, Mapping, Type, Dict, Callable, Any, NewType
 from urllib.error import URLError
 
 from PyQt5 import QtNetwork
@@ -730,6 +729,8 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
 APPNAME = "VDU Controls"
 VDU_CONTROLS_VERSION = '1.11.0'
 assert sys.version_info >= (3, 8), f'{APPNAME} utilises python version 3.8 or greater (your {sys.version}).'
+
+TRANSIENT_CHANGE = '[transient]'
 
 WESTERN_SKY = 'western-sky'
 EASTERN_SKY = 'eastern-sky'
@@ -1107,6 +1108,8 @@ LOG_SYSLOG_CAT = {syslog.LOG_INFO: "INFO:", syslog.LOG_ERR: "ERROR:", syslog.LOG
 log_to_syslog = False
 log_debug_enabled = False  # Often used to guard needless computation: log_debug(needless) if log_debug_enabled else None
 
+VduStableId = NewType('VduStableId', str)
+
 
 def is_dark_theme() -> bool:
     # Heuristic for checking for a dark theme. Is the sample text lighter than the background?
@@ -1351,7 +1354,7 @@ class DdcUtil:
         """Returns info about all codes known to ddcutil, whether supported or not."""
         return self.__run__('--verbose', 'vcpinfo').stdout.decode('utf-8', errors='surrogateescape')
 
-    def get_supported_vcp_codes(self) -> Dict[str, str]:
+    def get_supported_vcp_codes_map(self) -> Dict[str, str]:
         """Returns a map of descriptions keyed by vcp_code, the codes that ddcutil appears to support."""
         if self.supported_codes is not None:
             return self.supported_codes
@@ -1501,7 +1504,7 @@ CNC = COMPLEX_NON_CONTINUOUS_TYPE
 
 # Maps of controls supported by name on the command line and in config files.
 SUPPORTED_VCP_BY_CODE = {
-    **{code: VcpCapability(code, name) for code, name in (DdcUtil().get_supported_vcp_codes().items() if SUPPORT_ALL_VCP else [])},
+    **{code: VcpCapability(code, name) for code, name in (DdcUtil().get_supported_vcp_codes_map().items() if SUPPORT_ALL_VCP else [])},
     **{
         '10': VcpCapability(BRT, QT_TR_NOOP('brightness'), CON, icon_source=BRIGHTNESS_SVG, enabled=True, can_transition=True),
         '12': VcpCapability('12', QT_TR_NOOP('contrast'), CON, icon_source=CONTRAST_SVG, enabled=True, can_transition=True),
@@ -1659,6 +1662,19 @@ class ConfigIni(configparser.ConfigParser):
             for option in self[section]:
                 new_ini[section][option] = self[section][option]
         return new_ini
+
+    def is_different(self, other_ini: ConfigIni, vdu_settings_only: bool = False) -> bool:
+        if set(self.sections()) != set(other_ini.sections()):
+            return True
+        for section in self:
+            if (section != configparser.DEFAULTSECT and section != ConfigIni.METADATA_SECTION
+                    and (section != 'preset' or not vdu_settings_only)):
+                if set(self.options(section)) != set(other_ini.options(section)):
+                    return True
+                for option in self[section]:
+                    if self[section][option] != other_ini.get(section, option, fallback=None):
+                        return True
+        return False
 
 
 class VduControlsConfig:
@@ -1908,13 +1924,13 @@ class VduController(QObject):
     _RANGE_PATTERN = re.compile(r'Values:\s+([0-9]+)..([0-9]+)')
     _FEATURE_PATTERN = re.compile(r'([0-9A-F]{2})\s+[(]([^)]+)[)]\s(.*)', re.DOTALL | re.MULTILINE)
 
-    respond_to_changes_qtsignal = pyqtSignal(str, str, str)
+    respond_to_changes_qtsignal = pyqtSignal(str, str, str, str)
 
     def __init__(self, vdu_number: str, vdu_model_name: str, serial_number: str, manufacturer: str,
                  default_config: VduControlsConfig, ddcutil: DdcUtil, vdu_exception_handler: Callable,
                  option: int = 0) -> None:
         super().__init__()
-        self.vdu_stable_id = proper_name(vdu_model_name, serial_number)
+        self.vdu_stable_id = VduStableId(proper_name(vdu_model_name, serial_number))
         log_info(f"Initializing controls for {vdu_number=} {vdu_model_name=} {self.vdu_stable_id=}")
         self.vdu_number = vdu_number
         self.model_name = vdu_model_name
@@ -1989,12 +2005,12 @@ class VduController(QObject):
             raise VduException(vdu_description=self.get_vdu_description(), vcp_code=",".join(vcp_codes), exception=e,
                                operation="get_attributes") from e
 
-    def set_vcp_value(self, vcp_code: str, value: str) -> None:
+    def set_vcp_value(self, vcp_code: str, value: str, context: str = '') -> None:
         try:
             # raise subprocess.SubprocessError("set_attribute")  # for testing
             self.ddcutil.set_vcp(self.vdu_number, vcp_code, value,
                                  sleep_multiplier=self.sleep_multiplier, extra_args=self.ddcutil_extra_args)
-            self.respond_to_changes_qtsignal.emit(self.vdu_stable_id, vcp_code, value)
+            self.respond_to_changes_qtsignal.emit(self.vdu_stable_id, vcp_code, value, context)
         except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound) as e:
             raise VduException(vdu_description=self.get_vdu_description(), vcp_code=vcp_code, exception=e,
                                operation="set_attribute") from e
@@ -2206,8 +2222,7 @@ class SettingsEditorTab(QWidget):
                     self.status_message(tr("Saving {} ...").format(self.config_path.name))
                     QApplication.processEvents()
                     self.ini_editable.save(self.config_path)
-                    copy = pickle.dumps(self.ini_editable)
-                    self.ini_before = pickle.loads(copy)
+                    self.ini_before = self.ini_editable.duplicate()  # Update before
                     # After file is closed...
                     if what_changed is None:  # Not accumulating what has changed, implement change now.
                         self.change_callback(self.changed)
@@ -2217,8 +2232,7 @@ class SettingsEditorTab(QWidget):
                     self.status_message(tr("Saved {}").format(self.config_path.name), msecs=3000)
                 elif answer == QMessageBox.Discard:
                     self.status_message(tr("Discarded changes to {}").format(self.config_path.name), msecs=3000)
-                    copy = pickle.dumps(self.ini_before)
-                    self.ini_editable = pickle.loads(copy)
+                    self.ini_editable = self.ini_before.duplicate()  # Revert
                     self.reset()
                 return answer
             finally:
@@ -2235,12 +2249,7 @@ class SettingsEditorTab(QWidget):
     def is_unsaved(self) -> bool:
         if not self.config_path.exists():
             return True
-        self.changed = {}
-        for section in self.ini_before:
-            for option in self.ini_before[section]:
-                if self.ini_before[section][option] != self.ini_editable[section][option]:
-                    self.changed[(section, option)] = (self.ini_before[section][option], self.ini_editable[section][option])
-        return len(self.changed) != 0
+        return self.ini_editable.is_different(self.ini_before)
 
 
 class SettingsEditorFieldBase(QWidget):
@@ -2500,13 +2509,11 @@ class VduControlBase(QWidget):
         self.debug = False  # Local debug switch because this is very noisy and only needed rarely.
 
     def update_from_vdu(self, vcp_value: VcpValue):  # Used for updating from the results of get_attributes() -> List[VcpValue]
-        log_info("update_from_vdu") if self.debug else None
         self.current_value = vcp_value.current
         self.refresh_ui_view()
 
-    def set_value(self, new_value: str) -> None:  # Used by controllers for changing the physical VDU attribute
-        log_info("set value") if self.debug else None
-        self._change_physical_vdu(new_value)
+    def set_value(self, new_value: str, context: str = '') -> None:  # Used by controllers for changing the physical VDU attribute
+        self._change_physical_vdu(new_value, context)
         self.current_value = new_value
         self.refresh_ui_view()
 
@@ -2527,9 +2534,8 @@ class VduControlBase(QWidget):
                     self.connected_vdus_changed_qtsignal.emit()
                     break
 
-    def _change_physical_vdu(self, new_value: str) -> None:
-        log_info(f"_change_physical_vdu {self.refresh_ui_only=} {self.vcp_capability.vcp_code=}") if self.debug else None
-        self.controller.set_vcp_value(self.vcp_capability.vcp_code, new_value)
+    def _change_physical_vdu(self, new_value: str, context: str = '') -> None:
+        self.controller.set_vcp_value(self.vcp_capability.vcp_code, new_value, context)
         if self.vcp_capability.vcp_code in SUPPORTED_VCP_BY_CODE and \
                 SUPPORTED_VCP_BY_CODE[self.vcp_capability.vcp_code].causes_config_change:
             self.connected_vdus_changed_qtsignal.emit()  # Special case, such as a power control causing the VDU to go offline.
@@ -2858,7 +2864,7 @@ class Preset:
         if self.path.exists():
             os.remove(self.path.as_posix())
 
-    def get_brightness(self, vdu_stable_id: str) -> int:
+    def get_brightness(self, vdu_stable_id: VduStableId) -> int:
         if vdu_stable_id in self.preset_ini:
             return self.preset_ini.getint(vdu_stable_id, 'brightness', fallback=-1)
         return -1
@@ -3056,7 +3062,7 @@ class ContextMenu(QMenu):
             self.reserved_shortcuts = self.reserved_shortcuts_basic.copy()  # Reset shortcuts
             for action in self.actions():
                 self.removeAction(action) if action.property(ContextMenu.PRESET_NAME_PROP) is not None else None
-        for name, preset in self.app_controller.preset_controller.find_presets().items():
+        for name, preset in self.app_controller.preset_controller.find_presets_map().items():
             menu_action = self.get_preset_menu_action(name)
             if menu_action is None or not menu_action.property(ContextMenu.PRESET_NAME_PROP):
                 self.insert_preset_menu_action(preset, False)
@@ -3179,7 +3185,7 @@ class VduPanelBottomToolBar(QToolBar):
 class VduControlsMainPanel(QWidget):
     """GUI for detected VDU's, it will construct and contain a control panel for each VDU."""
 
-    respond_to_changes_qtsignal = pyqtSignal(str, str, str)
+    respond_to_changes_qtsignal = pyqtSignal(str, str, str, str)
     connected_vdus_changed_qtsignal = pyqtSignal()
 
     def __init__(self) -> None:
@@ -3259,7 +3265,8 @@ class VduControlsMainPanel(QWidget):
     def is_preset_active(self, preset: Preset) -> bool:
         for section in preset.preset_ini:
             if section not in ('metadata', 'preset') and (panel := self.vdu_control_panels.get(section, None)):
-                return panel.is_preset_active(preset.preset_ini)
+                if not  panel.is_preset_active(preset.preset_ini):
+                    return False
         return True
 
     def display_active_preset(self, preset: Preset | None) -> None:
@@ -3409,7 +3416,7 @@ class PresetTransitionWorker(WorkerThread):
                 step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
                 str_value = str(expected_int_value + step)
                 self.expected_values[key] = str_value  # revise to new value
-                self.main_controller.set_value(key.vdu_stable_id, key.vcp_code, str_value)  # update the GUI and VDU
+                self.main_controller.set_value(key.vdu_stable_id, key.vcp_code, str_value, context=TRANSIENT_CHANGE)
                 more_to_do = more_to_do or str_value != final_value
             now = datetime.now()
             if (now - self.last_progress_time).total_seconds() >= 1.0:
@@ -3469,7 +3476,7 @@ class PresetController:
     def reinitialize(self):
         self.presets = {}
 
-    def find_presets(self) -> Dict[str, Preset]:
+    def find_presets_map(self) -> Dict[str, Preset]:
         presets_still_present = []
         # Use a stable order for the files - alphabetical filename.
         for path_str in sorted(glob.glob(CONFIG_DIR_PATH.joinpath("Preset_*.conf").as_posix()), key=os.path.basename):
@@ -3507,7 +3514,7 @@ class PresetController:
         del self.presets[preset.name]
 
     def get_preset(self, preset_number: int) -> Preset | None:
-        presets = self.find_presets()
+        presets = self.find_presets_map()
         if preset_number < len(presets):
             return list(presets.values())[preset_number]
         return None
@@ -3630,31 +3637,33 @@ class PresetWidget(QWidget):
         line_layout.addWidget(preset_transition_button)
 
         line_layout.addSpacing(5)
-        timer_control_button = PushButtonLeftJustified(parent=self)
-        timer_control_button.setFlat(True)
-        timer_control_button.setAutoDefault(False)
+        self.timer_control_button = PushButtonLeftJustified(parent=self)
+        self.timer_control_button.setFlat(True)
+        self.timer_control_button.setAutoDefault(False)
 
         if preset.get_solar_elevation() is not None:
 
-            def format_description() -> str:
-                if preset.schedule_status == PresetScheduleStatus.SCHEDULED:
-                    action_desc = tr("Press to skip: ")
-                elif preset.schedule_status == PresetScheduleStatus.SUSPENDED:
-                    action_desc = tr("Press to re-enable: ")
-                else:
-                    action_desc = ''
-                return f"{action_desc}{SUN_SYMBOL} {preset.get_solar_elevation_description()}"
-
             def toggle_timer(_) -> None:
                 preset.toggle_timer()
-                timer_control_button.setText(preset.get_solar_elevation_abbreviation())
-                timer_control_button.setToolTip(format_description())
+                self.update_timer_button()
 
-            timer_control_button.setText(preset.get_solar_elevation_abbreviation())
-            timer_control_button.setToolTip(format_description())
-            timer_control_button.clicked.connect(toggle_timer)
-        timer_control_button.setEnabled(preset.schedule_status in (PresetScheduleStatus.SCHEDULED, PresetScheduleStatus.SUSPENDED))
-        line_layout.addWidget(timer_control_button)
+            self.timer_control_button.clicked.connect(toggle_timer)
+
+        line_layout.addWidget(self.timer_control_button)
+        self.update_timer_button()
+
+    def update_timer_button(self):
+        self.timer_control_button.setEnabled(
+            self.preset.schedule_status in (PresetScheduleStatus.SCHEDULED, PresetScheduleStatus.SUSPENDED))
+        if self.preset.schedule_status == PresetScheduleStatus.SCHEDULED:
+            action_desc = tr("Press to skip: ")
+        elif self.preset.schedule_status == PresetScheduleStatus.SUSPENDED:
+            action_desc = tr("Press to re-enable: ")
+        else:
+            action_desc = ''
+        tip_text = f"{action_desc}{SUN_SYMBOL} {self.preset.get_solar_elevation_description()}"
+        self.timer_control_button.setText(self.preset.get_solar_elevation_abbreviation())
+        self.timer_control_button.setToolTip(tip_text)
 
 
 class PresetActivationButton(QPushButton):
@@ -3721,6 +3730,11 @@ class PresetChooseIconButton(QPushButton):
             self.setIcon(self.preset.create_icon())
         else:
             self.setIcon(si(self, PresetsDialog.NO_ICON_ICON_NUMBER))
+
+    def reset(self):
+        self.last_selected_icon_path = None
+        self.preset = None
+        self.update_icon()
 
     def event(self, event: QEvent) -> bool:
         # PalletChange happens after the new style sheet is in use.
@@ -4039,7 +4053,7 @@ class PresetChooseElevationChart(QLabel):
     def configure_for_location(self, location: GeoLocation | None) -> None:
         self.location = location
         if location is not None:
-            self.elevation_time_map = create_todays_elevation_time_map(latitude=location.latitude, longitude=location.longitude)
+            self.elevation_time_map = create_todays_elevation_map(latitude=location.latitude, longitude=location.longitude)
             self.elevation_key = None
             self.create_plot()
 
@@ -4376,62 +4390,68 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
                 presets_dialog.status_message('')
 
     @staticmethod
-    def refresh_view() -> None:
+    def reconfigure_instance() -> None:
         if presets_dialog := PresetsDialog.get_instance():  # type: ignore
-            presets_dialog.reinitialize_from_data()  # TODO a bit of an extreme way to do it, consider something better?
+            presets_dialog.reconfigure()
 
     @staticmethod
-    def reconfigure() -> None:
+    def refresh_instance(preset: Preset = None) -> None:
         if presets_dialog := PresetsDialog.get_instance():  # type: ignore
-            presets_dialog.reinitialize_from_data()
+            presets_dialog.refresh(preset)
+
+    @staticmethod
+    def edit(preset: Preset) -> None:
+        if presets_dialog := PresetsDialog.get_instance():  # type: ignore
+            presets_dialog.edit_preset(preset)
 
     def __init__(self, main_controller: VduAppController, main_config: VduControlsConfig) -> None:
         super().__init__()
         self.setWindowTitle(tr('Presets'))
         self.main_controller = main_controller
         self.main_config = main_config
-        self.content_controls: Dict[Tuple[str, str], QWidget] = {}
+        self.content_controls_map: Dict[Tuple[str, str], QWidget] = {}
         self.resize(1600, 850)
         self.setMinimumWidth(1350)
         self.setMinimumHeight(600)
         layout = QVBoxLayout()
         self.setLayout(layout)
+        self.edit_pane_changed = False
 
-        presets_dialog_splitter = QSplitter()
-        presets_dialog_splitter.setOrientation(Qt.Horizontal)
-        presets_dialog_splitter.setHandleWidth(10)
-        layout.addWidget(presets_dialog_splitter)
+        dialog_splitter = QSplitter()
+        dialog_splitter.setOrientation(Qt.Horizontal)
+        dialog_splitter.setHandleWidth(10)
+        layout.addWidget(dialog_splitter, stretch=1)
 
-        presets_panel = QGroupBox()
-        presets_panel.setMinimumWidth(700)
-        presets_panel.setFlat(True)
-        presets_panel_layout = QVBoxLayout()
-        presets_panel.setLayout(presets_panel_layout)
-        presets_panel_title = QLabel(tr("Presets"))
-        presets_panel_title.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
-        presets_panel_layout.addWidget(presets_panel_title)
+        preset_list_panel = QGroupBox()
+        preset_list_panel.setMinimumWidth(750)
+        preset_list_panel.setFlat(True)
+        preset_list_layout = QVBoxLayout()
+        preset_list_panel.setLayout(preset_list_layout)
+        preset_list_title = QLabel(tr("Presets"))
+        preset_list_title.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
+        preset_list_layout.addWidget(preset_list_title)
         self.preset_widgets_scroll_area = QScrollArea(parent=self)
         preset_widgets_content = QWidget()
         self.preset_widgets_layout = QVBoxLayout()
         preset_widgets_content.setLayout(self.preset_widgets_layout)
         self.preset_widgets_scroll_area.setWidget(preset_widgets_content)
         self.preset_widgets_scroll_area.setWidgetResizable(True)
-        presets_panel_layout.addWidget(self.preset_widgets_scroll_area)
-        presets_dialog_splitter.addWidget(presets_panel)
+        preset_list_layout.addWidget(self.preset_widgets_scroll_area)
+        dialog_splitter.addWidget(preset_list_panel)
 
         main_controller.refresh_preset_menu()
         self.base_ini = ConfigIni()  # Create a temporary holder of preset values
-        main_controller.copy_to_preset_ini(self.base_ini)
+        main_controller.populate_ini_from_controls(self.base_ini)
 
         self.populate_presets_display_list()
 
-        self.edit_preset_widget = QWidget(parent=self)
-        self.edit_preset_layout = QHBoxLayout()
-        self.edit_preset_widget.setLayout(self.edit_preset_layout)
-        self.edit_preset_widget.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
+        self.edit_panel = QWidget(parent=self)
+        edit_panel_layout = QHBoxLayout()
+        self.edit_panel.setLayout(edit_panel_layout)
+        self.edit_panel.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
 
         self.edit_choose_icon_button = PresetChooseIconButton()
-        self.edit_preset_layout.addWidget(self.edit_choose_icon_button)
+        edit_panel_layout.addWidget(self.edit_choose_icon_button)
 
         self.preset_name_edit = QLineEdit()
         self.preset_name_edit.setToolTip(tr('Enter a new preset name.'))
@@ -4440,7 +4460,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
         self.preset_name_edit.textChanged.connect(self.change_edit_group_title)
         self.preset_name_edit.setValidator(QRegExpValidator(QRegExp("[A-Za-z0-9][A-Za-z0-9_ .-]{0,60}")))
 
-        self.edit_preset_layout.addWidget(self.preset_name_edit)
+        edit_panel_layout.addWidget(self.preset_name_edit)
 
         self.editor_groupbox = QGroupBox()
         self.editor_groupbox.setFlat(True)
@@ -4454,7 +4474,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
 
         self.editor_controls_widget = QScrollArea(parent=self)
         self.populate_editor_controls_widget()
-        self.editor_layout.addWidget(self.edit_preset_widget)
+        self.editor_layout.addWidget(self.edit_panel)
 
         self.controls_title_widget = self.editor_controls_prompt = QLabel(tr("Controls to include:"))
         self.controls_title_widget.setDisabled(True)
@@ -4467,12 +4487,19 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
         self.editor_trigger_widget = PresetChooseElevationWidget(self.main_config)
         self.editor_layout.addWidget(self.editor_trigger_widget)
 
-        presets_dialog_splitter.addWidget(self.editor_groupbox)
+        dialog_splitter.addWidget(self.editor_groupbox)
 
         self.status_bar = QStatusBar()
+
+        self.edit_clear_button = QPushButton(si(self, QStyle.SP_DialogCancelButton), tr('Clear'))
+        self.edit_clear_button.clicked.connect(self.reconfigure)
+        self.edit_clear_button.setToolTip(tr("Clear edits and enter a new preset using the defaults."))
+        self.status_bar.addPermanentWidget(self.edit_clear_button)
+
         self.edit_save_button = QPushButton(si(self, QStyle.SP_DialogSaveButton), tr('Save'))
         self.edit_save_button.clicked.connect(self.save_edited_preset)
         self.edit_save_needed.connect(self.save_edited_preset)
+        self.edit_save_button.setToolTip(tr("Save current VDU settings to Preset."))
         self.status_bar.addPermanentWidget(self.edit_save_button)
 
         self.edit_revert_button = QPushButton(si(self, QStyle.SP_DialogResetButton), tr('Revert'))
@@ -4486,6 +4513,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
                 self.edit_preset(preset_widget.preset)
 
         self.edit_revert_button.clicked.connect(revert_callable)
+        self.edit_revert_button.setToolTip(tr("Abandon edits, revert VDU and Preset settings."))
         self.status_bar.addPermanentWidget(self.edit_revert_button)
 
         self.close_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), tr('Close'))
@@ -4512,29 +4540,40 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
                 w.deleteLater()
             else:
                 self.preset_widgets_layout.removeItem(self.preset_widgets_layout.itemAt(i))
-        for preset_def in self.main_controller.preset_controller.find_presets().values():  # Populate new entries
+        for preset_def in self.main_controller.preset_controller.find_presets_map().values():  # Populate new entries
             preset_widget = self.create_preset_widget(preset_def)
             self.preset_widgets_layout.addWidget(preset_widget)
         self.preset_widgets_layout.addStretch(1)
 
-    def reinitialize_from_data(self) -> None:
+    def refresh(self, preset: Preset = None) -> None:
+        if preset:
+            self.populate_editor_controls_from_preset(preset)
+            if preset_widget := self.find_preset_widget(preset.name):
+                preset_widget.update_timer_button()
+        else:
+            #  self.reconfigure()  TODO would wipe out current editor content - is this what we want?
+            for preset_widget in self.get_preset_widgets():
+                preset_widget.update_timer_button()
+
+    def reconfigure(self) -> None:
         self.populate_presets_display_list()
         existing_content = self.editor_controls_widget.takeWidget()
         existing_content.deleteLater() if existing_content is not None else None
         self.base_ini = ConfigIni()
-        self.main_controller.copy_to_preset_ini(self.base_ini)
+        self.main_controller.populate_ini_from_controls(self.base_ini)
         self.populate_editor_controls_widget()
         self.preset_name_edit.setText('')
         self.editor_trigger_widget.configure_for_location(self.main_config.get_location())
+        self.edit_choose_icon_button.reset()
 
     def status_message(self, message: str, timeout: int = 0) -> None:
         self.status_bar.showMessage(message, msecs=3000 if timeout == -1 else timeout)
 
-    def find_preset_widget(self, name) -> PresetWidget | None:
+    def find_preset_widget(self, preset_name: str) -> PresetWidget | None:
         for i in range(self.preset_widgets_layout.count()):
             w = self.preset_widgets_layout.itemAt(i).widget()
             if isinstance(w, PresetWidget):
-                if w.name == name:
+                if w.name == preset_name:
                     return w
         return None
 
@@ -4543,7 +4582,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
         widget = QWidget()
         layout = QVBoxLayout()
         widget.setLayout(layout)
-        self.content_controls = {}
+        self.content_controls_map = {}
         for count, section in enumerate(self.base_ini.data_sections()):
             if count > 0:
                 line = QFrame()
@@ -4558,14 +4597,32 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
             for option in self.base_ini[section]:
                 option_control = QCheckBox(translate_option(option))
                 group_layout.addWidget(option_control)
-                self.content_controls[(section, option)] = option_control
+                self.content_controls_map[(section, option)] = option_control
                 option_control.setChecked(True)
             layout.addWidget(group_box)
         container.setWidget(widget)
 
-    def initialise_preset_from_controls(self, preset: Preset) -> None:
-        preset_ini = preset.preset_ini
-        for key, checkbox in self.content_controls.items():
+    def populate_editor_controls_from_preset(self, preset: Preset):
+        self.preset_name_edit.setText(preset.name)
+        self.edit_choose_icon_button.set_preset(preset)
+        for key, item in self.content_controls_map.items():
+            item.setChecked(preset.preset_ini.has_option(key[0], key[1]))
+        if preset.preset_ini.has_section('preset'):
+            self.editor_trigger_widget.set_elevation_from_text(
+                preset.preset_ini.get('preset', 'solar-elevation', fallback=None))
+            self.editor_trigger_widget.set_required_weather_filename(
+                preset.preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None))
+            self.editor_transitions_widget.set_transition_type(preset.get_transition_type())
+            self.editor_transitions_widget.set_step_seconds(preset.get_step_interval_seconds())
+
+    def has_changes(self, preset: Preset) -> bool:
+        ini_copy: ConfigIni = preset.preset_ini.duplicate()
+        self.initialise_preset_options(preset, ini_copy)
+        return ini_copy.is_different(preset.preset_ini)
+
+    def initialise_preset_options(self, preset: Preset, target_preset_ini: ConfigIni | None = None) -> None:
+        preset_ini = preset.preset_ini if target_preset_ini is None else target_preset_ini
+        for key, checkbox in self.content_controls_map.items():
             if checkbox.isChecked():
                 section, option = key
                 if not preset_ini.has_option(section, option):
@@ -4583,13 +4640,13 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
         preset_ini.set('preset', 'transition-type', str(self.editor_transitions_widget.get_transition_type()))
         preset_ini.set('preset', 'transition-step-interval-seconds', str(self.editor_transitions_widget.get_step_seconds()))
 
-    def get_presets(self) -> List[Preset]:
+    def get_preset_widgets(self) -> List[PresetWidget]:
         return [self.preset_widgets_layout.itemAt(i).widget()
                 for i in range(0, self.preset_widgets_layout.count() - 1)
                 if isinstance(self.preset_widgets_layout.itemAt(i).widget(), PresetWidget)]
 
     def get_preset_names_in_order(self) -> List[str]:
-        return [w.name for w in self.get_presets()]
+        return [w.name for w in self.get_preset_widgets()]
 
     def add_preset_widget(self, preset_widget: PresetWidget) -> None:
         # Insert before trailing stretch item
@@ -4617,7 +4674,6 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
 
     def restore_preset(self, preset: Preset, immediately: bool = True) -> None:
         self.main_controller.restore_preset(preset, immediately=immediately)
-        self.preset_name_edit.setText('')
 
     def save_preset(self, preset: Preset) -> None:
         preset_path = get_config_path(proper_name('Preset', preset.name))
@@ -4627,9 +4683,9 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
             confirmation.setText(message)
             if confirmation.exec() == QMessageBox.Cancel:
                 return
-        self.preset_name_edit.setText('')
-        self.main_controller.save_preset(preset)
-        self.status_message(tr("Saved {}").format(preset.name), timeout=-1)
+        if self._save(preset):
+            self.preset_name_edit.setText('')
+            self.status_message(tr("Saved {}").format(preset.name), timeout=-1)
 
     def delete_preset(self, preset: Preset, target_widget: QWidget) -> None:
         confirmation = MessageBox(QMessageBox.Question, buttons=QMessageBox.Ok | QMessageBox.Cancel, default=QMessageBox.Cancel)
@@ -4651,6 +4707,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
             self.editor_controls_widget.setDisabled(True)
             self.editor_transitions_widget.setDisabled(True)
             self.editor_trigger_widget.setDisabled(True)
+            self.edit_clear_button.setDisabled(True)
             self.edit_save_button.setDisabled(True)
             self.edit_revert_button.setDisabled(True)
             self.editor_title.setText(tr("Create new preset:"))
@@ -4660,8 +4717,10 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
         else:
             already_exists = self.find_preset_widget(changed_text)
             if already_exists:
+                self.edit_revert_button.setDisabled(False)
                 self.editor_title.setText(tr("Edit {}:").format(changed_text))
             else:
+                self.edit_revert_button.setDisabled(True)
                 self.editor_title.setText(tr("Create new preset:"))
             self.editor_controls_prompt.setText(tr("Controls to include in {}:").format(changed_text))
             self.editor_controls_widget.setDisabled(False)
@@ -4670,44 +4729,38 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
             self.controls_title_widget.setDisabled(False)
             self.editor_transitions_widget.setDisabled(False)
             self.edit_save_button.setDisabled(False)
-            self.edit_revert_button.setDisabled(False)
+            self.edit_clear_button.setDisabled(False)
 
     def edit_preset(self, preset: Preset) -> None:
 
-        def begin_editing(worker: PresetTransitionWorker) -> None:
-            if worker.work_state == PresetTransitionState.FINISHED:
-                self.preset_name_edit.setText(preset.name)
-                self.edit_choose_icon_button.set_preset(preset)
-                for key, item in self.content_controls.items():
-                    item.setChecked(preset.preset_ini.has_option(key[0], key[1]))
-                if preset.preset_ini.has_section('preset'):
-                    self.editor_trigger_widget.set_elevation_from_text(
-                        preset.preset_ini.get('preset', 'solar-elevation', fallback=None))
-                    self.editor_trigger_widget.set_required_weather_filename(
-                        preset.preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None))
-                    self.editor_transitions_widget.set_transition_type(preset.get_transition_type())
-                    self.editor_transitions_widget.set_step_seconds(preset.get_step_interval_seconds())
+        def begin_editing(worker: PresetTransitionWorker | None = None) -> None:
+            if worker is None or worker.work_state == PresetTransitionState.FINISHED:
+                self.populate_editor_controls_from_preset(preset)
             else:
                 self.status_message(tr(f"Failed to restore {preset.name} for editing."))
 
-        self.main_controller.restore_preset(preset, restore_finished=begin_editing, immediately=True)
+        if preset:
+            self.main_controller.restore_preset(preset, finished_func=begin_editing, immediately=True)
 
-    def save_edited_preset(self) -> None:
+    def find_edit_target(self) -> Tuple[Preset | None, PresetWidget | None]:
         preset_name = self.preset_name_edit.text().strip()
         if preset_name == '':
-            return
+            return None, None
         existing_preset_widget: PresetWidget | None = self.find_preset_widget(preset_name)
+        preset = existing_preset_widget.preset if existing_preset_widget else Preset(preset_name)
+        return preset, existing_preset_widget
+
+    def save_edited_preset(self) -> None:
+        preset, existing_preset_widget = self.find_edit_target()
         if existing_preset_widget:
             confirmation = MessageBox(QMessageBox.Question, buttons=QMessageBox.Save | QMessageBox.Cancel, default=QMessageBox.Save)
-            confirmation.setText(tr("Replace existing '{}' preset?").format(preset_name))
+            confirmation.setText(tr("Replace existing '{}' preset?").format(preset.name))
             if confirmation.exec() == QMessageBox.Cancel:
                 return
-            preset = existing_preset_widget.preset
             preset.clear_content()
-        else:
-            preset = Preset(preset_name)
-        self.initialise_preset_from_controls(preset)
-        self.main_controller.save_preset(preset)
+        self.initialise_preset_options(preset)  # Initialises the options, but does not set their values.
+        if not self._save(preset):
+            return
         # Create a new widget - an easy way to update the icon.
         new_preset_widget = self.create_preset_widget(preset)
         if existing_preset_widget:
@@ -4718,15 +4771,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
         else:
             self.add_preset_widget(new_preset_widget)
             self.main_controller.save_preset_order(self.get_preset_names_in_order())
-
-            def scroll_to_bottom() -> None:  # TODO figure out why this does not work
-                self.preset_widgets_scroll_area.updateGeometry()
-                self.preset_widgets_scroll_area.verticalScrollBar().setValue(
-                    self.preset_widgets_scroll_area.verticalScrollBar().maximum())
-                self.preset_widgets_scroll_area.ensureWidgetVisible(new_preset_widget)
-
-            self.preset_widgets_scroll_area.updateGeometry()
-            QTimer.singleShot(0, scroll_to_bottom)
+            self.preset_widgets_scroll_area.ensureWidgetVisible(new_preset_widget)
+            QApplication.processEvents()  # TODO figure out why this does not work
         self.preset_name_edit.setText('')
         self.status_message(tr("Saved {}").format(preset.name), timeout=-1)
 
@@ -4742,7 +4788,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
         return super().event(event)
 
     def closeEvent(self, event) -> None:
-        if self.preset_name_edit.text().strip() != '':
+        preset, _ = self.find_edit_target()
+        if self.preset_name_edit.text().strip() != '' and preset and self.has_changes(preset):
             alert = MessageBox(QMessageBox.Question, buttons=QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
                                default=QMessageBox.Save)
             alert.setText("Save current edit?")
@@ -4755,6 +4802,17 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
             else:
                 self.preset_name_edit.setText('')
         super().closeEvent(event)
+
+    def _save(self, preset: Preset):
+        self.main_controller.populate_ini_from_controls(preset.preset_ini, update_only=True)
+        if duplicated_preset := self.main_controller.is_duplicate(preset):
+            duplicates_warning = MessageBox(QMessageBox.Warning,
+                                            buttons=QMessageBox.Save | QMessageBox.Cancel, default=QMessageBox.Cancel)
+            duplicates_warning.setText(tr("Duplicates existing Preset {}, save anyway?").format(duplicated_preset.name))
+            if duplicates_warning.exec() == QMessageBox.Cancel:
+                return False
+        self.main_controller.save_preset(preset)
+        return True
 
 
 def exception_handler(e_type, e_value, e_traceback) -> None:
@@ -4913,14 +4971,14 @@ class LuxProfileChart(QLabel):
         super().__init__(parent=lux_dialog)
         self.lux_dialog = lux_dialog
         self.chart_changed_callback = lux_dialog.chart_changed_callback
-        self.profile_data = lux_dialog.lux_profile_data
+        self.profiles_map = lux_dialog.lux_profiles_map
         self.preset_points = lux_dialog.preset_points
         self.main_controller: VduAppController = lux_dialog.main_controller
-        self.vdu_chart_colors = self.lux_dialog.vdu_chart_color
-        self.range_restrictions = lux_dialog.range_restrictions  # Passed to chart
+        self.vdu_chart_colors = self.lux_dialog.drawing_color_map
+        self.range_restrictions = lux_dialog.range_restrictions_map  # Passed to chart
         self.current_lux = 0
         self.snap_to_margin = lux_dialog.lux_config.getint('lux-ui', 'snap-to-margin-pixels', fallback=4)
-        self.current_vdu_sid = '' if len(lux_dialog.lux_profile_data) == 0 else list(lux_dialog.lux_profile_data.keys())[0]
+        self.current_vdu_sid = VduStableId('') if len(self.profiles_map) == 0 else list(self.profiles_map.keys())[0]
         self.pixmap_width = 600
         self.pixmap_height = 550
         self.plot_width, self.plot_height = self.pixmap_width - 200, self.pixmap_height - 150
@@ -4982,8 +5040,8 @@ class LuxProfileChart(QLabel):
             painter.drawLine(self.x_origin, cutoff, self.x_origin + self.plot_width + 25, cutoff)
 
         point_markers = []  # Draw profile lines/histogram per vdu, current_profile last/on-top, collect point marker locations
-        for vdu_sid, vdu_data in [(vid, data) for vid, data in self.profile_data.items() if vid != self.current_vdu_sid] + \
-                                 [(self.current_vdu_sid, self.profile_data[self.current_vdu_sid])]:
+        for vdu_sid, vdu_data in [(vid, data) for vid, data in self.profiles_map.items() if vid != self.current_vdu_sid] + \
+                                 [(self.current_vdu_sid, self.profiles_map[self.current_vdu_sid])]:
             last_x, last_y = 0, 0
             if vdu_sid not in self.vdu_chart_colors:
                 continue  # must have been turned off
@@ -5040,7 +5098,7 @@ class LuxProfileChart(QLabel):
                 y = self.y_from_percent(brightness)
                 painter.drawLine(x_current_lux - 2, self.y_origin - y, x_current_lux + 2, self.y_origin - y)
             current_brightness_pointer = [(0, 0), (-32, 16), (-32, -16)]  # Indicate current brightness at current lux
-            for vdu_sid, brightness in self.lux_dialog.vdu_current_brightness.items():
+            for vdu_sid, brightness in self.lux_dialog.current_brightness_map.items():
                 if vdu_sid not in self.vdu_chart_colors:
                     continue  # must have been turned off
                 vdu_color_num = self.vdu_chart_colors[vdu_sid]
@@ -5094,7 +5152,7 @@ class LuxProfileChart(QLabel):
         painter.end()
         self.setPixmap(pixmap)
 
-    def set_current_profile(self, name: str) -> None:
+    def set_current_profile(self, name: VduStableId) -> None:
         self.current_vdu_sid = name
         self.create_plot()
 
@@ -5111,7 +5169,7 @@ class LuxProfileChart(QLabel):
 
     def lux_point_edit(self, x, y) -> bool:
         assert self.current_vdu_sid != ''
-        vdu_data = self.profile_data[self.current_vdu_sid]
+        vdu_data = self.profiles_map[self.current_vdu_sid]
         _, _, existing_lux, existing_percent, existing_point = self.find_close_to(x, y, self.current_vdu_sid)
         if existing_lux is not None:  # Remove
             if existing_point.preset_name is None:
@@ -5126,7 +5184,7 @@ class LuxProfileChart(QLabel):
     def lux_preset_edit(self, x) -> bool:
         if point := self.find_preset_point_close_to(x):  # Delete
             self.preset_points.remove(point)
-            for vdu_sid, profile in self.profile_data.items():
+            for vdu_sid, profile in self.profiles_map.items():
                 for profile_point in profile:
                     if profile_point == point:  # Note: these will not be the same object
                         # May not have a preset_name if not yet committed/saved.
@@ -5139,7 +5197,7 @@ class LuxProfileChart(QLabel):
                             profile.remove(profile_point)
                         break
             return True
-        presets = self.main_controller.get_presets()
+        presets = self.main_controller.find_presets_map()
         if len(presets):
             ask_preset = QInputDialog()
             ask_preset.setComboBoxItems(list(presets.keys()))
@@ -5150,7 +5208,7 @@ class LuxProfileChart(QLabel):
                 point = LuxPoint(self.lux_from_x(x), -1, preset_name)
                 self.preset_points.append(point)
                 self.preset_points.sort()
-                for profile in self.profile_data.values():
+                for profile in self.profiles_map.values():
                     profile.append(point)
                     profile.sort()
                 return True
@@ -5169,9 +5227,9 @@ class LuxProfileChart(QLabel):
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         self.create_plot()
 
-    def find_close_to(self, x: int, y: int, vdu_sid: str) -> Tuple:
+    def find_close_to(self, x: int, y: int, vdu_sid: VduStableId) -> Tuple:
         r = self.snap_to_margin
-        for vdu_pd in self.profile_data[vdu_sid]:
+        for vdu_pd in self.profiles_map[vdu_sid]:
             existing_lux = vdu_pd.lux
             if vdu_pd.preset_name is None:
                 existing_percent = vdu_pd.brightness
@@ -5465,8 +5523,8 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
     def __init__(self, auto_controller: LuxAutoController) -> None:
         super().__init__(task_body=self.adjust_for_lux, task_finished=self.finished_callable)  # type: ignore
         self.main_controller = auto_controller.main_controller
-        self.consecutive_errors: Dict[str, int] = {}
-        self.expected_brightness: Dict[str, int] = {}
+        self.consecutive_errors_map: Dict[str, int] = {}
+        self.expected_brightness_map: Dict[str, int] = {}
         self.adjust_now_requested = False
         self.unexpected_change = False
         lux_config = auto_controller.get_lux_config()
@@ -5500,7 +5558,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
             assert lux_auto_controller is not None
             while not self.stop_requested:
                 self.unexpected_change = False
-                self.expected_brightness.clear()
+                self.expected_brightness_map.clear()
                 lux_meter = lux_auto_controller.lux_meter
                 if lux_meter is None:  # In app config change
                     log_error("Exiting, no lux meter available.")
@@ -5562,7 +5620,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         else:  # No work done, no adjustment necessary
             self.status_message(f"{SUN_SYMBOL} {SUCCESS_SYMBOL}", timeout=3000)
 
-    def step_one_vdu(self, vdu_sid: str, profile_brightness: int, profile_preset_name: str | None,
+    def step_one_vdu(self, vdu_sid: VduStableId, profile_brightness: int, profile_preset_name: str | None,
                      lux_summary_text: str, first_step: bool) -> bool:
         # if profile_brightness is -1, the profile has an attached preset with no brightness, it may have been
         # attached to trigger non-brightness settings at a given lux value (triggered below, after the loop).
@@ -5582,8 +5640,8 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                     log_info(f"LuxAutoWorker: {vdu_sid=} {current_brightness=} {profile_brightness=} ignored, too small")
                     return False
                 # Check if something else is changing the brightness, or maybe there was a ddcutil error
-                if vdu_sid in self.expected_brightness and self.expected_brightness[vdu_sid] != current_brightness:
-                    log_info(f"LuxAutoWorker: {vdu_sid=}: {current_brightness=}% != step value {self.expected_brightness[vdu_sid]}%" 
+                if vdu_sid in self.expected_brightness_map and self.expected_brightness_map[vdu_sid] != current_brightness:
+                    log_info(f"LuxAutoWorker: {vdu_sid=}: {current_brightness=}% != step value {self.expected_brightness_map[vdu_sid]}%" 
                              f" something else altered the brightness - stop adjusting for lux.")
                     self.status_message(f"{SUN_SYMBOL} {ERROR_SYMBOL} {RAISED_HAND_SYMBOL} {vdu_sid}")
                     self.unexpected_change = True
@@ -5592,33 +5650,35 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                 step_size = max(1, abs(diff) // self.convergence_divisor)  # TODO find a good heuristic
                 step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
                 new_brightness = current_brightness + step
-                self.main_controller.set_value(vdu_sid, BRIGHTNESS_VCP_CODE, str(new_brightness))
-                self.expected_brightness[vdu_sid] = new_brightness
+                # Marking as transient, prevents showing intermediate preset matches, first clears, last sets (if appropriate).
+                value_context = TRANSIENT_CHANGE if not first_step and new_brightness != profile_brightness else ''
+                self.main_controller.set_value(vdu_sid, BRIGHTNESS_VCP_CODE, str(new_brightness), context=value_context)
+                self.expected_brightness_map[vdu_sid] = new_brightness
                 log_info(f"LuxAutoWorker: Start stepping {vdu_sid=} {current_brightness=} to {profile_brightness=} "
                          f" {profile_preset_name=} {lux_summary_text}") if first_step else None
                 self.status_message(
                     f"{SUN_SYMBOL} {current_brightness}%{STEPPING_SYMBOL}{profile_brightness}% {vdu_sid}" +
                     f" ({lux_summary_text}) {profile_preset_name if profile_preset_name is not None else ''}")
-                if self.consecutive_errors.get(vdu_sid, 0) > 0:
-                    log_info(f"LuxAutoWorker: ddcutil to {vdu_sid} succeeded after {self.consecutive_errors[vdu_sid]} errors.")
-                self.consecutive_errors[vdu_sid] = 0
+                if self.consecutive_errors_map.get(vdu_sid, 0) > 0:
+                    log_info(f"LuxAutoWorker: ddcutil to {vdu_sid} succeeded after {self.consecutive_errors_map[vdu_sid]} errors.")
+                self.consecutive_errors_map[vdu_sid] = 0
             except VduException as ve:
-                self.consecutive_errors[vdu_sid] = self.consecutive_errors.get(vdu_sid, 0) + 1
-                if self.consecutive_errors[vdu_sid] == 1:
+                self.consecutive_errors_map[vdu_sid] = self.consecutive_errors_map.get(vdu_sid, 0) + 1
+                if self.consecutive_errors_map[vdu_sid] == 1:
                     log_warning(f"LuxAutoWorker: Brightness error on {vdu_sid}, will sleep and try again: {ve}", -1)
                     self.status_message(tr("{} Failed to adjust {}, will try again").format(ERROR_SYMBOL, vdu_sid))
                     time.sleep(2)  # TODO do something better than this to make the message visible.
-                elif self.consecutive_errors[vdu_sid] > 1:
+                elif self.consecutive_errors_map[vdu_sid] > 1:
                     self.status_message(tr("{} Failed to adjust {}, {} errors so far. Sleeping {} minutes.").format(
-                        ERROR_SYMBOL, vdu_sid, self.consecutive_errors[vdu_sid],
+                        ERROR_SYMBOL, vdu_sid, self.consecutive_errors_map[vdu_sid],
                         self.main_controller.get_lux_auto_controller().get_lux_config().get_interval_minutes()))  # TODO seems dodgy
                     time.sleep(2)  # TODO do something better than this to make the message visible.
-                    if self.consecutive_errors[vdu_sid] == 2 or log_debug_enabled:
-                        log_info(f"LuxAutoWorker: {self.consecutive_errors[vdu_sid]} errors on {vdu_sid}, let this lux cycle end.")
+                    if self.consecutive_errors_map[vdu_sid] == 2 or log_debug_enabled:
+                        log_info(f"LuxAutoWorker: {self.consecutive_errors_map[vdu_sid]} errors on {vdu_sid}, let this lux cycle end.")
                     return False  # Report no changes, this allows the current adjustment cycle to end, will try again next cycle.
         return True
 
-    def determine_brightness(self, vdu_sid: str, smoothed_lux: int, lux_profile: List[LuxPoint]) -> Tuple[int, str | None]:
+    def determine_brightness(self, vdu_sid: VduStableId, smoothed_lux: int, lux_profile: List[LuxPoint]) -> Tuple[int, str | None]:
         matched_point = LuxPoint(0, 0)
         result_brightness = 0
         preset_name = None
@@ -5638,7 +5698,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                             preset_name = self.assess_preset_proximity(result_brightness, matched_point, profile_point)
                     break
         if preset_name is not None:   # Lookup preset brightness. Might be -1 if the preset doesn't have a brightness for this VDU
-            presets = self.main_controller.get_presets()  # TODO check
+            presets = self.main_controller.find_presets_map()  # TODO check
             if preset_name in presets:  # Change the result to the preset's current brightness value
                 result_brightness = presets[preset_name].get_brightness(vdu_sid)
         log_debug(f"LuxAutoWorker: determine_brightness {vdu_sid=} {result_brightness=}% {preset_name=}") if log_debug_enabled else None
@@ -5669,7 +5729,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
             return next_point.preset_name
         return None
 
-    def create_complete_profile(self, profile_points: List[LuxPoint], vdu_sid: str):
+    def create_complete_profile(self, profile_points: List[LuxPoint], vdu_sid: VduStableId):
         completed_profile = [LuxPoint(0, 0)]  # make sure we have a point at the origin of the scale
         for lux_point in profile_points:
             if lux_point.preset_name is None:
@@ -5722,7 +5782,7 @@ class LuxConfig(ConfigIni):
         super().__init__()
         self.path = get_config_path('AutoLux')
         self.last_modified_time = 0.0
-        self.cached_profiles: Dict[str, List[LuxPoint]] = {}
+        self.cached_profiles_map: Dict[str, List[LuxPoint]] = {}
 
     def get_device_name(self) -> str:
         return self.get("lux-meter", "lux-device", fallback='')
@@ -5730,7 +5790,7 @@ class LuxConfig(ConfigIni):
     def set_device_name(self, device_name: str) -> None:
         self.set("lux-meter", "lux-device", device_name)
 
-    def get_vdu_lux_profile(self, vdu_stable_id: str, brightness_range) -> List[LuxPoint]:
+    def get_vdu_lux_profile(self, vdu_stable_id: VduStableId, brightness_range) -> List[LuxPoint]:
         if self.has_option('lux-profile', vdu_stable_id):
             lux_points = [LuxPoint(v[0], v[1]) for v in literal_eval(self.get('lux-profile', vdu_stable_id))]
         else:  # Create a default profile:
@@ -5759,7 +5819,7 @@ class LuxConfig(ConfigIni):
         return self.getboolean("lux-meter", "automatic-brightness", fallback=False)
 
     def load(self, force: bool = False) -> LuxConfig:
-        self.cached_profiles.clear()
+        self.cached_profiles_map.clear()
         if self.path.exists():
             if Path.stat(self.path).st_mtime > self.last_modified_time or force:
                 log_info(f"Reading autolux file '{self.path.as_posix()}'")
@@ -5779,9 +5839,9 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         LuxDialog.show_existing_dialog() if LuxDialog.exists() else LuxDialog(main_controller)
 
     @staticmethod
-    def reinitialize_instance():
+    def reconfigure_instance():
         if lux_dialog := LuxDialog.get_instance():  # type: ignore
-            lux_dialog.reinitialise_from_data()
+            lux_dialog.reconfigure()
 
     @staticmethod
     def lux_dialog_message(message: str, timeout: int, destination: MsgDestination = MsgDestination.DEFAULT) -> None:
@@ -5789,20 +5849,20 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             lux_dialog.status_message(message, timeout, destination)
 
     @staticmethod
-    def lux_dialog_display_brightness(vdu_stable_id: str, brightness: int) -> None:
+    def lux_dialog_display_brightness(vdu_stable_id: VduStableId, brightness: int) -> None:
         if lux_dialog := LuxDialog.get_instance():  # type: ignore
-            lux_dialog.vdu_current_brightness[vdu_stable_id] = brightness
+            lux_dialog.current_brightness_map[vdu_stable_id] = brightness
             lux_dialog.profile_plot.show_changes(profile_changes=False)
 
     def __init__(self, main_controller: VduAppController) -> None:
         super().__init__()
         self.setWindowTitle(tr('Light-Meter'))
         self.main_controller: VduAppController = main_controller
-        self.lux_profile_data: Dict[str, List[LuxPoint]] = {}
-        self.range_restrictions: Dict[str, Tuple[int, int]] = {}
+        self.lux_profiles_map: Dict[VduStableId, List[LuxPoint]] = {}
+        self.range_restrictions_map: Dict[VduStableId, Tuple[int, int]] = {}
         self.preset_points: List[LuxPoint] = []
-        self.vdu_chart_color: Dict[str, QColor] = {}
-        self.vdu_current_brightness: Dict[str, int] = {}
+        self.drawing_color_map: Dict[VduStableId, QColor] = {}
+        self.current_brightness_map: Dict[VduStableId, int] = {}
         self.has_profile_changes = False
         self.setMinimumWidth(950)
 
@@ -5865,7 +5925,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
         revert_button = QPushButton(si(self, QStyle.SP_DialogResetButton), tr("Revert"))
         revert_button.setToolTip(tr("Abandon profile-chart changes, revert to last saved."))
-        revert_button.clicked.connect(self.reinitialise_from_data)
+        revert_button.clicked.connect(self.reconfigure)
         self.revert_button = revert_button
         self.status_bar.addPermanentWidget(revert_button, 0)
 
@@ -5918,7 +5978,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
 
         def select_profile(index: int) -> None:
             if self.profile_plot is not None:
-                profile_name = list(self.lux_profile_data.keys())[index]
+                profile_name = list(self.lux_profiles_map.keys())[index]
                 self.profile_plot.set_current_profile(profile_name)
                 self.status_message(tr("Editing profile {}").format(profile_name))
             if self.lux_config.get('lux-ui', 'selected-profile', fallback=None) != self.profile_selector.itemData(index):
@@ -5926,7 +5986,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
                 self.apply_settings(requires_auto_brightness_restart=False)
 
         self.profile_selector.currentIndexChanged.connect(select_profile)
-        self.reinitialise_from_data()
+        self.reconfigure()
         self.make_visible()
 
     def chart_changed_callback(self) -> None:
@@ -5935,14 +5995,14 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.save_button.setEnabled(True)
         self.revert_button.setEnabled(True)
 
-    def reinitialise_from_data(self) -> None:
+    def reconfigure(self) -> None:
         assert self.profile_plot is not None
         self.lux_config = self.main_controller.get_lux_auto_controller().get_lux_config().duplicate(LuxConfig())  # type: ignore
         self.device_name = self.lux_config.get("lux-meter", "lux-device", fallback='')
         self.enabled_checkbox.setChecked(self.lux_config.is_auto_enabled())
         self.interpolate_checkbox.setChecked(self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True))
         self.has_profile_changes = False
-        self.vdu_current_brightness.clear()
+        self.current_brightness_map.clear()
         self.save_button.setEnabled(False)
         self.revert_button.setEnabled(False)
         self.adjust_now_button.setText(f"{TIMER_RUNNING_SYMBOL} 00:00")
@@ -5956,14 +6016,14 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             value_range = (0, 100)
             if self.main_controller.is_vcp_code_enabled(vdu_sid, BRIGHTNESS_VCP_CODE):
                 value_range = self.main_controller.get_range(vdu_sid, BRIGHTNESS_VCP_CODE, fallback=value_range)
-                self.range_restrictions[vdu_sid] = value_range
+                self.range_restrictions_map[vdu_sid] = value_range
                 try:
-                    self.vdu_current_brightness[vdu_sid] = int(self.main_controller.get_value(vdu_sid, BRIGHTNESS_VCP_CODE))
+                    self.current_brightness_map[vdu_sid] = int(self.main_controller.get_value(vdu_sid, BRIGHTNESS_VCP_CODE))
                 except VduException as ve:
-                    self.vdu_current_brightness[vdu_sid] = 0
+                    self.current_brightness_map[vdu_sid] = 0
                     log_warning("VDU may not be available:", str(ve), trace=True)
             # All vdu's have a profile, even if they have no brightness control - because a preset may be attached to a lux value.
-            self.lux_profile_data[vdu_sid] = self.lux_config.get_vdu_lux_profile(vdu_sid, value_range)
+            self.lux_profiles_map[vdu_sid] = self.lux_config.get_vdu_lux_profile(vdu_sid, value_range)
             connected_id_list.append(vdu_sid)
         self.preset_points.clear()  # Edit out deleted presets by starting from scratch
         for preset_point in self.lux_config.get_preset_points():
@@ -5982,10 +6042,10 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             if connected_id_list != existing_id_list:  # List of connected VDU's has changed
                 self.profile_selector.clear()
                 random.seed(int(self.lux_config.get("lux-ui", "vdu_color_seed", fallback='0x543fff'), 16))
-                self.vdu_chart_color.clear()
+                self.drawing_color_map.clear()
                 for index, vdu_sid in enumerate(self.main_controller.get_vdu_stable_id_list()):
                     color = QColor.fromHsl(int(index * 137.508) % 255, random.randint(64, 128), random.randint(192, 200))
-                    self.vdu_chart_color[vdu_sid] = color
+                    self.drawing_color_map[vdu_sid] = color
                     color_icon = create_icon_from_svg_bytes(SWATCH_ICON_SOURCE.replace(b"#ffffff", bytes(color.name(), 'utf-8')))
                     self.profile_selector.addItem(
                         color_icon, self.main_controller.get_vdu_description(vdu_sid), userData=vdu_sid)
@@ -6054,7 +6114,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             self.status_message(tr("Brightness auto adjustment is disabled."))  # Remind user why auto is not working
 
     def save_profiles(self) -> None:
-        for vdu_sid, profile in self.profile_plot.profile_data.items():
+        for vdu_sid, profile in self.profile_plot.profiles_map.items():
             data = [(lux_point.lux, lux_point.brightness) for lux_point in profile if lux_point.preset_name is None]
             self.lux_config.set('lux-profile', vdu_sid, repr(data))
         preset_data = [(lux_point.lux, lux_point.preset_name) for lux_point in self.profile_plot.preset_points]
@@ -6157,7 +6217,7 @@ class LuxAutoController:
         self.initialize_from_config()
         lux_dialog: LuxDialog = LuxDialog.get_instance()  # type: ignore
         if lux_dialog is not None:
-            lux_dialog.reinitialise_from_data()
+            lux_dialog.reconfigure()
 
     def adjust_brightness_now(self) -> None:
         if self.lux_auto_brightness_worker is not None:
@@ -6328,7 +6388,7 @@ class VduAppController:   # Main controller containing methods for high level op
         self.main_config = main_config
         self.ddcutil: DdcUtil | None = None
         self.main_window: VduAppWindow | None = None
-        self.vdu_controllers: Dict[str, VduController] = {}  # for 1 to 6 VDU's a list is in the same performance ballpark as a dict.
+        self.vdu_controllers_map: Dict[VduStableId, VduController] = {}
         self.preset_controller = PresetController()
         self.detected_vdu_list: List[Tuple[str, str, str, str]] = []
         self.previously_detected_vdu_list: List[Tuple[str, str, str, str]] = []
@@ -6381,7 +6441,7 @@ class VduAppController:   # Main controller containing methods for high level op
                 self.main_window.display_active_preset()
                 log_debug("released application_configuration_lock") if log_debug_enabled else None
             if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED):
-                LuxDialog.reinitialize_instance()
+                LuxDialog.reconfigure_instance()
                 if self.lux_auto_controller is not None:
                     self.lux_auto_controller.initialize_from_config()
             # restore_preset tries to acquire the same lock, safe to unlock and let it relock...
@@ -6433,7 +6493,7 @@ class VduAppController:   # Main controller containing methods for high level op
         if self.ddcutil is None:
             return
         detected_vdu_list, ddcutil_problem = self.detect_vdus()
-        self.vdu_controllers = {}
+        self.vdu_controllers_map = {}
         main_panel_error_handler = self.main_window.get_main_panel().display_vdu_exception
         for vdu_number, manufacturer, model_name, vdu_serial in detected_vdu_list:
             controller = None
@@ -6452,8 +6512,8 @@ class VduAppController:   # Main controller containing methods for high level op
                     controller.write_template_config_files()
                 break
             if controller is not None:
-                self.vdu_controllers[controller.vdu_stable_id] = controller
-        if len(self.vdu_controllers) == 0:
+                self.vdu_controllers_map[controller.vdu_stable_id] = controller
+        if len(self.vdu_controllers_map) == 0:
             if self.main_config.is_set(ConfOption.WARNINGS_ENABLED):
                 self.main_window.display_no_controllers_error_dialog(ddcutil_problem)
 
@@ -6475,11 +6535,11 @@ class VduAppController:   # Main controller containing methods for high level op
 
     def edit_config(self) -> None:
         SettingsEditor.invoke(self.main_config,
-                              [vdu.config for vdu in self.vdu_controllers.values() if vdu.config is not None],
+                              [vdu.config for vdu in self.vdu_controllers_map.values() if vdu.config is not None],
                               self.settings_changed)
 
     def create_config_files(self) -> None:
-        for controller in self.vdu_controllers.values():
+        for controller in self.vdu_controllers_map.values():
             controller.write_template_config_files()
 
     def lux_auto_action(self) -> bool:
@@ -6520,23 +6580,24 @@ class VduAppController:   # Main controller containing methods for high level op
                     self.previously_detected_vdu_list = self.detected_vdu_list
                 if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) and LuxDialog.exists():
                     lux_dialog: LuxDialog = LuxDialog.get_instance()  # type: ignore
-                    lux_dialog.reinitialise_from_data()  # in case the number of connected monitors have changed.
-                    self.main_window.display_active_preset()
+                    lux_dialog.reconfigure()  # in case the number of connected monitors have changed.
+                    self.main_window.display_active_preset()  # TODO maybe redundant
             finally:
                 self.main_window.indicate_busy(False)
 
         self.refresh_data_task = WorkerThread(task_body=update_from_vdu, task_finished=update_ui_view)
         self.refresh_data_task.start()
 
-    def restore_preset(self, preset: Preset, restore_finished: Callable[[PresetTransitionWorker], None] | None = None,
+    def restore_preset(self, preset: Preset, finished_func: Callable[[PresetTransitionWorker], None] | None = None,
                        immediately: bool = False, scheduled_activity: bool = False) -> None:
         # Starts the restore, but it will complete in the worker thread
         if not is_running_in_gui_thread():  # Transfer this request into the GUI thread
             log_debug(f"restore_preset {preset.name} transferring task to GUI thread") if log_debug_enabled else None
             self.main_window.run_in_gui_thread(
-                partial(self.restore_preset, preset, restore_finished, immediately, scheduled_activity))
+                partial(self.restore_preset, preset, finished_func, immediately, scheduled_activity))
             return
 
+        log_debug("trying for application_configuration_lock")
         with self.application_configuration_lock:  # The lock prevents a transition firing when the GUI/app is reconfiguring
             self.transitioning_dummy_preset = None
             if not immediately:
@@ -6553,12 +6614,12 @@ class VduAppController:   # Main controller containing methods for high level op
                 self.transitioning_dummy_preset.update_progress() if self.transitioning_dummy_preset else None
                 self.main_window.display_active_preset(self.transitioning_dummy_preset)
 
-            def finished_callback(worker_thread: PresetTransitionWorker) -> None:
+            def restore_finished_callback(worker_thread: PresetTransitionWorker) -> None:
                 self.transitioning_dummy_preset = None
                 if worker_thread.vdu_exception is not None and not scheduled_activity:  # if it's a GUI request, ask if we should retry
                     if self.main_window.get_main_panel().display_vdu_exception(worker_thread.vdu_exception, can_retry=True):
                         # Try again (recursion) in new thread
-                        self.restore_preset(preset, restore_finished=restore_finished, immediately=immediately)
+                        self.restore_preset(preset, finished_func=finished_func, immediately=immediately)
                         return  # Don't do anything more the semi-recursive call above will take over from here
                 self.main_window.indicate_busy(False)
                 if self.main_window.tray is not None:
@@ -6569,16 +6630,16 @@ class VduAppController:   # Main controller containing methods for high level op
                     self.main_window.display_active_preset(preset)
                     self.main_window.display_preset_status(tr("Restored {} (elapsed time {} seconds)").format(
                         preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=2)))
-                    if restore_finished is not None:
-                        restore_finished(worker_thread)
+                    if finished_func is not None:
+                        finished_func(worker_thread)
                 else:  # Interrupted or exception:
                     self.main_window.display_active_preset()
                     self.main_window.display_preset_status(tr("Interrupted restoration of {}").format(preset.name))
-                    if restore_finished is not None:
-                        restore_finished(worker_thread)
+                    if finished_func is not None:
+                        finished_func(worker_thread)
 
             self.preset_transition_worker = PresetTransitionWorker(
-                self, preset, update_progress, finished_callback, immediately, scheduled_activity)
+                self, preset, update_progress, restore_finished_callback, immediately, scheduled_activity)
             self.preset_transition_worker.start()
 
     def schedule_presets(self, reconfiguring: bool = False) -> Preset | None:
@@ -6591,11 +6652,11 @@ class VduAppController:   # Main controller containing methods for high level op
         if location is None:
             return None
         log_info(f"Scheduling presets {reconfiguring=}")
-        time_map = create_todays_elevation_time_map(latitude=location.latitude, longitude=location.longitude)
+        time_map = create_todays_elevation_map(latitude=location.latitude, longitude=location.longitude)
         most_recent_overdue = None
         local_now = zoned_now()
         latest_due = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
-        for preset in self.preset_controller.find_presets().values():
+        for preset in self.preset_controller.find_presets_map().values():
             if reconfiguring:
                 preset.remove_elevation_trigger(quietly=True)
             elevation_key = preset.get_solar_elevation()
@@ -6625,7 +6686,9 @@ class VduAppController:   # Main controller containing methods for high level op
             # Testing: QTimer.singleShot(int(1000*30), partial(self.schedule_presets, True))
             self.daily_schedule_next_update = tomorrow
         if reconfiguring:
-            PresetsDialog.reconfigure()
+            PresetsDialog.reconfigure_instance()
+        else:
+            PresetsDialog.refresh_instance()
         return most_recent_overdue
 
     def activate_scheduled_preset(self, preset: Preset, check_weather: bool = True, immediately: bool = False,
@@ -6644,24 +6707,24 @@ class VduAppController:   # Main controller containing methods for high level op
                 self.main_window.display_preset_status(message)
                 return
 
-        def status_message(msg: str):
+        def activation_feedback(msg: str):
             self.main_window.display_preset_status(f"{TIME_CLOCK_SYMBOL} " + tr("Preset {} activating at {}").format(
                 preset.name, f"{activation_time:%H:%M}") + f" - {msg}")
 
-        def finished(worker: PresetTransitionWorker) -> None:
+        def activation_finished(worker: PresetTransitionWorker) -> None:
             assert preset.elevation_time_today is not None
             if worker.vdu_exception is not None:
                 secs = self.main_config.ini_content.getint('vdu-controls-globals', 'restore-error-sleep-seconds', fallback=60)
                 too_close = zoned_now() + timedelta(seconds=secs + 60)  # retry if more than a minute before any others
-                for other in self.preset_controller.find_presets().values():  # Skip retry if another is due soon
+                for other in self.preset_controller.find_presets_map().values():  # Skip retry if another is due soon
                     if (other.name != preset.name
                             and other.elevation_time_today is not None and other.elevation_time_today is not None
                             and preset.elevation_time_today < other.elevation_time_today <= too_close):
                         log_info(f"Schedule restoration skipped {preset.name}, too close to {other.name}")
                         preset.schedule_status = PresetScheduleStatus.SKIPPED_SUPERSEDED
-                        status_message(tr("Skipped, superseded"))
+                        activation_feedback(tr("Skipped, superseded"))
                         return
-                status_message(tr("Error, trying again in {} seconds").format(secs))
+                activation_feedback(tr("Error, trying again in {} seconds").format(secs))
                 if count == 1:
                     log_warning(f"Error during restoration of {preset.name}, retrying every {secs} seconds.")
                 QTimer.singleShot(
@@ -6669,13 +6732,13 @@ class VduAppController:   # Main controller containing methods for high level op
                     partial(self.activate_scheduled_preset, preset, check_weather, immediately, activation_time, count+1))
                 return
             preset.schedule_status = PresetScheduleStatus.SUCCEEDED
-            self.main_window.display_active_preset()
-            status_message(tr("Restored {}").format(preset.name))
+            self.main_window.display_active_preset(preset)
+            activation_feedback(tr("Restored {}").format(preset.name))
             log_info(f"Restored preset {preset.name} on try {count=}") if count > 1 else None
 
         log_info(f"Activating scheduled preset {preset.name} transition={immediately}") if count == 1 else None
         # Happens asynchronously in a thread
-        self.restore_preset(preset, restore_finished=finished,
+        self.restore_preset(preset, finished_func=activation_finished,
                             immediately=immediately or PresetTransitionFlag.SCHEDULED not in preset.get_transition_type(),
                             scheduled_activity=True)
 
@@ -6702,7 +6765,7 @@ class VduAppController:   # Main controller containing methods for high level op
         return True
 
     def find_preset_by_name(self, preset_name: str) -> Preset | None:
-        return self.preset_controller.find_presets().get(preset_name, None)
+        return self.preset_controller.find_presets_map().get(preset_name, None)
 
     def restore_named_preset(self, preset_name: str) -> None:
         if preset := self.find_preset_by_name(preset_name):
@@ -6710,7 +6773,6 @@ class VduAppController:   # Main controller containing methods for high level op
             self.restore_preset(preset, immediately=PresetTransitionFlag.MENU not in preset.get_transition_type())
 
     def save_preset(self, preset: Preset) -> None:
-        self.copy_to_preset_ini(preset.preset_ini, update_only=True)
         self.preset_controller.save_preset(preset)
         if self.main_window.app_context_menu.get_preset_menu_action(preset.name) is None:
             self.main_window.app_context_menu.insert_preset_menu_action(preset)
@@ -6722,9 +6784,16 @@ class VduAppController:   # Main controller containing methods for high level op
         self.preset_controller.save_order(name_order)
         self.refresh_preset_menu(reorder=True)
 
-    def copy_to_preset_ini(self, preset_ini: ConfigIni, update_only: bool = False) -> None:
+    def populate_ini_from_controls(self, preset_ini: ConfigIni, update_only: bool = False) -> None:
         for control_panel in self.main_window.get_main_panel().vdu_control_panels.values():
             control_panel.copy_state(preset_ini, update_only)
+
+    def is_duplicate(self, preset: Preset) -> Preset | None:
+        for other_preset in self.find_presets_map().values():
+            if other_preset.name != preset.name and not preset.preset_ini.is_different(other_preset.preset_ini,
+                                                                                       vdu_settings_only=True):
+                return other_preset
+        return None
 
     def delete_preset(self, preset: Preset) -> None:
         self.preset_controller.delete_preset(preset)
@@ -6741,59 +6810,59 @@ class VduAppController:   # Main controller containing methods for high level op
             with open(PRESET_NAME_FILE, encoding="utf-8") as cps_file:
                 preset_name = cps_file.read()
                 if preset_name.strip() != '':
-                    preset = self.preset_controller.find_presets().get(preset_name)  # will be None if it has been deleted
+                    preset = self.preset_controller.find_presets_map().get(preset_name)  # will be None if it has been deleted
                     if preset is not None and main_panel.is_preset_active(preset):
                         return preset
         # Guess by testing each possible preset against the current VDU settings
-        for preset in self.preset_controller.find_presets().values():
+        for preset in self.preset_controller.find_presets_map().values():
             if main_panel.is_preset_active(preset):
                 return preset
         return None
 
-    def get_presets(self) -> Dict[str, Preset]:
-        return self.preset_controller.find_presets()
+    def find_presets_map(self) -> Dict[str, Preset]:
+        return self.preset_controller.find_presets_map()
 
     def get_lux_auto_controller(self) -> LuxAutoController:
         assert self.lux_auto_controller is not None
         return self.lux_auto_controller
 
-    def get_vdu_stable_id_list(self) -> List[str]:
-        return list(self.vdu_controllers.keys())
+    def get_vdu_stable_id_list(self) -> List[VduStableId]:
+        return list(self.vdu_controllers_map.keys())
 
-    def get_vdu_current_values(self, vdu_stable_id: str):
-        if controller := self.vdu_controllers.get(vdu_stable_id, None):
+    def get_vdu_current_values(self, vdu_stable_id: VduStableId):
+        if controller := self.vdu_controllers_map.get(vdu_stable_id, None):
             vcp_codes = [capability.vcp_code for capability in controller.enabled_capabilities]
             return [(code, value) for code, value in zip(vcp_codes, controller.get_vcp_values(vcp_codes))]
         return []
 
-    def get_enabled_capabilities(self, vdu_stable_id: str) -> List[VcpCapability]:
-        if controller := self.vdu_controllers.get(vdu_stable_id, None):
+    def get_enabled_capabilities(self, vdu_stable_id: VduStableId) -> List[VcpCapability]:
+        if controller := self.vdu_controllers_map.get(vdu_stable_id, None):
             return controller.enabled_capabilities
         return []
 
-    def get_range(self, vdu_stable_id: str, vcp_code: str, fallback: Tuple[int, int] | None = None) -> Tuple[int, int] | None:
-        if controller := self.vdu_controllers.get(vdu_stable_id, None):
+    def get_range(self, vdu_stable_id: VduStableId, vcp_code: str, fallback: Tuple[int, int] | None = None) -> Tuple[int, int] | None:
+        if controller := self.vdu_controllers_map.get(vdu_stable_id, None):
             return controller.get_range_restrictions(vcp_code, fallback)
         log_error(f"get_range: No controller for {vdu_stable_id}")
         return fallback
 
     def get_value(self, vdu_stable_id, vcp_code):
-        if controller := self.vdu_controllers.get(vdu_stable_id, None):
+        if controller := self.vdu_controllers_map.get(vdu_stable_id, None):
             value = controller.get_vcp_values([vcp_code])
             if len(value) == 1:  # This could probably be an assertion
                 return value[0].current
         log_error(f"get_value: No controller for {vdu_stable_id}")
         return '0'
 
-    def set_value(self, vdu_stable_id: str, vcp_code: str, value_str: str):
+    def set_value(self, vdu_stable_id: VduStableId, vcp_code: str, value_str: str, context: str = ''):
         if panel := self.main_window.get_main_panel().vdu_control_panels.get(vdu_stable_id, None):
             if control := panel.get_control(vcp_code):
-                control.set_value(value_str)  # Apply to physical VDU
+                control.set_value(value_str, context)  # Apply to physical VDU
                 return
         log_error(f"set_value: No controller for {vdu_stable_id=} {vcp_code=}")
 
     def is_vcp_code_enabled(self, vdu_stable_id, vcp_code: str) -> bool:
-        if controller := self.vdu_controllers.get(vdu_stable_id, None):
+        if controller := self.vdu_controllers_map.get(vdu_stable_id, None):
             for capability in controller.enabled_capabilities:
                 if capability.vcp_code == vcp_code:
                     return True
@@ -6802,8 +6871,8 @@ class VduAppController:   # Main controller containing methods for high level op
     def display_lux_auto_indicators(self):
         self.main_window.display_lux_auto_indicators()
 
-    def get_vdu_description(self, vdu_stable_id: str):
-        if controller := self.vdu_controllers.get(vdu_stable_id, None):
+    def get_vdu_description(self, vdu_stable_id: VduStableId):
+        if controller := self.vdu_controllers_map.get(vdu_stable_id, None):
             return controller.get_vdu_description()
         log_error(f"get_vdu_description: No controller for {vdu_stable_id}")
         return vdu_stable_id
@@ -6958,8 +7027,10 @@ class VduAppWindow(QMainWindow):
             self.main_panel = None
         self.main_panel = VduControlsMainPanel()
 
-        def respond_to_changes_handler(vdu_stable_id: str, vcp_code: str, value: str) -> None:  # Update UI secondary displays
-            self.display_active_preset()
+        def respond_to_changes_handler(vdu_stable_id: VduStableId, vcp_code: str, value: str, context: str) -> None:
+            # Update UI secondary displays
+            if context.find(TRANSIENT_CHANGE) < 0:
+                self.display_active_preset()  # Detects matching Preset based on current VDU control settings
             if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) and self.main_controller.lux_auto_controller is not None:
                 if vcp_code == BRIGHTNESS_VCP_CODE:
                     LuxDialog.lux_dialog_display_brightness(vdu_stable_id, int(value))
@@ -6973,7 +7044,7 @@ class VduAppWindow(QMainWindow):
         if self.main_controller.lux_auto_controller is not None:
             tool_buttons.append(self.main_controller.lux_auto_controller.create_tool_button())
         self.refresh_preset_menu()
-        self.main_panel.initialise_control_panels(self.main_controller.vdu_controllers, self.app_context_menu, self.main_config,
+        self.main_panel.initialise_control_panels(self.main_controller.vdu_controllers_map, self.app_context_menu, self.main_config,
                                                   tool_buttons, self.splash_message_qtsignal)
         self.indicate_busy(True)
         self.setCentralWidget(self.main_panel)
@@ -6984,12 +7055,11 @@ class VduAppWindow(QMainWindow):
         return self.main_panel
 
     def indicate_busy(self, is_busy: bool):
-        log_debug(f"indicate_busy={is_busy}") if log_debug_enabled else None
+        # log_debug(f"indicate_busy={is_busy}") if log_debug_enabled else None
         self.get_main_panel().indicate_busy(is_busy)
         self.app_context_menu.indicate_busy(is_busy)
 
     def display_preset_status(self, message: str, timeout: int = 3000):
-        PresetsDialog.refresh_view()
         PresetsDialog.display_status_message(message=message, timeout=timeout)
         self.status_message(message, timeout=timeout, destination=MsgDestination.DEFAULT)
 
@@ -7008,19 +7078,21 @@ class VduAppWindow(QMainWindow):
         assert is_running_in_gui_thread()  # Boilerplate in case this is called from the wrong thread.
         if preset is None:
             preset = self.main_controller.which_preset_is_active()
-        if preset is None:
+        if preset is None:  # Clears the indicators
             self.get_main_panel().display_active_preset(None)
             self.app_context_menu.indicate_preset_active(None)
             self.set_app_icon_and_title()
+            PresetsDialog.refresh_instance(None)
             self.display_lux_auto_indicators()  # Check in case both schedule and lux auto are active
-        else:
+        else:  # Set indicators to specific preset
             self.get_main_panel().display_active_preset(preset)
             self.app_context_menu.indicate_preset_active(preset)
             self.set_app_icon_and_title(preset.create_icon(themed=False), preset.get_title_name())
+            PresetsDialog.refresh_instance(preset)
             if (self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) and
                     self.main_controller.lux_auto_controller.is_auto_enabled()):
                 QTimer.singleShot(5000, self.display_lux_auto_indicators)  # Replace with auto icon if auto enabled
-        if (preset is not None and preset != self.transitioning_dummy_preset) or palette_change:
+        if palette_change or (preset is not None and preset != self.transitioning_dummy_preset):
             self.refresh_preset_menu(palette_change=palette_change)
 
     def refresh_tray_menu(self) -> None:
@@ -7246,7 +7318,7 @@ def spherical_kilometers(lat1, lon1, lat2, lon2) -> float:
     return 12742 * math.asin(math.sqrt(a))
 
 
-def create_todays_elevation_time_map(latitude: float, longitude: float) -> Dict[SolarElevationKey, SolarElevationData]:
+def create_todays_elevation_map(latitude: float, longitude: float) -> Dict[SolarElevationKey, SolarElevationData]:
     """
     Create a minute-by-minute map of today's SolarElevations,
     so for a given dict[SolarElevation], return the first minute it occurs.
