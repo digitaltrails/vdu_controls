@@ -1188,6 +1188,10 @@ class VcpCapability:
     def property_name(self) -> str:
         return re.sub('[^A-Za-z0-9_-]', '-', self.name).lower()
 
+    def translated_name(self):  # deal with ddcutil returning mixed caps without losing the caps if possible
+        tr_key = self.name.lower()
+        tr_result = tr(tr_key)  # translations are keyed on lowercase
+        return tr_result if tr_key != tr_result else self.name  # Use original name if not translated
 
 class DdcUtilDisplayNotFound(Exception):
     pass
@@ -1555,7 +1559,7 @@ def conf_opt_def(name: str, section: str = 'vdu-controls-globals', conf_type: Co
 class ConfOption(Enum):
     SYSTEM_TRAY_ENABLED = conf_opt_def(name=QT_TR_NOOP('system-tray-enabled'),  default="no", restart=True,
                                        help=QT_TR_NOOP('start up in the system tray'))
-    TRANSLATIONS_ENABLED = conf_opt_def(name=QT_TR_NOOP('translations-enabled'),  default="no",
+    TRANSLATIONS_ENABLED = conf_opt_def(name=QT_TR_NOOP('translations-enabled'),  default="no", restart=True,
                                         help=QT_TR_NOOP('enable language translations'))
     WEATHER_ENABLED = conf_opt_def(name=QT_TR_NOOP('weather-enabled'), default='yes', help=QT_TR_NOOP('enable weather lookups'))
     SCHEDULE_ENABLED = conf_opt_def(name=QT_TR_NOOP('schedule-enabled'), default='yes', help=QT_TR_NOOP('enable preset schedule'))
@@ -2578,7 +2582,7 @@ class VduControlSlider(VduControlBase):
             svg_icon = QSvgWidget()
             svg_icon.load(handle_theme(SUPPORTED_VCP_BY_CODE[vcp_capability.vcp_code].icon_source))
             svg_icon.setFixedSize(50, 50)
-            svg_icon.setToolTip(tr(vcp_capability.name))
+            svg_icon.setToolTip(vcp_capability.translated_name())
             self.svg_icon = svg_icon
             layout.addWidget(svg_icon)
         else:
