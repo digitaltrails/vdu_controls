@@ -851,7 +851,7 @@ def translate_option(option_text) -> str:
     # We can't be sure of the case in capability descriptions retrieved from the monitors.
     # If there is no direct translation, we try canonical version of the name (all lowercase with '-' replaced with ' ').
     if (translation := tr(option_text)) != option_text:  # Probably a command line option
-        return translation.replace('-', ' ')
+        return translation
     canonical = option_text.lower().replace('-', ' ')
     return tr(canonical)
 
@@ -2260,7 +2260,7 @@ class SettingsEditorFieldBase(QWidget):
         self.option = option
         self.tip_text = tooltip
         self.has_error = False
-        self.setToolTip(tooltip) if tooltip != '' else None
+        self.setToolTip(tr(tooltip)) if tooltip != '' else None
 
     def translate_option(self) -> str:
         return translate_option(self.option)
