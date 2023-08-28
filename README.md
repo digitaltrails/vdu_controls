@@ -236,6 +236,7 @@ Version History
   * Handle utf-8 decoding errors for EDID's and capabilities (issue #49).
   * If debugging is on, log error stack traces (issue #49).
   * Better handle ddcutil not found (issue #48).
+  * Deepin 23 compatibility.
   * Some refactoring for maintainability and run-time efficiency (issue #52).
   * Numerous other minor enhancements and fixes.
 * 1.10.2

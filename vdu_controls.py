@@ -719,7 +719,7 @@ from PyQt5 import QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
     QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant
 from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QRegExpValidator, \
-    QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence
+    QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
@@ -4114,7 +4114,7 @@ class PresetChooseElevationChart(QLabel):
 
             # Draw elevation curve for today from the accumulated plot points:
             painter.setPen(QPen(QColor(0xff965b), std_line_width))
-            painter.drawPoints(curve_points)
+            painter.drawPoints(QPolygon(curve_points))
 
             # Draw various annotations such the horizon-line, noon-line, E & W, and the current degrees:
             painter.setPen(QPen(Qt.white, std_line_width))
@@ -4177,12 +4177,13 @@ class PresetChooseElevationChart(QLabel):
                 if ev_key.direction == EASTERN_SKY:
                     painter.drawLine(reverse_x(0), sky_line_y, reverse_x(solar_noon_x), sky_line_y)
                     painter.setPen(QPen(painter.pen().color(), 1))
-                    painter.drawPolygon([QPoint(reverse_x(0) - 20 + tx, sky_line_y - 10 + ty) for tx, ty in [(-8, 0), (0, -16), (8, 0)]])
+                    painter.drawPolygon(QPolygon([QPoint(reverse_x(0) - 20 + tx, sky_line_y - 10 + ty)
+                                                  for tx, ty in [(-8, 0), (0, -16), (8, 0)]]))
                 else:
                     painter.drawLine(reverse_x(solar_noon_x), sky_line_y, reverse_x(width), sky_line_y)
                     painter.setPen(QPen(painter.pen().color(), 1))
-                    painter.drawPolygon([QPoint(reverse_x(width - 18) + tx, sky_line_y + 10 + ty) for tx, ty in [(-8, 0), (0, 16), (8, 0)]])
-
+                    painter.drawPolygon(QPolygon([QPoint(reverse_x(width - 18) + tx, sky_line_y + 10 + ty)
+                                                  for tx, ty in [(-8, 0), (0, 16), (8, 0)]]))
                 # Draw the sun
                 painter.setPen(QPen(QColor(0xff4a23), std_line_width))
                 if self.sun_image is None:
@@ -5071,8 +5072,9 @@ class LuxProfileChart(QLabel):
                     if last_x and last_y:  # draw histogram-step, or if interpolating, the area under the line
                         painter.setBrush(histogram_bar_color)
                         painter.setPen(Qt.NoPen)
-                        painter.drawPolygon([QPoint(last_x, last_y), QPoint(x, y if interpolating else last_y),
-                                             QPoint(x, self.y_origin), QPoint(last_x, self.y_origin), QPoint(last_x, last_y)])
+                        painter.drawPolygon(
+                            QPolygon([QPoint(last_x, last_y), QPoint(x, y if interpolating else last_y),
+                                      QPoint(x, self.y_origin), QPoint(last_x, self.y_origin), QPoint(last_x, last_y)]))
                     last_x, last_y = x, y
             if not interpolating and last_x and last_y:   # Show last step
                 painter.fillRect(last_x, last_y, 15, self.y_origin - last_y, histogram_bar_color)
@@ -5091,7 +5093,7 @@ class LuxProfileChart(QLabel):
             painter.setBrush(Qt.white)
             x = self.x_origin + self.x_from_lux(preset_point.lux)
             painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height)
-            painter.drawPolygon([QPoint(x + tx//2, self.y_origin + 16 + ty//2) for tx, ty in pyramid])
+            painter.drawPolygon(QPolygon([QPoint(x + tx//2, self.y_origin + 16 + ty//2) for tx, ty in pyramid]))
 
         lux_color = QColor(0xfec053)
         if self.current_lux is not None:  # Draw vertical line at current lux
@@ -5110,7 +5112,8 @@ class LuxProfileChart(QLabel):
                 y = self.y_origin - self.y_from_percent(brightness)
                 painter.setPen(QPen(Qt.black, 1))  # QPen(vdu_line_color, std_line_width // 2, Qt.SolidLine))
                 painter.setBrush(vdu_line_color)
-                painter.drawPolygon([QPoint(x_current_lux - 2 + tx // 2, y + 0 + ty // 2) for tx, ty in current_brightness_pointer])
+                painter.drawPolygon(
+                    QPolygon([QPoint(x_current_lux - 2 + tx // 2, y + 0 + ty // 2) for tx, ty in current_brightness_pointer]))
 
         marker_diameter = std_line_width * 4
         mouse_pos = self.mapFromGlobal(self.cursor().pos())  # Draw cross-hairs at mouse pos
@@ -5134,7 +5137,7 @@ class LuxProfileChart(QLabel):
                     painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height - 5)
                     painter.setPen(QPen(Qt.red, 2))
                     painter.setBrush(Qt.white)
-                    painter.drawPolygon([QPoint(x + tx, self.y_origin + 18 + ty) for tx, ty in pyramid])
+                    painter.drawPolygon(QPolygon([QPoint(x + tx, self.y_origin + 18 + ty) for tx, ty in pyramid]))
                     if mouse_y > self.y_origin:  # Preset remove hint
                         painter.setPen(QPen(Qt.black, 1))
                         painter.drawText(x + 10, self.y_origin - 35, tr("Click remove preset at {} lux").format(lux))
@@ -5147,7 +5150,7 @@ class LuxProfileChart(QLabel):
                 if mouse_y > self.y_origin:  # Below axis, show hint for adding a Preset point: draw a red triangle below axis
                     painter.setPen(QPen(Qt.red, 2))
                     painter.setBrush(Qt.white)
-                    painter.drawPolygon([QPoint(x + tx, self.y_origin + 18 + ty) for tx, ty in pyramid])
+                    painter.drawPolygon(QPolygon([QPoint(x + tx, self.y_origin + 18 + ty) for tx, ty in pyramid]))
                     painter.setPen(QPen(Qt.black, 1))
                     painter.drawText(x + 10, self.y_origin - 35, tr("Click to add preset at {} lux").format(lux))
             painter.setPen(QPen(Qt.black, 1))
