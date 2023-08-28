@@ -1671,18 +1671,15 @@ class ConfigIni(configparser.ConfigParser):
                 new_ini[section][option] = self[section][option]
         return new_ini
 
-    def is_different(self, other_ini: ConfigIni, vdu_settings_only: bool = False) -> bool:
-        if set(self.sections()) != set(other_ini.sections()):
-            return True
-        for section in self:
-            if (section != configparser.DEFAULTSECT and section != ConfigIni.METADATA_SECTION
-                    and (section != 'preset' or not vdu_settings_only)):
-                if set(self.options(section)) != set(other_ini.options(section)):
-                    return True
-                for option in self[section]:
-                    if self[section][option] != other_ini.get(section, option, fallback=None):
-                        return True
-        return False
+    def diff(self, other: ConfigIni, vdu_settings_only: bool = False) -> Dict[Tuple[str, str], str]:
+        values = []
+        for subject in (self, other):
+            sections = set(subject.sections()) - set([configparser.DEFAULTSECT, ConfigIni.METADATA_SECTION])
+            if vdu_settings_only:
+                sections -= set(('preset',))
+            values.append([(section, option, value) for section in sections for option, value in subject[section].items()])
+        differences = list(set(values[0]) ^ set(values[1]))
+        return {(section, option): value for section, option, value in differences}
 
 
 class VduControlsConfig:
@@ -1932,7 +1929,7 @@ class VduController(QObject):
     _RANGE_PATTERN = re.compile(r'Values:\s+([0-9]+)..([0-9]+)')
     _FEATURE_PATTERN = re.compile(r'([0-9A-F]{2})\s+[(]([^)]+)[)]\s(.*)', re.DOTALL | re.MULTILINE)
 
-    vcp_value_changed_qtsignal = pyqtSignal(str, str, str, int)
+    vcp_value_changed_qtsignal = pyqtSignal(str, str, str, VcpOrigin)
 
     def __init__(self, vdu_number: str, vdu_model_name: str, serial_number: str, manufacturer: str,
                  default_config: VduControlsConfig, ddcutil: DdcUtil, vdu_exception_handler: Callable,
@@ -2153,7 +2150,7 @@ class SettingsEditorTab(QWidget):
         editor_layout = QVBoxLayout()
 
         self.change_callback = change_callback
-        self.changed: Dict[Tuple[str, str], Tuple[str, str]] = {}
+        self.unsaved_changes_map: Dict[Tuple[str, str], str] = {}
         self.setLayout(editor_layout)
         self.config_path = get_config_path(vdu_config.config_name)
         self.ini_before = vdu_config.ini_content
@@ -2245,10 +2242,10 @@ class SettingsEditorTab(QWidget):
                     self.ini_before = self.ini_editable.duplicate()  # Saved ini becomes the new "before"
                     # After file is closed...
                     if what_changed is None:  # Not accumulating what has changed, implement change now.
-                        self.change_callback(self.changed)
+                        self.change_callback(self.unsaved_changes_map)
                     else:  # Accumulating what has changed, just add to the dictionary.
-                        what_changed.update(self.changed)
-                    self.changed = {}
+                        what_changed.update(self.unsaved_changes_map)
+                    self.unsaved_changes_map = {}
                     self.status_message(tr("Saved {}").format(self.config_path.name), msecs=3000)
                 elif answer == QMessageBox.Discard:
                     self.status_message(tr("Discarded changes to {}").format(self.config_path.name), msecs=3000)
@@ -2267,9 +2264,11 @@ class SettingsEditorTab(QWidget):
             field.reset()
 
     def is_unsaved(self) -> bool:
-        if not self.config_path.exists():
-            return True
-        return self.ini_editable.is_different(self.ini_before)
+        if self.config_path.exists():
+            self.unsaved_changes_map = self.ini_editable.diff(self.ini_before)
+            return len(self.unsaved_changes_map) > 0
+        self.unsaved_changes_map = {}
+        return True
 
 
 class SettingsEditorFieldBase(QWidget):
@@ -3192,7 +3191,7 @@ class VduPanelBottomToolBar(QToolBar):
 class VduControlsMainPanel(QWidget):
     """GUI for detected VDU's, it will construct and contain a control panel for each VDU."""
 
-    vdu_vcp_changed_qtsignal = pyqtSignal(str, str, str, int)
+    vdu_vcp_changed_qtsignal = pyqtSignal(str, str, str, VcpOrigin)
     connected_vdus_changed_qtsignal = pyqtSignal()
 
     def __init__(self) -> None:
@@ -3386,7 +3385,8 @@ class PresetTransitionWorker(WorkerThread):
                             self.preset_non_transitioning_controls.append(key)
 
     def task_body(self) -> None:
-        while self.work_state != PresetTransitionState.STEPPING_COMPLETED and self.values_are_as_expected():
+        while (self.work_state != PresetTransitionState.STEPPING_COMPLETED and self.values_are_as_expected()
+                and not self.main_controller.pause_background_tasks(self)):
             now = time.time()
             if self.step_interval_seconds > 0:  # Delay if previous duration was too short due to speed or interruption/exception
                 previous_duration = now - self.previous_step_start_time
@@ -3397,11 +3397,11 @@ class PresetTransitionWorker(WorkerThread):
                 return
             self.step()
             self.progress_qtsignal.emit(self)
-        if self.work_state == PresetTransitionState.STEPPING_COMPLETED:
+        if self.work_state == PresetTransitionState.STEPPING_COMPLETED:  # Still TRANSIENT until we're all done.
             for key in self.preset_non_transitioning_controls:  # Finish by doing the non-transitioning controls
                 if self.stop_requested:
                     return
-                self.main_controller.set_value(key.vdu_stable_id, key.vcp_code, self.final_values[key])
+                self.main_controller.set_value(key.vdu_stable_id, key.vcp_code, self.final_values[key], origin=VcpOrigin.TRANSIENT)
             self.work_state = PresetTransitionState.FINISHED
             self.end_time = datetime.now()
             log_info(f"Successfully restored {self.preset.name}, elapsed time: {self.total_elapsed_seconds():.2f} seconds")
@@ -3588,7 +3588,7 @@ class PresetWidget(QWidget):
         save_button.setContentsMargins(0, 0, 0, 0)
         save_button.setToolTip(tr("Update this preset from the current VDU settings."))
         line_layout.addWidget(save_button)
-        save_button.clicked.connect(partial(save_action, preset=preset))
+        save_button.clicked.connect(partial(save_action, vdu_controls_only=preset))
         save_button.setAutoDefault(False)
 
         up_button = QPushButton()
@@ -4375,7 +4375,6 @@ class PresetChooseElevationWidget(QWidget):
 class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather complex - break into parts?
     """A dialog for creating/updating/removing presets."""
     NO_ICON_ICON_NUMBER = QStyle.SP_ComputerIcon
-    edit_save_needed = pyqtSignal()
 
     @staticmethod
     def invoke(main_controller: VduAppController, main_config: VduControlsConfig) -> None:
@@ -4404,6 +4403,11 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
     def refresh_instance(preset: Preset = None) -> None:
         if presets_dialog := PresetsDialog.get_instance():  # type: ignore
             presets_dialog.refresh(preset)
+
+    @staticmethod
+    def is_instance_editing() -> bool:
+        if presets_dialog := PresetsDialog.get_instance():
+            return presets_dialog.preset_name_edit.text() != ''
 
     def __init__(self, main_controller: VduAppController, main_config: VduControlsConfig) -> None:
         super().__init__()
@@ -4441,7 +4445,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
 
         main_controller.refresh_preset_menu()
         self.base_ini = ConfigIni()  # Create a temporary holder of preset values
-        main_controller.populate_ini_from_controls(self.base_ini)
+        main_controller.populate_ini_from_vdu(self.base_ini)
 
         self.populate_presets_display_list()
 
@@ -4492,13 +4496,12 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
         self.status_bar = QStatusBar()
 
         self.edit_clear_button = QPushButton(si(self, QStyle.SP_DialogCancelButton), tr('Clear'))
-        self.edit_clear_button.clicked.connect(self.reconfigure)
+        self.edit_clear_button.clicked.connect(self.reset_editor)
         self.edit_clear_button.setToolTip(tr("Clear edits and enter a new preset using the defaults."))
         self.status_bar.addPermanentWidget(self.edit_clear_button)
 
         self.edit_save_button = QPushButton(si(self, QStyle.SP_DialogSaveButton), tr('Save'))
-        self.edit_save_button.clicked.connect(self.save_edited_preset)
-        self.edit_save_needed.connect(self.save_edited_preset)
+        self.edit_save_button.clicked.connect(self.save_preset)
         self.edit_save_button.setToolTip(tr("Save current VDU settings to Preset."))
         self.status_bar.addPermanentWidget(self.edit_save_button)
 
@@ -4547,7 +4550,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
 
     def refresh(self, preset: Preset = None) -> None:
         if preset:
-            self.populate_editor_controls_from_preset(preset)
+            self.set_widget_values_from_preset(preset)
             if preset_widget := self.find_preset_widget(preset.name):
                 preset_widget.update_timer_button()
         else:
@@ -4560,10 +4563,13 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
         existing_content = self.editor_controls_widget.takeWidget()
         existing_content.deleteLater() if existing_content is not None else None
         self.base_ini = ConfigIni()
-        self.main_controller.populate_ini_from_controls(self.base_ini)
+        self.main_controller.populate_ini_from_vdu(self.base_ini)
         self.populate_editor_controls_widget()
-        self.preset_name_edit.setText('')
+        self.reset_editor()
         self.editor_trigger_widget.configure_for_location(self.main_config.get_location())
+
+    def reset_editor(self):
+        self.preset_name_edit.setText('')
         self.edit_choose_icon_button.reset()
 
     def status_message(self, message: str, timeout: int = 0) -> None:
@@ -4602,7 +4608,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
             layout.addWidget(group_box)
         container.setWidget(widget)
 
-    def populate_editor_controls_from_preset(self, preset: Preset):
+    def set_widget_values_from_preset(self, preset: Preset):
         self.preset_name_edit.setText(preset.name)
         self.edit_choose_icon_button.set_preset(preset)
         for key, item in self.content_controls_map.items():
@@ -4616,21 +4622,22 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
             self.editor_transitions_widget.set_step_seconds(preset.get_step_interval_seconds())
 
     def has_changes(self, preset: Preset) -> bool:
-        ini_copy: ConfigIni = preset.preset_ini.duplicate()
-        self.initialise_preset_options(preset, ini_copy)
-        return ini_copy.is_different(preset.preset_ini)
+        preset_copy = Preset(preset.name)
+        self.initialise_preset_options(preset_copy)
+        self.main_controller.populate_ini_from_vdu(preset_copy.preset_ini, update_only=True)
+        return len(preset.preset_ini.diff(preset_copy.preset_ini)) > 0
 
     def initialise_preset_options(self, preset: Preset, target_preset_ini: ConfigIni | None = None) -> None:
         preset_ini = preset.preset_ini if target_preset_ini is None else target_preset_ini
         for key, checkbox in self.content_controls_map.items():
-            if checkbox.isChecked():
-                section, option = key
-                if not preset_ini.has_option(section, option):
-                    # Can use a dummy value - it wil update when saved.
-                    value = self.base_ini.get(section, option, fallback="%should not happen%")
-                    if not preset_ini.has_section(section):
-                        preset_ini.add_section(section)
-                    preset_ini.set(section, option, value)
+            section, option = key  # TODO check/test following logic
+            if checkbox.isChecked():  # If this property is enabled, set its value
+                if not preset_ini.has_section(section):
+                    preset_ini.add_section(section)
+                value = self.base_ini.get(section, option, fallback="%should not happen%")
+                preset_ini.set(section, option, value)
+            elif preset_ini.has_section(section) and preset_ini.has_option(section, option):
+                preset_ini.remove_option(section, option)
         preset.set_icon_path(self.edit_choose_icon_button.last_selected_icon_path)
         if not preset_ini.has_section('preset'):
             preset_ini.add_section('preset')
@@ -4674,18 +4681,6 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
 
     def restore_preset(self, preset: Preset, immediately: bool = True) -> None:
         self.main_controller.restore_preset(preset, immediately=immediately)
-
-    def save_preset(self, preset: Preset) -> None:
-        preset_path = get_config_path(proper_name('Preset', preset.name))
-        if preset_path.exists():
-            confirmation = MessageBox(QMessageBox.Question, buttons=QMessageBox.Save | QMessageBox.Cancel, default=QMessageBox.Save)
-            message = tr('Update existing {} preset with current monitor settings?').format(preset.name)
-            confirmation.setText(message)
-            if confirmation.exec() == QMessageBox.Cancel:
-                return
-        if self._save(preset):
-            self.preset_name_edit.setText('')
-            self.status_message(tr("Saved {}").format(preset.name), timeout=-1)
 
     def delete_preset(self, preset: Preset, target_widget: QWidget) -> None:
         confirmation = MessageBox(QMessageBox.Question, buttons=QMessageBox.Ok | QMessageBox.Cancel, default=QMessageBox.Cancel)
@@ -4735,46 +4730,71 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
 
         def begin_editing(worker: PresetTransitionWorker | None = None) -> None:
             if worker is None or worker.work_state == PresetTransitionState.FINISHED:
-                self.populate_editor_controls_from_preset(preset)
+                self.set_widget_values_from_preset(preset)
             else:
                 self.status_message(tr(f"Failed to restore {preset.name} for editing."))
+            self.setEnabled(True)
 
         if preset:
+            self.setDisabled(True)  # Stop any editing until after the preset is restored.
             self.main_controller.restore_preset(preset, finished_func=begin_editing, immediately=True)
 
     def find_edit_target(self) -> Tuple[Preset | None, PresetWidget | None]:
         preset_name = self.preset_name_edit.text().strip()
         if preset_name == '':
             return None, None
-        existing_preset_widget: PresetWidget | None = self.find_preset_widget(preset_name)
-        preset = existing_preset_widget.preset if existing_preset_widget else Preset(preset_name)
-        return preset, existing_preset_widget
+        if existing_widget := self.find_preset_widget(preset_name):
+            return existing_widget.preset, existing_widget
+        return Preset(preset_name), None  # TODO check
 
-    def save_edited_preset(self) -> None:
-        preset, existing_preset_widget = self.find_edit_target()
-        if existing_preset_widget:
-            confirmation = MessageBox(QMessageBox.Question, buttons=QMessageBox.Save | QMessageBox.Cancel, default=QMessageBox.Save)
-            confirmation.setText(tr("Replace existing '{}' preset?").format(preset.name))
-            if confirmation.exec() == QMessageBox.Cancel:
-                return
-            preset.clear_content()
-        self.initialise_preset_options(preset)  # Initialises the options, but does not set their values.
-        if not self._save(preset):
-            return
-        # Create a new widget - an easy way to update the icon.
-        new_preset_widget = self.create_preset_widget(preset)
-        if existing_preset_widget:
-            self.preset_widgets_layout.replaceWidget(existing_preset_widget, new_preset_widget)
-            # The deleteLater removes the widget from the tree so that it is no longer findable and can be freed.
-            existing_preset_widget.deleteLater()
-            self.make_visible()
+    def save_preset(self, _: bool = False, vdu_controls_only: Preset = None, quiet: bool = False) -> QMessageBox.Ok | QMessageBox.Cancel:
+        if vdu_controls_only is not None:
+            preset, widget_to_replace = vdu_controls_only, None
         else:
-            self.add_preset_widget(new_preset_widget)
-            self.main_controller.save_preset_order(self.get_preset_names_in_order())
-            self.preset_widgets_scroll_area.ensureWidgetVisible(new_preset_widget)
-            QApplication.processEvents()  # TODO figure out why this does not work
-        self.preset_name_edit.setText('')
+            preset, widget_to_replace = self.find_edit_target()
+        if preset is None or (quiet and not self.has_changes(preset)):
+            return QMessageBox.Ok
+        preset_path = get_config_path(proper_name('Preset', preset.name))
+        if preset_path.exists():
+            if vdu_controls_only is not None:
+                question = tr('Update existing {} preset with current monitor settings?').format(preset.name)
+            else:
+                question = tr("Replace existing '{}' preset?").format(preset.name)
+        else:
+            question = tr("Save current edit?")
+        confirmation = MessageBox(QMessageBox.Question, buttons=QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
+                                  default=QMessageBox.Save)
+        confirmation.setText(question)
+        answer = confirmation.exec()
+        if answer == QMessageBox.Discard:
+            self.reset_editor()
+            return QMessageBox.Ok
+        elif answer == QMessageBox.Cancel:
+            return QMessageBox.Cancel
+        self.initialise_preset_options(preset)  # Initialises the options, but does not set their values.
+        self.main_controller.populate_ini_from_vdu(preset.preset_ini, update_only=True)  # populate from VDU controls
+        if duplicated_presets := self.main_controller.find_duplicates(preset):
+            duplicates_warning = MessageBox(QMessageBox.Warning,
+                                            buttons=QMessageBox.Save | QMessageBox.Cancel, default=QMessageBox.Cancel)
+            duplicates_warning.setText(tr("Duplicates existing Preset {}, save anyway?").format(duplicated_presets[0].name))
+            if duplicates_warning.exec() == QMessageBox.Cancel:
+                return QMessageBox.Cancel
+        self.main_controller.save_preset(preset)
+        if vdu_controls_only is None:  # Update widget icon, transition, weather, etc
+            new_preset_widget = self.create_preset_widget(preset)  # Create a new widget - an easy way to update the icon.
+            if widget_to_replace:
+                self.preset_widgets_layout.replaceWidget(widget_to_replace, new_preset_widget)
+                # The deleteLater removes the widget from the tree so that it is no longer findable and can be freed.
+                widget_to_replace.deleteLater()
+                self.make_visible()
+            else:
+                self.add_preset_widget(new_preset_widget)
+                self.main_controller.save_preset_order(self.get_preset_names_in_order())
+                self.preset_widgets_scroll_area.ensureWidgetVisible(new_preset_widget)
+                QApplication.processEvents()  # TODO figure out why this does not work
+        self.reset_editor()
         self.status_message(tr("Saved {}").format(preset.name), timeout=-1)
+        return QMessageBox.Save
 
     def create_preset_widget(self, preset) -> PresetWidget:
         return PresetWidget(preset, restore_action=self.restore_preset, save_action=self.save_preset,
@@ -4788,32 +4808,11 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
         return super().event(event)
 
     def closeEvent(self, event) -> None:
-        preset, _ = self.find_edit_target()
-        if self.preset_name_edit.text().strip() != '' and preset and self.has_changes(preset):
-            alert = MessageBox(QMessageBox.Question, buttons=QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
-                               default=QMessageBox.Save)
-            alert.setText("Save current edit?")
-            answer = alert.exec()
-            if answer == QMessageBox.Cancel:
-                event.ignore()
-                return
-            elif answer == QMessageBox.Save:
-                self.edit_save_needed.emit()
-            else:
-                self.preset_name_edit.setText('')
-        super().closeEvent(event)
-
-    def _save(self, preset: Preset):
-        self.main_controller.populate_ini_from_controls(preset.preset_ini, update_only=True)
-        if duplicated_preset := self.main_controller.is_duplicate(preset):
-            duplicates_warning = MessageBox(QMessageBox.Warning,
-                                            buttons=QMessageBox.Save | QMessageBox.Cancel, default=QMessageBox.Cancel)
-            duplicates_warning.setText(tr("Duplicates existing Preset {}, save anyway?").format(duplicated_preset.name))
-            if duplicates_warning.exec() == QMessageBox.Cancel:
-                return False
-        self.main_controller.save_preset(preset)
-        return True
-
+        if self.save_preset(quiet=True) == QMessageBox.Cancel:
+            event.ignore()
+        else:
+            self.reset_editor()
+            super().closeEvent(event)
 
 def exception_handler(e_type, e_value, e_traceback) -> None:
     """Overarching error handler in case something unexpected happens."""
@@ -5563,7 +5562,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         try:
             lux_auto_controller = self.main_controller.lux_auto_controller
             assert lux_auto_controller is not None
-            while not self.stop_requested:
+            while not self.stop_requested and not self.main_controller.pause_background_tasks(self):
                 self.unexpected_change = False
                 self.expected_brightness_map.clear()
                 lux_meter = lux_auto_controller.lux_meter
@@ -6529,7 +6528,7 @@ class VduAppController:   # Main controller containing methods for high level op
             restart_application(tr("A settings reset requires vdu_controls to restart."))
             return
         for setting in ConfOption:
-            if (setting.conf_section, setting.conf_name) in changed_settings and setting.restart_required:
+            if setting.restart_required and (setting.conf_section, setting.conf_name) in changed_settings:
                 restart_application(tr("The change to the {} option requires "
                                        "vdu_controls to restart.").format(tr(setting.conf_name)))
                 return
@@ -6694,8 +6693,8 @@ class VduAppController:   # Main controller containing methods for high level op
             self.daily_schedule_next_update = tomorrow
         if reconfiguring:
             PresetsDialog.reconfigure_instance()
-        else:
-            PresetsDialog.refresh_instance()
+        # else:
+        #    PresetsDialog.refresh_instance() # TODO probably not the right thing to do
         return most_recent_overdue
 
     def activate_scheduled_preset(self, preset: Preset, check_weather: bool = True, immediately: bool = False,
@@ -6791,16 +6790,14 @@ class VduAppController:   # Main controller containing methods for high level op
         self.preset_controller.save_order(name_order)
         self.refresh_preset_menu(reorder=True)
 
-    def populate_ini_from_controls(self, preset_ini: ConfigIni, update_only: bool = False) -> None:
+    def populate_ini_from_vdu(self, preset_ini: ConfigIni, update_only: bool = False) -> None:
         for control_panel in self.main_window.get_main_panel().vdu_control_panels.values():
             control_panel.copy_state(preset_ini, update_only)
 
-    def is_duplicate(self, preset: Preset) -> Preset | None:
-        for other_preset in self.find_presets_map().values():
-            if other_preset.name != preset.name and not preset.preset_ini.is_different(other_preset.preset_ini,
-                                                                                       vdu_settings_only=True):
-                return other_preset
-        return None
+    def find_duplicates(self, preset: Preset) -> List[Preset]:
+        return [other_preset for other_name, other_preset in self.find_presets_map().items()
+                if other_name != preset.name
+                and preset.preset_ini.diff(other_preset.preset_ini, vdu_settings_only=True) == {}]
 
     def delete_preset(self, preset: Preset) -> None:
         self.preset_controller.delete_preset(preset)
@@ -6883,6 +6880,21 @@ class VduAppController:   # Main controller containing methods for high level op
             return controller.get_vdu_description()
         log_error(f"get_vdu_description: No controller for {vdu_stable_id}")
         return vdu_stable_id
+
+    def pause_background_tasks(self, task: WorkerThread) -> bool:
+        i = 0
+        while PresetsDialog.is_instance_editing() and not task.stop_requested:
+            if i == 0:
+                log_info(f"Pausing {task.__class__.__name__} while preset is being edited.")
+            if i % 30 == 0:
+                self.main_window.status_message(
+                    tr("Task waiting for Preset editing to finish."), timeout=0, destination=MsgDestination.DEFAULT)
+            i += 1
+            time.sleep(2)
+        if i > 0:
+            log_info(f"Resuming {task.__class__.__name__}")
+        self.main_window.status_message('', timeout=1, destination=MsgDestination.DEFAULT)
+        return False
 
 
 class VduAppWindow(QMainWindow):
@@ -7080,13 +7092,13 @@ class VduAppWindow(QMainWindow):
             self.get_main_panel().display_active_preset(None)
             self.app_context_menu.indicate_preset_active(None)
             self.set_app_icon_and_title()
-            PresetsDialog.refresh_instance(None)
+            # PresetsDialog.refresh_instance(None)  # TODO probably not the right thing to do
             self.display_lux_auto_indicators()  # Check in case both schedule and lux auto are active
         else:  # Set indicators to specific preset
             self.get_main_panel().display_active_preset(preset)
             self.app_context_menu.indicate_preset_active(preset)
             self.set_app_icon_and_title(preset.create_icon(themed=False), preset.get_title_name())
-            PresetsDialog.refresh_instance(preset)
+            # PresetsDialog.refresh_instance(preset)  # TODO probably not the right thing to do
             if (self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) and
                     self.main_controller.lux_auto_controller.is_auto_enabled()):
                 QTimer.singleShot(5000, self.display_lux_auto_indicators)  # After a pause, replace with auto-icon if auto enabled
@@ -7098,6 +7110,7 @@ class VduAppWindow(QMainWindow):
         if vcp_code in SUPPORTED_VCP_BY_CODE and SUPPORTED_VCP_BY_CODE[vcp_code].causes_config_change:
             self.main_controller.configure_application()  # Special case, such as a power control causing the VDU to go offline.
             return
+        log_debug("respond", vdu_stable_id, vcp_code, value, origin.name) if log_debug_enabled else None
         if origin != VcpOrigin.TRANSIENT:  # Only want to indicate final status (not when just passing through a preset)
             self.update_status_indicators()
         if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) and self.main_controller.lux_auto_controller is not None:
@@ -7131,8 +7144,11 @@ class VduAppWindow(QMainWindow):
 
     def status_message(self, message: str, timeout: int, destination: MsgDestination):
         assert(self.main_panel is not None)
-        if destination == MsgDestination.DEFAULT:
-            self.main_panel.status_message(message, timeout)
+        if not is_running_in_gui_thread():
+            self.run_in_gui_thread(partial(self.status_message, message, timeout, destination))
+        else:
+            if destination == MsgDestination.DEFAULT:
+                self.main_panel.status_message(message, timeout)
 
     def event(self, event: QEvent) -> bool:
         # PalletChange happens after the new style sheet is in use.
