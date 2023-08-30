@@ -2791,15 +2791,6 @@ class VduControlPanel(QWidget):
         """Return the number of VDU controls.  Might be zero if initialization discovered no controllable attributes."""
         return len(self.vcp_controls)
 
-    def copy_state(self, preset_ini: ConfigIni, update_only) -> None:
-        vdu_section_name = self.controller.vdu_stable_id
-        if not preset_ini.has_section(vdu_section_name):
-            preset_ini.add_section(vdu_section_name)
-        for control in self.vcp_controls:
-            if not update_only or preset_ini.has_option(vdu_section_name, control.vcp_capability.property_name()):
-                if control.current_value is not None:
-                    preset_ini[vdu_section_name][control.vcp_capability.property_name()] = control.current_value
-
     def is_preset_active(self, preset_ini: ConfigIni) -> bool:
         vdu_section = self.controller.vdu_stable_id
         for control in self.vcp_controls:
@@ -2831,12 +2822,6 @@ class Preset:
             path_text = self.preset_ini.get("preset", "icon", fallback=None)
             return Path(path_text) if path_text else None
         return None
-
-    def set_icon_path(self, icon_path: Path | None) -> None:
-        if icon_path:
-            if not self.preset_ini.has_section("preset"):
-                self.preset_ini.add_section("preset")
-            self.preset_ini.set("preset", "icon", icon_path.as_posix())
 
     def create_icon(self, themed: bool = True) -> QIcon:
         icon_path = self.get_icon_path()
@@ -4447,7 +4432,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
 
         main_controller.refresh_preset_menu()
         self.base_ini = ConfigIni()  # Create a temporary holder of preset values
-        main_controller.populate_ini_from_vdu(self.base_ini)
+        main_controller.populate_ini_from_vdus(self.base_ini)
 
         self.populate_presets_display_list()
 
@@ -4565,7 +4550,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
         existing_content = self.editor_controls_widget.takeWidget()
         existing_content.deleteLater() if existing_content is not None else None
         self.base_ini = ConfigIni()
-        self.main_controller.populate_ini_from_vdu(self.base_ini)
+        self.main_controller.populate_ini_from_vdus(self.base_ini)
         self.populate_editor_controls_widget()
         self.reset_editor()
         self.editor_trigger_widget.configure_for_location(self.main_config.get_location())
@@ -4624,25 +4609,26 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
             self.editor_transitions_widget.set_step_seconds(preset.get_step_interval_seconds())
 
     def has_changes(self, preset: Preset) -> bool:
-        preset_copy = Preset(preset.name)
-        self.initialise_preset_options(preset_copy)
-        self.main_controller.populate_ini_from_vdu(preset_copy.preset_ini, update_only=True)
-        return len(preset.preset_ini.diff(preset_copy.preset_ini)) > 0
+        preset_ini_copy = preset.preset_ini.duplicate()
+        self.populate_ini_from_gui(preset_ini_copy)  # get ini options from GUI checkbox and field values
+        self.main_controller.populate_ini_from_vdus(preset_ini_copy, update_only=True)  # get current VDU values for ini options
+        log_debug(f"has_changes {preset.preset_ini.diff(preset_ini_copy)=}") if log_debug_enabled else None
+        return len(preset.preset_ini.diff(preset_ini_copy)) > 0
 
-    def initialise_preset_options(self, preset: Preset, target_preset_ini: ConfigIni | None = None) -> None:
-        preset_ini = preset.preset_ini if target_preset_ini is None else target_preset_ini
-        for key, checkbox in self.content_controls_map.items():
+    def populate_ini_from_gui(self, preset_ini: ConfigIni) -> None:  # initialise ini options based on GUI checkbox and field values
+        for key, checkbox in self.content_controls_map.items():  # Populate ini options to indicate which settings need to be saved
             section, option = key  # TODO check/test following logic
             if checkbox.isChecked():  # If this property is enabled, set its value
                 if not preset_ini.has_section(section):
                     preset_ini.add_section(section)
                 value = self.base_ini.get(section, option, fallback="%should not happen%")
-                preset_ini.set(section, option, value)
+                preset_ini.set(section, option, value)  # Just an initial value, it will be updated with the current VDU value later
             elif preset_ini.has_section(section) and preset_ini.has_option(section, option):
                 preset_ini.remove_option(section, option)
-        preset.set_icon_path(self.edit_choose_icon_button.last_selected_icon_path)
         if not preset_ini.has_section('preset'):
             preset_ini.add_section('preset')
+        if self.edit_choose_icon_button.last_selected_icon_path:
+            preset_ini.set("preset", "icon", self.edit_choose_icon_button.last_selected_icon_path.as_posix())
         preset_ini.set('preset', 'solar-elevation', format_solar_elevation_ini_text(self.editor_trigger_widget.elevation_key))
         if weather_filename := self.editor_trigger_widget.get_required_weather_filename():
             preset_ini.set('preset', 'solar-elevation-weather-restriction', weather_filename)
@@ -4773,8 +4759,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
             return QMessageBox.Ok
         elif answer == QMessageBox.Cancel:
             return QMessageBox.Cancel
-        self.initialise_preset_options(preset)  # Initialises the options, but does not set their values.
-        self.main_controller.populate_ini_from_vdu(preset.preset_ini, update_only=True)  # populate from VDU controls
+        self.populate_ini_from_gui(preset.preset_ini)  # Initialises the options from the GUI, but does not get the VDU values.
+        self.main_controller.populate_ini_from_vdus(preset.preset_ini, update_only=True)  # populate from VDU control values.
         if duplicated_presets := self.main_controller.find_duplicates(preset):
             duplicates_warning = MessageBox(QMessageBox.Warning,
                                             buttons=QMessageBox.Save | QMessageBox.Cancel, default=QMessageBox.Cancel)
@@ -6792,9 +6778,15 @@ class VduAppController:   # Main controller containing methods for high level op
         self.preset_controller.save_order(name_order)
         self.refresh_preset_menu(reorder=True)
 
-    def populate_ini_from_vdu(self, preset_ini: ConfigIni, update_only: bool = False) -> None:
+    def populate_ini_from_vdus(self, preset_ini: ConfigIni, update_only: bool = False) -> None:
         for control_panel in self.main_window.get_main_panel().vdu_control_panels.values():
-            control_panel.copy_state(preset_ini, update_only)
+            vdu_section_name = control_panel.controller.vdu_stable_id
+            if not preset_ini.has_section(vdu_section_name):
+                preset_ini.add_section(vdu_section_name)
+            for control in control_panel.vcp_controls:   # Fill out value for any options present in the preset_ini.
+                if not update_only or preset_ini.has_option(vdu_section_name, control.vcp_capability.property_name()):
+                    if control.current_value is not None:
+                        preset_ini[vdu_section_name][control.vcp_capability.property_name()] = control.current_value
 
     def find_duplicates(self, preset: Preset) -> List[Preset]:
         return [other_preset for other_name, other_preset in self.find_presets_map().items()
