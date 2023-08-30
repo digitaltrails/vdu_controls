@@ -724,7 +724,7 @@ from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
-    QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar
+    QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, qApp
 
 APPNAME = "VDU Controls"
 VDU_CONTROLS_VERSION = '1.11.0'
@@ -1563,6 +1563,8 @@ def conf_opt_def(name: str, section: str = 'vdu-controls-globals', conf_type: Co
 class ConfOption(Enum):
     SYSTEM_TRAY_ENABLED = conf_opt_def(name=QT_TR_NOOP('system-tray-enabled'), default="no", restart=True,
                                        tip=QT_TR_NOOP('start up in the system tray'))
+    HIDE_ON_FOCUS_OUT = conf_opt_def(name=QT_TR_NOOP('hide-on-focus-out'), default="no", restart=False,
+                                     tip=QT_TR_NOOP('minimise the main window automatically on focus out'))
     TRANSLATIONS_ENABLED = conf_opt_def(name=QT_TR_NOOP('translations-enabled'), default="no", restart=True,
                                         tip=QT_TR_NOOP('enable language translations'))
     WEATHER_ENABLED = conf_opt_def(name=QT_TR_NOOP('weather-enabled'), default='yes', tip=QT_TR_NOOP('enable weather lookups'))
@@ -6987,6 +6989,8 @@ class VduAppWindow(QMainWindow):
         self.main_controller.configure_application(self)
         self.app_restore_state()
 
+        qApp.focusChanged.connect(self.on_focus_changed)
+
         if self.tray is not None:
             self.hide()
             self.tray.activated.connect(partial(self.show_main_window, True))
@@ -7006,6 +7010,14 @@ class VduAppWindow(QMainWindow):
             release_alert.setTextFormat(Qt.RichText)
             release_alert.exec()
             main_config.write_file(get_config_path('vdu_controls'), overwrite=True)  # Stops the release notes from being repeated.
+
+    def on_focus_changed(self, from_widget, to_widget):
+        if to_widget is None and self.main_config.is_set(ConfOption.HIDE_ON_FOCUS_OUT, fallback=False):  # Focus out
+            for top_level_widget in QApplication.topLevelWidgets():
+                if isinstance(top_level_widget, DialogSingletonMixin) or isinstance(top_level_widget, GreyScaleDialog):
+                    if top_level_widget.isVisible():  # A dialog is showing - stay as we are
+                        return
+            self.hide()
 
     def show_main_window(self, toggle: bool = False) -> None:
         if toggle and self.isVisible():
