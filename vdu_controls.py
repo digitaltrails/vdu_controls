@@ -3575,7 +3575,7 @@ class PresetWidget(QWidget):
         save_button.setContentsMargins(0, 0, 0, 0)
         save_button.setToolTip(tr("Update this preset from the current VDU settings."))
         line_layout.addWidget(save_button)
-        save_button.clicked.connect(partial(save_action, vdu_controls_only=preset))
+        save_button.clicked.connect(partial(save_action, preset=preset, do_widget_update=False))
         save_button.setAutoDefault(False)
 
         up_button = QPushButton()
@@ -4735,19 +4735,17 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
             return existing_widget.preset, existing_widget
         return Preset(preset_name), None  # TODO check
 
-    def save_preset(self, _: bool = False, vdu_controls_only: Preset = None, quiet: bool = False) -> QMessageBox.Ok | QMessageBox.Cancel:
-        if vdu_controls_only is not None:
-            preset, widget_to_replace = vdu_controls_only, None
-        else:
-            preset, widget_to_replace = self.find_edit_target()
+    def save_preset(self, _: bool = False, preset: Preset = None,
+                    do_widget_update: bool = True, quiet: bool = False) -> QMessageBox.Ok | QMessageBox.Cancel:
+        preset, widget_to_replace = (preset, None) if preset else self.find_edit_target()
         if preset is None or (quiet and not self.has_changes(preset)):
             return QMessageBox.Ok
         preset_path = get_config_path(proper_name('Preset', preset.name))
         if preset_path.exists():
-            if vdu_controls_only is not None:
-                question = tr('Update existing {} preset with current monitor settings?').format(preset.name)
-            else:
+            if do_widget_update:  # The Preset Editor tab is creating/modifying a Preset and it's PresetWidget.
                 question = tr("Replace existing '{}' preset?").format(preset.name)
+            else:  # A PresetWidget is initiating an update to the Preset from the VDU's settings.
+                question = tr('Update existing {} preset with current monitor settings?').format(preset.name)
         else:
             question = tr("Save current edit?")
         confirmation = MessageBox(QMessageBox.Question, buttons=QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
@@ -4759,23 +4757,29 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
             return QMessageBox.Ok
         elif answer == QMessageBox.Cancel:
             return QMessageBox.Cancel
+
         self.populate_ini_from_gui(preset.preset_ini)  # Initialises the options from the GUI, but does not get the VDU values.
         self.main_controller.populate_ini_from_vdus(preset.preset_ini, update_only=True)  # populate from VDU control values.
-        if duplicated_presets := self.main_controller.find_duplicates(preset):
+
+        if duplicated_presets := [other_preset for other_name, other_preset in self.main_controller.find_presets_map().items()
+                                  if other_name != preset.name
+                                     and preset.preset_ini.diff(other_preset.preset_ini, vdu_settings_only=True) == {}]:
             duplicates_warning = MessageBox(QMessageBox.Warning,
                                             buttons=QMessageBox.Save | QMessageBox.Cancel, default=QMessageBox.Cancel)
             duplicates_warning.setText(tr("Duplicates existing Preset {}, save anyway?").format(duplicated_presets[0].name))
             if duplicates_warning.exec() == QMessageBox.Cancel:
                 return QMessageBox.Cancel
+
         self.main_controller.save_preset(preset)
-        if vdu_controls_only is None:  # Update widget icon, transition, weather, etc
+
+        if do_widget_update:  # Which means the editor is updating widget icon, transition, weather, etc
             new_preset_widget = self.create_preset_widget(preset)  # Create a new widget - an easy way to update the icon.
-            if widget_to_replace:
+            if widget_to_replace:   # Existing widget need to update
                 self.preset_widgets_layout.replaceWidget(widget_to_replace, new_preset_widget)
                 # The deleteLater removes the widget from the tree so that it is no longer findable and can be freed.
                 widget_to_replace.deleteLater()
                 self.make_visible()
-            else:
+            else:  # Must be a new Preset - create a new widget
                 self.add_preset_widget(new_preset_widget)
                 self.main_controller.save_preset_order(self.get_preset_names_in_order())
                 self.preset_widgets_scroll_area.ensureWidgetVisible(new_preset_widget)
@@ -4801,6 +4805,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
         else:
             self.reset_editor()
             super().closeEvent(event)
+
 
 def exception_handler(e_type, e_value, e_traceback) -> None:
     """Overarching error handler in case something unexpected happens."""
@@ -4835,6 +4840,7 @@ def create_image_from_svg_bytes(svg_bytes, themed: bool = True) -> QImage:
 
 svg_icon_cache: Dict[Tuple[bytes, bool], QIcon] = {}
 path_icon_cache: Dict[Tuple[Path, bool], QIcon] = {}
+
 
 def create_icon_from_svg_bytes(svg_bytes: bytes, themed: bool = True) -> QIcon:
     """There is no QIcon option for loading SVG from a string, only from a SVG file, so roll our own."""
@@ -6788,11 +6794,6 @@ class VduAppController:   # Main controller containing methods for high level op
                     if control.current_value is not None:
                         preset_ini[vdu_section_name][control.vcp_capability.property_name()] = control.current_value
 
-    def find_duplicates(self, preset: Preset) -> List[Preset]:
-        return [other_preset for other_name, other_preset in self.find_presets_map().items()
-                if other_name != preset.name
-                and preset.preset_ini.diff(other_preset.preset_ini, vdu_settings_only=True) == {}]
-
     def delete_preset(self, preset: Preset) -> None:
         self.preset_controller.delete_preset(preset)
         self.main_window.app_context_menu.remove_preset_menu_action(preset.name)
@@ -6878,15 +6879,13 @@ class VduAppController:   # Main controller containing methods for high level op
     def pause_background_tasks(self, task: WorkerThread) -> bool:
         i = 0
         while PresetsDialog.is_instance_editing() and not task.stop_requested:
-            if i == 0:
-                log_info(f"Pausing {task.__class__.__name__} while preset is being edited.")
+            log_info(f"Pausing {task.__class__.__name__} while preset is being edited.") if i == 0 else None
             if i % 30 == 0:
                 self.main_window.status_message(
                     tr("Task waiting for Preset editing to finish."), timeout=0, destination=MsgDestination.DEFAULT)
             i += 1
             time.sleep(2)
-        if i > 0:
-            log_info(f"Resuming {task.__class__.__name__}")
+        log_info(f"Resuming {task.__class__.__name__}") if i > 0 else None
         self.main_window.status_message('', timeout=1, destination=MsgDestination.DEFAULT)
         return False
 
