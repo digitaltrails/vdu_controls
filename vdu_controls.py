@@ -1255,7 +1255,7 @@ class DdcUtil:
                     syslog_args = ['--syslog', 'DEBUG' if log_debug_enabled else 'ERROR']
                 if '--enable-dynamic-sleep' not in args and '--disable-dynamic-sleep' not in args:
                     multiplier_args += ['--enable-dynamic-sleep']
-                    multiplier_value = None
+                    # multiplier_value = None  TODO what to do?
             if multiplier_value is not None and not math.isclose(multiplier_value, 0.0):
                 multiplier_args += ['--sleep-multiplier', f"{multiplier_value:.2f}"]
             process_args = [DDCUTIL] + self.common_args + syslog_args + multiplier_args + list(args)
@@ -1265,6 +1265,7 @@ class DdcUtil:
                 elapsed = time.time() - now
                 # Shorten EDID to 30 characters when logging it (it will be the only long argument)
                 log_debug(f"subprocess result: success {log_id} [{self.format_args_diagnostic(result.args)}] "
+                          f"{multiplier_value=} "
                           f"rc={result.returncode} elapsed={elapsed:.2f} "
                           f"stdout={result.stdout.decode('utf-8', errors='surrogateescape')}") if log_debug_enabled else None
             except subprocess.SubprocessError as spe:
@@ -1676,9 +1677,9 @@ class ConfigIni(configparser.ConfigParser):
     def diff(self, other: ConfigIni, vdu_settings_only: bool = False) -> Dict[Tuple[str, str], str]:
         values = []
         for subject in (self, other):
-            sections = set(subject.sections()) - set([configparser.DEFAULTSECT, ConfigIni.METADATA_SECTION])
+            sections = set(subject.sections()) - {configparser.DEFAULTSECT, ConfigIni.METADATA_SECTION}
             if vdu_settings_only:
-                sections -= set(('preset',))
+                sections -= {'preset'}
             values.append([(section, option, value) for section in sections for option, value in subject[section].items()])
         differences = list(set(values[0]) ^ set(values[1]))
         return {(section, option): value for section, option, value in differences}
@@ -2844,10 +2845,6 @@ class Preset:
         self.preset_ini = preset_ini
         return self.preset_ini
 
-    def clear_content(self) -> None:
-        self.remove_elevation_trigger()
-        self.preset_ini = ConfigIni()
-
     def save(self) -> None:
         self.preset_ini.save(self.path)
 
@@ -3575,7 +3572,7 @@ class PresetWidget(QWidget):
         save_button.setContentsMargins(0, 0, 0, 0)
         save_button.setToolTip(tr("Update this preset from the current VDU settings."))
         line_layout.addWidget(save_button)
-        save_button.clicked.connect(partial(save_action, preset=preset, do_widget_update=False))
+        save_button.clicked.connect(partial(save_action, from_widget=self))
         save_button.setAutoDefault(False)
 
         up_button = QPushButton()
@@ -4387,11 +4384,6 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
             presets_dialog.reconfigure()
 
     @staticmethod
-    def refresh_instance(preset: Preset = None) -> None:
-        if presets_dialog := PresetsDialog.get_instance():  # type: ignore
-            presets_dialog.refresh(preset)
-
-    @staticmethod
     def is_instance_editing() -> bool:
         if presets_dialog := PresetsDialog.get_instance():
             return presets_dialog.preset_name_edit.text() != ''
@@ -4534,16 +4526,6 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
             preset_widget = self.create_preset_widget(preset_def)
             self.preset_widgets_layout.addWidget(preset_widget)
         self.preset_widgets_layout.addStretch(1)
-
-    def refresh(self, preset: Preset = None) -> None:
-        if preset:
-            self.set_widget_values_from_preset(preset)
-            if preset_widget := self.find_preset_widget(preset.name):
-                preset_widget.update_timer_button()
-        else:
-            #  self.reconfigure()  TODO would wipe out current editor content - is this what we want?
-            for preset_widget in self.get_preset_widgets():
-                preset_widget.update_timer_button()
 
     def reconfigure(self) -> None:
         self.populate_presets_display_list()
@@ -4727,29 +4709,31 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
             self.setDisabled(True)  # Stop any editing until after the preset is restored.
             self.main_controller.restore_preset(preset, finished_func=begin_editing, immediately=True)
 
-    def find_edit_target(self) -> Tuple[Preset | None, PresetWidget | None]:
-        preset_name = self.preset_name_edit.text().strip()
-        if preset_name == '':
-            return None, None
-        if existing_widget := self.find_preset_widget(preset_name):
-            return existing_widget.preset, existing_widget
-        return Preset(preset_name), None  # TODO check
+    def save_preset(self, _: bool = False, from_widget: PresetWidget = None,
+                    quiet: bool = False) -> QMessageBox.Ok | QMessageBox.Cancel:
+        preset: Preset = None
+        widget_to_replace: PresetWidget = None
+        if from_widget:  # A from_widget is requesting that the Preset's VDU current settings be updated.
+            widget_to_replace = None  # Updating from widget, no change to icons or symbols, so no need to update the widget.
+            preset = from_widget.preset  # Just update the widget's preset from the VDU's current settings
+        elif preset_name := self.preset_name_edit.text().strip():  # Saving from the save button, this may be new Preset or update.
+            if widget_to_replace := self.find_preset_widget(preset_name):  # Already exists, update preset, replace widget
+                preset = widget_to_replace.preset  # Use the widget's existing Preset.
+            else:
+                preset = Preset(preset_name)  # New Preset
+        if preset is None or (quiet and not self.has_changes(preset)):  # Not found (weird), OR don't care if no changes made.
+            return QMessageBox.Ok  # Nothing more to do, everything is OK
 
-    def save_preset(self, _: bool = False, preset: Preset = None,
-                    do_widget_update: bool = True, quiet: bool = False) -> QMessageBox.Ok | QMessageBox.Cancel:
-        preset, widget_to_replace = (preset, None) if preset else self.find_edit_target()
-        if preset is None or (quiet and not self.has_changes(preset)):
-            return QMessageBox.Ok
         preset_path = get_config_path(proper_name('Preset', preset.name))
-        if preset_path.exists():
-            if do_widget_update:  # The Preset Editor tab is creating/modifying a Preset and it's PresetWidget.
-                question = tr("Replace existing '{}' preset?").format(preset.name)
-            else:  # A PresetWidget is initiating an update to the Preset from the VDU's settings.
+        if preset_path.exists():  # Existing Preset
+            if from_widget:  # The from_widget PresetWidget is initiating an update to the Preset from the VDU's settings.
                 question = tr('Update existing {} preset with current monitor settings?').format(preset.name)
-        else:
+            else:  # The Preset Editor tab is modifying a Preset and it's PresetWidget.
+                question = tr("Replace existing '{}' preset?").format(preset.name)
+        else:  # New Preset
             question = tr("Save current edit?")
-        confirmation = MessageBox(QMessageBox.Question, buttons=QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
-                                  default=QMessageBox.Save)
+        confirmation = MessageBox(
+            QMessageBox.Question, buttons=QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel, default=QMessageBox.Save)
         confirmation.setText(question)
         answer = confirmation.exec()
         if answer == QMessageBox.Discard:
@@ -4772,18 +4756,19 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
 
         self.main_controller.save_preset(preset)
 
-        if do_widget_update:  # Which means the editor is updating widget icon, transition, weather, etc
-            new_preset_widget = self.create_preset_widget(preset)  # Create a new widget - an easy way to update the icon.
+        if not from_widget:  # Which means the editor needs to update/create the PresetWidget, its icon, transition, weather, etc
+            replacement_widget = self.create_preset_widget(preset)  # Create a new widget - an easy way to update the icon.
             if widget_to_replace:   # Existing widget need to update
-                self.preset_widgets_layout.replaceWidget(widget_to_replace, new_preset_widget)
+                self.preset_widgets_layout.replaceWidget(widget_to_replace, replacement_widget)
                 # The deleteLater removes the widget from the tree so that it is no longer findable and can be freed.
                 widget_to_replace.deleteLater()
                 self.make_visible()
             else:  # Must be a new Preset - create a new widget
-                self.add_preset_widget(new_preset_widget)
+                self.add_preset_widget(replacement_widget)
                 self.main_controller.save_preset_order(self.get_preset_names_in_order())
-                self.preset_widgets_scroll_area.ensureWidgetVisible(new_preset_widget)
+                self.preset_widgets_scroll_area.ensureWidgetVisible(replacement_widget)
                 QApplication.processEvents()  # TODO figure out why this does not work
+
         self.reset_editor()
         self.status_message(tr("Saved {}").format(preset.name), timeout=-1)
         return QMessageBox.Save
@@ -6418,16 +6403,16 @@ class VduAppController:   # Main controller containing methods for high level op
 
     def configure_application(self, main_window: VduAppWindow | None = None):
         try:
-            log_info("Configuring application...")
+            log_info(f"Configuring application (reconfiguring={main_window is None})...")
             if main_window is not None:  # First time through
                 assert self.main_window is None
                 self.main_window = main_window
             if self.main_window.main_panel is not None:
                 self.main_window.indicate_busy(True)
                 QApplication.processEvents()
-            log_debug("attempting to lock application_configuration_lock", trace=False) if log_debug_enabled else None
+            log_debug("Attempting to obtain application_configuration_lock", trace=False) if log_debug_enabled else None
             with self.application_configuration_lock:
-                log_debug("holding application_configuration_lock") if log_debug_enabled else None
+                log_debug("Holding application_configuration_lock") if log_debug_enabled else None
                 if self.lux_auto_controller is not None:
                     self.lux_auto_controller.stop_worker()
                 if self.preset_transition_worker is not None:
@@ -6439,7 +6424,7 @@ class VduAppController:   # Main controller containing methods for high level op
                 self.preset_controller.reinitialize()
                 self.main_window.create_main_control_panel()
                 self.main_window.update_status_indicators()
-                log_debug("released application_configuration_lock") if log_debug_enabled else None
+            log_debug("Released application_configuration_lock") if log_debug_enabled else None
             if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED):
                 LuxDialog.reconfigure_instance()
                 if self.lux_auto_controller is not None:
@@ -6687,8 +6672,6 @@ class VduAppController:   # Main controller containing methods for high level op
             self.daily_schedule_next_update = tomorrow
         if reconfiguring:
             PresetsDialog.reconfigure_instance()
-        # else:
-        #    PresetsDialog.refresh_instance() # TODO probably not the right thing to do
         return most_recent_overdue
 
     def activate_scheduled_preset(self, preset: Preset, check_weather: bool = True, immediately: bool = False,
@@ -7002,7 +6985,7 @@ class VduAppWindow(QMainWindow):
             release_alert.exec()
             main_config.write_file(get_config_path('vdu_controls'), overwrite=True)  # Stops the release notes from being repeated.
 
-    def on_focus_changed(self, from_widget, to_widget):
+    def on_focus_changed(self, _, to_widget):
         if to_widget is None and self.main_config.is_set(ConfOption.HIDE_ON_FOCUS_OUT, fallback=False):  # Focus out
             for top_level_widget in QApplication.topLevelWidgets():
                 if isinstance(top_level_widget, DialogSingletonMixin) or isinstance(top_level_widget, GreyScaleDialog):
@@ -7095,13 +7078,11 @@ class VduAppWindow(QMainWindow):
             self.get_main_panel().display_active_preset(None)
             self.app_context_menu.indicate_preset_active(None)
             self.set_app_icon_and_title()
-            # PresetsDialog.refresh_instance(None)  # TODO probably not the right thing to do
             self.display_lux_auto_indicators()  # Check in case both schedule and lux auto are active
         else:  # Set indicators to specific preset
             self.get_main_panel().display_active_preset(preset)
             self.app_context_menu.indicate_preset_active(preset)
             self.set_app_icon_and_title(preset.create_icon(themed=False), preset.get_title_name())
-            # PresetsDialog.refresh_instance(preset)  # TODO probably not the right thing to do
             if (self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) and
                     self.main_controller.lux_auto_controller.is_auto_enabled()):
                 QTimer.singleShot(5000, self.display_lux_auto_indicators)  # After a pause, replace with auto-icon if auto enabled
@@ -7163,6 +7144,7 @@ class VduAppWindow(QMainWindow):
         self.app_context_menu.refresh_preset_menu(palette_change=palette_change, reorder=reorder)
 
     def display_no_controllers_error_dialog(self, ddcutil_problem):
+        log_error("No controllable monitors found.")
         error_no_monitors = MessageBox(QMessageBox.Critical)
         error_no_monitors.setText(tr('No controllable monitors found.'))
         error_no_monitors.setInformativeText(
@@ -7173,6 +7155,7 @@ class VduAppWindow(QMainWindow):
                 problem_text = ddcutil_problem.stderr.decode('utf-8', errors='surrogateescape') + '\n' + str(ddcutil_problem)
             else:
                 problem_text = str(ddcutil_problem)
+            log_error(f"Most recent ddcutil error: {problem_text}".encode("unicode_escape").decode("utf-8"))
             error_no_monitors.setDetailedText(tr("(Most recent ddcutil error: {})").format(problem_text))
         error_no_monitors.exec()
 
@@ -7240,18 +7223,16 @@ class SignalWakeupHandler(QtNetwork.QAbstractSocket):
         self.readyRead.connect(self._readSignal) # Second handler does the real handling
 
     def __del__(self) -> None:
-        # Restore any old handler on deletion
         if self.old_fd is not None and signal is not None and signal.set_wakeup_fd is not None:
-            signal.set_wakeup_fd(self.old_fd)
+            signal.set_wakeup_fd(self.old_fd)  # Restore any old handler on deletion
 
     def _readSignal(self) -> None:
         # Read the written byte. Note: readyRead is blocked from occurring again until readData()
-        # was called, so call it, even if you don't need the value.
+        # is called, so call it, even if you don't need the value.
         data = self.readData(1)
-        # Emit a Qt signal for convenience
         signal_number = int(data[0])
         log_info("SignalWakeupHandler", signal_number)
-        self.received_unix_signal_qtsignal.emit(signal_number)
+        self.received_unix_signal_qtsignal.emit(signal_number)  # Emit a Qt signal for convenience
 
 
 #
@@ -7275,8 +7256,7 @@ def calc_solar_azimuth_zenith(localised_time: datetime, latitude: float, longitu
     earth_mean_radius = 6371.01
     astronomical_unit = 149597890
 
-    # Calculate difference in days between the current Julian Day
-    # and JD 2451545.0, which is noon 1 January 2000 Universal Time
+    # Calculate difference in days between the current Julian Day and JD 2451545.0, which is noon 1 January 2000 Universal Time
 
     # Calculate time of the day in UT decimal hours
     decimal_hours = hours + (minutes + seconds / 60.) / 60.
@@ -7288,9 +7268,8 @@ def calc_solar_azimuth_zenith(localised_time: datetime, latitude: float, longitu
     # Calculate difference between current Julian Day and JD 2451545.0
     elapsed_julian_days = julian_date - 2451545.0
 
-    # Calculate ecliptic coordinates (ecliptic longitude and obliquity of the
-    # ecliptic in radians but without limiting the angle to be less than 2*Pi
-    # (i.e., the result may be greater than 2*Pi)
+    # Calculate ecliptic coordinates (ecliptic longitude and obliquity of the ecliptic in radians but
+    # without limiting the angle to be less than 2*Pi (i.e., the result may be greater than 2*Pi)
     omega = 2.1429 - 0.0010394594 * elapsed_julian_days
     mean_longitude = 4.8950630 + 0.017202791698 * elapsed_julian_days  # Radians
     mean_anomaly = 6.2400600 + 0.0172019699 * elapsed_julian_days
@@ -7298,9 +7277,8 @@ def calc_solar_azimuth_zenith(localised_time: datetime, latitude: float, longitu
         2. * mean_anomaly) - 0.0001134 - 0.0000203 * math.sin(omega)
     ecliptic_obliquity = 0.4090928 - 6.2140e-9 * elapsed_julian_days + 0.0000396 * math.cos(omega)
 
-    # Calculate celestial coordinates ( right ascension and declination ) in radians
-    # but without limiting the angle to be less than 2*Pi (i.e., the result may be
-    # greater than 2*Pi)
+    # Calculate celestial coordinates ( right ascension and declination ) in radians but without limiting
+    # the angle to be less than 2*Pi (i.e., the result may be greater than 2*Pi)
     sin_ecliptic_longitude = math.sin(ecliptic_longitude)
     dy = math.cos(ecliptic_obliquity) * sin_ecliptic_longitude
     dx = math.cos(ecliptic_longitude)
@@ -7466,7 +7444,6 @@ def main() -> None:
         print(__doc__)
         sys.exit()
 
-    # Assign to variable to stop it being reclaimed as garbage
     if main_config.is_set(ConfOption.TRANSLATIONS_ENABLED):
         initialise_locale_translations(app)
 
@@ -7474,7 +7451,7 @@ def main() -> None:
         AboutDialog.invoke()
 
     main_controller = VduAppController(main_config)
-    VduAppWindow(main_config, app, main_controller)
+    VduAppWindow(main_config, app, main_controller)  # may need to assign this to a variable to prevent garbage collection?
 
     if args.create_config_files:
         main_controller.create_config_files()
