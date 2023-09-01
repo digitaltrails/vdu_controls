@@ -4828,13 +4828,13 @@ def handle_theme(svg_str: bytes) -> bytes:
     return svg_str.replace(SVG_LIGHT_THEME_COLOR, SVG_DARK_THEME_COLOR) if is_dark_theme() else svg_str
 
 
-def create_pixmap_from_svg_bytes(svg_bytes: bytes, themed: bool = True) -> QPixmap:
+def create_pixmap_from_svg_bytes(svg_bytes: bytes) -> QPixmap:
     """There is no QIcon option for loading SVG from a string, only from a SVG file, so roll our own."""
-    return QPixmap.fromImage(create_image_from_svg_bytes(svg_bytes, themed))
+    return QPixmap.fromImage(create_image_from_svg_bytes(svg_bytes))
 
 
-def create_image_from_svg_bytes(svg_bytes, themed: bool = True) -> QImage:
-    renderer = QSvgRenderer(handle_theme(svg_bytes) if themed else svg_bytes)
+def create_image_from_svg_bytes(svg_bytes) -> QImage:
+    renderer = QSvgRenderer(svg_bytes)
     image = QImage(64, 64, QImage.Format_ARGB32)
     image.fill(0x0)
     painter = QPainter(image)
@@ -4844,23 +4844,21 @@ def create_image_from_svg_bytes(svg_bytes, themed: bool = True) -> QImage:
 
 
 svg_icon_cache: Dict[Tuple[bytes, bool], QIcon] = {}
-path_icon_cache: Dict[Tuple[Path, bool], QIcon] = {}
 
 
 def create_icon_from_svg_bytes(svg_bytes: bytes, themed: bool = True) -> QIcon:
     """There is no QIcon option for loading SVG from a string, only from a SVG file, so roll our own."""
-    key = svg_bytes, themed
-    if key in svg_icon_cache:
-        return svg_icon_cache[key]
-    icon = QIcon(create_pixmap_from_svg_bytes(svg_bytes, themed))
-    svg_icon_cache[key] = icon
+    if themed:
+        svg_bytes = handle_theme(svg_bytes)
+    if icon := svg_icon_cache.get(svg_bytes, None):
+        return icon
+    icon = QIcon(create_pixmap_from_svg_bytes(svg_bytes))
+    svg_icon_cache[svg_bytes] = icon
     return icon
 
 
 def create_icon_from_path(path: Path, themed: bool = True) -> QIcon:
     key = path, themed
-    if icon := path_icon_cache.get(key, None):
-        return icon
     if path.exists():
         if path.suffix == '.svg':
             with open(path, 'rb') as icon_file:
@@ -4868,7 +4866,6 @@ def create_icon_from_path(path: Path, themed: bool = True) -> QIcon:
                 icon = create_icon_from_svg_bytes(icon_bytes, themed)
         if path.suffix == '.png':
             icon = QIcon(path.as_posix())
-        path_icon_cache[key] = icon
         return icon
     # Copes with the case where the path has been deleted.
     return QApplication.style().standardIcon(QStyle.SP_MessageBoxQuestion)
