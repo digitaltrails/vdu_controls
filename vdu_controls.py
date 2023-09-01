@@ -1495,10 +1495,7 @@ class DialogSingletonMixin:
 
     @classmethod
     def get_instance(cls: Type) -> DialogSingletonMixin | None:
-        class_name = cls.__name__
-        if class_name in DialogSingletonMixin._dialogs_map:
-            return DialogSingletonMixin._dialogs_map[class_name]
-        return None
+        return DialogSingletonMixin._dialogs_map.get(cls.__name__, None)
 
 
 # Enabling this would enable anything supported by ddcutil - but that isn't safe for the hardware
@@ -1541,8 +1538,7 @@ class GeoLocation:
         if other is None:
             return False
         if not isinstance(other, GeoLocation):
-            # don't attempt to compare against unrelated types
-            return NotImplemented
+            return NotImplemented  # don't attempt to compare against unrelated types
         return self.latitude == other.latitude and self.longitude == other.longitude and \
             self.place_name == other.place_name
 
@@ -1852,8 +1848,8 @@ class VduControlsConfig:
         if args is None:
             args = sys.argv[1:]
         parser = argparse.ArgumentParser(
-            description=textwrap.dedent("""
-            VDU Controls
+            description=textwrap.dedent(f"""
+            {APPNAME}
               Uses ddcutil to issue Display Data Channel (DDC) Virtual Control Panel (VCP) commands.
               Controls DVI/DP/HDMI/USB connected monitors (but not builtin laptop displays)."""),
             formatter_class=argparse.RawTextHelpFormatter)
@@ -3562,12 +3558,12 @@ class PresetWidget(QWidget):
         line_layout.setSpacing(0)
         self.setLayout(line_layout)
 
-        preset_name_button = PresetActivationButton(preset)
+        self.preset_name_button = PresetActivationButton(preset)
 
-        line_layout.addWidget(preset_name_button)
-        preset_name_button.clicked.connect(partial(edit_action, preset=preset))
-        preset_name_button.setToolTip(tr('Activate this Preset and edit its options.'))
-        preset_name_button.setAutoDefault(False)
+        line_layout.addWidget(self.preset_name_button)
+        self.preset_name_button.clicked.connect(partial(edit_action, preset=preset))
+        self.preset_name_button.setToolTip(tr('Activate this Preset and edit its options.'))
+        self.preset_name_button.setAutoDefault(False)
         line_layout.addSpacing(20)
 
         save_button = QPushButton()
@@ -3658,6 +3654,13 @@ class PresetWidget(QWidget):
         tip_text = f"{action_desc}{SUN_SYMBOL} {self.preset.get_solar_elevation_description()}"
         self.timer_control_button.setText(self.preset.get_solar_elevation_abbreviation())
         self.timer_control_button.setToolTip(tip_text)
+
+    def indicate_active(self, active: bool):
+        weight = QFont.Bold if active else QFont.Normal
+        font = self.preset_name_button.font()
+        if font.weight() != weight:
+            font.setWeight(weight)
+            self.preset_name_button.setFont(font)
 
 
 class PresetActivationButton(QPushButton):
@@ -4392,6 +4395,11 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
     def is_instance_editing() -> bool:
         if presets_dialog := PresetsDialog.get_instance():
             return presets_dialog.preset_name_edit.text() != ''
+        
+    @staticmethod
+    def instance_indicate_active_preset(preset: Preset = None):
+        if presets_dialog := PresetsDialog.get_instance():
+            presets_dialog.indicate_active_preset(preset)
 
     def __init__(self, main_controller: VduAppController, main_config: VduControlsConfig) -> None:
         super().__init__()
@@ -4514,6 +4522,7 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
         self.editor_trigger_widget.setDisabled(True)
         self.edit_save_button.setDisabled(True)
         self.edit_revert_button.setDisabled(True)
+        self.indicate_active_preset(self.main_controller.which_preset_is_active())
         self.make_visible()
 
     def sizeHint(self) -> QSize:
@@ -4552,10 +4561,16 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
     def find_preset_widget(self, preset_name: str) -> PresetWidget | None:
         for i in range(self.preset_widgets_layout.count()):
             w = self.preset_widgets_layout.itemAt(i).widget()
-            if isinstance(w, PresetWidget):
-                if w.name == preset_name:
-                    return w
+            if isinstance(w, PresetWidget) and w.name == preset_name:
+                return w
         return None
+
+    def indicate_active_preset(self, preset: Preset = None):
+        self.preset_widgets_layout.findChildren(PresetWidget)
+        for i in range(self.preset_widgets_layout.count()):
+            w = self.preset_widgets_layout.itemAt(i).widget()
+            if isinstance(w, PresetWidget):
+                w.indicate_active(preset is not None and w.name == preset.name)
 
     def populate_editor_controls_widget(self):
         container = self.editor_controls_widget
@@ -4936,7 +4951,7 @@ def install_as_desktop_application(uninstall: bool = False) -> None:
             [Desktop Entry]
             Type=Application
             Exec={installed_script_path.as_posix()}
-            Name=VDU Controls
+            Name={APPNAME}
             GenericName=DDC control panel for monitors
             Comment=Virtual Control Panel for externally connected VDU's
             Icon={icon_path.as_posix()}
@@ -4950,7 +4965,7 @@ def install_as_desktop_application(uninstall: bool = False) -> None:
         log_info(f"Creating {icon_path.as_posix()}")
         get_splash_image().save(icon_path.as_posix())
 
-    log_info('Installation complete. Your desktop->applications->settings should now contain VDU Controls')
+    log_info(f"Installation complete. Your desktop->applications->settings should now contain {APPNAME}")
 
 
 class LuxProfileChart(QLabel):
@@ -6948,7 +6963,7 @@ class VduAppWindow(QMainWindow):
             else:
                 log_error("no system tray - cannot run in system tray.")
 
-        self.app_name = "VDU Controls"
+        self.app_name = APPNAME
         self.set_app_icon_and_title()
         app.setApplicationDisplayName(self.app_name)
         app.setAttribute(Qt.AA_UseHighDpiPixmaps)  # Make sure all icons use HiDPI - toolbars don't by default, so force it.
@@ -6959,7 +6974,7 @@ class VduAppWindow(QMainWindow):
         def splash_message_action(message) -> None:
             if splash is not None:
                 log_info(f"splash_message: {repr(message)}")
-                splash.showMessage(f"\n\nVDU Controls {VDU_CONTROLS_VERSION}\n{message}", Qt.AlignTop | Qt.AlignHCenter)
+                splash.showMessage(f"\n\n{APPNAME} {VDU_CONTROLS_VERSION}\n{message}", Qt.AlignTop | Qt.AlignHCenter)
 
         self.splash_message_qtsignal.connect(splash_message_action)
 
@@ -6979,6 +6994,8 @@ class VduAppWindow(QMainWindow):
 
         if splash is not None:
             splash.finish(self)
+            splash.deleteLater()
+            splash = None
 
         if main_config.file_path is None or (not main_config.ini_content.is_version_ge() and VDU_CONTROLS_VERSION.endswith('.0')):
             # User is new to this major version - point them to the release notes.
@@ -7082,11 +7099,13 @@ class VduAppWindow(QMainWindow):
         if preset is None:  # Clears the indicators
             self.get_main_panel().display_active_preset(None)
             self.app_context_menu.indicate_preset_active(None)
+            PresetsDialog.instance_indicate_active_preset(None)
             self.set_app_icon_and_title()
             self.display_lux_auto_indicators()  # Check in case both schedule and lux auto are active
         else:  # Set indicators to specific preset
             self.get_main_panel().display_active_preset(preset)
             self.app_context_menu.indicate_preset_active(preset)
+            PresetsDialog.instance_indicate_active_preset(preset)
             self.set_app_icon_and_title(preset.create_icon(themed=False), preset.get_title_name())
             if (self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) and
                     self.main_controller.lux_auto_controller.is_auto_enabled()):
