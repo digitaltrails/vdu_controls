@@ -1557,13 +1557,13 @@ class ConfType(str, Enum):
 
 
 def conf_opt_def(name: str, section: str = 'vdu-controls-globals', conf_type: ConfType = ConfType.BOOL,
-                 default: str | None = None, restart: bool = False, cmdline_arg: str = 'DEFAULT', tip: str = ''):
-    return name, section, cmdline_arg, conf_type, default, restart, tip
+                 default: str | None = None, restart: bool = False, cmdline_arg: str = 'DEFAULT', tip: str = '', related: str = ''):
+    return name, section, cmdline_arg, conf_type, default, restart, tip, related
 
 
 class ConfOption(Enum):
     SYSTEM_TRAY_ENABLED = conf_opt_def(name=QT_TR_NOOP('system-tray-enabled'), default="no", restart=True,
-                                       tip=QT_TR_NOOP('start up in the system tray'))
+                                       tip=QT_TR_NOOP('start up in the system tray'), related='hide-on-focus-out')
     HIDE_ON_FOCUS_OUT = conf_opt_def(name=QT_TR_NOOP('hide-on-focus-out'), default="no", restart=False,
                                      tip=QT_TR_NOOP('minimise the main window automatically on focus out'))
     TRANSLATIONS_ENABLED = conf_opt_def(name=QT_TR_NOOP('translations-enabled'), default="no", restart=True,
@@ -1593,13 +1593,14 @@ class ConfOption(Enum):
     UNKNOWN = conf_opt_def(name="UNKNOWN", section="UNKNOWN", conf_type=ConfType.BOOL, cmdline_arg='DISALLOWED', tip='')
 
     def __init__(self, name: str, section: str, cmdline_arg: str, conf_type: ConfType, default: str | None,
-                 restart_required: bool, help_text: str):
+                 restart_required: bool, help_text: str, related: ConfOption):
         self.conf_name, self.conf_section, self.conf_type, self.default_value = name, section, conf_type, default
         self.restart_required = restart_required
         self.help = help_text
         self.cmdline_arg = self.conf_name.replace("-enabled", "") if cmdline_arg == 'DEFAULT' else cmdline_arg
         self.cmdline_var = None
         self.default_value = default
+        self.related = related
 
     def add_cmdline_arg(self, parser: argparse.ArgumentParser) -> None:
         if self.cmdline_arg != "DISALLOWED":
@@ -2175,7 +2176,7 @@ class SettingsEditorTab(QWidget):
             for option_name in self.ini_editable[section_name]:
                 option_def = vdu_config.get_config_option(option_name)
                 if option_def.conf_type == ConfType.BOOL:
-                    booleans_grid.addWidget(field(SettingsEditorBooleanWidget(self, option_name, section_name, option_def.help)),
+                    booleans_grid.addWidget(field(SettingsEditorBooleanWidget(self, option_name, section_name, option_def.help, option_def.related)),
                                             bool_count // grid_columns, bool_count % grid_columns)
                     bool_count += 1
                 elif option_def.conf_type == ConfType.FLOAT:
@@ -2289,7 +2290,7 @@ class SettingsEditorFieldBase(QWidget):
 
 
 class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
-    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
+    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str, related: str) -> None:
         super().__init__(section_editor, option, section, tooltip)
         self.setLayout(QHBoxLayout())
         checkbox = QCheckBox(self.translate_option())
@@ -2297,6 +2298,10 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
 
         def toggled(is_checked: bool) -> None:
             section_editor.ini_editable[section][option] = 'yes' if is_checked else 'no'
+            if related:
+                info = MessageBox(QMessageBox.Information, QMessageBox.Ok)
+                info.setText(tr("You may also wish to set\n{}").format(tr(related)))
+                info.exec()
 
         checkbox.toggled.connect(toggled)
         self.layout().addWidget(checkbox)
