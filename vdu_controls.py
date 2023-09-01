@@ -2168,12 +2168,13 @@ class SettingsEditorTab(QWidget):
             booleans_grid = QGridLayout()
             booleans_panel.setLayout(booleans_grid)
             editor_layout.addWidget(booleans_panel)
-            bool_count, grid_columns = 0, 3  # booleans are counted and laid out according to grid_columns.
+            bool_count, grid_columns = 0, 6  # booleans are counted and laid out according to grid_columns.
             for option_name in self.ini_editable[section_name]:
                 option_def = vdu_config.get_config_option(option_name)
                 if option_def.conf_type == ConfType.BOOL:
-                    booleans_grid.addWidget(field(SettingsEditorBooleanWidget(self, option_name, section_name, option_def.help, option_def.related)),
-                                            bool_count // grid_columns, bool_count % grid_columns)
+                    booleans_grid.addWidget(
+                        field(SettingsEditorBooleanWidget(self, option_name, section_name, option_def.help, option_def.related)),
+                        bool_count // grid_columns, bool_count % grid_columns)
                     bool_count += 1
                 elif option_def.conf_type == ConfType.FLOAT:
                     editor_layout.addWidget(field(SettingsEditorFloatWidget(self, option_name, section_name, option_def.help)))
@@ -2373,8 +2374,6 @@ class SettingsEditorFloatWidget(SettingsEditorFieldBase):
 class SettingsEditorCsvWidget(SettingsEditorLineBase):
     def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
         super().__init__(section_editor, option, section, tooltip)
-        self.text_input.setMaximumWidth(1000)
-        self.text_input.setMaxLength(500)
         # TODO - should probably also allow spaces as well as commas, but the regexp is getting a bit tricky?
         # Validator matches CSV of two digit hex or the empty string.
         self.validator = QRegExpValidator(QRegExp(r"^([0-9a-fA-F]{2}([ \t]*,[ \t]*[0-9a-fA-F]{2})*)|$"))
@@ -3762,7 +3761,6 @@ class WeatherQuery:
         lang = local_local[0][:2] if local_local is not None and local_local[0] is not None else 'C'
         if location_name is None or location_name.strip() == '':
             location_name = ''
-
         self.when = zoned_now()
         try:
             log_info(f"QueryWeather: {self.url}")
@@ -6908,13 +6906,10 @@ class VduAppWindow(QMainWindow):
         self.main_config = main_config
         self.transitioning_dummy_preset: PresetTransitionDummy | None = None
         self.hide_shortcuts = True
-        gnome_tray_behaviour = main_config.is_set(ConfOption.SYSTEM_TRAY_ENABLED) and 'gnome' in os.environ.get(
-            'XDG_CURRENT_DESKTOP', default='unknown').lower()  # Gnome tray doesn't normally provide a way to bring up the main app.
-
-        def run_callable(task: Callable):
-            task()
-
-        self._run_in_gui_thread_qtsignal.connect(run_callable)
+        self._run_in_gui_thread_qtsignal.connect(partial)  # partial will execute its first arg as a callable.
+        # Gnome tray doesn't normally provide a way to bring up the main app.
+        self.os_desktop = os.environ.get('XDG_CURRENT_DESKTOP', default='unknown').lower()
+        gnome_tray_behaviour = main_config.is_set(ConfOption.SYSTEM_TRAY_ENABLED) and 'gnome' in self.os_desktop
 
         global log_debug_enabled
         if log_debug_enabled:
