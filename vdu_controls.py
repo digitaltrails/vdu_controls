@@ -4384,7 +4384,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
                 presets_dialog.status_message(
                     WARNING_SYMBOL + ' ' + tr('Solar-trigger scheduling is disabled in the Setting-Dialog.'))
             elif not presets_dialog.main_config.is_set(ConfOption.WEATHER_ENABLED):
-                presets_dialog.status_message(WARNING_SYMBOL + ' ' + tr('Weather lookup is disabled in the Setting-Dialog.'))
+                presets_dialog.status_message(WARNING_SYMBOL + ' ' + tr('Weather lookup is disabled in the Setting-Dialog.'),
+                                              timeout=60000)
             else:
                 presets_dialog.status_message('')
 
