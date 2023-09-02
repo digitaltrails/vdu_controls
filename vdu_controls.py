@@ -2168,7 +2168,7 @@ class SettingsEditorTab(QWidget):
             booleans_grid = QGridLayout()
             booleans_panel.setLayout(booleans_grid)
             editor_layout.addWidget(booleans_panel)
-            bool_count, grid_columns = 0, 6  # booleans are counted and laid out according to grid_columns.
+            bool_count, grid_columns = 0, 5  # booleans are counted and laid out according to grid_columns.
             for option_name in self.ini_editable[section_name]:
                 option_def = vdu_config.get_config_option(option_name)
                 if option_def.conf_type == ConfType.BOOL:
