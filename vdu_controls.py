@@ -12,9 +12,11 @@ Usage:
                      [--help|-h] [--about] [--detailed-help]
                      [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                      [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
-                     [--enable-vcp-code vcp_code] [--schedule|--no-schedule] [--location latitude,longitude]
-                     [--weather|--no-weather] [--lux-options|--no-lux-options] [--translations|--no-translations]
-                     [--splash|--no-splash] [--system-tray|--no-system-tray] [--hide-on-focus-out|--no-hide-on-focus-out]
+                     [--enable-vcp-code vcp_code] [--schedule|--no-schedule]
+                     [--location latitude,longitude] [--weather|--no-weather]
+                     [--lux-options|--no-lux-options] [--translations|--no-translations]
+                     [--splash|--no-splash] [--system-tray|--no-system-tray]
+                     [--hide-on-focus-out|--no-hide-on-focus-out]
                      [--syslog|--no-syslog]  [--debug|--no-debug] [--warnings|--no-warnings]
                      [--sleep-multiplier multiplier] [--ddcutil-extra-args 'extra args']
                      [--create-config-files] [--install] [--uninstall]
@@ -6303,6 +6305,7 @@ class HelpDialog(QDialog, DialogSingletonMixin):
         layout = QVBoxLayout()
         markdown_view = QTextEdit()
         markdown_view.setReadOnly(True)
+        markdown_view.setViewportMargins(80, 80, 50, 30)
         markdown_view.setMarkdown(__doc__)
         layout.addWidget(markdown_view)
         close_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), tr("Close"))
@@ -6312,7 +6315,7 @@ class HelpDialog(QDialog, DialogSingletonMixin):
         self.make_visible()
 
     def sizeHint(self) -> QSize:
-        return QSize(1200, 768)
+        return QSize(1600, 1000)
 
 
 class PresetScheduleStatus(Enum):
