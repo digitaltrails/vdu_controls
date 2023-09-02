@@ -219,7 +219,7 @@ Michael Hamilton
 Version History
 ---------------
 * 1.11.0
-  * Support for ddcutil 2.0 dynamic-sleep for improved response (in some cases VDU response time is halved).
+  * Make vdu_controls ddcutil-2.0-ready.
   * Support ddcutil versions earlier than 1.3 (issue #43, #53).
   * Alt-key keyboard shortcuts in the application and menus (issue #13).
   * Combined the Preset-Dialog Activate/Edit buttons into one button (simpler and more intuitive).
