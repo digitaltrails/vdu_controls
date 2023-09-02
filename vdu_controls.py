@@ -1589,7 +1589,7 @@ class ConfOption(Enum):
     UNKNOWN = conf_opt_def(name="UNKNOWN", section="UNKNOWN", conf_type=ConfType.BOOL, cmdline_arg='DISALLOWED', tip='')
 
     def __init__(self, name: str, section: str, cmdline_arg: str, conf_type: ConfType, default: str | None,
-                 restart_required: bool, help_text: str, related: ConfOption):
+                 restart_required: bool, help_text: str, related: str):
         self.conf_name, self.conf_section, self.conf_type, self.default_value = name, section, conf_type, default
         self.restart_required = restart_required
         self.help = help_text
@@ -4729,8 +4729,8 @@ class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather co
 
     def save_preset(self, _: bool = False, from_widget: PresetWidget = None,
                     quiet: bool = False) -> QMessageBox.Ok | QMessageBox.Cancel:
-        preset: Preset = None
-        widget_to_replace: PresetWidget = None
+        preset: Preset | None = None
+        widget_to_replace: PresetWidget | None = None
         if from_widget:  # A from_widget is requesting that the Preset's VDU current settings be updated.
             widget_to_replace = None  # Updating from widget, no change to icons or symbols, so no need to update the widget.
             preset = from_widget.preset  # Just update the widget's preset from the VDU's current settings
@@ -4841,7 +4841,7 @@ def create_image_from_svg_bytes(svg_bytes) -> QImage:
     return image
 
 
-svg_icon_cache: Dict[Tuple[bytes, bool], QIcon] = {}
+svg_icon_cache: Dict[bytes, QIcon] = {}
 
 
 def create_icon_from_svg_bytes(svg_bytes: bytes, themed: bool = True) -> QIcon:
@@ -4856,13 +4856,12 @@ def create_icon_from_svg_bytes(svg_bytes: bytes, themed: bool = True) -> QIcon:
 
 
 def create_icon_from_path(path: Path, themed: bool = True) -> QIcon:
-    key = path, themed
     if path.exists():
         if path.suffix == '.svg':
             with open(path, 'rb') as icon_file:
                 icon_bytes = icon_file.read()
                 icon = create_icon_from_svg_bytes(icon_bytes, themed)
-        if path.suffix == '.png':
+        elif path.suffix == '.png':
             icon = QIcon(path.as_posix())
         return icon
     # Copes with the case where the path has been deleted.
