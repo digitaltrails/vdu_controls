@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Aug 24, 2023" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Sep 02, 2023" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.11.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -38,14 +38,14 @@ A control panel for external monitors (\fIVisual Display Units\fP).
 .INDENT 3.5
 .INDENT 0.0
 .TP
-.B vdu_controls [\-h]
-[\-\-about] [\-\-detailed\-help]
+.B vdu_controls
+[\-\-help|\-h] [\-\-about] [\-\-detailed\-help]
 [\-\-show {brightness,contrast,audio\-volume,input\-source,power\-mode,osd\-language}]
 [\-\-hide {brightness,contrast,audio\-volume,input\-source,power\-mode,osd\-language}]
-[\-\-enable\-vcp\-code vcp_code] [\-\-system\-tray|\-\-no\-system\-tray] [\-\-debug|\-\-no\-debug] [\-\-warnings|\-\-no\-warnings]
-[\-\-syslog|\-\-no\-syslog] [\-\-location latitude,longitude] [\-\-translations|\-\-no\-translations]
-[\-\-lux\-options|\-\-no\-lux\-options]
-[\-\-schedule|\-\-no\-schedule] [\-\-weather|\-\-no\-weather] [\-\-splash|\-\-no\-splash]
+[\-\-enable\-vcp\-code vcp_code] [\-\-schedule|\-\-no\-schedule] [\-\-location latitude,longitude]
+[\-\-weather|\-\-no\-weather] [\-\-lux\-options|\-\-no\-lux\-options] [\-\-translations|\-\-no\-translations]
+[\-\-splash|\-\-no\-splash] [\-\-system\-tray|\-\-no\-system\-tray] [\-\-hide\-on\-focus\-out|\-\-no\-hide\-on\-focus\-out]
+[\-\-syslog|\-\-no\-syslog]  [\-\-debug|\-\-no\-debug] [\-\-warnings|\-\-no\-warnings]
 [\-\-sleep\-multiplier multiplier] [\-\-ddcutil\-extra\-args \(aqextra args\(aq]
 [\-\-create\-config\-files] [\-\-install] [\-\-uninstall]
 .UNINDENT
@@ -108,6 +108,9 @@ popup a warning when a VDU lacks an enabled control. \fB\-\-no\-warnings\fP is t
 .TP
 .B \-\-syslog|\-no\-syslog
 divert diagnostic output to the syslog (journald).  \fB\-\-no\-syslog\fP is the default.
+.TP
+.B \-\-hide\-on\-focus\-out|\-\-no\-hide\-on\-focus\-out
+minimise the main window automatically on focus out \fB\-\-no\-hide\-on\-focus\-out\fP is the default.
 .TP
 .B \-\-splash|\-\-no\-splash
 show the splash screen.  \fB\-\-splash\fP is the default.

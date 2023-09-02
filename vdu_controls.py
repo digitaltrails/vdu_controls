@@ -8,14 +8,14 @@ A control panel for external monitors (*Visual Display Units*).
 Usage:
 ======
 
-        vdu_controls [-h]
-                     [--about] [--detailed-help]
+        vdu_controls
+                     [--help|-h] [--about] [--detailed-help]
                      [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                      [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
-                     [--enable-vcp-code vcp_code] [--system-tray|--no-system-tray] [--debug|--no-debug] [--warnings|--no-warnings]
-                     [--syslog|--no-syslog] [--location latitude,longitude] [--translations|--no-translations]
-                     [--lux-options|--no-lux-options]
-                     [--schedule|--no-schedule] [--weather|--no-weather] [--splash|--no-splash]
+                     [--enable-vcp-code vcp_code] [--schedule|--no-schedule] [--location latitude,longitude]
+                     [--weather|--no-weather] [--lux-options|--no-lux-options] [--translations|--no-translations]
+                     [--splash|--no-splash] [--system-tray|--no-system-tray] [--hide-on-focus-out|--no-hide-on-focus-out]
+                     [--syslog|--no-syslog]  [--debug|--no-debug] [--warnings|--no-warnings]
                      [--sleep-multiplier multiplier] [--ddcutil-extra-args 'extra args']
                      [--create-config-files] [--install] [--uninstall]
 
@@ -51,6 +51,8 @@ Arguments supplied on the command line override config file equivalent settings.
                             popup a warning when a VDU lacks an enabled control. ``--no-warnings`` is the default.
       --syslog|-no-syslog
                             divert diagnostic output to the syslog (journald).  ``--no-syslog`` is the default.
+      --hide-on-focus-out|--no-hide-on-focus-out
+                            minimise the main window automatically on focus out ``--no-hide-on-focus-out`` is the default.
       --splash|--no-splash
                             show the splash screen.  ``--splash`` is the default.
       --sleep-multiplier    set the default ddcutil sleep multiplier
