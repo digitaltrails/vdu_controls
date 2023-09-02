@@ -6424,7 +6424,7 @@ class VduAppController:   # Main controller containing methods for high level op
             if self.main_window.main_panel is not None:
                 self.main_window.indicate_busy(True)
                 QApplication.processEvents()
-            log_debug("Attempting to obtain application_configuration_lock", trace=False) if log_debug_enabled else None
+            log_debug("configure: try to obtain application_configuration_lock", trace=False) if log_debug_enabled else None
             with self.application_configuration_lock:
                 log_debug("Holding application_configuration_lock") if log_debug_enabled else None
                 if self.lux_auto_controller is not None:
@@ -6438,7 +6438,7 @@ class VduAppController:   # Main controller containing methods for high level op
                 self.preset_controller.reinitialize()
                 self.main_window.create_main_control_panel()
                 self.main_window.update_status_indicators()
-            log_debug("Released application_configuration_lock") if log_debug_enabled else None
+            log_debug("configure: released application_configuration_lock") if log_debug_enabled else None
             if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED):
                 LuxDialog.reconfigure_instance()
                 if self.lux_auto_controller is not None:
@@ -6596,7 +6596,7 @@ class VduAppController:   # Main controller containing methods for high level op
                 partial(self.restore_preset, preset, finished_func, immediately, scheduled_activity))
             return
 
-        log_debug("trying for application_configuration_lock")
+        log_debug("restore_preset: try to obtain application_configuration_lock", trace=False) if log_debug_enabled else None
         with self.application_configuration_lock:  # The lock prevents a transition firing when the GUI/app is reconfiguring
             self.transitioning_dummy_preset = None
             if not immediately:
@@ -6615,7 +6615,7 @@ class VduAppController:   # Main controller containing methods for high level op
 
             def restore_finished_callback(worker_thread: PresetTransitionWorker) -> None:
                 self.transitioning_dummy_preset = None
-                if worker_thread.vdu_exception is not None and not scheduled_activity:  # if it's a GUI request, ask if we should retry
+                if worker_thread.vdu_exception is not None and not scheduled_activity:  # if it's a GUI request, ask if about retry
                     if self.main_window.get_main_panel().display_vdu_exception(worker_thread.vdu_exception, can_retry=True):
                         # Try again (recursion) in new thread
                         self.restore_preset(preset, finished_func=finished_func, immediately=immediately)
@@ -6640,6 +6640,7 @@ class VduAppController:   # Main controller containing methods for high level op
             self.preset_transition_worker = PresetTransitionWorker(
                 self, preset, update_progress, restore_finished_callback, immediately, scheduled_activity)
             self.preset_transition_worker.start()
+        log_debug("restore_preset: released application_configuration_lock") if log_debug_enabled else None
 
     def schedule_presets(self, reconfiguring: bool = False) -> Preset | None:
         # As well as scheduling, this method finds and returns the preset that should be applied at this time.
@@ -7044,8 +7045,6 @@ class VduAppWindow(QMainWindow):
             self.main_panel.deleteLater()
             self.main_panel = None
         self.main_panel = VduControlsMainPanel()
-        self.main_panel.vdu_vcp_changed_qtsignal.connect(self.respond_to_changes_handler)  # Wire up the signal/slots first
-        self.main_panel.connected_vdus_changed_qtsignal.connect(self.main_controller.configure_application)
         self.main_controller.initialize_vdu_controllers()  # Then initialise the VDU controllers and VDU control panel displays
         refresh_button = ToolButton(REFRESH_ICON_SOURCE, tr("Refresh settings from monitors"))
         refresh_button.pressed.connect(self.main_controller.start_refresh)
@@ -7055,6 +7054,8 @@ class VduAppWindow(QMainWindow):
         self.refresh_preset_menu()
         self.main_panel.initialise_control_panels(self.main_controller.vdu_controllers_map, self.app_context_menu, self.main_config,
                                                   tool_buttons, self.splash_message_qtsignal)
+        self.main_panel.vdu_vcp_changed_qtsignal.connect(self.respond_to_changes_handler)  # Wire up now after successful init...
+        self.main_panel.connected_vdus_changed_qtsignal.connect(self.main_controller.configure_application)  # to avoid deadlocks
         self.indicate_busy(True)
         self.setCentralWidget(self.main_panel)
         self.splash_message_qtsignal.emit(tr("Checking Presets"))
