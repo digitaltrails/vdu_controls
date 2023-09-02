@@ -6975,7 +6975,10 @@ class VduAppWindow(QMainWindow):
         self.main_controller.configure_application(self)
         self.app_restore_state()
 
-        qApp.focusChanged.connect(self.on_focus_changed)
+        self.inactive_pause_millis = int(os.environ.get('VDU_CONTROLS_INACTIVE_PAUSE_MILLIS', default='1200'))
+        self.active_event_count = 0
+        qApp.applicationStateChanged.connect(self.on_application_state_changed)
+        self.installEventFilter(self)
 
         if self.tray is not None:
             self.hide()
@@ -6999,13 +7002,35 @@ class VduAppWindow(QMainWindow):
             release_alert.exec()
             main_config.write_file(get_config_path('vdu_controls'), overwrite=True)  # Stops the release notes from being repeated.
 
-    def on_focus_changed(self, _, to_widget):
-        if to_widget is None and self.main_config.is_set(ConfOption.HIDE_ON_FOCUS_OUT, fallback=False):  # Focus out
-            for top_level_widget in QApplication.topLevelWidgets():
-                if isinstance(top_level_widget, DialogSingletonMixin) or isinstance(top_level_widget, GreyScaleDialog):
-                    if top_level_widget.isVisible():  # A dialog is showing - stay as we are
-                        return
-            self.hide()
+    def is_inactive(self):
+        # log_info(f"is_inactive: {self.active_event_count=}")
+        if qApp.applicationState() != Qt.ApplicationState.ApplicationInactive:
+            return False
+        for top_level_widget in QApplication.topLevelWidgets():  # Check if any dialogs are active
+            if isinstance(top_level_widget, DialogSingletonMixin) or isinstance(top_level_widget, GreyScaleDialog):
+                if top_level_widget.isVisible():
+                    return False  # A dialog is showing - definitely active
+        return True  # inactive and no dialogs are active
+
+    def on_application_state_changed(self, _: Qt.ApplicationState):
+        if self.main_config.is_set(ConfOption.HIDE_ON_FOCUS_OUT):
+            if self.is_inactive():
+                # The user may be using the title-bar or window-edges to move/resize the window. Monitor for no move/resize events
+                # which probably indicates a real focus out.  This is needed for gnome and xfce.
+                # log_info(f"on_application_state_changed {state}")
+                self.active_event_count = 0  # Count following move/resize events as evidence of titlebar edge-grab activity.
+
+                def hide_func():
+                    if self.active_event_count == 0 and self.is_inactive():  # No moving/resizing activity and is_inactive().
+                        self.hide()  # Probably safe to hide now
+
+                QTimer.singleShot(self.inactive_pause_millis, hide_func)  # wait N ms and see if any move/resize events occur.
+
+    def eventFilter(self, target: QObject, event: QEvent) -> bool:
+        # log_info(f"eventFilter {event.__class__.__name__} {event.type()}")
+        if event.type() in (QEvent.Move, QEvent.Resize, QEvent.WindowActivate):  # Still active if being moved or resized
+            self.active_event_count += 1
+        return super().eventFilter(target, event)
 
     def show_main_window(self, toggle: bool = False) -> None:
         if toggle and self.isVisible():
