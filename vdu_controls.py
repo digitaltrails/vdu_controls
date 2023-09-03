@@ -766,6 +766,7 @@ STEPPING_SYMBOL = '\u279f'  # DASHED TRIANGLE-HEADED RIGHTWARDS ARROW
 RAISED_HAND_SYMBOL = '\u270b'  # RAISED HAND
 RIGHT_POINTER_WHITE = '\u25B9'  # WHITE RIGHT-POINTING SMALL TRIANGLE
 RIGHT_POINTER_BLACK = '\u25B8'  # BLACK RIGHT-POINTING SMALL TRIANGLE
+MENU_ACTIVE_PRESET_SYMBOL = '\u25c2'  # BLACK LEFT-POINTING SMALL TRIANGLE
 
 SolarElevationKey = namedtuple('SolarElevationKey', ['direction', 'elevation'])
 SolarElevationData = namedtuple('SolarElevationData', ['azimuth', 'zenith', 'when'])
@@ -3074,7 +3075,7 @@ class ContextMenu(QMenu):
             action_preset_name = action.property(ContextMenu.PRESET_NAME_PROP)
             if action_preset_name:  # Mark active preset or un-mark previous active preset
                 shortcut = action.property(ContextMenu.PRESET_SHORTCUT_PROP)
-                suffix = (' ' + SUCCESS_SYMBOL) if preset is not None and preset.name == action_preset_name else ''
+                suffix = (' ' + MENU_ACTIVE_PRESET_SYMBOL) if preset is not None and preset.name == action_preset_name else ''
                 new_text = (shortcut.annotated_word if shortcut else action_preset_name) + suffix
                 if new_text != action.text():
                     action.setText(new_text)
