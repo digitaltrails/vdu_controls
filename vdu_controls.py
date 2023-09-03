@@ -1507,8 +1507,8 @@ class DialogSingletonMixin:
 # implementations.  Plus the user might not be able to reset to factory for some of them?
 SUPPORT_ALL_VCP = False
 
-BRIGHTNESS_VCP_CODE = BRT = '10'
-CONTRAST_VCP_CODE = '12'
+BRIGHTNESS_VCP_CODE = BRIT = '10'
+CONTRAST_VCP_CODE = CONT = '12'
 CON = CONTINUOUS_TYPE  # Shorter abbreviation
 SNC = SIMPLE_NON_CONTINUOUS_TYPE
 CNC = COMPLEX_NON_CONTINUOUS_TYPE
@@ -1517,8 +1517,8 @@ CNC = COMPLEX_NON_CONTINUOUS_TYPE
 SUPPORTED_VCP_BY_CODE = {
     **{code: VcpCapability(code, name) for code, name in (DdcUtil().get_supported_vcp_codes_map().items() if SUPPORT_ALL_VCP else [])},
     **{
-        '10': VcpCapability(BRT, QT_TR_NOOP('brightness'), CON, icon_source=BRIGHTNESS_SVG, enabled=True, can_transition=True),
-        '12': VcpCapability('12', QT_TR_NOOP('contrast'), CON, icon_source=CONTRAST_SVG, enabled=True, can_transition=True),
+        BRIT: VcpCapability(BRIT, QT_TR_NOOP('brightness'), CON, icon_source=BRIGHTNESS_SVG, enabled=True, can_transition=True),
+        CONT: VcpCapability(CONT, QT_TR_NOOP('contrast'), CON, icon_source=CONTRAST_SVG, enabled=True, can_transition=True),
         '62': VcpCapability('62', QT_TR_NOOP('audio volume'), CON, icon_source=VOLUME_SVG, can_transition=True),
         '8D': VcpCapability('8D', QT_TR_NOOP('audio mute'), SNC, icon_source=VOLUME_SVG),
         '8F': VcpCapability('8F', QT_TR_NOOP('audio treble'), CON, icon_source=VOLUME_SVG, can_transition=True),
