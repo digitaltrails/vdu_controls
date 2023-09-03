@@ -203,7 +203,8 @@ Acknowledgements
 * [yochananmarqos](https://github.com/yochananmarqos), for Gnome related suggestions and AUR port.
 * [denilsonsa](https://github.com/denilsonsa), for several issues, tests and fixes that contributed to version 1.9.0 and 1.11.0.
 * [crashmatt](https://github.com/crashmatt), [lowne](https://github.com/lowne), [usr](https://github.com/usr)3, for contributing fixes to code and documentation.
-* [Jakeler](https://github.com/Jakeler), [kupiqu](https://github.com/kupiqu), for suggestions for enhancements. 
+* [Jakeler](https://github.com/Jakeler), [kupiqu](https://github.com/kupiqu), [Milor123](https://github.com/Milor123), [nahoj](https://github.com/nahoj) for 
+  contributing suggestions for enhancements. 
 * [malcolmlewis](https://github.com/malcolmlewis) for assistance with the OpenSUSE Open Build Service submissions.
 * [Christopher Laws](https://github.com/claws) for the [BH1750 library](https://github.com/claws/BH1750) 
   and [example build](https://github.com/claws/BH1750#example) (for use with the auto-brightness option).
@@ -221,25 +222,29 @@ Version History
 * 1.11.0
   * Make vdu_controls ddcutil-2.0-ready.
   * Support ddcutil versions earlier than 1.3 (issue #43, #53).
-  * Alt-key keyboard shortcuts in the application and menus (issue #13).
-  * Combined the Preset-Dialog Activate/Edit buttons into one button (simpler and more intuitive).
-  * Added a hide-on-focus-out which minimizes the main window on focus out, similar to other tray apps. (issue #57)
-  * Added config-settings tool-tips, made them consistent with command line argument help (issue #52).
-  * Made message box popups resizable for increased readability.
-  * Supply a starter set of Prest icons - a selection of KDE breeze5-icons (issue #56).
-  * Added a currently active Preset indicator to the Context-Menu (issue #55) and Preset Dialog.
-  * Reordering of Presets no longer requires a restart to become apparent in the Context-Menu.
-  * Reworked the Preset-Dialog, hopefully it's more intuitive, plus it now detects unsaved changes.
-  * Made the app icon un-themed so that overlaid active Preset text/icon is more visible (issue #55)
-  * Provided a Reset button on the VDU Settings tab, this makes it possible to un-ignore a VDU (issue #51).
-  * Made boolean config-settings and command-line arguments more consistent, command line take precedence (issue #52).
-  * Fixed command line arg --sleep-multiplier (issue #54).
-  * Handle utf-8 decoding errors for EDID's and capabilities (issue #49).
-  * If debugging is on, log error stack traces (issue #49).
+  * Main-Window: added a Settings hide-on-focus-out option to minimizes the main window on focus out (issue #57).
+  * Main-Window: always display brightness and contrast as the first two controls for each VDU.
+  * Main-Window and Context Menu: added alt-key keyboard shortcuts (issue #13).
+  * Main-Window and Context Menu: added alt-key keyboard shortcuts (issue #13).
+  * Context-Menu: now suffixes an indicator mark on the currently active Preset (if any) (issue #55).
+  * Context-Menu: will now reflect any changes in the ordering of Presets without requiring an application restart.
+  * Tray-Icon: made the app icon un-themed so that overlaid active Preset text/icon is more visible (issue #55).
+  * Settings-Dialog: provided a Reset button to make it possible to un-ignore a VDU (issue #51).
+  * Settings-Dialog: added tool-tips to main config-settings, made them consistent with command line help (issue #52).
+  * Preset-Dialog: combined Activate/Edit buttons into one button (simpler and more intuitive).
+  * Preset Dialog: now bolds the text button of the currently active Preset (if any).
+  * Preset Dialog: now detects unsaved changes.
+  * Preset Dialog: locks out any scheduled or automatic VDU changes while a Preset is being edited.
+  * Preset-Dialog: supplied a starter set of Prest icons - a selection of KDE breeze5-icons (issue #56).
+  * Popup-Messages: made message box popups resizable for increased readability.
+  * Command-line: made config-settings and command-line arguments consistent, command line has precedence (issue #52).
+  * Command-line: fixed --sleep-multiplier (issue #54).
+  * Prevent crashes by properly handling utf-8 decoding errors for EDID's and capabilities (issue #49).
+  * If debugging is on, when logging some kinds of errors, also log stack traces  (issue #49).
   * Better handle ddcutil not found (issue #48).
-  * Deepin 23 compatibility.
-  * Some refactoring for maintainability and run-time efficiency (issue #52).
-  * Numerous other minor enhancements and fixes.
+  * Refactoring for maintainability and run-time efficiency (issue #52).
+  * Deepin 23 pyqt library compatibility.
+  * Numerous minor enhancements and fixes.
 * 1.10.2
   * Fix Preset non-zero transition-step-seconds, so it works properly.
   * Changing log-to-syslog or log-debug-enabled no longer requires a restart.
