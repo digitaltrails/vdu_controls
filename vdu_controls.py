@@ -81,6 +81,10 @@ controls can be enabled via the ``Settings`` dialog.
 ``vdu_controls`` may optionally run as an entry in the system tray of KDE, Deepin, GNOME, and Xfce (and possibly
 others). The UI attempts to adapt to the quirks of the different tray implementations.
 
+Related to the ``system-tray`` option is ``hide-on-focus-out``, which does exactly what it says.
+If set, ``hide-on-focus-out`` it will be temporarily disabled while any dialogs, such as Settings or
+Greyscale, are visible.
+
 Named ``Preset`` configurations can be saved for later recall. For example, a user could create
 presets for night, day, photography, movies, and so forth.  Presets may be automatically triggered
 according to solar elevation, and can be further constrained by local weather conditions. Presets can
@@ -253,8 +257,11 @@ VDU, for example::
 
 When the GUI is used to create a preset file, you may select which controls to save.  For example, you
 might create a preset that includes the brightness, but not the contrast or audio-volume. Keeping
-the included controls to a minimum speeds up the transtion and reduces the chances of the VDU failing
+the included controls to a minimum speeds up the transition and reduces the chances of the VDU failing
 to keep up with the associated stream of DDC commands.
+
+When using the GUI to create or edit a Preset, activation of scheduled Presets and adjustments due
+to light-metering are blocked until editing is complete.
 
 Presets - solar elevation triggers
 ----------------------------------
