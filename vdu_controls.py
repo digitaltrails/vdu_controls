@@ -7012,7 +7012,7 @@ class VduAppWindow(QMainWindow):
             main_config.write_file(get_config_path('vdu_controls'), overwrite=True)  # Stops the release notes from being repeated.
 
     def is_inactive(self):
-        # log_info(f"is_inactive: {self.active_event_count=}")
+        # log_info(f"is_inactive: {self.active_event_count=} {qApp.applicationState()}")
         if qApp.applicationState() != Qt.ApplicationState.ApplicationInactive:
             return False
         for top_level_widget in QApplication.topLevelWidgets():  # Check if any dialogs are active
@@ -7031,6 +7031,7 @@ class VduAppWindow(QMainWindow):
 
                 def hide_func():
                     if self.active_event_count == 0 and self.is_inactive():  # No moving/resizing activity and is_inactive().
+                        # log_info("Going to hide")
                         self.hide()  # Probably safe to hide now
 
                 QTimer.singleShot(self.inactive_pause_millis, hide_func)  # wait N ms and see if any move/resize events occur.
