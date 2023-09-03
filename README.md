@@ -220,30 +220,30 @@ Michael Hamilton
 Version History
 ---------------
 * 1.11.0
-  * Make vdu_controls ddcutil-2.0-ready.
-  * Support ddcutil versions earlier than 1.3 (issue #43, #53).
-  * Main-Window: added a Settings hide-on-focus-out option to minimizes the main window on focus out (issue #57).
-  * Main-Window: always display brightness and contrast as the first two controls for each VDU.
+  * Made vdu_controls ddcutil-2.0-ready.
+  * Added support for ddcutil versions earlier than 1.3 (issue #43, #53).
+  * Main-Window: added a hide-on-focus-out option to minimize the main window on focus out (issue #57).
+  * Main-Window: changed the layout to display brightness and contrast as the first two controls for each VDU.
   * Main-Window and Context Menu: added alt-key keyboard shortcuts (issue #13).
   * Main-Window and Context Menu: added alt-key keyboard shortcuts (issue #13).
-  * Context-Menu: now suffixes an indicator mark on the currently active Preset (if any) (issue #55).
-  * Context-Menu: will now reflect any changes in the ordering of Presets without requiring an application restart.
+  * Context-Menu: added an indicator mark suffix to the currently active Preset (if any) (issue #55).
+  * Context-Menu: made changes to Preset ordering propagate to the menu without requiring an application restart.
   * Tray-Icon: made the app icon un-themed so that overlaid active Preset text/icon is more visible (issue #55).
-  * Settings-Dialog: provided a Reset button to make it possible to un-ignore a VDU (issue #51).
+  * Settings-Dialog: added a Reset button to makes it possible to un-ignore a VDU (issue #51).
   * Settings-Dialog: added tool-tips to main config-settings, made them consistent with command line help (issue #52).
-  * Preset-Dialog: combined Activate/Edit buttons into one button (simpler and more intuitive).
-  * Preset Dialog: now bolds the text button of the currently active Preset (if any).
-  * Preset Dialog: now detects unsaved changes.
-  * Preset Dialog: locks out any scheduled or automatic VDU changes while a Preset is being edited.
+  * Preset-Dialog: combined the Activate and Edit buttons into one button (simpler and more intuitive).
+  * Preset Dialog: made the dialog bold the text button of the currently active Preset (if any).
+  * Preset Dialog: added code to detect and and warn of unsaved changes.
+  * Preset Dialog: made the dialog lock out any scheduled or automatic VDU changes while a Preset is being edited.
   * Preset-Dialog: supplied a starter set of Prest icons - a selection of KDE breeze5-icons (issue #56).
   * Popup-Messages: made message box popups resizable for increased readability.
   * Command-line: made config-settings and command-line arguments consistent, command line has precedence (issue #52).
-  * Command-line: fixed --sleep-multiplier (issue #54).
-  * Prevent crashes by properly handling utf-8 decoding errors for EDID's and capabilities (issue #49).
-  * If debugging is on, when logging some kinds of errors, also log stack traces  (issue #49).
-  * Better handle ddcutil not found (issue #48).
-  * Refactoring for maintainability and run-time efficiency (issue #52).
-  * Deepin 23 pyqt library compatibility.
+  * Command-line: fixed --sleep-multiplier so that it is actually applied (issue #54).
+  * Prevented potential crashes in the event of utf-8 decoding errors for EDID's and capabilities (issue #49).
+  * Added logging of stack traces for some errors if debugging is set to on (issue #49).
+  * Improved the handling of ddcutil not found (issue #48).
+  * Refactored to improve maintainability and run-time efficiency (issue #52).
+  * Added Deepin 23 pyqt library compatibility.
   * Numerous minor enhancements and fixes.
 * 1.10.2
   * Fix Preset non-zero transition-step-seconds, so it works properly.
