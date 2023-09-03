@@ -4936,14 +4936,14 @@ def install_as_desktop_application(uninstall: bool = False) -> None:
         return
 
     if installed_script_path.exists():
-        log_warning(f"skipping installation of {installed_script_path.as_posix()}, it is already present.")
-    else:
-        source = open(__file__).read()
-        source = source.replace("#!/usr/bin/python3", '#!' + sys.executable)
-        log_info(f"Creating {installed_script_path.as_posix()}")
-        open(installed_script_path, 'w').write(source)
-        log_info(f"chmod u+rwx {installed_script_path.as_posix()}")
-        os.chmod(installed_script_path, stat.S_IRWXU)
+        log_warning(f"reinstalling {installed_script_path.as_posix()}, assuming an upgrade is required.")
+
+    source = open(__file__).read()
+    source = source.replace("#!/usr/bin/python3", '#!' + sys.executable)
+    log_info(f"Creating {installed_script_path.as_posix()}")
+    open(installed_script_path, 'w').write(source)
+    log_info(f"chmod u+rwx {installed_script_path.as_posix()}")
+    os.chmod(installed_script_path, stat.S_IRWXU)
 
     if desktop_definition_path.exists():
         log_warning(f"Skipping installation of {desktop_definition_path.as_posix()}, it is already present.")

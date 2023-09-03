@@ -494,7 +494,7 @@ class CameraDisplay(QLabel):
             scaled = self.current_image.scaled(self.width(), self.height(), Qt.AspectRatioMode.KeepAspectRatio)
             pixmap = QPixmap.fromImage(scaled)
             self.painter = QPainter(pixmap)
-            self.painter.drawTiledPixmap(0, 0, self.width(), self.height(), pixmap)
+            self.painter.drawPixmap(0, 0, self.width(), self.height(), pixmap)
             # Existing selection from config file:
             existing_relative_selection = (float(v) for v in global_config['camera']['crop'].split(','))
             existing_absolute_selection = self.calc_absolute_rectangle(*existing_relative_selection)
