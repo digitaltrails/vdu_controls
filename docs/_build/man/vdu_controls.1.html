@@ -74,6 +74,10 @@ can be enabled via the <code>Settings</code> dialog.</p>
 system tray of KDE, Deepin, GNOME, and Xfce (and possibly others). The
 UI attempts to adapt to the quirks of the different tray
 implementations.</p>
+<p>Related to the <code>system-tray</code> option is
+<code>hide-on-focus-out</code>, which does exactly what it says. If set,
+<code>hide-on-focus-out</code> it will be temporarily disabled while any
+dialogs, such as Settings or Greyscale, are visible.</p>
 <p>Named <code>Preset</code> configurations can be saved for later
 recall. For example, a user could create presets for night, day,
 photography, movies, and so forth. Presets may be automatically
@@ -202,7 +206,7 @@ settings and editing that VDU’s <strong>capabilities
 override</strong>:</p>
 <ol type="1">
 <li>locate the feature, in this example the brightness,</li>
-<li>add a <strong>Values:</strong> <strong><em>min..max</em></strong>
+<li>add a <strong>Values:</strong> <strong>min..max</strong>
 specification to line the following the feature definition,</li>
 <li>save the changes.</li>
 </ol>
@@ -258,9 +262,12 @@ audio-speaker-volume = 16</code></pre>
 <p>When the GUI is used to create a preset file, you may select which
 controls to save. For example, you might create a preset that includes
 the brightness, but not the contrast or audio-volume. Keeping the
-included controls to a minimum speeds up the transtion and reduces the
+included controls to a minimum speeds up the transition and reduces the
 chances of the VDU failing to keep up with the associated stream of DDC
 commands.</p>
+<p>When using the GUI to create or edit a Preset, activation of
+scheduled Presets and adjustments due to light-metering are blocked
+until editing is complete.</p>
 <h2 id="presets---solar-elevation-triggers">Presets - solar elevation
 triggers</h2>
 <p>A preset may be set to automatically trigger when the sun rises to a
@@ -523,6 +530,17 @@ metering and auto-adjustment heuristics::</p>
 <h2
 id="improving-response-time-dynamic-optimization-and-sleep-multipliers">Improving
 Response Time: Dynamic Optimization and Sleep Multipliers</h2>
+<p>If you are using <code>ddcutil</code> version 2.0 or greater,
+<code>vdu_controls</code> will default to using the <code>ddcutil</code>
+<strong>dynamic sleep optimiser</strong>. The optimiser automatically
+tunes and caches VDU specific timings when ever <code>ddcutil</code> is
+run. Should you encounter any reliability-issues or errors, they may be
+automatically resolved as <code>ddcutil</code> refines it’s cached
+timings. Should problems persist, the dynamic sleep optimiser can be
+disabled by adding <code>--disable-dynamic-sleep</code> to the
+<strong>ddcutil extra arguments</strong> in the <strong>Settings
+Dialog</strong> (either globally on the <strong>vdu_controls
+tab</strong> or selectively under each VDU’s tab).</p>
 <p>For versions of <code>ddcutil</code> prior to 2.0, you can manually
 set the <code>vdu_control</code> <code>sleep-multiplier</code> passed to
 <code>ddcutil</code>. A sleep multiplier less than one will speed up the
@@ -532,22 +550,6 @@ can cope with smaller multipliers. A bit of experimentation with
 multiplier values may greatly speed up responsiveness. In a multi-VDU
 setup individual sleep multipliers can be configured (see previous
 section).</p>
-<p>If you are using <code>ddcutil</code> version 2.0 or greater,
-<code>vdu_controls</code> will default to using the <code>ddcutil</code>
-dynamic sleep optimiser. The optimiser automatically tunes and caches
-VDU specific timings when ever <code>ddcutil</code> is run. Should you
-encounter any reliability-issues or errors, they may well be
-automatically resolved as <code>ddcutil</code> refines it’s cached
-timings.</p>
-<p>If dynamic sleep is available, <code>vdu_controls</code> will
-override any existing existing global or VDU-specific sleep multipliers
-specified in the <code>Settings Dialog</code>, these multipliers will
-now only be applied if the <code>ddcutil</code> version is less than
-2.0. This behavior may be countermanded by disabling dynamic sleep in
-the <code>vdu_controls</code> global settings. If countermanded, each
-VDU’s set sleep multiplier will be be used for all versions of
-<code>ddcutil</code>, but dynamic sleep may still be selectively applied
-to each VDU by setting its multiplier to zero.</p>
 <h2 id="improving-response-time-connections-and-controls">Improving
 Response Time: Connections and Controls</h2>
 <p><code>DDC/I2C</code> is not the speediest or most reliable form of

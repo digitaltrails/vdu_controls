@@ -203,7 +203,7 @@ practically supports 20 to 90. In such cases, this can be corrected by bringing 
 the vdu_controls settings and editing that VDU's **capabilities override**:
 
  1. locate the feature, in this example the brightness,
- 2. add a __Values:__ ***min..max*** specification to line the following the feature definition,
+ 2. add a **Values:** **min..max** specification to line the following the feature definition,
  3. save the changes.
 
 For the brightness example the completed edit would look like::
@@ -552,6 +552,15 @@ and auto-adjustment heuristics::
 Improving Response Time: Dynamic Optimization and Sleep Multipliers
 -------------------------------------------------------------------
 
+If you are using ``ddcutil`` version 2.0 or greater, ``vdu_controls`` will default
+to using the ``ddcutil`` **dynamic sleep optimiser**.  The optimiser automatically tunes
+and caches VDU specific timings when ever ``ddcutil`` is run.  Should you encounter
+any reliability-issues or errors, they may be automatically resolved as
+`ddcutil` refines it's cached timings.  Should problems persist, the dynamic
+sleep optimiser can be disabled by adding ``--disable-dynamic-sleep`` to the
+**ddcutil extra arguments** in the **Settings Dialog** (either globally on the
+**vdu_controls tab** or selectively under each VDU's tab).
+
 For versions of ``ddcutil`` prior to 2.0, you can manually set the ``vdu_control``
 ``sleep-multiplier`` passed to ``ddcutil``.  A sleep multiplier less than one will
 speed up the i2c protocol interactions at the risk of increased protocol errors.
@@ -559,20 +568,6 @@ The default sleep multiplier of 1.0 has to be quite conservative, many VDU's
 can cope with smaller multipliers. A bit of experimentation with multiplier values
 may greatly speed up responsiveness. In a multi-VDU setup individual sleep
 multipliers can be configured (see previous section).
-
-If you are using ``ddcutil`` version 2.0 or greater, ``vdu_controls`` will default
-to using the ``ddcutil`` dynamic sleep optimiser.  The optimiser automatically tunes
-and caches VDU specific timings when ever ``ddcutil`` is run.  Should you encounter
-any reliability-issues or errors, they may well be automatically resolved as
-`ddcutil` refines it's cached timings.
-
-If dynamic sleep is available, `vdu_controls` will override any existing
-existing global or VDU-specific sleep multipliers specified in the `Settings Dialog`,
-these multipliers will now only be applied if the `ddcutil` version is less than 2.0.
-This behavior may be countermanded by disabling dynamic sleep in the `vdu_controls`
-global settings.  If countermanded, each VDU's set sleep multiplier will be
-be used for all versions of `ddcutil`, but dynamic sleep may still be selectively
-applied to each VDU by setting its multiplier to zero.
 
 Improving Response Time: Connections and Controls
 -------------------------------------------------

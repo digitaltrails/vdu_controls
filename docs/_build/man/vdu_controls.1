@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Sep 02, 2023" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Sep 04, 2023" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.11.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -151,6 +151,10 @@ controls can be enabled via the \fBSettings\fP dialog.
 .sp
 \fBvdu_controls\fP may optionally run as an entry in the system tray of KDE, Deepin, GNOME, and Xfce (and possibly
 others). The UI attempts to adapt to the quirks of the different tray implementations.
+.sp
+Related to the \fBsystem\-tray\fP option is \fBhide\-on\-focus\-out\fP, which does exactly what it says.
+If set, \fBhide\-on\-focus\-out\fP it will be temporarily disabled while any dialogs, such as Settings or
+Greyscale, are visible.
 .sp
 Named \fBPreset\fP configurations can be saved for later recall. For example, a user could create
 presets for night, day, photography, movies, and so forth.  Presets may be automatically triggered
@@ -300,7 +304,7 @@ the vdu_controls settings and editing that VDU\(aqs \fBcapabilities override\fP:
 .IP 1. 3
 locate the feature, in this example the brightness,
 .IP 2. 3
-add a __Values:__ \fB*min..max*\fP specification to line the following the feature definition,
+add a \fBValues:\fP \fBmin..max\fP specification to line the following the feature definition,
 .IP 3. 3
 save the changes.
 .UNINDENT
@@ -371,8 +375,11 @@ audio\-speaker\-volume = 16
 .sp
 When the GUI is used to create a preset file, you may select which controls to save.  For example, you
 might create a preset that includes the brightness, but not the contrast or audio\-volume. Keeping
-the included controls to a minimum speeds up the transtion and reduces the chances of the VDU failing
+the included controls to a minimum speeds up the transition and reduces the chances of the VDU failing
 to keep up with the associated stream of DDC commands.
+.sp
+When using the GUI to create or edit a Preset, activation of scheduled Presets and adjustments due
+to light\-metering are blocked until editing is complete.
 .SS Presets \- solar elevation triggers
 .sp
 A preset may be set to automatically trigger when the sun rises to a specified elevation.
@@ -757,6 +764,15 @@ interpolation\-sensitivity\-percent=10
 .UNINDENT
 .SS Improving Response Time: Dynamic Optimization and Sleep Multipliers
 .sp
+If you are using \fBddcutil\fP version 2.0 or greater, \fBvdu_controls\fP will default
+to using the \fBddcutil\fP \fBdynamic sleep optimiser\fP\&.  The optimiser automatically tunes
+and caches VDU specific timings when ever \fBddcutil\fP is run.  Should you encounter
+any reliability\-issues or errors, they may be automatically resolved as
+\fIddcutil\fP refines it\(aqs cached timings.  Should problems persist, the dynamic
+sleep optimiser can be disabled by adding \fB\-\-disable\-dynamic\-sleep\fP to the
+\fBddcutil extra arguments\fP in the \fBSettings Dialog\fP (either globally on the
+\fBvdu_controls tab\fP or selectively under each VDU\(aqs tab).
+.sp
 For versions of \fBddcutil\fP prior to 2.0, you can manually set the \fBvdu_control\fP
 \fBsleep\-multiplier\fP passed to \fBddcutil\fP\&.  A sleep multiplier less than one will
 speed up the i2c protocol interactions at the risk of increased protocol errors.
@@ -764,20 +780,6 @@ The default sleep multiplier of 1.0 has to be quite conservative, many VDU\(aqs
 can cope with smaller multipliers. A bit of experimentation with multiplier values
 may greatly speed up responsiveness. In a multi\-VDU setup individual sleep
 multipliers can be configured (see previous section).
-.sp
-If you are using \fBddcutil\fP version 2.0 or greater, \fBvdu_controls\fP will default
-to using the \fBddcutil\fP dynamic sleep optimiser.  The optimiser automatically tunes
-and caches VDU specific timings when ever \fBddcutil\fP is run.  Should you encounter
-any reliability\-issues or errors, they may well be automatically resolved as
-\fIddcutil\fP refines it\(aqs cached timings.
-.sp
-If dynamic sleep is available, \fIvdu_controls\fP will override any existing
-existing global or VDU\-specific sleep multipliers specified in the \fISettings Dialog\fP,
-these multipliers will now only be applied if the \fIddcutil\fP version is less than 2.0.
-This behavior may be countermanded by disabling dynamic sleep in the \fIvdu_controls\fP
-global settings.  If countermanded, each VDU\(aqs set sleep multiplier will be
-be used for all versions of \fIddcutil\fP, but dynamic sleep may still be selectively
-applied to each VDU by setting its multiplier to zero.
 .SS Improving Response Time: Connections and Controls
 .sp
 \fBDDC/I2C\fP is not the speediest or most reliable form of communication. VDU\(aqs may
