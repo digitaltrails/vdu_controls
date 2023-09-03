@@ -1508,6 +1508,7 @@ class DialogSingletonMixin:
 SUPPORT_ALL_VCP = False
 
 BRIGHTNESS_VCP_CODE = BRT = '10'
+CONTRAST_VCP_CODE = '12'
 CON = CONTINUOUS_TYPE  # Shorter abbreviation
 SNC = SIMPLE_NON_CONTINUOUS_TYPE
 CNC = COMPLEX_NON_CONTINUOUS_TYPE
@@ -2081,7 +2082,8 @@ class VduController(QObject):
                 capability = VcpCapability(vcp_code, vcp_name, vcp_type=vcp_type, values=values, icon_source=None,
                                            can_transition=vcp_type == CONTINUOUS_TYPE)
                 feature_map[vcp_code] = capability
-        return feature_map
+        return { **{k: feature_map[k] for k in (BRIGHTNESS_VCP_CODE, CONTRAST_VCP_CODE) if k in feature_map},  # Put B&C first
+                 **{k: v for k, v in feature_map.items() if k not in (BRIGHTNESS_VCP_CODE, CONTRAST_VCP_CODE)}}
 
 
 class SettingsEditor(QDialog, DialogSingletonMixin):
