@@ -227,7 +227,7 @@ It should be noted that config files can only be used to alter definitions of VC
 by \fBddcutil\fP\&.  If a VCP code is listed as a \fImanufacturer specific feature\fP it is not supported. Manufacturer
 specific features should not be experimented with, some may have destructive or irreversible consequences that
 may brick the hardware. It is possible to enable any codes by  creating a  \fBddcutil\fP user
-definition (\fB\-\-udef\fP) file, BUT THIS SHOULD ONLY BE USED WITH EXTREME CAUTION AND CANNOT BE RECOMMENDED.
+definition (\fI\-\-udef\fP) file, BUT THIS SHOULD ONLY BE USED WITH EXTREME CAUTION AND CANNOT BE RECOMMENDED.
 .sp
 The config files are in INI\-format divided into a number of sections as outlined below:
 .INDENT 0.0
@@ -765,13 +765,13 @@ interpolation\-sensitivity\-percent=10
 .SS Improving Response Time: Dynamic Optimization and Sleep Multipliers
 .sp
 If you are using \fBddcutil\fP version 2.0 or greater, \fBvdu_controls\fP will default
-to using the \fBddcutil\fP \fBdynamic sleep optimiser\fP\&.  The optimiser automatically tunes
-and caches VDU specific timings when ever \fBddcutil\fP is run.  Should you encounter
-any reliability\-issues or errors, they may be automatically resolved as
-\fIddcutil\fP refines it\(aqs cached timings.  Should problems persist, the dynamic
-sleep optimiser can be disabled by adding \fB\-\-disable\-dynamic\-sleep\fP to the
-\fBddcutil extra arguments\fP in the \fBSettings Dialog\fP (either globally on the
-\fBvdu_controls tab\fP or selectively under each VDU\(aqs tab).
+to using the \fBddcutil\fP \fIdynamic sleep optimiser\fP\&.  The optimiser automatically tunes
+and caches VDU specific timings when ever \fBddcutil\fP is run.  Any reliability\-issues
+or reported errors may be automatically resolved as the optimiser refines it\(aqs
+cached timings.  Should problems persist, the optimiser can be disabled by
+adding \fI\-\-disable\-dynamic\-sleep\fP to the \fBddcutil extra arguments\fP in
+the \fBSettings Dialog\fP (either globally on the \fBvdu_controls tab\fP or
+selectively under each VDU\(aqs tab).
 .sp
 For versions of \fBddcutil\fP prior to 2.0, you can manually set the \fBvdu_control\fP
 \fBsleep\-multiplier\fP passed to \fBddcutil\fP\&.  A sleep multiplier less than one will

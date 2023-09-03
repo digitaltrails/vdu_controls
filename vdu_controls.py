@@ -144,7 +144,7 @@ It should be noted that config files can only be used to alter definitions of VC
 by ``ddcutil``.  If a VCP code is listed as a *manufacturer specific feature* it is not supported. Manufacturer
 specific features should not be experimented with, some may have destructive or irreversible consequences that
 may brick the hardware. It is possible to enable any codes by  creating a  ``ddcutil`` user
-definition (``--udef``) file, BUT THIS SHOULD ONLY BE USED WITH EXTREME CAUTION AND CANNOT BE RECOMMENDED.
+definition (`--udef`) file, BUT THIS SHOULD ONLY BE USED WITH EXTREME CAUTION AND CANNOT BE RECOMMENDED.
 
 The config files are in INI-format divided into a number of sections as outlined below::
 
@@ -553,13 +553,13 @@ Improving Response Time: Dynamic Optimization and Sleep Multipliers
 -------------------------------------------------------------------
 
 If you are using ``ddcutil`` version 2.0 or greater, ``vdu_controls`` will default
-to using the ``ddcutil`` **dynamic sleep optimiser**.  The optimiser automatically tunes
-and caches VDU specific timings when ever ``ddcutil`` is run.  Should you encounter
-any reliability-issues or errors, they may be automatically resolved as
-`ddcutil` refines it's cached timings.  Should problems persist, the dynamic
-sleep optimiser can be disabled by adding ``--disable-dynamic-sleep`` to the
-**ddcutil extra arguments** in the **Settings Dialog** (either globally on the
-**vdu_controls tab** or selectively under each VDU's tab).
+to using the ``ddcutil`` *dynamic sleep optimiser*.  The optimiser automatically tunes
+and caches VDU specific timings when ever ``ddcutil`` is run.  Any reliability-issues
+or reported errors may be automatically resolved as the optimiser refines it's
+cached timings.  Should problems persist, the optimiser can be disabled by
+adding `--disable-dynamic-sleep` to the **ddcutil extra arguments** in
+the **Settings Dialog** (either globally on the **vdu_controls tab** or
+selectively under each VDU's tab).
 
 For versions of ``ddcutil`` prior to 2.0, you can manually set the ``vdu_control``
 ``sleep-multiplier`` passed to ``ddcutil``.  A sleep multiplier less than one will

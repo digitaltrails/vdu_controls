@@ -532,13 +532,12 @@ id="improving-response-time-dynamic-optimization-and-sleep-multipliers">Improvin
 Response Time: Dynamic Optimization and Sleep Multipliers</h2>
 <p>If you are using <code>ddcutil</code> version 2.0 or greater,
 <code>vdu_controls</code> will default to using the <code>ddcutil</code>
-<strong>dynamic sleep optimiser</strong>. The optimiser automatically
-tunes and caches VDU specific timings when ever <code>ddcutil</code> is
-run. Should you encounter any reliability-issues or errors, they may be
-automatically resolved as <code>ddcutil</code> refines it’s cached
-timings. Should problems persist, the dynamic sleep optimiser can be
-disabled by adding <code>--disable-dynamic-sleep</code> to the
-<strong>ddcutil extra arguments</strong> in the <strong>Settings
+<em>dynamic sleep optimiser</em>. The optimiser automatically tunes and
+caches VDU specific timings when ever <code>ddcutil</code> is run. Any
+reliability-issues or reported errors may be automatically resolved as
+the optimiser refines it’s cached timings. Should problems persist, the
+optimiser can be disabled by adding <code>--disable-dynamic-sleep</code>
+to the <strong>ddcutil extra arguments</strong> in the <strong>Settings
 Dialog</strong> (either globally on the <strong>vdu_controls
 tab</strong> or selectively under each VDU’s tab).</p>
 <p>For versions of <code>ddcutil</code> prior to 2.0, you can manually
