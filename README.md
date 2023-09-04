@@ -225,7 +225,6 @@ Version History
   * Main-Window: added a hide-on-focus-out option to minimize the main window on focus out (issue #57).
   * Main-Window: changed the layout to display brightness and contrast as the first two controls for each VDU.
   * Main-Window and Context Menu: added alt-key keyboard shortcuts (issue #13).
-  * Main-Window and Context Menu: added alt-key keyboard shortcuts (issue #13).
   * Context-Menu: added an indicator mark suffix to the currently active Preset (if any) (issue #55).
   * Context-Menu: made changes to Preset ordering propagate to the menu without requiring an application restart.
   * Tray-Icon: made the app icon un-themed so that overlaid active Preset text/icon is more visible (issue #55).
