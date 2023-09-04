@@ -1580,6 +1580,8 @@ class ConfOption(Enum):
                                          tip=QT_TR_NOOP('enable the startup splash screen'))
     WARNINGS_ENABLED = conf_opt_def(name=QT_TR_NOOP('warnings-enabled'), default="no",
                                     tip=QT_TR_NOOP('popup warnings if a VDU lacks an enabled control'))
+    SMART_WINDOW = conf_opt_def(name=QT_TR_NOOP('smart-window'), default="yes",
+                                tip=QT_TR_NOOP('smart main window placement and geometry'))
     DEBUG_ENABLED = conf_opt_def(name=QT_TR_NOOP('debug-enabled'), default="no", tip=QT_TR_NOOP('output extra debug information'))
     SYSLOG_ENABLED = conf_opt_def(name=QT_TR_NOOP('syslog-enabled'), default="no",
                                   tip=QT_TR_NOOP('divert diagnostic output to the syslog'))
@@ -7048,7 +7050,7 @@ class VduAppWindow(QMainWindow):
         if toggle and self.isVisible():
             self.hide()
         else:
-            if len(self.settings.allKeys()) == 0:
+            if len(self.settings.allKeys()) == 0 and self.main_config.is_set(ConfOption.PRESERVE_WINDOW_STATE):
                 # No previous state - guess a position near the tray. Use the mouse pos as a guess to where the
                 # system tray is.  The Linux Qt x,y geometry returned by the tray icon is 0,0, so we can't use that.
                 p = QCursor.pos()
@@ -7170,14 +7172,16 @@ class VduAppWindow(QMainWindow):
                 event.accept()  # let the window close
 
     def app_save_state(self) -> None:
-        self.settings.setValue(self.geometry_key, self.saveGeometry())
-        self.settings.setValue(self.state_key, self.saveState())
+        if self.main_config.is_set(ConfOption.SMART_WINDOW, fallback=True):
+            self.settings.setValue(self.geometry_key, self.saveGeometry())
+            self.settings.setValue(self.state_key, self.saveState())
 
     def app_restore_state(self) -> None:
-        if geometry := self.settings.value(self.geometry_key, None):
-            self.restoreGeometry(geometry)
-            window_state = self.settings.value(self.state_key, None)
-            self.restoreState(window_state)
+        if self.main_config.is_set(ConfOption.SMART_WINDOW, fallback=True):
+            if geometry := self.settings.value(self.geometry_key, None):
+                self.restoreGeometry(geometry)
+                window_state = self.settings.value(self.state_key, None)
+                self.restoreState(window_state)
 
     def status_message(self, message: str, timeout: int, destination: MsgDestination):
         assert(self.main_panel is not None)
