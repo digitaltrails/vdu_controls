@@ -97,6 +97,7 @@ ln -s -f %{_datadir}/icons %{_datadir}/vdu_controls/icons/system-icons
 %{_datadir}/vdu_controls/translations/about_de_DE.txt
 %{_datadir}/vdu_controls/sample-scripts/lux-from-webcam.bash
 %{_datadir}/vdu_controls/sample-scripts/lux-from-webcam.py
+%{_datadir}/vdu_controls/sample-scripts/vlux_meter.py
 %ghost %{_datadir}/vdu_controls/icons/system-icons
 
 %changelog

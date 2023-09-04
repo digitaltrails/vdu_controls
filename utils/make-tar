@@ -8,6 +8,7 @@ fi
 version="$1"
 
 ln -s . vdu_controls-$version
+cp vlux_meter.py vdu_controls-$version/sample-scripts/
 tar --files-from=- -cvzf  /home/michael/rpmbuild/SOURCES/vdu_controls-$version.tar.gz <<EOF
 vdu_controls-$version/.gitignore
 vdu_controls-$version/LICENSE.md
@@ -41,6 +42,7 @@ vdu_controls-$version/translations/about_fr_FR.txt
 vdu_controls-$version/translations/about_de_DE.txt
 vdu_controls-$version/sample-scripts/lux-from-webcam.bash
 vdu_controls-$version/sample-scripts/lux-from-webcam.py
+vdu_controls-$version/sample-scripts/vlux_meter.py
 vdu_controls-$version/vdu_controls.desktop
 vdu_controls-$version/icons/
 EOF

@@ -244,6 +244,7 @@ Version History
   * Refactored to improve maintainability and run-time efficiency (issue #52).
   * Added Deepin 23 pyqt library compatibility.
   * Numerous minor enhancements and fixes.
+  * An alpha release of vlux_meter.py, a system-tray webcam lux-meter, has been included in the sample scripts folder.
 * 1.10.2
   * Fix Preset non-zero transition-step-seconds, so it works properly.
   * Changing log-to-syslog or log-debug-enabled no longer requires a restart.
