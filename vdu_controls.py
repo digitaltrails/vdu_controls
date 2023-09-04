@@ -433,7 +433,7 @@ feed to a fifo.
 Example scripts for mapping webcam average brightness to approximate lux values are
 available in ``/usr/share/vdu_controls/sample-scripts/`` or they can be downloaded
 from https://github.com/digitaltrails/vdu_controls/tree/master/sample-scripts.  They
-will require customising for your own webcam and lighting conditions.
+may require customising for your own webcam and lighting conditions.
 
 In creating an "lux meter" for used with vdu_controls, theres is no need to produce
 standard lux values.  It is sufficient to produce log10-like values from 1 to 10000
