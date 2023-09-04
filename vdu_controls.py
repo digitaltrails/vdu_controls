@@ -16,7 +16,7 @@ Usage:
                      [--location latitude,longitude] [--weather|--no-weather]
                      [--lux-options|--no-lux-options] [--translations|--no-translations]
                      [--splash|--no-splash] [--system-tray|--no-system-tray]
-                     [--hide-on-focus-out|--no-hide-on-focus-out]
+                     [--hide-on-focus-out|--no-hide-on-focus-out] [--smart-window|--no-smart-window]
                      [--syslog|--no-syslog]  [--debug|--no-debug] [--warnings|--no-warnings]
                      [--sleep-multiplier multiplier] [--ddcutil-extra-args 'extra args']
                      [--create-config-files] [--install] [--uninstall]
@@ -57,6 +57,8 @@ Arguments supplied on the command line override config file equivalent settings.
                             minimise the main window automatically on focus out ``--no-hide-on-focus-out`` is the default.
       --splash|--no-splash
                             show the splash screen.  ``--splash`` is the default.
+      --smart-window|--no-smart-window
+                            smart main window placement and geometry.  ``--smart-window`` is the default.
       --sleep-multiplier    set the default ddcutil sleep multiplier
                             protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 1.0)
       --ddcutil-extra-args  extra arguments to pass to ddcutil (enclosed in single quotes)
