@@ -184,7 +184,7 @@ The following commands will extract documentation from ``vdu_controls.py``:
 ```
 I prefer [Pandoc](https://pandoc.org/)'s HTML generation. There is a util script that generates the
 Sphinx outputs and then pandoc for the html:
-```commandline
+```
 % ./util/make-man
 ```
 
