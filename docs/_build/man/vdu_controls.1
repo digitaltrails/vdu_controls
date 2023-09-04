@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Sep 04, 2023" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Sep 05, 2023" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.11.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -46,7 +46,7 @@ A control panel for external monitors (\fIVisual Display Units\fP).
 [\-\-location latitude,longitude] [\-\-weather|\-\-no\-weather]
 [\-\-lux\-options|\-\-no\-lux\-options] [\-\-translations|\-\-no\-translations]
 [\-\-splash|\-\-no\-splash] [\-\-system\-tray|\-\-no\-system\-tray]
-[\-\-hide\-on\-focus\-out|\-\-no\-hide\-on\-focus\-out]
+[\-\-hide\-on\-focus\-out|\-\-no\-hide\-on\-focus\-out] [\-\-smart\-window|\-\-no\-smart\-window]
 [\-\-syslog|\-\-no\-syslog]  [\-\-debug|\-\-no\-debug] [\-\-warnings|\-\-no\-warnings]
 [\-\-sleep\-multiplier multiplier] [\-\-ddcutil\-extra\-args \(aqextra args\(aq]
 [\-\-create\-config\-files] [\-\-install] [\-\-uninstall]
@@ -116,6 +116,9 @@ minimise the main window automatically on focus out \fB\-\-no\-hide\-on\-focus\-
 .TP
 .B \-\-splash|\-\-no\-splash
 show the splash screen.  \fB\-\-splash\fP is the default.
+.TP
+.B \-\-smart\-window|\-\-no\-smart\-window
+smart main window placement and geometry.  \fB\-\-smart\-window\fP is the default.
 .UNINDENT
 .INDENT 0.0
 .TP
