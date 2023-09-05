@@ -1084,8 +1084,8 @@ DDCUTIL = "ddcutil"
 #: Internal special exit code used to signal that the exit handler should restart the program.
 EXIT_CODE_FOR_RESTART = 1959
 
-# Number of times to retry getting attributes - in case a monitor is slow after being powered up.
-GET_ATTRIBUTES_RETRIES = 3
+# Number of times to retry getting/setting attributes - in case a monitor is slow after being powered up.
+DDCUTIL_RETRIES = int(os.getenv("VDU_CONTROLS_DDCUTIL_RETRIES", default='4'))
 
 # Use a slight hack to make QMessageBox resizable.
 RESIZABLE_QMESSAGEBOX_HACK = True
@@ -1179,7 +1179,7 @@ class VcpCapability:
 
     def __init__(self, vcp_code: str, vcp_name: str, vcp_type: str | None = None, values: List | None = None,
                  causes_config_change: bool = False, icon_source: bytes | None = None, enabled: bool = False,
-                 can_transition: bool = False):
+                 can_transition: bool = False, retry_setvcp: bool = True):
         self.vcp_code = vcp_code
         self.name = vcp_name
         self.vcp_type = vcp_type
@@ -1188,6 +1188,7 @@ class VcpCapability:
         # Default config enablement
         self.enabled = enabled
         self.can_transition = can_transition
+        self.retry_setvcp = retry_setvcp and not causes_config_change  ## Safe to repeat set on error
         # For non-continuous types of VCP (VCP types SNC or CNC). Also for special cases, such as restricted brightness ranges.
         self.values = [] if values is None else values
 
@@ -1360,13 +1361,21 @@ class DdcUtil:
         return self.vcp_type_map[vcp_code] if vcp_code in self.vcp_type_map else None
 
     def set_vcp(self, vdu_number: str, vcp_code: str, new_value: str,
-                sleep_multiplier: float | None = None, extra_args: List[str] | None = None) -> None:
+                sleep_multiplier: float | None = None, extra_args: List[str] | None = None, retry_on_error: bool = False) -> None:
         """Send a new value to a specific VDU and vcp_code."""
         extra_args = [] if extra_args is None else extra_args
         if self.get_type(vcp_code) != CONTINUOUS_TYPE:
             new_value = 'x' + new_value
         args_list = extra_args + ['setvcp', vcp_code, new_value] + self.id_key_args(vdu_number)
-        self.__run__(*args_list, sleep_multiplier=sleep_multiplier, log_id=vdu_number)
+        for attempt_count in range(DDCUTIL_RETRIES):
+            try:
+                self.__run__(*args_list, sleep_multiplier=sleep_multiplier, log_id=vdu_number)
+                return
+            except (subprocess.SubprocessError, ValueError) as e:  # Don't log here, it creates too much noise in the logs
+                if not retry_on_error or attempt_count + 1 == DDCUTIL_RETRIES:
+                    log_error(f"setvcp failure {attempt_count} {e}")
+                    raise  # Too many failures, pass the buck upstairs
+            time.sleep(attempt_count * 0.25)
 
     def vcp_info(self) -> str:
         """Returns info about all codes known to ddcutil, whether supported or not."""
@@ -1408,8 +1417,8 @@ class DdcUtil:
         # Should we loop here, or higher up - maybe it doesn't matter.
         extra_args = [] if extra_args is None else extra_args
         results_dict: Dict[str, VcpValue | None] = {vcp_code: None for vcp_code in vcp_code_list}  # Force vcp_code_list ordering
-        for i in range(GET_ATTRIBUTES_RETRIES):
-            args = extra_args + ['--brief', 'getvcp'] + vcp_code_list + self.id_key_args(vdu_number)
+        args = extra_args + ['--brief', 'getvcp'] + vcp_code_list + self.id_key_args(vdu_number)
+        for attempt_count in range(DDCUTIL_RETRIES):
             try:
                 from_ddcutil = self.__run__(*args, sleep_multiplier=sleep_multiplier, log_id=vdu_number)
                 for line in from_ddcutil.stdout.split(b"\n"):
@@ -1423,10 +1432,9 @@ class DdcUtil:
                         raise ValueError(f"getvcp: VDU {vdu_number} - failed to obtain value for vcp_code {vcp_code}")
                 return list(results_dict.values())
             except (subprocess.SubprocessError, ValueError):  # Don't log here, it creates too much noise in the logs
-                if i + 1 == GET_ATTRIBUTES_RETRIES:
+                if attempt_count + 1 == DDCUTIL_RETRIES:
                     raise  # Too many failures, pass the buck upstairs
-            time.sleep(2)
-        raise ValueError("getvcp: reached unreachable code.")
+            time.sleep(attempt_count * 0.25)
 
     def __parse_vcp_value(self, vdu_number: str, vcp_code: str, result: str) -> VcpValue | None:
         if not (specific_vcp_value_pattern := DdcUtil._SPECIFIC_VCP_VALUE_PATTERN_CACHE.get(vcp_code, None)):
@@ -1519,8 +1527,9 @@ SNC = SIMPLE_NON_CONTINUOUS_TYPE
 CNC = COMPLEX_NON_CONTINUOUS_TYPE
 
 # Maps of controls supported by name on the command line and in config files.
-SUPPORTED_VCP_BY_CODE = {
-    **{code: VcpCapability(code, name) for code, name in (DdcUtil().get_supported_vcp_codes_map().items() if SUPPORT_ALL_VCP else [])},
+SUPPORTED_VCP_BY_CODE: Dict[str: VcpCapability] = {
+    **{code: VcpCapability(code, name, retry_setvcp=False)
+       for code, name in (DdcUtil().get_supported_vcp_codes_map().items() if SUPPORT_ALL_VCP else [])},
     **{
         BRIT: VcpCapability(BRIT, QT_TR_NOOP('brightness'), CON, icon_source=BRIGHTNESS_SVG, enabled=True, can_transition=True),
         CONT: VcpCapability(CONT, QT_TR_NOOP('contrast'), CON, icon_source=CONTRAST_SVG, enabled=True, can_transition=True),
@@ -2034,8 +2043,9 @@ class VduController(QObject):
     def set_vcp_value(self, vcp_code: str, value: str, origin: VcpOrigin = VcpOrigin.NORMAL) -> None:
         try:
             # raise subprocess.SubprocessError("set_attribute")  # for testing
-            self.ddcutil.set_vcp(self.vdu_number, vcp_code, value,
-                                 sleep_multiplier=self.sleep_multiplier, extra_args=self.ddcutil_extra_args)
+            retry_on_error = vcp_code in SUPPORTED_VCP_BY_CODE and SUPPORTED_VCP_BY_CODE[vcp_code].retry_setvcp
+            self.ddcutil.set_vcp(self.vdu_number, vcp_code, value, sleep_multiplier=self.sleep_multiplier,
+                                 extra_args=self.ddcutil_extra_args, retry_on_error=retry_on_error)
             self.values_cache[vcp_code] = value
             if log_debug_enabled:
                 log_debug(f"vcp_value_changed: {self.vdu_stable_id} {vcp_code=} {value} origin={origin.name}")
@@ -7038,7 +7048,7 @@ class VduAppWindow(QMainWindow):
                 def hide_func():
                     if self.active_event_count == 0 and self.is_inactive():  # No moving/resizing activity and is_inactive().
                         # log_info("Going to hide")
-                        self.hide() if self.tray else self.showMinimized() # Probably safe to hide now
+                        self.hide() if self.tray else self.showMinimized()  # Probably safe to hide now
 
                 QTimer.singleShot(self.inactive_pause_millis, hide_func)  # wait N ms and see if any move/resize events occur.
 
