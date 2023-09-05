@@ -7038,7 +7038,7 @@ class VduAppWindow(QMainWindow):
                 def hide_func():
                     if self.active_event_count == 0 and self.is_inactive():  # No moving/resizing activity and is_inactive().
                         # log_info("Going to hide")
-                        self.hide()  # Probably safe to hide now
+                        self.hide() if self.tray else self.showMinimized() # Probably safe to hide now
 
                 QTimer.singleShot(self.inactive_pause_millis, hide_func)  # wait N ms and see if any move/resize events occur.
 
