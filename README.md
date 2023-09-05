@@ -224,8 +224,9 @@ Version History
   * Added support for ddcutil versions earlier than 1.3 (issue #43, #53).
   * Main-Window: added a hide-on-focus-out option to minimize the main window on focus out (issue #57).
   * Main-Window: changed the layout to display brightness and contrast as the first two controls for each VDU.
+  * Main-Window: added jump to clicked value to sliders (issue #59).
+  * Main-Window: added a smart-main-window option to make main window placement and geometry preservation optional.
   * Main-Window and Context Menu: added alt-key keyboard shortcuts (issue #13).
-  * Main-Window added a smart-main-window option to make smart main window placement and geometry preservation optional.
   * Context-Menu: added an indicator mark suffix to the currently active Preset (if any) (issue #55).
   * Context-Menu: made changes to Preset ordering propagate to the menu without requiring an application restart.
   * Tray-Icon: made the app icon un-themed so that overlaid active Preset text/icon is more visible (issue #55).

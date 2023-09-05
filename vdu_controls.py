@@ -2594,6 +2594,13 @@ class VduControlBase(QWidget):
             self.refresh_ui_only = False
 
 
+class ClickableSlider(QSlider):  # loosely based on https://stackoverflow.com/a/29639127/609575
+
+    def mousePressEvent(self, ev):  # On mouse click, set value to the value at the click position
+        self.setValue(QStyle.sliderValueFromPosition(self.minimum(), self.maximum(), ev.x(), self.width()))
+        super().mousePressEvent(ev)
+
+
 class VduControlSlider(VduControlBase):
     """
     GUI control for a DDC continuously variable attribute.
@@ -2621,20 +2628,17 @@ class VduControlSlider(VduControlBase):
             label.setText(tr(vcp_capability.name))
             layout.addWidget(label)
 
-        self.slider = slider = QSlider()
+        self.slider = slider = ClickableSlider()
         slider.setMinimumWidth(200)
         self.range_restriction = vcp_capability.values
         if len(self.range_restriction) != 0:
             slider.setRange(int(self.range_restriction[1]), int(self.range_restriction[2]))
-
-        self.slider = slider
         slider.setSingleStep(1)
         slider.setPageStep(10)
         slider.setTickInterval(10)
         slider.setTickPosition(QSlider.TicksBelow)
         slider.setOrientation(Qt.Horizontal)  # type: ignore
-        # Don't rewrite the ddc value too often - not sure of the implications
-        slider.setTracking(False)
+        slider.setTracking(False)  # Don't rewrite the ddc value too often - not sure of the implications
         layout.addWidget(slider)
 
         self.spinbox = QSpinBox()
@@ -5677,7 +5681,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                 origin = VcpOrigin.TRANSIENT if not first_step and new_brightness != profile_brightness else VcpOrigin.NORMAL
                 self.main_controller.set_value(vdu_sid, BRIGHTNESS_VCP_CODE, str(new_brightness), origin=origin)
                 self.expected_brightness_map[vdu_sid] = new_brightness
-                log_info(f"LuxAutoWorker: Start stepping {vdu_sid=} {current_brightness=} to {profile_brightness=} "
+                log_info(f"LuxAutoWorker {thread_pid()}: Start stepping {vdu_sid=} {current_brightness=} to {profile_brightness=} "
                          f" {profile_preset_name=} {lux_summary_text}") if first_step else None
                 self.status_message(
                     f"{SUN_SYMBOL} {current_brightness}%{STEPPING_SYMBOL}{profile_brightness}% {vdu_sid}" +
