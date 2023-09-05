@@ -8,7 +8,7 @@ THIS IS A WORK IN PROGRESS - only tested using a Logitech Webcam C270.
 vlux_meter.py is a system tray application that uses a web camera to produce
 a FIFO feed of lux values for supply to vdu_controls.  Controls are provided
 for setting a sample area crop and a defining a mappings from brightness
-(0..255) to lux (0..100,000).  The lux values is sampled every 60 seconds.
+(0..255) to lux (0..100,000).  A lux value is produced every 60 seconds.
 
 Usage:  python3 vlux_meter.py
 
