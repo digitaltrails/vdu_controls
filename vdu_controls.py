@@ -2103,7 +2103,13 @@ class VduController(QObject):
                  **{k: v for k, v in feature_map.items() if k not in (BRIGHTNESS_VCP_CODE, CONTRAST_VCP_CODE)}}
 
 
-class SettingsEditor(QDialog, DialogSingletonMixin):
+class SubWinDialog(QDialog):  # Fix for gnome: QDialog must be a subwindow, otherwise it will always stay on top of other windows.
+
+    def __init__(self, parent: QWidget | None = None, flags: Qt.WindowType = Qt.SubWindow) -> None:
+        super().__init__(parent, flags)
+
+
+class SettingsEditor(SubWinDialog, DialogSingletonMixin):
     """
     Application Settings Editor, edits a default global settings file, and a settings file for each VDU.
     The files are in INI format.  Internally the settings are VduControlsConfig wrappers around the standard class ConfigIni.
@@ -4381,7 +4387,7 @@ class PresetChooseElevationWidget(QWidget):
         self.weather_widget.set_required_weather_filepath(weather_filename)
 
 
-class PresetsDialog(QDialog, DialogSingletonMixin):  # TODO has become rather complex - break into parts?
+class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rather complex - break into parts?
     """A dialog for creating/updating/removing presets."""
     NO_ICON_ICON_NUMBER = QStyle.SP_ComputerIcon
 
@@ -5851,7 +5857,7 @@ class LuxConfig(ConfigIni):
         return self
 
 
-class LuxDialog(QDialog, DialogSingletonMixin):
+class LuxDialog(SubWinDialog, DialogSingletonMixin):
 
     @staticmethod
     def invoke(main_controller: VduAppController) -> None:
@@ -6242,7 +6248,7 @@ class LuxAutoController:
             self.lux_auto_brightness_worker.adjust_now_requested = True
 
 
-class GreyScaleDialog(QDialog):
+class GreyScaleDialog(SubWinDialog):
     """Creates a dialog with a grey scale VDU calibration image.  Non-model. Have as many as you like - one per VDU."""
 
     # This stops garbage collection of independent instances of this dialog until the user closes them.
@@ -6308,7 +6314,7 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
         self.activateWindow()
 
 
-class HelpDialog(QDialog, DialogSingletonMixin):
+class HelpDialog(SubWinDialog, DialogSingletonMixin):
 
     @staticmethod
     def invoke() -> None:

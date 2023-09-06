@@ -226,6 +226,7 @@ Version History
   * Main-Window: changed the layout to display brightness and contrast as the first two controls for each VDU.
   * Main-Window: added jump to clicked value to sliders (issue #59).
   * Main-Window: added a smart-main-window option to make main window placement and geometry preservation optional.
+  * Main-Window: the main window can now be raised above the other sub-windows (gnome issue only).
   * Main-Window and Context Menu: added alt-key keyboard shortcuts (issue #13).
   * Context-Menu: added an indicator mark suffix to the currently active Preset (if any) (issue #55).
   * Context-Menu: made changes to Preset ordering propagate to the menu without requiring an application restart.
