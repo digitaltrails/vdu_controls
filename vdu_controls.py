@@ -6448,6 +6448,7 @@ class VduAppController:   # Main controller containing methods for high level op
             log_debug("configure: try to obtain application_configuration_lock", trace=False) if log_debug_enabled else None
             with self.application_configuration_lock:
                 log_debug("Holding application_configuration_lock") if log_debug_enabled else None
+                self.unschedule_presets()  # Hopefully stops any timers from firing.
                 if self.lux_auto_controller is not None:
                     self.lux_auto_controller.stop_worker()
                 if self.preset_transition_worker is not None:
@@ -6709,6 +6710,11 @@ class VduAppController:   # Main controller containing methods for high level op
         if reconfiguring:
             PresetsDialog.reconfigure_instance()
         return most_recent_overdue
+
+    def unschedule_presets(self):
+        for preset in self.preset_controller.find_presets_map().values():
+            if preset.timer is not None and preset.timer.remainingTime() > 0:
+                preset.timer.stop()
 
     def activate_scheduled_preset(self, preset: Preset, check_weather: bool = True, immediately: bool = False,
                                   activation_time: datetime | None = None, count=1) -> None:
