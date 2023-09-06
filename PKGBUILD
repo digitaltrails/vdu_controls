@@ -36,7 +36,6 @@ package() {
     install -m644 icons/* /usr/share/vdu_controls/icons
     install -m644 translations/*.ts /usr/share/vdu_controls/translations
     install -m755 sample-scripts/* /usr/share/vdu_controls/sample-scripts
-    install -m755 vlux_meter.py /usr/share/vdu_controls/sample-scripts
 
     cat > /usr/share/applications/%{name}.desktop <<'EOF'
 [Desktop Entry]
