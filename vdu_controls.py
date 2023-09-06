@@ -6027,9 +6027,6 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         self.adjust_now_button.setText(f"{TIMER_RUNNING_SYMBOL} 00:00")
         self.adjust_now_button.show() if self.lux_config.is_auto_enabled() else self.adjust_now_button.hide()
 
-        self.status_message(tr("Initializing Light Meter Dialog..."))
-        QApplication.processEvents()  # Next bit is slow
-
         connected_id_list = []   # List of all currently connected VDU's
         for index, vdu_sid in enumerate(self.main_controller.get_vdu_stable_id_list()):
             value_range = (0, 100)
@@ -6113,7 +6110,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             meter_device = self.main_controller.get_lux_auto_controller().lux_meter
             self.configure_ui(meter_device)  # Use the new meter for a new lux-display metering thread
             if meter_device is not None and self.lux_config.is_auto_enabled():
-                self.status_message(tr("Restarted brightness auto adjustment"), timeout=5000)
+                self.status_message(tr("Restarted automatic brightness adjustment"), timeout=5000)
 
     def configure_ui(self, meter_device: LuxMeterDevice | None) -> None:
         if meter_device is not None:
@@ -6130,7 +6127,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
         if meter_device is None:
             self.status_message(tr("No metering device set."))  # Remind user why metering and auto is not working
         elif not self.lux_config.is_auto_enabled():
-            self.status_message(tr("Brightness auto adjustment is disabled."))  # Remind user why auto is not working
+            self.status_message(tr("Brightness automatic adjustment is disabled."))  # Remind user why auto is not working
 
     def save_profiles(self) -> None:
         for vdu_sid, profile in self.profile_plot.profiles_map.items():
@@ -6163,6 +6160,7 @@ class LuxDialog(QDialog, DialogSingletonMixin):
             self.adjust_now_button.setText(message)
         else:
             self.status_bar.showMessage(message, timeout)
+        QApplication.processEvents()  # force messages out
 
 
 class LuxDeviceException(Exception):
@@ -6180,7 +6178,7 @@ class LuxAutoController:
         self.lux_tool_button = self.create_tool_button()
 
     def create_tool_button(self) -> ToolButton:  # Used when the application UI has to reinitialize
-        self.lux_tool_button = ToolButton(AUTO_LUX_ON_SVG, tr("Toggle automatic brightness control"))
+        self.lux_tool_button = ToolButton(AUTO_LUX_ON_SVG, tr("Toggle light metered brightness adjustment"))
         self.lux_tool_button.pressed.connect(self.toggle_auto)
         return self.lux_tool_button
 
@@ -6231,12 +6229,13 @@ class LuxAutoController:
     def toggle_auto(self) -> None:
         enabled = self.is_auto_enabled()
         assert self.lux_config is not None
+        message = tr("Disabling light metered adjustments.") if enabled else tr("Enabling light metered adjustments.")
+        self.main_controller.status_message(message, timeout=5000)
+        LuxDialog.lux_dialog_message(message, timeout=5000)
         self.lux_config.set('lux-meter', 'automatic-brightness', 'no' if enabled else 'yes')
         self.lux_config.save(get_config_path('AutoLux'))
         self.initialize_from_config()
-        lux_dialog: LuxDialog = LuxDialog.get_instance()  # type: ignore
-        if lux_dialog is not None:
-            lux_dialog.reconfigure()
+        LuxDialog.reconfigure_instance()
 
     def adjust_brightness_now(self) -> None:
         if self.lux_auto_brightness_worker is not None:
@@ -6566,12 +6565,16 @@ class VduAppController:   # Main controller containing methods for high level op
     def lux_auto_action(self) -> bool:
         if self.lux_auto_controller is None:
             return False
-        self.lux_auto_controller.toggle_auto()
-        self.main_window.display_lux_auto_indicators()
-        if not self.lux_auto_controller.is_auto_enabled():
-            self.main_window.update_status_indicators()  # Restore normal icon - which might include a preset
-            return False
-        return True
+        try:
+            self.main_window.setDisabled(True)
+            self.lux_auto_controller.toggle_auto()
+            self.main_window.display_lux_auto_indicators()
+            if not self.lux_auto_controller.is_auto_enabled():
+                self.main_window.update_status_indicators()  # Restore normal icon - which might include a preset
+                return False
+            return True
+        finally:
+            self.main_window.setDisabled(False)
 
     def start_refresh(self) -> None:
         assert is_running_in_gui_thread()
@@ -6914,6 +6917,8 @@ class VduAppController:   # Main controller containing methods for high level op
         self.main_window.status_message('', timeout=1, destination=MsgDestination.DEFAULT)
         return False
 
+    def status_message(self, message: str, timeout: int, destination: MsgDestination = MsgDestination.DEFAULT):
+        self.main_window.status_message(message, timeout, destination)
 
 class VduAppWindow(QMainWindow):
     splash_message_qtsignal = pyqtSignal(str)
@@ -7204,6 +7209,7 @@ class VduAppWindow(QMainWindow):
         else:
             if destination == MsgDestination.DEFAULT:
                 self.main_panel.status_message(message, timeout)
+                QApplication.processEvents()  # Force the message out straight way.
 
     def event(self, event: QEvent) -> bool:
         # PalletChange happens after the new style sheet is in use.
