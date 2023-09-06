@@ -1372,7 +1372,7 @@ class DdcUtil:
                 self.__run__(*args_list, sleep_multiplier=sleep_multiplier, log_id=vdu_number)
                 return
             except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound) as e:
-                log_error(f"setvcp failure {attempt_count} {e}")  # Don't log here, it creates too much noise in the logs
+                # log_error(f"setvcp failure {attempt_count} {e}")  # Don't log here, it creates too much noise in the logs
                 if not retry_on_error or attempt_count + 1 == DDCUTIL_RETRIES:
                     raise  # Too many failures, pass the buck upstairs
             time.sleep(attempt_count * 0.25)
@@ -3344,6 +3344,15 @@ class WorkerThread(QThread):
         while self.isRunning():
             time.sleep(0.1)
 
+    def doze(self, seconds: float, sleep_unit: float = 0.5):
+        for i in range(0, int(seconds)):
+            if self.stop_requested:
+                return
+            time.sleep(sleep_unit)
+            seconds -= sleep_unit
+        if not self.stop_requested and seconds > 0.0:
+            time.sleep(seconds)
+
 
 class PresetTransitionState(Enum):
     INITIALIZED = 0
@@ -3400,7 +3409,7 @@ class PresetTransitionWorker(WorkerThread):
             if self.step_interval_seconds > 0:  # Delay if previous duration was too short due to speed or interruption/exception
                 previous_duration = now - self.previous_step_start_time
                 if previous_duration < self.step_interval_seconds:
-                    time.sleep(self.step_interval_seconds - previous_duration)
+                    self.doze(self.step_interval_seconds - previous_duration)
             self.previous_step_start_time = time.time()
             if self.stop_requested:
                 return
@@ -5367,7 +5376,7 @@ class LuxMeterWidgetThread(WorkerThread):
             if self.lux_meter is None:
                 return
             self.new_lux_value.emit(round(self.lux_meter.get_cached_value(5.0)))
-            time.sleep(5.0)
+            self.doze(5.0)
 
 
 def lux_create_device(device_name: str) -> LuxMeterDevice:
@@ -5491,7 +5500,7 @@ class LuxMeterSerialDevice(LuxMeterDevice):
     def get_value(self) -> float:  # an un-smoothed raw value
         with self.lock:
             cause = None
-            backoff_secs = 10
+            backoff_secs = 10  # TODO does this block threads?
             while True:
                 try:
                     if self.serial_device is None:
@@ -5576,7 +5585,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
         self._lux_dialog_message_qtsignal.emit(message, timeout, destination)
 
     def adjust_for_lux(self) -> None:
-        time.sleep(10.0)  # Give any previous thread a chance to exit, plus let the GUI and presets settle down
+        self.doze(10)  # Give any previous thread a chance to exit, plus let the GUI and presets settle down
         log_info(f"LuxAutoWorker monitoring commences {thread_pid()=}")
         try:
             lux_auto_controller = self.main_controller.lux_auto_controller
@@ -5605,7 +5614,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                 smoothed_lux = self.smoother.smooth(metered_lux)
                 self.status_message(f"{SUN_SYMBOL} {self.lux_summary(metered_lux, smoothed_lux)}", timeout=3000)
             self.status_message(f"{TIMER_RUNNING_SYMBOL} {second // 60:02d}:{second % 60:02d}", 0, MsgDestination.COUNTDOWN)
-            time.sleep(1)
+            self.doze(1)
 
     def stepping_brightness(self, lux_config: LuxConfig, lux_meter: LuxMeterDevice) -> None:
         change_count, last_change_count = 0, -1
@@ -5630,7 +5639,7 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                 if self.step_one_vdu(vdu_sid, profile_brightness, profile_preset_name, lux_summary_text, start_of_cycle):
                     change_count += 1
             start_of_cycle = False
-            time.sleep(self.step_pause_millis/1000.0)  # Let i2c settle down, then continue - TODO is this really necessary?
+            self.doze(self.step_pause_millis / 1000.0)  # Let i2c settle down, then continue - TODO is this really necessary?
         if change_count != 0:  # If any work was done in previous steps, finish up the remaining tasks
             log_info(f"LuxAutoWorker: stepping completed in {change_count} stepped adjustments, {profile_preset_name=}")
             self.status_message(tr("Brightness adjustment completed"), timeout=5000)
@@ -5692,12 +5701,12 @@ class LuxAutoWorker(WorkerThread):   # Why is this so complicated?
                 if self.consecutive_errors_map[vdu_sid] == 1:
                     log_warning(f"LuxAutoWorker: Brightness error on {vdu_sid}, will sleep and try again: {ve}", -1)
                     self.status_message(tr("{} Failed to adjust {}, will try again").format(ERROR_SYMBOL, vdu_sid))
-                    time.sleep(2)  # TODO do something better than this to make the message visible.
+                    self.doze(2)  # TODO do something better than this to make the message visible.
                 elif self.consecutive_errors_map[vdu_sid] > 1:
                     self.status_message(tr("{} Failed to adjust {}, {} errors so far. Sleeping {} minutes.").format(
                         ERROR_SYMBOL, vdu_sid, self.consecutive_errors_map[vdu_sid],
                         self.main_controller.get_lux_auto_controller().get_lux_config().get_interval_minutes()))  # TODO seems dodgy
-                    time.sleep(2)  # TODO do something better than this to make the message visible.
+                    self.doze(2)  # TODO do something better than this to make the message visible.
                     if self.consecutive_errors_map[vdu_sid] == 2 or log_debug_enabled:
                         log_info(f"LuxAutoWorker: {self.consecutive_errors_map[vdu_sid]} errors on {vdu_sid}, let this lux cycle end.")
                     return False  # Report no changes, this allows the current adjustment cycle to end, will try again next cycle.
