@@ -2596,17 +2596,14 @@ class VduControlBase(QWidget):
 
 class ClickableSlider(QSlider):  # loosely based on https://stackoverflow.com/a/29639127/609575
 
-    def mousePressEvent(self, ev):  # On mouse click, set value to the value at the click position
-        self.setValue(QStyle.sliderValueFromPosition(self.minimum(), self.maximum(), ev.x(), self.width()))
-        super().mousePressEvent(ev)
+    def mousePressEvent(self, event):  # On mouse click, set value to the value at the click position
+        self.setValue(QStyle.sliderValueFromPosition(self.minimum(), self.maximum(), event.x(), self.width()))
+        super().mousePressEvent(event)
 
 
 class VduControlSlider(VduControlBase):
     """
-    GUI control for a DDC continuously variable attribute.
-
-    A compound widget with icon, slider, and text-field.  This is a duck-typed GUI control widget (could inherit
-    from an abstract type if we wanted to get formal about it).
+    GUI control for a DDC continuously variable attribute. A compound widget with icon, slider, and text-field.
     """
 
     def __init__(self, controller: VduController, vcp_capability: VcpCapability) -> None:
@@ -2699,8 +2696,6 @@ class VduControlSlider(VduControlBase):
 class VduControlComboBox(VduControlBase):
     """
     GUI control for a DDC non-continuously variable attribute, one that has a list of choices.
-
-    This is a duck-typed GUI control widget (could inherit from an abstract type if we wanted to get formal about it).
     """
 
     def __init__(self, controller: VduController, vcp_capability: VcpCapability) -> None:
@@ -2757,9 +2752,6 @@ class VduControlComboBox(VduControlBase):
 class VduControlPanel(QWidget):
     """
     Widget that contains all the controls for a single VDU (monitor/display).
-
-    The widget maintains a list of GUI "controls" that are duck-typed and will have refresh_data() and refresh_view()
-    methods.
     """
 
     def __init__(self, controller: VduController, vdu_exception_handler: Callable) -> None:
