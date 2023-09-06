@@ -1371,9 +1371,9 @@ class DdcUtil:
             try:
                 self.__run__(*args_list, sleep_multiplier=sleep_multiplier, log_id=vdu_number)
                 return
-            except (subprocess.SubprocessError, ValueError) as e:  # Don't log here, it creates too much noise in the logs
+            except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound) as e:
+                log_error(f"setvcp failure {attempt_count} {e}")  # Don't log here, it creates too much noise in the logs
                 if not retry_on_error or attempt_count + 1 == DDCUTIL_RETRIES:
-                    log_error(f"setvcp failure {attempt_count} {e}")
                     raise  # Too many failures, pass the buck upstairs
             time.sleep(attempt_count * 0.25)
 
@@ -1431,8 +1431,8 @@ class DdcUtil:
                     if str_value is None:
                         raise ValueError(f"getvcp: VDU {vdu_number} - failed to obtain value for vcp_code {vcp_code}")
                 return list(results_dict.values())
-            except (subprocess.SubprocessError, ValueError):  # Don't log here, it creates too much noise in the logs
-                if attempt_count + 1 == DDCUTIL_RETRIES:
+            except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound):
+                if attempt_count + 1 == DDCUTIL_RETRIES:   # Don't log here, it creates too much noise in the logs
                     raise  # Too many failures, pass the buck upstairs
             time.sleep(attempt_count * 0.25)
 
