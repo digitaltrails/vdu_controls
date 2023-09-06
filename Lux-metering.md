@@ -149,7 +149,7 @@ Manual exposure webcam approximate Lux metering
 If you don't wish to build an Arduino based solution, you 
 may be able to use a webcam to achieve usable metering values. 
 
-I've developed two scripts that can uses a webcam frame grab
+I've developed three scripts that can uses a webcam frame grab
 to calculate a lux-like value:  
 
  * [**lux-from-webcam.bash**](/sample-scripts/lux-from-webcam.bash):  This bash 
@@ -158,17 +158,28 @@ to calculate a lux-like value:
      **Dependencies**: ``ImageMagick-7`` (image conversion software),
      and ``v4l-utils`` (Video 4 Linux camera controls).
 
- * [**lux-from-webcam.py**](/sample-scripts/lux-from-webcam.py):  Averages 
+ * [**lux-from-webcam.py**](/sample-scripts/lux-from-webcam.py):  This simple python script averages 
      a webcam capture using OpenCV, otherwise
      it's pretty much the same as the bash script.  
      **Dependencies**: ``cv2``(`OpenCV` python real-time computer vision library).
 
-Both scripts are intended for use with webcams that feature manual 
+ * [**vlux_meter.py**](/sample-scripts/vlux_meter.py):  This script is an 
+     alpha level release of a more user-friendly version of the previous 
+     two scripts. It's a python Qt application that runs out of the system-tray.
+     Controls are included for previewing the image capture, setting a sample 
+     crop area, and mapping brightness 0..255 to lux values 0..100,000.
+     **Dependencies**: ``pyqt`` ``cv2``(`OpenCV` python real-time computer vision library).
+
+The scripts are intended for use with webcams that feature manual 
 exposure controls. Sampling from fixed manual exposures allows relative
 brightness to be measured by calculating the average brightness in 
 captured images. Such an approach will work reliably for any desktop 
 where the webcam's view is fixed and the only major change throughout 
 the day is the light level.
+
+The `vlux_meter.py` script can be restricted to sampling from a fixed
+crop within each capture, this might help when using a camera that 
+lacks fixed exposure controls.
 
 The average brightness in the images can be used to develop a mapping 
 of brightness values to approximate lux values. The mapping need not be 
@@ -229,7 +240,7 @@ to be comfortable editing and configuring hardware and scripts using the
 command line. The requirements for the two scripts are available on 
 all major Linux distributions.
 
-Both scripts are similar in their approach:
+The scripts are similar in their approach:
 1. capture a still image, 
 2. compute the average image-brightness for the captured image (0..255), 
 3. consult a table of image-brightness to lux mappings, 
@@ -238,7 +249,7 @@ Both scripts are similar in their approach:
 
 #### Configuring the scripts
 
-They both read the same two config files: 
+The first two scripts read the same two config files: 
 
  * `~/.config/lux-from-webcam.config` - basic parameters. **This file is optional**. 
     Default values:
@@ -274,6 +285,40 @@ of natural daylight.  They're unlikely to be suitable for other situations.
 You can use either the bash script or the python script, or even switch from one 
 to the other.  The bash script is slightly faster.
 
+#### Configuring vlux_meter.py
+
+The ``vlux_meter.py`` script reads and writes an INI format config file:
+```
+~/.config/vlux_meter/vlux_meter.conf
+```
+
+The config file is reasonable self describing, a sample follows:
+```
+[camera]
+device = /dev/video0
+manual_exposure_option = 1
+manual_exposure_time = 64
+auto_exposure_option = 3
+crop = 3.8750,11.1667,14.8750,27.8333
+
+[brightness_to_lux]
+Sunlight = 250 100000
+Daylight = 160 10000
+Overcast = 110 1000
+Rise/set = 50 400
+Dusk = 20 100
+Room = 5 50
+Night = 0 5
+Rise-Set = 50 400
+
+[global]
+system_tray_enabled = yes
+fifo_path = ~/.cache/vlux_fifo
+display_frequency_millis = 1000
+dispatch_frequency_seconds = 60
+translations_enabled = no**
+```
+
 #### Installing the scripts
 
 In order to use these with ``vdu_controls``, they must be set to be 
@@ -305,9 +350,15 @@ INFO: brightness=129, value=110, lux=1031.81, name=OVERCAST
 #### Options for webcams that lack manual exposure options
 
 If a webcam doesn't support fixed manual exposures, it may still be
-possible to write your own heuristics to guess at the available light (the
-guess only has to be good enough for use with ``vdu_controls``, the
-values need not be perfect).  Such heuristics would likely be very 
+possible to sample from an appropriate crop within each capture.
+Cropping is supported by `vlux_meter.py` and you might also 
+add cropping to the other simpler scripts. Cropping might be coupled 
+with be a specifically tailored target within the crop, perhaps 
+something that is 18% grey, or a pattern of some sort.
+
+You may also write your own heuristics to guess at the available light.
+The guess only has to be good enough for use with ``vdu_controls``, the
+values need not be perfect.  Such heuristics would likely be very 
 specific to local circumstances, I've not explored such an approach 
 to any great degree, but possibilities include:
 
