@@ -207,7 +207,7 @@ Acknowledgements
   contributing suggestions for enhancements. 
 * [malcolmlewis](https://github.com/malcolmlewis) for assistance with the OpenSUSE Open Build Service submissions.
 * [Christopher Laws](https://github.com/claws) for the [BH1750 library](https://github.com/claws/BH1750) 
-  and [example build](https://github.com/claws/BH1750#example) (for use with the auto-brightness option).
+  and [example build](https://github.com/claws/BH1750#example) (lux-metering).
 * Plus others who have supplied feedback and suggestions.
 
 
