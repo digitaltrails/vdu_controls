@@ -143,8 +143,8 @@ rules to create a fixed-name symlink to your arduino device. For example:
 In `vdu_controls`, set the lux device to new fixed-name `/dev/arduino` instead 
 of `/dev/ttyUSB[0-9]`
 
-Manual exposure webcam approximate Lux metering
------------------------------------------------
+Webcam approximate Lux metering
+-------------------------------
 
 If you don't wish to build an Arduino based solution, you 
 may be able to use a webcam to achieve usable metering values. 
@@ -188,8 +188,8 @@ sufficient for use with ``vdu_controls``.
 
 ### How to tell if a webcam has a manual exposure option
 
-When attempting to use these scripts with a webcam, it's first
-necessary to find out whether the webcam has any options for manual
+When attempting to use these scripts with a webcam, it's a good
+idea to find out whether the webcam has any options for manual
 exposure and how to configure them.  Both of the scripts are 
 set to use options available with a  __Logitech Webcam C270__, the 
 scripts, or their associated config file, may need editing to employ 
@@ -285,9 +285,39 @@ of natural daylight.  They're unlikely to be suitable for other situations.
 You can use either the bash script or the python script, or even switch from one 
 to the other.  The bash script is slightly faster.
 
+
+#### Installing the scripts
+
+In order to use the first two scripts with ``vdu_controls``, they must be 
+set to be executable:
+
+```
+chmod u+x lux-from-webcam.bash
+chmod u+x lux-from-webcam.py
+```
+
+#### Running the scripts
+
+Once they are set to be executable, they will be able to be selected 
+as _"Runnable"_ script in the  `Light Metering Dialog`. Then
+metering can be enabled, and ``vdu_controls`` will periodically
+run the selected script to obtain a single lux values.
+
+They can also be run in a shell to experiment with creating new
+mapping values. They both output diagnostics to stderr, for example:
+
+```
+% /usr/share/vdu_controls/sample-scripts/lux-from-webcam.bash
+INFO: camera-brightness: 129/255
+INFO: log10 interpolating 129 over 110..160 to lux 1000..10000
+INFO: brightness=129, value=110, lux=1031.81, name=OVERCAST
+1031.81
+```
+
 #### Configuring vlux_meter.py
 
-The ``vlux_meter.py`` script reads and writes an INI format config file:
+`vlux_meter.py` can mostly be configured from within its own GUI. It reads 
+and writes these settings to an INI format config file:
 ```
 ~/.config/vlux_meter/vlux_meter.conf
 ```
@@ -319,32 +349,14 @@ dispatch_frequency_seconds = 60
 translations_enabled = no**
 ```
 
-#### Installing the scripts
+#### Running vlux_meter.py
 
-In order to use these with ``vdu_controls``, they must be set to be 
-executable:
+Make sure v4l (Video for Linux) and python3-opencv (a computer vision library) 
+are installed.  Then just run `vlux_meter.py` as a normal python script 
+and check the system tray for a new item:
 
-```
-chmod u+x lux-from-webcam.bash
-chmod U+x lux-from-webcam.py
-```
-
-#### Running the scripts
-
-Once they are set to be executable, they will be able to be selected 
-as _"Runnable"_ script in the  `Light Metering Dialog`. Then
-metering can be enabled, and ``vdu_controls`` will periodically
-run the selected script to obtain a single lux values.
-
-They can also be run in a shell to experiment with creating new
-mapping values. They both output diagnostics to stderr, for example:
-
-```
-% /usr/share/vdu_controls/sample-scripts/lux-from-webcam.bash
-INFO: camera-brightness: 129/255
-INFO: log10 interpolating 129 over 110..160 to lux 1000..10000
-INFO: brightness=129, value=110, lux=1031.81, name=OVERCAST
-1031.81
+```commandline
+python3 vlux_meter.py
 ```
 
 #### Options for webcams that lack manual exposure options
@@ -354,7 +366,8 @@ possible to sample from an appropriate crop within each capture.
 Cropping is supported by `vlux_meter.py` and you might also 
 add cropping to the other simpler scripts. Cropping might be coupled 
 with be a specifically tailored target within the crop, perhaps 
-something that is 18% grey, or a pattern of some sort.
+a card or item in the scene that's 18% grey, or a patterned card 
+of some sort.
 
 You may also write your own heuristics to guess at the available light.
 The guess only has to be good enough for use with ``vdu_controls``, the
