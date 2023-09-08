@@ -322,7 +322,7 @@ and writes these settings to an INI format config file:
 ~/.config/vlux_meter/vlux_meter.conf
 ```
 
-The config file is reasonable self describing, a sample follows:
+The config file is reasonably self describing, a sample follows:
 ```
 [camera]
 device = /dev/video0
