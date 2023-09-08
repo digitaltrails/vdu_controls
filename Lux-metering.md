@@ -359,6 +359,8 @@ and check the system tray for a new item:
 python3 vlux_meter.py
 ```
 
+Set `vdu_controls` to read lux from the FIFO ``$HOME/.cache/vlux_fifo``
+
 #### Options for webcams that lack manual exposure options
 
 If a webcam doesn't support fixed manual exposures, it may still be
@@ -393,8 +395,7 @@ three options for utilizing a light meter:
  * A tty device: provide a stream of values separated by carriage-return linefeed.
  * A UNIX FIFO: provide a stream of values separated by linefeed (the normal 
    UNIX line terminator).
- * An executable: provide one value on one linefeed terminated line each time 
-   it is run.
+ * An executable: provide one value on one line each time it is run.
 
 A custom light meter need not supply accurate or realistic values. A 
 custom meter can produce any useful sequence or set or values in the 
