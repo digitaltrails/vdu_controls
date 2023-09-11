@@ -1255,21 +1255,21 @@ class DdcUtil:
         return ' '.join([arg if len(arg) < 30 else arg[:30] + "..." for arg in args])
 
     def __run__(self, *args, sleep_multiplier: float | None = None, log_id='') -> subprocess.CompletedProcess:
-        with self.ddcutil_access_lock:
-            log_id = f"Display-{log_id}" if log_id != '' else ''  # Make it easier to tell - eid is a bit much
-            syslog_args = []
-            multiplier_args = []
-            multiplier_value = self.default_sleep_multiplier if sleep_multiplier is None else sleep_multiplier
-            if self.version[0] >= 2:
-                if log_to_syslog and '--syslog' not in args:
-                    syslog_args = ['--syslog', 'DEBUG' if log_debug_enabled else 'ERROR']
-                if '--enable-dynamic-sleep' not in args and '--disable-dynamic-sleep' not in args:
-                    multiplier_args += ['--enable-dynamic-sleep']
-                    # multiplier_value = None  TODO what to do?
-            if multiplier_value is not None and not math.isclose(multiplier_value, 0.0):
-                multiplier_args += ['--sleep-multiplier', f"{multiplier_value:.2f}"]
-            process_args = [DDCUTIL] + self.common_args + syslog_args + multiplier_args + list(args)
-            try:
+        log_id = f"Display-{log_id}" if log_id != '' else ''  # Make it easier to tell - eid is a bit much
+        syslog_args = []
+        multiplier_args = []
+        multiplier_value = self.default_sleep_multiplier if sleep_multiplier is None else sleep_multiplier
+        if self.version[0] >= 2:
+            if log_to_syslog and '--syslog' not in args:
+                syslog_args = ['--syslog', 'DEBUG' if log_debug_enabled else 'ERROR']
+            if '--enable-dynamic-sleep' not in args and '--disable-dynamic-sleep' not in args:
+                multiplier_args += ['--enable-dynamic-sleep']
+                # multiplier_value = None  TODO what to do?
+        if multiplier_value is not None and not math.isclose(multiplier_value, 0.0):
+            multiplier_args += ['--sleep-multiplier', f"{multiplier_value:.2f}"]
+        process_args = [DDCUTIL] + self.common_args + syslog_args + multiplier_args + list(args)
+        try:
+            with self.ddcutil_access_lock:
                 now = time.time()
                 result = subprocess.run(process_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
                 elapsed = time.time() - now
@@ -1278,16 +1278,16 @@ class DdcUtil:
                           f"{multiplier_value=} "
                           f"rc={result.returncode} elapsed={elapsed:.2f} "
                           f"stdout={result.stdout.decode('utf-8', errors='surrogateescape')}") if log_debug_enabled else None
-            except subprocess.SubprocessError as spe:
-                error_text = spe.stderr.decode('utf-8', errors='surrogateescape')
-                if error_text.lower().find("display not found") >= 0:  # raise DdcUtilDisplayNotFound and stay quiet
-                    log_debug("subprocess result: display-not-found ", log_id, self.format_args_diagnostic(process_args),
-                              f"stderr='{error_text}', exception={str(spe)}", trace=True) if log_debug_enabled else None
-                    raise DdcUtilDisplayNotFound(' '.join(args)) from spe
-                log_debug("subprocess result: error ", log_id, self.format_args_diagnostic(process_args),
+        except subprocess.SubprocessError as spe:
+            error_text = spe.stderr.decode('utf-8', errors='surrogateescape')
+            if error_text.lower().find("display not found") >= 0:  # raise DdcUtilDisplayNotFound and stay quiet
+                log_debug("subprocess result: display-not-found ", log_id, self.format_args_diagnostic(process_args),
                           f"stderr='{error_text}', exception={str(spe)}", trace=True) if log_debug_enabled else None
-                raise
-            return result
+                raise DdcUtilDisplayNotFound(' '.join(args)) from spe
+            log_debug("subprocess result: error ", log_id, self.format_args_diagnostic(process_args),
+                      f"stderr='{error_text}', exception={str(spe)}", trace=True) if log_debug_enabled else None
+            raise
+        return result
 
     def detect_monitors(self, issue_warnings: bool = True, sleep_multiplier: float = 0.0) -> List[Tuple[str, str, str, str]]:
         """Return a list of (vdu_number, desc) tuples."""
@@ -5425,9 +5425,9 @@ class LuxMeterFifoDevice(LuxMeterDevice):
         return self.cached_value
 
     def get_value(self) -> float:
-        with self.meter_access_lock:
-            while True:
-                try:
+        while True:
+            try:
+                with self.meter_access_lock:
                     if self.fifo is None:
                         log_info(f"Initialising fifo {self.device_name} - waiting on fifo data.")
                         self.fifo = open(self.device_name)
@@ -5435,9 +5435,9 @@ class LuxMeterFifoDevice(LuxMeterDevice):
                         buffer = self.fifo.readline()
                         if len(select.select([self.fifo], [], [], 0.0)[0]) == 0 and buffer is not None:  # Buffer has been flushed
                             return float(buffer.replace('\n', ''))
-                except (OSError, ValueError) as se:
-                    log_warning(f"Retry read of {self.device_name}, will retry feed in 10 seconds", se, trace=True)
-                    time.sleep(10)
+            except (OSError, ValueError) as se:
+                log_warning(f"Retry read of {self.device_name}, will retry feed in 10 seconds", se, trace=True)
+                time.sleep(10)
 
     def close(self) -> None:
         with self.meter_access_lock:
@@ -5464,14 +5464,14 @@ class LuxMeterRunnableDevice(LuxMeterDevice):
         return self.cached_value
 
     def get_value(self) -> float:
-        with self.lock:
-            while True:
-                try:
+        while True:
+            try:
+                with self.lock:
                     result = subprocess.run([self.runnable], stdout=subprocess.PIPE, check=True)
                     return float(result.stdout)
-                except (OSError, ValueError, subprocess.CalledProcessError) as se:
-                    log_warning(f"Error running {self.runnable}, will retry in 10 seconds", se, trace=True)
-                    time.sleep(10)
+            except (OSError, ValueError, subprocess.CalledProcessError) as se:
+                log_warning(f"Error running {self.runnable}, will retry in 10 seconds", se, trace=True)
+                time.sleep(10)
 
     def close(self) -> None:
         pass
@@ -5500,11 +5500,11 @@ class LuxMeterSerialDevice(LuxMeterDevice):
         return self.cached_value
 
     def get_value(self) -> float:  # an un-smoothed raw value
-        with self.lock:
-            cause = None
-            backoff_secs = 10  # TODO does this block threads?
-            while True:
-                try:
+        cause = None
+        backoff_secs = 10
+        while True:
+            try:
+                with self.lock:
                     if self.serial_device is None:
                         log_info(f"LuxMeterSerialDevice: Initialising character device {self.device_name}")
                         self.serial_device = self.serial_module.Serial(self.device_name)
@@ -5515,14 +5515,14 @@ class LuxMeterSerialDevice(LuxMeterDevice):
                         if match := self.line_matcher.match(decoded):  # only accept correctly formatted output
                             return float(match.group(1))
                         cause = f"value that failed to parse: {decoded.encode('unicode_escape')}"
-                except (self.serial_module.SerialException, termios.error, FileNotFoundError, ValueError) as se:
-                    cause = se
-                log_warning(f"Retry read of {self.device_name}, will reopen feed in {backoff_secs} seconds. Cause:", cause, trace=True)
-                time.sleep(backoff_secs)
-                backoff_secs = backoff_secs * 2 if backoff_secs < 300 else 300
-                if self.serial_device is not None:
-                    self.serial_device.close()
-                self.serial_device = None
+            except (self.serial_module.SerialException, termios.error, FileNotFoundError, ValueError) as se:
+                cause = se
+            log_warning(f"Retry read of {self.device_name}, will reopen feed in {backoff_secs} seconds. Cause:", cause, trace=True)
+            time.sleep(backoff_secs)
+            backoff_secs = backoff_secs * 2 if backoff_secs < 300 else 300
+            if self.serial_device is not None:
+                self.serial_device.close()
+            self.serial_device = None
 
     def close(self) -> None:
         with self.lock:
