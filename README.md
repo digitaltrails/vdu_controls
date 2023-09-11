@@ -219,6 +219,9 @@ Michael Hamilton
 
 Version History
 ---------------
+* 1.11.1
+  * Fix Preset text size in tray icon.
+  * Fix occasional concurrency lockup issue in lux_metering.
 * 1.11.0
   * Made vdu_controls ddcutil-2.0-ready.
   * Added support for ddcutil versions earlier than 1.3 (issue #43, #53).

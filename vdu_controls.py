@@ -735,7 +735,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, qApp
 
 APPNAME = "VDU Controls"
-VDU_CONTROLS_VERSION = '1.11.0'
+VDU_CONTROLS_VERSION = '1.11.1'
 assert sys.version_info >= (3, 8), f'{APPNAME} utilises python version 3.8 or greater (your {sys.version}).'
 
 WESTERN_SKY = 'western-sky'

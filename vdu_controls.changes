@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Tue 12 Sep 2023 20:59:00 UTC - Michael Hamilton <michael@actrix.gen.nz>
+
+- Version1.11.1
+  * Fix Preset text size in tray icon.
+  * Fix occasional concurrency lockup issue in lux_metering.
+
+-------------------------------------------------------------------
 Sun 24 Jun 2023 21:50:00 UTC - Michael Hamilton <michael@actrix.gen.nz>
 
 - Version 1.11.0
