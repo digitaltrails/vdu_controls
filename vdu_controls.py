@@ -2120,21 +2120,29 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
         SettingsEditor.show_existing_dialog() if SettingsEditor.exists() else SettingsEditor(default_config,
                                                                                              vdu_config_list, change_callback)
 
+    @staticmethod
+    def reconfigure_instance(vdu_config_list: List[VduControlsConfig]) -> None:
+        SettingsEditor.get_instance().reconfigure(vdu_config_list) if SettingsEditor.exists() else None
+
     def __init__(self, default_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig], change_callback) -> None:
         super().__init__()
         self.setWindowTitle(tr('Settings'))
         self.setMinimumWidth(1024)
         self.setLayout(QVBoxLayout())
-        tabs = QTabWidget()
-        self.layout().addWidget(tabs)
+        self.tabs = QTabWidget()
+        self.layout().addWidget(self.tabs)
         self.editor_tab_list = []
         self.change_callback = change_callback
-        for config in [default_config, ] + vdu_config_list:
-            tab = SettingsEditorTab(self, config, change_callback, parent=tabs)
-            tab.save_all_clicked_qtsignal.connect(self.save_all)  # type: ignore
-            tabs.addTab(tab, config.get_config_name())
-            self.editor_tab_list.append(tab)
+        self.reconfigure([default_config, *vdu_config_list])
         self.make_visible()
+
+    def reconfigure(self, config_list: List[VduControlsConfig]) -> None:
+        for config in config_list:
+            if get_config_path(config.config_name) not in [tab.config_path for tab in self.editor_tab_list]:
+                tab = SettingsEditorTab(self, config, self.change_callback, parent=self.tabs)
+                tab.save_all_clicked_qtsignal.connect(self.save_all)  # type: ignore
+                self.tabs.addTab(tab, config.get_config_name())
+                self.editor_tab_list.append(tab)
 
     def save_all(self, warn_if_nothing_to_save: bool = True) -> int:
         what_changed: Dict[str, str] = {}
@@ -6476,6 +6484,7 @@ class VduAppController:   # Main controller containing methods for high level op
                 self.preset_controller.reinitialize()
                 self.main_window.create_main_control_panel()
                 self.main_window.update_status_indicators()
+                SettingsEditor.reconfigure_instance(self.get_vdu_configs())
             log_debug("configure: released application_configuration_lock") if log_debug_enabled else None
             if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED):
                 LuxDialog.reconfigure_instance()
@@ -6571,9 +6580,10 @@ class VduAppController:   # Main controller containing methods for high level op
         self.configure_application()
 
     def edit_config(self) -> None:
-        SettingsEditor.invoke(self.main_config,
-                              [vdu.config for vdu in self.vdu_controllers_map.values() if vdu.config is not None],
-                              self.settings_changed)
+        SettingsEditor.invoke(self.main_config, self.get_vdu_configs(), self.settings_changed)
+
+    def get_vdu_configs(self) -> List[VduControlsConfig]:
+        return [vdu.config for vdu in self.vdu_controllers_map.values() if vdu.config is not None]
 
     def create_config_files(self) -> None:
         for controller in self.vdu_controllers_map.values():
