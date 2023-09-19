@@ -984,6 +984,14 @@ CONTRAST_SVG = b"""
 
 AUTO_LUX_ON_SVG = BRIGHTNESS_SVG.replace(b'viewBox="0 0 24 24"', b'viewBox="3 3 18 18"').replace(b'#232629', b'#ff8500')
 AUTO_LUX_OFF_SVG = BRIGHTNESS_SVG.replace(b'viewBox="0 0 24 24"', b'viewBox="3 3 18 18"').replace(b'#232629', b'#84888c')
+AUTO_LUX_APP_SVG = b"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <g transform="translate(36, 25)">
+    <g transform="translate(-544.57141-742.93359)">
+      <circle r="6.5" cy="756.93359" cx="558.57141" style="fill:#000000"/>
+      <circle r="6" cy="756.93359" cx="558.57141" style="fill:#ff8500"/>
+    </g>
+  </g>
+</svg>"""
 
 # adjustrgb icon from breeze5-icons: LGPL-3.0-only
 COLOR_TEMPERATURE_SVG = b"""
@@ -1023,9 +1031,7 @@ MENU_ICON_SOURCE = b"""
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
   <defs id="defs3051">
     <style type="text/css" id="current-color-scheme">
-      .ColorScheme-Text {
-        color:#232629;
-      }
+      .ColorScheme-Text { color:#232629; }
       </style>
   </defs>
   <g transform="translate(1,1)">
@@ -4925,7 +4931,7 @@ def create_icon_from_text(text: str, themed: bool = True) -> QIcon:
     return QIcon(pixmap)
 
 
-def create_merged_icon(base_icon: QIcon, overlay_icon: QIcon) -> QIcon:
+def create_merged_icon(base_icon: QIcon, overlay_icon: QIcon, full_overlay: bool = False) -> QIcon:
     """Non-destructively overlay overlay_icon in the middle of base_icon."""
     base_pixmap = base_icon.pixmap(QSize(64, 64), QIcon.Mode.Normal, QIcon.State.On)
     base_size = base_pixmap.size()
@@ -4933,7 +4939,10 @@ def create_merged_icon(base_icon: QIcon, overlay_icon: QIcon) -> QIcon:
     overlay_pixmap = overlay_icon.pixmap(base_size, QIcon.Mode.Normal, QIcon.State.On)
     painter = QPainter(combined_pixmap)
     painter.drawPixmap(0, 0, base_pixmap)
-    painter.drawPixmap(base_size.width()//4, base_size.height()//8, base_size.width()//2, base_size.height()//2, overlay_pixmap)
+    if full_overlay:
+        painter.drawPixmap(0, 0, 64, 64, overlay_pixmap)
+    else:
+        painter.drawPixmap(base_size.width()//4, base_size.height()//8, base_size.width()//2, base_size.height()//2, overlay_pixmap)
     painter.end()
     overlay_icon = QIcon()
     overlay_icon.addPixmap(combined_pixmap)
@@ -6965,6 +6974,8 @@ class VduAppWindow(QMainWindow):
         self.main_config = main_config
         self.transitioning_dummy_preset: PresetTransitionDummy | None = None
         self.hide_shortcuts = True
+        self.current_preset_icon: QIcon | None = None
+        self.current_preset_title: str | None = None
         self._run_in_gui_thread_qtsignal.connect(partial)  # partial will execute its first arg as a callable.
         # Gnome tray doesn't normally provide a way to bring up the main app.
         self.os_desktop = os.environ.get('XDG_CURRENT_DESKTOP', default='unknown').lower()
@@ -7015,7 +7026,7 @@ class VduAppWindow(QMainWindow):
                 log_error("no system tray - cannot run in system tray.")
 
         self.app_name = APPNAME
-        self.set_app_icon_and_title()
+        self.update_app_icon_and_title()
         app.setApplicationDisplayName(self.app_name)
         app.setAttribute(Qt.AA_UseHighDpiPixmaps)  # Make sure all icons use HiDPI - toolbars don't by default, so force it.
 
@@ -7109,13 +7120,19 @@ class VduAppWindow(QMainWindow):
             self.raise_()  # Attempt to force it to the top with raise and activate
             self.activateWindow()
 
-    def set_app_icon_and_title(self, icon: QIcon | None = None, title_prefix: str | None = None) -> None:
-        assert is_running_in_gui_thread()
-        title = f"{title_prefix} {PRESET_APP_SEPARATOR_SYMBOL} {self.app_name}" if title_prefix else self.app_name
-        if self.windowTitle() != title:
+    def update_app_icon_and_title(self):
+        if self.current_preset_icon is not None:
+            icon = create_merged_icon(self.app_icon, self.current_preset_icon)
+            title = f"{self.current_preset_title} {PRESET_APP_SEPARATOR_SYMBOL} {self.app_name}"
+        else:
+            icon = self.app_icon
+            title = self.app_name
+        if self.main_controller.lux_auto_controller is not None and self.main_controller.lux_auto_controller.is_auto_enabled():
+            icon = create_merged_icon(icon, create_icon_from_svg_bytes(AUTO_LUX_APP_SVG, themed=False), full_overlay=True)
+            title = f"{tr('Auto')}/{title}"
+        if self.windowTitle() != title:  # Don't change if not needed - prevent flickering.
             self.setWindowTitle(title)
-        icon = create_merged_icon(self.app_icon, icon) if icon else self.app_icon
-        self.app.setWindowIcon(icon)
+            self.app.setWindowIcon(icon)
         if self.tray:
             self.tray.setToolTip(title)
             self.tray.setIcon(icon)
@@ -7166,8 +7183,7 @@ class VduAppWindow(QMainWindow):
             icon = create_icon_from_svg_bytes(lux_auto_controller.current_auto_svg())
             self.app_context_menu.update_lux_auto_icon(icon)
             self.refresh_tray_menu()
-            if lux_auto_controller.is_auto_enabled():
-                self.set_app_icon_and_title(icon, tr('Auto'))
+            self.update_app_icon_and_title()
 
     def update_status_indicators(self, preset=None, palette_change: bool = False) -> None:
         assert is_running_in_gui_thread()  # Boilerplate in case this is called from the wrong thread.
@@ -7177,13 +7193,16 @@ class VduAppWindow(QMainWindow):
             self.get_main_panel().display_active_preset(None)
             self.app_context_menu.indicate_preset_active(None)
             PresetsDialog.instance_indicate_active_preset(None)
-            self.set_app_icon_and_title()
+            self.current_preset_title = self.current_preset_icon = None
+            self.update_app_icon_and_title()
             self.display_lux_auto_indicators()  # Check in case both schedule and lux auto are active
         else:  # Set indicators to specific preset
             self.get_main_panel().display_active_preset(preset)
             self.app_context_menu.indicate_preset_active(preset)
             PresetsDialog.instance_indicate_active_preset(preset)
-            self.set_app_icon_and_title(preset.create_icon(themed=False), preset.get_title_name())
+            self.current_preset_title = preset.get_title_name()
+            self.current_preset_icon = preset.create_icon(themed=False)
+            self.update_app_icon_and_title()
             if (self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) and
                     self.main_controller.lux_auto_controller.is_auto_enabled()):
                 QTimer.singleShot(5000, self.display_lux_auto_indicators)  # After a pause, replace with auto-icon if auto enabled
