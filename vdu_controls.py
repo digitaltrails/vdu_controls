@@ -7107,7 +7107,7 @@ class VduAppWindow(QMainWindow):
         if toggle and self.isVisible():
             self.hide()
         else:
-            if len(self.settings.allKeys()) == 0 and self.main_config.is_set(ConfOption.PRESERVE_WINDOW_STATE):
+            if len(self.settings.allKeys()) == 0 and self.main_config.is_set(ConfOption.SMART_WINDOW):
                 # No previous state - guess a position near the tray. Use the mouse pos as a guess to where the
                 # system tray is.  The Linux Qt x,y geometry returned by the tray icon is 0,0, so we can't use that.
                 p = QCursor.pos()
