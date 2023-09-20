@@ -222,6 +222,9 @@ Version History
 * 1.11.1
   * Fix Preset text size in tray icon.
   * Fix occasional concurrency lockup issue in lux_metering.
+  * Update the Settings Dialog when a new VDU becomes available.
+  * Light-metering: app-icon/title: show an lux-auto indicator (orange "LED") AND the current preset (if any).
+  * Fix first time use crash (issue #60).
 * 1.11.0
   * Made vdu_controls ddcutil-2.0-ready.
   * Added support for ddcutil versions earlier than 1.3 (issue #43, #53).

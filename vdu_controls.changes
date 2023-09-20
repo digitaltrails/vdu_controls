@@ -4,6 +4,9 @@ Tue 12 Sep 2023 20:59:00 UTC - Michael Hamilton <michael@actrix.gen.nz>
 - Version1.11.1
   * Fix Preset text size in tray icon.
   * Fix occasional concurrency lockup issue in lux_metering.
+  * Update the Settings Dialog when a new VDU becomes available.
+  * Light-metering: app-icon/title: show an lux-auto indicator (orange "LED") AND the current preset (if any).
+  * Fix first time use crash (issue #60).
 
 -------------------------------------------------------------------
 Sun 24 Jun 2023 21:50:00 UTC - Michael Hamilton <michael@actrix.gen.nz>
