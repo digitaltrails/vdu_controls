@@ -7,6 +7,7 @@ Tue 12 Sep 2023 20:59:00 UTC - Michael Hamilton <michael@actrix.gen.nz>
   * Update the Settings Dialog when a new VDU becomes available.
   * Light-metering: show both a lux-auto indicator (an orange "LED") AND the current preset (if any) in the app icon.
   * Fix first time use crash (issue #60).
+  * Allow % in config files by turning off ConfigParser interpolation (issue #60).
 
 -------------------------------------------------------------------
 Sun 24 Jun 2023 21:50:00 UTC - Michael Hamilton <michael@actrix.gen.nz>

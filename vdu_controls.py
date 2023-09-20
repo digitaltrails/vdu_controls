@@ -1361,7 +1361,7 @@ class DdcUtil:
         """Return a vpc capabilities string."""
         result = self.__run__(*['capabilities'] + self.id_key_args(vdu_number), log_id=vdu_number)
         capability_text = result.stdout.decode('utf-8', errors='surrogateescape')
-        return capability_text.replace('%', '')
+        return capability_text
 
     def get_type(self, vcp_code) -> str | None:
         return self.vcp_type_map[vcp_code] if vcp_code in self.vcp_type_map else None
@@ -1651,7 +1651,7 @@ class ConfigIni(configparser.ConfigParser):
     METADATA_TIMESTAMP_OPTION = "timestamp"
 
     def __init__(self) -> None:
-        super().__init__()
+        super().__init__(interpolation=None)
         if not self.has_section(ConfigIni.METADATA_SECTION):
             self.add_section(ConfigIni.METADATA_SECTION)
 
@@ -1789,7 +1789,7 @@ class VduControlsConfig:
         return self.ini_content['ddcutil-capabilities']['capabilities-override']
 
     def set_capabilities_alt_text(self, alt_text: str) -> None:
-        self.ini_content['ddcutil-capabilities']['capabilities-override'] = alt_text.replace("%", "%%")
+        self.ini_content['ddcutil-capabilities']['capabilities-override'] = alt_text
 
     def enable_supported_vcp_code(self, vcp_code: str) -> None:
         self.ini_content['vdu-controls-widgets'][SUPPORTED_VCP_BY_CODE[vcp_code].property_name()] = 'yes'
@@ -1845,7 +1845,7 @@ class VduControlsConfig:
         alt_text = preserve_indents_match.group(1) if preserve_indents_match is not None else ''
         # Remove excess indentation while preserving the minimum existing indentation.
         alt_text = inspect.cleandoc(alt_text)
-        self.ini_content['ddcutil-capabilities']['capabilities-override'] = alt_text.replace('%', '')
+        self.ini_content['ddcutil-capabilities']['capabilities-override'] = alt_text
 
     def reload(self) -> None:
         log_info(f"Reloading config: {self.file_path}")
@@ -2512,7 +2512,7 @@ class SettingsEditorLongTextWidget(SettingsEditorFieldBase):
         text_editor = QPlainTextEdit(section_editor.ini_editable[section][option])
 
         def text_changed() -> None:
-            section_editor.ini_editable[section][option] = text_editor.toPlainText().replace("%", "%%")
+            section_editor.ini_editable[section][option] = text_editor.toPlainText()
 
         text_editor.textChanged.connect(text_changed)
         layout.addWidget(text_editor)

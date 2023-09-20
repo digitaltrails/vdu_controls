@@ -225,6 +225,7 @@ Version History
   * Update the Settings Dialog when a new VDU becomes available.
   * Light-metering: show both a lux-auto indicator (an orange "LED") AND the current preset (if any) in the app icon.
   * Fix first time use crash (issue #60).
+  * Allow % in config files by turning off ConfigParser interpolation (issue #60).
 * 1.11.0
   * Made vdu_controls ddcutil-2.0-ready.
   * Added support for ddcutil versions earlier than 1.3 (issue #43, #53).
