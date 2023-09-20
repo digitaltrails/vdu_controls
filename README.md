@@ -223,7 +223,7 @@ Version History
   * Fix Preset text size in tray icon.
   * Fix occasional concurrency lockup issue in lux_metering.
   * Update the Settings Dialog when a new VDU becomes available.
-  * Light-metering: app-icon/title: show an lux-auto indicator (orange "LED") AND the current preset (if any).
+  * Light-metering: show both a lux-auto indicator (an orange "LED") AND the current preset (if any) in the app icon.
   * Fix first time use crash (issue #60).
 * 1.11.0
   * Made vdu_controls ddcutil-2.0-ready.
