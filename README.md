@@ -221,6 +221,7 @@ Version History
 ---------------
 * 1.11.2
   * Encode translations in plain text rather than escaped XML (for easier editing).
+  * Tidy up of app-icon's auto-lux indicator and transitioning-preset indicator.
 
 * 1.11.1
   * Fix Preset text size in tray icon.

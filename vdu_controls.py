@@ -984,14 +984,8 @@ CONTRAST_SVG = b"""
 
 AUTO_LUX_ON_SVG = BRIGHTNESS_SVG.replace(b'viewBox="0 0 24 24"', b'viewBox="3 3 18 18"').replace(b'#232629', b'#ff8500')
 AUTO_LUX_OFF_SVG = BRIGHTNESS_SVG.replace(b'viewBox="0 0 24 24"', b'viewBox="3 3 18 18"').replace(b'#232629', b'#84888c')
-AUTO_LUX_APP_SVG = b"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <g transform="translate(36, 25)">
-    <g transform="translate(-544.57141-742.93359)">
-      <circle r="6.5" cy="756.93359" cx="558.57141" style="fill:#000000"/>
-      <circle r="6" cy="756.93359" cx="558.57141" style="fill:#ff8500"/>
-    </g>
-  </g>
-</svg>"""
+AUTO_LUX_LED_COLOR = QColor(0xff8500)
+PRESET_TRANSITIONING_LED_COLOR = QColor(0x00ff00)
 
 # adjustrgb icon from breeze5-icons: LGPL-3.0-only
 COLOR_TEMPERATURE_SVG = b"""
@@ -1055,9 +1049,7 @@ REFRESH_ICON_SOURCE = b"""
 """
 
 TRANSITION_ICON_SOURCE = b"""
-<svg  xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24">
-  <rect width="10" height="10" rx="4" x="6" y="6" stroke="black" stroke-width="1" fill="#80ff00" />
-</svg>
+<svg  xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24"></svg>
 """
 
 SWATCH_ICON_SOURCE = b"""
@@ -4931,22 +4923,22 @@ def create_icon_from_text(text: str, themed: bool = True) -> QIcon:
     return QIcon(pixmap)
 
 
-def create_merged_icon(base_icon: QIcon, overlay_icon: QIcon, full_overlay: bool = False) -> QIcon:
-    """Non-destructively overlay overlay_icon in the middle of base_icon."""
-    base_pixmap = base_icon.pixmap(QSize(64, 64), QIcon.Mode.Normal, QIcon.State.On)
-    base_size = base_pixmap.size()
-    combined_pixmap = QPixmap(base_pixmap)
-    overlay_pixmap = overlay_icon.pixmap(base_size, QIcon.Mode.Normal, QIcon.State.On)
+def create_decorated_app_icon(base_icon: QIcon, overlay_icon: QIcon | None = None,
+                              left_indicator: QColor | None = None, right_indicator: QColor | None = None) -> QIcon:
+    # Non-destructively overlay overlay_icon and indicators within a copy of base_icon.
+    icon_size = QSize(64, 64)   # Everything is hard coded based on 64x64
+    combined_pixmap = QPixmap(base_icon.pixmap(icon_size, QIcon.Mode.Normal, QIcon.State.On))
     painter = QPainter(combined_pixmap)
-    painter.drawPixmap(0, 0, base_pixmap)
-    if full_overlay:
-        painter.drawPixmap(0, 0, 64, 64, overlay_pixmap)
-    else:
-        painter.drawPixmap(base_size.width()//4, base_size.height()//8, base_size.width()//2, base_size.height()//2, overlay_pixmap)
+    if overlay_icon:
+        overlay_pixmap = overlay_icon.pixmap(icon_size, QIcon.Mode.Normal, QIcon.State.On)
+        painter.drawPixmap(16, 8, 32, 32, overlay_pixmap)
+    painter.setPen(QPen(Qt.black, 1, Qt.SolidLine))
+    for i, led_color in enumerate((left_indicator, right_indicator)):
+        if led_color:
+            painter.setBrush(led_color)  # Each indicator resembles/simulates an LED embedded in the app icon.
+            painter.drawEllipse(8 if i == 0 else 44, 32, 16, 16)
     painter.end()
-    overlay_icon = QIcon()
-    overlay_icon.addPixmap(combined_pixmap)
-    return overlay_icon
+    return QIcon(combined_pixmap)
 
 
 def install_as_desktop_application(uninstall: bool = False) -> None:
@@ -6209,11 +6201,10 @@ class LuxAutoController:
         self.lux_config = LuxConfig()
         self.lux_meter: LuxMeterDevice | None = None
         self.lux_auto_brightness_worker: LuxAutoWorker | None = None
-        self.lux_tool_button = self.create_tool_button()
+        self.lux_tool_button: ToolButton | None = None
 
     def create_tool_button(self) -> ToolButton:  # Used when the application UI has to reinitialize
         self.lux_tool_button = ToolButton(AUTO_LUX_ON_SVG, tr("Toggle light metered brightness adjustment"))
-        self.lux_tool_button.pressed.connect(self.toggle_auto)
         return self.lux_tool_button
 
     def stop_worker(self):
@@ -6492,13 +6483,13 @@ class VduAppController:   # Main controller containing methods for high level op
                 self.create_ddcutil()
                 self.preset_controller.reinitialize()
                 self.main_window.create_main_control_panel()
-                self.main_window.update_status_indicators()
                 SettingsEditor.reconfigure_instance(self.get_vdu_configs())
             log_debug("configure: released application_configuration_lock") if log_debug_enabled else None
             if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED):
                 LuxDialog.reconfigure_instance()
                 if self.lux_auto_controller is not None:
                     self.lux_auto_controller.initialize_from_config()
+            self.main_window.update_status_indicators()
             # restore_preset tries to acquire the same lock, safe to unlock and let it relock...
             if overdue := self.schedule_presets(True):
                 # This preset is the one that should be running now
@@ -6604,11 +6595,8 @@ class VduAppController:   # Main controller containing methods for high level op
         try:
             self.main_window.setDisabled(True)
             self.lux_auto_controller.toggle_auto()
-            self.main_window.display_lux_auto_indicators()
-            if not self.lux_auto_controller.is_auto_enabled():
-                self.main_window.update_status_indicators()  # Restore normal icon - which might include a preset
-                return False
-            return True
+            self.main_window.update_status_indicators()
+            return self.lux_auto_controller.is_auto_enabled()
         finally:
             self.main_window.setDisabled(False)
 
@@ -6972,10 +6960,7 @@ class VduAppWindow(QMainWindow):
         self.settings = QSettings('vdu_controls.qt.state', 'vdu_controls')
         self.main_panel: VduControlsMainPanel | None = None
         self.main_config = main_config
-        self.transitioning_dummy_preset: PresetTransitionDummy | None = None
         self.hide_shortcuts = True
-        self.current_preset_icon: QIcon | None = None
-        self.current_preset_title: str | None = None
         self._run_in_gui_thread_qtsignal.connect(partial)  # partial will execute its first arg as a callable.
         # Gnome tray doesn't normally provide a way to bring up the main app.
         self.os_desktop = os.environ.get('XDG_CURRENT_DESKTOP', default='unknown').lower()
@@ -7120,16 +7105,17 @@ class VduAppWindow(QMainWindow):
             self.raise_()  # Attempt to force it to the top with raise and activate
             self.activateWindow()
 
-    def update_app_icon_and_title(self):
-        if self.current_preset_icon is not None:
-            icon = create_merged_icon(self.app_icon, self.current_preset_icon)
-            title = f"{self.current_preset_title} {PRESET_APP_SEPARATOR_SYMBOL} {self.app_name}"
-        else:
-            icon = self.app_icon
-            title = self.app_name
+    def update_app_icon_and_title(self, preset: Preset | None = None):
+        title = self.app_name
+        preset_icon = led1_color = led2_color = None
+        if preset is not None:
+            led1_color = PRESET_TRANSITIONING_LED_COLOR if isinstance(preset, PresetTransitionDummy) else None
+            title = f"{preset.get_title_name()} {PRESET_APP_SEPARATOR_SYMBOL} {title}"
+            preset_icon = preset.create_icon(themed=False)
         if self.main_controller.lux_auto_controller is not None and self.main_controller.lux_auto_controller.is_auto_enabled():
-            icon = create_merged_icon(icon, create_icon_from_svg_bytes(AUTO_LUX_APP_SVG, themed=False), full_overlay=True)
+            led2_color = AUTO_LUX_LED_COLOR
             title = f"{tr('Auto')}/{title}"
+        icon = create_decorated_app_icon(self.app_icon, preset_icon, led1_color, led2_color)
         if self.windowTitle() != title:  # Don't change if not needed - prevent flickering.
             self.setWindowTitle(title)
             self.app.setWindowIcon(icon)
@@ -7152,7 +7138,9 @@ class VduAppWindow(QMainWindow):
         refresh_button.pressed.connect(self.main_controller.start_refresh)
         tool_buttons = [refresh_button]
         if self.main_controller.lux_auto_controller is not None:
-            tool_buttons.append(self.main_controller.lux_auto_controller.create_tool_button())
+            lux_auto_button = self.main_controller.lux_auto_controller.create_tool_button()
+            lux_auto_button.pressed.connect(self.main_controller.lux_auto_action)
+            tool_buttons.append(lux_auto_button)
         self.refresh_preset_menu()
         self.main_panel.initialise_control_panels(self.main_controller.vdu_controllers_map, self.app_context_menu, self.main_config,
                                                   tool_buttons, self.splash_message_qtsignal)
@@ -7183,7 +7171,6 @@ class VduAppWindow(QMainWindow):
             icon = create_icon_from_svg_bytes(lux_auto_controller.current_auto_svg())
             self.app_context_menu.update_lux_auto_icon(icon)
             self.refresh_tray_menu()
-            self.update_app_icon_and_title()
 
     def update_status_indicators(self, preset=None, palette_change: bool = False) -> None:
         assert is_running_in_gui_thread()  # Boilerplate in case this is called from the wrong thread.
@@ -7193,20 +7180,13 @@ class VduAppWindow(QMainWindow):
             self.get_main_panel().display_active_preset(None)
             self.app_context_menu.indicate_preset_active(None)
             PresetsDialog.instance_indicate_active_preset(None)
-            self.current_preset_title = self.current_preset_icon = None
-            self.update_app_icon_and_title()
-            self.display_lux_auto_indicators()  # Check in case both schedule and lux auto are active
         else:  # Set indicators to specific preset
             self.get_main_panel().display_active_preset(preset)
             self.app_context_menu.indicate_preset_active(preset)
             PresetsDialog.instance_indicate_active_preset(preset)
-            self.current_preset_title = preset.get_title_name()
-            self.current_preset_icon = preset.create_icon(themed=False)
-            self.update_app_icon_and_title()
-            if (self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) and
-                    self.main_controller.lux_auto_controller.is_auto_enabled()):
-                QTimer.singleShot(5000, self.display_lux_auto_indicators)  # After a pause, replace with auto-icon if auto enabled
-        if palette_change or (preset is not None and preset != self.transitioning_dummy_preset):
+        self.update_app_icon_and_title(preset)
+        self.display_lux_auto_indicators()
+        if palette_change or (preset is not None and not isinstance(preset, PresetTransitionDummy)):
             self.refresh_preset_menu(palette_change=palette_change)
 
     def respond_to_changes_handler(self, vdu_stable_id: VduStableId, vcp_code: str, value: str, origin: VcpOrigin) -> None:
