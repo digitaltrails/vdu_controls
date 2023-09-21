@@ -24,7 +24,7 @@
     <message>
         <location filename="../vdu_controls.py" line="1536" />
         <source>audio volume</source>
-        <translation>Tonlautst&#228;rke </translation>
+        <translation>Tonlautstärke </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1537" />
@@ -34,7 +34,7 @@
     <message>
         <location filename="../vdu_controls.py" line="1538" />
         <source>audio treble</source>
-        <translation>Audio H&#246;hen </translation>
+        <translation>Audio Höhen </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1539" />
@@ -44,7 +44,7 @@
     <message>
         <location filename="../vdu_controls.py" line="1540" />
         <source>audio mic volume</source>
-        <translation>Audio-Mic-Lautst&#228;rke</translation>
+        <translation>Audio-Mic-Lautstärke</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1541" />
@@ -74,7 +74,7 @@
     <message>
         <location filename="../vdu_controls.py" line="1607" />
         <source>capabilities-override</source>
-        <translation>Override/Cache f&#252;r ddcutil-Funktionen text </translation>
+        <translation>Override/Cache für ddcutil-Funktionen text </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1717" />
@@ -94,7 +94,7 @@
     <message>
         <location filename="../vdu_controls.py" line="1725" />
         <source>ddcutil-capabilities</source>
-        <translation>ddcutil-F&#228;higkeiten </translation>
+        <translation>ddcutil-Fähigkeiten </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3014" />
@@ -104,12 +104,12 @@
     <message>
         <location filename="../vdu_controls.py" line="2147" />
         <source>Nothing needs saving. Do you wish to save anyway?</source>
-        <translation>Nichts muss gespeichert werden. M&#246;chten Sie trotzdem speichern? </translation>
+        <translation>Nichts muss gespeichert werden. Möchten Sie trotzdem speichern? </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="2218" />
         <source>No unsaved changes for {}.</source>
-        <translation>Keine ungespeicherten &#196;nderungen f&#252;r {}. </translation>
+        <translation>Keine ungespeicherten Änderungen für {}. </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="2222" />
@@ -124,7 +124,7 @@
     <message>
         <location filename="../vdu_controls.py" line="6326" />
         <source>Close</source>
-        <translation>Schlie&#223;en </translation>
+        <translation>Schließen </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="2258" />
@@ -134,7 +134,7 @@
     <message>
         <location filename="../vdu_controls.py" line="2434" />
         <source>Latitude,Longitude for solar elevation calculations.</source>
-        <translation>Breitengrad, L&#228;ngengrad f&#252;r Sonnenh&#246;henberechnungen. </translation>
+        <translation>Breitengrad, Längengrad für Sonnenhöhenberechnungen. </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="2457" />
@@ -169,12 +169,12 @@
     <message>
         <location filename="../vdu_controls.py" line="2740" />
         <source>Display {vnum} {vdesc} feature {code} '({cdesc})' has an undefined value '{value}'. Valid values are {valid}.</source>
-        <translation>Anzeige {vnum} {vdesc} Feature {code} '({cdesc})' hat einen undefinierten Wert '{value}'. G&#252;ltige Werte sind {valid}. </translation>
+        <translation>Anzeige {vnum} {vdesc} Feature {code} '({cdesc})' hat einen undefinierten Wert '{value}'. Gültige Werte sind {valid}. </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="2745" />
         <source>If you want to extend the set of permitted values, you can edit the metadata for {} in the settings panel.  For more details see the man page concerning VDU/VDU-model config files.</source>
-        <translation>Wenn Sie den Satz zul&#228;ssiger Werte erweitern m&#246;chten, k&#246;nnen Sie die Metadaten f&#252;r {} im Einstellungsfeld bearbeiten. Weitere Einzelheiten finden Sie in der Manpage zu VDU/VDU-Modell-Konfigurationsdateien. </translation>
+        <translation>Wenn Sie den Satz zulässiger Werte erweitern möchten, können Sie die Metadaten für {} im Einstellungsfeld bearbeiten. Weitere Einzelheiten finden Sie in der Manpage zu VDU/VDU-Modell-Konfigurationsdateien. </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="2761" />
@@ -184,22 +184,22 @@
     <message>
         <location filename="../vdu_controls.py" line="2782" />
         <source>If you want to extend the set of permitted values, see the man page concerning VDU/VDU-model config files .</source>
-        <translation>Wenn Sie den Satz zul&#228;ssiger Werte erweitern m&#246;chten, lesen Sie die Manpage zu VDU/VDU-Modell-Konfigurationsdateien . </translation>
+        <translation>Wenn Sie den Satz zulässiger Werte erweitern möchten, lesen Sie die Manpage zu VDU/VDU-Modell-Konfigurationsdateien . </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="2910" />
         <source>{} later today at {}</source>
-        <translation>{} sp&#228;ter heute bei {} </translation>
+        <translation>{} später heute bei {} </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="2912" />
         <source>{} earlier today at {}</source>
-        <translation>{} fr&#252;her heute um {} </translation>
+        <translation>{} früher heute um {} </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="2914" />
         <source>{} suspended for  {}</source>
-        <translation>{} ausgesetzt f&#252;r {} </translation>
+        <translation>{} ausgesetzt für {} </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="4316" />
@@ -229,7 +229,7 @@
     <message>
         <location filename="../vdu_controls.py" line="3017" />
         <source>Abou&amp;t</source>
-        <translation>&amp;&#220;ber </translation>
+        <translation>&amp;Über </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3018" />
@@ -244,7 +244,7 @@
     <message>
         <location filename="../vdu_controls.py" line="7241" />
         <source>Failed to obtain capabilities for monitor {} {} {}.</source>
-        <translation>Fehler beim Abrufen von F&#228;higkeiten f&#252;r Monitor {} {} {}. </translation>
+        <translation>Fehler beim Abrufen von Fähigkeiten für Monitor {} {} {}. </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="7243" />
@@ -255,9 +255,9 @@
  3: Apply standard brightness and contrast controls.</source>
         <translation>Dieser Monitor kann nicht automatisch konfiguriert werden.
  Sie haben die Wahl:
- 1: Erneut versuchen, die F&#228;higkeiten zu erhalten.
+ 1: Erneut versuchen, die Fähigkeiten zu erhalten.
  2: Diesen Monitor ignorieren.
- 3: Die Standardeinstellungen f&#252;r Helligkeit und Kontrast anwenden. </translation>
+ 3: Die Standardeinstellungen für Helligkeit und Kontrast anwenden. </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="7252" />
@@ -279,12 +279,12 @@
         <source>
 Please check these files and edit or remove them if they cause further issues.</source>
         <translation>
-Bitte &#252;berpr&#252;fen Sie diese Dateien und bearbeiten oder entfernen Sie sie, wenn sie weitere Probleme verursachen. </translation>
+Bitte überprüfen Sie diese Dateien und bearbeiten oder entfernen Sie sie, wenn sie weitere Probleme verursachen. </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3233" />
         <source>Monitor {} {} lacks any accessible controls.</source>
-        <translation>Monitor {} {} hat keine zug&#228;nglichen Steuerelemente. </translation>
+        <translation>Monitor {} {} hat keine zugänglichen Steuerelemente. </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3235" />
@@ -297,8 +297,8 @@ Bitte &#252;berpr&#252;fen Sie diese Dateien und bearbeiten oder entfernen Sie s
 Use the refresh button if any become available.
 Check that ddcutil and i2c are installed and configured.</source>
         <translation>Keine steuerbaren Monitore gefunden.
-Verwenden Sie die Aktualisierungsschaltfl&#228;che, wenn einer verf&#252;gbar wird.
-Pr&#252;fen Sie, ob ddcutil und i2c installiert und konfiguriert sind. </translation>
+Verwenden Sie die Aktualisierungsschaltfläche, wenn einer verfügbar wird.
+Prüfen Sie, ob ddcutil und i2c installiert und konfiguriert sind. </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="7226" />
@@ -319,7 +319,7 @@ Run vdu_controls --debug in a console and check for additional messages.
 {}</source>
         <translation>Ist ddcutil installiert?  Ist i2c installiert und konfiguriert?
 
-F&#252;hren Sie vdu_controls --debug in einer Konsole aus und pr&#252;fen Sie auf zus&#228;tzliche Meldungen.
+Führen Sie vdu_controls --debug in einer Konsole aus und prüfen Sie auf zusätzliche Meldungen.
 
 {} </translation>
     </message>
@@ -331,32 +331,32 @@ F&#252;hren Sie vdu_controls --debug in einer Konsole aus und pr&#252;fen Sie au
     <message>
         <location filename="../vdu_controls.py" line="3602" />
         <source>Move up the menu order.</source>
-        <translation>In der Men&#252;reihenfolge nach oben gehen. </translation>
+        <translation>In der Menüreihenfolge nach oben gehen. </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3612" />
         <source>Move down the menu order.</source>
-        <translation>Bewegen Sie sich in der Men&#252;reihenfolge nach unten. </translation>
+        <translation>Bewegen Sie sich in der Menüreihenfolge nach unten. </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3621" />
         <source>Delete this preset.</source>
-        <translation>Diese Voreinstellung l&#246;schen. </translation>
+        <translation>Diese Voreinstellung löschen. </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3667" />
         <source>Press to skip: </source>
-        <translation>Dr&#252;cken Sie zum &#220;berspringen: </translation>
+        <translation>Drücken Sie zum Überspringen: </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3669" />
         <source>Press to re-enable: </source>
-        <translation>Dr&#252;cken Sie, um die Voreinstellung wieder zu aktivieren: </translation>
+        <translation>Drücken Sie, um die Voreinstellung wieder zu aktivieren: </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3705" />
         <source>Choose a preset icon.</source>
-        <translation>W&#228;hlen Sie ein Voreinstellungssymbol. </translation>
+        <translation>Wählen Sie ein Voreinstellungssymbol. </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3731" />
@@ -366,7 +366,7 @@ F&#252;hren Sie vdu_controls --debug in einer Konsole aus und pr&#252;fen Sie au
     <message>
         <location filename="../vdu_controls.py" line="4266" />
         <source>Solar elevation trigger: </source>
-        <translation>Ausl&#246;ser f&#252;r die Sonnenerh&#246;hung: </translation>
+        <translation>Auslöser für die Sonnenerhöhung: </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="4314" />
@@ -381,12 +381,12 @@ F&#252;hren Sie vdu_controls --debug in einer Konsole aus und pr&#252;fen Sie au
     <message>
         <location filename="../vdu_controls.py" line="4320" />
         <source>dusk</source>
-        <translation>Abendd&#228;mmerung </translation>
+        <translation>Abenddämmerung </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="4322" />
         <source>twilight</source>
-        <translation>D&#228;mmerung </translation>
+        <translation>Dämmerung </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="4324" />
@@ -421,7 +421,7 @@ F&#252;hren Sie vdu_controls --debug in einer Konsole aus und pr&#252;fen Sie au
     <message>
         <location filename="../vdu_controls.py" line="4607" />
         <source>Choose which settings to save for {}</source>
-        <translation>W&#228;hlen Sie die zu speichernden Einstellungen f&#252;r {} </translation>
+        <translation>Wählen Sie die zu speichernden Einstellungen für {} </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="4768" />
@@ -431,7 +431,7 @@ F&#252;hren Sie vdu_controls --debug in einer Konsole aus und pr&#252;fen Sie au
     <message>
         <location filename="../vdu_controls.py" line="4695" />
         <source>Delete {}?</source>
-        <translation>{} l&#246;schen? </translation>
+        <translation>{} löschen? </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="4727" />
@@ -480,21 +480,21 @@ Use the content-menu to create additional charts and
 drag them onto each display.
 
 This chart is resizable. </source>
-        <translation>Graustufen-Referenz f&#252;r die Bildschirmeinstellung.
+        <translation>Graustufen-Referenz für die Bildschirmeinstellung.
 
 Stellen Sie den Kontrast auf das Maximum ein (bei HDR-Monitoren
 versuchen Sie einen niedrigeren Wert, z. B. 70 %) und passen Sie die Helligkeit
-bis so viele Rechtecke wie m&#246;glich zu erkennen sind.
+bis so viele Rechtecke wie möglich zu erkennen sind.
 
-Verwenden Sie das Inhaltsmen&#252;, um zus&#228;tzliche Diagramme zu erstellen und
+Verwenden Sie das Inhaltsmenü, um zusätzliche Diagramme zu erstellen und
 ziehen Sie sie auf jedes Display.
 
-Dieses Diagramm ist in der Gr&#246;&#223;e ver&#228;nderbar.  </translation>
+Dieses Diagramm ist in der Größe veränderbar.  </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="6294" />
         <source>About vdu_controls</source>
-        <translation>&#220;ber vdu_controls </translation>
+        <translation>Über vdu_controls </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="6996" />
@@ -512,22 +512,22 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="7442" />
         <source>Using newer .ts file {} translations from {}</source>
-        <translation>Verwendet neuere .ts-Datei {} &#220;bersetzungen von {} </translation>
+        <translation>Verwendet neuere .ts-Datei {} Übersetzungen von {} </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="7451" />
         <source>Loaded {} translations from {}</source>
-        <translation>Geladene {} &#220;bersetzungen von {} </translation>
+        <translation>Geladene {} Übersetzungen von {} </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="7454" />
         <source>Loading {} translations from {}</source>
-        <translation>Laden von {} &#220;bersetzungen aus {} </translation>
+        <translation>Laden von {} Übersetzungen aus {} </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="7457" />
         <source>Using {} translations from {}</source>
-        <translation>Verwenden von {} &#220;bersetzungen aus {} </translation>
+        <translation>Verwenden von {} Übersetzungen aus {} </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="7543" />
@@ -537,7 +537,7 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="7544" />
         <source>This is probably because {} is not executable or is not on your PATH.</source>
-        <translation>Dies liegt wahrscheinlich daran, dass {} nicht ausf&#252;hrbar ist oder sich nicht in Ihrem PATH befindet. </translation>
+        <translation>Dies liegt wahrscheinlich daran, dass {} nicht ausführbar ist oder sich nicht in Ihrem PATH befindet. </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="2258" />
@@ -547,7 +547,7 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="2905" />
         <source> (subject to {} weather)</source>
-        <translation> (abh&#228;ngig von {} Wetter) </translation>
+        <translation> (abhängig von {} Wetter) </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="6789" />
@@ -562,7 +562,7 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="3812" />
         <source>Please check Location in Settings</source>
-        <translation>Bitte &#252;berpr&#252;fen Sie den Standort in den Einstellungen </translation>
+        <translation>Bitte überprüfen Sie den Standort in den Einstellungen </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3817" />
@@ -572,7 +572,7 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="3849" />
         <source>Additional weather requirements</source>
-        <translation>Zus&#228;tzliche Wetteranforderungen </translation>
+        <translation>Zusätzliche Wetteranforderungen </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3850" />
@@ -587,12 +587,12 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="3830" />
         <source>The site {} reports your location as {}, {}, {},{} which is about {} {} from the latitude and longitude specified in Settings.</source>
-        <translation>Die Website {a} meldet Ihren Standort als {}, {}, {},{}, der etwa {} {} von dem in den Einstellungen angegebenen Breiten- und L&#228;ngengrad entfernt ist.</translation>
+        <translation>Die Website {a} meldet Ihren Standort als {}, {}, {},{}, der etwa {} {} von dem in den Einstellungen angegebenen Breiten- und Längengrad entfernt ist.</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3930" />
         <source>Weather for {} will be retrieved from {}</source>
-        <translation>Das Wetter f&#252;r {} wird von {} abgerufen.</translation>
+        <translation>Das Wetter für {} wird von {} abgerufen.</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="7030" />
@@ -602,7 +602,7 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="3835" />
         <source>Please check the location specified in Settings.</source>
-        <translation>Bitte &#252;berpr&#252;fen Sie den in den Einstellungen angegebenen Ort.</translation>
+        <translation>Bitte überprüfen Sie den in den Einstellungen angegebenen Ort.</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="7031" />
@@ -617,7 +617,7 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="6337" />
         <source>unscheduled</source>
-        <translation>au&#223;erplanm&#228;&#223;ig</translation>
+        <translation>außerplanmäßig</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="6341" />
@@ -627,7 +627,7 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="6342" />
         <source>skipped, superseded</source>
-        <translation>&#252;bersprungen, ersetzt</translation>
+        <translation>übersprungen, ersetzt</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="6343" />
@@ -654,7 +654,7 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="7119" />
         <source>Checking Presets</source>
-        <translation>&#220;berpr&#252;fen von Voreinstellungen</translation>
+        <translation>Überprüfen von Voreinstellungen</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="4811" />
@@ -664,7 +664,7 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="4705" />
         <source>Deleted {}</source>
-        <translation>{} gel&#246;scht</translation>
+        <translation>{} gelöscht</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="6764" />
@@ -684,17 +684,17 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="3994" />
         <source>Transition step</source>
-        <translation>&#220;bergang Schritt</translation>
+        <translation>Übergang Schritt</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="6629" />
         <source>Transitioning to preset {}</source>
-        <translation>&#220;bergang zur Voreinstellung {}</translation>
+        <translation>Übergang zur Voreinstellung {}</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="6635" />
         <source>Transitioning to preset {} (elapsed time {} seconds)...</source>
-        <translation>&#220;bergang zur Voreinstellung {} (verstrichene Zeit {} Sekunden)...</translation>
+        <translation>Übergang zur Voreinstellung {} (verstrichene Zeit {} Sekunden)...</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="6655" />
@@ -709,7 +709,7 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="3635" />
         <source>Transition to {}, each step is {} seconds. {}</source>
-        <translation>&#220;bergang zu {}, jeder Schritt dauert {} Sekunden. {}</translation>
+        <translation>Übergang zu {}, jeder Schritt dauert {} Sekunden. {}</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3012" />
@@ -719,17 +719,17 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="3013" />
         <source>&amp;Light-Meter</source>
-        <translation>&amp;Lichtmessger&#228;t </translation>
+        <translation>&amp;Lichtmessgerät </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3151" />
         <source>Context and Preset Menu</source>
-        <translation>Kontext- und Voreinstellungsmen&#252; </translation>
+        <translation>Kontext- und Voreinstellungsmenü </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3638" />
         <source>Transition to {}. {}</source>
-        <translation>&#220;bergang zu {}. {} </translation>
+        <translation>Übergang zu {}. {} </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3998" />
@@ -739,12 +739,12 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="4164" />
         <source>Drag to change.</source>
-        <translation>Ziehen zum &#196;ndern. </translation>
+        <translation>Ziehen zum Ändern. </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="4171" />
         <source>Click to delete.</source>
-        <translation>Zum L&#246;schen anklicken. </translation>
+        <translation>Zum Löschen anklicken. </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="5316" />
@@ -769,17 +769,17 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="5945" />
         <source>Revert</source>
-        <translation>R&#252;ckg&#228;ngig machen </translation>
+        <translation>Rückgängig machen </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="5966" />
         <source>Select a tty device or fifo</source>
-        <translation>Ein tty-Ger&#228;t oder Fifo ausw&#228;hlen </translation>
+        <translation>Ein tty-Gerät oder Fifo auswählen </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="6089" />
         <source> Device {}</source>
-        <translation> Ger&#228;t {} </translation>
+        <translation> Gerät {} </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="6091" />
@@ -794,7 +794,7 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="6095" />
         <source> Not available {}</source>
-        <translation> Nicht verf&#252;gbar {} </translation>
+        <translation> Nicht verfügbar {} </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="6099" />
@@ -804,12 +804,12 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="6101" />
         <source>You might need to be a member of the {} group.</source>
-        <translation>Sie m&#252;ssen m&#246;glicherweise Mitglied der Gruppe {} sein. </translation>
+        <translation>Sie müssen möglicherweise Mitglied der Gruppe {} sein. </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="6147" />
         <source>There are unsaved profile changes?</source>
-        <translation>Es gibt ungespeicherte Profil&#228;nderungen? </translation>
+        <translation>Es gibt ungespeicherte Profiländerungen? </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="6214" />
@@ -819,7 +819,7 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="6546" />
         <source>The change to the {} option requires vdu_controls to restart.</source>
-        <translation>Die &#196;nderung der Option {} erfordert einen Neustart von vdu_controls. </translation>
+        <translation>Die Änderung der Option {} erfordert einen Neustart von vdu_controls. </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="7107" />
@@ -849,12 +849,12 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="5371" />
         <source>Failed to setup {} - no read access to device.</source>
-        <translation>Failed to setup {} - kein Lesezugriff auf das Ger&#228;t.</translation>
+        <translation>Failed to setup {} - kein Lesezugriff auf das Gerät.</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="5378" />
         <source>Failed to setup {} - not an recognised kind of device or not executable.</source>
-        <translation>Failed to setup {} - kein anerkannter Ger&#228;tetyp oder nicht ausf&#252;hrbar.</translation>
+        <translation>Failed to setup {} - kein anerkannter Gerätetyp oder nicht ausführbar.</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="5155" />
@@ -864,17 +864,17 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="5167" />
         <source>Click to add preset at {} lux</source>
-        <translation>Klicken Sie auf , um eine Voreinstellung f&#252;r {} Lux hinzuzuf&#252;gen.</translation>
+        <translation>Klicken Sie auf , um eine Voreinstellung für {} Lux hinzuzufügen.</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="5476" />
         <source>The required pyserial serial-port module is not installed on this system.</source>
-        <translation>Das erforderliche Modul f&#252;r den seriellen Anschluss pyserial ist auf diesem System nicht installiert.</translation>
+        <translation>Das erforderliche Modul für den seriellen Anschluss pyserial ist auf diesem System nicht installiert.</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="5906" />
         <source>No metering source selected</source>
-        <translation>Keine Messquelle ausgew&#228;hlt</translation>
+        <translation>Keine Messquelle ausgewählt</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3290" />
@@ -929,22 +929,22 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="5940" />
         <source>Apply and save profile-chart changes.</source>
-        <translation>&#196;nderungen der Profiltabelle anwenden und speichern. </translation>
+        <translation>Änderungen der Profiltabelle anwenden und speichern. </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="5946" />
         <source>Abandon profile-chart changes, revert to last saved.</source>
-        <translation>Verwerfen von Profiltabellen&#228;nderungen, Zur&#252;ckkehren zum zuletzt gespeicherten Wert. </translation>
+        <translation>Verwerfen von Profiltabellenänderungen, Zurückkehren zum zuletzt gespeicherten Wert. </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="5972" />
         <source>Meter changed to {}.</source>
-        <translation>Z&#228;hler auf {} ge&#228;ndert. </translation>
+        <translation>Zähler auf {} geändert. </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="5987" />
         <source>Interval changed to {} minutes.</source>
-        <translation>Intervall auf {} Minuten ge&#228;ndert. </translation>
+        <translation>Intervall auf {} Minuten geändert. </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="6002" />
@@ -954,17 +954,17 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="6013" />
         <source>Use Apply to commit chart changes.</source>
-        <translation>Verwenden Sie Anwenden, um Diagramm&#228;nderungen zu best&#228;tigen. </translation>
+        <translation>Verwenden Sie Anwenden, um Diagrammänderungen zu bestätigen. </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="6128" />
         <source>No metering device set.</source>
-        <translation>Kein Messger&#228;t eingestellt. </translation>
+        <translation>Kein Messgerät eingestellt. </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="6753" />
         <source>Skipped, superseded</source>
-        <translation>&#220;bersprungen, abgel&#246;st </translation>
+        <translation>Übersprungen, abgelöst </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="6755" />
@@ -974,12 +974,12 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="5957" />
         <source>Press to expire the timer and immediately evaluate brightness.</source>
-        <translation>Dr&#252;cken Sie , um den Timer ablaufen zu lassen und sofort die Helligkeit zu bewerten.</translation>
+        <translation>Drücken Sie , um den Timer ablaufen zu lassen und sofort die Helligkeit zu bewerten.</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="2244" />
         <source>Reset</source>
-        <translation>Zur&#252;cksetzen</translation>
+        <translation>Zurücksetzen</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="2263" />
@@ -989,17 +989,17 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="2275" />
         <source>Discarded changes to {}</source>
-        <translation>Verworfene &#196;nderungen an {}</translation>
+        <translation>Verworfene Änderungen an {}</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="6542" />
         <source>A settings reset requires vdu_controls to restart.</source>
-        <translation>Ein Zur&#252;cksetzen der Einstellungen erfordert einen Neustart von vdu_controls.</translation>
+        <translation>Ein Zurücksetzen der Einstellungen erfordert einen Neustart von vdu_controls.</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="2237" />
         <source>Reset settings under the {} tab?</source>
-        <translation>Einstellungen unter der Registerkarte {} zur&#252;cksetzen?</translation>
+        <translation>Einstellungen unter der Registerkarte {} zurücksetzen?</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="2238" />
@@ -1009,7 +1009,7 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="2246" />
         <source>Reset/remove existing settings under the {} tab.</source>
-        <translation>Zur&#252;cksetzen/Entfernen bestehender Einstellungen unter der Registerkarte {}.</translation>
+        <translation>Zurücksetzen/Entfernen bestehender Einstellungen unter der Registerkarte {}.</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3945" />
@@ -1019,7 +1019,7 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="3978" />
         <source>Transition</source>
-        <translation>&#220;bergang</translation>
+        <translation>Übergang</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="6368" />
@@ -1034,7 +1034,7 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="6368" />
         <source>Smoothly on menu</source>
-        <translation>Reibungslos bei Men&#252;</translation>
+        <translation>Reibungslos bei Menü</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="6369" />
@@ -1064,7 +1064,7 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="1584" />
         <source>enable language translations</source>
-        <translation>Sprach&#252;bersetzungen aktivieren</translation>
+        <translation>Sprachübersetzungen aktivieren</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1586" />
@@ -1094,7 +1094,7 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="1596" />
         <source>output extra debug information</source>
-        <translation>Gibt zus&#228;tzliche Debug-Informationen aus</translation>
+        <translation>Gibt zusätzliche Debug-Informationen aus</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1597" />
@@ -1104,7 +1104,7 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="1599" />
         <source>latitude,longitude</source>
-        <translation>Breitengrad, L&#228;ngengrad</translation>
+        <translation>Breitengrad, Längengrad</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1601" />
@@ -1124,7 +1124,7 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="3729" />
         <source>Select an icon...</source>
-        <translation>W&#228;hlen Sie ein Symbol aus... </translation>
+        <translation>Wählen Sie ein Symbol aus... </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="4444" />
@@ -1139,7 +1139,7 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="5237" />
         <source>Use the Presets Dialog to create some.</source>
-        <translation>Verwenden Sie das Dialogfeld &#8222;Voreinstellungen&#8220;, um einige zu erstellen. </translation>
+        <translation>Verwenden Sie das Dialogfeld „Voreinstellungen“, um einige zu erstellen. </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="5878" />
@@ -1164,17 +1164,17 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="1607" />
         <source>override/cache for ddcutil capabilities text</source>
-        <translation>Override/Cache f&#252;r ddcutil-Funktionen text </translation>
+        <translation>Override/Cache für ddcutil-Funktionen text </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1603" />
         <source>ddcutil-extra-args</source>
-        <translation>ddcutil zus&#228;tzliche Argumente</translation>
+        <translation>ddcutil zusätzliche Argumente</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1603" />
         <source>ddcutil extra arguments (default none)</source>
-        <translation>ddcutil zus&#228;tzliche Argumente (Standard keine).</translation>
+        <translation>ddcutil zusätzliche Argumente (Standard keine).</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="3583" />
@@ -1189,7 +1189,7 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="4510" />
         <source>Clear edits and enter a new preset using the defaults.</source>
-        <translation>L&#246;schen Sie die &#196;nderungen und geben Sie eine neue Voreinstellung mit den Standardeinstellungen ein. </translation>
+        <translation>Löschen Sie die Änderungen und geben Sie eine neue Voreinstellung mit den Standardeinstellungen ein. </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="4515" />
@@ -1199,7 +1199,7 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="4529" />
         <source>Abandon edits, revert VDU and Preset settings.</source>
-        <translation>&#196;nderungen abbrechen, Bildschirm- und Voreinstellungseinstellungen zur&#252;cksetzen. </translation>
+        <translation>Änderungen abbrechen, Bildschirm- und Voreinstellungseinstellungen zurücksetzen. </translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="4791" />
@@ -1214,7 +1214,7 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="1584" />
         <source>translations-enabled</source>
-        <translation>&#220;bersetzungen aktiviert</translation>
+        <translation>Übersetzungen aktiviert</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1586" />
@@ -1234,7 +1234,7 @@ Suche nach DDC-Monitoren...
     <message>
         <location filename="../vdu_controls.py" line="1590" />
         <source>splash-screen-enabled</source>
-        <translation>Begr&#252;&#223;ungsbildschirm aktiviert</translation>
+        <translation>Begrüßungsbildschirm aktiviert</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="1592" />
@@ -1290,7 +1290,7 @@ Suche nach DDC-Monitoren...
         <location filename="../vdu_controls.py" line="2323" />
         <source>You may also wish to set
 {}</source>
-        <translation>M&#246;glicherweise m&#246;chten Sie auch festlegen
+        <translation>Möglicherweise möchten Sie auch festlegen
 {} </translation>
     </message>
     <message>

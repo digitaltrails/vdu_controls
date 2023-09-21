@@ -219,6 +219,9 @@ Michael Hamilton
 
 Version History
 ---------------
+* 1.11.2
+  * Encode translations in plain text rather than escaped XML (for easier editing).
+
 * 1.11.1
   * Fix Preset text size in tray icon.
   * Fix occasional concurrency lockup issue in lux_metering.
