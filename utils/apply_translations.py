@@ -59,8 +59,9 @@ def main():
 
     output_filename = sys.argv[3]
     print(f"Updating {output_filename }")
-
-    tree.write(output_filename)
+    with open(output_filename, 'w') as of:
+        of.write(ET.tostring(tree.getroot(), encoding="unicode"))
+    #tree.write(output_filename)
     if missing != '':
         print("Missing translation for:")
         print(missing)
