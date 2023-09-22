@@ -6920,7 +6920,7 @@ class VduAppController:   # Main controller containing methods for high level op
         return False
 
     def display_lux_auto_indicators(self):
-        self.main_window.display_lux_auto_indicators()
+        self.main_window.update_status_indicators()
 
     def get_vdu_description(self, vdu_stable_id: VduStableId):
         if controller := self.vdu_controllers_map.get(vdu_stable_id, None):
@@ -7011,7 +7011,6 @@ class VduAppWindow(QMainWindow):
                 log_error("no system tray - cannot run in system tray.")
 
         self.app_name = APPNAME
-        self.update_app_icon_and_title()
         app.setApplicationDisplayName(self.app_name)
         app.setAttribute(Qt.AA_UseHighDpiPixmaps)  # Make sure all icons use HiDPI - toolbars don't by default, so force it.
 
@@ -7105,24 +7104,6 @@ class VduAppWindow(QMainWindow):
             self.raise_()  # Attempt to force it to the top with raise and activate
             self.activateWindow()
 
-    def update_app_icon_and_title(self, preset: Preset | None = None):
-        title = self.app_name
-        preset_icon = led1_color = led2_color = None
-        if preset is not None:
-            led1_color = PRESET_TRANSITIONING_LED_COLOR if isinstance(preset, PresetTransitionDummy) else None
-            title = f"{preset.get_title_name()} {PRESET_APP_SEPARATOR_SYMBOL} {title}"
-            preset_icon = preset.create_icon(themed=False)
-        if self.main_controller.lux_auto_controller is not None and self.main_controller.lux_auto_controller.is_auto_enabled():
-            led2_color = AUTO_LUX_LED_COLOR
-            title = f"{tr('Auto')}/{title}"
-        icon = create_decorated_app_icon(self.app_icon, preset_icon, led1_color, led2_color)
-        if self.windowTitle() != title:  # Don't change if not needed - prevent flickering.
-            self.setWindowTitle(title)
-            self.app.setWindowIcon(icon)
-        if self.tray:
-            self.tray.setToolTip(title)
-            self.tray.setIcon(icon)
-
     def quit_app(self) -> None:
         self.app_save_state()
         self.app.quit()
@@ -7163,17 +7144,10 @@ class VduAppWindow(QMainWindow):
         PresetsDialog.display_status_message(message=message, timeout=timeout)
         self.status_message(message, timeout=timeout, destination=MsgDestination.DEFAULT)
 
-    def display_lux_auto_indicators(self) -> None:
-        assert is_running_in_gui_thread()  # Boilerplate in case this is called from the wrong thread.
-        lux_auto_controller = self.main_controller.lux_auto_controller
-        if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) \
-                and lux_auto_controller is not None and lux_auto_controller.lux_meter is not None:
-            icon = create_icon_from_svg_bytes(lux_auto_controller.current_auto_svg())
-            self.app_context_menu.update_lux_auto_icon(icon)
-            self.refresh_tray_menu()
-
     def update_status_indicators(self, preset=None, palette_change: bool = False) -> None:
         assert is_running_in_gui_thread()  # Boilerplate in case this is called from the wrong thread.
+        title = self.app_name
+        preset_icon = led1_color = led2_color = None
         if preset is None:  # Detects matching Preset based on current VDU control settings
             preset = self.main_controller.which_preset_is_active()
         if preset is None:  # Clears the indicators
@@ -7184,8 +7158,21 @@ class VduAppWindow(QMainWindow):
             self.get_main_panel().display_active_preset(preset)
             self.app_context_menu.indicate_preset_active(preset)
             PresetsDialog.instance_indicate_active_preset(preset)
-        self.update_app_icon_and_title(preset)
-        self.display_lux_auto_indicators()
+            title = f"{preset.get_title_name()} {PRESET_APP_SEPARATOR_SYMBOL} {title}"
+            preset_icon = preset.create_icon(themed=False)
+            led1_color = PRESET_TRANSITIONING_LED_COLOR if isinstance(preset, PresetTransitionDummy) else None
+        if self.main_controller.lux_auto_controller is not None and self.main_controller.lux_auto_controller.is_auto_enabled():
+            title = f"{tr('Auto')}/{title}"
+            led2_color = AUTO_LUX_LED_COLOR
+        icon = create_icon_from_svg_bytes(self.main_controller.lux_auto_controller.current_auto_svg())  # NB cache involved
+        self.app_context_menu.update_lux_auto_icon(icon)  # Won't actually update if it hasn't changed
+        icon = create_decorated_app_icon(self.app_icon, preset_icon, led1_color, led2_color)
+        if self.windowTitle() != title:  # Don't change if not needed - prevent flickering.
+            self.setWindowTitle(title)
+            self.app.setWindowIcon(icon)
+        if self.tray:
+            self.tray.setToolTip(title)
+            self.tray.setIcon(icon)
         if palette_change or (preset is not None and not isinstance(preset, PresetTransitionDummy)):
             self.refresh_preset_menu(palette_change=palette_change)
 
