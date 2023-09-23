@@ -222,6 +222,7 @@ Version History
 * 1.11.2
   * Encode translations in plain text rather than escaped XML (for easier editing).
   * Tidy up of app-icon's auto-lux indicator and transitioning-preset indicator.
+  * Icon/device-chooser-dialog: init-time reduced from 30 to 5 seconds for users with large home folders (issue #61).
 
 * 1.11.1
   * Fix Preset text size in tray icon.

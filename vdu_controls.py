@@ -723,6 +723,7 @@ from threading import Lock
 from typing import List, Tuple, Mapping, Type, Dict, Callable, Any, NewType
 from urllib.error import URLError
 
+from PyQt5 import QtCore
 from PyQt5 import QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
     QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant
@@ -3549,6 +3550,22 @@ class PresetController:
         return None
 
 
+class FasterFileDialog(QFileDialog):   # Takes 5 seconds versus 30+ seconds for QFileDilog.getOpenFileName() on KDE.
+    os.putenv('QT_LOGGING_RULES', 'kf.kio.widgets.kdirmodel.warning=false')  # annoying KDE message
+
+    @staticmethod
+    def getOpenFileName(parent: QWidget | None = None, caption: str = '', directory: str = '', filter: str = '',
+                        initial_filter: str = '', options: QFileDialog.Options | QFileDialog.Option = 0) -> Tuple[str, str]:
+        try:  # Get rid of annoying message: 'qtimeline::start: already running'
+            original_handler = QtCore.qInstallMessageHandler(lambda mode, context, message: None)
+            dialog = QFileDialog(parent=parent, caption=caption, directory=directory, filter=filter, options=options)
+            dialog.setOption(QFileDialog.ReadOnly | options)  # Makes no difference
+            dialog.setFileMode(QFileDialog.ExistingFile)
+            return (dialog.selectedFiles()[0], filter) if dialog.exec() else ('', '')  # match QFileDilog.getOpenFileName()
+        finally:
+            QtCore.qInstallMessageHandler(original_handler)
+
+
 class MessageBox(QMessageBox):
     def __init__(self, icon: QIcon, buttons: QMessageBox.StandardButtons = QMessageBox.NoButton,
                  default: QMessageBox.StandardButton | None = None) -> None:
@@ -3749,8 +3766,8 @@ class PresetChooseIconButton(QPushButton):
             PresetsDialog.get_instance().setDisabled(True)
             PresetsDialog.get_instance().status_message(TIME_CLOCK_SYMBOL + ' ' + tr("Select an icon..."))
             QApplication.processEvents()
-            icon_file = QFileDialog.getOpenFileName(self, tr('Icon SVG or PNG file'), self.last_icon_dir.as_posix(),
-                                                    'SVG or PNG (*.svg *.png)')
+            icon_file = FasterFileDialog.getOpenFileName(self, tr('Icon SVG or PNG file'), self.last_icon_dir.as_posix(),
+                                                         'SVG or PNG (*.svg *.png)')
             self.last_selected_icon_path = Path(icon_file[0]) if icon_file[0] != '' else None
             if self.last_selected_icon_path:
                 self.last_icon_dir = self.last_selected_icon_path.parent
@@ -5989,7 +6006,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.status_layout.addWidget(self.status_bar)
 
         def choose_device() -> None:
-            device_name = QFileDialog.getOpenFileName(self, tr("Select a tty device or fifo"), "/dev/ttyUSB0")[0]
+            device_name = FasterFileDialog.getOpenFileName(self, tr("Select a tty device or fifo"), "/dev/ttyUSB0")[0]
             device_name = self.validate_device(device_name)
             if device_name != '':
                 if device_name != self.lux_config.get('lux-meter', 'lux-device', fallback=''):
