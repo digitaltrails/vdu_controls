@@ -1,23 +1,51 @@
 #!/usr/bin/python3
 """
-vlux_meter.py - approximate lux value based on a webcam image
-=============================================================
+vlux_meter.py - webcam approximate lux meter
+============================================
 
 THIS IS A WORK IN PROGRESS - only tested using a Logitech Webcam C270.
 
-vlux_meter.py is a system tray application that uses a web camera to produce
+`vlux_meter` is a system tray application that uses a web camera to produce
 a FIFO feed of lux values for supply to vdu_controls.  Controls are provided
 for setting a sample area crop and a defining a mappings from brightness
 (0..255) to lux (0..100,000).  A lux value is produced every 60 seconds.
 
-Usage:  python3 vlux_meter.py
+Usage:
+======
 
-The appropriate manual exposure option (if there is one) can be 
-discovered by running
+     python3 vlux_meter.py
+
+vdu_controls
+============
+
+`vlux_meter` is intended for use with [vdu_controls](https://github.com/digitaltrails/vdu_controls/blob/master/README.md),
+a GUI interface to DDC capable VDU's.
+
+Dependencies
+============
+`vlux_meter` depends on the Python ["https://pypi.org/project/opencv-python/](cv2) library and
+[https://www.kernel.org/doc/html/v4.8/media/v4l-drivers/index.html](video4linux).
+
+`vlux_meter` is written in python3.8 and Qt5, it should run on any Linux desktop that provides those requirements.
+
+Privacy
+=======
+
+While no images are saved or transmitted by `vlux_meter`, I do
+not know if the underlying processing in cv2 and video4linux involves any temporary or permanent persistence.
+
+Manual Exposure Options
+=======================
+
+Better results may be able to be achieved if manual exposure options are enabled.
+
+The appropriate manual exposure option (if there is one) can be discovered by running
 
    v4l2-ctl -d /dev/video0 --list-ctrls-menus 
 
-Copyright (C) 2023 Michael Hamilton
+Reporting Bugs
+==============
+https://github.com/digitaltrails/vdu_controls/issues
 
 GNU License
 ===========
@@ -34,6 +62,8 @@ more details.
 You should have received a copy of the GNU General Public License along
 with this program. If not, see https://www.gnu.org/licenses/.
 """
+# Copyright (C) 2023 Michael Hamilton
+from __future__ import annotations
 import configparser
 import io
 import locale
@@ -49,7 +79,7 @@ import time
 from datetime import datetime
 from functools import partial
 from pathlib import Path
-from typing import List, Tuple, Mapping, Callable, Dict
+from typing import List, Tuple, Mapping, Callable, Dict, Type
 
 import cv2  # type: ignore
 from PyQt5 import QtNetwork
@@ -58,13 +88,54 @@ from PyQt5.QtGui import QGuiApplication, QPixmap, QIcon, QCursor, QImage, QPaint
     QColor, QIntValidator
 from PyQt5.QtSvg import QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QMainWindow, QSystemTrayIcon, QMenu, QStyle, QWidget, QLabel, QVBoxLayout, QToolButton, \
-    QStatusBar, QHBoxLayout, QSlider, QGridLayout, QLineEdit, QSpinBox, QPushButton, QFileDialog, QCheckBox, QComboBox
+    QStatusBar, QHBoxLayout, QSlider, QGridLayout, QLineEdit, QSpinBox, QPushButton, QFileDialog, QCheckBox, QComboBox, QTextEdit, \
+    QDialog, QMessageBox
 
 APPNAME = "Vlux Meter"
 VLUX_METER_VERSION = '1.0.0'
 
-IMAGE_LOCATION = Path('/tmp').joinpath('lux-from-webcam.jpg').as_posix()
-SAVE_IMAGE = False
+
+ABOUT_TEXT = f"""
+
+<b>vlux_mter version {VLUX_METER_VERSION}</b>
+<p>
+A webcam based approximate lux meter.
+<p>
+Visit <a href="https://github.com/digitaltrails/vdu_controls/blob/master/Lux-metering.md">https://github.com/digitaltrails/vdu_controls/blob/master/Lux-metering.md</a> for
+more details.
+<p>
+<hr>
+<small>
+<b>vlux_meter Copyright (C) 2023 Michael Hamilton</b>
+<br><br>
+This program is free software: you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the
+Free Software Foundation, version 3.
+<br><br>
+
+<bold>
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+more details.
+</bold>
+<br><br>
+You should have received a copy of the GNU General Public License along
+with this program. If not, see <a href="https://www.gnu.org/licenses/">https://www.gnu.org/licenses/</a>.
+</small>
+<hr>
+<p><p>
+<quote>
+<small>
+Intended for use with <a href="https://github.com/digitaltrails/vdu_controls/blob/master/README.md">vdu_controls</a>, a GUI interface to DDC capable VDU's.
+<br>
+vlux_meter depends on the Python <a href="https://pypi.org/project/opencv-python/">cv2</a> library and 
+<a href="https://www.kernel.org/doc/html/v4.8/media/v4l-drivers/index.html">video4linux.</a>.
+While no images are saved or transmitted by vlux_meter, I do
+not know if the underlying processing in cv2 and video4linux involves any temporary or permanent persistence.</a>.
+</small>
+</quote>
+"""
 
 #: A high resolution image, will fall back to an internal SVG if this file isn't found on the local system
 DEFAULT_SPLASH_PNG = "/usr/share/icons/hicolor/256x256/apps/vlux_meter.png"
@@ -147,7 +218,6 @@ DEFAULT_SETTINGS = {
         'dispatch_frequency_seconds': 60,
         'translations_enabled': 'no',
     },
-
 }
 
 CONFIG_DIR_PATH = Path.home().joinpath('.config', 'vlux_meter')
@@ -427,7 +497,7 @@ class ContextMenu(QMenu):
     def __init__(self,
                  main_window,
                  main_window_action,
-                 about_action, help_action, chart_action, settings_action, quit_action) -> None:
+                 about_action, help_action, settings_action, quit_action) -> None:
         super().__init__()
         self.main_window = main_window
         if main_window_action is not None:
@@ -435,10 +505,9 @@ class ContextMenu(QMenu):
             self.addSeparator()
         self.busy_disable_prop = "busy_disable"
         self.preset_prop = "is_preset"
-        # self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Grey Scale'), chart_action)
         # self.addAction(si(self, QStyle.SP_ComputerIcon), tr('Settings'), settings_action)
-        # self.addAction(si(self, QStyle.SP_MessageBoxInformation), tr('About'), about_action)
-        # self.addAction(si(self, QStyle.SP_DialogHelpButton), tr('Help'), help_action)
+        self.addAction(si(self, QStyle.SP_MessageBoxInformation), tr('About'), about_action)
+        self.addAction(si(self, QStyle.SP_DialogHelpButton), tr('Help'), help_action)
         # self.addSeparator()
         self.addAction(si(self, QStyle.SP_DialogCloseButton), tr('Quit'), quit_action)
 
@@ -476,7 +545,7 @@ class CameraDisplay(QLabel):
         super().__init__("", parent=parent)
         self.painter = None
         self.current_image: QImage | None = None
-        self.setPixmap(QPixmap(800,600))  # Initial "null value"
+        self.setPixmap(QPixmap(800, 600))  # Initial "null value"
         self.drawing_with_mouse = False
         self.x_start = 0
         self.y_start = 0
@@ -526,11 +595,12 @@ class CameraDisplay(QLabel):
         w_percent = 100 * w / self.pixmap().width()
         return x_percent, y_percent, w_percent, h_percent
 
-    def calc_absolute_rectangle(self, x_percent: float, y_percent: float, w_percent: float, h_percent: float) -> Tuple[int, int, int, int]:
-        x = int(int(x_percent/100 * self.pixmap().width()))
-        y = int(int(y_percent/100 * self.pixmap().height()))
-        w = int(w_percent/100 * self.pixmap().width())
-        h = int(h_percent/100 * self.pixmap().height())
+    def calc_absolute_rectangle(self, x_percent: float, y_percent: float, w_percent: float, h_percent: float) -> Tuple[
+        int, int, int, int]:
+        x = int(int(x_percent / 100 * self.pixmap().width()))
+        y = int(int(y_percent / 100 * self.pixmap().height()))
+        w = int(w_percent / 100 * self.pixmap().width())
+        h = int(h_percent / 100 * self.pixmap().height())
         return x, y, w, h
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
@@ -578,8 +648,11 @@ def make_heading(heading_text: str, parent: QWidget = None):
 class BrightnessMappingDisplay(QWidget):
     def __init__(self):
         super().__init__()
+
         layout = QGridLayout()
         self.setLayout(layout)
+        layout.setContentsMargins(25, 0, 25, 0)
+        layout.setHorizontalSpacing(20)
         heading = make_heading(tr("Brightness-to-Lux Mapping"), self)
         layout.addWidget(heading, 0, 0, 1, -1, Qt.AlignTop)
 
@@ -608,6 +681,7 @@ class BrightnessMappingDisplay(QWidget):
         global_config['brightness_to_lux'][name] = f"{brightness} {lux}"
         global_config.save(CONFIG_PATH)
 
+
 class PushButtonLeftJustified(QPushButton):
     def __init__(self, text: str | None = None, parent: QWidget | None = None) -> None:
         super().__init__(parent=parent)
@@ -624,6 +698,8 @@ class PushButtonLeftJustified(QPushButton):
 
     def setText(self, text: str) -> None:
         self.label.setText(text)
+
+
 class CameraControls(QWidget):
     def __init__(self):
         super().__init__()
@@ -647,6 +723,115 @@ class CameraControls(QWidget):
                     global_config.save(CONFIG_PATH)
 
         self.camera_device_selector.pressed.connect(choose_device)
+
+
+class DialogSingletonMixin:
+    """
+    A mixin that can augment a QDialog or QMessageBox with code to enforce a singleton UI.
+    For example, it is used so that only ones settings editor can be active at a time.
+    """
+    _dialogs_map: Dict[str, DialogSingletonMixin] = {}
+
+    def __init__(self) -> None:
+        """Registers the concrete class as a singleton, so it can be reused later."""
+        super().__init__()
+        class_name = self.__class__.__name__
+        if class_name in DialogSingletonMixin._dialogs_map:
+            raise TypeError(f"ERROR: More than one instance of {class_name} cannot exist.")
+        log_debug(f'SingletonDialog created for {class_name}') if log_debug_enabled else None
+        DialogSingletonMixin._dialogs_map[class_name] = self
+
+    def closeEvent(self, event) -> None:
+        """Subclasses that implement their own closeEvent must call this closeEvent to deregister the singleton"""
+        class_name = self.__class__.__name__
+        log_debug(f"SingletonDialog remove {class_name} "
+                  f"registered={class_name in DialogSingletonMixin._dialogs_map}") if log_debug_enabled else None
+        if class_name in DialogSingletonMixin._dialogs_map:
+            del DialogSingletonMixin._dialogs_map[class_name]
+        event.accept()
+
+    def make_visible(self) -> None:
+        """ If the dialog exists(), call this to make it visible by raising it.
+        Internal, used by the class method show_existing_dialog()"""
+        self.show()  # type: ignore
+        self.raise_()  # type: ignore
+        self.activateWindow()  # type: ignore
+
+    @classmethod
+    def show_existing_dialog(cls: Type) -> None:
+        """If the dialog exists(), call this to make it visible by raising it."""
+        class_name = cls.__name__
+        log_debug(f'SingletonDialog show existing {class_name}') if log_debug_enabled else None
+        instance = DialogSingletonMixin._dialogs_map[class_name]
+        instance.make_visible()
+
+    @classmethod
+    def exists(cls: Type) -> bool:
+        """Returns true if the dialog has already been created."""
+        class_name = cls.__name__
+        log_debug(f"SingletonDialog exists {class_name} "
+                  f"{class_name in DialogSingletonMixin._dialogs_map}") if log_debug_enabled else None
+        return class_name in DialogSingletonMixin._dialogs_map
+
+    @classmethod
+    def get_instance(cls: Type) -> DialogSingletonMixin | None:
+        return DialogSingletonMixin._dialogs_map.get(cls.__name__, None)
+
+
+class SubWinDialog(QDialog):  # Fix for gnome: QDialog must be a subwindow, otherwise it will always stay on top of other windows.
+
+    def __init__(self, parent: QWidget | None = None, flags: Qt.WindowType = Qt.SubWindow) -> None:
+        super().__init__(parent, flags)
+
+
+class AboutDialog(QMessageBox, DialogSingletonMixin):
+
+    @staticmethod
+    def invoke() -> None:
+        AboutDialog.show_existing_dialog() if AboutDialog.exists() else AboutDialog()
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.setWindowTitle(tr('About'))
+        self.setTextFormat(Qt.AutoText)
+        self.setText(tr('About vdu_controls'))
+        path = find_locale_specific_file("about_{}.txt")
+        if path:
+            with open(path, encoding='utf-8') as about_for_locale:
+                about_text = about_for_locale.read().format(VLUX_VERSION=VLUX_METER_VERSION)
+        else:
+            about_text = ABOUT_TEXT
+        self.setInformativeText(about_text)
+        self.setIcon(QMessageBox.Information)
+        self.setModal(False)
+        self.show()
+        self.raise_()
+        self.activateWindow()
+
+
+class HelpDialog(SubWinDialog, DialogSingletonMixin):
+
+    @staticmethod
+    def invoke() -> None:
+        HelpDialog.show_existing_dialog() if HelpDialog.exists() else HelpDialog()
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.setWindowTitle(tr('Help'))
+        layout = QVBoxLayout()
+        markdown_view = QTextEdit()
+        markdown_view.setReadOnly(True)
+        markdown_view.setViewportMargins(80, 80, 50, 30)
+        markdown_view.setMarkdown(__doc__)
+        layout.addWidget(markdown_view)
+        close_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), tr("Close"))
+        close_button.clicked.connect(self.hide)
+        layout.addWidget(close_button, 0, Qt.AlignRight)
+        self.setLayout(layout)
+        self.make_visible()
+
+    def sizeHint(self) -> QSize:
+        return QSize(1600, 1000)
 
 
 class VluxMeterWindow(QMainWindow):
@@ -676,19 +861,19 @@ class VluxMeterWindow(QMainWindow):
 
         if gnome_tray_behaviour:
             # Gnome tray doesn't normally provide a way to bring up the main app.
-            def main_window_action_implemenation() -> None:
+            def main_window_action_implementation() -> None:
                 self.show()
                 self.raise_()
                 self.activateWindow()
 
-            main_window_action = main_window_action_implemenation
+            main_window_action = main_window_action_implementation
 
         def quit_app() -> None:
             self.app_save_state()
             app.quit()
 
-        self.context_menu = ContextMenu(self, main_window_action=main_window_action, settings_action=None, help_action=None,
-                                        quit_action=quit_app, chart_action=None, about_action=None)
+        self.context_menu = ContextMenu(self, main_window_action=main_window_action, settings_action=None,
+                                        help_action=HelpDialog.invoke, quit_action=quit_app, about_action=AboutDialog.invoke)
         self.app_name = "Vlux Meter"
         self.set_app_icon_and_title()
         app.setApplicationDisplayName(self.app_name)
@@ -725,21 +910,21 @@ class VluxMeterWindow(QMainWindow):
 
         main_widget = QWidget()
         layout = QGridLayout()
-        self.setContentsMargins(8, 0, 0, 0)
+        self.setContentsMargins(25, 5, 10, 10)
         main_widget.setLayout(layout)
 
         self.lux_display = make_heading(tr('Lux:'), parent=self)
-        layout.addWidget(self.lux_display, 0, 0, 1, 2)
+        layout.addWidget(self.lux_display, 0, 0, 1, 1)
 
         self.camera_display = CameraDisplay(parent=self)
-        layout.addWidget(self.camera_display, 1, 0, 1, 2, Qt.AlignTop|Qt.AlignLeft)
+        layout.addWidget(self.camera_display, 2, 0, 1, 1, Qt.AlignTop | Qt.AlignLeft)
 
         self.brightness_lux_mapping_display = BrightnessMappingDisplay()
-        #self.brightness_lux_mapping_display.setDisabled(True)
-        layout.addWidget(self.brightness_lux_mapping_display, 0, 2, -1, 1)
+        # self.brightness_lux_mapping_display.setDisabled(True)
+        layout.addWidget(self.brightness_lux_mapping_display, 0, 2, 3, 1)
 
         self.camera_controls = CameraControls()
-        layout.addWidget(self.camera_controls, 2, 0, 1, 2)
+        layout.addWidget(self.camera_controls, 1, 0, 1, 1)
 
         self.setCentralWidget(main_widget)
         self.setStatusBar(StatusBar(app_context_menu=self.context_menu, parent=self))
@@ -765,6 +950,7 @@ class VluxMeterWindow(QMainWindow):
                     # Attempt to force it to the top with raise and activate
                     self.raise_()
                     self.activateWindow()
+
             self.hide()
             self.tray.activated.connect(show_window)
             self.tray.setVisible(True)
@@ -824,7 +1010,6 @@ class CameraMeterThread(QThread):
     new_image_signal = pyqtSignal(QImage)
 
     def __init__(self) -> None:
-
         """Init should always be called from the GUI thread - for easy access to the GUI thread"""
         super().__init__()
         log_info(f"MeterThread: going to start from thread = {threading.get_ident()}")
@@ -844,7 +1029,8 @@ class CameraMeterThread(QThread):
             camera = cv2.VideoCapture(global_config['camera']['device'], cv2.CAP_V4L2)
             original_auto_exposure_option = camera.get(cv2.CAP_PROP_AUTO_EXPOSURE)
             original_exposure = camera.get(cv2.CAP_PROP_EXPOSURE)
-            log_debug(f"existing values: auto-exposure={original_auto_exposure_option} exposure={original_exposure}") if log_debug_enabled else None
+            log_debug(
+                f"existing values: auto-exposure={original_auto_exposure_option} exposure={original_exposure}") if log_debug_enabled else None
             auto_exposure_option = global_config.getint("camera", "auto_exposure_option")
             manual_exposure_time = global_config.getint("camera", "manual_exposure_time")
             try:
@@ -857,10 +1043,11 @@ class CameraMeterThread(QThread):
                 self.signal_new_image(image)
                 xp, yp, wp, hp = (float(v) for v in global_config['camera']['crop'].split(','))
                 ih, iw = image.shape[0:2]
-                crop_x, crop_y, crop_w, crop_h = round(xp/100.0 * iw), round(yp/100.0 * ih), round(wp/100.0 * iw), round(hp/100.0 * ih)
+                crop_x, crop_y, crop_w, crop_h = round(xp / 100.0 * iw), round(yp / 100.0 * ih), round(wp / 100.0 * iw), round(
+                    hp / 100.0 * ih)
                 grey_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
                 cv2.imshow('grey', grey_image) if log_debug_enabled else None
-                cropped_image = grey_image[crop_y:crop_y+crop_h,crop_x:crop_x+crop_w]
+                cropped_image = grey_image[crop_y:crop_y + crop_h, crop_x:crop_x + crop_w]
                 cv2.imshow('crop', cropped_image) if log_debug_enabled else None
                 brightness = cv2.mean(cropped_image)[0]
                 previous_lux, previous_value = None, None
@@ -877,7 +1064,7 @@ class CameraMeterThread(QThread):
                     previous_lux, previous_value = lux, value
             finally:
                 log_debug(f"Restoring auto-exposure={original_auto_exposure_option} exposure={original_exposure}"
-                          )  if log_debug_enabled else None
+                          ) if log_debug_enabled else None
                 camera.set(cv2.CAP_PROP_AUTO_EXPOSURE, original_auto_exposure_option)
                 if original_auto_exposure_option != auto_exposure_option:  # Can only set exposure if not on auto_exposure
                     camera.set(cv2.CAP_PROP_EXPOSURE, original_exposure)
