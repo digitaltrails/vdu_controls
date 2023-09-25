@@ -4932,6 +4932,7 @@ def create_icon_from_text(text: str, themed: bool = True) -> QIcon:
     painter = QPainter(pixmap)
     font = QApplication.font()
     font.setPixelSize(24)
+    font.setWeight(QFont.Medium)
     painter.setFont(font)
     painter.setOpacity(1.0)
     painter.setPen(QColor((SVG_DARK_THEME_COLOR if themed and is_dark_theme() else SVG_LIGHT_THEME_COLOR).decode("utf-8")))
