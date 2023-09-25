@@ -939,7 +939,9 @@ unix_signal_handler: SignalWakeupHandler | None = None
 SYSTEM_TRAY_WAIT_SECONDS = 20
 
 SVG_LIGHT_THEME_COLOR = b"#232629"
+SVG_LIGHT_THEME_TEXT_COLOR = b"#000000"
 SVG_DARK_THEME_COLOR = b"#f3f3f3"
+SVG_DARK_THEME_TEXT_COLOR = SVG_DARK_THEME_COLOR
 
 # modified brightness icon from breeze5-icons: LGPL-3.0-only
 BRIGHTNESS_SVG = b"""
@@ -4932,9 +4934,11 @@ def create_icon_from_text(text: str, themed: bool = True) -> QIcon:
     painter = QPainter(pixmap)
     font = QApplication.font()
     font.setPixelSize(24)
+    font.setWeight(QFont.Medium)
     painter.setFont(font)
     painter.setOpacity(1.0)
-    painter.setPen(QColor((SVG_DARK_THEME_COLOR if themed and is_dark_theme() else SVG_LIGHT_THEME_COLOR).decode("utf-8")))
+    painter.setPen(
+        QColor((SVG_DARK_THEME_TEXT_COLOR if themed and is_dark_theme() else SVG_LIGHT_THEME_TEXT_COLOR).decode("utf-8")))
     painter.drawText(pixmap.rect(), Qt.AlignTop, text)
     painter.end()
     return QIcon(pixmap)
