@@ -223,7 +223,7 @@ Version History
   * Encode translations in plain text rather than escaped XML (for easier editing).
   * Tidy up of app-icon's auto-lux indicator and transitioning-preset indicator.
   * Icon/device-chooser-dialog: init-time reduced from 30 to 5 seconds for users with large home folders (issue #61).
-
+  * Fixes/additions to the sample-script vlux_meter.py and the related vdu_controls FIFO reader.
 * 1.11.1
   * Fix Preset text size in tray icon.
   * Fix occasional concurrency lockup issue in lux_metering.

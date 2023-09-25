@@ -3556,7 +3556,7 @@ class FasterFileDialog(QFileDialog):   # Takes 5 seconds versus 30+ seconds for 
     @staticmethod
     def getOpenFileName(parent: QWidget | None = None, caption: str = '', directory: str = '', filter: str = '',
                         initial_filter: str = '', options: QFileDialog.Options | QFileDialog.Option = 0) -> Tuple[str, str]:
-        try:  # Get rid of annoying message: 'qtimeline::start: already running'
+        try:  # Get rid of another annoying message: 'qtimeline::start: already running'
             original_handler = QtCore.qInstallMessageHandler(lambda mode, context, message: None)
             dialog = QFileDialog(parent=parent, caption=caption, directory=directory, filter=filter, options=options)
             dialog.setOption(QFileDialog.ReadOnly | options)  # Makes no difference
@@ -5457,10 +5457,13 @@ class LuxMeterFifoDevice(LuxMeterDevice):
                     if self.fifo is None:
                         log_info(f"Initialising fifo {self.device_name} - waiting on fifo data.")
                         self.fifo = open(self.device_name)
-                    if self.fifo is not None and len(select.select([self.fifo], [], [], 5.0)[0]) == 1:
+                    if len(select.select([self.fifo], [], [], 2.5)[0]) == 1:
                         buffer = self.fifo.readline()
-                        if len(select.select([self.fifo], [], [], 0.0)[0]) == 0 and buffer is not None:  # Buffer has been flushed
+                        if len(select.select([self.fifo], [], [], 0.5)[0]) == 0 and buffer is not None:  # Buffer has been flushed
                             return float(buffer.replace('\n', ''))
+                    if self.fifo is None:
+                        return 0.0
+                time.sleep(2.5)
             except (OSError, ValueError) as se:
                 log_warning(f"Retry read of {self.device_name}, will retry feed in 10 seconds", se, trace=True)
                 time.sleep(10)
