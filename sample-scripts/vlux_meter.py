@@ -82,7 +82,7 @@ from pathlib import Path
 from typing import List, Tuple, Mapping, Callable, Dict, Type
 
 import cv2  # type: ignore
-from PyQt5 import QtNetwork
+from PyQt5 import QtNetwork, QtCore
 from PyQt5.QtCore import QSettings, pyqtSignal, QThread, QCoreApplication, QTranslator, QLocale, QPoint, QSize, QEvent, Qt, QObject
 from PyQt5.QtGui import QGuiApplication, QPixmap, QIcon, QCursor, QImage, QPainter, QPalette, QResizeEvent, QMouseEvent, QPen, \
     QColor, QIntValidator
@@ -222,6 +222,9 @@ DEFAULT_SETTINGS = {
 
 CONFIG_DIR_PATH = Path.home().joinpath('.config', 'vlux_meter')
 CONFIG_PATH = CONFIG_DIR_PATH.joinpath('vlux_meter.conf')
+
+DEFAULT_FIFO_PATH = Path.home().joinpath('.cache', 'vlux_file')
+
 LOCALE_TRANSLATIONS_PATHS = [
     Path.cwd().joinpath('translations')] if os.getenv('VDU_CONTROLS_DEVELOPER', default="no") == 'yes' else [] + [
     Path(CONFIG_DIR_PATH).joinpath('translations'),
@@ -700,22 +703,48 @@ class PushButtonLeftJustified(QPushButton):
         self.label.setText(text)
 
 
+class FasterFileDialog(QFileDialog):   # Takes 5 seconds versus 30+ seconds for QFileDilog.getOpenFileName() on KDE.
+    os.putenv('QT_LOGGING_RULES', 'kf.kio.widgets.kdirmodel.warning=false')  # annoying KDE message
+
+    @staticmethod
+    def getOpenFileName(parent: QWidget | None = None, caption: str = '', directory: str = '', filter: str = '',
+                        initial_filter: str = '', options: QFileDialog.Options | QFileDialog.Option = 0) -> Tuple[str, str]:
+        try:  # Get rid of another annoying message: 'qtimeline::start: already running'
+            original_handler = QtCore.qInstallMessageHandler(lambda mode, context, message: None)
+            dialog = QFileDialog(parent=parent, caption=caption, directory=directory, filter=filter, options=options)
+            # dialog.setOption(QFileDialog.ReadOnly | options)  # Makes no difference
+            # dialog.setFileMode(QFileDialog.ExistingFile)
+            return (dialog.selectedFiles()[0], filter) if dialog.exec() else ('', '')  # match QFileDilog.getOpenFileName()
+        finally:
+            QtCore.qInstallMessageHandler(original_handler)
+
+
 class CameraControls(QWidget):
     def __init__(self):
         super().__init__()
-        layout = QHBoxLayout()
+        layout = QGridLayout()
         self.setLayout(layout)
+
+        layout.addWidget(QLabel("Video device:"), 0, 0, 1, 1)
         self.camera_device_selector = PushButtonLeftJustified()
         self.camera_device_selector.setText(global_config.get('camera', 'device', fallback=''))
-        layout.addWidget(self.camera_device_selector)
-        self.toggle_manual_control = QComboBox()
-        self.toggle_manual_control.addItem("Manual Exposure")
-        self.toggle_manual_control.addItem("Auto Exposure")
-        self.toggle_manual_control.setDisabled(True)
-        layout.addWidget(self.toggle_manual_control)
+        layout.addWidget(self.camera_device_selector, 1, 0, 1, 1)
+
+        self.auto_exposure_modes = [(1, "manual"), (3, "Aperture Priority")]
+        layout.addWidget(QLabel("Exposure Mode:"), 0, 1, 1, 1)
+        self.auto_exposure_mode_selector = QComboBox()
+        self.auto_exposure_mode_selector.addItem("Auto Exposure")
+        self.auto_exposure_mode_selector.addItem("Manual Exposure")
+        self.auto_exposure_mode_selector.setCurrentIndex(1 if global_config.getboolean('camera', 'use_manual', fallback=False) else 0)
+        layout.addWidget(self.auto_exposure_mode_selector, 1, 1, 2, 1, )
+
+        layout.addWidget(QLabel("Output FIFO:"), 0, 2, 1, 1)
+        self.fifo_selector = PushButtonLeftJustified()
+        self.fifo_selector.setText(global_config.get('global', 'fifo_path', fallback=DEFAULT_FIFO_PATH.as_posix()))
+        layout.addWidget(self.fifo_selector, 1, 2, 1, 1)
 
         def choose_device() -> None:
-            device_name = QFileDialog.getOpenFileName(self, tr("Select a camera device"), "/dev/video0")[0]
+            device_name = FasterFileDialog.getOpenFileName(self, tr("Select a camera device"), "/dev/video0")[0]
             if device_name != '':
                 path = pathlib.Path(device_name)
                 if path.is_char_device():
@@ -723,6 +752,22 @@ class CameraControls(QWidget):
                     global_config.save(CONFIG_PATH)
 
         self.camera_device_selector.pressed.connect(choose_device)
+
+        def change_exposure_mode(index: int):
+            global_config['camera']['use_manual'] = 'yes' if index == 1 else 'no'
+            global_config.save(CONFIG_PATH)
+
+        self.auto_exposure_mode_selector.currentIndexChanged.connect(change_exposure_mode)
+
+        def choose_fifo() -> None:
+            fifo_path = FasterFileDialog.getOpenFileName(self, tr("Select a fifo path"), DEFAULT_FIFO_PATH.as_posix())[0]
+            if fifo_path != '':
+                path = pathlib.Path(fifo_path)
+                if path.is_char_device():
+                    global_config['global']['fifo_path'] = fifo_path
+                    global_config.save(CONFIG_PATH)
+
+        self.fifo_selector.pressed.connect(choose_fifo)
 
 
 class DialogSingletonMixin:
@@ -843,7 +888,7 @@ class VluxMeterWindow(QMainWindow):
         self.app = app
         self.app_icon = create_themed_icon_from_svg_bytes(VLUX_METER_ICON_SVG)
         splash_pixmap = get_splash_image()
-        self.lux_dispatcher = None if config.getboolean("global", "fifo_disabled", fallback=True) else LuxFifoDispatcher()
+        self.lux_dispatcher = None if config.getboolean("global", "fifo_disabled", fallback=False) else LuxFifoDispatcher()
         self.app_icon.addPixmap(splash_pixmap)
         self.setObjectName('main_window')
         self.geometry_key = self.objectName() + "_geometry"
@@ -960,7 +1005,7 @@ class VluxMeterWindow(QMainWindow):
     def display_lux_value(self, lux: int, brightness: int):
         self.status_message('', 0)
         if self.lux_dispatcher is not None:
-            self.lux_dispatcher.dispatch_lux_value(lux)
+            self.lux_dispatcher.dispatch_lux_value(lux, brightness)
         self.lux_display.setText(f"Lux: {lux:n} (brightness={brightness}) {datetime.now().strftime('%X')}")
 
     def display_camera_image(self, image: QImage):
@@ -1027,18 +1072,24 @@ class CameraMeterThread(QThread):
     def measure_lux(self):
         while True:
             camera = cv2.VideoCapture(global_config['camera']['device'], cv2.CAP_V4L2)
-            original_auto_exposure_option = camera.get(cv2.CAP_PROP_AUTO_EXPOSURE)
-            original_exposure = camera.get(cv2.CAP_PROP_EXPOSURE)
-            log_debug(
-                f"existing values: auto-exposure={original_auto_exposure_option} exposure={original_exposure}") if log_debug_enabled else None
-            auto_exposure_option = global_config.getint("camera", "auto_exposure_option")
-            manual_exposure_time = global_config.getint("camera", "manual_exposure_time")
+            use_manual = global_config.getboolean("camera", "use_manual", fallback=False)
+            if use_manual:
+                original_exposure_option = camera.get(cv2.CAP_PROP_AUTO_EXPOSURE)
+                original_exposure_time = camera.get(cv2.CAP_PROP_EXPOSURE)
+
+                manual_exposure_option = global_config.getint("camera", "manual_exposure_option")
+                manual_exposure_time = global_config.getint("camera", "manual_exposure_time")
+                log_debug(f"Using manual exposure: {original_exposure_option=} {original_exposure_time=} "
+                          f" {manual_exposure_option=} {manual_exposure_time=}") if log_debug_enabled else None
             try:
-                camera.set(cv2.CAP_PROP_AUTO_EXPOSURE, auto_exposure_option)
-                camera.set(cv2.CAP_PROP_EXPOSURE, manual_exposure_time)
-                new_auto_exposure = camera.get(cv2.CAP_PROP_AUTO_EXPOSURE)
-                new_exposure = camera.get(cv2.CAP_PROP_EXPOSURE)
-                log_debug(f"new values: auto-exposure={new_auto_exposure} exposure={new_exposure}") if log_debug_enabled else None
+                if use_manual:
+                    if original_exposure_option != manual_exposure_option:
+                        camera.set(cv2.CAP_PROP_AUTO_EXPOSURE, manual_exposure_option)
+                    if original_exposure_time != manual_exposure_time:
+                        camera.set(cv2.CAP_PROP_EXPOSURE, manual_exposure_time)
+                new_exposure_option = camera.get(cv2.CAP_PROP_AUTO_EXPOSURE)
+                new_exposure_time = camera.get(cv2.CAP_PROP_EXPOSURE)
+                log_debug(f"new values: {new_exposure_option=} {new_exposure_time=}") if log_debug_enabled else None
                 result, image = camera.read()
                 self.signal_new_image(image)
                 xp, yp, wp, hp = (float(v) for v in global_config['camera']['crop'].split(','))
@@ -1057,21 +1108,22 @@ class CameraMeterThread(QThread):
                             # Interpolate on a log10 scale - at least that's what I think this is (idea from chatgpt)
                             lux = lux + 10 ** (
                                     (brightness - value) / (previous_value - value) * math.log10((previous_lux - lux)))
-                        log_debug(f"brightness={brightness}, value={value}, lux={lux}, name={name}") if log_debug_enabled else None
+                        log_debug(f"{brightness=}, {value=}, {lux=}, {name=}") if log_debug_enabled else None
                         int_lux = round(lux)
                         self.new_lux_value_signal.emit(int_lux, round(brightness))
                         break
                     previous_lux, previous_value = lux, value
             finally:
-                log_debug(f"Restoring auto-exposure={original_auto_exposure_option} exposure={original_exposure}"
-                          ) if log_debug_enabled else None
-                camera.set(cv2.CAP_PROP_AUTO_EXPOSURE, original_auto_exposure_option)
-                if original_auto_exposure_option != auto_exposure_option:  # Can only set exposure if not on auto_exposure
-                    camera.set(cv2.CAP_PROP_EXPOSURE, original_exposure)
+                if use_manual:
+                    log_debug(f"Restoring {original_exposure_option=} {original_exposure_time=}") if log_debug_enabled else None
+                    if original_exposure_option != new_exposure_option:
+                        camera.set(cv2.CAP_PROP_AUTO_EXPOSURE, original_exposure_option)
+                    if original_exposure_time != new_exposure_time:  # Can only set exposure if not on auto_exposure
+                        camera.set(cv2.CAP_PROP_EXPOSURE, original_exposure_time)
                 camera.release()
                 camera = None
             sleep_seconds = 1 if self.fast_fresh else global_config.getint('global', 'dispatch_frequency_seconds')
-            log_debug(f"Meter Sleeping {sleep_seconds} seconds") if log_debug_enabled else None
+            log_debug(f"Meter Sleeping {sleep_seconds=}") if log_debug_enabled else None
             for _ in range(0, sleep_seconds):
                 time.sleep(1)
                 if self.fast_fresh:
