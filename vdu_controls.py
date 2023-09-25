@@ -7181,11 +7181,12 @@ class VduAppWindow(QMainWindow):
             title = f"{preset.get_title_name()} {PRESET_APP_SEPARATOR_SYMBOL} {title}"
             preset_icon = preset.create_icon(themed=False)
             led1_color = PRESET_TRANSITIONING_LED_COLOR if isinstance(preset, PresetTransitionDummy) else None
-        if self.main_controller.lux_auto_controller is not None and self.main_controller.lux_auto_controller.is_auto_enabled():
-            title = f"{tr('Auto')}/{title}"
-            led2_color = AUTO_LUX_LED_COLOR
-        icon = create_icon_from_svg_bytes(self.main_controller.lux_auto_controller.current_auto_svg())  # NB cache involved
-        self.app_context_menu.update_lux_auto_icon(icon)  # Won't actually update if it hasn't changed
+        if self.main_controller.lux_auto_controller is not None:
+            if self.main_controller.lux_auto_controller.is_auto_enabled():
+                title = f"{tr('Auto')}/{title}"
+                led2_color = AUTO_LUX_LED_COLOR
+            menu_icon = create_icon_from_svg_bytes(self.main_controller.lux_auto_controller.current_auto_svg())  # NB cache involved
+            self.app_context_menu.update_lux_auto_icon(menu_icon)  # Won't actually update if it hasn't changed
         icon = create_decorated_app_icon(self.app_icon, preset_icon, led1_color, led2_color)
         if self.windowTitle() != title:  # Don't change if not needed - prevent flickering.
             self.setWindowTitle(title)
