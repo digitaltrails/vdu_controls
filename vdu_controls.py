@@ -1193,7 +1193,7 @@ class VcpCapability:
         # Default config enablement
         self.enabled = enabled
         self.can_transition = can_transition
-        self.retry_setvcp = retry_setvcp and not causes_config_change  ## Safe to repeat set on error
+        self.retry_setvcp = retry_setvcp and not causes_config_change  # Safe to repeat set on error
         # For non-continuous types of VCP (VCP types SNC or CNC). Also for special cases, such as restricted brightness ranges.
         self.values = [] if values is None else values
 
@@ -2104,8 +2104,8 @@ class VduController(QObject):
                 capability = VcpCapability(vcp_code, vcp_name, vcp_type=vcp_type, values=values, icon_source=None,
                                            can_transition=vcp_type == CONTINUOUS_TYPE)
                 feature_map[vcp_code] = capability
-        return { **{k: feature_map[k] for k in (BRIGHTNESS_VCP_CODE, CONTRAST_VCP_CODE) if k in feature_map},  # Put B&C first
-                 **{k: v for k, v in feature_map.items() if k not in (BRIGHTNESS_VCP_CODE, CONTRAST_VCP_CODE)}}
+        return {**{k: feature_map[k] for k in (BRIGHTNESS_VCP_CODE, CONTRAST_VCP_CODE) if k in feature_map},  # Put B&C first
+                **{k: v for k, v in feature_map.items() if k not in (BRIGHTNESS_VCP_CODE, CONTRAST_VCP_CODE)}}
 
 
 class SubWinDialog(QDialog):  # Fix for gnome: QDialog must be a subwindow, otherwise it will always stay on top of other windows.
@@ -3291,7 +3291,7 @@ class VduControlsMainPanel(QWidget):
     def is_preset_active(self, preset: Preset) -> bool:
         for section in preset.preset_ini:
             if section not in ('metadata', 'preset') and (panel := self.vdu_control_panels.get(section, None)):
-                if not  panel.is_preset_active(preset.preset_ini):
+                if not panel.is_preset_active(preset.preset_ini):
                     return False
         return True
 
@@ -6439,7 +6439,7 @@ class PresetTransitionFlag(IntFlag):
         return [option for option in PresetTransitionFlag if (option & (option - 1) == 0) and option != 0 and option in self]
 
     def __str__(self) -> str:
-        assert self.name is not None  #  TODO this failed once - get to repeat
+        assert self.name is not None  # TODO this failed once - get to repeat
         if self.value == PresetTransitionFlag.NONE:
             return self.name.lower()
         return ','.join([component.name.lower() for component in self.component_values()])  # type: ignore
@@ -6975,6 +6975,7 @@ class VduAppController:   # Main controller containing methods for high level op
     def status_message(self, message: str, timeout: int, destination: MsgDestination = MsgDestination.DEFAULT):
         self.main_window.status_message(message, timeout, destination)
 
+
 class VduAppWindow(QMainWindow):
     splash_message_qtsignal = pyqtSignal(str)
     _run_in_gui_thread_qtsignal = pyqtSignal(object)
@@ -7341,7 +7342,7 @@ class SignalWakeupHandler(QtNetwork.QAbstractSocket):
         self.old_fd = None
         self.wsock, self.rsock = socket.socketpair(type=socket.SOCK_DGRAM)  # Create a socket pair
         self.setSocketDescriptor(self.rsock.fileno())  # Let Qt listen on the one end
-        self.wsock.setblocking(False) # And let Python write on the other end
+        self.wsock.setblocking(False)  # And let Python write on the other end
         self.old_fd = signal.set_wakeup_fd(self.wsock.fileno())
         # First Python code executed gets any exception from the signal handler, so add a dummy handler first
         self.readyRead.connect(lambda: None)
