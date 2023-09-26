@@ -1111,6 +1111,8 @@ COMPLEX_NON_CONTINUOUS_TYPE = 'CNC'
 # The GUI treats SNC and CNC the same - only DdcUtil needs to distinguish them.
 GUI_NON_CONTINUOUS_TYPE = SIMPLE_NON_CONTINUOUS_TYPE
 
+DISABLE_HIGH_DPI = os.getenv("DISABLE_HIGH_DPI", default='no') == 'yes'
+
 LOG_SYSLOG_CAT = {syslog.LOG_INFO: "INFO:", syslog.LOG_ERR: "ERROR:", syslog.LOG_WARNING: "WARNING:", syslog.LOG_DEBUG: "DEBUG:"}
 log_to_syslog = False
 log_debug_enabled = False  # Often used to guard needless computation: log_debug(needless) if log_debug_enabled else None
@@ -1128,7 +1130,7 @@ def is_dark_theme() -> bool:
 
 
 def is_high_dpi() -> bool:
-    return QApplication.primaryScreen().physicalDotsPerInch() >= 160
+    return not DISABLE_HIGH_DPI and QApplication.primaryScreen().physicalDotsPerInch() >= 160
 
 
 def get_splash_image() -> QPixmap:
