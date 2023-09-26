@@ -5416,6 +5416,8 @@ class LuxMeterWidgetThread(WorkerThread):
                 return
             self.new_lux_value.emit(round(self.lux_meter.get_cached_value(5.0)))
             self.doze(5.0)
+        if self.lux_meter:
+            self.lux_meter.close()
 
 
 def lux_create_device(device_name: str) -> LuxMeterDevice:
@@ -5453,6 +5455,7 @@ class LuxMeterFifoDevice(LuxMeterDevice):
         self.cached_value: float | None = None
         self.cached_time = time.time()
         self.thread = thread
+        self.last_value = 0.0
 
     def get_cached_value(self, age_seconds: float) -> float:
         if self.cached_value is not None and time.time() - self.cached_time <= age_seconds:
@@ -5462,27 +5465,37 @@ class LuxMeterFifoDevice(LuxMeterDevice):
         return self.cached_value
 
     def get_value(self) -> float:
+        buffer = b''
         while True:
             try:
                 with self.meter_access_lock:
                     if self.fifo is None:
                         log_info(f"Initialising fifo {self.device_name} - waiting on fifo data.")
-                        self.fifo = open(self.device_name)
-                    if len(select.select([self.fifo], [], [], 2.5)[0]) == 1:
-                        buffer = self.fifo.readline()
-                        if len(select.select([self.fifo], [], [], 0.5)[0]) == 0 and buffer is not None:  # Buffer has been flushed
-                            return float(buffer.replace('\n', ''))
-                    if self.fifo is None:
-                        return 0.0
-                time.sleep(2.5)
+                        self.fifo = os.open(self.device_name, os.O_RDONLY | os.O_NONBLOCK)
+                    while len(select.select([self.fifo], [], [], 1.0)[0]) == 1:
+                        buffer += os.read(self.fifo, 1)
+                        if len(buffer) == 0:
+                            log_debug(f"possible disconnect of fifo, returning {self.last_value=}") if log_debug_enabled else None
+                            return self.last_value
+                        if buffer.endswith(b'\n'):
+                            log_debug(f"newline terminated {buffer=}") if log_debug_enabled else None
+                            self.last_value = float(buffer.decode().replace('\n', ''))
+                            log_info(f"new metered value {self.last_value}")
+                            return self.last_value
+                    log_debug(f"returning {self.last_value=}") if log_debug_enabled else None
+                    return self.last_value
             except (OSError, ValueError) as se:
-                log_warning(f"Retry read of {self.device_name}, will retry feed in 10 seconds", se, trace=True)
-                time.sleep(10)
+                if self.fifo is not None:
+                    os.close(self.fifo)
+                    self.fifo = None
+                log_warning(f"Retry read of {self.device_name=} {buffer=} returning {self.last_value=}", se, trace=True)
+                return self.last_value
 
     def close(self) -> None:
         with self.meter_access_lock:
             if self.fifo is not None:
-                self.fifo.close()
+                log_info("closing fifo")
+                os.close(self.fifo)
                 self.fifo = None
 
 

@@ -1151,19 +1151,21 @@ class LuxFifoDispatcher(QThread):
             while self.lux_value == -1:  # Initialising, wait for a value
                 time.sleep(1)
             while True:
-                if self.lux_value > -1:
-                    if self.fifo is None:
-                        fifo_path = Path(os.path.expanduser(global_config.get('global', 'fifo_path')))
-                        if not fifo_path.exists():
-                            os.mkfifo(fifo_path)
-                        self.fifo = open(fifo_path, 'w')
-                    log_info(f"Dispatcher writing {self.lux_value} to FIFO")
-                    self.fifo.write(f"{self.lux_value}\n")
-                    self.fifo.flush()
+                try:
+                    if self.lux_value > -1:
+                        if self.fifo is None:
+                            fifo_path = Path(os.path.expanduser(global_config.get('global', 'fifo_path')))
+                            if not fifo_path.exists():
+                                os.mkfifo(fifo_path)
+                            self.fifo = open(fifo_path, 'w')
+                        log_info(f"Dispatcher writing {self.lux_value} to FIFO")
+                        self.fifo.write(f"{self.lux_value}\n")
+                        self.fifo.flush()
+                except BrokenPipeError as e:
+                    log_info(f"Broken pipe {e} - client departed?")
                 dispatch_frequency_seconds = global_config.getint('global', 'dispatch_frequency_seconds', fallback=60)
                 log_debug(f"Dispatcher sleeping {dispatch_frequency_seconds} seconds") if log_debug_enabled else None
                 time.sleep(dispatch_frequency_seconds)
-
         finally:
             self.fifo.close()
             self.fifo = None
