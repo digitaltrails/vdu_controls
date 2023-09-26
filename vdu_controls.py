@@ -1127,6 +1127,10 @@ def is_dark_theme() -> bool:
     return dark_theme_found
 
 
+def is_high_dpi() -> bool:
+    return QApplication.primaryScreen().physicalDotsPerInch() >= 160
+
+
 def get_splash_image() -> QPixmap:
     """Get the splash pixmap from the installed png, failing that, the internal splash png."""
     pixmap = QPixmap()
@@ -2631,7 +2635,7 @@ class VduControlSlider(VduControlBase):
                 and SUPPORTED_VCP_BY_CODE[vcp_capability.vcp_code].icon_source is not None):
             svg_icon = QSvgWidget()
             svg_icon.load(handle_theme(SUPPORTED_VCP_BY_CODE[vcp_capability.vcp_code].icon_source))
-            svg_icon.setFixedSize(50, 50)
+            svg_icon.setFixedSize(52, 52) if is_high_dpi() else svg_icon.setFixedSize(40, 40)
             svg_icon.setToolTip(vcp_capability.translated_name())
             self.svg_icon = svg_icon
             layout.addWidget(svg_icon)
@@ -3159,7 +3163,8 @@ class VduPanelBottomToolBar(QToolBar):
         self.tool_buttons = tool_buttons
         for button in self.tool_buttons:
             self.addWidget(button)
-        self.setIconSize(QSize(32, 32))  # Why 32x32 ???
+        if is_high_dpi():
+            self.setIconSize(QSize(32, 32))
         self.progress_bar: QProgressBar | None = None
         self.status_area = QStatusBar()
         self.addWidget(self.status_area)
@@ -3725,7 +3730,8 @@ class PresetActivationButton(QPushButton):
     def __init__(self, preset: Preset) -> None:
         super().__init__()
         self.preset = preset
-        self.setIconSize(QSize(24, 24))
+        if is_high_dpi():
+            self.setIconSize(QSize(24, 24))
         self.setIcon(preset.create_icon())
         self.setText(preset.get_title_name())
         self.setToolTip(tr("Restore {} (immediately)").format(preset.get_title_name()))
@@ -3743,7 +3749,8 @@ class PresetChooseIconButton(QPushButton):
         super().__init__()
         self.setIcon(si(self, PresetsDialog.NO_ICON_ICON_NUMBER))
         self.setToolTip(tr('Choose a preset icon.'))
-        self.setIconSize(QSize(32, 32))
+        if is_high_dpi():
+            self.setIconSize(QSize(32, 32))
         self.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
         self.setAutoDefault(False)
         self.last_selected_icon_path: Path | None = None
@@ -6989,6 +6996,8 @@ class VduAppWindow(QMainWindow):
         # Gnome tray doesn't normally provide a way to bring up the main app.
         self.os_desktop = os.environ.get('XDG_CURRENT_DESKTOP', default='unknown').lower()
         gnome_tray_behaviour = main_config.is_set(ConfOption.SYSTEM_TRAY_ENABLED) and 'gnome' in self.os_desktop
+        # QApplication.setAttribute(Qt.AA_DisableHighDpiScaling)
+        # QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
 
         global log_debug_enabled
         if log_debug_enabled:
@@ -7007,8 +7016,9 @@ class VduAppWindow(QMainWindow):
             hide_shortcuts=self.hide_shortcuts, parent=self)
 
         splash_pixmap = get_splash_image()
-        splash = QSplashScreen(splash_pixmap.scaledToWidth(800).scaledToHeight(400),
-                               Qt.WindowStaysOnTopHint) if main_config.is_set(ConfOption.SPLASH_SCREEN_ENABLED) else None
+        splash = QSplashScreen(
+            splash_pixmap.scaledToWidth(800 if is_high_dpi() else 600).scaledToHeight(400 if is_high_dpi() else 300),
+            Qt.WindowStaysOnTopHint) if main_config.is_set(ConfOption.SPLASH_SCREEN_ENABLED) else None
 
         if splash is not None:
             splash.show()
