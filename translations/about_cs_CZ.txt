@@ -1,0 +1,41 @@
+
+
+<b>verze vdu_controls {VDU_CONTROLS_VERSION}</b>
+<p>
+Virtuální ovládací panel pro externí zobrazovací jednotky.
+<p>
+Další podrobnosti najdete na <a href="https://github.com/digitaltrails/vdu_controls">https://github.com/digitaltrails/vdu_controls</a>.
+<p>
+Poznámky k vydání: <a href="https://github.com/digitaltrails/vdu_controls/releases/tag/v{VDU_CONTROLS_VERSION}">
+v{VDU_CONTROLS_VERSION}.</a>
+<p>
+<hr>
+<small>
+<b>vdu_controls Copyright (C) 2021 Michael Hamilton</b>
+<br><br>
+This program is free software: you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the
+Free Software Foundation, version 3.
+<br><br>
+
+<bold>
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+more details.
+</bold>
+<br><br>
+You should have received a copy of the GNU General Public License along
+with this program. If not, see <a href="https://www.gnu.org/licenses/">https://www.gnu.org/licenses/</a>.
+</small>
+<hr>
+<p><p>
+<quote>
+<small>
+Vdu_controls spoléhá na <a href="https://www.ddcutil.com/">ddcutil</a>, robustní rozhraní k VDU s podporou DDC.
+<br>
+Na vaši žádost může být vaše zeměpisná poloha načtena z <a href="{IP_ADDRESS_INFO_URL}">{IP_ADDRESS_INFO_URL}</a>.
+<br>
+Na vaši žádost může být počasí pro vaši polohu načteno z <a href="{WEATHER_FORECAST_URL}">{WEATHER_FORECAST_URL}</a>.
+</small>
+</quote>
