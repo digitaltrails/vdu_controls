@@ -1118,12 +1118,12 @@ Velikost tohoto grafu lze měnit. </translation>
     <message>
         <location filename="../vdu_controls.py" line="6452" />
         <source>Smoothly on solar</source>
-        <translation>Vždy ihned</translation>
+        <translation>Hladký na solární</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="6452" />
         <source>Smoothly on menu</source>
-        <translation>Vždy ihned</translation>
+        <translation>Hladce v nabídce</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="6453" />

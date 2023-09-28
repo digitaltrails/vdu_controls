@@ -6459,8 +6459,8 @@ class PresetTransitionFlag(IntFlag):
 
     def description(self, descriptions=descriptions) -> str:  # Yuck
         if self.value in (PresetTransitionFlag.NONE, PresetTransitionFlag.ALWAYS):
-            return descriptions[self]
-        return ', '.join([descriptions[component] for component in self.component_values()])
+            return tr(descriptions[self])
+        return ', '.join([tr(descriptions[component]) for component in self.component_values()])
 
     def component_values(self) -> list[PresetTransitionFlag]:
         # similar to Python 3.11 enum.show_flag_values(self) - list of power of two components for self
