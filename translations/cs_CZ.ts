@@ -1133,7 +1133,7 @@ Velikost tohoto grafu lze měnit. </translation>
     <message>
         <location filename="../vdu_controls.py" line="6453" />
         <source>Always smoothly</source>
-        <translation>Hladký na signálu</translation>
+        <translation>Vždy hladce</translation>
     </message>
     <message>
         <location filename="../vdu_controls.py" line="6558" />
