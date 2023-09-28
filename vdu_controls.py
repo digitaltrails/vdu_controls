@@ -3053,10 +3053,12 @@ class ContextMenu(QMenu):
         shortcut_letter = text[text.index('&') + 1].upper() if text.find('&') >= 0 else None
         if shortcut_letter is not None:
             log_debug(f"Reserve shortcut '{shortcut_letter}'") if log_debug_enabled else None
-            assert shortcut_letter not in self.reserved_shortcuts
-            self.reserved_shortcuts.append(shortcut_letter)
-            action.setShortcuts(self.shortcut_list(ContextMenu.ALT.format(shortcut_letter.upper()), extra_shortcut))
-            action.setShortcutContext(Qt.ApplicationShortcut)
+            if shortcut_letter in self.reserved_shortcuts:
+                log_error(f"{shortcut_letter=} already in in {self.reserved_shortcuts=}")
+            else:
+                self.reserved_shortcuts.append(shortcut_letter)
+                action.setShortcuts(self.shortcut_list(ContextMenu.ALT.format(shortcut_letter.upper()), extra_shortcut))
+                action.setShortcutContext(Qt.ApplicationShortcut)
         return action
 
     def get_preset_menu_action(self, name: str) -> QAction | None:
