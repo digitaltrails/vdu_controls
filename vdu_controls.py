@@ -746,7 +746,7 @@ EASTERN_SKY = 'eastern-sky'
 
 IP_ADDRESS_INFO_URL = os.getenv('VDU_CONTROLS_IPINFO_URL', default='https://ipinfo.io/json')
 WEATHER_FORECAST_URL = os.getenv('VDU_CONTROLS_WTTR_URL', default='https://wttr.in')
-TESTING_TIME_ZONE = None  # for example 'Europe/Berlin' 'Asia/Shanghai'
+TESTING_TIME_ZONE = os.getenv('VDU_CONTROLS_TEST_TIME_ZONE')  # for example 'Europe/Berlin' 'Asia/Shanghai'
 
 TIME_CLOCK_SYMBOL = '\u25F4'  # WHITE CIRCLE WITH UPPER LEFT QUADRANT
 WEATHER_RESTRICTION_SYMBOL = '\u2614'  # UMBRELLA WITH RAIN DROPS
@@ -1243,8 +1243,6 @@ class DdcUtil:
         self.supported_codes: Dict[str, str] | None = None
         self.default_sleep_multiplier = default_sleep_multiplier
         self.vcp_type_map: Dict[str, str] = {}
-        self.use_edid = os.getenv('VDU_CONTROLS_USE_EDID', default="yes") == 'yes'
-        log_info(f"Use_edid={self.use_edid} (to disable it: export VDU_CONTROLS_USE_EDID=no)")
         self.edid_map: Dict[str, str] = {}
         self.ddcutil_access_lock = Lock()
         self.version = (0, 0, 0)  # Dummy version for bootstrapping
@@ -1319,11 +1317,10 @@ class DdcUtil:
                 bin_serial_number = rubbish.sub('_', ds_parts.get('Binary serial number', '').split('(')[0].strip())
                 man_date = rubbish.sub('_', ds_parts.get('Manufacture year', ''))
                 i2c_bus_id = ds_parts.get('I2C bus', '').replace("/dev/", '').replace("-", "_")
-                if self.use_edid:
-                    edid = self.parse_edid(display_str)
-                    # check for duplicate edid, any duplicate will use the display Num
-                    if edid is not None and edid not in self.edid_map.values():
-                        self.edid_map[vdu_number] = edid
+                edid = self.parse_edid(display_str)
+                # check for duplicate edid, any duplicate will use the display Num
+                if edid is not None and edid not in self.edid_map.values():
+                    self.edid_map[vdu_number] = edid
                 for candidate in serial_number, bin_serial_number, man_date, i2c_bus_id, f"DisplayNum{vdu_number}":
                     if candidate.strip() != '':
                         possibly_unique = (model_name, candidate)
@@ -7264,14 +7261,6 @@ class VduAppWindow(QMainWindow):
 
     def closeEvent(self, event) -> None:
         self.app_save_state()
-        # Despite what you find on Google, the following seems unnecessary, and causes vdu_controls to veto logout/shutdown
-        # if it's window is present on the desktop.  Leaving the code here for one more version.
-        if os.getenv("VDU_CONTROLS_OLD_CLOSE_BEHAVIOR") is not None:
-            if self.tray is not None:
-                self.hide()
-                event.ignore()  # hide the window
-            else:
-                event.accept()  # let the window close
 
     def app_save_state(self) -> None:
         if self.main_config.is_set(ConfOption.SMART_WINDOW, fallback=True):
