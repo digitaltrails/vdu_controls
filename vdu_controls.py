@@ -3827,7 +3827,6 @@ class WeatherQuery:
         self.longitude = self.latitude = self.country_name = self.area_name = None
         self.cloud_cover = self.visibility = self.weather_desc = self.weather_code = None
         self.when: datetime | None = None
-        self.query_succeeded = False
 
     def run_query(self) -> None:
         location_name = self.location.place_name
@@ -3859,7 +3858,6 @@ class WeatherQuery:
                     self.proximity_km = round(spherical_kilometers(float(self.latitude), float(self.longitude),
                                                                    self.location.latitude, self.location.longitude))
                     self.proximity_ok = self.proximity_km <= self.maximum_distance_km
-                    self.query_succeeded = True
                     log_info(f"QueryWeather result: {self}")
                     return
         except urllib.error.HTTPError as e:
@@ -5887,9 +5885,6 @@ class LuxConfig(ConfigIni):
 
     def get_device_name(self) -> str:
         return self.get("lux-meter", "lux-device", fallback='')
-
-    def set_device_name(self, device_name: str) -> None:
-        self.set("lux-meter", "lux-device", device_name)
 
     def get_vdu_lux_profile(self, vdu_stable_id: VduStableId, brightness_range) -> List[LuxPoint]:
         if self.has_option('lux-profile', vdu_stable_id):
