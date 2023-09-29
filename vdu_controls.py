@@ -1245,15 +1245,15 @@ class DdcUtil:
         self.vcp_type_map: Dict[str, str] = {}
         self.edid_map: Dict[str, str] = {}
         self.ddcutil_access_lock = Lock()
-        self.version = (0, 0, 0)  # Dummy version for bootstrapping
+        self.ddcutil_version = (0, 0, 0)  # Dummy version for bootstrapping
         self.version_suffix = ''
         version_info = self.__run__('--version').stdout.decode('utf-8', errors='surrogateescape')
         if version_match := re.match(r'[a-z]+ ([0-9]+).([0-9]+).([0-9]+)-?([^\n]*)', version_info):
-            self.version = tuple(int(i) for i in version_match.groups()[0:3])
+            self.ddcutil_version = tuple(int(i) for i in version_match.groups()[0:3])
             self.version_suffix = version_match.groups()[3]
         # self.version = (1, 2, 2)  # for testing for 1.2.2 compatibility
-        log_info(f"ddcutil version info: {self.version} {self.version_suffix} (dynamic-sleep-support={self.version >= (2, 0, 0)})")
-        if self.version >= (2, 0, 0):  # Won't know real version until around here  TODO is this test needed?
+        log_info(f"ddcutil version {self.ddcutil_version} {self.version_suffix}(dynamic-sleep={self.ddcutil_version >= (2, 0, 0)})")
+        if self.ddcutil_version >= (2, 0, 0):  # Won't know real version until around here  TODO is this test needed?
             self.common_args += [arg for arg in os.getenv('VDU_CONTROLS_DDCUTIL_ARGS', default='').split(' ') if arg != '']
 
     def id_key_args(self, vdu_number: str) -> List[str]:
@@ -1267,7 +1267,7 @@ class DdcUtil:
         syslog_args = []
         multiplier_args = []
         multiplier_value = self.default_sleep_multiplier if sleep_multiplier is None else sleep_multiplier
-        if self.version[0] >= 2:
+        if self.ddcutil_version[0] >= 2:
             if log_to_syslog and '--syslog' not in args:
                 syslog_args = ['--syslog', 'DEBUG' if log_debug_enabled else 'ERROR']
             if '--enable-dynamic-sleep' not in args and '--disable-dynamic-sleep' not in args:
@@ -1410,7 +1410,7 @@ class DdcUtil:
 
     def get_vcp_values(self, vdu_number: str, vcp_code_list: List[str],
                        sleep_multiplier: float | None = None, extra_args: List[str] | None = None) -> List[VcpValue]:
-        if self.version > (1, 3, 0):
+        if self.ddcutil_version > (1, 3, 0):
             return self._get_vcp_values_implementation(vdu_number, vcp_code_list, sleep_multiplier, extra_args)
         else:
             return [self._get_vcp_values_implementation(vdu_number, [cd], sleep_multiplier, extra_args)[0] for cd in vcp_code_list]
@@ -7015,9 +7015,9 @@ class VduAppWindow(QMainWindow):
         self.app = app
         self.main_controller: VduAppController = main_controller
         self.setObjectName('main_window')
-        self.geometry_key = self.objectName() + "_geometry"
-        self.state_key = self.objectName() + "_window_state"
-        self.settings = QSettings('vdu_controls.qt.state', 'vdu_controls')
+        self.qt_geometry_key = self.objectName() + "_geometry"
+        self.qt_state_key = self.objectName() + "_window_state"
+        self.qt_settings = QSettings('vdu_controls.qt.state', 'vdu_controls')
         self.main_panel: VduControlsMainPanel | None = None
         self.main_config = main_config
         self.hide_shortcuts = True
@@ -7093,7 +7093,7 @@ class VduAppWindow(QMainWindow):
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
 
         self.main_controller.configure_application(self)
-        self.app_restore_state()
+        self.app_restore_window_state()
 
         self.inactive_pause_millis = int(os.environ.get('VDU_CONTROLS_INACTIVE_PAUSE_MILLIS', default='1200'))
         self.active_event_count = 0
@@ -7157,7 +7157,7 @@ class VduAppWindow(QMainWindow):
         if toggle and self.isVisible():
             self.hide()
         else:
-            if len(self.settings.allKeys()) == 0 and self.main_config.is_set(ConfOption.SMART_WINDOW):
+            if len(self.qt_settings.allKeys()) == 0 and self.main_config.is_set(ConfOption.SMART_WINDOW):
                 # No previous state - guess a position near the tray. Use the mouse pos as a guess to where the
                 # system tray is.  The Linux Qt x,y geometry returned by the tray icon is 0,0, so we can't use that.
                 p = QCursor.pos()
@@ -7171,7 +7171,7 @@ class VduAppWindow(QMainWindow):
             self.activateWindow()
 
     def quit_app(self) -> None:
-        self.app_save_state()
+        self.app_save_window_state()
         self.app.quit()
 
     def create_main_control_panel(self) -> None:
@@ -7260,18 +7260,18 @@ class VduAppWindow(QMainWindow):
         self.app_context_menu.update()
 
     def closeEvent(self, event) -> None:
-        self.app_save_state()
+        self.app_save_window_state()
 
-    def app_save_state(self) -> None:
+    def app_save_window_state(self) -> None:
         if self.main_config.is_set(ConfOption.SMART_WINDOW, fallback=True):
-            self.settings.setValue(self.geometry_key, self.saveGeometry())
-            self.settings.setValue(self.state_key, self.saveState())
+            self.qt_settings.setValue(self.qt_geometry_key, self.saveGeometry())
+            self.qt_settings.setValue(self.qt_state_key, self.saveState())
 
-    def app_restore_state(self) -> None:
+    def app_restore_window_state(self) -> None:
         if self.main_config.is_set(ConfOption.SMART_WINDOW, fallback=True):
-            if geometry := self.settings.value(self.geometry_key, None):
+            if geometry := self.qt_settings.value(self.qt_geometry_key, None):
                 self.restoreGeometry(geometry)
-                window_state = self.settings.value(self.state_key, None)
+            if window_state := self.qt_settings.value(self.qt_state_key, None):
                 self.restoreState(window_state)
 
     def status_message(self, message: str, timeout: int, destination: MsgDestination):
