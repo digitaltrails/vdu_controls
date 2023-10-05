@@ -1378,7 +1378,7 @@ class DdcUtil:
             try:
                 self.__run__(*args_list, sleep_multiplier=sleep_multiplier, log_id=vdu_number)
                 return
-            except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound) as e:
+            except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound):
                 # log_error(f"setvcp failure {attempt_count} {e}")  # Don't log here, it creates too much noise in the logs
                 if not retry_on_error or attempt_count + 1 == DDCUTIL_RETRIES:
                     raise  # Too many failures, pass the buck upstairs
@@ -3570,11 +3570,11 @@ class FasterFileDialog(QFileDialog):  # Takes 5 seconds versus 30+ seconds for Q
     os.putenv('QT_LOGGING_RULES', 'kf.kio.widgets.kdirmodel.warning=false')  # annoying KDE message
 
     @staticmethod
-    def getOpenFileName(parent: QWidget | None = None, caption: str = '', directory: str = '', filter: str = '',
+    def getOpenFileName(parent: QWidget | None = None, caption: str = '', directory: str = '', filter_str: str = '',
                         initial_filter: str = '', options: QFileDialog.Options | QFileDialog.Option = 0) -> Tuple[str, str]:
+        original_handler = QtCore.qInstallMessageHandler(lambda mode, context, message: None)
         try:  # Get rid of another annoying message: 'qtimeline::start: already running'
-            original_handler = QtCore.qInstallMessageHandler(lambda mode, context, message: None)
-            dialog = QFileDialog(parent=parent, caption=caption, directory=directory, filter=filter, options=options)
+            dialog = QFileDialog(parent=parent, caption=caption, directory=directory, filter=filter_str)
             dialog.setOption(QFileDialog.ReadOnly | options)  # Makes no difference
             dialog.setFileMode(QFileDialog.ExistingFile)
             return (dialog.selectedFiles()[0], filter) if dialog.exec() else ('', '')  # match QFileDilog.getOpenFileName()
@@ -4935,7 +4935,7 @@ def create_icon_from_path(path: Path, themed: bool = True) -> QIcon:
             with open(path, 'rb') as icon_file:
                 icon_bytes = icon_file.read()
                 icon = create_icon_from_svg_bytes(icon_bytes, themed)
-        elif path.suffix == '.png':
+        else:  # Hope the file contains something QIcon can cope with:
             icon = QIcon(path.as_posix())
         return icon
     # Copes with the case where the path has been deleted.
@@ -5456,7 +5456,7 @@ class LuxMeterFifoDevice(LuxMeterDevice):
     def __init__(self, device_name: str, thread: QThread | None = None) -> None:
         super().__init__()
         self.device_name = device_name
-        self.fifo: io.TextIOBase | None = None
+        self.fifo: int | None = None
         self.meter_access_lock = Lock()
         self.cached_value: float | None = None
         self.cached_time = time.time()
