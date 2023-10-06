@@ -3339,7 +3339,8 @@ class VduControlsMainPanel(QWidget):
 class WorkerThread(QThread):
     finished_work = pyqtSignal(object)
 
-    def __init__(self, task_body: Callable[[], None], task_finished: Callable[[WorkerThread], None] | None = None) -> None:
+    def __init__(self, task_body: Callable[[], None], task_finished: Callable[[WorkerThread], None] | None = None,
+                 loop: bool = False) -> None:
         super().__init__()
         # init should always be initiated from the GUI thread to grant the worker's __init__ easy access to the GUI thread.
         log_debug(f"WorkerThread: init {self.__class__.__name__} from {thread_pid()=}") if log_debug_enabled else None
@@ -3347,6 +3348,7 @@ class WorkerThread(QThread):
         self.stop_requested = False
         self.task_body = task_body
         self.task_finished = task_finished
+        self.loop = loop
         if self.task_finished is not None:
             self.finished_work.connect(self.task_finished)
         self.vdu_exception: VduException | None = None
@@ -3356,7 +3358,10 @@ class WorkerThread(QThread):
         class_name = self.__class__.__name__
         try:
             log_debug(f"WorkerThread: {class_name=} running in {thread_pid()=} {self.task_body}") if log_debug_enabled else None
-            self.task_body()
+            while not self.stop_requested:
+                self.task_body()
+                if not self.loop:
+                    break
         except VduException as e:
             self.vdu_exception = e
         log_debug(f"WorkerThread: {class_name=} terminating {thread_pid()=}") if log_debug_enabled else None
@@ -5412,18 +5417,19 @@ class LuxDisplayWorker(WorkerThread):  # Periodically emit updates for the displ
     new_lux_value = pyqtSignal(int)
 
     def __init__(self, lux_meter: LuxMeterDevice) -> None:
-        super().__init__(task_body=self.read_loop)
+        super().__init__(task_body=self.update_value, loop=True)
         self.lux_meter = lux_meter
         self.stop_requested = False
 
-    def read_loop(self) -> None:
-        while not self.stop_requested:
-            if self.lux_meter is None:
-                return
-            lux = round(self.lux_meter.get_cached_value(5.0))
+    def update_value(self) -> None:
+        if self.lux_meter is None:
+            self.stop()
+            return
+        if float_lux := self.lux_meter.get_value():
+            lux = round(float_lux)
             log_debug(f"LuxDisplayWorker received new value {lux=}") if log_debug_enabled else None
             self.new_lux_value.emit(lux)
-            self.doze(5.0)
+        self.doze(5.0)
 
 
 def lux_create_device(device_name: str) -> LuxMeterDevice:
@@ -5442,100 +5448,78 @@ def lux_create_device(device_name: str) -> LuxMeterDevice:
 
 class LuxMeterDevice:
 
-    def get_cached_value(self, age_seconds: float) -> float:
+    def __init__(self) -> None:  # use a thread to prevent any blocking due to slow updating
+        super().__init__()
+        self.current_value: float | None = None
+        self.worker = WorkerThread(task_body=self.update_current_value, task_finished=self.cleanup, loop=True)
+
+    def get_value(self) -> float | None:  # an un-smoothed raw value - TODO should smoothing be moved here?
+        if self.current_value is None:
+            self.worker.start() if not self.worker.isRunning() else None
+            while self.current_value is None and not self.worker.stop_requested:  # have to block on the first time through.
+                time.sleep(0.1)
+        return self.current_value
+
+    def update_current_value(self, new_value: float | None = None) -> None:
+        log_debug(f"new metered value {new_value=}") if log_debug_enabled else None
+        self.current_value = new_value
+
+    def cleanup(self):
         pass
 
-    def get_value(self) -> float:
-        pass
-
-    def close_meter(self) -> None:
-        pass
+    def stop_metering(self) -> None:
+        self.worker.stop()
 
 
 class LuxMeterFifoDevice(LuxMeterDevice):
 
     def __init__(self, device_name: str) -> None:
         super().__init__()
-        self.worker = WorkerThread(task_body=self.task_body)  # use a thread to prevent blocking on the FIFO - due to slow updating
         self.device_name = device_name
         self.fifo: int | None = None
-        self.last_value: float | None = None
-        self.worker.start()
+        self.buffer = b''
 
-    def get_cached_value(self, age_seconds: float) -> float:
-        return self.get_value()   # always return the last value to avoid blocking (might block first time through).
+    def update_current_value(self, new_value: float | None = None) -> None:
+        try:
+            if self.fifo is None:
+                log_info(f"Initialising fifo {self.device_name} - waiting on fifo data.")
+                self.fifo = os.open(self.device_name, os.O_RDONLY | os.O_NONBLOCK)
+            while len(select.select([self.fifo], [], [], 1.0)[0]) == 1:
+                byte = os.read(self.fifo, 1)
+                if byte is None:
+                    self.cleanup()  # Fifo has closed, maybe meter is resetting
+                elif byte == b'\n':
+                    if len(self.buffer) > 0:
+                        super().update_current_value(float(self.buffer.decode()))
+                        self.buffer = b''
+                else:
+                    self.buffer += byte
+        except (OSError, ValueError) as se:
+            self.cleanup()
+            self.buffer = b''
+            log_warning(f"Reopen and retry {self.device_name=} {self.buffer=}", se, trace=True)
 
-    def get_value(self) -> float:
-        while self.last_value is None:  # have to block on the first time through.
-            time.sleep(1.0)
-        return self.last_value
-
-    def task_body(self):
-        buffer = b''
-        while True:
-            try:
-                if self.worker.stop_requested:
-                    log_info("Fifo metering stopping")
-                    self._internal_close()
-                    return
-                if self.fifo is None:
-                    log_info(f"Initialising fifo {self.device_name} - waiting on fifo data.")
-                    self.fifo = os.open(self.device_name, os.O_RDONLY | os.O_NONBLOCK)
-                while len(select.select([self.fifo], [], [], 1.0)[0]) == 1:
-                    byte = os.read(self.fifo, 1)
-                    if byte is None:
-                        self._internal_close()  # Fifo has closed, maybe meter is resetting
-                    elif byte == b'\n':
-                        if len(buffer) > 0:
-                            self.last_value = float(buffer.decode())
-                            buffer = b''
-                            log_debug(f"new metered value {self.last_value}") if log_debug_enabled else None
-                    else:
-                        buffer += byte
-            except (OSError, ValueError) as se:
-                self._internal_close()
-                buffer = b''
-                log_warning(f"Retry read of {self.device_name=} {buffer=} returning {self.last_value=}", se, trace=True)
-
-    def _internal_close(self):
+    def cleanup(self):
         if self.fifo is not None:
             log_info("closing fifo")
             os.close(self.fifo)
             self.fifo = None
 
-    def close_meter(self) -> None:
-        self.worker.stop()
-
 
 class LuxMeterRunnableDevice(LuxMeterDevice):
 
-    def __init__(self, device_name: str, thread: QThread | None = None) -> None:
+    def __init__(self, device_name: str) -> None:
         super().__init__()
         self.runnable = device_name
-        self.lock = Lock()
-        self.cached_value: float | None = None
-        self.cached_time = time.time()
-        self.thread = thread
+        self.sleep_time = float(os.getenv("LUX_METER_RUNNABLE_SLEEP", default='60.0'))
 
-    def get_cached_value(self, age_seconds: float) -> float:
-        if self.cached_value is not None and time.time() - self.cached_time <= age_seconds:
-            return self.cached_value
-        self.cached_value = self.get_value()
-        self.cached_time = time.time()
-        return self.cached_value
-
-    def get_value(self) -> float:
-        while True:
-            try:
-                with self.lock:
-                    result = subprocess.run([self.runnable], stdout=subprocess.PIPE, check=True)
-                    return float(result.stdout)
-            except (OSError, ValueError, subprocess.CalledProcessError) as se:
-                log_warning(f"Error running {self.runnable}, will retry in 10 seconds", se, trace=True)
-                time.sleep(10)
-
-    def close_meter(self) -> None:
-        pass
+    def update_current_value(self, new_value: float | None = None) -> None:
+        try:
+            result = subprocess.run([self.runnable], stdout=subprocess.PIPE, check=True)
+            super().update_current_value(float(result.stdout))
+        except (OSError, ValueError, subprocess.CalledProcessError) as se:
+            log_warning(f"Error running {self.runnable}, will retry in {self.sleep_time} seconds", se, trace=True)
+        self.worker.doze(self.sleep_time)  # Don't re-run too fast
 
 
 class LuxMeterSerialDevice(LuxMeterDevice):
@@ -5544,52 +5528,43 @@ class LuxMeterSerialDevice(LuxMeterDevice):
         super().__init__()
         self.device_name = device_name
         self.serial_device = None
-        self.lock = Lock()
-        self.cached_value: float = 0.0
-        self.cached_time = 0.0
         self.line_matcher = re.compile(r'\A([0-9]+[.][0-9]+)\r\n\Z', re.DOTALL)  # Be precise to try and catch errors
+        self.backoff_secs = self.initial_backoff_secs = 10
         try:
             self.serial_module = import_module('serial')
         except ModuleNotFoundError as mnf:
             raise LuxDeviceException(tr("The required pyserial serial-port module is not installed on this system.")) from mnf
 
-    def get_cached_value(self, age_seconds: float) -> float:  # Used for metering where an up-to-date value is less important
-        if self.cached_value is not None and time.time() - self.cached_time <= age_seconds:
-            return self.cached_value
-        self.cached_value = self.get_value()
-        self.cached_time = time.time()
-        return self.cached_value
-
-    def get_value(self) -> float:  # an un-smoothed raw value
-        cause = None
-        backoff_secs = 10
-        while True:
-            try:
-                with self.lock:
-                    if self.serial_device is None:
-                        log_info(f"LuxMeterSerialDevice: Initialising character device {self.device_name}")
-                        self.serial_device = self.serial_module.Serial(self.device_name)
-                    if self.serial_device is not None:
-                        self.serial_device.reset_input_buffer()
-                        buffer = self.serial_device.read_until()
-                        decoded = buffer.decode('utf-8', errors='surrogateescape')
-                        if match := self.line_matcher.match(decoded):  # only accept correctly formatted output
-                            return float(match.group(1))
-                        cause = f"value that failed to parse: {decoded.encode('unicode_escape')}"
-            except (self.serial_module.SerialException, termios.error, FileNotFoundError, ValueError) as se:
-                cause = se
-            log_warning(f"Retry read of {self.device_name}, will reopen feed in {backoff_secs} seconds. Cause:", cause, trace=True)
-            time.sleep(backoff_secs)
-            backoff_secs = backoff_secs * 2 if backoff_secs < 300 else 300
+    def update_current_value(self, new_value: float | None = None) -> None:
+        problem = None
+        try:
+            if self.serial_device is None:
+                log_info(f"LuxMeterSerialDevice: Initialising character device {self.device_name}")
+                self.serial_device = self.serial_module.Serial(self.device_name)
             if self.serial_device is not None:
-                self.serial_device.close()
+                self.serial_device.reset_input_buffer()
+                buffer = self.serial_device.read_until()
+                decoded = buffer.decode('utf-8', errors='surrogateescape')
+                if match := self.line_matcher.match(decoded):  # only accept correctly formatted output
+                    super().update_current_value(float(match.group(1)))
+                    self.backoff_secs = self.initial_backoff_secs
+                else:
+                    problem = f"value that failed to parse: {decoded.encode('unicode_escape')}"
+            self.worker.doze(1.0)
+        except (self.serial_module.SerialException, termios.error, FileNotFoundError, ValueError) as se:
+            problem = se
+        if problem:
+            log_warning(f"Retry read of {self.device_name}, will reopen feed in {self.backoff_secs} seconds. Cause:", problem,
+                        trace=True)
+            self.cleanup()
+            self.worker.doze(self.backoff_secs)
+            self.backoff_secs = self.backoff_secs * 2 if self.backoff_secs < 300 else 300
+
+    def cleanup(self):
+        if self.serial_device is not None:
+            log_info("closing serial device")
+            self.serial_device.close()
             self.serial_device = None
-
-    def close_meter(self) -> None:
-        with self.lock:
-            if self.serial_device is not None:
-                self.serial_device.close()
-                self.serial_device = None
 
 
 class LuxSmooth:
@@ -5685,23 +5660,23 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         profile_preset_name = None
         while change_count != last_change_count:  # while brightness changing
             last_change_count = change_count
-            metered_lux = lux_meter.get_value()
-            smoothed_lux = self.smoother.smooth(metered_lux)
-            lux_summary_text = self.lux_summary(metered_lux, smoothed_lux)
-            if start_of_cycle:
-                self.status_message(f"{SUN_SYMBOL} {lux_summary_text} {PROCESSING_LUX_SYMBOL}", timeout=3000)
-            # If interpolating, it may be that each VDU profile is closer to a different attached preset, if this happens,
-            # chose the preset associated with the brightest value.
-            for vdu_sid in self.main_controller.get_vdu_stable_id_list():  # For each VDU, do one step of its profile
-                if self.stop_requested or self.unexpected_change:
-                    return
-                # In case the lux reading changes, reevaluate target brightness every time...
-                value_range = self.main_controller.get_range(vdu_sid, BRIGHTNESS_VCP_CODE, fallback=(0, 100))
-                lux_profile = lux_config.get_vdu_lux_profile(vdu_sid, value_range)
-                profile_brightness, profile_preset_name = self.determine_brightness(vdu_sid, smoothed_lux, lux_profile)
-                if self.step_one_vdu(vdu_sid, profile_brightness, profile_preset_name, lux_summary_text, start_of_cycle):
-                    change_count += 1
-            start_of_cycle = False
+            if metered_lux := lux_meter.get_value():
+                smoothed_lux = self.smoother.smooth(metered_lux)
+                lux_summary_text = self.lux_summary(metered_lux, smoothed_lux)
+                if start_of_cycle:
+                    self.status_message(f"{SUN_SYMBOL} {lux_summary_text} {PROCESSING_LUX_SYMBOL}", timeout=3000)
+                # If interpolating, it may be that each VDU profile is closer to a different attached preset, if this happens,
+                # chose the preset associated with the brightest value.
+                for vdu_sid in self.main_controller.get_vdu_stable_id_list():  # For each VDU, do one step of its profile
+                    if self.stop_requested or self.unexpected_change:
+                        return
+                    # In case the lux reading changes, reevaluate target brightness every time...
+                    value_range = self.main_controller.get_range(vdu_sid, BRIGHTNESS_VCP_CODE, fallback=(0, 100))
+                    lux_profile = lux_config.get_vdu_lux_profile(vdu_sid, value_range)
+                    profile_brightness, profile_preset_name = self.determine_brightness(vdu_sid, smoothed_lux, lux_profile)
+                    if self.step_one_vdu(vdu_sid, profile_brightness, profile_preset_name, lux_summary_text, start_of_cycle):
+                        change_count += 1
+                start_of_cycle = False
             self.doze(self.step_pause_millis / 1000.0)  # Let i2c settle down, then continue - TODO is this really necessary?
         if change_count != 0:  # If any work was done in previous steps, finish up the remaining tasks
             log_info(f"LuxAutoWorker: stepping completed in {change_count} stepped adjustments, {profile_preset_name=}")
@@ -6279,7 +6254,7 @@ class LuxAutoController:
         try:
             if self.lux_config.get_device_name().strip() != '':
                 if self.lux_meter is not None:
-                    self.lux_meter.close_meter()
+                    self.lux_meter.stop_metering()
                 self.lux_meter = lux_create_device(self.lux_config.get_device_name())
             if self.lux_config.is_auto_enabled():
                 log_info("Lux auto-brightness settings refresh - restart monitoring.")
