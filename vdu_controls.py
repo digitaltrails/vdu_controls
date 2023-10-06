@@ -5353,7 +5353,7 @@ class LuxProfileChart(QLabel):
         return round((math.log10(lux) - math.log10(1)) / ((math.log10(100000) - math.log10(1)) / self.plot_width)) if lux > 0 else 0
 
 
-class LuxMeterWidget(QWidget):
+class LuxDisplayWidget(QWidget):
     lux_changed_qtsignal = pyqtSignal(int)
 
     def __init__(self, parent: LuxDialog | None = None) -> None:
@@ -5370,7 +5370,7 @@ class LuxMeterWidget(QWidget):
         self.lux_plot.setFixedWidth(self.max_history)
         self.lux_plot.setFixedHeight(100)
         self.layout().addWidget(self.lux_plot)
-        self.lux_meter_worker: LuxMeterWidgetThread | None = None
+        self.lux_display_worker: LuxDisplayWorker | None = None
 
     def display_lux(self, lux: int) -> None:
         self.current_lux_display.setText(tr("Lux: {}".format(lux)))
@@ -5390,25 +5390,25 @@ class LuxMeterWidget(QWidget):
         if len(self.history) > 1:
             self.history = (self.history + [0] * 10)[-100:]
 
-    def start_metering(self, lux_meter: LuxMeterDevice) -> None:
-        self.stop_metering()
-        self.lux_meter_worker = LuxMeterWidgetThread(lux_meter)
-        self.lux_meter_worker.new_lux_value.connect(self.display_lux)
-        self.lux_meter_worker.start()
+    def start_display(self, lux_meter: LuxMeterDevice) -> None:
+        self.stop_display()
+        self.lux_display_worker = LuxDisplayWorker(lux_meter)
+        self.lux_display_worker.new_lux_value.connect(self.display_lux)
+        self.lux_display_worker.start()
 
-    def stop_metering(self) -> None:
-        if self.lux_meter_worker is not None:
-            self.lux_meter_worker.stop_requested = True
-            self.lux_meter_worker.new_lux_value.disconnect(self.display_lux)
+    def stop_display(self) -> None:
+        if self.lux_display_worker is not None:
+            self.lux_display_worker.stop_requested = True
+            self.lux_display_worker.new_lux_value.disconnect(self.display_lux)
             self.interrupt_history()
-            self.lux_meter_worker = None
+            self.lux_display_worker = None
 
     def y_from_lux(self, lux: int) -> int:
         return round(
             (math.log10(lux) - math.log10(1)) / ((math.log10(100000) - math.log10(1)) / self.lux_plot.height())) if lux > 0 else 0
 
 
-class LuxMeterWidgetThread(WorkerThread):
+class LuxDisplayWorker(WorkerThread):  # Periodically emit updates for the displayed lux value
     new_lux_value = pyqtSignal(int)
 
     def __init__(self, lux_meter: LuxMeterDevice) -> None:
@@ -5420,10 +5420,10 @@ class LuxMeterWidgetThread(WorkerThread):
         while not self.stop_requested:
             if self.lux_meter is None:
                 return
-            self.new_lux_value.emit(round(self.lux_meter.get_cached_value(5.0)))
+            lux = round(self.lux_meter.get_cached_value(5.0))
+            log_debug(f"LuxDisplayWorker received new value {lux=}") if log_debug_enabled else None
+            self.new_lux_value.emit(lux)
             self.doze(5.0)
-        if self.lux_meter:
-            self.lux_meter.close()
 
 
 def lux_create_device(device_name: str) -> LuxMeterDevice:
@@ -5441,68 +5441,70 @@ def lux_create_device(device_name: str) -> LuxMeterDevice:
 
 
 class LuxMeterDevice:
+
     def get_cached_value(self, age_seconds: float) -> float:
         pass
 
     def get_value(self) -> float:
         pass
 
-    def close(self) -> None:
+    def close_meter(self) -> None:
         pass
 
 
 class LuxMeterFifoDevice(LuxMeterDevice):
 
-    def __init__(self, device_name: str, thread: QThread | None = None) -> None:
+    def __init__(self, device_name: str) -> None:
         super().__init__()
+        self.worker = WorkerThread(task_body=self.task_body)  # use a thread to prevent blocking on the FIFO - due to slow updating
         self.device_name = device_name
         self.fifo: int | None = None
-        self.meter_access_lock = Lock()
-        self.cached_value: float | None = None
-        self.cached_time = time.time()
-        self.thread = thread
-        self.last_value = 0.0
+        self.last_value: float | None = None
+        self.worker.start()
 
     def get_cached_value(self, age_seconds: float) -> float:
-        if self.cached_value is not None and time.time() - self.cached_time <= age_seconds:
-            return self.cached_value
-        self.cached_value = self.get_value()
-        self.cached_time = time.time()
-        return self.cached_value
+        return self.get_value()   # always return the last value to avoid blocking (might block first time through).
 
     def get_value(self) -> float:
+        while self.last_value is None:  # have to block on the first time through.
+            time.sleep(1.0)
+        return self.last_value
+
+    def task_body(self):
         buffer = b''
         while True:
             try:
-                with self.meter_access_lock:
-                    if self.fifo is None:
-                        log_info(f"Initialising fifo {self.device_name} - waiting on fifo data.")
-                        self.fifo = os.open(self.device_name, os.O_RDONLY | os.O_NONBLOCK)
-                    while len(select.select([self.fifo], [], [], 1.0)[0]) == 1:
-                        buffer += os.read(self.fifo, 1)
-                        if len(buffer) == 0:
-                            log_debug(f"possible disconnect of fifo, returning {self.last_value=}") if log_debug_enabled else None
-                            return self.last_value
-                        if buffer.endswith(b'\n'):
-                            log_debug(f"newline terminated {buffer=}") if log_debug_enabled else None
-                            self.last_value = float(buffer.decode().replace('\n', ''))
-                            log_info(f"new metered value {self.last_value}")
-                            return self.last_value
-                    log_debug(f"returning {self.last_value=}") if log_debug_enabled else None
-                    return self.last_value
+                if self.worker.stop_requested:
+                    log_info("Fifo metering stopping")
+                    self._internal_close()
+                    return
+                if self.fifo is None:
+                    log_info(f"Initialising fifo {self.device_name} - waiting on fifo data.")
+                    self.fifo = os.open(self.device_name, os.O_RDONLY | os.O_NONBLOCK)
+                while len(select.select([self.fifo], [], [], 1.0)[0]) == 1:
+                    byte = os.read(self.fifo, 1)
+                    if byte is None:
+                        self._internal_close()  # Fifo has closed, maybe meter is resetting
+                    elif byte == b'\n':
+                        if len(buffer) > 0:
+                            self.last_value = float(buffer.decode())
+                            buffer = b''
+                            log_debug(f"new metered value {self.last_value}") if log_debug_enabled else None
+                    else:
+                        buffer += byte
             except (OSError, ValueError) as se:
-                if self.fifo is not None:
-                    os.close(self.fifo)
-                    self.fifo = None
+                self._internal_close()
+                buffer = b''
                 log_warning(f"Retry read of {self.device_name=} {buffer=} returning {self.last_value=}", se, trace=True)
-                return self.last_value
 
-    def close(self) -> None:
-        with self.meter_access_lock:
-            if self.fifo is not None:
-                log_info("closing fifo")
-                os.close(self.fifo)
-                self.fifo = None
+    def _internal_close(self):
+        if self.fifo is not None:
+            log_info("closing fifo")
+            os.close(self.fifo)
+            self.fifo = None
+
+    def close_meter(self) -> None:
+        self.worker.stop()
 
 
 class LuxMeterRunnableDevice(LuxMeterDevice):
@@ -5532,7 +5534,7 @@ class LuxMeterRunnableDevice(LuxMeterDevice):
                 log_warning(f"Error running {self.runnable}, will retry in 10 seconds", se, trace=True)
                 time.sleep(10)
 
-    def close(self) -> None:
+    def close_meter(self) -> None:
         pass
 
 
@@ -5583,7 +5585,7 @@ class LuxMeterSerialDevice(LuxMeterDevice):
                 self.serial_device.close()
             self.serial_device = None
 
-    def close(self) -> None:
+    def close_meter(self) -> None:
         with self.lock:
             if self.serial_device is not None:
                 self.serial_device.close()
@@ -5975,7 +5977,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         grid_layout = QGridLayout()
         top_box.setLayout(grid_layout)
 
-        self.lux_display_widget = LuxMeterWidget(parent=self)
+        self.lux_display_widget = LuxDisplayWidget(parent=self)
         self.lux_display_widget.display_lux(0)
         grid_layout.addWidget(self.lux_display_widget, 0, 0, 4, 3, alignment=Qt.AlignLeft | Qt.AlignTop)
 
@@ -6183,7 +6185,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.lux_config.save(self.path)
         if requires_auto_brightness_restart:
             self.main_controller.get_lux_auto_controller().initialize_from_config()  # Causes the LuxAutoWorker to restart
-            self.lux_display_widget.stop_metering()  # Stop the lux-display metering thread
+            self.lux_display_widget.stop_display()  # Stop the lux-display metering thread
             meter_device = self.main_controller.get_lux_auto_controller().lux_meter
             self.configure_ui(meter_device)  # Use the new meter for a new lux-display metering thread
             if meter_device is not None and self.lux_config.is_auto_enabled():
@@ -6191,7 +6193,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
 
     def configure_ui(self, meter_device: LuxMeterDevice | None) -> None:
         if meter_device is not None:
-            self.lux_display_widget.start_metering(meter_device)
+            self.lux_display_widget.start_display(meter_device)
             self.enabled_checkbox.setEnabled(True)
             if self.lux_config.is_auto_enabled():
                 self.adjust_now_button.show()
@@ -6228,7 +6230,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
             elif answer == QMessageBox.Cancel:
                 event.ignore()
                 return
-        self.lux_display_widget.stop_metering()
+        self.lux_display_widget.stop_display()
         super().closeEvent(event)
 
     def status_message(self, message: str, timeout: int = 0, destination: MsgDestination = MsgDestination.DEFAULT) -> None:
@@ -6276,6 +6278,8 @@ class LuxAutoController:
         self.lux_config.load()
         try:
             if self.lux_config.get_device_name().strip() != '':
+                if self.lux_meter is not None:
+                    self.lux_meter.close_meter()
                 self.lux_meter = lux_create_device(self.lux_config.get_device_name())
             if self.lux_config.is_auto_enabled():
                 log_info("Lux auto-brightness settings refresh - restart monitoring.")
