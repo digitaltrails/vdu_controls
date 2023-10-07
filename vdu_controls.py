@@ -6034,13 +6034,17 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
 
         self.enabled_checkbox.stateChanged.connect(set_auto_monitoring)
 
-        def interval_selector_changed() -> None:
-            if self.interval_selector.value() != self.lux_config.get_interval_minutes():
-                self.lux_config.set('lux-meter', 'interval-minutes', str(self.interval_selector.value()))
+        def apply_interval(value: int) -> None:
+            if self.interval_selector.value() == value and value != self.lux_config.get_interval_minutes():
+                self.lux_config.set('lux-meter', 'interval-minutes', str(value))
                 self.apply_settings()
-                self.status_message(tr("Interval changed to {} minutes.").format(self.interval_selector.value()))
+                self.status_message(tr("Interval changed to {} minutes.").format(value))
 
-        self.interval_selector.editingFinished.connect(interval_selector_changed)
+        def interval_selector_changed(value: int) -> None:
+            if self.interval_selector.value() == value and value != self.lux_config.get_interval_minutes():
+                QTimer.singleShot(1200, partial(apply_interval, value))  # kind of like focus out, no change in a while
+
+        self.interval_selector.valueChanged.connect(interval_selector_changed)
 
         def set_interpolation(checked: int) -> None:
             if (checked == Qt.Checked) != self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True):
