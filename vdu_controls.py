@@ -5417,11 +5417,11 @@ class LuxDisplayWorker(WorkerThread):  # Periodically emit updates for the displ
     new_lux_value = pyqtSignal(int)
 
     def __init__(self, lux_meter: LuxMeterDevice) -> None:
-        super().__init__(task_body=self.update_value, loop=True)
+        super().__init__(task_body=self.display_value, loop=True)
         self.lux_meter = lux_meter
         self.stop_requested = False
 
-    def update_value(self) -> None:
+    def display_value(self) -> None:
         if self.lux_meter is None:
             self.stop()
             return
