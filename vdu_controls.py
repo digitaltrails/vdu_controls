@@ -948,25 +948,30 @@ SVG_DARK_THEME_TEXT_COLOR = SVG_DARK_THEME_COLOR
 # modified brightness icon from breeze5-icons: LGPL-3.0-only
 BRIGHTNESS_SVG = b"""
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24">
-  <defs>
-    <style id="current-color-scheme" type="text/css">
-        .ColorScheme-Text { color:#232629; }
-    </style>
-  </defs>
+  <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
   <g transform="translate(1,1)">
     <g shape-rendering="auto">
-      <path d="m11 7c-2.2032167 0-4 1.7967833-4 4 0 2.203217 1.7967833 4 4 4 2.203217 0 4-1.796783 4-4 0-2.2032167-1.796783-4-4-4zm0 1c1.662777 0 3 1.3372234 3 3 0 1.662777-1.337223 3-3 3-1.6627766 0-3-1.337223-3-3 0-1.6627766 1.3372234-3 3-3z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
-      <path d="m10.5 3v3h1v-3h-1z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
-      <path d="m10.5 16v3h1v-3h-1z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
-      <path d="m3 10.5v1h3v-1h-3z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
-      <path d="m16 10.5v1h3v-1h-3z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
-      <path d="m14.707031 14-0.707031 0.707031 2.121094 2.121094 0.707031-0.707031-2.121094-2.121094z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
-      <path d="M 5.7070312 5 L 5 5.7070312 L 7.1210938 7.828125 L 7.828125 7.1210938 L 5.7070312 5 z " class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
-      <path d="M 7.1210938 14 L 5 16.121094 L 5.7070312 16.828125 L 7.828125 14.707031 L 7.1210938 14 z " class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
-      <path d="M 16.121094 5 L 14 7.1210938 L 14.707031 7.828125 L 16.828125 5.7070312 L 16.121094 5 z " class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
+      <path d="m11 7c-2.2032167 0-4 1.7967833-4 4 0 2.203217 1.7967833 4 4 4 2.203217 0 4-1.796783 4-4 0-2.2032167-1.796783-4-4-4zm0
+       1c1.662777 0 3 1.3372234 3 3 0 1.662777-1.337223 3-3 3-1.6627766 0-3-1.337223-3-3 0-1.6627766 1.3372234-3 3-3z" 
+       class="ColorScheme-Text" fill="currentColor"/>
+      <path d="m10.5 3v3h1v-3h-1z" class="ColorScheme-Text" fill="currentColor"/>
+      <path d="m10.5 16v3h1v-3h-1z" class="ColorScheme-Text" fill="currentColor"/>
+      <path d="m3 10.5v1h3v-1h-3z" class="ColorScheme-Text" fill="currentColor"/>
+      <path d="m16 10.5v1h3v-1h-3z" class="ColorScheme-Text" fill="currentColor"/>
+      <path d="m14.707031 14-0.707031 0.707031 2.121094 2.121094 0.707031-0.707031-2.121094-2.121094z"
+       class="ColorScheme-Text" fill="currentColor"/>
+      <path d="M 5.7070312 5 L 5 5.7070312 L 7.1210938 7.828125 L 7.828125 7.1210938 L 5.7070312 5 z "
+       class="ColorScheme-Text" fill="currentColor"/>
+      <path d="M 7.1210938 14 L 5 16.121094 L 5.7070312 16.828125 L 7.828125 14.707031 L 7.1210938 14 z "
+       class="ColorScheme-Text" fill="currentColor"/>
+      <path d="M 16.121094 5 L 14 7.1210938 L 14.707031 7.828125 L 16.828125 5.7070312 L 16.121094 5 z "
+       class="ColorScheme-Text" fill="currentColor"/>
       <g>
-        <path d="m11.000001 7.7500005v6.4999985h2.166665l1.083333-2.166666v-2.1666663l-1.083333-2.1666662z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
-        <path d="m10.984375 7.734375v0.015625 6.515625h2.191406l1.089844-2.177734v-2.1757816l-1.089844-2.1777344h-2.191406zm0.03125 0.03125h2.140625l1.078125 2.1542969v2.1601561l-1.078125 2.154297h-2.140625v-6.46875z" class="ColorScheme-Text" fill="currentColor" color-rendering="auto" dominant-baseline="auto" image-rendering="auto"/>
+        <path d="m11.000001 7.7500005v6.4999985h2.166665l1.083333-2.166666v-2.1666663l-1.083333-2.1666662z"
+         class="ColorScheme-Text" fill="currentColor"/>
+        <path d="m10.984375 7.734375v0.015625 6.515625h2.191406l1.089844-2.177734v-2.1757816l-1.089844-2.1777344h-2.191406zm0.03125 
+         0.03125h2.140625l1.078125 2.1542969v2.1601561l-1.078125 2.154297h-2.140625v-6.46875z"
+          class="ColorScheme-Text" fill="currentColor"/>
       </g>
     </g>
   </g>
@@ -976,13 +981,11 @@ BRIGHTNESS_SVG = b"""
 # modified contrast icon from breeze5-icons: LGPL-3.0-only
 CONTRAST_SVG = b"""
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24">
-  <defs>
-    <style type="text/css" id="current-color-scheme">
-      .ColorScheme-Text { color:#232629; }
-    </style>
-  </defs>
+  <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
   <g transform="translate(1,1)">
-    <path style="fill:currentColor;fill-opacity:1;stroke:none" transform="translate(-1,-1)" d="m 12,7 c -2.761424,0 -5,2.2386 -5,5 0,2.7614 2.238576,5 5,5 2.761424,0 5,-2.2386 5,-5 0,-2.7614 -2.238576,-5 -5,-5 z m 0,1 v 8 C 9.790861,16 8,14.2091 8,12 8,9.7909 9.790861,8 12,8" class="ColorScheme-Text" id="path79" />
+    <path style="fill:currentColor;fill-opacity:1;stroke:none" transform="translate(-1,-1)" d="m 12,7 c -2.761424,0 -5,2.2386
+     -5,5 0,2.7614 2.238576,5 5,5 2.761424,0 5,-2.2386 5,-5 0,-2.7614 -2.238576,-5 -5,-5 z m 0,1 v 8 C 9.790861,16 8,14.2091 8,12
+      8,9.7909 9.790861,8 12,8" class="ColorScheme-Text" id="path79" />
   </g>
 </svg>
 """
@@ -995,15 +998,16 @@ PRESET_TRANSITIONING_LED_COLOR = QColor(0x00ff00)
 # adjustrgb icon from breeze5-icons: LGPL-3.0-only
 COLOR_TEMPERATURE_SVG = b"""
 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-  <defs>
-    <clipPath>
-      <path d="m7 1023.36h1v1h-1z" style="fill:#f2f2f2"/>
-    </clipPath>
-  </defs>
+  <defs> <clipPath> <path d="m7 1023.36h1v1h-1z" style="fill:#f2f2f2"/> </clipPath> </defs>
   <g transform="translate(1,1)">
-    <path d="m11.5 9c-1.213861 0-2.219022.855928-2.449219 2h-6.05078v1h6.05078c.230197 1.144072 1.235358 2 2.449219 2 1.213861 0 2.219022-.855928 2.449219-2h5.05078v-1h-5.05078c-.230197-1.144072-1.235358-2-2.449219-2" style="fill:#2ecc71"/>
-    <path d="m5.5 14c-1.385 0-2.5 1.115-2.5 2.5 0 1.385 1.115 2.5 2.5 2.5 1.21386 0 2.219022-.855928 2.449219-2h11.05078v-1h-11.05078c-.230196-1.144072-1.235358-2-2.449219-2m0 1c.831 0 1.5.669 1.5 1.5 0 .831-.669 1.5-1.5 1.5-.831 0-1.5-.669-1.5-1.5 0-.831.669-1.5 1.5-1.5" style="fill:#1d99f3"/>
-    <path d="m14.5 3c-1.21386 0-2.219022.855928-2.449219 2h-9.05078v1h9.05078c.230197 1.144072 1.235359 2 2.449219 2 1.21386 0 2.219022-.855928 2.449219-2h2.050781v-1h-2.050781c-.230197-1.144072-1.235359-2-2.449219-2m0 1c.831 0 1.5.669 1.5 1.5 0 .831-.669 1.5-1.5 1.5-.831 0-1.5-.669-1.5-1.5 0-.831.669-1.5 1.5-1.5" style="fill:#da4453"/>
+    <path d="m11.5 9c-1.213861 0-2.219022.855928-2.449219 2h-6.05078v1h6.05078c.230197 1.144072 1.235358 2 2.449219 2 1.213861 0
+     2.219022-.855928 2.449219-2h5.05078v-1h-5.05078c-.230197-1.144072-1.235358-2-2.449219-2" style="fill:#2ecc71"/>
+    <path d="m5.5 14c-1.385 0-2.5 1.115-2.5 2.5 0 1.385 1.115 2.5 2.5 2.5 1.21386 0 2.219022-.855928
+     2.449219-2h11.05078v-1h-11.05078c-.230196-1.144072-1.235358-2-2.449219-2m0 1c.831 0 1.5.669 1.5 1.5 0 .831-.669
+      1.5-1.5 1.5-.831 0-1.5-.669-1.5-1.5 0-.831.669-1.5 1.5-1.5" style="fill:#1d99f3"/>
+    <path d="m14.5 3c-1.21386 0-2.219022.855928-2.449219 2h-9.05078v1h9.05078c.230197 1.144072 1.235359 2 2.449219 2 1.21386 0
+     2.219022-.855928 2.449219-2h2.050781v-1h-2.050781c-.230197-1.144072-1.235359-2-2.449219-2m0 1c.831 0 1.5.669 1.5 1.5 0
+      .831-.669 1.5-1.5 1.5-.831 0-1.5-.669-1.5-1.5 0-.831.669-1.5 1.5-1.5" style="fill:#da4453"/>
   </g>
 </svg>
 """
@@ -1011,13 +1015,13 @@ COLOR_TEMPERATURE_SVG = b"""
 # audio-volume-high icon from breeze5-icons: LGPL-3.0-only
 VOLUME_SVG = b"""
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="-7 -7 40 40" width="24" height="24">
-  <style id="current-color-scheme" type="text/css">
-        .ColorScheme-Text { color:#232629; }
-    </style>
+  <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
   <g transform="translate(1,1)">
     <g class="ColorScheme-Text" fill="currentColor">
-      <path d="m14.324219 7.28125-.539063.8613281a4 4 0 0 1 1.214844 2.8574219 4 4 0 0 1 -1.210938 2.861328l.539063.863281a5 5 0 0 0 1.671875-3.724609 5 5 0 0 0 -1.675781-3.71875z"/>
-      <path d="m13.865234 3.5371094-.24414.9765625a7 7 0 0 1 4.378906 6.4863281 7 7 0 0 1 -4.380859 6.478516l.24414.974609a8 8 0 0 0 5.136719-7.453125 8 8 0 0 0 -5.134766-7.4628906z"/>
+      <path d="m14.324219 7.28125-.539063.8613281a4 4 0 0 1 1.214844 2.8574219 4 4 0 0 1 -1.210938 2.861328l.539063.863281a5
+       5 0 0 0 1.671875-3.724609 5 5 0 0 0 -1.675781-3.71875z"/>
+      <path d="m13.865234 3.5371094-.24414.9765625a7 7 0 0 1 4.378906 6.4863281 7 7 0 0 1 -4.380859 6.478516l.24414.974609a8
+       8 0 0 0 5.136719-7.453125 8 8 0 0 0 -5.134766-7.4628906z"/>
       <path d="m3 8h2v6h-2z" fill-rule="evenodd"/>
       <path d="m6 14 5 5h1v-16h-1l-5 5z"/>
     </g>
@@ -1028,27 +1032,24 @@ VOLUME_SVG = b"""
 # application-menu icon from breeze5-icons: LGPL-3.0-only
 MENU_ICON_SOURCE = b"""
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-  <defs id="defs3051">
-    <style type="text/css" id="current-color-scheme">
-      .ColorScheme-Text { color:#232629; }
-      </style>
-  </defs>
-  <g transform="translate(1,1)">
-    <path style="fill:currentColor;fill-opacity:1;stroke:none" d="m3 5v2h16v-2h-16m0 5v2h16v-2h-16m0 5v2h16v-2h-16" class="ColorScheme-Text"/>
-  </g>
+  <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
+  <g transform="translate(1,1)"> <path style="fill:currentColor;fill-opacity:1;stroke:none" d="m3 5v2h16v-2h-16m0
+   5v2h16v-2h-16m0 5v2h16v-2h-16" class="ColorScheme-Text"/> </g>
 </svg>
 """
 
 # view-refresh icon from breeze5-icons: LGPL-3.0-only
 REFRESH_ICON_SOURCE = b"""
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24">
-  <defs>
-    <style type="text/css" id="current-color-scheme">.ColorScheme-Text {
-        color:#232629;
-      }</style>
-  </defs>
+  <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
   <g transform="translate(1,1)">
-    <path class="ColorScheme-Text" fill="currentColor" d="m 19,11 c 0,1.441714 -0.382922,2.789289 -1.044922,3.955078 l -0.738281,-0.738281 c 0,0 0.002,-0.0019 0.002,-0.0019 l -2.777344,-2.779297 0.707032,-0.707031 2.480468,2.482422 C 17.861583,12.515315 18,11.776088 18,11 18,7.12203 14.878,4 11,4 9.8375,4 8.746103,4.285828 7.783203,4.783203 L 7.044922,4.044922 C 8.210722,3.382871 9.5583,3 11,3 c 4.432,0 8,3.568034 8,8 z m -4.044922,6.955078 C 13.789278,18.617129 12.4417,19 11,19 6.568,19 3,15.431966 3,11 3,9.558286 3.382922,8.210711 4.044922,7.044922 l 0.683594,0.683594 0.002,-0.002 2.828125,2.828126 L 6.851609,11.261673 4.373094,8.783157 C 4.139126,9.480503 4,10.221736 4,11 c 0,3.87797 3.122,7 7,7 1.1625,0 2.253897,-0.285829 3.216797,-0.783203 z"/>
+    <path class="ColorScheme-Text" fill="currentColor" d="m 19,11 c 0,1.441714 -0.382922,2.789289 -1.044922,3.955078 
+     l -0.738281, -0.738281 c 0,0 0.002,-0.0019 0.002,-0.0019 l -2.777344,-2.779297 0.707032,-0.707031 2.480468,2.482422 
+     C 17.861583, 12.515315 18,11.776088 18,11 18,7.12203 14.878,4 11,4 9.8375,4 8.746103,4.285828 7.783203,4.783203 
+     L 7.044922,4.044922 C 8.210722,3.382871 9.5583,3 11,3 c 4.432,0 8,3.568034 8,8 z m -4.044922,6.955078 
+     C 13.789278,18.617129 12.4417,19 11,19 6.568,19 3,15.431966 3,11 3,9.558286 3.382922,8.210711 4.044922,7.044922 
+     l 0.683594,0.683594 0.002,-0.002 2.828125,2.828126 L 6.851609,11.261673 4.373094,8.783157 
+     C 4.139126,9.480503 4,10.221736 4,11 c 0,3.87797 3.122,7 7,7 1.1625,0 2.253897,-0.285829 3.216797,-0.783203 z"/>
   </g>
 </svg>
 """
@@ -2479,8 +2480,7 @@ class SettingsEditorLocationWidget(SettingsEditorLineBase):
 
     def location_dialog(self) -> str | None:
         ask_permission = MessageBox(QMessageBox.Question, buttons=QMessageBox.Yes | QMessageBox.No)
-        ask_permission.setText(
-            tr('Query {} to obtain information based on your IP-address?').format(IP_ADDRESS_INFO_URL))
+        ask_permission.setText(tr('Query {} to obtain information based on your IP-address?').format(IP_ADDRESS_INFO_URL))
         if ask_permission.exec() == QMessageBox.Yes:
             try:
                 ipinfo = self.retrieve_ipinfo()
@@ -2501,8 +2501,7 @@ class SettingsEditorLocationWidget(SettingsEditorLineBase):
                     return data
             except (URLError, KeyError) as e:
                 error_dialog = MessageBox(QMessageBox.Critical)
-                error_dialog.setText(
-                    tr("Failed to obtain info from {}: {}").format(IP_ADDRESS_INFO_URL, e))
+                error_dialog.setText(tr("Failed to obtain info from {}: {}").format(IP_ADDRESS_INFO_URL, e))
                 error_dialog.exec()
         return ''
 
@@ -3414,7 +3413,8 @@ class PresetTransitionWorker(WorkerThread):
         self.final_values: Dict[TransitionValueKey, str] = {}
         self.expected_values: Dict[TransitionValueKey, str | None] = {}
         self.transition_immediately = immediately
-        self.work_state = PresetTransitionState.STEPPING_COMPLETED if self.transition_immediately else PresetTransitionState.INITIALIZED
+        self.work_state = \
+            PresetTransitionState.STEPPING_COMPLETED if self.transition_immediately else PresetTransitionState.INITIALIZED
         self.scheduled_activity = scheduled_activity
         self.progress_callable = progress_callable
         self.progress_qtsignal.connect(self.progress_callable)
@@ -3905,8 +3905,7 @@ class PresetChooseWeatherWidget(QWidget):
         self.required_weather_filepath: Path | None = None
         self.setLayout(QVBoxLayout())
         self.label = QLabel(tr("Additional weather requirements"))
-        self.label.setToolTip(
-            tr("Weather conditions will be retrieved from {}").format(WEATHER_FORECAST_URL))
+        self.label.setToolTip(tr("Weather conditions will be retrieved from {}").format(WEATHER_FORECAST_URL))
         self.layout().addWidget(self.label)
         self.chooser = QComboBox()
 
@@ -4844,7 +4843,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
         if duplicated_presets := [other_preset for other_name, other_preset in self.main_controller.find_presets_map().items()
                                   if other_name != preset.name
-                                     and preset.preset_ini.diff(other_preset.preset_ini, vdu_settings_only=True) == {}]:
+                                  and preset.preset_ini.diff(other_preset.preset_ini, vdu_settings_only=True) == {}]:
             duplicates_warning = MessageBox(QMessageBox.Warning,
                                             buttons=QMessageBox.Save | QMessageBox.Cancel, default=QMessageBox.Cancel)
             duplicates_warning.setText(tr("Duplicates existing Preset {}, save anyway?").format(duplicated_presets[0].name))
@@ -6121,8 +6120,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                     color = QColor.fromHsl(int(index * 137.508) % 255, random.randint(64, 128), random.randint(192, 200))
                     self.drawing_color_map[vdu_sid] = color
                     color_icon = create_icon_from_svg_bytes(SWATCH_ICON_SOURCE.replace(b"#ffffff", bytes(color.name(), 'utf-8')))
-                    self.profile_selector.addItem(
-                        color_icon, self.main_controller.get_vdu_description(vdu_sid), userData=vdu_sid)
+                    self.profile_selector.addItem(color_icon, self.main_controller.get_vdu_description(vdu_sid), userData=vdu_sid)
                     if vdu_sid == candidate_id:
                         self.profile_selector.setCurrentIndex(index)
                         self.profile_plot.current_vdu_sid = candidate_id
@@ -6677,8 +6675,7 @@ class VduAppController:  # Main controller containing methods for high level ope
         # Starts the restore, but it will complete in the worker thread
         if not is_running_in_gui_thread():  # Transfer this request into the GUI thread
             log_debug(f"restore_preset {preset.name} transferring task to GUI thread") if log_debug_enabled else None
-            self.main_window.run_in_gui_thread(
-                partial(self.restore_preset, preset, finished_func, immediately, scheduled_activity))
+            self.main_window.run_in_gui_thread(partial(self.restore_preset, preset, finished_func, immediately, scheduled_activity))
             return
 
         log_debug("restore_preset: try to obtain application_configuration_lock", trace=False) if log_debug_enabled else None
@@ -6846,8 +6843,7 @@ class VduAppController:  # Main controller containing methods for high level ope
                     return False
         except ValueError as e:
             msg = MessageBox(QMessageBox.Warning)
-            msg.setText(
-                tr("Ignoring weather requirements, unable to query local weather: {}").format(str(e.args[0])))
+            msg.setText(tr("Ignoring weather requirements, unable to query local weather: {}").format(str(e.args[0])))
             msg.setInformativeText(e.args[1])
             msg.exec()
         return True
@@ -7422,8 +7418,7 @@ def calc_solar_azimuth_zenith(localised_time: datetime, latitude: float, longitu
     cos_latitude = math.cos(latitude_in_radians)
     sin_latitude = math.sin(latitude_in_radians)
     cos_hour_angle = math.cos(hour_angle)
-    zenith_angle = (
-        math.acos(cos_latitude * cos_hour_angle * math.cos(declination) + math.sin(declination) * sin_latitude))
+    zenith_angle = math.acos(cos_latitude * cos_hour_angle * math.cos(declination) + math.sin(declination) * sin_latitude)
     dy = -math.sin(hour_angle)
     dx = math.tan(declination) * cos_latitude - sin_latitude * cos_hour_angle
     azimuth = math.atan2(dy, dx)
@@ -7440,8 +7435,7 @@ def calc_solar_azimuth_zenith(localised_time: datetime, latitude: float, longitu
 # Spherical distance from https://stackoverflow.com/a/21623206/609575
 def spherical_kilometers(lat1, lon1, lat2, lon2) -> float:
     p = math.pi / 180
-    a = 0.5 - math.cos((lat2 - lat1) * p) / 2 + math.cos(lat1 * p) * math.cos(lat2 * p) * (
-            1 - math.cos((lon2 - lon1) * p)) / 2
+    a = 0.5 - math.cos((lat2 - lat1) * p) / 2 + math.cos(lat1 * p) * math.cos(lat2 * p) * (1 - math.cos((lon2 - lon1) * p)) / 2
     return 12742 * math.asin(math.sqrt(a))
 
 
