@@ -1196,7 +1196,6 @@ class VcpCapability:
         self.vcp_type = vcp_type
         self.icon_source = icon_source
         self.causes_config_change = causes_config_change
-        # Default config enablement
         self.enabled = enabled
         self.can_transition = can_transition
         self.retry_setvcp = retry_setvcp and not causes_config_change  # Safe to repeat set on error
