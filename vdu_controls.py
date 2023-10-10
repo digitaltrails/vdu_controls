@@ -72,10 +72,10 @@ Arguments supplied on the command line override config file equivalent settings.
 Description
 ===========
 
-``vdu_controls`` is a virtual control panel for externally connected VDU's.  The application detects
-DVI, DP, HDMI, or USB connected VDU's.  It provides controls for settings such as brightness and contrast.
+``vdu_controls`` is a virtual control panel for externally connected VDUs.  The application detects
+DVI, DP, HDMI, or USB connected VDUs.  It provides controls for settings such as brightness and contrast.
 
-The application interacts with VDU's via the VESA *Display Data Channel* (*DDC*) *Virtual Control Panel*  (*VCP*)
+The application interacts with VDUs via the VESA *Display Data Channel* (*DDC*) *Virtual Control Panel*  (*VCP*)
 commands set.  DDC VCP interactions are mediated by the ``ddcutil`` command line utility.  ``Ddcutil`` provides
 a robust interface that is tolerant of the vagaries of the many OEM DDC implementations.
 
@@ -102,9 +102,9 @@ control panel or on the system-tray icon.  The context menu is also available vi
 bottom right of the main control panel.
 
 Builtin laptop displays normally don't implement DDC and those displays are not supported, but a laptop's
-externally connected VDU's are likely to be controllable.
+externally connected VDUs are likely to be controllable.
 
-Some controls change the number of connected devices (for example, some VDU's support a power-off command). If
+Some controls change the number of connected devices (for example, some VDUs support a power-off command). If
 such controls are used, ``vdu_controls`` will detect the change and will reconfigure the controls
 for the new situation (for example, DDC VDU 2 may now be DD VDU 1).  If you change settings independently of
 ``vdu_controls``, for example, by using a VDU's physical controls,  the ``vdu_controls`` UI includes a refresh
@@ -192,7 +192,7 @@ As well as using the ``Settings``, config files may also be created by the comma
 
     vdu_controls --create-config-files
 
-which will create initial templates based on the currently connected VDU's.
+which will create initial templates based on the currently connected VDUs.
 
 The config files are completely optional, they need not be used if the existing command line options are found to be
 adequate to the task at hand.
@@ -237,7 +237,7 @@ an icon, it will be assigned one created from the letters of its name (the first
 
 Presets may be set to transition immediately (the default); gradually on schedule (solar elevation); or gradually
 always (when triggered by schedule, context menu, or UNIX signal).  The speed of transition is determined by
-how quickly the VDU's can respond to adjustment (which is generally quite slowly).  During a transition,
+how quickly each VDU can respond to adjustment (which is generally quite slowly).  During a transition,
 the transition will be abandoned if the controls involved in the transition are manually altered, or another
 preset is manually invoked.
 
@@ -321,7 +321,7 @@ preset immediately regardless of the transition settings.
 
 Normally a transition single-steps the controls as quickly as possible.  In practice
 this means each step takes one or more seconds and increases linearly depending on the
-number of VDU's and number of controls being altered.  The Presets Dialog includes
+number of VDUs and number of controls being altered.  The Presets Dialog includes
 a ``Transition Step seconds`` control that can be used to increase the step interval
 and extend a transition over a longer period of time.
 
@@ -568,16 +568,16 @@ selectively under each VDU's tab).
 For versions of ``ddcutil`` prior to 2.0, you can manually set the ``vdu_control``
 ``sleep-multiplier`` passed to ``ddcutil``.  A sleep multiplier less than one will
 speed up the i2c protocol interactions at the risk of increased protocol errors.
-The default sleep multiplier of 1.0 has to be quite conservative, many VDU's
+The default sleep multiplier of 1.0 has to be quite conservative, many VDUs
 can cope with smaller multipliers. A bit of experimentation with multiplier values
 may greatly speed up responsiveness. In a multi-VDU setup individual sleep
 multipliers can be configured (see previous section).
 
-Improving Response Time: Connections and Controls
--------------------------------------------------
+Improving Response Time and Reliability: Connections and Controls
+-----------------------------------------------------------------
 
-``DDC/I2C`` is not the speediest or most reliable form of communication. VDU's may
-vary in their responsiveness and compliance.  GPU's, GPU drivers, and types
+``DDC/I2C`` is not the speediest or most reliable form of communication. VDUs may
+vary in their responsiveness and compliance.  GPUs, GPU drivers, and types
 of connection may affect the reliability. If you have the choice, ``DisplayPort``
 can be more reliable than ``DVI`` or ``HDMI``.
 
@@ -607,7 +607,7 @@ Examples
     vdu_controls --enable-vcp-code 63 --enable-vcp-code 93 --warnings --debug
         All default controls, plus controls for VCP_CODE 63 and 93, show any warnings, output debugging info.
 
-This script often refers to displays and monitors as VDU's in order to
+This script often refers to displays and monitors as VDUs in order to
 disambiguate the noun/verb duality of "display" and "monitor"
 
 Prerequisites
@@ -625,12 +625,12 @@ Kernel Modules::
         modprobe i2c_dev
         lsmod | grep i2c_dev
 
-Get ddcutil working first. Check that the detect command detects your VDU's without issuing any
+Get ddcutil working first. Check that the detect command detects your VDUs without issuing any
 errors:
 
         ddcutil detect
 
-Read ddcutil readme concerning config of i2c_dev with nvidia GPU's. Detailed ddcutil info at https://www.ddcutil.com/
+Read ddcutil readme concerning config of i2c_dev with nvidia GPUs. Detailed ddcutil info at https://www.ddcutil.com/
 
 If you wish to use a serial-port lux metering device, the ``pyserial`` module is a runtime requirement.
 
@@ -739,6 +739,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
 
 APPNAME = "VDU Controls"
 VDU_CONTROLS_VERSION = '1.11.2'
+VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in VDU_CONTROLS_VERSION.split('.'))
 assert sys.version_info >= (3, 8), f'{APPNAME} utilises python version 3.8 or greater (your python is {sys.version}).'
 
 WESTERN_SKY = 'western-sky'
@@ -810,7 +811,7 @@ def format_solar_elevation_ini_text(elevation: SolarElevationKey | None) -> str:
 
 
 def parse_solar_elevation_ini_text(ini_text: str) -> SolarElevationKey:
-    parts = ini_text.strip().split(' ')
+    parts = ini_text.strip().split()
     if len(parts) != 2:
         raise ValueError(f"Invalid SolarElevation: '{ini_text}'")
     if parts[0] not in [EASTERN_SKY, WESTERN_SKY]:
@@ -900,7 +901,7 @@ with this program. If not, see <a href="https://www.gnu.org/licenses/">https://w
 <p><p>
 <quote>
 <small>
-Vdu_controls relies on <a href="https://www.ddcutil.com/">ddcutil</a>, a robust interface to DDC capable VDU's.
+Vdu_controls relies on <a href="https://www.ddcutil.com/">ddcutil</a>, a robust interface to DDC capable VDUs.
 <br>
 At your request, your geographic location may be retrieved from <a href="{IP_ADDRESS_INFO_URL}">{IP_ADDRESS_INFO_URL}</a>.
 <br>
@@ -1130,7 +1131,7 @@ def is_dark_theme() -> bool:
     return dark_theme_found
 
 
-adjust_for_dpi = True
+adjust_for_dpi = True  # Depending on whether the user is scaling or not, they may want High DPI adjustments.
 
 
 def is_high_dpi() -> bool:
@@ -1182,7 +1183,7 @@ def log_error(*args, trace=False) -> None:
 
 
 def thread_pid():
-    return threading.get_native_id()  # More unique than get_ident (internal ID's get recycled immediately) - see with htop -H.
+    return threading.get_native_id()  # More unique than get_ident (internal IDs get recycled immediately) - see with htop -H.
 
 
 class VcpCapability:
@@ -1196,7 +1197,6 @@ class VcpCapability:
         self.vcp_type = vcp_type
         self.icon_source = icon_source
         self.causes_config_change = causes_config_change
-        # Default config enablement
         self.enabled = enabled
         self.can_transition = can_transition
         self.retry_setvcp = retry_setvcp and not causes_config_change  # Safe to repeat set on error
@@ -1227,9 +1227,7 @@ VcpValue = namedtuple('VcpValue', ['current', 'max', 'vcp_type'])  # A getvcp co
 
 class DdcUtil:
     """
-    Interface to the command line ddcutil Display Data Channel Utility for interacting with VDU's.
-    The exception callback can return True if we should retry after errors (after the callback takes
-    corrective action such as increasing the sleep_multiplier).
+    Interface to the command line ddcutil Display Data Channel Utility for interacting with VDUs.
     """
     _VCP_CODE_REGEXP = re.compile(r"^VCP ([0-9A-F]{2}) ")  # VCP 2-digit-hex
     _C_PATTERN = re.compile(r'([0-9]+) ([0-9]+)')  # Match Continuous-Type getvcp result
@@ -1255,7 +1253,7 @@ class DdcUtil:
         # self.version = (1, 2, 2)  # for testing for 1.2.2 compatibility
         log_info(f"ddcutil version {self.ddcutil_version} {self.version_suffix}(dynamic-sleep={self.ddcutil_version >= (2, 0, 0)})")
         if self.ddcutil_version >= (2, 0, 0):  # Won't know real version until around here  TODO is this test needed?
-            self.common_args += [arg for arg in os.getenv('VDU_CONTROLS_DDCUTIL_ARGS', default='').split(' ') if arg != '']
+            self.common_args += [arg for arg in os.getenv('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != '']
 
     def id_key_args(self, vdu_number: str) -> List[str]:
         return ['--edid', self.edid_map[vdu_number]] if vdu_number in self.edid_map else ['--display', vdu_number]
@@ -1298,10 +1296,12 @@ class DdcUtil:
             raise
         return result
 
-    def detect_monitors(self, issue_warnings: bool = True, sleep_multiplier: float = 0.0) -> List[Tuple[str, str, str, str]]:
+    def detect_monitors(self, issue_warnings: bool = True, sleep_multiplier: float = 0.0,
+                        extra_args: List[str] | None = None) -> List[Tuple[str, str, str, str]]:
         """Return a list of (vdu_number, desc) tuples."""
+        args = ([] if extra_args is None else extra_args) + ['detect', '--verbose', ]
         display_list = []
-        result = self.__run__('detect', '--verbose', sleep_multiplier=sleep_multiplier)
+        result = self.__run__(*args, sleep_multiplier=sleep_multiplier)
         # Going to get rid of anything that is not a-z A-Z 0-9 as potential rubbish
         rubbish = re.compile('[^a-zA-Z0-9]+')
         # This isn't efficient, it doesn't need to be, so I'm keeping re-defs close to where they are used.
@@ -1309,7 +1309,7 @@ class DdcUtil:
         for display_str in re.split("\n\n", result.stdout.decode('utf-8', errors='surrogateescape')):
             if display_match := re.search(r'Display ([0-9]+)', display_str):
                 vdu_number = display_match.group(1)
-                log_debug(f"checking possible ID's for display {vdu_number}") if log_debug_enabled else None
+                log_debug(f"checking possible IDs for display {vdu_number}") if log_debug_enabled else None
                 ds_parts = {fm.group(1).strip(): fm.group(2).strip()
                             for fm in re.finditer(r'[ \t]*([^:\n]+):[ \t]+([^\n]*)', display_str)}  # Create dict {name:value} pairs
                 model_name = rubbish.sub('_', ds_parts.get('Model', 'unknown_model'))
@@ -1349,7 +1349,7 @@ class DdcUtil:
                     f"Unique key for {vdu_number=} {manufacturer=} is ({model_name=} {main_id=})") if log_debug_enabled else None
                 display_list.append((vdu_number, manufacturer, model_name, main_id))
                 key_already_assigned[vdu_number] = 1
-        # display_list.append(("3", "maker_y", "model_z", "1234")) # For testing bad VDU's:
+        # display_list.append(("3", "maker_y", "model_z", "1234")) # For testing bad VDUs:
         return display_list
 
     def parse_edid(self, display_str: str) -> str | None:
@@ -1359,9 +1359,10 @@ class DdcUtil:
             return edid
         return None
 
-    def query_capabilities(self, vdu_number: str) -> str:
+    def query_capabilities(self, vdu_number: str, extra_args: List[str] | None = None) -> str:
         """Return a vpc capabilities string."""
-        result = self.__run__(*['capabilities'] + self.id_key_args(vdu_number), log_id=vdu_number)
+        args = ([] if extra_args is None else extra_args) + ['capabilities'] + self.id_key_args(vdu_number)
+        result = self.__run__(*args, log_id=vdu_number)
         capability_text = result.stdout.decode('utf-8', errors='surrogateescape')
         return capability_text
 
@@ -1371,14 +1372,13 @@ class DdcUtil:
     def set_vcp(self, vdu_number: str, vcp_code: str, new_value: str,
                 sleep_multiplier: float | None = None, extra_args: List[str] | None = None, retry_on_error: bool = False) -> None:
         """Send a new value to a specific VDU and vcp_code."""
-        extra_args = [] if extra_args is None else extra_args
         if self.get_type(vcp_code) != CONTINUOUS_TYPE:
             new_value = 'x' + new_value
-        args_list = extra_args + ['setvcp', vcp_code, new_value] + self.id_key_args(vdu_number)
+        args = ([] if extra_args is None else extra_args) + ['setvcp', vcp_code, new_value] + self.id_key_args(vdu_number)
         for attempt_count in range(DDCUTIL_RETRIES):
             try:
-                self.__run__(*args_list, sleep_multiplier=sleep_multiplier, log_id=vdu_number)
-                return
+                self.__run__(*args, sleep_multiplier=sleep_multiplier, log_id=vdu_number)
+                break
             except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound):
                 # log_error(f"setvcp failure {attempt_count} {e}")  # Don't log here, it creates too much noise in the logs
                 if not retry_on_error or attempt_count + 1 == DDCUTIL_RETRIES:
@@ -1423,9 +1423,8 @@ class DdcUtil:
         """
         # Try a few times in case there is a glitch due to a monitor being turned-off/on or slow to respond
         # Should we loop here, or higher up - maybe it doesn't matter.
-        extra_args = [] if extra_args is None else extra_args
+        args = ([] if extra_args is None else extra_args) + ['--brief', 'getvcp'] + vcp_code_list + self.id_key_args(vdu_number)
         results_dict: Dict[str, VcpValue | None] = {vcp_code: None for vcp_code in vcp_code_list}  # Force vcp_code_list ordering
-        args = extra_args + ['--brief', 'getvcp'] + vcp_code_list + self.id_key_args(vdu_number)
         for attempt_count in range(DDCUTIL_RETRIES):
             try:
                 from_ddcutil = self.__run__(*args, sleep_multiplier=sleep_multiplier, log_id=vdu_number)
@@ -1667,21 +1666,10 @@ class ConfigIni(configparser.ConfigParser):
         if self.has_option(ConfigIni.METADATA_SECTION, ConfigIni.METADATA_VERSION_OPTION):
             version = self[ConfigIni.METADATA_SECTION][ConfigIni.METADATA_VERSION_OPTION]
             try:
-                return tuple([int(i) for i in version.split('.')])
+                return tuple(int(i) for i in version.split('.'))
             except ValueError:
                 log_error(f"Illegal version number {version} should be i.j.k where i, j and k are integers.", trace=True)
         return 1, 6, 0
-
-    def is_version_ge(self, version_text: str = VDU_CONTROLS_VERSION) -> bool:
-        major, minor, release = [int(i) for i in version_text.split(".")]
-        current_major, current_minor, current_release = self.get_version()
-        if current_major < major:
-            return False
-        if current_minor < minor:
-            return False
-        if current_release < release:
-            return False
-        return True
 
     def save(self, config_path) -> None:
         if not config_path.parent.is_dir():
@@ -1787,7 +1775,7 @@ class VduControlsConfig:
     def get_ddcutil_extra_args(self, fallback: List[str] | None = None) -> List[str]:
         fallback = [] if fallback is None else fallback
         value = self.ini_content.get('ddcutil-parameters', 'ddcutil-extra-args', fallback=None)
-        return fallback if value is None or value.strip() == '' else value.split(' ')
+        return fallback if value is None or value.strip() == '' else value.split()
 
     def get_capabilities_alt_text(self) -> str:
         return self.ini_content['ddcutil-capabilities']['capabilities-override']
@@ -2002,7 +1990,7 @@ class VduController(QObject):
                 enabled_vcp_codes = ASSUMED_CONTROLS_CONFIG_VCP_CODES
                 self.capabilities_text = ASSUMED_CONTROLS_CONFIG_TEXT
             else:
-                self.capabilities_text = ddcutil.query_capabilities(vdu_number)
+                self.capabilities_text = ddcutil.query_capabilities(vdu_number, extra_args=self.ddcutil_extra_args)
         self.capabilities_supported_by_this_vdu = self._parse_capabilities(self.capabilities_text)
         # Find those capabilities supported by this VDU AND enabled in the GUI:
         self.enabled_capabilities = [c for c in self.capabilities_supported_by_this_vdu.values() if c.vcp_code in enabled_vcp_codes]
@@ -2189,17 +2177,18 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
 
 class SettingsEditorTab(QWidget):
     """A tab corresponding to a settings file, generates UI widgets for each tab based on what's in the config. """
-
     save_all_clicked_qtsignal = pyqtSignal()
 
     def __init__(self, editor_dialog: SettingsEditor, vdu_config: VduControlsConfig, change_callback: Callable,
                  parent: QTabWidget) -> None:
         super().__init__(parent=parent)
-        editor_layout = QVBoxLayout()
-
+        widget_map = {ConfType.BOOL: SettingsEditorBooleanWidget, ConfType.FLOAT: SettingsEditorFloatWidget,
+                      ConfType.LONG_TEXT: SettingsEditorLongTextWidget, ConfType.TEXT: SettingsEditorLongTextWidget,
+                      ConfType.CSV: SettingsEditorCsvWidget, ConfType.LOCATION: SettingsEditorLocationWidget}
+        layout = QVBoxLayout()
         self.change_callback = change_callback
         self.unsaved_changes_map: Dict[Tuple[str, str], str] = {}
-        self.setLayout(editor_layout)
+        self.setLayout(layout)
         self.config_path = get_config_path(vdu_config.config_name)
         self.ini_before = vdu_config.ini_content
         self.ini_editable = self.ini_before.duplicate()
@@ -2211,11 +2200,11 @@ class SettingsEditorTab(QWidget):
 
         for section_name in self.ini_editable.data_sections():
             title = tr(section_name).replace('-', ' ')
-            editor_layout.addWidget(QLabel(f"<b>{title}</b>"))
+            layout.addWidget(QLabel(f"<b>{title}</b>"))
             booleans_panel = QWidget()
             booleans_grid = QGridLayout()
             booleans_panel.setLayout(booleans_grid)
-            editor_layout.addWidget(booleans_panel)
+            layout.addWidget(booleans_panel)
             bool_count, grid_columns = 0, 5  # booleans are counted and laid out according to grid_columns.
             for option_name in self.ini_editable[section_name]:
                 option_def = vdu_config.get_config_option(option_name)
@@ -2224,16 +2213,8 @@ class SettingsEditorTab(QWidget):
                         field(SettingsEditorBooleanWidget(self, option_name, section_name, option_def.help, option_def.related)),
                         bool_count // grid_columns, bool_count % grid_columns)
                     bool_count += 1
-                elif option_def.conf_type == ConfType.FLOAT:
-                    editor_layout.addWidget(field(SettingsEditorFloatWidget(self, option_name, section_name, option_def.help)))
-                elif option_def.conf_type == ConfType.LONG_TEXT:
-                    editor_layout.addWidget(field(SettingsEditorLongTextWidget(self, option_name, section_name, option_def.help)))
-                elif option_def.conf_type == ConfType.TEXT:
-                    editor_layout.addWidget(field(SettingsEditorTextWidget(self, option_name, section_name, option_def.help)))
-                elif option_def.conf_type == ConfType.CSV:
-                    editor_layout.addWidget(field(SettingsEditorCsvWidget(self, option_name, section_name, option_def.help)))
-                elif option_def.conf_type == ConfType.LOCATION:
-                    editor_layout.addWidget(field(SettingsEditorLocationWidget(self, option_name, section_name, option_def.help)))
+                else:
+                    layout.addWidget(field(widget_map[option_def.conf_type](self, option_name, section_name, option_def.help)))
 
         def save_clicked() -> None:
             if self.is_unsaved():
@@ -2272,7 +2253,7 @@ class SettingsEditorTab(QWidget):
         reset_button.setToolTip(tr("Reset/remove existing settings under the {} tab.").format(vdu_config.config_name))
         self.status_bar.addWidget(reset_button, 0)
 
-        editor_layout.addWidget(self.status_bar)
+        layout.addWidget(self.status_bar)
 
     def save(self, force: bool = False, what_changed: Dict[str, str] | None = None) -> int:
         # what_changed is an output parameter, if passed, it will be updated with what has changed.
@@ -2748,7 +2729,7 @@ class VduControlComboBox(VduControlBase):
         canonical = source.lower()
         maybe = tr(canonical)
         result = maybe if maybe != canonical else source
-        return ' '.join(w[:1].upper() + w[1:] for w in result.split(' '))  # Default to capitalized version of each word
+        return ' '.join(w[:1].upper() + w[1:] for w in result.split())  # Default to capitalized version of each word
 
     def refresh_ui_view_implementation(self) -> None:
         """Copy the internally cached current value onto the GUI view."""
@@ -3219,7 +3200,7 @@ class VduPanelBottomToolBar(QToolBar):
 
 
 class VduControlsMainPanel(QWidget):
-    """GUI for detected VDU's, it will construct and contain a control panel for each VDU."""
+    """GUI for detected VDUs, it will construct and contain a control panel for each VDU."""
 
     vdu_vcp_changed_qtsignal = pyqtSignal(str, str, str, VcpOrigin)
     connected_vdus_changed_qtsignal = pyqtSignal()
@@ -3328,7 +3309,7 @@ class VduControlsMainPanel(QWidget):
         answer = self.alert.exec()
         self.alert = None
         if answer != QMessageBox.Retry:
-            self.connected_vdus_changed_qtsignal.emit()  # Maybe the connected VDU's have changed - check.
+            self.connected_vdus_changed_qtsignal.emit()  # Maybe the connected VDUs have changed - check.
         return answer == QMessageBox.Retry
 
     def status_message(self, message: str, timeout: int):
@@ -3636,7 +3617,6 @@ class PresetWidget(QWidget):
         self.setLayout(line_layout)
 
         self.preset_name_button = PresetActivationButton(preset)
-
         line_layout.addWidget(self.preset_name_button)
         self.preset_name_button.clicked.connect(partial(edit_action, preset=preset))
         self.preset_name_button.setToolTip(tr('Activate this Preset and edit its options.'))
@@ -3812,8 +3792,7 @@ class PresetChooseIconButton(QPushButton):
         self.update_icon()
 
     def event(self, event: QEvent) -> bool:
-        # PalletChange happens after the new style sheet is in use.
-        if event.type() == QEvent.PaletteChange:
+        if event.type() == QEvent.PaletteChange:  # PalletChange happens after the new style sheet is in use.
             self.update_icon()
         return super().event(event)
 
@@ -4751,8 +4730,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
     def delete_preset(self, preset: Preset, target_widget: QWidget) -> None:
         confirmation = MessageBox(QMessageBox.Question, buttons=QMessageBox.Ok | QMessageBox.Cancel, default=QMessageBox.Cancel)
         confirmation.setText(tr('Delete {}?').format(preset.name))
-        rc = confirmation.exec()
-        if rc == QMessageBox.Cancel:
+        if confirmation.exec() == QMessageBox.Cancel:
             return
         self.main_controller.delete_preset(preset)
         self.preset_widgets_layout.removeWidget(target_widget)
@@ -4811,7 +4789,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         widget_to_replace: PresetWidget | None = None
         if from_widget:  # A from_widget is requesting that the Preset's VDU current settings be updated.
             widget_to_replace = None  # Updating from widget, no change to icons or symbols, so no need to update the widget.
-            preset = from_widget.preset  # Just update the widget's preset from the VDU's current settings
+            preset = from_widget.preset  # Just update the widget's preset from the VDUs current settings
         elif preset_name := self.preset_name_edit.text().strip():  # Saving from the save button, this may be new Preset or update.
             if widget_to_replace := self.find_preset_widget(preset_name):  # Already exists, update preset, replace widget
                 preset = widget_to_replace.preset  # Use the widget's existing Preset.
@@ -4822,7 +4800,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
         preset_path = get_config_path(proper_name('Preset', preset.name))
         if preset_path.exists():  # Existing Preset
-            if from_widget:  # The from_widget PresetWidget is initiating an update to the Preset from the VDU's settings.
+            if from_widget:  # The from_widget PresetWidget is initiating an update to the Preset from the VDUs settings.
                 question = tr('Update existing {} preset with current monitor settings?').format(preset.name)
             else:  # The Preset Editor tab is modifying a Preset and it's PresetWidget.
                 question = tr("Replace existing '{}' preset?").format(preset.name)
@@ -5032,7 +5010,7 @@ def install_as_desktop_application(uninstall: bool = False) -> None:
             Exec={installed_script_path.as_posix()}
             Name={APPNAME}
             GenericName=DDC control panel for monitors
-            Comment=Virtual Control Panel for externally connected VDU's
+            Comment=Virtual Control Panel for externally connected VDUs
             Icon={icon_path.as_posix()}
             Categories=Qt;Settings;
             """)
@@ -5286,8 +5264,7 @@ class LuxProfileChart(QLabel):
             ask_preset = QInputDialog()
             ask_preset.setComboBoxItems(list(presets.keys()))
             ask_preset.setOption(QInputDialog.UseListViewForComboBoxItems)
-            rc = ask_preset.exec()
-            if rc == QDialog.Accepted:
+            if ask_preset.exec() == QDialog.Accepted:
                 preset_name = ask_preset.textValue()
                 point = LuxPoint(self.lux_from_x(x), -1, preset_name)
                 self.preset_points.append(point)
@@ -5459,7 +5436,10 @@ class LuxMeterDevice:
                 time.sleep(0.1)
         return self.current_value
 
-    def update_current_value(self, new_value: float | None = None) -> None:
+    def update_current_value(self) -> None:
+        pass
+
+    def set_current_value(self, new_value: float) -> None:
         log_debug(f"new metered value {new_value=}") if log_debug_enabled else None
         self.current_value = new_value
 
@@ -5489,7 +5469,7 @@ class LuxMeterFifoDevice(LuxMeterDevice):
                     self.cleanup()  # Fifo has closed, maybe meter is resetting
                 elif byte == b'\n':
                     if len(self.buffer) > 0:
-                        super().update_current_value(float(self.buffer.decode()))
+                        self.set_current_value(float(self.buffer.decode()))
                         self.buffer = b''
                 else:
                     self.buffer += byte
@@ -5515,7 +5495,7 @@ class LuxMeterRunnableDevice(LuxMeterDevice):
     def update_current_value(self, new_value: float | None = None) -> None:
         try:
             result = subprocess.run([self.runnable], stdout=subprocess.PIPE, check=True)
-            super().update_current_value(float(result.stdout))
+            self.set_current_value(float(result.stdout))
         except (OSError, ValueError, subprocess.CalledProcessError) as se:
             log_warning(f"Error running {self.runnable}, will retry in {self.sleep_time} seconds", se, trace=True)
         self.worker.doze(self.sleep_time)  # Don't re-run too fast
@@ -5545,7 +5525,7 @@ class LuxMeterSerialDevice(LuxMeterDevice):
                 buffer = self.serial_device.read_until()
                 decoded = buffer.decode('utf-8', errors='surrogateescape')
                 if match := self.line_matcher.match(decoded):  # only accept correctly formatted output
-                    super().update_current_value(float(match.group(1)))
+                    self.set_current_value(float(match.group(1)))
                     self.backoff_secs = self.initial_backoff_secs
                 else:
                     problem = f"value that failed to parse: {decoded.encode('unicode_escape')}"
@@ -6084,7 +6064,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.adjust_now_button.setText(f"{TIMER_RUNNING_SYMBOL} 00:00")
         self.adjust_now_button.show() if self.lux_config.is_auto_enabled() else self.adjust_now_button.hide()
 
-        connected_id_list = []  # List of all currently connected VDU's
+        connected_id_list = []  # List of all currently connected VDUs
         for index, vdu_sid in enumerate(self.main_controller.get_vdu_stable_id_list()):
             value_range = (0, 100)
             if self.main_controller.is_vcp_code_enabled(vdu_sid, BRIGHTNESS_VCP_CODE):
@@ -6095,7 +6075,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                 except VduException as ve:
                     self.current_brightness_map[vdu_sid] = 0
                     log_warning("VDU may not be available:", str(ve), trace=True)
-            # All vdu's have a profile, even if they have no brightness control - because a preset may be attached to a lux value.
+            # All VDUs have a profile, even if they have no brightness control - because a preset may be attached to a lux value.
             self.lux_profiles_map[vdu_sid] = self.lux_config.get_vdu_lux_profile(vdu_sid, value_range)
             connected_id_list.append(vdu_sid)
         self.preset_points.clear()  # Edit out deleted presets by starting from scratch
@@ -6112,7 +6092,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
             candidate_id = connected_id_list[0]
         try:
             self.profile_selector.blockSignals(True)  # Stop initialization from causing signal until all data is aligned.
-            if connected_id_list != existing_id_list:  # List of connected VDU's has changed
+            if connected_id_list != existing_id_list:  # List of connected VDUs has changed
                 self.profile_selector.clear()
                 random.seed(int(self.lux_config.get("lux-ui", "vdu_color_seed", fallback='0x543fff'), 16))
                 self.drawing_color_map.clear()
@@ -6554,7 +6534,8 @@ class VduAppController:  # Main controller containing methods for high level ope
             # Limit to a reasonable number of iterations.
             for i in range(1, 11):
                 prev_num = len(self.detected_vdu_list)
-                self.detected_vdu_list = self.ddcutil.detect_monitors(sleep_multiplier=self.main_config.get_sleep_multiplier())
+                self.detected_vdu_list = self.ddcutil.detect_monitors(sleep_multiplier=self.main_config.get_sleep_multiplier(),
+                                                                      extra_args=self.main_config.get_ddcutil_extra_args())
                 if prev_num == len(self.detected_vdu_list):
                     log_info(f"Number of detected monitors is stable at {len(self.detected_vdu_list)} (loop={i})")
                     break
@@ -6580,8 +6561,8 @@ class VduAppController:  # Main controller containing methods for high level ope
                 try:
                     controller = VduController(vdu_number, model_name, vdu_serial, manufacturer, self.main_config,
                                                self.ddcutil, main_panel_error_handler, VduController.NORMAL_VDU)
-                except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:  # TODO figure out all possible Exceptions:
-                    # Catch any kind of parse related error
+                except (subprocess.SubprocessError, ValueError, re.error, OSError, DdcUtilDisplayNotFound) as e:
+                    # Catch any kind of parse related error  # TODO figure out all possible Exceptions:
                     log_error(f"Problem creating controller for {vdu_number=} {model_name=} {vdu_serial=} exception={e}",
                               trace=True)
                     choice = self.main_window.ask_for_vdu_controller_remedy(vdu_number, model_name, vdu_serial)
@@ -7086,7 +7067,8 @@ class VduAppWindow(QMainWindow):
             splash.deleteLater()
             splash = None
 
-        if main_config.file_path is None or (not main_config.ini_content.is_version_ge() and VDU_CONTROLS_VERSION.endswith('.0')):
+        if main_config.file_path is None or (
+                main_config.ini_content.get_version() < VDU_CONTROLS_VERSION_TUPLE and VDU_CONTROLS_VERSION_TUPLE[-1] == 0):
             # User is new to this major version - point them to the release notes.
             release_alert = MessageBox(QMessageBox.Information, buttons=QMessageBox.Close)
             welcome = tr("Welcome to vdu_controls version {}").format(VDU_CONTROLS_VERSION)
@@ -7149,7 +7131,7 @@ class VduAppWindow(QMainWindow):
         self.app.quit()
 
     def create_main_control_panel(self) -> None:
-        # Call on initialisation and whenever the number of connected VDU's changes.
+        # Call on initialisation and whenever the number of connected VDUs changes.
         if self.main_panel is not None:
             self.main_panel.deleteLater()
             self.main_panel = None
@@ -7358,15 +7340,12 @@ class SignalWakeupHandler(QtNetwork.QAbstractSocket):
         self.received_unix_signal_qtsignal.emit(signal_number)  # Emit a Qt signal for convenience
 
 
-#
 # FUNCTION TO COMPUTE SOLAR AZIMUTH AND ZENITH ANGLE
-# Extracted from a larger gist by Antti Lipponen
-# https://gist.github.com/anttilipp/1c482c8cc529918b7b973339f8c28895
+# Extracted from a larger gist by Antti Lipponen: https://gist.github.com/anttilipp/1c482c8cc529918b7b973339f8c28895
 # which was translated to Python from http://www.psa.es/sdg/sunpos.htm
 #
-# Converted to only using the python math library (instead of numpy) by me for vdu_controls.
+# Converted to only use the python math library (instead of numpy) by me for vdu_controls.
 # Coding style also altered for use with vdu_controls.
-#
 def calc_solar_azimuth_zenith(localised_time: datetime, latitude: float, longitude: float) -> Tuple[float, float]:
     """
     Return azimuth degrees clockwise from true north and zenith in degrees from vertical direction.
