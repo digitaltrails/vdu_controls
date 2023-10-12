@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Sep 07, 2023" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Oct 13, 2023" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.11.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -119,6 +119,9 @@ show the splash screen.  \fB\-\-splash\fP is the default.
 .TP
 .B \-\-smart\-window|\-\-no\-smart\-window
 smart main window placement and geometry.  \fB\-\-smart\-window\fP is the default.
+.TP
+.B \-\-adjust\-for\-dpi|\-\-no\-adjust\-for\-dpi
+adjust icon sizes according to display DPI.  \fB\-\-adjust\-for\-dpi\fP is the default.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -142,10 +145,10 @@ uninstalls the vdu_controls application menu file and script for the current use
 .UNINDENT
 .SH DESCRIPTION
 .sp
-\fBvdu_controls\fP is a virtual control panel for externally connected VDU\(aqs.  The application detects
-DVI, DP, HDMI, or USB connected VDU\(aqs.  It provides controls for settings such as brightness and contrast.
+\fBvdu_controls\fP is a virtual control panel for externally connected VDUs.  The application detects
+DVI, DP, HDMI, or USB connected VDUs.  It provides controls for settings such as brightness and contrast.
 .sp
-The application interacts with VDU\(aqs via the VESA \fIDisplay Data Channel\fP (\fIDDC\fP) \fIVirtual Control Panel\fP  (\fIVCP\fP)
+The application interacts with VDUs via the VESA \fIDisplay Data Channel\fP (\fIDDC\fP) \fIVirtual Control Panel\fP  (\fIVCP\fP)
 commands set.  DDC VCP interactions are mediated by the \fBddcutil\fP command line utility.  \fBDdcutil\fP provides
 a robust interface that is tolerant of the vagaries of the many OEM DDC implementations.
 .sp
@@ -172,9 +175,9 @@ control panel or on the system\-tray icon.  The context menu is also available v
 bottom right of the main control panel.
 .sp
 Builtin laptop displays normally don\(aqt implement DDC and those displays are not supported, but a laptop\(aqs
-externally connected VDU\(aqs are likely to be controllable.
+externally connected VDUs are likely to be controllable.
 .sp
-Some controls change the number of connected devices (for example, some VDU\(aqs support a power\-off command). If
+Some controls change the number of connected devices (for example, some VDUs support a power\-off command). If
 such controls are used, \fBvdu_controls\fP will detect the change and will reconfigure the controls
 for the new situation (for example, DDC VDU 2 may now be DD VDU 1).  If you change settings independently of
 \fBvdu_controls\fP, for example, by using a VDU\(aqs physical controls,  the \fBvdu_controls\fP UI includes a refresh
@@ -290,7 +293,7 @@ vdu_controls \-\-create\-config\-files
 .UNINDENT
 .UNINDENT
 .sp
-which will create initial templates based on the currently connected VDU\(aqs.
+which will create initial templates based on the currently connected VDUs.
 .sp
 The config files are completely optional, they need not be used if the existing command line options are found to be
 adequate to the task at hand.
@@ -346,7 +349,7 @@ an icon, it will be assigned one created from the letters of its name (the first
 .sp
 Presets may be set to transition immediately (the default); gradually on schedule (solar elevation); or gradually
 always (when triggered by schedule, context menu, or UNIX signal).  The speed of transition is determined by
-how quickly the VDU\(aqs can respond to adjustment (which is generally quite slowly).  During a transition,
+how quickly each VDU can respond to adjustment (which is generally quite slowly).  During a transition,
 the transition will be abandoned if the controls involved in the transition are manually altered, or another
 preset is manually invoked.
 .sp
@@ -443,7 +446,7 @@ preset immediately regardless of the transition settings.
 .sp
 Normally a transition single\-steps the controls as quickly as possible.  In practice
 this means each step takes one or more seconds and increases linearly depending on the
-number of VDU\(aqs and number of controls being altered.  The Presets Dialog includes
+number of VDUs and number of controls being altered.  The Presets Dialog includes
 a \fBTransition Step seconds\fP control that can be used to increase the step interval
 and extend a transition over a longer period of time.
 .sp
@@ -779,14 +782,14 @@ selectively under each VDU\(aqs tab).
 For versions of \fBddcutil\fP prior to 2.0, you can manually set the \fBvdu_control\fP
 \fBsleep\-multiplier\fP passed to \fBddcutil\fP\&.  A sleep multiplier less than one will
 speed up the i2c protocol interactions at the risk of increased protocol errors.
-The default sleep multiplier of 1.0 has to be quite conservative, many VDU\(aqs
+The default sleep multiplier of 1.0 has to be quite conservative, many VDUs
 can cope with smaller multipliers. A bit of experimentation with multiplier values
 may greatly speed up responsiveness. In a multi\-VDU setup individual sleep
 multipliers can be configured (see previous section).
-.SS Improving Response Time: Connections and Controls
+.SS Improving Response Time and Reliability: Connections and Controls
 .sp
-\fBDDC/I2C\fP is not the speediest or most reliable form of communication. VDU\(aqs may
-vary in their responsiveness and compliance.  GPU\(aqs, GPU drivers, and types
+\fBDDC/I2C\fP is not the speediest or most reliable form of communication. VDUs may
+vary in their responsiveness and compliance.  GPUs, GPU drivers, and types
 of connection may affect the reliability. If you have the choice, \fBDisplayPort\fP
 can be more reliable than \fBDVI\fP or \fBHDMI\fP\&.
 .sp
@@ -820,7 +823,7 @@ All default controls, plus controls for VCP_CODE 63 and 93, show any warnings, o
 .UNINDENT
 .UNINDENT
 .sp
-This script often refers to displays and monitors as VDU\(aqs in order to
+This script often refers to displays and monitors as VDUs in order to
 disambiguate the noun/verb duality of \(dqdisplay\(dq and \(dqmonitor\(dq
 .SH PREREQUISITES
 .sp
@@ -852,7 +855,7 @@ lsmod | grep i2c_dev
 .UNINDENT
 .UNINDENT
 .sp
-Get ddcutil working first. Check that the detect command detects your VDU\(aqs without issuing any
+Get ddcutil working first. Check that the detect command detects your VDUs without issuing any
 errors:
 .INDENT 0.0
 .INDENT 3.5
@@ -860,7 +863,7 @@ ddcutil detect
 .UNINDENT
 .UNINDENT
 .sp
-Read ddcutil readme concerning config of i2c_dev with nvidia GPU\(aqs. Detailed ddcutil info at \fI\%https://www.ddcutil.com/\fP
+Read ddcutil readme concerning config of i2c_dev with nvidia GPUs. Detailed ddcutil info at \fI\%https://www.ddcutil.com/\fP
 .sp
 If you wish to use a serial\-port lux metering device, the \fBpyserial\fP module is a runtime requirement.
 .SH ENVIRONMENT

@@ -51,6 +51,8 @@ equivalent settings.</p>
                         show the splash screen.  ``--splash`` is the default.
   --smart-window|--no-smart-window
                         smart main window placement and geometry.  ``--smart-window`` is the default.
+  --adjust-for-dpi|--no-adjust-for-dpi
+                        adjust icon sizes according to display DPI.  ``--adjust-for-dpi`` is the default.
   --sleep-multiplier    set the default ddcutil sleep multiplier
                         protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 1.0)
   --ddcutil-extra-args  extra arguments to pass to ddcutil (enclosed in single quotes)
@@ -60,10 +62,10 @@ equivalent settings.</p>
   --uninstall           uninstalls the vdu_controls application menu file and script for the current user.</code></pre>
 <h1 id="description">Description</h1>
 <p><code>vdu_controls</code> is a virtual control panel for externally
-connected VDU’s. The application detects DVI, DP, HDMI, or USB connected
-VDU’s. It provides controls for settings such as brightness and
+connected VDUs. The application detects DVI, DP, HDMI, or USB connected
+VDUs. It provides controls for settings such as brightness and
 contrast.</p>
-<p>The application interacts with VDU’s via the VESA <em>Display Data
+<p>The application interacts with VDUs via the VESA <em>Display Data
 Channel</em> (<em>DDC</em>) <em>Virtual Control Panel</em>
 (<em>VCP</em>) commands set. DDC VCP interactions are mediated by the
 <code>ddcutil</code> command line utility. <code>Ddcutil</code> provides
@@ -95,10 +97,10 @@ right-mouse button either in the main control panel or on the
 system-tray icon. The context menu is also available via a
 hamburger-menu item on the bottom right of the main control panel.</p>
 <p>Builtin laptop displays normally don’t implement DDC and those
-displays are not supported, but a laptop’s externally connected VDU’s
-are likely to be controllable.</p>
+displays are not supported, but a laptop’s externally connected VDUs are
+likely to be controllable.</p>
 <p>Some controls change the number of connected devices (for example,
-some VDU’s support a power-off command). If such controls are used,
+some VDUs support a power-off command). If such controls are used,
 <code>vdu_controls</code> will detect the change and will reconfigure
 the controls for the new situation (for example, DDC VDU 2 may now be DD
 VDU 1). If you change settings independently of
@@ -193,7 +195,7 @@ capabilities-override =</code></pre>
 created by the command line option::</p>
 <pre><code>vdu_controls --create-config-files</code></pre>
 <p>which will create initial templates based on the currently connected
-VDU’s.</p>
+VDUs.</p>
 <p>The config files are completely optional, they need not be used if
 the existing command line options are found to be adequate to the task
 at hand.</p>
@@ -240,7 +242,7 @@ words).</p>
 <p>Presets may be set to transition immediately (the default); gradually
 on schedule (solar elevation); or gradually always (when triggered by
 schedule, context menu, or UNIX signal). The speed of transition is
-determined by how quickly the VDU’s can respond to adjustment (which is
+determined by how quickly each VDU can respond to adjustment (which is
 generally quite slowly). During a transition, the transition will be
 abandoned if the controls involved in the transition are manually
 altered, or another preset is manually invoked.</p>
@@ -316,7 +318,7 @@ activate any preset immediately regardless of the transition
 settings.</p>
 <p>Normally a transition single-steps the controls as quickly as
 possible. In practice this means each step takes one or more seconds and
-increases linearly depending on the number of VDU’s and number of
+increases linearly depending on the number of VDUs and number of
 controls being altered. The Presets Dialog includes a
 <code>Transition Step seconds</code> control that can be used to
 increase the step interval and extend a transition over a longer period
@@ -546,16 +548,17 @@ tab</strong> or selectively under each VDU’s tab).</p>
 set the <code>vdu_control</code> <code>sleep-multiplier</code> passed to
 <code>ddcutil</code>. A sleep multiplier less than one will speed up the
 i2c protocol interactions at the risk of increased protocol errors. The
-default sleep multiplier of 1.0 has to be quite conservative, many VDU’s
+default sleep multiplier of 1.0 has to be quite conservative, many VDUs
 can cope with smaller multipliers. A bit of experimentation with
 multiplier values may greatly speed up responsiveness. In a multi-VDU
 setup individual sleep multipliers can be configured (see previous
 section).</p>
-<h2 id="improving-response-time-connections-and-controls">Improving
-Response Time: Connections and Controls</h2>
+<h2
+id="improving-response-time-and-reliability-connections-and-controls">Improving
+Response Time and Reliability: Connections and Controls</h2>
 <p><code>DDC/I2C</code> is not the speediest or most reliable form of
-communication. VDU’s may vary in their responsiveness and compliance.
-GPU’s, GPU drivers, and types of connection may affect the reliability.
+communication. VDUs may vary in their responsiveness and compliance.
+GPUs, GPU drivers, and types of connection may affect the reliability.
 If you have the choice, <code>DisplayPort</code> can be more reliable
 than <code>DVI</code> or <code>HDMI</code>.</p>
 <p>Reducing the number of enabled controls can speed up initialisation,
@@ -581,8 +584,8 @@ vdu_controls --create-config-files --system-tray --no-splash --show brightness -
 
 vdu_controls --enable-vcp-code 63 --enable-vcp-code 93 --warnings --debug
     All default controls, plus controls for VCP_CODE 63 and 93, show any warnings, output debugging info.</code></pre>
-<p>This script often refers to displays and monitors as VDU’s in order
-to disambiguate the noun/verb duality of “display” and “monitor”</p>
+<p>This script often refers to displays and monitors as VDUs in order to
+disambiguate the noun/verb duality of “display” and “monitor”</p>
 <h1 id="prerequisites">Prerequisites</h1>
 <p>Described for OpenSUSE, similar for other distros:</p>
 <p>Software::</p>
@@ -592,9 +595,9 @@ to disambiguate the noun/verb duality of “display” and “monitor”</p>
 <pre><code>    modprobe i2c_dev
     lsmod | grep i2c_dev</code></pre>
 <p>Get ddcutil working first. Check that the detect command detects your
-VDU’s without issuing any errors:</p>
+VDUs without issuing any errors:</p>
 <pre><code>    ddcutil detect</code></pre>
-<p>Read ddcutil readme concerning config of i2c_dev with nvidia GPU’s.
+<p>Read ddcutil readme concerning config of i2c_dev with nvidia GPUs.
 Detailed ddcutil info at https://www.ddcutil.com/</p>
 <p>If you wish to use a serial-port lux metering device, the
 <code>pyserial</code> module is a runtime requirement.</p>
