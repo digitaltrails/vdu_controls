@@ -5459,7 +5459,10 @@ class LuxMeterDevice:
                 time.sleep(0.1)
         return self.current_value
 
-    def update_current_value(self, new_value: float | None = None) -> None:
+    def update_current_value(self) -> None:
+        pass
+
+    def set_current_value(self, new_value: float) -> None:
         log_debug(f"new metered value {new_value=}") if log_debug_enabled else None
         self.current_value = new_value
 
@@ -5489,7 +5492,7 @@ class LuxMeterFifoDevice(LuxMeterDevice):
                     self.cleanup()  # Fifo has closed, maybe meter is resetting
                 elif byte == b'\n':
                     if len(self.buffer) > 0:
-                        super().update_current_value(float(self.buffer.decode()))
+                        self.set_current_value(float(self.buffer.decode()))
                         self.buffer = b''
                 else:
                     self.buffer += byte
@@ -5515,7 +5518,7 @@ class LuxMeterRunnableDevice(LuxMeterDevice):
     def update_current_value(self, new_value: float | None = None) -> None:
         try:
             result = subprocess.run([self.runnable], stdout=subprocess.PIPE, check=True)
-            super().update_current_value(float(result.stdout))
+            self.set_current_value(float(result.stdout))
         except (OSError, ValueError, subprocess.CalledProcessError) as se:
             log_warning(f"Error running {self.runnable}, will retry in {self.sleep_time} seconds", se, trace=True)
         self.worker.doze(self.sleep_time)  # Don't re-run too fast
@@ -5545,7 +5548,7 @@ class LuxMeterSerialDevice(LuxMeterDevice):
                 buffer = self.serial_device.read_until()
                 decoded = buffer.decode('utf-8', errors='surrogateescape')
                 if match := self.line_matcher.match(decoded):  # only accept correctly formatted output
-                    super().update_current_value(float(match.group(1)))
+                    self.set_current_value(float(match.group(1)))
                     self.backoff_secs = self.initial_backoff_secs
                 else:
                     problem = f"value that failed to parse: {decoded.encode('unicode_escape')}"
