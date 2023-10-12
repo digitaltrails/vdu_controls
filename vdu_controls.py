@@ -739,6 +739,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
 
 APPNAME = "VDU Controls"
 VDU_CONTROLS_VERSION = '1.11.2'
+VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in VDU_CONTROLS_VERSION.split('.'))
 assert sys.version_info >= (3, 8), f'{APPNAME} utilises python version 3.8 or greater (your python is {sys.version}).'
 
 WESTERN_SKY = 'western-sky'
@@ -1130,7 +1131,7 @@ def is_dark_theme() -> bool:
     return dark_theme_found
 
 
-adjust_for_dpi = True
+adjust_for_dpi = True  # Depending on whether the user is scaling or not, they may want High DPI adjustments.
 
 
 def is_high_dpi() -> bool:
@@ -1227,8 +1228,6 @@ VcpValue = namedtuple('VcpValue', ['current', 'max', 'vcp_type'])  # A getvcp co
 class DdcUtil:
     """
     Interface to the command line ddcutil Display Data Channel Utility for interacting with VDUs.
-    The exception callback can return True if we should retry after errors (after the callback takes
-    corrective action such as increasing the sleep_multiplier).
     """
     _VCP_CODE_REGEXP = re.compile(r"^VCP ([0-9A-F]{2}) ")  # VCP 2-digit-hex
     _C_PATTERN = re.compile(r'([0-9]+) ([0-9]+)')  # Match Continuous-Type getvcp result
@@ -1379,7 +1378,7 @@ class DdcUtil:
         for attempt_count in range(DDCUTIL_RETRIES):
             try:
                 self.__run__(*args, sleep_multiplier=sleep_multiplier, log_id=vdu_number)
-                return
+                break
             except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound):
                 # log_error(f"setvcp failure {attempt_count} {e}")  # Don't log here, it creates too much noise in the logs
                 if not retry_on_error or attempt_count + 1 == DDCUTIL_RETRIES:
@@ -1667,21 +1666,10 @@ class ConfigIni(configparser.ConfigParser):
         if self.has_option(ConfigIni.METADATA_SECTION, ConfigIni.METADATA_VERSION_OPTION):
             version = self[ConfigIni.METADATA_SECTION][ConfigIni.METADATA_VERSION_OPTION]
             try:
-                return tuple([int(i) for i in version.split('.')])
+                return tuple(int(i) for i in version.split('.'))
             except ValueError:
                 log_error(f"Illegal version number {version} should be i.j.k where i, j and k are integers.", trace=True)
         return 1, 6, 0
-
-    def is_version_ge(self, version_text: str = VDU_CONTROLS_VERSION) -> bool:
-        major, minor, release = [int(i) for i in version_text.split(".")]
-        current_major, current_minor, current_release = self.get_version()
-        if current_major < major:
-            return False
-        if current_minor < minor:
-            return False
-        if current_release < release:
-            return False
-        return True
 
     def save(self, config_path) -> None:
         if not config_path.parent.is_dir():
@@ -2189,17 +2177,18 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
 
 class SettingsEditorTab(QWidget):
     """A tab corresponding to a settings file, generates UI widgets for each tab based on what's in the config. """
-
     save_all_clicked_qtsignal = pyqtSignal()
 
     def __init__(self, editor_dialog: SettingsEditor, vdu_config: VduControlsConfig, change_callback: Callable,
                  parent: QTabWidget) -> None:
         super().__init__(parent=parent)
-        editor_layout = QVBoxLayout()
-
+        widget_map = {ConfType.BOOL: SettingsEditorBooleanWidget, ConfType.FLOAT: SettingsEditorFloatWidget,
+                      ConfType.LONG_TEXT: SettingsEditorLongTextWidget, ConfType.TEXT: SettingsEditorLongTextWidget,
+                      ConfType.CSV: SettingsEditorCsvWidget, ConfType.LOCATION: SettingsEditorLocationWidget}
+        layout = QVBoxLayout()
         self.change_callback = change_callback
         self.unsaved_changes_map: Dict[Tuple[str, str], str] = {}
-        self.setLayout(editor_layout)
+        self.setLayout(layout)
         self.config_path = get_config_path(vdu_config.config_name)
         self.ini_before = vdu_config.ini_content
         self.ini_editable = self.ini_before.duplicate()
@@ -2211,11 +2200,11 @@ class SettingsEditorTab(QWidget):
 
         for section_name in self.ini_editable.data_sections():
             title = tr(section_name).replace('-', ' ')
-            editor_layout.addWidget(QLabel(f"<b>{title}</b>"))
+            layout.addWidget(QLabel(f"<b>{title}</b>"))
             booleans_panel = QWidget()
             booleans_grid = QGridLayout()
             booleans_panel.setLayout(booleans_grid)
-            editor_layout.addWidget(booleans_panel)
+            layout.addWidget(booleans_panel)
             bool_count, grid_columns = 0, 5  # booleans are counted and laid out according to grid_columns.
             for option_name in self.ini_editable[section_name]:
                 option_def = vdu_config.get_config_option(option_name)
@@ -2224,16 +2213,8 @@ class SettingsEditorTab(QWidget):
                         field(SettingsEditorBooleanWidget(self, option_name, section_name, option_def.help, option_def.related)),
                         bool_count // grid_columns, bool_count % grid_columns)
                     bool_count += 1
-                elif option_def.conf_type == ConfType.FLOAT:
-                    editor_layout.addWidget(field(SettingsEditorFloatWidget(self, option_name, section_name, option_def.help)))
-                elif option_def.conf_type == ConfType.LONG_TEXT:
-                    editor_layout.addWidget(field(SettingsEditorLongTextWidget(self, option_name, section_name, option_def.help)))
-                elif option_def.conf_type == ConfType.TEXT:
-                    editor_layout.addWidget(field(SettingsEditorTextWidget(self, option_name, section_name, option_def.help)))
-                elif option_def.conf_type == ConfType.CSV:
-                    editor_layout.addWidget(field(SettingsEditorCsvWidget(self, option_name, section_name, option_def.help)))
-                elif option_def.conf_type == ConfType.LOCATION:
-                    editor_layout.addWidget(field(SettingsEditorLocationWidget(self, option_name, section_name, option_def.help)))
+                else:
+                    layout.addWidget(field(widget_map[option_def.conf_type](self, option_name, section_name, option_def.help)))
 
         def save_clicked() -> None:
             if self.is_unsaved():
@@ -2272,7 +2253,7 @@ class SettingsEditorTab(QWidget):
         reset_button.setToolTip(tr("Reset/remove existing settings under the {} tab.").format(vdu_config.config_name))
         self.status_bar.addWidget(reset_button, 0)
 
-        editor_layout.addWidget(self.status_bar)
+        layout.addWidget(self.status_bar)
 
     def save(self, force: bool = False, what_changed: Dict[str, str] | None = None) -> int:
         # what_changed is an output parameter, if passed, it will be updated with what has changed.
@@ -3636,7 +3617,6 @@ class PresetWidget(QWidget):
         self.setLayout(line_layout)
 
         self.preset_name_button = PresetActivationButton(preset)
-
         line_layout.addWidget(self.preset_name_button)
         self.preset_name_button.clicked.connect(partial(edit_action, preset=preset))
         self.preset_name_button.setToolTip(tr('Activate this Preset and edit its options.'))
@@ -3812,8 +3792,7 @@ class PresetChooseIconButton(QPushButton):
         self.update_icon()
 
     def event(self, event: QEvent) -> bool:
-        # PalletChange happens after the new style sheet is in use.
-        if event.type() == QEvent.PaletteChange:
+        if event.type() == QEvent.PaletteChange:  # PalletChange happens after the new style sheet is in use.
             self.update_icon()
         return super().event(event)
 
@@ -4751,8 +4730,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
     def delete_preset(self, preset: Preset, target_widget: QWidget) -> None:
         confirmation = MessageBox(QMessageBox.Question, buttons=QMessageBox.Ok | QMessageBox.Cancel, default=QMessageBox.Cancel)
         confirmation.setText(tr('Delete {}?').format(preset.name))
-        rc = confirmation.exec()
-        if rc == QMessageBox.Cancel:
+        if confirmation.exec() == QMessageBox.Cancel:
             return
         self.main_controller.delete_preset(preset)
         self.preset_widgets_layout.removeWidget(target_widget)
@@ -5286,8 +5264,7 @@ class LuxProfileChart(QLabel):
             ask_preset = QInputDialog()
             ask_preset.setComboBoxItems(list(presets.keys()))
             ask_preset.setOption(QInputDialog.UseListViewForComboBoxItems)
-            rc = ask_preset.exec()
-            if rc == QDialog.Accepted:
+            if ask_preset.exec() == QDialog.Accepted:
                 preset_name = ask_preset.textValue()
                 point = LuxPoint(self.lux_from_x(x), -1, preset_name)
                 self.preset_points.append(point)
@@ -7090,7 +7067,8 @@ class VduAppWindow(QMainWindow):
             splash.deleteLater()
             splash = None
 
-        if main_config.file_path is None or (not main_config.ini_content.is_version_ge() and VDU_CONTROLS_VERSION.endswith('.0')):
+        if main_config.file_path is None or (
+                main_config.ini_content.get_version() < VDU_CONTROLS_VERSION_TUPLE and VDU_CONTROLS_VERSION_TUPLE[-1] == 0):
             # User is new to this major version - point them to the release notes.
             release_alert = MessageBox(QMessageBox.Information, buttons=QMessageBox.Close)
             welcome = tr("Welcome to vdu_controls version {}").format(VDU_CONTROLS_VERSION)
@@ -7362,15 +7340,12 @@ class SignalWakeupHandler(QtNetwork.QAbstractSocket):
         self.received_unix_signal_qtsignal.emit(signal_number)  # Emit a Qt signal for convenience
 
 
-#
 # FUNCTION TO COMPUTE SOLAR AZIMUTH AND ZENITH ANGLE
-# Extracted from a larger gist by Antti Lipponen
-# https://gist.github.com/anttilipp/1c482c8cc529918b7b973339f8c28895
+# Extracted from a larger gist by Antti Lipponen: https://gist.github.com/anttilipp/1c482c8cc529918b7b973339f8c28895
 # which was translated to Python from http://www.psa.es/sdg/sunpos.htm
 #
-# Converted to only using the python math library (instead of numpy) by me for vdu_controls.
+# Converted to only use the python math library (instead of numpy) by me for vdu_controls.
 # Coding style also altered for use with vdu_controls.
-#
 def calc_solar_azimuth_zenith(localised_time: datetime, latitude: float, longitude: float) -> Tuple[float, float]:
     """
     Return azimuth degrees clockwise from true north and zenith in degrees from vertical direction.
