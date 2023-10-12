@@ -1297,10 +1297,12 @@ class DdcUtil:
             raise
         return result
 
-    def detect_monitors(self, issue_warnings: bool = True, sleep_multiplier: float = 0.0) -> List[Tuple[str, str, str, str]]:
+    def detect_monitors(self, issue_warnings: bool = True, sleep_multiplier: float = 0.0,
+                        extra_args: List[str] | None = None) -> List[Tuple[str, str, str, str]]:
         """Return a list of (vdu_number, desc) tuples."""
+        args = ([] if extra_args is None else extra_args) + ['detect', '--verbose', ]
         display_list = []
-        result = self.__run__('detect', '--verbose', sleep_multiplier=sleep_multiplier)
+        result = self.__run__(*args, sleep_multiplier=sleep_multiplier)
         # Going to get rid of anything that is not a-z A-Z 0-9 as potential rubbish
         rubbish = re.compile('[^a-zA-Z0-9]+')
         # This isn't efficient, it doesn't need to be, so I'm keeping re-defs close to where they are used.
@@ -1358,9 +1360,10 @@ class DdcUtil:
             return edid
         return None
 
-    def query_capabilities(self, vdu_number: str) -> str:
+    def query_capabilities(self, vdu_number: str, extra_args: List[str] | None = None) -> str:
         """Return a vpc capabilities string."""
-        result = self.__run__(*['capabilities'] + self.id_key_args(vdu_number), log_id=vdu_number)
+        args = ([] if extra_args is None else extra_args) + ['capabilities'] + self.id_key_args(vdu_number)
+        result = self.__run__(*args, log_id=vdu_number)
         capability_text = result.stdout.decode('utf-8', errors='surrogateescape')
         return capability_text
 
@@ -1370,13 +1373,12 @@ class DdcUtil:
     def set_vcp(self, vdu_number: str, vcp_code: str, new_value: str,
                 sleep_multiplier: float | None = None, extra_args: List[str] | None = None, retry_on_error: bool = False) -> None:
         """Send a new value to a specific VDU and vcp_code."""
-        extra_args = [] if extra_args is None else extra_args
         if self.get_type(vcp_code) != CONTINUOUS_TYPE:
             new_value = 'x' + new_value
-        args_list = extra_args + ['setvcp', vcp_code, new_value] + self.id_key_args(vdu_number)
+        args = ([] if extra_args is None else extra_args) + ['setvcp', vcp_code, new_value] + self.id_key_args(vdu_number)
         for attempt_count in range(DDCUTIL_RETRIES):
             try:
-                self.__run__(*args_list, sleep_multiplier=sleep_multiplier, log_id=vdu_number)
+                self.__run__(*args, sleep_multiplier=sleep_multiplier, log_id=vdu_number)
                 return
             except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound):
                 # log_error(f"setvcp failure {attempt_count} {e}")  # Don't log here, it creates too much noise in the logs
@@ -1422,9 +1424,8 @@ class DdcUtil:
         """
         # Try a few times in case there is a glitch due to a monitor being turned-off/on or slow to respond
         # Should we loop here, or higher up - maybe it doesn't matter.
-        extra_args = [] if extra_args is None else extra_args
+        args = ([] if extra_args is None else extra_args) + ['--brief', 'getvcp'] + vcp_code_list + self.id_key_args(vdu_number)
         results_dict: Dict[str, VcpValue | None] = {vcp_code: None for vcp_code in vcp_code_list}  # Force vcp_code_list ordering
-        args = extra_args + ['--brief', 'getvcp'] + vcp_code_list + self.id_key_args(vdu_number)
         for attempt_count in range(DDCUTIL_RETRIES):
             try:
                 from_ddcutil = self.__run__(*args, sleep_multiplier=sleep_multiplier, log_id=vdu_number)
@@ -2001,7 +2002,7 @@ class VduController(QObject):
                 enabled_vcp_codes = ASSUMED_CONTROLS_CONFIG_VCP_CODES
                 self.capabilities_text = ASSUMED_CONTROLS_CONFIG_TEXT
             else:
-                self.capabilities_text = ddcutil.query_capabilities(vdu_number)
+                self.capabilities_text = ddcutil.query_capabilities(vdu_number, extra_args=self.ddcutil_extra_args)
         self.capabilities_supported_by_this_vdu = self._parse_capabilities(self.capabilities_text)
         # Find those capabilities supported by this VDU AND enabled in the GUI:
         self.enabled_capabilities = [c for c in self.capabilities_supported_by_this_vdu.values() if c.vcp_code in enabled_vcp_codes]
@@ -6553,7 +6554,8 @@ class VduAppController:  # Main controller containing methods for high level ope
             # Limit to a reasonable number of iterations.
             for i in range(1, 11):
                 prev_num = len(self.detected_vdu_list)
-                self.detected_vdu_list = self.ddcutil.detect_monitors(sleep_multiplier=self.main_config.get_sleep_multiplier())
+                self.detected_vdu_list = self.ddcutil.detect_monitors(sleep_multiplier=self.main_config.get_sleep_multiplier(),
+                                                                      extra_args=self.main_config.get_ddcutil_extra_args())
                 if prev_num == len(self.detected_vdu_list):
                     log_info(f"Number of detected monitors is stable at {len(self.detected_vdu_list)} (loop={i})")
                     break
