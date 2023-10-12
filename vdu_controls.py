@@ -72,10 +72,10 @@ Arguments supplied on the command line override config file equivalent settings.
 Description
 ===========
 
-``vdu_controls`` is a virtual control panel for externally connected VDU's.  The application detects
-DVI, DP, HDMI, or USB connected VDU's.  It provides controls for settings such as brightness and contrast.
+``vdu_controls`` is a virtual control panel for externally connected VDUs.  The application detects
+DVI, DP, HDMI, or USB connected VDUs.  It provides controls for settings such as brightness and contrast.
 
-The application interacts with VDU's via the VESA *Display Data Channel* (*DDC*) *Virtual Control Panel*  (*VCP*)
+The application interacts with VDUs via the VESA *Display Data Channel* (*DDC*) *Virtual Control Panel*  (*VCP*)
 commands set.  DDC VCP interactions are mediated by the ``ddcutil`` command line utility.  ``Ddcutil`` provides
 a robust interface that is tolerant of the vagaries of the many OEM DDC implementations.
 
@@ -102,9 +102,9 @@ control panel or on the system-tray icon.  The context menu is also available vi
 bottom right of the main control panel.
 
 Builtin laptop displays normally don't implement DDC and those displays are not supported, but a laptop's
-externally connected VDU's are likely to be controllable.
+externally connected VDUs are likely to be controllable.
 
-Some controls change the number of connected devices (for example, some VDU's support a power-off command). If
+Some controls change the number of connected devices (for example, some VDUs support a power-off command). If
 such controls are used, ``vdu_controls`` will detect the change and will reconfigure the controls
 for the new situation (for example, DDC VDU 2 may now be DD VDU 1).  If you change settings independently of
 ``vdu_controls``, for example, by using a VDU's physical controls,  the ``vdu_controls`` UI includes a refresh
@@ -192,7 +192,7 @@ As well as using the ``Settings``, config files may also be created by the comma
 
     vdu_controls --create-config-files
 
-which will create initial templates based on the currently connected VDU's.
+which will create initial templates based on the currently connected VDUs.
 
 The config files are completely optional, they need not be used if the existing command line options are found to be
 adequate to the task at hand.
@@ -237,7 +237,7 @@ an icon, it will be assigned one created from the letters of its name (the first
 
 Presets may be set to transition immediately (the default); gradually on schedule (solar elevation); or gradually
 always (when triggered by schedule, context menu, or UNIX signal).  The speed of transition is determined by
-how quickly the VDU's can respond to adjustment (which is generally quite slowly).  During a transition,
+how quickly each VDU can respond to adjustment (which is generally quite slowly).  During a transition,
 the transition will be abandoned if the controls involved in the transition are manually altered, or another
 preset is manually invoked.
 
@@ -321,7 +321,7 @@ preset immediately regardless of the transition settings.
 
 Normally a transition single-steps the controls as quickly as possible.  In practice
 this means each step takes one or more seconds and increases linearly depending on the
-number of VDU's and number of controls being altered.  The Presets Dialog includes
+number of VDUs and number of controls being altered.  The Presets Dialog includes
 a ``Transition Step seconds`` control that can be used to increase the step interval
 and extend a transition over a longer period of time.
 
@@ -568,16 +568,16 @@ selectively under each VDU's tab).
 For versions of ``ddcutil`` prior to 2.0, you can manually set the ``vdu_control``
 ``sleep-multiplier`` passed to ``ddcutil``.  A sleep multiplier less than one will
 speed up the i2c protocol interactions at the risk of increased protocol errors.
-The default sleep multiplier of 1.0 has to be quite conservative, many VDU's
+The default sleep multiplier of 1.0 has to be quite conservative, many VDUs
 can cope with smaller multipliers. A bit of experimentation with multiplier values
 may greatly speed up responsiveness. In a multi-VDU setup individual sleep
 multipliers can be configured (see previous section).
 
-Improving Response Time: Connections and Controls
--------------------------------------------------
+Improving Response Time and Reliability: Connections and Controls
+-----------------------------------------------------------------
 
-``DDC/I2C`` is not the speediest or most reliable form of communication. VDU's may
-vary in their responsiveness and compliance.  GPU's, GPU drivers, and types
+``DDC/I2C`` is not the speediest or most reliable form of communication. VDUs may
+vary in their responsiveness and compliance.  GPUs, GPU drivers, and types
 of connection may affect the reliability. If you have the choice, ``DisplayPort``
 can be more reliable than ``DVI`` or ``HDMI``.
 
@@ -607,7 +607,7 @@ Examples
     vdu_controls --enable-vcp-code 63 --enable-vcp-code 93 --warnings --debug
         All default controls, plus controls for VCP_CODE 63 and 93, show any warnings, output debugging info.
 
-This script often refers to displays and monitors as VDU's in order to
+This script often refers to displays and monitors as VDUs in order to
 disambiguate the noun/verb duality of "display" and "monitor"
 
 Prerequisites
@@ -625,12 +625,12 @@ Kernel Modules::
         modprobe i2c_dev
         lsmod | grep i2c_dev
 
-Get ddcutil working first. Check that the detect command detects your VDU's without issuing any
+Get ddcutil working first. Check that the detect command detects your VDUs without issuing any
 errors:
 
         ddcutil detect
 
-Read ddcutil readme concerning config of i2c_dev with nvidia GPU's. Detailed ddcutil info at https://www.ddcutil.com/
+Read ddcutil readme concerning config of i2c_dev with nvidia GPUs. Detailed ddcutil info at https://www.ddcutil.com/
 
 If you wish to use a serial-port lux metering device, the ``pyserial`` module is a runtime requirement.
 
@@ -900,7 +900,7 @@ with this program. If not, see <a href="https://www.gnu.org/licenses/">https://w
 <p><p>
 <quote>
 <small>
-Vdu_controls relies on <a href="https://www.ddcutil.com/">ddcutil</a>, a robust interface to DDC capable VDU's.
+Vdu_controls relies on <a href="https://www.ddcutil.com/">ddcutil</a>, a robust interface to DDC capable VDUs.
 <br>
 At your request, your geographic location may be retrieved from <a href="{IP_ADDRESS_INFO_URL}">{IP_ADDRESS_INFO_URL}</a>.
 <br>
@@ -1182,7 +1182,7 @@ def log_error(*args, trace=False) -> None:
 
 
 def thread_pid():
-    return threading.get_native_id()  # More unique than get_ident (internal ID's get recycled immediately) - see with htop -H.
+    return threading.get_native_id()  # More unique than get_ident (internal IDs get recycled immediately) - see with htop -H.
 
 
 class VcpCapability:
@@ -1226,7 +1226,7 @@ VcpValue = namedtuple('VcpValue', ['current', 'max', 'vcp_type'])  # A getvcp co
 
 class DdcUtil:
     """
-    Interface to the command line ddcutil Display Data Channel Utility for interacting with VDU's.
+    Interface to the command line ddcutil Display Data Channel Utility for interacting with VDUs.
     The exception callback can return True if we should retry after errors (after the callback takes
     corrective action such as increasing the sleep_multiplier).
     """
@@ -1310,7 +1310,7 @@ class DdcUtil:
         for display_str in re.split("\n\n", result.stdout.decode('utf-8', errors='surrogateescape')):
             if display_match := re.search(r'Display ([0-9]+)', display_str):
                 vdu_number = display_match.group(1)
-                log_debug(f"checking possible ID's for display {vdu_number}") if log_debug_enabled else None
+                log_debug(f"checking possible IDs for display {vdu_number}") if log_debug_enabled else None
                 ds_parts = {fm.group(1).strip(): fm.group(2).strip()
                             for fm in re.finditer(r'[ \t]*([^:\n]+):[ \t]+([^\n]*)', display_str)}  # Create dict {name:value} pairs
                 model_name = rubbish.sub('_', ds_parts.get('Model', 'unknown_model'))
@@ -1350,7 +1350,7 @@ class DdcUtil:
                     f"Unique key for {vdu_number=} {manufacturer=} is ({model_name=} {main_id=})") if log_debug_enabled else None
                 display_list.append((vdu_number, manufacturer, model_name, main_id))
                 key_already_assigned[vdu_number] = 1
-        # display_list.append(("3", "maker_y", "model_z", "1234")) # For testing bad VDU's:
+        # display_list.append(("3", "maker_y", "model_z", "1234")) # For testing bad VDUs:
         return display_list
 
     def parse_edid(self, display_str: str) -> str | None:
@@ -3219,7 +3219,7 @@ class VduPanelBottomToolBar(QToolBar):
 
 
 class VduControlsMainPanel(QWidget):
-    """GUI for detected VDU's, it will construct and contain a control panel for each VDU."""
+    """GUI for detected VDUs, it will construct and contain a control panel for each VDU."""
 
     vdu_vcp_changed_qtsignal = pyqtSignal(str, str, str, VcpOrigin)
     connected_vdus_changed_qtsignal = pyqtSignal()
@@ -3328,7 +3328,7 @@ class VduControlsMainPanel(QWidget):
         answer = self.alert.exec()
         self.alert = None
         if answer != QMessageBox.Retry:
-            self.connected_vdus_changed_qtsignal.emit()  # Maybe the connected VDU's have changed - check.
+            self.connected_vdus_changed_qtsignal.emit()  # Maybe the connected VDUs have changed - check.
         return answer == QMessageBox.Retry
 
     def status_message(self, message: str, timeout: int):
@@ -4811,7 +4811,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         widget_to_replace: PresetWidget | None = None
         if from_widget:  # A from_widget is requesting that the Preset's VDU current settings be updated.
             widget_to_replace = None  # Updating from widget, no change to icons or symbols, so no need to update the widget.
-            preset = from_widget.preset  # Just update the widget's preset from the VDU's current settings
+            preset = from_widget.preset  # Just update the widget's preset from the VDUs current settings
         elif preset_name := self.preset_name_edit.text().strip():  # Saving from the save button, this may be new Preset or update.
             if widget_to_replace := self.find_preset_widget(preset_name):  # Already exists, update preset, replace widget
                 preset = widget_to_replace.preset  # Use the widget's existing Preset.
@@ -4822,7 +4822,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
         preset_path = get_config_path(proper_name('Preset', preset.name))
         if preset_path.exists():  # Existing Preset
-            if from_widget:  # The from_widget PresetWidget is initiating an update to the Preset from the VDU's settings.
+            if from_widget:  # The from_widget PresetWidget is initiating an update to the Preset from the VDUs settings.
                 question = tr('Update existing {} preset with current monitor settings?').format(preset.name)
             else:  # The Preset Editor tab is modifying a Preset and it's PresetWidget.
                 question = tr("Replace existing '{}' preset?").format(preset.name)
@@ -5032,7 +5032,7 @@ def install_as_desktop_application(uninstall: bool = False) -> None:
             Exec={installed_script_path.as_posix()}
             Name={APPNAME}
             GenericName=DDC control panel for monitors
-            Comment=Virtual Control Panel for externally connected VDU's
+            Comment=Virtual Control Panel for externally connected VDUs
             Icon={icon_path.as_posix()}
             Categories=Qt;Settings;
             """)
@@ -6087,7 +6087,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.adjust_now_button.setText(f"{TIMER_RUNNING_SYMBOL} 00:00")
         self.adjust_now_button.show() if self.lux_config.is_auto_enabled() else self.adjust_now_button.hide()
 
-        connected_id_list = []  # List of all currently connected VDU's
+        connected_id_list = []  # List of all currently connected VDUs
         for index, vdu_sid in enumerate(self.main_controller.get_vdu_stable_id_list()):
             value_range = (0, 100)
             if self.main_controller.is_vcp_code_enabled(vdu_sid, BRIGHTNESS_VCP_CODE):
@@ -6098,7 +6098,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                 except VduException as ve:
                     self.current_brightness_map[vdu_sid] = 0
                     log_warning("VDU may not be available:", str(ve), trace=True)
-            # All vdu's have a profile, even if they have no brightness control - because a preset may be attached to a lux value.
+            # All VDUs have a profile, even if they have no brightness control - because a preset may be attached to a lux value.
             self.lux_profiles_map[vdu_sid] = self.lux_config.get_vdu_lux_profile(vdu_sid, value_range)
             connected_id_list.append(vdu_sid)
         self.preset_points.clear()  # Edit out deleted presets by starting from scratch
@@ -6115,7 +6115,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
             candidate_id = connected_id_list[0]
         try:
             self.profile_selector.blockSignals(True)  # Stop initialization from causing signal until all data is aligned.
-            if connected_id_list != existing_id_list:  # List of connected VDU's has changed
+            if connected_id_list != existing_id_list:  # List of connected VDUs has changed
                 self.profile_selector.clear()
                 random.seed(int(self.lux_config.get("lux-ui", "vdu_color_seed", fallback='0x543fff'), 16))
                 self.drawing_color_map.clear()
@@ -7153,7 +7153,7 @@ class VduAppWindow(QMainWindow):
         self.app.quit()
 
     def create_main_control_panel(self) -> None:
-        # Call on initialisation and whenever the number of connected VDU's changes.
+        # Call on initialisation and whenever the number of connected VDUs changes.
         if self.main_panel is not None:
             self.main_panel.deleteLater()
             self.main_panel = None

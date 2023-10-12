@@ -45,7 +45,7 @@ Sun 24 Jun 2023 21:50:00 UTC - Michael Hamilton <michael@actrix.gen.nz>
   * Popup-Messages: made message box popups resizable for increased readability.
   * Command-line: made config-settings and command-line arguments consistent, command line has precedence (issue #52).
   * Command-line: fixed --sleep-multiplier so that it is actually applied (issue #54).
-  * Prevented potential crashes in the event of utf-8 decoding errors for EDID's and capabilities (issue #49).
+  * Prevented potential crashes in the event of utf-8 decoding errors for EDIDs and capabilities (issue #49).
   * Added logging of stack traces for some errors if debugging is set to on (issue #49).
   * Improved the handling of ddcutil not found (issue #48).
   * Refactored to improve maintainability and run-time efficiency (issue #52).

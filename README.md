@@ -6,10 +6,10 @@ A control panel for external monitors (*Visual Display Units*).
 Description
 -----------
 
-``vdu_controls`` is a virtual control panel for externally connected VDU's.  The application detects 
-DVI, DP, HDMI, or USB connected VDU's.  It provides controls for settings such as brightness and contrast.
+``vdu_controls`` is a virtual control panel for externally connected VDUs.  The application detects 
+DVI, DP, HDMI, or USB connected VDUs.  It provides controls for settings such as brightness and contrast.
 
-The application interacts with VDU's via the VESA *Display Data Channel* (*DDC*) *Virtual Control Panel*  (*VCP*) 
+The application interacts with VDUs via the VESA *Display Data Channel* (*DDC*) *Virtual Control Panel*  (*VCP*) 
 commands set.  DDC VCP interactions are mediated by the ``ddcutil`` command line utility.  ``Ddcutil`` provides
 a robust interface that is tolerant of the vagaries of the many OEM DDC implementations.
 
@@ -39,7 +39,7 @@ Getting Started
 
 To get started with ``vdu_controls``, you only need to download the ``vdu_controls.py`` python script and
 check that the dependencies described below are in place.  Alternatively, should you wish to install ``vdu_controls`` 
-for all users, rpm's are available for **OpenSUSE**, **Fedora**, and there is an  **archlinux** AUR package
+for all users, RPMs are available for **OpenSUSE**, **Fedora**, and there is an  **archlinux** AUR package
 which also works in **Manjaro**.  See the *Install* section below. 
 
 > Development is **trunk-based**.  It is my intent that the trunk should 
@@ -53,7 +53,7 @@ Dependencies
 All the following runtime dependencies are likely to be pre-packaged on any modern Linux distribution 
 (``vdu_controls`` was originally developed on OpenSUSE Tumbleweed).
 
-* **ddcutil >= 1.2, >= 1.4 recommended**: the command line utility that interfaces to VDU's via DDC over i2c-dev or USB. (If 
+* **ddcutil >= 1.2, >= 1.4 recommended**: the command line utility that interfaces to VDUs via DDC over i2c-dev or USB. (If 
   anyone requires support for versions of ddcutil prior to v1.2 please contact me directly.)
 * **i2c-dev**: the i2c-dev kernel module normally shipped with all Linux distributions and required by [ddcutil](https://www.ddcutil.com)
 * **python >=3.8**: ``vdu_controls`` is written in python and may depend on some features present only in 3.8 onward.
@@ -65,6 +65,8 @@ It's best to confirm that ``ddcutil`` is functioning before using ``vdu_controls
   (including some extra steps for Nvidia GPU users).
 * See [https://www.ddcutil.com/i2c_permissions/](https://www.ddcutil.com/i2c_permissions/) for instructions on setting 
   and testing the required permissions.  
+* Fo some VUDs, DDC/CI over Display-Port to Display-Port connections may work when others 
+  connections don't (mainly with some Nvidia GPUs).
 
 As of ddcutil 1.4, installing a pre-packaged ddcutil will most likely set the correct udev rules to 
 grant users access to the required devices.  If you are using an earlier ddcutil, it may be necessary to follow 
@@ -74,7 +76,7 @@ Installing
 ----------
 
 As previously stated, the ``vdu_vontrols.py`` script is only file required beyond the prerequisites. There
-are also **OpenSUSE** and **Fedora** rpm's available at: [https://software.opensuse.org/package/vdu_controls](https://software.opensuse.org/package/vdu_controls)
+are also **OpenSUSE** and **Fedora** RPMs available at: [https://software.opensuse.org/package/vdu_controls](https://software.opensuse.org/package/vdu_controls)
 and an **archlinux** (**manjaro** compatible) **AUR** package at: [https://aur.archlinux.org/packages/vdu_controls](https://aur.archlinux.org/packages/vdu_controls)
 
 
@@ -256,7 +258,7 @@ Version History
   * Popup-Messages: made message box popups resizable for increased readability.
   * Command-line: made config-settings and command-line arguments consistent, command line has precedence (issue #52).
   * Command-line: fixed --sleep-multiplier so that it is actually applied (issue #54).
-  * Prevented potential crashes in the event of utf-8 decoding errors for EDID's and capabilities (issue #49).
+  * Prevented potential crashes in the event of utf-8 decoding errors for EDIDs and capabilities (issue #49).
   * Added logging of stack traces for some errors if debugging is set to on (issue #49).
   * Improved the handling of ddcutil not found (issue #48).
   * Refactored to improve maintainability and run-time efficiency (issue #52).
@@ -382,7 +384,7 @@ Version History
   * A minor enhancement to ease installation on Ubuntu, create ``$HOME/bin`` if it doesn't exist. 
 * 1.3.0
   * Add a CUSTOM::Sleep_Multiplier VDU config-file option to allow VDU specific sleep multipliers.
-    This can be used to prevent the slowest VDU from dragging down response time for all connected VDU's.
+    This can be used to prevent the slowest VDU from dragging down response time for all connected VDUs.
   * Added a main UI right-mouse action that makes the context menu available in the UI window.
   * Added a help option to context menu, it displays a formatted version of the ``--detailed-help`` text.
   * Added a ``--detailed-help`` command line option to extract the help from the script (in Markdown format).

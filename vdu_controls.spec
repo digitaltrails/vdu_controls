@@ -47,7 +47,7 @@ Requires:       python3-pyserial
 
 %description
 vdu_controls is a virtual control panel for externally connected
-VDU's (visual display units).  Controls are included for backlight
+VDUs (visual display units).  Controls are included for backlight
 brightness, and contrast.  vdu_controls uses the ddcutil command
 line utility to interact with external displays via VESA Display
 Data Channel (DDC) Virtual Control Panel (VCP) standards.
