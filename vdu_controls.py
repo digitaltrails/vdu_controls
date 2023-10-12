@@ -810,7 +810,7 @@ def format_solar_elevation_ini_text(elevation: SolarElevationKey | None) -> str:
 
 
 def parse_solar_elevation_ini_text(ini_text: str) -> SolarElevationKey:
-    parts = ini_text.strip().split(' ')
+    parts = ini_text.strip().split()
     if len(parts) != 2:
         raise ValueError(f"Invalid SolarElevation: '{ini_text}'")
     if parts[0] not in [EASTERN_SKY, WESTERN_SKY]:
@@ -1254,7 +1254,7 @@ class DdcUtil:
         # self.version = (1, 2, 2)  # for testing for 1.2.2 compatibility
         log_info(f"ddcutil version {self.ddcutil_version} {self.version_suffix}(dynamic-sleep={self.ddcutil_version >= (2, 0, 0)})")
         if self.ddcutil_version >= (2, 0, 0):  # Won't know real version until around here  TODO is this test needed?
-            self.common_args += [arg for arg in os.getenv('VDU_CONTROLS_DDCUTIL_ARGS', default='').split(' ') if arg != '']
+            self.common_args += [arg for arg in os.getenv('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != '']
 
     def id_key_args(self, vdu_number: str) -> List[str]:
         return ['--edid', self.edid_map[vdu_number]] if vdu_number in self.edid_map else ['--display', vdu_number]
@@ -1786,7 +1786,7 @@ class VduControlsConfig:
     def get_ddcutil_extra_args(self, fallback: List[str] | None = None) -> List[str]:
         fallback = [] if fallback is None else fallback
         value = self.ini_content.get('ddcutil-parameters', 'ddcutil-extra-args', fallback=None)
-        return fallback if value is None or value.strip() == '' else value.split(' ')
+        return fallback if value is None or value.strip() == '' else value.split()
 
     def get_capabilities_alt_text(self) -> str:
         return self.ini_content['ddcutil-capabilities']['capabilities-override']
@@ -2747,7 +2747,7 @@ class VduControlComboBox(VduControlBase):
         canonical = source.lower()
         maybe = tr(canonical)
         result = maybe if maybe != canonical else source
-        return ' '.join(w[:1].upper() + w[1:] for w in result.split(' '))  # Default to capitalized version of each word
+        return ' '.join(w[:1].upper() + w[1:] for w in result.split())  # Default to capitalized version of each word
 
     def refresh_ui_view_implementation(self) -> None:
         """Copy the internally cached current value onto the GUI view."""
