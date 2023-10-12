@@ -6579,8 +6579,8 @@ class VduAppController:  # Main controller containing methods for high level ope
                 try:
                     controller = VduController(vdu_number, model_name, vdu_serial, manufacturer, self.main_config,
                                                self.ddcutil, main_panel_error_handler, VduController.NORMAL_VDU)
-                except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:  # TODO figure out all possible Exceptions:
-                    # Catch any kind of parse related error
+                except (subprocess.SubprocessError, ValueError, re.error, OSError, DdcUtilDisplayNotFound) as e:
+                    # Catch any kind of parse related error  # TODO figure out all possible Exceptions:
                     log_error(f"Problem creating controller for {vdu_number=} {model_name=} {vdu_serial=} exception={e}",
                               trace=True)
                     choice = self.main_window.ask_for_vdu_controller_remedy(vdu_number, model_name, vdu_serial)
