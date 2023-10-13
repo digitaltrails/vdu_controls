@@ -44,7 +44,7 @@ Terminal=false
 Exec=%{_bindir}/%{name}
 Name=VDU Controls
 GenericName=VDU controls
-Comment=Virtual Control Panel for externally connected VDU's
+Comment=Virtual Control Panel for externally connected VDUs
 Icon=preferences-desktop-display-color
 Categories=Settings
 EOF
