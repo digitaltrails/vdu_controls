@@ -15,8 +15,8 @@ Usage:
 
      python3 vlux_meter.py
 
-vdu_controls
-============
+vlux_meter
+==========
 
 `vlux_meter` is intended for use with [vdu_controls](https://github.com/digitaltrails/vdu_controls/blob/master/README.md),
 a GUI interface to DDC capable VDU's.
@@ -839,7 +839,7 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
         super().__init__()
         self.setWindowTitle(tr('About'))
         self.setTextFormat(Qt.AutoText)
-        self.setText(tr('About vdu_controls'))
+        self.setText(tr('About vlux_meter'))
         path = find_locale_specific_file("about_{}.txt")
         if path:
             with open(path, encoding='utf-8') as about_for_locale:
@@ -1177,7 +1177,7 @@ class LuxFifoDispatcher(QThread):
 
 def main():
     global global_config
-    """vdu_controls application main."""
+    """vlux_meter application main."""
     # Allow control-c to terminate the program
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     sys.stdout = open(sys.stdout.fileno(), mode='w', encoding='utf8', buffering=1)  # Force UTF-8, just in case it isn't
