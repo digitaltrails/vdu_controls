@@ -201,17 +201,17 @@ interpreter and python3 libraries are from the standard Tumbleweed repositories.
 Acknowledgements
 ----------------
 
-* [rockowitz](https://github.com/rockowitz), for the robust [ddcutil](https://github.com/rockowitz/ddcutil) utility
-* [yochananmarqos](https://github.com/yochananmarqos), for Gnome related suggestions and AUR port.
-* [denilsonsa](https://github.com/denilsonsa), for several issues, tests and fixes that contributed to version 1.9.0 and 1.11.0.
-* [crashmatt](https://github.com/crashmatt), [lowne](https://github.com/lowne), [usr](https://github.com/usr)3, for contributing fixes to code and documentation.
-* [Jakeler](https://github.com/Jakeler), [kupiqu](https://github.com/kupiqu), [Milor123](https://github.com/Milor123), [nahoj](https://github.com/nahoj), [0xCUBE](https://github.com/0xCUB3) for 
-  contributing suggestions for enhancements. 
-* [malcolmlewis](https://github.com/malcolmlewis) for assistance with the OpenSUSE Open Build Service submissions.
-* [Christopher Laws](https://github.com/claws) for the [BH1750 library](https://github.com/claws/BH1750) 
+* Sanford Rockowitz ([rockowitz](https://github.com/rockowitz)), for the robust [ddcutil](https://github.com/rockowitz/ddcutil) utility and all the friendly help and assistance.
+* Mark Wagie ([yochananmarqos](https://github.com/yochananmarqos)), for Gnome related suggestions and AUR port.
+* Denilson Sá Maia ([denilsonsa](https://github.com/denilsonsa)), for many suggestions, assistance, and contributions.
+* Matthew Coleman ([crashmatt](https://github.com/crashmatt)), Mark Lowne ([lowne](https://github.com/lowne)), [usr3](https://github.com/usr3), for 
+  contributing fixes to code and documentation.
+* [Jakeler](https://github.com/Jakeler), [kupiqu](https://github.com/kupiqu), Mateo Bohorquez ([Milor123](https://github.com/Milor123)), Johan Grande ([nahoj](https://github.com/nahoj)), 
+  [0xCUBE](https://github.com/0xCUB3), for contributing suggestions for enhancements. 
+* Malcolm Lewis ([malcolmlewis](https://github.com/malcolmlewis)) for assistance with the OpenSUSE Open Build Service submissions.
+* Christopher Laws ([claws](https://github.com/claws)) for the [BH1750 library](https://github.com/claws/BH1750) 
   and [example build](https://github.com/claws/BH1750#example) (lux-metering).
 * Plus others who have supplied feedback and suggestions.
-
 
 Author
 ------
