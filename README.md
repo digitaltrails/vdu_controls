@@ -211,7 +211,6 @@ Acknowledgements
   and [example build](https://github.com/claws/BH1750#example) (lux-metering).
 * Plus others who have supplied feedback and suggestions.
 
-
 Author
 ------
 
