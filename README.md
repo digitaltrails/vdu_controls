@@ -218,7 +218,6 @@ Author
 
 Michael Hamilton
 
-
 Version History
 ---------------
 * 1.11.2
