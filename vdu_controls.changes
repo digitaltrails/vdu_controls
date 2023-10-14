@@ -2,6 +2,7 @@
 Tue 21 Sep 2023 03:59:00 UTC - Michael Hamilton <michael@actrix.gen.nz>
 
 - Version1.11.2
+  * Added an F10_key context menu shortcut to all application windows (KDE accessibility standard).
   * Set icon and pixmap sizes appropriately for Normal and High DPI (controlled by adjust-for-dpi) (issue #63).
   * Icon/device-chooser-dialog: init-time reduced from 30 to 5 seconds for users with large home folders (issue #61).
   * Improvements/Fixes to the vlux_meter.py sample-script and the related vdu_controls FIFO reader.

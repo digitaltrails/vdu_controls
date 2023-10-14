@@ -83,11 +83,8 @@ By default, ``vdu_controls`` offers a subset of controls including brightness, c
 controls can be enabled via the ``Settings`` dialog.
 
 ``vdu_controls`` may optionally run as an entry in the system tray of KDE, Deepin, GNOME, and Xfce (and possibly
-others). The UI attempts to adapt to the quirks of the different tray implementations.
-
-Related to the ``system-tray`` option is ``hide-on-focus-out``, which does exactly what it says.
-If set, ``hide-on-focus-out`` it will be temporarily disabled while any dialogs, such as Settings or
-Greyscale, are visible.
+others). The UI attempts to adapt to the quirks of the different tray implementations.  Related to the ``system-tray``
+option is ``hide-on-focus-out`` (hide on focus out is disabled while any dialogs, Settings, Greyscale, or others, are visible).
 
 Named ``Preset`` configurations can be saved for later recall. For example, a user could create
 presets for night, day, photography, movies, and so forth.  Presets may be automatically triggered
@@ -97,9 +94,11 @@ be set to transition immediately or gradually.  Presets may also be activated by
 The UI's look-and-feel dynamically adjusts to the desktop theme.  Colors and icons automatically
 reconfigure without the need for a restart when changing between light and dark themes.
 
-A context menu containing this help is available by pressing the right-mouse button either in the main
-control panel or on the system-tray icon.  The context menu is also available via a hamburger-menu item on the
-bottom right of the main control panel.
+From any application window, use `F1` to access help, and `F10` to access the context-menu.   The
+context menu is also available via the right-mouse button in the main-window, the hamburger-menu item
+on the bottom right of the main window, and the right-mouse button on the system-tray icon. The
+context-menu provides `ALT-key` shortcuts for all menu items (subject to sufficient letters being
+available to support all user defined Presets).
 
 Builtin laptop displays normally don't implement DDC and those displays are not supported, but a laptop's
 externally connected VDUs are likely to be controllable.
@@ -735,7 +734,7 @@ from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
-    QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, qApp
+    QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, qApp, QShortcut
 
 APPNAME = "VDU Controls"
 VDU_CONTROLS_VERSION = '1.11.2'
@@ -4175,7 +4174,7 @@ class PresetChooseElevationChart(QLabel):
             # Draw pie/compass angle
             if ev_key:
                 angle_above_horz = ev_key.elevation if ev_key.direction == EASTERN_SKY else (
-                            180 - ev_key.elevation)  # anticlockwise from 0
+                        180 - ev_key.elevation)  # anticlockwise from 0
             else:
                 angle_above_horz = 180 + 19
             _, radius = self.calc_angle_radius(self.current_pos) if self.current_pos else (0, 21)
@@ -7014,6 +7013,13 @@ class VduAppWindow(QMainWindow):
 
         self.app_icon = QIcon()
         self.app_icon.addPixmap(splash_pixmap)
+
+        def f10_func():
+            self.app_context_menu.exec(QCursor.pos())
+
+        f10_shortcut = QShortcut(QKeySequence(Qt.Key_F10), self)  # New Qt standard shortcut for context menu.
+        f10_shortcut.setContext(Qt.ApplicationShortcut)
+        f10_shortcut.activated.connect(f10_func)
 
         self.tray = None
         if main_config.is_set(ConfOption.SYSTEM_TRAY_ENABLED):

@@ -17,11 +17,20 @@ By default ``vdu_controls`` offers a subset of controls including brightness, co
 controls can be enabled via the ``Settings`` dialog.  ``vdu_controls`` may optionally run as an entry in the
 system tray.
 
+``vdu_controls`` may optionally run as an entry in the system tray of KDE, Deepin, GNOME, and Xfce (and possibly
+others). The UI attempts to adapt to the quirks of the different tray implementations.
+
 Named ``Preset`` configurations can be saved for later recall. For example, a user could create
 presets for night, day, photography, movies, and so forth.  Presets may be automatically triggered
 according to solar elevation, and can be further constrained by local weather conditions (as
 reported by [https://wttr.in](https://wttr.in)). Presets can be set to transition immediately or
 gradually.  Presets may also be activated by UNIX signals.
+
+From any application window, use `F1` to access help, and `F10` to access the context-menu.   The 
+context menu is also available via the right-mouse button in the main-window, the hamburger-menu item 
+on the bottom right of the main window, and the right-mouse button on the system-tray icon. The 
+context-menu provides `ALT-key` shortcuts for all menu items (subject to sufficient letters being
+available to support all user defined Presets).
 
 _Version 1.10_ introduces options for using lux readings from a hardware lux meter (or in some 
 cases a webcam).  When lux metering is enabled, ``vdu_controls`` can vary brightness according 
@@ -221,6 +230,7 @@ Michael Hamilton
 Version History
 ---------------
 * 1.11.2
+  * Added an F10_key context menu shortcut to all application windows (KDE accessibility standard).
   * Set icon and pixmap sizes appropriately for Normal and High DPI (controlled by adjust-for-dpi) (issue #63).
   * Icon/device-chooser-dialog: init-time reduced from 30 to 5 seconds for users with large home folders (issue #61).
   * Improvements/Fixes to the vlux_meter.py sample-script and the related vdu_controls FIFO reader.

@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Oct 13, 2023" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Oct 15, 2023" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.11.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -156,11 +156,8 @@ By default, \fBvdu_controls\fP offers a subset of controls including brightness,
 controls can be enabled via the \fBSettings\fP dialog.
 .sp
 \fBvdu_controls\fP may optionally run as an entry in the system tray of KDE, Deepin, GNOME, and Xfce (and possibly
-others). The UI attempts to adapt to the quirks of the different tray implementations.
-.sp
-Related to the \fBsystem\-tray\fP option is \fBhide\-on\-focus\-out\fP, which does exactly what it says.
-If set, \fBhide\-on\-focus\-out\fP it will be temporarily disabled while any dialogs, such as Settings or
-Greyscale, are visible.
+others). The UI attempts to adapt to the quirks of the different tray implementations.  Related to the \fBsystem\-tray\fP
+option is \fBhide\-on\-focus\-out\fP (hide on focus out is disabled while any dialogs, Settings, Greyscale, or others, are visible).
 .sp
 Named \fBPreset\fP configurations can be saved for later recall. For example, a user could create
 presets for night, day, photography, movies, and so forth.  Presets may be automatically triggered
@@ -170,9 +167,11 @@ be set to transition immediately or gradually.  Presets may also be activated by
 The UI\(aqs look\-and\-feel dynamically adjusts to the desktop theme.  Colors and icons automatically
 reconfigure without the need for a restart when changing between light and dark themes.
 .sp
-A context menu containing this help is available by pressing the right\-mouse button either in the main
-control panel or on the system\-tray icon.  The context menu is also available via a hamburger\-menu item on the
-bottom right of the main control panel.
+From any application window, use \fIF1\fP to access help, and \fIF10\fP to access the context\-menu.   The
+context menu is also available via the right\-mouse button in the main\-window, the hamburger\-menu item
+on the bottom right of the main window, and the right\-mouse button on the system\-tray icon. The
+context\-menu provides \fIALT\-key\fP shortcuts for all menu items (subject to sufficient letters being
+available to support all user defined Presets).
 .sp
 Builtin laptop displays normally don\(aqt implement DDC and those displays are not supported, but a laptop\(aqs
 externally connected VDUs are likely to be controllable.

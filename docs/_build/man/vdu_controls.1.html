@@ -77,11 +77,9 @@ can be enabled via the <code>Settings</code> dialog.</p>
 <p><code>vdu_controls</code> may optionally run as an entry in the
 system tray of KDE, Deepin, GNOME, and Xfce (and possibly others). The
 UI attempts to adapt to the quirks of the different tray
-implementations.</p>
-<p>Related to the <code>system-tray</code> option is
-<code>hide-on-focus-out</code>, which does exactly what it says. If set,
-<code>hide-on-focus-out</code> it will be temporarily disabled while any
-dialogs, such as Settings or Greyscale, are visible.</p>
+implementations. Related to the <code>system-tray</code> option is
+<code>hide-on-focus-out</code> (hide on focus out is disabled while any
+dialogs, Settings, Greyscale, or others, are visible).</p>
 <p>Named <code>Preset</code> configurations can be saved for later
 recall. For example, a user could create presets for night, day,
 photography, movies, and so forth. Presets may be automatically
@@ -92,10 +90,13 @@ signals.</p>
 <p>The UI’s look-and-feel dynamically adjusts to the desktop theme.
 Colors and icons automatically reconfigure without the need for a
 restart when changing between light and dark themes.</p>
-<p>A context menu containing this help is available by pressing the
-right-mouse button either in the main control panel or on the
-system-tray icon. The context menu is also available via a
-hamburger-menu item on the bottom right of the main control panel.</p>
+<p>From any application window, use <code>F1</code> to access help, and
+<code>F10</code> to access the context-menu. The context menu is also
+available via the right-mouse button in the main-window, the
+hamburger-menu item on the bottom right of the main window, and the
+right-mouse button on the system-tray icon. The context-menu provides
+<code>ALT-key</code> shortcuts for all menu items (subject to sufficient
+letters being available to support all user defined Presets).</p>
 <p>Builtin laptop displays normally don’t implement DDC and those
 displays are not supported, but a laptop’s externally connected VDUs are
 likely to be controllable.</p>
