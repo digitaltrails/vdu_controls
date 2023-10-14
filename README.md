@@ -229,12 +229,12 @@ Michael Hamilton
 
 Version History
 ---------------
-* 1.11.2
+* 1.12.0
   * Added an F10_key context menu shortcut to all application windows (KDE accessibility standard).
   * Set icon and pixmap sizes appropriately for Normal and High DPI (controlled by adjust-for-dpi) (issue #63).
   * Icon/device-chooser-dialog: init-time reduced from 30 to 5 seconds for users with large home folders (issue #61).
   * Improvements/Fixes to the vlux_meter.py sample-script and the related vdu_controls FIFO reader.
-  * Improved visibility of the app-icon's transitioning-preset indicator and auto-lux indicator.
+  * Improved visibility of the app-icon's preset-transitioning indicator and auto-lux indicator.
   * Increased contrast for generated text preset-abbreviation icons.
   * Encode translations in plain text rather than escaped XML (for easier editing).
 

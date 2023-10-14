@@ -18,12 +18,12 @@
 
 
 Name:           vdu_controls
-Version:        1.11.2
+Version:        1.12.0
 Release:        0
 Summary:        Visual Display Unit virtual control panel
 License:        GPL-3.0-or-later
 URL:            https://github.com/digitaltrails/vdu_controls
-Source0:        https://github.com/digitaltrails/vdu_controls/archive/refs/tags/v1.11.2.tar.gz#/%{name}-%{version}.tar.gz
+Source0:        https://github.com/digitaltrails/vdu_controls/archive/refs/tags/v1.12.0.tar.gz#/%{name}-%{version}.tar.gz
 BuildRequires:  coreutils
 BuildRequires:  hicolor-icon-theme
 BuildArch:      noarch
@@ -106,3 +106,13 @@ ln -s -f %{_datadir}/icons %{_datadir}/vdu_controls/icons/system-icons
 %ghost %{_datadir}/vdu_controls/icons/system-icons
 
 %changelog
+
+# Build service notes:
+# 0) Build service page: https://build.opensuse.org/package/show/utilities/vdu_controls
+# 1) branch the package (link on left margin of page)
+# 2) upload/alter package files in branch (should be the github versions)
+# 3) wait for builds to complete
+# 4) when OK/finished/happy, submit
+# 5) check assigned tasks: self approve submission and opt to remove branch
+# 6) check build service page (above) has updated
+# 7) wait for propagation to experimental package https://software.opensuse.org/package/vdu_controls
