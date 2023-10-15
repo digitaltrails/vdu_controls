@@ -13,7 +13,7 @@ for setting a sample area crop and a defining a mappings from brightness
 Usage:
 ======
 
-     python3 vlux_meter.py
+     python3 vlux_meter.py -h|--help --system-tray|--no-system-tray
 
 vlux_meter
 ==========
@@ -64,6 +64,8 @@ with this program. If not, see https://www.gnu.org/licenses/.
 """
 # Copyright (C) 2023 Michael Hamilton
 from __future__ import annotations
+
+import argparse
 import configparser
 import io
 import locale
@@ -212,7 +214,7 @@ DEFAULT_SETTINGS = {
         'Night': brightness_lux_str(0, 5),
     },
     'global': {
-        'system_tray_enabled': 'yes',
+        'system_tray_enabled': 'no',
         'fifo_path': '~/.cache/vlux_fifo',
         'display_frequency_millis': 1000,
         'dispatch_frequency_seconds': 60,
@@ -899,6 +901,12 @@ class VluxMeterWindow(QMainWindow):
         self.meter_thread = meter_thread
         app.installEventFilter(self)
 
+        parser = argparse.ArgumentParser(description=f"{APPNAME} webcam approximate lux meter")
+        parser.add_argument(f"--system-tray", dest="system_tray", action='store_const', const='yes', help="run in the system tray")
+        parser.add_argument(f"--no-system-tray", dest="system_tray", action='store_const', const='no',
+                            help="do not run in the system tray")
+        args = parser.parse_args(sys.argv[1:])
+
         gnome_tray_behaviour = config.getboolean("global", "system_tray_enabled") and 'gnome' in os.environ.get(
             'XDG_CURRENT_DESKTOP', default='unknown').lower()
 
@@ -936,7 +944,7 @@ class VluxMeterWindow(QMainWindow):
         global signal_wakeup_handler
         signal_wakeup_handler.signalReceived.connect(respond_to_unix_signal)
 
-        if config.getboolean('global', 'system_tray_enabled'):
+        if (args.system_tray and args.system_tray == 'yes') or config.getboolean('global', 'system_tray_enabled'):
             if not QSystemTrayIcon.isSystemTrayAvailable():
                 log_warning("no system tray, waiting to see if one becomes available.")
                 for _ in range(0, SYSTEM_TRAY_WAIT_SECONDS):
