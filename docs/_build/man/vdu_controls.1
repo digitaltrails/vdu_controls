@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Oct 15, 2023" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Oct 16, 2023" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.11.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -601,16 +601,25 @@ lux reading per line.  Each line must be terminated by carriage\-return newline 
 device) or just newline (fifo/named\-pipe). The runnable script will be run each time a
 value is needed, it must output a single line containing a lux value.
 .sp
-Possible hardware devices include the GY\-30/BH1750 lux meter wired to an Arduino which may
-act as a character device.  It may be possible use webcam/camera output to compute an
-approximate lux value, ether by analysing image content, or examining image settings that
-contribute to exposure such ISO values, apertures, and shutter speed, the result could be
-feed to a fifo.
+Possible hardware devices include:
+.INDENT 0.0
+.INDENT 3.5
+.INDENT 0.0
+.IP \(bu 2
+An Arduino with a GY\-30/BH1750 lux meter may act as a character device.
+.IP \(bu 2
+A webcam can be used to produce approximate lux values sufficient for brightness
+adjustment, ether by analysing image content, or examining image settings that
+contribute to exposure such ISO values, apertures, and shutter speed.
+.UNINDENT
+.UNINDENT
+.UNINDENT
 .sp
-Example scripts for mapping webcam average brightness to approximate lux values are
-available in \fB/usr/share/vdu_controls/sample\-scripts/\fP or they can be downloaded
+Example scripts for mapping a webcam\(aqs average\-brightness to approximate lux values are
+included in \fB/usr/share/vdu_controls/sample\-scripts/\fP or they can be downloaded
 from \fI\%https://github.com/digitaltrails/vdu_controls/tree/master/sample\-scripts\fP\&.  They
-may require customising for your own webcam and lighting conditions.
+may require customising for your own webcam and lighting conditions.  The examples
+include the beta\-level Qt\-GUI \fBvlux_meter\fP which runs out of the system tray.
 .sp
 In creating an \(dqlux meter\(dq for used with vdu_controls, theres is no need to produce
 standard lux values.  It is sufficient to produce log10\-like values from 1 to 10000
@@ -640,7 +649,7 @@ night               5
 .UNINDENT
 .UNINDENT
 .sp
-Due to VDU hardware and DDC protocal limitations, gradual/stepping changes in
+Due to VDU hardware and DDC protocol limitations, gradual/stepping changes in
 brightness are quite likely to noticeable and potentially annoying.
 The auto\-brightness  adjustment feature includes several measures to dampen
 minimise the amount of stepping:

@@ -425,16 +425,22 @@ lux reading per line.  Each line must be terminated by carriage-return newline (
 device) or just newline (fifo/named-pipe). The runnable script will be run each time a
 value is needed, it must output a single line containing a lux value.
 
-Possible hardware devices include the GY-30/BH1750 lux meter wired to an Arduino which may
-act as a character device.  It may be possible use webcam/camera output to compute an
-approximate lux value, ether by analysing image content, or examining image settings that
-contribute to exposure such ISO values, apertures, and shutter speed, the result could be
-feed to a fifo.
+Possible hardware devices include:
 
-Example scripts for mapping webcam average brightness to approximate lux values are
-available in ``/usr/share/vdu_controls/sample-scripts/`` or they can be downloaded
+    * An Arduino with a GY-30/BH1750 lux meter may act as a character device.
+
+    * A webcam can be used to produce approximate lux values sufficient for brightness
+      adjustment, ether by analysing image content, or examining image settings that
+      contribute to exposure such ISO values, apertures, and shutter speed.
+
+Example scripts for mapping a webcam's average-brightness to approximate lux values are
+included in ``/usr/share/vdu_controls/sample-scripts/`` or they can be downloaded
 from https://github.com/digitaltrails/vdu_controls/tree/master/sample-scripts.  They
-may require customising for your own webcam and lighting conditions.
+may require customising for your own webcam and lighting conditions.  The examples
+include the beta-level Qt-GUI ``vlux_meter.py`` which may optionally runs in the
+system-tray and which writes a lux feed to the FIFO `~/.cache/vlux_fifo`.
+See https://github.com/digitaltrails/vdu_controls/blob/master/Lux-metering.md
+for details.
 
 In creating an "lux meter" for used with vdu_controls, theres is no need to produce
 standard lux values.  It is sufficient to produce log10-like values from 1 to 10000
@@ -453,7 +459,7 @@ include typical lux values, for example:
         living-room        50
         night               5
 
-Due to VDU hardware and DDC protocal limitations, gradual/stepping changes in
+Due to VDU hardware and DDC protocol limitations, gradual/stepping changes in
 brightness are quite likely to noticeable and potentially annoying.
 The auto-brightness  adjustment feature includes several measures to dampen
 minimise the amount of stepping:
