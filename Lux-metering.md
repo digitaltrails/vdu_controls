@@ -352,14 +352,19 @@ translations_enabled = no**
 #### Running vlux_meter.py
 
 Make sure v4l (Video for Linux) and python3-opencv (a computer vision library) 
-are installed.  Then just run `vlux_meter.py` as a normal python script 
-and check the system tray for a new item:
+are installed.  Then just run `vlux_meter.py` as a normal python script,
+It may optionally run from the system-tray (either by passing a command line
+argument or by editing the config file):
 
 ```commandline
-python3 vlux_meter.py
+python3 vlux_meter.py --system-tray|--no-system-tray
 ```
 
-Set `vdu_controls` to read lux from the FIFO ``$HOME/.cache/vlux_fifo``
+Lux values are output to the FIFO ``$HOME/.cache/vlux_fifo``.
+
+Set `vdu_controls` lux-metering to read lux from the FIFO ``$HOME/.cache/vlux_fifo``
+
+Config files are written to ``$HOME/.config/vlux_meter/vlux_meter.conf``
 
 #### Options for webcams that lack manual exposure options
 
