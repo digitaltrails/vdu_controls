@@ -100,7 +100,7 @@ That makes three options for "installation":
     % python3 vdu_controls.py --install
    ```
       Depending on which desktop you're running menu changes may require logout before they become visible.
-3. A system-wide installation:
+3. A system-wide installation using a distribution's rpm package:
    ```
    sudo rpm --install vdu_controls-1.5.0-17.1.noarch.rpm
    ```
@@ -115,7 +115,8 @@ That makes three options for "installation":
 
 Please note the first two options only install ``vdu-controls`` for the current user.  The script and desktop-file 
 installed for a single user could be modified and copied into /usr or /usr/local hierarchies should you 
-wish to do so.
+wish to do so.  If using the first two options, you might want to follow up by manually downloading
+some of the [starter set of icons](icons) for use when creating Presets.
 
 Executing the program
 ---------------------
