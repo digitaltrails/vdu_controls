@@ -1165,6 +1165,7 @@ class LuxFifoDispatcher(QThread):
                             fifo_path = Path(os.path.expanduser(global_config.get('global', 'fifo_path')))
                             if not fifo_path.exists():
                                 os.mkfifo(fifo_path)
+                            log_info(f"Will output data to FIFO {fifo_path.as_posix()}")
                             self.fifo = open(fifo_path, 'w')
                         log_info(f"Dispatcher writing {self.lux_value} to FIFO")
                         self.fifo.write(f"{self.lux_value}\n")
