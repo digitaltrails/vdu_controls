@@ -411,93 +411,70 @@ cloud conditions. For example:
 Light/Lux Metering
 ------------------
 
-``vdu_controls`` can a hardware lux metering device to adjust VDU brightness according
-to a specified lux/brightness profile.
+``vdu_controls`` can use a hardware lux metering device and adjust VDU brightness according
+to custom per-VDU lux-brightness profiles.
 
 The Settings Dialog includes an option enable lux metering options.  When enabled, the
 Content Menu will include Light Meter option to access a Light-Meter Dialog.
 The dialog can be used to define the metering device and the Lux Brightness Response
 Profile for each VDU.
 
-The metering device must a readable character device, a UNIX fifo (named-pipe), or a
-runnable script.  The character device or fifo must periodically supply one floating point
-lux reading per line.  Each line must be terminated by carriage-return newline (character
-device) or just newline (fifo/named-pipe). The runnable script will be run each time a
-value is needed, it must output a single line containing a lux value.
+The metering device may be a serial-device, a UNIX FIFO (named-pipe), or a
+executable-script:
+
+    * A serial-device must periodically supply one floating point lux reading
+      terminated by a carriage-return newline.
+
+    * A FIFO must periodically supply one floating point lux reading
+      terminated by a newline.
+
+    * An executable-script must supply one floating point lux reading
+      terminated by a newline each time it is run.
+
 
 Possible hardware devices include:
 
-    * An Arduino with a GY-30/BH1750 lux meter may act as a character device.
+    * An Arduino with a GY-30/BH1750 lux meter writing to a usb serial-port.
 
-    * A webcam can be used to produce approximate lux values sufficient for brightness
-      adjustment, ether by analysing image content, or examining image settings that
-      contribute to exposure such ISO values, apertures, and shutter speed.
+    * A webcam periodically sampled to produce approximate lux values.  Values
+      might be estimated by analysing image content or image settings that
+      contribute to exposure, such ISO values, apertures, and shutter speed.
+
+Further information on various lux metering options, as well as instructions
+for constructing and programming an Arduino with a GY-30/BH1750, can be
+found at:
+
+    https://github.com/digitaltrails/vdu_controls/blob/master/Lux-metering.md
 
 Example scripts for mapping a webcam's average-brightness to approximate lux values are
-included in ``/usr/share/vdu_controls/sample-scripts/`` or they can be downloaded
-from https://github.com/digitaltrails/vdu_controls/tree/master/sample-scripts.  They
-may require customising for your own webcam and lighting conditions.  The examples
-include the beta-level Qt-GUI ``vlux_meter.py`` which may optionally runs in the
-system-tray and which writes a lux feed to the FIFO `~/.cache/vlux_fifo`.
-See https://github.com/digitaltrails/vdu_controls/blob/master/Lux-metering.md
-for details.
+included in ``/usr/share/vdu_controls/sample-scripts/`` or they can also
+be downloaded from the following location:
 
-In creating an "lux meter" for used with vdu_controls, theres is no need to produce
-standard lux values.  It is sufficient to produce log10-like values from 1 to 10000
-that can be used to create a VDU profile that changes according to your own ambient
-conditions.  Metered values need not be continuous, a set of appropriate stepped
-values might serve just as well as a continuous measure. Potential step values might
-include typical lux values, for example:
+    https://github.com/digitaltrails/vdu_controls/tree/master/sample-scripts.
 
-    Lighting conditions and lux values::
+The scripts may require customising for your own webcam and lighting conditions.
 
-        sunlight       100000
-        daylight        10000
-        overcast         1000
-        sunrise/sunset    400
-        dark-overcast     100
-        living-room        50
-        night               5
+The examples include ``vlux_meter.py``, a beta-release Qt-GUI python script
+that samples from a webcam and writes to a FIFO (`$HOME/.cache/vlux_fifo`).
+The script optionally runs in the system-tray.  It includes controls for mapping
+image-brightness to lux mappings, and for defining a crop from which to sample
+brightness values.
 
-Due to VDU hardware and DDC protocol limitations, gradual/stepping changes in
-brightness are quite likely to noticeable and potentially annoying.
-The auto-brightness  adjustment feature includes several measures to dampen
-minimise the amount of stepping:
+Lux Metering and brightness transitions
+---------------------------------------
 
-    * Lux/Brightness Profiles define brightness-steps so that
+Due to VDU hardware and DDC protocol limitations, gradual transitions from
+one brightness level to another are quite likely to noticeable and potentially
+annoying.  The auto-brightness adjustment feature includes several measures to
+reduce the amount of stepping when transitioning to a final value:
+
+    * Lux/Brightness Profiles may define brightness-steps so that
       brightness levels remain constant over set ranges of lux values.
     * Adjustments are only made at intervals of one or more minutes.
     * Large adjustments are made with larger step sizes to shorten the transition period.
     * The adjustment task passes lux values through a smoothing low-pass filter.
-
-If light-levels are changing frequently and extremely, for example, as the sun passes
-behind a succession of clouds, the main panel, context-menu, and light-metering dialog
-each contain Manual/Auto controls for disabling/enabling lux metering.  Additionally,
-you might tune the lux/brightness profile to eliminate the issue.  Achieving an
-acceptable profile will require some experimentation.
-
-The Light Meter dialog includes an option to enable interpolation of brightness values
-with each Profile step.  Enabling this option doesn't change the frequency of
-lux-measurements, but during periods where ambient light levels are changing,
-the option may generate more adjustments.
-
-Light metering settings and profiles are stored in::
-
-    $HOME/.config/vdu_controls/AutoLux.conf
-
-A typical example follows::
-
-    [lux-meter]
-    automatic-brightness = yes
-    lux-device = /dev/ttyUSB0
-    interval-minutes = 2
-
-    [lux-profile]
-    hp_zr24w_cnt008 = [(1, 90), (29, 90), (926, 100), (8414, 100), (100000, 100)]
-    lg_hdr_4k_8 = [(1, 13), (60, 25), (100, 50), (299, 70), (1000, 90), (10000, 100), (100000, 100)]
-
-    [lux-presets]
-    lux-preset-points = [(0, 'Night'), (60, 'Brighter-Night'), (250, 'Cloudy'), (1000, 'Sunny')]
+    * The main-panel, context-menu, and light-metering dialog each contain Manual/Auto
+      controls that can be used to temporarily disabling lux metering.
 
 Light/Lux Metering and Presets
 -------------------------------
