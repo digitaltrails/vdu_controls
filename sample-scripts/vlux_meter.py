@@ -214,7 +214,7 @@ DEFAULT_SETTINGS = {
         'Night': brightness_lux_str(0, 5),
     },
     'global': {
-        'system_tray_enabled': 'no',
+        'system_tray_enabled': 'yes',
         'fifo_path': '~/.cache/vlux_fifo',
         'display_frequency_millis': 1000,
         'dispatch_frequency_seconds': 60,

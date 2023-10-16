@@ -429,7 +429,11 @@ downloaded from
 https://github.com/digitaltrails/vdu_controls/tree/master/sample-scripts.
 They may require customising for your own webcam and lighting
 conditions. The examples include the beta-level Qt-GUI
-<code>vlux_meter</code> which runs out of the system tray.</p>
+<code>vlux_meter.py</code> which may optionally runs in the system-tray
+and which writes a lux feed to the FIFO <code>~/.cache/vlux_fifo</code>.
+See
+https://github.com/digitaltrails/vdu_controls/blob/master/Lux-metering.md
+for details.</p>
 <p>In creating an “lux meter” for used with vdu_controls, theres is no
 need to produce standard lux values. It is sufficient to produce
 log10-like values from 1 to 10000 that can be used to create a VDU
