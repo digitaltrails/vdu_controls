@@ -100,23 +100,22 @@ That makes three options for "installation":
     % python3 vdu_controls.py --install
    ```
       Depending on which desktop you're running menu changes may require logout before they become visible.
-3. A system-wide installation using a distribution's rpm package:
-   ```
-   sudo rpm --install vdu_controls-1.5.0-17.1.noarch.rpm
-   ```
-   The rpm will install the following files:
+3. A system-wide installation using a distribution's packaging system which will install all of:
+
    ```
    /usr/bin/vdu_controls
    /usr/share/applications/vdu_controls.desktop
-   /usr/share/licenses/vdu_controls
    /usr/share/licenses/vdu_controls/LICENSE.md
+   /usr/share/vdu_controls/icons/*
+   /usr/share/vdu_controls/sample-scripts/*
+   /usr/share/vdu_controls/translations/*
    /usr/share/man/man1/vdu_controls.1.gz
    ```
 
 Please note the first two options only install ``vdu-controls`` for the current user.  The script and desktop-file 
 installed for a single user could be modified and copied into /usr or /usr/local hierarchies should you 
 wish to do so.  If using the first two options, you might want to follow up by manually downloading
-some of the [starter set of icons](icons) for use when creating Presets.
+some of the other items such as the [starter set of icons](icons) for use when creating Presets.
 
 Executing the program
 ---------------------
@@ -146,10 +145,10 @@ Both brief help and detailed help can also be accessed via the command line:
 % python3 vdu_controls.py --help
 % python3 vdu_controls.py --detailed-help
 % python3 vdu_controls.py --detailed-help | pandoc --from markdown --to html > vdu_controls_help.html
-# or if installed in $HOME/bin
+# or if installed as an executable:
 % vdu_controls --help
 % vdu_controls --detailed-help
-% vdu_controls --detailed-help --detailed-help | pandoc --from markdown --to html > vdu_controls_help.html
+% vdu_controls --detailed-help | pandoc --from markdown --to html > vdu_controls_help.html
 ```
 
 Whether run from the desktop application-menu or run from the command line, ``vdu-controls`` behaviour can be altered

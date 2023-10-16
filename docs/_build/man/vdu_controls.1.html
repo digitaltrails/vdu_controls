@@ -1,8 +1,8 @@
 <h1 id="vdu_controls---a-ddc-control-panel-for-monitors">vdu_controls -
 a DDC control panel for monitors</h1>
-<p>A control panel for external monitors (<em>Visual Display
-Units</em>).</p>
-<h1 id="usage">Usage:</h1>
+<p>A control panel for DisplayPort, DVI, HDMI, or USB connected VDUs
+(<em>Visual Display Units</em>).</p>
+<h1 id="synopsis">Synopsis:</h1>
 <pre><code>    vdu_controls
                  [--help|-h] [--about] [--detailed-help]
                  [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
@@ -61,74 +61,45 @@ equivalent settings.</p>
   --install             installs the vdu_controls in the current user&#39;s path and desktop application menu.
   --uninstall           uninstalls the vdu_controls application menu file and script for the current user.</code></pre>
 <h1 id="description">Description</h1>
-<p><code>vdu_controls</code> is a virtual control panel for externally
-connected VDUs. The application detects DVI, DP, HDMI, or USB connected
-VDUs. It provides controls for settings such as brightness and
-contrast.</p>
-<p>The application interacts with VDUs via the VESA <em>Display Data
-Channel</em> (<em>DDC</em>) <em>Virtual Control Panel</em>
-(<em>VCP</em>) commands set. DDC VCP interactions are mediated by the
-<code>ddcutil</code> command line utility. <code>Ddcutil</code> provides
-a robust interface that is tolerant of the vagaries of the many OEM DDC
+<p><code>vdu_controls</code> is a control-panel for DisplayPort, DVI,
+HDMI, or USB connected VDUs. It provides controls for settings such as
+brightness and contrast. It interacts with VDUs by using the
+<code>ddcutil</code> command line utility to issue standard VESA
+<em>Display Data Channel</em> (<em>DDC</em>) <em>Virtual Control
+Panel</em> (<em>VCP</em>) commands. <code>Ddcutil</code> provides a
+robust interface that is tolerant of the vagaries of the many OEM DDC
 implementations.</p>
 <p>By default, <code>vdu_controls</code> offers a subset of controls
 including brightness, contrast and audio controls. Additional controls
 can be enabled via the <code>Settings</code> dialog.</p>
-<p><code>vdu_controls</code> may optionally run as an entry in the
-system tray of KDE, Deepin, GNOME, and Xfce (and possibly others). The
-UI attempts to adapt to the quirks of the different tray
-implementations. Related to the <code>system-tray</code> option is
-<code>hide-on-focus-out</code> (hide on focus out is disabled while any
-dialogs, Settings, Greyscale, or others, are visible).</p>
+<p>The UI’s look-and-feel adjusts itself for dark and light desktop
+themes. The application may optionally run in the system tray of KDE,
+Deepin, GNOME, and Xfce (and possibly others), adjusting itself for the
+quirks of the different tray implementations.</p>
 <p>Named <code>Preset</code> configurations can be saved for later
-recall. For example, a user could create presets for night, day,
-photography, movies, and so forth. Presets may be automatically
-triggered according to solar elevation, and can be further constrained
-by local weather conditions. Presets can be set to transition
-immediately or gradually. Presets may also be activated by UNIX
-signals.</p>
-<p>The UI’s look-and-feel dynamically adjusts to the desktop theme.
-Colors and icons automatically reconfigure without the need for a
-restart when changing between light and dark themes.</p>
-<p>From any application window, use <code>F1</code> to access help, and
-<code>F10</code> to access the context-menu. The context menu is also
-available via the right-mouse button in the main-window, the
-hamburger-menu item on the bottom right of the main window, and the
-right-mouse button on the system-tray icon. The context-menu provides
+recall. For example, presets may be created for night, day, photography,
+movies, and so forth. Presets can be automatically triggered according
+to solar elevation, and can be further constrained by local weather
+conditions. Presets can be set to transition immediately or gradually.
+Presets can also be activated by UNIX signals.</p>
+<p>From any UI window, <code>F1</code> accesses help, and
+<code>F10</code> accesses the main-menu. The main-menu is also available
+via the main-window’s hamburger-menu, and via the right-mouse button in
+either the main-window or the system-tray icon. The main-menu has
 <code>ALT-key</code> shortcuts for all menu items (subject to sufficient
-letters being available to support all user defined Presets).</p>
-<p>Builtin laptop displays normally don’t implement DDC and those
-displays are not supported, but a laptop’s externally connected VDUs are
-likely to be controllable.</p>
-<p>Some controls change the number of connected devices (for example,
-some VDUs support a power-off command). If such controls are used,
-<code>vdu_controls</code> will detect the change and will reconfigure
-the controls for the new situation (for example, DDC VDU 2 may now be DD
-VDU 1). If you change settings independently of
-<code>vdu_controls</code>, for example, by using a VDU’s physical
-controls, the <code>vdu_controls</code> UI includes a refresh button to
-force it to assess the new configuration.</p>
-<p>Note that some VDU settings may disable or enable other settings. For
-example, setting a monitor to a specific picture-profile might result in
-the contrast-control being disabled, but <code>vdu_controls</code> will
-not be aware of the restriction resulting in its contrast-control erring
-or appearing to do nothing.</p>
+letters being available to distinguish all user defined presets).</p>
 <p>For further information, including screenshots, see
 https://github.com/digitaltrails/vdu_controls .</p>
 <h1 id="configuration">Configuration</h1>
 <p>Configuration changes can be made via the <code>Settings</code>
-dialog or via command line parameters (or by editing the config-files
-directly). The command line provides an immediate way to temporarily
-alter the behaviour of the application. The Settings-Dialog and config
-files provide a more comprehensive and permanent solution for altering
-the application’s configuration.</p>
+dialog, the command line, or by manually editing the config-files.</p>
 <h2 id="settings-menu-and-config-files">Settings Menu and Config
 files</h2>
-<p>The right-mouse - context-menu - <code>Settings</code> accesses the
-Settings dialog which can be used to customise the application by
-writing to a set of config files. The <code>Settings</code> dialog
-features a tab for editing a config file specific to each VDU. The
-config files are named according to the following scheme:</p>
+<p>The right-mouse - main-menu - <code>Settings</code> accesses the
+Settings dialog which can be used to customise the application. The
+<code>Settings</code> dialog features a tab for editing a config file
+specific to each VDU. The config files are named according to the
+following scheme:</p>
 <ul>
 <li>Application wide default config:
 <code>$HOME/.config/vdu_controls/vdu_controls.conf</code></li>
@@ -138,23 +109,22 @@ config files are named according to the following scheme:</p>
 <code>$HOME/.config/vdu_controls/&lt;model&gt;.conf</code></li>
 </ul>
 <p>The application wide default file can be used to alter application
-settings and the set of default VDU controls.</p>
+settings, the set of default VDU controls, and the default additional
+parameters to pass to <code>ddcutil</code>.</p>
 <p>The VDU-specific config files can be used to:</p>
 <ul>
 <li>Correct manufacturer built-in metadata.</li>
 <li>Customise which controls are to be provided for each VDU.</li>
-<li>Set an optimal <code>ddcutil</code> DDC communication
-speed-multiplier for each VDU.</li>
+<li>Set optimal <code>ddcutil</code> DDC parameters for each VDU.</li>
 </ul>
-<p>It should be noted that config files can only be used to alter
-definitions of VCP codes already supported by <code>ddcutil</code>. If a
-VCP code is listed as a <em>manufacturer specific feature</em> it is not
-supported. Manufacturer specific features should not be experimented
-with, some may have destructive or irreversible consequences that may
-brick the hardware. It is possible to enable any codes by creating a
-<code>ddcutil</code> user definition (<code>--udef</code>) file, BUT
-THIS SHOULD ONLY BE USED WITH EXTREME CAUTION AND CANNOT BE
-RECOMMENDED.</p>
+<p>Config files can only be used to alter definitions of VCP codes
+already supported by <code>ddcutil</code>. If a VCP code is listed as a
+<em>manufacturer specific feature</em> it is not supported. Manufacturer
+specific features should not be experimented with, some may have
+destructive or irreversible consequences that may brick the hardware. It
+is possible to enable any codes by creating a <code>ddcutil</code> user
+definition (<code>--udef</code>) file, BUT THIS SHOULD ONLY BE USED WITH
+EXTREME CAUTION AND CANNOT BE RECOMMENDED.</p>
 <p>The config files are in INI-format divided into a number of sections
 as outlined below::</p>
 <pre><code>[vdu-controls-globals]
@@ -198,19 +168,18 @@ created by the command line option::</p>
 <p>which will create initial templates based on the currently connected
 VDUs.</p>
 <p>The config files are completely optional, they need not be used if
-the existing command line options are found to be adequate to the task
-at hand.</p>
+the default options are found to be adequate.</p>
 <h2 id="adding-value-restrictions-to-the-config-file">Adding value
 restrictions to the config file</h2>
-<p>If a VDU’s DDC reported feature minimum and maximum values are
-incorrect, the vdu_controls user interface can be restricted to the
-correct range. For example, say a VDU reports it supports a brightness
-range of 0 to 100, but in fact only practically supports 20 to 90. In
-such cases, this can be corrected by bringing up the vdu_controls
-settings and editing that VDU’s <strong>capabilities
+<p>In some cases, a VDU’s DDC reported minimums and maximums may be
+incorrect or overstated. Within vdu_controls, this can be corrected by
+overriding the DDC reported range. For example, perhaps a VDU reports it
+supports a brightness range of 0 to 100, but in fact only practically
+supports 20 to 90. This can be corrected by bringing up the VDU’s
+settings tab and editing the text in the <strong>capabilities
 override</strong>:</p>
 <ol type="1">
-<li>locate the feature, in this example the brightness,</li>
+<li>locate the feature, in this example, the brightness,</li>
 <li>add a <strong>Values:</strong> <strong>min..max</strong>
 specification to line the following the feature definition,</li>
 <li>save the changes.</li>
@@ -230,19 +199,20 @@ lighting conditions or different applications, for example:
 settings match a preset, the preset’s name will show in the window-title
 and tray tooltip, the preset’s icon will overlay the normal tray
 icon.</p>
-<p>The <code>Presets</code> item in right-mouse
-<code>context-menu</code> will bring up a <code>Presets</code> dialog
-for managing and applying presets. The <code>context-menu</code> also
-includes a shortcut for applying each existing presets.</p>
+<p>The <code>Presets</code> item in <code>main-menu</code> will bring up
+a <code>Presets</code> dialog for managing and applying presets. The
+<code>main-menu</code> also includes a shortcut for applying each
+existing presets.</p>
 <p>Any small SVG or PNG can be assigned as a preset’s icon. Monochrome
 SVG icons that conform to the Plasma color conventions will be
 automatically inverted if the desktop them is changed from dark to
 light. If a preset lacks an icon, it will be assigned one created from
-the letters of its name (the first letter of the first and last
-words).</p>
+the letters of its name (the first letter of the first and last words).
+A starter set of icons is included in
+<code>/usr/share/vdu_controls/icons/</code>.</p>
 <p>Presets may be set to transition immediately (the default); gradually
 on schedule (solar elevation); or gradually always (when triggered by
-schedule, context menu, or UNIX signal). The speed of transition is
+schedule, main-menu, or UNIX signal). The speed of transition is
 determined by how quickly each VDU can respond to adjustment (which is
 generally quite slowly). During a transition, the transition will be
 abandoned if the controls involved in the transition are manually
@@ -270,8 +240,8 @@ the brightness, but not the contrast or audio-volume. Keeping the
 included controls to a minimum speeds up the transition and reduces the
 chances of the VDU failing to keep up with the associated stream of DDC
 commands.</p>
-<p>When using the GUI to create or edit a Preset, activation of
-scheduled Presets and adjustments due to light-metering are blocked
+<p>When using the GUI to create or edit a preset, activation of
+scheduled presets and adjustments due to light-metering are blocked
 until editing is complete.</p>
 <h2 id="presets---solar-elevation-triggers">Presets - solar elevation
 triggers</h2>
@@ -308,12 +278,12 @@ case changes to controls slider controls such as brightness and contrast
 will be stepped by one until the final values are reached. Any
 non-continuous values will be set after all continuous values have
 reached their final values.</p>
-<p>The Preset Dialog includes controls to set a Preset’s transition type
+<p>The Preset Dialog includes controls to set a preset’s transition type
 to a combination these values:</p>
 <pre><code>* ``None`` transition, values change immediately;
 * ``On schedule`` according to a solar elevation trigger;
 * ``On signal`` on the appropriate UNIX signal;
-* ``On menu`` when selected in the context-menu;</code></pre>
+* ``On menu`` when selected in the main-menu;</code></pre>
 <p>In the Presets Dialog, the preset activation and edit buttons will
 activate any preset immediately regardless of the transition
 settings.</p>
@@ -363,14 +333,11 @@ try to guess you location from your external IP address. The guess may
 vary due to the state of the <code>wttr.in</code> server. It’s best to
 fill out a place-name to ensure stable results.</p>
 <h2 id="presets---remote-control">Presets - remote control</h2>
-<p>UNIX/Linux signals may be used to instruct a running
-<code>vdu_controls</code> to invoke a preset. This feature is provided
-so that scripts, cron or systemd-timer might be used to change the
-preset based on some measured condition appropriate for local
-circumstances.</p>
-<p>Signals in the range 40 to 55 correspond to first to last presets (if
-any are defined). Additionally, SIGHUP can be used to initiate “Refresh
-settings from monitors”. For example:</p>
+<p>Scripts may use UNIX/Linux signals may be used to instruct a running
+<code>vdu_controls</code> to invoke a preset or to initiate “Refresh
+settings from monitors”. Signals in the range 40 to 55 correspond to
+first to last presets (if any are defined). Additionally, SIGHUP can be
+used to initiate “Refresh settings from monitors”. For example:</p>
 <pre><code>Identify the running vdu_controls (assuming it is installed as /usr/bin/vdu_controls)::
 
     ps axwww | grep &#39;[/]usr/bin/vdu_controls&#39;
@@ -380,7 +347,7 @@ Combine this with kill to trigger a preset change::
     kill -40 $(ps axwww | grep &#39;[/]usr/bin/vdu_controls&#39; | awk &#39;{print $1}&#39;)
     kill -41 $(ps axwww | grep &#39;[/]usr/bin/vdu_controls&#39; | awk &#39;{print $1}&#39;)
 
-Or if some other process has changed a monitors settings, trigger vdu_controls to update it&#39;s UI::
+Or if some other process has changed a VDUs settings, trigger vdu_controls to update it&#39;s UI::
 
     kill -HUP $(ps axwww | grep &#39;[/]usr/bin/vdu_controls&#39; | awk &#39;{print $1}&#39;)</code></pre>
 <p>Any other signals will be handled normally (in many cases they will
@@ -437,11 +404,11 @@ downloaded from the following location:</p>
 <p>The scripts may require customising for your own webcam and lighting
 conditions.</p>
 <p>The examples include <code>vlux_meter.py</code>, a beta-release
-Qt-GUI python script that samples from a webcam and writes to a FIFO
-(<code>$HOME/.cache/vlux_fifo</code>). The script optionally runs in the
-system-tray. It includes controls for mapping image-brightness to lux
-mappings, and for defining a crop from which to sample brightness
-values.</p>
+Qt-GUI python-script that meters from a webcam and writes to a FIFO
+(<code>$HOME/.cache/vlux_fifo</code>). Controls are included for mapping
+image-brightness to lux mappings, and for defining a crop from which to
+sample brightness values. The script optionally runs in the
+system-tray.</p>
 <h2 id="lux-metering-and-brightness-transitions">Lux Metering and
 brightness transitions</h2>
 <p>Due to VDU hardware and DDC protocol limitations, gradual transitions
@@ -454,34 +421,34 @@ a final value:</p>
 * Adjustments are only made at intervals of one or more minutes.
 * Large adjustments are made with larger step sizes to shorten the transition period.
 * The adjustment task passes lux values through a smoothing low-pass filter.
-* The main-panel, context-menu, and light-metering dialog each contain Manual/Auto
+* The main-panel, main-menu, and light-metering dialog each contain Manual/Auto
   controls that can be used to temporarily disabling lux metering.</code></pre>
 <h2 id="lightlux-metering-and-presets">Light/Lux Metering and
 Presets</h2>
 <p>The Light-Meter Dialog includes the ability to set a Preset to
 trigger at a lux value. This feature is accessed by hovering under the
 bottom axis of the Lux Profile Chart.</p>
-<p>When a Preset is tied to a lux value, the Preset’s VDU brightness
+<p>When a preset is tied to a lux value, the preset’s VDU brightness
 values become fixed points on the Lux Profile Chart. When the specified
 metered lux value is achieved, the metered stepping process will restore
-the Preset’s brightness values and then follow that by triggering the
-Preset’s full restoration. This ordering of events reduces the
-likelihood of metered-stepping, and Preset-restoration from
+the preset’s brightness values and then follow that by triggering the
+preset’s full restoration. This ordering of events reduces the
+likelihood of metered-stepping, and preset-restoration from
 clashing.</p>
-<p>A Preset that does not include a VDU’s brightness may be attached to
+<p>A preset that does not include a VDU’s brightness may be attached to
 a lux point to restore one or more non-brightness controls. For example,
-on reaching a particular lux level, an attached Preset might restore a
+on reaching a particular lux level, an attached preset might restore a
 contrast setting.</p>
-<p>If a Preset is attached to a lux value and then detached, the
-Preset’s profile points will be converted to normal (editable) profile
+<p>If a preset is attached to a lux value and then detached, the
+preset’s profile points will be converted to normal (editable) profile
 points. Attach/detach is a quick way to copy VDU brightness values from
-Presets if you don’t want to permanently attach them.</p>
-<p>If you utilise light-metered auto-brightness and Preset-scheduling
+presets if you don’t want to permanently attach them.</p>
+<p>If you utilise light-metered auto-brightness and preset-scheduling
 together, their combined effects may conflict. For example, a scheduled
-Preset may set a reduced brightness, but soon after, light-metering
+preset may set a reduced brightness, but soon after, light-metering
 might increase it. If you wish to use the two together, design your
 lux/brightness profile steps to match the brightness levels of specific
-Presets, for example, a full-sun Preset and the matching step in a
+presets, for example, a full-sun preset and the matching step in a
 lux/brightness Profile might both be assigned the same brightness
 level.</p>
 <p>The Preset Diolog includes an option to enable auto-brightness
@@ -489,7 +456,7 @@ interpolation. When enabled, this option will calculate values between
 steps in the profiles. Interpolation won’t change the auto-brightness
 value if the change would be less than 10%. During interpolation, if the
 smoothed metered lux value is found to be in proximity to any
-profile-attached Preset, the Preset will be preferred over
+profile-attached preset, the preset will be preferred over
 interpolation.</p>
 <h2 id="lux-metering-internal-parameters">Lux Metering Internal
 Parameters</h2>
@@ -506,7 +473,7 @@ metering and auto-adjustment heuristics::</p>
   smoother-alpha=0.5
   # If an interpolated value yields a change in brightness, how big should the change
   # be to trigger an actual VDU change in brightness? Also determines how close
-  # an interpolated value needs to be to a an attached Preset&#39;s brightness in order
+  # an interpolated value needs to be to a an attached preset&#39;s brightness in order
   # to prefer triggering the preset over applying the interpolated value.
   interpolation-sensitivity-percent=10</code></pre>
 <h2
@@ -535,15 +502,36 @@ section).</p>
 id="improving-response-time-and-reliability-connections-and-controls">Improving
 Response Time and Reliability: Connections and Controls</h2>
 <p><code>DDC/I2C</code> is not the speediest or most reliable form of
-communication. VDUs may vary in their responsiveness and compliance.
-GPUs, GPU drivers, and types of connection may affect the reliability.
-If you have the choice, <code>DisplayPort</code> can be more reliable
-than <code>DVI</code> or <code>HDMI</code>.</p>
+communication. VDUs also vary in their responsiveness and compliance.
+GPUs, GPU drivers, and types of connection may affect the
+reliability.</p>
+<p>If you have the choice, a <code>DisplayPort</code> to
+<code>DisplayPort</code> connection may be more reliable than
+<code>DVI</code> or <code>HDMI</code>.</p>
 <p>Reducing the number of enabled controls can speed up initialisation,
-reduce the time taken when the refresh button is pressed, and reduce the
-time taken to restore presets.</p>
+decrease the refresh time, and reduce the time taken to restore
+presets.</p>
 <p>There’s plenty of useful info for getting the best out of
 <code>ddcutil</code> at https://www.ddcutil.com/.</p>
+<h1 id="limitations">Limitations</h1>
+<p>Some controls change the number of connected devices (for example,
+some VDUs support a power-off command). If such controls are used,
+<code>vdu_controls</code> will detect the change and will reconfigure
+the controls for the new situation (for example, DDC VDU 2 may now be
+DDC VDU 1). If you change settings independently of
+<code>vdu_controls</code>, for example, by using a VDU’s physical
+controls, the <code>vdu_controls</code> UI includes a refresh button to
+force it to assess the new configuration.</p>
+<p>Some VDU settings may disable or enable other settings in the VDU.
+For example, setting a VDU to a specific picture-profile might result in
+the contrast-control being disabled, but <code>vdu_controls</code> will
+not be aware of the restriction resulting in its contrast-control erring
+or appearing to do nothing.</p>
+<p>Builtin laptop displays normally don’t implement DDC and those
+displays are not supported, but a laptop’s externally connected VDUs are
+likely to be controllable. (For some laptops it might be possible to
+write a custom script-wrapper for <code>ddcutil</code> which emulates
+DDC for the laptop display.)</p>
 <h1 id="examples">Examples</h1>
 <pre><code>vdu_controls
     All default controls.
@@ -581,31 +569,27 @@ Detailed ddcutil info at https://www.ddcutil.com/</p>
 <code>pyserial</code> module is a runtime requirement.</p>
 <h1 id="environment">Environment</h1>
 <pre><code>LC_ALL, LANG, LANGUAGE
-    These  variables specify the locale for language translations and units
-    of distance. LC_ALL is used by python, LANGUAGE is used by Qt.
-    Normally, they should all have the same value, for example: ``Da_DK``.
-    For these to have any effect on language, ``Settings`` ``Translations Enabled``
-    must also be enabled.
+    These  variables specify the locale for language translations and units of distance.
+    LC_ALL is used by python, LANGUAGE is used by Qt. Normally, they should all have the same
+    value, for example: ``Da_DK``. For these to have any effect on language, ``Settings``
+    ``Translations Enabled`` must also be enabled.
 
 VDU_CONTROLS_IPINFO_URL
-    This variable overrides the default ip-address to location service
-    URL (``https://ipinfo.io/json``).
+    This variable overrides the default ip-address to location service URL (``https://ipinfo.io/json``).
 
 VDU_CONTROLS_WTTR_URL
     This variable overrides default weather service URL (``https://wttr.in``).
 
 VDU_CONTROLS_WEATHER_KM
-    This variable overrides the default maximum permissible spherical
-    distance (in kilometres) between the ``Settings`` ``Location``
-    and ``wttr.in`` reported location (``200 km``, 124 miles).
+    This variable overrides the default maximum permissible spherical distance (in kilometres)
+    between the ``Settings`` ``Location`` and ``wttr.in`` reported location (``200 km``, 124 miles).
 
 VDU_CONTROLS_DDCUTIL_ARGS
-    This variable adds to the list of arguments passed to each exec of
-    ddcutil.
+    This variable adds to the list of arguments passed to each exec of ddcutil.
 
 VDU_CONTROLS_DEVELOPER
-    This variable changes some search paths to be more convenient in
-    a development scenario. (``no`` or yes)</code></pre>
+    This variable changes some search paths to be more convenient in a development
+    scenario. (``no`` or yes)</code></pre>
 <h1 id="reporting-bugs">Reporting Bugs</h1>
 <p>https://github.com/digitaltrails/vdu_controls/issues</p>
 <h1 id="gnu-license">GNU License</h1>
