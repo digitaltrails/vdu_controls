@@ -14,8 +14,7 @@ commands set.  DDC VCP interactions are mediated by the ``ddcutil`` command line
 a robust interface that is tolerant of the vagaries of the many OEM DDC implementations.
 
 By default ``vdu_controls`` offers a subset of controls including brightness, contrast and audio controls.  Additional
-controls can be enabled via the ``Settings`` dialog.  ``vdu_controls`` may optionally run as an entry in the
-system tray.
+controls can be enabled via the ``Settings`` dialog.  
 
 ``vdu_controls`` may optionally run as an entry in the system tray of KDE, Deepin, GNOME, and Xfce (and possibly
 others). The UI attempts to adapt to the quirks of the different tray implementations.
