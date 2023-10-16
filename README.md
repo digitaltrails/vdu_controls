@@ -50,10 +50,10 @@ check that the dependencies described below are in place.  Alternatively, should
 for all users, RPMs are available for **OpenSUSE**, **Fedora**, and there is an  **archlinux** AUR package
 which also works in **Manjaro**.  See the *Install* section below. 
 
-> Development is **trunk-based**.  It is my intent that the trunk should 
+> Development is **trunk-based**.  It is my intention that the trunk should 
 > always be usable as a daily-driver.  That being said, a download of trunk is likely to 
 > be less stable than downloading one of the formal [releases](https://github.com/digitaltrails/vdu_controls/releases) 
-> or installing one of the packages that available in various distros.
+> or installing one of the packages that are available in various distros.
 
 Dependencies
 ------------
