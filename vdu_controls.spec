@@ -97,9 +97,11 @@ ln -s -f %{_datadir}/icons %{_datadir}/vdu_controls/icons/system-icons
 %{_datadir}/vdu_controls/translations/da_DK.ts
 %{_datadir}/vdu_controls/translations/fr_FR.ts
 %{_datadir}/vdu_controls/translations/de_DE.ts
+%{_datadir}/vdu_controls/translations/cs_CZ.ts
 %{_datadir}/vdu_controls/translations/about_da_DK.txt
 %{_datadir}/vdu_controls/translations/about_fr_FR.txt
 %{_datadir}/vdu_controls/translations/about_de_DE.txt
+%{_datadir}/vdu_controls/translations/about_cs_CZ.txt
 %{_datadir}/vdu_controls/sample-scripts/lux-from-webcam.bash
 %{_datadir}/vdu_controls/sample-scripts/lux-from-webcam.py
 %{_datadir}/vdu_controls/sample-scripts/vlux_meter.py

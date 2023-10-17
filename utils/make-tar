@@ -36,9 +36,11 @@ vdu_controls-$version/vdu_controls.png
 vdu_controls-$version/translations/da_DK.ts
 vdu_controls-$version/translations/fr_FR.ts
 vdu_controls-$version/translations/de_DE.ts
+vdu_controls-$version/translations/cs_CZ.ts
 vdu_controls-$version/translations/about_da_DK.txt
 vdu_controls-$version/translations/about_fr_FR.txt
 vdu_controls-$version/translations/about_de_DE.txt
+vdu_controls-$version/about_cs_CZ.txt
 vdu_controls-$version/sample-scripts/lux-from-webcam.bash
 vdu_controls-$version/sample-scripts/lux-from-webcam.py
 vdu_controls-$version/sample-scripts/vlux_meter.py
