@@ -1084,10 +1084,16 @@ def is_dark_theme() -> bool:
 
 
 adjust_for_dpi = True  # Depending on whether the user is scaling or not, they may want High DPI adjustments.
+high_dpi = None
 
 
 def is_high_dpi() -> bool:
-    return adjust_for_dpi and QApplication.primaryScreen().physicalDotsPerInch() >= 160
+    global high_dpi
+    if adjust_for_dpi and high_dpi is None:
+        font_height = QFontMetrics(QLabel("ABC").font()).height()
+        high_dpi = font_height > 30
+        log_info(f"HighDPI: {high_dpi} (standard font height={font_height})")
+    return adjust_for_dpi and high_dpi
 
 
 def get_splash_image() -> QPixmap:
@@ -1458,8 +1464,7 @@ class DialogSingletonMixin:
         """If the dialog exists(), call this to make it visible by raising it."""
         class_name = cls.__name__
         log_debug(f'SingletonDialog show existing {class_name}') if log_debug_enabled else None
-        instance = DialogSingletonMixin._dialogs_map[class_name]
-        instance.make_visible()
+        DialogSingletonMixin._dialogs_map[class_name].make_visible()
 
     @classmethod
     def exists(cls: Type) -> bool:
@@ -1903,8 +1908,7 @@ class VduController(QObject):
     vcp_value_changed_qtsignal = pyqtSignal(str, str, str, VcpOrigin)
 
     def __init__(self, vdu_number: str, vdu_model_name: str, serial_number: str, manufacturer: str,
-                 default_config: VduControlsConfig, ddcutil: DdcUtil, vdu_exception_handler: Callable,
-                 option: int = 0) -> None:
+                 default_config: VduControlsConfig, ddcutil: DdcUtil, vdu_exception_handler: Callable, option: int = 0) -> None:
         super().__init__()
         self.vdu_stable_id = VduStableId(proper_name(vdu_model_name, serial_number))
         log_info(f"Initializing controls for {vdu_number=} {vdu_model_name=} {self.vdu_stable_id=}")
@@ -6934,7 +6938,7 @@ class VduAppWindow(QMainWindow):
         gnome_tray_behaviour = main_config.is_set(ConfOption.SYSTEM_TRAY_ENABLED) and 'gnome' in self.os_desktop
         global adjust_for_dpi
         adjust_for_dpi = self.main_config.is_set(ConfOption.ADJUST_FOR_DPI, fallback=True)
-        # QApplication.setAttribute(Qt.AA_DisableHighDpiScaling)
+        # QApplication.setAttribute(Qt.AA_DisableHighDpiScaling)  # not usefull?
         # QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
 
         global log_debug_enabled
