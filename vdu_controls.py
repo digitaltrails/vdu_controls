@@ -1084,17 +1084,16 @@ def is_dark_theme() -> bool:
 
 
 adjust_for_dpi = True  # Depending on whether the user is scaling or not, they may want High DPI adjustments.
-high_dpi = None
+standard_font_pixel_height: int | None = None
 
 
-def is_high_dpi() -> bool:
-    global high_dpi
-    if adjust_for_dpi and high_dpi is None:
-        font_height = QFontMetrics(QLabel("ABC").font()).height()
-        high_dpi = font_height > 30
-        log_info(f"HighDPI: {high_dpi} (standard font height={font_height})")
-    return adjust_for_dpi and high_dpi
-
+def standard_height(scaled: int|float = 1):
+    global standard_font_pixel_height
+    if standard_font_pixel_height is None:
+        standard_font_pixel_height = QFontMetrics(QLabel("ABC").font()).height()
+        standard_font_pixel_height += standard_font_pixel_height % 2
+        log_info(f"{standard_font_pixel_height=}")
+    return int(standard_font_pixel_height * scaled)
 
 def get_splash_image() -> QPixmap:
     """Get the splash pixmap from the installed png, failing that, the internal splash png."""
@@ -2577,7 +2576,7 @@ class VduControlSlider(VduControlBase):
                 and SUPPORTED_VCP_BY_CODE[vcp_capability.vcp_code].icon_source is not None):
             svg_icon = QSvgWidget()
             svg_icon.load(handle_theme(SUPPORTED_VCP_BY_CODE[vcp_capability.vcp_code].icon_source))
-            svg_icon.setFixedSize(52, 52) if is_high_dpi() else svg_icon.setFixedSize(40, 40)
+            svg_icon.setFixedSize(standard_height(scaled=1.6), standard_height(1.6))
             svg_icon.setToolTip(vcp_capability.translated_name())
             self.svg_icon = svg_icon
             layout.addWidget(svg_icon)
@@ -3107,8 +3106,7 @@ class VduPanelBottomToolBar(QToolBar):
         self.tool_buttons = tool_buttons
         for button in self.tool_buttons:
             self.addWidget(button)
-        if is_high_dpi():
-            self.setIconSize(QSize(32, 32))
+        self.setIconSize(QSize(standard_height(), standard_height()))
         self.progress_bar: QProgressBar | None = None
         self.status_area = QStatusBar()
         self.addWidget(self.status_area)
@@ -3679,8 +3677,7 @@ class PresetActivationButton(QPushButton):
     def __init__(self, preset: Preset) -> None:
         super().__init__()
         self.preset = preset
-        if is_high_dpi():
-            self.setIconSize(QSize(24, 24))
+        self.setIconSize(QSize(standard_height(), standard_height()))
         self.setIcon(preset.create_icon())
         self.setText(preset.get_title_name())
         self.setToolTip(tr("Restore {} (immediately)").format(preset.get_title_name()))
@@ -3698,8 +3695,7 @@ class PresetChooseIconButton(QPushButton):
         super().__init__()
         self.setIcon(si(self, PresetsDialog.NO_ICON_ICON_NUMBER))
         self.setToolTip(tr('Choose a preset icon.'))
-        if is_high_dpi():
-            self.setIconSize(QSize(32, 32))
+        self.setIconSize(QSize(standard_height(), standard_height()))
         self.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
         self.setAutoDefault(False)
         self.last_selected_icon_path: Path | None = None
@@ -6960,7 +6956,7 @@ class VduAppWindow(QMainWindow):
 
         splash_pixmap = get_splash_image()
         splash = QSplashScreen(
-            splash_pixmap.scaledToWidth(800 if is_high_dpi() else 600).scaledToHeight(400 if is_high_dpi() else 300),
+            splash_pixmap.scaledToWidth(standard_height(scaled=26)).scaledToHeight(standard_height(scaled=13)),
             Qt.WindowStaysOnTopHint) if main_config.is_set(ConfOption.SPLASH_SCREEN_ENABLED) else None
 
         if splash is not None:
