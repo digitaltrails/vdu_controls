@@ -229,7 +229,8 @@ Michael Hamilton
 Version History
 ---------------
 * 1.12.1
-  * Change High DPI detection to use standard font height as a more trustworthy test.
+  * Set icon and window dimensions relative to the user's desktop font height.
+  * Remove adjust-for-dpi in favour of the the above which automatically accounts for DPI.
 
 * 1.12.0
   * Added an F10_key context menu shortcut to all application windows (KDE accessibility standard).

@@ -59,8 +59,6 @@ Arguments supplied on the command line override config file equivalent settings.
                             show the splash screen.  ``--splash`` is the default.
       --smart-window|--no-smart-window
                             smart main window placement and geometry.  ``--smart-window`` is the default.
-      --adjust-for-dpi|--no-adjust-for-dpi
-                            adjust icon sizes according to display DPI.  ``--adjust-for-dpi`` is the default.
       --sleep-multiplier    set the default ddcutil sleep multiplier
                             protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 1.0)
       --ddcutil-extra-args  extra arguments to pass to ddcutil (enclosed in single quotes)
@@ -1083,17 +1081,22 @@ def is_dark_theme() -> bool:
     return dark_theme_found
 
 
-adjust_for_dpi = True  # Depending on whether the user is scaling or not, they may want High DPI adjustments.
-standard_font_pixel_height: int | None = None
+DEVELOPERS_NATIVE_FONT_HEIGHT = 32  # Value being used on my development desktop
+standard_font_pixel_height: int | None = None  # A metric for use in sizing various components.
 
 
-def standard_height(scaled: int|float = 1):
+def native_font_height(scaled: int | float = 1):  # In real hardware pixels
     global standard_font_pixel_height
     if standard_font_pixel_height is None:
         standard_font_pixel_height = QFontMetrics(QLabel("ABC").font()).height()
-        standard_font_pixel_height += standard_font_pixel_height % 2
-        log_info(f"{standard_font_pixel_height=}")
-    return int(standard_font_pixel_height * scaled)
+        standard_pixel_height = standard_font_pixel_height + standard_font_pixel_height % 2
+        log_info(f"{standard_font_pixel_height=} => {standard_pixel_height=}")
+    return round(standard_font_pixel_height * scaled)
+
+
+def native_pixels(developers_pixels: int):  # In real hardware pixels
+    return round((native_font_height() * developers_pixels) / DEVELOPERS_NATIVE_FONT_HEIGHT)
+
 
 def get_splash_image() -> QPixmap:
     """Get the splash pixmap from the installed png, failing that, the internal splash png."""
@@ -1556,8 +1559,6 @@ class ConfOption(Enum):
                                     tip=QT_TR_NOOP('popup warnings if a VDU lacks an enabled control'))
     SMART_WINDOW = conf_opt_def(name=QT_TR_NOOP('smart-window'), default="yes",
                                 tip=QT_TR_NOOP('smart main window placement and geometry'))
-    ADJUST_FOR_DPI = conf_opt_def(name=QT_TR_NOOP('adjust-for-dpi'), default="yes", restart=True,
-                                  tip=QT_TR_NOOP('adjust icon sizes according to display DPI'))
     DEBUG_ENABLED = conf_opt_def(name=QT_TR_NOOP('debug-enabled'), default="no", tip=QT_TR_NOOP('output extra debug information'))
     SYSLOG_ENABLED = conf_opt_def(name=QT_TR_NOOP('syslog-enabled'), default="no",
                                   tip=QT_TR_NOOP('divert diagnostic output to the syslog'))
@@ -2081,7 +2082,7 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
     def __init__(self, default_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig], change_callback) -> None:
         super().__init__()
         self.setWindowTitle(tr('Settings'))
-        self.setMinimumWidth(1024)
+        self.setMinimumWidth(native_pixels(1024))
         self.setLayout(QVBoxLayout())
         self.tabs = QTabWidget()
         self.layout().addWidget(self.tabs)
@@ -2466,7 +2467,7 @@ class SettingsEditorTextWidget(SettingsEditorLongTextWidget):
 
     def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
         super().__init__(section_editor, option, section, tooltip)
-        self.setMaximumHeight(100)
+        self.setMaximumHeight(native_font_height(scaled=3))
 
 
 def restart_application(reason: str) -> None:
@@ -2576,7 +2577,7 @@ class VduControlSlider(VduControlBase):
                 and SUPPORTED_VCP_BY_CODE[vcp_capability.vcp_code].icon_source is not None):
             svg_icon = QSvgWidget()
             svg_icon.load(handle_theme(SUPPORTED_VCP_BY_CODE[vcp_capability.vcp_code].icon_source))
-            svg_icon.setFixedSize(standard_height(scaled=1.6), standard_height(1.6))
+            svg_icon.setFixedSize(native_font_height(scaled=1.8), native_font_height(scaled=1.8))
             svg_icon.setToolTip(vcp_capability.translated_name())
             self.svg_icon = svg_icon
             layout.addWidget(svg_icon)
@@ -3106,7 +3107,7 @@ class VduPanelBottomToolBar(QToolBar):
         self.tool_buttons = tool_buttons
         for button in self.tool_buttons:
             self.addWidget(button)
-        self.setIconSize(QSize(standard_height(), standard_height()))
+        self.setIconSize(QSize(native_font_height(), native_font_height()))
         self.progress_bar: QProgressBar | None = None
         self.status_area = QStatusBar()
         self.addWidget(self.status_area)
@@ -3538,9 +3539,9 @@ class MessageBox(QMessageBox):
         result = super().event(event)
         if RESIZABLE_MESSAGEBOX_HACK:
             if event.type() == QEvent.MouseMove or event == QEvent.MouseButtonPress:
-                self.setMaximumSize(1200, 800)
+                self.setMaximumSize(native_pixels(1200), native_pixels(800))
                 if text_edit_field := self.findChild(QTextEdit):
-                    text_edit_field.setMaximumHeight(600)
+                    text_edit_field.setMaximumHeight(native_pixels(600))
         return result
 
 
@@ -3677,7 +3678,7 @@ class PresetActivationButton(QPushButton):
     def __init__(self, preset: Preset) -> None:
         super().__init__()
         self.preset = preset
-        self.setIconSize(QSize(standard_height(), standard_height()))
+        self.setIconSize(QSize(native_font_height(), native_font_height()))
         self.setIcon(preset.create_icon())
         self.setText(preset.get_title_name())
         self.setToolTip(tr("Restore {} (immediately)").format(preset.get_title_name()))
@@ -3695,7 +3696,7 @@ class PresetChooseIconButton(QPushButton):
         super().__init__()
         self.setIcon(si(self, PresetsDialog.NO_ICON_ICON_NUMBER))
         self.setToolTip(tr('Choose a preset icon.'))
-        self.setIconSize(QSize(standard_height(), standard_height()))
+        self.setIconSize(QSize(native_font_height(), native_font_height()))
         self.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
         self.setAutoDefault(False)
         self.last_selected_icon_path: Path | None = None
@@ -4414,9 +4415,9 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.main_controller = main_controller
         self.main_config = main_config
         self.content_controls_map: Dict[Tuple[str, str], QWidget] = {}
-        self.resize(1600, 850)
-        self.setMinimumWidth(1350)
-        self.setMinimumHeight(600)
+        self.resize(native_pixels(1600), native_pixels(950))
+        self.setMinimumWidth(native_pixels(1350))
+        self.setMinimumHeight(native_pixels(600))
         layout = QVBoxLayout()
         self.setLayout(layout)
 
@@ -4426,7 +4427,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         layout.addWidget(dialog_splitter, stretch=1)
 
         preset_list_panel = QGroupBox()
-        preset_list_panel.setMinimumWidth(750)
+        preset_list_panel.setMinimumWidth(native_pixels(750))
         preset_list_panel.setFlat(True)
         preset_list_layout = QVBoxLayout()
         preset_list_panel.setLayout(preset_list_layout)
@@ -4467,8 +4468,8 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
         self.editor_groupbox = QGroupBox()
         self.editor_groupbox.setFlat(True)
-        self.editor_groupbox.setMinimumHeight(768)
-        self.editor_groupbox.setMinimumWidth(550)
+        self.editor_groupbox.setMinimumHeight(native_pixels(768))
+        self.editor_groupbox.setMinimumWidth(native_pixels(550))
         self.editor_layout = QVBoxLayout()
         self.editor_title = QLabel(tr("New Preset:"))
         self.editor_title.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
@@ -4530,10 +4531,11 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.edit_save_button.setDisabled(True)
         self.edit_revert_button.setDisabled(True)
         self.indicate_active_preset(self.main_controller.which_preset_is_active())
+        self.editor_controls_widget.adjustSize()
         self.make_visible()
 
     def sizeHint(self) -> QSize:
-        return QSize(1200, 768)
+        return QSize(native_pixels(1200), native_pixels(768))
 
     def populate_presets_display_list(self) -> None:
         for i in range(self.preset_widgets_layout.count() - 1, -1, -1):  # Remove existing entries
@@ -4581,6 +4583,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
     def populate_editor_controls_widget(self):
         container = self.editor_controls_widget
+        container.setMinimumHeight(native_font_height(scaled=6))  # making this too big throws the parent layout out of wack
         widget = QWidget()
         layout = QVBoxLayout()
         widget.setLayout(layout)
@@ -6248,8 +6251,8 @@ class GreyScaleDialog(SubWinDialog):
         self.setModal(False)
         svg_widget = QSvgWidget()
         svg_widget.renderer().load(GREY_SCALE_SVG)
-        svg_widget.setMinimumWidth(600)
-        svg_widget.setMinimumHeight(400)
+        svg_widget.setMinimumWidth(native_pixels(600))
+        svg_widget.setMinimumHeight(native_pixels(400))
         svg_widget.setToolTip(tr(
             'Grey Scale Reference for VDU adjustment.\n\n'
             'Set contrast toward the maximum (for HDR monitors\n'
@@ -6309,7 +6312,7 @@ class HelpDialog(SubWinDialog, DialogSingletonMixin):
         layout = QVBoxLayout()
         markdown_view = QTextEdit()
         markdown_view.setReadOnly(True)
-        markdown_view.setViewportMargins(80, 80, 50, 30)
+        markdown_view.setViewportMargins(native_pixels(80), native_pixels(80), native_pixels(50), native_pixels(30))
         markdown_view.setMarkdown(__doc__)
         layout.addWidget(markdown_view)
         close_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), tr("Close"))
@@ -6319,7 +6322,7 @@ class HelpDialog(SubWinDialog, DialogSingletonMixin):
         self.make_visible()
 
     def sizeHint(self) -> QSize:
-        return QSize(1600, 1000)
+        return QSize(native_pixels(1600), native_pixels(1000))
 
 
 class PresetScheduleStatus(Enum):
@@ -6932,10 +6935,6 @@ class VduAppWindow(QMainWindow):
         # Gnome tray doesn't normally provide a way to bring up the main app.
         self.os_desktop = os.environ.get('XDG_CURRENT_DESKTOP', default='unknown').lower()
         gnome_tray_behaviour = main_config.is_set(ConfOption.SYSTEM_TRAY_ENABLED) and 'gnome' in self.os_desktop
-        global adjust_for_dpi
-        adjust_for_dpi = self.main_config.is_set(ConfOption.ADJUST_FOR_DPI, fallback=True)
-        # QApplication.setAttribute(Qt.AA_DisableHighDpiScaling)  # not usefull?
-        # QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
 
         global log_debug_enabled
         if log_debug_enabled:
@@ -6956,7 +6955,7 @@ class VduAppWindow(QMainWindow):
 
         splash_pixmap = get_splash_image()
         splash = QSplashScreen(
-            splash_pixmap.scaledToWidth(standard_height(scaled=26)).scaledToHeight(standard_height(scaled=13)),
+            splash_pixmap.scaledToWidth(native_font_height(scaled=26)).scaledToHeight(native_font_height(scaled=13)),
             Qt.WindowStaysOnTopHint) if main_config.is_set(ConfOption.SPLASH_SCREEN_ENABLED) else None
 
         if splash is not None:
