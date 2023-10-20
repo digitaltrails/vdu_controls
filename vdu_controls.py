@@ -1082,16 +1082,15 @@ def is_dark_theme() -> bool:
 
 
 DEVELOPERS_NATIVE_FONT_HEIGHT = 32  # Value being used on my development desktop
-standard_font_pixel_height: int | None = None  # A metric for use in sizing various components.
+native_font_height_pixels: int | None = None  # A metric for use in sizing various components.
 
 
 def native_font_height(scaled: int | float = 1):  # In real hardware pixels
-    global standard_font_pixel_height
-    if standard_font_pixel_height is None:
-        standard_font_pixel_height = QFontMetrics(QLabel("ABC").font()).height()
-        standard_pixel_height = standard_font_pixel_height + standard_font_pixel_height % 2
-        log_info(f"{standard_font_pixel_height=} => {standard_pixel_height=}")
-    return round(standard_font_pixel_height * scaled)
+    global native_font_height_pixels
+    if native_font_height_pixels is None:
+        native_font_height_pixels = QFontMetrics(QLabel("ABC").font()).height()
+        log_info(f"{native_font_height_pixels=}")
+    return round(native_font_height_pixels * scaled)
 
 
 def native_pixels(developers_pixels: int):  # In real hardware pixels
