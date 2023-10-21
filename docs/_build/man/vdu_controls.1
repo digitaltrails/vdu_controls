@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Oct 17, 2023" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Oct 22, 2023" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.11.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -46,6 +46,7 @@ A control panel for DisplayPort, DVI, HDMI, or USB connected VDUs (\fIVisual Dis
 [\-\-location latitude,longitude] [\-\-weather|\-\-no\-weather]
 [\-\-lux\-options|\-\-no\-lux\-options] [\-\-translations|\-\-no\-translations]
 [\-\-splash|\-\-no\-splash] [\-\-system\-tray|\-\-no\-system\-tray]
+[\-\-monochrome\-tray|\-\-no\-monochrome\-tray] [\-\-mono\-light\-tray|\-\-no\-mono\-light\-tray]
 [\-\-hide\-on\-focus\-out|\-\-no\-hide\-on\-focus\-out] [\-\-smart\-window|\-\-no\-smart\-window]
 [\-\-syslog|\-\-no\-syslog]  [\-\-debug|\-\-no\-debug] [\-\-warnings|\-\-no\-warnings]
 [\-\-sleep\-multiplier multiplier] [\-\-ddcutil\-extra\-args \(aqextra args\(aq]
@@ -117,11 +118,14 @@ minimise the main window automatically on focus out \fB\-\-no\-hide\-on\-focus\-
 .B \-\-splash|\-\-no\-splash
 show the splash screen.  \fB\-\-splash\fP is the default.
 .TP
+.B \-\-monochrome\-tray|\-\-no\-monochrome\-tray
+monochrome themed system\-tray. \fB\-\-no\-monochrome\-tray\fP is the default.
+.TP
+.B \-\-mono\-light\-tray|\-\-no\-mono\-light\-tray
+alter monochrome\-tray for a light themed system\-tray. \fB\-\-no\-mono\-light\-tray\fP is the default.
+.TP
 .B \-\-smart\-window|\-\-no\-smart\-window
 smart main window placement and geometry.  \fB\-\-smart\-window\fP is the default.
-.TP
-.B \-\-adjust\-for\-dpi|\-\-no\-adjust\-for\-dpi
-adjust icon sizes according to display DPI.  \fB\-\-adjust\-for\-dpi\fP is the default.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -837,6 +841,30 @@ This variable adds to the list of arguments passed to each exec of ddcutil.
 .B VDU_CONTROLS_DEVELOPER
 This variable changes some search paths to be more convenient in a development
 scenario. (\fBno\fP or yes)
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.SH FILES
+.INDENT 0.0
+.INDENT 3.5
+.INDENT 0.0
+.TP
+.B $HOME/.config/vdu_controls/
+Location for config files, Presets, and other persistent data.
+.TP
+.B $HOME/.config/vdu_controls/tray_icon.svg
+If present, this file is the preferred source for the system\-tray icon. It can be used if the normal
+icon conflicts with the desktop theme. If the \fBSettings\fP \fBmonochrome\-tray\fP
+and \fBmono\-light\-tray\fP are enabled, they are applied to the file when it is read.
+.TP
+.B $HOME/.config/vdu_controls/translations/
+Location for user supplied translations.
+.TP
+.B $HOME/.config/vdu_controls.qt.state/
+Location for Qt/desktop state such as the past window sizes and locations.
+.TP
+.B /usr/share/vdu_controls
+Location for system\-wide icons,  sample\-scripts, and  translations.
 .UNINDENT
 .UNINDENT
 .UNINDENT

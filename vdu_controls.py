@@ -15,7 +15,8 @@ Synopsis:
                      [--enable-vcp-code vcp_code] [--schedule|--no-schedule]
                      [--location latitude,longitude] [--weather|--no-weather]
                      [--lux-options|--no-lux-options] [--translations|--no-translations]
-                     [--splash|--no-splash] [--system-tray|--no-system-tray] [--monochrome-tray|--no-monochrome-tray]
+                     [--splash|--no-splash] [--system-tray|--no-system-tray]
+                     [--monochrome-tray|--no-monochrome-tray] [--mono-light-tray|--no-mono-light-tray]
                      [--hide-on-focus-out|--no-hide-on-focus-out] [--smart-window|--no-smart-window]
                      [--syslog|--no-syslog]  [--debug|--no-debug] [--warnings|--no-warnings]
                      [--sleep-multiplier multiplier] [--ddcutil-extra-args 'extra args']
@@ -58,7 +59,9 @@ Arguments supplied on the command line override config file equivalent settings.
       --splash|--no-splash
                             show the splash screen.  ``--splash`` is the default.
       --monochrome-tray|--no-monochrome-tray
-                            monochrome themed system-tray.  ``--no-monochrome-tray`` is the default.
+                            monochrome themed system-tray. ``--no-monochrome-tray`` is the default.
+      --mono-light-tray|--no-mono-light-tray
+                            alter monochrome-tray for a light themed system-tray. ``--no-mono-light-tray`` is the default.
       --smart-window|--no-smart-window
                             smart main window placement and geometry.  ``--smart-window`` is the default.
       --sleep-multiplier    set the default ddcutil sleep multiplier
@@ -616,6 +619,25 @@ Environment
         This variable changes some search paths to be more convenient in a development
         scenario. (``no`` or yes)
 
+Files
+=====
+    $HOME/.config/vdu_controls/
+        Location for config files, Presets, and other persistent data.
+
+    $HOME/.config/vdu_controls/tray_icon.svg
+        If present, this file is the preferred source for the system-tray icon. It can be used if the normal
+        icon conflicts with the desktop theme. If the ``Settings`` ``monochrome-tray``
+        and ``mono-light-tray`` are enabled, they are applied to the file when it is read.
+
+    $HOME/.config/vdu_controls/translations/
+        Location for user supplied translations.
+
+    $HOME/.config/vdu_controls.qt.state/
+        Location for Qt/desktop state such as the past window sizes and locations.
+
+    /usr/share/vdu_controls
+        Location for system-wide icons,  sample-scripts, and  translations.
+
 Reporting Bugs
 ==============
 https://github.com/digitaltrails/vdu_controls/issues
@@ -873,7 +895,7 @@ https://github.com/digitaltrails/vdu_controls/releases/tag/v{VERSION}</a>
 
 CONFIG_DIR_PATH = Path.home().joinpath('.config', 'vdu_controls')
 PRESET_NAME_FILE = CONFIG_DIR_PATH.joinpath('current_preset.txt')
-CUSTOM_TRAY_ICON_FILE =  CONFIG_DIR_PATH.joinpath('app_icon.svg')
+CUSTOM_TRAY_ICON_FILE =  CONFIG_DIR_PATH.joinpath('tray_icon.svg')
 LOCALE_TRANSLATIONS_PATHS = [
     Path.cwd().joinpath('translations')] if os.getenv('VDU_CONTROLS_DEVELOPER', default="no") == 'yes' else [] + [
     Path(CONFIG_DIR_PATH).joinpath('translations'), Path("/usr/share/vdu_controls/translations"), ]
@@ -898,9 +920,10 @@ SVG_LIGHT_THEME_TEXT_COLOR = b"#000000"
 SVG_DARK_THEME_COLOR = b"#f3f3f3"
 SVG_DARK_THEME_TEXT_COLOR = SVG_DARK_THEME_COLOR
 
+mono_light_tray = False
 MONOCHROME_APP_ICON = b"""
 <svg viewBox="0 0 22 22" version="1.1" id="svg1" xmlns="http://www.w3.org/2000/svg">
-  <defs id="defs3051"><style type="text/css" id="current-color-scheme">.ColorScheme-Text {color:#000000;}</style></defs>
+  <defs id="defs3051"><style type="text/css" id="current-color-scheme">.ColorScheme-Text {color:#ffffff;}</style></defs>
   <path style="fill:currentColor;fill-opacity:1;stroke:none"
      d="m 3.012318,1.987629 -0.086226,13.98553 h 1 l 5.0022397,0.02464 -1e-7,2 -2.0022396,-0.02464 v 1 h 8.0000002 v -1 
      l -2.00224,-0.01232 -0.01232,-2 5.01456,0.01232 h 1 L 18.957944,2.0296853 17.989795,2.0050493 4.0174203,1.9774244 
@@ -1571,6 +1594,8 @@ class ConfOption(Enum):
                                 tip=QT_TR_NOOP('smart main window placement and geometry'))
     MONOCHROME_TRAY_ENABLED = conf_opt_def(name=QT_TR_NOOP('monochrome-tray-enabled'), default="no", restart=False,
                                        tip=QT_TR_NOOP('monochrome themed system tray'))
+    MONO_LIGHT_TRAY_ENABLED = conf_opt_def(name=QT_TR_NOOP('mono-light-tray-enabled'), default="no", restart=False,
+                                       tip=QT_TR_NOOP('alter monochrome for a light themed system tray'))
     DEBUG_ENABLED = conf_opt_def(name=QT_TR_NOOP('debug-enabled'), default="no", tip=QT_TR_NOOP('output extra debug information'))
     SYSLOG_ENABLED = conf_opt_def(name=QT_TR_NOOP('syslog-enabled'), default="no",
                                   tip=QT_TR_NOOP('divert diagnostic output to the syslog'))
@@ -2176,13 +2201,14 @@ class SettingsEditorTab(QWidget):
             bool_count, grid_columns = 0, 5  # booleans are counted and laid out according to grid_columns.
             for option_name in self.ini_editable[section_name]:
                 option_def = vdu_config.get_config_option(option_name)
-                if option_def.conf_type == ConfType.BOOL:
-                    booleans_grid.addWidget(
-                        field(SettingsEditorBooleanWidget(self, option_name, section_name, option_def.help, option_def.related)),
-                        bool_count // grid_columns, bool_count % grid_columns)
-                    bool_count += 1
-                else:
-                    layout.addWidget(field(widget_map[option_def.conf_type](self, option_name, section_name, option_def.help)))
+                if option_def != ConfOption.UNKNOWN:
+                    if option_def.conf_type == ConfType.BOOL:
+                        booleans_grid.addWidget(
+                            field(SettingsEditorBooleanWidget(self, option_name, section_name, option_def.help, option_def.related)),
+                            bool_count // grid_columns, bool_count % grid_columns)
+                        bool_count += 1
+                    else:
+                        layout.addWidget(field(widget_map[option_def.conf_type](self, option_name, section_name, option_def.help)))
 
         def save_clicked() -> None:
             if self.is_unsaved():
@@ -2816,15 +2842,15 @@ class Preset:
             return Path(path_text) if path_text else None
         return None
 
-    def create_icon(self, themed: bool = True) -> QIcon:
+    def create_icon(self, themed: bool = True, monochrome=False) -> QIcon:
         icon_path = self.get_icon_path()
         if icon_path and icon_path.exists():
-            return create_icon_from_path(icon_path, themed)
+            return create_icon_from_path(icon_path, themed, monochrome)
         else:
             # Only room for two letters at most - use first and last if more than one word.
             full_acronym = [word[0] for word in re.split(r"[ _-]", self.name) if word != '']
             abbreviation = full_acronym[0] if len(full_acronym) == 1 else full_acronym[0] + full_acronym[-1]
-            return create_icon_from_text(abbreviation, themed)
+            return create_icon_from_text(abbreviation, themed, monochrome)
 
     def load(self) -> ConfigIni:
         if self.path.exists():
@@ -3464,7 +3490,7 @@ class PresetTransitionDummy(Preset):  # A wrapper that creates titles and icons 
     def get_title_name(self) -> str:
         return self.arrows[self.count % 2] + self.name
 
-    def create_icon(self, themed: bool = False) -> QIcon:
+    def create_icon(self, themed: bool = False, monochrome: bool = False) -> QIcon:
         return self.icons[self.count % 2]
 
 
@@ -4845,9 +4871,8 @@ def exception_handler(e_type, e_value, e_traceback) -> None:
     QApplication.quit()
 
 
-def handle_theme(svg_str: bytes) -> bytes:
-    return svg_str.replace(SVG_LIGHT_THEME_COLOR,  # Replace theme colors and also black/white
-                           SVG_DARK_THEME_COLOR).replace(b"#000000;", b"#ffffff;") if is_dark_theme() else svg_str
+def handle_theme(svg_bytes: bytes) -> bytes:
+    return svg_bytes.replace(SVG_LIGHT_THEME_COLOR, SVG_DARK_THEME_COLOR) if is_dark_theme() else svg_bytes
 
 
 def create_pixmap_from_svg_bytes(svg_bytes: bytes) -> QPixmap:
@@ -4868,9 +4893,11 @@ def create_image_from_svg_bytes(svg_bytes) -> QImage:
 svg_icon_cache: Dict[bytes, QIcon] = {}
 
 
-def create_icon_from_svg_bytes(svg_bytes: bytes, themed: bool = True) -> QIcon:
+def create_icon_from_svg_bytes(svg_bytes: bytes, themed: bool = True, monochrome: bool = False) -> QIcon:
     """There is no QIcon option for loading SVG from a string, only from a SVG file, so roll our own."""
-    if themed:
+    if monochrome:
+        svg_bytes = handle_monochrome(svg_bytes)
+    elif themed:
         svg_bytes = handle_theme(svg_bytes)
     if icon := svg_icon_cache.get(svg_bytes, None):
         return icon
@@ -4879,12 +4906,19 @@ def create_icon_from_svg_bytes(svg_bytes: bytes, themed: bool = True) -> QIcon:
     return icon
 
 
-def create_icon_from_path(path: Path, themed: bool = True) -> QIcon:
+def handle_monochrome(svg_bytes):
+    if mono_light_tray:
+        return svg_bytes.replace(SVG_LIGHT_THEME_COLOR, b"#000000").replace(b"#ffffff", b"#000000")
+    else:
+        return svg_bytes.replace(SVG_LIGHT_THEME_COLOR, b"#ffffff").replace(b"#000000", b"#ffffff")
+
+
+def create_icon_from_path(path: Path, themed: bool = True, monochrome: bool = False) -> QIcon:
     if path.exists():
         if path.suffix == '.svg':
             with open(path, 'rb') as icon_file:
                 icon_bytes = icon_file.read()
-                icon = create_icon_from_svg_bytes(icon_bytes, themed)
+                icon = create_icon_from_svg_bytes(icon_bytes, themed, monochrome)
         else:  # Hope the file contains something QIcon can cope with:
             icon = QIcon(path.as_posix())
         return icon
@@ -4892,7 +4926,7 @@ def create_icon_from_path(path: Path, themed: bool = True) -> QIcon:
     return QApplication.style().standardIcon(QStyle.SP_MessageBoxQuestion)
 
 
-def create_icon_from_text(text: str, themed: bool = True) -> QIcon:
+def create_icon_from_text(text: str, themed: bool = True, monochrome: bool = False) -> QIcon:
     pixmap = QPixmap(32, 32)
     pixmap.fill(Qt.transparent)
     painter = QPainter(pixmap)
@@ -4901,8 +4935,11 @@ def create_icon_from_text(text: str, themed: bool = True) -> QIcon:
     font.setWeight(QFont.Medium)
     painter.setFont(font)
     painter.setOpacity(1.0)
-    painter.setPen(
-        QColor((SVG_DARK_THEME_TEXT_COLOR if themed and is_dark_theme() else SVG_LIGHT_THEME_TEXT_COLOR).decode("utf-8")))
+    if monochrome:
+        painter.setPen(QColor("#000000" if mono_light_tray else "#ffffff"))
+    else:
+        painter.setPen(
+            QColor((SVG_DARK_THEME_TEXT_COLOR if themed and is_dark_theme() else SVG_LIGHT_THEME_TEXT_COLOR).decode("utf-8")))
     painter.drawText(pixmap.rect(), Qt.AlignTop, text)
     painter.end()
     return QIcon(pixmap)
@@ -6976,6 +7013,7 @@ class VduAppWindow(QMainWindow):
             splash.raise_()  # Attempt to force it to the top with raise and activate
             splash.activateWindow()
         self.app_icon: QIcon | None = None
+        self.tray_icon: QIcon | None = None
         self.initialise_app_icon(splash_pixmap)
 
         def f10_func():
@@ -7101,16 +7139,19 @@ class VduAppWindow(QMainWindow):
         self.app.quit()
 
     def initialise_app_icon(self, splash_pixmap: QPixmap | None = None):
+        global mono_light_tray
+        self.app_icon = QIcon()
+        self.app_icon.addPixmap(get_splash_image() if splash_pixmap is None else splash_pixmap)
+        mono_light_tray = self.main_config.is_set(ConfOption.MONO_LIGHT_TRAY_ENABLED)
+        monochrome_tray = self.main_config.is_set(ConfOption.MONOCHROME_TRAY_ENABLED)
         if CUSTOM_TRAY_ICON_FILE.exists() and os.access(CUSTOM_TRAY_ICON_FILE.as_posix(), os.R_OK):
-            log_info(f"Loading {CUSTOM_TRAY_ICON_FILE}")
-            self.app_icon = create_icon_from_path(CUSTOM_TRAY_ICON_FILE, themed=False)  # theme is up to the user.
-            self.app_icon.setThemeName("not-themed")
-        elif self.main_config.is_set(ConfOption.MONOCHROME_TRAY_ENABLED):  # Special monochrome system tray/panel.
-            self.app_icon = create_icon_from_svg_bytes(MONOCHROME_APP_ICON, themed=True)
+            log_info(f"Loading custom app_icon: {CUSTOM_TRAY_ICON_FILE} {monochrome_tray=} {mono_light_tray=}")
+            self.tray_icon = create_icon_from_path(CUSTOM_TRAY_ICON_FILE, themed=False, monochrome=monochrome_tray)
+        elif monochrome_tray:  # Special monochrome system-tray - unthemed, colors in tray may differ from desktop
+            log_info(f"Using monochrome app_icon: {monochrome_tray=} {mono_light_tray=}")
+            self.tray_icon = create_icon_from_svg_bytes(MONOCHROME_APP_ICON, monochrome=True)
         else:  # non-themed color icon based on the splash screen image
-            self.app_icon = QIcon()
-            self.app_icon.addPixmap(get_splash_image() if splash_pixmap is None else splash_pixmap)
-            self.app_icon.setThemeName("not-themed")
+            self.tray_icon = self.app_icon
 
     def create_main_control_panel(self) -> None:
         # Call on initialisation and whenever the number of connected VDUs changes.
@@ -7163,7 +7204,7 @@ class VduAppWindow(QMainWindow):
             self.app_context_menu.indicate_preset_active(preset)
             PresetsDialog.instance_indicate_active_preset(preset)
             title = f"{preset.get_title_name()} {PRESET_APP_SEPARATOR_SYMBOL} {title}"
-            preset_icon = preset.create_icon(themed=self.app_icon.themeName() != 'not-themed')
+            preset_icon = preset.create_icon(monochrome=self.main_config.is_set(ConfOption.MONOCHROME_TRAY_ENABLED))
             led1_color = PRESET_TRANSITIONING_LED_COLOR if isinstance(preset, PresetTransitionDummy) else None
         if self.main_controller.lux_auto_controller is not None:
             if self.main_controller.lux_auto_controller.is_auto_enabled():
@@ -7171,13 +7212,12 @@ class VduAppWindow(QMainWindow):
                 led2_color = AUTO_LUX_LED_COLOR
             menu_icon = create_icon_from_svg_bytes(self.main_controller.lux_auto_controller.current_auto_svg())  # NB cache involved
             self.app_context_menu.update_lux_auto_icon(menu_icon)  # Won't actually update if it hasn't changed
-        icon = create_decorated_app_icon(self.app_icon, preset_icon, led1_color, led2_color)
         if self.windowTitle() != title:  # Don't change if not needed - prevent flickering.
             self.setWindowTitle(title)
-            self.app.setWindowIcon(icon)
+            self.app.setWindowIcon(create_decorated_app_icon(self.app_icon, preset_icon, led1_color, led2_color))
         if self.tray:
             self.tray.setToolTip(title)
-            self.tray.setIcon(icon)
+            self.tray.setIcon(create_decorated_app_icon(self.tray_icon, preset_icon, led1_color, led2_color))
         if palette_change or (preset is not None and not isinstance(preset, PresetTransitionDummy)):
             self.refresh_preset_menu(palette_change=palette_change)
 
