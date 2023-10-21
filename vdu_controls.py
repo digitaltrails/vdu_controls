@@ -15,7 +15,7 @@ Synopsis:
                      [--enable-vcp-code vcp_code] [--schedule|--no-schedule]
                      [--location latitude,longitude] [--weather|--no-weather]
                      [--lux-options|--no-lux-options] [--translations|--no-translations]
-                     [--splash|--no-splash] [--system-tray|--no-system-tray]
+                     [--splash|--no-splash] [--system-tray|--no-system-tray] [--monochrome-tray|--no-monochrome-tray]
                      [--hide-on-focus-out|--no-hide-on-focus-out] [--smart-window|--no-smart-window]
                      [--syslog|--no-syslog]  [--debug|--no-debug] [--warnings|--no-warnings]
                      [--sleep-multiplier multiplier] [--ddcutil-extra-args 'extra args']
@@ -57,6 +57,8 @@ Arguments supplied on the command line override config file equivalent settings.
                             minimise the main window automatically on focus out ``--no-hide-on-focus-out`` is the default.
       --splash|--no-splash
                             show the splash screen.  ``--splash`` is the default.
+      --monochrome-tray|--no-monochrome-tray
+                            monochrome themed system-tray.  ``--no-monochrome-tray`` is the default.
       --smart-window|--no-smart-window
                             smart main window placement and geometry.  ``--smart-window`` is the default.
       --sleep-multiplier    set the default ddcutil sleep multiplier
@@ -871,6 +873,7 @@ https://github.com/digitaltrails/vdu_controls/releases/tag/v{VERSION}</a>
 
 CONFIG_DIR_PATH = Path.home().joinpath('.config', 'vdu_controls')
 PRESET_NAME_FILE = CONFIG_DIR_PATH.joinpath('current_preset.txt')
+CUSTOM_TRAY_ICON_FILE =  CONFIG_DIR_PATH.joinpath('app_icon.svg')
 LOCALE_TRANSLATIONS_PATHS = [
     Path.cwd().joinpath('translations')] if os.getenv('VDU_CONTROLS_DEVELOPER', default="no") == 'yes' else [] + [
     Path(CONFIG_DIR_PATH).joinpath('translations'), Path("/usr/share/vdu_controls/translations"), ]
@@ -881,8 +884,7 @@ class MsgDestination(Enum):
     COUNTDOWN = 1
 
 
-# Use Linux/UNIX signals for interprocess communication to trigger preset changes - 16 presets should be enough
-# for anyone.
+# Use Linux/UNIX signals to trigger preset changes - 16 presets should be enough for anyone.
 PRESET_SIGNAL_MIN = 40
 PRESET_SIGNAL_MAX = 55
 
@@ -895,6 +897,15 @@ SVG_LIGHT_THEME_COLOR = b"#232629"
 SVG_LIGHT_THEME_TEXT_COLOR = b"#000000"
 SVG_DARK_THEME_COLOR = b"#f3f3f3"
 SVG_DARK_THEME_TEXT_COLOR = SVG_DARK_THEME_COLOR
+
+MONOCHROME_APP_ICON = b"""
+<svg viewBox="0 0 22 22" version="1.1" id="svg1" xmlns="http://www.w3.org/2000/svg">
+  <defs id="defs3051"><style type="text/css" id="current-color-scheme">.ColorScheme-Text {color:#000000;}</style></defs>
+  <path style="fill:currentColor;fill-opacity:1;stroke:none"
+     d="m 3.012318,1.987629 -0.086226,13.98553 h 1 l 5.0022397,0.02464 -1e-7,2 -2.0022396,-0.02464 v 1 h 8.0000002 v -1 
+     l -2.00224,-0.01232 -0.01232,-2 5.01456,0.01232 h 1 L 18.957944,2.0296853 17.989795,2.0050493 4.0174203,1.9774244 
+     Z m 0.9927843,1.0339651 13.9651597,-0.01742 -0.01954,10.9465899 -14.0000001,0.02464 z" id="rect4211" class="ColorScheme-Text"/>
+</svg>"""
 
 # modified brightness icon from breeze5-icons: LGPL-3.0-only
 BRIGHTNESS_SVG = b"""
@@ -946,7 +957,7 @@ AUTO_LUX_OFF_SVG = BRIGHTNESS_SVG.replace(b'viewBox="0 0 24 24"', b'viewBox="3 3
 AUTO_LUX_LED_COLOR = QColor(0xff8500)
 PRESET_TRANSITIONING_LED_COLOR = QColor(0x00ff00)
 
-# adjustrgb icon from breeze5-icons: LGPL-3.0-only
+# adjust rgb icon from breeze5-icons: LGPL-3.0-only
 COLOR_TEMPERATURE_SVG = b"""
 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
   <defs> <clipPath> <path d="m7 1023.36h1v1h-1z" style="fill:#f2f2f2"/> </clipPath> </defs>
@@ -1558,6 +1569,8 @@ class ConfOption(Enum):
                                     tip=QT_TR_NOOP('popup warnings if a VDU lacks an enabled control'))
     SMART_WINDOW = conf_opt_def(name=QT_TR_NOOP('smart-window'), default="yes",
                                 tip=QT_TR_NOOP('smart main window placement and geometry'))
+    MONOCHROME_TRAY_ENABLED = conf_opt_def(name=QT_TR_NOOP('monochrome-tray-enabled'), default="no", restart=False,
+                                       tip=QT_TR_NOOP('monochrome themed system tray'))
     DEBUG_ENABLED = conf_opt_def(name=QT_TR_NOOP('debug-enabled'), default="no", tip=QT_TR_NOOP('output extra debug information'))
     SYSLOG_ENABLED = conf_opt_def(name=QT_TR_NOOP('syslog-enabled'), default="no",
                                   tip=QT_TR_NOOP('divert diagnostic output to the syslog'))
@@ -4833,7 +4846,8 @@ def exception_handler(e_type, e_value, e_traceback) -> None:
 
 
 def handle_theme(svg_str: bytes) -> bytes:
-    return svg_str.replace(SVG_LIGHT_THEME_COLOR, SVG_DARK_THEME_COLOR) if is_dark_theme() else svg_str
+    return svg_str.replace(SVG_LIGHT_THEME_COLOR,  # Replace theme colors and also black/white
+                           SVG_DARK_THEME_COLOR).replace(b"#000000;", b"#ffffff;") if is_dark_theme() else svg_str
 
 
 def create_pixmap_from_svg_bytes(svg_bytes: bytes) -> QPixmap:
@@ -6449,6 +6463,7 @@ class VduAppController:  # Main controller containing methods for high level ope
                 log_to_syslog = self.main_config.is_set(ConfOption.SYSLOG_ENABLED)
                 self.create_ddcutil()
                 self.preset_controller.reinitialize()
+                self.main_window.initialise_app_icon()
                 self.main_window.create_main_control_panel()
                 SettingsEditor.reconfigure_instance(self.get_vdu_configs())
             log_debug("configure: released application_configuration_lock") if log_debug_enabled else None
@@ -6956,14 +6971,12 @@ class VduAppWindow(QMainWindow):
         splash = QSplashScreen(
             splash_pixmap.scaledToWidth(native_font_height(scaled=26)).scaledToHeight(native_font_height(scaled=13)),
             Qt.WindowStaysOnTopHint) if main_config.is_set(ConfOption.SPLASH_SCREEN_ENABLED) else None
-
         if splash is not None:
             splash.show()
             splash.raise_()  # Attempt to force it to the top with raise and activate
             splash.activateWindow()
-
-        self.app_icon = QIcon()
-        self.app_icon.addPixmap(splash_pixmap)
+        self.app_icon: QIcon | None = None
+        self.initialise_app_icon(splash_pixmap)
 
         def f10_func():
             self.app_context_menu.exec(QCursor.pos())
@@ -7087,6 +7100,18 @@ class VduAppWindow(QMainWindow):
         self.app_save_window_state()
         self.app.quit()
 
+    def initialise_app_icon(self, splash_pixmap: QPixmap | None = None):
+        if CUSTOM_TRAY_ICON_FILE.exists() and os.access(CUSTOM_TRAY_ICON_FILE.as_posix(), os.R_OK):
+            log_info(f"Loading {CUSTOM_TRAY_ICON_FILE}")
+            self.app_icon = create_icon_from_path(CUSTOM_TRAY_ICON_FILE, themed=False)  # theme is up to the user.
+            self.app_icon.setThemeName("not-themed")
+        elif self.main_config.is_set(ConfOption.MONOCHROME_TRAY_ENABLED):  # Special monochrome system tray/panel.
+            self.app_icon = create_icon_from_svg_bytes(MONOCHROME_APP_ICON, themed=True)
+        else:  # non-themed color icon based on the splash screen image
+            self.app_icon = QIcon()
+            self.app_icon.addPixmap(get_splash_image() if splash_pixmap is None else splash_pixmap)
+            self.app_icon.setThemeName("not-themed")
+
     def create_main_control_panel(self) -> None:
         # Call on initialisation and whenever the number of connected VDUs changes.
         if self.main_panel is not None:
@@ -7138,7 +7163,7 @@ class VduAppWindow(QMainWindow):
             self.app_context_menu.indicate_preset_active(preset)
             PresetsDialog.instance_indicate_active_preset(preset)
             title = f"{preset.get_title_name()} {PRESET_APP_SEPARATOR_SYMBOL} {title}"
-            preset_icon = preset.create_icon(themed=False)
+            preset_icon = preset.create_icon(themed=self.app_icon.themeName() != 'not-themed')
             led1_color = PRESET_TRANSITIONING_LED_COLOR if isinstance(preset, PresetTransitionDummy) else None
         if self.main_controller.lux_auto_controller is not None:
             if self.main_controller.lux_auto_controller.is_auto_enabled():
@@ -7199,6 +7224,7 @@ class VduAppWindow(QMainWindow):
     def event(self, event: QEvent) -> bool:
         # PalletChange happens after the new style sheet is in use.
         if event.type() == QEvent.PaletteChange:
+            self.initialise_app_icon()
             self.update_status_indicators(palette_change=True)
         return super().event(event)
 
