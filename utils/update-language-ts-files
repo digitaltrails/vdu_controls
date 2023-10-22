@@ -2,3 +2,4 @@
 pylupdate5 vdu_controls.py -ts translations/da_DK.ts
 pylupdate5 vdu_controls.py -ts translations/de_DE.ts
 pylupdate5 vdu_controls.py -ts translations/fr_FR.ts
+pylupdate5 vdu_controls.py -ts translations/cs_CZ.ts
