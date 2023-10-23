@@ -2270,7 +2270,6 @@ class SettingsEditorTab(QWidget):
                     QApplication.processEvents()
                     self.ini_editable.save(self.config_path)
                     self.ini_before = self.ini_editable.duplicate()  # Saved ini becomes the new "before"
-                    # After file is closed...
                     if what_changed is None:  # Not accumulating what has changed, implement change now.
                         self.change_callback(self.unsaved_changes_map)
                     else:  # Accumulating what has changed, just add to the dictionary.
@@ -2362,7 +2361,7 @@ class SettingsEditorLineBase(SettingsEditorFieldBase):
             self.has_error = self.validator.validate(text, 0)[0] != QValidator.Acceptable
             self.set_error_indication(self.has_error)
         if not self.has_error:
-            internal_value = str(text)  # Why did I do this - it text not really a string?
+            internal_value = str(text)  # Why did I do this - is text not really a string?
             if not self.has_error:
                 self.section_editor.ini_editable[self.section][self.option] = internal_value
 
@@ -2683,13 +2682,11 @@ class VduControlSlider(VduControlBase):
         super().update_from_vdu(vcp_value)
 
     def refresh_ui_view_implementation(self) -> None:
-        """Copy the internally cached current value onto the GUI view."""
-        if self.current_value is not None:
+        if self.current_value is not None:  # Copy the internally cached current value onto the GUI view.
             self.slider.setValue(clamp(int(self.current_value), self.slider.minimum(), self.slider.maximum()))
 
     def event(self, event: QEvent) -> bool:
-        # PalletChange happens after the new style sheet is in use.
-        if event.type() == QEvent.PaletteChange:
+        if event.type() == QEvent.PaletteChange:  # PalletChange happens after the new style sheet is in use.
             icon_source = SUPPORTED_VCP_BY_CODE[self.vcp_capability.vcp_code].icon_source
             if icon_source is not None:
                 assert self.svg_icon is not None  # Because it must have been loaded from source earlier
@@ -2703,7 +2700,6 @@ class VduControlComboBox(VduControlBase):
     """
 
     def __init__(self, controller: VduController, vcp_capability: VcpCapability) -> None:
-        """Construct the combobox control and initialize its values from the VDU."""
         super().__init__(controller, vcp_capability)
         layout = QHBoxLayout()
         self.setLayout(layout)
