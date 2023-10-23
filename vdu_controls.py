@@ -354,7 +354,7 @@ settings from monitors".  For example:
         kill -40 $(ps axwww | grep '[/]usr/bin/vdu_controls' | awk '{print $1}')
         kill -41 $(ps axwww | grep '[/]usr/bin/vdu_controls' | awk '{print $1}')
 
-    Or if some other process has changed a VDUs settings, trigger vdu_controls to update it's UI::
+    Or if some other process has changed a VDUs settings, trigger vdu_controls to update its UI::
 
         kill -HUP $(ps axwww | grep '[/]usr/bin/vdu_controls' | awk '{print $1}')
 
@@ -387,7 +387,7 @@ The Settings Dialog includes an option enable lux metering options.  When enable
 will include Light Meter option to access a Light-Meter Dialog. The dialog can be used to define the
 metering device and the Lux Brightness Response Profile for each VDU.
 
-The metering device may be a serial-device, a UNIX FIFO (named-pipe), or a executable-script:
+The metering device may be a serial-device, a UNIX FIFO (named-pipe), or an executable-script:
 
     * A serial-device must periodically supply one floating point lux reading
       terminated by a carriage-return newline.
