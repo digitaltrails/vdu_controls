@@ -1115,8 +1115,8 @@ def is_dark_theme() -> bool:
     return dark_theme_found
 
 
-DEVELOPERS_NATIVE_FONT_HEIGHT = 32  # Value being used on my development desktop
-native_font_height_pixels: int | None = None  # A metric for use in sizing various components.
+DEVELOPERS_NATIVE_FONT_HEIGHT = 32  # The font height being used on my development desktop.
+native_font_height_pixels: int | None = None  # A metric for use in sizing components relative to DEVELOPERS_NATIVE_FONT_HEIGHT.
 
 
 def native_font_height(scaled: int | float = 1):  # In real hardware pixels
@@ -1325,7 +1325,7 @@ class DdcUtil:
                             del key_prospects[possibly_unique]
                         else:
                             key_prospects[possibly_unique] = vdu_number, manufacturer
-            elif len(display_str.strip()) != 0 and issue_warnings:
+            elif display_str.strip() != '' and issue_warnings:
                 if display_str.startswith('Invalid display'):
                     log_warning(f"Ignoring one display (probably switched off)")
                 else:
@@ -1586,8 +1586,7 @@ class ConfIni(configparser.ConfigParser):
         if not self.has_section(ConfIni.METADATA_SECTION):
             self.add_section(ConfIni.METADATA_SECTION)
 
-    def data_sections(self) -> List:
-        """Section other than metadata and DEFAULT - real data."""
+    def data_sections(self) -> List:  # Section other than metadata and DEFAULT - real data.
         return [s for s in self.sections() if s != configparser.DEFAULTSECT and s != ConfIni.METADATA_SECTION]
 
     def get_version(self) -> Tuple:
@@ -1636,8 +1635,8 @@ class ConfIni(configparser.ConfigParser):
 CI = ConfIni  # Shorthand for next series of declarations only
 
 
-def conf_opt_def(cname: str, section: str = CI.VDU_CONTROLS_GLOBALS, conf_type: str = CI.TYPE_BOOL,
-                 default: str | None = None, restart: bool = False, cmdline_arg: str = 'DEFAULT', tip: str = '', related: str = ''):
+def conf_opt_def(cname: str, section: str = CI.VDU_CONTROLS_GLOBALS, conf_type: str = CI.TYPE_BOOL, default: str | None = None,
+                 restart: bool = False, cmdline_arg: str = 'DEFAULT', tip: str = '', related: str = ''):
     return cname, section, cmdline_arg, conf_type, default, restart, tip, related
 
 
@@ -1801,8 +1800,7 @@ class VduControlsConfig:
                 enabled_vcp_codes.append(control_def.vcp_code)
         enable_codes_str = self.ini_content.get(*ConfOption.ENABLE_VCP_CODES.conf_id, fallback='')
         for vcp_code in enable_codes_str.split(","):
-            code = vcp_code.strip().upper()
-            if code != '':
+            if code := vcp_code.strip().upper():
                 if code not in enabled_vcp_codes:
                     enabled_vcp_codes.append(code)
                 else:
@@ -1856,8 +1854,8 @@ class VduControlsConfig:
     def write_file(self, config_path: Path, overwrite: bool = False) -> None:
         """Write the config to a file.  Used for creating initial template config files."""
         self.file_path = config_path
-        if config_path.is_file():
-            if not overwrite:
+        if config_path.exists():
+            if not config_path.is_file() or not overwrite:
                 log_error(f"{config_path.as_posix()} exists, remove the file if you really want to replace it.")
                 return
         log_info(f"Creating new config file {config_path.as_posix()}")
@@ -2064,9 +2062,8 @@ class VduController(QObject):
         """Return a map of vpc capabilities keyed by vcp code."""
 
         def parse_values(values_str: str) -> List[str]:
-            stripped = values_str.strip()
             values_list = []
-            if len(stripped) != 0:
+            if stripped := values_str.strip():
                 lines_list = stripped.split('\n')
                 if len(lines_list) == 1:
                     if range_match := VduController._RANGE_PATTERN.match(lines_list[0]):
@@ -6886,8 +6883,7 @@ class VduAppController:  # Main controller containing methods for high level ope
         main_panel = self.main_window.get_main_panel()
         if PRESET_NAME_FILE.exists():
             with open(PRESET_NAME_FILE, encoding="utf-8") as cps_file:
-                preset_name = cps_file.read()
-                if preset_name.strip() != '':
+                if preset_name := cps_file.read().strip():
                     preset = self.preset_controller.find_presets_map().get(preset_name)  # will be None if it has been deleted
                     if preset is not None and main_panel.is_preset_active(preset):
                         return preset
@@ -7083,9 +7079,7 @@ class VduAppWindow(QMainWindow):
             splash.deleteLater()
             splash = None
 
-        if main_config.file_path is None or (
-                main_config.ini_content.get_version() < VDU_CONTROLS_VERSION_TUPLE and VDU_CONTROLS_VERSION_TUPLE[-1] == 0):
-            # User is new to this major version - point them to the release notes.
+        if main_config.file_path is None or main_config.ini_content.get_version() < VDU_CONTROLS_VERSION_TUPLE:  # New version...
             release_alert = MessageBox(QMessageBox.Information, buttons=QMessageBox.Close)
             welcome = tr("Welcome to vdu_controls version {}").format(VDU_CONTROLS_VERSION)
             note = tr("Please read the online release notes:")
