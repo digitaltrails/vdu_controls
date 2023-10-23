@@ -895,7 +895,7 @@ https://github.com/digitaltrails/vdu_controls/releases/tag/v{VERSION}</a>
 
 CONFIG_DIR_PATH = Path.home().joinpath('.config', 'vdu_controls')
 PRESET_NAME_FILE = CONFIG_DIR_PATH.joinpath('current_preset.txt')
-CUSTOM_TRAY_ICON_FILE =  CONFIG_DIR_PATH.joinpath('tray_icon.svg')
+CUSTOM_TRAY_ICON_FILE = CONFIG_DIR_PATH.joinpath('tray_icon.svg')
 LOCALE_TRANSLATIONS_PATHS = [
     Path.cwd().joinpath('translations')] if os.getenv('VDU_CONTROLS_DEVELOPER', default="no") == 'yes' else [] + [
     Path(CONFIG_DIR_PATH).joinpath('translations'), Path("/usr/share/vdu_controls/translations"), ]
@@ -1462,6 +1462,21 @@ def si(widget: QWidget, icon_number: QStyle.StandardPixmap) -> QIcon:  # Qt bund
     return widget.style().standardIcon(icon_number)
 
 
+class GeoLocation:
+    def __init__(self, latitude: float, longitude: float, place_name: str | None) -> None:
+        self.latitude: float = latitude
+        self.longitude: float = longitude
+        self.place_name: str | None = place_name
+
+    def __eq__(self, other) -> bool:
+        if other is None:
+            return False
+        if not isinstance(other, GeoLocation):
+            return NotImplemented  # don't attempt to compare against unrelated types
+        return self.latitude == other.latitude and self.longitude == other.longitude and \
+            self.place_name == other.place_name
+
+
 class DialogSingletonMixin:
     """
     A mixin that can augment a QDialog or QMessageBox with code to enforce a singleton UI.
@@ -1546,43 +1561,87 @@ SUPPORTED_VCP_BY_CODE: Dict[str: VcpCapability] = {
 SUPPORTED_VCP_BY_PROPERTY_NAME = {c.property_name(): c for c in SUPPORTED_VCP_BY_CODE.values()}
 
 
-class GeoLocation:
-    def __init__(self, latitude: float, longitude: float, place_name: str | None) -> None:
-        self.latitude: float = latitude
-        self.longitude: float = longitude
-        self.place_name: str | None = place_name
+class ConfIni(configparser.ConfigParser):
+    """ConfigParser is a little messy and its class name is a bit misleading, wrap it and bend it to our needs."""
 
-    def __eq__(self, other) -> bool:
-        if other is None:
-            return False
-        if not isinstance(other, GeoLocation):
-            return NotImplemented  # don't attempt to compare against unrelated types
-        return self.latitude == other.latitude and self.longitude == other.longitude and \
-            self.place_name == other.place_name
+    METADATA_SECTION = "metadata"  # INI version tracking section
+    METADATA_VERSION_OPTION = "version"
+    METADATA_TIMESTAMP_OPTION = "timestamp"
+
+    VDU_CONTROLS_GLOBALS = QT_TR_NOOP('vdu-controls-globals')  # Data sections
+    VDU_CONTROLS_WIDGETS = QT_TR_NOOP('vdu-controls-widgets')
+    DDCUTIL_PARAMETERS = QT_TR_NOOP('ddcutil-parameters')
+    DDCUTIL_CAPABILITIES = QT_TR_NOOP('ddcutil-capabilities')
+    UNKNOWN_SECTION = QT_TR_NOOP('unknown')
+
+    TYPE_BOOL = 'bool'  # Supported types
+    TYPE_FLOAT = 'float'
+    TYPE_CSV = 'csv'
+    TYPE_LONG_TEXT = 'long_text'
+    TYPE_TEXT = 'mediumtext'
+    TYPE_LOCATION = 'location'
+
+    def __init__(self) -> None:
+        super().__init__(interpolation=None)
+        if not self.has_section(ConfIni.METADATA_SECTION):
+            self.add_section(ConfIni.METADATA_SECTION)
+
+    def data_sections(self) -> List:
+        """Section other than metadata and DEFAULT - real data."""
+        return [s for s in self.sections() if s != configparser.DEFAULTSECT and s != ConfIni.METADATA_SECTION]
+
+    def get_version(self) -> Tuple:
+        if self.has_option(ConfIni.METADATA_SECTION, ConfIni.METADATA_VERSION_OPTION):
+            version = self[ConfIni.METADATA_SECTION][ConfIni.METADATA_VERSION_OPTION]
+            try:
+                return tuple(int(i) for i in version.split('.'))
+            except ValueError:
+                log_error(f"Illegal version number {version} should be i.j.k where i, j and k are integers.", trace=True)
+        return 1, 6, 0
+
+    def save(self, config_path) -> None:
+        if not config_path.parent.is_dir():
+            os.makedirs(config_path.parent)
+        with open(config_path, 'w', encoding="utf-8") as config_file:
+            self[ConfIni.METADATA_SECTION][ConfIni.METADATA_VERSION_OPTION] = VDU_CONTROLS_VERSION
+            self[ConfIni.METADATA_SECTION][ConfIni.METADATA_TIMESTAMP_OPTION] = str(zoned_now())
+            self.write(config_file)
+        log_info(f"Wrote config to {config_path.as_posix()}")
+
+    def duplicate(self, new_ini=None) -> ConfIni:
+        if new_ini is None:
+            new_ini = ConfIni()
+        for section in self:
+            if section != configparser.DEFAULTSECT and section != ConfIni.METADATA_SECTION:
+                new_ini.add_section(section)
+            for option in self[section]:
+                new_ini[section][option] = self[section][option]
+        return new_ini
+
+    def diff(self, other: ConfIni, vdu_settings_only: bool = False) -> Dict[Tuple[str, str], str]:
+        values = []
+        for subject in (self, other):
+            sections = set(subject.sections()) - {configparser.DEFAULTSECT, ConfIni.METADATA_SECTION}
+            if vdu_settings_only:
+                sections -= {'preset'}
+            values.append([(section, option, value) for section in sections for option, value in subject[section].items()])
+        differences = list(set(values[0]) ^ set(values[1]))
+        return {(section, option): value for section, option, value in differences}
+
+    @staticmethod
+    def get_path(config_name: str) -> Path:
+        return CONFIG_DIR_PATH.joinpath(config_name + '.conf')
 
 
-VDU_CONTROLS_GLOBALS = QT_TR_NOOP('vdu-controls-globals')
-VDU_CONTROLS_WIDGETS = QT_TR_NOOP('vdu-controls-widgets')
-DDCUTIL_PARAMETERS = QT_TR_NOOP('ddcutil-parameters')
-DDCUTIL_CAPABILITIES = QT_TR_NOOP('ddcutil-capabilities')
-UNKNOWN_SECTION = QT_TR_NOOP('unknown')
+CI = ConfIni  # Shorthand for next series of declarations only
 
 
-class ConfType(str, Enum):
-    BOOL = 'bool'
-    FLOAT = 'float'
-    CSV = 'csv'
-    LONG_TEXT = 'long_text'
-    TEXT = 'mediumtext'
-    LOCATION = 'location'
-
-
-def conf_opt_def(cname: str, section: str = VDU_CONTROLS_GLOBALS, conf_type: ConfType = ConfType.BOOL,
+def conf_opt_def(cname: str, section: str = CI.VDU_CONTROLS_GLOBALS, conf_type: str = CI.TYPE_BOOL,
                  default: str | None = None, restart: bool = False, cmdline_arg: str = 'DEFAULT', tip: str = '', related: str = ''):
     return cname, section, cmdline_arg, conf_type, default, restart, tip, related
 
 
-class ConfOption(Enum):
+class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration - not really Enum - alternatives?
     SYSTEM_TRAY_ENABLED = conf_opt_def(cname=QT_TR_NOOP('system-tray-enabled'), default="no", restart=True,
                                        tip=QT_TR_NOOP('start up in the system tray'), related='hide-on-focus-out')
     HIDE_ON_FOCUS_OUT = conf_opt_def(cname=QT_TR_NOOP('hide-on-focus-out'), default="no", restart=False,
@@ -1606,100 +1665,40 @@ class ConfOption(Enum):
     DEBUG_ENABLED = conf_opt_def(cname=QT_TR_NOOP('debug-enabled'), default="no", tip=QT_TR_NOOP('output extra debug information'))
     SYSLOG_ENABLED = conf_opt_def(cname=QT_TR_NOOP('syslog-enabled'), default="no",
                                   tip=QT_TR_NOOP('divert diagnostic output to the syslog'))
-    LOCATION = conf_opt_def(cname=QT_TR_NOOP('location'), conf_type=ConfType.LOCATION, tip=QT_TR_NOOP('latitude,longitude'))
-    SLEEP_MULTIPLIER = conf_opt_def(cname=QT_TR_NOOP('sleep-multiplier'), section=DDCUTIL_PARAMETERS, conf_type=ConfType.FLOAT,
+    LOCATION = conf_opt_def(cname=QT_TR_NOOP('location'), conf_type=CI.TYPE_LOCATION, tip=QT_TR_NOOP('latitude,longitude'))
+    SLEEP_MULTIPLIER = conf_opt_def(cname=QT_TR_NOOP('sleep-multiplier'), section=CI.DDCUTIL_PARAMETERS, conf_type=CI.TYPE_FLOAT,
                                     tip=QT_TR_NOOP('ddcutil --sleep-multiplier (0.1 .. 2.0, default none)'))
-    DDCUTIL_EXTRA_ARGS = conf_opt_def(cname=QT_TR_NOOP('ddcutil-extra-args'), section=DDCUTIL_PARAMETERS, conf_type=ConfType.TEXT,
+    DDCUTIL_EXTRA_ARGS = conf_opt_def(cname=QT_TR_NOOP('ddcutil-extra-args'), section=CI.DDCUTIL_PARAMETERS, conf_type=CI.TYPE_TEXT,
                                       tip=QT_TR_NOOP('ddcutil extra arguments (default none)'))
-    ENABLE_VCP_CODES = conf_opt_def(cname=QT_TR_NOOP('enable-vcp-codes'), section=VDU_CONTROLS_WIDGETS, conf_type=ConfType.CSV,
+    ENABLE_VCP_CODES = conf_opt_def(cname=QT_TR_NOOP('enable-vcp-codes'), section=CI.VDU_CONTROLS_WIDGETS, conf_type=CI.TYPE_CSV,
                                     cmdline_arg='DISALLOWED', tip=QT_TR_NOOP('CSV list of VCP Hex-code capabilities to enable'))
-    CAPABILITIES_OVERRIDE = conf_opt_def(cname=QT_TR_NOOP('capabilities-override'), section=DDCUTIL_CAPABILITIES,
-                                         conf_type=ConfType.LONG_TEXT, cmdline_arg='DISALLOWED',
+    CAPABILITIES_OVERRIDE = conf_opt_def(cname=QT_TR_NOOP('capabilities-override'), section=CI.DDCUTIL_CAPABILITIES,
+                                         conf_type=CI.TYPE_LONG_TEXT, cmdline_arg='DISALLOWED',
                                          tip=QT_TR_NOOP('override/cache for ddcutil capabilities text'))
-    UNKNOWN = conf_opt_def(cname="UNKNOWN", section=UNKNOWN_SECTION, conf_type=ConfType.BOOL, cmdline_arg='DISALLOWED', tip='')
+    UNKNOWN = conf_opt_def(cname="UNKNOWN", section=CI.UNKNOWN_SECTION, conf_type=CI.TYPE_BOOL, cmdline_arg='DISALLOWED', tip='')
 
-    def __init__(self, conf_name: str, section: str, cmdline_arg: str, conf_type: ConfType, default: str | None,
+    def __init__(self, conf_name: str, section: str, cmdline_arg: str, conf_type: str, default: str | None,
                  restart_required: bool, help_text: str, related: str):
         self.conf_name, self.conf_section, self.conf_type, self.default_value = conf_name, section, conf_type, default
         self.conf_id = self.conf_section, self.conf_name
         self.restart_required = restart_required
         self.help = help_text
         self.cmdline_arg = self.conf_name.replace("-enabled", "") if cmdline_arg == 'DEFAULT' else cmdline_arg
-        self.cmdline_var = None
+        self.cmdline_var = None if self.cmdline_arg == "DISALLOWED" else self.conf_name.replace('-enabled', '').replace('-', '_')
         self.default_value = default
         self.related = related
 
     def add_cmdline_arg(self, parser: argparse.ArgumentParser) -> None:
         if self.cmdline_arg != "DISALLOWED":
-            arg_var = self.cmdline_var = self.conf_name.replace('-enabled', '').replace('-', '_')
-            if self.conf_type == ConfType.BOOL:  # Store strings for bools, allows us to differentiate yes/no and not supplied.
-                parser.add_argument(f"--{self.cmdline_arg}", dest=arg_var, action='store_const', const='yes',
+            if self.conf_type == CI.TYPE_BOOL:  # Store strings for bools, allows us to differentiate yes/no and not supplied.
+                parser.add_argument(f"--{self.cmdline_arg}", dest=self.cmdline_var, action='store_const', const='yes',
                                     help=self.help + ' ' + (tr('(default)') if self.default_value == 'yes' else ''))
-                parser.add_argument(f"--no-{self.cmdline_arg}", dest=arg_var, action='store_const', const='no',
+                parser.add_argument(f"--no-{self.cmdline_arg}", dest=self.cmdline_var, action='store_const', const='no',
                                     help=tr('(default)') if self.default_value == 'no' else '')
-            elif self.conf_type == ConfType.FLOAT:
+            elif self.conf_type == CI.TYPE_FLOAT:
                 parser.add_argument(f"--{self.cmdline_arg}", type=float, default=self.default_value, help=self.help)
             else:
                 parser.add_argument(f"--{self.cmdline_arg}", type=str, default=self.default_value, help=self.help)
-
-
-def get_config_path(config_name: str) -> Path:
-    return CONFIG_DIR_PATH.joinpath(config_name + '.conf')
-
-
-class ConfigIni(configparser.ConfigParser):
-    """ConfigParser is a little messy and its class name is a bit misleading, wrap it and bend it to our needs."""
-
-    METADATA_SECTION = "metadata"
-    METADATA_VERSION_OPTION = "version"
-    METADATA_TIMESTAMP_OPTION = "timestamp"
-
-    def __init__(self) -> None:
-        super().__init__(interpolation=None)
-        if not self.has_section(ConfigIni.METADATA_SECTION):
-            self.add_section(ConfigIni.METADATA_SECTION)
-
-    def data_sections(self) -> List:
-        """Section other than metadata and DEFAULT - real data."""
-        return [s for s in self.sections() if s != configparser.DEFAULTSECT and s != ConfigIni.METADATA_SECTION]
-
-    def get_version(self) -> Tuple:
-        if self.has_option(ConfigIni.METADATA_SECTION, ConfigIni.METADATA_VERSION_OPTION):
-            version = self[ConfigIni.METADATA_SECTION][ConfigIni.METADATA_VERSION_OPTION]
-            try:
-                return tuple(int(i) for i in version.split('.'))
-            except ValueError:
-                log_error(f"Illegal version number {version} should be i.j.k where i, j and k are integers.", trace=True)
-        return 1, 6, 0
-
-    def save(self, config_path) -> None:
-        if not config_path.parent.is_dir():
-            os.makedirs(config_path.parent)
-        with open(config_path, 'w', encoding="utf-8") as config_file:
-            self[ConfigIni.METADATA_SECTION][ConfigIni.METADATA_VERSION_OPTION] = VDU_CONTROLS_VERSION
-            self[ConfigIni.METADATA_SECTION][ConfigIni.METADATA_TIMESTAMP_OPTION] = str(zoned_now())
-            self.write(config_file)
-        log_info(f"Wrote config to {config_path.as_posix()}")
-
-    def duplicate(self, new_ini=None) -> ConfigIni:
-        if new_ini is None:
-            new_ini = ConfigIni()
-        for section in self:
-            if section != configparser.DEFAULTSECT and section != ConfigIni.METADATA_SECTION:
-                new_ini.add_section(section)
-            for option in self[section]:
-                new_ini[section][option] = self[section][option]
-        return new_ini
-
-    def diff(self, other: ConfigIni, vdu_settings_only: bool = False) -> Dict[Tuple[str, str], str]:
-        values = []
-        for subject in (self, other):
-            sections = set(subject.sections()) - {configparser.DEFAULTSECT, ConfigIni.METADATA_SECTION}
-            if vdu_settings_only:
-                sections -= {'preset'}
-            values.append([(section, option, value) for section in sections for option, value in subject[section].items()])
-        differences = list(set(values[0]) ^ set(values[1]))
-        return {(section, option): value for section, option, value in differences}
 
 
 class VduControlsConfig:
@@ -1710,21 +1709,21 @@ class VduControlsConfig:
 
     def __init__(self, config_name: str, default_enabled_vcp_codes: List | None = None, include_globals: bool = False) -> None:
         self.config_name = config_name
-        self.ini_content = ConfigIni()
+        self.ini_content = ConfIni()
 
         if include_globals:
-            self.ini_content[VDU_CONTROLS_GLOBALS] = {}
+            self.ini_content[ConfIni.VDU_CONTROLS_GLOBALS] = {}
             for option in ConfOption:  # Add in options for all supported controls
-                if option.conf_section == VDU_CONTROLS_GLOBALS:
+                if option.conf_section == ConfIni.VDU_CONTROLS_GLOBALS:
                     default_str = str(option.default_value) if option.default_value is not None else ''
                     self.ini_content.set(*option.conf_id, default_str)
 
-        self.ini_content[VDU_CONTROLS_WIDGETS] = {}
-        self.ini_content[DDCUTIL_PARAMETERS] = {}
-        self.ini_content[DDCUTIL_CAPABILITIES] = {}
+        self.ini_content[ConfIni.VDU_CONTROLS_WIDGETS] = {}
+        self.ini_content[ConfIni.DDCUTIL_PARAMETERS] = {}
+        self.ini_content[ConfIni.DDCUTIL_CAPABILITIES] = {}
 
         for item in SUPPORTED_VCP_BY_CODE.values():
-            self.ini_content[VDU_CONTROLS_WIDGETS][item.property_name()] = 'yes' if item.enabled else 'no'
+            self.ini_content[ConfIni.VDU_CONTROLS_WIDGETS][item.property_name()] = 'yes' if item.enabled else 'no'
 
         self.ini_content.set(*ConfOption.ENABLE_VCP_CODES.conf_id, '')
         self.ini_content.set(*ConfOption.SLEEP_MULTIPLIER.conf_id, str('0.0'))
@@ -1746,14 +1745,14 @@ class VduControlsConfig:
         return ConfOption.UNKNOWN
 
     def restrict_to_actual_capabilities(self, supported_by_this_vdu: Dict[str, VcpCapability]) -> None:
-        for option_name in self.ini_content[VDU_CONTROLS_WIDGETS]:
-            if self.get_conf_option(VDU_CONTROLS_WIDGETS, option_name).conf_type == ConfType.BOOL:
+        for option_name in self.ini_content[ConfIni.VDU_CONTROLS_WIDGETS]:
+            if self.get_conf_option(ConfIni.VDU_CONTROLS_WIDGETS, option_name).conf_type == ConfIni.TYPE_BOOL:
                 if option_name in SUPPORTED_VCP_BY_PROPERTY_NAME and \
                         SUPPORTED_VCP_BY_PROPERTY_NAME[option_name].vcp_code not in supported_by_this_vdu:
-                    del self.ini_content[VDU_CONTROLS_WIDGETS][option_name]
+                    del self.ini_content[ConfIni.VDU_CONTROLS_WIDGETS][option_name]
                     log_debug(f"Removed {self.config_name} {option_name} - not supported by VDU") if log_debug_enabled else None
                 elif option_name.startswith('unsupported-') and option_name[len('unsupported-'):] not in supported_by_this_vdu:
-                    del self.ini_content[VDU_CONTROLS_WIDGETS][option_name]
+                    del self.ini_content[ConfIni.VDU_CONTROLS_WIDGETS][option_name]
                     log_debug(f"Removed {self.config_name} {option_name} - not supported by VDU") if log_debug_enabled else None
 
     def get_config_name(self) -> str:
@@ -1786,19 +1785,19 @@ class VduControlsConfig:
         self.ini_content.set(*ConfOption.CAPABILITIES_OVERRIDE.conf_id, alt_text)
 
     def enable_supported_vcp_code(self, vcp_code: str) -> None:
-        self.ini_content[VDU_CONTROLS_WIDGETS][SUPPORTED_VCP_BY_CODE[vcp_code].property_name()] = 'yes'
+        self.ini_content[ConfIni.VDU_CONTROLS_WIDGETS][SUPPORTED_VCP_BY_CODE[vcp_code].property_name()] = 'yes'
 
     def enable_unsupported_vcp_code(self, vcp_code: str) -> None:
-        self.ini_content[VDU_CONTROLS_WIDGETS][f'unsupported-{vcp_code}'] = 'yes'
+        self.ini_content[ConfIni.VDU_CONTROLS_WIDGETS][f'unsupported-{vcp_code}'] = 'yes'
 
     def disable_supported_vcp_code(self, vcp_code: str) -> None:
-        self.ini_content[VDU_CONTROLS_WIDGETS][SUPPORTED_VCP_BY_CODE[vcp_code].property_name()] = 'no'
+        self.ini_content[ConfIni.VDU_CONTROLS_WIDGETS][SUPPORTED_VCP_BY_CODE[vcp_code].property_name()] = 'no'
 
     def get_all_enabled_vcp_codes(self) -> List[str]:
         # No very efficient
         enabled_vcp_codes = []
         for control_name, control_def in SUPPORTED_VCP_BY_PROPERTY_NAME.items():
-            if self.ini_content[VDU_CONTROLS_WIDGETS].getboolean(control_name, fallback=False):
+            if self.ini_content[ConfIni.VDU_CONTROLS_WIDGETS].getboolean(control_name, fallback=False):
                 enabled_vcp_codes.append(control_def.vcp_code)
         enable_codes_str = self.ini_content.get(*ConfOption.ENABLE_VCP_CODES.conf_id, fallback='')
         for vcp_code in enable_codes_str.split(","):
@@ -1971,7 +1970,7 @@ class VduController(QObject):
         self.values_cache: Dict[str] = {}
         enabled_vcp_codes = default_config.get_all_enabled_vcp_codes()
         for config_name in (self.vdu_stable_id, self.vdu_model_id):
-            config_path = get_config_path(config_name)
+            config_path = ConfIni.get_path(config_name)
             log_debug("checking for config file '" + config_path.as_posix() + "'") if log_debug_enabled else None
             if os.path.isfile(config_path) and os.access(config_path, os.R_OK):
                 config = VduControlsConfig(config_name)
@@ -2007,7 +2006,7 @@ class VduController(QObject):
     def write_template_config_files(self) -> None:
         """Write template config files to $HOME/.config/vdu_controls/"""
         for config_name in (self.vdu_stable_id, self.vdu_model_id):
-            save_config_path = get_config_path(config_name)
+            save_config_path = ConfIni.get_path(config_name)
             config = VduControlsConfig(config_name, default_enabled_vcp_codes=[c.vcp_code for c in self.enabled_capabilities])
             config.set_capabilities_alt_text(self.capabilities_text if self.capabilities_text is not None else '')
             config.write_file(save_config_path)
@@ -2138,7 +2137,7 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
 
     def reconfigure(self, config_list: List[VduControlsConfig]) -> None:
         for config in config_list:
-            if get_config_path(config.config_name) not in [tab.config_path for tab in self.editor_tab_list]:
+            if ConfIni.get_path(config.config_name) not in [tab.config_path for tab in self.editor_tab_list]:
                 tab = SettingsEditorTab(self, config, self.change_callback, parent=self.tabs)
                 tab.save_all_clicked_qtsignal.connect(self.save_all)  # type: ignore
                 self.tabs.addTab(tab, config.get_config_name())
@@ -2183,14 +2182,14 @@ class SettingsEditorTab(QWidget):
     def __init__(self, editor_dialog: SettingsEditor, vdu_config: VduControlsConfig, change_callback: Callable,
                  parent: QTabWidget) -> None:
         super().__init__(parent=parent)
-        widget_map = {ConfType.BOOL: SettingsEditorBooleanWidget, ConfType.FLOAT: SettingsEditorFloatWidget,
-                      ConfType.LONG_TEXT: SettingsEditorLongTextWidget, ConfType.TEXT: SettingsEditorLongTextWidget,
-                      ConfType.CSV: SettingsEditorCsvWidget, ConfType.LOCATION: SettingsEditorLocationWidget}
+        widget_map = {ConfIni.TYPE_BOOL: SettingsEditorBooleanWidget, ConfIni.TYPE_FLOAT: SettingsEditorFloatWidget,
+                      ConfIni.TYPE_LONG_TEXT: SettingsEditorLongTextWidget, ConfIni.TYPE_TEXT: SettingsEditorLongTextWidget,
+                      ConfIni.TYPE_CSV: SettingsEditorCsvWidget, ConfIni.TYPE_LOCATION: SettingsEditorLocationWidget}
         layout = QVBoxLayout()
         self.change_callback = change_callback
         self.unsaved_changes_map: Dict[Tuple[str, str], str] = {}
         self.setLayout(layout)
-        self.config_path = get_config_path(vdu_config.config_name)
+        self.config_path = ConfIni.get_path(vdu_config.config_name)
         self.ini_before = vdu_config.ini_content
         self.ini_editable = self.ini_before.duplicate()
         self.field_list: List[SettingsEditorFieldBase] = []
@@ -2209,10 +2208,11 @@ class SettingsEditorTab(QWidget):
             bool_count, grid_columns = 0, 5  # booleans are counted and laid out according to grid_columns.
             for option_name in self.ini_editable[section_name]:
                 option_def = vdu_config.get_conf_option(section_name, option_name)
-                if section_name != VDU_CONTROLS_GLOBALS or option_def != ConfOption.UNKNOWN:
-                    if option_def.conf_type == ConfType.BOOL:
+                if section_name != ConfIni.VDU_CONTROLS_GLOBALS or option_def != ConfOption.UNKNOWN:
+                    if option_def.conf_type == ConfIni.TYPE_BOOL:
                         booleans_grid.addWidget(
-                            field(SettingsEditorBooleanWidget(self, option_name, section_name, option_def.help, option_def.related)),
+                            field(
+                                SettingsEditorBooleanWidget(self, option_name, section_name, option_def.help, option_def.related)),
                             bool_count // grid_columns, bool_count % grid_columns)
                         bool_count += 1
                     else:
@@ -2818,7 +2818,7 @@ class VduControlPanel(QWidget):
         """Return the number of VDU controls.  Might be zero if initialization discovered no controllable attributes."""
         return len(self.vcp_controls)
 
-    def is_preset_active(self, preset_ini: ConfigIni) -> bool:
+    def is_preset_active(self, preset_ini: ConfIni) -> bool:
         vdu_section = self.controller.vdu_stable_id
         for control in self.vcp_controls:
             if control.vcp_capability.property_name() in preset_ini[vdu_section]:
@@ -2834,8 +2834,8 @@ class Preset:
 
     def __init__(self, name) -> None:
         self.name = name
-        self.path = get_config_path(proper_name('Preset', name))
-        self.preset_ini = ConfigIni()
+        self.path = ConfIni.get_path(proper_name('Preset', name))
+        self.preset_ini = ConfIni()
         self.timer: QTimer | None = None
         self.timer_action: Callable[[Preset], None] | None = None
         self.schedule_status = PresetScheduleStatus.UNSCHEDULED
@@ -2860,14 +2860,14 @@ class Preset:
             abbreviation = full_acronym[0] if len(full_acronym) == 1 else full_acronym[0] + full_acronym[-1]
             return create_icon_from_text(abbreviation, themed, monochrome)
 
-    def load(self) -> ConfigIni:
+    def load(self) -> ConfIni:
         if self.path.exists():
             log_debug(f"Reading preset file '{self.path.as_posix()}'") if log_debug_enabled else None
             preset_text = Path(self.path).read_text()
-            preset_ini = ConfigIni()
+            preset_ini = ConfIni()
             preset_ini.read_string(preset_text)
         else:
-            preset_ini = ConfigIni()
+            preset_ini = ConfIni()
         self.preset_ini = preset_ini
         return self.preset_ini
 
@@ -4490,7 +4490,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         dialog_splitter.addWidget(preset_list_panel)
 
         main_controller.refresh_preset_menu()
-        self.base_ini = ConfigIni()  # Create a temporary holder of preset values
+        self.base_ini = ConfIni()  # Create a temporary holder of preset values
         main_controller.populate_ini_from_vdus(self.base_ini)
 
         self.populate_presets_display_list()
@@ -4600,7 +4600,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.populate_presets_display_list()
         existing_content = self.editor_controls_widget.takeWidget()
         existing_content.deleteLater() if existing_content is not None else None
-        self.base_ini = ConfigIni()
+        self.base_ini = ConfIni()
         self.main_controller.populate_ini_from_vdus(self.base_ini)
         self.populate_editor_controls_widget()
         self.reset_editor()
@@ -4673,7 +4673,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         log_debug(f"has_changes {preset.preset_ini.diff(preset_ini_copy)=}") if log_debug_enabled else None
         return len(preset.preset_ini.diff(preset_ini_copy)) > 0
 
-    def populate_ini_from_gui(self, preset_ini: ConfigIni) -> None:  # initialise ini options based on GUI checkbox and field values
+    def populate_ini_from_gui(self, preset_ini: ConfIni) -> None:  # initialise ini options based on GUI checkbox and field values
         for key, checkbox in self.content_controls_map.items():  # Populate ini options to indicate which settings need to be saved
             section, option = key  # TODO check/test following logic
             if checkbox.isChecked():  # If this property is enabled, set its value
@@ -4799,7 +4799,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         if preset is None or (quiet and not self.has_changes(preset)):  # Not found (weird), OR don't care if no changes made.
             return QMessageBox.Ok  # Nothing more to do, everything is OK
 
-        preset_path = get_config_path(proper_name('Preset', preset.name))
+        preset_path = ConfIni.get_path(proper_name('Preset', preset.name))
         if preset_path.exists():  # Existing Preset
             if from_widget:  # The from_widget PresetWidget is initiating an update to the Preset from the VDUs settings.
                 question = tr('Update existing {} preset with current monitor settings?').format(preset.name)
@@ -4822,7 +4822,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
         if duplicated_presets := [other_preset for other_name, other_preset in self.main_controller.find_presets_map().items()
                                   if other_name != preset.name
-                                  and preset.preset_ini.diff(other_preset.preset_ini, vdu_settings_only=True) == {}]:
+                                     and preset.preset_ini.diff(other_preset.preset_ini, vdu_settings_only=True) == {}]:
             duplicates_warning = MessageBox(QMessageBox.Warning,
                                             buttons=QMessageBox.Save | QMessageBox.Cancel, default=QMessageBox.Cancel)
             duplicates_warning.setText(tr("Duplicates existing Preset {}, save anyway?").format(duplicated_presets[0].name))
@@ -5844,11 +5844,11 @@ class LuxPoint:
         return f"({self.lux} lux, {self.brightness}%, preset={self.preset_name})"
 
 
-class LuxConfig(ConfigIni):
+class LuxConfig(ConfIni):
 
     def __init__(self) -> None:
         super().__init__()
-        self.path = get_config_path('AutoLux')
+        self.path = ConfIni.get_path('AutoLux')
         self.last_modified_time = 0.0
         self.cached_profiles_map: Dict[str, List[LuxPoint]] = {}
 
@@ -5931,7 +5931,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.has_profile_changes = False
         self.setMinimumWidth(950)
 
-        self.path = get_config_path('AutoLux')
+        self.path = ConfIni.get_path('AutoLux')
 
         self.device_name = ''
         self.lux_config = main_controller.get_lux_auto_controller().get_lux_config()
@@ -6283,7 +6283,7 @@ class LuxAutoController:
         self.main_controller.status_message(message, timeout=5000)
         LuxDialog.lux_dialog_message(message, timeout=5000)
         self.lux_config.set('lux-meter', 'automatic-brightness', 'no' if enabled else 'yes')
-        self.lux_config.save(get_config_path('AutoLux'))
+        self.lux_config.save(ConfIni.get_path('AutoLux'))
         self.initialize_from_config()
         LuxDialog.reconfigure_instance()
 
@@ -6793,7 +6793,7 @@ class VduAppController:  # Main controller containing methods for high level ope
 
         def activation_finished(worker: PresetTransitionWorker) -> None:
             assert preset.elevation_time_today is not None
-            if worker.vdu_exception is not None:   # TODO the following ini variable isn't defined for the ini file
+            if worker.vdu_exception is not None:  # TODO the following ini variable isn't defined for the ini file
                 secs = self.main_config.ini_content.getint('vdu-controls-globals', 'restore-error-sleep-seconds', fallback=60)
                 too_close = zoned_now() + timedelta(seconds=secs + 60)  # retry if more than a minute before any others
                 for other in self.preset_controller.find_presets_map().values():  # Skip retry if another is due soon
@@ -6863,7 +6863,7 @@ class VduAppController:  # Main controller containing methods for high level ope
         self.preset_controller.save_order(name_order)
         self.refresh_preset_menu(reorder=True)
 
-    def populate_ini_from_vdus(self, preset_ini: ConfigIni, update_only: bool = False) -> None:
+    def populate_ini_from_vdus(self, preset_ini: ConfIni, update_only: bool = False) -> None:
         for control_panel in self.main_window.get_main_panel().vdu_control_panels.values():
             vdu_section_name = control_panel.controller.vdu_stable_id
             if not preset_ini.has_section(vdu_section_name):
@@ -7092,7 +7092,7 @@ class VduAppWindow(QMainWindow):
             release_alert.setText(RELEASE_ANNOUNCEMENT.format(WELCOME=welcome, NOTE=note, VERSION=VDU_CONTROLS_VERSION))
             release_alert.setTextFormat(Qt.RichText)
             release_alert.exec()
-            main_config.write_file(get_config_path('vdu_controls'), overwrite=True)  # Stops the release notes from being repeated.
+            main_config.write_file(ConfIni.get_path('vdu_controls'), overwrite=True)  # Stops release notes from being repeated.
 
     def is_inactive(self):
         # log_info(f"is_inactive: {self.active_event_count=} {qApp.applicationState()}")
@@ -7548,7 +7548,7 @@ def main() -> None:
     unix_signal_handler = SignalWakeupHandler(app)
 
     main_config = VduControlsConfig('vdu_controls', include_globals=True)
-    default_config_path = get_config_path('vdu_controls')
+    default_config_path = ConfIni.get_path('vdu_controls')
     log_info("Looking for config file '" + default_config_path.as_posix() + "'")
     if Path.is_file(default_config_path) and os.access(default_config_path, os.R_OK):
         main_config.parse_file(default_config_path)
