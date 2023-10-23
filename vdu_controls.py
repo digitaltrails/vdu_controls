@@ -1561,6 +1561,13 @@ class GeoLocation:
             self.place_name == other.place_name
 
 
+VDU_CONTROLS_GLOBALS = QT_TR_NOOP('vdu-controls-globals')
+VDU_CONTROLS_WIDGETS = QT_TR_NOOP('vdu-controls-widgets')
+DDCUTIL_PARAMETERS = QT_TR_NOOP('ddcutil-parameters')
+DDCUTIL_CAPABILITIES = QT_TR_NOOP('ddcutil-capabilities')
+UNKNOWN_SECTION = QT_TR_NOOP('unknown')
+
+
 class ConfType(str, Enum):
     BOOL = 'bool'
     FLOAT = 'float'
@@ -1570,51 +1577,51 @@ class ConfType(str, Enum):
     LOCATION = 'location'
 
 
-def conf_opt_def(name: str, section: str = 'vdu-controls-globals', conf_type: ConfType = ConfType.BOOL,
+def conf_opt_def(cname: str, section: str = VDU_CONTROLS_GLOBALS, conf_type: ConfType = ConfType.BOOL,
                  default: str | None = None, restart: bool = False, cmdline_arg: str = 'DEFAULT', tip: str = '', related: str = ''):
-    return name, section, cmdline_arg, conf_type, default, restart, tip, related
+    return cname, section, cmdline_arg, conf_type, default, restart, tip, related
 
 
 class ConfOption(Enum):
-    SYSTEM_TRAY_ENABLED = conf_opt_def(name=QT_TR_NOOP('system-tray-enabled'), default="no", restart=True,
+    SYSTEM_TRAY_ENABLED = conf_opt_def(cname=QT_TR_NOOP('system-tray-enabled'), default="no", restart=True,
                                        tip=QT_TR_NOOP('start up in the system tray'), related='hide-on-focus-out')
-    HIDE_ON_FOCUS_OUT = conf_opt_def(name=QT_TR_NOOP('hide-on-focus-out'), default="no", restart=False,
+    HIDE_ON_FOCUS_OUT = conf_opt_def(cname=QT_TR_NOOP('hide-on-focus-out'), default="no", restart=False,
                                      tip=QT_TR_NOOP('minimise the main window automatically on focus out'))
-    TRANSLATIONS_ENABLED = conf_opt_def(name=QT_TR_NOOP('translations-enabled'), default="no", restart=True,
+    TRANSLATIONS_ENABLED = conf_opt_def(cname=QT_TR_NOOP('translations-enabled'), default="no", restart=True,
                                         tip=QT_TR_NOOP('enable language translations'))
-    WEATHER_ENABLED = conf_opt_def(name=QT_TR_NOOP('weather-enabled'), default='yes', tip=QT_TR_NOOP('enable weather lookups'))
-    SCHEDULE_ENABLED = conf_opt_def(name=QT_TR_NOOP('schedule-enabled'), default='yes', tip=QT_TR_NOOP('enable preset schedule'))
-    LUX_OPTIONS_ENABLED = conf_opt_def(name=QT_TR_NOOP('lux-options-enabled'), default="no", restart=True,
+    WEATHER_ENABLED = conf_opt_def(cname=QT_TR_NOOP('weather-enabled'), default='yes', tip=QT_TR_NOOP('enable weather lookups'))
+    SCHEDULE_ENABLED = conf_opt_def(cname=QT_TR_NOOP('schedule-enabled'), default='yes', tip=QT_TR_NOOP('enable preset schedule'))
+    LUX_OPTIONS_ENABLED = conf_opt_def(cname=QT_TR_NOOP('lux-options-enabled'), default="no", restart=True,
                                        tip=QT_TR_NOOP('enable light metering options'))
-    SPLASH_SCREEN_ENABLED = conf_opt_def(name=QT_TR_NOOP('splash-screen-enabled'), default='yes', cmdline_arg='splash',
+    SPLASH_SCREEN_ENABLED = conf_opt_def(cname=QT_TR_NOOP('splash-screen-enabled'), default='yes', cmdline_arg='splash',
                                          tip=QT_TR_NOOP('enable the startup splash screen'))
-    WARNINGS_ENABLED = conf_opt_def(name=QT_TR_NOOP('warnings-enabled'), default="no",
+    WARNINGS_ENABLED = conf_opt_def(cname=QT_TR_NOOP('warnings-enabled'), default="no",
                                     tip=QT_TR_NOOP('popup warnings if a VDU lacks an enabled control'))
-    SMART_WINDOW = conf_opt_def(name=QT_TR_NOOP('smart-window'), default="yes",
+    SMART_WINDOW = conf_opt_def(cname=QT_TR_NOOP('smart-window'), default="yes",
                                 tip=QT_TR_NOOP('smart main window placement and geometry'))
-    MONOCHROME_TRAY_ENABLED = conf_opt_def(name=QT_TR_NOOP('monochrome-tray-enabled'), default="no", restart=False,
-                                       tip=QT_TR_NOOP('monochrome themed system tray'))
-    MONO_LIGHT_TRAY_ENABLED = conf_opt_def(name=QT_TR_NOOP('mono-light-tray-enabled'), default="no", restart=False,
-                                       tip=QT_TR_NOOP('alter monochrome for a light themed system tray'))
-    DEBUG_ENABLED = conf_opt_def(name=QT_TR_NOOP('debug-enabled'), default="no", tip=QT_TR_NOOP('output extra debug information'))
-    SYSLOG_ENABLED = conf_opt_def(name=QT_TR_NOOP('syslog-enabled'), default="no",
+    MONOCHROME_TRAY_ENABLED = conf_opt_def(cname=QT_TR_NOOP('monochrome-tray-enabled'), default="no", restart=False,
+                                           tip=QT_TR_NOOP('monochrome themed system tray'))
+    MONO_LIGHT_TRAY_ENABLED = conf_opt_def(cname=QT_TR_NOOP('mono-light-tray-enabled'), default="no", restart=False,
+                                           tip=QT_TR_NOOP('alter monochrome for a light themed system tray'))
+    DEBUG_ENABLED = conf_opt_def(cname=QT_TR_NOOP('debug-enabled'), default="no", tip=QT_TR_NOOP('output extra debug information'))
+    SYSLOG_ENABLED = conf_opt_def(cname=QT_TR_NOOP('syslog-enabled'), default="no",
                                   tip=QT_TR_NOOP('divert diagnostic output to the syslog'))
-    LOCATION = conf_opt_def(name=QT_TR_NOOP('location'), section='vdu-controls-globals', conf_type=ConfType.LOCATION,
-                            tip=QT_TR_NOOP('latitude,longitude'))
-    SLEEP_MULTIPLIER = conf_opt_def(name=QT_TR_NOOP('sleep-multiplier'), section='ddcutil-parameters', conf_type=ConfType.FLOAT,
+    LOCATION = conf_opt_def(cname=QT_TR_NOOP('location'), conf_type=ConfType.LOCATION, tip=QT_TR_NOOP('latitude,longitude'))
+    SLEEP_MULTIPLIER = conf_opt_def(cname=QT_TR_NOOP('sleep-multiplier'), section=DDCUTIL_PARAMETERS, conf_type=ConfType.FLOAT,
                                     tip=QT_TR_NOOP('ddcutil --sleep-multiplier (0.1 .. 2.0, default none)'))
-    DDCUTIL_ARGS = conf_opt_def(name=QT_TR_NOOP('ddcutil-extra-args'), section='ddcutil-parameters', conf_type=ConfType.TEXT,
-                                tip=QT_TR_NOOP('ddcutil extra arguments (default none)'))
-    ENABLE_VCP_CODES = conf_opt_def(name=QT_TR_NOOP('enable-vcp-codes'), section='vdu-controls-widgets', conf_type=ConfType.CSV,
+    DDCUTIL_EXTRA_ARGS = conf_opt_def(cname=QT_TR_NOOP('ddcutil-extra-args'), section=DDCUTIL_PARAMETERS, conf_type=ConfType.TEXT,
+                                      tip=QT_TR_NOOP('ddcutil extra arguments (default none)'))
+    ENABLE_VCP_CODES = conf_opt_def(cname=QT_TR_NOOP('enable-vcp-codes'), section=VDU_CONTROLS_WIDGETS, conf_type=ConfType.CSV,
                                     cmdline_arg='DISALLOWED', tip=QT_TR_NOOP('CSV list of VCP Hex-code capabilities to enable'))
-    CAPABILITIES_OVERRIDE = conf_opt_def(name=QT_TR_NOOP('capabilities-override'), section='ddcutil-capabilities',
+    CAPABILITIES_OVERRIDE = conf_opt_def(cname=QT_TR_NOOP('capabilities-override'), section=DDCUTIL_CAPABILITIES,
                                          conf_type=ConfType.LONG_TEXT, cmdline_arg='DISALLOWED',
                                          tip=QT_TR_NOOP('override/cache for ddcutil capabilities text'))
-    UNKNOWN = conf_opt_def(name="UNKNOWN", section="UNKNOWN", conf_type=ConfType.BOOL, cmdline_arg='DISALLOWED', tip='')
+    UNKNOWN = conf_opt_def(cname="UNKNOWN", section=UNKNOWN_SECTION, conf_type=ConfType.BOOL, cmdline_arg='DISALLOWED', tip='')
 
-    def __init__(self, name: str, section: str, cmdline_arg: str, conf_type: ConfType, default: str | None,
+    def __init__(self, conf_name: str, section: str, cmdline_arg: str, conf_type: ConfType, default: str | None,
                  restart_required: bool, help_text: str, related: str):
-        self.conf_name, self.conf_section, self.conf_type, self.default_value = name, section, conf_type, default
+        self.conf_name, self.conf_section, self.conf_type, self.default_value = conf_name, section, conf_type, default
+        self.conf_id = self.conf_section, self.conf_name
         self.restart_required = restart_required
         self.help = help_text
         self.cmdline_arg = self.conf_name.replace("-enabled", "") if cmdline_arg == 'DEFAULT' else cmdline_arg
@@ -1706,23 +1713,23 @@ class VduControlsConfig:
         self.ini_content = ConfigIni()
 
         if include_globals:
-            self.ini_content[QT_TR_NOOP('vdu-controls-globals')] = {}
+            self.ini_content[VDU_CONTROLS_GLOBALS] = {}
             for option in ConfOption:  # Add in options for all supported controls
-                if option.conf_section == 'vdu-controls-globals':
+                if option.conf_section == VDU_CONTROLS_GLOBALS:
                     default_str = str(option.default_value) if option.default_value is not None else ''
-                    self.ini_content[option.conf_section][option.conf_name] = default_str
+                    self.ini_content.set(*option.conf_id, default_str)
 
-        self.ini_content[QT_TR_NOOP('vdu-controls-widgets')] = {}
-        self.ini_content[QT_TR_NOOP('ddcutil-parameters')] = {}
-        self.ini_content[QT_TR_NOOP('ddcutil-capabilities')] = {}
+        self.ini_content[VDU_CONTROLS_WIDGETS] = {}
+        self.ini_content[DDCUTIL_PARAMETERS] = {}
+        self.ini_content[DDCUTIL_CAPABILITIES] = {}
 
         for item in SUPPORTED_VCP_BY_CODE.values():
-            self.ini_content['vdu-controls-widgets'][item.property_name()] = 'yes' if item.enabled else 'no'
+            self.ini_content[VDU_CONTROLS_WIDGETS][item.property_name()] = 'yes' if item.enabled else 'no'
 
-        self.ini_content['vdu-controls-widgets']['enable-vcp-codes'] = ''
-        self.ini_content['ddcutil-parameters']['sleep-multiplier'] = str(0.0)
-        self.ini_content['ddcutil-parameters']['ddcutil-extra-args'] = ''
-        self.ini_content['ddcutil-capabilities']['capabilities-override'] = ''
+        self.ini_content.set(*ConfOption.ENABLE_VCP_CODES.conf_id, '')
+        self.ini_content.set(*ConfOption.SLEEP_MULTIPLIER.conf_id, str('0.0'))
+        self.ini_content.set(*ConfOption.DDCUTIL_EXTRA_ARGS.conf_id, '')
+        self.ini_content.set(*ConfOption.CAPABILITIES_OVERRIDE.conf_id, '')
 
         if default_enabled_vcp_codes is not None:
             for code in default_enabled_vcp_codes:
@@ -1732,20 +1739,21 @@ class VduControlsConfig:
                     self.enable_unsupported_vcp_code(code)
         self.file_path: Path | None = None
 
-    def get_config_option(self, option_name: str) -> ConfOption:
-        for option in [opt for opt in ConfOption if opt.conf_name == option_name]:  # Inefficient, but a small number of iterations
-            return option
+    def get_conf_option(self, section_name: str, option_name: str) -> ConfOption:
+        for option in ConfOption:  # Inefficient, but a small number of iterations
+            if option.conf_section == section_name and option.conf_name == option_name:
+                return option
         return ConfOption.UNKNOWN
 
     def restrict_to_actual_capabilities(self, supported_by_this_vdu: Dict[str, VcpCapability]) -> None:
-        for option_name in self.ini_content['vdu-controls-widgets']:
-            if self.get_config_option(option_name).conf_type == ConfType.BOOL:
+        for option_name in self.ini_content[VDU_CONTROLS_WIDGETS]:
+            if self.get_conf_option(VDU_CONTROLS_WIDGETS, option_name).conf_type == ConfType.BOOL:
                 if option_name in SUPPORTED_VCP_BY_PROPERTY_NAME and \
                         SUPPORTED_VCP_BY_PROPERTY_NAME[option_name].vcp_code not in supported_by_this_vdu:
-                    del self.ini_content['vdu-controls-widgets'][option_name]
+                    del self.ini_content[VDU_CONTROLS_WIDGETS][option_name]
                     log_debug(f"Removed {self.config_name} {option_name} - not supported by VDU") if log_debug_enabled else None
                 elif option_name.startswith('unsupported-') and option_name[len('unsupported-'):] not in supported_by_this_vdu:
-                    del self.ini_content['vdu-controls-widgets'][option_name]
+                    del self.ini_content[VDU_CONTROLS_WIDGETS][option_name]
                     log_debug(f"Removed {self.config_name} {option_name} - not supported by VDU") if log_debug_enabled else None
 
     def get_config_name(self) -> str:
@@ -1763,36 +1771,36 @@ class VduControlsConfig:
                 self.ini_content[option.conf_section][option.conf_name] = str_value
 
     def get_sleep_multiplier(self, fallback: float = None) -> float | None:
-        value = self.ini_content.getfloat('ddcutil-parameters', 'sleep-multiplier', fallback=0.0)
+        value = self.ini_content.getfloat(*ConfOption.SLEEP_MULTIPLIER.conf_id, fallback=0.0)
         return fallback if math.isclose(value, 0.0) else value
 
     def get_ddcutil_extra_args(self, fallback: List[str] | None = None) -> List[str]:
         fallback = [] if fallback is None else fallback
-        value = self.ini_content.get('ddcutil-parameters', 'ddcutil-extra-args', fallback=None)
+        value = self.ini_content.get(*ConfOption.DDCUTIL_EXTRA_ARGS.conf_id, fallback=None)
         return fallback if value is None or value.strip() == '' else value.split()
 
     def get_capabilities_alt_text(self) -> str:
-        return self.ini_content['ddcutil-capabilities']['capabilities-override']
+        return self.ini_content.get(*ConfOption.CAPABILITIES_OVERRIDE.conf_id)
 
     def set_capabilities_alt_text(self, alt_text: str) -> None:
-        self.ini_content['ddcutil-capabilities']['capabilities-override'] = alt_text
+        self.ini_content.set(*ConfOption.CAPABILITIES_OVERRIDE.conf_id, alt_text)
 
     def enable_supported_vcp_code(self, vcp_code: str) -> None:
-        self.ini_content['vdu-controls-widgets'][SUPPORTED_VCP_BY_CODE[vcp_code].property_name()] = 'yes'
+        self.ini_content[VDU_CONTROLS_WIDGETS][SUPPORTED_VCP_BY_CODE[vcp_code].property_name()] = 'yes'
 
     def enable_unsupported_vcp_code(self, vcp_code: str) -> None:
-        self.ini_content['vdu-controls-widgets'][f'unsupported-{vcp_code}'] = 'yes'
+        self.ini_content[VDU_CONTROLS_WIDGETS][f'unsupported-{vcp_code}'] = 'yes'
 
     def disable_supported_vcp_code(self, vcp_code: str) -> None:
-        self.ini_content['vdu-controls-widgets'][SUPPORTED_VCP_BY_CODE[vcp_code].property_name()] = 'no'
+        self.ini_content[VDU_CONTROLS_WIDGETS][SUPPORTED_VCP_BY_CODE[vcp_code].property_name()] = 'no'
 
     def get_all_enabled_vcp_codes(self) -> List[str]:
         # No very efficient
         enabled_vcp_codes = []
         for control_name, control_def in SUPPORTED_VCP_BY_PROPERTY_NAME.items():
-            if self.ini_content['vdu-controls-widgets'].getboolean(control_name, fallback=False):
+            if self.ini_content[VDU_CONTROLS_WIDGETS].getboolean(control_name, fallback=False):
                 enabled_vcp_codes.append(control_def.vcp_code)
-        enable_codes_str = self.ini_content['vdu-controls-widgets']['enable-vcp-codes']
+        enable_codes_str = self.ini_content.get(*ConfOption.ENABLE_VCP_CODES.conf_id, fallback='')
         for vcp_code in enable_codes_str.split(","):
             code = vcp_code.strip().upper()
             if code != '':
@@ -1805,7 +1813,7 @@ class VduControlsConfig:
 
     def get_location(self) -> GeoLocation | None:
         try:
-            spec = self.ini_content.get('vdu-controls-globals', 'location', fallback=None)
+            spec = self.ini_content.get(*ConfOption.LOCATION.conf_id, fallback=None)
             if spec is None or spec.strip() == '':
                 return None
             parts = spec.split(',')
@@ -1822,7 +1830,7 @@ class VduControlsConfig:
         log_info("Using config file '" + config_path.as_posix() + "'")
         if re.search(r'(\[ddcutil-capabilities])|(\[ddcutil-parameters])|(\[vdu-controls-\w])', config_text) is None:
             log_info(f"Old style config file {basename} overrides ddcutils capabilities")
-            self.ini_content['ddcutil-capabilities']['capabilities-override'] = config_text
+            self.ini_content.set(*ConfOption.CAPABILITIES_OVERRIDE.conf_id, config_text)
             return
         self.ini_content.read_string(config_text)
         # Manually extract the text preserving meaningful indentation
@@ -1831,7 +1839,7 @@ class VduControlsConfig:
         alt_text = preserve_indents_match.group(1) if preserve_indents_match is not None else ''
         # Remove excess indentation while preserving the minimum existing indentation.
         alt_text = inspect.cleandoc(alt_text)
-        self.ini_content['ddcutil-capabilities']['capabilities-override'] = alt_text
+        self.ini_content.set(*ConfOption.CAPABILITIES_OVERRIDE.conf_id, alt_text)
 
     def reload(self) -> None:
         log_info(f"Reloading config: {self.file_path}")
@@ -2200,8 +2208,8 @@ class SettingsEditorTab(QWidget):
             layout.addWidget(booleans_panel)
             bool_count, grid_columns = 0, 5  # booleans are counted and laid out according to grid_columns.
             for option_name in self.ini_editable[section_name]:
-                option_def = vdu_config.get_config_option(option_name)
-                if section_name != 'vdu-controls-globals' or option_def != ConfOption.UNKNOWN:   # Bug here - test excludes widget control switches
+                option_def = vdu_config.get_conf_option(section_name, option_name)
+                if section_name != VDU_CONTROLS_GLOBALS or option_def != ConfOption.UNKNOWN:
                     if option_def.conf_type == ConfType.BOOL:
                         booleans_grid.addWidget(
                             field(SettingsEditorBooleanWidget(self, option_name, section_name, option_def.help, option_def.related)),
@@ -6785,7 +6793,7 @@ class VduAppController:  # Main controller containing methods for high level ope
 
         def activation_finished(worker: PresetTransitionWorker) -> None:
             assert preset.elevation_time_today is not None
-            if worker.vdu_exception is not None:
+            if worker.vdu_exception is not None:   # TODO the following ini variable isn't defined for the ini file
                 secs = self.main_config.ini_content.getint('vdu-controls-globals', 'restore-error-sleep-seconds', fallback=60)
                 too_close = zoned_now() + timedelta(seconds=secs + 60)  # retry if more than a minute before any others
                 for other in self.preset_controller.find_presets_map().values():  # Skip retry if another is due soon
