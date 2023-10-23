@@ -2201,7 +2201,7 @@ class SettingsEditorTab(QWidget):
             bool_count, grid_columns = 0, 5  # booleans are counted and laid out according to grid_columns.
             for option_name in self.ini_editable[section_name]:
                 option_def = vdu_config.get_config_option(option_name)
-                if True or option_def != ConfOption.UNKNOWN:   # Bug here - test excludes widget control switches
+                if section_name != 'vdu-controls-globals' or option_def != ConfOption.UNKNOWN:   # Bug here - test excludes widget control switches
                     if option_def.conf_type == ConfType.BOOL:
                         booleans_grid.addWidget(
                             field(SettingsEditorBooleanWidget(self, option_name, section_name, option_def.help, option_def.related)),
