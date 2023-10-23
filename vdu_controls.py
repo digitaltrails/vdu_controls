@@ -2180,7 +2180,7 @@ class SettingsEditorTab(QWidget):
                  parent: QTabWidget) -> None:
         super().__init__(parent=parent)
         widget_map = {ConfIni.TYPE_BOOL: SettingsEditorBooleanWidget, ConfIni.TYPE_FLOAT: SettingsEditorFloatWidget,
-                      ConfIni.TYPE_LONG_TEXT: SettingsEditorLongTextWidget, ConfIni.TYPE_TEXT: SettingsEditorLongTextWidget,
+                      ConfIni.TYPE_LONG_TEXT: SettingsEditorLongTextWidget, ConfIni.TYPE_TEXT: SettingsEditorTextWidget,
                       ConfIni.TYPE_CSV: SettingsEditorCsvWidget, ConfIni.TYPE_LOCATION: SettingsEditorLocationWidget}
         layout = QVBoxLayout()
         self.change_callback = change_callback
