@@ -3259,11 +3259,12 @@ class VduControlsMainPanel(QWidget):
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(open_context_menu)
 
-    def indicate_busy(self, is_busy: bool = True) -> None:
+    def indicate_busy(self, is_busy: bool = True, lock_controls: bool = True) -> None:
         if self.bottom_toolbar is not None:
             self.bottom_toolbar.indicate_busy(is_busy)
-        for control_panel in self.vdu_control_panels.values():
-            control_panel.setDisabled(is_busy)
+        if lock_controls:
+            for control_panel in self.vdu_control_panels.values():
+                control_panel.setDisabled(is_busy)
 
     def is_preset_active(self, preset: Preset) -> bool:
         for section in preset.preset_ini:
@@ -6663,7 +6664,7 @@ class VduAppController:  # Main controller containing methods for high level ope
                 self.transitioning_dummy_preset = PresetTransitionDummy(preset)
                 self.main_window.display_preset_status(tr("Transitioning to preset {}").format(preset.name))
                 self.main_window.update_status_indicators(self.transitioning_dummy_preset)
-            self.main_window.indicate_busy(True)
+            self.main_window.indicate_busy(True, lock_controls=immediately)
             preset.load()
 
             def update_progress(worker_thread: PresetTransitionWorker) -> None:
@@ -7168,9 +7169,9 @@ class VduAppWindow(QMainWindow):
         assert self.main_panel is not None
         return self.main_panel
 
-    def indicate_busy(self, is_busy: bool):
+    def indicate_busy(self, is_busy: bool, lock_controls: bool = True):
         # log_debug(f"indicate_busy={is_busy}") if log_debug_enabled else None
-        self.get_main_panel().indicate_busy(is_busy)
+        self.get_main_panel().indicate_busy(is_busy, lock_controls)
         self.app_context_menu.indicate_busy(is_busy)
 
     def display_preset_status(self, message: str, timeout: int = 3000):
