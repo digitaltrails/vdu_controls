@@ -7076,7 +7076,6 @@ class VduAppWindow(QMainWindow):
             main_config.write_file(ConfIni.get_path('vdu_controls'), overwrite=True)  # Stops release notes from being repeated.
 
     def is_inactive(self):
-        # log_info(f"is_inactive: {self.active_event_count=} {qApp.applicationState()}")
         if qApp.applicationState() != Qt.ApplicationState.ApplicationInactive:
             return False
         for top_level_widget in QApplication.topLevelWidgets():  # Check if any dialogs are active
@@ -7170,7 +7169,6 @@ class VduAppWindow(QMainWindow):
         return self.main_panel
 
     def indicate_busy(self, is_busy: bool, lock_controls: bool = True):
-        # log_debug(f"indicate_busy={is_busy}") if log_debug_enabled else None
         self.get_main_panel().indicate_busy(is_busy, lock_controls)
         self.app_context_menu.indicate_busy(is_busy)
 
