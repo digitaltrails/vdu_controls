@@ -2624,9 +2624,7 @@ class VduControlSlider(VduControlBase):
             self.svg_icon = svg_icon
             layout.addWidget(svg_icon)
         else:
-            label = QLabel()
-            label.setText(tr(vcp_capability.name))
-            layout.addWidget(label)
+            layout.addWidget(QLabel(tr(vcp_capability.name)))
 
         self.slider = slider = ClickableSlider()
         slider.setMinimumWidth(200)
@@ -2703,8 +2701,7 @@ class VduControlComboBox(VduControlBase):
         super().__init__(controller, vcp_capability)
         layout = QHBoxLayout()
         self.setLayout(layout)
-        label = QLabel(self.translate_label(vcp_capability.name))
-        layout.addWidget(label)
+        layout.addWidget(QLabel(self.translate_label(vcp_capability.name)))
         self.combo_box = combo_box = QComboBox()
         layout.addWidget(combo_box)
 
@@ -2757,9 +2754,7 @@ class VduControlPanel(QWidget):
     def __init__(self, controller: VduController, vdu_exception_handler: Callable) -> None:
         super().__init__()
         layout = QVBoxLayout()
-        label = QLabel()
-        label.setText(tr('Monitor {}: {}').format(controller.vdu_number, controller.get_vdu_description()))
-        layout.addWidget(label)
+        layout.addWidget(QLabel(tr('Monitor {}: {}').format(controller.vdu_number, controller.get_vdu_description())))
         self.controller: VduController = controller
         self.vcp_controls: List[VduControlBase] = []
         self.vdu_exception_handler = vdu_exception_handler
@@ -4547,8 +4542,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.edit_revert_button = QPushButton(si(self, QStyle.SP_DialogResetButton), tr('Revert'))
 
         def revert_callable() -> None:
-            preset_name = self.preset_name_edit.text().strip()
-            preset_widget = self.find_preset_widget(preset_name)
+            preset_widget = self.find_preset_widget(self.preset_name_edit.text().strip())
             if preset_widget is None:
                 self.preset_name_edit.setText('')
             else:
@@ -4585,8 +4579,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
             else:
                 self.preset_widgets_layout.removeItem(self.preset_widgets_layout.itemAt(i))
         for preset_def in self.main_controller.preset_controller.find_presets_map().values():  # Populate new entries
-            preset_widget = self.create_preset_widget(preset_def)
-            self.preset_widgets_layout.addWidget(preset_widget)
+            self.preset_widgets_layout.addWidget(self.create_preset_widget(preset_def))
         self.preset_widgets_layout.addStretch(1)
 
     def reconfigure(self) -> None:
@@ -4702,8 +4695,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         index = self.preset_widgets_layout.indexOf(target_widget)
         if index > 0:
             self.preset_widgets_layout.removeWidget(target_widget)
-            new_preset_widget = self.create_preset_widget(preset)
-            self.preset_widgets_layout.insertWidget(index - 1, new_preset_widget)
+            self.preset_widgets_layout.insertWidget(index - 1, self.create_preset_widget(preset))
             target_widget.deleteLater()
             self.main_controller.save_preset_order(self.get_preset_names_in_order())
             self.preset_widgets_scroll_area.updateGeometry()
@@ -4712,8 +4704,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         index = self.preset_widgets_layout.indexOf(target_widget)
         if index < self.preset_widgets_layout.count() - 2:
             self.preset_widgets_layout.removeWidget(target_widget)
-            new_preset_widget = self.create_preset_widget(preset)
-            self.preset_widgets_layout.insertWidget(index + 1, new_preset_widget)
+            self.preset_widgets_layout.insertWidget(index + 1, self.create_preset_widget(preset))
             target_widget.deleteLater()
             self.main_controller.save_preset_order(self.get_preset_names_in_order())
             self.preset_widgets_scroll_area.updateGeometry()
@@ -4748,8 +4739,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
             self.controls_title_widget.setDisabled(True)
             self.editor_transitions_widget.setDisabled(True)
         else:
-            already_exists = self.find_preset_widget(changed_text)
-            if already_exists:
+            if self.find_preset_widget(changed_text):  # Already exists
                 self.edit_revert_button.setDisabled(False)
                 self.editor_title.setText(tr("Edit {}:").format(changed_text))
             else:
