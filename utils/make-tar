@@ -1,10 +1,59 @@
 #!/bin/bash
 
-if [ $# -ne 1 ]
+if [ $# -ne 2 ]
 then
-    echo "ERROR: please supply version parameter, e.g. 1.5.1"
+    echo "ERROR: please supply version parameter, e.g. 1.5.1 [git|local]"
     exit 1
 fi
 version="$1"
+source="$2"
 
-git archive --format tgz --prefix=vdu_controls-$version/ HEAD > /home/michael/rpmbuild/SOURCES/vdu_controls-$version.tar.gz
+if [ $source == "git" ]
+then
+    git archive --format tgz --prefix=vdu_controls-$version/ HEAD > /home/michael/rpmbuild/SOURCES/vdu_controls-$version.tar.gz
+    exit 0
+fi
+
+# Local source
+ln -s . vdu_controls-$version
+tar --files-from=- -cvzf  /home/michael/rpmbuild/SOURCES/vdu_controls-$version.tar.gz <<EOF
+vdu_controls-$version/.gitignore
+vdu_controls-$version/LICENSE.md
+vdu_controls-$version/MANIFEST.in
+vdu_controls-$version/README.md
+vdu_controls-$version/docs/Makefile
+vdu_controls-$version/docs/_build/man/vdu_controls.1
+vdu_controls-$version/docs/_build/man/vdu_controls.1.html
+vdu_controls-$version/docs/_config.yml
+vdu_controls-$version/docs/conf.py
+vdu_controls-$version/docs/index.rst
+vdu_controls-$version/docs/make.bat
+vdu_controls-$version/pyproject.toml
+vdu_controls-$version/screen-shots/Screenshot_Large-330.png
+vdu_controls-$version/screen-shots/Screenshot_Large.png
+vdu_controls-$version/screen-shots/Screenshot_Small-227.png
+vdu_controls-$version/screen-shots/Screenshot_Small.png
+vdu_controls-$version/screen-shots/Screenshot_settings-300.png
+vdu_controls-$version/screen-shots/Screenshot_settings.png
+vdu_controls-$version/screen-shots/Screenshot_tray-200.png
+vdu_controls-$version/screen-shots/Screenshot_tray.png
+vdu_controls-$version/screen-shots/kickoff.png
+vdu_controls-$version/setup.cfg
+vdu_controls-$version/vdu_controls.py
+vdu_controls-$version/vdu_controls.png
+vdu_controls-$version/translations/da_DK.ts
+vdu_controls-$version/translations/fr_FR.ts
+vdu_controls-$version/translations/de_DE.ts
+vdu_controls-$version/translations/cs_CZ.ts
+vdu_controls-$version/translations/about_da_DK.txt
+vdu_controls-$version/translations/about_fr_FR.txt
+vdu_controls-$version/translations/about_de_DE.txt
+vdu_controls-$version/translations/about_cs_CZ.txt
+vdu_controls-$version/sample-scripts/lux-from-webcam.bash
+vdu_controls-$version/sample-scripts/lux-from-webcam.py
+vdu_controls-$version/sample-scripts/vlux_meter.py
+vdu_controls-$version/vdu_controls.desktop
+vdu_controls-$version/icons/
+EOF
+
+rm vdu_controls-$version

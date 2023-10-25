@@ -1,12 +1,13 @@
 -------------------------------------------------------------------
 Tue 19 Oct 2023 02:05:00 UTC - Michael Hamilton <michael@actrix.gen.nz>
 
-- Version 1.12.1
+- Version 1.20.0
   * Added options monochrome-tray and mono-light-tray to enable a monochrome tray-icon (dark and light).
   * Optional $HOME/.config/vdu_controls/tray_icon.svg overrides the normal tray icon.
   * Improved the adjustment of icon/window dimensions by scaling them in respect to the user's default-font height.
   * Remove adjust-for-dpi in favour of the the above which automatically accounts for DPI.
   * When a Preset is transitioning slowly (i.e. not immediately), the UI controls can be used to stop the transition.
+  * Considerable internal refactoring of option handling.
 
 -------------------------------------------------------------------
 Tue 21 Sep 2023 03:59:00 UTC - Michael Hamilton <michael@actrix.gen.nz>

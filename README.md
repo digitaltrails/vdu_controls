@@ -229,12 +229,13 @@ Michael Hamilton
 
 Version History
 ---------------
-* 1.12.1
+* 1.20.0
   * Added options monochrome-tray and mono-light-tray to enable a monochrome tray-icon (dark and light).
   * Optional $HOME/.config/vdu_controls/tray_icon.svg overrides the normal tray icon.
   * Improved the adjustment of icon/window dimensions by scaling them in respect to the user's default-font height.
   * Remove adjust-for-dpi in favour of the the above which automatically accounts for DPI.
   * When a Preset is transitioning slowly (i.e. not immediately), the UI controls can be used to stop the transition.
+  * Considerable internal refactoring of option handling.
 
 * 1.12.0
   * Added an F10_key context menu shortcut to all application windows (KDE accessibility standard).
