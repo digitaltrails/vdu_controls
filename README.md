@@ -229,6 +229,9 @@ Michael Hamilton
 
 Version History
 ---------------
+* 1.21.0
+  * Added an immediate-lighting-check option to the context-menu (if lux-metering is enabled).
+
 * 1.20.0
   * Added options monochrome-tray and mono-light-tray to enable a monochrome tray-icon (dark and light).
   * Optional $HOME/.config/vdu_controls/tray_icon.svg overrides the normal tray icon.
