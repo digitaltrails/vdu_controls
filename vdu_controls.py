@@ -2991,7 +2991,7 @@ class ContextMenu(QMenu):
     ALT = 'Alt+{}'
 
     def __init__(self, app_controller: VduAppController, main_window_action, about_action, help_action, gray_scale_action,
-                 lux_auto_action, lux_meter_action, settings_action, presets_action, refresh_action, quit_action,
+                 lux_auto_action, lux_check_action, lux_meter_action, settings_action, presets_action, refresh_action, quit_action,
                  hide_shortcuts: bool, parent: QWidget) -> None:
         super().__init__(parent=parent)
         self.app_controller = app_controller
@@ -3005,6 +3005,7 @@ class ContextMenu(QMenu):
         self._add_action(QStyle.SP_ComputerIcon, tr('&Grey Scale'), gray_scale_action)
         if lux_meter_action is not None:
             self.lux_auto_action = self._add_action(QStyle.SP_ComputerIcon, tr('&Auto/Manual'), lux_auto_action)
+            self._add_action(QStyle.SP_MediaSeekForward, tr('Lighting &Check'), lux_check_action)
             self._add_action(QStyle.SP_ComputerIcon, tr('&Light-Meter'), lux_meter_action)
         self._add_action(QStyle.SP_ComputerIcon, tr('&Settings'), settings_action, 'Ctrl+Shift+,')
         self._add_action(QStyle.SP_BrowserReload, tr('&Refresh'), refresh_action, QKeySequence.Refresh).setProperty(
@@ -6613,6 +6614,11 @@ class VduAppController:  # Main controller containing methods for high level ope
         finally:
             self.main_window.setDisabled(False)
 
+    def lux_check_action(self) -> bool:
+        if self.lux_auto_controller is None:
+            return False
+        self.lux_auto_controller.adjust_brightness_now()
+
     def start_refresh(self) -> None:
         assert is_running_in_gui_thread()
         self.main_window.indicate_busy(True)
@@ -6988,6 +6994,7 @@ class VduAppWindow(QMainWindow):
             main_window_action=partial(self.show_main_window, True) if gnome_tray_behaviour else None,
             about_action=AboutDialog.invoke, help_action=HelpDialog.invoke, gray_scale_action=GreyScaleDialog,
             lux_auto_action=self.main_controller.lux_auto_action if main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) else None,
+            lux_check_action=self.main_controller.lux_check_action if main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) else None,
             lux_meter_action=partial(LuxDialog.invoke, self.main_controller) if main_config.is_set(
                 ConfOption.LUX_OPTIONS_ENABLED) else None,
             settings_action=self.main_controller.edit_config,
