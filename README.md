@@ -231,6 +231,7 @@ Version History
 ---------------
 * 1.21.0
   * Added an immediate-lighting-check option to the context-menu (if lux-metering is enabled).
+  * Added experimental support for https://github.com/digitaltrails/ddcutil-dbus
 
 * 1.20.0
   * Added options monochrome-tray and mono-light-tray to enable a monochrome tray-icon (dark and light).
