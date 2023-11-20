@@ -1485,9 +1485,9 @@ class DdcUtilDBus:
             self.common_args += [arg for arg in os.getenv('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != '']
 
     def connect_to_service(self) -> object:
-        session_bus_name = "com.ddcutil.DdcutilService"
-        session_bus_object = "/com/ddcutil/DdcutilObject"
-        server_executable = "ddcutil-dbus-server"
+        session_service_name = os.environ.get('DDCUTIL_SERVICE_NAME', default="com.ddcutil.DdcutilService")
+        service_object_path = os.environ.get('DDCUTIL_SERVICE_OBJECT_PATH', default="/com/ddcutil/DdcutilObject")
+        server_executable = os.environ.get('DDCUTIL_SERVICE_EXECUTABLE', default="ddcutil-dbus-server")
         try:
             log_info("Checking that the dasbus python module is installed on this system")
             import_module('dasbus')
@@ -1499,13 +1499,13 @@ class DdcUtilDBus:
         session_bus = SessionMessageBus()
         while True:
             try:
-                ddcutil_proxy = session_bus.get_proxy(session_bus_name, session_bus_object)
+                ddcutil_proxy = session_bus.get_proxy(session_service_name, service_object_path)
                 ddcutil_proxy.DdcutilVersionString  # Test the availability - will cause exception
-                log_info(f"D-Bus service {session_bus_name=} {session_bus_object=} is available, proxy connected OK.")
+                log_info(f"D-Bus {session_service_name=} {service_object_path=} is available, proxy connected OK.")
                 return ddcutil_proxy  # Must be OK
             except DBusError as e:
                 log_error(e)
-            log_warning(f"D-Bus service {session_bus_name=} {session_bus_object=} unavailable, going to start {server_executable=}")
+            log_warning(f"D-Bus {session_service_name=} {service_object_path=} unavailable, starting {server_executable=}")
             if os.system(f"whereis {server_executable} && {server_executable} 1>~/.{server_executable}.log 2>&1 &") != 0:
                 raise DdcUtilDisplayNotFound("Error starting D-Bus service {server_executable=}")
             time.sleep(2)
@@ -1571,10 +1571,9 @@ class DdcUtilDBus:
         """Return a vpc capabilities string."""
         edid_hex = self.id_key_args_dbus(vdu_number)
         with self.ddcutil_access_lock:
-            model, mccs_major, mccs_minor, commands, features, status, errmsg = self.ddcutil_proxy.GetCapabilitiesMetadata(-1, edid_hex)
-        capability_text = f"Model: {model}\n" \
-               f"MCCS version: {mccs_major}.{mccs_minor}\n" \
-               "VCP Features:\n"
+            model, mccs_major, mccs_minor, commands, features, status, errmsg = self.ddcutil_proxy.GetCapabilitiesMetadata(
+                -1, edid_hex, 0)
+        capability_text = f"Model: {model}\n"  f"MCCS version: {mccs_major}.{mccs_minor}\n" "VCP Features:\n"
         for feature_id, feature in features.items():
             feature_code = f"{feature_id:02x}".upper()
             feature_name = feature[0]
@@ -1599,7 +1598,8 @@ class DdcUtilDBus:
         if key in self.vcp_type_map:
             return self.vcp_type_map[key]
         with self.ddcutil_access_lock:
-            _, _, _, _, _, is_complex, is_continuous, status, errmsg = self.ddcutil_proxy.GetVcpMetadata(-1, edid_hex, int(vcp_code, 16))
+            _, _, _, _, _, is_complex, is_continuous, status, errmsg = self.ddcutil_proxy.GetVcpMetadata(-1, edid_hex,
+                                                                                                         int(vcp_code, 16), 0)
         type_str = CONTINUOUS_TYPE if is_continuous else (COMPLEX_NON_CONTINUOUS_TYPE if is_complex else SIMPLE_NON_CONTINUOUS_TYPE)
         self.vcp_type_map[key] = type_str
         return type_str
@@ -1611,7 +1611,7 @@ class DdcUtilDBus:
 
         for attempt_count in range(DDCUTIL_RETRIES):
             with self.ddcutil_access_lock:
-                status, errmsg = self.ddcutil_proxy.SetVcp(-1, edid_hex, int(vcp_code, 16), int(new_value))
+                status, errmsg = self.ddcutil_proxy.SetVcp(-1, edid_hex, int(vcp_code, 16), int(new_value), 0)
             if status == 0:
                 return
             if not retry_on_error or attempt_count + 1 == DDCUTIL_RETRIES:
@@ -1653,7 +1653,7 @@ class DdcUtilDBus:
         for attempt_count in range(DDCUTIL_RETRIES):
             with self.ddcutil_access_lock:
                 values, status, errmsg = self.ddcutil_proxy.GetMultipleVcp(-1, self.id_key_args_dbus(vdu_number),
-                                                                           [int(vcp, 16) for vcp in vcp_code_list])
+                                                                           [int(vcp, 16) for vcp in vcp_code_list], 0)
             if status != 0:
                 if status in self.status_values and self.status_values[status] == "DDCRC_INVALID_DISPLAY":
                     raise DdcUtilDisplayNotFound(f"getvcp:  VDU {vdu_number} - {self.status_values[status]} - {errmsg}")
