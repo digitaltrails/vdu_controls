@@ -1485,8 +1485,8 @@ class DdcUtilDBus:
             self.common_args += [arg for arg in os.getenv('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != '']
 
     def connect_to_service(self) -> object:
-        session_bus_name = "com.ddcutil.libddcutil.DdcutilService"
-        session_bus_object = "/com/ddcutil/libddcutil/DdcutilObject"
+        session_bus_name = "com.ddcutil.DdcutilService"
+        session_bus_object = "/com/ddcutil/DdcutilObject"
         server_executable = "ddcutil-dbus-server"
         try:
             log_info("Checking that the dasbus python module is installed on this system")
