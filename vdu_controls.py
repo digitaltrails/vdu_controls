@@ -1511,7 +1511,7 @@ class DdcUtilDBus:
             time.sleep(2)
 
     def id_key_args_dbus(self, vdu_number: str) -> List[str]:
-        return self.edid_map[vdu_number].upper()
+        return self.edid_map[vdu_number]
 
     def format_args_diagnostic(self, args: List[str]):
         return ' '.join([arg if len(arg) < 30 else arg[:30] + "..." for arg in args])
@@ -1539,7 +1539,7 @@ class DdcUtilDBus:
             bin_serial_number = str(vdu.binary_serial_number)  # TODO rubbish.sub('_', ds_parts.get('Binary serial number', '').split('(')[0].strip())
             man_date = ''  # TODO rubbish.sub('_', ds_parts.get('Manufacture year', ''))
             i2c_bus_id = ''  # TODO ds_parts.get('I2C bus', '').replace("/dev/", '').replace("-", "_")
-            edid = vdu.edid_hex.lower()
+            edid = vdu.edid_txt
             # check for duplicate edid, any duplicate will use the display Num
             if edid is not None and edid not in self.edid_map.values():
                 self.edid_map[vdu_number] = edid
@@ -1569,10 +1569,10 @@ class DdcUtilDBus:
 
     def query_capabilities(self, vdu_number: str, extra_args: List[str] | None = None) -> str:
         """Return a vpc capabilities string."""
-        edid_hex = self.id_key_args_dbus(vdu_number)
+        edid_txt = self.id_key_args_dbus(vdu_number)
         with self.ddcutil_access_lock:
             model, mccs_major, mccs_minor, commands, features, status, errmsg = self.ddcutil_proxy.GetCapabilitiesMetadata(
-                -1, edid_hex, 0)
+                -1, edid_txt, 0)
         capability_text = f"Model: {model}\n"  f"MCCS version: {mccs_major}.{mccs_minor}\n" "VCP Features:\n"
         for feature_id, feature in features.items():
             feature_code = f"{feature_id:02x}".upper()
@@ -1593,12 +1593,12 @@ class DdcUtilDBus:
         return capability_text
 
     def get_type(self, vdu_number: int, vcp_code: str) -> str | None:  # may not be needed with a dbus implementation
-        edid_hex = self.id_key_args_dbus(vdu_number)
-        key = (edid_hex, vcp_code)
+        edid_txt = self.id_key_args_dbus(vdu_number)
+        key = (edid_txt, vcp_code)
         if key in self.vcp_type_map:
             return self.vcp_type_map[key]
         with self.ddcutil_access_lock:
-            _, _, _, _, _, is_complex, is_continuous, status, errmsg = self.ddcutil_proxy.GetVcpMetadata(-1, edid_hex,
+            _, _, _, _, _, is_complex, is_continuous, status, errmsg = self.ddcutil_proxy.GetVcpMetadata(-1, edid_txt,
                                                                                                          int(vcp_code, 16), 0)
         type_str = CONTINUOUS_TYPE if is_continuous else (COMPLEX_NON_CONTINUOUS_TYPE if is_complex else SIMPLE_NON_CONTINUOUS_TYPE)
         self.vcp_type_map[key] = type_str
@@ -1607,11 +1607,11 @@ class DdcUtilDBus:
     def set_vcp(self, vdu_number: str, vcp_code: str, new_value: str,
                 sleep_multiplier: float | None = None, extra_args: List[str] | None = None, retry_on_error: bool = False) -> None:
         """Send a new value to a specific VDU and vcp_code."""
-        edid_hex = self.id_key_args_dbus(vdu_number)
+        edid_txt = self.id_key_args_dbus(vdu_number)
 
         for attempt_count in range(DDCUTIL_RETRIES):
             with self.ddcutil_access_lock:
-                status, errmsg = self.ddcutil_proxy.SetVcp(-1, edid_hex, int(vcp_code, 16), int(new_value), 0)
+                status, errmsg = self.ddcutil_proxy.SetVcp(-1, edid_txt, int(vcp_code, 16), int(new_value), 0)
             if status == 0:
                 return
             if not retry_on_error or attempt_count + 1 == DDCUTIL_RETRIES:
