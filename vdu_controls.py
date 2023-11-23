@@ -1289,6 +1289,9 @@ class DdcUtil:
             raise
         return result
 
+    def refresh(self):
+        pass
+
     def detect_monitors(self, issue_warnings: bool = True, sleep_multiplier: float = 0.0,
                         extra_args: List[str] | None = None) -> List[Tuple[str, str, str, str]]:
         """Return a list of (vdu_number, desc) tuples."""
@@ -1516,6 +1519,11 @@ class DdcUtilDBus:
     def format_args_diagnostic(self, args: List[str]):
         return ' '.join([arg if len(arg) < 30 else arg[:30] + "..." for arg in args])
 
+    def refresh(self):
+        status, message = self.ddcutil_proxy.Initialize('', 0, 0)
+        self.ddcutil_proxy = self.connect_to_service()
+        log_info(f"Refresh proxy {status=} {message=}")
+
     def detect_monitors(self, issue_warnings: bool = True, sleep_multiplier: float = 0.0,
                         extra_args: List[str] | None = None) -> List[Tuple[str, str, str, str]]:
         """Return a list of (vdu_number, desc) tuples."""
@@ -1655,9 +1663,9 @@ class DdcUtilDBus:
                 values, status, errmsg = self.ddcutil_proxy.GetMultipleVcp(-1, self.id_key_args_dbus(vdu_number),
                                                                            [int(vcp, 16) for vcp in vcp_code_list], 0)
             if status != 0:
-                if status in self.status_values and self.status_values[status] == "DDCRC_INVALID_DISPLAY":
-                    raise DdcUtilDisplayNotFound(f"getvcp:  VDU {vdu_number} - {self.status_values[status]} - {errmsg}")
-                raise ValueError(f"getvcp: VDU {vdu_number} - {self.status_values[status]} - {errmsg}")
+                if self.status_values.get(status, "DDCRC_INVALID_DISPLAY") == "DDCRC_INVALID_DISPLAY":
+                    raise DdcUtilDisplayNotFound(f"getvcp:  VDU {vdu_number} status={self.status_values.get(status, str(status))}: {errmsg}")
+                raise ValueError(f"getvcp: VDU {vdu_number} status={self.status_values.get(status, str(status))}: {errmsg}")
             for vcp, value, maxv, formatted in values:
                 vcp_code = f'{vcp:02x}'.upper()
                 vcp_type = self.get_type(vdu_number, vcp_code)
@@ -6845,6 +6853,7 @@ class VduAppController:  # Main controller containing methods for high level ope
         def update_from_vdu() -> None:
             if self.ddcutil is not None:
                 try:
+                    self.ddcutil.refresh();
                     self.detected_vdu_list = self.ddcutil.detect_monitors(sleep_multiplier=self.main_config.get_sleep_multiplier())
                     for control_panel in self.main_window.get_main_panel().vdu_control_panels.values():
                         if control_panel.controller.get_full_id() in self.detected_vdu_list:
