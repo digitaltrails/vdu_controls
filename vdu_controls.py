@@ -1289,9 +1289,6 @@ class DdcUtil:
             raise
         return result
 
-    def refresh(self):
-        pass
-
     def detect_monitors(self, issue_warnings: bool = True, sleep_multiplier: float = 0.0,
                         extra_args: List[str] | None = None) -> List[Tuple[str, str, str, str]]:
         """Return a list of (vdu_number, desc) tuples."""
@@ -1518,11 +1515,6 @@ class DdcUtilDBus:
 
     def format_args_diagnostic(self, args: List[str]):
         return ' '.join([arg if len(arg) < 30 else arg[:30] + "..." for arg in args])
-
-    def refresh(self):
-        status, message = self.ddcutil_proxy.Initialize('', 0, 0)
-        self.ddcutil_proxy = self.connect_to_service()
-        log_info(f"Refresh proxy {status=} {message=}")
 
     def detect_monitors(self, issue_warnings: bool = True, sleep_multiplier: float = 0.0,
                         extra_args: List[str] | None = None) -> List[Tuple[str, str, str, str]]:
@@ -6853,7 +6845,6 @@ class VduAppController:  # Main controller containing methods for high level ope
         def update_from_vdu() -> None:
             if self.ddcutil is not None:
                 try:
-                    self.ddcutil.refresh();
                     self.detected_vdu_list = self.ddcutil.detect_monitors(sleep_multiplier=self.main_config.get_sleep_multiplier())
                     for control_panel in self.main_window.get_main_panel().vdu_control_panels.values():
                         if control_panel.controller.get_full_id() in self.detected_vdu_list:
