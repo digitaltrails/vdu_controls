@@ -1621,16 +1621,19 @@ class DdcUtilDBus:
                 sleep_multiplier: float | None = None, extra_args: List[str] | None = None, retry_on_error: bool = False) -> None:
         """Send a new value to a specific VDU and vcp_code."""
         edid_txt = self.id_key_args_dbus(vdu_number)
-
+        if self.get_type(vdu_number, vcp_code) != CONTINUOUS_TYPE:
+            int_new_value = int(new_value, 16)
+        else:
+            int_new_value = int(new_value)
         for attempt_count in range(DDCUTIL_RETRIES):
             with self.ddcutil_access_lock:
-                status, errmsg = self.ddcutil_proxy.SetVcp(-1, edid_txt, int(vcp_code, 16), int(new_value), 0)
+                status, errmsg = self.ddcutil_proxy.SetVcp(-1, edid_txt, int(vcp_code, 16), int_new_value, 0)
             if status == 0:
                 return
             if not retry_on_error or attempt_count + 1 == DDCUTIL_RETRIES:
                 if status in self.status_values and self.status_values[status] == "DDCRC_INVALID_DISPLAY":
                     raise DdcUtilDisplayNotFound(f"setvcp:  VDU {vdu_number} - {self.status_values[status]} - {errmsg}")
-                raise ValueError(f"setvcp value error {status=} {errmsg=}")
+                raise ValueError(f"setvcp {vcp_code=} value={new_value} error {status=} {errmsg=}")
                 # TODO raise DdcUtilDisplayNotFound
             time.sleep(attempt_count * 0.25)
 
