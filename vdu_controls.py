@@ -1461,34 +1461,13 @@ class DdcUtil:
         raise ValueError(f"VDU {vdu_number} vcp_code {vcp_code} failed to parse vcp value '{result}'")
 
 
-class DdcUtilDBus:
-    """
-    Interface to the D-Bus ddcutil service Display Data Channel Utility for interacting with VDUs.
-    """
+class DasBusImplementation:
 
-    def __init__(self, default_sleep_multiplier: float | None = None) -> None:
-        super().__init__()
+    def __init__(self):
+        self.service_access_lock = Lock()
+        self.displays_changed_callback = None
         self.ddcutil_proxy = self.connect_to_service()
-        self.common_args = []
-        self.supported_codes: Dict[str, str] | None = None
-        self.default_sleep_multiplier = default_sleep_multiplier
-        self.vcp_type_map: Dict[str, str] = {}
-        self.edid_map: Dict[str, str] = {}
-        self.displays_changed_callback: Callable | None = None
-        self.ddcutil_access_lock = Lock()
-        self.ddcutil_version = (0, 0, 0)  # Dummy version for bootstrapping
-        self.version_suffix = ''
-        version_info = self.ddcutil_proxy.DdcutilVersionString
-        global about_supporting_versions
-        about_supporting_versions += f"D-Bus DdcutilInterface {self.ddcutil_proxy.InterfaceVersionString} (ddcutil {version_info})"
-        if version_match := re.match(r'[a-z]+ ([0-9]+).([0-9]+).([0-9]+)-?([^\n]*)', version_info):
-            self.ddcutil_version = tuple(int(i) for i in version_match.groups()[0:3])
-            self.version_suffix = version_match.groups()[3]
-        # self.version = (1, 2, 2)  # for testing for 1.2.2 compatibility
-        self.status_values = self.ddcutil_proxy.StatusValues;
-        log_info(f"ddcutil version {self.ddcutil_version} {self.version_suffix}(dynamic-sleep={self.ddcutil_version >= (2, 0, 0)})")
-        if self.ddcutil_version >= (2, 0, 0):  # Won't know real version until around here  TODO is this test needed?
-            self.common_args += [arg for arg in os.getenv('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != '']
+        self.DetectedAttributes = namedtuple("DetectedAttributes", self.ddcutil_proxy.AttributesReturnedByDetect)
 
         def displays_changed_dbus_handler(count: int, flags: int):
             log_info("ConnectedDisplaysChanged Callback called", count, flags)
@@ -1523,6 +1502,81 @@ class DdcUtilDBus:
                 raise DdcUtilDisplayNotFound("Error starting D-Bus service {server_executable=}")
             time.sleep(2)
 
+    def get_ddcutil_version_string(self) -> str:
+        return self.ddcutil_proxy.DdcutilVersionString
+
+    def get_interface_version_string(self) -> str:
+        return self.ddcutil_proxy.InterfaceVersionString
+
+    def get_status_values(self) -> Dict[int, str]:
+        return self.ddcutil_proxy.StatusValues
+
+    def set_detected_displays_changed_callback(self, callback: callable) -> None:
+        self.displays_changed_callback = callback
+
+    def detect(self, flags: int) -> List[Tuple]:
+        with self.service_access_lock:
+            number_detected, list_of_displays, status, errmsg = self.ddcutil_proxy.Detect(flags)
+            vdu_list = [self.DetectedAttributes(*vdu) for vdu in list_of_displays]
+            return vdu_list
+
+    def get_capabilities(self, edid_txt: str) -> Tuple:
+        with self.service_access_lock:
+            model, mccs_major, mccs_minor, commands, features, status, errmsg = self.ddcutil_proxy.GetCapabilitiesMetadata(
+                -1, edid_txt, 0)
+            return model, mccs_major, mccs_minor, commands, features, status, errmsg
+
+    def get_type(self, edid_txt: str, vcp_code_int: int) -> Tuple:
+        with self.service_access_lock:
+            _, _, _, _, _, is_complex, is_continuous, status, errmsg = self.ddcutil_proxy.GetVcpMetadata(-1, edid_txt,
+                                                                                                         vcp_code_int, 0)
+            return is_complex, is_continuous, status, errmsg
+
+    def set_vcp(self, edid_txt: str, vcp_code_int: int, new_value_int: int):
+        with self.service_access_lock:
+            return self.ddcutil_proxy.SetVcp(-1, edid_txt, vcp_code_int, new_value_int, 0)
+
+    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> Tuple[List[int], int, str]:
+        with self.service_access_lock:
+            return self.ddcutil_proxy.GetMultipleVcp(-1, edid_txt, vcp_code_int_list, 0)
+
+
+class DdcUtilDBus:
+    """
+    Interface to the D-Bus ddcutil service Display Data Channel Utility for interacting with VDUs.
+    """
+
+    def __init__(self, default_sleep_multiplier: float | None = None) -> None:
+        super().__init__()
+        self.ddcutil_service = DasBusImplementation()
+        self.common_args = []
+        self.supported_codes: Dict[str, str] | None = None
+        self.default_sleep_multiplier = default_sleep_multiplier
+        self.vcp_type_map: Dict[str, str] = {}
+        self.edid_map: Dict[str, str] = {}
+        self.displays_changed_callback: Callable | None = None
+        self.ddcutil_version = (0, 0, 0)  # Dummy version for bootstrapping
+        self.version_suffix = ''
+        version_info = self.ddcutil_service.get_ddcutil_version_string()
+        global about_supporting_versions
+        about_supporting_versions += \
+            f"D-Bus DdcutilInterface {self.ddcutil_service.get_interface_version_string()} (ddcutil {version_info})"
+        if version_match := re.match(r'[a-z]+ ([0-9]+).([0-9]+).([0-9]+)-?([^\n]*)', version_info):
+            self.ddcutil_version = tuple(int(i) for i in version_match.groups()[0:3])
+            self.version_suffix = version_match.groups()[3]
+        # self.version = (1, 2, 2)  # for testing for 1.2.2 compatibility
+        self.status_values = self.ddcutil_service.get_status_values();
+        log_info(f"ddcutil version {self.ddcutil_version} {self.version_suffix}(dynamic-sleep={self.ddcutil_version >= (2, 0, 0)})")
+        if self.ddcutil_version >= (2, 0, 0):  # Won't know real version until around here  TODO is this test needed?
+            self.common_args += [arg for arg in os.getenv('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != '']
+
+        def displays_changed_dbus_handler(count: int, flags: int):
+            log_info("ConnectedDisplaysChanged Callback called", count, flags)
+            if self.displays_changed_callback:
+                self.displays_changed_callback(count, flags)
+
+        self.ddcutil_service.set_detected_displays_changed_callback(displays_changed_dbus_handler)
+
     def id_key_args_dbus(self, vdu_number: str) -> List[str]:
         return self.edid_map[vdu_number]
 
@@ -1534,11 +1588,7 @@ class DdcUtilDBus:
         """Return a list of (vdu_number, desc) tuples."""
         args = ([] if extra_args is None else extra_args) + ['detect', '--verbose', ]
         display_list = []
-        DetectedAttributes = namedtuple("DetectedAttributes", self.ddcutil_proxy.AttributesReturnedByDetect)
-        with self.ddcutil_access_lock:
-            number_detected, list_of_displays, status, errmsg = self.ddcutil_proxy.Detect(0)
-        vdu_list = [DetectedAttributes(*vdu) for vdu in list_of_displays]  # Reform into list of namedtuples
-
+        vdu_list = self.ddcutil_service.detect(0)
         # Going to get rid of anything that is not a-z A-Z 0-9 as potential rubbish
         rubbish = re.compile('[^a-zA-Z0-9]+')
         # This isn't efficient, it doesn't need to be, so I'm keeping re-defs close to where they are used.
@@ -1583,9 +1633,7 @@ class DdcUtilDBus:
     def query_capabilities(self, vdu_number: str, extra_args: List[str] | None = None) -> str:
         """Return a vpc capabilities string."""
         edid_txt = self.id_key_args_dbus(vdu_number)
-        with self.ddcutil_access_lock:
-            model, mccs_major, mccs_minor, commands, features, status, errmsg = self.ddcutil_proxy.GetCapabilitiesMetadata(
-                -1, edid_txt, 0)
+        model, mccs_major, mccs_minor, commands, features, status, errmsg = self.ddcutil_service.get_capabilities(edid_txt)
         capability_text = f"Model: {model}\n"  f"MCCS version: {mccs_major}.{mccs_minor}\n" "VCP Features:\n"
         for feature_id, feature in features.items():
             feature_code = f"{feature_id:02x}".upper()
@@ -1610,9 +1658,7 @@ class DdcUtilDBus:
         key = (edid_txt, vcp_code)
         if key in self.vcp_type_map:
             return self.vcp_type_map[key]
-        with self.ddcutil_access_lock:
-            _, _, _, _, _, is_complex, is_continuous, status, errmsg = self.ddcutil_proxy.GetVcpMetadata(-1, edid_txt,
-                                                                                                         int(vcp_code, 16), 0)
+        is_complex, is_continuous, status, errmsg = self.ddcutil_service.get_type(edid_txt, int(vcp_code, 16))
         type_str = CONTINUOUS_TYPE if is_continuous else (COMPLEX_NON_CONTINUOUS_TYPE if is_complex else SIMPLE_NON_CONTINUOUS_TYPE)
         self.vcp_type_map[key] = type_str
         return type_str
@@ -1626,8 +1672,7 @@ class DdcUtilDBus:
         else:
             int_new_value = int(new_value)
         for attempt_count in range(DDCUTIL_RETRIES):
-            with self.ddcutil_access_lock:
-                status, errmsg = self.ddcutil_proxy.SetVcp(-1, edid_txt, int(vcp_code, 16), int_new_value, 0)
+            status, errmsg = self.ddcutil_service.set_vcp(edid_txt, int(vcp_code, 16), int_new_value)
             if status == 0:
                 return
             if not retry_on_error or attempt_count + 1 == DDCUTIL_RETRIES:
@@ -1646,7 +1691,7 @@ class DdcUtilDBus:
         if self.supported_codes is not None:
             return self.supported_codes
         self.supported_codes = {}
-        info = DdcUtil().vcp_info()
+        info = self.vcp_info()
         code_definitions = info.split("\nVCP code ")
         for code_def in code_definitions[1:]:
             lines = code_def.split('\n')
@@ -1667,9 +1712,8 @@ class DdcUtilDBus:
         # Try a few times in case there is a glitch due to a monitor being turned-off/on or slow to respond
 
         for attempt_count in range(DDCUTIL_RETRIES):
-            with self.ddcutil_access_lock:
-                values, status, errmsg = self.ddcutil_proxy.GetMultipleVcp(-1, self.id_key_args_dbus(vdu_number),
-                                                                           [int(vcp, 16) for vcp in vcp_code_list], 0)
+            values, status, errmsg = self.ddcutil_service.get_vcp_values(self.id_key_args_dbus(vdu_number),
+                                                                         [int(vcp, 16) for vcp in vcp_code_list])
             if status != 0:
                 if self.status_values.get(status, "DDCRC_INVALID_DISPLAY") == "DDCRC_INVALID_DISPLAY":
                     raise DdcUtilDisplayNotFound(f"getvcp:  VDU {vdu_number} status={self.status_values.get(status, str(status))}: {errmsg}")
