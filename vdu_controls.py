@@ -1105,6 +1105,7 @@ log_debug_enabled = False  # Often used to guard needless computation: log_debug
 
 VduStableId = NewType('VduStableId', str)
 
+about_supporting_versions = ""
 
 def is_dark_theme() -> bool:
     # Heuristic for checking for a dark theme. Is the sample text lighter than the background?
@@ -1240,6 +1241,8 @@ class DdcUtil:
         self.ddcutil_version = (0, 0, 0)  # Dummy version for bootstrapping
         self.version_suffix = ''
         version_info = self.__run__('--version').stdout.decode('utf-8', errors='surrogateescape')
+        global about_supporting_versions
+        about_supporting_versions += "f{version_info} "
         if version_match := re.match(r'[a-z]+ ([0-9]+).([0-9]+).([0-9]+)-?([^\n]*)', version_info):
             self.ddcutil_version = tuple(int(i) for i in version_match.groups()[0:3])
             self.version_suffix = version_match.groups()[3]
@@ -1471,10 +1474,13 @@ class DdcUtilDBus:
         self.default_sleep_multiplier = default_sleep_multiplier
         self.vcp_type_map: Dict[str, str] = {}
         self.edid_map: Dict[str, str] = {}
+        self.displays_changed_callback: Callable | None = None
         self.ddcutil_access_lock = Lock()
         self.ddcutil_version = (0, 0, 0)  # Dummy version for bootstrapping
         self.version_suffix = ''
         version_info = self.ddcutil_proxy.DdcutilVersionString
+        global about_supporting_versions
+        about_supporting_versions += f"D-Bus DdcutilInterface {self.ddcutil_proxy.InterfaceVersionString} (ddcutil {version_info})"
         if version_match := re.match(r'[a-z]+ ([0-9]+).([0-9]+).([0-9]+)-?([^\n]*)', version_info):
             self.ddcutil_version = tuple(int(i) for i in version_match.groups()[0:3])
             self.version_suffix = version_match.groups()[3]
@@ -1483,6 +1489,13 @@ class DdcUtilDBus:
         log_info(f"ddcutil version {self.ddcutil_version} {self.version_suffix}(dynamic-sleep={self.ddcutil_version >= (2, 0, 0)})")
         if self.ddcutil_version >= (2, 0, 0):  # Won't know real version until around here  TODO is this test needed?
             self.common_args += [arg for arg in os.getenv('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != '']
+
+        def displays_changed_dbus_handler(count: int, flags: int):
+            log_info("ConnectedDisplaysChanged Callback called", count, flags)
+            if self.displays_changed_callback:
+                self.displays_changed_callback(count, flags)
+
+        self.ddcutil_proxy.ConnectedDisplaysChanged.connect(displays_changed_dbus_handler)
 
     def connect_to_service(self) -> object:
         session_service_name = os.environ.get('DDCUTIL_SERVICE_NAME', default="com.ddcutil.DdcutilService")
@@ -6551,6 +6564,7 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
                     WEATHER_FORECAST_URL=WEATHER_FORECAST_URL)
         else:
             about_text = ABOUT_TEXT
+        about_text += f"<hr><p><small>{about_supporting_versions}</small>"
         self.setInformativeText(about_text)
         self.setIcon(QMessageBox.Information)
         self.setModal(False)
