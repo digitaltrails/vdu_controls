@@ -1578,7 +1578,7 @@ class DdcutilInterfaceExe:
         results_dict: Dict[str, VcpValue | None] = {vcp_code: None for vcp_code in vcp_code_list}  # Force vcp_code_list ordering
         for attempt_count in range(DDCUTIL_RETRIES):
             try:
-                from_ddcutil = self.__run__(*args, log_id=f"{edid_txt:.30}")
+                from_ddcutil = self.__run__(*args, log_id=f"{edid_txt:.30}...")
                 for line in from_ddcutil.stdout.split(b"\n"):
                     line_utf8 = line.decode('utf-8', errors='surrogateescape') + '\n'
                     if vcp_code_match := DdcutilInterfaceExe._VCP_CODE_REGEXP.match(line_utf8):
@@ -6878,7 +6878,7 @@ class VduAppController:  # Main controller containing methods for high level ope
         def update_from_vdu() -> None:
             if self.ddcutil is not None:
                 try:
-                    self.detected_vdu_list = self.ddcutil.detect_monitors(sleep_multiplier=self.main_config.get_sleep_multiplier())
+                    self.detected_vdu_list = self.ddcutil.detect_monitors()
                     for control_panel in self.main_window.get_main_panel().vdu_control_panels.values():
                         if control_panel.controller.get_full_id() in self.detected_vdu_list:
                             control_panel.refresh_from_vdu()
