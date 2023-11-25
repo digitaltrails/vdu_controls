@@ -1226,12 +1226,12 @@ class DdcUtil:
 
     def __init__(self, use_dbus: bool = False) -> None:
         super().__init__()
-        if use_dbus:
+        if use_dbus:  # The service-interface implementations are duck-typed.
             self.ddcutil_service = DdcutilInterfaceDasbus()
         else:
             self.ddcutil_service = DdcutilInterfaceExe()
         self.supported_codes: Dict[str, str] | None = None
-        self.vcp_type_map: Dict[str, str] = {}
+        self.vcp_type_map: Dict[Tuple[str, str], str] = {}
         self.edid_map: Dict[str, str] = {}
         self.displays_changed_callback: Callable | None = None
         self.ddcutil_version = (0, 0, 0)  # Dummy version for bootstrapping
@@ -1260,7 +1260,7 @@ class DdcUtil:
     def set_extra_args(self, vdu_number: str, sleep_multiplier: float | None, extra_args: List[str]):
         self.ddcutil_service.set_extra_args(self.edid_map[vdu_number], sleep_multiplier, extra_args)
 
-    def id_key_args_dbus(self, vdu_number: str) -> List[str]:
+    def id_key_args_dbus(self, vdu_number: str) -> str:
         return self.edid_map[vdu_number]
 
     def format_args_diagnostic(self, args: List[str]):
@@ -1280,7 +1280,7 @@ class DdcUtil:
             model_name = rubbish.sub('_', vdu.model_name)
             manufacturer = rubbish.sub('_', vdu.manufacturer_id)
             serial_number = rubbish.sub('_', vdu.serial_number)
-            bin_serial_number = str(vdu.binary_serial_number)  # TODO rubbish.sub('_', ds_parts.get('Binary serial number', '').split('(')[0].strip())
+            bin_serial_number = str(vdu.binary_serial_number)
             man_date = ''  # TODO rubbish.sub('_', ds_parts.get('Manufacture year', ''))
             i2c_bus_id = ''  # TODO ds_parts.get('I2C bus', '').replace("/dev/", '').replace("-", "_")
             edid = vdu.edid_txt
@@ -1312,12 +1312,9 @@ class DdcUtil:
         return display_list
 
     def query_capabilities(self, vdu_number: str, extra_args: List[str] | None = None) -> str:
-        """Return a vpc capabilities string."""
         edid_txt = self.id_key_args_dbus(vdu_number)
-        if full_text := self.ddcutil_service.get_capabilities_text(edid_txt):
-            return full_text  # this service supports retrieving a text version of capabilities.
-        model, mccs_major, mccs_minor, commands, features, status, errmsg = self.ddcutil_service.get_capabilities(edid_txt)
-        if full_text:
+        model, mccs_major, mccs_minor, _, features, full_text, status, errmsg = self.ddcutil_service.get_capabilities(edid_txt)
+        if full_text:  # The service supplies pre-assembled capabilities text.
             return full_text
         capability_text = f"Model: {model}\n"  f"MCCS version: {mccs_major}.{mccs_minor}\n" "VCP Features:\n"
         for feature_id, feature in features.items():
@@ -1338,7 +1335,7 @@ class DdcUtil:
                         capability_text += f"         {value_code}: {value_name}\n"
         return capability_text
 
-    def get_type(self, vdu_number: int, vcp_code: str) -> str | None:  # may not be needed with a dbus implementation
+    def get_type(self, vdu_number: str, vcp_code: str) -> str | None:  # may not be needed with a dbus implementation
         edid_txt = self.id_key_args_dbus(vdu_number)
         key = (edid_txt, vcp_code)
         if key in self.vcp_type_map:
@@ -1348,15 +1345,11 @@ class DdcUtil:
         self.vcp_type_map[key] = type_str
         return type_str
 
-    def set_vcp(self, vdu_number: str, vcp_code: str, new_value: str, retry_on_error: bool = False) -> None:
+    def set_vcp(self, vdu_number: str, vcp_code: str, new_value: int, retry_on_error: bool = False) -> None:
         """Send a new value to a specific VDU and vcp_code."""
         edid_txt = self.id_key_args_dbus(vdu_number)
-        if self.get_type(vdu_number, vcp_code) != CONTINUOUS_TYPE:
-            int_new_value = int(new_value, 16)
-        else:
-            int_new_value = int(new_value)
         for attempt_count in range(DDCUTIL_RETRIES):
-            status, errmsg = self.ddcutil_service.set_vcp(edid_txt, int(vcp_code, 16), int_new_value)
+            status, errmsg = self.ddcutil_service.set_vcp(edid_txt, int(vcp_code, 16), new_value)
             if status == 0:
                 return
             if not retry_on_error or attempt_count + 1 == DDCUTIL_RETRIES:
@@ -1399,14 +1392,13 @@ class DdcUtil:
                                                                          [int(vcp, 16) for vcp in vcp_code_list])
             if status != 0:
                 if self.status_values.get(status, "DDCRC_INVALID_DISPLAY") == "DDCRC_INVALID_DISPLAY":
-                    raise DdcUtilDisplayNotFound(f"getvcp:  VDU {vdu_number} status={self.status_values.get(status, str(status))}: {errmsg}")
+                    raise DdcUtilDisplayNotFound(
+                        f"getvcp:  VDU {vdu_number} status={self.status_values.get(status, str(status))}: {errmsg}")
                 raise ValueError(f"getvcp: VDU {vdu_number} status={self.status_values.get(status, str(status))}: {errmsg}")
             for vcp, value, maxv, _ in values:
                 vcp_code = f'{vcp:02X}'
                 vcp_type = self.get_type(vdu_number, vcp_code)
-                vcp_value_str = str(value) if vcp_type == CONTINUOUS_TYPE else f'{value:02X}'
-                vcp_max_str = str(maxv) if vcp_type == CONTINUOUS_TYPE else f'{value:02X}'
-                results_dict[vcp_code] = VcpValue(vcp_value_str, vcp_max_str, vcp_type)
+                results_dict[vcp_code] = VcpValue(value, maxv, vcp_type)
             if None not in results_dict.values():
                 break  # Got all values - OK to stop
         for vcp_code, value in results_dict.items():
@@ -1421,7 +1413,7 @@ class DdcutilInterfaceExe:
     _C_PATTERN = re.compile(r'([0-9]+) ([0-9]+)')  # Match Continuous-Type getvcp result
     _SNC_PATTERN = re.compile(r'x([0-9a-f]+)')  # Match Simple Non-Continuous-Type getvcp result
     _CNC_PATTERN = re.compile(r'x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+)')  # Match Complex Non-Continuous-Type result
-    _SPECIFIC_VCP_VALUE_PATTERN_CACHE: Dict[str, re.Pattern] = {}
+    _SPECIFIC_VCP_VALUE_PATTERN_CACHE: Dict[int, re.Pattern] = {}
 
     def __init__(self):
         self.extra_args: Dict[str, List[str]] = {}
@@ -1535,14 +1527,12 @@ class DdcutilInterfaceExe:
                     edid, bin_serial_number))
         return display_list
 
-    def get_capabilities_text(self, edid_txt: str) -> Tuple[str, int, str] | None:
-        args = self.extra_args.get(edid_txt, []) + ['capabilities'] + '--edid' + edid_txt
+    def get_capabilities(self, edid_txt: str) -> Tuple[
+        str, int, int, Dict[int, str], Dict[int, Tuple[str, str, Dict[int, str]]], str, int, str]:
+        args = self.extra_args.get(edid_txt, []) + ['--edid', edid_txt, 'capabilities']
         result = self.__run__(*args, log_id=f"{edid_txt:.30}...")
         capability_text = result.stdout.decode('utf-8', errors='surrogateescape')
-        return capability_text, 0, "OK"
-
-    def get_capabilities(self, edid_txt: str) -> Tuple[str, int, int, Dict[int, str], Dict[int, Tuple[str, str, Dict[int, str]]]]:
-        raise NotImplemented('get_capabilities')  # Not supported
+        return '', 0, 0, {}, {}, capability_text, 0, "OK"
 
     def get_type(self, edid_txt: str, vcp_code_int: int) -> Tuple[bool, bool, int, str] | None:
         type_code = self.vcp_type_map.get(vcp_code_int, None)
@@ -1562,20 +1552,16 @@ class DdcutilInterfaceExe:
             return -1, "BAD"
         return 0, "OK"
 
-    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> Tuple[List[int], int, str]:
+    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> Tuple[List[VcpValue], int, str]:
         if self.ddcutil_version > (1, 3, 0):
             return self._get_vcp_values_implementation(edid_txt, vcp_code_int_list), 0, "OK"
         else:
             return [self._get_vcp_values_implementation(edid_txt, [cd])[0] for cd in vcp_code_int_list], 0, "OK"
 
-    def _get_vcp_values_implementation(self, edid_txt: str, vcp_code_list: List[int]) -> List[VcpValue]:
-        """
-        Returns None if there is an error communicating with the VDU
-        """
+    def _get_vcp_values_implementation(self, edid_txt: str, vcp_code_list: List[int]) -> List[Tuple[str, int, int, str]]:
         # Try a few times in case there is a glitch due to a monitor being turned-off/on or slow to respond
-        # Should we loop here, or higher up - maybe it doesn't matter.
         args = self.extra_args.get(edid_txt, []) + ['--brief', 'getvcp'] + [f"{c:02X}" for c in vcp_code_list] + ['--edid', edid_txt]
-        results_dict: Dict[str, VcpValue | None] = {vcp_code: None for vcp_code in vcp_code_list}  # Force vcp_code_list ordering
+        results_dict: Dict[int, VcpValue | None] = {vcp_code: None for vcp_code in vcp_code_list}  # Force vcp_code_list ordering
         for attempt_count in range(DDCUTIL_RETRIES):
             try:
                 from_ddcutil = self.__run__(*args, log_id=f"{edid_txt:.30}...")
@@ -1583,12 +1569,11 @@ class DdcutilInterfaceExe:
                     line_utf8 = line.decode('utf-8', errors='surrogateescape') + '\n'
                     if vcp_code_match := DdcutilInterfaceExe._VCP_CODE_REGEXP.match(line_utf8):
                         vcp_code = int(vcp_code_match.group(1), 16)
-                        vcp_value, vcp_max, vcp_type = self.__parse_vcp_value(vcp_code, line_utf8)
-                        results_dict[vcp_code] = (vcp_code, vcp_value, vcp_max, line_utf8)
-                for vcp_code, str_value in results_dict.items():
-                    if str_value is None:
+                        results_dict[vcp_code] = self.__parse_vcp_value(vcp_code, line_utf8)
+                for vcp_code, vcp_value in results_dict.items():
+                    if vcp_value is None:
                         raise ValueError(f"getvcp: VDU {edid_txt:.30}... - failed to obtain value for vcp_code {vcp_code}")
-                return list(results_dict.values())
+                return [(vcp_code, v.current, v.max, v.vcp_type) for vcp_code, v in results_dict.items()]
             except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound):
                 if attempt_count + 1 == DDCUTIL_RETRIES:  # Don't log here, it creates too much noise in the logs
                     raise  # Too many failures, pass the buck upstairs
@@ -1604,13 +1589,13 @@ class DdcutilInterfaceExe:
             self.vcp_type_map[vcp_code] = type_indicator
             if type_indicator == CONTINUOUS_TYPE:
                 if c_match := DdcutilInterfaceExe._C_PATTERN.match(value_match.group(2)):
-                    return int(c_match.group(1)), int(c_match.group(2)), CONTINUOUS_TYPE
+                    return VcpValue(int(c_match.group(1)), int(c_match.group(2)), CONTINUOUS_TYPE)
             elif type_indicator == SIMPLE_NON_CONTINUOUS_TYPE:
                 if snc_match := DdcutilInterfaceExe._SNC_PATTERN.match(value_match.group(2)):
-                    return int(snc_match.group(1), 16), 0, SIMPLE_NON_CONTINUOUS_TYPE
+                    return VcpValue(int(snc_match.group(1), 16), 0, SIMPLE_NON_CONTINUOUS_TYPE)
             elif type_indicator == COMPLEX_NON_CONTINUOUS_TYPE:
                 if cnc_match := DdcutilInterfaceExe._CNC_PATTERN.match(value_match.group(2)):
-                    return int(cnc_match.group(3), 16) << 8 | int(cnc_match.group(4), 16), 0, COMPLEX_NON_CONTINUOUS_TYPE
+                    return VcpValue(int(cnc_match.group(3), 16) << 8 | int(cnc_match.group(4), 16), 0, COMPLEX_NON_CONTINUOUS_TYPE)
             else:
                 raise TypeError(f'Unsupported VCP type {type_indicator} vcp_code {vcp_code}')
         raise ValueError(f"VDU vcp_code {vcp_code} failed to parse vcp value '{result}'")
@@ -1682,13 +1667,12 @@ class DdcutilInterfaceDasbus:
             vdu_list = [self.DetectedAttributes(*vdu) for vdu in list_of_displays]
             return vdu_list
 
-    def get_capabilities_text(self, edid_txt: str) -> str | None:
-        return None
-    def get_capabilities(self, edid_txt: str) -> Tuple[str, int, int, Dict[int, str], Dict[int, Tuple[str, str, Dict[int, str]]]]:
+    def get_capabilities(self, edid_txt: str) -> Tuple[
+        str, int, int, Dict[int, str], Dict[int, Tuple[str, str, Dict[int, str]]], str, int, str]:
         with self.service_access_lock:
             model, mccs_major, mccs_minor, commands, features, status, errmsg = self.ddcutil_proxy.GetCapabilitiesMetadata(
                 -1, edid_txt, 0)
-            return model, mccs_major, mccs_minor, commands, features, status, errmsg
+            return model, mccs_major, mccs_minor, commands, features, '', status, errmsg
 
     def get_type(self, edid_txt: str, vcp_code_int: int) -> Tuple[bool, bool, int, str]:
         with self.service_access_lock:
@@ -2197,7 +2181,7 @@ class VduController(QObject):
     _RANGE_PATTERN = re.compile(r'Values:\s+([0-9]+)..([0-9]+)')
     _FEATURE_PATTERN = re.compile(r'([0-9A-F]{2})\s+[(]([^)]+)[)]\s(.*)', re.DOTALL | re.MULTILINE)
 
-    vcp_value_changed_qtsignal = pyqtSignal(str, str, str, VcpOrigin)
+    vcp_value_changed_qtsignal = pyqtSignal(str, str, int, VcpOrigin)
 
     def __init__(self, vdu_number: str, vdu_model_name: str, serial_number: str, manufacturer: str,
                  default_config: VduControlsConfig, ddcutil: DdcUtil, vdu_exception_handler: Callable, option: int = 0) -> None:
@@ -2215,7 +2199,7 @@ class VduController(QObject):
         self.vdu_model_id = proper_name(vdu_model_name.strip())
         self.capabilities_text: str | None = None
         self.config = None
-        self.values_cache: Dict[str] = {}
+        self.values_cache: Dict[str, int] = {}
         enabled_vcp_codes = default_config.get_all_enabled_vcp_codes()
         for config_name in (self.vdu_stable_id, self.vdu_model_id):
             config_path = ConfIni.get_path(config_name)
@@ -2285,9 +2269,9 @@ class VduController(QObject):
             return values
         except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound) as e:
             raise VduException(vdu_description=self.get_vdu_description(), vcp_code=",".join(vcp_codes), exception=e,
-                               operation="get_attributes") from e
+                               operation="get_vcp_values") from e
 
-    def set_vcp_value(self, vcp_code: str, value: str, origin: VcpOrigin = VcpOrigin.NORMAL) -> None:
+    def set_vcp_value(self, vcp_code: str, value: int, origin: VcpOrigin = VcpOrigin.NORMAL) -> None:
         try:
             # raise subprocess.SubprocessError("set_attribute")  # for testing
             retry_on_error = vcp_code in SUPPORTED_VCP_BY_CODE and SUPPORTED_VCP_BY_CODE[vcp_code].retry_setvcp
@@ -2298,7 +2282,7 @@ class VduController(QObject):
             self.vcp_value_changed_qtsignal.emit(self.vdu_stable_id, vcp_code, value, origin)
         except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound) as e:
             raise VduException(vdu_description=self.get_vdu_description(), vcp_code=vcp_code, exception=e,
-                               operation="set_attribute") from e
+                               operation="set_vcp_value") from e
 
     def get_range_restrictions(self, vcp_code, fallback: Tuple[int, int] | None = None) -> Tuple[int, int] | None:
         if vcp_code in self.capabilities_supported_by_this_vdu:
@@ -2798,7 +2782,7 @@ class VduControlBase(QWidget):
         super().__init__()
         self.controller = controller
         self.vcp_capability = vcp_capability
-        self.current_value: str | None = None
+        self.current_value: int | None = None
         # Using Qt signals to ensure GUI activity occurs in the GUI thread (this thread).
         self._refresh_ui_view_in_gui_thread_qtsignal.connect(self._refresh_ui_view_task)
         self.refresh_ui_only = False
@@ -2808,12 +2792,12 @@ class VduControlBase(QWidget):
         self.current_value = vcp_value.current
         self.refresh_ui_view()
 
-    def set_value(self, new_value: str, origin: VcpOrigin = VcpOrigin.NORMAL) -> None:  # Used by controllers to alter physical VDU
+    def set_value(self, new_value: int, origin: VcpOrigin = VcpOrigin.NORMAL) -> None:  # Used by controllers to alter physical VDU
         self.controller.set_vcp_value(self.vcp_capability.vcp_code, new_value, origin)
         self.current_value = new_value
         self.refresh_ui_view()
 
-    def ui_change_vdu_attribute(self, new_value: str) -> None:  # Used by UI controls to change values
+    def ui_change_vdu_attribute(self, new_value: int) -> None:  # Used by UI controls to change values
         log_info("ui_change_vdu_attribute") if self.debug else None
         if self.refresh_ui_only:  # Called from a GUI control when it was already responding to a vdu attribute change.
             log_info(f"Skip change {self.refresh_ui_only=}") if self.debug else None
@@ -2827,8 +2811,11 @@ class VduControlBase(QWidget):
                 if not self.controller.vdu_exception_handler(e, True):  # handler gets to decide if we should loop again
                     break
 
+    def get_current_text_value(self) -> str | None:  # Return text in correct base: continuous->base10 non-continuous->base16
+        assert False, "subclass failed to implement get_current_text_value"
+
     def refresh_ui_view_implementation(self):  # Subclasses to implement
-        pass
+        assert False, "subclass failed to implement refresh_ui_view_implementation"
 
     def refresh_ui_view(self) -> None:
         if not is_running_in_gui_thread():
@@ -2898,9 +2885,9 @@ class VduControlSlider(VduControlBase):
         layout.addWidget(self.spinbox)
 
         def slider_changed(value: int) -> None:
-            self.current_value = str(value)
+            self.current_value = value
             self.spinbox.setValue(value)
-            self.ui_change_vdu_attribute(self.current_value)
+            self.ui_change_vdu_attribute(value)
 
         slider.valueChanged.connect(slider_changed)
 
@@ -2927,6 +2914,9 @@ class VduControlSlider(VduControlBase):
             self.spinbox.setRange(0, int_max)
             self.slider.setRange(0, int_max)
         super().update_from_vdu(vcp_value)
+
+    def get_current_text_value(self) -> str|None:
+        return str(self.current_value) if self.current_value else None
 
     def refresh_ui_view_implementation(self) -> None:
         if self.current_value is not None:  # Copy the internally cached current value onto the GUI view.
@@ -2960,7 +2950,7 @@ class VduControlComboBox(VduControlBase):
             combo_box.addItem(self.translate_label(desc), value)
 
         def index_changed(_: int) -> None:
-            self.current_value = self.combo_box.currentData()
+            self.current_value = int(self.combo_box.currentData(), 16)
             self.validate_value()
             self.ui_change_vdu_attribute(self.current_value)
 
@@ -2972,22 +2962,26 @@ class VduControlComboBox(VduControlBase):
         result = maybe if maybe != canonical else source
         return ' '.join(w[:1].upper() + w[1:] for w in result.split())  # Default to capitalized version of each word
 
+    def get_current_text_value(self) -> str|None:
+        return f"{self.current_value:02X}" if self.current_value else None
+
     def refresh_ui_view_implementation(self) -> None:
         """Copy the internally cached current value onto the GUI view."""
         self.validate_value()
-        self.combo_box.setCurrentIndex(self.keys.index(self.current_value))
+        self.combo_box.setCurrentIndex(self.keys.index(self.get_current_text_value()))
 
     def validate_value(self) -> None:
-        if self.current_value not in self.keys:
+        if self.get_current_text_value() not in self.keys:
             self.keys.append(self.current_value)
-            self.combo_box.addItem('UNKNOWN-' + str(self.current_value), self.current_value)
+            self.combo_box.addItem('UNKNOWN-' + self.get_current_text_value(), self.current_value)
             self.combo_box.model().item(self.combo_box.count() - 1).setEnabled(False)
             alert = MessageBox(QMessageBox.Critical)
             alert.setText(
                 tr("Display {vnum} {vdesc} feature {code} '({cdesc})' has an undefined value '{value}'. "
                    "Valid values are {valid}.").format(
                     vdesc=self.controller.get_vdu_description(), vnum=self.controller.vdu_number,
-                    code=self.vcp_capability.vcp_code, cdesc=self.vcp_capability.name, value=self.current_value, valid=self.keys))
+                    code=self.vcp_capability.vcp_code, cdesc=self.vcp_capability.name,
+                    value=self.get_current_text_value(), valid=self.keys))
             alert.setInformativeText(
                 tr('If you want to extend the set of permitted values, you can edit the metadata '
                    'for {} in the settings panel.  For more details see the man page concerning '
@@ -3059,7 +3053,8 @@ class VduControlPanel(QWidget):
         vdu_section = self.controller.vdu_stable_id
         for control in self.vcp_controls:
             if control.vcp_capability.property_name() in preset_ini[vdu_section]:
-                if control.current_value != preset_ini[vdu_section][control.vcp_capability.property_name()]:
+                # Prior to version vdu_controls 1.21 we stored lower, but ddcutil expects upper
+                if control.get_current_text_value() != preset_ini[vdu_section][control.vcp_capability.property_name()].upper():
                     return False
         return True
 
@@ -3441,7 +3436,7 @@ class VduPanelBottomToolBar(QToolBar):
 class VduControlsMainPanel(QWidget):
     """GUI for detected VDUs, it will construct and contain a control panel for each VDU."""
 
-    vdu_vcp_changed_qtsignal = pyqtSignal(str, str, str, VcpOrigin)
+    vdu_vcp_changed_qtsignal = pyqtSignal(str, str, int, VcpOrigin)
     connected_vdus_changed_qtsignal = pyqtSignal()
 
     def __init__(self) -> None:
@@ -3631,8 +3626,8 @@ class PresetTransitionWorker(WorkerThread):
         self.step_interval_seconds = self.preset.get_step_interval_seconds()
         self.preset_non_transitioning_controls: List[TransitionValueKey] = []  # specific to this preset
         self.preset_transitioning_controls: List[TransitionValueKey] = []  # specific to this preset
-        self.final_values: Dict[TransitionValueKey, str] = {}
-        self.expected_values: Dict[TransitionValueKey, str | None] = {}
+        self.final_values: Dict[TransitionValueKey, int] = {}
+        self.expected_values: Dict[TransitionValueKey, int | None] = {}
         self.transition_immediately = immediately
         self.work_state = \
             PresetTransitionState.STEPPING_COMPLETED if self.transition_immediately else PresetTransitionState.INITIALIZED
@@ -3645,7 +3640,10 @@ class PresetTransitionWorker(WorkerThread):
                     property_name = vcp_capability.property_name()
                     if property_name in self.preset.preset_ini[vdu_stable_id]:
                         key = TransitionValueKey(vdu_stable_id=vdu_stable_id, vcp_code=vcp_capability.vcp_code)
-                        self.final_values[key] = self.preset.preset_ini[vdu_stable_id][property_name]
+                        if vcp_capability.vcp_type == CONTINUOUS_TYPE:
+                            self.final_values[key] = self.preset.preset_ini.getint(vdu_stable_id, property_name)
+                        else:
+                            self.final_values[key] = int(self.preset.preset_ini[vdu_stable_id][property_name], 16)
                         if vcp_capability.can_transition and not self.transition_immediately:
                             self.preset_transitioning_controls.append(key)
                         else:
@@ -3679,17 +3677,15 @@ class PresetTransitionWorker(WorkerThread):
             if self.stop_requested:
                 return
             final_value = self.final_values[key]
-            final_int_value = int(final_value)
             expected_value = self.expected_values[key]
-            expected_int_value = int(expected_value)
-            diff = final_int_value - expected_int_value
+            diff = final_value - expected_value
             if diff != 0:
                 step_size = 5
                 step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
-                str_value = str(expected_int_value + step)
-                self.expected_values[key] = str_value  # revise to new value
-                self.main_controller.set_value(key.vdu_stable_id, key.vcp_code, str_value, origin=VcpOrigin.TRANSIENT)
-                more_to_do = more_to_do or str_value != final_value
+                new_value = expected_value + step
+                self.expected_values[key] = new_value  # revise to new value
+                self.main_controller.set_value(key.vdu_stable_id, key.vcp_code, new_value, origin=VcpOrigin.TRANSIENT)
+                more_to_do = more_to_do or new_value != final_value
             now = datetime.now()
             if (now - self.last_progress_time).total_seconds() >= 1.0:
                 self.last_progress_time = now
@@ -5926,7 +5922,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             return False
         if self.main_controller.is_vcp_code_enabled(vdu_sid, BRIGHTNESS_VCP_CODE):  # can only adjust brightness controls
             try:
-                current_brightness = int(self.main_controller.get_value(vdu_sid, BRIGHTNESS_VCP_CODE))
+                current_brightness = self.main_controller.get_value(vdu_sid, BRIGHTNESS_VCP_CODE)
                 diff = profile_brightness - current_brightness
                 # Check if already at the correct brightness.
                 if diff == 0:
@@ -5952,7 +5948,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                 new_brightness = current_brightness + step
                 # Marking as transient, prevents showing intermediate preset matches, first clears, last sets (if appropriate).
                 origin = VcpOrigin.TRANSIENT if not first_step and new_brightness != profile_brightness else VcpOrigin.NORMAL
-                self.main_controller.set_value(vdu_sid, BRIGHTNESS_VCP_CODE, str(new_brightness), origin=origin)
+                self.main_controller.set_value(vdu_sid, BRIGHTNESS_VCP_CODE, new_brightness, origin=origin)
                 self.expected_brightness_map[vdu_sid] = new_brightness
                 log_info(f"LuxAutoWorker {thread_pid()}: Start stepping {vdu_sid=} {current_brightness=} to {profile_brightness=} "
                          f" {profile_preset_name=} {lux_summary_text}") if first_step else None
@@ -6318,7 +6314,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                 value_range = self.main_controller.get_range(vdu_sid, BRIGHTNESS_VCP_CODE, fallback=value_range)
                 self.range_restrictions_map[vdu_sid] = value_range
                 try:
-                    self.current_brightness_map[vdu_sid] = int(self.main_controller.get_value(vdu_sid, BRIGHTNESS_VCP_CODE))
+                    self.current_brightness_map[vdu_sid] = self.main_controller.get_value(vdu_sid, BRIGHTNESS_VCP_CODE)
                 except VduException as ve:
                     self.current_brightness_map[vdu_sid] = 0
                     log_warning("VDU may not be available:", str(ve), trace=True)
@@ -7113,7 +7109,7 @@ class VduAppController:  # Main controller containing methods for high level ope
             for control in control_panel.vcp_controls:  # Fill out value for any options present in the preset_ini.
                 if not update_only or preset_ini.has_option(vdu_section_name, control.vcp_capability.property_name()):
                     if control.current_value is not None:
-                        preset_ini[vdu_section_name][control.vcp_capability.property_name()] = control.current_value
+                        preset_ini[vdu_section_name][control.vcp_capability.property_name()] = control.get_current_text_value()
 
     def delete_preset(self, preset: Preset) -> None:
         self.preset_controller.delete_preset(preset)
@@ -7166,18 +7162,18 @@ class VduAppController:  # Main controller containing methods for high level ope
         log_error(f"get_range: No controller for {vdu_stable_id}")
         return fallback
 
-    def get_value(self, vdu_stable_id, vcp_code):
+    def get_value(self, vdu_stable_id, vcp_code) -> int:
         if controller := self.vdu_controllers_map.get(vdu_stable_id, None):
             value = controller.get_vcp_values([vcp_code])
             if len(value) == 1:  # This could probably be an assertion
                 return value[0].current
         log_error(f"get_value: No controller for {vdu_stable_id}")
-        return '0'
+        return 0
 
-    def set_value(self, vdu_stable_id: VduStableId, vcp_code: str, value_str: str, origin: VcpOrigin = VcpOrigin.NORMAL):
+    def set_value(self, vdu_stable_id: VduStableId, vcp_code: str, value: int, origin: VcpOrigin = VcpOrigin.NORMAL):
         if panel := self.main_window.get_main_panel().vdu_control_panels.get(vdu_stable_id, None):
             if control := panel.get_control(vcp_code):
-                control.set_value(value_str, origin)  # Apply to physical VDU
+                control.set_value(value, origin)  # Apply to physical VDU
                 return
         log_error(f"set_value: No controller for {vdu_stable_id=} {vcp_code=}")
 
@@ -7467,17 +7463,17 @@ class VduAppWindow(QMainWindow):
         if palette_change or (preset is not None and not isinstance(preset, PresetTransitionDummy)):
             self.refresh_preset_menu(palette_change=palette_change)
 
-    def respond_to_changes_handler(self, vdu_stable_id: VduStableId, vcp_code: str, value: str, origin: VcpOrigin) -> None:
+    def respond_to_changes_handler(self, vdu_stable_id: VduStableId, vcp_code: str, value: int, origin: VcpOrigin) -> None:
         # Update UI secondary displays
         if vcp_code in SUPPORTED_VCP_BY_CODE and SUPPORTED_VCP_BY_CODE[vcp_code].causes_config_change:
             self.main_controller.configure_application()  # Special case, such as a power control causing the VDU to go offline.
             return
-        log_debug("respond", vdu_stable_id, vcp_code, value, origin.name) if log_debug_enabled else None
+        log_debug(f"respond {vdu_stable_id=} {vcp_code=} {value=} {origin.name=}") if log_debug_enabled else None
         if origin != VcpOrigin.TRANSIENT:  # Only want to indicate final status (not when just passing through a preset)
             self.update_status_indicators()
         if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) and self.main_controller.lux_auto_controller is not None:
             if vcp_code == BRIGHTNESS_VCP_CODE:
-                LuxDialog.lux_dialog_display_brightness(vdu_stable_id, int(value))
+                LuxDialog.lux_dialog_display_brightness(vdu_stable_id, value)
 
     def refresh_tray_menu(self) -> None:
         assert is_running_in_gui_thread()
