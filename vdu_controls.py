@@ -1549,7 +1549,7 @@ class DdcutilInterfaceExe:
         try:
             self.__run__(*args, log_id=f"{edid_txt:.30}...")
         except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound):
-            return -1, "BAD"
+            return -1, "DDCUTIL_COMMAND_ERROR"
         return 0, "OK"
 
     def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> Tuple[List[VcpValue], int, str]:
