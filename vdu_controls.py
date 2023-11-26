@@ -1269,7 +1269,7 @@ class DdcUtil:
     def detect_monitors(self) -> List[Tuple[str, str, str, str]]:
         """Return a list of (vdu_number, desc) tuples."""
         display_list = []
-        vdu_list = self.ddcutil_service.detect(0)
+        vdu_list = self.ddcutil_service.detect(1)
         # Going to get rid of anything that is not a-z A-Z 0-9 as potential rubbish
         rubbish = re.compile('[^a-zA-Z0-9]+')
         # This isn't efficient, it doesn't need to be, so I'm keeping re-defs close to where they are used.
@@ -1580,7 +1580,6 @@ class DdcutilInterfaceExe:
             time.sleep(attempt_count * 0.25)
 
     def __parse_vcp_value(self, vcp_code: int, result: str) -> VcpValue | None:
-        print(result)
         if not (specific_vcp_value_pattern := DdcutilInterfaceExe._SPECIFIC_VCP_VALUE_PATTERN_CACHE.get(vcp_code, None)):
             specific_vcp_value_pattern = re.compile(r'VCP ' + f"{vcp_code:02X}" + r' ([A-Z]+) (.+)\n')
             DdcutilInterfaceExe._SPECIFIC_VCP_VALUE_PATTERN_CACHE[vcp_code] = specific_vcp_value_pattern
@@ -1607,7 +1606,9 @@ class DdcutilInterfaceDasbus:
         self.extra_args: Dict[str, List[str]] = {}
         self.service_access_lock = Lock()
         self.displays_changed_callback = None
+        self.dbus_timeout_millis = int(os.getenv("VDU_CONTROLS_DBUS_TIMEOUT_MILLIS", default='5000'))
         self.ddcutil_proxy = self.connect_to_service()
+        self.ddcutil_proxy.OutputLevel = 16
         self.DetectedAttributes = namedtuple("DetectedAttributes", self.ddcutil_proxy.AttributesReturnedByDetect)
 
         def displays_changed_dbus_handler(count: int, flags: int):
@@ -1663,7 +1664,7 @@ class DdcutilInterfaceDasbus:
 
     def detect(self, flags: int) -> List[Tuple]:
         with self.service_access_lock:
-            number_detected, list_of_displays, status, errmsg = self.ddcutil_proxy.Detect(flags)
+            number_detected, list_of_displays, status, errmsg = self.ddcutil_proxy.Detect(flags, timeout=self.dbus_timeout_millis)
             vdu_list = [self.DetectedAttributes(*vdu) for vdu in list_of_displays]
             return vdu_list
 
@@ -1671,22 +1672,22 @@ class DdcutilInterfaceDasbus:
         str, int, int, Dict[int, str], Dict[int, Tuple[str, str, Dict[int, str]]], str, int, str]:
         with self.service_access_lock:
             model, mccs_major, mccs_minor, commands, features, status, errmsg = self.ddcutil_proxy.GetCapabilitiesMetadata(
-                -1, edid_txt, 0)
+                -1, edid_txt, 0, timeout=self.dbus_timeout_millis)
             return model, mccs_major, mccs_minor, commands, features, '', status, errmsg
 
     def get_type(self, edid_txt: str, vcp_code_int: int) -> Tuple[bool, bool, int, str]:
         with self.service_access_lock:
-            _, _, _, _, _, is_complex, is_continuous, status, errmsg = self.ddcutil_proxy.GetVcpMetadata(-1, edid_txt,
-                                                                                                         vcp_code_int, 0)
+            _, _, _, _, _, is_complex, is_continuous, status, errmsg = self.ddcutil_proxy.GetVcpMetadata(
+                -1, edid_txt, vcp_code_int, 0, timeout=self.dbus_timeout_millis)
             return is_complex, is_continuous, status, errmsg
 
     def set_vcp(self, edid_txt: str, vcp_code_int: int, new_value_int: int):
         with self.service_access_lock:
-            return self.ddcutil_proxy.SetVcp(-1, edid_txt, vcp_code_int, new_value_int, 0)
+            return self.ddcutil_proxy.SetVcp(-1, edid_txt, vcp_code_int, new_value_int, 0, timeout=self.dbus_timeout_millis)
 
     def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> Tuple[List[int], int, str]:
         with self.service_access_lock:
-            return self.ddcutil_proxy.GetMultipleVcp(-1, edid_txt, vcp_code_int_list, 0)
+            return self.ddcutil_proxy.GetMultipleVcp(-1, edid_txt, vcp_code_int_list, 0, timeout=self.dbus_timeout_millis)
 
 
 
@@ -2267,7 +2268,7 @@ class VduController(QObject):
                         log_debug(f"vcp_value_changed: {self.vdu_stable_id} {vcp_code=} {value} origin={VcpOrigin.EXTERNAL.name}")
                     self.vcp_value_changed_qtsignal.emit(self.vdu_stable_id, vcp_code, value, VcpOrigin.EXTERNAL)
             return values
-        except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound) as e:
+        except (subprocess.SubprocessError, ValueError, TimeoutError, DdcUtilDisplayNotFound) as e:
             raise VduException(vdu_description=self.get_vdu_description(), vcp_code=",".join(vcp_codes), exception=e,
                                operation="get_vcp_values") from e
 
@@ -2280,7 +2281,7 @@ class VduController(QObject):
             if log_debug_enabled:
                 log_debug(f"vcp_value_changed: {self.vdu_stable_id} {vcp_code=} {value} origin={origin.name}")
             self.vcp_value_changed_qtsignal.emit(self.vdu_stable_id, vcp_code, value, origin)
-        except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound) as e:
+        except (subprocess.SubprocessError, ValueError, TimeoutError, DdcUtilDisplayNotFound) as e:
             raise VduException(vdu_description=self.get_vdu_description(), vcp_code=vcp_code, exception=e,
                                operation="set_vcp_value") from e
 
