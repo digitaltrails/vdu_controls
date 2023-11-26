@@ -6566,10 +6566,21 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
 
     @staticmethod
     def invoke() -> None:
-        AboutDialog.show_existing_dialog() if AboutDialog.exists() else AboutDialog()
+        if AboutDialog.exists():
+            AboutDialog.get_instance().refresh_content()
+            AboutDialog.show_existing_dialog()
+        else:
+            AboutDialog()
 
     def __init__(self) -> None:
         super().__init__()
+        self.refresh_content()
+        self.setModal(False)
+        self.show()
+        self.raise_()
+        self.activateWindow()
+
+    def refresh_content(self):
         self.setWindowTitle(tr('About'))
         self.setTextFormat(Qt.AutoText)
         self.setText(tr('About vdu_controls'))
@@ -6584,10 +6595,6 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
         about_text += f"<hr><p><small>{about_supporting_versions}</small>"
         self.setInformativeText(about_text)
         self.setIcon(QMessageBox.Information)
-        self.setModal(False)
-        self.show()
-        self.raise_()
-        self.activateWindow()
 
 
 class HelpDialog(SubWinDialog, DialogSingletonMixin):
