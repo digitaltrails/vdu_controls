@@ -1248,7 +1248,7 @@ class DdcUtil:
         log_info(f"ddcutil version {self.ddcutil_version} {self.version_suffix}(dynamic-sleep={self.ddcutil_version >= (2, 0, 0)})")
 
         def displays_changed_dbus_handler(count: int, flags: int):
-            log_info("ConnectedDisplaysChanged Callback called", count, flags)
+            log_debug("ConnectedDisplaysChanged Callback called", count, flags)
             if self.displays_changed_callback:
                 self.displays_changed_callback(count, flags)
 
@@ -3544,6 +3544,7 @@ class VduControlsMainPanel(QWidget):
         answer = self.alert.exec()
         self.alert = None
         if answer != QMessageBox.Retry:
+            log_info("Signaling change in connected vdus")
             self.connected_vdus_changed_qtsignal.emit()  # Maybe the connected VDUs have changed - check.
         return answer == QMessageBox.Retry
 
@@ -6839,6 +6840,7 @@ class VduAppController:  # Main controller containing methods for high level ope
         global log_to_syslog
         log_to_syslog = self.main_config.is_set(ConfOption.SYSLOG_ENABLED)
         log_debug_enabled = self.main_config.is_set(ConfOption.DEBUG_ENABLED)
+        log_info("Reconfiguring due to settings change.")
         self.configure_application()
 
     def edit_config(self) -> None:
@@ -6869,6 +6871,7 @@ class VduAppController:  # Main controller containing methods for high level ope
 
     def start_refresh(self) -> None:
         assert is_running_in_gui_thread()
+        log_info("Refresh requested")
         self.main_window.indicate_busy(True)
 
         def update_from_vdu() -> None:
@@ -6891,6 +6894,7 @@ class VduAppController:  # Main controller containing methods for high level ope
                 if self.refresh_data_task.vdu_exception is not None:
                     main_panel.display_vdu_exception(self.refresh_data_task.vdu_exception, can_retry=False)
                 if len(self.detected_vdu_list) == 0 or self.detected_vdu_list != self.previously_detected_vdu_list:
+                    log_info(f"Reconfiguring: detected vdu count={self.detected_vdu_list}")
                     self.configure_application()
                     self.previously_detected_vdu_list = self.detected_vdu_list
                 if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) and LuxDialog.exists():
@@ -7465,7 +7469,9 @@ class VduAppWindow(QMainWindow):
 
     def respond_to_changes_handler(self, vdu_stable_id: VduStableId, vcp_code: str, value: int, origin: VcpOrigin) -> None:
         # Update UI secondary displays
-        if vcp_code in SUPPORTED_VCP_BY_CODE and SUPPORTED_VCP_BY_CODE[vcp_code].causes_config_change:
+        if (vcp_code in SUPPORTED_VCP_BY_CODE and SUPPORTED_VCP_BY_CODE[vcp_code].causes_config_change and
+                origin == VcpOrigin.NORMAL):  # Only if this is an internally initiated change
+            log_info(f"Must reconfigure due to change to: {vdu_stable_id=} {vcp_code=} {value=} {origin.name=}")
             self.main_controller.configure_application()  # Special case, such as a power control causing the VDU to go offline.
             return
         log_debug(f"respond {vdu_stable_id=} {vcp_code=} {value=} {origin.name=}") if log_debug_enabled else None
