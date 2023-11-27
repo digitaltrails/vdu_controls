@@ -702,7 +702,8 @@ from urllib.error import URLError
 from PyQt5 import QtCore
 from PyQt5 import QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
-    QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant
+    QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType
+from PyQt5.QtDBus import QDBusConnection, QDBusInterface, QDBusError, QDBusMessage, QDBusArgument
 from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QRegExpValidator, \
     QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
@@ -1227,7 +1228,7 @@ class DdcUtil:
     def __init__(self, use_dbus: bool = False) -> None:
         super().__init__()
         if use_dbus:  # The service-interface implementations are duck-typed.
-            self.ddcutil_service = DdcutilInterfaceDasbus()
+            self.ddcutil_service = DdcutilInterfaceQtDBus()
         else:
             self.ddcutil_service = DdcutilInterfaceExe()
         self.supported_codes: Dict[str, str] | None = None
@@ -1244,7 +1245,7 @@ class DdcUtil:
         global about_supporting_versions
         about_supporting_versions = \
             f"ddcutil-interface: {self.ddcutil_service.get_interface_version_string()}; ddcutil: {version_info}"
-        self.status_values = self.ddcutil_service.get_status_values();
+        self.status_values = self.ddcutil_service.get_status_values()
         log_info(f"ddcutil version {self.ddcutil_version} {self.version_suffix}(dynamic-sleep={self.ddcutil_version >= (2, 0, 0)})")
 
         def displays_changed_dbus_handler(count: int, flags: int):
@@ -1313,7 +1314,7 @@ class DdcUtil:
 
     def query_capabilities(self, vdu_number: str, extra_args: List[str] | None = None) -> str:
         edid_txt = self.id_key_args_dbus(vdu_number)
-        model, mccs_major, mccs_minor, _, features, full_text, status, errmsg = self.ddcutil_service.get_capabilities(edid_txt)
+        model, mccs_major, mccs_minor, _, features, full_text = self.ddcutil_service.get_capabilities(edid_txt)
         if full_text:  # The service supplies pre-assembled capabilities text.
             return full_text
         capability_text = f"Model: {model}\n"  f"MCCS version: {mccs_major}.{mccs_minor}\n" "VCP Features:\n"
@@ -1340,7 +1341,7 @@ class DdcUtil:
         key = (edid_txt, vcp_code)
         if key in self.vcp_type_map:
             return self.vcp_type_map[key]
-        is_complex, is_continuous, status, errmsg = self.ddcutil_service.get_type(edid_txt, int(vcp_code, 16))
+        is_complex, is_continuous = self.ddcutil_service.get_type(edid_txt, int(vcp_code, 16))
         type_str = CONTINUOUS_TYPE if is_continuous else (COMPLEX_NON_CONTINUOUS_TYPE if is_complex else SIMPLE_NON_CONTINUOUS_TYPE)
         self.vcp_type_map[key] = type_str
         return type_str
@@ -1349,14 +1350,12 @@ class DdcUtil:
         """Send a new value to a specific VDU and vcp_code."""
         edid_txt = self.id_key_args_dbus(vdu_number)
         for attempt_count in range(DDCUTIL_RETRIES):
-            status, errmsg = self.ddcutil_service.set_vcp(edid_txt, int(vcp_code, 16), new_value)
-            if status == 0:
+            try:
+                self.ddcutil_service.set_vcp(edid_txt, int(vcp_code, 16), new_value)
                 return
-            if not retry_on_error or attempt_count + 1 == DDCUTIL_RETRIES:
-                if status in self.status_values and self.status_values[status] == "DDCRC_INVALID_DISPLAY":
-                    raise DdcUtilDisplayNotFound(f"setvcp:  VDU {vdu_number} - {self.status_values[status]} - {errmsg}")
-                raise ValueError(f"setvcp {vcp_code=} value={new_value} error {status=} {errmsg=}")
-                # TODO raise DdcUtilDisplayNotFound
+            except (subprocess.SubprocessError, DdcUtilDisplayNotFound, ValueError) as e:
+                if not retry_on_error or attempt_count + 1 == DDCUTIL_RETRIES:
+                    raise e
             time.sleep(attempt_count * 0.25)
 
     def vcp_info(self) -> str:
@@ -1388,15 +1387,11 @@ class DdcUtil:
         # Try a few times in case there is a glitch due to a monitor being turned-off/on or slow to respond
 
         for attempt_count in range(DDCUTIL_RETRIES):
-            values, status, errmsg = self.ddcutil_service.get_vcp_values(self.id_key_args_dbus(vdu_number),
+            values = self.ddcutil_service.get_vcp_values(self.id_key_args_dbus(vdu_number),
                                                                          [int(vcp, 16) for vcp in vcp_code_list])
-            if status != 0:
-                if self.status_values.get(status, "DDCRC_INVALID_DISPLAY") == "DDCRC_INVALID_DISPLAY":
-                    raise DdcUtilDisplayNotFound(
-                        f"getvcp:  VDU {vdu_number} status={self.status_values.get(status, str(status))}: {errmsg}")
-                raise ValueError(f"getvcp: VDU {vdu_number} status={self.status_values.get(status, str(status))}: {errmsg}")
             for vcp, value, maxv, _ in values:
-                vcp_code = f'{vcp:02X}'
+                code = vcp if isinstance(vcp, int) else int.from_bytes(vcp)
+                vcp_code = f'{code:02X}'
                 vcp_type = self.get_type(vdu_number, vcp_code)
                 results_dict[vcp_code] = VcpValue(value, maxv, vcp_type)
             if None not in results_dict.values():
@@ -1528,35 +1523,31 @@ class DdcutilInterfaceExe:
         return display_list
 
     def get_capabilities(self, edid_txt: str) -> Tuple[
-        str, int, int, Dict[int, str], Dict[int, Tuple[str, str, Dict[int, str]]], str, int, str]:
+        str, int, int, Dict[int, str], Dict[int, Tuple[str, str, Dict[int, str]]], str]:
         args = self.extra_args.get(edid_txt, []) + ['--edid', edid_txt, 'capabilities']
         result = self.__run__(*args, log_id=f"{edid_txt:.30}...")
         capability_text = result.stdout.decode('utf-8', errors='surrogateescape')
-        return '', 0, 0, {}, {}, capability_text, 0, "OK"
+        return '', 0, 0, {}, {}, capability_text
 
-    def get_type(self, edid_txt: str, vcp_code_int: int) -> Tuple[bool, bool, int, str] | None:
+    def get_type(self, edid_txt: str, vcp_code_int: int) -> Tuple[bool, bool] | None:
         type_code = self.vcp_type_map.get(vcp_code_int, None)
         if type_code is None:
             return False, False, -1, "BAD_TYPE"
         is_complex = type_code == COMPLEX_NON_CONTINUOUS_TYPE
         is_continuous = type_code == CONTINUOUS_TYPE
-        return is_complex, is_continuous, 0, "OK"
+        return is_complex, is_continuous
 
-    def set_vcp(self, edid_txt: str, vcp_code_int: int, new_value_int: int) -> Tuple[int, str]:
+    def set_vcp(self, edid_txt: str, vcp_code_int: int, new_value_int: int) -> None:
         vcp_code = f"{vcp_code_int:02X}"
         new_value = f"x{new_value_int:X}"
         args = self.extra_args.get(edid_txt, []) + ['setvcp', vcp_code, new_value, "--edid", edid_txt]
-        try:
-            self.__run__(*args, log_id=f"{edid_txt:.30}...")
-        except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound):
-            return -1, "DDCUTIL_COMMAND_ERROR"
-        return 0, "OK"
+        self.__run__(*args, log_id=f"{edid_txt:.30}...")
 
-    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> Tuple[List[VcpValue], int, str]:
+    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[VcpValue]:
         if self.ddcutil_version > (1, 3, 0):
-            return self._get_vcp_values_implementation(edid_txt, vcp_code_int_list), 0, "OK"
+            return self._get_vcp_values_implementation(edid_txt, vcp_code_int_list)
         else:
-            return [self._get_vcp_values_implementation(edid_txt, [cd])[0] for cd in vcp_code_int_list], 0, "OK"
+            return [self._get_vcp_values_implementation(edid_txt, [cd])[0] for cd in vcp_code_int_list]
 
     def _get_vcp_values_implementation(self, edid_txt: str, vcp_code_list: List[int]) -> List[Tuple[str, int, int, str]]:
         # Try a few times in case there is a glitch due to a monitor being turned-off/on or slow to respond
@@ -1669,26 +1660,155 @@ class DdcutilInterfaceDasbus:
             return vdu_list
 
     def get_capabilities(self, edid_txt: str) -> Tuple[
-        str, int, int, Dict[int, str], Dict[int, Tuple[str, str, Dict[int, str]]], str, int, str]:
+        str, int, int, Dict[int, str], Dict[int, Tuple[str, str, Dict[int, str]]], str]:
         with self.service_access_lock:
-            model, mccs_major, mccs_minor, commands, features, status, errmsg = self.ddcutil_proxy.GetCapabilitiesMetadata(
+            model, mccs_major, mccs_minor, commands, features = self.ddcutil_proxy.GetCapabilitiesMetadata(
                 -1, edid_txt, 0, timeout=self.dbus_timeout_millis)
-            return model, mccs_major, mccs_minor, commands, features, '', status, errmsg
+            return model, mccs_major, mccs_minor, commands, features, ''
 
     def get_type(self, edid_txt: str, vcp_code_int: int) -> Tuple[bool, bool, int, str]:
         with self.service_access_lock:
             _, _, _, _, _, is_complex, is_continuous, status, errmsg = self.ddcutil_proxy.GetVcpMetadata(
                 -1, edid_txt, vcp_code_int, 0, timeout=self.dbus_timeout_millis)
-            return is_complex, is_continuous, status, errmsg
+            return is_complex, is_continuous
 
-    def set_vcp(self, edid_txt: str, vcp_code_int: int, new_value_int: int):
+    def set_vcp(self, edid_txt: str, vcp_code_int: int, new_value_int: int) -> None:
         with self.service_access_lock:
-            return self.ddcutil_proxy.SetVcp(-1, edid_txt, vcp_code_int, new_value_int, 0, timeout=self.dbus_timeout_millis)
+            self.ddcutil_proxy.SetVcp(-1, edid_txt, vcp_code_int, new_value_int, 0, timeout=self.dbus_timeout_millis)
 
-    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> Tuple[List[int], int, str]:
+    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[int]:
         with self.service_access_lock:
-            return self.ddcutil_proxy.GetMultipleVcp(-1, edid_txt, vcp_code_int_list, 0, timeout=self.dbus_timeout_millis)
+            return self.ddcutil_proxy.GetMultipleVcp(-1, edid_txt, vcp_code_int_list, 0, timeout=self.dbus_timeout_millis)[0]
 
+
+class DdcutilInterfaceQtDBus(QObject):
+
+    def __init__(self):
+        super().__init__()
+        self.service_interface_name = os.environ.get('DDCUTIL_SERVICE_INTERFACE_NAME', default="com.ddcutil.DdcutilInterface")
+        self.extra_args: Dict[str, List[str]] = {}
+        self.service_access_lock = Lock()
+        self.displays_changed_callback = None
+        self.dbus_timeout_millis = int(os.getenv("VDU_CONTROLS_DBUS_TIMEOUT_MILLIS", default='5000'))
+        self.ddcutil_proxy, self.ddcutil_props_proxy = self.connect_to_service()
+        self.ddcutil_proxy.OutputLevel = 16
+        self.DetectedAttributes = namedtuple("DetectedAttributes",
+                                             self.ddcutil_props_proxy.call("Get",
+                                                                           "com.ddcutil.DdcutilInterface",
+                                                                           "AttributesReturnedByDetect").arguments()[0])
+
+    def set_common_args(self, sleep_multiplier: float | None, common_args: List[str]):
+        pass  # TODO not implemented
+
+    def set_extra_args(self, vdu_number: str, sleep_multiplier: float, extra_args: List[str]):
+        pass  # TODO not implemented
+
+    def connect_to_service(self) -> object:
+        session_service_name = os.environ.get('DDCUTIL_SERVICE_NAME', default="com.ddcutil.DdcutilService")
+        service_object_path = os.environ.get('DDCUTIL_SERVICE_OBJECT_PATH', default="/com/ddcutil/DdcutilObject")
+
+        server_executable = os.environ.get('DDCUTIL_SERVICE_EXECUTABLE', default="ddcutil-dbus-server")
+        while True:
+            try:
+                bus = QDBusConnection.connectToBus(QDBusConnection.BusType.SessionBus, "session")
+
+                ddcutil_dbus_iface = QDBusInterface(session_service_name,
+                                                    service_object_path,
+                                                    self.service_interface_name,
+                                                    connection=bus)
+
+                # Properties are available via a separate interface with "Get" and "Set" methods
+                ddcutil_dbus_props = QDBusInterface(session_service_name,
+                                                    service_object_path,
+                                                    "org.freedesktop.DBus.Properties",
+                                                    connection=bus)
+
+                bus.registerObject("/", self)
+                # Connect receiving slot
+                bus.connect(session_service_name,
+                            service_object_path,
+                            self.service_interface_name,
+                            "ConnectedDisplaysChanged",
+                            self._callback);
+
+                return ddcutil_dbus_iface, ddcutil_dbus_props
+            except QDBusError as e:
+                log_error(e)
+            log_warning(f"D-Bus {session_service_name=} {service_object_path=} unavailable, starting {server_executable=}")
+            if os.system(f"whereis {server_executable} && {server_executable} 1>~/.{server_executable}.log 2>&1 &") != 0:
+                raise DdcUtilDisplayNotFound("Error starting D-Bus service {server_executable=}")
+            time.sleep(2)
+
+    @pyqtSlot(QDBusMessage)
+    def _callback(self, message: QDBusMessage):
+        print("ConnectedDisplaysChanged Callback called", message.arguments())
+        self.displays_changed_callback(*message.arguments())
+
+    def get_ddcutil_version_string(self) -> str:
+        return self._validate(self.ddcutil_props_proxy.call("Get", self.service_interface_name, "DdcutilVersionString"))[0]
+
+    def get_interface_version_string(self) -> str:
+        return self._validate(self.ddcutil_props_proxy.call("Get", self.service_interface_name,
+                                             "InterfaceVersionString"))[0] + " (QtDBus)"
+
+    def get_status_values(self) -> Dict[int, str]:
+        return self._validate(self.ddcutil_props_proxy.call("Get", self.service_interface_name, "StatusValues"))[0]
+
+    def set_detected_displays_changed_callback(self, callback: callable) -> None:
+        self.displays_changed_callback = callback
+
+    def detect(self, flags: int) -> List[Tuple]:
+        with self.service_access_lock:
+            result = self.ddcutil_proxy.call("Detect", QDBusArgument(1, QMetaType.UInt))
+            return [self.DetectedAttributes(*vdu) for vdu in self._validate(result)[1]]
+
+    def get_capabilities(self, edid_txt: str) -> Tuple[
+        str, int, int, Dict[int, str], Dict[int, Tuple[str, str, Dict[int, str]]], str]:
+        with self.service_access_lock:
+            model, mccs_major, mccs_minor, commands, capabilities, status, errmsg = \
+                self._validate(self.ddcutil_proxy.call(
+                    "GetCapabilitiesMetadata", -1, edid_txt, QDBusArgument(0, QMetaType.UInt)))
+            return model, mccs_major, mccs_minor, commands, capabilities, ''
+
+    def get_type(self, edid_txt: str, vcp_code_int: int) -> Tuple[bool, bool, int, str]:
+        with self.service_access_lock:
+            _, _, _, _, _, is_complex, is_continuous = self._validate(self.ddcutil_proxy.call(
+                "GetVcpMetadata", -1, edid_txt, QDBusArgument(vcp_code_int, QMetaType.UChar), QDBusArgument(0, QMetaType.UInt)))
+            return is_complex, is_continuous
+
+    def set_vcp(self, edid_txt: str, vcp_code_int: int, new_value_int: int) -> None:
+        with self.service_access_lock:
+            self._validate(self.ddcutil_proxy.call("SetVcp", -1, edid_txt,
+                                                   QDBusArgument(vcp_code_int, QMetaType.UChar),
+                                                   QDBusArgument(new_value_int, QMetaType.UShort),
+                                                   QDBusArgument(0, QMetaType.UInt)))
+
+    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[int]:
+        vcp_code_array = QDBusArgument()
+        vcp_code_array.beginArray(QMetaType.UChar)
+        for vcp_code_int in vcp_code_int_list:
+            vcp_code_array.add(QDBusArgument(vcp_code_int, QMetaType.UChar))
+        vcp_code_array.endArray()
+        with self.service_access_lock:
+            return self._validate(self.ddcutil_proxy.call(
+                "GetMultipleVcp", -1, edid_txt, vcp_code_array, QDBusArgument(0, QMetaType.UInt)))[0]
+
+    def _validate(self, result: QDBusMessage) -> List:
+        if result.errorName():
+            raise ValueError(f"D-Bus error {result.errorName()}: {result.errorMessage()}")
+        arg_list = result.arguments()
+        print(arg_list[-2],"<<<")if len(arg_list) >= 2 else None
+        if len(arg_list) >= 2:
+            status, message = result.arguments()[-2:]
+            if status != 0:
+                status_values = self.get_status_values()
+                formatted_message = f"D-Bus  status={status_values.get(status, str(status))}: {message}"
+                log_error(formatted_message)
+                if status_values.get(status, "DDCRC_INVALID_DISPLAY") == "DDCRC_INVALID_DISPLAY":
+                    raise DdcUtilDisplayNotFound(formatted_message)
+                raise ValueError(formatted_message)
+            return arg_list[:-2]
+        return arg_list
 
 
 def si(widget: QWidget, icon_number: QStyle.StandardPixmap) -> QIcon:  # Qt bundled standard icons (which are themed)
