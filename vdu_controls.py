@@ -703,7 +703,7 @@ from PyQt5 import QtCore
 from PyQt5 import QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
     QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType
-from PyQt5.QtDBus import QDBusConnection, QDBusInterface, QDBusError, QDBusMessage, QDBusArgument
+from PyQt5.QtDBus import QDBusConnection, QDBusInterface, QDBusError, QDBusMessage, QDBusArgument, QDBusVariant
 from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QRegExpValidator, \
     QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
@@ -1591,111 +1591,29 @@ class DdcutilInterfaceExe:
         raise ValueError(f"VDU vcp_code {vcp_code} failed to parse vcp value '{result}'")
 
 
-class DdcutilInterfaceDasbus:
-
-    def __init__(self):
-        self.extra_args: Dict[str, List[str]] = {}
-        self.service_access_lock = Lock()
-        self.displays_changed_callback = None
-        self.dbus_timeout_millis = int(os.getenv("VDU_CONTROLS_DBUS_TIMEOUT_MILLIS", default='5000'))
-        self.ddcutil_proxy = self.connect_to_service()
-        self.ddcutil_proxy.OutputLevel = 16
-        self.DetectedAttributes = namedtuple("DetectedAttributes", self.ddcutil_proxy.AttributesReturnedByDetect)
-
-        def displays_changed_dbus_handler(count: int, flags: int):
-            log_info("ConnectedDisplaysChanged Callback called", count, flags)
-            if self.displays_changed_callback:
-                self.displays_changed_callback(count, flags)
-
-        self.ddcutil_proxy.ConnectedDisplaysChanged.connect(displays_changed_dbus_handler)
-
-    def set_common_args(self, sleep_multiplier: float | None, common_args: List[str]):
-        pass  # TODO not implemented
-
-    def set_extra_args(self, vdu_number: str, sleep_multiplier: float, extra_args: List[str]):
-        pass  # TODO not implemented
-
-    def connect_to_service(self) -> object:
-        session_service_name = os.environ.get('DDCUTIL_SERVICE_NAME', default="com.ddcutil.DdcutilService")
-        service_object_path = os.environ.get('DDCUTIL_SERVICE_OBJECT_PATH', default="/com/ddcutil/DdcutilObject")
-        server_executable = os.environ.get('DDCUTIL_SERVICE_EXECUTABLE', default="ddcutil-dbus-server")
-        try:
-            log_info("Checking that the dasbus python module is installed on this system")
-            import_module('dasbus')
-            log_info("dasbus module is available")
-        except ModuleNotFoundError as mnf:
-            raise ValueError(tr("The required dasbus D-BUS module is not installed on this system.")) from mnf
-        from dasbus.connection import SessionMessageBus
-        from dasbus.error import DBusError
-        session_bus = SessionMessageBus()
-        while True:
-            try:
-                ddcutil_proxy = session_bus.get_proxy(session_service_name, service_object_path)
-                ddcutil_proxy.DdcutilVersionString  # Test the availability - will cause exception
-                log_info(f"D-Bus {session_service_name=} {service_object_path=} is available, proxy connected OK.")
-                return ddcutil_proxy  # Must be OK
-            except DBusError as e:
-                log_error(e)
-            log_warning(f"D-Bus {session_service_name=} {service_object_path=} unavailable, starting {server_executable=}")
-            if os.system(f"whereis {server_executable} && {server_executable} 1>~/.{server_executable}.log 2>&1 &") != 0:
-                raise DdcUtilDisplayNotFound("Error starting D-Bus service {server_executable=}")
-            time.sleep(2)
-
-    def get_ddcutil_version_string(self) -> str:
-        return self.ddcutil_proxy.DdcutilVersionString
-
-    def get_interface_version_string(self) -> str:
-        return self.ddcutil_proxy.InterfaceVersionString + " (dasbus)"
-
-    def get_status_values(self) -> Dict[int, str]:
-        return self.ddcutil_proxy.StatusValues
-
-    def set_detected_displays_changed_callback(self, callback: callable) -> None:
-        self.displays_changed_callback = callback
-
-    def detect(self, flags: int) -> List[Tuple]:
-        with self.service_access_lock:
-            number_detected, list_of_displays, status, errmsg = self.ddcutil_proxy.Detect(flags, timeout=self.dbus_timeout_millis)
-            vdu_list = [self.DetectedAttributes(*vdu) for vdu in list_of_displays]
-            return vdu_list
-
-    def get_capabilities(self, edid_txt: str) -> Tuple[
-        str, int, int, Dict[int, str], Dict[int, Tuple[str, str, Dict[int, str]]], str]:
-        with self.service_access_lock:
-            model, mccs_major, mccs_minor, commands, features = self.ddcutil_proxy.GetCapabilitiesMetadata(
-                -1, edid_txt, 0, timeout=self.dbus_timeout_millis)
-            return model, mccs_major, mccs_minor, commands, features, ''
-
-    def get_type(self, edid_txt: str, vcp_code_int: int) -> Tuple[bool, bool, int, str]:
-        with self.service_access_lock:
-            _, _, _, _, _, is_complex, is_continuous, status, errmsg = self.ddcutil_proxy.GetVcpMetadata(
-                -1, edid_txt, vcp_code_int, 0, timeout=self.dbus_timeout_millis)
-            return is_complex, is_continuous
-
-    def set_vcp(self, edid_txt: str, vcp_code_int: int, new_value_int: int) -> None:
-        with self.service_access_lock:
-            self.ddcutil_proxy.SetVcp(-1, edid_txt, vcp_code_int, new_value_int, 0, timeout=self.dbus_timeout_millis)
-
-    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[int]:
-        with self.service_access_lock:
-            return self.ddcutil_proxy.GetMultipleVcp(-1, edid_txt, vcp_code_int_list, 0, timeout=self.dbus_timeout_millis)[0]
-
-
 class DdcutilInterfaceQtDBus(QObject):
 
     def __init__(self):
         super().__init__()
-        self.service_interface_name = os.environ.get('DDCUTIL_SERVICE_INTERFACE_NAME', default="com.ddcutil.DdcutilInterface")
+        self.dbus_interface_name = os.environ.get('DDCUTIL_SERVICE_INTERFACE_NAME', default="com.ddcutil.DdcutilInterface")
         self.extra_args: Dict[str, List[str]] = {}
         self.service_access_lock = Lock()
         self.displays_changed_callback = None
         self.dbus_timeout_millis = int(os.getenv("VDU_CONTROLS_DBUS_TIMEOUT_MILLIS", default='5000'))
         self.ddcutil_proxy, self.ddcutil_props_proxy = self.connect_to_service()
-        self.ddcutil_proxy.OutputLevel = 16
+        self.ddcutil_output_level = 16
         self.DetectedAttributes = namedtuple("DetectedAttributes",
                                              self.ddcutil_props_proxy.call("Get",
-                                                                           "com.ddcutil.DdcutilInterface",
+                                                                           self.dbus_interface_name,
                                                                            "AttributesReturnedByDetect").arguments()[0])
+        output_level = self._validate(self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "OutputLevel"))[0]
+        if output_level == self.ddcutil_output_level:
+            log_info(f"D-Bus service output_level is {output_level}")
+        else:
+            log_info(f"Changing D-Bus service output_level from {output_level} to {self.ddcutil_output_level}")
+            self._validate(self.ddcutil_props_proxy.call("Set",
+                                          self.dbus_interface_name,
+                                          "OutputLevel", QDBusVariant(QDBusArgument(self.ddcutil_output_level, QMetaType.UInt))))
 
     def set_common_args(self, sleep_multiplier: float | None, common_args: List[str]):
         pass  # TODO not implemented
@@ -1704,37 +1622,34 @@ class DdcutilInterfaceQtDBus(QObject):
         pass  # TODO not implemented
 
     def connect_to_service(self) -> object:
-        session_service_name = os.environ.get('DDCUTIL_SERVICE_NAME', default="com.ddcutil.DdcutilService")
-        service_object_path = os.environ.get('DDCUTIL_SERVICE_OBJECT_PATH', default="/com/ddcutil/DdcutilObject")
+        dbus_service_name = os.environ.get('DDCUTIL_SERVICE_NAME', default="com.ddcutil.DdcutilService")
+        dbus_object_path = os.environ.get('DDCUTIL_SERVICE_OBJECT_PATH', default="/com/ddcutil/DdcutilObject")
 
         server_executable = os.environ.get('DDCUTIL_SERVICE_EXECUTABLE', default="ddcutil-dbus-server")
         while True:
             try:
                 bus = QDBusConnection.connectToBus(QDBusConnection.BusType.SessionBus, "session")
-
-                ddcutil_dbus_iface = QDBusInterface(session_service_name,
-                                                    service_object_path,
-                                                    self.service_interface_name,
+                ddcutil_dbus_iface = QDBusInterface(dbus_service_name,
+                                                    dbus_object_path,
+                                                    self.dbus_interface_name,
                                                     connection=bus)
-
                 # Properties are available via a separate interface with "Get" and "Set" methods
-                ddcutil_dbus_props = QDBusInterface(session_service_name,
-                                                    service_object_path,
+                ddcutil_dbus_props = QDBusInterface(dbus_service_name,
+                                                    dbus_object_path,
                                                     "org.freedesktop.DBus.Properties",
                                                     connection=bus)
-
                 bus.registerObject("/", self)
                 # Connect receiving slot
-                bus.connect(session_service_name,
-                            service_object_path,
-                            self.service_interface_name,
+                bus.connect(dbus_service_name,
+                            dbus_object_path,
+                            self.dbus_interface_name,
                             "ConnectedDisplaysChanged",
                             self._callback);
-
+                ddcutil_dbus_iface.setTimeout(self.dbus_timeout_millis)
                 return ddcutil_dbus_iface, ddcutil_dbus_props
             except QDBusError as e:
                 log_error(e)
-            log_warning(f"D-Bus {session_service_name=} {service_object_path=} unavailable, starting {server_executable=}")
+            log_warning(f"D-Bus {dbus_service_name=} {dbus_object_path=} unavailable, starting {server_executable=}")
             if os.system(f"whereis {server_executable} && {server_executable} 1>~/.{server_executable}.log 2>&1 &") != 0:
                 raise DdcUtilDisplayNotFound("Error starting D-Bus service {server_executable=}")
             time.sleep(2)
@@ -1742,17 +1657,18 @@ class DdcutilInterfaceQtDBus(QObject):
     @pyqtSlot(QDBusMessage)
     def _callback(self, message: QDBusMessage):
         print("ConnectedDisplaysChanged Callback called", message.arguments())
-        self.displays_changed_callback(*message.arguments())
+        if self.displays_changed_callback:
+            self.displays_changed_callback(*message.arguments())
 
     def get_ddcutil_version_string(self) -> str:
-        return self._validate(self.ddcutil_props_proxy.call("Get", self.service_interface_name, "DdcutilVersionString"))[0]
+        return self._validate(self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "DdcutilVersionString"))[0]
 
     def get_interface_version_string(self) -> str:
-        return self._validate(self.ddcutil_props_proxy.call("Get", self.service_interface_name,
-                                             "InterfaceVersionString"))[0] + " (QtDBus)"
+        return self._validate(self.ddcutil_props_proxy.call("Get", self.dbus_interface_name,
+                                             "InterfaceVersionString"))[0] + " (QtDBus client)"
 
     def get_status_values(self) -> Dict[int, str]:
-        return self._validate(self.ddcutil_props_proxy.call("Get", self.service_interface_name, "StatusValues"))[0]
+        return self._validate(self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "StatusValues"))[0]
 
     def set_detected_displays_changed_callback(self, callback: callable) -> None:
         self.displays_changed_callback = callback
@@ -1763,7 +1679,7 @@ class DdcutilInterfaceQtDBus(QObject):
             return [self.DetectedAttributes(*vdu) for vdu in self._validate(result)[1]]
 
     def get_capabilities(self, edid_txt: str) -> Tuple[
-        str, int, int, Dict[int, str], Dict[int, Tuple[str, str, Dict[int, str]]], str]:
+            str, int, int, Dict[int, str], Dict[int, Tuple[str, str, Dict[int, str]]], str]:
         with self.service_access_lock:
             model, mccs_major, mccs_minor, commands, capabilities, status, errmsg = \
                 self._validate(self.ddcutil_proxy.call(
@@ -1797,7 +1713,6 @@ class DdcutilInterfaceQtDBus(QObject):
         if result.errorName():
             raise ValueError(f"D-Bus error {result.errorName()}: {result.errorMessage()}")
         arg_list = result.arguments()
-        print(arg_list[-2],"<<<")if len(arg_list) >= 2 else None
         if len(arg_list) >= 2:
             status, message = result.arguments()[-2:]
             if status != 0:
