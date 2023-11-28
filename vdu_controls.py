@@ -1108,6 +1108,7 @@ VduStableId = NewType('VduStableId', str)
 
 about_supporting_versions = ""
 
+
 def is_dark_theme() -> bool:
     # Heuristic for checking for a dark theme. Is the sample text lighter than the background?
     label = QLabel("am I in the dark?")
@@ -1228,9 +1229,10 @@ class DdcUtil:
     def __init__(self, use_dbus: bool = False) -> None:
         super().__init__()
         if use_dbus:  # The service-interface implementations are duck-typed.
-            self.ddcutil_service = DdcutilInterfaceQtDBus()
+            self.ddcutil_service_class = DdcutilInterfaceQtDBus
         else:
-            self.ddcutil_service = DdcutilInterfaceExe()
+            self.ddcutil_service_class = DdcutilInterfaceExe
+        self.ddcutil_service = self.ddcutil_service_class()
         self.supported_codes: Dict[str, str] | None = None
         self.vcp_type_map: Dict[Tuple[str, str], str] = {}
         self.edid_map: Dict[str, str] = {}
@@ -1254,6 +1256,9 @@ class DdcUtil:
                 self.displays_changed_callback(count, flags)
 
         self.ddcutil_service.set_detected_displays_changed_callback(displays_changed_dbus_handler)
+
+    def refresh(self):
+        self.ddcutil_service = self.ddcutil_service_class()  # Just in case the connection has gone bad.
 
     def set_common_args(self, sleep_multiplier: float | None, common_args: List[str]):
         self.ddcutil_service.set_common_args(sleep_multiplier, common_args)
@@ -1495,7 +1500,7 @@ class DdcutilInterfaceExe:
         return None
 
     def detect(self, flags: int) -> List[Tuple]:
-        issue_warnings = False # TODO
+        issue_warnings = False  # TODO
         args = ['detect', '--verbose', ]
         display_list = []
         result = self.__run__(*args)
@@ -2998,7 +3003,7 @@ class VduControlComboBox(VduControlBase):
         result = maybe if maybe != canonical else source
         return ' '.join(w[:1].upper() + w[1:] for w in result.split())  # Default to capitalized version of each word
 
-    def get_current_text_value(self) -> str|None:
+    def get_current_text_value(self) -> str | None:
         return f"{self.current_value:02X}" if self.current_value else None
 
     def refresh_ui_view_implementation(self) -> None:
@@ -6920,6 +6925,7 @@ class VduAppController:  # Main controller containing methods for high level ope
         def update_from_vdu() -> None:
             if self.ddcutil is not None:
                 try:
+                    self.ddcutil.refresh()
                     self.detected_vdu_list = self.ddcutil.detect_monitors()
                     for control_panel in self.main_window.get_main_panel().vdu_control_panels.values():
                         if control_panel.controller.get_full_id() in self.detected_vdu_list:
