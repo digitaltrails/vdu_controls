@@ -1240,7 +1240,7 @@ class DdcUtil:
         self.ddcutil_version = (0, 0, 0)  # Dummy version for bootstrapping
         self.version_suffix = ''
         version_info = self.ddcutil_service.get_ddcutil_version_string()
-        if version_match := re.match(r'[a-z]+ ([0-9]+).([0-9]+).([0-9]+)-?([^\n]*)', version_info):
+        if version_match := re.match(r'[a-z]* ?([0-9]+).([0-9]+).([0-9]+)-?([^\n]*)', version_info):
             self.ddcutil_version = tuple(int(i) for i in version_match.groups()[0:3])
             self.version_suffix = version_match.groups()[3]
         # self.version = (1, 2, 2)  # for testing for 1.2.2 compatibility
