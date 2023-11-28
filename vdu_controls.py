@@ -1723,7 +1723,7 @@ class DdcutilInterfaceQtDBus(QObject):
             if status != 0:
                 status_values = self.get_status_values()
                 formatted_message = f"D-Bus  status={status_values.get(status, str(status))}: {message}"
-                log_error(formatted_message)
+                log_debug(formatted_message) if log_debug_enabled else None
                 if status_values.get(status, "DDCRC_INVALID_DISPLAY") == "DDCRC_INVALID_DISPLAY":
                     raise DdcUtilDisplayNotFound(formatted_message)
                 raise ValueError(formatted_message)

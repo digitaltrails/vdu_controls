@@ -3,6 +3,28 @@ vdu_controls - a DDC control panel for monitors
 
 A control panel for external monitors (*Visual Display Units*).
 
+> This is the D-Bus development branch for vdu_controls.  It's functional and
+> you're welcome to try it.  It's many times faster and more reponsive than 
+> the non-D-Bus approach. It depends on a D-Bus service that I've 
+> written to interface with libddcutil: 
+> 
+>    https://github.com/digitaltrails/ddcutil-dbus.  
+> 
+> You would need to build and install this service.  It's one C file, just make an
+> install as a user session daemon.  It doesn't need to be installed as root,
+> you could even start it manually from the command line.  It will build 
+> against any libddcutil from 1.4 onward.
+> 
+> Once the service is running, just toggle `vdu_controls->Settins->dbus client enabled`.  The
+> bottom line of the About-Dialog should then list ddcutil-interface as `1.0.0 (QtDBus client)`.
+> You can also access the service from any D-Bus clients such as d-feet or the
+> command line tool dbus-send.
+> 
+> The service is under active development along with supporting ammendments 
+> to libddcutil by @rockowitz.  The intention is to eventually package it 
+> with ddcutil/libddcutil.
+
+
 Description
 -----------
 
