@@ -22,6 +22,7 @@ Version:        2.0.0
 Release:        0
 Summary:        Visual Display Unit virtual control panel
 License:        GPL-3.0-or-later
+Group:          System/GUI/Other
 URL:            https://github.com/digitaltrails/vdu_controls
 Source0:        https://github.com/digitaltrails/vdu_controls/archive/refs/tags/v2.0.0.tar.gz#/%{name}-%{version}.tar.gz
 BuildRequires:  coreutils
@@ -107,8 +108,6 @@ ln -s -f %{_datadir}/icons %{_datadir}/vdu_controls/icons/system-icons
 %{_datadir}/vdu_controls/sample-scripts/vlux_meter.py
 %ghost %{_datadir}/vdu_controls/icons/system-icons
 
-%changelog
-
 # Build service notes:
 # 0) Build service page: https://build.opensuse.org/package/show/utilities/vdu_controls
 # 1) branch the package (link on left margin of page)
@@ -118,3 +117,4 @@ ln -s -f %{_datadir}/icons %{_datadir}/vdu_controls/icons/system-icons
 # 5) check assigned tasks: self approve submission and opt to remove branch
 # 6) check build service page (above) has updated
 # 7) wait for propagation to experimental package https://software.opensuse.org/package/vdu_controls
+%changelog
