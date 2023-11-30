@@ -1545,7 +1545,7 @@ class DdcutilInterfaceExe:
         return '', 0, 0, {}, {}, capability_text
 
     def get_type(self, edid_txt: str, vcp_code_int: int) -> Tuple[bool, bool] | None:
-        type_code = self.vcp_type_map.get(vcp_code_int, None)
+        type_code = self.vcp_type_map.get(vcp_code_int)
         if type_code is None:
             return False, False, -1, "BAD_TYPE"
         is_complex = type_code == COMPLEX_NON_CONTINUOUS_TYPE
@@ -1823,7 +1823,7 @@ class DialogSingletonMixin:
 
     @classmethod
     def get_instance(cls: Type) -> DialogSingletonMixin | None:
-        return DialogSingletonMixin._dialogs_map.get(cls.__name__, None)
+        return DialogSingletonMixin._dialogs_map.get(cls.__name__)
 
 
 # Enabling this would enable anything supported by ddcutil - but that isn't safe for the hardware
@@ -2326,7 +2326,7 @@ class VduController(QObject):
             values = self.ddcutil.get_vcp_values(self.vdu_number, vcp_codes)
             for vcp_code, vcp_value in zip(vcp_codes, values):
                 value = vcp_value.current
-                if self.values_cache.get(vcp_code, None) != value:
+                if self.values_cache.get(vcp_code) != value:
                     self.values_cache[vcp_code] = value
                     if log_debug_enabled:
                         log_debug(f"vcp_value_changed: {self.vdu_stable_id} {vcp_code=} {value} origin={VcpOrigin.EXTERNAL.name}")
@@ -5203,7 +5203,7 @@ def create_icon_from_svg_bytes(svg_bytes: bytes, themed: bool = True, monochrome
         svg_bytes = handle_monochrome(svg_bytes)
     elif themed:
         svg_bytes = handle_theme(svg_bytes)
-    if icon := svg_icon_cache.get(svg_bytes, None):
+    if icon := svg_icon_cache.get(svg_bytes):
         return icon
     icon = QIcon(create_pixmap_from_svg_bytes(svg_bytes))
     svg_icon_cache[svg_bytes] = icon
@@ -7051,7 +7051,7 @@ class VduAppController:  # Main controller containing methods for high level ope
                 preset.remove_elevation_trigger(quietly=True)
             elevation_key = preset.get_solar_elevation()
             if elevation_key is not None and preset.schedule_status == PresetScheduleStatus.UNSCHEDULED:
-                if elevation_data := time_map.get(elevation_key, None):
+                if elevation_data := time_map.get(elevation_key):
                     when_today = elevation_data.when
                     preset.elevation_time_today = when_today
                     if when_today > local_now:
@@ -7157,7 +7157,7 @@ class VduAppController:  # Main controller containing methods for high level ope
         return True
 
     def find_preset_by_name(self, preset_name: str) -> Preset | None:
-        return self.preset_controller.find_presets_map().get(preset_name, None)
+        return self.preset_controller.find_presets_map().get(preset_name)
 
     def restore_named_preset(self, preset_name: str) -> None:
         if preset := self.find_preset_by_name(preset_name):
@@ -7220,25 +7220,25 @@ class VduAppController:  # Main controller containing methods for high level ope
         return list(self.vdu_controllers_map.keys())
 
     def get_vdu_current_values(self, vdu_stable_id: VduStableId):
-        if controller := self.vdu_controllers_map.get(vdu_stable_id, None):
+        if controller := self.vdu_controllers_map.get(vdu_stable_id):
             vcp_codes = [capability.vcp_code for capability in controller.enabled_capabilities]
             return [(code, value) for code, value in zip(vcp_codes, controller.get_vcp_values(vcp_codes))]
         return []
 
     def get_enabled_capabilities(self, vdu_stable_id: VduStableId) -> List[VcpCapability]:
-        if controller := self.vdu_controllers_map.get(vdu_stable_id, None):
+        if controller := self.vdu_controllers_map.get(vdu_stable_id):
             return controller.enabled_capabilities
         return []
 
     def get_range(self, vdu_stable_id: VduStableId, vcp_code: str, fallback: Tuple[int, int] | None = None) -> Tuple[
                                                                                                                    int, int] | None:
-        if controller := self.vdu_controllers_map.get(vdu_stable_id, None):
+        if controller := self.vdu_controllers_map.get(vdu_stable_id):
             return controller.get_range_restrictions(vcp_code, fallback)
         log_error(f"get_range: No controller for {vdu_stable_id}")
         return fallback
 
     def get_value(self, vdu_stable_id, vcp_code) -> int:
-        if controller := self.vdu_controllers_map.get(vdu_stable_id, None):
+        if controller := self.vdu_controllers_map.get(vdu_stable_id):
             value = controller.get_vcp_values([vcp_code])
             if len(value) == 1:  # This could probably be an assertion
                 return value[0].current
@@ -7246,14 +7246,14 @@ class VduAppController:  # Main controller containing methods for high level ope
         return 0
 
     def set_value(self, vdu_stable_id: VduStableId, vcp_code: str, value: int, origin: VcpOrigin = VcpOrigin.NORMAL):
-        if panel := self.main_window.get_main_panel().vdu_control_panels.get(vdu_stable_id, None):
+        if panel := self.main_window.get_main_panel().vdu_control_panels.get(vdu_stable_id):
             if control := panel.get_control(vcp_code):
                 control.set_value(value, origin)  # Apply to physical VDU
                 return
         log_error(f"set_value: No controller for {vdu_stable_id=} {vcp_code=}")
 
     def is_vcp_code_enabled(self, vdu_stable_id, vcp_code: str) -> bool:
-        if controller := self.vdu_controllers_map.get(vdu_stable_id, None):
+        if controller := self.vdu_controllers_map.get(vdu_stable_id):
             for capability in controller.enabled_capabilities:
                 if capability.vcp_code == vcp_code:
                     return True
@@ -7263,7 +7263,7 @@ class VduAppController:  # Main controller containing methods for high level ope
         self.main_window.update_status_indicators()
 
     def get_vdu_description(self, vdu_stable_id: VduStableId):
-        if controller := self.vdu_controllers_map.get(vdu_stable_id, None):
+        if controller := self.vdu_controllers_map.get(vdu_stable_id):
             return controller.get_vdu_description()
         log_error(f"get_vdu_description: No controller for {vdu_stable_id}")
         return vdu_stable_id
