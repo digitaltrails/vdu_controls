@@ -1259,7 +1259,7 @@ class DdcUtil:
         self.ddcutil_service.set_detected_displays_changed_callback(displays_changed_dbus_handler)
 
     def refresh(self):
-        self.ddcutil_service = self.ddcutil_service_class()  # Just in case the connection has gone bad.
+        self.ddcutil_service = self.ddcutil_service_class(self.common_args)  # Just in case the connection has gone bad.
 
     def set_sleep_multiplier(self, vdu_number: str, sleep_multiplier: float | None):
         self.ddcutil_service.set_sleep_multiplier(self.get_edid_txt(vdu_number), sleep_multiplier)
@@ -1453,7 +1453,7 @@ class DdcutilInterfaceExe:
             edid_args = []
             multiplier_args = []
         extra_args = self.extra_args.get(edid_txt, []) if edid_txt else []
-        log_id = self._get_vdu_human_name(edid_txt) if edid_txt else ''  # Make it easier to tell - eid is a bit much
+        log_id = self._get_vdu_human_name(edid_txt) if (edid_txt and log_debug_enabled) else ''
         syslog_args = []
         if self.ddcutil_version[0] >= 2:
             if log_to_syslog and '--syslog' not in args:
