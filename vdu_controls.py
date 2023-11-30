@@ -1226,16 +1226,17 @@ class DdcUtil:
     Interface to the abstracted ddcutil service
     """
 
-    def __init__(self, use_dbus: bool = False) -> None:
+    def __init__(self, common_args: List[str] = [], enable_dbus_client: bool = False) -> None:
         super().__init__()
-        if use_dbus:  # The service-interface implementations are duck-typed.
+        if enable_dbus_client:  # The service-interface implementations are duck-typed.
             self.ddcutil_service_class = DdcutilInterfaceQtDBus
         else:
             self.ddcutil_service_class = DdcutilInterfaceExe
-        self.ddcutil_service = self.ddcutil_service_class()
+        self.common_args = common_args
+        self.ddcutil_service = self.ddcutil_service_class(common_args)
         self.supported_codes: Dict[str, str] | None = None
         self.vcp_type_map: Dict[Tuple[str, str], str] = {}
-        self.edid_map: Dict[str, str] = {}
+        self.edid_txt_map: Dict[str, str] = {}
         self.displays_changed_callback: Callable | None = None
         self.ddcutil_version = (0, 0, 0)  # Dummy version for bootstrapping
         self.version_suffix = ''
@@ -1260,14 +1261,14 @@ class DdcUtil:
     def refresh(self):
         self.ddcutil_service = self.ddcutil_service_class()  # Just in case the connection has gone bad.
 
-    def set_common_args(self, sleep_multiplier: float | None, common_args: List[str]):
-        self.ddcutil_service.set_common_args(sleep_multiplier, common_args)
+    def set_sleep_multiplier(self, vdu_number: str, sleep_multiplier: float | None):
+        self.ddcutil_service.set_sleep_multiplier(self.get_edid_txt(vdu_number), sleep_multiplier)
 
-    def set_extra_args(self, vdu_number: str, sleep_multiplier: float | None, extra_args: List[str]):
-        self.ddcutil_service.set_extra_args(self.edid_map[vdu_number], sleep_multiplier, extra_args)
+    def set_vdu_specific_args(self, vdu_number: str, extra_args: List[str]):
+        self.ddcutil_service.set_vdu_specific_args(self.get_edid_txt(vdu_number), extra_args)
 
-    def id_key_args_dbus(self, vdu_number: str) -> str:
-        return self.edid_map[vdu_number]
+    def get_edid_txt(self, vdu_number: str) -> str:
+        return self.edid_txt_map[vdu_number]
 
     def format_args_diagnostic(self, args: List[str]):
         return ' '.join([arg if len(arg) < 30 else arg[:30] + "..." for arg in args])
@@ -1291,8 +1292,8 @@ class DdcUtil:
             i2c_bus_id = ''  # TODO ds_parts.get('I2C bus', '').replace("/dev/", '').replace("-", "_")
             edid = vdu.edid_txt
             # check for duplicate edid, any duplicate will use the display Num
-            if edid is not None and edid not in self.edid_map.values():
-                self.edid_map[vdu_number] = edid
+            if edid is not None and edid not in self.edid_txt_map.values():
+                self.edid_txt_map[vdu_number] = edid
             for candidate in serial_number, bin_serial_number, man_date, i2c_bus_id, f"DisplayNum{vdu_number}":
                 if candidate.strip() != '':
                     possibly_unique = (model_name, candidate)
@@ -1318,7 +1319,7 @@ class DdcUtil:
         return display_list
 
     def query_capabilities(self, vdu_number: str, extra_args: List[str] | None = None) -> str:
-        edid_txt = self.id_key_args_dbus(vdu_number)
+        edid_txt = self.get_edid_txt(vdu_number)
         model, mccs_major, mccs_minor, _, features, full_text = self.ddcutil_service.get_capabilities(edid_txt)
         if full_text:  # The service supplies pre-assembled capabilities text.
             return full_text
@@ -1342,18 +1343,18 @@ class DdcUtil:
         return capability_text
 
     def get_type(self, vdu_number: str, vcp_code: str) -> str | None:  # may not be needed with a dbus implementation
-        edid_txt = self.id_key_args_dbus(vdu_number)
-        key = (edid_txt, vcp_code)
-        if key in self.vcp_type_map:
-            return self.vcp_type_map[key]
+        edid_txt = self.get_edid_txt(vdu_number)
+        vcp_type_key = (edid_txt, vcp_code)
+        if type_str := self.vcp_type_map.get(vcp_type_key):
+            return type_str
         is_complex, is_continuous = self.ddcutil_service.get_type(edid_txt, int(vcp_code, 16))
         type_str = CONTINUOUS_TYPE if is_continuous else (COMPLEX_NON_CONTINUOUS_TYPE if is_complex else SIMPLE_NON_CONTINUOUS_TYPE)
-        self.vcp_type_map[key] = type_str
+        self.vcp_type_map[vcp_type_key] = type_str
         return type_str
 
     def set_vcp(self, vdu_number: str, vcp_code: str, new_value: int, retry_on_error: bool = False) -> None:
         """Send a new value to a specific VDU and vcp_code."""
-        edid_txt = self.id_key_args_dbus(vdu_number)
+        edid_txt = self.get_edid_txt(vdu_number)
         for attempt_count in range(DDCUTIL_RETRIES):
             try:
                 self.ddcutil_service.set_vcp(edid_txt, int(vcp_code, 16), new_value)
@@ -1392,8 +1393,8 @@ class DdcUtil:
         # Try a few times in case there is a glitch due to a monitor being turned-off/on or slow to respond
 
         for attempt_count in range(DDCUTIL_RETRIES):
-            values = self.ddcutil_service.get_vcp_values(self.id_key_args_dbus(vdu_number),
-                                                                         [int(vcp, 16) for vcp in vcp_code_list])
+            values = self.ddcutil_service.get_vcp_values(self.get_edid_txt(vdu_number),
+                                                         [int(vcp, 16) for vcp in vcp_code_list])
             for vcp, value, maxv, _ in values:
                 code = vcp if isinstance(vcp, int) else int.from_bytes(vcp)
                 vcp_code = f'{code:02X}'
@@ -1403,7 +1404,7 @@ class DdcUtil:
                 break  # Got all values - OK to stop
         for vcp_code, value in results_dict.items():
             if value is None:
-                raise ValueError(f"getvcp: VDU {vdu_number} - failed to obtain value for vcp_code {vcp_code}")
+                raise ValueError(f"getvcp: display-{vdu_number} - failed to obtain value for vcp_code {vcp_code}")
         return list(results_dict.values())
 
 
@@ -1415,57 +1416,66 @@ class DdcutilInterfaceExe:
     _CNC_PATTERN = re.compile(r'x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+)')  # Match Complex Non-Continuous-Type result
     _SPECIFIC_VCP_VALUE_PATTERN_CACHE: Dict[int, re.Pattern] = {}
 
-    def __init__(self):
+    def __init__(self, common_args: List[str]):
+        self.vdu_sleep_multiplier: Dict[str, float] = {}
         self.extra_args: Dict[str, List[str]] = {}
-        self.common_args: List[str] = []
+        self.common_args = [arg for arg in os.getenv('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != ''] + common_args
         self.ddcutil_access_lock = Lock()
         self.vcp_type_map: Dict[int, str] = {}
         self.ddcutil_version = (0, 0, 0)
         self.ddcutil_version_string = "0.0.0"
         self.version_suffix = ''
-        self.common_args = []
         self.DetectedAttributes = namedtuple("DetectedAttributes", ('display_number', 'usb_bus', 'usb_device',
                                              'manufacturer_id', 'model_name', 'serial_number', 'product_code',
                                              'edid_txt', 'binary_serial_number'))
+        self.vdu_map_by_edid: Dict[str, Tuple] = {}
+        
+    def set_sleep_multiplier(self, edid_txt: str, sleep_multiplier: float):
+        self.vdu_sleep_multiplier[edid_txt] = sleep_multiplier
 
-    def set_common_args(self, sleep_multiplier: float | None, common_args: List[str]):
-        common_args = [arg for arg in os.getenv('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != ''] + common_args
-        if sleep_multiplier is not None:
-            common_args += ['--sleep-multiplier', str(sleep_multiplier)]
-        self.common_args = common_args
-
-    def set_extra_args(self, edid_txt: str, sleep_multiplier: float | None, extra_args: List[str]):
-        if sleep_multiplier is not None:
-            extra_args += ['--sleep-multiplier', str(sleep_multiplier)]
+    def set_vdu_specific_args(self, edid_txt: str, extra_args: List[str]):
         self.extra_args[edid_txt] = extra_args
 
-    def format_args_diagnostic(self, args: List[str]):
+    def _get_vdu_human_name(self, edid_txt: str):
+        if vdu := self.vdu_map_by_edid.get(edid_txt):
+            return f"display-{vdu.display_number} {vdu.model_name}"
+        return f"Unknown-display {edid_txt:.30}..."
+
+    def _format_args_diagnostic(self, args: List[str]):
         return ' '.join([arg if len(arg) < 30 else arg[:30] + "..." for arg in args])
 
-    def __run__(self, *args, log_id='') -> subprocess.CompletedProcess:
-        log_id = f"Display-{log_id}" if log_id != '' else ''  # Make it easier to tell - eid is a bit much
+    def __run__(self, *args, edid_txt: str = None) -> subprocess.CompletedProcess:
+        if edid_txt:
+            edid_args = ["--edid", edid_txt] if edid_txt else []
+            multiplier = self.vdu_sleep_multiplier.get(edid_txt, None)
+            multiplier_args = ["--sleep-multiplier", f"{multiplier:4.2f}"] if multiplier else []
+        else:
+            edid_args = []
+            multiplier_args = []
+        extra_args = self.extra_args.get(edid_txt, []) if edid_txt else []
+        log_id = self._get_vdu_human_name(edid_txt) if edid_txt else ''  # Make it easier to tell - eid is a bit much
         syslog_args = []
         if self.ddcutil_version[0] >= 2:
             if log_to_syslog and '--syslog' not in args:
                 syslog_args = ['--syslog', 'DEBUG' if log_debug_enabled else 'ERROR']
-        process_args = [DDCUTIL] + self.common_args + syslog_args + list(args)
+        process_args = [DDCUTIL] + self.common_args  + multiplier_args + syslog_args + extra_args + list(args) + edid_args
         try:
             with self.ddcutil_access_lock:
                 now = time.time()
                 result = subprocess.run(process_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
                 elapsed = time.time() - now
                 # Shorten EDID to 30 characters when logging it (it will be the only long argument)
-                log_debug(f"subprocess result: success {log_id} [{self.format_args_diagnostic(result.args)}] "
-                          f"{process_args=} "
+                log_debug(f"subprocess result: success {log_id} [{self._format_args_diagnostic(result.args)}] "
+                          # f"{process_args=} "
                           f"rc={result.returncode} elapsed={elapsed:.2f} "
                           f"stdout={result.stdout.decode('utf-8', errors='surrogateescape')}") if log_debug_enabled else None
         except subprocess.SubprocessError as spe:
             error_text = spe.stderr.decode('utf-8', errors='surrogateescape')
             if error_text.lower().find("display not found") >= 0:  # raise DdcUtilDisplayNotFound and stay quiet
-                log_debug("subprocess result: display-not-found ", log_id, self.format_args_diagnostic(process_args),
+                log_debug("subprocess result: display-not-found ", log_id, self._format_args_diagnostic(process_args),
                           f"stderr='{error_text}', exception={str(spe)}", trace=True) if log_debug_enabled else None
                 raise DdcUtilDisplayNotFound(' '.join(args)) from spe
-            log_debug("subprocess result: error ", log_id, self.format_args_diagnostic(process_args),
+            log_debug("subprocess result: error ", log_id, self._format_args_diagnostic(process_args),
                       f"stderr='{error_text}', exception={str(spe)}", trace=True) if log_debug_enabled else None
             raise
         return result
@@ -1521,16 +1531,16 @@ class DdcutilInterfaceExe:
                 bin_serial_number = rubbish.sub('_', ds_parts.get('Binary serial number', '').split('(')[0].strip())
                 man_date = rubbish.sub('_', ds_parts.get('Manufacture year', ''))
                 i2c_bus_id = ds_parts.get('I2C bus', '').replace("/dev/", '').replace("-", "_")
-                edid = self._parse_edid(display_str)
-                display_list.append(self.DetectedAttributes(
-                    vdu_number, '', '', manufacturer, model_name, serial_number, '',
-                    edid, bin_serial_number))
+                edid_txt = self._parse_edid(display_str)
+                vdu_attributes = self.DetectedAttributes(vdu_number, '', '', manufacturer, model_name, serial_number, '', edid_txt,
+                                                         bin_serial_number)
+                display_list.append(vdu_attributes)
+                self.vdu_map_by_edid[edid_txt] = vdu_attributes
         return display_list
 
     def get_capabilities(self, edid_txt: str) -> Tuple[
         str, int, int, Dict[int, str], Dict[int, Tuple[str, str, Dict[int, str]]], str]:
-        args = self.extra_args.get(edid_txt, []) + ['--edid', edid_txt, 'capabilities']
-        result = self.__run__(*args, log_id=f"{edid_txt:.30}...")
+        result = self.__run__('capabilities', edid_txt=edid_txt)
         capability_text = result.stdout.decode('utf-8', errors='surrogateescape')
         return '', 0, 0, {}, {}, capability_text
 
@@ -1545,8 +1555,7 @@ class DdcutilInterfaceExe:
     def set_vcp(self, edid_txt: str, vcp_code_int: int, new_value_int: int) -> None:
         vcp_code = f"{vcp_code_int:02X}"
         new_value = f"x{new_value_int:X}"
-        args = self.extra_args.get(edid_txt, []) + ['setvcp', vcp_code, new_value, "--edid", edid_txt]
-        self.__run__(*args, log_id=f"{edid_txt:.30}...")
+        self.__run__('setvcp', vcp_code, new_value, edid_txt=edid_txt)
 
     def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[VcpValue]:
         if self.ddcutil_version > (1, 3, 0):
@@ -1556,11 +1565,11 @@ class DdcutilInterfaceExe:
 
     def _get_vcp_values_implementation(self, edid_txt: str, vcp_code_list: List[int]) -> List[Tuple[str, int, int, str]]:
         # Try a few times in case there is a glitch due to a monitor being turned-off/on or slow to respond
-        args = self.extra_args.get(edid_txt, []) + ['--brief', 'getvcp'] + [f"{c:02X}" for c in vcp_code_list] + ['--edid', edid_txt]
+        args = ['--brief', 'getvcp'] + [f"{c:02X}" for c in vcp_code_list]
         results_dict: Dict[int, VcpValue | None] = {vcp_code: None for vcp_code in vcp_code_list}  # Force vcp_code_list ordering
         for attempt_count in range(DDCUTIL_RETRIES):
             try:
-                from_ddcutil = self.__run__(*args, log_id=f"{edid_txt:.30}...")
+                from_ddcutil = self.__run__(*args, edid_txt=edid_txt)
                 for line in from_ddcutil.stdout.split(b"\n"):
                     line_utf8 = line.decode('utf-8', errors='surrogateescape') + '\n'
                     if vcp_code_match := DdcutilInterfaceExe._VCP_CODE_REGEXP.match(line_utf8):
@@ -1568,7 +1577,8 @@ class DdcutilInterfaceExe:
                         results_dict[vcp_code] = self.__parse_vcp_value(vcp_code, line_utf8)
                 for vcp_code, vcp_value in results_dict.items():
                     if vcp_value is None:
-                        raise ValueError(f"getvcp: VDU {edid_txt:.30}... - failed to obtain value for vcp_code {vcp_code}")
+                        raise ValueError(f"getvcp: {self._get_vdu_human_name(edid_txt)}" 
+                                         f" - failed to obtain value for vcp_code {vcp_code}")
                 return [(vcp_code, v.current, v.max, v.vcp_type) for vcp_code, v in results_dict.items()]
             except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound):
                 if attempt_count + 1 == DDCUTIL_RETRIES:  # Don't log here, it creates too much noise in the logs
@@ -1598,19 +1608,28 @@ class DdcutilInterfaceExe:
 
 class DdcutilInterfaceQtDBus(QObject):
 
-    def __init__(self):
+    def __init__(self, common_args: List[str] = []):
         super().__init__()
         self.dbus_interface_name = os.environ.get('DDCUTIL_SERVICE_INTERFACE_NAME', default="com.ddcutil.DdcutilInterface")
-        self.extra_args: Dict[str, List[str]] = {}
+        self.common_args = [arg for arg in os.getenv('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != ''] + common_args
         self.service_access_lock = Lock()
         self.displays_changed_callback = None
         self.dbus_timeout_millis = int(os.getenv("VDU_CONTROLS_DBUS_TIMEOUT_MILLIS", default='5000'))
         self.ddcutil_proxy, self.ddcutil_props_proxy = self.connect_to_service()
+
+        if len(self.common_args) != 0:
+            self._validate(self.ddcutil_proxy.call("Restart",
+                                                   " ".join(self.common_args),
+                                                   QDBusArgument(0, QMetaType.UInt),
+                                                   QDBusArgument(0, QMetaType.UInt)))
+            # time.sleep(2)
+
         self.ddcutil_output_level = 16
         self.DetectedAttributes = namedtuple("DetectedAttributes",
                                              self.ddcutil_props_proxy.call("Get",
                                                                            self.dbus_interface_name,
                                                                            "AttributesReturnedByDetect").arguments()[0])
+        self.vdu_map_by_edid: Dict[str, Tuple] = {}
         output_level = self._validate(self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "OutputLevel"))[0]
         if output_level == self.ddcutil_output_level:
             log_info(f"D-Bus service output_level is {output_level}")
@@ -1620,10 +1639,13 @@ class DdcutilInterfaceQtDBus(QObject):
                                           self.dbus_interface_name,
                                           "OutputLevel", QDBusVariant(QDBusArgument(self.ddcutil_output_level, QMetaType.UInt))))
 
-    def set_common_args(self, sleep_multiplier: float | None, common_args: List[str]):
-        pass  # TODO not implemented
+    def set_sleep_multiplier(self, edid_txt: str, sleep_multiplier: float):
+        with self.service_access_lock:
+            self._validate(self.ddcutil_proxy.call("SetSleepMultiplier", -1, edid_txt,
+                                                   QDBusArgument(sleep_multiplier, QMetaType.Double),
+                                                   QDBusArgument(0, QMetaType.UInt)))
 
-    def set_extra_args(self, vdu_number: str, sleep_multiplier: float, extra_args: List[str]):
+    def set_vdu_specific_args(self, vdu_number: str, extra_args: List[str]):
         pass  # TODO not implemented
 
     def connect_to_service(self) -> object:
@@ -1680,8 +1702,10 @@ class DdcutilInterfaceQtDBus(QObject):
 
     def detect(self, flags: int) -> List[Tuple]:
         with self.service_access_lock:
-            result = self.ddcutil_proxy.call("Detect", QDBusArgument(1, QMetaType.UInt))
-            return [self.DetectedAttributes(*vdu) for vdu in self._validate(result)[1]]
+            result = self.ddcutil_proxy.call("Detect", QDBusArgument(flags, QMetaType.UInt))
+            vdu_list = [self.DetectedAttributes(*vdu) for vdu in self._validate(result)[1]]
+            self.vdu_map_by_edid = {vdu.edid_txt: vdu for vdu in vdu_list}
+            return vdu_list
 
     def get_capabilities(self, edid_txt: str) -> Tuple[
             str, int, int, Dict[int, str], Dict[int, Tuple[str, str, Dict[int, str]]], str]:
@@ -2235,12 +2259,11 @@ class VduController(QObject):
         self.manufacturer = manufacturer
         self.ddcutil = ddcutil
         self.vdu_exception_handler = vdu_exception_handler
-        self.sleep_multiplier: float | None = default_config.get_sleep_multiplier()
-        self.ddcutil_extra_args: List[str] = default_config.get_ddcutil_extra_args()
         self.vdu_model_id = proper_name(vdu_model_name.strip())
         self.capabilities_text: str | None = None
         self.config = None
         self.values_cache: Dict[str, int] = {}
+        default_sleep_multiplier: float | None = default_config.get_sleep_multiplier(fallback=None)
         enabled_vcp_codes = default_config.get_all_enabled_vcp_codes()
         for config_name in (self.vdu_stable_id, self.vdu_model_id):
             config_path = ConfIni.get_path(config_name)
@@ -2250,9 +2273,10 @@ class VduController(QObject):
                 config.parse_file(config_path)
                 if default_config.is_set(ConfOption.DEBUG_ENABLED):
                     config.debug_dump()
-                self.sleep_multiplier = config.get_sleep_multiplier(fallback=self.sleep_multiplier)
-                self.ddcutil_extra_args = config.get_ddcutil_extra_args(fallback=self.ddcutil_extra_args)
-                self.ddcutil.set_extra_args(vdu_number, self.sleep_multiplier, self.ddcutil_extra_args)
+                multiplier = config.get_sleep_multiplier(fallback=default_sleep_multiplier)
+                if multiplier:
+                    self.ddcutil.set_sleep_multiplier(vdu_number, multiplier)
+                self.ddcutil.set_vdu_specific_args(vdu_number, config.get_ddcutil_extra_args(fallback=None))
                 enabled_vcp_codes = config.get_all_enabled_vcp_codes()
                 self.capabilities_text = config.get_capabilities_alt_text()
                 self.config = config
@@ -6812,10 +6836,8 @@ class VduAppController:  # Main controller containing methods for high level ope
 
     def create_ddcutil(self):
         try:
-            self.ddcutil = DdcUtil(use_dbus=self.main_config.is_set(ConfOption.DBUS_CLIENT_ENABLED))
-            #   self.ddcutil = DdcUtil(default_sleep_multiplier=self.main_config.get_sleep_multiplier())
-            self.ddcutil.set_common_args(self.main_config.get_sleep_multiplier(),
-                                         self.main_config.get_ddcutil_extra_args())
+            self.ddcutil = DdcUtil(common_args=self.main_config.get_ddcutil_extra_args(),
+                                   enable_dbus_client=self.main_config.is_set(ConfOption.DBUS_CLIENT_ENABLED))
         except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
             self.main_window.display_no_controllers_error_dialog(e)
             self.ddcutil = None
