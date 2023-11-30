@@ -20,6 +20,8 @@ Synopsis:
                      [--hide-on-focus-out|--no-hide-on-focus-out] [--smart-window|--no-smart-window]
                      [--syslog|--no-syslog]  [--debug|--no-debug] [--warnings|--no-warnings]
                      [--sleep-multiplier multiplier] [--ddcutil-extra-args 'extra args']
+                     [--dbus-client-enabled|--no-dbus-client-enabled]
+                     [--dbus-auto-connect|--no-dbus-auto-connect]
                      [--create-config-files] [--install] [--uninstall]
 
 Optional arguments:
@@ -67,6 +69,10 @@ Arguments supplied on the command line override config file equivalent settings.
       --sleep-multiplier    set the default ddcutil sleep multiplier
                             protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 1.0)
       --ddcutil-extra-args  extra arguments to pass to ddcutil (enclosed in single quotes)
+      --dbus-client-enabled|--no-dbus-client-enabled
+                            use the ddcutil-dbus-server instead of the ddcutil command ``--no-dbus-client-enabled`` is the default
+      --dbus-auto-connect|--no-dbus-auto-connect
+                            use dbus to automatically detect VDU connection/disconnection ``--no-dbus-auto-connect`` is the default
       --create-config-files
                             if they do not exist, create template config INI files in $HOME/.config/vdu_controls/
       --install             installs the vdu_controls in the current user's path and desktop application menu.
@@ -1226,7 +1232,8 @@ class DdcUtil:
     Interface to the abstracted ddcutil service
     """
 
-    def __init__(self, common_args: List[str] = [], enable_dbus_client: bool = False) -> None:
+    def __init__(self, common_args: List[str] = [], enable_dbus_client: bool = False,
+                 connected_vdus_changed_callable: Callable = None) -> None:
         super().__init__()
         if enable_dbus_client:  # The service-interface implementations are duck-typed.
             self.ddcutil_service_class = DdcutilInterfaceQtDBus
@@ -1237,7 +1244,7 @@ class DdcUtil:
         self.supported_codes: Dict[str, str] | None = None
         self.vcp_type_map: Dict[Tuple[str, str], str] = {}
         self.edid_txt_map: Dict[str, str] = {}
-        self.displays_changed_callback: Callable | None = None
+        self.displays_changed_callback: Callable | None = connected_vdus_changed_callable
         self.ddcutil_version = (0, 0, 0)  # Dummy version for bootstrapping
         self.version_suffix = ''
         version_info = self.ddcutil_service.get_ddcutil_version_string()
@@ -1250,6 +1257,9 @@ class DdcUtil:
             f"ddcutil-interface: {self.ddcutil_service.get_interface_version_string()}; ddcutil: {version_info}"
         self.status_values = self.ddcutil_service.get_status_values()
         log_info(f"ddcutil version {self.ddcutil_version} {self.version_suffix}(dynamic-sleep={self.ddcutil_version >= (2, 0, 0)})")
+
+        if self.displays_changed_callback:
+            log_info("Will use d-bus to automatically react to VDU connection/disconnection")
 
         def displays_changed_dbus_handler(count: int, flags: int):
             log_debug("ConnectedDisplaysChanged Callback called", count, flags)
@@ -1962,7 +1972,10 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
     SYSLOG_ENABLED = conf_opt_def(cname=QT_TR_NOOP('syslog-enabled'), default="no",
                                   tip=QT_TR_NOOP('divert diagnostic output to the syslog'))
     DBUS_CLIENT_ENABLED = conf_opt_def(cname=QT_TR_NOOP('dbus-client-enabled'), default="no",
-                                  tip=QT_TR_NOOP('use the ddcutil-dbus-server instead of the ddcutil command (experimental feature)'))
+                                  tip=QT_TR_NOOP('use the ddcutil-dbus-server instead of the ddcutil command (experimental)'))
+    DBUS_AUTO_CONNECT = conf_opt_def(cname=QT_TR_NOOP('dbus-auto-connect'), default="no",
+                                     tip=QT_TR_NOOP('use dbus to automatically detect VDU connection/disconnection'),
+                                     related='dbus-client-enabled')
     LOCATION = conf_opt_def(cname=QT_TR_NOOP('location'), conf_type=CI.TYPE_LOCATION, tip=QT_TR_NOOP('latitude,longitude'))
     SLEEP_MULTIPLIER = conf_opt_def(cname=QT_TR_NOOP('sleep-multiplier'), section=CI.DDCUTIL_PARAMETERS, conf_type=CI.TYPE_FLOAT,
                                     tip=QT_TR_NOOP('ddcutil --sleep-multiplier (0.1 .. 2.0, default none)'))
@@ -6836,8 +6849,16 @@ class VduAppController:  # Main controller containing methods for high level ope
 
     def create_ddcutil(self):
         try:
+
+            def handle_changes(count: int, flags: int):
+                log_info(f"Connected VDUs changed count={count}")
+                self.main_window.run_in_gui_thread(self.start_refresh)
+
+            callback = handle_changes if self.main_config.is_set(ConfOption.DBUS_AUTO_CONNECT, fallback=False) else None
             self.ddcutil = DdcUtil(common_args=self.main_config.get_ddcutil_extra_args(),
-                                   enable_dbus_client=self.main_config.is_set(ConfOption.DBUS_CLIENT_ENABLED))
+                                   enable_dbus_client=self.main_config.is_set(ConfOption.DBUS_CLIENT_ENABLED),
+                                   connected_vdus_changed_callable=callback)
+
         except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
             self.main_window.display_no_controllers_error_dialog(e)
             self.ddcutil = None
@@ -7302,7 +7323,12 @@ class VduAppWindow(QMainWindow):
         self.main_panel: VduControlsMainPanel | None = None
         self.main_config = main_config
         self.hide_shortcuts = True
-        self._run_in_gui_thread_qtsignal.connect(partial)  # partial will execute its first arg as a callable.
+
+        def run_in_gui(task: Callable):
+            log_debug("Running task in gui thread") if log_debug_enabled else None
+            task() # Was using a partial, but it silently failed when task was a method with only self and no other arguments.
+
+        self._run_in_gui_thread_qtsignal.connect(run_in_gui)
         # Gnome tray doesn't normally provide a way to bring up the main app.
         self.os_desktop = os.environ.get('XDG_CURRENT_DESKTOP', default='unknown').lower()
         gnome_tray_behaviour = main_config.is_set(ConfOption.SYSTEM_TRAY_ENABLED) and 'gnome' in self.os_desktop
