@@ -82,12 +82,19 @@ Description
 ===========
 
 ``vdu_controls`` is a control-panel for DisplayPort, DVI, HDMI, or USB connected VDUs.  It provides
-controls for settings such as brightness and contrast. It interacts with VDUs by using the
-``ddcutil`` command line utility to issue standard VESA *Display Data Channel* (*DDC*) *Virtual
-Control Panel*  (*VCP*) commands.  ``Ddcutil`` provides a robust interface that is tolerant of the
-vagaries of the many OEM DDC implementations.
+controls for settings such as brightness and contrast.
 
-By default, ``vdu_controls`` offers a subset of controls including brightness, contrast and audio
+``vdu_controls`` interacts with VDUs by using ``ddcutil`` to issue standard VESA
+*Virtual Control Panel*  (*VCP*) commands via the VESA  *Display Data Channel* (*DDC*).
+``Ddcutil`` provides a robust interface that is tolerant of the vagaries of the many OEM DDC
+implementations.
+
+By default, ``vdu_controls`` runs ``ddcutil`` separately for each VCP-command, this only
+requires the presence of the ``ddcutil`` command.  From ``vdu_controls 2.0`` onward,
+``vdu_controls`` can be set to use the ``ddcutil D-Bus service`` to provide a considerably
+faster and smoother experience, this requires ``ddcutil-dbus-server`` and
+
+Out of the box, ``vdu_controls`` offers a subset of controls including brightness, contrast and audio
 controls.  Additional controls can be enabled via the ``Settings`` dialog.
 
 The UI's look-and-feel adjusts itself for dark and light desktop themes. The application may
@@ -1943,8 +1950,8 @@ CI = ConfIni  # Shorthand for next series of declarations only
 
 
 def conf_opt_def(cname: str, section: str = CI.VDU_CONTROLS_GLOBALS, conf_type: str = CI.TYPE_BOOL, default: str | None = None,
-                 restart: bool = False, cmdline_arg: str = 'DEFAULT', tip: str = '', related: str = ''):
-    return cname, section, cmdline_arg, conf_type, default, restart, tip, related
+                 restart: bool = False, cmdline_arg: str = 'DEFAULT', tip: str = '', related: str = '', requires: str = ''):
+    return cname, section, cmdline_arg, conf_type, default, restart, tip, related, requires
 
 
 class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration - not really Enum - alternatives?
@@ -1975,7 +1982,7 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
                                   tip=QT_TR_NOOP('use the ddcutil-dbus-server instead of the ddcutil command (experimental)'))
     DBUS_AUTO_CONNECT = conf_opt_def(cname=QT_TR_NOOP('dbus-auto-connect'), default="no",
                                      tip=QT_TR_NOOP('use dbus to automatically detect VDU connection/disconnection'),
-                                     related='dbus-client-enabled')
+                                     requires='dbus-client-enabled')
     LOCATION = conf_opt_def(cname=QT_TR_NOOP('location'), conf_type=CI.TYPE_LOCATION, tip=QT_TR_NOOP('latitude,longitude'))
     SLEEP_MULTIPLIER = conf_opt_def(cname=QT_TR_NOOP('sleep-multiplier'), section=CI.DDCUTIL_PARAMETERS, conf_type=CI.TYPE_FLOAT,
                                     tip=QT_TR_NOOP('ddcutil --sleep-multiplier (0.1 .. 2.0, default none)'))
@@ -1989,7 +1996,7 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
     UNKNOWN = conf_opt_def(cname="UNKNOWN", section=CI.UNKNOWN_SECTION, conf_type=CI.TYPE_BOOL, cmdline_arg='DISALLOWED', tip='')
 
     def __init__(self, conf_name: str, section: str, cmdline_arg: str, conf_type: str, default: str | None,
-                 restart_required: bool, help_text: str, related: str):
+                 restart_required: bool, help_text: str, related: str, requires: str):
         self.conf_name, self.conf_section, self.conf_type, self.default_value = conf_name, section, conf_type, default
         self.conf_id = self.conf_section, self.conf_name
         self.restart_required = restart_required
@@ -1998,6 +2005,7 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
         self.cmdline_var = None if self.cmdline_arg == "DISALLOWED" else self.conf_name.replace('-enabled', '').replace('-', '_')
         self.default_value = default
         self.related = related
+        self.requires = requires
 
     def add_cmdline_arg(self, parser: argparse.ArgumentParser) -> None:
         if self.cmdline_arg != "DISALLOWED":
@@ -2520,7 +2528,8 @@ class SettingsEditorTab(QWidget):
                     if option_def.conf_type == ConfIni.TYPE_BOOL:
                         booleans_grid.addWidget(
                             field(
-                                SettingsEditorBooleanWidget(self, option_name, section_name, option_def.help, option_def.related)),
+                                SettingsEditorBooleanWidget(self, option_name, section_name,
+                                                            option_def.help, option_def.related, option_def.requires)),
                             bool_count // grid_columns, bool_count % grid_columns)
                         bool_count += 1
                     else:
@@ -2626,7 +2635,7 @@ class SettingsEditorFieldBase(QWidget):
 
 
 class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
-    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str, related: str) -> None:
+    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str, related: str, requires: str) -> None:
         super().__init__(section_editor, option, section, tooltip)
         self.setLayout(QHBoxLayout())
         checkbox = QCheckBox(self.translate_option())
@@ -2637,6 +2646,10 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
             if related:
                 info = MessageBox(QMessageBox.Information, QMessageBox.Ok)
                 info.setText(tr("You may also wish to set\n{}").format(tr(related)))
+                info.exec()
+            if is_checked and requires:
+                info = MessageBox(QMessageBox.Information, QMessageBox.Ok)
+                info.setText(tr("You will also need to set\n{}").format(tr(requires)))
                 info.exec()
 
         checkbox.toggled.connect(toggled)
