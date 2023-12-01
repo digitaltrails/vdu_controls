@@ -6874,7 +6874,6 @@ class VduAppController:  # Main controller containing methods for high level ope
 
         except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
             self.main_window.display_no_controllers_error_dialog(e)
-            self.ddcutil = None
 
     def detect_vdus(self) -> Tuple[List[Tuple[str, str, str, str]], Exception | None]:
         if self.ddcutil is None:
