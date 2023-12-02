@@ -1639,22 +1639,12 @@ class DdcutilInterfaceQtDBus(QObject):
                                                    " ".join(self.common_args),
                                                    QDBusArgument(0, QMetaType.UInt),
                                                    QDBusArgument(0, QMetaType.UInt)))
-            # time.sleep(2)
 
-        self.ddcutil_output_level = 16
         self.DetectedAttributes = namedtuple("DetectedAttributes",
                                              self.ddcutil_props_proxy.call("Get",
                                                                            self.dbus_interface_name,
                                                                            "AttributesReturnedByDetect").arguments()[0])
         self.vdu_map_by_edid: Dict[str, Tuple] = {}
-        output_level = self._validate(self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "OutputLevel"))[0]
-        if output_level == self.ddcutil_output_level:
-            log_info(f"D-Bus service output_level is {output_level}")
-        else:
-            log_info(f"Changing D-Bus service output_level from {output_level} to {self.ddcutil_output_level}")
-            self._validate(self.ddcutil_props_proxy.call("Set",
-                                          self.dbus_interface_name,
-                                          "OutputLevel", QDBusVariant(QDBusArgument(self.ddcutil_output_level, QMetaType.UInt))))
 
     def set_sleep_multiplier(self, edid_txt: str, sleep_multiplier: float):
         with self.service_access_lock:
