@@ -20,7 +20,7 @@ A control panel for external monitors (*Visual Display Units*).
 > You can also access the service from any D-Bus clients such as d-feet or the
 > command line tool dbus-send.
 > 
-> The service is under active development along with supporting ammendments 
+> The service is under active development along with supporting amendments 
 > to libddcutil by @rockowitz.  The intention is to eventually package it 
 > with ddcutil/libddcutil.
 > 
