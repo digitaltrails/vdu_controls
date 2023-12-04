@@ -1340,7 +1340,9 @@ class DdcUtil:
         model, mccs_major, mccs_minor, _, features, full_text = self.ddcutil_service.get_capabilities(edid_txt)
         if full_text:  # The service supplies pre-assembled capabilities text.
             return full_text
-        capability_text = f"Model: {model}\n"  f"MCCS version: {mccs_major}.{mccs_minor}\n" "VCP Features:\n"
+        capability_text = f"Model: {model}\n" \
+                          f"MCCS version: {int.from_bytes(mccs_major)}.{int.from_bytes(mccs_minor)}\n" \
+                          "VCP Features:\n"
         for feature_id, feature in features.items():
             assert len(feature_id) == 1
             feature_code = f"{int.from_bytes(feature_id):02X}"
