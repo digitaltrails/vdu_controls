@@ -1335,7 +1335,7 @@ class DdcUtil:
         # display_list.append(("3", "maker_y", "model_z", "1234")) # For testing bad VDUs:
         return display_list
 
-    def query_capabilities(self, vdu_number: str, extra_args: List[str] | None = None) -> str:
+    def query_capabilities(self, vdu_number: str) -> str:
         edid_txt = self.get_edid_txt(vdu_number)
         model, mccs_major, mccs_minor, _, features, full_text = self.ddcutil_service.get_capabilities(edid_txt)
         if full_text:  # The service supplies pre-assembled capabilities text.
@@ -2299,7 +2299,7 @@ class VduController(QObject):
                 enabled_vcp_codes = ASSUMED_CONTROLS_CONFIG_VCP_CODES
                 self.capabilities_text = ASSUMED_CONTROLS_CONFIG_TEXT
             else:
-                self.capabilities_text = ddcutil.query_capabilities(vdu_number, extra_args=self.ddcutil_extra_args)
+                self.capabilities_text = ddcutil.query_capabilities(vdu_number)
         self.capabilities_supported_by_this_vdu = self._parse_capabilities(self.capabilities_text)
         # Find those capabilities supported by this VDU AND enabled in the GUI:
         self.enabled_capabilities = [c for c in self.capabilities_supported_by_this_vdu.values() if c.vcp_code in enabled_vcp_codes]

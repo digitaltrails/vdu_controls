@@ -63,18 +63,18 @@ Data Channel (DDC) Virtual Control Panel (VCP) standards.
 install -d -m 0755 %{buildroot}%{_bindir} \
                    %{buildroot}%{_mandir}/man1/ \
                    %{buildroot}%{_datadir}/applications \
-                   %{buildroot}%{_datadir}/vdu_controls/translations \
-                   %{buildroot}%{_datadir}/vdu_controls/icons \
-                   %{buildroot}%{_datadir}/vdu_controls/sample-scripts \
+                   %{buildroot}%{_datadir}/%{name}/translations \
+                   %{buildroot}%{_datadir}/%{name}/icons \
+                   %{buildroot}%{_datadir}/%{name}/sample-scripts \
                    %{buildroot}%{_datadir}/icons/hicolor/256x256/apps
-install -m 0755 vdu_controls.py  %{buildroot}/%{_bindir}/%{name}
+install -m 0755 %{name}.py  %{buildroot}/%{_bindir}/%{name}
 install -m 0644 %{name}.desktop %{buildroot}%{_datadir}/applications/%{name}.desktop
 install -m 0644 %{name}.png %{buildroot}%{_datadir}/icons/hicolor/256x256/apps/%{name}.png
-install -m 0644 icons/* %{buildroot}%{_datadir}/vdu_controls/icons/
-install -m 0644 translations/*.ts %{buildroot}%{_datadir}/vdu_controls/translations/
-install -m 0644 translations/about_*.txt %{buildroot}%{_datadir}/vdu_controls/translations/
-install -m 0755 sample-scripts/* %{buildroot}%{_datadir}/vdu_controls/sample-scripts/
-install -m 0644 docs/_build/man/vdu_controls.1 %{buildroot}%{_mandir}/man1/
+install -m 0644 icons/* %{buildroot}%{_datadir}/%{name}/icons/
+install -m 0644 translations/*.ts %{buildroot}%{_datadir}/%{name}/translations/
+install -m 0644 translations/about_*.txt %{buildroot}%{_datadir}/%{name}/translations/
+install -m 0755 sample-scripts/* %{buildroot}%{_datadir}/%{name}/sample-scripts/
+install -m 0644 docs/_build/man/%{name}.1 %{buildroot}%{_mandir}/man1/
 
 # This script is supposed to work with any python3 - so leave the shebang alone
 # %%if 0%{?suse_version}
@@ -82,31 +82,31 @@ install -m 0644 docs/_build/man/vdu_controls.1 %{buildroot}%{_mandir}/man1/
 # %%endif
 
 %post
-ln -s -f %{_datadir}/icons %{_datadir}/vdu_controls/icons/system-icons
+ln -s -f %{_datadir}/icons %{_datadir}/%{name}/icons/system-icons
 
 %files
 %license LICENSE.md
-%dir %{_datadir}/vdu_controls
-%dir %{_datadir}/vdu_controls/icons
-%dir %{_datadir}/vdu_controls/translations
-%dir %{_datadir}/vdu_controls/sample-scripts
+%dir %{_datadir}/%{name}
+%dir %{_datadir}/%{name}/icons
+%dir %{_datadir}/%{name}/translations
+%dir %{_datadir}/%{name}/sample-scripts
 %{_bindir}/%{name}
 %{_datadir}/applications/%{name}.desktop
 %{_datadir}/icons/hicolor/256x256/apps/%{name}.png
 %{_mandir}/man1/%{name}.1%{?ext_man}
-%{_datadir}/vdu_controls/icons/*
-%{_datadir}/vdu_controls/translations/da_DK.ts
-%{_datadir}/vdu_controls/translations/fr_FR.ts
-%{_datadir}/vdu_controls/translations/de_DE.ts
-%{_datadir}/vdu_controls/translations/cs_CZ.ts
-%{_datadir}/vdu_controls/translations/about_da_DK.txt
-%{_datadir}/vdu_controls/translations/about_fr_FR.txt
-%{_datadir}/vdu_controls/translations/about_de_DE.txt
-%{_datadir}/vdu_controls/translations/about_cs_CZ.txt
-%{_datadir}/vdu_controls/sample-scripts/lux-from-webcam.bash
-%{_datadir}/vdu_controls/sample-scripts/lux-from-webcam.py
-%{_datadir}/vdu_controls/sample-scripts/vlux_meter.py
-%ghost %{_datadir}/vdu_controls/icons/system-icons
+%{_datadir}/%{name}/icons/*
+%{_datadir}/%{name}/translations/da_DK.ts
+%{_datadir}/%{name}/translations/fr_FR.ts
+%{_datadir}/%{name}/translations/de_DE.ts
+%{_datadir}/%{name}/translations/cs_CZ.ts
+%{_datadir}/%{name}/translations/about_da_DK.txt
+%{_datadir}/%{name}/translations/about_fr_FR.txt
+%{_datadir}/%{name}/translations/about_de_DE.txt
+%{_datadir}/%{name}/translations/about_cs_CZ.txt
+%{_datadir}/%{name}/sample-scripts/lux-from-webcam.bash
+%{_datadir}/%{name}/sample-scripts/lux-from-webcam.py
+%{_datadir}/%{name}/sample-scripts/vlux_meter.py
+%ghost %{_datadir}/%{name}/icons/system-icons
 
 # Build service notes:
 # 0) Build service page: https://build.opensuse.org/package/show/utilities/vdu_controls
