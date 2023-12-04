@@ -1342,7 +1342,8 @@ class DdcUtil:
             return full_text
         capability_text = f"Model: {model}\n"  f"MCCS version: {mccs_major}.{mccs_minor}\n" "VCP Features:\n"
         for feature_id, feature in features.items():
-            feature_code = f"{feature_id:02X}"
+            assert len(feature_id) == 1
+            feature_code = f"{feature_id[0]:02X}"
             feature_name = feature[0]
             feature_values = feature[2]
             capability_text += f"   Feature: {feature_code} ({feature_name})\n"
@@ -1350,12 +1351,12 @@ class DdcUtil:
                 if all(value == '' for value in feature_values.values()):
                     capability_text += "      Values:"
                     for value_id in feature_values.keys():
-                        capability_text += f" {value_id:02X}"
+                        capability_text += f" {value_id[0]:02X}"
                     capability_text += " (interpretation unavailable)\n"
                 else:
                     capability_text += "      Values:\n"
                     for value_id, value_name in feature_values.items():
-                        value_code = f"{value_id:02X}"
+                        value_code = f"{value_id[0]:02X}"
                         capability_text += f"         {value_code}: {value_name}\n"
         return capability_text
 
@@ -1717,7 +1718,7 @@ class DdcutilInterfaceQtDBus(QObject):
     def get_capabilities(self, edid_txt: str) -> Tuple[
             str, int, int, Dict[int, str], Dict[int, Tuple[str, str, Dict[int, str]]], str]:
         with self.service_access_lock:
-            model, mccs_major, mccs_minor, commands, capabilities, status, errmsg = \
+            model, mccs_major, mccs_minor, commands, capabilities = \
                 self._validate(self.ddcutil_proxy.call(
                     "GetCapabilitiesMetadata", -1, edid_txt, QDBusArgument(0, QMetaType.UInt)))
             return model, mccs_major, mccs_minor, commands, capabilities, ''
