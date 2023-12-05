@@ -1053,6 +1053,21 @@ REFRESH_ICON_SOURCE = b"""
 </svg>
 """
 
+LIGHTING_CHECK_SVG = b"""
+<svg version="1.1" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <style id="current-color-scheme" type="text/css">.ColorScheme-Text {
+        color:#232629;
+      }
+      .ColorScheme-NegativeText {
+          color:#ff8500;
+      }</style>
+    </defs>
+    <path style="fill:currentColor;fill-opacity:1;stroke:none" class="ColorScheme-Text" d="M 5,3 V 4 H 7 V 5.0507812 C 4.7620407,5.3045267 3,7.1975144 3,9.5 3,11.813856 4.7794406,13.714649 7.0332031,13.953125 6.6992186,13.613635 6.43803,13.209557 6.265625,12.765625 4.9435886,12.265608 4,10.997158 4,9.5 4,7.5670034 5.5670034,6 7.5,6 c 1.4804972,0 2.738502,0.9218541 3.25,2.2207031 0.447476,0.1661231 0.856244,0.4220185 1.201172,0.7519531 -0.10518,-0.8491863 -0.442085,-1.62392 -0.957031,-2.2597656 l 0.754297,-0.7542968 0.398046,0.3949218 0.707032,-0.7070312 -1.5,-1.5 L 10.646484,4.8535156 11.042969,5.25 10.291016,6.0019531 C 9.6449906,5.4911251 8.858964,5.1481728 8,5.0507812 V 4 h 2 V 3 Z"/>
+    <path style="fill:currentColor;fill-opacity:1;stroke:none" class="ColorScheme-NegativeText" d="m12 11.5a2.5 2.5 0 0 1-2.5 2.5 2.5 2.5 0 0 1-2.5-2.5 2.5 2.5 0 0 1 2.5-2.5 2.5 2.5 0 0 1 2.5 2.5z"/>
+</svg>
+"""
+
 TRANSITION_ICON_SOURCE = b"""
 <svg  xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24"></svg>
 """
@@ -3333,7 +3348,7 @@ class ContextMenu(QMenu):
         self._add_action(QStyle.SP_ComputerIcon, tr('&Grey Scale'), gray_scale_action)
         if lux_meter_action is not None:
             self.lux_auto_action = self._add_action(QStyle.SP_ComputerIcon, tr('&Auto/Manual'), lux_auto_action)
-            self._add_action(QStyle.SP_MediaSeekForward, tr('Lighting &Check'), lux_check_action)
+            self.lux_check_action = self._add_action(QStyle.SP_MediaSeekForward, tr('Lighting &Check'), lux_check_action)
             self._add_action(QStyle.SP_ComputerIcon, tr('&Light-Meter'), lux_meter_action)
         self._add_action(QStyle.SP_ComputerIcon, tr('&Settings'), settings_action, 'Ctrl+Shift+,')
         self._add_action(QStyle.SP_BrowserReload, tr('&Refresh'), refresh_action, QKeySequence.Refresh).setProperty(
@@ -3429,11 +3444,12 @@ class ContextMenu(QMenu):
                     changed += 1
         self.update() if changed else None
 
-    def update_lux_auto_icon(self, icon: QIcon) -> None:
+    def update_lux_auto_icon(self, icon: QIcon, lux_auto_enabled: bool) -> None:
         if self.auto_lux_icon != icon:
             self.auto_lux_icon = icon
             self.lux_auto_action.setIcon(icon)
             self.update()
+        self.lux_check_action.setEnabled(lux_auto_enabled)
 
     def allocate_preset_shortcut(self, word: str) -> Shortcut | None:
         for letter in list(word):
@@ -6540,10 +6556,15 @@ class LuxAutoController:
         self.lux_meter: LuxMeterDevice | None = None
         self.lux_auto_brightness_worker: LuxAutoWorker | None = None
         self.lux_tool_button: ToolButton | None = None
+        self.lux_lighting_check_button: ToolButton | None = None
 
     def create_tool_button(self) -> ToolButton:  # Used when the application UI has to reinitialize
         self.lux_tool_button = ToolButton(AUTO_LUX_ON_SVG, tr("Toggle light metered brightness adjustment"))
         return self.lux_tool_button
+
+    def create_lighting_check_button(self) -> ToolButton:  # Used when the application UI has to reinitialize
+        self.lux_lighting_check_button = ToolButton(LIGHTING_CHECK_SVG, tr("Perform lighting check now"))
+        return self.lux_lighting_check_button
 
     def stop_worker(self):
         if self.lux_auto_brightness_worker is not None:
@@ -6580,6 +6601,7 @@ class LuxAutoController:
             alert.setInformativeText(str(lde))
             alert.exec()
         self.lux_tool_button.refresh_icon(self.current_auto_svg())  # Refresh indicators immediately
+        self.lux_lighting_check_button.setEnabled(self.is_auto_enabled())
 
     def is_auto_enabled(self) -> bool:
         return self.lux_config is not None and self.lux_config.is_auto_enabled()
@@ -6598,6 +6620,7 @@ class LuxAutoController:
         self.main_controller.status_message(message, timeout=5000)
         LuxDialog.lux_dialog_message(message, timeout=5000)
         self.lux_config.set('lux-meter', 'automatic-brightness', 'no' if enabled else 'yes')
+        self.lux_lighting_check_button.setEnabled(not enabled)
         self.lux_config.save(ConfIni.get_path('AutoLux'))
         self.initialize_from_config()
         LuxDialog.reconfigure_instance()
@@ -7516,6 +7539,9 @@ class VduAppWindow(QMainWindow):
             lux_auto_button = self.main_controller.lux_auto_controller.create_tool_button()
             lux_auto_button.pressed.connect(self.main_controller.lux_auto_action)
             tool_buttons.append(lux_auto_button)
+            lc_button = self.main_controller.lux_auto_controller.create_lighting_check_button()
+            lc_button.pressed.connect(self.main_controller.lux_check_action)
+            tool_buttons.append(lc_button)
         self.refresh_preset_menu()
         self.main_panel.initialise_control_panels(self.main_controller.vdu_controllers_map, self.app_context_menu, self.main_config,
                                                   tool_buttons, self.splash_message_qtsignal)
@@ -7555,11 +7581,12 @@ class VduAppWindow(QMainWindow):
             preset_icon = preset.create_icon(monochrome=self.main_config.is_set(ConfOption.MONOCHROME_TRAY_ENABLED))
             led1_color = PRESET_TRANSITIONING_LED_COLOR if isinstance(preset, PresetTransitionDummy) else None
         if self.main_controller.lux_auto_controller is not None:
-            if self.main_controller.lux_auto_controller.is_auto_enabled():
+            lux_auto_enabled = self.main_controller.lux_auto_controller.is_auto_enabled()
+            if lux_auto_enabled:
                 title = f"{tr('Auto')}/{title}"
                 led2_color = AUTO_LUX_LED_COLOR
             menu_icon = create_icon_from_svg_bytes(self.main_controller.lux_auto_controller.current_auto_svg())  # NB cache involved
-            self.app_context_menu.update_lux_auto_icon(menu_icon)  # Won't actually update if it hasn't changed
+            self.app_context_menu.update_lux_auto_icon(menu_icon, lux_auto_enabled)  # Won't actually update if it hasn't changed
         if self.windowTitle() != title:  # Don't change if not needed - prevent flickering.
             self.setWindowTitle(title)
             self.app.setWindowIcon(create_decorated_app_icon(self.app_icon, preset_icon, led1_color, led2_color))
