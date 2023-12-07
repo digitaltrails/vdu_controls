@@ -1713,11 +1713,11 @@ class DdcutilInterfaceQtDBus(QObject):
             self.listener_callback(*message.arguments())
 
     def get_ddcutil_version_string(self) -> str:
-        return self._validate(self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "DdcutilVersionString"))[0]
+        return self._validate(self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "DdcutilVersion"))[0]
 
     def get_interface_version_string(self) -> str:
         return self._validate(self.ddcutil_props_proxy.call("Get", self.dbus_interface_name,
-                                             "InterfaceVersionString"))[0] + " (QtDBus client)"
+                                             "ServiceInterfaceVersion"))[0] + " (QtDBus client)"
 
     def get_status_values(self) -> Dict[int, str]:
         return self._validate(self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "StatusValues"))[0]
