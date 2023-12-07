@@ -21,7 +21,7 @@ Synopsis:
                      [--syslog|--no-syslog]  [--debug|--no-debug] [--warnings|--no-warnings]
                      [--sleep-multiplier multiplier] [--ddcutil-extra-args 'extra args']
                      [--dbus-client-enabled|--no-dbus-client-enabled]
-                     [--dbus-auto-connect|--no-dbus-auto-connect]
+                     [--dbus-listen|--no-dbus-listen]
                      [--create-config-files] [--install] [--uninstall]
 
 Optional arguments:
@@ -71,8 +71,8 @@ Arguments supplied on the command line override config file equivalent settings.
       --ddcutil-extra-args  extra arguments to pass to ddcutil (enclosed in single quotes)
       --dbus-client-enabled|--no-dbus-client-enabled
                             use the ddcutil-dbus-server instead of the ddcutil command ``--no-dbus-client-enabled`` is the default
-      --dbus-auto-connect|--no-dbus-auto-connect
-                            use dbus to automatically detect VDU connection/disconnection ``--no-dbus-auto-connect`` is the default
+      --dbus-listener|--no-dbus-listener
+                            listen for VDU status change signals ``--no-dbus-listener`` is the default
       --create-config-files
                             if they do not exist, create template config INI files in $HOME/.config/vdu_controls/
       --install             installs the vdu_controls in the current user's path and desktop application menu.
@@ -1283,12 +1283,12 @@ class DdcUtil:
         if self.displays_changed_callback:
             log_info("Will use d-bus to automatically react to VDU connection/disconnection")
 
-        def displays_changed_dbus_handler(count: int, flags: int):
+        def dbus_signal_listener(count: int, flags: int):
             log_debug("ConnectedDisplaysChanged Callback called", count, flags)
             if self.displays_changed_callback:
                 self.displays_changed_callback(count, flags)
 
-        self.ddcutil_service.set_detected_displays_changed_callback(displays_changed_dbus_handler)
+        self.ddcutil_service.set_listerner_callback(dbus_signal_listener)
 
     def refresh(self):
         self.ddcutil_service = self.ddcutil_service_class(self.common_args)  # Just in case the connection has gone bad.
@@ -1534,7 +1534,7 @@ class DdcutilInterfaceExe:
     def get_status_values(self) -> Dict[int, str]:
         return {}
 
-    def set_detected_displays_changed_callback(self, callback: callable) -> None:
+    def set_listerner_callback(self, callback: callable) -> None:
         pass  # Not implemented
 
     def _parse_edid(self, display_str: str) -> str | None:
@@ -1648,7 +1648,7 @@ class DdcutilInterfaceQtDBus(QObject):
         self.dbus_interface_name = os.environ.get('DDCUTIL_SERVICE_INTERFACE_NAME', default="com.ddcutil.DdcutilInterface")
         self.common_args = [arg for arg in os.getenv('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != ''] + common_args
         self.service_access_lock = Lock()
-        self.displays_changed_callback = None
+        self.listener_callback = None
         self.dbus_timeout_millis = int(os.getenv("VDU_CONTROLS_DBUS_TIMEOUT_MILLIS", default='5000'))
         self.ddcutil_proxy, self.ddcutil_props_proxy = self.connect_to_service()
 
@@ -1696,7 +1696,7 @@ class DdcutilInterfaceQtDBus(QObject):
                             dbus_object_path,
                             self.dbus_interface_name,
                             "ConnectedDisplaysChanged",
-                            self._callback);
+                            self._dbus_signal_handler);
                 ddcutil_dbus_iface.setTimeout(self.dbus_timeout_millis)
                 return ddcutil_dbus_iface, ddcutil_dbus_props
             except QDBusError as e:
@@ -1707,10 +1707,10 @@ class DdcutilInterfaceQtDBus(QObject):
             time.sleep(2)
 
     @pyqtSlot(QDBusMessage)
-    def _callback(self, message: QDBusMessage):
-        print("ConnectedDisplaysChanged Callback called", message.arguments())
-        if self.displays_changed_callback:
-            self.displays_changed_callback(*message.arguments())
+    def _dbus_signal_handler(self, message: QDBusMessage):
+        print("Received D-Bus signal", message.arguments())
+        if self.listener_callback:
+            self.listener_callback(*message.arguments())
 
     def get_ddcutil_version_string(self) -> str:
         return self._validate(self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "DdcutilVersionString"))[0]
@@ -1722,8 +1722,8 @@ class DdcutilInterfaceQtDBus(QObject):
     def get_status_values(self) -> Dict[int, str]:
         return self._validate(self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "StatusValues"))[0]
 
-    def set_detected_displays_changed_callback(self, callback: callable) -> None:
-        self.displays_changed_callback = callback
+    def set_listerner_callback(self, callback: callable) -> None:
+        self.listener_callback = callback
 
     def detect(self, flags: int) -> List[Tuple]:
         with self.service_access_lock:
@@ -1988,9 +1988,9 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
                                   tip=QT_TR_NOOP('divert diagnostic output to the syslog'))
     DBUS_CLIENT_ENABLED = conf_opt_def(cname=QT_TR_NOOP('dbus-client-enabled'), default="no",
                                   tip=QT_TR_NOOP('use the ddcutil-dbus-server instead of the ddcutil command (experimental)'))
-    DBUS_AUTO_CONNECT = conf_opt_def(cname=QT_TR_NOOP('dbus-auto-connect'), default="no",
-                                     tip=QT_TR_NOOP('use dbus to automatically detect VDU connection/disconnection'),
-                                     requires='dbus-client-enabled')
+    DBUS_LISTENER_ENABLED = conf_opt_def(cname=QT_TR_NOOP('dbus-listener'), default="no",
+                                         tip=QT_TR_NOOP('listen for D-Bus VDU connection/disconnection signals'),
+                                         requires='dbus-client-enabled')
     LOCATION = conf_opt_def(cname=QT_TR_NOOP('location'), conf_type=CI.TYPE_LOCATION, tip=QT_TR_NOOP('latitude,longitude'))
     SLEEP_MULTIPLIER = conf_opt_def(cname=QT_TR_NOOP('sleep-multiplier'), section=CI.DDCUTIL_PARAMETERS, conf_type=CI.TYPE_FLOAT,
                                     tip=QT_TR_NOOP('ddcutil --sleep-multiplier (0.1 .. 2.0, default none)'))
@@ -6883,7 +6883,7 @@ class VduAppController:  # Main controller containing methods for high level ope
                 log_info(f"Connected VDUs changed count={count}")
                 self.main_window.run_in_gui_thread(self.start_refresh)
 
-            callback = handle_changes if self.main_config.is_set(ConfOption.DBUS_AUTO_CONNECT, fallback=False) else None
+            callback = handle_changes if self.main_config.is_set(ConfOption.DBUS_LISTENER_ENABLED, fallback=False) else None
             self.ddcutil = DdcUtil(common_args=self.main_config.get_ddcutil_extra_args(),
                                    enable_dbus_client=self.main_config.is_set(ConfOption.DBUS_CLIENT_ENABLED),
                                    connected_vdus_changed_callable=callback)
