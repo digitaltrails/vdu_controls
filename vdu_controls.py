@@ -1284,7 +1284,7 @@ class DdcUtil:
             log_info("Will use d-bus to automatically react to VDU connection/disconnection")
 
         def dbus_signal_listener(count: int, flags: int):
-            log_debug("ConnectedDisplaysChanged Callback called", count, flags)
+            log_info("dbus_signal_listener received signal", count, flags)
             if self.displays_changed_callback:
                 self.displays_changed_callback(count, flags)
 
