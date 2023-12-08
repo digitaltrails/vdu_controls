@@ -1283,10 +1283,10 @@ class DdcUtil:
         if self.displays_changed_callback:
             log_info("Will use d-bus to automatically react to VDU connection/disconnection")
 
-        def dbus_signal_listener(count: int, flags: int):
-            log_info("dbus_signal_listener received signal", count, flags)
+        def dbus_signal_listener(edid_encoded: str, event_type: int, flags: int):
+            log_info(f"dbus_signal_listener received signal {edid_encoded:.30}... {event_type=} {flags=}")
             if self.displays_changed_callback:
-                self.displays_changed_callback(count, flags)
+                self.displays_changed_callback(edid_encoded, event_type, flags)
 
         self.ddcutil_service.set_listerner_callback(dbus_signal_listener)
 
@@ -6879,8 +6879,8 @@ class VduAppController:  # Main controller containing methods for high level ope
     def create_ddcutil(self):
         try:
 
-            def handle_changes(count: int, flags: int):
-                log_info(f"Connected VDUs changed count={count}")
+            def handle_changes(edid_encoded: str, event_type: int, flags: int):
+                log_info(f"Connected VDUs changed {event_type=} {flags=} {edid_encoded:.30}...");
                 self.main_window.run_in_gui_thread(self.start_refresh)
 
             callback = handle_changes if self.main_config.is_set(ConfOption.DBUS_LISTENER_ENABLED, fallback=False) else None
