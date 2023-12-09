@@ -8,7 +8,7 @@ A control panel for external monitors (*Visual Display Units*).
 > the non-D-Bus approach. It depends on a D-Bus service that I've 
 > written to interface with libddcutil: 
 > 
->    https://github.com/digitaltrails/ddcutil-dbus.  
+>    https://github.com/digitaltrails/ddcutil-service  
 > 
 > You would need to build and install this service.  It's one C file, just `make` and
 > install it as a user session daemon.  It doesn't need to be installed as root.
