@@ -697,7 +697,6 @@ import sys
 import syslog
 import termios
 import textwrap
-import threading
 import time
 import traceback
 import urllib.request
@@ -708,7 +707,8 @@ from enum import Enum, IntFlag
 from functools import partial
 from importlib import import_module
 from pathlib import Path
-from threading import Lock
+import threading
+from threading import Lock, RLock
 from typing import List, Tuple, Mapping, Type, Dict, Callable, Any, NewType
 from urllib.error import URLError
 
@@ -1290,7 +1290,7 @@ class DdcUtil:
 
         self.ddcutil_service.set_listerner_callback(dbus_signal_listener)
 
-    def refresh(self):
+    def refresh_connection(self):
         self.ddcutil_service = self.ddcutil_service_class(self.common_args)  # Just in case the connection has gone bad.
 
     def set_sleep_multiplier(self, vdu_number: str, sleep_multiplier: float | None):
@@ -6800,6 +6800,7 @@ class VduAppController:  # Main controller containing methods for high level ope
 
     def __init__(self, main_config: VduControlsConfig) -> None:
         self.application_configuration_lock = Lock()
+        self.refresh_lock = Lock()
         self.main_config = main_config
         self.ddcutil: DdcUtil | None = None
         self.main_window: VduAppWindow | None = None
@@ -6878,16 +6879,14 @@ class VduAppController:  # Main controller containing methods for high level ope
 
     def create_ddcutil(self):
         try:
-
             def handle_changes(edid_encoded: str, event_type: int, flags: int):
                 log_info(f"Connected VDUs changed {event_type=} {flags=} {edid_encoded:.30}...");
-                self.main_window.run_in_gui_thread(self.start_refresh)
+                self.start_refresh()
 
             callback = handle_changes if self.main_config.is_set(ConfOption.DBUS_LISTENER_ENABLED, fallback=False) else None
             self.ddcutil = DdcUtil(common_args=self.main_config.get_ddcutil_extra_args(),
                                    enable_dbus_client=self.main_config.is_set(ConfOption.DBUS_CLIENT_ENABLED),
                                    connected_vdus_changed_callable=callback)
-
         except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
             self.main_window.display_no_controllers_error_dialog(e)
 
@@ -6989,23 +6988,29 @@ class VduAppController:  # Main controller containing methods for high level ope
         self.lux_auto_controller.adjust_brightness_now()
 
     def start_refresh(self) -> None:
+        if not is_running_in_gui_thread():
+            log_debug("Reinvoke sart_refresh() in GUI thread.")
+            self.main_window.run_in_gui_thread(self.start_refresh)
+            return
         assert is_running_in_gui_thread()
-        log_info("Refresh requested")
-        self.main_window.indicate_busy(True)
+        if self.refresh_lock.locked():  # Already doing a refresh, don't do another one.
+            log_debug("Already doing a refresh, won't do another one")
+            return
+        log_info("Refresh commenses")
 
         def update_from_vdu() -> None:
             if self.ddcutil is not None:
-                try:
-                    self.ddcutil.refresh()
-                    self.detected_vdu_list = self.ddcutil.detect_monitors()
-                    for control_panel in self.main_window.get_main_panel().vdu_control_panels.values():
-                        if control_panel.controller.get_full_id() in self.detected_vdu_list:
-                            control_panel.refresh_from_vdu()
-                except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
-                    if self.refresh_data_task.vdu_exception is None:
-                        self.refresh_data_task.vdu_exception = VduException(vdu_description="unknown", operation="unknown",
-                                                                            exception=e)
-
+                with self.refresh_lock:
+                    try:
+                        self.ddcutil.refresh_connection()
+                        self.detected_vdu_list = self.ddcutil.detect_monitors()
+                        for control_panel in self.main_window.get_main_panel().vdu_control_panels.values():
+                            if control_panel.controller.get_full_id() in self.detected_vdu_list:
+                                control_panel.refresh_from_vdu()
+                    except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
+                        if self.refresh_data_task.vdu_exception is None:
+                            self.refresh_data_task.vdu_exception = VduException(vdu_description="unknown", operation="unknown",
+                                                                                exception=e)
         def update_ui_view(_: WorkerThread) -> None:
             # Invoke when the worker thread completes. Runs in the GUI thread and can refresh remaining UI views.
             try:
@@ -7024,6 +7029,7 @@ class VduAppController:  # Main controller containing methods for high level ope
             finally:
                 self.main_window.indicate_busy(False)
 
+        self.main_window.indicate_busy(True)
         self.refresh_data_task = WorkerThread(task_body=update_from_vdu, task_finished=update_ui_view)
         self.refresh_data_task.start()
 
