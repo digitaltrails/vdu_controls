@@ -256,11 +256,11 @@ Version History
 
 * 2.0.0
   * This version introduces D-Bus based access to ddcutil for up 10x faster response times.
-  * Abstracted the interface to ddcutil and provided two implementations. 
   * Implemented a client interface to the new ddcutil D-Bus service, see https://github.com/digitaltrails/ddcutil-dbus
   * Retained a non-D-Bus option by refactoring the exiting ddcutil-executable wrapper to conform the the new interface.
-  * Refactored the UI to use an abstracted ddcutil interface and added settings to toggle between implementations.
-  * Added an immediate-lighting-check option to the context-menu (if lux-metering is enabled).
+  * Added an immediate-lighting-check button and corresponding context-menu item (when lux-metering is enabled).
+  * Added an ambient-light-control for manual lux input, one slider to adjust brightness on all displays.
+  * Added more preset icons, sourced from https://erikflowers.github.io/weather-icons/
 
 * 1.20.0
   * Added options monochrome-tray and mono-light-tray to enable a monochrome tray-icon (dark and light).
