@@ -6949,7 +6949,7 @@ class LuxAmbientSlider(QWidget):
         top_layout.addWidget(sub_panel, alignment=Qt.AlignTop)
 
         def slider_changed(value: int) -> None:
-            real_value = int(10 ** (value / 1000))
+            real_value = round(10 ** (value / 1000))
             self.set_current_value(real_value, self.slider)
             self.value_changed_signal.emit(real_value)
 
