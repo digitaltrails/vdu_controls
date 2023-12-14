@@ -1072,22 +1072,6 @@ TRANSITION_ICON_SOURCE = b"""
 <svg  xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24"></svg>
 """
 
-LUX_METER_ICON_SOURCE = b"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-  <defs id="defs3051">
-    <style type="text/css" id="current-color-scheme">
-      .ColorScheme-Text {
-        color:#232629;
-      }
-      </style>
-  </defs>
-  <g transform="translate(1,1)">
-    <path style="fill:currentColor;fill-opacity:1;stroke:none" d="M 11 3 A 8 8 0 0 0 3 11 A 8 8 0 0 0 11 19 A 8 8 0 0 0 19 11 A 8 8 0 0 0 11 3 z M 11 4 A 7 7 0 0 1 18 11 A 7 7 0 0 1 11 18 A 7 7 0 0 1 4 11 A 7 7 0 0 1 11 4 z " class="ColorScheme-Text"/>
-    <path style="fill:currentColor;fill-opacity:0.5;stroke:none" d="M 3.0351562 10.263672 C 3.0121295 10.508444 3.0003982 10.754148 3 11 C 3 15.418278 6.581722 19 11 19 C 15.418278 19 19 15.418278 19 11 C 18.9982 10.761936 18.985861 10.524069 18.962891 10.287109 C 18.568446 11.825601 15.121563 12.999925 11 13 C 6.8558354 12.999185 3.3993891 11.81172 3.0351562 10.263672 z " class="ColorScheme-Text"/>
-  </g>
-</svg>
-"""
-
-
 SWATCH_ICON_SOURCE = b"""
 <svg  xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24">
   <rect width="20" height="20" rx="4" x="2" y="3" stroke="black" stroke-width="1" fill="#ffffff" />
@@ -1989,8 +1973,6 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
     SCHEDULE_ENABLED = conf_opt_def(cname=QT_TR_NOOP('schedule-enabled'), default='yes', tip=QT_TR_NOOP('enable preset schedule'))
     LUX_OPTIONS_ENABLED = conf_opt_def(cname=QT_TR_NOOP('lux-options-enabled'), default="no", restart=True,
                                        tip=QT_TR_NOOP('enable light metering options'))
-    LUX_SLIDER_ENABLED = conf_opt_def(cname=QT_TR_NOOP('lux-slider-enabled'), default="no", restart=False,
-                                       tip=QT_TR_NOOP('enable light metering options'), requires="lux-options-enabled")
     SPLASH_SCREEN_ENABLED = conf_opt_def(cname=QT_TR_NOOP('splash-screen-enabled'), default='yes', cmdline_arg='splash',
                                          tip=QT_TR_NOOP('enable the startup splash screen'))
     WARNINGS_ENABLED = conf_opt_def(cname=QT_TR_NOOP('warnings-enabled'), default="no",
@@ -5917,6 +5899,8 @@ class LuxMeterSerialDevice(LuxMeterDevice):
 
 class LuxMeterManualDevice(LuxMeterDevice):
 
+    device_name = 'Slider-Control'
+
     def __init__(self) -> None:
         super().__init__(requires_worker=False)
         self.current_value: float | None = None
@@ -6405,6 +6389,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.status_layout.addWidget(self.status_bar)
 
         def choose_device() -> None:
+            existing_device = self.lux_config.get('lux-meter', "lux-device", fallback=None)
             item, ok = QInputDialog.getItem(self, tr("Choose Lux Meter"), tr("Lux Meter Type"), self.device_descriptions[1:])
             if ok and item:
                 type_num = self.device_descriptions.index(item)
@@ -6412,12 +6397,15 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                     device_name = FasterFileDialog.getOpenFileName(self, tr("Select: {}").format(item))[0]
                     device_name, type_num = self.validate_device(device_name, required_type_num=type_num)
                 else:
-                    device_name = "Slider-Control"
+                    device_name = LuxMeterManualDevice.device_name
                 if device_name != '':
                     if device_name != self.lux_config.get('lux-meter', 'lux-device', fallback=''):
                         self.meter_device_selector.setText(self.device_descriptions[type_num] + ': ' + device_name)
                         self.lux_config.set('lux-meter', "lux-device", device_name)
-                        self.apply_settings(requires_auto_brightness_restart=True)
+                        if existing_device != device_name and LuxMeterManualDevice.device_name in (existing_device, device_name):
+                            self.apply_settings(requires_app_restart=True)
+                        else:
+                            self.apply_settings(requires_auto_brightness_restart=True)
                         self.status_message(tr("Meter changed to {}.").format(device_name))
                 return device_name, type_num
             return '', 0
@@ -6427,14 +6415,14 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         def set_auto_monitoring(checked: int) -> None:
             if (checked == Qt.Checked) != self.lux_config.is_auto_enabled():
                 self.lux_config.set('lux-meter', 'automatic-brightness', 'yes' if checked == Qt.Checked else 'no')
-                self.apply_settings()
+                self.apply_settings(requires_auto_brightness_restart=True)
 
         self.enabled_checkbox.stateChanged.connect(set_auto_monitoring)
 
         def apply_interval(value: int) -> None:
             if self.interval_selector.value() == value and value != self.lux_config.get_interval_minutes():
                 self.lux_config.set('lux-meter', 'interval-minutes', str(value))
-                self.apply_settings()
+                self.apply_settings(requires_auto_brightness_restart=True)
                 self.status_message(tr("Interval changed to {} minutes.").format(value))
 
         def interval_selector_changed(value: int) -> None:
@@ -6446,7 +6434,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         def set_interpolation(checked: int) -> None:
             if (checked == Qt.Checked) != self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True):
                 self.lux_config.set('lux-meter', 'interpolate-brightness', 'yes' if checked == Qt.Checked else 'no')
-                self.apply_settings()
+                self.apply_settings(requires_auto_brightness_restart=True)
 
         self.interpolate_checkbox.stateChanged.connect(set_interpolation)
 
@@ -6546,7 +6534,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
             type_num = 2
         elif path.exists() and os.access(device, os.X_OK):
             type_num = 3
-        elif device == "Slider-Control":
+        elif device == LuxMeterManualDevice.device_name:
             type_num = 4
         else:
             type_num = 0
@@ -6566,8 +6554,11 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
             return '', 0
         return device, type_num
 
-    def apply_settings(self, requires_auto_brightness_restart: bool = True) -> None:
+    def apply_settings(self, requires_auto_brightness_restart: bool = True, requires_app_restart: bool = False) -> None:
         self.lux_config.save(self.path)
+        if requires_app_restart:
+            self.main_controller.settings_changed([])
+            return
         if requires_auto_brightness_restart:
             self.main_controller.get_lux_auto_controller().initialize_from_config()  # Causes the LuxAutoWorker to restart
             self.lux_display_widget.stop_display()  # Stop the lux-display metering thread
@@ -6599,7 +6590,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
             self.lux_config.set('lux-profile', vdu_sid, repr(data))
         preset_data = [(lux_point.lux, lux_point.preset_name) for lux_point in self.profile_plot.preset_points]
         self.lux_config.set('lux-presets', 'lux-preset-points', repr(preset_data))
-        self.apply_settings(True)
+        self.apply_settings(requires_auto_brightness_restart=True)
         self.has_profile_changes = False
         self.save_button.setEnabled(False)
         self.revert_button.setEnabled(False)
@@ -6637,6 +6628,7 @@ class LuxAutoController:
         super().__init__()
         self.main_controller = main_controller
         self.lux_config = LuxConfig()
+        self.lux_config.load()
         self.lux_meter: LuxMeterDevice | None = None
         self.lux_auto_brightness_worker: LuxAutoWorker | None = None
         self.lux_tool_button: ToolButton | None = None
@@ -6650,9 +6642,10 @@ class LuxAutoController:
         self.lux_lighting_check_button = ToolButton(LIGHTING_CHECK_SVG, tr("Perform lighting check now"))
         return self.lux_lighting_check_button
 
-    def create_manual_input_control(self) -> LuxControlSlider | None:
-        if True or isinstance(self.lux_meter, LuxMeterManualDevice):
-            lux_slider = LuxControlSlider()
+    def create_manual_input_control(self) -> LuxAmbientSlider | None:
+        self.lux_config.load()  # may have changed
+        if self.lux_config.get("lux-meter", "lux-device", fallback=None) == 'Slider-Control': #True or isinstance(self.lux_meter, LuxMeterManualDevice):
+            lux_slider = LuxAmbientSlider()
 
             def update_meter(value: int):
                 print(f"vc {value=}")
@@ -6890,7 +6883,7 @@ LUX_NIGHT_SVG = b"""<?xml version="1.0" encoding="utf-8"?>
     </g>
 </svg>
 """
-class LuxControlSlider(QWidget):
+class LuxAmbientSlider(QWidget):
 
     value_changed_signal = pyqtSignal(int)
 
@@ -6899,35 +6892,55 @@ class LuxControlSlider(QWidget):
         super().__init__()
 
         self.zones = {
-            tr('Sunlight'): (10000, 100000, LUX_SUNLIGHT_SVG),
-            tr('Daylight'): (1000, 10000, LUX_DAYLIGHT_SVG),
-            tr('Overcast'): (400, 1000, LUX_OVERCAST_SVG),
-            tr('Rise/set'): (50, 400, LUX_RISE_SET_SVG),
-            tr('Dusk'): (50, 100, LUX_DUSK_SVG),
-            tr('Room'): (5, 50, LUX_ROOM_SVG),
-            tr('Night'): (0, 5, LUX_NIGHT_SVG),
+            tr('Sunlight'): (10000, 100000, LUX_SUNLIGHT_SVG, 2),
+            tr('Daylight'): (1000, 10000, LUX_DAYLIGHT_SVG, 3),
+            tr('Overcast'): (400, 1000, LUX_OVERCAST_SVG, 2),
+            tr('Rise/set'): (50, 400, LUX_RISE_SET_SVG, 1),
+            tr('Dusk'): (50, 100, LUX_DUSK_SVG, 2),
+            tr('Room'): (5, 50, LUX_ROOM_SVG, 2),
+            tr('Night'): (0, 5, LUX_NIGHT_SVG, 2),
         }
+        top_layout = QVBoxLayout()
+        self.setLayout(top_layout)
+        top_layout.addWidget(QLabel(tr("Ambient Light Level")), alignment=Qt.AlignBottom)
 
-        layout = QHBoxLayout()
-        self.setLayout(layout)
+        sub_panel = QWidget()
+        sub_panel_layout = QHBoxLayout()
+        sub_panel.setLayout(sub_panel_layout)
         svg_icon: QSvgWidget = QSvgWidget()
-        svg_icon.load(handle_theme(LUX_METER_ICON_SOURCE))
+        svg_icon.load(handle_theme(LUX_OVERCAST_SVG))
         svg_icon.setFixedSize(native_font_height(scaled=1.8), native_font_height(scaled=1.8))
         svg_icon.setToolTip(tr("Manual light level input (Lux value)"))
         self.svg_icon = svg_icon
-        layout.addWidget(svg_icon)
+        sub_panel_layout.addWidget(svg_icon)
 
+        slider_panel = QWidget()
+        slider_layout = QGridLayout()
+        slider_panel.setLayout(slider_layout)
+        col = 0
+        self.label_map: Dict[QLabel, bytes] = {}
+        for key, (_, _, svg_bytes, span) in reversed(self.zones.items()):
+            icon = create_icon_from_svg_bytes(svg_bytes)
+            label = QLabel()
+            label.setPixmap(icon.pixmap(native_font_height(scaled=1), native_font_height(scaled=1)))
+            label.setToolTip(key)
+            slider_layout.addWidget(label, 0, col, 1, span, alignment=Qt.AlignBottom|Qt.AlignHCenter)
+            col += span
+            self.label_map[label] = svg_bytes
+            #slider_layout.addWidget(QLabel(key), 2, col, 1, 1)
         self.slider = slider = ClickableSlider()
         self.current_value = 10000
         slider.setMinimumWidth(200)
         slider.setRange(int(math.log10(1) * 1000), int(math.log10(100000) * 1000))
         slider.setSingleStep(1)
         slider.setPageStep(100)
-        #slider.setTickInterval(1000)
-        #slider.setTickPosition(QSlider.TicksBelow)
+        slider.setTickInterval(1000)
+        slider.setTickPosition(QSlider.TicksBelow)
         slider.setOrientation(Qt.Horizontal)  # type: ignore
         slider.setTracking(False)  # Don't rewrite the ddc value too often - not sure of the implications
-        layout.addWidget(slider)
+        slider_layout.addWidget(slider,1,0,1,14, alignment=Qt.AlignTop);
+
+        sub_panel_layout.addWidget(slider_panel, stretch=100)
 
         #self.combobox = QComboBox()
         self.spinbox = QSpinBox()
@@ -6937,7 +6950,8 @@ class LuxControlSlider(QWidget):
         self.spinbox.setValue(self.current_value)
         # for txt in ("sunlit", "cloudy", "overcast", "dawn/dusk", "room", "night"):
         #     self.combobox.addItem(txt)
-        layout.addWidget(self.spinbox)
+        sub_panel_layout.addWidget(self.spinbox)
+        top_layout.addWidget(sub_panel, alignment=Qt.AlignTop)
 
         def slider_changed(value: int) -> None:
             real_value = int(10 ** (value / 1000))
@@ -6988,16 +7002,18 @@ class LuxControlSlider(QWidget):
 
     def set_current_value(self, real_value: int) -> None:
         for name, data in self.zones.items():
-            lower, upper, svg = data
+            lower, upper, svg, span = data
             if lower < real_value <= upper:
                 print("change ", name)
                 self.svg_icon.load(handle_theme(svg))
         self.current_value = real_value
 
-
     def event(self, event: QEvent) -> bool:
         if event.type() == QEvent.PaletteChange:  # PalletChange happens after the new style sheet is in use.
-            self.svg_icon.load(handle_theme(LUX_METER_ICON_SOURCE))
+            self.set_current_value(self.current_value)
+            for label, svg_bytes in self.label_map.items():
+                icon = create_icon_from_svg_bytes(svg_bytes)
+                label.setPixmap(icon.pixmap(native_font_height(scaled=1), native_font_height(scaled=1)))
         return super().event(event)
 
 
