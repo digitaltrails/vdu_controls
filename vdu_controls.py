@@ -5700,37 +5700,40 @@ class LuxDisplayWidget(QWidget):
         self.lux_plot.setFixedHeight(100)
         self.layout().addWidget(self.lux_plot)
         self.lux_display_worker: LuxDisplayWorker | None = None
+        self.current_meter: LuxMeterDevice | None = None
+        self.updates_enabled = True
 
     def display_lux(self, lux: int) -> None:
-        self.current_lux_display.setText(tr("Lux: {}".format(lux)))
-        self.history = self.history[-self.max_history:]
-        self.history.append(lux)
-        pixmap = QPixmap(self.lux_plot.width(), self.lux_plot.height())
-        painter = QPainter(pixmap)
-        painter.fillRect(0, 0, self.lux_plot.width(), self.lux_plot.height(), QColor(0x6baee8))  # 0x5b93c5))
-        painter.setPen(QPen(QColor(0xfec053), 1))  # fbc21b 0xffdd30 #fec053
-        for i in range(len(self.history)):
-            painter.drawLine(i, self.lux_plot.height(), i, self.lux_plot.height() - self.y_from_lux(self.history[i]))
-        painter.end()
-        self.lux_plot.setPixmap(pixmap)
-        self.lux_changed_qtsignal.emit(lux)
+        if self.updates_enabled:
+            self.current_lux_display.setText(tr("Lux: {}".format(lux)))
+            self.history = self.history[-self.max_history:]
+            self.history.append(lux)
+            pixmap = QPixmap(self.lux_plot.width(), self.lux_plot.height())
+            painter = QPainter(pixmap)
+            painter.fillRect(0, 0, self.lux_plot.width(), self.lux_plot.height(), QColor(0x6baee8))  # 0x5b93c5))
+            painter.setPen(QPen(QColor(0xfec053), 1))  # fbc21b 0xffdd30 #fec053
+            for i in range(len(self.history)):
+                painter.drawLine(i, self.lux_plot.height(), i, self.lux_plot.height() - self.y_from_lux(self.history[i]))
+            painter.end()
+            self.lux_plot.setPixmap(pixmap)
+            self.lux_changed_qtsignal.emit(lux)
 
     def interrupt_history(self) -> None:
         if len(self.history) > 1:
             self.history = (self.history + [0] * 10)[-100:]
 
-    def start_display(self, lux_meter: LuxMeterDevice) -> None:
-        self.stop_display()
-        self.lux_display_worker = LuxDisplayWorker(lux_meter)
-        self.lux_display_worker.new_lux_value.connect(self.display_lux)
-        self.lux_display_worker.start()
+    def connect_meter(self, lux_meter: LuxMeterDevice) -> None:
+        print("called connect meter")
+        if self.current_meter:
+            self.current_meter.new_lux_value_signal.disconnect(self.display_lux)
+        self.current_meter = lux_meter
+        self.current_meter.new_lux_value_signal.connect(self.display_lux)
+        self.enable_display_updates(True)
 
-    def stop_display(self) -> None:
-        if self.lux_display_worker is not None:
-            self.lux_display_worker.stop_requested = True
-            self.lux_display_worker.new_lux_value.disconnect(self.display_lux)
+    def enable_display_updates(self, enable: bool = True) -> None:
+        if not enable:
             self.interrupt_history()
-            self.lux_display_worker = None
+        self.updates_enabled = enable
 
     def y_from_lux(self, lux: int) -> int:
         return round(
@@ -5772,7 +5775,9 @@ def lux_create_device(device_name: str) -> LuxMeterDevice:
     raise LuxDeviceException(tr("Failed to setup {} - not an recognised kind of device or not executable.").format(device_name))
 
 
-class LuxMeterDevice:
+class LuxMeterDevice(QObject):
+
+    new_lux_value_signal = pyqtSignal(int)
 
     def __init__(self, requires_worker: bool = True) -> None:  # use a thread to prevent any blocking due to slow updating
         super().__init__()
@@ -5793,6 +5798,7 @@ class LuxMeterDevice:
     def set_current_value(self, new_value: float) -> None:
         #log_debug(f"new metered value {new_value=}") if log_debug_enabled else None
         self.current_value = new_value
+        self.new_lux_value_signal.emit(round(new_value))
 
     def cleanup(self):
         pass
@@ -6273,7 +6279,6 @@ class LuxChooseSourceWidget(QWidget):
             index = self.source_list.index(item)
 
 
-
 class LuxDialog(SubWinDialog, DialogSingletonMixin):
 
     @staticmethod
@@ -6459,6 +6464,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
 
     def reconfigure(self) -> None:
         assert self.profile_plot is not None
+        # Make a copy of the config so the profile changes aren't applied until Apply is pressed.
         self.lux_config = self.main_controller.get_lux_auto_controller().get_lux_config().duplicate(LuxConfig())  # type: ignore
         self.device_name = self.lux_config.get("lux-meter", "lux-device", fallback='')
         self.enabled_checkbox.setChecked(self.lux_config.is_auto_enabled())
@@ -6519,7 +6525,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
 
     def make_visible(self) -> None:
         super().make_visible()
-        self.configure_ui(self.main_controller.get_lux_auto_controller().lux_meter)
+        self.lux_display_widget.enable_display_updates(True)
 
     def is_interpolating(self) -> bool:
         return self.interpolate_checkbox.isChecked()
@@ -6561,7 +6567,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
             return
         if requires_auto_brightness_restart:
             self.main_controller.get_lux_auto_controller().initialize_from_config()  # Causes the LuxAutoWorker to restart
-            self.lux_display_widget.stop_display()  # Stop the lux-display metering thread
+            self.lux_display_widget.connect_meter(None)
             meter_device = self.main_controller.get_lux_auto_controller().lux_meter
             self.configure_ui(meter_device)  # Use the new meter for a new lux-display metering thread
             if meter_device is not None and self.lux_config.is_auto_enabled():
@@ -6569,7 +6575,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
 
     def configure_ui(self, meter_device: LuxMeterDevice | None) -> None:
         if meter_device is not None:
-            self.lux_display_widget.start_display(meter_device)
+            self.lux_display_widget.connect_meter(meter_device)
             self.enabled_checkbox.setEnabled(True)
             if self.lux_config.is_auto_enabled():
                 self.adjust_now_button.show()
@@ -6606,7 +6612,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
             elif answer == QMessageBox.Cancel:
                 event.ignore()
                 return
-        self.lux_display_widget.stop_display()
+        self.lux_display_widget.enable_display_updates(False) # Stop updating the display
         super().closeEvent(event)
 
     def status_message(self, message: str, timeout: int = 0, destination: MsgDestination = MsgDestination.DEFAULT) -> None:
@@ -6635,15 +6641,20 @@ class LuxAutoController:
         self.lux_lighting_check_button: ToolButton | None = None
 
     def create_tool_button(self) -> ToolButton:  # Used when the application UI has to reinitialize
+        # Used when the application UI has to reinitialize
+        if self.lux_config.get("lux-meter", "lux-device", fallback=None) == 'Slider-Control':
+            return None
         self.lux_tool_button = ToolButton(AUTO_LUX_ON_SVG, tr("Toggle light metered brightness adjustment"))
         return self.lux_tool_button
 
-    def create_lighting_check_button(self) -> ToolButton:  # Used when the application UI has to reinitialize
+    def create_lighting_check_button(self) -> ToolButton:
+        # Used when the application UI has to reinitialize
+        if self.lux_config.get("lux-meter", "lux-device", fallback=None) == 'Slider-Control':
+            return None
         self.lux_lighting_check_button = ToolButton(LIGHTING_CHECK_SVG, tr("Perform lighting check now"))
         return self.lux_lighting_check_button
 
     def create_manual_input_control(self) -> LuxAmbientSlider | None:
-        self.lux_config.load()  # may have changed
         if self.lux_config.get("lux-meter", "lux-device", fallback=None) == 'Slider-Control': #True or isinstance(self.lux_meter, LuxMeterManualDevice):
             lux_slider = LuxAmbientSlider()
 
@@ -6690,8 +6701,10 @@ class LuxAutoController:
             alert.setText(tr("Error setting up lux meter: {}").format(self.lux_config.get_device_name()))
             alert.setInformativeText(str(lde))
             alert.exec()
-        self.lux_tool_button.refresh_icon(self.current_auto_svg())  # Refresh indicators immediately
-        self.lux_lighting_check_button.setEnabled(self.is_auto_enabled())
+        if self.lux_tool_button:
+            self.lux_tool_button.refresh_icon(self.current_auto_svg())  # Refresh indicators immediately
+        if self.lux_lighting_check_button:
+            self.lux_lighting_check_button.setEnabled(self.is_auto_enabled())
 
     def is_auto_enabled(self) -> bool:
         return self.lux_config is not None and self.lux_config.is_auto_enabled()
@@ -7241,9 +7254,9 @@ class VduAppController:  # Main controller containing methods for high level ope
                 SettingsEditor.reconfigure_instance(self.get_vdu_configs())
             log_debug("configure: released application_configuration_lock") if log_debug_enabled else None
             if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED):
-                LuxDialog.reconfigure_instance()
                 if self.lux_auto_controller is not None:
                     self.lux_auto_controller.initialize_from_config()
+                    LuxDialog.reconfigure_instance()
             self.main_window.update_status_indicators()
             # restore_preset tries to acquire the same lock, safe to unlock and let it relock...
             if overdue := self.schedule_presets(True):
@@ -7924,14 +7937,15 @@ class VduAppWindow(QMainWindow):
         tool_buttons = [refresh_button]
         extra_controls = []
         if self.main_controller.lux_auto_controller is not None:
-            lux_auto_button = self.main_controller.lux_auto_controller.create_tool_button()
-            lux_auto_button.pressed.connect(self.main_controller.lux_auto_action)
-            tool_buttons.append(lux_auto_button)
-            lc_button = self.main_controller.lux_auto_controller.create_lighting_check_button()
-            lc_button.pressed.connect(self.main_controller.lux_check_action)
-            tool_buttons.append(lc_button)
-            if lc_extra := self.main_controller.lux_auto_controller.create_manual_input_control():
-                extra_controls.append(lc_extra)
+            self.main_controller.lux_auto_controller.lux_config.load()  # may have changed
+            if lux_auto_button := self.main_controller.lux_auto_controller.create_tool_button():
+                lux_auto_button.pressed.connect(self.main_controller.lux_auto_action)
+                tool_buttons.append(lux_auto_button)
+            if lux_check_button := self.main_controller.lux_auto_controller.create_lighting_check_button():
+                lux_check_button.pressed.connect(self.main_controller.lux_check_action)
+                tool_buttons.append(lux_check_button)
+            if lux_manual_input := self.main_controller.lux_auto_controller.create_manual_input_control():
+                extra_controls.append(lux_manual_input)
         self.refresh_preset_menu()
         self.main_panel.initialise_control_panels(self.main_controller.vdu_controllers_map, self.app_context_menu, self.main_config,
                                                   tool_buttons, extra_controls, self.splash_message_qtsignal)
