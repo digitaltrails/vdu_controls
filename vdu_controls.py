@@ -6888,9 +6888,9 @@ class LuxAmbientSlider(QWidget):
     value_changed_signal = pyqtSignal(int)
 
     def __init__(self) -> None:
-        """Construct the slider control and initialize its values from the VDU."""
         super().__init__()
 
+        self.in_flux = False
         self.zones = {
             tr('Sunlight'): (10000, 100000, LUX_SUNLIGHT_SVG, 2),
             tr('Daylight'): (1000, 10000, LUX_DAYLIGHT_SVG, 3),
@@ -6900,6 +6900,7 @@ class LuxAmbientSlider(QWidget):
             tr('Room'): (5, 50, LUX_ROOM_SVG, 2),
             tr('Night'): (0, 5, LUX_NIGHT_SVG, 2),
         }
+
         top_layout = QVBoxLayout()
         self.setLayout(top_layout)
         top_layout.addWidget(QLabel(tr("Ambient Light Level")), alignment=Qt.AlignBottom)
@@ -6908,10 +6909,10 @@ class LuxAmbientSlider(QWidget):
         sub_panel_layout = QHBoxLayout()
         sub_panel.setLayout(sub_panel_layout)
         svg_icon: QSvgWidget = QSvgWidget()
-        svg_icon.load(handle_theme(LUX_OVERCAST_SVG))
         svg_icon.setFixedSize(native_font_height(scaled=1.8), native_font_height(scaled=1.8))
         svg_icon.setToolTip(tr("Manual light level input (Lux value)"))
         self.svg_icon = svg_icon
+        self.current_svg_bytes: bytes = None
         sub_panel_layout.addWidget(svg_icon)
 
         slider_panel = QWidget()
@@ -6927,7 +6928,6 @@ class LuxAmbientSlider(QWidget):
             slider_layout.addWidget(label, 0, col, 1, span, alignment=Qt.AlignBottom|Qt.AlignHCenter)
             col += span
             self.label_map[label] = svg_bytes
-            #slider_layout.addWidget(QLabel(key), 2, col, 1, 1)
         self.slider = slider = ClickableSlider()
         self.current_value = 10000
         slider.setMinimumWidth(200)
@@ -6941,72 +6941,66 @@ class LuxAmbientSlider(QWidget):
         slider_layout.addWidget(slider,1,0,1,14, alignment=Qt.AlignTop);
 
         sub_panel_layout.addWidget(slider_panel, stretch=100)
-
-        #self.combobox = QComboBox()
         self.spinbox = QSpinBox()
+        self.spinbox.setKeyboardTracking(False)
         self.spinbox.setRange(1, 100000)
-        #self.slider.setRange(0, 100000)
-
         self.spinbox.setValue(self.current_value)
-        # for txt in ("sunlit", "cloudy", "overcast", "dawn/dusk", "room", "night"):
-        #     self.combobox.addItem(txt)
         sub_panel_layout.addWidget(self.spinbox)
         top_layout.addWidget(sub_panel, alignment=Qt.AlignTop)
 
         def slider_changed(value: int) -> None:
             real_value = int(10 ** (value / 1000))
-            self.set_current_value(real_value)
-            self.spinbox.setValue(real_value)
+            self.set_current_value(real_value, self.slider)
             self.value_changed_signal.emit(real_value)
-
-            # print(f"{value=} {self.current_value=}")
-            # self.spinbox.setValue(self.current_value)
-            #     # TODO raise signal
-            # for name, data in zones.items():
-            #     lower, upper, svg = data
-            #     if lower < self.current_value <= upper:
-            #         self.svg_icon.load(handle_theme(svg))
 
         slider.valueChanged.connect(slider_changed)
 
-        self.sliding = False  # Stop the controls from circular feedback and from triggering self.ui_change_vdu_attribute()
-
         def slider_moved(value: int) -> None:
-            try:
-                self.sliding = True
-                real_value = int(10 ** (value / 1000))
-                self.set_current_value(real_value)
-                self.spinbox.setValue(real_value)
-                # TODO raise signal
-            finally:
-                self.sliding = False
+            self.sliding = True
+            new_lux_value = round(10 ** (value / 1000))
+            self.set_current_value(new_lux_value, self.slider)
+            # TODO raise signal
 
         slider.sliderMoved.connect(slider_moved)
 
-        # def spinbox_value_changed() -> None:
-        #     if not self.sliding:
-        #         slider.setValue(int(math.log10(self.spinbox.value()) * 1000))
-        #
-        # self.spinbox.valueChanged.connect(spinbox_value_changed)
+        def spinbox_value_changed() -> None:
+            self.set_current_value(self.spinbox.value(), self.spinbox)
 
+        self.spinbox.valueChanged.connect(spinbox_value_changed)
 
-        # def editing_finished():
-        #     self.set_current_value(self.spinbox.value())
-        #     slider.setValue(int(math.log10(self.spinbox.value()) * 1000))
-        #
-        #
-        # self.spinbox.editingFinished.connect(editing_finished)
+        def editing_finished():
+            self.set_current_value(self.spinbox.value(), self.spinbox)
 
+        self.spinbox.editingFinished.connect(editing_finished)
 
-        #self.spinbox.valueChanged.connect(self.value_changed_signal)
+        lux_value = 10000
+        persisted_path = CONFIG_DIR_PATH.joinpath("lux_manual_value.txt")
+        if persisted_path.exists():
+            try:
+                lux_value = int(persisted_path.read_text())
+            except ValueError:
+                persisted_path.unlink()
+        self.set_current_value(lux_value)
 
-    def set_current_value(self, real_value: int) -> None:
-        for name, data in self.zones.items():
-            lower, upper, svg, span = data
-            if lower < real_value <= upper:
-                print("change ", name)
-                self.svg_icon.load(handle_theme(svg))
-        self.current_value = real_value
+    def set_current_value(self, real_value: int, source: QWidget|None = None) -> None:
+        if not self.in_flux:
+            try:
+                self.in_flux = True
+                for name, data in self.zones.items():
+                    lower, upper, svg, span = data
+                    if lower < real_value <= upper:
+                        print("change ", name)
+                        CONFIG_DIR_PATH.joinpath("lux_manual_value.txt").write_text(str(real_value))
+                        if self.current_svg_bytes != svg:
+                            self.current_svg_bytes = svg
+                            self.svg_icon.load(handle_theme(svg))
+                self.current_value = real_value
+                if source != self.slider:
+                    self.slider.setValue(round(math.log10(real_value) * 1000))
+                if source != self.spinbox:
+                    self.spinbox.setValue(real_value)
+            finally:
+                self.in_flux = False
 
     def event(self, event: QEvent) -> bool:
         if event.type() == QEvent.PaletteChange:  # PalletChange happens after the new style sheet is in use.
