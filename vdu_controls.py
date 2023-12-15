@@ -700,6 +700,7 @@ import textwrap
 import time
 import traceback
 import urllib.request
+from abc import abstractmethod
 from ast import literal_eval
 from collections import namedtuple
 from datetime import datetime, timedelta, timezone
@@ -1063,8 +1064,15 @@ LIGHTING_CHECK_SVG = b"""
           color:#ff8500;
       }</style>
     </defs>
-    <path style="fill:currentColor;fill-opacity:1;stroke:none" class="ColorScheme-Text" d="M 5,3 V 4 H 7 V 5.0507812 C 4.7620407,5.3045267 3,7.1975144 3,9.5 3,11.813856 4.7794406,13.714649 7.0332031,13.953125 6.6992186,13.613635 6.43803,13.209557 6.265625,12.765625 4.9435886,12.265608 4,10.997158 4,9.5 4,7.5670034 5.5670034,6 7.5,6 c 1.4804972,0 2.738502,0.9218541 3.25,2.2207031 0.447476,0.1661231 0.856244,0.4220185 1.201172,0.7519531 -0.10518,-0.8491863 -0.442085,-1.62392 -0.957031,-2.2597656 l 0.754297,-0.7542968 0.398046,0.3949218 0.707032,-0.7070312 -1.5,-1.5 L 10.646484,4.8535156 11.042969,5.25 10.291016,6.0019531 C 9.6449906,5.4911251 8.858964,5.1481728 8,5.0507812 V 4 h 2 V 3 Z"/>
-    <path style="fill:currentColor;fill-opacity:1;stroke:none" class="ColorScheme-NegativeText" d="m12 11.5a2.5 2.5 0 0 1-2.5 2.5 2.5 2.5 0 0 1-2.5-2.5 2.5 2.5 0 0 1 2.5-2.5 2.5 2.5 0 0 1 2.5 2.5z"/>
+    <path style="fill:currentColor;fill-opacity:1;stroke:none" class="ColorScheme-Text" d="M 5,3 V 4 H 7 V 5.0507812
+     C 4.7620407,5.3045267 3,7.1975144 3,9.5 3,11.813856 4.7794406,13.714649 7.0332031,13.953125 6.6992186,13.613635 
+     6.43803,13.209557 6.265625,12.765625 4.9435886,12.265608 4,10.997158 4,9.5 4,7.5670034 5.5670034,6 7.5,6 
+     c 1.4804972,0 2.738502,0.9218541 3.25,2.2207031 0.447476,0.1661231 0.856244,0.4220185 1.201172,0.7519531 
+     -0.10518,-0.8491863 -0.442085,-1.62392 -0.957031,-2.2597656 l 0.754297,-0.7542968 
+     0.398046,0.3949218 0.707032,-0.7070312 -1.5,-1.5 L 10.646484,4.8535156 11.042969,5.25 10.291016,6.0019531 
+     C 9.6449906,5.4911251 8.858964,5.1481728 8,5.0507812 V 4 h 2 V 3 Z"/>
+    <path style="fill:currentColor;fill-opacity:1;stroke:none" class="ColorScheme-NegativeText" d="m12 11.5a2.5 2.5 0
+     0 1-2.5 2.5 2.5 2.5 0 0 1-2.5-2.5 2.5 2.5 0 0 1 2.5-2.5 2.5 2.5 0 0 1 2.5 2.5z"/>
 </svg>
 """
 
@@ -1254,7 +1262,7 @@ class DdcUtil:
     Interface to the abstracted ddcutil service
     """
 
-    def __init__(self, common_args: List[str] = [], enable_dbus_client: bool = False,
+    def __init__(self, common_args: List[str] | None = None, enable_dbus_client: bool = False,
                  connected_vdus_changed_callable: Callable = None) -> None:
         super().__init__()
         if enable_dbus_client:  # The service-interface implementations are duck-typed.
@@ -1301,9 +1309,6 @@ class DdcUtil:
 
     def get_edid_txt(self, vdu_number: str) -> str:
         return self.edid_txt_map[vdu_number]
-
-    def format_args_diagnostic(self, args: List[str]):
-        return ' '.join([arg if len(arg) < 30 else arg[:30] + "..." for arg in args])
 
     def detect_monitors(self) -> List[Tuple[str, str, str, str]]:
         """Return a list of (vdu_number, desc) tuples."""
@@ -1355,11 +1360,8 @@ class DdcUtil:
         model, mccs_major, mccs_minor, _, features, full_text = self.ddcutil_service.get_capabilities(edid_txt)
         if full_text:  # The service supplies pre-assembled capabilities text.
             return full_text
-        capability_text = f"Model: {model}\n" \
-                          f"MCCS version: {int.from_bytes(mccs_major)}.{int.from_bytes(mccs_minor)}\n" \
-                          "VCP Features:\n"
+        capability_text = f"Model: {model}\nMCCS version: {mccs_major}.{mccs_minor}\nVCP Features:\n"
         for feature_id, feature in features.items():
-            assert len(feature_id) == 1
             feature_code = f"{int.from_bytes(feature_id):02X}"
             feature_name = feature[0]
             feature_values = feature[2]
@@ -1401,7 +1403,7 @@ class DdcUtil:
 
     def vcp_info(self) -> str:
         """Returns info about all codes known to ddcutil, whether supported or not."""
-        return DdcutilInterfaceExe().vcp_info()
+        return DdcutilInterfaceExe([]).vcp_info()
 
     def get_supported_vcp_codes_map(self) -> Dict[str, str]:
         """Returns a map of descriptions keyed by vcp_code, the codes that ddcutil appears to support."""
@@ -1493,7 +1495,7 @@ class DdcutilInterfaceExe:
         if self.ddcutil_version[0] >= 2:
             if log_to_syslog and '--syslog' not in args:
                 syslog_args = ['--syslog', 'DEBUG' if log_debug_enabled else 'ERROR']
-        process_args = [DDCUTIL] + self.common_args  + multiplier_args + syslog_args + extra_args + list(args) + edid_args
+        process_args = [DDCUTIL] + self.common_args + multiplier_args + syslog_args + extra_args + list(args) + edid_args
         try:
             with self.ddcutil_access_lock:
                 now = time.time()
@@ -1574,7 +1576,7 @@ class DdcutilInterfaceExe:
         return display_list
 
     def get_capabilities(self, edid_txt: str) -> Tuple[
-        str, int, int, Dict[int, str], Dict[int, Tuple[str, str, Dict[int, str]]], str]:
+        str, int, int, Dict[bytes, str], Dict[bytes, Tuple[bytes, str, Dict[bytes, str]]], str]:
         result = self.__run__('capabilities', edid_txt=edid_txt)
         capability_text = result.stdout.decode('utf-8', errors='surrogateescape')
         return '', 0, 0, {}, {}, capability_text
@@ -1582,7 +1584,7 @@ class DdcutilInterfaceExe:
     def get_type(self, edid_txt: str, vcp_code_int: int) -> Tuple[bool, bool] | None:
         type_code = self.vcp_type_map.get(vcp_code_int)
         if type_code is None:
-            return False, False, -1, "BAD_TYPE"
+            return False, False
         is_complex = type_code == COMPLEX_NON_CONTINUOUS_TYPE
         is_continuous = type_code == CONTINUOUS_TYPE
         return is_complex, is_continuous
@@ -1592,7 +1594,7 @@ class DdcutilInterfaceExe:
         new_value = f"x{new_value_int:X}"
         self.__run__('setvcp', vcp_code, new_value, edid_txt=edid_txt)
 
-    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[VcpValue]:
+    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[(int, int, int, str)]:
         if self.ddcutil_version > (1, 3, 0):
             return self._get_vcp_values_implementation(edid_txt, vcp_code_int_list)
         else:
@@ -1643,7 +1645,7 @@ class DdcutilInterfaceExe:
 
 class DdcutilInterfaceQtDBus(QObject):
 
-    def __init__(self, common_args: List[str] = []):
+    def __init__(self, common_args: List[str] | None = None):
         super().__init__()
         self.dbus_interface_name = os.environ.get('DDCUTIL_SERVICE_INTERFACE_NAME', default="com.ddcutil.DdcutilInterface")
         self.common_args = [arg for arg in os.getenv('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != ''] + common_args
@@ -1696,7 +1698,7 @@ class DdcutilInterfaceQtDBus(QObject):
                             dbus_object_path,
                             self.dbus_interface_name,
                             "ConnectedDisplaysChanged",
-                            self._dbus_signal_handler);
+                            self._dbus_signal_handler)
                 ddcutil_dbus_iface.setTimeout(self.dbus_timeout_millis)
                 return ddcutil_dbus_iface, ddcutil_dbus_props
             except QDBusError as e:
@@ -1733,14 +1735,14 @@ class DdcutilInterfaceQtDBus(QObject):
             return vdu_list
 
     def get_capabilities(self, edid_txt: str) -> Tuple[
-            str, int, int, Dict[int, str], Dict[int, Tuple[str, str, Dict[int, str]]], str]:
+            str, int, int, Dict[bytes, str], Dict[bytes, Tuple[str, str, Dict[bytes, str]]], str]:
         with self.service_access_lock:
             model, mccs_major, mccs_minor, commands, capabilities = \
                 self._validate(self.ddcutil_proxy.call(
                     "GetCapabilitiesMetadata", -1, edid_txt, QDBusArgument(0, QMetaType.UInt)))
-            return model, mccs_major, mccs_minor, commands, capabilities, ''
+            return model, int.from_bytes(mccs_major), int.from_bytes(mccs_minor), commands, capabilities, ''
 
-    def get_type(self, edid_txt: str, vcp_code_int: int) -> Tuple[bool, bool, int, str]:
+    def get_type(self, edid_txt: str, vcp_code_int: int) -> Tuple[bool, bool]:
         with self.service_access_lock:
             _, _, _, _, _, is_complex, is_continuous = self._validate(self.ddcutil_proxy.call(
                 "GetVcpMetadata", -1, edid_txt, QDBusArgument(vcp_code_int, QMetaType.UChar), QDBusArgument(0, QMetaType.UInt)))
@@ -1753,7 +1755,7 @@ class DdcutilInterfaceQtDBus(QObject):
                                                    QDBusArgument(new_value_int, QMetaType.UShort),
                                                    QDBusArgument(0, QMetaType.UInt)))
 
-    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[int]:
+    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[Tuple(int, int, int, str)]:
         vcp_code_array = QDBusArgument()
         vcp_code_array.beginArray(QMetaType.UChar)
         for vcp_code_int in vcp_code_int_list:
@@ -2643,7 +2645,8 @@ class SettingsEditorFieldBase(QWidget):
 
 
 class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
-    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str, related: str, requires: str) -> None:
+    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str,
+                 tooltip: str, related: str, requires: str) -> None:
         super().__init__(section_editor, option, section, tooltip)
         self.setLayout(QHBoxLayout())
         checkbox = QCheckBox(self.translate_option())
@@ -2910,9 +2913,11 @@ class VduControlBase(QWidget):
                 if not self.controller.vdu_exception_handler(e, True):  # handler gets to decide if we should loop again
                     break
 
+    @abstractmethod
     def get_current_text_value(self) -> str | None:  # Return text in correct base: continuous->base10 non-continuous->base16
         assert False, "subclass failed to implement get_current_text_value"
 
+    @abstractmethod
     def refresh_ui_view_implementation(self):  # Subclasses to implement
         assert False, "subclass failed to implement refresh_ui_view_implementation"
 
@@ -5721,8 +5726,7 @@ class LuxDisplayWidget(QWidget):
         if len(self.history) > 1:
             self.history = (self.history + [0] * 10)[-100:]
 
-    def connect_meter(self, lux_meter: LuxMeterDevice) -> None:
-        print("called connect meter")
+    def connect_meter(self, lux_meter: LuxMeterDevice | None) -> None:
         if self.current_meter:
             self.current_meter.new_lux_value_signal.disconnect(self.display_lux)
         self.current_meter = lux_meter
@@ -5779,11 +5783,11 @@ class LuxMeterDevice(QObject):
         pass
 
     def set_current_value(self, new_value: float) -> None:
-        #log_debug(f"new metered value {new_value=}") if log_debug_enabled else None
+        # log_debug(f"new metered value {new_value=}") if log_debug_enabled else None
         self.current_value = new_value
         self.new_lux_value_signal.emit(round(new_value))
 
-    def cleanup(self):
+    def cleanup(self, worker: WorkerThread):
         pass
 
     def stop_metering(self) -> None:
@@ -5818,7 +5822,7 @@ class LuxMeterFifoDevice(LuxMeterDevice):
             self.buffer = b''
             log_warning(f"Reopen and retry {self.device_name=} {self.buffer=}", se, trace=True)
 
-    def cleanup(self):
+    def cleanup(self, worker: WorkerThread | None = None):
         if self.fifo is not None:
             log_info("closing fifo")
             os.close(self.fifo)
@@ -5879,7 +5883,7 @@ class LuxMeterSerialDevice(LuxMeterDevice):
             self.worker.doze(self.backoff_secs)
             self.backoff_secs = self.backoff_secs * 2 if self.backoff_secs < 300 else 300
 
-    def cleanup(self):
+    def cleanup(self, worker: WorkerThread | None = None):
         if self.serial_device is not None:
             log_info("closing serial device")
             self.serial_device.close()
@@ -5913,6 +5917,7 @@ class LuxMeterManualDevice(LuxMeterDevice):
 
     def stop_metering(self) -> None:
         pass
+
 
 class LuxSmooth:
     def __init__(self, n: int, alpha: float = 0.5) -> None:
@@ -6252,29 +6257,6 @@ class LuxConfig(ConfIni):
                 self.add_section(section_name)
         return self
 
-class LuxChooseSourceWidget(QWidget):
-    def __init__(self, main_controller: VduAppController) -> None:
-        super().__init__()
-        layout = QHBoxLayout()
-        self.setLayout(layout)
-        self.source_list = (tr("No metering"),
-                            tr("Arduino+GY30"),
-                            tr("Local FIFO"),
-                            tr("Executable"),
-                            tr("Manual Input"))
-        self.meter_device_selector = QComboBox()
-        for source in self.source_list:
-            self.meter_device_selector.addItem(source)
-        layout.addWidget(self.meter_device_selector)
-        add_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr("Add"))
-        layout.addWidget(add_button)
-        add_button.clicked.connect(self.add_source)
-
-    def add_source(self):
-        item = QInputDialog.getItem(self, tr("Add lux meter source"), self.source_list)
-        if item:
-            index = self.source_list.index(item)
-
 
 class LuxDialog(SubWinDialog, DialogSingletonMixin):
 
@@ -6409,8 +6391,6 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                         else:
                             self.apply_settings(requires_auto_brightness_restart=True)
                         self.status_message(tr("Meter changed to {}.").format(device_name))
-                return device_name, type_num
-            return '', 0
 
         self.meter_device_selector.pressed.connect(choose_device)
 
@@ -6548,7 +6528,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                 alert.setInformativeText(tr("You might need to be a member of the {} group.").format(path.group()))
             alert.exec()
             return '', 0
-        if type_num in (1,2,3) and not os.access(device, os.R_OK):
+        if type_num in (1, 2, 3) and not os.access(device, os.R_OK):
             alert = MessageBox(QMessageBox.Critical)
             alert.setText(tr("No read access to {}").format(device))
             if path.is_char_device() and path.group() != "root":
@@ -6614,7 +6594,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
             elif answer == QMessageBox.Cancel:
                 event.ignore()
                 return
-        self.lux_display_widget.enable_display_updates(False) # Stop updating the display
+        self.lux_display_widget.enable_display_updates(False)  # Stop updating the display
         super().closeEvent(event)
 
     def status_message(self, message: str, timeout: int = 0, destination: MsgDestination = MsgDestination.DEFAULT) -> None:
@@ -6657,7 +6637,7 @@ class LuxAutoController:
         return self.lux_lighting_check_button
 
     def create_manual_input_control(self) -> LuxAmbientSlider | None:
-        if self.lux_config.get("lux-meter", "lux-device", fallback=None) == 'Slider-Control': #True or isinstance(self.lux_meter, LuxMeterManualDevice):
+        if self.lux_config.get("lux-meter", "lux-device", fallback=None) == 'Slider-Control':
             lux_slider = LuxAmbientSlider()
 
             def update_meter(value: int):
@@ -6921,7 +6901,7 @@ class LuxAmbientSlider(QWidget):
 
         self.svg_icon = QSvgWidget()
         self.svg_icon.setFixedSize(native_font_height(scaled=1.8), native_font_height(scaled=1.8))
-        self.svg_icon_current_source: bytes = None
+        self.svg_icon_current_source: bytes | None = None
 
         top_layout = QVBoxLayout()
         self.setLayout(top_layout)
@@ -6942,7 +6922,7 @@ class LuxAmbientSlider(QWidget):
             log10_label = QLabel()
             log10_label.setPixmap(icon.pixmap(native_font_height(scaled=1), native_font_height(scaled=1)))
             log10_label.setToolTip(key)
-            lux_slider_panel_layout.addWidget(log10_label, 0, col, 1, span, alignment=Qt.AlignBottom|Qt.AlignHCenter)
+            lux_slider_panel_layout.addWidget(log10_label, 0, col, 1, span, alignment=Qt.AlignBottom | Qt.AlignHCenter)
             self.label_map[log10_label] = svg_bytes
             col += span
 
@@ -6956,14 +6936,14 @@ class LuxAmbientSlider(QWidget):
         self.lux_slider.setTickPosition(QSlider.TicksBelow)
         self.lux_slider.setOrientation(Qt.Horizontal)  # type: ignore
         self.lux_slider.setTracking(False)  # Don't rewrite the ddc value too often - not sure of the implications
-        lux_slider_panel_layout.addWidget(self.lux_slider, 1, 0, 1, 15, alignment=Qt.AlignTop);
+        lux_slider_panel_layout.addWidget(self.lux_slider, 1, 0, 1, 15, alignment=Qt.AlignTop)
 
         # A hacky way to get custom labels without redifining paint
         for col_num, span, value in ((0, 3, 1), (3, 3, 10), (6, 3, 100), (9, 3, 1000), (12, 3, 10000), (14, 1, 100000)):
             log10_label = QLabel(f"{value:2d}")
             app_font = QApplication.font()
             log10_label.setFont(QFont(app_font.family(), round(app_font.pointSize() * .66), QFont.Weight.Normal))
-            lux_slider_panel_layout.addWidget(log10_label, 2, col_num, 1, span, alignment=Qt.AlignLeft|Qt.AlignTop)
+            lux_slider_panel_layout.addWidget(log10_label, 2, col_num, 1, span, alignment=Qt.AlignLeft | Qt.AlignTop)
 
         input_panel_layout.addWidget(lux_slider_panel, stretch=100)
 
@@ -6976,16 +6956,16 @@ class LuxAmbientSlider(QWidget):
 
         top_layout.addWidget(input_panel, alignment=Qt.AlignTop)
 
-        def lux_slider_change(value: int) -> None:
-            real_value = round(10 ** (value / 1000))
+        def lux_slider_change(new_value: int) -> None:
+            real_value = round(10 ** (new_value / 1000))
             self.set_current_value(real_value, self.lux_slider)
             self.new_lux_value_signal.emit(real_value)
 
         self.lux_slider.valueChanged.connect(lux_slider_change)
 
-        def lux_slider_moved(value: int) -> None:
+        def lux_slider_moved(new_value: int) -> None:
             self.sliding = True
-            new_lux_value = round(10 ** (value / 1000))
+            new_lux_value = round(10 ** (new_value / 1000))
             self.set_current_value(new_lux_value, self.lux_slider)
 
         self.lux_slider.sliderMoved.connect(lux_slider_moved)
@@ -7000,9 +6980,9 @@ class LuxAmbientSlider(QWidget):
 
         self.lux_input_field.editingFinished.connect(input_field_editing_finished)
 
-        self.set_current_value(round(LuxMeterManualDevice.get_stored_value())) # trigger side-effects.
+        self.set_current_value(round(LuxMeterManualDevice.get_stored_value()))  # trigger side-effects.
 
-    def set_current_value(self, real_value: int, source: QWidget|None = None) -> None:
+    def set_current_value(self, real_value: int, source: QWidget | None = None) -> None:
         if not self.in_flux:
             try:
                 self.in_flux = True
@@ -7281,7 +7261,7 @@ class VduAppController:  # Main controller containing methods for high level ope
     def create_ddcutil(self):
         try:
             def handle_changes(edid_encoded: str, event_type: int, flags: int):
-                log_info(f"Connected VDUs changed {event_type=} {flags=} {edid_encoded:.30}...");
+                log_info(f"Connected VDUs changed {event_type=} {flags=} {edid_encoded:.30}...")
                 self.start_refresh()
 
             callback = handle_changes if self.main_config.is_set(ConfOption.DBUS_LISTENER_ENABLED, fallback=False) else None
@@ -7412,6 +7392,7 @@ class VduAppController:  # Main controller containing methods for high level ope
                         if self.refresh_data_task.vdu_exception is None:
                             self.refresh_data_task.vdu_exception = VduException(vdu_description="unknown", operation="unknown",
                                                                                 exception=e)
+
         def update_ui_view(_: WorkerThread) -> None:
             # Invoke when the worker thread completes. Runs in the GUI thread and can refresh remaining UI views.
             try:
@@ -7761,7 +7742,7 @@ class VduAppWindow(QMainWindow):
 
         def run_in_gui(task: Callable):
             log_debug("Running task in gui thread") if log_debug_enabled else None
-            task() # Was using a partial, but it silently failed when task was a method with only self and no other arguments.
+            task()  # Was using a partial, but it silently failed when task was a method with only self and no other arguments.
 
         self._run_in_gui_thread_qtsignal.connect(run_in_gui)
         # Gnome tray doesn't normally provide a way to bring up the main app.
