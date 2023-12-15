@@ -6925,7 +6925,7 @@ class LuxAmbientSlider(QWidget):
 
         top_layout = QVBoxLayout()
         self.setLayout(top_layout)
-        top_layout.addWidget(QLabel(tr("Ambient Light Level")), alignment=Qt.AlignBottom)
+        top_layout.addWidget(QLabel(tr("Ambient Light Level (lux)")), alignment=Qt.AlignBottom)
 
         input_panel = QWidget()
         input_panel_layout = QHBoxLayout()
