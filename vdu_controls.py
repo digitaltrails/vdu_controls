@@ -697,6 +697,7 @@ import sys
 import syslog
 import termios
 import textwrap
+import threading
 import time
 import traceback
 import urllib.request
@@ -708,8 +709,7 @@ from enum import Enum, IntFlag
 from functools import partial
 from importlib import import_module
 from pathlib import Path
-import threading
-from threading import Lock, RLock
+from threading import Lock
 from typing import List, Tuple, Mapping, Type, Dict, Callable, Any, NewType
 from urllib.error import URLError
 
@@ -717,7 +717,7 @@ from PyQt5 import QtCore
 from PyQt5 import QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
     QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType
-from PyQt5.QtDBus import QDBusConnection, QDBusInterface, QDBusError, QDBusMessage, QDBusArgument, QDBusVariant
+from PyQt5.QtDBus import QDBusConnection, QDBusInterface, QDBusError, QDBusMessage, QDBusArgument
 from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QRegExpValidator, \
     QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
