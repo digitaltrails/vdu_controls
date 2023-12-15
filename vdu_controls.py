@@ -6904,96 +6904,105 @@ class LuxAmbientSlider(QWidget):
         super().__init__()
 
         self.in_flux = False
-        self.zones = {
+        self.zones = {  # Using col span as a hacky way to line up icons above the slider
             tr('Sunlight'): (10000, 100000, LUX_SUNLIGHT_SVG, 2),
             tr('Daylight'): (1000, 10000, LUX_DAYLIGHT_SVG, 3),
             tr('Overcast'): (400, 1000, LUX_OVERCAST_SVG, 2),
-            tr('Rise/set'): (50, 400, LUX_RISE_SET_SVG, 1),
-            tr('Dusk'): (50, 100, LUX_DUSK_SVG, 2),
-            tr('Room'): (5, 50, LUX_ROOM_SVG, 2),
+            tr('Rise/set'): (50, 400, LUX_RISE_SET_SVG, 2),
+            tr('Dusk'): (50, 100, LUX_DUSK_SVG, 1),
+            tr('Room'): (5, 50, LUX_ROOM_SVG, 3),
             tr('Night'): (0, 5, LUX_NIGHT_SVG, 2),
         }
+        self.current_value = 10000
+
+        self.svg_icon = QSvgWidget()
+        self.svg_icon.setFixedSize(native_font_height(scaled=1.8), native_font_height(scaled=1.8))
+        self.svg_icon_current_source: bytes = None
 
         top_layout = QVBoxLayout()
         self.setLayout(top_layout)
         top_layout.addWidget(QLabel(tr("Ambient Light Level")), alignment=Qt.AlignBottom)
 
-        sub_panel = QWidget()
-        sub_panel_layout = QHBoxLayout()
-        sub_panel.setLayout(sub_panel_layout)
-        svg_icon: QSvgWidget = QSvgWidget()
-        svg_icon.setFixedSize(native_font_height(scaled=1.8), native_font_height(scaled=1.8))
-        svg_icon.setToolTip(tr("Manual light level input (Lux value)"))
-        self.svg_icon = svg_icon
-        self.current_svg_bytes: bytes = None
-        sub_panel_layout.addWidget(svg_icon)
+        input_panel = QWidget()
+        input_panel_layout = QHBoxLayout()
+        input_panel.setLayout(input_panel_layout)
+        input_panel_layout.addWidget(self.svg_icon)
 
-        slider_panel = QWidget()
-        slider_layout = QGridLayout()
-        slider_panel.setLayout(slider_layout)
+        lux_slider_panel = QWidget()
+        lux_slider_panel_layout = QGridLayout()
+        lux_slider_panel.setLayout(lux_slider_panel_layout)
         col = 0
         self.label_map: Dict[QLabel, bytes] = {}
         for key, (_, _, svg_bytes, span) in reversed(self.zones.items()):
             icon = create_icon_from_svg_bytes(svg_bytes)
-            label = QLabel()
-            label.setPixmap(icon.pixmap(native_font_height(scaled=1), native_font_height(scaled=1)))
-            label.setToolTip(key)
-            slider_layout.addWidget(label, 0, col, 1, span, alignment=Qt.AlignBottom|Qt.AlignHCenter)
+            log10_label = QLabel()
+            log10_label.setPixmap(icon.pixmap(native_font_height(scaled=1), native_font_height(scaled=1)))
+            log10_label.setToolTip(key)
+            lux_slider_panel_layout.addWidget(log10_label, 0, col, 1, span, alignment=Qt.AlignBottom|Qt.AlignHCenter)
+            self.label_map[log10_label] = svg_bytes
             col += span
-            self.label_map[label] = svg_bytes
-        self.slider = slider = ClickableSlider()
-        self.current_value = 10000
-        slider.setMinimumWidth(200)
-        slider.setRange(int(math.log10(1) * 1000), int(math.log10(100000) * 1000))
-        slider.setSingleStep(1)
-        slider.setPageStep(100)
-        slider.setTickInterval(1000)
-        slider.setTickPosition(QSlider.TicksBelow)
-        slider.setOrientation(Qt.Horizontal)  # type: ignore
-        slider.setTracking(False)  # Don't rewrite the ddc value too often - not sure of the implications
-        slider_layout.addWidget(slider,1,0,1,14, alignment=Qt.AlignTop);
 
-        sub_panel_layout.addWidget(slider_panel, stretch=100)
-        self.spinbox = QSpinBox()
-        self.spinbox.setKeyboardTracking(False)
-        self.spinbox.setRange(1, 100000)
-        self.spinbox.setValue(self.current_value)
-        sub_panel_layout.addWidget(self.spinbox)
-        top_layout.addWidget(sub_panel, alignment=Qt.AlignTop)
+        self.lux_slider = ClickableSlider()
+        self.lux_slider.setToolTip(tr("Ambient light level input (lux value)"))
+        self.lux_slider.setMinimumWidth(200)
+        self.lux_slider.setRange(int(math.log10(1) * 1000), int(math.log10(100000) * 1000))
+        self.lux_slider.setSingleStep(1)
+        self.lux_slider.setPageStep(100)
+        self.lux_slider.setTickInterval(1000)
+        self.lux_slider.setTickPosition(QSlider.TicksBelow)
+        self.lux_slider.setOrientation(Qt.Horizontal)  # type: ignore
+        self.lux_slider.setTracking(False)  # Don't rewrite the ddc value too often - not sure of the implications
+        lux_slider_panel_layout.addWidget(self.lux_slider, 1, 0, 1, 15, alignment=Qt.AlignTop);
 
-        def slider_changed(value: int) -> None:
+        # A hacky way to get custom labels without redifining paint
+        for col_num, span, value in ((0, 3, 1), (3, 3, 10), (6, 3, 100), (9, 3, 1000), (12, 3, 10000), (14, 1, 100000)):
+            log10_label = QLabel(f"{value:2d}")
+            app_font = QApplication.font()
+            log10_label.setFont(QFont(app_font.family(), round(app_font.pointSize() * .66), QFont.Weight.Normal))
+            lux_slider_panel_layout.addWidget(log10_label, 2, col_num, 1, span, alignment=Qt.AlignLeft|Qt.AlignTop)
+
+        input_panel_layout.addWidget(lux_slider_panel, stretch=100)
+
+        self.lux_input_field = QSpinBox()
+        self.lux_input_field.setToolTip(tr("Ambient light level input (lux value)"))
+        self.lux_input_field.setKeyboardTracking(False)
+        self.lux_input_field.setRange(1, 100000)
+        self.lux_input_field.setValue(self.current_value)
+        input_panel_layout.addWidget(self.lux_input_field)
+
+        top_layout.addWidget(input_panel, alignment=Qt.AlignTop)
+
+        def lux_slider_change(value: int) -> None:
             real_value = round(10 ** (value / 1000))
-            self.set_current_value(real_value, self.slider)
+            self.set_current_value(real_value, self.lux_slider)
             self.value_changed_signal.emit(real_value)
 
-        slider.valueChanged.connect(slider_changed)
+        self.lux_slider.valueChanged.connect(lux_slider_change)
 
-        def slider_moved(value: int) -> None:
+        def lux_slider_moved(value: int) -> None:
             self.sliding = True
             new_lux_value = round(10 ** (value / 1000))
-            self.set_current_value(new_lux_value, self.slider)
-            # TODO raise signal
+            self.set_current_value(new_lux_value, self.lux_slider)
 
-        slider.sliderMoved.connect(slider_moved)
+        self.lux_slider.sliderMoved.connect(lux_slider_moved)
 
-        def spinbox_value_changed() -> None:
-            self.set_current_value(self.spinbox.value(), self.spinbox)
+        def lux_input_field_changed() -> None:
+            self.set_current_value(self.lux_input_field.value(), self.lux_input_field)
 
-        self.spinbox.valueChanged.connect(spinbox_value_changed)
+        self.lux_input_field.valueChanged.connect(lux_input_field_changed)
 
-        def editing_finished():
-            self.set_current_value(self.spinbox.value(), self.spinbox)
+        def input_field_editing_finished():
+            self.set_current_value(self.lux_input_field.value(), self.lux_input_field)
 
-        self.spinbox.editingFinished.connect(editing_finished)
+        self.lux_input_field.editingFinished.connect(input_field_editing_finished)
 
-        lux_value = 10000
         persisted_path = CONFIG_DIR_PATH.joinpath("lux_manual_value.txt")
         if persisted_path.exists():
             try:
-                lux_value = int(persisted_path.read_text())
+                self.current_value = int(persisted_path.read_text())
             except ValueError:
                 persisted_path.unlink()
-        self.set_current_value(lux_value)
+        self.set_current_value(self.current_value) # trigger side-effects.
 
     def set_current_value(self, real_value: int, source: QWidget|None = None) -> None:
         if not self.in_flux:
@@ -7004,14 +7013,15 @@ class LuxAmbientSlider(QWidget):
                     if lower < real_value <= upper:
                         print("change ", name)
                         CONFIG_DIR_PATH.joinpath("lux_manual_value.txt").write_text(str(real_value))
-                        if self.current_svg_bytes != svg:
-                            self.current_svg_bytes = svg
+                        if self.svg_icon_current_source != svg:
+                            self.svg_icon_current_source = svg
                             self.svg_icon.load(handle_theme(svg))
+                            self.svg_icon.setToolTip(name)
                 self.current_value = real_value
-                if source != self.slider:
-                    self.slider.setValue(round(math.log10(real_value) * 1000))
-                if source != self.spinbox:
-                    self.spinbox.setValue(real_value)
+                if source != self.lux_slider:
+                    self.lux_slider.setValue(round(math.log10(real_value) * 1000))
+                if source != self.lux_input_field:
+                    self.lux_input_field.setValue(real_value)
             finally:
                 self.in_flux = False
 
