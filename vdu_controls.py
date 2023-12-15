@@ -5699,7 +5699,6 @@ class LuxDisplayWidget(QWidget):
         self.lux_plot.setFixedWidth(self.max_history)
         self.lux_plot.setFixedHeight(100)
         self.layout().addWidget(self.lux_plot)
-        self.lux_display_worker: LuxDisplayWorker | None = None
         self.current_meter: LuxMeterDevice | None = None
         self.updates_enabled = True
 
@@ -5727,8 +5726,11 @@ class LuxDisplayWidget(QWidget):
         if self.current_meter:
             self.current_meter.new_lux_value_signal.disconnect(self.display_lux)
         self.current_meter = lux_meter
-        self.current_meter.new_lux_value_signal.connect(self.display_lux)
-        self.enable_display_updates(True)
+        if self.current_meter:
+            self.current_meter.new_lux_value_signal.connect(self.display_lux)
+            if isinstance(lux_meter, LuxMeterManualDevice):
+                self.display_lux(round(lux_meter.get_value()))
+            self.enable_display_updates(True)
 
     def enable_display_updates(self, enable: bool = True) -> None:
         if not enable:
@@ -5738,25 +5740,6 @@ class LuxDisplayWidget(QWidget):
     def y_from_lux(self, lux: int) -> int:
         return round(
             (math.log10(lux) - math.log10(1)) / ((math.log10(100000) - math.log10(1)) / self.lux_plot.height())) if lux > 0 else 0
-
-
-class LuxDisplayWorker(WorkerThread):  # Periodically emit updates for the displayed lux value
-    new_lux_value = pyqtSignal(int)
-
-    def __init__(self, lux_meter: LuxMeterDevice) -> None:
-        super().__init__(task_body=self._display_value_task_loop, loop=True)
-        self.lux_meter = lux_meter
-        self.stop_requested = False
-
-    def _display_value_task_loop(self) -> None:
-        if self.lux_meter is None:
-            self.stop()
-            return
-        if float_lux := self.lux_meter.get_value():
-            lux = round(float_lux)
-            log_debug(f"LuxDisplayWorker received new value {lux=}") if log_debug_enabled else None
-            self.new_lux_value.emit(lux)
-        self.doze(5.0)
 
 
 def lux_create_device(device_name: str) -> LuxMeterDevice:
@@ -5909,10 +5892,24 @@ class LuxMeterManualDevice(LuxMeterDevice):
 
     def __init__(self) -> None:
         super().__init__(requires_worker=False)
-        self.current_value: float | None = None
+        self.current_value: float | None = 10000
 
     def get_value(self) -> float | None:
+        self.current_value = self.get_stored_value()
         return self.current_value
+
+    @staticmethod
+    def get_stored_value() -> float:
+        persisted_path = CONFIG_DIR_PATH.joinpath("lux_manual_value.txt")
+        if persisted_path.exists():
+            try:
+                return float(persisted_path.read_text())
+            except ValueError:
+                persisted_path.unlink()
+
+    def set_current_value(self, new_value: float) -> None:
+        CONFIG_DIR_PATH.joinpath("lux_manual_value.txt").write_text(str(round(new_value)))
+        super().set_current_value(new_value)
 
     def stop_metering(self) -> None:
         pass
@@ -6574,10 +6571,11 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                 self.status_message(tr("Restarted automatic brightness adjustment"), timeout=5000)
 
     def configure_ui(self, meter_device: LuxMeterDevice | None) -> None:
+        manual_metering_enabled = isinstance(meter_device, LuxMeterManualDevice)
         if meter_device is not None:
             self.lux_display_widget.connect_meter(meter_device)
             self.enabled_checkbox.setEnabled(True)
-            if self.lux_config.is_auto_enabled():
+            if self.lux_config.is_auto_enabled() and not manual_metering_enabled:
                 self.adjust_now_button.show()
             else:
                 self.adjust_now_button.hide()
@@ -6587,8 +6585,12 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
             self.adjust_now_button.hide()
         if meter_device is None:
             self.status_message(tr("No metering device set."))  # Remind user why metering and auto is not working
-        elif not self.lux_config.is_auto_enabled():
-            self.status_message(tr("Brightness automatic adjustment is disabled."))  # Remind user why auto is not working
+        else:
+            self.enabled_checkbox.setDisabled(manual_metering_enabled)
+            self.interval_selector.setDisabled(manual_metering_enabled)
+            self.interval_label.setDisabled(manual_metering_enabled)
+            if not self.lux_config.is_auto_enabled():
+                self.status_message(tr("Brightness automatic adjustment is disabled."))  # Remind user why auto is not working
 
     def save_profiles(self) -> None:
         for vdu_sid, profile in self.profile_plot.profiles_map.items():
@@ -6617,8 +6619,8 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
 
     def status_message(self, message: str, timeout: int = 0, destination: MsgDestination = MsgDestination.DEFAULT) -> None:
         if destination == MsgDestination.COUNTDOWN:
-            self.adjust_now_button.show()
-            self.adjust_now_button.setText(message)
+            if not self.adjust_now_button.isHidden():
+                self.adjust_now_button.setText(message)
         else:
             self.status_bar.showMessage(message, timeout)
         QApplication.processEvents()  # force messages out
@@ -6642,15 +6644,15 @@ class LuxAutoController:
 
     def create_tool_button(self) -> ToolButton:  # Used when the application UI has to reinitialize
         # Used when the application UI has to reinitialize
-        if self.lux_config.get("lux-meter", "lux-device", fallback=None) == 'Slider-Control':
-            return None
+        # if self.lux_config.get("lux-meter", "lux-device", fallback=None) == 'Slider-Control':
+        #     return None
         self.lux_tool_button = ToolButton(AUTO_LUX_ON_SVG, tr("Toggle light metered brightness adjustment"))
         return self.lux_tool_button
 
     def create_lighting_check_button(self) -> ToolButton:
         # Used when the application UI has to reinitialize
-        if self.lux_config.get("lux-meter", "lux-device", fallback=None) == 'Slider-Control':
-            return None
+        # if self.lux_config.get("lux-meter", "lux-device", fallback=None) == 'Slider-Control':
+        #    return None
         self.lux_lighting_check_button = ToolButton(LIGHTING_CHECK_SVG, tr("Perform lighting check now"))
         return self.lux_lighting_check_button
 
@@ -6663,7 +6665,7 @@ class LuxAutoController:
                 self.lux_meter.set_current_value(value)
                 self.main_controller.lux_check_action()
 
-            lux_slider.value_changed_signal.connect(update_meter)
+            lux_slider.new_lux_value_signal.connect(update_meter)
             return lux_slider
         return None
 
@@ -6896,9 +6898,11 @@ LUX_NIGHT_SVG = b"""<?xml version="1.0" encoding="utf-8"?>
     </g>
 </svg>
 """
+
+
 class LuxAmbientSlider(QWidget):
 
-    value_changed_signal = pyqtSignal(int)
+    new_lux_value_signal = pyqtSignal(int)
 
     def __init__(self) -> None:
         super().__init__()
@@ -6975,7 +6979,7 @@ class LuxAmbientSlider(QWidget):
         def lux_slider_change(value: int) -> None:
             real_value = round(10 ** (value / 1000))
             self.set_current_value(real_value, self.lux_slider)
-            self.value_changed_signal.emit(real_value)
+            self.new_lux_value_signal.emit(real_value)
 
         self.lux_slider.valueChanged.connect(lux_slider_change)
 
@@ -6996,13 +7000,7 @@ class LuxAmbientSlider(QWidget):
 
         self.lux_input_field.editingFinished.connect(input_field_editing_finished)
 
-        persisted_path = CONFIG_DIR_PATH.joinpath("lux_manual_value.txt")
-        if persisted_path.exists():
-            try:
-                self.current_value = int(persisted_path.read_text())
-            except ValueError:
-                persisted_path.unlink()
-        self.set_current_value(self.current_value) # trigger side-effects.
+        self.set_current_value(round(LuxMeterManualDevice.get_stored_value())) # trigger side-effects.
 
     def set_current_value(self, real_value: int, source: QWidget|None = None) -> None:
         if not self.in_flux:
@@ -7012,7 +7010,6 @@ class LuxAmbientSlider(QWidget):
                     lower, upper, svg, span = data
                     if lower < real_value <= upper:
                         print("change ", name)
-                        CONFIG_DIR_PATH.joinpath("lux_manual_value.txt").write_text(str(real_value))
                         if self.svg_icon_current_source != svg:
                             self.svg_icon_current_source = svg
                             self.svg_icon.load(handle_theme(svg))
