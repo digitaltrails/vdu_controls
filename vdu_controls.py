@@ -1266,26 +1266,26 @@ class DdcUtil:
                  connected_vdus_changed_callable: Callable = None) -> None:
         super().__init__()
         if enable_dbus_client:  # The service-interface implementations are duck-typed.
-            self.ddcutil_service_class = DdcutilInterfaceQtDBus
+            self.ddcutil_impl_class = DdcutilQtDBusImpl
         else:
-            self.ddcutil_service_class = DdcutilInterfaceExe
+            self.ddcutil_impl_class = DdcutilExeImpl
         self.common_args = common_args
-        self.ddcutil_service = self.ddcutil_service_class(common_args)
+        self.ddcutil_impl = self.ddcutil_impl_class(common_args)
         self.supported_codes: Dict[str, str] | None = None
         self.vcp_type_map: Dict[Tuple[str, str], str] = {}
         self.edid_txt_map: Dict[str, str] = {}
         self.displays_changed_callback: Callable | None = connected_vdus_changed_callable
         self.ddcutil_version = (0, 0, 0)  # Dummy version for bootstrapping
         self.version_suffix = ''
-        version_info = self.ddcutil_service.get_ddcutil_version_string()
+        version_info = self.ddcutil_impl.get_ddcutil_version_string()
         if version_match := re.match(r'[a-z]* ?([0-9]+).([0-9]+).([0-9]+)-?([^\n]*)', version_info):
             self.ddcutil_version = tuple(int(i) for i in version_match.groups()[0:3])
             self.version_suffix = version_match.groups()[3]
         # self.version = (1, 2, 2)  # for testing for 1.2.2 compatibility
         global about_supporting_versions
         about_supporting_versions = \
-            f"ddcutil-interface: {self.ddcutil_service.get_interface_version_string()}; ddcutil: {version_info}"
-        self.status_values = self.ddcutil_service.get_status_values()
+            f"ddcutil-interface: {self.ddcutil_impl.get_interface_version_string()}; ddcutil: {version_info}"
+        self.status_values = self.ddcutil_impl.get_status_values()
         log_info(f"ddcutil version {self.ddcutil_version} {self.version_suffix}(dynamic-sleep={self.ddcutil_version >= (2, 0, 0)})")
 
         if self.displays_changed_callback:
@@ -1296,16 +1296,16 @@ class DdcUtil:
             if self.displays_changed_callback:
                 self.displays_changed_callback(edid_encoded, event_type, flags)
 
-        self.ddcutil_service.set_listerner_callback(dbus_signal_listener)
+        self.ddcutil_impl.set_listerner_callback(dbus_signal_listener)
 
     def refresh_connection(self):
-        self.ddcutil_service = self.ddcutil_service_class(self.common_args)  # Just in case the connection has gone bad.
+        self.ddcutil_impl = self.ddcutil_impl_class(self.common_args)  # Just in case the connection has gone bad.
 
     def set_sleep_multiplier(self, vdu_number: str, sleep_multiplier: float | None):
-        self.ddcutil_service.set_sleep_multiplier(self.get_edid_txt(vdu_number), sleep_multiplier)
+        self.ddcutil_impl.set_sleep_multiplier(self.get_edid_txt(vdu_number), sleep_multiplier)
 
     def set_vdu_specific_args(self, vdu_number: str, extra_args: List[str]):
-        self.ddcutil_service.set_vdu_specific_args(self.get_edid_txt(vdu_number), extra_args)
+        self.ddcutil_impl.set_vdu_specific_args(self.get_edid_txt(vdu_number), extra_args)
 
     def get_edid_txt(self, vdu_number: str) -> str:
         return self.edid_txt_map[vdu_number]
@@ -1313,7 +1313,7 @@ class DdcUtil:
     def detect_monitors(self) -> List[Tuple[str, str, str, str]]:
         """Return a list of (vdu_number, desc) tuples."""
         display_list = []
-        vdu_list = self.ddcutil_service.detect(1)
+        vdu_list = self.ddcutil_impl.detect(1)
         # Going to get rid of anything that is not a-z A-Z 0-9 as potential rubbish
         rubbish = re.compile('[^a-zA-Z0-9]+')
         # This isn't efficient, it doesn't need to be, so I'm keeping re-defs close to where they are used.
@@ -1357,7 +1357,7 @@ class DdcUtil:
 
     def query_capabilities(self, vdu_number: str) -> str:
         edid_txt = self.get_edid_txt(vdu_number)
-        model, mccs_major, mccs_minor, _, features, full_text = self.ddcutil_service.get_capabilities(edid_txt)
+        model, mccs_major, mccs_minor, _, features, full_text = self.ddcutil_impl.get_capabilities(edid_txt)
         if full_text:  # The service supplies pre-assembled capabilities text.
             return full_text
         capability_text = f"Model: {model}\nMCCS version: {mccs_major}.{mccs_minor}\nVCP Features:\n"
@@ -1384,7 +1384,7 @@ class DdcUtil:
         vcp_type_key = (edid_txt, vcp_code)
         if type_str := self.vcp_type_map.get(vcp_type_key):
             return type_str
-        is_complex, is_continuous = self.ddcutil_service.get_type(edid_txt, int(vcp_code, 16))
+        is_complex, is_continuous = self.ddcutil_impl.get_type(edid_txt, int(vcp_code, 16))
         type_str = CONTINUOUS_TYPE if is_continuous else (COMPLEX_NON_CONTINUOUS_TYPE if is_complex else SIMPLE_NON_CONTINUOUS_TYPE)
         self.vcp_type_map[vcp_type_key] = type_str
         return type_str
@@ -1394,7 +1394,7 @@ class DdcUtil:
         edid_txt = self.get_edid_txt(vdu_number)
         for attempt_count in range(DDCUTIL_RETRIES):
             try:
-                self.ddcutil_service.set_vcp(edid_txt, int(vcp_code, 16), new_value)
+                self.ddcutil_impl.set_vcp(edid_txt, int(vcp_code, 16), new_value)
                 return
             except (subprocess.SubprocessError, DdcUtilDisplayNotFound, ValueError) as e:
                 if not retry_on_error or attempt_count + 1 == DDCUTIL_RETRIES:
@@ -1403,7 +1403,7 @@ class DdcUtil:
 
     def vcp_info(self) -> str:
         """Returns info about all codes known to ddcutil, whether supported or not."""
-        return DdcutilInterfaceExe([]).vcp_info()
+        return DdcutilExeImpl([]).vcp_info()
 
     def get_supported_vcp_codes_map(self) -> Dict[str, str]:
         """Returns a map of descriptions keyed by vcp_code, the codes that ddcutil appears to support."""
@@ -1430,11 +1430,10 @@ class DdcUtil:
         # Try a few times in case there is a glitch due to a monitor being turned-off/on or slow to respond
 
         for attempt_count in range(DDCUTIL_RETRIES):
-            values = self.ddcutil_service.get_vcp_values(self.get_edid_txt(vdu_number),
-                                                         [int(vcp, 16) for vcp in vcp_code_list])
+            values = self.ddcutil_impl.get_vcp_values(self.get_edid_txt(vdu_number),
+                                                      [int(vcp, 16) for vcp in vcp_code_list])
             for vcp, value, maxv, _ in values:
-                code = vcp if isinstance(vcp, int) else int.from_bytes(vcp)
-                vcp_code = f'{code:02X}'
+                vcp_code = f'{vcp:02X}'
                 vcp_type = self.get_type(vdu_number, vcp_code)
                 results_dict[vcp_code] = VcpValue(value, maxv, vcp_type)
             if None not in results_dict.values():
@@ -1445,7 +1444,7 @@ class DdcUtil:
         return list(results_dict.values())
 
 
-class DdcutilInterfaceExe:
+class DdcutilExeImpl:
 
     _VCP_CODE_REGEXP = re.compile(r"^VCP ([0-9A-F]{2}) ")  # VCP 2-digit-hex
     _C_PATTERN = re.compile(r'([0-9]+) ([0-9]+)')  # Match Continuous-Type getvcp result
@@ -1594,13 +1593,13 @@ class DdcutilInterfaceExe:
         new_value = f"x{new_value_int:X}"
         self.__run__('setvcp', vcp_code, new_value, edid_txt=edid_txt)
 
-    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[(int, int, int, str)]:
+    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[Tuple[int, int, int, str]]:
         if self.ddcutil_version > (1, 3, 0):
             return self._get_vcp_values_implementation(edid_txt, vcp_code_int_list)
         else:
             return [self._get_vcp_values_implementation(edid_txt, [cd])[0] for cd in vcp_code_int_list]
 
-    def _get_vcp_values_implementation(self, edid_txt: str, vcp_code_list: List[int]) -> List[Tuple[str, int, int, str]]:
+    def _get_vcp_values_implementation(self, edid_txt: str, vcp_code_list: List[int]) -> List[Tuple[int, int, int, str]]:
         # Try a few times in case there is a glitch due to a monitor being turned-off/on or slow to respond
         args = ['--brief', 'getvcp'] + [f"{c:02X}" for c in vcp_code_list]
         results_dict: Dict[int, VcpValue | None] = {vcp_code: None for vcp_code in vcp_code_list}  # Force vcp_code_list ordering
@@ -1609,7 +1608,7 @@ class DdcutilInterfaceExe:
                 from_ddcutil = self.__run__(*args, edid_txt=edid_txt)
                 for line in from_ddcutil.stdout.split(b"\n"):
                     line_utf8 = line.decode('utf-8', errors='surrogateescape') + '\n'
-                    if vcp_code_match := DdcutilInterfaceExe._VCP_CODE_REGEXP.match(line_utf8):
+                    if vcp_code_match := DdcutilExeImpl._VCP_CODE_REGEXP.match(line_utf8):
                         vcp_code = int(vcp_code_match.group(1), 16)
                         results_dict[vcp_code] = self.__parse_vcp_value(vcp_code, line_utf8)
                 for vcp_code, vcp_value in results_dict.items():
@@ -1623,27 +1622,27 @@ class DdcutilInterfaceExe:
             time.sleep(attempt_count * 0.25)
 
     def __parse_vcp_value(self, vcp_code: int, result: str) -> VcpValue | None:
-        if not (specific_vcp_value_pattern := DdcutilInterfaceExe._SPECIFIC_VCP_VALUE_PATTERN_CACHE.get(vcp_code, None)):
+        if not (specific_vcp_value_pattern := DdcutilExeImpl._SPECIFIC_VCP_VALUE_PATTERN_CACHE.get(vcp_code, None)):
             specific_vcp_value_pattern = re.compile(r'VCP ' + f"{vcp_code:02X}" + r' ([A-Z]+) (.+)\n')
-            DdcutilInterfaceExe._SPECIFIC_VCP_VALUE_PATTERN_CACHE[vcp_code] = specific_vcp_value_pattern
+            DdcutilExeImpl._SPECIFIC_VCP_VALUE_PATTERN_CACHE[vcp_code] = specific_vcp_value_pattern
         if value_match := specific_vcp_value_pattern.match(result):
             type_indicator = value_match.group(1)
             self.vcp_type_map[vcp_code] = type_indicator
             if type_indicator == CONTINUOUS_TYPE:
-                if c_match := DdcutilInterfaceExe._C_PATTERN.match(value_match.group(2)):
+                if c_match := DdcutilExeImpl._C_PATTERN.match(value_match.group(2)):
                     return VcpValue(int(c_match.group(1)), int(c_match.group(2)), CONTINUOUS_TYPE)
             elif type_indicator == SIMPLE_NON_CONTINUOUS_TYPE:
-                if snc_match := DdcutilInterfaceExe._SNC_PATTERN.match(value_match.group(2)):
+                if snc_match := DdcutilExeImpl._SNC_PATTERN.match(value_match.group(2)):
                     return VcpValue(int(snc_match.group(1), 16), 0, SIMPLE_NON_CONTINUOUS_TYPE)
             elif type_indicator == COMPLEX_NON_CONTINUOUS_TYPE:
-                if cnc_match := DdcutilInterfaceExe._CNC_PATTERN.match(value_match.group(2)):
+                if cnc_match := DdcutilExeImpl._CNC_PATTERN.match(value_match.group(2)):
                     return VcpValue(int(cnc_match.group(3), 16) << 8 | int(cnc_match.group(4), 16), 0, COMPLEX_NON_CONTINUOUS_TYPE)
             else:
                 raise TypeError(f'Unsupported VCP type {type_indicator} vcp_code {vcp_code}')
         raise ValueError(f"VDU vcp_code {vcp_code} failed to parse vcp value '{result}'")
 
 
-class DdcutilInterfaceQtDBus(QObject):
+class DdcutilQtDBusImpl(QObject):
 
     def __init__(self, common_args: List[str] | None = None):
         super().__init__()
@@ -1755,15 +1754,16 @@ class DdcutilInterfaceQtDBus(QObject):
                                                    QDBusArgument(new_value_int, QMetaType.UShort),
                                                    QDBusArgument(0, QMetaType.UInt)))
 
-    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[Tuple(int, int, int, str)]:
+    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[Tuple[int, int, int, str]]:
         vcp_code_array = QDBusArgument()
         vcp_code_array.beginArray(QMetaType.UChar)
         for vcp_code_int in vcp_code_int_list:
             vcp_code_array.add(QDBusArgument(vcp_code_int, QMetaType.UChar))
         vcp_code_array.endArray()
         with self.service_access_lock:
-            return self._validate(self.ddcutil_proxy.call(
+            raw = self._validate(self.ddcutil_proxy.call(
                 "GetMultipleVcp", -1, edid_txt, vcp_code_array, QDBusArgument(0, QMetaType.UInt)))[0]
+            return [(int.from_bytes(vcp), value, maximum, text_val) for vcp, value, maximum, text_val in raw]
 
     def _validate(self, result: QDBusMessage) -> List:
         if result.errorName():
