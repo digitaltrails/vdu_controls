@@ -6971,7 +6971,7 @@ class LuxAmbientSlider(QWidget):
                         print("change ", name)
                         if self.svg_icon_current_source != svg:
                             self.svg_icon_current_source = svg
-                            self.svg_icon.load(handle_theme(svg))
+                            self.svg_icon.load(handle_theme(self.svg_icon_current_source))
                             self.svg_icon.setToolTip(name)
                 self.current_value = real_value
                 if source != self.lux_slider:
@@ -6983,7 +6983,7 @@ class LuxAmbientSlider(QWidget):
 
     def event(self, event: QEvent) -> bool:
         if event.type() == QEvent.PaletteChange:  # PalletChange happens after the new style sheet is in use.
-            self.set_current_value(self.current_value)
+            self.svg_icon.load(handle_theme(self.svg_icon_current_source))
             for label, svg_bytes in self.label_map.items():
                 icon = create_icon_from_svg_bytes(svg_bytes)
                 label.setPixmap(icon.pixmap(native_font_height(scaled=1), native_font_height(scaled=1)))
