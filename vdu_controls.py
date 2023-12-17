@@ -5793,6 +5793,9 @@ class LuxMeterDevice(QObject):
     def stop_metering(self) -> None:
         self.worker.stop()
 
+    def requires_smoothing(self):
+        return True
+
 
 class LuxMeterFifoDevice(LuxMeterDevice):
 
@@ -5918,6 +5921,9 @@ class LuxMeterManualDevice(LuxMeterDevice):
     def stop_metering(self) -> None:
         pass
 
+    def requires_smoothing(self):
+        return False
+
 
 class LuxSmooth:
     def __init__(self, n: int, alpha: float = 0.5) -> None:
@@ -5975,7 +5981,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         self._lux_dialog_message_qtsignal.emit(message, timeout, destination)
 
     def adjust_for_lux(self) -> None:
-        self.doze(10)  # Give any previous thread a chance to exit, plus let the GUI and presets settle down
+        self.doze(2)  # Give any previous thread a chance to exit, plus let the GUI and presets settle down
         log_info(f"LuxAutoWorker monitoring commences {thread_pid()=}")
         try:
             lux_auto_controller = self.main_controller.lux_auto_controller
@@ -6002,7 +6008,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             if (0 < second < self.sleep_seconds) and second % self.sampling_interval_seconds == 0:
                 metered_lux = lux_meter.get_value()  # Update the smoothing while sleeping
                 if metered_lux:
-                    smoothed_lux = self.smoother.smooth(metered_lux)
+                    smoothed_lux = self.smoother.smooth(metered_lux) if lux_meter.requires_smoothing() else metered_lux
                     self.status_message(f"{SUN_SYMBOL} {self.lux_summary(metered_lux, smoothed_lux)}", timeout=3000)
             self.status_message(f"{TIMER_RUNNING_SYMBOL} {second // 60:02d}:{second % 60:02d}", 0, MsgDestination.COUNTDOWN)
             self.doze(1)
@@ -6014,7 +6020,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         while change_count != last_change_count:  # while brightness changing
             last_change_count = change_count
             if metered_lux := lux_meter.get_value():
-                smoothed_lux = self.smoother.smooth(metered_lux)
+                smoothed_lux = self.smoother.smooth(metered_lux) if lux_meter.requires_smoothing() else metered_lux
                 lux_summary_text = self.lux_summary(metered_lux, smoothed_lux)
                 if start_of_cycle:
                     self.status_message(f"{SUN_SYMBOL} {lux_summary_text} {PROCESSING_LUX_SYMBOL}", timeout=3000)
