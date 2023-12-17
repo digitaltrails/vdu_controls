@@ -5793,8 +5793,8 @@ class LuxMeterDevice(QObject):
     def stop_metering(self) -> None:
         self.worker.stop()
 
-    def requires_smoothing(self):
-        return True
+    def requires_exact_reponse(self):
+        return False
 
 
 class LuxMeterFifoDevice(LuxMeterDevice):
@@ -5921,8 +5921,8 @@ class LuxMeterManualDevice(LuxMeterDevice):
     def stop_metering(self) -> None:
         pass
 
-    def requires_smoothing(self):
-        return False
+    def requires_exact_reponse(self):
+        return True
 
 
 class LuxSmooth:
@@ -5951,7 +5951,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
     _lux_dialog_message_qtsignal = pyqtSignal(str, int, MsgDestination)
 
     def __init__(self, auto_controller: LuxAutoController) -> None:
-        super().__init__(task_body=self.adjust_for_lux, task_finished=self.finished_callable)  # type: ignore
+        super().__init__(task_body=self.adjust_for_lux, task_finished=self.finished_callable)
         self.main_controller = auto_controller.main_controller
         self.consecutive_errors_map: Dict[str, int] = {}
         self.expected_brightness_map: Dict[str, int] = {}
@@ -5967,7 +5967,10 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                                   alpha=lux_config.getfloat('lux-meter', 'smoother-alpha', fallback=0.5))
         log_info(f"LuxAutoWorker: lux-meter.smoother-n={self.smoother.length} lux-meter.smoother-alpha={self.smoother.alpha}")
         self.interpolation_enabled = lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True)
-        self.sensitivity_percent = lux_config.getint('lux-meter', 'interpolation-sensitivity-percent', fallback=10)
+        if self.main_controller.lux_auto_controller.lux_meter.requires_exact_reponse():
+            self.sensitivity_percent = 0
+        else:
+            self.sensitivity_percent = lux_config.getint('lux-meter', 'interpolation-sensitivity-percent', fallback=10)
         log_info(f"LuxAutoWorker: lux-meter.interpolation-sensitivity-percent={self.sensitivity_percent}")
         self.convergence_divisor = lux_config.getint('lux-meter', 'convergence-divisor', fallback=2)
         log_info(f"LuxAutoWorker: lux-meter.convergence-divisor={self.convergence_divisor}")
@@ -6008,7 +6011,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             if (0 < second < self.sleep_seconds) and second % self.sampling_interval_seconds == 0:
                 metered_lux = lux_meter.get_value()  # Update the smoothing while sleeping
                 if metered_lux:
-                    smoothed_lux = self.smoother.smooth(metered_lux) if lux_meter.requires_smoothing() else metered_lux
+                    smoothed_lux = metered_lux if lux_meter.requires_exact_reponse() else self.smoother.smooth(metered_lux)
                     self.status_message(f"{SUN_SYMBOL} {self.lux_summary(metered_lux, smoothed_lux)}", timeout=3000)
             self.status_message(f"{TIMER_RUNNING_SYMBOL} {second // 60:02d}:{second % 60:02d}", 0, MsgDestination.COUNTDOWN)
             self.doze(1)
@@ -6020,7 +6023,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         while change_count != last_change_count:  # while brightness changing
             last_change_count = change_count
             if metered_lux := lux_meter.get_value():
-                smoothed_lux = self.smoother.smooth(metered_lux) if lux_meter.requires_smoothing() else metered_lux
+                smoothed_lux = metered_lux if lux_meter.requires_exact_reponse() else self.smoother.smooth(metered_lux)
                 lux_summary_text = self.lux_summary(metered_lux, smoothed_lux)
                 if start_of_cycle:
                     self.status_message(f"{SUN_SYMBOL} {lux_summary_text} {PROCESSING_LUX_SYMBOL}", timeout=3000)
@@ -6719,6 +6722,7 @@ class LuxAutoController:
     def adjust_brightness_now(self) -> None:
         if self.lux_auto_brightness_worker is not None:
             self.lux_auto_brightness_worker.adjust_now_requested = True
+
 
 LUX_SUNLIGHT_SVG = b"""<?xml version="1.0" encoding="utf-8"?>
 <!-- Generator: Adobe Illustrator 22.0.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
