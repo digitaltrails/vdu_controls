@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright 2023 Michael Hamilton License Creative Commons - Attribution CC BY -->
+<svg width="24px" height="24px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
+    <g class="ColorScheme-Text" stroke="currentColor" stroke-linecap="round" stroke-width="1.25">
+        <path d="M6.5,11 a1,1 0 0,1 7,0 " /> <!-- Big top -->
+        <path d="M6.5,11 a1,1 0 0,0 0,6.5 " /> <!--  Big left -->
+        <path d="M14,11 a1,1 0 0,1 0,6.5 " /> <!-- Big right -->
+        <path d="M12.5,8.5 a1,1 0 0,1 5,-.5 " /> <!-- Small top -->
+        <path d="M17.5,8.5 a1,1 0 0,1 0,5.5 " stroke-linecap="square"/> <!-- Small right -->
+        <path d="M7,17.5 l6.5,0" stroke-linecap="square"/> <!-- Big bottom -->
+    </g>
+</svg>

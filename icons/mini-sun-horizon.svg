@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright 2023 Michael Hamilton License Creative Commons - Attribution CC BY -->
+<svg width="24px" height="24px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
+    <g class="ColorScheme-Text" stroke="currentColor" stroke-linecap="round" stroke-width="1.25">
+        <path d="M8.25,15 A3.75,3.25 0 0,1 15.75,15 " stroke-linecap="square"/>
+        <line x1="12" y1="7.5" x2="12" y2="9.5"/>
+        <line x1="6" y1="10" x2="7.41" y2="11.41"/>
+        <line x1="18" y1="10" x2="16.59" y2="11.41"/>
+        <line x1="5" y1="17." x2="19" y2="17"/>
+    </g>
+</svg>

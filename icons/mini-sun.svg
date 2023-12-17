@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright 2023 Michael Hamilton License Creative Commons - Attribution CC BY -->
+<svg width="24px" height="24px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
+    <g class="ColorScheme-Text" stroke="currentColor" stroke-linecap="round" stroke-width="1.25">
+        <circle cx="12" cy="12" r="4" />
+        <line x1="3.5" y1="12" x2="5.5" y2="12" />
+        <line x1="18.5" y1="12" x2="20.5" y2="12"/>
+        <line x1="12" y1="3.5" x2="12" y2="5.5"/>
+        <line x1="12" y1="18.5" x2="12" y2="20.5"/>
+        <line x1="6" y1="6" x2="7.41" y2="7.41"/>
+        <line x1="16.59" y1="16.59" x2="18.01" y2="18.01"/>
+        <line x1="18" y1="6" x2="16.59" y2="7.41"/>
+        <line x1="7.41" y1="16.59" x2="6" y2="18.01"/>
+    </g>
+</svg>
