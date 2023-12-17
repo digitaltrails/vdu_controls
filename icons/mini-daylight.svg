@@ -6,8 +6,12 @@
         <path d="M6.5,11 a1,1 0 0,1 7,0 " /> <!-- Big top -->
         <path d="M6.5,11 a1,1 0 0,0 0,6.5 " /> <!--  Big left -->
         <path d="M14,11 a1,1 0 0,1 0,6.5 " /> <!-- Big right -->
-        <path d="M12.5,8.5 a1,1 0 0,1 5,-.5 " /> <!-- Small top -->
-        <path d="M17.5,8.5 a1,1 0 0,1 0,5.5 " stroke-linecap="square"/> <!-- Small right -->
         <path d="M7,17.5 l6.5,0" stroke-linecap="square"/> <!-- Big bottom -->
+        <path d="M12.5,8 a1,1 0 0,1 5,4 "/> <!-- Sun arc -->
+        <path d="M15,10 m 0,-6 l 0,1.25"/> <!-- ray -->
+        <path d="M15,10 m 3.5,-3.5 l 1,-1"/> <!-- ray -->
+        <path d="M15,10 m -3.5,-3.5 l -1,-1"/> <!-- ray -->
+        <path d="M15,10 m 3.5,3.5 l 1,1"/> <!-- ray -->
+        <path d="M15,10 m 5,0 l 1.25,0"/> <!-- ray -->
     </g>
 </svg>
