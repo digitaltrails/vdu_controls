@@ -7888,7 +7888,7 @@ class VduAppWindow(QMainWindow):
             self.app_context_menu.indicate_preset_active(preset)
             PresetsDialog.instance_indicate_active_preset(preset)
             title = f"{preset.get_title_name()} {PRESET_APP_SEPARATOR_SYMBOL} {title}"
-            preset_icon = preset.create_icon(monochrome=self.main_config.is_set(ConfOption.MONOCHROME_TRAY_ENABLED))
+            preset_icon = preset.create_icon(themed=False, monochrome=self.main_config.is_set(ConfOption.MONOCHROME_TRAY_ENABLED))
             led1_color = PRESET_TRANSITIONING_LED_COLOR if isinstance(preset, PresetTransitionDummy) else None
         if self.main_controller.lux_auto_controller is not None:
             lux_auto_enabled = self.main_controller.lux_auto_controller.is_auto_enabled()
