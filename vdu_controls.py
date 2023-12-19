@@ -1613,7 +1613,7 @@ class DdcutilExeImpl:
                         results_dict[vcp_code] = self.__parse_vcp_value(vcp_code, line_utf8)
                 for vcp_code, vcp_value in results_dict.items():
                     if vcp_value is None:
-                        raise ValueError(f"getvcp: {self._get_vdu_human_name(edid_txt)}" 
+                        raise ValueError(f"getvcp: {self._get_vdu_human_name(edid_txt)}"
                                          f" - failed to obtain value for vcp_code {vcp_code}")
                 return [(vcp_code, v.current, v.max, v.vcp_type) for vcp_code, v in results_dict.items()]
             except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound):
@@ -1718,7 +1718,7 @@ class DdcutilQtDBusImpl(QObject):
 
     def get_interface_version_string(self) -> str:
         return self._validate(self.ddcutil_props_proxy.call("Get", self.dbus_interface_name,
-                                             "ServiceInterfaceVersion"))[0] + " (QtDBus client)"
+                                                            "ServiceInterfaceVersion"))[0] + " (QtDBus client)"
 
     def get_status_values(self) -> Dict[int, str]:
         return self._validate(self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "StatusValues"))[0]
@@ -1734,7 +1734,7 @@ class DdcutilQtDBusImpl(QObject):
             return vdu_list
 
     def get_capabilities(self, edid_txt: str) -> Tuple[
-            str, int, int, Dict[bytes, str], Dict[bytes, Tuple[str, str, Dict[bytes, str]]], str]:
+        str, int, int, Dict[bytes, str], Dict[bytes, Tuple[str, str, Dict[bytes, str]]], str]:
         with self.service_access_lock:
             model, mccs_major, mccs_minor, commands, capabilities = \
                 self._validate(self.ddcutil_proxy.call(
@@ -1989,7 +1989,7 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
     SYSLOG_ENABLED = conf_opt_def(cname=QT_TR_NOOP('syslog-enabled'), default="no",
                                   tip=QT_TR_NOOP('divert diagnostic output to the syslog'))
     DBUS_CLIENT_ENABLED = conf_opt_def(cname=QT_TR_NOOP('dbus-client-enabled'), default="no",
-                                  tip=QT_TR_NOOP('use the ddcutil-dbus-server instead of the ddcutil command (experimental)'))
+                                       tip=QT_TR_NOOP('use the ddcutil-dbus-server instead of the ddcutil command (experimental)'))
     DBUS_LISTENER_ENABLED = conf_opt_def(cname=QT_TR_NOOP('dbus-listener'), default="no",
                                          tip=QT_TR_NOOP('listen for D-Bus VDU connection/disconnection signals'),
                                          requires='dbus-client-enabled')
@@ -3019,7 +3019,7 @@ class VduControlSlider(VduControlBase):
             self.slider.setRange(0, int_max)
         super().update_from_vdu(vcp_value)
 
-    def get_current_text_value(self) -> str|None:
+    def get_current_text_value(self) -> str | None:
         return str(self.current_value) if self.current_value else None
 
     def refresh_ui_view_implementation(self) -> None:
@@ -3252,7 +3252,7 @@ class Preset:
                 if self.timer and self.timer.remainingTime() > 0:
                     template = tr("{} later today at {}") + weather_suffix
                 elif self.elevation_time_today < zoned_now():
-                    template = tr("{} earlier today at {}") + weather_suffix + f" ({self.schedule_status.description()})"
+                    template = tr("{} earlier today at {}") + weather_suffix + f" ({tr(self.schedule_status.description())})"
                 else:
                     template = tr("{} suspended for  {}")
                 result = template.format(basic_desc, self.elevation_time_today.strftime("%H:%M"))
@@ -5763,7 +5763,6 @@ def lux_create_device(device_name: str) -> LuxMeterDevice:
 
 
 class LuxMeterDevice(QObject):
-
     new_lux_value_signal = pyqtSignal(int)
 
     def __init__(self, requires_worker: bool = True) -> None:  # use a thread to prevent any blocking due to slow updating
@@ -5894,7 +5893,6 @@ class LuxMeterSerialDevice(LuxMeterDevice):
 
 
 class LuxMeterManualDevice(LuxMeterDevice):
-
     device_name = 'Slider-Control'
 
     def __init__(self) -> None:
@@ -6213,6 +6211,11 @@ class LuxPoint:
     def __str__(self):
         return f"({self.lux} lux, {self.brightness}%, preset={self.preset_name})"
 
+class LuxDeviceType(namedtuple('LuxDevice', 'name description'), Enum):
+    MANUAL_INPUT = "manual-input", QT_TR_NOOP("Manual Input")
+    ARDUINO = "arduino", QT_TR_NOOP("Arduino tty device")
+    FIFO = "fifo", QT_TR_NOOP("Linux FIFO")
+    EXECUTABLE = "executable", QT_TR_NOOP("Script/program")
 
 class LuxConfig(ConfIni):
 
@@ -6300,12 +6303,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.current_brightness_map: Dict[VduStableId, int] = {}
         self.has_profile_changes = False
         self.setMinimumWidth(950)
-
-        self.device_descriptions = (tr("Not available"), tr("Arduino tty input"), tr("Linux FIFO"),
-                                    tr("Runnable script/program"), tr("Manual Input"))
-
         self.path = ConfIni.get_path('AutoLux')
-
         self.device_name = ''
         self.lux_config = main_controller.get_lux_auto_controller().get_lux_config()
 
@@ -6319,10 +6317,18 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
 
         self.lux_display_widget = LuxDisplayWidget(parent=self)
         self.lux_display_widget.display_lux(0)
-        grid_layout.addWidget(self.lux_display_widget, 0, 0, 4, 3, alignment=Qt.AlignLeft | Qt.AlignTop)
+        grid_layout.addWidget(self.lux_display_widget, 0, 0, 4, 2, alignment=Qt.AlignLeft | Qt.AlignTop)
 
-        self.meter_device_selector = PushButtonLeftJustified()
-        self.meter_device_selector.setText(tr("No metering source selected"))
+        existing_device = self.lux_config.get_device_name()
+        existing_device_type = self.lux_config.get('lux-meter', 'lux-device-type', fallback='')
+        self.meter_device_selector = QComboBox()
+        for i, dev in enumerate(LuxDeviceType):
+            if dev.name == existing_device_type:
+                self.meter_device_selector.addItem(f"{tr(dev.description)}: {existing_device}", dev)
+                self.meter_device_selector.setCurrentIndex(i)
+            else:
+                self.meter_device_selector.addItem(tr(dev.description), dev)
+
         grid_layout.addWidget(self.meter_device_selector, 0, 2, 1, 3)
 
         self.enabled_checkbox = QCheckBox(tr("Enable automatic brightness adjustment"))
@@ -6381,27 +6387,36 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.adjust_now_button.hide()
         self.status_layout.addWidget(self.status_bar)
 
-        def choose_device() -> None:
-            existing_device = self.lux_config.get('lux-meter', "lux-device", fallback=None)
-            item, ok = QInputDialog.getItem(self, tr("Choose Lux Meter"), tr("Lux Meter Type"), self.device_descriptions[1:])
-            if ok and item:
-                type_num = self.device_descriptions.index(item)
-                if 1 <= type_num <= 3:
-                    device_name = FasterFileDialog.getOpenFileName(self, tr("Select: {}").format(item))[0]
-                    device_name, type_num = self.validate_device(device_name, required_type_num=type_num)
-                else:
-                    device_name = LuxMeterManualDevice.device_name
-                if device_name != '':
-                    if device_name != self.lux_config.get('lux-meter', 'lux-device', fallback=''):
-                        self.meter_device_selector.setText(self.device_descriptions[type_num] + ': ' + device_name)
-                        self.lux_config.set('lux-meter', "lux-device", device_name)
-                        if existing_device != device_name and LuxMeterManualDevice.device_name in (existing_device, device_name):
-                            self.apply_settings(requires_app_restart=True)
-                        else:
-                            self.apply_settings(requires_auto_brightness_restart=True)
-                        self.status_message(tr("Meter changed to {}.").format(device_name))
+        def choose_device(index: int) -> None:
+            existing_device = self.lux_config.get('lux-meter', "lux-device", fallback='')
+            while True:
+                lux_device_type = self.meter_device_selector.itemData(index)
+                if lux_device_type == LuxDeviceType.MANUAL_INPUT:
+                    device_path = LuxMeterManualDevice.device_name
+                    break
+                elif lux_device_type in (LuxDeviceType.ARDUINO, LuxDeviceType.FIFO, LuxDeviceType.EXECUTABLE):
+                    device_path = FasterFileDialog.getOpenFileName(
+                        self,  tr("Select: {}").format(tr(lux_device_type.description)), existing_device)[0]
+                    if device_path == '' or self.validate_device(device_path, required_type=lux_device_type):
+                        break
+            if device_path == '':
+                for i in range(self.meter_device_selector.count()):
+                    existing_device_type = self.lux_config.get('lux-meter', 'lux-device-type', fallback='')
+                    if self.meter_device_selector.itemData(i).name == existing_device_type:
+                        self.meter_device_selector.setCurrentIndex(i)
+            else:
+                if device_path != existing_device:
+                    self.meter_device_selector.setItemText(index, tr(lux_device_type.description) + ': ' + device_path)
+                    self.lux_config.set('lux-meter', "lux-device", device_path)
+                    self.lux_config.set('lux-meter', "lux-device-type", self.meter_device_selector.itemData(index).name)
+                    self.lux_config.save(self.path)
+                    if existing_device != device_path and LuxMeterManualDevice.device_name in (existing_device, device_path):
+                        self.apply_settings(requires_app_restart=True)
+                    else:
+                        self.apply_settings(requires_auto_brightness_restart=True)
+                    self.status_message(tr("Meter changed to {}.").format(device_path))
 
-        self.meter_device_selector.pressed.connect(choose_device)
+        self.meter_device_selector.activated.connect(choose_device)
 
         def set_auto_monitoring(checked: int) -> None:
             if (checked == Qt.Checked) != self.lux_config.is_auto_enabled():
@@ -6481,8 +6496,6 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
             if preset_point.preset_name is not None and self.main_controller.find_preset_by_name(preset_point.preset_name):
                 self.preset_points.append(preset_point)
 
-        _, type_num = self.validate_device(self.device_name)
-        self.meter_device_selector.setText(self.device_descriptions[type_num] + ': ' + self.device_name)
         self.interval_selector.setValue(self.lux_config.get_interval_minutes())
 
         existing_id_list = [self.profile_selector.itemData(index) for index in range(0, self.profile_selector.count())]
@@ -6516,35 +6529,26 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
     def is_interpolating(self) -> bool:
         return self.interpolate_checkbox.isChecked()
 
-    def validate_device(self, device, required_type_num: int | None = None) -> (str, int):
-        if device is None or device.strip() == '':
-            return '', 0
+    def validate_device(self, device, required_type: LuxDeviceType) -> bool:
+        if required_type == LuxDeviceType.MANUAL_INPUT:
+            return True
         path = pathlib.Path(device)
-        if path.is_char_device():
-            type_num = 1
-        elif path.is_fifo():
-            type_num = 2
-        elif path.exists() and os.access(device, os.X_OK):
-            type_num = 3
-        elif device == LuxMeterManualDevice.device_name:
-            type_num = 4
+        if ((required_type == LuxDeviceType.ARDUINO and path.is_char_device()) or
+            (required_type == LuxDeviceType.FIFO and path.is_fifo()) or
+            (required_type == LuxDeviceType.EXECUTABLE and path.exists() and os.access(device, os.X_OK))):
+            if not os.access(device, os.R_OK):
+                alert = MessageBox(QMessageBox.Critical)
+                alert.setText(tr("No read access to {}").format(device))
+                if path.is_char_device() and path.group() != "root":
+                    alert.setInformativeText(tr("You might need to be a member of the {} group.").format(path.group()))
+                alert.exec()
+                return False
         else:
-            type_num = 0
-        if required_type_num is not None and required_type_num != type_num:
             alert = MessageBox(QMessageBox.Critical)
-            alert.setText(tr("Expecting {}, but {} was selected.").format(self.device_descriptions[required_type_num], device))
-            if path.is_char_device() and path.group() != "root":
-                alert.setInformativeText(tr("You might need to be a member of the {} group.").format(path.group()))
+            alert.setText(tr("Expecting {}, but {} was selected.").format(tr(required_type.description), device))
             alert.exec()
-            return '', 0
-        if type_num in (1, 2, 3) and not os.access(device, os.R_OK):
-            alert = MessageBox(QMessageBox.Critical)
-            alert.setText(tr("No read access to {}").format(device))
-            if path.is_char_device() and path.group() != "root":
-                alert.setInformativeText(tr("You might need to be a member of the {} group.").format(path.group()))
-            alert.exec()
-            return '', 0
-        return device, type_num
+            return False
+        return True
 
     def apply_settings(self, requires_auto_brightness_restart: bool = True, requires_app_restart: bool = False) -> None:
         self.lux_config.save(self.path)
@@ -6633,15 +6637,11 @@ class LuxAutoController:
 
     def create_tool_button(self) -> ToolButton:  # Used when the application UI has to reinitialize
         # Used when the application UI has to reinitialize
-        # if self.lux_config.get("lux-meter", "lux-device", fallback=None) == 'Slider-Control':
-        #     return None
         self.lux_tool_button = ToolButton(AUTO_LUX_ON_SVG, tr("Toggle light metered brightness adjustment"))
         return self.lux_tool_button
 
     def create_lighting_check_button(self) -> ToolButton:
         # Used when the application UI has to reinitialize
-        # if self.lux_config.get("lux-meter", "lux-device", fallback=None) == 'Slider-Control':
-        #    return None
         self.lux_lighting_check_button = ToolButton(LIGHTING_CHECK_SVG, tr("Perform lighting check now"))
         return self.lux_lighting_check_button
 
@@ -6708,13 +6708,13 @@ class LuxAutoController:
         return self.lux_config
 
     def toggle_auto(self) -> None:
-        enabled = self.is_auto_enabled()
+        change_to_manual = self.is_auto_enabled()
         assert self.lux_config is not None
-        message = tr("Disabling light metered adjustments.") if enabled else tr("Enabling light metered adjustments.")
+        message = tr("Disabling light metered adjustments.") if change_to_manual else tr("Enabling light metered adjustments.")
         self.main_controller.status_message(message, timeout=5000)
         LuxDialog.lux_dialog_message(message, timeout=5000)
-        self.lux_config.set('lux-meter', 'automatic-brightness', 'no' if enabled else 'yes')
-        self.lux_lighting_check_button.setEnabled(not enabled)
+        self.lux_config.set('lux-meter', 'automatic-brightness', 'no' if change_to_manual else 'yes')
+        self.lux_lighting_check_button.setEnabled(not change_to_manual)
         self.lux_config.save(ConfIni.get_path('AutoLux'))
         self.initialize_from_config()
         LuxDialog.reconfigure_instance()
@@ -6780,7 +6780,6 @@ LUX_ROOM_SVG = b"""<?xml version="1.0" encoding="utf-8"?>
     </g>
 </svg>"""
 
-
 LUX_NIGHT_SVG = b"""<?xml version="1.0" encoding="utf-8"?>
 <!-- Copyright 2023 Michael Hamilton License Creative Commons - Attribution CC BY -->
 <svg width="24px" height="24px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -6800,7 +6799,6 @@ LUX_NIGHT_SVG = b"""<?xml version="1.0" encoding="utf-8"?>
 
 
 class LuxAmbientSlider(QWidget):
-
     new_lux_value_signal = pyqtSignal(int)
 
     def __init__(self) -> None:
@@ -6900,23 +6898,23 @@ class LuxAmbientSlider(QWidget):
 
         self.set_current_value(round(LuxMeterManualDevice.get_stored_value()))  # trigger side-effects.
 
-    def set_current_value(self, real_value: int, source: QWidget | None = None) -> None:
+    def set_current_value(self, value: int, source: QWidget | None = None) -> None:
         if not self.in_flux:
             try:
                 self.in_flux = True
                 for name, data in self.zones.items():
                     lower, upper, svg, span = data
-                    if lower < real_value <= upper:
+                    if lower < value <= upper:
                         print("change ", name)
                         if self.svg_icon_current_source != svg:
                             self.svg_icon_current_source = svg
                             self.svg_icon.load(handle_theme(self.svg_icon_current_source))
                             self.svg_icon.setToolTip(name)
-                self.current_value = real_value
+                self.current_value = value
                 if source != self.lux_slider:
-                    self.lux_slider.setValue(round(math.log10(real_value) * 1000))
+                    self.lux_slider.setValue(round(math.log10(value) * 1000))
                 if source != self.lux_input_field:
-                    self.lux_input_field.setValue(real_value)
+                    self.lux_input_field.setValue(value)
             finally:
                 self.in_flux = False
 
