@@ -6933,7 +6933,6 @@ class LuxAmbientSlider(QWidget):
                 for name, data in self.zones.items():
                     lower, upper, svg, span = data
                     if lower < value <= upper:
-                        print("change ", name)
                         if self.svg_icon_current_source != svg:
                             self.svg_icon_current_source = svg
                             self.svg_icon.load(handle_theme(self.svg_icon_current_source))
