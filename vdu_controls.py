@@ -5920,6 +5920,7 @@ class LuxMeterManualDevice(LuxMeterDevice):
                 return float(persisted_path.read_text())
             except ValueError:
                 persisted_path.unlink()
+        return 1000
 
     @staticmethod
     def save_stored_value(new_value: float):
