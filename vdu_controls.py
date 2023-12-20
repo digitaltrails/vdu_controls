@@ -2312,18 +2312,22 @@ class VduController(QObject):
                 self.capabilities_text = config.get_capabilities_alt_text()
                 self.config = config
                 break
-        if self.capabilities_text is None:
+        print(f"{self.capabilities_text=}")
+        if not self.capabilities_text:
             if option == VduController.IGNORE_VDU:
-                self.capabilities_text = ''
+                self.capabilities_text = 'Ignore VDU'
+                log_info(f"Capabilities override set to ignore VDU {vdu_number=} {vdu_model_name=} {self.vdu_stable_id=}")
             elif option == VduController.ASSUME_STANDARD_CONTROLS:
                 enabled_vcp_codes = ASSUMED_CONTROLS_CONFIG_VCP_CODES
                 self.capabilities_text = ASSUMED_CONTROLS_CONFIG_TEXT
             else:
                 self.capabilities_text = ddcutil.query_capabilities(vdu_number)
+        #print(f"{self.capabilities_text}")
         self.capabilities_supported_by_this_vdu = self._parse_capabilities(self.capabilities_text)
+        #print(f"{self.capabilities_supported_by_this_vdu=}")
         # Find those capabilities supported by this VDU AND enabled in the GUI:
         self.enabled_capabilities = [c for c in self.capabilities_supported_by_this_vdu.values() if c.vcp_code in enabled_vcp_codes]
-
+        #print(f"{self.enabled_capabilities=}")
         if self.config is None:
             # In memory only config - in case it's needed by a future config editor
             self.config = VduControlsConfig(self.vdu_stable_id,
@@ -2391,6 +2395,9 @@ class VduController(QObject):
 
     def _parse_capabilities(self, capabilities_text=None) -> Dict[str, VcpCapability]:
         """Return a map of vpc capabilities keyed by vcp code."""
+
+        if capabilities_text == "Ignore VDU":
+            return {}
 
         def parse_values(values_str: str) -> List[str]:
             values_list = []
