@@ -2332,6 +2332,8 @@ class VduController(QObject):
         self.config.restrict_to_actual_capabilities(
             self.capabilities_supported_by_this_vdu)  # TODO Might be possible to make this redundant now.
 
+        # print(self._parse_capabilities(""""""))  # TODO remove debug test 2023/12/20
+
     def write_template_config_files(self) -> None:
         """Write template config files to $HOME/.config/vdu_controls/"""
         for config_name in (self.vdu_stable_id, self.vdu_model_id):
@@ -6219,7 +6221,7 @@ class LuxPoint:
         return f"({self.lux} lux, {self.brightness}%, preset={self.preset_name})"
 
 class LuxDeviceType(namedtuple('LuxDevice', 'name description'), Enum):
-    MANUAL_INPUT = "manual-input", QT_TR_NOOP("Manual Input")
+    MANUAL_INPUT = "None", QT_TR_NOOP("No meter - manual input only")
     ARDUINO = "arduino", QT_TR_NOOP("Arduino tty device")
     FIFO = "fifo", QT_TR_NOOP("Linux FIFO")
     EXECUTABLE = "executable", QT_TR_NOOP("Script/program")
@@ -6572,25 +6574,17 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
 
     def configure_ui(self, meter_device: LuxMeterDevice | None) -> None:
         manual_metering_enabled = self.meter_device_selector.currentData().name == LuxDeviceType.MANUAL_INPUT.name
-        if meter_device is not None:
-            self.lux_display_widget.connect_meter(meter_device)
-            self.enabled_checkbox.setEnabled(True)
-            if self.lux_config.is_auto_enabled() and not manual_metering_enabled:
-                self.adjust_now_button.show()
-            else:
-                self.adjust_now_button.hide()
-        else:
+        if manual_metering_enabled or meter_device is None:
             self.enabled_checkbox.setChecked(False)
             self.enabled_checkbox.setEnabled(False)
-            self.adjust_now_button.hide()
-        if meter_device is None:
-            self.status_message(tr("No metering device set."))  # Remind user why metering and auto is not working
+            self.interval_label.setEnabled(False)
+            self.status_message(tr("No metering device set."))
         else:
-            self.enabled_checkbox.setDisabled(manual_metering_enabled)
-            self.interval_selector.setDisabled(manual_metering_enabled)
-            self.interval_label.setDisabled(manual_metering_enabled)
-            if not self.lux_config.is_auto_enabled():
-                self.status_message(tr("Brightness automatic adjustment is disabled."))  # Remind user why auto is not working
+            self.enabled_checkbox.setEnabled(True)
+            self.interval_label.setEnabled(True)
+
+        if meter_device is not None:
+            self.lux_display_widget.connect_meter(meter_device)
 
     def save_profiles(self) -> None:
         for vdu_sid, profile in self.profile_plot.profiles_map.items():
@@ -6654,10 +6648,11 @@ class LuxAutoController:
         return self.lux_lighting_check_button
 
     def update_manual_meter(self, value: int):
-        if not self.is_auto_enabled():
-            print(f"vc {value=}")
-            self.lux_meter.set_current_value(value)
-            self.adjust_brightness_now()
+        if self.is_auto_enabled():
+            self.set_auto(False)
+        print(f"vc {value=}")
+        self.lux_meter.set_current_value(value)
+        self.adjust_brightness_now()
 
     def update_manual_slider(self, value: int):
         if self.is_auto_enabled() and not isinstance(self.lux_meter, LuxMeterManualDevice):
@@ -6729,8 +6724,16 @@ class LuxAutoController:
         return self.lux_config
 
     def toggle_auto(self) -> None:
-        change_to_manual = self.is_auto_enabled()
+        self.set_auto(not self.is_auto_enabled())
+
+    def set_auto(self, enable: bool):
         assert self.lux_config is not None
+        if enable and self.lux_config.get("lux-meter", "lux-device-type") == LuxDeviceType.MANUAL_INPUT.name:
+            message = tr("Cannot enable auto, no metering device set.")
+            self.main_controller.status_message(message, timeout=5000)
+            LuxDialog.lux_dialog_message(message, timeout=5000)
+            return
+        change_to_manual = not enable
         message = tr("Manual input of Ambient Light Level (lux).") if change_to_manual else tr("Hardware light metering enabled.")
         self.main_controller.status_message(message, timeout=5000)
         LuxDialog.lux_dialog_message(message, timeout=5000)
@@ -6924,6 +6927,8 @@ class LuxAmbientSlider(QWidget):
     def set_current_value(self, value: int, source: QWidget | None = None) -> None:
         if not self.in_flux:
             try:
+                if source == None:
+                    self.blockSignals(True)
                 self.in_flux = True
                 for name, data in self.zones.items():
                     lower, upper, svg, span = data
@@ -6940,6 +6945,8 @@ class LuxAmbientSlider(QWidget):
                     self.lux_input_field.setValue(value)
             finally:
                 self.in_flux = False
+                if source == None:
+                    self.blockSignals(False)
 
     def event(self, event: QEvent) -> bool:
         if event.type() == QEvent.PaletteChange:  # PalletChange happens after the new style sheet is in use.
