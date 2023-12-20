@@ -6736,18 +6736,21 @@ class LuxAutoController:
 
     def set_auto(self, enable: bool):
         assert self.lux_config is not None
-        if enable and self.lux_config.get("lux-meter", "lux-device-type", fallback='') == LuxDeviceType.MANUAL_INPUT.name:
-            message = tr("Cannot enable auto, no metering device set.")
-            self.main_controller.status_message(message, timeout=5000)
-            LuxDialog.lux_dialog_message(message, timeout=5000)
-            return
-        change_to_manual = not enable
-        message = tr("Switching to manual input of ambient lux.") if change_to_manual else tr("Hardware light metering enabled.")
+        if enable:
+            if self.lux_config.get("lux-meter", "lux-device-type",
+                                    fallback=LuxDeviceType.MANUAL_INPUT.name) == LuxDeviceType.MANUAL_INPUT.name:
+                message = tr("Cannot enable auto, no metering device set.")
+                self.main_controller.status_message(message, timeout=5000)
+                LuxDialog.lux_dialog_message(message, timeout=5000)
+                return
+            message = tr("Hardware light metering enabled.")
+            self.lux_config.set('lux-meter', 'automatic-brightness', 'yes')
+        else:
+            message = tr("Switching to manual input of ambient lux.")
+            self.lux_config.set('lux-meter', 'automatic-brightness', 'no')
+        self.lux_config.save(ConfIni.get_path('AutoLux'))
         self.main_controller.status_message(message, timeout=5000)
         LuxDialog.lux_dialog_message(message, timeout=5000)
-        self.lux_config.set('lux-meter', 'automatic-brightness', 'no' if change_to_manual else 'yes')
-        #self.lux_lighting_check_button.setEnabled(not change_to_manual)
-        self.lux_config.save(ConfIni.get_path('AutoLux'))
         self.initialize_from_config()
         LuxDialog.reconfigure_instance()
 
