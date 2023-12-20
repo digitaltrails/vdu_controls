@@ -1308,7 +1308,7 @@ class DdcUtil:
         self.ddcutil_impl.set_vdu_specific_args(self.get_edid_txt(vdu_number), extra_args)
 
     def get_edid_txt(self, vdu_number: str) -> str:
-        return self.edid_txt_map[vdu_number]
+        return self.edid_txt_map.get(vdu_number, vdu_number)  # no edid probably means a simulated VDU
 
     def detect_monitors(self) -> List[Tuple[str, str, str, str]]:
         """Return a list of (vdu_number, desc) tuples."""
