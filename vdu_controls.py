@@ -1430,7 +1430,6 @@ class DdcUtil:
 
 
 class DdcutilExeImpl:
-
     _VCP_CODE_REGEXP = re.compile(r"^VCP ([0-9A-F]{2}) ")  # VCP 2-digit-hex
     _C_PATTERN = re.compile(r'([0-9]+) ([0-9]+)')  # Match Continuous-Type getvcp result
     _SNC_PATTERN = re.compile(r'x([0-9a-f]+)')  # Match Simple Non-Continuous-Type getvcp result
@@ -1447,10 +1446,11 @@ class DdcutilExeImpl:
         self.ddcutil_version_string = "0.0.0"
         self.version_suffix = ''
         self.DetectedAttributes = namedtuple("DetectedAttributes", ('display_number', 'usb_bus', 'usb_device',
-                                             'manufacturer_id', 'model_name', 'serial_number', 'product_code',
-                                             'edid_txt', 'binary_serial_number'))
+                                                                    'manufacturer_id', 'model_name', 'serial_number',
+                                                                    'product_code',
+                                                                    'edid_txt', 'binary_serial_number'))
         self.vdu_map_by_edid: Dict[str, Tuple] = {}
-        
+
     def set_sleep_multiplier(self, edid_txt: str, sleep_multiplier: float):
         self.vdu_sleep_multiplier[edid_txt] = sleep_multiplier
 
@@ -1538,7 +1538,6 @@ class DdcutilExeImpl:
         # Going to get rid of anything that is not a-z A-Z 0-9 as potential rubbish
         rubbish = re.compile('[^a-zA-Z0-9]+')
         # This isn't efficient, it doesn't need to be, so I'm keeping re-defs close to where they are used.
-        key_prospects: Dict[Tuple[str, str], Tuple[str, str]] = {}
         for display_str in re.split("\n\n", result.stdout.decode('utf-8', errors='surrogateescape')):
             if display_match := re.search(r'Display ([0-9]+)', display_str):
                 vdu_number = display_match.group(1)
@@ -2307,12 +2306,12 @@ class VduController(QObject):
                 self.capabilities_text = ASSUMED_CONTROLS_CONFIG_TEXT
             else:
                 self.capabilities_text = ddcutil.query_capabilities(vdu_number)
-        #print(f"{self.capabilities_text}")
+        # print(f"{self.capabilities_text}")
         self.capabilities_supported_by_this_vdu = self._parse_capabilities(self.capabilities_text)
-        #print(f"{self.capabilities_supported_by_this_vdu=}")
+        # print(f"{self.capabilities_supported_by_this_vdu=}")
         # Find those capabilities supported by this VDU AND enabled in the GUI:
         self.enabled_capabilities = [c for c in self.capabilities_supported_by_this_vdu.values() if c.vcp_code in enabled_vcp_codes]
-        #print(f"{self.enabled_capabilities=}")
+        # print(f"{self.enabled_capabilities=}")
         if self.config is None:
             # In memory only config - in case it's needed by a future config editor
             self.config = VduControlsConfig(self.vdu_stable_id,
@@ -3443,12 +3442,11 @@ class ContextMenu(QMenu):
                     changed += 1
         self.update() if changed else None
 
-    def update_lux_auto_icon(self, icon: QIcon, lux_auto_enabled: bool) -> None:
+    def update_lux_auto_icon(self, icon: QIcon) -> None:
         if self.auto_lux_icon != icon:
             self.auto_lux_icon = icon
             self.lux_auto_action.setIcon(icon)
             self.update()
-        #self.lux_check_action.setEnabled(lux_auto_enabled)
 
     def allocate_preset_shortcut(self, word: str) -> Shortcut | None:
         for letter in list(word):
@@ -5997,7 +5995,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                 self.stepping_brightness(lux_auto_controller.lux_config, lux_meter)
                 if self.single_shot:
                     break
-                self.idle_sampling(lux_meter) # Sleep and sample for rest of cycle
+                self.idle_sampling(lux_meter)  # Sleep and sample for rest of cycle
         finally:
             log_info(f"LuxAutoWorker exiting (stop_requested={self.stop_requested}) {thread_pid()=}")
 
@@ -6213,11 +6211,13 @@ class LuxPoint:
     def __str__(self):
         return f"({self.lux} lux, {self.brightness}%, preset={self.preset_name})"
 
+
 class LuxDeviceType(namedtuple('LuxDevice', 'name description'), Enum):
     MANUAL_INPUT = "None", QT_TR_NOOP("No meter - manual input only")
     ARDUINO = "arduino", QT_TR_NOOP("Arduino tty device")
     FIFO = "fifo", QT_TR_NOOP("Linux FIFO")
     EXECUTABLE = "executable", QT_TR_NOOP("Script/program")
+
 
 class LuxConfig(ConfIni):
 
@@ -6398,7 +6398,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                     break
                 elif lux_device_type in (LuxDeviceType.ARDUINO, LuxDeviceType.FIFO, LuxDeviceType.EXECUTABLE):
                     device_path = FasterFileDialog.getOpenFileName(
-                        self,  tr("Select: {}").format(tr(lux_device_type.description)), existing_device)[0]
+                        self, tr("Select: {}").format(tr(lux_device_type.description)), existing_device)[0]
                     if device_path == '' or self.validate_device(device_path, required_type=lux_device_type):
                         break
             if device_path == '':
@@ -6536,8 +6536,8 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
             return True
         path = pathlib.Path(device)
         if ((required_type == LuxDeviceType.ARDUINO and path.is_char_device()) or
-            (required_type == LuxDeviceType.FIFO and path.is_fifo()) or
-            (required_type == LuxDeviceType.EXECUTABLE and path.exists() and os.access(device, os.X_OK))):
+                (required_type == LuxDeviceType.FIFO and path.is_fifo()) or
+                (required_type == LuxDeviceType.EXECUTABLE and path.exists() and os.access(device, os.X_OK))):
             if not os.access(device, os.R_OK):
                 alert = MessageBox(QMessageBox.Critical)
                 alert.setText(tr("No read access to {}").format(device))
@@ -6653,7 +6653,7 @@ class LuxAutoController:
             self.lux_slider.set_current_value(value)
 
     def create_manual_input_control(self) -> LuxAmbientSlider:
-        if self.lux_slider == None:
+        if self.lux_slider is None:
             self.lux_slider = LuxAmbientSlider()
         try:
             self.lux_slider.new_lux_value_signal.connect(self.update_manual_meter, Qt.UniqueConnection)
@@ -6723,12 +6723,12 @@ class LuxAutoController:
         assert self.lux_config is not None
         if enable:
             if self.lux_config.get("lux-meter", "lux-device-type",
-                                    fallback=LuxDeviceType.MANUAL_INPUT.name) == LuxDeviceType.MANUAL_INPUT.name:
+                                   fallback=LuxDeviceType.MANUAL_INPUT.name) == LuxDeviceType.MANUAL_INPUT.name:
                 message = tr("Cannot enable auto, no metering device set.")
                 self.main_controller.status_message(message, timeout=5000)
                 LuxDialog.lux_dialog_message(message, timeout=5000)
                 return
-            message = tr("Hardware light metering enabled.")
+            message = tr("Switching to hardware light metering.")
             self.lux_config.set('lux-meter', 'automatic-brightness', 'yes')
         else:
             message = tr("Switching to manual input of ambient lux.")
@@ -6745,6 +6745,7 @@ class LuxAutoController:
                 self.lux_auto_brightness_worker.adjust_now_requested = True
         else:
             self.start_worker(single_shot=True)
+
 
 LUX_SUNLIGHT_SVG = b"""<?xml version="1.0" encoding="utf-8"?>
 <svg width="24px" height="24px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -6921,7 +6922,7 @@ class LuxAmbientSlider(QWidget):
     def set_current_value(self, value: int, source: QWidget | None = None) -> None:
         if not self.in_flux:
             try:
-                if source == None:
+                if source is None:
                     self.blockSignals(True)
                 self.in_flux = True
                 for name, data in self.zones.items():
@@ -6938,7 +6939,7 @@ class LuxAmbientSlider(QWidget):
                     self.lux_input_field.setValue(value)
             finally:
                 self.in_flux = False
-                if source == None:
+                if source is None:
                     self.blockSignals(False)
 
     def event(self, event: QEvent) -> bool:
@@ -7917,7 +7918,7 @@ class VduAppWindow(QMainWindow):
                 title = f"{tr('Auto')}/{title}"
                 led2_color = AUTO_LUX_LED_COLOR
             menu_icon = create_icon_from_svg_bytes(self.main_controller.lux_auto_controller.current_auto_svg())  # NB cache involved
-            self.app_context_menu.update_lux_auto_icon(menu_icon, lux_auto_enabled)  # Won't actually update if it hasn't changed
+            self.app_context_menu.update_lux_auto_icon(menu_icon)  # Won't actually update if it hasn't changed
         if self.windowTitle() != title:  # Don't change if not needed - prevent flickering.
             self.setWindowTitle(title)
             self.app.setWindowIcon(create_decorated_app_icon(self.app_icon, preset_icon, led1_color, led2_color))
