@@ -24,6 +24,12 @@ A control panel for external monitors (*Visual Display Units*).
 > to libddcutil by @rockowitz.  The intention is to eventually package it 
 > with ddcutil/libddcutil.
 > 
+> Version 2.0 also adds manual ambient-light input.  This allows all connected VDU's
+> to be simultatiniously adjusted by moving one slider.  This is an alternative
+> to fully automatic control via hardware lux-metering.  To access this new option
+> tick **Settings->Lux options enabled**.
+> 
+> 
 > Feedback welcome.
 
 
