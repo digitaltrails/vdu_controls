@@ -3654,7 +3654,7 @@ class VduControlsMainPanel(QWidget):
 
 
 class WorkerThread(QThread):
-    finished_work = pyqtSignal(object)
+    finished_work_qtsignal = pyqtSignal(object)
 
     def __init__(self, task_body: Callable[[], None], task_finished: Callable[[WorkerThread], None] | None = None,
                  loop: bool = False) -> None:
@@ -3667,7 +3667,7 @@ class WorkerThread(QThread):
         self.task_finished = task_finished
         self.loop = loop
         if self.task_finished is not None:
-            self.finished_work.connect(self.task_finished)
+            self.finished_work_qtsignal.connect(self.task_finished)
         self.vdu_exception: VduException | None = None
 
     def run(self) -> None:
@@ -3682,7 +3682,7 @@ class WorkerThread(QThread):
         except VduException as e:
             self.vdu_exception = e
         log_debug(f"WorkerThread: {class_name=} terminating {thread_pid()=}") if log_debug_enabled else None
-        self.finished_work.emit(self)
+        self.finished_work_qtsignal.emit(self)
 
     def stop(self) -> None:
         self.stop_requested = True
@@ -4627,7 +4627,7 @@ class PresetChooseElevationChart(QLabel):
 
 
 class PresetChooseElevationWidget(QWidget):
-    _slider_select_elevation = pyqtSignal(object)
+    _slider_select_elevation_qtsignal = pyqtSignal(object)
 
     def __init__(self, main_config: VduControlsConfig) -> None:
         super().__init__()
@@ -4651,7 +4651,7 @@ class PresetChooseElevationWidget(QWidget):
         self.slider.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.slider.setTickInterval(5)
         self.slider.setTickPosition(QSlider.TicksAbove)
-        self._slider_select_elevation.connect(self.set_elevation_key)
+        self._slider_select_elevation_qtsignal.connect(self.set_elevation_key)
 
         bottom_layout = QHBoxLayout()
         layout.addLayout(bottom_layout)
@@ -4672,10 +4672,10 @@ class PresetChooseElevationWidget(QWidget):
     def sliding(self) -> None:
         value = self.slider.value()
         if value == -1:
-            self._slider_select_elevation.emit(None)
+            self._slider_select_elevation_qtsignal.emit(None)
             return
         chart = self.elevation_chart
-        self._slider_select_elevation.emit(chart.elevation_steps[value] if 0 <= value < len(chart.elevation_steps) else None)
+        self._slider_select_elevation_qtsignal.emit(chart.elevation_steps[value] if 0 <= value < len(chart.elevation_steps) else None)
 
     def display_elevation_description(self) -> None:
         if self.elevation_key is None:
@@ -5720,10 +5720,10 @@ class LuxDisplayWidget(QWidget):
 
     def connect_meter(self, lux_meter: LuxMeterDevice | None) -> None:
         if self.current_meter:
-            self.current_meter.new_lux_value_signal.disconnect(self.display_lux)
+            self.current_meter.new_lux_value_qtsignal.disconnect(self.display_lux)
         self.current_meter = lux_meter
         if self.current_meter:
-            self.current_meter.new_lux_value_signal.connect(self.display_lux)
+            self.current_meter.new_lux_value_qtsignal.connect(self.display_lux)
             if isinstance(lux_meter, LuxMeterManualDevice):
                 self.display_lux(round(lux_meter.get_value()))
             self.enable_display_updates(True)
@@ -5755,7 +5755,7 @@ def lux_create_device(device_name: str) -> LuxMeterDevice:
 
 
 class LuxMeterDevice(QObject):
-    new_lux_value_signal = pyqtSignal(int)
+    new_lux_value_qtsignal = pyqtSignal(int)
 
     def __init__(self, requires_worker: bool = True) -> None:  # use a thread to prevent any blocking due to slow updating
         super().__init__()
@@ -5776,7 +5776,7 @@ class LuxMeterDevice(QObject):
     def set_current_value(self, new_value: float) -> None:
         # log_debug(f"new metered value {new_value=}") if log_debug_enabled else None
         self.current_value = new_value
-        self.new_lux_value_signal.emit(round(new_value))
+        self.new_lux_value_qtsignal.emit(round(new_value))
 
     def cleanup(self, worker: WorkerThread):
         pass
@@ -6654,8 +6654,8 @@ class LuxAutoController:
     def create_manual_input_control(self) -> LuxAmbientSlider:
         if self.lux_slider is None:
             self.lux_slider = LuxAmbientSlider()
-            self.lux_slider.new_lux_value_signal.connect(self.update_manual_meter)
-            self.lux_slider.status_icon_pressed_signal.connect(partial(LuxDialog.invoke, self.main_controller))
+            self.lux_slider.new_lux_value_qtsignal.connect(self.update_manual_meter)
+            self.lux_slider.status_icon_pressed_qtsignal.connect(partial(LuxDialog.invoke, self.main_controller))
         return self.lux_slider
 
     def stop_worker(self):
@@ -6671,7 +6671,7 @@ class LuxAutoController:
                 self.lux_auto_brightness_worker = LuxAutoWorker(self, single_shot)
                 self.lux_auto_brightness_worker.start()
                 try:
-                    self.lux_meter.new_lux_value_signal.connect(self.update_manual_slider, type=Qt.UniqueConnection)
+                    self.lux_meter.new_lux_value_qtsignal.connect(self.update_manual_slider, type=Qt.UniqueConnection)
                 except TypeError:
                     pass
 
@@ -6817,8 +6817,8 @@ LUX_NIGHT_SVG = b"""<?xml version="1.0" encoding="utf-8"?>
 
 
 class LuxAmbientSlider(QWidget):
-    new_lux_value_signal = pyqtSignal(int)
-    status_icon_pressed_signal = pyqtSignal()
+    new_lux_value_qtsignal = pyqtSignal(int)
+    status_icon_pressed_qtsignal = pyqtSignal()
 
     def __init__(self) -> None:
         super().__init__()
@@ -6837,7 +6837,7 @@ class LuxAmbientSlider(QWidget):
         self.status_icon = QPushButton()
         self.status_icon.setIconSize(QSize(native_font_height(scaled=1.8), native_font_height(scaled=1.8)))
         self.status_icon.setFlat(True)
-        self.status_icon.pressed.connect(self.status_icon_pressed_signal)
+        self.status_icon.pressed.connect(self.status_icon_pressed_qtsignal)
         self.svg_icon_current_source: bytes | None = None
 
         top_layout = QVBoxLayout()
@@ -6886,7 +6886,7 @@ class LuxAmbientSlider(QWidget):
         def lux_slider_change(new_value: int) -> None:
             real_value = round(10 ** (new_value / 1000))
             self.set_current_value(real_value, self.lux_slider)
-            self.new_lux_value_signal.emit(real_value)
+            self.new_lux_value_qtsignal.emit(real_value)
 
         self.lux_slider.valueChanged.connect(lux_slider_change)
 
