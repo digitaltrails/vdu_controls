@@ -1693,7 +1693,7 @@ class DdcutilQtDBusImpl(QObject):
 
     @pyqtSlot(QDBusMessage)
     def _dbus_signal_handler(self, message: QDBusMessage):
-        print("Received D-Bus signal", message.arguments())
+        log_info("Received D-Bus signal", message.arguments())
         if self.listener_callback:
             self.listener_callback(*message.arguments())
 
@@ -2296,7 +2296,7 @@ class VduController(QObject):
                 self.capabilities_text = config.get_capabilities_alt_text()
                 self.config = config
                 break
-        print(f"{self.capabilities_text=}")
+        # print(f"{self.capabilities_text=}")
         if not self.capabilities_text:
             if option == VduController.IGNORE_VDU:
                 self.capabilities_text = 'Ignore VDU'
@@ -6643,7 +6643,6 @@ class LuxAutoController:
     def update_manual_meter(self, value: int):
         if self.is_auto_enabled():
             self.set_auto(False)
-        print(f"vc {value=}")
         self.lux_meter.set_current_value(value)
         self.adjust_brightness_now()
 
@@ -6655,10 +6654,8 @@ class LuxAutoController:
     def create_manual_input_control(self) -> LuxAmbientSlider:
         if self.lux_slider is None:
             self.lux_slider = LuxAmbientSlider()
-        try:
-            self.lux_slider.new_lux_value_signal.connect(self.update_manual_meter, Qt.UniqueConnection)
-        except TypeError:
-            pass
+            self.lux_slider.new_lux_value_signal.connect(self.update_manual_meter)
+            self.lux_slider.status_icon_pressed_signal.connect(partial(LuxDialog.invoke, self.main_controller))
         return self.lux_slider
 
     def stop_worker(self):
@@ -6821,6 +6818,7 @@ LUX_NIGHT_SVG = b"""<?xml version="1.0" encoding="utf-8"?>
 
 class LuxAmbientSlider(QWidget):
     new_lux_value_signal = pyqtSignal(int)
+    status_icon_pressed_signal = pyqtSignal()
 
     def __init__(self) -> None:
         super().__init__()
@@ -6836,8 +6834,10 @@ class LuxAmbientSlider(QWidget):
         }
         self.current_value = 10000
 
-        self.svg_icon = QSvgWidget()
-        self.svg_icon.setFixedSize(native_font_height(scaled=1.8), native_font_height(scaled=1.8))
+        self.status_icon = QPushButton()
+        self.status_icon.setIconSize(QSize(native_font_height(scaled=1.8), native_font_height(scaled=1.8)))
+        self.status_icon.setFlat(True)
+        self.status_icon.pressed.connect(self.status_icon_pressed_signal)
         self.svg_icon_current_source: bytes | None = None
 
         top_layout = QVBoxLayout()
@@ -6847,7 +6847,7 @@ class LuxAmbientSlider(QWidget):
         input_panel = QWidget()
         input_panel_layout = QHBoxLayout()
         input_panel.setLayout(input_panel_layout)
-        input_panel_layout.addWidget(self.svg_icon)
+        input_panel_layout.addWidget(self.status_icon)
 
         lux_slider_panel = QWidget()
         lux_slider_panel_layout = QGridLayout()
@@ -6867,10 +6867,10 @@ class LuxAmbientSlider(QWidget):
 
         # A hacky way to get custom labels without redifining paint
         for col_num, span, value in ((0, 3, 1), (3, 3, 10), (6, 3, 100), (9, 3, 1000), (12, 3, 10000), (14, 1, 100000)):
-            log10_label = QLabel(f"{value:2d}")
+            log10_button = QLabel(f"{value:2d}")
             app_font = QApplication.font()
-            log10_label.setFont(QFont(app_font.family(), round(app_font.pointSize() * .66), QFont.Weight.Normal))
-            lux_slider_panel_layout.addWidget(log10_label, 2, col_num, 1, span, alignment=Qt.AlignLeft | Qt.AlignTop)
+            log10_button.setFont(QFont(app_font.family(), round(app_font.pointSize() * .66), QFont.Weight.Normal))
+            lux_slider_panel_layout.addWidget(log10_button, 2, col_num, 1, span, alignment=Qt.AlignLeft | Qt.AlignTop)
 
         input_panel_layout.addWidget(lux_slider_panel, stretch=100)
 
@@ -6908,18 +6908,17 @@ class LuxAmbientSlider(QWidget):
         self.lux_input_field.editingFinished.connect(input_field_editing_finished)
 
         col = 0
+        log10_icon_size = QSize(native_font_height(scaled=1), native_font_height(scaled=1))
         self.label_map: Dict[QLabel, bytes] = {}
         for key, (_, _, icon_value, svg_bytes, span) in reversed(self.zones.items()):
-            icon = create_icon_from_svg_bytes(svg_bytes)
-            log10_label = QPushButton()
-            log10_label.setIconSize(QSize(native_font_height(scaled=1), native_font_height(scaled=1)))
-            #log10_label.setPixmap(icon.pixmap(native_font_height(scaled=1), native_font_height(scaled=1)))
-            log10_label.setIcon(icon) # (icon.pixmap(native_font_height(scaled=1), native_font_height(scaled=1)))
-            log10_label.setFlat(True)
-            log10_label.setToolTip(key)
-            log10_label.pressed.connect(partial(self.lux_input_field.setValue, icon_value))
-            lux_slider_panel_layout.addWidget(log10_label, 0, col, 1, span, alignment=Qt.AlignBottom | Qt.AlignHCenter)
-            self.label_map[log10_label] = svg_bytes
+            log10_button = QPushButton()
+            log10_button.setIconSize(log10_icon_size)
+            log10_button.setIcon(create_icon_from_svg_bytes(svg_bytes))
+            log10_button.setFlat(True)
+            log10_button.setToolTip(key)
+            log10_button.pressed.connect(partial(self.lux_input_field.setValue, icon_value))
+            lux_slider_panel_layout.addWidget(log10_button, 0, col, 1, span, alignment=Qt.AlignBottom | Qt.AlignHCenter)
+            self.label_map[log10_button] = svg_bytes
             col += span
 
         self.set_current_value(round(LuxMeterManualDevice.get_stored_value()))  # trigger side-effects.
@@ -6935,8 +6934,8 @@ class LuxAmbientSlider(QWidget):
                     if lower < value <= upper:
                         if self.svg_icon_current_source != svg:
                             self.svg_icon_current_source = svg
-                            self.svg_icon.load(handle_theme(self.svg_icon_current_source))
-                            self.svg_icon.setToolTip(name)
+                            self.status_icon.setIcon(create_icon_from_svg_bytes(self.svg_icon_current_source))
+                            self.status_icon.setToolTip(name)
                 self.current_value = value
                 if source != self.lux_slider:
                     self.lux_slider.setValue(round(math.log10(value) * 1000))
@@ -6949,11 +6948,9 @@ class LuxAmbientSlider(QWidget):
 
     def event(self, event: QEvent) -> bool:
         if event.type() == QEvent.PaletteChange:  # PalletChange happens after the new style sheet is in use.
-            self.svg_icon.load(handle_theme(self.svg_icon_current_source))
-            for label, svg_bytes in self.label_map.items():
-                icon = create_icon_from_svg_bytes(svg_bytes)
-                # label.setPixmap(icon.pixmap(native_font_height(scaled=1), native_font_height(scaled=1)))
-                label.setIcon(icon) #.pixmap(native_font_height(scaled=1), native_font_height(scaled=1)))
+            self.status_icon.setIcon(create_icon_from_svg_bytes(self.svg_icon_current_source))
+            for slider_button, svg_bytes in self.label_map.items():
+                slider_button.setIcon(create_icon_from_svg_bytes(svg_bytes))
         return super().event(event)
 
 
