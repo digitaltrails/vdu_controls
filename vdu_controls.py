@@ -49,7 +49,7 @@ Arguments supplied on the command line override config file equivalent settings.
       --weather|--no-weather
                             enable/disable weather lookups. ``--weather`` is the default.
       --lux-options|--no-lux-options
-                            enable/disable hardware light metering options. ``--no-lux-options`` is the default.
+                            enable/disable hardware light metering options. ``--lux-options`` is the default.
       --debug|--no-debug
                             enable/disable additional debug information.  ``--no-debug`` is the default.
       --warnings--no-warnings
@@ -1048,7 +1048,7 @@ REFRESH_ICON_SOURCE = b"""
 LIGHTING_CHECK_SVG = b"""
 <svg version="1.1" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
     <defs> <style id="current-color-scheme" type="text/css">.ColorScheme-Text { color:#232629; }
-      .ColorScheme-NegativeText { color:#ff8500; }</style> </defs>
+      .ColorScheme-LED { color:#ff8500; }</style> </defs>
     <path style="fill:currentColor;fill-opacity:1;stroke:none" class="ColorScheme-Text" d="M 5,3 V 4 H 7 V 5.0507812
      C 4.7620407,5.3045267 3,7.1975144 3,9.5 3,11.813856 4.7794406,13.714649 7.0332031,13.953125 6.6992186,13.613635 
      6.43803,13.209557 6.265625,12.765625 4.9435886,12.265608 4,10.997158 4,9.5 4,7.5670034 5.5670034,6 7.5,6 
@@ -1056,10 +1056,11 @@ LIGHTING_CHECK_SVG = b"""
      -0.10518,-0.8491863 -0.442085,-1.62392 -0.957031,-2.2597656 l 0.754297,-0.7542968 
      0.398046,0.3949218 0.707032,-0.7070312 -1.5,-1.5 L 10.646484,4.8535156 11.042969,5.25 10.291016,6.0019531 
      C 9.6449906,5.4911251 8.858964,5.1481728 8,5.0507812 V 4 h 2 V 3 Z"/>
-    <path style="fill:currentColor;fill-opacity:1;stroke:none" class="ColorScheme-NegativeText" d="m12 11.5a2.5 2.5 0
+    <path style="fill:currentColor;fill-opacity:1;stroke:none" class="ColorScheme-LED" d="m12 11.5a2.5 2.5 0
      0 1-2.5 2.5 2.5 2.5 0 0 1-2.5-2.5 2.5 2.5 0 0 1 2.5-2.5 2.5 2.5 0 0 1 2.5 2.5z"/>
 </svg>
 """
+LIGHTING_CHECK_OFF_SVG = LIGHTING_CHECK_SVG.replace(b'#ff8500', b'#84888c')
 
 TRANSITION_ICON_SOURCE = b"""
 <svg  xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24"></svg>
@@ -1957,7 +1958,7 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
                                         tip=QT_TR_NOOP('enable language translations'))
     WEATHER_ENABLED = conf_opt_def(cname=QT_TR_NOOP('weather-enabled'), default='yes', tip=QT_TR_NOOP('enable weather lookups'))
     SCHEDULE_ENABLED = conf_opt_def(cname=QT_TR_NOOP('schedule-enabled'), default='yes', tip=QT_TR_NOOP('enable preset schedule'))
-    LUX_OPTIONS_ENABLED = conf_opt_def(cname=QT_TR_NOOP('lux-options-enabled'), default="no", restart=True,
+    LUX_OPTIONS_ENABLED = conf_opt_def(cname=QT_TR_NOOP('lux-options-enabled'), default="yes", restart=True,
                                        tip=QT_TR_NOOP('enable light metering options'))
     SPLASH_SCREEN_ENABLED = conf_opt_def(cname=QT_TR_NOOP('splash-screen-enabled'), default='yes', cmdline_arg='splash',
                                          tip=QT_TR_NOOP('enable the startup splash screen'))
@@ -3471,7 +3472,7 @@ class ToolButton(QToolButton):
         self.refresh_icon()
 
     def refresh_icon(self, svg_source: bytes | None = None) -> None:  # may refresh the theme (coloring light/dark) of the icon
-        if svg_source is not None:
+        if svg_source is not None:  # Either a new icon or if None just a light/dark theme refresh
             self.svg_source = svg_source
         self.setIcon(create_icon_from_svg_bytes(self.svg_source))  # this may alter the SVG for light/dark theme
 
@@ -6655,7 +6656,14 @@ class LuxAutoController:
         if self.lux_slider is None:
             self.lux_slider = LuxAmbientSlider()
             self.lux_slider.new_lux_value_qtsignal.connect(self.update_manual_meter)
-            self.lux_slider.status_icon_pressed_qtsignal.connect(partial(LuxDialog.invoke, self.main_controller))
+
+            def toggle_lux_dialog():
+                if LuxDialog.exists() and LuxDialog.get_instance().isVisible():
+                    LuxDialog.get_instance().close()
+                else:
+                    LuxDialog.invoke(self.main_controller)
+
+            self.lux_slider.status_icon_pressed_qtsignal.connect(toggle_lux_dialog)
         return self.lux_slider
 
     def stop_worker(self):
@@ -6700,14 +6708,17 @@ class LuxAutoController:
             alert.exec()
         if self.lux_tool_button:
             self.lux_tool_button.refresh_icon(self.current_auto_svg())  # Refresh indicators immediately
-        # if self.lux_lighting_check_button:
-        #     self.lux_lighting_check_button.setEnabled(self.is_auto_enabled())
+        if self.lux_lighting_check_button:
+            self.lux_lighting_check_button.refresh_icon(self.current_check_svg())
 
     def is_auto_enabled(self) -> bool:
         return self.lux_config is not None and self.lux_config.is_auto_enabled()
 
     def current_auto_svg(self) -> bytes:
         return AUTO_LUX_ON_SVG if self.is_auto_enabled() else AUTO_LUX_OFF_SVG
+
+    def current_check_svg(self) -> bytes:
+        return LIGHTING_CHECK_SVG if self.is_auto_enabled() else LIGHTING_CHECK_OFF_SVG
 
     def get_lux_config(self) -> LuxConfig:
         assert self.lux_config is not None
