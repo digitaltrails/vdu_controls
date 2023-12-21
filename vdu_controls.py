@@ -6827,12 +6827,12 @@ class LuxAmbientSlider(QWidget):
 
         self.in_flux = False
         self.zones = {  # Using col span as a hacky way to line up icons above the slider
-            tr('Sunlight'): (20000, 100000, LUX_SUNLIGHT_SVG, 2),
-            tr('Daylight'): (1000, 20000, LUX_DAYLIGHT_SVG, 2),
-            tr('Overcast'): (400, 1000, LUX_OVERCAST_SVG, 3),
-            tr('Rise/set'): (100, 400, LUX_RISE_SET_SVG, 2),
-            tr('Room'): (15, 100, LUX_ROOM_SVG, 3),
-            tr('Night'): (0, 15, LUX_NIGHT_SVG, 3),
+            tr('Sunlight'): (20000, 100000, 45000, LUX_SUNLIGHT_SVG, 2),
+            tr('Daylight'): (1000, 20000, 6000, LUX_DAYLIGHT_SVG, 2),
+            tr('Overcast'): (400, 1000, 900, LUX_OVERCAST_SVG, 3),
+            tr('Rise/set'): (100, 400, 130, LUX_RISE_SET_SVG, 2),
+            tr('Room'): (15, 100, 20, LUX_ROOM_SVG, 3),
+            tr('Night'): (0, 15, 2, LUX_NIGHT_SVG, 3),
         }
         self.current_value = 10000
 
@@ -6852,16 +6852,6 @@ class LuxAmbientSlider(QWidget):
         lux_slider_panel = QWidget()
         lux_slider_panel_layout = QGridLayout()
         lux_slider_panel.setLayout(lux_slider_panel_layout)
-        col = 0
-        self.label_map: Dict[QLabel, bytes] = {}
-        for key, (_, _, svg_bytes, span) in reversed(self.zones.items()):
-            icon = create_icon_from_svg_bytes(svg_bytes)
-            log10_label = QLabel()
-            log10_label.setPixmap(icon.pixmap(native_font_height(scaled=1), native_font_height(scaled=1)))
-            log10_label.setToolTip(key)
-            lux_slider_panel_layout.addWidget(log10_label, 0, col, 1, span, alignment=Qt.AlignBottom | Qt.AlignHCenter)
-            self.label_map[log10_label] = svg_bytes
-            col += span
 
         self.lux_slider = ClickableSlider()
         self.lux_slider.setToolTip(tr("Ambient light level input (lux value)"))
@@ -6917,6 +6907,21 @@ class LuxAmbientSlider(QWidget):
 
         self.lux_input_field.editingFinished.connect(input_field_editing_finished)
 
+        col = 0
+        self.label_map: Dict[QLabel, bytes] = {}
+        for key, (_, _, icon_value, svg_bytes, span) in reversed(self.zones.items()):
+            icon = create_icon_from_svg_bytes(svg_bytes)
+            log10_label = QPushButton()
+            log10_label.setIconSize(QSize(native_font_height(scaled=1), native_font_height(scaled=1)))
+            #log10_label.setPixmap(icon.pixmap(native_font_height(scaled=1), native_font_height(scaled=1)))
+            log10_label.setIcon(icon) # (icon.pixmap(native_font_height(scaled=1), native_font_height(scaled=1)))
+            log10_label.setFlat(True)
+            log10_label.setToolTip(key)
+            log10_label.pressed.connect(partial(self.lux_input_field.setValue, icon_value))
+            lux_slider_panel_layout.addWidget(log10_label, 0, col, 1, span, alignment=Qt.AlignBottom | Qt.AlignHCenter)
+            self.label_map[log10_label] = svg_bytes
+            col += span
+
         self.set_current_value(round(LuxMeterManualDevice.get_stored_value()))  # trigger side-effects.
 
     def set_current_value(self, value: int, source: QWidget | None = None) -> None:
@@ -6926,7 +6931,7 @@ class LuxAmbientSlider(QWidget):
                     self.blockSignals(True)
                 self.in_flux = True
                 for name, data in self.zones.items():
-                    lower, upper, svg, span = data
+                    lower, upper, _, svg, span = data
                     if lower < value <= upper:
                         if self.svg_icon_current_source != svg:
                             self.svg_icon_current_source = svg
@@ -6947,7 +6952,8 @@ class LuxAmbientSlider(QWidget):
             self.svg_icon.load(handle_theme(self.svg_icon_current_source))
             for label, svg_bytes in self.label_map.items():
                 icon = create_icon_from_svg_bytes(svg_bytes)
-                label.setPixmap(icon.pixmap(native_font_height(scaled=1), native_font_height(scaled=1)))
+                # label.setPixmap(icon.pixmap(native_font_height(scaled=1), native_font_height(scaled=1)))
+                label.setIcon(icon) #.pixmap(native_font_height(scaled=1), native_font_height(scaled=1)))
         return super().event(event)
 
 
