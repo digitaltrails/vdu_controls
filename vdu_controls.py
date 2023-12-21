@@ -6177,7 +6177,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         completed_profile.append(LuxPoint(100000, 100))  # make sure we hava point at the end of the scale.
         return completed_profile
 
-    def finished_callable(self, _: LuxAutoWorker) -> None:
+    def finished_callable(self, _: WorkerThread) -> None:
         if self.vdu_exception:
             log_error(f"LuxAutoWorker exited with exception={self.vdu_exception}")
 
