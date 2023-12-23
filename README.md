@@ -29,6 +29,7 @@ A control panel for external monitors (*Visual Display Units*).
 > to fully automatic control via hardware lux-metering.  To access this new option
 > tick **Settings->Lux options enabled**.
 > 
+>  ![Custom](screen-shots/ambient-slider-example.png) 
 > 
 > Feedback welcome.
 
