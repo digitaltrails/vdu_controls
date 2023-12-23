@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Oct 22, 2023" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Dec 24, 2023" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.11.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -50,6 +50,8 @@ A control panel for DisplayPort, DVI, HDMI, or USB connected VDUs (\fIVisual Dis
 [\-\-hide\-on\-focus\-out|\-\-no\-hide\-on\-focus\-out] [\-\-smart\-window|\-\-no\-smart\-window]
 [\-\-syslog|\-\-no\-syslog]  [\-\-debug|\-\-no\-debug] [\-\-warnings|\-\-no\-warnings]
 [\-\-sleep\-multiplier multiplier] [\-\-ddcutil\-extra\-args \(aqextra args\(aq]
+[\-\-dbus\-client\-enabled|\-\-no\-dbus\-client\-enabled]
+[\-\-dbus\-listen|\-\-no\-dbus\-listen]
 [\-\-create\-config\-files] [\-\-install] [\-\-uninstall]
 .UNINDENT
 .UNINDENT
@@ -97,7 +99,7 @@ enable/disable preset scheduling. \fB\-\-schedule\fP is the default.
 enable/disable weather lookups. \fB\-\-weather\fP is the default.
 .TP
 .B \-\-lux\-options|\-\-no\-lux\-options
-enable/disable hardware light metering options. \fB\-\-no\-lux\-options\fP is the default.
+enable/disable hardware light metering options. \fB\-\-lux\-options\fP is the default.
 .TP
 .B \-\-debug|\-\-no\-debug
 enable/disable additional debug information.  \fB\-\-no\-debug\fP is the default.
@@ -135,6 +137,16 @@ protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 1.
 .TP
 .B  \-\-ddcutil\-extra\-args
 extra arguments to pass to ddcutil (enclosed in single quotes)
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-dbus\-client\-enabled|\-\-no\-dbus\-client\-enabled
+use the ddcutil\-dbus\-server instead of the ddcutil command \fB\-\-no\-dbus\-client\-enabled\fP is the default
+.TP
+.B \-\-dbus\-listener|\-\-no\-dbus\-listener
+listen for VDU status change signals \fB\-\-no\-dbus\-listener\fP is the default
+.UNINDENT
+.INDENT 0.0
 .TP
 .B  \-\-create\-config\-files
 if they do not exist, create template config INI files in $HOME/.config/vdu_controls/
@@ -150,12 +162,19 @@ uninstalls the vdu_controls application menu file and script for the current use
 .SH DESCRIPTION
 .sp
 \fBvdu_controls\fP is a control\-panel for DisplayPort, DVI, HDMI, or USB connected VDUs.  It provides
-controls for settings such as brightness and contrast. It interacts with VDUs by using the
-\fBddcutil\fP command line utility to issue standard VESA \fIDisplay Data Channel\fP (\fIDDC\fP) \fIVirtual
-Control Panel\fP  (\fIVCP\fP) commands.  \fBDdcutil\fP provides a robust interface that is tolerant of the
-vagaries of the many OEM DDC implementations.
+controls for settings such as brightness and contrast.
 .sp
-By default, \fBvdu_controls\fP offers a subset of controls including brightness, contrast and audio
+\fBvdu_controls\fP interacts with VDUs by using \fBddcutil\fP to issue standard VESA
+\fIVirtual Control Panel\fP  (\fIVCP\fP) commands via the VESA  \fIDisplay Data Channel\fP (\fIDDC\fP).
+\fBDdcutil\fP provides a robust interface that is tolerant of the vagaries of the many OEM DDC
+implementations.
+.sp
+By default, \fBvdu_controls\fP runs \fBddcutil\fP separately for each VCP\-command, this only
+requires the presence of the \fBddcutil\fP command.  From \fBvdu_controls 2.0\fP onward,
+\fBvdu_controls\fP can be set to use the \fBddcutil D\-Bus service\fP to provide a considerably
+faster and smoother experience, this requires \fBddcutil\-dbus\-server\fP and
+.sp
+Out of the box, \fBvdu_controls\fP offers a subset of controls including brightness, contrast and audio
 controls.  Additional controls can be enabled via the \fBSettings\fP dialog.
 .sp
 The UI\(aqs look\-and\-feel adjusts itself for dark and light desktop themes. The application may
@@ -494,7 +513,7 @@ kill \-41 $(ps axwww | grep \(aq[/]usr/bin/vdu_controls\(aq | awk \(aq{print $1}
 .UNINDENT
 .UNINDENT
 .sp
-Or if some other process has changed a VDUs settings, trigger vdu_controls to update it\(aqs UI:
+Or if some other process has changed a VDUs settings, trigger vdu_controls to update its UI:
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -562,10 +581,10 @@ curl \(aqwttr.in?format=\(dqdawn=%D,dusk=%d,weather=%C\(dq\(aq
 custom per\-VDU lux\-brightness profiles.
 .sp
 The Settings Dialog includes an option enable lux metering options.  When enabled, the Content Menu
-will include Light Meter option to access a Light\-Meter Dialog. The dialog can be used to define the
+will include Light Meter option to access a Light\-Metering Dialog. The dialog can be used to define the
 metering device and the Lux Brightness Response Profile for each VDU.
 .sp
-The metering device may be a serial\-device, a UNIX FIFO (named\-pipe), or a executable\-script:
+The metering device may be a serial\-device, a UNIX FIFO (named\-pipe), or an executable\-script:
 .INDENT 0.0
 .INDENT 3.5
 .INDENT 0.0
@@ -645,7 +664,7 @@ controls that can be used to temporarily disabling lux metering.
 .UNINDENT
 .SS Light/Lux Metering and Presets
 .sp
-The Light\-Meter Dialog includes the ability to set a Preset to trigger at a lux value.  This feature
+The Light\-Metering Dialog includes the ability to set a Preset to trigger at a lux value.  This feature
 is accessed by hovering under the bottom axis of the Lux Profile Chart.
 .sp
 When a preset is tied to a lux value, the preset\(aqs VDU brightness values become fixed points on the

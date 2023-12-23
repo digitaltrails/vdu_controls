@@ -15,6 +15,8 @@ a DDC control panel for monitors</h1>
                  [--hide-on-focus-out|--no-hide-on-focus-out] [--smart-window|--no-smart-window]
                  [--syslog|--no-syslog]  [--debug|--no-debug] [--warnings|--no-warnings]
                  [--sleep-multiplier multiplier] [--ddcutil-extra-args &#39;extra args&#39;]
+                 [--dbus-client-enabled|--no-dbus-client-enabled]
+                 [--dbus-listen|--no-dbus-listen]
                  [--create-config-files] [--install] [--uninstall]</code></pre>
 <h2 id="optional-arguments">Optional arguments:</h2>
 <p>Arguments supplied on the command line override config file
@@ -39,7 +41,7 @@ equivalent settings.</p>
   --weather|--no-weather
                         enable/disable weather lookups. ``--weather`` is the default.
   --lux-options|--no-lux-options
-                        enable/disable hardware light metering options. ``--no-lux-options`` is the default.
+                        enable/disable hardware light metering options. ``--lux-options`` is the default.
   --debug|--no-debug
                         enable/disable additional debug information.  ``--no-debug`` is the default.
   --warnings--no-warnings
@@ -59,6 +61,10 @@ equivalent settings.</p>
   --sleep-multiplier    set the default ddcutil sleep multiplier
                         protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 1.0)
   --ddcutil-extra-args  extra arguments to pass to ddcutil (enclosed in single quotes)
+  --dbus-client-enabled|--no-dbus-client-enabled
+                        use the ddcutil-dbus-server instead of the ddcutil command ``--no-dbus-client-enabled`` is the default
+  --dbus-listener|--no-dbus-listener
+                        listen for VDU status change signals ``--no-dbus-listener`` is the default
   --create-config-files
                         if they do not exist, create template config INI files in $HOME/.config/vdu_controls/
   --install             installs the vdu_controls in the current user&#39;s path and desktop application menu.
@@ -66,13 +72,21 @@ equivalent settings.</p>
 <h1 id="description">Description</h1>
 <p><code>vdu_controls</code> is a control-panel for DisplayPort, DVI,
 HDMI, or USB connected VDUs. It provides controls for settings such as
-brightness and contrast. It interacts with VDUs by using the
-<code>ddcutil</code> command line utility to issue standard VESA
-<em>Display Data Channel</em> (<em>DDC</em>) <em>Virtual Control
-Panel</em> (<em>VCP</em>) commands. <code>Ddcutil</code> provides a
-robust interface that is tolerant of the vagaries of the many OEM DDC
+brightness and contrast.</p>
+<p><code>vdu_controls</code> interacts with VDUs by using
+<code>ddcutil</code> to issue standard VESA <em>Virtual Control
+Panel</em> (<em>VCP</em>) commands via the VESA <em>Display Data
+Channel</em> (<em>DDC</em>). <code>Ddcutil</code> provides a robust
+interface that is tolerant of the vagaries of the many OEM DDC
 implementations.</p>
-<p>By default, <code>vdu_controls</code> offers a subset of controls
+<p>By default, <code>vdu_controls</code> runs <code>ddcutil</code>
+separately for each VCP-command, this only requires the presence of the
+<code>ddcutil</code> command. From <code>vdu_controls 2.0</code> onward,
+<code>vdu_controls</code> can be set to use the
+<code>ddcutil D-Bus service</code> to provide a considerably faster and
+smoother experience, this requires <code>ddcutil-dbus-server</code>
+and</p>
+<p>Out of the box, <code>vdu_controls</code> offers a subset of controls
 including brightness, contrast and audio controls. Additional controls
 can be enabled via the <code>Settings</code> dialog.</p>
 <p>The UI’s look-and-feel adjusts itself for dark and light desktop
@@ -350,7 +364,7 @@ Combine this with kill to trigger a preset change::
     kill -40 $(ps axwww | grep &#39;[/]usr/bin/vdu_controls&#39; | awk &#39;{print $1}&#39;)
     kill -41 $(ps axwww | grep &#39;[/]usr/bin/vdu_controls&#39; | awk &#39;{print $1}&#39;)
 
-Or if some other process has changed a VDUs settings, trigger vdu_controls to update it&#39;s UI::
+Or if some other process has changed a VDUs settings, trigger vdu_controls to update its UI::
 
     kill -HUP $(ps axwww | grep &#39;[/]usr/bin/vdu_controls&#39; | awk &#39;{print $1}&#39;)</code></pre>
 <p>Any other signals will be handled normally (in many cases they will
@@ -377,10 +391,10 @@ adjust VDU brightness according to custom per-VDU lux-brightness
 profiles.</p>
 <p>The Settings Dialog includes an option enable lux metering options.
 When enabled, the Content Menu will include Light Meter option to access
-a Light-Meter Dialog. The dialog can be used to define the metering
+a Light-Metering Dialog. The dialog can be used to define the metering
 device and the Lux Brightness Response Profile for each VDU.</p>
 <p>The metering device may be a serial-device, a UNIX FIFO (named-pipe),
-or a executable-script:</p>
+or an executable-script:</p>
 <pre><code>* A serial-device must periodically supply one floating point lux reading
   terminated by a carriage-return newline.
 
@@ -428,7 +442,7 @@ a final value:</p>
   controls that can be used to temporarily disabling lux metering.</code></pre>
 <h2 id="lightlux-metering-and-presets">Light/Lux Metering and
 Presets</h2>
-<p>The Light-Meter Dialog includes the ability to set a Preset to
+<p>The Light-Metering Dialog includes the ability to set a Preset to
 trigger at a lux value. This feature is accessed by hovering under the
 bottom axis of the Lux Profile Chart.</p>
 <p>When a preset is tied to a lux value, the preset’s VDU brightness
