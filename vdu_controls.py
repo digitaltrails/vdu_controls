@@ -397,7 +397,7 @@ Light/Lux Metering
 custom per-VDU lux-brightness profiles.
 
 The Settings Dialog includes an option enable lux metering options.  When enabled, the Content Menu
-will include Light Meter option to access a Light-Meter Dialog. The dialog can be used to define the
+will include Light Meter option to access a Light-Metering Dialog. The dialog can be used to define the
 metering device and the Lux Brightness Response Profile for each VDU.
 
 The metering device may be a serial-device, a UNIX FIFO (named-pipe), or an executable-script:
@@ -457,7 +457,7 @@ value:
 Light/Lux Metering and Presets
 -------------------------------
 
-The Light-Meter Dialog includes the ability to set a Preset to trigger at a lux value.  This feature
+The Light-Metering Dialog includes the ability to set a Preset to trigger at a lux value.  This feature
 is accessed by hovering under the bottom axis of the Lux Profile Chart.
 
 When a preset is tied to a lux value, the preset's VDU brightness values become fixed points on the
@@ -1664,33 +1664,30 @@ class DdcutilQtDBusImpl(QObject):
         dbus_object_path = os.environ.get('DDCUTIL_SERVICE_OBJECT_PATH', default="/com/ddcutil/DdcutilObject")
 
         server_executable = os.environ.get('DDCUTIL_SERVICE_EXECUTABLE', default="ddcutil-dbus-server")
-        while True:
-            try:
-                bus = QDBusConnection.connectToBus(QDBusConnection.BusType.SessionBus, "session")
-                ddcutil_dbus_iface = QDBusInterface(dbus_service_name,
-                                                    dbus_object_path,
-                                                    self.dbus_interface_name,
-                                                    connection=bus)
-                # Properties are available via a separate interface with "Get" and "Set" methods
-                ddcutil_dbus_props = QDBusInterface(dbus_service_name,
-                                                    dbus_object_path,
-                                                    "org.freedesktop.DBus.Properties",
-                                                    connection=bus)
-                bus.registerObject("/", self)
-                # Connect receiving slot
-                bus.connect(dbus_service_name,
-                            dbus_object_path,
-                            self.dbus_interface_name,
-                            "ConnectedDisplaysChanged",
-                            self._dbus_signal_handler)
-                ddcutil_dbus_iface.setTimeout(self.dbus_timeout_millis)
-                return ddcutil_dbus_iface, ddcutil_dbus_props
-            except QDBusError as e:
-                log_error(e)
-            log_warning(f"D-Bus {dbus_service_name=} {dbus_object_path=} unavailable, starting {server_executable=}")
-            if os.system(f"whereis {server_executable} && {server_executable} 1>~/.{server_executable}.log 2>&1 &") != 0:
-                raise DdcUtilDisplayNotFound("Error starting D-Bus service {server_executable=}")
-            time.sleep(2)
+        bus = QDBusConnection.connectToBus(QDBusConnection.BusType.SessionBus, "session")
+        ddcutil_dbus_iface = QDBusInterface(dbus_service_name,
+                                            dbus_object_path,
+                                            self.dbus_interface_name,
+                                            connection=bus)
+        # Properties are available via a separate interface with "Get" and "Set" methods
+        ddcutil_dbus_props = QDBusInterface(dbus_service_name,
+                                            dbus_object_path,
+                                            "org.freedesktop.DBus.Properties",
+                                            connection=bus)
+        bus.registerObject("/", self)
+        # Connect receiving slot
+        bus.connect(dbus_service_name,
+                    dbus_object_path,
+                    self.dbus_interface_name,
+                    "ConnectedDisplaysChanged",
+                    self._dbus_signal_handler)
+        ddcutil_dbus_iface.setTimeout(self.dbus_timeout_millis)
+        sanity_check = ddcutil_dbus_props.call("Get", self.dbus_interface_name, "DdcutilVersion")
+        if sanity_check.errorName():
+            log_error(f'Sanity check of {self.dbus_interface_name} failed: {sanity_check.errorMessage()}')
+            raise DdcUtilDisplayNotFound(f"Error contacting D-Bus service {self.dbus_interface_name}")
+        return ddcutil_dbus_iface, ddcutil_dbus_props
+
 
     @pyqtSlot(QDBusMessage)
     def _dbus_signal_handler(self, message: QDBusMessage):
@@ -1974,9 +1971,9 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
     SYSLOG_ENABLED = conf_opt_def(cname=QT_TR_NOOP('syslog-enabled'), default="no",
                                   tip=QT_TR_NOOP('divert diagnostic output to the syslog'))
     DBUS_CLIENT_ENABLED = conf_opt_def(cname=QT_TR_NOOP('dbus-client-enabled'), default="no",
-                                       tip=QT_TR_NOOP('use the ddcutil-dbus-server instead of the ddcutil command (experimental)'))
+                                       tip=QT_TR_NOOP('use the D-Bus ddcutil-server instead of the ddcutil command'))
     DBUS_LISTENER_ENABLED = conf_opt_def(cname=QT_TR_NOOP('dbus-listener'), default="no",
-                                         tip=QT_TR_NOOP('listen for D-Bus VDU connection/disconnection signals'),
+                                         tip=QT_TR_NOOP('listen for ddcutil-server VDU status-signals'),
                                          requires='dbus-client-enabled')
     LOCATION = conf_opt_def(cname=QT_TR_NOOP('location'), conf_type=CI.TYPE_LOCATION, tip=QT_TR_NOOP('latitude,longitude'))
     SLEEP_MULTIPLIER = conf_opt_def(cname=QT_TR_NOOP('sleep-multiplier'), section=CI.DDCUTIL_PARAMETERS, conf_type=CI.TYPE_FLOAT,
@@ -3348,7 +3345,7 @@ class ContextMenu(QMenu):
         if lux_meter_action is not None:
             self.lux_auto_action = self._add_action(QStyle.SP_ComputerIcon, tr('&Auto/Manual'), lux_auto_action)
             self.lux_check_action = self._add_action(QStyle.SP_MediaSeekForward, tr('Lighting &Check'), lux_check_action)
-            self._add_action(QStyle.SP_ComputerIcon, tr('&Light-Meter'), lux_meter_action)
+            self._add_action(QStyle.SP_ComputerIcon, tr('&Light-Metering'), lux_meter_action)
         self._add_action(QStyle.SP_ComputerIcon, tr('&Settings'), settings_action, 'Ctrl+Shift+,')
         self._add_action(QStyle.SP_BrowserReload, tr('&Refresh'), refresh_action, QKeySequence.Refresh).setProperty(
             ContextMenu.BUSY_DISABLE_PROP, QVariant(True))
@@ -5205,7 +5202,7 @@ def exception_handler(e_type, e_value, e_traceback) -> None:
     log_error("\n" + ''.join(traceback.format_exception(e_type, e_value, e_traceback)))
     alert = MessageBox(QMessageBox.Critical)
     alert.setText(tr('Error: {}').format(''.join(traceback.format_exception_only(e_type, e_value))))
-    alert.setInformativeText(tr('Is the sleep-multiplier setting too low?') +
+    alert.setInformativeText(tr('Is ddcutil or ddcutil-service installed?') +
                              '<br>_______________________________________________________<br>')
     alert.setDetailedText(tr('Details: {}').format(''.join(traceback.format_exception(e_type, e_value, e_traceback))))
     alert.exec()
@@ -6297,7 +6294,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
 
     def __init__(self, main_controller: VduAppController) -> None:
         super().__init__()
-        self.setWindowTitle(tr('Light-Meter'))
+        self.setWindowTitle(tr('Light-Metering'))
         self.main_controller: VduAppController = main_controller
         self.lux_profiles_map: Dict[VduStableId, List[LuxPoint]] = {}
         self.range_restrictions_map: Dict[VduStableId, Tuple[int, int]] = {}
@@ -6364,13 +6361,13 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
 
         self.status_bar = QStatusBar()
 
-        save_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr("Apply"))
+        save_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr("Save Profile"))
         save_button.setToolTip(tr("Apply and save profile-chart changes."))
         save_button.clicked.connect(self.save_profiles)
         self.save_button = save_button
         self.status_bar.addPermanentWidget(save_button, 0)
 
-        revert_button = QPushButton(si(self, QStyle.SP_DialogResetButton), tr("Revert"))
+        revert_button = QPushButton(si(self, QStyle.SP_DialogResetButton), tr("Revert Profile"))
         revert_button.setToolTip(tr("Abandon profile-chart changes, revert to last saved."))
         revert_button.clicked.connect(self.reconfigure)
         self.revert_button = revert_button
@@ -6462,7 +6459,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
 
     def chart_changed_callback(self) -> None:
         self.has_profile_changes = True
-        self.status_message(tr("Use Apply to commit chart changes."))
+        self.status_message(tr("Press Save-Profile to activate new profile."))
         self.save_button.setEnabled(True)
         self.revert_button.setEnabled(True)
 
@@ -7902,7 +7899,8 @@ class VduAppWindow(QMainWindow):
         return self.main_panel
 
     def indicate_busy(self, is_busy: bool, lock_controls: bool = True):
-        self.get_main_panel().indicate_busy(is_busy, lock_controls)
+        if self.main_panel:
+            self.main_panel.indicate_busy(is_busy, lock_controls)
         self.app_context_menu.indicate_busy(is_busy)
 
     def display_preset_status(self, message: str, timeout: int = 3000):
@@ -7996,19 +7994,18 @@ class VduAppWindow(QMainWindow):
 
     def display_no_controllers_error_dialog(self, ddcutil_problem):
         log_error("No controllable monitors found.")
-        error_no_monitors = MessageBox(QMessageBox.Critical)
-        error_no_monitors.setText(tr('No controllable monitors found.'))
-        error_no_monitors.setInformativeText(
-            tr("Is ddcutil installed?  Is i2c installed and configured?\n\n"
-               "Run vdu_controls --debug in a console and check for additional messages.\n\n{}").format(''))
+        no_vdus_alert = MessageBox(QMessageBox.Critical)
+        no_vdus_alert.setText(tr('No controllable monitors found.'))
         if ddcutil_problem is not None:
             if isinstance(ddcutil_problem, subprocess.SubprocessError):
                 problem_text = ddcutil_problem.stderr.decode('utf-8', errors='surrogateescape') + '\n' + str(ddcutil_problem)
             else:
                 problem_text = str(ddcutil_problem)
-            log_error(f"Most recent ddcutil error: {problem_text}".encode("unicode_escape").decode("utf-8"))
-            error_no_monitors.setDetailedText(tr("(Most recent ddcutil error: {})").format(problem_text))
-        error_no_monitors.exec()
+            log_error(f"Most recent error: {problem_text}".encode("unicode_escape").decode("utf-8"))
+        no_vdus_alert.setInformativeText(
+            tr("Is ddcutil or ddcutil-service installed and working?") + "\n\n" +
+            tr("Most recent error: {}").format(problem_text) + "\n" + '_' * 80)
+        no_vdus_alert.exec()
 
     def ask_for_vdu_controller_remedy(self, vdu_number: str, model_name: str, vdu_serial: str):
         no_auto = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Ignore | QMessageBox.Apply | QMessageBox.Retry)
