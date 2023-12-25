@@ -49,7 +49,7 @@ Arguments supplied on the command line override config file equivalent settings.
       --weather|--no-weather
                             enable/disable weather lookups. ``--weather`` is the default.
       --lux-options|--no-lux-options
-                            enable/disable hardware light metering options. ``--lux-options`` is the default.
+                            enable/disable ambient light metering options. ``--lux-options`` is the default.
       --debug|--no-debug
                             enable/disable additional debug information.  ``--no-debug`` is the default.
       --warnings--no-warnings
@@ -1090,9 +1090,6 @@ GREY_SCALE_SVG = f'''
 #: A high resolution image, will fall back to an internal PNG if this file isn't found on the local system
 DEFAULT_SPLASH_PNG = "/usr/share/icons/hicolor/256x256/apps/vdu_controls.png"
 
-#: Assuming ddcutil is somewhere on the PATH.
-DDCUTIL = "ddcutil"
-
 #: Internal special exit code used to signal that the exit handler should restart the program.
 EXIT_CODE_FOR_RESTART = 1959
 
@@ -1119,7 +1116,7 @@ ASSUMED_CONTROLS_CONFIG_TEXT = ('\n'
 CONTINUOUS_TYPE = 'C'
 SIMPLE_NON_CONTINUOUS_TYPE = 'SNC'
 COMPLEX_NON_CONTINUOUS_TYPE = 'CNC'
-# The GUI treats SNC and CNC the same - only DdcUtil needs to distinguish them.
+# The GUI treats SNC and CNC the same - only Ddcutil needs to distinguish them.
 GUI_NON_CONTINUOUS_TYPE = SIMPLE_NON_CONTINUOUS_TYPE
 
 LOG_SYSLOG_CAT = {syslog.LOG_INFO: "INFO:", syslog.LOG_ERR: "ERROR:", syslog.LOG_WARNING: "WARNING:", syslog.LOG_DEBUG: "DEBUG:"}
@@ -1230,7 +1227,11 @@ class VcpCapability:
         return tr_result if tr_key != tr_result else self.name  # Use original name if not translated
 
 
-class DdcUtilDisplayNotFound(Exception):
+class DdcutilServiceNotFound(Exception):
+    pass
+
+
+class DdcutilDisplayNotFound(Exception):
     pass
 
 
@@ -1243,18 +1244,22 @@ class VcpOrigin(Enum):  # Cause of a VCP value change
 VcpValue = namedtuple('VcpValue', ['current', 'max', 'vcp_type'])  # A getvcp command returns these three things
 
 
-class DdcUtil:
+class Ddcutil:
     """
     Interface to the abstracted ddcutil service
     """
 
-    def __init__(self, common_args: List[str] | None = None, enable_dbus_client: bool = False,
+    def __init__(self, common_args: List[str] | None = None, prefer_dbus_client: bool = False,
                  connected_vdus_changed_callable: Callable = None) -> None:
         super().__init__()
-        if enable_dbus_client:  # The service-interface implementations are duck-typed.
-            self.ddcutil_impl_class = DdcutilQtDBusImpl
+
+        if prefer_dbus_client and Ddcutil.is_service_available():
+            self.ddcutil_impl_class = DdcutilQtDBusImpl  # The service-interface implementations are duck-typed.
         else:
             self.ddcutil_impl_class = DdcutilExeImpl
+            if prefer_dbus_client:
+                log_warning("Failed to detect D-Bus ddcutil-service, falling back to the ddcutil command.")
+
         self.common_args = common_args
         self.ddcutil_impl = self.ddcutil_impl_class(common_args)
         self.supported_codes: Dict[str, str] | None = None
@@ -1272,17 +1277,27 @@ class DdcUtil:
         about_supporting_versions = \
             f"ddcutil-interface: {self.ddcutil_impl.get_interface_version_string()}; ddcutil: {version_info}"
         self.status_values = self.ddcutil_impl.get_status_values()
-        log_info(f"ddcutil version {self.ddcutil_version} {self.version_suffix}(dynamic-sleep={self.ddcutil_version >= (2, 0, 0)})")
+        log_info(f"ddcutil version {self.ddcutil_version} "
+                 f"{self.version_suffix}(dynamic-sleep={self.ddcutil_version >= (2, 0, 0)}) "
+                 f"- interface {self.ddcutil_impl.get_interface_version_string()}")
 
-        if self.displays_changed_callback:
+        if self.ddcutil_impl_class == DdcutilQtDBusImpl and self.displays_changed_callback:
             log_info("Will use d-bus to automatically react to VDU connection/disconnection")
 
-        def dbus_signal_listener(edid_encoded: str, event_type: int, flags: int):
-            log_info(f"dbus_signal_listener received signal {edid_encoded:.30}... {event_type=} {flags=}")
-            if self.displays_changed_callback:
-                self.displays_changed_callback(edid_encoded, event_type, flags)
+            def dbus_signal_listener(edid_encoded: str, event_type: int, flags: int):
+                log_info(f"dbus_signal_listener received signal {edid_encoded:.30}... {event_type=} {flags=}")
+                if self.displays_changed_callback:
+                    self.displays_changed_callback(edid_encoded, event_type, flags)
 
-        self.ddcutil_impl.set_listerner_callback(dbus_signal_listener)
+            self.ddcutil_impl.set_listerner_callback(dbus_signal_listener)
+
+    @staticmethod
+    def is_service_available() -> bool:
+        try:
+            DdcutilQtDBusImpl()
+            return True
+        except DdcutilServiceNotFound:
+            return False
 
     def refresh_connection(self):
         self.ddcutil_impl = self.ddcutil_impl_class(self.common_args)  # Just in case the connection has gone bad.
@@ -1382,7 +1397,7 @@ class DdcUtil:
             try:
                 self.ddcutil_impl.set_vcp(edid_txt, int(vcp_code, 16), new_value)
                 return
-            except (subprocess.SubprocessError, DdcUtilDisplayNotFound, ValueError) as e:
+            except (subprocess.SubprocessError, DdcutilDisplayNotFound, ValueError) as e:
                 if not retry_on_error or attempt_count + 1 == DDCUTIL_RETRIES:
                     raise e
             time.sleep(attempt_count * 0.25)
@@ -1480,7 +1495,7 @@ class DdcutilExeImpl:
         if self.ddcutil_version[0] >= 2:
             if log_to_syslog and '--syslog' not in args:
                 syslog_args = ['--syslog', 'DEBUG' if log_debug_enabled else 'ERROR']
-        process_args = [DDCUTIL] + self.common_args + multiplier_args + syslog_args + extra_args + list(args) + edid_args
+        process_args = ['ddcutil'] + self.common_args + multiplier_args + syslog_args + extra_args + list(args) + edid_args
         try:
             with self.ddcutil_access_lock:
                 now = time.time()
@@ -1493,10 +1508,10 @@ class DdcutilExeImpl:
                           f"stdout={result.stdout.decode('utf-8', errors='surrogateescape')}") if log_debug_enabled else None
         except subprocess.SubprocessError as spe:
             error_text = spe.stderr.decode('utf-8', errors='surrogateescape')
-            if error_text.lower().find("display not found") >= 0:  # raise DdcUtilDisplayNotFound and stay quiet
+            if error_text.lower().find("display not found") >= 0:  # raise DdcutilDisplayNotFound and stay quiet
                 log_debug("subprocess result: display-not-found ", log_id, self._format_args_diagnostic(process_args),
                           f"stderr='{error_text}', exception={str(spe)}", trace=True) if log_debug_enabled else None
-                raise DdcUtilDisplayNotFound(' '.join(args)) from spe
+                raise DdcutilDisplayNotFound(' '.join(args)) from spe
             log_debug("subprocess result: error ", log_id, self._format_args_diagnostic(process_args),
                       f"stderr='{error_text}', exception={str(spe)}", trace=True) if log_debug_enabled else None
             raise
@@ -1516,7 +1531,7 @@ class DdcutilExeImpl:
         return self.ddcutil_version_string
 
     def get_interface_version_string(self) -> str:
-        return "Command Line"
+        return "Command Line - ddcutil"
 
     def get_status_values(self) -> Dict[int, str]:
         return {}
@@ -1601,7 +1616,7 @@ class DdcutilExeImpl:
                         raise ValueError(f"getvcp: {self._get_vdu_human_name(edid_txt)}"
                                          f" - failed to obtain value for vcp_code {vcp_code}")
                 return [(vcp_code, v.current, v.max, v.vcp_type) for vcp_code, v in results_dict.items()]
-            except (subprocess.SubprocessError, ValueError, DdcUtilDisplayNotFound):
+            except (subprocess.SubprocessError, ValueError, DdcutilDisplayNotFound):
                 if attempt_count + 1 == DDCUTIL_RETRIES:  # Don't log here, it creates too much noise in the logs
                     raise  # Too many failures, pass the buck upstairs
             time.sleep(attempt_count * 0.25)
@@ -1632,7 +1647,8 @@ class DdcutilQtDBusImpl(QObject):
     def __init__(self, common_args: List[str] | None = None):
         super().__init__()
         self.dbus_interface_name = os.environ.get('DDCUTIL_SERVICE_INTERFACE_NAME', default="com.ddcutil.DdcutilInterface")
-        self.common_args = [arg for arg in os.getenv('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != ''] + common_args
+        env_args = [arg for arg in os.getenv('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != '']
+        self.common_args = env_args + common_args if common_args else []
         self.service_access_lock = Lock()
         self.listener_callback = None
         self.dbus_timeout_millis = int(os.getenv("VDU_CONTROLS_DBUS_TIMEOUT_MILLIS", default='5000'))
@@ -1659,11 +1675,9 @@ class DdcutilQtDBusImpl(QObject):
     def set_vdu_specific_args(self, vdu_number: str, extra_args: List[str]):
         pass  # TODO not implemented
 
-    def connect_to_service(self) -> object:
+    def connect_to_service(self) -> (object, object):
         dbus_service_name = os.environ.get('DDCUTIL_SERVICE_NAME', default="com.ddcutil.DdcutilService")
         dbus_object_path = os.environ.get('DDCUTIL_SERVICE_OBJECT_PATH', default="/com/ddcutil/DdcutilObject")
-
-        server_executable = os.environ.get('DDCUTIL_SERVICE_EXECUTABLE', default="ddcutil-dbus-server")
         bus = QDBusConnection.connectToBus(QDBusConnection.BusType.SessionBus, "session")
         ddcutil_dbus_iface = QDBusInterface(dbus_service_name,
                                             dbus_object_path,
@@ -1685,9 +1699,8 @@ class DdcutilQtDBusImpl(QObject):
         sanity_check = ddcutil_dbus_props.call("Get", self.dbus_interface_name, "DdcutilVersion")
         if sanity_check.errorName():
             log_error(f'Sanity check of {self.dbus_interface_name} failed: {sanity_check.errorMessage()}')
-            raise DdcUtilDisplayNotFound(f"Error contacting D-Bus service {self.dbus_interface_name}")
+            raise DdcutilServiceNotFound(f"Error contacting D-Bus service {self.dbus_interface_name}")
         return ddcutil_dbus_iface, ddcutil_dbus_props
-
 
     @pyqtSlot(QDBusMessage)
     def _dbus_signal_handler(self, message: QDBusMessage):
@@ -1699,8 +1712,8 @@ class DdcutilQtDBusImpl(QObject):
         return self._validate(self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "DdcutilVersion"))[0]
 
     def get_interface_version_string(self) -> str:
-        return self._validate(self.ddcutil_props_proxy.call("Get", self.dbus_interface_name,
-                                                            "ServiceInterfaceVersion"))[0] + " (QtDBus client)"
+        return self._validate(self.ddcutil_props_proxy.call(
+            "Get", self.dbus_interface_name, "ServiceInterfaceVersion"))[0] + " (D-Bus ddcutil-service - libddcutil)"
 
     def get_status_values(self) -> Dict[int, str]:
         return self._validate(self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "StatusValues"))[0]
@@ -1758,7 +1771,7 @@ class DdcutilQtDBusImpl(QObject):
                 formatted_message = f"D-Bus  status={status_values.get(status, str(status))}: {message}"
                 log_debug(formatted_message) if log_debug_enabled else None
                 if status_values.get(status, "DDCRC_INVALID_DISPLAY") == "DDCRC_INVALID_DISPLAY":
-                    raise DdcUtilDisplayNotFound(formatted_message)
+                    raise DdcutilDisplayNotFound(formatted_message)
                 raise ValueError(formatted_message)
             return arg_list[:-2]
         return arg_list
@@ -1849,7 +1862,7 @@ CNC = COMPLEX_NON_CONTINUOUS_TYPE
 # Maps of controls supported by name on the command line and in config files.
 SUPPORTED_VCP_BY_CODE: Dict[str: VcpCapability] = {
     **{code: VcpCapability(code, name, retry_setvcp=False)
-       for code, name in (DdcUtil().get_supported_vcp_codes_map().items() if SUPPORT_ALL_VCP else [])},
+       for code, name in (Ddcutil().get_supported_vcp_codes_map().items() if SUPPORT_ALL_VCP else [])},
     **{
         BRIT: VcpCapability(BRIT, QT_TR_NOOP('brightness'), CON, icon_source=BRIGHTNESS_SVG, enabled=True, can_transition=True),
         CONT: VcpCapability(CONT, QT_TR_NOOP('contrast'), CON, icon_source=CONTRAST_SVG, enabled=True, can_transition=True),
@@ -1970,8 +1983,8 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
     DEBUG_ENABLED = conf_opt_def(cname=QT_TR_NOOP('debug-enabled'), default="no", tip=QT_TR_NOOP('output extra debug information'))
     SYSLOG_ENABLED = conf_opt_def(cname=QT_TR_NOOP('syslog-enabled'), default="no",
                                   tip=QT_TR_NOOP('divert diagnostic output to the syslog'))
-    DBUS_CLIENT_ENABLED = conf_opt_def(cname=QT_TR_NOOP('dbus-client-enabled'), default="no",
-                                       tip=QT_TR_NOOP('use the D-Bus ddcutil-server instead of the ddcutil command'))
+    DBUS_CLIENT_ENABLED = conf_opt_def(cname=QT_TR_NOOP('dbus-client-enabled'), default="yes",
+                                       tip=QT_TR_NOOP('use the D-Bus ddcutil-server if available'))
     DBUS_LISTENER_ENABLED = conf_opt_def(cname=QT_TR_NOOP('dbus-listener'), default="no",
                                          tip=QT_TR_NOOP('listen for ddcutil-server VDU status-signals'),
                                          requires='dbus-client-enabled')
@@ -2262,7 +2275,7 @@ class VduController(QObject):
     vcp_value_changed_qtsignal = pyqtSignal(str, str, int, VcpOrigin)
 
     def __init__(self, vdu_number: str, vdu_model_name: str, serial_number: str, manufacturer: str,
-                 default_config: VduControlsConfig, ddcutil: DdcUtil, vdu_exception_handler: Callable, option: int = 0) -> None:
+                 default_config: VduControlsConfig, ddcutil: Ddcutil, vdu_exception_handler: Callable, option: int = 0) -> None:
         super().__init__()
         self.vdu_stable_id = VduStableId(proper_name(vdu_model_name, serial_number))
         log_info(f"Initializing controls for {vdu_number=} {vdu_model_name=} {self.vdu_stable_id=}")
@@ -2351,7 +2364,7 @@ class VduController(QObject):
                         log_debug(f"vcp_value_changed: {self.vdu_stable_id} {vcp_code=} {value} origin={VcpOrigin.EXTERNAL.name}")
                     self.vcp_value_changed_qtsignal.emit(self.vdu_stable_id, vcp_code, value, VcpOrigin.EXTERNAL)
             return values
-        except (subprocess.SubprocessError, ValueError, TimeoutError, DdcUtilDisplayNotFound) as e:
+        except (subprocess.SubprocessError, ValueError, TimeoutError, DdcutilDisplayNotFound) as e:
             raise VduException(vdu_description=self.get_vdu_description(), vcp_code=",".join(vcp_codes), exception=e,
                                operation="get_vcp_values") from e
 
@@ -2364,7 +2377,7 @@ class VduController(QObject):
             if log_debug_enabled:
                 log_debug(f"vcp_value_changed: {self.vdu_stable_id} {vcp_code=} {value} origin={origin.name}")
             self.vcp_value_changed_qtsignal.emit(self.vdu_stable_id, vcp_code, value, origin)
-        except (subprocess.SubprocessError, ValueError, TimeoutError, DdcUtilDisplayNotFound) as e:
+        except (subprocess.SubprocessError, ValueError, TimeoutError, DdcutilDisplayNotFound) as e:
             raise VduException(vdu_description=self.get_vdu_description(), vcp_code=vcp_code, exception=e,
                                operation="set_vcp_value") from e
 
@@ -2857,7 +2870,7 @@ class VduException(Exception):
         self.operation = operation
 
     def is_display_not_found_error(self) -> bool:
-        return self.cause is not None and isinstance(self.cause, DdcUtilDisplayNotFound)
+        return self.cause is not None and isinstance(self.cause, DdcutilDisplayNotFound)
 
     def __str__(self) -> str:
         return f"VduException: {self.vdu_description} op={self.operation} attr={self.attr_id} {self.cause}"
@@ -4673,7 +4686,8 @@ class PresetChooseElevationWidget(QWidget):
             self._slider_select_elevation_qtsignal.emit(None)
             return
         chart = self.elevation_chart
-        self._slider_select_elevation_qtsignal.emit(chart.elevation_steps[value] if 0 <= value < len(chart.elevation_steps) else None)
+        self._slider_select_elevation_qtsignal.emit(
+            chart.elevation_steps[value] if 0 <= value < len(chart.elevation_steps) else None)
 
     def display_elevation_description(self) -> None:
         if self.elevation_key is None:
@@ -6388,7 +6402,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.status_layout.addWidget(self.status_bar)
 
         def choose_device(index: int) -> None:
-            existing_device = self.lux_config.get('lux-meter', "lux-device", fallback='')
+            config_device = self.lux_config.get('lux-meter', "lux-device", fallback='')
             while True:
                 lux_device_type = self.meter_device_selector.itemData(index)
                 if lux_device_type == LuxDeviceType.MANUAL_INPUT:
@@ -6396,21 +6410,21 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                     break
                 elif lux_device_type in (LuxDeviceType.ARDUINO, LuxDeviceType.FIFO, LuxDeviceType.EXECUTABLE):
                     device_path = FasterFileDialog.getOpenFileName(
-                        self, tr("Select: {}").format(tr(lux_device_type.description)), existing_device)[0]
+                        self, tr("Select: {}").format(tr(lux_device_type.description)), config_device)[0]
                     if device_path == '' or self.validate_device(device_path, required_type=lux_device_type):
                         break
             if device_path == '':
-                for i in range(self.meter_device_selector.count()):
-                    existing_device_type = self.lux_config.get('lux-meter', 'lux-device-type', fallback='')
-                    if self.meter_device_selector.itemData(i).name == existing_device_type:
-                        self.meter_device_selector.setCurrentIndex(i)
+                for dev_num in range(self.meter_device_selector.count()):
+                    config_device_type = self.lux_config.get('lux-meter', 'lux-device-type', fallback='')
+                    if self.meter_device_selector.itemData(dev_num).name == config_device_type:
+                        self.meter_device_selector.setCurrentIndex(dev_num)
             else:
-                if device_path != existing_device:
+                if device_path != config_device:
                     self.meter_device_selector.setItemText(index, tr(lux_device_type.description) + ': ' + device_path)
                     self.lux_config.set('lux-meter', "lux-device", device_path)
                     self.lux_config.set('lux-meter', "lux-device-type", self.meter_device_selector.itemData(index).name)
                     self.lux_config.save(self.path)
-                    if existing_device != device_path and LuxMeterManualDevice.device_name in (existing_device, device_path):
+                    if config_device != device_path and LuxMeterManualDevice.device_name in (config_device, device_path):
                         self.apply_settings(requires_app_restart=True)
                     else:
                         self.apply_settings(requires_auto_brightness_restart=True)
@@ -7134,7 +7148,7 @@ class VduAppController:  # Main controller containing methods for high level ope
         self.application_configuration_lock = Lock()
         self.refresh_lock = Lock()
         self.main_config = main_config
-        self.ddcutil: DdcUtil | None = None
+        self.ddcutil: Ddcutil | None = None
         self.main_window: VduAppWindow | None = None
         self.vdu_controllers_map: Dict[VduStableId, VduController] = {}
         self.preset_controller = PresetController()
@@ -7210,16 +7224,18 @@ class VduAppController:  # Main controller containing methods for high level ope
         log_info("Completed configuring application")
 
     def create_ddcutil(self):
-        try:
-            def handle_changes(edid_encoded: str, event_type: int, flags: int):
-                log_info(f"Connected VDUs changed {event_type=} {flags=} {edid_encoded:.30}...")
-                self.start_refresh()
 
-            callback = handle_changes if self.main_config.is_set(ConfOption.DBUS_LISTENER_ENABLED, fallback=False) else None
-            self.ddcutil = DdcUtil(common_args=self.main_config.get_ddcutil_extra_args(),
-                                   enable_dbus_client=self.main_config.is_set(ConfOption.DBUS_CLIENT_ENABLED),
+        def handle_changes(edid_encoded: str, event_type: int, flags: int):
+            log_info(f"Connected VDUs changed {event_type=} {flags=} {edid_encoded:.30}...")
+            self.start_refresh()
+
+        callback = handle_changes if self.main_config.is_set(ConfOption.DBUS_LISTENER_ENABLED, fallback=False) else None
+
+        try:
+            self.ddcutil = Ddcutil(common_args=self.main_config.get_ddcutil_extra_args(),
+                                   prefer_dbus_client=self.main_config.is_set(ConfOption.DBUS_CLIENT_ENABLED),
                                    connected_vdus_changed_callable=callback)
-        except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
+        except (subprocess.SubprocessError, ValueError, re.error, OSError, DdcutilServiceNotFound) as e:
             self.main_window.display_no_controllers_error_dialog(e)
 
     def detect_vdus(self) -> Tuple[List[Tuple[str, str, str, str]], Exception | None]:
@@ -7259,7 +7275,7 @@ class VduAppController:  # Main controller containing methods for high level ope
                 try:
                     controller = VduController(vdu_number, model_name, vdu_serial, manufacturer, self.main_config,
                                                self.ddcutil, main_panel_error_handler, VduController.NORMAL_VDU)
-                except (subprocess.SubprocessError, ValueError, re.error, OSError, DdcUtilDisplayNotFound) as e:
+                except (subprocess.SubprocessError, ValueError, re.error, OSError, DdcutilDisplayNotFound) as e:
                     # Catch any kind of parse related error  # TODO figure out all possible Exceptions:
                     log_error(f"Problem creating controller for {vdu_number=} {model_name=} {vdu_serial=} exception={e}",
                               trace=True)
@@ -7992,16 +8008,15 @@ class VduAppWindow(QMainWindow):
     def refresh_preset_menu(self, palette_change: bool = False, reorder: bool = False):
         self.app_context_menu.refresh_preset_menu(palette_change=palette_change, reorder=reorder)
 
-    def display_no_controllers_error_dialog(self, ddcutil_problem):
+    def display_no_controllers_error_dialog(self, ddcutil_problem: Exception):
         log_error("No controllable monitors found.")
         no_vdus_alert = MessageBox(QMessageBox.Critical)
         no_vdus_alert.setText(tr('No controllable monitors found.'))
-        if ddcutil_problem is not None:
-            if isinstance(ddcutil_problem, subprocess.SubprocessError):
-                problem_text = ddcutil_problem.stderr.decode('utf-8', errors='surrogateescape') + '\n' + str(ddcutil_problem)
-            else:
-                problem_text = str(ddcutil_problem)
-            log_error(f"Most recent error: {problem_text}".encode("unicode_escape").decode("utf-8"))
+        if isinstance(ddcutil_problem, subprocess.SubprocessError):
+            problem_text = ddcutil_problem.stderr.decode('utf-8', errors='surrogateescape') + '\n' + str(ddcutil_problem)
+        else:
+            problem_text = str(ddcutil_problem)
+        log_error(f"Most recent error: {problem_text}".encode("unicode_escape").decode("utf-8"))
         no_vdus_alert.setInformativeText(
             tr("Is ddcutil or ddcutil-service installed and working?") + "\n\n" +
             tr("Most recent error: {}").format(problem_text) + "\n" + '_' * 80)
