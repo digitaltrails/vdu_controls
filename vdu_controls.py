@@ -427,7 +427,7 @@ Lux Metering and brightness transitions
 ---------------------------------------
 
 Due to VDU hardware and DDC protocol limitations, gradual transitions from one brightness level to
-another are likely to noticeable and potentially annoying.  The auto-brightness adjustment
+another are likely to be noticeable and potentially annoying.  The auto-brightness adjustment
 feature includes several measures to reduce the amount of stepping when transitioning to a final
 value:
 
@@ -436,15 +436,16 @@ value:
  - Adjustments are only made at intervals of one or more minutes.
  - Large adjustments are made with larger step sizes to shorten the transition period.
  - The adjustment task passes lux values through a smoothing low-pass filter.
- - Altering the manual ambient-light-level slider turns off automatic adjustment.
- - The main-panel, main-menu, and light-metering dialog each contain Manual/Auto
-   controls that can be used to turn off automatic adjustment.
 
-The Preset Dialog includes an option to enable auto-brightness interpolation. When enabled, this
-option will calculate values between steps in the profiles. Interpolation won't change the
-auto-brightness value if the change would be less than 10%.  During interpolation, if the smoothed
-metered lux value is found to be in proximity to any profile-attached preset, the preset will be
-preferred over interpolation.
+When ambient light conditions are fluctuating, for example, due to passing clouds, automatic adjust
+can be suspended.  The main-panel, main-menu, and light-metering dialog each contain controls for
+toggling Auto/Manual.  Additionally, moving the manual slider turns off automatic adjustment.
+
+The Light-metering dialog includes an option to enable auto-brightness interpolation. This option
+will enable the calculation of values between steps in the profiles. In order to avoid small
+fluctuating changes, interpolation won't result in brightness changes less than 10%.  During
+interpolation, if a lux value is found to be in proximity to any attached preset, the preset
+values will be preferred over interpolated ones.
 
 Light/Lux Metering and Presets
 -------------------------------
