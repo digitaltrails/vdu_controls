@@ -33,81 +33,99 @@ Arguments supplied on the command line override config file equivalent settings.
       --detailed-help       full help in Markdown format
       --about               info about vdu_controls
       --show control_name
-                            show specified control only (``--show`` may be specified multiple times)
+                            show specified control only, may be specified multiple times
       --hide control_name
-                            hide/disable a control (``--hide`` may be specified multiple times)
+                            hide/disable a control, may be specified multiple times
       --enable-vcp-code vcp_code
-                            enable a control for a vcp-code unavailable via hide/show (maybe specified multiple times)
+                            enable a control for a vcp-code unavailable via hide/show,
+                            may be specified multiple times
       --system-tray|--no-system-tray
-                            start up as an entry in the system tray.  ``--no-system-tray`` is the default.
+                            start up as an entry in the system tray.
+                            ``--no-system-tray`` is the default.
       --location latitude,longitude
-                            local latitude and longitude for triggering presets by solar elevation
+                            local latitude and longitude for triggering presets
+                            by solar elevation
       --translations|--no-translations
-                            enable/disable language translations. ``--no-translations`` is the default.
+                            enable/disable language translations.
+                            ``--no-translations`` is the default.
       --schedule|--no-schedule
                             enable/disable preset scheduling. ``--schedule`` is the default.
       --weather|--no-weather
                             enable/disable weather lookups. ``--weather`` is the default.
       --lux-options|--no-lux-options
-                            enable/disable ambient light metering options. ``--lux-options`` is the default.
+                            enable/disable ambient light metering options.
+                            ``--lux-options`` is the default.
       --debug|--no-debug
-                            enable/disable additional debug information.  ``--no-debug`` is the default.
+                            enable/disable additional debug information.
+                            ``--no-debug`` is the default.
       --warnings--no-warnings
-                            popup a warning when a VDU lacks an enabled control. ``--no-warnings`` is the default.
+                            popup a warning when a VDU lacks an enabled control.
+                            ``--no-warnings`` is the default.
       --syslog|-no-syslog
-                            divert diagnostic output to the syslog (journald).  ``--no-syslog`` is the default.
+                            divert diagnostic output to the syslog (journald).
+                            ``--no-syslog`` is the default.
       --hide-on-focus-out|--no-hide-on-focus-out
-                            minimise the main window automatically on focus out ``--no-hide-on-focus-out`` is the default.
+                            minimise the main window automatically on focus out
+                            ``--no-hide-on-focus-out`` is the default.
       --splash|--no-splash
                             show the splash screen.  ``--splash`` is the default.
       --monochrome-tray|--no-monochrome-tray
-                            monochrome themed system-tray. ``--no-monochrome-tray`` is the default.
+                            monochrome themed system-tray.
+                            ``--no-monochrome-tray`` is the default.
       --mono-light-tray|--no-mono-light-tray
-                            alter monochrome-tray for a light themed system-tray. ``--no-mono-light-tray`` is the default.
+                            alter monochrome-tray for a light themed system-tray.
+                            ``--no-mono-light-tray`` is the default.
       --smart-window|--no-smart-window
-                            smart main window placement and geometry.  ``--smart-window`` is the default.
+                            smart main window placement and geometry.
+                            ``--smart-window`` is the default.
       --sleep-multiplier    set the default ddcutil sleep multiplier
-                            protocol reliability multiplier for ddcutil (typically 0.1 .. 2.0, default is 1.0)
+                            protocol reliability multiplier for ddcutil (typically
+                            0.1 .. 2.0, default is 1.0)
       --ddcutil-extra-args  extra arguments to pass to ddcutil (enclosed in single quotes)
       --dbus-client-enabled|--no-dbus-client-enabled
-                            use the ddcutil-dbus-server instead of the ddcutil command ``--no-dbus-client-enabled`` is the default
+                            use the ddcutil-dbus-server instead of the ddcutil command
+                            ``--no-dbus-client-enabled`` is the default
       --dbus-listener|--no-dbus-listener
-                            listen for VDU status change signals ``--no-dbus-listener`` is the default
+                            listen for VDU status change signals
+                            ``--no-dbus-listener`` is the default
       --create-config-files
-                            if they do not exist, create template config INI files in $HOME/.config/vdu_controls/
-      --install             installs the vdu_controls in the current user's path and desktop application menu.
-      --uninstall           uninstalls the vdu_controls application menu file and script for the current user.
+                            if they do not exist, create template config INI files
+                            in $HOME/.config/vdu_controls/
+      --install             installs the vdu_controls in the current user's path and
+                            desktop application menu.
+      --uninstall           uninstalls the vdu_controls application menu file and
+                            script for the current user.
 
 Description
 ===========
 
-``vdu_controls`` is a control-panel for DisplayPort, DVI, HDMI, or USB connected VDUs.  It provides
-controls for settings such as brightness and contrast.
+``vdu_controls`` is a control-panel for DisplayPort, DVI, HDMI, or USB connected VDUs.  Out of the
+box, ``vdu_controls`` offers a subset of controls including brightness, contrast and audio
+controls.  Additional controls can be enabled via the ``Settings`` dialog.
 
 ``vdu_controls`` interacts with VDUs by using ``ddcutil`` to issue standard VESA
 *Virtual Control Panel*  (*VCP*) commands via the VESA  *Display Data Channel* (*DDC*).
 ``Ddcutil`` provides a robust interface that is tolerant of the vagaries of the many OEM DDC
 implementations.
 
-By default, ``vdu_controls`` runs ``ddcutil`` separately for each VCP-command, this only
-requires the presence of the ``ddcutil`` command.  From ``vdu_controls 2.0`` onward,
-``vdu_controls`` can be set to use the ``ddcutil D-Bus service`` to provide a considerably
-faster and smoother experience, this requires ``ddcutil-dbus-server`` and
-
-Out of the box, ``vdu_controls`` offers a subset of controls including brightness, contrast and audio
-controls.  Additional controls can be enabled via the ``Settings`` dialog.
+From ``vdu_controls 2.0`` onward, ``vdu_controls`` defaults to using the ``D-Bus ddcutil-service``.
+Should the ``ddcutil-service`` be unavailable, ``vdu_controls`` will fall back to running ``ddcutil``
+separately for each VCP-command.
 
 The UI's look-and-feel adjusts itself for dark and light desktop themes. The application may
-optionally run in the system tray of KDE, Deepin, GNOME, and Xfce (and possibly others),
-adjusting itself for the quirks of the different tray implementations.
+optionally run in the system tray of KDE, Deepin, GNOME, and Xfce (and possibly others).
 
-Named ``Preset`` configurations can be saved for later recall. For example, presets may be created
-for night, day, photography, movies, and so forth.  Presets can be automatically triggered according
-to solar elevation, and can be further constrained by local weather conditions. Presets can be set
-to transition immediately or gradually.  Presets can also be activated by UNIX signals.
+The UI provides an optional ``ambient-light slider`` for simultaneously adjusting
+all VDUs according to custom per-VDU ambient lux/brightness profiles.  Options are included for
+accessing a hardware ambient light-meter, or a webcam, for fully automatic brightness adjustment.
+
+Named ``Preset`` configurations can be saved and recalled. For example, presets may be created
+for night, day, photography, movies, and so forth.   Presets can be triggered by specific ambient
+light levels, scheduled according to local solar elevation, vetoed by local weather conditions,
+or activated by UNIX signals.
 
 From any UI window, `F1` accesses help, and `F10` accesses the main-menu.   The main-menu is
-also available via the main-window's hamburger-menu, and via the right-mouse button in either the
+also available via the hamburger-menu, and also via the right-mouse button in either the
 main-window or the system-tray icon.  The main-menu has `ALT-key` shortcuts for all menu items
 (subject to sufficient letters being available to distinguish all user defined presets).
 
@@ -116,35 +134,23 @@ For further information, including screenshots, see https://github.com/digitaltr
 Configuration
 =============
 
-Configuration changes can be made via the ``Settings`` dialog, the command line, or by manually
-editing the config-files.
+Configuration changes can be made via the ``Settings`` dialog or by editing the config-files.
 
 Settings Menu and Config files
 ------------------------------
 
-The right-mouse - main-menu - ``Settings`` accesses the Settings dialog which can be used to
-customise the application.  The ``Settings`` dialog features a tab for editing a config file
-specific to each VDU.  The config files are named according to the following scheme:
+The ``Settings`` dialog features a tab for editing common/default settings as well as
+tabs specific to each VDU.  The config files are named according to the following scheme:
 
  - Application wide default config: ``$HOME/.config/vdu_controls/vdu_controls.conf``
  - VDU model and serial number config: ``$HOME/.config/vdu_controls/<model>_<serial|display_num>.conf``
  - VDU model only config: ``$HOME/.config/vdu_controls/<model>.conf``
-
-The application wide default file can be used to alter application settings, the set of default
-VDU controls, and the default additional parameters to pass to ``ddcutil``.
 
 The VDU-specific config files can be used to:
 
  - Correct manufacturer built-in metadata.
  - Customise which controls are to be provided for each VDU.
  - Set optimal ``ddcutil`` DDC parameters for each VDU.
-
-Config files can only be used to alter definitions of VCP codes already supported by ``ddcutil``.
-If a VCP code is listed as a *manufacturer specific feature* it is not supported. Manufacturer
-specific features should not be experimented with, some may have destructive or irreversible
-consequences that may brick the hardware. It is possible to enable any codes by  creating
-a  ``ddcutil`` user definition (`--udef`) file, BUT THIS SHOULD ONLY BE USED WITH EXTREME CAUTION
-AND CANNOT BE RECOMMENDED.
 
 The config files are in INI-format divided into a number of sections as outlined below::
 
@@ -184,6 +190,10 @@ The config files are in INI-format divided into a number of sections as outlined
     # The (possibly edited) output from "ddcutil --display N capabilities" with leading spaces retained.
     capabilities-override =
 
+Config files can only be used to enable and alter definitions of VCP codes supported by ``ddcutil``.
+Unsupported manufacturer specific features should only be experimented with caution, some
+may have irreversible consequences, including bricking the hardware.
+
 As well as using the ``Settings``, config files may also be created by the command line option::
 
     vdu_controls --create-config-files
@@ -197,7 +207,7 @@ Adding value restrictions to the config file
 --------------------------------------------
 
 In some cases, a VDU's DDC reported minimums and maximums may be incorrect or overstated.  Within
-vdu_controls, this can be corrected by overriding the DDC reported range. For example, perhaps a VDU
+vdu_controls this can be corrected by overriding the DDC reported range. For example, perhaps a VDU
 reports it supports a brightness range of 0 to 100, but in fact only practically supports 20 to 90.
 This can be corrected by bringing up the VDU's settings tab and editing the text in
 the **capabilities override**:
@@ -217,31 +227,31 @@ Presets
 -------
 
 A custom named preset can be used to save the current VDU settings for later recall. Any number of
-presets can be created to suit different lighting conditions or different applications, for example:
-*Night*, *Day*, *Overcast*, *Sunny*, *Photography*, and *Video*.
-
-Presets can be assigned a name and icon.  If the current monitor settings match a preset, the
-preset's name will show in the window-title and tray tooltip, the preset's icon will overlay the
-normal tray icon.
+presets can be created for different lighting conditions or different applications, for example:
+*Night*, *Day*, *Overcast*, *Sunny*, *Photography*, and *Video*. Each presets can be assigned a
+name and icon.
 
 The ``Presets`` item in ``main-menu`` will bring up a ``Presets`` dialog for managing and
 applying presets.  The ``main-menu`` also includes a shortcut for applying each existing presets.
 
 Any small SVG or PNG can be assigned as a preset's icon.  Monochrome SVG icons that conform to the
 Plasma color conventions will be automatically inverted if the desktop them is changed from dark to
-light. If a preset lacks an icon, it will be assigned one created from the letters of its name (the
-first letter of the first and last words). A starter set of icons is included in
-``/usr/share/vdu_controls/icons/``.
+light. If a preset lacks an icon, an icon will be created from its initials (of its first and last
+words). A starter set of icons is included in ``/usr/share/vdu_controls/icons/``.
+
+Any time the current VDUs settings match those of a preset, the preset's name and icon will
+automatically show in the window-title, tray tooltip, tray icon.
 
 Presets may be set to transition immediately (the default); gradually on schedule (solar elevation);
 or gradually always (when triggered by schedule, main-menu, or UNIX signal).  The speed of
-transition is determined by how quickly each VDU can respond to adjustment (which is generally quite
-slowly).  During a transition, the transition will be abandoned if the controls involved in the
-transition are manually altered, or another preset is manually invoked.
+transition is determined by how quickly each VDU can respond to adjustment.  During a transition,
+the transition will be abandoned if the controls involved in the transition are altered by any other
+activity.
 
-Each preset is stored in the application config directory as
-``$HOME/.config/vdu_controls/Preset_<preset_name>.conf``. Preset files are saved in INI-file format
-for ease of editing.  Each preset file contains a section for each connected VDU, for example::
+Each preset is stored in config directory as: ``$HOME/.config/vdu_controls/Preset_<preset_name>.conf``
+
+Preset files are saved in INI-file format for ease of editing.  Each preset file contains a
+section for each connected VDU, for example::
 
     [preset]
     icon = /usr/share/icons/breeze/status/16/cloudstatus.svg
@@ -257,12 +267,12 @@ for ease of editing.  Each preset file contains a section for each connected VDU
     brightness = 13
     audio-speaker-volume = 16
 
-When the GUI is used to create a preset file, you may select which controls to save.  For example,
+When creating a preset file, you may select which controls to save for each VDU.  For example,
 you might create a preset that includes the brightness, but not the contrast or audio-volume.
 Keeping the included controls to a minimum speeds up the transition and reduces the chances of the
 VDU failing to keep up with the associated stream of DDC commands.
 
-When using the GUI to create or edit a preset, activation of scheduled presets and adjustments due
+While using the GUI to create or edit a preset, activation of scheduled presets and adjustments due
 to light-metering are blocked until editing is complete.
 
 Presets - solar elevation triggers
@@ -272,21 +282,20 @@ A preset may be set to automatically trigger when the sun rises to a specified e
 being to allow a preset to trigger relative to dawn or dusk, or when the sun rises above some
 surrounding terrain (the time of which will vary as the seasons change).
 
+If a preset has an elevation, the preset will be triggered each day at a time calculated according
+to the latitude and longitude specified by in the ``vdu-controls-globals`` ``location`` option.
+By choosing an appropriate ``solar-elevation`` a preset may be confined to specific times of the
+year.  For example, a preset with a positive solar elevation will not trigger at mid-winter in the
+Arctic circle (because the sun never gets that high).  Any preset may be manually invoked
+regardless of its specified solar elevations.
+
 To assign a trigger, use the Preset Dialog to set a preset's ``solar-elevation``.  A solar elevation
 may range from -19 degrees in the eastern sky (morning/ascending) to -19 degrees in the western sky
 (afternoon/descending), with a maximum nearing 90 degrees at midday.
 
-If a preset has an elevation, it will be triggered each day at a time calculated by using the
-latitude and longitude specified by in the ``vdu-controls-globals`` ``location`` option.
-
-By choosing an appropriate ``solar-elevation`` a preset may be confined to specific times of the
-year.  For example, a preset with a positive solar elevation will not trigger at mid-winter in the
-Arctic circle (because the sun never gets that high).  Such a preset may always be manually selected
-regardless of its specified solar elevations.
-
-On any given day, the user may temporarily override any trigger, in which case the trigger is
-suspended until the following day.  For example, a user might choose to disable a trigger intended
-for the brightest part of the day if the day is particularly dull,
+On any given day, the Preset Dialog may be used to temporarily override any trigger, in which case
+the trigger is suspended until the following day.  For example, a user might choose to disable
+a trigger intended for the brightest part of the day if the day is particularly dull.
 
 At startup ``vdu_controls`` will restore the most recent preset that would have been triggered for
 this day (if any).  For example, say a user has ``vdu_controls`` set to run at login, and they've
@@ -296,19 +305,17 @@ overdue dawn preset will be triggered at login.
 Presets - Smooth Transitions
 ----------------------------
 
-A preset may be set to ``Transition Smoothly``, in which case changes to controls slider controls
-such as brightness and contrast will be stepped by one until the final values are reached.  Any
-non-continuous values will be set after all continuous values have reached their final values.
+A preset may be set to ``Transition Smoothly``, in which case changes to controls continuous-value
+slider controls such as brightness and contrast will be stepped by one until the final values are
+reached.  Any non-continuous values will be set after all continuous values have reached their
+final values, for example, if input-source is included in a preset, it will be restored at the end.
 
-The Preset Dialog includes controls to set a preset's transition type to a combination these values:
+The Preset Dialog includes a combo-box for defining when to applt transitions to a preset:
 
-    * ``None`` transition, values change immediately;
-    * ``On schedule`` according to a solar elevation trigger;
-    * ``On signal`` on the appropriate UNIX signal;
-    * ``On menu`` when selected in the main-menu;
-
-In the Presets Dialog, the preset activation and edit buttons will activate any preset immediately
-regardless of the transition settings.
+ - ``None`` - change immediately;
+ - ``On schedule`` - slowly change according to a solar elevation trigger;
+ - ``On signal`` - slowly change on the appropriate UNIX signal;
+ - ``On menu`` - slowly change when selected in the main-menu;
 
 Normally a transition single-steps the controls as quickly as possible.  In practice this means each
 step takes one or more seconds and increases linearly depending on the number of VDUs and number of
@@ -347,8 +354,7 @@ When weather requirements are in use, ``vdu_controls`` will check that the coord
 be issued if they are more than 200 km (124 miles) apart.
 
 If the place-name is left blank, the ``wttr.in`` server will try to guess you location from your
-external IP address.  The guess may vary due to the state of the ``wttr.in`` server. It's best to
-fill out a place-name to ensure stable results.
+external IP address.  The guess may not be accurate and may vary over time.
 
 Presets - remote control
 ------------------------
@@ -373,52 +379,31 @@ settings from monitors".  For example:
 
 Any other signals will be handled normally (in many cases they will result in process termination).
 
-Triggers that might be considered include the time of day, the ambient light level, or the
-prevailing cloud conditions. For example:
+Ambient Light Levels and Light/Lux Metering
+-------------------------------------------
 
-    * Ambient light level as measured by a webcam::
+The default UI includes an ``ambient-light slider`` which will simultaneously adjust all VDUs
+according to custom per-VDU lux/brightness profiles.  As well as indicating the ambient light
+level manually via the slider, ``vdu_controls`` can be configured to periodically read from a
+hardware lux metering device and adjust brightness automatically.  The Lux-Dialog provides
+controls for setting up light metering and VDU lux/brightness profiles.  If ambient light level
+controls are not required, the Settings Dialog includes an option to disable and hide them.
 
-        ffmpeg -y -s 1024x768 -i /dev/video0 -frames 1 $HOME/tmp/out.jpg 1>&2
-        ambient=$(convert $HOME/tmp/out.jpg -colorspace gray -resize 1x1 -evaluate-sequence Max -format "%[fx:100*mean]" info:)
-        echo $ambient
+As well as the manual-slider, a metering device may be a serial-device, a UNIX FIFO (named-pipe),
+or an executable (script or program):
 
-    * Local cloud conditions from https://github.com/chubin/wttr.in::
-
-        curl 'wttr.in?format=%C'
-
-    * Local time/sunrise/sunset again from wttr.in::
-
-        curl 'wttr.in?format="dawn=%D,dusk=%d,weather=%C"'
-
-Light/Lux Metering
-------------------
-
-``vdu_controls`` can use a hardware lux metering device and adjust VDU brightness according to
-custom per-VDU lux-brightness profiles.
-
-The Settings Dialog includes an option enable lux metering options.  When enabled, the Content Menu
-will include Light Meter option to access a Light-Metering Dialog. The dialog can be used to define the
-metering device and the Lux Brightness Response Profile for each VDU.
-
-The metering device may be a serial-device, a UNIX FIFO (named-pipe), or an executable-script:
-
-    * A serial-device must periodically supply one floating point lux reading
-      terminated by a carriage-return newline.
-
-    * A FIFO must periodically supply one floating point lux reading
-      terminated by a newline.
-
-    * An executable-script must supply one floating point lux reading
-      terminated by a newline each time it is run.
-
+ - A serial-device must periodically supply one floating-point lux-value
+   terminated by a carriage-return newline.
+ - A FIFO must periodically supply one floating-point lux-value terminated by a newline.
+ - An executable must supply one floating-point lux-value reading terminated by a newline each time
+   it is run.
 
 Possible hardware devices include:
 
-    * An Arduino with a GY-30/BH1750 lux meter writing to a usb serial-port.
-
-    * A webcam periodically sampled to produce approximate lux values.  Values
-      might be estimated by analysing image content or image settings that
-      contribute to exposure, such ISO values, apertures, and shutter speed.
+ - An Arduino with a GY-30/BH1750 lux meter writing to a usb serial-port.
+ - A webcam periodically sampled to produce approximate lux values.  Values
+   might be estimated by analysing image content or image settings that
+   contribute to exposure, such ISO values, apertures, and shutter speed.
 
 Further information on various lux metering options, as well as instructions for constructing and
 programming an Arduino with a GY-30/BH1750, can be found at:
@@ -431,28 +416,35 @@ location:
 
     https://github.com/digitaltrails/vdu_controls/tree/master/sample-scripts.
 
-The scripts may require customising for your own webcam and lighting conditions.
-
 The examples include ``vlux_meter.py``, a beta-release Qt-GUI python-script that meters from a
 webcam and writes to a FIFO (`$HOME/.cache/vlux_fifo`). Controls are included for mapping
 image-brightness to lux mappings, and for defining a crop from which to sample brightness values.
 The script optionally runs in the system-tray.
 
+The examples may require customising for your own webcam and lighting conditions.
+
 Lux Metering and brightness transitions
 ---------------------------------------
 
 Due to VDU hardware and DDC protocol limitations, gradual transitions from one brightness level to
-another are quite likely to noticeable and potentially annoying.  The auto-brightness adjustment
+another are likely to noticeable and potentially annoying.  The auto-brightness adjustment
 feature includes several measures to reduce the amount of stepping when transitioning to a final
 value:
 
-    * Lux/Brightness Profiles may define brightness-steps so that
-      brightness levels remain constant over set ranges of lux values.
-    * Adjustments are only made at intervals of one or more minutes.
-    * Large adjustments are made with larger step sizes to shorten the transition period.
-    * The adjustment task passes lux values through a smoothing low-pass filter.
-    * The main-panel, main-menu, and light-metering dialog each contain Manual/Auto
-      controls that can be used to temporarily disabling lux metering.
+ - Lux/Brightness Profiles may define brightness-steps so that
+   brightness levels remain constant over set ranges of lux values.
+ - Adjustments are only made at intervals of one or more minutes.
+ - Large adjustments are made with larger step sizes to shorten the transition period.
+ - The adjustment task passes lux values through a smoothing low-pass filter.
+ - Altering the manual ambient-light-level slider turns off automatic adjustment.
+ - The main-panel, main-menu, and light-metering dialog each contain Manual/Auto
+   controls that can be used to turn off automatic adjustment.
+
+The Preset Dialog includes an option to enable auto-brightness interpolation. When enabled, this
+option will calculate values between steps in the profiles. Interpolation won't change the
+auto-brightness value if the change would be less than 10%.  During interpolation, if the smoothed
+metered lux value is found to be in proximity to any profile-attached preset, the preset will be
+preferred over interpolation.
 
 Light/Lux Metering and Presets
 -------------------------------
@@ -461,10 +453,9 @@ The Light-Metering Dialog includes the ability to set a Preset to trigger at a l
 is accessed by hovering under the bottom axis of the Lux Profile Chart.
 
 When a preset is tied to a lux value, the preset's VDU brightness values become fixed points on the
-Lux Profile Chart.  When the specified metered lux value is achieved, the metered stepping process
-will restore the preset's brightness values and then follow that by triggering the preset's full
-restoration.  This ordering of events reduces the likelihood of metered-stepping, and
-preset-restoration from clashing.
+Lux Profile Chart.  When the specified metered lux value is achieved, the stepping process will
+restore the preset's brightness values and then trigger the full restoration of the preset.  This
+ordering of events reduces the likelihood of metered-stepping, and preset-restoration from clashing.
 
 A preset that does not include a VDU's brightness may be attached to a lux point to restore one or
 more non-brightness controls.  For example, on reaching a particular lux level, an attached preset
@@ -479,12 +470,6 @@ may conflict. For example, a scheduled preset may set a reduced brightness, but 
 light-metering might increase it.  If you wish to use the two together, design your lux/brightness
 profile steps to match the brightness levels of specific presets, for example, a full-sun preset and
 the matching step in a lux/brightness Profile might both be assigned the same brightness level.
-
-The Preset Diolog includes an option to enable auto-brightness interpolation. When enabled, this
-option will calculate values between steps in the profiles. Interpolation won't change the
-auto-brightness value if the change would be less than 10%.  During interpolation, if the smoothed
-metered lux value is found to be in proximity to any profile-attached preset, the preset will be
-preferred over interpolation.
 
 Lux Metering Internal Parameters
 --------------------------------
@@ -503,7 +488,7 @@ heuristics::
       smoother-alpha=0.5
       # If an interpolated value yields a change in brightness, how big should the change
       # be to trigger an actual VDU change in brightness? Also determines how close
-      # an interpolated value needs to be to a an attached preset's brightness in order
+      # an interpolated value needs to be to an attached preset's brightness in order
       # to prefer triggering the preset over applying the interpolated value.
       interpolation-sensitivity-percent=10
 
@@ -528,7 +513,7 @@ multipliers can be configured (see previous section).
 Improving Response Time and Reliability: Connections and Controls
 -----------------------------------------------------------------
 
-``DDC/I2C`` is not the speediest or most reliable form of communication. VDUs also vary in their
+``DDC/I2C`` is not the most reliable form of communication. VDUs may vary in their
 responsiveness and compliance.  GPUs, GPU drivers, and types of connection may affect the
 reliability.
 
@@ -591,20 +576,17 @@ Software::
 
         zypper install python3 python3-qt5 noto-sans-math-fonts noto-sans-symbols2-fonts
         zypper install ddcutil
+        zypper install libddcutil ddcutil-service  # optional, but recommended if availabled
 
-Kernel Modules::
-
-        modprobe i2c_dev
-        lsmod | grep i2c_dev
+If you wish to use a serial-port lux metering device, the ``pyserial`` module is a runtime requirement.
 
 Get ddcutil working first. Check that the detect command detects your VDUs without issuing any
 errors:
 
         ddcutil detect
 
-Read ddcutil readme concerning config of i2c_dev with nvidia GPUs. Detailed ddcutil info at https://www.ddcutil.com/
-
-If you wish to use a serial-port lux metering device, the ``pyserial`` module is a runtime requirement.
+Read ddcutil documentation concerning config of i2c_dev with nvidia GPUs. Detailed ddcutil info
+at https://www.ddcutil.com/
 
 Environment
 ===========
@@ -7063,7 +7045,7 @@ class HelpDialog(SubWinDialog, DialogSingletonMixin):
         markdown_view = QTextEdit()
         markdown_view.setReadOnly(True)
         markdown_view.setViewportMargins(native_pixels(80), native_pixels(80), native_pixels(50), native_pixels(30))
-        markdown_view.setMarkdown(__doc__)
+        markdown_view.setMarkdown(re.sub(r"^$([^ ])", r"<br/>\n\1", __doc__, flags=re.MULTILINE))  # hack Qt markdown
         layout.addWidget(markdown_view)
         close_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), tr("Close"))
         close_button.clicked.connect(self.hide)
