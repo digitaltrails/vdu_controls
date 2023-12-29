@@ -967,7 +967,7 @@ CONTRAST_SVG = b"""
 AUTO_LUX_ON_SVG = BRIGHTNESS_SVG.replace(b'viewBox="0 0 24 24"', b'viewBox="3 3 18 18"').replace(b'#232629', b'#ff8500')
 AUTO_LUX_OFF_SVG = BRIGHTNESS_SVG.replace(b'viewBox="0 0 24 24"', b'viewBox="3 3 18 18"').replace(b'#232629', b'#84888c')
 AUTO_LUX_LED_COLOR = QColor(0xff8500)
-PRESET_TRANSITIONING_LED_COLOR = QColor(0x00ff00)
+PRESET_TRANSITIONING_LED_COLOR = QColor(0x55ff00)
 
 # adjust rgb icon from breeze5-icons: LGPL-3.0-only
 COLOR_TEMPERATURE_SVG = b"""
