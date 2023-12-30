@@ -10,13 +10,14 @@ A control panel for external monitors (*Visual Display Units*).
 > to be simultatiniously adjusted by moving one slider.  This is an alternative
 > to fully automatic control via hardware lux-metering.  When the ambient-light-level
 > is changed, each VDU us adjusted according to its own custom light-level/brighness
-> profiled defined under **Settings->Light-Metering**. This new option is enabled
+> profile defined under **Settings->Light-Metering**. This new option is enabled
 > by default, but can be disabled by unchecking  **Settings->Lux options enabled**.
 >
 >  ![Custom](screen-shots/ambient-slider-example.png) 
 >
-> The second major change in 2.0 is that the DDC interface has been rewriten to optionally
-> use the D-Bus [ddcutil-service](https://github.com/digitaltrails/ddcutil-service) instead
+> The second major change in 2.0 is actually far more wide-reaching, but much less visibile.
+> The  internal DDC/VDU interface has been rewritten to optionally use the
+> D-Bus [ddcutil-service](https://github.com/digitaltrails/ddcutil-service) instead
 > of the **ddcutil** command. The new **ddcutil-service** is a daemon I've written to
 > interface with **libddcutil**, it's faster and more reponsive than the older
 > command-based implementation. The older command based approach is still the default.
