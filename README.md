@@ -22,10 +22,11 @@ A control panel for external monitors (*Visual Display Units*).
 > interface with **libddcutil**, it's faster and more reponsive than the older
 > command-based implementation. The older command based approach is still the default.
 > 
-> If you'd like to try the **ddcutil-service**, you'd need to build and install it, 
-> it's one C file, just `make` and install it as a user session daemon.  It doesn't 
-> need to be installed as root, it can also be started manually from the command 
-> line. It will build against any libddcutil from 1.4 onward. For details, see:
+> If you'd like to try the **ddcutil-service**, it's written in C, so you'd
+> probably need to build and install it (I do have an RPM for OpenSUSE Tumbleweed).
+> It's one C file,  it doesn't need to be installed as root, it can also be started
+> manually from the command line. It will build against any libddcutil from 1.4 onward.
+> For install/build details, see:
 > 
 >    https://github.com/digitaltrails/ddcutil-service
 > 
