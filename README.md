@@ -33,7 +33,7 @@ A control panel for external monitors (*Visual Display Units*).
 > Once the service is running, just toggle `vdu_controls->Settins->dbus client enabled`.  The
 > bottom line of the About-Dialog should then list ddcutil-interface as `1.0.0 (QtDBus client)`.
 > You can also access the service from any D-Bus clients such as d-feet or the
-> command line tool dbus-send.
+> command line tools such as dbus-send and busctl.
 > 
 > The service is under active development along with supporting amendments 
 > to libddcutil by @rockowitz.  The current intention is to eventually package it 
