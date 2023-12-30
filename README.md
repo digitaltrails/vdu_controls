@@ -3,17 +3,26 @@ vdu_controls - a DDC control panel for monitors
 
 A control panel for external monitors (*Visual Display Units*).
 
-> This is the D-Bus development branch for vdu_controls.  It's functional and
-> you're welcome to try it.  It's many times faster and more reponsive than 
-> the non-D-Bus approach. It depends on a D-Bus service that I've 
-> written to interface with libddcutil: 
+> This is the vdu_controls 2.0 truck development branch for vdu_controls.  
+> It's functional and you're welcome to try it.  
+> 
+> Version 2.0 adds manual ambient-light input.  This allows all connected VDU's
+> to be simultatiniously adjusted by moving one slider.  This is an alternative
+> to fully automatic control via hardware lux-metering.  The new option is enabled
+> by default, but can be disabled by unchecking  **Settings->Lux options enabled**.
+>
+> A major change in 2.0 is that the DDC interface has been rewriten to optionally
+> use the D-Bus **ddcutil-service** instead of the **ddcutil** command. The older 
+> command based approach is still the default.
+> The new **ddcutil-service** is a daemon I've written to interface with **libddcutil**, 
+> it's faster and more reponsive than the older command-based implementation. 
+> 
+> If you'd like to try the **ddcutil-service**, you'd need to build and install it, 
+> it's one C file, just `make` and install it as a user session daemon.  It doesn't 
+> even need to be installed as root, you can even start it manually from the command 
+> line. It will build against any libddcutil from 1.4 onward. For details, see:
 > 
 >    https://github.com/digitaltrails/ddcutil-service  
-> 
-> You would need to build and install this service.  It's one C file, just `make` and
-> install it as a user session daemon.  It doesn't need to be installed as root.
-> You could even start it manually from the command line.  It will build 
-> against any libddcutil from 1.4 onward.
 > 
 > Once the service is running, just toggle `vdu_controls->Settins->dbus client enabled`.  The
 > bottom line of the About-Dialog should then list ddcutil-interface as `1.0.0 (QtDBus client)`.
@@ -21,13 +30,9 @@ A control panel for external monitors (*Visual Display Units*).
 > command line tool dbus-send.
 > 
 > The service is under active development along with supporting amendments 
-> to libddcutil by @rockowitz.  The intention is to eventually package it 
+> to libddcutil by @rockowitz.  The current intention is to eventually package it 
 > with ddcutil/libddcutil.
 > 
-> Version 2.0 also adds manual ambient-light input.  This allows all connected VDU's
-> to be simultatiniously adjusted by moving one slider.  This is an alternative
-> to fully automatic control via hardware lux-metering.  To access this new option
-> tick **Settings->Lux options enabled**.
 > 
 >  ![Custom](screen-shots/ambient-slider-example.png) 
 > 
