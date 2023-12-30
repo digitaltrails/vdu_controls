@@ -27,7 +27,7 @@ A control panel for external monitors (*Visual Display Units*).
 > need to be installed as root, it can also be started manually from the command 
 > line. It will build against any libddcutil from 1.4 onward. For details, see:
 > 
->    https://github.com/digitaltrails/ddcutil-service  
+>    https://github.com/digitaltrails/ddcutil-service
 > 
 > Once the service is running, just toggle `vdu_controls->Settins->dbus client enabled`.  The
 > bottom line of the About-Dialog should then list ddcutil-interface as `1.0.0 (QtDBus client)`.
