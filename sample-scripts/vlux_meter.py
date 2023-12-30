@@ -661,7 +661,7 @@ class BrightnessMappingDisplay(QWidget):
         heading = make_heading(tr("Brightness-to-Lux Mapping"), self)
         layout.addWidget(heading, 0, 0, 1, -1, Qt.AlignTop)
 
-        self.input_widgets: Dict[QWidget, QSpinBox] = {}
+        self.input_widgets: Dict[str, QSpinBox] = {}
         for col, (brightness, (name, lux)) in enumerate(reversed(global_config.get_brightness_map().items())):
             lux_label = QLabel(f"{lux:n}\n{name}")
             layout.addWidget(lux_label, 1, col, 1, 1)
