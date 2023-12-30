@@ -6,22 +6,24 @@ A control panel for external monitors (*Visual Display Units*).
 > This is the vdu_controls 2.0 trunk development branch for vdu_controls.  It's
 > functional and you're welcome to try it.  
 > 
-> Version 2.0 adds manual ambient-light input.  This allows all connected VDU's
+> Version 2.0 adds manual ambient-light-level input.  This allows all connected VDU's
 > to be simultatiniously adjusted by moving one slider.  This is an alternative
-> to fully automatic control via hardware lux-metering.  The new option is enabled
+> to fully automatic control via hardware lux-metering.  When the ambient-light-level
+> is changed, each VDU us adjusted according to its own custom light-level/brighness
+> profiled defined under **Settings->Light-Metering**. This new option is enabled
 > by default, but can be disabled by unchecking  **Settings->Lux options enabled**.
 >
 >  ![Custom](screen-shots/ambient-slider-example.png) 
 >
-> A major change in 2.0 is that the DDC interface has been rewriten to optionally
-> use the D-Bus **ddcutil-service** instead of the **ddcutil** command. The older 
-> command based approach is still the default.
-> The new **ddcutil-service** is a daemon I've written to interface with **libddcutil**, 
-> it's faster and more reponsive than the older command-based implementation. 
+> The second major change in 2.0 is that the DDC interface has been rewriten to optionally
+> use the D-Bus [ddcutil-service](https://github.com/digitaltrails/ddcutil-service) instead
+> of the **ddcutil** command. The new **ddcutil-service** is a daemon I've written to
+> interface with **libddcutil**, it's faster and more reponsive than the older
+> command-based implementation. The older command based approach is still the default.
 > 
 > If you'd like to try the **ddcutil-service**, you'd need to build and install it, 
 > it's one C file, just `make` and install it as a user session daemon.  It doesn't 
-> even need to be installed as root, you can even start it manually from the command 
+> need to be installed as root, it can also be started manually from the command 
 > line. It will build against any libddcutil from 1.4 onward. For details, see:
 > 
 >    https://github.com/digitaltrails/ddcutil-service  
