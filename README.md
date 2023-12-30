@@ -3,13 +3,15 @@ vdu_controls - a DDC control panel for monitors
 
 A control panel for external monitors (*Visual Display Units*).
 
-> This is the vdu_controls 2.0 truck development branch for vdu_controls.  
-> It's functional and you're welcome to try it.  
+> This is the vdu_controls 2.0 trunk development branch for vdu_controls.  It's
+> functional and you're welcome to try it.  
 > 
 > Version 2.0 adds manual ambient-light input.  This allows all connected VDU's
 > to be simultatiniously adjusted by moving one slider.  This is an alternative
 > to fully automatic control via hardware lux-metering.  The new option is enabled
 > by default, but can be disabled by unchecking  **Settings->Lux options enabled**.
+>
+>  ![Custom](screen-shots/ambient-slider-example.png) 
 >
 > A major change in 2.0 is that the DDC interface has been rewriten to optionally
 > use the D-Bus **ddcutil-service** instead of the **ddcutil** command. The older 
@@ -33,10 +35,6 @@ A control panel for external monitors (*Visual Display Units*).
 > to libddcutil by @rockowitz.  The current intention is to eventually package it 
 > with ddcutil/libddcutil.
 > 
-> 
->  ![Custom](screen-shots/ambient-slider-example.png) 
-> 
-> Feedback welcome.
 
 
 Description
