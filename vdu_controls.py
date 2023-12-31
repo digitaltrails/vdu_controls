@@ -70,10 +70,10 @@ Arguments supplied on the command line override config file equivalent settings.
       --splash|--no-splash
                             show the splash screen.  ``--splash`` is the default.
       --monochrome-tray|--no-monochrome-tray
-                            monochrome themed system-tray.
+                            monochrome dark themed system-tray.
                             ``--no-monochrome-tray`` is the default.
       --mono-light-tray|--no-mono-light-tray
-                            alter monochrome-tray for a light themed system-tray.
+                            monochrome themed system-tray.
                             ``--no-mono-light-tray`` is the default.
       --smart-window|--no-smart-window
                             smart main window placement and geometry.
@@ -1960,9 +1960,9 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
     SMART_WINDOW = conf_opt_def(cname=QT_TR_NOOP('smart-window'), default="yes",
                                 tip=QT_TR_NOOP('smart main window placement and geometry'))
     MONOCHROME_TRAY_ENABLED = conf_opt_def(cname=QT_TR_NOOP('monochrome-tray-enabled'), default="no", restart=False,
-                                           tip=QT_TR_NOOP('monochrome themed system tray'))
+                                           tip=QT_TR_NOOP('monochrome dark themed system tray'))
     MONO_LIGHT_TRAY_ENABLED = conf_opt_def(cname=QT_TR_NOOP('mono-light-tray-enabled'), default="no", restart=False,
-                                           tip=QT_TR_NOOP('alter monochrome for a light themed system tray'))
+                                           tip=QT_TR_NOOP('monochrome light themed system tray'))
     DEBUG_ENABLED = conf_opt_def(cname=QT_TR_NOOP('debug-enabled'), default="no", tip=QT_TR_NOOP('output extra debug information'))
     SYSLOG_ENABLED = conf_opt_def(cname=QT_TR_NOOP('syslog-enabled'), default="no",
                                   tip=QT_TR_NOOP('divert diagnostic output to the syslog'))
@@ -6827,7 +6827,6 @@ class LuxAmbientSlider(QWidget):
 
     def __init__(self) -> None:
         super().__init__()
-
         self.in_flux = False
         self.zones = {  # Using col span as a hacky way to line up icons above the slider
             tr('Sunlight'): (20000, 100000, 45000, LUX_SUNLIGHT_SVG, 2),
@@ -6940,7 +6939,7 @@ class LuxAmbientSlider(QWidget):
                         if self.svg_icon_current_source != svg:
                             self.svg_icon_current_source = svg
                             self.status_icon.setIcon(create_icon_from_svg_bytes(self.svg_icon_current_source))
-                            self.status_icon.setToolTip(name)
+                            self.status_icon.setToolTip(tr("Open/Close Light-Meter Dialog"))
                 self.current_value = value
                 if source != self.lux_slider:
                     self.lux_slider.setValue(round(math.log10(value) * 1000))
@@ -7853,7 +7852,7 @@ class VduAppWindow(QMainWindow):
         self.app_icon = QIcon()
         self.app_icon.addPixmap(get_splash_image() if splash_pixmap is None else splash_pixmap)
         mono_light_tray = self.main_config.is_set(ConfOption.MONO_LIGHT_TRAY_ENABLED)
-        monochrome_tray = self.main_config.is_set(ConfOption.MONOCHROME_TRAY_ENABLED)
+        monochrome_tray = mono_light_tray or self.main_config.is_set(ConfOption.MONOCHROME_TRAY_ENABLED)
         if CUSTOM_TRAY_ICON_FILE.exists() and os.access(CUSTOM_TRAY_ICON_FILE.as_posix(), os.R_OK):
             log_info(f"Loading custom app_icon: {CUSTOM_TRAY_ICON_FILE} {monochrome_tray=} {mono_light_tray=}")
             self.tray_icon = create_icon_from_path(CUSTOM_TRAY_ICON_FILE, themed=False, monochrome=monochrome_tray)
