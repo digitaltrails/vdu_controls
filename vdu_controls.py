@@ -6416,9 +6416,12 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.meter_device_selector.activated.connect(choose_device)
 
         def set_auto_monitoring(checked: int) -> None:
-            if (checked == Qt.Checked) != self.lux_config.is_auto_enabled():
-                self.lux_config.set('lux-meter', 'automatic-brightness', 'yes' if checked == Qt.Checked else 'no')
+            enable = checked == Qt.Checked
+            if enable != self.lux_config.is_auto_enabled():
+                self.lux_config.set('lux-meter', 'automatic-brightness', 'yes' if enable else 'no')
+                self.adjust_now_button.setVisible(enable)
                 self.apply_settings(requires_auto_brightness_restart=True)
+
 
         self.enabled_checkbox.stateChanged.connect(set_auto_monitoring)
 
@@ -6472,7 +6475,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.save_button.setEnabled(False)
         self.revert_button.setEnabled(False)
         self.adjust_now_button.setText(f"{TIMER_RUNNING_SYMBOL} 00:00")
-        self.adjust_now_button.show() if self.lux_config.is_auto_enabled() else self.adjust_now_button.hide()
+        self.adjust_now_button.setVisible(self.lux_config.is_auto_enabled())
 
         connected_id_list = []  # List of all currently connected VDUs
         for index, vdu_sid in enumerate(self.main_controller.get_vdu_stable_id_list()):
@@ -7346,6 +7349,7 @@ class VduAppController:  # Main controller containing methods for high level ope
             # Invoke when the worker thread completes. Runs in the GUI thread and can refresh remaining UI views.
             try:
                 assert self.refresh_data_task is not None and is_running_in_gui_thread()
+                log_debug("Refresh - update UI view")
                 main_panel = self.main_window.get_main_panel()
                 if self.refresh_data_task.vdu_exception is not None:
                     main_panel.display_vdu_exception(self.refresh_data_task.vdu_exception, can_retry=False)
