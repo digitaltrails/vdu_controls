@@ -20,18 +20,28 @@ A control panel for external monitors (*Visual Display Units*).
 > D-Bus [ddcutil-service](https://github.com/digitaltrails/ddcutil-service) instead
 > of the **ddcutil** command. The new **ddcutil-service** is a daemon I've written to
 > interface with **libddcutil**, it's faster and more reponsive than the older
-> command-based implementation. The older command based approach is still the default.
+> command-based implementation. Should the ddcutil-service be unavailable,
+> the DDC/VDU interface reverts to using the ddcutil command. 
 > 
 > If you'd like to try the **ddcutil-service**, it's written in C, so you'd
 > probably need to build and install it (I do have an RPM for OpenSUSE Tumbleweed).
-> It's one C file,  it doesn't need to be installed as root, it can also be started
-> manually from the command line. It will build against any libddcutil from 1.4 onward.
+> It's one C file. It will build against any libddcutil from 1.4 onward.
+> It doesn't need to be installed as root, it can also be started
+> manually from the command line or installed as a single user D-Bus daemon.
 > For install/build details, see:
 > 
 >    https://github.com/digitaltrails/ddcutil-service
 > 
-> Once the service is running, just toggle `vdu_controls->Settins->dbus client enabled`.  The
-> bottom line of the About-Dialog should then list ddcutil-interface as `1.0.0 (QtDBus client)`.
+> Unofficial *community* OpenSUSE Tumbleweed RPM:
+> 
+>    https://software.opensuse.org/package/ddcutil-service
+> 
+> If the service installed for on demand access via the D-BUS daemon, or if
+> ddcutil-service is run manually, a new instance of vdu_controls should automatically 
+> start using it and the bottom line of the **About Dialog** will
+> list **ddcutil-interface** as **1.0.0 (QtDBus client)**.  Use of the service can
+> also be manually toggled via `vdu_controls->Settins->dbus client enabled`.
+> 
 > You can also access the service from any D-Bus clients such as d-feet or the
 > command line tools such as dbus-send and busctl.
 > 
