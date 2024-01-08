@@ -6943,7 +6943,7 @@ class LuxAmbientSlider(QWidget):
                             self.svg_icon_current_source = svg
                             self.status_icon.setIcon(create_icon_from_svg_bytes(self.svg_icon_current_source))
                             self.status_icon.setToolTip(tr("Open/Close Light-Meter Dialog"))
-                self.current_value = value
+                self.current_value = max(1, value)  # restrict to non-negative and something valid for log10
                 if source != self.lux_slider:
                     self.lux_slider.setValue(round(math.log10(value) * 1000))
                 if source != self.lux_input_field:
