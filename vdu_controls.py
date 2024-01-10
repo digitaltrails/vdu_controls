@@ -5678,7 +5678,7 @@ class LuxDisplayWidget(QWidget):
         self.current_lux_display.setFont(big_font)
         self.layout().addWidget(self.current_lux_display)
         self.max_history = 300
-        self.history = [0] * (self.max_history // 5)
+        self.history = [0] * (self.max_history // 10)
         self.lux_plot = QLabel()
         self.lux_plot.setFixedWidth(self.max_history)
         self.lux_plot.setFixedHeight(100)
@@ -5716,7 +5716,7 @@ class LuxDisplayWidget(QWidget):
 
     def enable_display_updates(self, enable: bool = True) -> None:
         if enable:
-            self.history = (self.history + [0] * 2)[-100:]  # Make a little gap in the history to show where we are
+            self.history = (self.history + [0] * 2)[-self.max_history:]  # Make a little gap in the history to show where we are
             self.update_plot()
         self.updates_enabled = enable
 
