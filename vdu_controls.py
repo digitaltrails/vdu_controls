@@ -5687,23 +5687,22 @@ class LuxDisplayWidget(QWidget):
         self.updates_enabled = True
 
     def display_lux(self, lux: int) -> None:
+        self.history = self.history[-self.max_history:]
+        self.history.append(lux)
         if self.updates_enabled:
             self.current_lux_display.setText(tr("Lux: {}".format(lux)))
-            self.history = self.history[-self.max_history:]
-            self.history.append(lux)
-            pixmap = QPixmap(self.lux_plot.width(), self.lux_plot.height())
-            painter = QPainter(pixmap)
-            painter.fillRect(0, 0, self.lux_plot.width(), self.lux_plot.height(), QColor(0x6baee8))  # 0x5b93c5))
-            painter.setPen(QPen(QColor(0xfec053), 1))  # fbc21b 0xffdd30 #fec053
-            for i in range(len(self.history)):
-                painter.drawLine(i, self.lux_plot.height(), i, self.lux_plot.height() - self.y_from_lux(self.history[i]))
-            painter.end()
-            self.lux_plot.setPixmap(pixmap)
+            self.update_plot()
             self.lux_changed_qtsignal.emit(lux)
 
-    def interrupt_history(self) -> None:
-        if len(self.history) > 1:
-            self.history = (self.history + [0] * 10)[-100:]
+    def update_plot(self):
+        pixmap = QPixmap(self.lux_plot.width(), self.lux_plot.height())
+        painter = QPainter(pixmap)
+        painter.fillRect(0, 0, self.lux_plot.width(), self.lux_plot.height(), QColor(0x6baee8))  # 0x5b93c5))
+        painter.setPen(QPen(QColor(0xfec053), 1))  # fbc21b 0xffdd30 #fec053
+        for i in range(len(self.history)):
+            painter.drawLine(i, self.lux_plot.height(), i, self.lux_plot.height() - self.y_from_lux(self.history[i]))
+        painter.end()
+        self.lux_plot.setPixmap(pixmap)
 
     def connect_meter(self, lux_meter: LuxMeterDevice | None) -> None:
         if self.current_meter:
@@ -5716,8 +5715,9 @@ class LuxDisplayWidget(QWidget):
             self.enable_display_updates(True)
 
     def enable_display_updates(self, enable: bool = True) -> None:
-        if not enable:
-            self.interrupt_history()
+        if enable:
+            self.history = (self.history + [0] * 2)[-100:]  # Make a little gap in the history to show where we are
+            self.update_plot()
         self.updates_enabled = enable
 
     def y_from_lux(self, lux: int) -> int:
@@ -6515,8 +6515,8 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.status_message('')
 
     def make_visible(self) -> None:
-        super().make_visible()
         self.lux_display_widget.enable_display_updates(True)
+        super().make_visible()
 
     def is_interpolating(self) -> bool:
         return self.interpolate_checkbox.isChecked()
