@@ -1617,6 +1617,8 @@ class DdcutilExeImpl:
 
 class DdcutilDBusImpl(QObject):
 
+    _registered_dbus_signal_handler: Callable | None = None  # Only once instance and listener should exist at a time
+
     def __init__(self, common_args: List[str] | None = None):
         super().__init__()
         self.dbus_interface_name = os.environ.get('DDCUTIL_SERVICE_INTERFACE_NAME', default="com.ddcutil.DdcutilInterface")
@@ -1656,9 +1658,13 @@ class DdcutilDBusImpl(QObject):
         ddcutil_dbus_props = QDBusInterface(
             dbus_service_name, dbus_object_path, "org.freedesktop.DBus.Properties", connection=session_bus)
         session_bus.registerObject("/", self)
+        if DdcutilDBusImpl._registered_dbus_signal_handler:  # clear previous handler that belonged to old instance.
+            session_bus.disconnect(dbus_service_name, dbus_object_path, self.dbus_interface_name,
+                                   "ConnectedDisplaysChanged", DdcutilDBusImpl._registered_dbus_signal_handler)
         # Connect receiving slot
         session_bus.connect(dbus_service_name, dbus_object_path, self.dbus_interface_name,
                             "ConnectedDisplaysChanged", self._dbus_signal_handler)
+        DdcutilDBusImpl._registered_dbus_signal_handler = self._dbus_signal_handler
         ddcutil_dbus_iface.setTimeout(self.dbus_timeout_millis)
         self._self_check(ddcutil_dbus_props)
         return ddcutil_dbus_iface, ddcutil_dbus_props
@@ -1679,7 +1685,7 @@ class DdcutilDBusImpl(QObject):
 
     @pyqtSlot(QDBusMessage)
     def _dbus_signal_handler(self, message: QDBusMessage):
-        log_info("Received D-Bus signal", message.arguments())
+        log_info(f"Received D-Bus signal {message.arguments()=} {id(self)=}")   # concerned about old instances... id()
         if self.listener_callback:
             self.listener_callback(*message.arguments())
 
