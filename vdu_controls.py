@@ -3057,12 +3057,15 @@ class VduControlComboBox(VduControlBase):
     def refresh_ui_view_implementation(self) -> None:
         """Copy the internally cached current value onto the GUI view."""
         self.validate_value()
-        self.combo_box.setCurrentIndex(self.keys.index(self.get_current_text_value()))
+        value = self.get_current_text_value()
+        if value is not None:
+            self.combo_box.setCurrentIndex(self.keys.index(value))
 
     def validate_value(self) -> None:
-        if self.get_current_text_value() not in self.keys:
+        value = self.get_current_text_value()
+        if value is not None and value not in self.keys:
             self.keys.append(self.current_value)
-            self.combo_box.addItem('UNKNOWN-' + self.get_current_text_value(), self.current_value)
+            self.combo_box.addItem('UNKNOWN-' + value, self.current_value)
             self.combo_box.model().item(self.combo_box.count() - 1).setEnabled(False)
             alert = MessageBox(QMessageBox.Critical)
             alert.setText(
@@ -3070,7 +3073,7 @@ class VduControlComboBox(VduControlBase):
                    "Valid values are {valid}.").format(
                     vdesc=self.controller.get_vdu_description(), vnum=self.controller.vdu_number,
                     code=self.vcp_capability.vcp_code, cdesc=self.vcp_capability.name,
-                    value=self.get_current_text_value(), valid=self.keys))
+                    value=value, valid=self.keys))
             alert.setInformativeText(
                 tr('If you want to extend the set of permitted values, you can edit the metadata '
                    'for {} in the settings panel.  For more details see the man page concerning '
