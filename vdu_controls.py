@@ -6810,16 +6810,11 @@ LUX_ROOM_SVG = b"""<?xml version="1.0" encoding="utf-8"?>
 </svg>"""
 
 LUX_NIGHT_SVG = b"""<?xml version="1.0" encoding="utf-8"?>
-<!-- Copyright 2023 Michael Hamilton License Creative Commons - Attribution CC BY -->
+<!-- Copyright 2024 Michael Hamilton License Creative Commons - Attribution CC BY -->
 <svg width="24px" height="24px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
-    <g class="ColorScheme-Text" stroke="none" stroke-linecap="square" stroke-width="0.5" fill="currentColor">
-        <path d="M 8,5 m2.5,.1 .6,1.7h1.8l-1.4,1.1 .5,1.7-1.5-1.0-1.5,1.0 .5-1.7-1.4-1.1h1.8z" transform="scale(1.0)"/>
-        <path d="M 4,8 m2.5,.1 .6,1.7h1.8l-1.4,1.1 .5,1.7-1.5-1.0-1.5,1.0 .5-1.7-1.4-1.1h1.8z" transform="scale(1.2)"/>
-        <path d="M 10,13 m2.5,.1 .6,1.7h1.8l-1.4,1.1 .5,1.7-1.5-1.0-1.5,1.0 .5-1.7-1.4-1.1h1.8z" 
-            transform="scale(1.1)"/>
-        <path d="M 12.5,8.5 m2.5,.1 .6,1.7h1.8l-1.4,1.1 .5,1.7-1.5-1.0-1.5,1.0 .5-1.7-1.4-1.1h1.8z"
-            transform="scale(1.0)"/>
+    <g class="ColorScheme-Text" stroke="currentColor" stroke-linecap="round" stroke-width="1.25" transform="translate(24, 24), scale(-1,-1)">
+        <path d="M17.5 7.5   A6.25 6.25   0 1 0   16.5 16.5   5 5   0 1 1   17.5 7.5z"/>
     </g>
 </svg>
 """
