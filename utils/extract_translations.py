@@ -17,13 +17,13 @@ Example:
    pylupdate5 vdu_controls.py -ts translations/da_DK.ts
    
    # Use extract_translations.py to extract the messages to a simpler format:
-   python3 extract_translations.py translations/da_DK.ts > temp.txt
+   python3 utils/extract_translations.py translations/da_DK.ts > temp.txt
    
    # Now cut and paste the contents of temp.txt into https://www.deepl.com/translator
    # And cut and past the resulting translation into deepl.txt
    
    # Then apply deepl.txt back into the .ts file to create translations/proto.ts.output
-   python3 apply_translations.py temp.txt deepl.txt translations/da_DK.ts
+   python3 utils/apply_translations.py temp.txt deepl.txt translations/da_DK.ts
    
    # The above script may report some phrases that were not translated, you could
    # paste those phrases to a different site, for example Google Translate. Then run
