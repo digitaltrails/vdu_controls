@@ -3529,7 +3529,6 @@ class VduControlsMainPanel(QWidget):
     """GUI for detected VDUs, it will construct and contain a control panel for each VDU."""
 
     vdu_vcp_changed_qtsignal = pyqtSignal(str, str, int, VcpOrigin)
-    connected_vdus_changed_qtsignal = pyqtSignal()
 
     def __init__(self) -> None:
         super().__init__()
@@ -3539,10 +3538,11 @@ class VduControlsMainPanel(QWidget):
         self.vdu_control_panels: Dict[str, VduControlPanel] = {}
         self.alert: QMessageBox | None = None
 
-    def initialise_control_panels(self, vdu_controllers: Dict[str, VduController],
+    def initialise_control_panels(self, main_controller: VduAppController,
                                   app_context_menu: ContextMenu, main_config: VduControlsConfig,
                                   tool_buttons: List[ToolButton], extra_controls: List[QWidget],
                                   splash_message_qtsignal: pyqtSignal) -> None:
+        self.main_controller = main_controller
         if self.layout():  # Already laid out, must be responding to a configuration change requiring re-layout.
             for i in range(0, self.layout().count()):  # Remove all existing widgets.
                 item = self.layout().itemAt(i)
@@ -3556,7 +3556,7 @@ class VduControlsMainPanel(QWidget):
         self.setLayout(controllers_layout)
 
         warnings_enabled = main_config.is_set(ConfOption.WARNINGS_ENABLED)
-        for controller in vdu_controllers.values():
+        for controller in self.main_controller.vdu_controllers_map.values():
             splash_message_qtsignal.emit(f"DDC ID {controller.vdu_number}\n{controller.get_vdu_description()}")
             vdu_control_panel = VduControlPanel(controller, self.display_vdu_exception)
             controller.vcp_value_changed_qtsignal.connect(self.vdu_vcp_changed_qtsignal)
@@ -3565,8 +3565,8 @@ class VduControlsMainPanel(QWidget):
                 controllers_layout.addWidget(vdu_control_panel)
             elif warnings_enabled:
                 warn_omitted = MessageBox(QMessageBox.Warning)
-                warn_omitted.setText(tr('Monitor {} {} lacks any accessible controls.').format(controller.vdu_number,
-                                                                                               controller.get_vdu_description()))
+                warn_omitted.setText(tr('Monitor {} {} lacks any accessible controls.').format(
+                    controller.vdu_number, controller.get_vdu_description()))
                 warn_omitted.setInformativeText(tr('The monitor will be omitted from the control panel.'))
                 warn_omitted.exec()
 
@@ -3641,7 +3641,7 @@ class VduControlsMainPanel(QWidget):
         self.alert = None
         if answer != QMessageBox.Retry:
             log_info("Signaling change in connected vdus")
-            self.connected_vdus_changed_qtsignal.emit()  # Maybe the connected VDUs have changed - check.
+            self.main_controller.configure_application()
         return answer == QMessageBox.Retry
 
     def status_message(self, message: str, timeout: int):
@@ -7123,9 +7123,12 @@ def parse_transition_type(string_value: str) -> PresetTransitionFlag:
     return transition_type
 
 
-class VduAppController:  # Main controller containing methods for high level operations
+class VduAppController(QObject):  # Main controller containing methods for high level operations
+
+    #connected_vdus_changed_qtsignal = pyqtSignal()
 
     def __init__(self, main_config: VduControlsConfig) -> None:
+        super().__init__()
         self.application_configuration_lock = Lock()
         self.refresh_lock = Lock()
         self.main_config = main_config
@@ -7868,7 +7871,7 @@ class VduAppWindow(QMainWindow):
             self.main_panel.deleteLater()
             self.main_panel = None
         self.main_panel = VduControlsMainPanel()
-        self.main_controller.initialize_vdu_controllers()  # Then initialise the VDU controllers and VDU control panel displays
+        self.main_controller.initialize_vdu_controllers()
         refresh_button = ToolButton(REFRESH_ICON_SOURCE, tr("Refresh settings from monitors"))
         refresh_button.pressed.connect(self.main_controller.start_refresh)
         tool_buttons = [refresh_button]
@@ -7884,10 +7887,10 @@ class VduAppWindow(QMainWindow):
             if lux_manual_input := self.main_controller.lux_auto_controller.create_manual_input_control():
                 extra_controls.append(lux_manual_input)
         self.refresh_preset_menu()
-        self.main_panel.initialise_control_panels(self.main_controller.vdu_controllers_map, self.app_context_menu, self.main_config,
+        self.main_panel.initialise_control_panels(self.main_controller, self.app_context_menu, self.main_config,
                                                   tool_buttons, extra_controls, self.splash_message_qtsignal)
-        self.main_panel.vdu_vcp_changed_qtsignal.connect(self.respond_to_changes_handler)  # Wire up now after successful init...
-        self.main_panel.connected_vdus_changed_qtsignal.connect(self.main_controller.configure_application)  # to avoid deadlocks
+        # Wire-up after successful init to avoid deadlocks
+        self.main_panel.vdu_vcp_changed_qtsignal.connect(self.respond_to_changes_handler)
         self.indicate_busy(True)
         self.setCentralWidget(self.main_panel)
         self.splash_message_qtsignal.emit(tr("Checking Presets"))
@@ -7941,7 +7944,7 @@ class VduAppWindow(QMainWindow):
     def respond_to_changes_handler(self, vdu_stable_id: VduStableId, vcp_code: str, value: int, origin: VcpOrigin) -> None:
         # Update UI secondary displays
         if (vcp_code in SUPPORTED_VCP_BY_CODE and SUPPORTED_VCP_BY_CODE[vcp_code].causes_config_change and
-                origin == VcpOrigin.NORMAL):  # Only if this is an internally initiated change
+                origin == VcpOrigin.NORMAL):  # Special-case VCP-code and only if this is an internally initiated change
             log_info(f"Must reconfigure due to change to: {vdu_stable_id=} {vcp_code=} {value=} {origin.name=}")
             self.main_controller.configure_application()  # Special case, such as a power control causing the VDU to go offline.
             return
