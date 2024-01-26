@@ -7345,6 +7345,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                         for control_panel in self.main_window.get_main_panel().vdu_control_panels.values():
                             if control_panel.controller.get_full_id() in self.detected_vdu_list:
                                 control_panel.refresh_from_vdu()
+                        if self.lux_auto_controller:
+                            self.lux_auto_controller.adjust_brightness_now()
                     except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
                         if self.refresh_data_task.vdu_exception is None:
                             self.refresh_data_task.vdu_exception = VduException(vdu_description="unknown", operation="unknown",
