@@ -7345,8 +7345,6 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                         for control_panel in self.main_window.get_main_panel().vdu_control_panels.values():
                             if control_panel.controller.get_full_id() in self.detected_vdu_list:
                                 control_panel.refresh_from_vdu()
-                        if self.lux_auto_controller:
-                            self.lux_auto_controller.adjust_brightness_now()
                     except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
                         if self.refresh_data_task.vdu_exception is None:
                             self.refresh_data_task.vdu_exception = VduException(vdu_description="unknown", operation="unknown",
@@ -7364,10 +7362,11 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     log_info(f"Reconfiguring: detected vdu count={self.detected_vdu_list}")
                     self.configure_application()
                     self.previously_detected_vdu_list = self.detected_vdu_list
-                if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) and LuxDialog.exists():
-                    lux_dialog: LuxDialog = LuxDialog.get_instance()  # type: ignore
-                    lux_dialog.reconfigure()  # in case the number of connected monitors have changed.
-                    self.main_window.update_status_indicators()  # TODO maybe redundant
+                if self.lux_auto_controller:
+                    if LuxDialog.exists():
+                        lux_dialog: LuxDialog = LuxDialog.get_instance()  # type: ignore
+                        lux_dialog.reconfigure()  # in case the number of connected monitors have changed.
+                    self.lux_auto_controller.adjust_brightness_now()
             finally:
                 self.main_window.indicate_busy(False)
 
