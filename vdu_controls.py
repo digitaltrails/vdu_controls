@@ -1082,6 +1082,8 @@ DDCUTIL_RETRIES = int(os.getenv("VDU_CONTROLS_DDCUTIL_RETRIES", default='4'))
 # Use a slight hack to make QMessageBox resizable.
 RESIZABLE_MESSAGEBOX_HACK = True
 
+IGNORE_VDU_MARKER_TEXT = 'Ignore VDU'
+
 ASSUMED_CONTROLS_CONFIG_VCP_CODES = ['10', '12']
 ASSUMED_CONTROLS_CONFIG_TEXT = ('\n'
                                 'capabilities-override = Model: unknown\n'
@@ -1273,7 +1275,13 @@ class Ddcutil:
         self.ddcutil_impl.refresh_connection()
 
     def set_sleep_multiplier(self, vdu_number: str, sleep_multiplier: float | None):
-        self.ddcutil_impl.set_sleep_multiplier(self.get_edid_txt(vdu_number), sleep_multiplier)
+        try:
+            self.ddcutil_impl.set_sleep_multiplier(self.get_edid_txt(vdu_number), sleep_multiplier)
+        except ValueError as e:
+            if str(e).find('com.ddcutil.DdcutilService.Error.MultiplierLocked') > 0:
+                log_warning(f"Ignoring: {e}")
+            else:
+                raise
 
     def set_vdu_specific_args(self, vdu_number: str, extra_args: List[str]):
         self.ddcutil_impl.set_vdu_specific_args(self.get_edid_txt(vdu_number), extra_args)
@@ -2250,13 +2258,15 @@ class VduController(QObject):
     NORMAL_VDU = 0
     IGNORE_VDU = 1
     ASSUME_STANDARD_CONTROLS = 2
+    DISCARD_VDU = 3
     _RANGE_PATTERN = re.compile(r'Values:\s+([0-9]+)..([0-9]+)')
     _FEATURE_PATTERN = re.compile(r'([0-9A-F]{2})\s+[(]([^)]+)[)]\s(.*)', re.DOTALL | re.MULTILINE)
 
     vcp_value_changed_qtsignal = pyqtSignal(str, str, int, VcpOrigin)
 
     def __init__(self, vdu_number: str, vdu_model_name: str, serial_number: str, manufacturer: str,
-                 default_config: VduControlsConfig, ddcutil: Ddcutil, vdu_exception_handler: Callable, option: int = 0) -> None:
+                 default_config: VduControlsConfig, ddcutil: Ddcutil,
+                 vdu_exception_handler: Callable, remedy: int = 0) -> None:
         super().__init__()
         self.vdu_stable_id = VduStableId(proper_name(vdu_model_name, serial_number))
         log_info(f"Initializing controls for {vdu_number=} {vdu_model_name=} {self.vdu_stable_id=}")
@@ -2285,15 +2295,17 @@ class VduController(QObject):
                     self.ddcutil.set_sleep_multiplier(vdu_number, multiplier)
                 self.ddcutil.set_vdu_specific_args(vdu_number, config.get_ddcutil_extra_args(fallback=None))
                 enabled_vcp_codes = config.get_all_enabled_vcp_codes()
-                self.capabilities_text = config.get_capabilities_alt_text()
+                self.capabilities_text = config.get_capabilities_alt_text()  # cached, possibly edited, ddc capabilities
                 self.config = config
                 break
         # print(f"{self.capabilities_text=}")
         if not self.capabilities_text:
-            if option == VduController.IGNORE_VDU:
-                self.capabilities_text = 'Ignore VDU'
+            if remedy == VduController.DISCARD_VDU:
+                self.capabilities_text = IGNORE_VDU_MARKER_TEXT
                 log_info(f"Capabilities override set to ignore VDU {vdu_number=} {vdu_model_name=} {self.vdu_stable_id=}")
-            elif option == VduController.ASSUME_STANDARD_CONTROLS:
+            elif remedy == VduController.IGNORE_VDU:
+                self.capabilities_text = ''
+            elif remedy == VduController.ASSUME_STANDARD_CONTROLS:
                 enabled_vcp_codes = ASSUMED_CONTROLS_CONFIG_VCP_CODES
                 self.capabilities_text = ASSUMED_CONTROLS_CONFIG_TEXT
             else:
@@ -2311,8 +2323,6 @@ class VduController(QObject):
             self.config.set_capabilities_alt_text(self.capabilities_text)
         self.config.restrict_to_actual_capabilities(
             self.capabilities_supported_by_this_vdu)  # TODO Might be possible to make this redundant now.
-
-        # print(self._parse_capabilities(""""""))  # TODO remove debug test 2023/12/20
 
     def write_template_config_files(self) -> None:
         """Write template config files to $HOME/.config/vdu_controls/"""
@@ -7257,14 +7267,13 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     controller = VduController(vdu_number, model_name, vdu_serial, manufacturer, self.main_config,
                                                self.ddcutil, main_panel_error_handler, VduController.NORMAL_VDU)
                 except (subprocess.SubprocessError, ValueError, re.error, OSError, DdcutilDisplayNotFound) as e:
-                    # Catch any kind of parse related error  # TODO figure out all possible Exceptions:
                     log_error(f"Problem creating controller for {vdu_number=} {model_name=} {vdu_serial=} exception={e}",
                               trace=True)
-                    choice = self.main_window.ask_for_vdu_controller_remedy(vdu_number, model_name, vdu_serial)
-                    if choice == VduController.NORMAL_VDU:
+                    remedy = self.main_window.ask_for_vdu_controller_remedy(vdu_number, model_name, vdu_serial)
+                    if remedy == VduController.NORMAL_VDU:
                         continue  # Try again
                     controller = VduController(vdu_number, model_name, vdu_serial, manufacturer, self.main_config,
-                                               self.ddcutil, main_panel_error_handler, choice)
+                                               self.ddcutil, main_panel_error_handler, remedy)
                     controller.write_template_config_files()
                 break
             if controller is not None:
@@ -8005,20 +8014,29 @@ class VduAppWindow(QMainWindow):
         no_vdus_alert.exec()
 
     def ask_for_vdu_controller_remedy(self, vdu_number: str, model_name: str, vdu_serial: str):
-        no_auto = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Ignore | QMessageBox.Apply | QMessageBox.Retry)
+        no_auto = MessageBox(QMessageBox.Critical,
+                             buttons=QMessageBox.Discard | QMessageBox.Ignore | QMessageBox.Apply | QMessageBox.Retry)
         no_auto.setText(
             tr('Failed to obtain capabilities for monitor {} {} {}.').format(vdu_number, model_name, vdu_serial))
         no_auto.setInformativeText(tr(
             'Cannot automatically configure this monitor.'
             '\n You can choose to:'
             '\n 1: Retry obtaining the capabilities.'
-            '\n 2: Ignore this monitor.'
-            '\n 3: Apply standard brightness and contrast controls.'))
+            '\n 2: Temporarily ignore this monitor.'
+            '\n 3: Apply standard brightness and contrast controls.'
+            '\n 4: Permanently discard this monitor from use with vdu_controls.'))
         choice = no_auto.exec()
-        if choice == QMessageBox.Ignore:
+        if choice == QMessageBox.Discard:
             warn = MessageBox(QMessageBox.Information)
-            warn.setText(tr('Ignoring {} monitor.').format(model_name))
-            warn.setInformativeText(tr('Wrote {} config files to {}.').format(model_name, CONFIG_DIR_PATH))
+            warn.setText(tr('Discarding {} monitor.').format(model_name))
+            warn.setInformativeText(tr('Remove "{}" from {} capabilities override to reverse this decision.').format(
+                    IGNORE_VDU_MARKER_TEXT, model_name))
+            warn.exec()
+            return VduController.DISCARD_VDU
+        elif choice == QMessageBox.Ignore:
+            warn = MessageBox(QMessageBox.Information)
+            warn.setText(tr('Ignoring {} monitor for now.').format(model_name))
+            warn.setInformativeText(tr('Will retry when vdu_controls is next started'))
             warn.exec()
             return VduController.IGNORE_VDU
         elif choice == QMessageBox.Apply:
