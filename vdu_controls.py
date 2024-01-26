@@ -5200,11 +5200,8 @@ def exception_handler(e_type, e_value, e_traceback) -> None:
     log_error("\n" + ''.join(traceback.format_exception(e_type, e_value, e_traceback)))
     alert = MessageBox(QMessageBox.Critical)
     alert.setText(tr('Error: {}').format(''.join(traceback.format_exception_only(e_type, e_value))))
-    alert.setInformativeText(tr('Is ddcutil or ddcutil-service installed?') +
-                             '<br>_______________________________________________________<br>')
     alert.setDetailedText(tr('Details: {}').format(''.join(traceback.format_exception(e_type, e_value, e_traceback))))
     alert.exec()
-    QApplication.quit()
 
 
 def handle_theme(svg_bytes: bytes) -> bytes:
