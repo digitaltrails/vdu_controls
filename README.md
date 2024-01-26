@@ -274,7 +274,7 @@ Version History
 ---------------
 
 * 2.0.0
-  * Added an optional D-Bus interface to ddcutil for up 10x faster response times.
+  * Added an optional D-Bus interface to ddcutil for up to 10x faster response times.
   * Added an immediate-lighting-check button and corresponding context-menu item (when lux-metering is enabled).
   * Added an ambient-light-control for manual lux input, one slider to adjust brightness on all displays.
   * Added more preset icons.
