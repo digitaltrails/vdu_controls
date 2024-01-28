@@ -116,8 +116,8 @@ The UI's look-and-feel adjusts itself for dark and light desktop themes. The app
 optionally run in the system tray of KDE, Deepin, GNOME, and Xfce (and possibly others).
 
 The UI provides an optional ``ambient-light slider`` for simultaneously adjusting
-all VDUs according to custom per-VDU ambient lux/brightness profiles.  Options are included for
-accessing a hardware ambient light-meter, or a webcam, for fully automatic brightness adjustment.
+all VDUs according to custom per-VDU ambient lux/brightness profiles.  Options are included
+for automated adjustment by accessing a hardware light-meters, webcams, or other devices.
 
 Named ``Preset`` configurations can be saved and recalled. For example, presets may be created
 for night, day, photography, movies, and so forth.   Presets can be triggered by specific ambient
