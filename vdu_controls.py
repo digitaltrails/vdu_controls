@@ -7206,7 +7206,10 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
         def handle_changes(edid_encoded: str, event_type: int, flags: int):
             log_info(f"Connected VDUs changed {event_type=} {flags=} {edid_encoded:.30}...")
-            self.start_refresh()
+            if event_type in (2, 3):
+                self.start_refresh()
+            else:
+                log_info(f"DPMS event {event_type=} {edid_encoded=:30}...")
 
         try:
             self.ddcutil = Ddcutil(common_args=self.main_config.get_ddcutil_extra_args(),
