@@ -1619,7 +1619,8 @@ class DdcutilExeImpl:
 
 class DdcutilDBusImpl(QObject):
 
-    _registered_dbus_signal_handler: Callable | None = None  # Only once instance and listener should exist at a time
+    _metadata_cache: Dict[Tuple[str, int], Tuple[int, int]] = {}
+    _registered_dbus_signal_handler: Callable | None = None  # Only one instance and listener should exist at a time
 
     def __init__(self, common_args: List[str] | None = None, callback: Callable | None = None):
         super().__init__()
@@ -1717,9 +1718,13 @@ class DdcutilDBusImpl(QObject):
             return model, int.from_bytes(mccs_major), int.from_bytes(mccs_minor), commands, capabilities, ''
 
     def get_type(self, edid_txt: str, vcp_code_int: int) -> Tuple[bool, bool]:
+        key = (edid_txt, vcp_code_int)
+        if key in DdcutilDBusImpl._metadata_cache:
+            return DdcutilDBusImpl._metadata_cache[key]
         with self.service_access_lock:
             _, _, _, _, _, is_complex, is_continuous = self._validate(self.ddcutil_proxy.call(
                 "GetVcpMetadata", -1, edid_txt, QDBusArgument(vcp_code_int, QMetaType.UChar), QDBusArgument(0, QMetaType.UInt)))
+            DdcutilDBusImpl._metadata_cache[key] = (is_complex, is_continuous)
             return is_complex, is_continuous
 
     def set_vcp(self, edid_txt: str, vcp_code_int: int, new_value_int: int) -> None:
