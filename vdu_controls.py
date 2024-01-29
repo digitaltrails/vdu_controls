@@ -21,7 +21,6 @@ Synopsis:
                      [--syslog|--no-syslog]  [--debug|--no-debug] [--warnings|--no-warnings]
                      [--sleep-multiplier multiplier] [--ddcutil-extra-args 'extra args']
                      [--dbus-client-enabled|--no-dbus-client-enabled]
-                     [--dbus-listen|--no-dbus-listen]
                      [--create-config-files] [--install] [--uninstall]
 
 Optional arguments:
@@ -85,9 +84,6 @@ Arguments supplied on the command line override config file equivalent settings.
       --dbus-client-enabled|--no-dbus-client-enabled
                             use the ddcutil-dbus-server instead of the ddcutil command
                             ``--no-dbus-client-enabled`` is the default
-      --dbus-listener|--no-dbus-listener
-                            listen for VDU status change signals
-                            ``--no-dbus-listener`` is the default
       --create-config-files
                             if they do not exist, create template config INI files
                             in $HOME/.config/vdu_controls/
@@ -1235,7 +1231,7 @@ class Ddcutil:
     """
 
     def __init__(self, common_args: List[str] | None = None, prefer_dbus_client: bool = True,
-                 connected_vdus_changed_callable: Callable = None) -> None:
+                 connected_vdus_changed_callback: Callable = None) -> None:
         super().__init__()
 
         self.common_args = common_args
@@ -1243,15 +1239,13 @@ class Ddcutil:
         self.ddcutil_impl = None  # The service-interface implementations are duck-typed.
         if prefer_dbus_client:
             try:
-                self.ddcutil_impl = DdcutilDBusImpl(self.common_args)
+                self.ddcutil_impl = DdcutilDBusImpl(self.common_args, callback=connected_vdus_changed_callback)
             except DdcutilServiceNotFound as e:
                 log_warning("Failed to detect D-Bus ddcutil-service, falling back to the ddcutil command.")
 
-        if self.ddcutil_impl is None:
+        if self.ddcutil_impl is None:  # dbus not prefered or dbus failed to initialise
             self.ddcutil_impl = DdcutilExeImpl(self.common_args)
 
-        self.displays_changed_callback: Callable | None = connected_vdus_changed_callable
-        self.ddcutil_impl.set_listerner_callback(self.displays_changed_callback)
         self.supported_codes: Dict[str, str] | None = None
         self.vcp_type_map: Dict[Tuple[str, str], str] = {}
         self.edid_txt_map: Dict[str, str] = {}
@@ -1627,13 +1621,13 @@ class DdcutilDBusImpl(QObject):
 
     _registered_dbus_signal_handler: Callable | None = None  # Only once instance and listener should exist at a time
 
-    def __init__(self, common_args: List[str] | None = None):
+    def __init__(self, common_args: List[str] | None = None, callback: Callable | None = None):
         super().__init__()
         self.dbus_interface_name = os.environ.get('DDCUTIL_SERVICE_INTERFACE_NAME', default="com.ddcutil.DdcutilInterface")
         env_args = [arg for arg in os.getenv('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != '']
         self.common_args = env_args + common_args if common_args else []
         self.service_access_lock = Lock()
-        self.listener_callback = None
+        self.listener_callback: Callable | None = callback
         self.dbus_timeout_millis = int(os.getenv("VDU_CONTROLS_DBUS_TIMEOUT_MILLIS", default='5000'))
         self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service()
 
@@ -1706,9 +1700,6 @@ class DdcutilDBusImpl(QObject):
 
     def get_status_values(self) -> Dict[int, str]:
         return self._validate(self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "StatusValues"))[0]
-
-    def set_listerner_callback(self, callback: callable) -> None:
-        self.listener_callback = callback
 
     def detect(self, flags: int) -> List[Tuple]:
         with self.service_access_lock:
@@ -1974,9 +1965,6 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
                                   tip=QT_TR_NOOP('divert diagnostic output to the syslog'))
     DBUS_CLIENT_ENABLED = conf_opt_def(cname=QT_TR_NOOP('dbus-client-enabled'), default="yes",
                                        tip=QT_TR_NOOP('use the D-Bus ddcutil-server if available'))
-    DBUS_LISTENER_ENABLED = conf_opt_def(cname=QT_TR_NOOP('dbus-listener'), default="no",
-                                         tip=QT_TR_NOOP('listen for ddcutil-server VDU status-signals'),
-                                         requires='dbus-client-enabled')
     LOCATION = conf_opt_def(cname=QT_TR_NOOP('location'), conf_type=CI.TYPE_LOCATION, tip=QT_TR_NOOP('latitude,longitude'))
     SLEEP_MULTIPLIER = conf_opt_def(cname=QT_TR_NOOP('sleep-multiplier'), section=CI.DDCUTIL_PARAMETERS, conf_type=CI.TYPE_FLOAT,
                                     tip=QT_TR_NOOP('ddcutil --sleep-multiplier (0.1 .. 2.0, default none)'))
@@ -7220,12 +7208,10 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             log_info(f"Connected VDUs changed {event_type=} {flags=} {edid_encoded:.30}...")
             self.start_refresh()
 
-        callback = handle_changes if self.main_config.is_set(ConfOption.DBUS_LISTENER_ENABLED, fallback=False) else None
-
         try:
             self.ddcutil = Ddcutil(common_args=self.main_config.get_ddcutil_extra_args(),
                                    prefer_dbus_client=self.main_config.is_set(ConfOption.DBUS_CLIENT_ENABLED),
-                                   connected_vdus_changed_callable=callback)
+                                   connected_vdus_changed_callback=handle_changes)
         except (subprocess.SubprocessError, ValueError, re.error, OSError, DdcutilServiceNotFound) as e:
             self.main_window.display_no_controllers_error_dialog(e)
 
