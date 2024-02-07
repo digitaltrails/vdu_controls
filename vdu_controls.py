@@ -1689,8 +1689,9 @@ class DdcutilDBusImpl(QObject):
     @pyqtSlot(QDBusMessage)
     def _dbus_signal_handler(self, message: QDBusMessage):
         log_info(f"Received D-Bus signal {message.arguments()=} {id(self)=}")   # concerned about old instances... id()
-        if self.listener_callback:
-            self.listener_callback(*message.arguments())
+        with self.service_access_lock:
+            if self.listener_callback:
+                self.listener_callback(*message.arguments())
 
     def get_ddcutil_version_string(self) -> str:
         return self._validate(self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "DdcutilVersion"))[0]
@@ -7349,18 +7350,19 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             try:
                 assert self.refresh_data_task is not None and is_running_in_gui_thread()
                 log_debug("Refresh - update UI view")
-                main_panel = self.main_window.get_main_panel()
-                if self.refresh_data_task.vdu_exception is not None:
-                    main_panel.display_vdu_exception(self.refresh_data_task.vdu_exception, can_retry=False)
-                if len(self.detected_vdu_list) == 0 or self.detected_vdu_list != self.previously_detected_vdu_list:
-                    log_info(f"Reconfiguring: detected vdu count={self.detected_vdu_list}")
-                    self.configure_application()
-                    self.previously_detected_vdu_list = self.detected_vdu_list
-                if self.lux_auto_controller:
-                    if LuxDialog.exists():
-                        lux_dialog: LuxDialog = LuxDialog.get_instance()  # type: ignore
-                        lux_dialog.reconfigure()  # in case the number of connected monitors have changed.
-                    self.lux_auto_controller.adjust_brightness_now()
+                with self.refresh_lock:  # An event may have cause a parallel refresh, let it finish
+                    main_panel = self.main_window.get_main_panel()
+                    if self.refresh_data_task.vdu_exception is not None:
+                        main_panel.display_vdu_exception(self.refresh_data_task.vdu_exception, can_retry=False)
+                    if len(self.detected_vdu_list) == 0 or self.detected_vdu_list != self.previously_detected_vdu_list:
+                        log_info(f"Reconfiguring: detected vdu count={self.detected_vdu_list}")
+                        self.configure_application()  # May cause a further refresh?
+                        self.previously_detected_vdu_list = self.detected_vdu_list
+                    if self.lux_auto_controller:
+                        if LuxDialog.exists():
+                            lux_dialog: LuxDialog = LuxDialog.get_instance()  # type: ignore
+                            lux_dialog.reconfigure()  # in case the number of connected monitors have changed.
+                        self.lux_auto_controller.adjust_brightness_now()
             finally:
                 self.main_window.indicate_busy(False)
 
