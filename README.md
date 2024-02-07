@@ -36,14 +36,15 @@ A control panel for external monitors (*Visual Display Units*).
 > 
 >    https://software.opensuse.org/package/ddcutil-service
 > 
-> If the service installed for on demand access via the D-BUS daemon, or if
-> ddcutil-service is run manually, a new instance of vdu_controls should automatically 
-> start using it and the bottom line of the **About Dialog** will
+> The service can be installed for on demand access via the D-BUS daemon. It can also
+> run manually from the command line.  Once the service is running, any new 
+> instance of vdu_controls should automatically find and connect to the service.
+> When using the service, the bottom line of vdu_controls **About Dialog** will
 > list **ddcutil-interface** as **1.0.0 (QtDBus client)**.  Use of the service can
-> also be manually toggled via `vdu_controls->Settins->dbus client enabled`.
+> be manually toggled via `vdu_controls->Settins->dbus client enabled`.
 > 
-> You can also access the service from any D-Bus clients such as d-feet or the
-> command line tools such as dbus-send and busctl.
+> The service may also be accessed from generic D-Bus clients such as d-feet 
+> dbus-send and busctl.
 > 
 
 Description
