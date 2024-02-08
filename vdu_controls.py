@@ -20,7 +20,8 @@ Synopsis:
                      [--hide-on-focus-out|--no-hide-on-focus-out] [--smart-window|--no-smart-window]
                      [--syslog|--no-syslog]  [--debug|--no-debug] [--warnings|--no-warnings]
                      [--sleep-multiplier multiplier] [--ddcutil-extra-args 'extra args']
-                     [--dbus-client-enabled|--no-dbus-client-enabled]
+                     [--dbus-client|--no-dbus-client]
+                     [--dbus-signals|--no-dbus-signals]
                      [--create-config-files] [--install] [--uninstall]
 
 Optional arguments:
@@ -81,9 +82,12 @@ Arguments supplied on the command line override config file equivalent settings.
                             protocol reliability multiplier for ddcutil (typically
                             0.1 .. 2.0, default is 1.0)
       --ddcutil-extra-args  extra arguments to pass to ddcutil (enclosed in single quotes)
-      --dbus-client-enabled|--no-dbus-client-enabled
-                            use the ddcutil-dbus-server instead of the ddcutil command
-                            ``--no-dbus-client-enabled`` is the default
+      --dbus-client|--no-dbus-client
+                            use the D-Bus ddcutil-server instead of the ddcutil command
+                            ``--dbus-client`` is the default
+      --dbus-signals|--no-dbus-signals
+                            enable D-Bus ddcutil-server display change signals
+                            ``--dbus-signals`` is the default
       --create-config-files
                             if they do not exist, create template config INI files
                             in $HOME/.config/vdu_controls/
@@ -696,7 +700,7 @@ from PyQt5 import QtCore
 from PyQt5 import QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
     QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType
-from PyQt5.QtDBus import QDBusConnection, QDBusInterface, QDBusError, QDBusMessage, QDBusArgument
+from PyQt5.QtDBus import QDBusConnection, QDBusInterface, QDBusError, QDBusMessage, QDBusArgument, QDBusVariant
 from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QRegExpValidator, \
     QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
@@ -1666,8 +1670,10 @@ class DdcutilDBusImpl(QObject):
                                    "ConnectedDisplaysChanged", DdcutilDBusImpl._registered_dbus_signal_handler)
         # Connect receiving slot
         session_bus.connect(dbus_service_name, dbus_object_path, self.dbus_interface_name,
-                            "ConnectedDisplaysChanged", self._dbus_signal_handler)
-        DdcutilDBusImpl._registered_dbus_signal_handler = self._dbus_signal_handler
+                            "ServiceInitialized", self._service_initialized_signal_handler)
+        session_bus.connect(dbus_service_name, dbus_object_path, self.dbus_interface_name,
+                            "ConnectedDisplaysChanged", self._connected_display_change_signal_handler)
+        DdcutilDBusImpl._registered_dbus_signal_handler = self._connected_display_change_signal_handler
         ddcutil_dbus_iface.setTimeout(self.dbus_timeout_millis)
         self._self_check(ddcutil_dbus_props)
         return ddcutil_dbus_iface, ddcutil_dbus_props
@@ -1678,6 +1684,11 @@ class DdcutilDBusImpl(QObject):
         except DdcutilServiceNotFound:
             # TODO not sure this is necessary, may confuse native QDBus layer, tests OK though
             self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service()
+        if self.listener_callback:  # In case the service has restarted
+            self.ddcutil_props_proxy.call("Set",
+                                          "com.ddcutil.DdcutilInterface",
+                                          "ServiceEmitSignals",
+                                          QDBusVariant(QDBusArgument(True, QMetaType.Bool)))
 
     def _self_check(self, ddcutil_dbus_props: object | None = None):
         proxy =  ddcutil_dbus_props if ddcutil_dbus_props else self.ddcutil_props_proxy
@@ -1687,7 +1698,14 @@ class DdcutilDBusImpl(QObject):
             raise DdcutilServiceNotFound(f"Error contacting D-Bus service {self.dbus_interface_name}")
 
     @pyqtSlot(QDBusMessage)
-    def _dbus_signal_handler(self, message: QDBusMessage):
+    def _service_initialized_signal_handler(self, message: QDBusMessage):
+        log_info(f"Received D-Bus signal {message.arguments()=} {id(self)=}")   # concerned about old instances... id()
+        with self.service_access_lock:
+            if self.listener_callback:
+                self.listener_callback('', -1, 0)
+
+    @pyqtSlot(QDBusMessage)
+    def _connected_display_change_signal_handler(self, message: QDBusMessage):
         log_info(f"Received D-Bus signal {message.arguments()=} {id(self)=}")   # concerned about old instances... id()
         with self.service_access_lock:
             if self.listener_callback:
@@ -1971,6 +1989,9 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
                                   tip=QT_TR_NOOP('divert diagnostic output to the syslog'))
     DBUS_CLIENT_ENABLED = conf_opt_def(cname=QT_TR_NOOP('dbus-client-enabled'), default="yes",
                                        tip=QT_TR_NOOP('use the D-Bus ddcutil-server if available'))
+    DBUS_SIGNALS_ENABLED = conf_opt_def(cname=QT_TR_NOOP('dbus-signals-enabled'), default="yes",
+                                        tip=QT_TR_NOOP('enable D-Bus display change signals if available'),
+                                        requires='dbus-client-enabled')
     LOCATION = conf_opt_def(cname=QT_TR_NOOP('location'), conf_type=CI.TYPE_LOCATION, tip=QT_TR_NOOP('latitude,longitude'))
     SLEEP_MULTIPLIER = conf_opt_def(cname=QT_TR_NOOP('sleep-multiplier'), section=CI.DDCUTIL_PARAMETERS, conf_type=CI.TYPE_FLOAT,
                                     tip=QT_TR_NOOP('ddcutil --sleep-multiplier (0.1 .. 2.0, default none)'))
@@ -7212,7 +7233,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
         def handle_changes(edid_encoded: str, event_type: int, flags: int):
             log_info(f"Connected VDUs changed {event_type=} {flags=} {edid_encoded:.30}...")
-            if event_type in (2, 3):
+            if event_type in (-1, 2, 3):
                 self.start_refresh()
             else:
                 log_info(f"DPMS event {event_type=} {edid_encoded=:30}...")
