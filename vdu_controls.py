@@ -86,7 +86,7 @@ Arguments supplied on the command line override config file equivalent settings.
                             use the D-Bus ddcutil-server instead of the ddcutil command
                             ``--dbus-client`` is the default
       --dbus-signals|--no-dbus-signals
-                            enable D-Bus ddcutil-server display change signals
+                            enable D-Bus ddcutil-server VDU-connectivity-change signals
                             ``--dbus-signals`` is the default
       --create-config-files
                             if they do not exist, create template config INI files
@@ -1990,7 +1990,7 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
     DBUS_CLIENT_ENABLED = conf_opt_def(cname=QT_TR_NOOP('dbus-client-enabled'), default="yes",
                                        tip=QT_TR_NOOP('use the D-Bus ddcutil-server if available'))
     DBUS_SIGNALS_ENABLED = conf_opt_def(cname=QT_TR_NOOP('dbus-signals-enabled'), default="yes",
-                                        tip=QT_TR_NOOP('enable D-Bus display change signals if available'),
+                                        tip=QT_TR_NOOP('enable D-Bus VDU-connectivity-change signals if available'),
                                         requires='dbus-client-enabled')
     LOCATION = conf_opt_def(cname=QT_TR_NOOP('location'), conf_type=CI.TYPE_LOCATION, tip=QT_TR_NOOP('latitude,longitude'))
     SLEEP_MULTIPLIER = conf_opt_def(cname=QT_TR_NOOP('sleep-multiplier'), section=CI.DDCUTIL_PARAMETERS, conf_type=CI.TYPE_FLOAT,
@@ -7231,17 +7231,24 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
     def create_ddcutil(self):
 
-        def handle_changes(edid_encoded: str, event_type: int, flags: int):
-            log_info(f"Connected VDUs changed {event_type=} {flags=} {edid_encoded:.30}...")
-            if event_type in (-1, 2, 3):
-                self.start_refresh()
-            else:
-                log_info(f"DPMS event {event_type=} {edid_encoded=:30}...")
+        if self.main_config.is_set(ConfOption.DBUS_SIGNALS_ENABLED):
+
+            def vdu_connectivity_changed_callback(edid_encoded: str, event_type: int, flags: int):
+                log_info(f"Connected VDUs changed {event_type=} {flags=} {edid_encoded:.30}...")
+                if event_type in (-1, 2, 3):
+                    self.start_refresh()
+                else:
+                    log_info(f"DPMS event {event_type=} {edid_encoded=:30}...")
+
+            change_handler = vdu_connectivity_changed_callback
+            log_debug("Enabled callback for VDU-connectivity-change D-Bus signals")
+        else:
+            change_handler = None
 
         try:
             self.ddcutil = Ddcutil(common_args=self.main_config.get_ddcutil_extra_args(),
                                    prefer_dbus_client=self.main_config.is_set(ConfOption.DBUS_CLIENT_ENABLED),
-                                   connected_vdus_changed_callback=handle_changes)
+                                   connected_vdus_changed_callback=change_handler)
         except (subprocess.SubprocessError, ValueError, re.error, OSError, DdcutilServiceNotFound) as e:
             self.main_window.display_no_controllers_error_dialog(e)
 
