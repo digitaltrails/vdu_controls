@@ -34,8 +34,8 @@ Requires:       noto-sans-math-fonts
 Requires:       noto-sans-symbols2-fonts
 Requires:       python3
 Requires:       python3-qt5
-Suggests:       python3-pyserial
-Suggests:       ddcutil-service
+Recommends:     ddcutil-service
+Recommends:     python3-pyserial
 %endif
 %if 0%{?fedora_version}
 %define ext_man *
