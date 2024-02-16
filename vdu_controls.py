@@ -7350,7 +7350,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
     def start_refresh(self) -> None:
         if not is_running_in_gui_thread():
-            log_debug("Reinvoke sart_refresh() in GUI thread.")
+            log_debug("Reinvoke start_refresh() in GUI thread.")
             self.main_window.run_in_gui_thread(self.start_refresh)
             return
         assert is_running_in_gui_thread()
@@ -7361,38 +7361,40 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
         def update_from_vdu() -> None:
             if self.ddcutil is not None:
-                with self.refresh_lock:
-                    try:
-                        self.ddcutil.refresh_connection()
-                        self.detected_vdu_list = self.ddcutil.detect_monitors()
-                        for control_panel in self.main_window.get_main_panel().vdu_control_panels.values():
-                            if control_panel.controller.get_full_id() in self.detected_vdu_list:
-                                control_panel.refresh_from_vdu()
-                    except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
-                        if self.refresh_data_task.vdu_exception is None:
-                            self.refresh_data_task.vdu_exception = VduException(vdu_description="unknown", operation="unknown",
-                                                                                exception=e)
+                self.refresh_lock.acquire()
+                try:
+                    self.ddcutil.refresh_connection()
+                    self.detected_vdu_list = self.ddcutil.detect_monitors()
+                    for control_panel in self.main_window.get_main_panel().vdu_control_panels.values():
+                        if control_panel.controller.get_full_id() in self.detected_vdu_list:
+                            control_panel.refresh_from_vdu()
+                except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
+                    self.refresh_lock.release()
+                    if self.refresh_data_task.vdu_exception is None:
+                        self.refresh_data_task.vdu_exception = VduException(vdu_description="unknown", operation="unknown",
+                                                                            exception=e)
+
 
         def update_ui_view(_: WorkerThread) -> None:
             # Invoke when the worker thread completes. Runs in the GUI thread and can refresh remaining UI views.
             try:
                 assert self.refresh_data_task is not None and is_running_in_gui_thread()
                 log_debug("Refresh - update UI view")
-                with self.refresh_lock:  # An event may have cause a parallel refresh, let it finish
-                    main_panel = self.main_window.get_main_panel()
-                    if self.refresh_data_task.vdu_exception is not None:
-                        main_panel.display_vdu_exception(self.refresh_data_task.vdu_exception, can_retry=False)
-                    if len(self.detected_vdu_list) == 0 or self.detected_vdu_list != self.previously_detected_vdu_list:
-                        log_info(f"Reconfiguring: detected vdu count={self.detected_vdu_list}")
-                        self.configure_application()  # May cause a further refresh?
-                        self.previously_detected_vdu_list = self.detected_vdu_list
-                    if self.lux_auto_controller:
-                        if LuxDialog.exists():
-                            lux_dialog: LuxDialog = LuxDialog.get_instance()  # type: ignore
-                            lux_dialog.reconfigure()  # in case the number of connected monitors have changed.
-                        self.lux_auto_controller.adjust_brightness_now()
+                main_panel = self.main_window.get_main_panel()
+                if self.refresh_data_task.vdu_exception is not None:
+                    main_panel.display_vdu_exception(self.refresh_data_task.vdu_exception, can_retry=False)
+                if len(self.detected_vdu_list) == 0 or self.detected_vdu_list != self.previously_detected_vdu_list:
+                    log_info(f"Reconfiguring: detected vdu count={self.detected_vdu_list}")
+                    self.configure_application()  # May cause a further refresh?
+                    self.previously_detected_vdu_list = self.detected_vdu_list
+                if self.lux_auto_controller:
+                    if LuxDialog.exists():
+                        lux_dialog: LuxDialog = LuxDialog.get_instance()  # type: ignore
+                        lux_dialog.reconfigure()  # in case the number of connected monitors have changed.
+                    self.lux_auto_controller.adjust_brightness_now()
             finally:
                 self.main_window.indicate_busy(False)
+                self.refresh_lock.release()
 
         self.main_window.indicate_busy(True)
         self.refresh_data_task = WorkerThread(task_body=update_from_vdu, task_finished=update_ui_view)
