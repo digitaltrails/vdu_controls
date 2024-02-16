@@ -1699,14 +1699,14 @@ class DdcutilDBusImpl(QObject):
 
     @pyqtSlot(QDBusMessage)
     def _service_initialized_signal_handler(self, message: QDBusMessage):
-        log_info(f"Received D-Bus signal {message.arguments()=} {id(self)=}")   # concerned about old instances... id()
+        log_info(f"Received service_initialized D-Bus signal {message.arguments()=} {id(self)=}")   # concerned about old instances... id()
         with self.service_access_lock:
             if self.listener_callback:
                 self.listener_callback('', -1, 0)
 
     @pyqtSlot(QDBusMessage)
     def _connected_display_change_signal_handler(self, message: QDBusMessage):
-        log_info(f"Received D-Bus signal {message.arguments()=} {id(self)=}")   # concerned about old instances... id()
+        log_info(f"Received display_change D-Bus signal {message.arguments()=} {id(self)=}")   # concerned about old instances... id()
         with self.service_access_lock:
             if self.listener_callback:
                 self.listener_callback(*message.arguments())
