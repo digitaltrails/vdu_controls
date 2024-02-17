@@ -24,7 +24,7 @@ Summary:        Visual Display Unit virtual control panel
 License:        GPL-3.0-or-later
 Group:          System/GUI/Other
 URL:            https://github.com/digitaltrails/vdu_controls
-Source0:        https://github.com/digitaltrails/vdu_controls/archive/refs/tags/v2.0.0.tar.gz#/%{name}-%{version}.tar.gz
+Source0:        https://github.com/digitaltrails/vdu_controls/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 BuildRequires:  coreutils
 BuildRequires:  hicolor-icon-theme
 BuildArch:      noarch
