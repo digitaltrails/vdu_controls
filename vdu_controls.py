@@ -1339,7 +1339,7 @@ class Ddcutil:
             return full_text
         capability_text = f"Model: {model}\nMCCS version: {mccs_major}.{mccs_minor}\nVCP Features:\n"
         for feature_id, feature in features.items():
-            feature_code = f"{int.from_bytes(feature_id):02X}"
+            feature_code = f"{int.from_bytes(feature_id, 'big'):02X}"
             feature_name = feature[0]
             feature_values = feature[2]
             capability_text += f"   Feature: {feature_code} ({feature_name})\n"
@@ -1347,12 +1347,12 @@ class Ddcutil:
                 if all(value == '' for value in feature_values.values()):
                     capability_text += "      Values:"
                     for value_id in feature_values.keys():
-                        capability_text += f" {int.from_bytes(value_id):02X}"
+                        capability_text += f" {int.from_bytes(value_id, 'big'):02X}"
                     capability_text += " (interpretation unavailable)\n"
                 else:
                     capability_text += "      Values:\n"
                     for value_id, value_name in feature_values.items():
-                        value_code = f"{int.from_bytes(value_id):02X}"
+                        value_code = f"{int.from_bytes(value_id, 'big'):02X}"
                         capability_text += f"         {value_code}: {value_name}\n"
         return capability_text
 
@@ -1734,7 +1734,7 @@ class DdcutilDBusImpl(QObject):
             model, mccs_major, mccs_minor, commands, capabilities = \
                 self._validate(self.ddcutil_proxy.call(
                     "GetCapabilitiesMetadata", -1, edid_txt, QDBusArgument(0, QMetaType.UInt)))
-            return model, int.from_bytes(mccs_major), int.from_bytes(mccs_minor), commands, capabilities, ''
+            return model, int.from_bytes(mccs_major, 'big'), int.from_bytes(mccs_minor, 'big'), commands, capabilities, ''
 
     def get_type(self, edid_txt: str, vcp_code_int: int) -> Tuple[bool, bool]:
         key = (edid_txt, vcp_code_int)
@@ -1762,7 +1762,7 @@ class DdcutilDBusImpl(QObject):
         with self.service_access_lock:
             raw = self._validate(self.ddcutil_proxy.call(
                 "GetMultipleVcp", -1, edid_txt, vcp_code_array, QDBusArgument(0, QMetaType.UInt)))[0]
-            return [(int.from_bytes(vcp), value, maximum, text_val) for vcp, value, maximum, text_val in raw]
+            return [(int.from_bytes(vcp, 'big'), value, maximum, text_val) for vcp, value, maximum, text_val in raw]
 
     def _validate(self, result: QDBusMessage) -> List:
         if result.errorName():
