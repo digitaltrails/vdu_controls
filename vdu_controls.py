@@ -3030,7 +3030,7 @@ class VduControlSlider(VduControlBase):
         super().update_from_vdu(vcp_value)
 
     def get_current_text_value(self) -> str | None:
-        return str(self.current_value) if self.current_value else None
+        return str(self.current_value) if self.current_value is not None else None
 
     def refresh_ui_view_implementation(self) -> None:
         if self.current_value is not None:  # Copy the internally cached current value onto the GUI view.
@@ -3077,7 +3077,7 @@ class VduControlComboBox(VduControlBase):
         return ' '.join(w[:1].upper() + w[1:] for w in result.split())  # Default to capitalized version of each word
 
     def get_current_text_value(self) -> str | None:
-        return f"{self.current_value:02X}" if self.current_value else None
+        return f"{self.current_value:02X}" if self.current_value is not None else None
 
     def refresh_ui_view_implementation(self) -> None:
         """Copy the internally cached current value onto the GUI view."""
