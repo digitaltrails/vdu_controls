@@ -3789,9 +3789,14 @@ class PresetTransitionWorker(WorkerThread):
                 if self.stop_requested:
                     return
                 self.main_controller.set_value(key.vdu_stable_id, key.vcp_code, self.final_values[key], origin=VcpOrigin.TRANSIENT)
-            self.work_state = PresetTransitionState.FINISHED
+                self.expected_values[key] = self.final_values[key]
+            if self.values_are_as_expected():
+                log_info(f"Restored {self.preset.name}, elapsed: {self.total_elapsed_seconds():.2f} seconds")
+                self.work_state = PresetTransitionState.FINISHED
+            else:
+                log_error(f"Failed to restore non transitioning controls {self.preset.name}")
             self.end_time = datetime.now()
-            log_info(f"Successfully restored {self.preset.name}, elapsed time: {self.total_elapsed_seconds():.2f} seconds")
+
 
     def step(self) -> None:
         more_to_do = False
