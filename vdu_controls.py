@@ -5783,11 +5783,12 @@ class LuxMeterDevice(QObject):
     def __init__(self, requires_worker: bool = True) -> None:  # use a thread to prevent any blocking due to slow updating
         super().__init__()
         self.current_value: float | None = None
+        self.requires_worker = requires_worker
         if requires_worker:
             self.worker = WorkerThread(task_body=self.update_current_value, task_finished=self.cleanup, loop=True)
 
     def get_value(self) -> float | None:  # an un-smoothed raw value - TODO should smoothing be moved here?
-        if self.current_value is None:
+        if self.current_value is None and self.requires_worker:
             self.worker.start() if not self.worker.isRunning() else None
             while self.current_value is None and not self.worker.stop_requested:  # have to block on the first time through.
                 time.sleep(0.1)
@@ -5797,7 +5798,6 @@ class LuxMeterDevice(QObject):
         pass
 
     def set_current_value(self, new_value: float) -> None:
-        # log_debug(f"new metered value {new_value=}") if log_debug_enabled else None
         self.current_value = new_value
         self.new_lux_value_qtsignal.emit(round(new_value))
 
@@ -5805,7 +5805,8 @@ class LuxMeterDevice(QObject):
         pass
 
     def stop_metering(self) -> None:
-        self.worker.stop()
+        if self.requires_worker:
+            self.worker.stop()
 
     def requires_exact_reponse(self):
         return False
@@ -5824,7 +5825,7 @@ class LuxMeterFifoDevice(LuxMeterDevice):
             if self.fifo is None:
                 log_info(f"Initialising fifo {self.device_name} - waiting on fifo data.")
                 self.fifo = os.open(self.device_name, os.O_RDONLY | os.O_NONBLOCK)
-            while len(select.select([self.fifo], [], [], 1.0)[0]) == 1:
+            while not self.worker.stop_requested and len(select.select([self.fifo], [], [], 1.0)[0]) == 1:
                 byte = os.read(self.fifo, 1)
                 if byte is None:
                     self.cleanup()  # Fifo has closed, maybe meter is resetting
@@ -6417,29 +6418,26 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
             while True:
                 lux_device_type = self.meter_device_selector.itemData(index)
                 if lux_device_type == LuxDeviceType.MANUAL_INPUT:
-                    device_path = LuxMeterManualDevice.device_name
+                    new_device_path = LuxMeterManualDevice.device_name
                     break
                 elif lux_device_type in (LuxDeviceType.ARDUINO, LuxDeviceType.FIFO, LuxDeviceType.EXECUTABLE):
-                    device_path = FasterFileDialog.getOpenFileName(
+                    new_device_path = FasterFileDialog.getOpenFileName(
                         self, tr("Select: {}").format(tr(lux_device_type.description)), config_device)[0]
-                    if device_path == '' or self.validate_device(device_path, required_type=lux_device_type):
+                    if new_device_path == '' or self.validate_device(new_device_path, required_type=lux_device_type):
                         break
-            if device_path == '':
+            if new_device_path == '':
                 for dev_num in range(self.meter_device_selector.count()):
                     config_device_type = self.lux_config.get('lux-meter', 'lux-device-type', fallback='')
                     if self.meter_device_selector.itemData(dev_num).name == config_device_type:
                         self.meter_device_selector.setCurrentIndex(dev_num)
             else:
-                if device_path != config_device:
-                    self.meter_device_selector.setItemText(index, tr(lux_device_type.description) + ': ' + device_path)
-                    self.lux_config.set('lux-meter', "lux-device", device_path)
+                if new_device_path != config_device:
+                    self.meter_device_selector.setItemText(index, tr(lux_device_type.description) + ': ' + new_device_path)
+                    self.lux_config.set('lux-meter', "lux-device", new_device_path)
                     self.lux_config.set('lux-meter', "lux-device-type", self.meter_device_selector.itemData(index).name)
                     self.lux_config.save(self.path)
-                    if config_device != device_path and LuxMeterManualDevice.device_name in (config_device, device_path):
-                        self.apply_settings(requires_app_restart=True)
-                    else:
-                        self.apply_settings(requires_auto_brightness_restart=True)
-                    self.status_message(tr("Meter changed to {}.").format(device_path))
+                    self.apply_settings()
+                    self.status_message(tr("Meter changed to {}.").format(new_device_path))
 
         self.meter_device_selector.activated.connect(choose_device)
 
@@ -6448,15 +6446,14 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
             if enable != self.lux_config.is_auto_enabled():
                 self.lux_config.set('lux-meter', 'automatic-brightness', 'yes' if enable else 'no')
                 self.adjust_now_button.setVisible(enable)
-                self.apply_settings(requires_auto_brightness_restart=True)
-
+                self.apply_settings()
 
         self.enabled_checkbox.stateChanged.connect(set_auto_monitoring)
 
         def apply_interval(value: int) -> None:
             if self.interval_selector.value() == value and value != self.lux_config.get_interval_minutes():
                 self.lux_config.set('lux-meter', 'interval-minutes', str(value))
-                self.apply_settings(requires_auto_brightness_restart=True)
+                self.apply_settings()
                 self.status_message(tr("Interval changed to {} minutes.").format(value))
 
         def interval_selector_changed(value: int) -> None:
@@ -6468,7 +6465,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         def set_interpolation(checked: int) -> None:
             if (checked == Qt.Checked) != self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True):
                 self.lux_config.set('lux-meter', 'interpolate-brightness', 'yes' if checked == Qt.Checked else 'no')
-                self.apply_settings(requires_auto_brightness_restart=True)
+                self.apply_settings()
 
         self.interpolate_checkbox.stateChanged.connect(set_interpolation)
 
@@ -6479,7 +6476,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                 self.status_message(tr("Editing profile {}").format(profile_name))
             if self.lux_config.get('lux-ui', 'selected-profile', fallback=None) != self.profile_selector.itemData(index):
                 self.lux_config.set('lux-ui', 'selected-profile', self.profile_selector.itemData(index))
-                self.apply_settings(requires_auto_brightness_restart=False)
+                self.apply_settings(requires_metering_restart=False)
 
         self.profile_selector.currentIndexChanged.connect(select_profile)
         self.reconfigure()
@@ -6578,12 +6575,9 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
             return False
         return True
 
-    def apply_settings(self, requires_auto_brightness_restart: bool = True, requires_app_restart: bool = False) -> None:
+    def apply_settings(self, requires_metering_restart: bool = True) -> None:
         self.lux_config.save(self.path)
-        if requires_app_restart:
-            self.main_controller.settings_changed([])
-            return
-        if requires_auto_brightness_restart:
+        if requires_metering_restart:
             self.main_controller.get_lux_auto_controller().initialize_from_config()  # Causes the LuxAutoWorker to restart
             self.lux_display_widget.connect_meter(None)
             meter_device = self.main_controller.get_lux_auto_controller().lux_meter
@@ -6592,6 +6586,8 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                 self.status_message(tr("Restarted automatic brightness adjustment"), timeout=5000)
 
     def configure_ui(self, meter_device: LuxMeterDevice | None) -> None:
+        if meter_device is not None:  # Set this up first because altering the checkboxes will cause events to use the outcome.
+            self.lux_display_widget.connect_meter(meter_device)
         manual_metering_enabled = self.meter_device_selector.currentData().name == LuxDeviceType.MANUAL_INPUT.name
         if manual_metering_enabled or meter_device is None:
             self.enabled_checkbox.setChecked(False)
@@ -6602,16 +6598,13 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
             self.enabled_checkbox.setEnabled(True)
             self.interval_label.setEnabled(True)
 
-        if meter_device is not None:
-            self.lux_display_widget.connect_meter(meter_device)
-
     def save_profiles(self) -> None:
         for vdu_sid, profile in self.profile_plot.profiles_map.items():
             data = [(lux_point.lux, lux_point.brightness) for lux_point in profile if lux_point.preset_name is None]
             self.lux_config.set('lux-profile', vdu_sid, repr(data))
         preset_data = [(lux_point.lux, lux_point.preset_name) for lux_point in self.profile_plot.preset_points]
         self.lux_config.set('lux-presets', 'lux-preset-points', repr(preset_data))
-        self.apply_settings(requires_auto_brightness_restart=True)
+        self.apply_settings()
         self.has_profile_changes = False
         self.save_button.setEnabled(False)
         self.revert_button.setEnabled(False)
@@ -6722,8 +6715,6 @@ class LuxAutoController:
             else:
                 log_info("Lux auto-brightness settings refresh - monitoring is off.")  # TODO handle exception
                 self.stop_worker()
-                self.lux_meter = lux_create_device(LuxMeterManualDevice.device_name)
-
             self.main_controller.display_lux_auto_indicators()  # Refresh indicators immediately
         except LuxDeviceException as lde:
             log_error(f"Error setting up lux meter {lde}", trace=True)
