@@ -23,18 +23,24 @@ A control panel for external monitors (*Visual Display Units*).
 > command-based implementation. Should the ddcutil-service be unavailable,
 > the DDC/VDU interface reverts to using the ddcutil command. 
 > 
-> If you'd like to try the **ddcutil-service**, it's written in C, so you'd
-> probably need to build and install it (I do have an RPM for OpenSUSE Tumbleweed).
+> If you'd like to try the **ddcutil-service**, builds are available for OpenSUSE 
+> Tumbleweed and the Arch AUR:
+> 
+> OpenSUSE Tumbleweed RPM:
+> 
+>    https://software.opensuse.org/package/ddcutil-service
+> 
+> AUR (Arch Linux User Repository):
+> 
+>    https://aur.archlinux.org/packages/ddcutil-service
+>
+> Otherwise it's written in C, so you'd need to build and install it.
 > It's one C file. It will build against any libddcutil from 1.4 onward.
 > It doesn't need to be installed as root, it can also be started
 > manually from the command line or installed as a single user D-Bus daemon.
 > For install/build details, see:
 > 
 >    https://github.com/digitaltrails/ddcutil-service
-> 
-> Unofficial *community* OpenSUSE Tumbleweed RPM:
-> 
->    https://software.opensuse.org/package/ddcutil-service
 > 
 > The service can be installed for on demand access via the D-BUS daemon. It can also
 > run manually from the command line.  Once the service is running, any new 
@@ -278,6 +284,7 @@ Version History
   * Fix infinite-loop when altering an existing FIFO lux-meter in the Lux-Dialog.
   * Fix the refresh of the LuxDialog meter-readout/plot when changing to a new meter.
   * Apply context-aware defaults to the LuxDialog device file-chooser. 
+  * Improve/fix the handling of displays/laptop-displays that may be detected but lack proper DDC.
 
 * 2.0.0
   * Added an optional D-Bus interface to ddcutil for up to 10x faster response times.
