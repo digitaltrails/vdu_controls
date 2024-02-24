@@ -699,7 +699,7 @@ from urllib.error import URLError
 from PyQt5 import QtCore
 from PyQt5 import QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
-    QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType
+    QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir
 from PyQt5.QtDBus import QDBusConnection, QDBusInterface, QDBusError, QDBusMessage, QDBusArgument, QDBusVariant
 from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QRegExpValidator, \
     QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon
@@ -3926,12 +3926,13 @@ class FasterFileDialog(QFileDialog):  # Takes 5 seconds versus 30+ seconds for Q
 
     @staticmethod
     def getOpenFileName(parent: QWidget | None = None, caption: str = '', directory: str = '', filter_str: str = '',
-                        initial_filter: str = '', options: QFileDialog.Options | QFileDialog.Option = 0) -> Tuple[str, str]:
+                        initial_filter: str = '', options: QFileDialog.Options | QFileDialog.Option = QFileDialog.ReadOnly) -> Tuple[str, str]:
         original_handler = QtCore.qInstallMessageHandler(lambda mode, context, message: None)
         try:  # Get rid of another annoying message: 'qtimeline::start: already running'
             dialog = QFileDialog(parent=parent, caption=caption, directory=directory, filter=filter_str)
-            dialog.setOption(QFileDialog.ReadOnly | options)  # Makes no difference
+            dialog.setOptions(options)
             dialog.setFileMode(QFileDialog.ExistingFile)
+            dialog.setFilter(QDir.AllEntries | QDir.AllDirs | QDir.Hidden | QDir.System)
             return (dialog.selectedFiles()[0], filter) if dialog.exec() else ('', '')  # match QFileDilog.getOpenFileName()
         finally:
             QtCore.qInstallMessageHandler(original_handler)
