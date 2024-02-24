@@ -6414,30 +6414,35 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.status_layout.addWidget(self.status_bar)
 
         def choose_device(index: int) -> None:
-            config_device = self.lux_config.get('lux-meter', "lux-device", fallback='')
+            current_dev = self.lux_config.get('lux-meter', "lux-device", fallback='')
+            current_dev_type = self.lux_config.get('lux-meter', "lux-device-type", fallback='')
             while True:
-                lux_device_type = self.meter_device_selector.itemData(index)
-                if lux_device_type == LuxDeviceType.MANUAL_INPUT:
-                    new_device_path = LuxMeterManualDevice.device_name
+                new_dev_type = self.meter_device_selector.itemData(index)
+                if new_dev_type == LuxDeviceType.MANUAL_INPUT:
+                    new_dev_path = LuxMeterManualDevice.device_name
                     break
-                elif lux_device_type in (LuxDeviceType.ARDUINO, LuxDeviceType.FIFO, LuxDeviceType.EXECUTABLE):
-                    new_device_path = FasterFileDialog.getOpenFileName(
-                        self, tr("Select: {}").format(tr(lux_device_type.description)), config_device)[0]
-                    if new_device_path == '' or self.validate_device(new_device_path, required_type=lux_device_type):
+                elif new_dev_type in (LuxDeviceType.ARDUINO, LuxDeviceType.FIFO, LuxDeviceType.EXECUTABLE):
+                    if current_dev_type == new_dev_type.name:
+                        default_file = current_dev
+                    else:
+                        default_file = "/dev/arduino" if new_dev_type == LuxDeviceType.ARDUINO else Path.home().as_posix()
+                    new_dev_path = FasterFileDialog.getOpenFileName(
+                        self, tr("Select: {}").format(tr(new_dev_type.description)), default_file)[0]
+                    if new_dev_path == '' or self.validate_device(new_dev_path, required_type=new_dev_type):
                         break
-            if new_device_path == '':
+            if new_dev_path == '':
                 for dev_num in range(self.meter_device_selector.count()):
                     config_device_type = self.lux_config.get('lux-meter', 'lux-device-type', fallback='')
                     if self.meter_device_selector.itemData(dev_num).name == config_device_type:
                         self.meter_device_selector.setCurrentIndex(dev_num)
             else:
-                if new_device_path != config_device:
-                    self.meter_device_selector.setItemText(index, tr(lux_device_type.description) + ': ' + new_device_path)
-                    self.lux_config.set('lux-meter', "lux-device", new_device_path)
-                    self.lux_config.set('lux-meter', "lux-device-type", self.meter_device_selector.itemData(index).name)
+                if new_dev_path != current_dev:
+                    self.meter_device_selector.setItemText(index, tr(new_dev_type.description) + ': ' + new_dev_path)
+                    self.lux_config.set('lux-meter', "lux-device", new_dev_path)
+                    self.lux_config.set('lux-meter', "lux-device-type", new_dev_type.name)
                     self.lux_config.save(self.path)
                     self.apply_settings()
-                    self.status_message(tr("Meter changed to {}.").format(new_device_path))
+                    self.status_message(tr("Meter changed to {}.").format(new_dev_path))
 
         self.meter_device_selector.activated.connect(choose_device)
 
