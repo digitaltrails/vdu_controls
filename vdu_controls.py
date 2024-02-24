@@ -2283,6 +2283,8 @@ class VduController(QObject):
                  default_config: VduControlsConfig, ddcutil: Ddcutil,
                  vdu_exception_handler: Callable, remedy: int = 0) -> None:
         super().__init__()
+        if vdu_model_name.strip() == '':  # laptop monitors can sneak through with no model_name
+            vdu_model_name = "Unknown"
         self.vdu_stable_id = VduStableId(proper_name(vdu_model_name, serial_number))
         log_info(f"Initializing controls for {vdu_number=} {vdu_model_name=} {self.vdu_stable_id=}")
         self.vdu_number = vdu_number
@@ -2295,6 +2297,7 @@ class VduController(QObject):
         self.capabilities_text: str | None = None
         self.config = None
         self.values_cache: Dict[str, int] = {}
+        self.ignore_vdu = False
         default_sleep_multiplier: float | None = default_config.get_sleep_multiplier(fallback=None)
         enabled_vcp_codes = default_config.get_all_enabled_vcp_codes()
         for config_name in (self.vdu_stable_id, self.vdu_model_id):
@@ -2325,6 +2328,7 @@ class VduController(QObject):
                 self.capabilities_text = ASSUMED_CONTROLS_CONFIG_TEXT
             else:
                 self.capabilities_text = ddcutil.query_capabilities(vdu_number)
+        self.ignore_vdu = self.capabilities_text == '' or self.capabilities_text == IGNORE_VDU_MARKER_TEXT
         # print(f"{self.capabilities_text}")
         self.capabilities_supported_by_this_vdu = self._parse_capabilities(self.capabilities_text)
         # print(f"{self.capabilities_supported_by_this_vdu=}")
@@ -2338,6 +2342,8 @@ class VduController(QObject):
             self.config.set_capabilities_alt_text(self.capabilities_text)
         self.config.restrict_to_actual_capabilities(
             self.capabilities_supported_by_this_vdu)  # TODO Might be possible to make this redundant now.
+        if remedy == VduController.DISCARD_VDU:
+            self.write_template_config_files()  # Persist the discard
 
     def write_template_config_files(self) -> None:
         """Write template config files to $HOME/.config/vdu_controls/"""
@@ -7640,7 +7646,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         return self.lux_auto_controller
 
     def get_vdu_stable_id_list(self) -> List[VduStableId]:
-        return list(self.vdu_controllers_map.keys())
+        return [id for id, vdu_controller in self.vdu_controllers_map.items() if not vdu_controller.ignore_vdu]
 
     def get_vdu_current_values(self, vdu_stable_id: VduStableId):
         if controller := self.vdu_controllers_map.get(vdu_stable_id):
