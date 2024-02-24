@@ -275,6 +275,9 @@ Version History
 ---------------
 * 2.0.1
   * Fix D-Bus client code for python versions prior to 3.11.
+  * Fix infinite-loop when altering an existing FIFO lux-meter in the Lux-Dialog.
+  * Fix the refresh of the LuxDialog meter-readout/plot when changing to a new meter.
+  * Apply context-aware defaults to the LuxDialog device file-chooser. 
 
 * 2.0.0
   * Added an optional D-Bus interface to ddcutil for up to 10x faster response times.
