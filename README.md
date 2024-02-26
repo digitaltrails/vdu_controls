@@ -18,7 +18,9 @@ A control panel for external monitors (*Visual Display Units*).
 > of the **ddcutil** command. The new **ddcutil-service** is a daemon I've written to
 > interface with **libddcutil**, it's faster and more reponsive than the older
 > command-based implementation. Should the ddcutil-service be unavailable,
-> the DDC/VDU interface reverts to using the ddcutil command. 
+> the DDC/VDU interface reverts to using the ddcutil command.  Should you encounter 
+> any issues with using the service, **Settings->D-Bus client enabled** can 
+> be used to disable it and force the use of the command.
 > 
 > If you'd like to try the **ddcutil-service**, builds are available for OpenSUSE 
 > Tumbleweed and the Arch AUR:

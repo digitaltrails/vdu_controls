@@ -83,10 +83,10 @@ Arguments supplied on the command line override config file equivalent settings.
                             0.1 .. 2.0, default is 1.0)
       --ddcutil-extra-args  extra arguments to pass to ddcutil (enclosed in single quotes)
       --dbus-client|--no-dbus-client
-                            use the D-Bus ddcutil-server instead of the ddcutil command
+                            use the D-Bus ddcutil-service instead of the ddcutil command
                             ``--dbus-client`` is the default
       --dbus-signals|--no-dbus-signals
-                            enable D-Bus ddcutil-server VDU-connectivity-change signals
+                            enable D-Bus ddcutil-service VDU-connectivity-change signals
                             ``--dbus-signals`` is the default
       --create-config-files
                             if they do not exist, create template config INI files
@@ -109,8 +109,9 @@ controls.  Additional controls can be enabled via the ``Settings`` dialog.
 implementations.
 
 From ``vdu_controls 2.0`` onward, ``vdu_controls`` defaults to using the ``D-Bus ddcutil-service``.
-Should the ``ddcutil-service`` be unavailable, ``vdu_controls`` will fall back to running ``ddcutil``
-separately for each VCP-command.
+Should the ``ddcutil-service`` be unavailable, ``vdu_controls`` will fall back to running the
+``ddcutil`` command to perform each request.  Should you encounter any issues with using the
+service, the Settings dialog can be used to disable it and force the use of the command.
 
 The UI's look-and-feel adjusts itself for dark and light desktop themes. The application may
 optionally run in the system tray of KDE, Deepin, GNOME, and Xfce (and possibly others).
