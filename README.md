@@ -3,9 +3,6 @@ vdu_controls - a DDC control panel for monitors
 
 A control panel for external monitors (*Visual Display Units*).
 
-> This is the vdu_controls 2.0 trunk development branch for vdu_controls.  It's
-> functional and you're welcome to try it.  
-> 
 > Version 2.0 adds manual ambient-light-level input.  This allows all connected VDU's
 > to be simultatiniously adjusted by moving one slider.  This is an alternative
 > to fully automatic control via hardware lux-metering.  When the ambient-light-level
@@ -285,6 +282,7 @@ Version History
   * Fix the refresh of the LuxDialog meter-readout/plot when changing to a new meter.
   * Apply context-aware defaults to the LuxDialog device file-chooser. 
   * Improve/fix the handling of displays/laptop-displays that may be detected but lack proper DDC.
+  * Force the file-picker to always show devices and FIFOs - it wasn't showing then on some desktops.
 
 * 2.0.0
   * Added an optional D-Bus interface to ddcutil for up to 10x faster response times.
