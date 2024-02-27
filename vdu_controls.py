@@ -110,8 +110,7 @@ implementations.
 
 From ``vdu_controls 2.0`` onward, ``vdu_controls`` defaults to using the ``D-Bus ddcutil-service``.
 Should the ``ddcutil-service`` be unavailable, ``vdu_controls`` will fall back to running the
-``ddcutil`` command to perform each request.  Should you encounter any issues with using the
-service, the Settings dialog can be used to disable it and force the use of the command.
+``ddcutil`` command to perform each request.
 
 The UI's look-and-feel adjusts itself for dark and light desktop themes. The application may
 optionally run in the system tray of KDE, Deepin, GNOME, and Xfce (and possibly others).
@@ -499,11 +498,13 @@ Improving Response Time: Dynamic Optimization and Sleep Multipliers
 
 If you are using ``ddcutil`` version 2.0 or greater, ``vdu_controls`` will default to using the
 ``ddcutil`` *dynamic sleep optimiser*.  The optimiser automatically tunes and caches VDU specific
-timings when ever ``ddcutil`` is run.  Any reliability-issues or reported errors may be
-automatically resolved as the optimiser refines it's cached timings.  Should problems persist, the
+timings when ever ``ddcutil`` is run.  Any reliability-issues or errors may be automatically
+resolved as the optimiser refines it's cached timings.  Should problems persist, the
 optimiser can be disabled by adding `--disable-dynamic-sleep` to the **ddcutil extra arguments** in
 the **Settings Dialog** (either globally on the **vdu_controls tab** or selectively under each VDU's
-tab).
+tab).  If dynamic sleep is disabled, multipliers can then be manually assigned. The optimiser's
+heuristics continue to be refined, it may be that some issues may be resolved by moving to a more
+recent version of ``libddcutil/ddcutil``.
 
 For versions of ``ddcutil`` prior to 2.0, you can manually set the ``vdu_control``
 ``sleep-multiplier`` passed to ``ddcutil``.  A sleep multiplier less than one will speed up the i2c
@@ -515,9 +516,9 @@ multipliers can be configured (see previous section).
 Improving Response Time and Reliability: Connections and Controls
 -----------------------------------------------------------------
 
-``DDC/I2C`` is not the most reliable form of communication. VDUs may vary in their
-responsiveness and compliance.  GPUs, GPU drivers, and types of connection may affect the
-reliability.
+``DDC/I2C`` is not a totally reliable form of communication. VDUs may vary in their responsiveness
+and compliance.  GPUs, GPU drivers, and types of connection may affect the reliability. Both ddcutil
+and vdu_controls attempt to manage the reliability by using repetition and by adjusting timings.
 
 If you have the choice, a ``DisplayPort`` to ``DisplayPort`` connection may be more reliable than
 ``DVI`` or ``HDMI``.
@@ -541,9 +542,13 @@ specific picture-profile might result in the contrast-control being disabled, bu
 will not be aware of the restriction resulting in its contrast-control erring or appearing to do
 nothing.
 
+The ``ddcutil-service`` has some ability to signal hot-plug events, such as connecting
+a new VDU or powering one down. Not all GPU-drivers support an efficient means of event detection,
+as a result there may be a delay of many seconds before ``ddcutil-service`` passes these events
+to ``vdu_controls``.
+
 Builtin laptop displays normally don't implement DDC and those displays are not supported, but a
-laptop's externally connected VDUs are likely to be controllable. (For some laptops it might be
-possible to write a custom script-wrapper for `ddcutil` which emulates DDC for the laptop display.)
+laptop's externally connected VDUs are likely to be controllable.
 
 Examples
 ========
