@@ -15,8 +15,8 @@ a DDC control panel for monitors</h1>
                  [--hide-on-focus-out|--no-hide-on-focus-out] [--smart-window|--no-smart-window]
                  [--syslog|--no-syslog]  [--debug|--no-debug] [--warnings|--no-warnings]
                  [--sleep-multiplier multiplier] [--ddcutil-extra-args &#39;extra args&#39;]
-                 [--dbus-client-enabled|--no-dbus-client-enabled]
-                 [--dbus-listen|--no-dbus-listen]
+                 [--dbus-client|--no-dbus-client]
+                 [--dbus-signals|--no-dbus-signals]
                  [--create-config-files] [--install] [--uninstall]</code></pre>
 <h2 id="optional-arguments">Optional arguments:</h2>
 <p>Arguments supplied on the command line override config file
@@ -62,10 +62,10 @@ equivalent settings.</p>
   --splash|--no-splash
                         show the splash screen.  ``--splash`` is the default.
   --monochrome-tray|--no-monochrome-tray
-                        monochrome themed system-tray.
+                        monochrome dark themed system-tray.
                         ``--no-monochrome-tray`` is the default.
   --mono-light-tray|--no-mono-light-tray
-                        alter monochrome-tray for a light themed system-tray.
+                        monochrome themed system-tray.
                         ``--no-mono-light-tray`` is the default.
   --smart-window|--no-smart-window
                         smart main window placement and geometry.
@@ -74,12 +74,12 @@ equivalent settings.</p>
                         protocol reliability multiplier for ddcutil (typically
                         0.1 .. 2.0, default is 1.0)
   --ddcutil-extra-args  extra arguments to pass to ddcutil (enclosed in single quotes)
-  --dbus-client-enabled|--no-dbus-client-enabled
-                        use the ddcutil-dbus-server instead of the ddcutil command
-                        ``--no-dbus-client-enabled`` is the default
-  --dbus-listener|--no-dbus-listener
-                        listen for VDU status change signals
-                        ``--no-dbus-listener`` is the default
+  --dbus-client|--no-dbus-client
+                        use the D-Bus ddcutil-service instead of the ddcutil command
+                        ``--dbus-client`` is the default
+  --dbus-signals|--no-dbus-signals
+                        enable D-Bus ddcutil-service VDU-connectivity-change signals
+                        ``--dbus-signals`` is the default
   --create-config-files
                         if they do not exist, create template config INI files
                         in $HOME/.config/vdu_controls/
@@ -102,16 +102,15 @@ implementations.</p>
 <p>From <code>vdu_controls 2.0</code> onward, <code>vdu_controls</code>
 defaults to using the <code>D-Bus ddcutil-service</code>. Should the
 <code>ddcutil-service</code> be unavailable, <code>vdu_controls</code>
-will fall back to running <code>ddcutil</code> separately for each
-VCP-command.</p>
+will fall back to running the <code>ddcutil</code> command to perform
+each request.</p>
 <p>The UI’s look-and-feel adjusts itself for dark and light desktop
 themes. The application may optionally run in the system tray of KDE,
 Deepin, GNOME, and Xfce (and possibly others).</p>
 <p>The UI provides an optional <code>ambient-light slider</code> for
 simultaneously adjusting all VDUs according to custom per-VDU ambient
-lux/brightness profiles. Options are included for accessing a hardware
-ambient light-meter, or a webcam, for fully automatic brightness
-adjustment.</p>
+lux/brightness profiles. Options are included for automated adjustment
+by accessing a hardware light-meters, webcams, or other devices.</p>
 <p>Named <code>Preset</code> configurations can be saved and recalled.
 For example, presets may be created for night, day, photography, movies,
 and so forth. Presets can be triggered by specific ambient light levels,
@@ -507,12 +506,16 @@ Response Time: Dynamic Optimization and Sleep Multipliers</h2>
 <code>vdu_controls</code> will default to using the <code>ddcutil</code>
 <em>dynamic sleep optimiser</em>. The optimiser automatically tunes and
 caches VDU specific timings when ever <code>ddcutil</code> is run. Any
-reliability-issues or reported errors may be automatically resolved as
-the optimiser refines it’s cached timings. Should problems persist, the
+reliability-issues or errors may be automatically resolved as the
+optimiser refines it’s cached timings. Should problems persist, the
 optimiser can be disabled by adding <code>--disable-dynamic-sleep</code>
 to the <strong>ddcutil extra arguments</strong> in the <strong>Settings
 Dialog</strong> (either globally on the <strong>vdu_controls
-tab</strong> or selectively under each VDU’s tab).</p>
+tab</strong> or selectively under each VDU’s tab). If dynamic sleep is
+disabled, multipliers can then be manually assigned. The optimiser’s
+heuristics continue to be refined, it may be that some issues may be
+resolved by moving to a more recent version of
+<code>libddcutil/ddcutil</code>.</p>
 <p>For versions of <code>ddcutil</code> prior to 2.0, you can manually
 set the <code>vdu_control</code> <code>sleep-multiplier</code> passed to
 <code>ddcutil</code>. A sleep multiplier less than one will speed up the
@@ -525,9 +528,11 @@ section).</p>
 <h2
 id="improving-response-time-and-reliability-connections-and-controls">Improving
 Response Time and Reliability: Connections and Controls</h2>
-<p><code>DDC/I2C</code> is not the most reliable form of communication.
+<p><code>DDC/I2C</code> is not a totally reliable form of communication.
 VDUs may vary in their responsiveness and compliance. GPUs, GPU drivers,
-and types of connection may affect the reliability.</p>
+and types of connection may affect the reliability. Both ddcutil and
+vdu_controls attempt to manage the reliability by using repetition and
+by adjusting timings.</p>
 <p>If you have the choice, a <code>DisplayPort</code> to
 <code>DisplayPort</code> connection may be more reliable than
 <code>DVI</code> or <code>HDMI</code>.</p>
@@ -550,11 +555,14 @@ For example, setting a VDU to a specific picture-profile might result in
 the contrast-control being disabled, but <code>vdu_controls</code> will
 not be aware of the restriction resulting in its contrast-control erring
 or appearing to do nothing.</p>
+<p>The <code>ddcutil-service</code> has some ability to signal hot-plug
+events, such as connecting a new VDU or powering one down. Not all
+GPU-drivers support an efficient means of event detection, as a result
+there may be a delay of many seconds before <code>ddcutil-service</code>
+passes these events to <code>vdu_controls</code>.</p>
 <p>Builtin laptop displays normally don’t implement DDC and those
 displays are not supported, but a laptop’s externally connected VDUs are
-likely to be controllable. (For some laptops it might be possible to
-write a custom script-wrapper for <code>ddcutil</code> which emulates
-DDC for the laptop display.)</p>
+likely to be controllable.</p>
 <h1 id="examples">Examples</h1>
 <pre><code>vdu_controls
     All default controls.

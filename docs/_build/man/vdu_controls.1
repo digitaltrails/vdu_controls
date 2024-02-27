@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Dec 27, 2023" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Feb 28, 2024" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.11.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -50,8 +50,8 @@ A control panel for DisplayPort, DVI, HDMI, or USB connected VDUs (\fIVisual Dis
 [\-\-hide\-on\-focus\-out|\-\-no\-hide\-on\-focus\-out] [\-\-smart\-window|\-\-no\-smart\-window]
 [\-\-syslog|\-\-no\-syslog]  [\-\-debug|\-\-no\-debug] [\-\-warnings|\-\-no\-warnings]
 [\-\-sleep\-multiplier multiplier] [\-\-ddcutil\-extra\-args \(aqextra args\(aq]
-[\-\-dbus\-client\-enabled|\-\-no\-dbus\-client\-enabled]
-[\-\-dbus\-listen|\-\-no\-dbus\-listen]
+[\-\-dbus\-client|\-\-no\-dbus\-client]
+[\-\-dbus\-signals|\-\-no\-dbus\-signals]
 [\-\-create\-config\-files] [\-\-install] [\-\-uninstall]
 .UNINDENT
 .UNINDENT
@@ -130,11 +130,11 @@ minimise the main window automatically on focus out
 show the splash screen.  \fB\-\-splash\fP is the default.
 .TP
 .B \-\-monochrome\-tray|\-\-no\-monochrome\-tray
-monochrome themed system\-tray.
+monochrome dark themed system\-tray.
 \fB\-\-no\-monochrome\-tray\fP is the default.
 .TP
 .B \-\-mono\-light\-tray|\-\-no\-mono\-light\-tray
-alter monochrome\-tray for a light themed system\-tray.
+monochrome themed system\-tray.
 \fB\-\-no\-mono\-light\-tray\fP is the default.
 .TP
 .B \-\-smart\-window|\-\-no\-smart\-window
@@ -153,13 +153,13 @@ extra arguments to pass to ddcutil (enclosed in single quotes)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B \-\-dbus\-client\-enabled|\-\-no\-dbus\-client\-enabled
-use the ddcutil\-dbus\-server instead of the ddcutil command
-\fB\-\-no\-dbus\-client\-enabled\fP is the default
+.B \-\-dbus\-client|\-\-no\-dbus\-client
+use the D\-Bus ddcutil\-service instead of the ddcutil command
+\fB\-\-dbus\-client\fP is the default
 .TP
-.B \-\-dbus\-listener|\-\-no\-dbus\-listener
-listen for VDU status change signals
-\fB\-\-no\-dbus\-listener\fP is the default
+.B \-\-dbus\-signals|\-\-no\-dbus\-signals
+enable D\-Bus ddcutil\-service VDU\-connectivity\-change signals
+\fB\-\-dbus\-signals\fP is the default
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -189,15 +189,15 @@ controls.  Additional controls can be enabled via the \fBSettings\fP dialog.
 implementations.
 .sp
 From \fBvdu_controls 2.0\fP onward, \fBvdu_controls\fP defaults to using the \fBD\-Bus ddcutil\-service\fP\&.
-Should the \fBddcutil\-service\fP be unavailable, \fBvdu_controls\fP will fall back to running \fBddcutil\fP
-separately for each VCP\-command.
+Should the \fBddcutil\-service\fP be unavailable, \fBvdu_controls\fP will fall back to running the
+\fBddcutil\fP command to perform each request.
 .sp
 The UI\(aqs look\-and\-feel adjusts itself for dark and light desktop themes. The application may
 optionally run in the system tray of KDE, Deepin, GNOME, and Xfce (and possibly others).
 .sp
 The UI provides an optional \fBambient\-light slider\fP for simultaneously adjusting
-all VDUs according to custom per\-VDU ambient lux/brightness profiles.  Options are included for
-accessing a hardware ambient light\-meter, or a webcam, for fully automatic brightness adjustment.
+all VDUs according to custom per\-VDU ambient lux/brightness profiles.  Options are included
+for automated adjustment by accessing a hardware light\-meters, webcams, or other devices.
 .sp
 Named \fBPreset\fP configurations can be saved and recalled. For example, presets may be created
 for night, day, photography, movies, and so forth.   Presets can be triggered by specific ambient
@@ -682,11 +682,13 @@ interpolation\-sensitivity\-percent=10
 .sp
 If you are using \fBddcutil\fP version 2.0 or greater, \fBvdu_controls\fP will default to using the
 \fBddcutil\fP \fIdynamic sleep optimiser\fP\&.  The optimiser automatically tunes and caches VDU specific
-timings when ever \fBddcutil\fP is run.  Any reliability\-issues or reported errors may be
-automatically resolved as the optimiser refines it\(aqs cached timings.  Should problems persist, the
+timings when ever \fBddcutil\fP is run.  Any reliability\-issues or errors may be automatically
+resolved as the optimiser refines it\(aqs cached timings.  Should problems persist, the
 optimiser can be disabled by adding \fI\-\-disable\-dynamic\-sleep\fP to the \fBddcutil extra arguments\fP in
 the \fBSettings Dialog\fP (either globally on the \fBvdu_controls tab\fP or selectively under each VDU\(aqs
-tab).
+tab).  If dynamic sleep is disabled, multipliers can then be manually assigned. The optimiser\(aqs
+heuristics continue to be refined, it may be that some issues may be resolved by moving to a more
+recent version of \fBlibddcutil/ddcutil\fP\&.
 .sp
 For versions of \fBddcutil\fP prior to 2.0, you can manually set the \fBvdu_control\fP
 \fBsleep\-multiplier\fP passed to \fBddcutil\fP\&.  A sleep multiplier less than one will speed up the i2c
@@ -696,9 +698,9 @@ with multiplier values may greatly speed up responsiveness. In a multi\-VDU setu
 multipliers can be configured (see previous section).
 .SS Improving Response Time and Reliability: Connections and Controls
 .sp
-\fBDDC/I2C\fP is not the most reliable form of communication. VDUs may vary in their
-responsiveness and compliance.  GPUs, GPU drivers, and types of connection may affect the
-reliability.
+\fBDDC/I2C\fP is not a totally reliable form of communication. VDUs may vary in their responsiveness
+and compliance.  GPUs, GPU drivers, and types of connection may affect the reliability. Both ddcutil
+and vdu_controls attempt to manage the reliability by using repetition and by adjusting timings.
 .sp
 If you have the choice, a \fBDisplayPort\fP to \fBDisplayPort\fP connection may be more reliable than
 \fBDVI\fP or \fBHDMI\fP\&.
@@ -720,9 +722,13 @@ specific picture\-profile might result in the contrast\-control being disabled, 
 will not be aware of the restriction resulting in its contrast\-control erring or appearing to do
 nothing.
 .sp
+The \fBddcutil\-service\fP has some ability to signal hot\-plug events, such as connecting
+a new VDU or powering one down. Not all GPU\-drivers support an efficient means of event detection,
+as a result there may be a delay of many seconds before \fBddcutil\-service\fP passes these events
+to \fBvdu_controls\fP\&.
+.sp
 Builtin laptop displays normally don\(aqt implement DDC and those displays are not supported, but a
-laptop\(aqs externally connected VDUs are likely to be controllable. (For some laptops it might be
-possible to write a custom script\-wrapper for \fIddcutil\fP which emulates DDC for the laptop display.)
+laptop\(aqs externally connected VDUs are likely to be controllable.
 .SH EXAMPLES
 .INDENT 0.0
 .INDENT 3.5
