@@ -716,7 +716,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, qApp, QShortcut
 
 APPNAME = "VDU Controls"
-VDU_CONTROLS_VERSION = '2.0.1'
+VDU_CONTROLS_VERSION = '2.0.2'
 VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in VDU_CONTROLS_VERSION.split('.'))
 assert sys.version_info >= (3, 8), f'{APPNAME} utilises python version 3.8 or greater (your python is {sys.version}).'
 
@@ -1293,7 +1293,7 @@ class Ddcutil:
     def get_edid_txt(self, vdu_number: str) -> str:
         return self.edid_txt_map.get(vdu_number, vdu_number)  # no edid probably means a simulated VDU
 
-    def detect_monitors(self) -> List[Tuple[str, str, str, str]]:
+    def detect_vdus(self) -> List[Tuple[str, str, str, str]]:
         """Return a list of (vdu_number, desc) tuples."""
         display_list = []
         vdu_list = self.ddcutil_impl.detect(1)
@@ -1640,17 +1640,23 @@ class DdcutilDBusImpl(QObject):
         self.service_access_lock = Lock()
         self.listener_callback: Callable | None = callback
         self.dbus_timeout_millis = int(os.getenv("VDU_CONTROLS_DBUS_TIMEOUT_MILLIS", default='5000'))
-        self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service()
-
-        if len(self.common_args) != 0:
-            self._validate(self.ddcutil_proxy.call("Restart", " ".join(self.common_args),
-                                                   QDBusArgument(0, QMetaType.UInt), QDBusArgument(0, QMetaType.UInt)))
-
-        self.DetectedAttributes = namedtuple("DetectedAttributes",
-                                             self.ddcutil_props_proxy.call("Get",
-                                                                           self.dbus_interface_name,
-                                                                           "AttributesReturnedByDetect").arguments()[0])
-        self.vdu_map_by_edid: Dict[str, Tuple] = {}
+        for try_count in range(1,32):  # Approximating an infinite loop
+            self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service()
+            if len(self.common_args) != 0:  # have to restart with the common_args, wait and connect again
+                self._validate(self.ddcutil_proxy.call("Restart", " ".join(self.common_args),
+                                                       QDBusArgument(0, QMetaType.UInt), QDBusArgument(0, QMetaType.UInt)))
+            else:  # Retrieve the attributes returned by detect and also use the retrieval as a self check
+                self_check_op = self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "AttributesReturnedByDetect")
+                if self_check_op.errorName():
+                    log_error(f'Sanity check try {try_count}: {self.dbus_interface_name} failed: {self_check_op.errorMessage()}')
+                    if try_count >= 4:  # Give up
+                        raise DdcutilServiceNotFound(
+                            f"Error contacting D-Bus service {self.dbus_interface_name} {self_check_op.errorMessage()}")
+                else:
+                    self.DetectedAttributes = namedtuple("DetectedAttributes", self_check_op.arguments()[0])
+                    self.vdu_map_by_edid: Dict[str, Tuple] = {}
+                    break
+            time.sleep(2)  # Try again
 
     def set_sleep_multiplier(self, edid_txt: str, sleep_multiplier: float):
         with self.service_access_lock:
@@ -1681,32 +1687,22 @@ class DdcutilDBusImpl(QObject):
                             "ConnectedDisplaysChanged", self._connected_display_change_signal_handler)
         DdcutilDBusImpl._registered_dbus_signal_handler = self._connected_display_change_signal_handler
         ddcutil_dbus_iface.setTimeout(self.dbus_timeout_millis)
-        self._self_check(ddcutil_dbus_props)
-        return ddcutil_dbus_iface, ddcutil_dbus_props
-
-    def refresh_connection(self):
-        try:
-            self._self_check()  # Only reconnect if there is something wrong.
-        except DdcutilServiceNotFound:
-            # TODO not sure this is necessary, may confuse native QDBus layer, tests OK though
-            self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service()
         if self.listener_callback:  # In case the service has restarted
-            self.ddcutil_props_proxy.call("Set",
-                                          "com.ddcutil.DdcutilInterface",
-                                          "ServiceEmitSignals",
-                                          QDBusVariant(QDBusArgument(True, QMetaType.Bool)))
-
-    def _self_check(self, ddcutil_dbus_props: object | None = None):
-        proxy =  ddcutil_dbus_props if ddcutil_dbus_props else self.ddcutil_props_proxy
-        self_check_op = proxy.call("Get", self.dbus_interface_name, "DdcutilVersion")
-        if self_check_op.errorName():
-            log_error(f'Sanity check of {self.dbus_interface_name} failed: {self_check_op.errorMessage()}')
-            raise DdcutilServiceNotFound(f"Error contacting D-Bus service {self.dbus_interface_name}")
+            ddcutil_dbus_props.call("Set",
+                                    "com.ddcutil.DdcutilInterface",
+                                    "ServiceEmitSignals",
+                                    QDBusVariant(QDBusArgument(True, QMetaType.Bool)))
+        return ddcutil_dbus_iface, ddcutil_dbus_props
 
     @pyqtSlot(QDBusMessage)
     def _service_initialized_signal_handler(self, message: QDBusMessage):
         log_info(f"Received service_initialized D-Bus signal {message.arguments()=} {id(self)=}")   # concerned about old instances... id()
         with self.service_access_lock:
+            if self.listener_callback:  # In case the service has restarted
+                self.ddcutil_props_proxy.call("Set",
+                                              "com.ddcutil.DdcutilInterface",
+                                              "ServiceEmitSignals",
+                                              QDBusVariant(QDBusArgument(True, QMetaType.Bool)))
             if self.listener_callback:
                 self.listener_callback('', -1, 0)
 
@@ -1773,8 +1769,8 @@ class DdcutilDBusImpl(QObject):
     def _validate(self, result: QDBusMessage) -> List:
         if result.errorName():
             raise ValueError(f"D-Bus error {result.errorName()}: {result.errorMessage()}")
-        arg_list = result.arguments()
-        if len(arg_list) >= 2:
+        result_arg_list = result.arguments()
+        if len(result_arg_list) >= 2:
             status, message = result.arguments()[-2:]
             if status != 0:
                 status_values = self.get_status_values()
@@ -1783,8 +1779,8 @@ class DdcutilDBusImpl(QObject):
                 if status_values.get(status, "DDCRC_INVALID_DISPLAY") == "DDCRC_INVALID_DISPLAY":
                     raise DdcutilDisplayNotFound(formatted_message)
                 raise ValueError(formatted_message)
-            return arg_list[:-2]
-        return arg_list
+            return result_arg_list[:-2]
+        return result_arg_list
 
 
 def si(widget: QWidget, icon_number: QStyle.StandardPixmap) -> QIcon:  # Qt bundled standard icons (which are themed)
@@ -7277,7 +7273,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             # Limit to a reasonable number of iterations.
             for i in range(1, 11):
                 prev_num = len(self.detected_vdu_list)
-                self.detected_vdu_list = self.ddcutil.detect_monitors()
+                self.detected_vdu_list = self.ddcutil.detect_vdus()
                 if prev_num == len(self.detected_vdu_list):
                     log_info(f"Number of detected monitors is stable at {len(self.detected_vdu_list)} (loop={i})")
                     break
@@ -7375,23 +7371,22 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
         def update_from_vdu() -> None:
             if self.ddcutil is not None:
-                self.refresh_lock.acquire()
-                try:
-                    self.ddcutil.refresh_connection()
-                    self.detected_vdu_list = self.ddcutil.detect_monitors()
-                    for control_panel in self.main_window.get_main_panel().vdu_control_panels.values():
-                        if control_panel.controller.get_full_id() in self.detected_vdu_list:
-                            control_panel.refresh_from_vdu()
-                except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
-                    self.refresh_lock.release()
-                    if self.refresh_data_task.vdu_exception is None:
-                        self.refresh_data_task.vdu_exception = VduException(vdu_description="unknown", operation="unknown",
-                                                                            exception=e)
-
+                with self.refresh_lock:
+                    try:
+                        self.ddcutil.refresh_connection()
+                        self.detected_vdu_list = self.ddcutil.detect_vdus()
+                        for control_panel in self.main_window.get_main_panel().vdu_control_panels.values():
+                            if control_panel.controller.get_full_id() in self.detected_vdu_list:
+                                control_panel.refresh_from_vdu()
+                    except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
+                        self.refresh_lock.release()
+                        if self.refresh_data_task.vdu_exception is None:
+                            self.refresh_data_task.vdu_exception = VduException(vdu_description="unknown", operation="unknown",
+                                                                                exception=e)
 
         def update_ui_view(_: WorkerThread) -> None:
             # Invoke when the worker thread completes. Runs in the GUI thread and can refresh remaining UI views.
-            try:
+            try:  # No need for locking in here - running in the GUI thread effectively single threads the operation.
                 assert self.refresh_data_task is not None and is_running_in_gui_thread()
                 log_debug("Refresh - update UI view")
                 main_panel = self.main_window.get_main_panel()
@@ -7408,7 +7403,6 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     self.lux_auto_controller.adjust_brightness_now()
             finally:
                 self.main_window.indicate_busy(False)
-                self.refresh_lock.release()
 
         self.main_window.indicate_busy(True)
         self.refresh_data_task = WorkerThread(task_body=update_from_vdu, task_finished=update_ui_view)
