@@ -278,6 +278,10 @@ Michael Hamilton
 
 Version History
 ---------------
+* 2.0.2
+  * Attempt to eliminate deadlocks when exceptions occur.
+  * Cleanup the initialisation of the ddcutil-service connection.
+  * Add more caveats and limitations to the documentation.
 * 2.0.1
   * Fix D-Bus client code for python versions prior to 3.11.
   * Fix infinite-loop when altering an existing FIFO lux-meter in the Lux-Dialog.
