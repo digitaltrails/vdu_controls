@@ -1694,6 +1694,12 @@ class DdcutilDBusImpl(QObject):
                                     QDBusVariant(QDBusArgument(True, QMetaType.Bool)))
         return ddcutil_dbus_iface, ddcutil_dbus_props
 
+    def refresh_connection(self):
+        self_check_op = self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "ServiceInterfaceVersion")
+        if self_check_op.errorName():  # Only reconnect if something appears to be wrong
+            log_error(f'refresh_connection: check of {self.dbus_interface_name} failed: {self_check_op.errorMessage()}')
+            self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service()
+
     @pyqtSlot(QDBusMessage)
     def _service_initialized_signal_handler(self, message: QDBusMessage):
         log_info(f"Received service_initialized D-Bus signal {message.arguments()=} {id(self)=}")   # concerned about old instances... id()
