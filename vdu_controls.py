@@ -3678,9 +3678,9 @@ class VduControlsMainPanel(QWidget):
         self.alert.setAttribute(Qt.WA_DeleteOnClose)
         answer = self.alert.exec()
         self.alert = None
-        if answer != QMessageBox.Retry:
-            log_info("Signaling change in connected vdus")
-            self.main_controller.configure_application()
+        # if answer != QMessageBox.Retry:
+        #     log_info("Signaling change in connected vdus")  # Can't do this - it can result in repeated looping.
+        #     self.main_controller.start_refresh()
         return answer == QMessageBox.Retry
 
     def status_message(self, message: str, timeout: int):
