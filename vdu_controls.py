@@ -706,7 +706,7 @@ from PyQt5 import QtCore
 from PyQt5 import QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
     QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir
-from PyQt5.QtDBus import QDBusConnection, QDBusInterface, QDBusError, QDBusMessage, QDBusArgument, QDBusVariant
+from PyQt5.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusArgument, QDBusVariant
 from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QRegExpValidator, \
     QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
@@ -1630,7 +1630,8 @@ class DdcutilExeImpl:
 class DdcutilDBusImpl(QObject):
 
     _metadata_cache: Dict[Tuple[str, int], Tuple[int, int]] = {}
-    _registered_dbus_signal_handler: Callable | None = None  # Only one instance and listener should exist at a time
+    _current_connected_displays_changed_handler: Callable | None = None  # Only one instance and listener should exist at a time
+    _current_service_initialization_handler: Callable | None = None  # Only one instance and listener should exist at a time
 
     def __init__(self, common_args: List[str] | None = None, callback: Callable | None = None):
         super().__init__()
@@ -1650,6 +1651,7 @@ class DdcutilDBusImpl(QObject):
                 if self_check_op.errorName():
                     log_error(f'Sanity check try {try_count}: {self.dbus_interface_name} failed: {self_check_op.errorMessage()}')
                     if try_count >= 4:  # Give up
+                        self._connect_to_service(disconnect=True)  # disconnect handler references to facilitate garbage collection
                         raise DdcutilServiceNotFound(
                             f"Error contacting D-Bus service {self.dbus_interface_name} {self_check_op.errorMessage()}")
                 else:
@@ -1667,7 +1669,7 @@ class DdcutilDBusImpl(QObject):
     def set_vdu_specific_args(self, vdu_number: str, extra_args: List[str]):
         pass  # TODO not implemented
 
-    def _connect_to_service(self) -> (object, object):
+    def _connect_to_service(self, disconnect=False) -> (object, object):
         dbus_service_name = os.environ.get('DDCUTIL_SERVICE_NAME', default="com.ddcutil.DdcutilService")
         dbus_object_path = os.environ.get('DDCUTIL_SERVICE_OBJECT_PATH', default="/com/ddcutil/DdcutilObject")
         session_bus = QDBusConnection.connectToBus(QDBusConnection.BusType.SessionBus, "session")
@@ -1677,15 +1679,23 @@ class DdcutilDBusImpl(QObject):
         ddcutil_dbus_props = QDBusInterface(
             dbus_service_name, dbus_object_path, "org.freedesktop.DBus.Properties", connection=session_bus)
         session_bus.registerObject("/", self)
-        if DdcutilDBusImpl._registered_dbus_signal_handler:  # clear previous handler that belonged to old instance.
+        if DdcutilDBusImpl._current_connected_displays_changed_handler:  # clear previous handler that belonged to old instance.
             session_bus.disconnect(dbus_service_name, dbus_object_path, self.dbus_interface_name,
-                                   "ConnectedDisplaysChanged", DdcutilDBusImpl._registered_dbus_signal_handler)
-        # Connect receiving slot
+                                   "ConnectedDisplaysChanged", DdcutilDBusImpl._current_connected_displays_changed_handler)
+        DdcutilDBusImpl._current_connected_displays_changed_handler = None
+        if DdcutilDBusImpl._current_service_initialization_handler:  # clear previous handler that belonged to old instance.
+            session_bus.disconnect(dbus_service_name, dbus_object_path, self.dbus_interface_name,
+                                   "ServiceInitialized", DdcutilDBusImpl._current_service_initialization_handler)
+            DdcutilDBusImpl._service_initialization_handler = None
+        if disconnect:
+            return None, None;
+        # Connect receiving slots
         session_bus.connect(dbus_service_name, dbus_object_path, self.dbus_interface_name,
-                            "ServiceInitialized", self._service_initialized_signal_handler)
+                            "ServiceInitialized", self._service_initialization_handler)
+        DdcutilDBusImpl._current_service_initialization_handler = self._service_initialization_handler
         session_bus.connect(dbus_service_name, dbus_object_path, self.dbus_interface_name,
-                            "ConnectedDisplaysChanged", self._connected_display_change_signal_handler)
-        DdcutilDBusImpl._registered_dbus_signal_handler = self._connected_display_change_signal_handler
+                            "ConnectedDisplaysChanged", self._connected_displays_changed_handler)
+        DdcutilDBusImpl._current_connected_displays_changed_handler = self._connected_displays_changed_handler
         ddcutil_dbus_iface.setTimeout(self.dbus_timeout_millis)
         if self.listener_callback:  # In case the service has restarted
             ddcutil_dbus_props.call("Set",
@@ -1701,7 +1711,7 @@ class DdcutilDBusImpl(QObject):
             self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service()
 
     @pyqtSlot(QDBusMessage)
-    def _service_initialized_signal_handler(self, message: QDBusMessage):
+    def _service_initialization_handler(self, message: QDBusMessage):
         log_info(f"Received service_initialized D-Bus signal {message.arguments()=} {id(self)=}")   # concerned about old instances... id()
         with self.service_access_lock:
             if self.listener_callback:  # In case the service has restarted
@@ -1713,7 +1723,7 @@ class DdcutilDBusImpl(QObject):
                 self.listener_callback('', -1, 0)
 
     @pyqtSlot(QDBusMessage)
-    def _connected_display_change_signal_handler(self, message: QDBusMessage):
+    def _connected_displays_changed_handler(self, message: QDBusMessage):
         log_info(f"Received display_change D-Bus signal {message.arguments()=} {id(self)=}")   # concerned about old instances... id()
         with self.service_access_lock:
             if self.listener_callback:
