@@ -767,7 +767,7 @@ def is_running_in_gui_thread() -> bool:
 
 
 def zoned_now() -> datetime:
-    if TESTING_TIME_ZONE is not None:
+    if TESTING_TIME_ZONE is not None:  # This is a testing only path that requires python > 3.8
         from zoneinfo import ZoneInfo
         return datetime.now(ZoneInfo(TESTING_TIME_ZONE))  # for testing scheduling
     return datetime.now().astimezone()
@@ -1560,12 +1560,12 @@ class DdcutilExeImpl:
         return display_list
 
     def get_capabilities(self, edid_txt: str) -> Tuple[
-        str, int, int, Dict[bytes, str], Dict[bytes, Tuple[bytes, str, Dict[bytes, str]]], str]:
+            str, int, int, Dict[bytes, str], Dict[bytes, Tuple[bytes, str, Dict[bytes, str]]], str]:
         result = self.__run__('capabilities', edid_txt=edid_txt)
         capability_text = result.stdout.decode('utf-8', errors='surrogateescape')
         return '', 0, 0, {}, {}, capability_text
 
-    def get_type(self, edid_txt: str, vcp_code_int: int) -> Tuple[bool, bool] | None:
+    def get_type(self, edid_txt: str, vcp_code_int: int) -> Tuple[bool, bool] | None:  # edid_txt isn't currently used/supported
         type_code = self.vcp_type_map.get(vcp_code_int)
         if type_code is None:
             return False, False
@@ -1629,7 +1629,7 @@ class DdcutilExeImpl:
 
 class DdcutilDBusImpl(QObject):
 
-    _metadata_cache: Dict[Tuple[str, int], Tuple[int, int]] = {}
+    _metadata_cache: Dict[Tuple[str, int], Tuple[bool, bool]] = {}
     _current_connected_displays_changed_handler: Callable | None = None  # Only one instance and listener should exist at a time
     _current_service_initialization_handler: Callable | None = None  # Only one instance and listener should exist at a time
 
@@ -1641,7 +1641,7 @@ class DdcutilDBusImpl(QObject):
         self.service_access_lock = Lock()
         self.listener_callback: Callable | None = callback
         self.dbus_timeout_millis = int(os.getenv("VDU_CONTROLS_DBUS_TIMEOUT_MILLIS", default='5000'))
-        for try_count in range(1,32):  # Approximating an infinite loop
+        for try_count in range(1, 32):  # Approximating an infinite loop
             self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service()
             if len(self.common_args) != 0:  # have to restart with the common_args, wait and connect again
                 self._validate(self.ddcutil_proxy.call("Restart", " ".join(self.common_args),
@@ -1688,7 +1688,7 @@ class DdcutilDBusImpl(QObject):
                                    "ServiceInitialized", DdcutilDBusImpl._current_service_initialization_handler)
             DdcutilDBusImpl._service_initialization_handler = None
         if disconnect:
-            return None, None;
+            return None, None
         # Connect receiving slots
         if self._service_initialization_handler:
             session_bus.connect(dbus_service_name, dbus_object_path, self.dbus_interface_name,
@@ -1714,7 +1714,7 @@ class DdcutilDBusImpl(QObject):
 
     @pyqtSlot(QDBusMessage)
     def _service_initialization_handler(self, message: QDBusMessage):
-        log_info(f"Received service_initialized D-Bus signal {message.arguments()=} {id(self)=}")   # concerned about old instances... id()
+        log_info(f"Received service_initialized D-Bus signal {message.arguments()=} {id(self)=}")   # check old instances... id()
         with self.service_access_lock:
             if self.listener_callback:  # In case the service has restarted
                 self.ddcutil_props_proxy.call("Set",
@@ -1726,7 +1726,7 @@ class DdcutilDBusImpl(QObject):
 
     @pyqtSlot(QDBusMessage)
     def _connected_displays_changed_handler(self, message: QDBusMessage):
-        log_info(f"Received display_change D-Bus signal {message.arguments()=} {id(self)=}")   # concerned about old instances... id()
+        log_info(f"Received display_change D-Bus signal {message.arguments()=} {id(self)=}")  # check old instances id()
         with self.service_access_lock:
             if self.listener_callback:
                 self.listener_callback(*message.arguments())
@@ -1749,7 +1749,7 @@ class DdcutilDBusImpl(QObject):
             return vdu_list
 
     def get_capabilities(self, edid_txt: str) -> Tuple[
-        str, int, int, Dict[bytes, str], Dict[bytes, Tuple[str, str, Dict[bytes, str]]], str]:
+            str, int, int, Dict[bytes, str], Dict[bytes, Tuple[str, str, Dict[bytes, str]]], str]:
         with self.service_access_lock:
             model, mccs_major, mccs_minor, commands, capabilities = \
                 self._validate(self.ddcutil_proxy.call(
@@ -3588,6 +3588,7 @@ class VduControlsMainPanel(QWidget):
         self.setObjectName("vdu_controls_main_panel")
         self.vdu_control_panels: Dict[str, VduControlPanel] = {}
         self.alert: QMessageBox | None = None
+        self.main_controller: VduAppController | None = None
 
     def initialise_control_panels(self, main_controller: VduAppController,
                                   app_context_menu: ContextMenu, main_config: VduControlsConfig,
@@ -3823,7 +3824,6 @@ class PresetTransitionWorker(WorkerThread):
                 log_error(f"Failed to restore non transitioning controls {self.preset.name}")
             self.end_time = datetime.now()
 
-
     def step(self) -> None:
         more_to_do = False
         for key in self.preset_transitioning_controls:  # Step each control by step or negative step...
@@ -3946,7 +3946,8 @@ class FasterFileDialog(QFileDialog):  # Takes 5 seconds versus 30+ seconds for Q
 
     @staticmethod
     def getOpenFileName(parent: QWidget | None = None, caption: str = '', directory: str = '', filter_str: str = '',
-                        initial_filter: str = '', options: QFileDialog.Options | QFileDialog.Option = QFileDialog.ReadOnly) -> Tuple[str, str]:
+                        initial_filter: str = '',
+                        options: QFileDialog.Options | QFileDialog.Option = QFileDialog.ReadOnly) -> Tuple[str, str]:
         original_handler = QtCore.qInstallMessageHandler(lambda mode, context, message: None)
         try:  # Get rid of another annoying message: 'qtimeline::start: already running'
             dialog = QFileDialog(parent=parent, caption=caption, directory=directory, filter=filter_str)
@@ -6863,7 +6864,8 @@ LUX_NIGHT_SVG = b"""<?xml version="1.0" encoding="utf-8"?>
 <!-- Copyright 2024 Michael Hamilton License Creative Commons - Attribution CC BY -->
 <svg width="24px" height="24px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
-    <g class="ColorScheme-Text" stroke="currentColor" stroke-linecap="round" stroke-width="1.25" transform="translate(24, 24), scale(-1,-1)">
+    <g class="ColorScheme-Text" stroke="currentColor" stroke-linecap="round" stroke-width="1.25" 
+       transform="translate(24, 24), scale(-1,-1)">
         <path d="M17.5 7.5   A6.25 6.25   0 1 0   16.5 16.5   5 5   0 1 1   17.5 7.5z"/>
     </g>
 </svg>
@@ -7174,8 +7176,6 @@ def parse_transition_type(string_value: str) -> PresetTransitionFlag:
 
 
 class VduAppController(QObject):  # Main controller containing methods for high level operations
-
-    #connected_vdus_changed_qtsignal = pyqtSignal()
 
     def __init__(self, main_config: VduControlsConfig) -> None:
         super().__init__()
@@ -7665,7 +7665,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         return self.lux_auto_controller
 
     def get_vdu_stable_id_list(self) -> List[VduStableId]:
-        return [id for id, vdu_controller in self.vdu_controllers_map.items() if not vdu_controller.ignore_vdu]
+        return [stable_id for stable_id, vdu_controller in self.vdu_controllers_map.items() if not vdu_controller.ignore_vdu]
 
     def get_vdu_current_values(self, vdu_stable_id: VduStableId):
         if controller := self.vdu_controllers_map.get(vdu_stable_id):
