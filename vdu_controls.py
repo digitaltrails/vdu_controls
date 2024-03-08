@@ -1250,7 +1250,7 @@ class Ddcutil:
         if prefer_dbus_client:
             try:
                 self.ddcutil_impl = DdcutilDBusImpl(self.common_args, callback=connected_vdus_changed_callback)
-            except (DdcutilServiceNotFound, TypeError) as e:
+            except DdcutilServiceNotFound as e:
                 log_warning("Failed to detect D-Bus ddcutil-service, falling back to the ddcutil command.")
 
         if self.ddcutil_impl is None:  # dbus not prefered or dbus failed to initialise
@@ -1690,11 +1690,13 @@ class DdcutilDBusImpl(QObject):
         if disconnect:
             return None, None;
         # Connect receiving slots
-        session_bus.connect(dbus_service_name, dbus_object_path, self.dbus_interface_name,
-                            "ServiceInitialized", self._service_initialization_handler)
+        if self._service_initialization_handler:
+            session_bus.connect(dbus_service_name, dbus_object_path, self.dbus_interface_name,
+                                "ServiceInitialized", self._service_initialization_handler)
         DdcutilDBusImpl._current_service_initialization_handler = self._service_initialization_handler
-        session_bus.connect(dbus_service_name, dbus_object_path, self.dbus_interface_name,
-                            "ConnectedDisplaysChanged", self._connected_displays_changed_handler)
+        if self._connected_displays_changed_handler:
+            session_bus.connect(dbus_service_name, dbus_object_path, self.dbus_interface_name,
+                                "ConnectedDisplaysChanged", self._connected_displays_changed_handler)
         DdcutilDBusImpl._current_connected_displays_changed_handler = self._connected_displays_changed_handler
         ddcutil_dbus_iface.setTimeout(self.dbus_timeout_millis)
         if self.listener_callback:  # In case the service has restarted
