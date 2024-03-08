@@ -1250,7 +1250,7 @@ class Ddcutil:
         if prefer_dbus_client:
             try:
                 self.ddcutil_impl = DdcutilDBusImpl(self.common_args, callback=connected_vdus_changed_callback)
-            except DdcutilServiceNotFound as e:
+            except (DdcutilServiceNotFound, TypeError) as e:
                 log_warning("Failed to detect D-Bus ddcutil-service, falling back to the ddcutil command.")
 
         if self.ddcutil_impl is None:  # dbus not prefered or dbus failed to initialise
