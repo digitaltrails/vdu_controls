@@ -1245,11 +1245,13 @@ class Ddcutil:
         super().__init__()
 
         self.common_args = common_args
+        self.is_speedy = False
 
         self.ddcutil_impl = None  # The service-interface implementations are duck-typed.
         if prefer_dbus_client:
             try:
                 self.ddcutil_impl = DdcutilDBusImpl(self.common_args, callback=connected_vdus_changed_callback)
+                self.is_speedy = True
             except DdcutilServiceNotFound as e:
                 log_warning("Failed to detect D-Bus ddcutil-service, falling back to the ddcutil command.")
 
@@ -2312,6 +2314,7 @@ class VduController(QObject):
         self.serial_number = serial_number
         self.manufacturer = manufacturer
         self.ddcutil = ddcutil
+        self.is_speedy = ddcutil.is_speedy
         self.vdu_exception_handler = vdu_exception_handler
         self.vdu_model_id = proper_name(vdu_model_name.strip())
         self.capabilities_text: str | None = None
@@ -2921,6 +2924,7 @@ class VduControlBase(QWidget):
         self.controller = controller
         self.vcp_capability = vcp_capability
         self.current_value: int | None = None
+        self.is_speedy = controller.is_speedy
         # Using Qt signals to ensure GUI activity occurs in the GUI thread (this thread).
         self._refresh_ui_view_in_gui_thread_qtsignal.connect(self._refresh_ui_view_task)
         self.refresh_ui_only = False
@@ -2989,6 +2993,7 @@ class VduControlSlider(VduControlBase):
         """Construct the slider control and initialize its values from the VDU."""
         super().__init__(controller, vcp_capability)
         layout = QHBoxLayout()
+        self.last_move_ns = time.time_ns()
         self.setLayout(layout)
         self.svg_icon: QSvgWidget | None = None
         if (vcp_capability.vcp_code in SUPPORTED_VCP_BY_CODE
@@ -3043,7 +3048,9 @@ class VduControlSlider(VduControlBase):
         slider.sliderMoved.connect(slider_moved)
 
         def spinbox_value_changed() -> None:
-            if not self.sliding:
+            now_ns = time.time_ns()
+            if not self.sliding or (self.is_speedy and now_ns - self.last_move_ns > 100_000):
+                self.last_move_ns = now_ns
                 slider.setValue(self.spinbox.value())
 
         self.spinbox.valueChanged.connect(spinbox_value_changed)
