@@ -283,6 +283,9 @@ Version History
   * Cleanup the initialisation of the ddcutil-service connection.
   * Add more caveats and limitations to the documentation.
   * Don't automatically refresh on error - eliminate popup dialog loops.
+  * If using ddcutil-server, VCP changes while dragging sliders are now immediate.
+  * Manually adjusting the Ambient Light Level is more accurate and responsive.
+
 * 2.0.1
   * Fix D-Bus client code for python versions prior to 3.11.
   * Fix infinite-loop when altering an existing FIFO lux-meter in the Lux-Dialog.
