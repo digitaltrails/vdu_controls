@@ -3,12 +3,17 @@ vdu_controls - a DDC control panel for monitors
 
 A control panel for external monitors (*Visual Display Units*).
 
-> Version 2.0 adds manual ambient-light-level input.  This allows all connected VDU's
+> **Notice: KDE 6** introduced energy saving brighness dimming after 5 minutes of idle
+> time.  This may interfere with changes made via **vdu_controls**, including
+> *scheduled-presets* and *ambient-light-control*.  The relevant KDE 6 options can 
+> be found under ***System Settings -> System -> Energy Saving***.
+
+> **vdu_controls version 2.0** adds manual ambient-light-level input.  This allows all connected VDU's
 > to be simultatiniously adjusted by moving one slider.  This is an alternative
 > to fully automatic control via hardware lux-metering.  When the ambient-light-level
 > is changed, each VDU us adjusted according to its own custom light-level/brighness
-> profile defined under **Settings->Light-Metering**. This new option is enabled
-> by default, but can be disabled by unchecking  **Settings->Lux options enabled**.
+> profile defined under ***Settings->Light-Metering***. This new option is enabled
+> by default, but can be disabled by unchecking  ***Settings->Lux options enabled***.
 >
 >  ![Custom](screen-shots/ambient-slider-example.png) 
 >
@@ -19,7 +24,7 @@ A control panel for external monitors (*Visual Display Units*).
 > interface with **libddcutil**, it's faster and more reponsive than the older
 > command-based implementation. Should the ddcutil-service be unavailable,
 > the DDC/VDU interface reverts to using the ddcutil command.  Should you encounter 
-> any issues with using the service, **Settings->D-Bus client enabled** can 
+> any issues with using the service, ***Settings->D-Bus client enabled*** can 
 > be used to disable it and force the use of the command.
 > 
 > If you'd like to try the **ddcutil-service**, builds are available for OpenSUSE 
