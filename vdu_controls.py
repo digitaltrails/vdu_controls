@@ -3098,8 +3098,8 @@ class VduControlComboBox(VduControlBase):
 
         def index_changed(_: int) -> None:
             self.current_value = int(self.combo_box.currentData(), 16)
-            self.validate_value()
-            self.ui_change_vdu_attribute(self.current_value)
+            if self.validate_value() >= 0:
+                self.ui_change_vdu_attribute(self.current_value)
 
         combo_box.currentIndexChanged.connect(index_changed)
 
@@ -3114,14 +3114,15 @@ class VduControlComboBox(VduControlBase):
 
     def refresh_ui_view_implementation(self) -> None:
         """Copy the internally cached current value onto the GUI view."""
-        self.validate_value()
-        value = self.get_current_text_value()
-        if (value is not None) and (value in self.keys):
-            self.combo_box.setCurrentIndex(self.keys.index(value))
+        value_index = self.validate_value()
+        if value_index >= 0:
+            self.combo_box.setCurrentIndex(value_index)
 
-    def validate_value(self) -> None:
+    def validate_value(self) -> int:
         value = self.get_current_text_value()
-        if value is not None and value not in self.keys:
+        if value is None:
+            return -1
+        if value not in self.keys:
             self.keys.append(self.current_value)
             self.combo_box.addItem('UNKNOWN-' + value, self.current_value)
             self.combo_box.model().item(self.combo_box.count() - 1).setEnabled(False)
@@ -3137,6 +3138,8 @@ class VduControlComboBox(VduControlBase):
                    'for {} in the settings panel.  For more details see the man page concerning '
                    'VDU/VDU-model config files.').format(self.controller.get_vdu_description()))
             alert.exec()
+            return -1
+        return self.keys.index(value)
 
 
 class VduControlPanel(QWidget):
@@ -7426,7 +7429,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     if LuxDialog.exists():
                         lux_dialog: LuxDialog = LuxDialog.get_instance()  # type: ignore
                         lux_dialog.reconfigure()  # in case the number of connected monitors have changed.
-                    self.lux_auto_controller.adjust_brightness_now()
+                    if self.lux_auto_controller.is_auto_enabled():
+                        self.lux_auto_controller.adjust_brightness_now()
             finally:
                 self.main_window.indicate_busy(False)
 
