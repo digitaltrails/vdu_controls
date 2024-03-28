@@ -203,8 +203,8 @@ which will create initial templates based on the currently connected VDUs.
 The config files are completely optional, they need not be used if the default options are found to be
 adequate.
 
-Adding value restrictions to the config file
---------------------------------------------
+Adding value restrictions to a VDU's capabilities override
+----------------------------------------------------------
 
 In some cases, a VDU's DDC reported minimums and maximums may be incorrect or overstated.  Within
 vdu_controls this can be corrected by overriding the DDC reported range. For example, perhaps a VDU
@@ -212,9 +212,10 @@ reports it supports a brightness range of 0 to 100, but in fact only practically
 This can be corrected by bringing up the VDU's settings tab and editing the text in
 the **capabilities override**:
 
- 1. locate the feature, in this example, the brightness,
- 2. add a **Values:** **min..max** specification to line the following the feature definition,
- 3. save the changes.
+ 1. Open the *Settings* tab for the VDU, navigate to the "capabilities override* field
+ 2. locate the feature, in this example, the brightness,
+ 3. add a **Values:** **min..max** specification to line the following the feature definition,
+ 4. save the changes.
 
 For the brightness example the completed edit would look like::
 
@@ -222,6 +223,25 @@ For the brightness example the completed edit would look like::
         Values: 20..80
 
 The vdu_controls slider for that value will now be restricted to the specified range.
+
+Adding a refresh/reload requirement to a VDU's capabilities override
+--------------------------------------------------------------------
+
+Altering the values of some VCP codes may result in a cascade of changes to other
+codes.  For example, changing a VCP value for *Picture Mode* might result in changes
+to several VCP-code features, including brightness, contrast, and others. Exactly
+which codes have these kinds of side effects isn't indicated in the metadata
+obtained from each VDU, however vdu_controls supports adding *refresh* annotations
+to the feature-names within the **capabilities override**.  For example::
+
+    Feature: 15 (Picture Mode)
+
+Can be annotated with::
+
+    Feature: 15 (Picture Mode *refresh*)
+
+With this annotation, when ever *Picture Mode* is altered, vdu_controls will
+reload all configuration files and refresh all control values from the VDUs.
 
 Presets
 -------
@@ -541,6 +561,13 @@ Some VDU settings may disable or enable other settings in the VDU. For example, 
 specific picture-profile might result in the contrast-control being disabled, but ``vdu_controls``
 will not be aware of the restriction resulting in its contrast-control erring or appearing to do
 nothing.
+
+If your VDUs support *picture-modes*, altering any controls in vdu_controls will most likely
+result in the picture-mode being customised.  For example, say you have selected the
+VDU's *Vivid* picture-mode, if you use vdu_controls to change the brightness, it's likely
+that this will now become the brightness for *Vivid* until the VDU is reset to its defaults.
+To avoid confusion, it may be advisable to stick to one picture-mode for use with vdu_controls,
+preserving the others unaltered.
 
 The ``ddcutil-service`` has some ability to signal hot-plug events, such as connecting
 a new VDU or powering one down. Not all GPU-drivers support an efficient means of event detection,

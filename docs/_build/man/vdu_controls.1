@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Feb 28, 2024" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Mar 29, 2024" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.11.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -310,7 +310,7 @@ which will create initial templates based on the currently connected VDUs.
 .sp
 The config files are completely optional, they need not be used if the default options are found to be
 adequate.
-.SS Adding value restrictions to the config file
+.SS Adding value restrictions to a VDU\(aqs capabilities override
 .sp
 In some cases, a VDU\(aqs DDC reported minimums and maximums may be incorrect or overstated.  Within
 vdu_controls this can be corrected by overriding the DDC reported range. For example, perhaps a VDU
@@ -321,10 +321,12 @@ the \fBcapabilities override\fP:
 .INDENT 3.5
 .INDENT 0.0
 .IP 1. 3
-locate the feature, in this example, the brightness,
+Open the \fISettings\fP tab for the VDU, navigate to the \(dqcapabilities override* field
 .IP 2. 3
-add a \fBValues:\fP \fBmin..max\fP specification to line the following the feature definition,
+locate the feature, in this example, the brightness,
 .IP 3. 3
+add a \fBValues:\fP \fBmin..max\fP specification to line the following the feature definition,
+.IP 4. 3
 save the changes.
 .UNINDENT
 .UNINDENT
@@ -344,6 +346,39 @@ Feature: 10 (Brightness)
 .UNINDENT
 .sp
 The vdu_controls slider for that value will now be restricted to the specified range.
+.SS Adding a refresh/reload requirement to a VDU\(aqs capabilities override
+.sp
+Altering the values of some VCP codes may result in a cascade of changes to other
+codes.  For example, changing a VCP value for \fIPicture Mode\fP might result in changes
+to several VCP\-code features, including brightness, contrast, and others. Exactly
+which codes have these kinds of side effects isn\(aqt indicated in the metadata
+obtained from each VDU, however vdu_controls supports adding \fIrefresh\fP annotations
+to the feature\-names within the \fBcapabilities override\fP\&.  For example:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+Feature: 15 (Picture Mode)
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Can be annotated with:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+Feature: 15 (Picture Mode *refresh*)
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+With this annotation, when ever \fIPicture Mode\fP is altered, vdu_controls will
+reload all configuration files and refresh all control values from the VDUs.
 .SS Presets
 .sp
 A custom named preset can be used to save the current VDU settings for later recall. Any number of
@@ -721,6 +756,13 @@ Some VDU settings may disable or enable other settings in the VDU. For example, 
 specific picture\-profile might result in the contrast\-control being disabled, but \fBvdu_controls\fP
 will not be aware of the restriction resulting in its contrast\-control erring or appearing to do
 nothing.
+.sp
+If your VDUs support \fIpicture\-modes\fP, altering any controls in vdu_controls will most likely
+result in the picture\-mode being customised.  For example, say you have selected the
+VDU\(aqs \fIVivid\fP picture\-mode, if you use vdu_controls to change the brightness, it\(aqs likely
+that this will now become the brightness for \fIVivid\fP until the VDU is reset to its defaults.
+To avoid confusion, it may be advisable to stick to one picture\-mode for use with vdu_controls,
+preserving the others unaltered.
 .sp
 The \fBddcutil\-service\fP has some ability to signal hot\-plug events, such as connecting
 a new VDU or powering one down. Not all GPU\-drivers support an efficient means of event detection,
