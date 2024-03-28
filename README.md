@@ -266,8 +266,9 @@ Acknowledgements
 * Sanford Rockowitz ([rockowitz](https://github.com/rockowitz)), for the robust [ddcutil](https://github.com/rockowitz/ddcutil) utility and all the friendly help and assistance.
 * Mark Wagie ([yochananmarqos](https://github.com/yochananmarqos)), for Gnome related suggestions and AUR port.
 * Denilson Sá Maia ([denilsonsa](https://github.com/denilsonsa)), for many suggestions, assistance, and contributions.
-* Matthew Coleman ([crashmatt](https://github.com/crashmatt)), Mark Lowne ([lowne](https://github.com/lowne)), [usr3](https://github.com/usr3), for 
-  contributing fixes to code and documentation.
+* Matthew Coleman ([crashmatt](https://github.com/crashmatt)), Mark Lowne ([lowne](https://github.com/lowne)), [usr3](https://github.com/usr3),
+  Mateo Bohorquez G. ([Milor123](https://github.com/Milor123))
+  for contributing fixes to code and documentation.
 * [Jakeler](https://github.com/Jakeler), [kupiqu](https://github.com/kupiqu), Mateo Bohorquez ([Milor123](https://github.com/Milor123)), Johan Grande ([nahoj](https://github.com/nahoj)), 
   [0xCUBE](https://github.com/0xCUB3), [RokeJulianLockhart](https://github.com/RokeJulianLockhart), [abil76](https://github.com/abil76) 
   for contributing suggestions for enhancements. 
@@ -289,7 +290,10 @@ Version History
   * Add more caveats and limitations to the documentation.
   * Don't automatically refresh on error - eliminate popup dialog loops.
   * If using ddcutil-server, VCP changes while dragging sliders are now immediate.
-  * Manually adjusting the Ambient Light Level is more accurate and responsive.
+  * Make manual adjustment of the ambient Light Level more accurate and responsive when using ddcutil-service.
+  * Gracefully handle invalid combo-box VCP values (don't crash).
+  * When refresh is pressed, only auto adjust ambient brightness if auto-brightness is enabled.
+  * Added an option *refresh* annotation suffix for metadata VCP-code names which causes vdu_controls to refresh all values.
 
 * 2.0.1
   * Fix D-Bus client code for python versions prior to 3.11.
