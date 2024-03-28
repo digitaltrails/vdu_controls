@@ -26,15 +26,15 @@ the main `Settings Dialog`)
 This document discusses some hardware options for lux metering.
 
 
-GY30/BH1750 + Arduino Lux metering
+GY30/GY302/BH1750 + Arduino Lux metering
 ----------------------------------
 
-An Arduino and a GY30/BH1750 is the very reliable way of obtaining
+An Arduino and a GY30/GY302/BH1750 is the very reliable way of obtaining
 true Lux values.  At the time of writing, the Arduino Nano and a 
 GY30/BH1750 can be purchased for about US$10.  
 
 The image below shows a [Arduino nano](https://en.wikipedia.org/wiki/Arduino_Nano), 
-the [GY-30/BH1750](https://github.com/claws/BH1750#bh1750) and the
+the [GY-30](https://github.com/claws/BH1750#bh1750) and the
 required wiring connections: 
 
 ![Default](screen-shots/arduino-gy30.jpg)
@@ -46,11 +46,16 @@ headers pre-fitted, in which case assembly on a solderless
 breadboard would be extremely easy.  Power and tty communication 
 is via the USB connection to the PC.
 
+> As well as the GY30, there is also a GY302/BH1750. The
+> sketch-library I use should work with any of these. But should
+> this not to be the case, issue #80 describes how to get the GY302 
+> working with vdu_controls by using a different sketch-library.
+
 ### The Arduino-Sketch (that runs on the Arduino)
 
 A simple [_Arduino Sketch_](https://docs.arduino.cc/learn/programming/sketches)  using 
 [Christopher Laws' BH1750 library](https://github.com/claws/BH1750) 
-will allow a GY30/BH1750 equipped Arduino to produce a feed 
+will allow a GY30/GY302/BH1750 equipped Arduino to produce a feed 
 of Lux values. The sketch code I'm using is as follows:
 
 ```
