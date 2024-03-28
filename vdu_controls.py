@@ -2298,8 +2298,10 @@ class VduController(QObject):
     DISCARD_VDU = 3
     _RANGE_PATTERN = re.compile(r'Values:\s+([0-9]+)..([0-9]+)')
     _FEATURE_PATTERN = re.compile(r'([0-9A-F]{2})\s+[(]([^)]+)[)]\s(.*)', re.DOTALL | re.MULTILINE)
+    _LIMITED_RANGE_KEY = "%%RANGE%%"  # A key internal to vdu_controls for storing Range n..m values.
+    _FORCE_REFRESH_NAME_SUFFIX = "*refresh*"
 
-    vcp_value_changed_qtsignal = pyqtSignal(str, str, int, VcpOrigin)
+    vcp_value_changed_qtsignal = pyqtSignal(str, str, int, VcpOrigin, bool)
 
     def __init__(self, vdu_number: str, vdu_model_name: str, serial_number: str, manufacturer: str,
                  default_config: VduControlsConfig, ddcutil: Ddcutil,
@@ -2397,7 +2399,8 @@ class VduController(QObject):
                     self.values_cache[vcp_code] = value
                     if log_debug_enabled:
                         log_debug(f"vcp_value_changed: {self.vdu_stable_id} {vcp_code=} {value} origin={VcpOrigin.EXTERNAL.name}")
-                    self.vcp_value_changed_qtsignal.emit(self.vdu_stable_id, vcp_code, value, VcpOrigin.EXTERNAL)
+                    self.vcp_value_changed_qtsignal.emit(self.vdu_stable_id, vcp_code, value, VcpOrigin.EXTERNAL,
+                                                         self.capabilities_supported_by_this_vdu[vcp_code].causes_config_change)
             return values
         except (subprocess.SubprocessError, ValueError, TimeoutError, DdcutilDisplayNotFound) as e:
             raise VduException(vdu_description=self.get_vdu_description(), vcp_code=",".join(vcp_codes), exception=e,
@@ -2411,7 +2414,8 @@ class VduController(QObject):
             self.values_cache[vcp_code] = value
             if log_debug_enabled:
                 log_debug(f"vcp_value_changed: {self.vdu_stable_id} {vcp_code=} {value} origin={origin.name}")
-            self.vcp_value_changed_qtsignal.emit(self.vdu_stable_id, vcp_code, value, origin)
+            self.vcp_value_changed_qtsignal.emit(self.vdu_stable_id, vcp_code, value, origin,
+                                                 self.capabilities_supported_by_this_vdu[vcp_code].causes_config_change)
         except (subprocess.SubprocessError, ValueError, TimeoutError, DdcutilDisplayNotFound) as e:
             raise VduException(vdu_description=self.get_vdu_description(), vcp_code=vcp_code, exception=e,
                                operation="set_vcp_value") from e
@@ -2435,7 +2439,7 @@ class VduController(QObject):
                 lines_list = stripped.split('\n')
                 if len(lines_list) == 1:
                     if range_match := VduController._RANGE_PATTERN.match(lines_list[0]):
-                        values_list = ["%%Range%%", range_match.group(1), range_match.group(2)]
+                        values_list = [VduController._LIMITED_RANGE_KEY, range_match.group(1), range_match.group(2)]
                     else:
                         space_separated = lines_list[0].replace('(interpretation unavailable)', '').strip().split(' ')
                         values_list = [(v.upper(), 'unknown ' + v) for v in space_separated[1:]]
@@ -2448,20 +2452,22 @@ class VduController(QObject):
             if feature_match := VduController._FEATURE_PATTERN.match(feature_text):
                 vcp_code = feature_match.group(1)
                 vcp_name = feature_match.group(2)
+                if requires_refresh := vcp_name.lower().endswith(VduController._FORCE_REFRESH_NAME_SUFFIX):
+                    vcp_name = vcp_name.replace(VduController._FORCE_REFRESH_NAME_SUFFIX, "")
                 values = parse_values(feature_match.group(3))
                 # Guess type from existence or not of value list
                 if len(values) == 0:
                     vcp_type = CONTINUOUS_TYPE
                     if vcp_code in SUPPORTED_VCP_BY_CODE:  # Override if we know better
                         vcp_type = SUPPORTED_VCP_BY_CODE[vcp_code].vcp_type
-                elif values[0] == "%%Range%%":  # Special vdu_controls hacked config spec to specify range
+                elif values[0] == VduController._LIMITED_RANGE_KEY:  # Special internal hacked config spec to specify range
                     vcp_type = CONTINUOUS_TYPE
                 else:
                     vcp_type = GUI_NON_CONTINUOUS_TYPE
                 if vcp_type == COMPLEX_NON_CONTINUOUS_TYPE or vcp_type == SIMPLE_NON_CONTINUOUS_TYPE:
                     vcp_type = GUI_NON_CONTINUOUS_TYPE  # Treat them the same in the GUI
                 capability = VcpCapability(vcp_code, vcp_name, vcp_type=vcp_type, values=values, icon_source=None,
-                                           can_transition=vcp_type == CONTINUOUS_TYPE)
+                                           can_transition=vcp_type == CONTINUOUS_TYPE, causes_config_change=requires_refresh)
                 feature_map[vcp_code] = capability
         return {**{k: feature_map[k] for k in (BRIGHTNESS_VCP_CODE, CONTRAST_VCP_CODE) if k in feature_map},  # Put B&C first
                 **{k: v for k, v in feature_map.items() if k not in (BRIGHTNESS_VCP_CODE, CONTRAST_VCP_CODE)}}
@@ -3589,7 +3595,7 @@ class VduPanelBottomToolBar(QToolBar):
 class VduControlsMainPanel(QWidget):
     """GUI for detected VDUs, it will construct and contain a control panel for each VDU."""
 
-    vdu_vcp_changed_qtsignal = pyqtSignal(str, str, int, VcpOrigin)
+    vdu_vcp_changed_qtsignal = pyqtSignal(str, str, int, VcpOrigin, bool)
 
     def __init__(self) -> None:
         super().__init__()
@@ -7997,8 +8003,7 @@ class VduAppWindow(QMainWindow):
             preset_icon = preset.create_icon(themed=False, monochrome=self.main_config.is_set(ConfOption.MONOCHROME_TRAY_ENABLED))
             led1_color = PRESET_TRANSITIONING_LED_COLOR if isinstance(preset, PresetTransitionDummy) else None
         if self.main_controller.lux_auto_controller is not None:
-            lux_auto_enabled = self.main_controller.lux_auto_controller.is_auto_enabled()
-            if lux_auto_enabled:
+            if self.main_controller.lux_auto_controller.is_auto_enabled():
                 title = f"{tr('Auto')}/{title}"
                 led2_color = AUTO_LUX_LED_COLOR
             menu_icon = create_icon_from_svg_bytes(self.main_controller.lux_auto_controller.current_auto_svg())  # NB cache involved
@@ -8012,10 +8017,10 @@ class VduAppWindow(QMainWindow):
         if palette_change or (preset is not None and not isinstance(preset, PresetTransitionDummy)):
             self.refresh_preset_menu(palette_change=palette_change)
 
-    def respond_to_changes_handler(self, vdu_stable_id: VduStableId, vcp_code: str, value: int, origin: VcpOrigin) -> None:
+    def respond_to_changes_handler(self, vdu_stable_id: VduStableId, vcp_code: str, value: int, origin: VcpOrigin,
+                                   causes_config_change: bool) -> None:
         # Update UI secondary displays
-        if (vcp_code in SUPPORTED_VCP_BY_CODE and SUPPORTED_VCP_BY_CODE[vcp_code].causes_config_change and
-                origin == VcpOrigin.NORMAL):  # Special-case VCP-code and only if this is an internally initiated change
+        if causes_config_change and origin == VcpOrigin.NORMAL:  # only respond if this is an internally initiated change
             log_info(f"Must reconfigure due to change to: {vdu_stable_id=} {vcp_code=} {value=} {origin.name=}")
             self.main_controller.configure_application()  # Special case, such as a power control causing the VDU to go offline.
             return
