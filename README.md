@@ -285,16 +285,16 @@ Michael Hamilton
 Version History
 ---------------
 * 2.0.2
-  * Attempt to eliminate deadlocks when exceptions occur.
-  * Cleanup the initialisation of the ddcutil-service connection.
-  * Add more caveats and limitations to the documentation.
-  * Don't automatically refresh on error - eliminate popup dialog loops.
-  * If using ddcutil-server, VCP changes while dragging sliders are now immediate.
-  * Make manual adjustment of the ambient Light Level more accurate and responsive when using ddcutil-service.
+  * Added a *refresh* annotation suffix for use with VCP-codes which cause multiple changes.
+  * Make manual adjustment of the ambient Light Level more accurate and responsive.
+  * When using ddcutil-server, VCP changes while dragging sliders are immediate.
   * Gracefully handle invalid combo-box VCP values (don't crash).
   * When refresh is pressed, only auto adjust ambient brightness if auto-brightness is enabled.
-  * Added an option *refresh* annotation suffix for metadata VCP-code names which causes vdu_controls to refresh all values.
-
+  * Don't automatically refresh on error, eliminate popup dialog loops.
+  * Eliminate deadlocks when exceptions occur.
+  * Cleanup the initialisation of the ddcutil-service connection.
+  * Add more caveats and limitations to the documentation.
+  
 * 2.0.1
   * Fix D-Bus client code for python versions prior to 3.11.
   * Fix infinite-loop when altering an existing FIFO lux-meter in the Lux-Dialog.
