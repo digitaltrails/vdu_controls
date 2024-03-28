@@ -3116,7 +3116,7 @@ class VduControlComboBox(VduControlBase):
         """Copy the internally cached current value onto the GUI view."""
         self.validate_value()
         value = self.get_current_text_value()
-        if value is not None:
+        if (value is not None) and (value in self.keys):
             self.combo_box.setCurrentIndex(self.keys.index(value))
 
     def validate_value(self) -> None:
