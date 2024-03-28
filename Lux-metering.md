@@ -48,7 +48,9 @@ is via the USB connection to the PC.
 
 > As well as the GY30, there is also a GY302/BH1750. The
 > sketch-library I use should work with any of these. But should
-> this not to be the case, issue #80 describes how to get the GY302 
+> this not to be the case, 
+> [issue #80](https://github.com/digitaltrails/vdu_controls/issues/80) 
+> describes how to get the GY302 
 > working with vdu_controls by using a different sketch-library.
 
 ### The Arduino-Sketch (that runs on the Arduino)
