@@ -267,7 +267,7 @@ Acknowledgements
 * Mark Wagie ([yochananmarqos](https://github.com/yochananmarqos)), for Gnome related suggestions and AUR port.
 * Denilson Sá Maia ([denilsonsa](https://github.com/denilsonsa)), for many suggestions, assistance, and contributions.
 * Matthew Coleman ([crashmatt](https://github.com/crashmatt)), Mark Lowne ([lowne](https://github.com/lowne)), [usr3](https://github.com/usr3),
-  Mateo Bohorquez G. ([Milor123](https://github.com/Milor123))
+  Mateo Bohorquez G. ([Milor123](https://github.com/Milor123)), Andrew Sun ([apsun](https://github.com/apsun))
   for contributing fixes to code and documentation.
 * [Jakeler](https://github.com/Jakeler), [kupiqu](https://github.com/kupiqu), Mateo Bohorquez ([Milor123](https://github.com/Milor123)), Johan Grande ([nahoj](https://github.com/nahoj)), 
   [0xCUBE](https://github.com/0xCUB3), [RokeJulianLockhart](https://github.com/RokeJulianLockhart), [abil76](https://github.com/abil76) 
@@ -287,7 +287,7 @@ Version History
 * 2.0.2
   * Added a *refresh* annotation suffix for use with VCP-codes which cause multiple changes.
   * Make manual adjustment of the ambient Light Level more accurate and responsive.
-  * When using ddcutil-server, VCP changes while dragging sliders are immediate.
+  * When using ddcutil-server, values change as sliders are dragged (rather than only on release).
   * Gracefully handle invalid combo-box VCP values (don't crash).
   * When refresh is pressed, only auto adjust ambient brightness if auto-brightness is enabled.
   * Don't automatically refresh on error, eliminate popup dialog loops.
