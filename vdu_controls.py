@@ -2471,7 +2471,7 @@ class VduController(QObject):
                         space_separated = lines_list[0].replace('(interpretation unavailable)', '').strip().split(' ')
                         values_list = [(v.upper(), 'unknown ' + v) for v in space_separated[1:]]
                 else:
-                    values_list = [(key.upper(), desc) for key, desc in (v.strip().split(": ", 1) for v in lines_list[1:])]
+                    values_list = [(key.upper(), desc.strip()) for key, desc in (v.strip().split(":", 1) for v in lines_list[1:])]
             return values_list
 
         feature_map = {}
