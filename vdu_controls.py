@@ -6784,10 +6784,12 @@ class LuxAutoController:
         assert is_running_in_gui_thread()
         self.lux_config.load()
         try:
-            if self.lux_config.get_device_name().strip() != '':
-                if self.lux_meter is not None:
-                    self.lux_meter.stop_metering()
-                self.lux_meter = lux_create_device(self.lux_config.get_device_name())
+            if self.lux_meter is not None:
+                self.lux_meter.stop_metering()
+            device_name = self.lux_config.get_device_name().strip()
+            if not device_name:
+                device_name = LuxMeterManualDevice.device_name
+            self.lux_meter = lux_create_device(device_name)
             if self.lux_config.is_auto_enabled():
                 log_info("Lux auto-brightness settings refresh - restart monitoring.")
                 self.start_worker()
