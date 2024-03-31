@@ -295,6 +295,7 @@ Version History
   * Eliminate deadlocks when exceptions occur.
   * Cleanup the initialisation of the ddcutil-service connection.
   * Add more caveats and limitations to the documentation.
+  * Fix manual ambient light slider when light meter is uninitialized.
   
 * 2.0.1
   * Fix D-Bus client code for python versions prior to 3.11.
