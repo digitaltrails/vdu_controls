@@ -3022,6 +3022,8 @@ class VduControlSlider(VduControlBase):
     GUI control for a DDC continuously variable attribute. A compound widget with icon, slider, and text-field.
     """
 
+    MIN_SET_INTERVAL = 250_000_000  # limit calls to ddcutil_service SetVcp - pick a generous sustainable interval.
+
     def __init__(self, controller: VduController, vcp_capability: VcpCapability) -> None:
         """Construct the slider control and initialize its values from the VDU."""
         super().__init__(controller, vcp_capability)
@@ -3082,7 +3084,7 @@ class VduControlSlider(VduControlBase):
 
         def spinbox_value_changed() -> None:
             now_ns = time.time_ns()
-            if not self.sliding or (self.is_speedy and now_ns - self.last_move_ns > 200_000_000):
+            if not self.sliding or (self.is_speedy and now_ns - self.last_move_ns > VduControlSlider.MIN_SET_INTERVAL):
                 self.last_move_ns = now_ns
                 slider.setValue(self.spinbox.value())
 
@@ -7037,9 +7039,9 @@ class LuxAmbientSlider(QWidget):
                             self.status_icon.setToolTip(tr("Open/Close Light-Meter Dialog"))
                 self.current_value = max(1, value)  # restrict to non-negative and something valid for log10
                 if source != self.lux_slider:
-                    self.lux_slider.setValue(round(math.log10(value) * 1000))
+                    self.lux_slider.setValue(round(math.log10(self.current_value) * 1000))
                 if source != self.lux_input_field:
-                    self.lux_input_field.setValue(value)
+                    self.lux_input_field.setValue(self.current_value)
             finally:
                 self.in_flux = False
                 if source is None:
