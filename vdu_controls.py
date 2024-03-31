@@ -3082,7 +3082,7 @@ class VduControlSlider(VduControlBase):
 
         def spinbox_value_changed() -> None:
             now_ns = time.time_ns()
-            if not self.sliding or (self.is_speedy and now_ns - self.last_move_ns > 100_000):
+            if not self.sliding or (self.is_speedy and now_ns - self.last_move_ns > 200_000_000):
                 self.last_move_ns = now_ns
                 slider.setValue(self.spinbox.value())
 
