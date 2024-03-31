@@ -3022,7 +3022,7 @@ class VduControlSlider(VduControlBase):
     GUI control for a DDC continuously variable attribute. A compound widget with icon, slider, and text-field.
     """
 
-    MIN_SET_INTERVAL = 250_000_000  # limit calls to ddcutil_service SetVcp - pick a generous sustainable interval.
+    MIN_SET_INTERVAL = 500_000_000  # limit calls to ddcutil_service SetVcp - pick a generous sustainable interval.
 
     def __init__(self, controller: VduController, vcp_capability: VcpCapability) -> None:
         """Construct the slider control and initialize its values from the VDU."""
