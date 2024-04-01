@@ -2365,8 +2365,6 @@ class VduController(QObject):
             if item:  # if last item in a non-empty queue
                 try:
                     self.set_vcp_value(*item)  # use the last queued value
-                    # raise VduException(vdu_description=self.get_vdu_description(), vcp_code=item[0], exception=None,
-                    #                    operation="set_vcp_value_asynchronously test")
                 except VduException as e:
                     self._async_setvcp_exception_qtsignal.emit(*item, e)
             else:
