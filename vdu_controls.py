@@ -1934,6 +1934,52 @@ SUPPORTED_VCP_BY_CODE: Dict[str: VcpCapability] = {
 SUPPORTED_VCP_BY_PROPERTY_NAME = {c.property_name(): c for c in SUPPORTED_VCP_BY_CODE.values()}
 
 
+class WorkerThread(QThread):
+    finished_work_qtsignal = pyqtSignal(object)
+
+    def __init__(self, task_body: Callable[[], None], task_finished: Callable[[WorkerThread], None] | None = None,
+                 loop: bool = False) -> None:
+        super().__init__()
+        # init should always be initiated from the GUI thread to grant the worker's __init__ easy access to the GUI thread.
+        log_debug(f"WorkerThread: init {self.__class__.__name__} from {thread_pid()=}") if log_debug_enabled else None
+        assert is_running_in_gui_thread()
+        self.stop_requested = False
+        self.task_body = task_body
+        self.task_finished = task_finished
+        self.loop = loop
+        if self.task_finished is not None:
+            self.finished_work_qtsignal.connect(self.task_finished)
+        self.vdu_exception: VduException | None = None
+
+    def run(self) -> None:
+        # Long-running task, runs in a separate thread
+        class_name = self.__class__.__name__
+        try:
+            log_debug(f"WorkerThread: {class_name=} running in {thread_pid()=} {self.task_body}") if log_debug_enabled else None
+            while not self.stop_requested:
+                self.task_body()
+                if not self.loop:
+                    break
+        except VduException as e:
+            self.vdu_exception = e
+        log_debug(f"WorkerThread: {class_name=} terminating {thread_pid()=}") if log_debug_enabled else None
+        self.finished_work_qtsignal.emit(self)
+
+    def stop(self) -> None:
+        self.stop_requested = True
+        while self.isRunning():
+            time.sleep(0.1)
+
+    def doze(self, seconds: float, sleep_unit: float = 0.5):
+        for i in range(0, int(seconds)):
+            if self.stop_requested:
+                return
+            time.sleep(sleep_unit)
+            seconds -= sleep_unit
+        if not self.stop_requested and seconds > 0.0:
+            time.sleep(seconds)
+
+
 class ConfIni(configparser.ConfigParser):
     """ConfigParser is a little messy and its class name is a bit misleading, wrap it and bend it to our needs."""
 
@@ -2307,6 +2353,30 @@ class VduControlsConfig:
         return parsed_args
 
 
+class VduControllerAsyncSetter(WorkerThread):  # Used to decouple the set-vcp from the GUI
+
+    def __init__(self):
+        super().__init__(task_body=self._async_setvcp_task_body, task_finished=None, loop=True)
+        self._async_setvcp_queue: queue.Queue = queue.Queue()
+
+    def _async_setvcp_task_body(self):
+        controller = vcp_code = value = origin = None
+        while not self._async_setvcp_queue.empty():  # Clear the queue and apply the last entry
+            try:
+                controller, vcp_code, value, origin = self._async_setvcp_queue.get_nowait()
+                self._async_setvcp_queue.task_done()
+            except queue.Empty:
+                break
+        if controller is not None:  # if last item in a non-empty queue
+            controller.set_vcp_value(vcp_code, value, origin, asynchronous_caller=True)  # use the last queued value
+            time.sleep(0.1)   # minimum time, enough for the VDU to recover, hopefully.
+        else:
+            time.sleep(0.25)  # when idle, sleep longer
+
+    def queue_setvcp(self, controller: VduController, vcp_code: str, value: int, origin: VcpOrigin):
+        self._async_setvcp_queue.put((controller, vcp_code, value, origin))
+
+
 class VduController(QObject):
     """
     Holds model+controller specific to an individual VDU including a map of its capabilities. A model object in
@@ -2332,6 +2402,8 @@ class VduController(QObject):
     vcp_value_changed_qtsignal = pyqtSignal(str, str, int, VcpOrigin, bool)
     _async_setvcp_exception_qtsignal = pyqtSignal(str, int, VcpOrigin, Exception)
 
+    _async_setvcp_task: VduControllerAsyncSetter = None
+
     def __init__(self, vdu_number: str, vdu_model_name: str, serial_number: str, manufacturer: str,
                  default_config: VduControlsConfig, ddcutil: Ddcutil,
                  vdu_exception_handler: Callable, remedy: int = 0) -> None:
@@ -2353,32 +2425,15 @@ class VduController(QObject):
                 self.set_vcp_value_asynchronously(vcp_code, value, origin)
 
         self._async_setvcp_exception_qtsignal.connect(handle_async_setvcp_exception)
-
-        def async_setvcp_task_body():
-            item = None
-            while not self._async_setvcp_queue.empty():
-                try:
-                    item = self._async_setvcp_queue.get_nowait()
-                    self._async_setvcp_queue.task_done()
-                except queue.Empty:
-                    break;
-            if item:  # if last item in a non-empty queue
-                try:
-                    self.set_vcp_value(*item)  # use the last queued value
-                except VduException as e:
-                    self._async_setvcp_exception_qtsignal.emit(*item, e)
-            else:
-                time.sleep(0.1)
-
-        self._async_setvcp_task = WorkerThread(async_setvcp_task_body, loop=True)
+        if VduController._async_setvcp_task is None or VduController._async_setvcp_task.isFinished():
+            VduController._async_setvcp_task = VduControllerAsyncSetter()
+            VduController._async_setvcp_task.start()
 
         self.vdu_model_id = proper_name(vdu_model_name.strip())
         self.capabilities_text: str | None = None
         self.config = None
         self.values_cache: Dict[str, int] = {}
         self.ignore_vdu = False
-        self._async_set_vcp_task: WorkerThread | None = None
-        self._async_setvcp_queue: queue.Queue = queue.Queue()
         default_sleep_multiplier: float | None = default_config.get_sleep_multiplier(fallback=None)
         enabled_vcp_codes = default_config.get_all_enabled_vcp_codes()
         for config_name in (self.vdu_stable_id, self.vdu_model_id):
@@ -2426,10 +2481,6 @@ class VduController(QObject):
         if remedy == VduController.DISCARD_VDU:
             self.write_template_config_files()  # Persist the discard
 
-    def stop(self):
-        if self._async_setvcp_task.isRunning():
-            self._async_setvcp_task.stop()
-
     def write_template_config_files(self) -> None:
         """Write template config files to $HOME/.config/vdu_controls/"""
         for config_name in (self.vdu_stable_id, self.vdu_model_id):
@@ -2466,7 +2517,8 @@ class VduController(QObject):
             raise VduException(vdu_description=self.get_vdu_description(), vcp_code=",".join(vcp_codes), exception=e,
                                operation="get_vcp_values") from e
 
-    def set_vcp_value(self, vcp_code: str, value: int, origin: VcpOrigin = VcpOrigin.NORMAL) -> None:
+    def set_vcp_value(self, vcp_code: str, value: int, origin: VcpOrigin = VcpOrigin.NORMAL,
+                      asynchronous_caller: bool = False) -> None:
         try:
             # raise subprocess.SubprocessError("set_attribute")  # for testing
             retry_on_error = vcp_code in SUPPORTED_VCP_BY_CODE and SUPPORTED_VCP_BY_CODE[vcp_code].retry_setvcp
@@ -2477,13 +2529,15 @@ class VduController(QObject):
             self.vcp_value_changed_qtsignal.emit(self.vdu_stable_id, vcp_code, value, origin,
                                                  self.capabilities_supported_by_this_vdu[vcp_code].causes_config_change)
         except (subprocess.SubprocessError, ValueError, TimeoutError, DdcutilDisplayNotFound) as e:
-            raise VduException(vdu_description=self.get_vdu_description(), vcp_code=vcp_code, exception=e,
-                               operation="set_vcp_value") from e
+            vdu_exception = VduException(vdu_description=self.get_vdu_description(), vcp_code=vcp_code, exception=e,
+                                         operation="set_vcp_value")
+            if not asynchronous_caller:
+                raise vdu_exception from e
+            self._async_setvcp_exception_qtsignal.emit(vcp_code, value, origin, vdu_exception)
 
     def set_vcp_value_asynchronously(self, vcp_code: str, value: int, origin: VcpOrigin = VcpOrigin.NORMAL) -> None:
-        if not self._async_setvcp_task.isRunning():
-            self._async_setvcp_task.start()
-        self._async_setvcp_queue.put((vcp_code, value, origin))
+        # Queue the change for the queue processing thread - avoids blocking the GUI.
+        VduController._async_setvcp_task.queue_setvcp(self, vcp_code, value, origin )
 
     def get_range_restrictions(self, vcp_code, fallback: Tuple[int, int] | None = None) -> Tuple[int, int] | None:
         if vcp_code in self.capabilities_supported_by_this_vdu:
@@ -3774,52 +3828,6 @@ class VduControlsMainPanel(QWidget):
 
     def status_message(self, message: str, timeout: int):
         self.bottom_toolbar.status_area.showMessage(message, timeout) if self.bottom_toolbar else None
-
-
-class WorkerThread(QThread):
-    finished_work_qtsignal = pyqtSignal(object)
-
-    def __init__(self, task_body: Callable[[], None], task_finished: Callable[[WorkerThread], None] | None = None,
-                 loop: bool = False) -> None:
-        super().__init__()
-        # init should always be initiated from the GUI thread to grant the worker's __init__ easy access to the GUI thread.
-        log_debug(f"WorkerThread: init {self.__class__.__name__} from {thread_pid()=}") if log_debug_enabled else None
-        assert is_running_in_gui_thread()
-        self.stop_requested = False
-        self.task_body = task_body
-        self.task_finished = task_finished
-        self.loop = loop
-        if self.task_finished is not None:
-            self.finished_work_qtsignal.connect(self.task_finished)
-        self.vdu_exception: VduException | None = None
-
-    def run(self) -> None:
-        # Long-running task, runs in a separate thread
-        class_name = self.__class__.__name__
-        try:
-            log_debug(f"WorkerThread: {class_name=} running in {thread_pid()=} {self.task_body}") if log_debug_enabled else None
-            while not self.stop_requested:
-                self.task_body()
-                if not self.loop:
-                    break
-        except VduException as e:
-            self.vdu_exception = e
-        log_debug(f"WorkerThread: {class_name=} terminating {thread_pid()=}") if log_debug_enabled else None
-        self.finished_work_qtsignal.emit(self)
-
-    def stop(self) -> None:
-        self.stop_requested = True
-        while self.isRunning():
-            time.sleep(0.1)
-
-    def doze(self, seconds: float, sleep_unit: float = 0.5):
-        for i in range(0, int(seconds)):
-            if self.stop_requested:
-                return
-            time.sleep(sleep_unit)
-            seconds -= sleep_unit
-        if not self.stop_requested and seconds > 0.0:
-            time.sleep(seconds)
 
 
 class PresetTransitionState(Enum):
@@ -7388,8 +7396,6 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         if self.ddcutil is None:
             return
         detected_vdu_list, ddcutil_problem = self.detect_vdus()
-        for controller in self.vdu_controllers_map.values():
-            controller.stop()
         self.vdu_controllers_map = {}
         main_panel_error_handler = self.main_window.get_main_panel().display_vdu_exception
         for vdu_number, manufacturer, model_name, vdu_serial in detected_vdu_list:
