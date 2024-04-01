@@ -702,6 +702,7 @@ import locale
 import math
 import os
 import pathlib
+import queue
 import random
 import re
 import select
@@ -2329,6 +2330,7 @@ class VduController(QObject):
     _FORCE_REFRESH_NAME_SUFFIX = "*refresh*"
 
     vcp_value_changed_qtsignal = pyqtSignal(str, str, int, VcpOrigin, bool)
+    _async_setvcp_exception_qtsignal = pyqtSignal(str, int, VcpOrigin, Exception)
 
     def __init__(self, vdu_number: str, vdu_model_name: str, serial_number: str, manufacturer: str,
                  default_config: VduControlsConfig, ddcutil: Ddcutil,
@@ -2345,11 +2347,40 @@ class VduController(QObject):
         self.ddcutil = ddcutil
         self.is_speedy = ddcutil.is_speedy
         self.vdu_exception_handler = vdu_exception_handler
+
+        def handle_async_setvcp_exception(vcp_code: str, value: int, origin: VcpOrigin, e: VduException):
+            if self.vdu_exception_handler(e, True):
+                self.set_vcp_value_asynchronously(vcp_code, value, origin)
+
+        self._async_setvcp_exception_qtsignal.connect(handle_async_setvcp_exception)
+
+        def async_setvcp_task_body():
+            item = None
+            while not self._async_setvcp_queue.empty():
+                try:
+                    item = self._async_setvcp_queue.get_nowait()
+                    self._async_setvcp_queue.task_done()
+                except queue.Empty:
+                    break;
+            if item:  # if last item in a non-empty queue
+                try:
+                    self.set_vcp_value(*item)  # use the last queued value
+                    # raise VduException(vdu_description=self.get_vdu_description(), vcp_code=item[0], exception=None,
+                    #                    operation="set_vcp_value_asynchronously test")
+                except VduException as e:
+                    self._async_setvcp_exception_qtsignal.emit(*item, e)
+            else:
+                time.sleep(0.1)
+
+        self._async_setvcp_task = WorkerThread(async_setvcp_task_body, loop=True)
+
         self.vdu_model_id = proper_name(vdu_model_name.strip())
         self.capabilities_text: str | None = None
         self.config = None
         self.values_cache: Dict[str, int] = {}
         self.ignore_vdu = False
+        self._async_set_vcp_task: WorkerThread | None = None
+        self._async_setvcp_queue: queue.Queue = queue.Queue()
         default_sleep_multiplier: float | None = default_config.get_sleep_multiplier(fallback=None)
         enabled_vcp_codes = default_config.get_all_enabled_vcp_codes()
         for config_name in (self.vdu_stable_id, self.vdu_model_id):
@@ -2396,6 +2427,10 @@ class VduController(QObject):
             self.capabilities_supported_by_this_vdu)  # TODO Might be possible to make this redundant now.
         if remedy == VduController.DISCARD_VDU:
             self.write_template_config_files()  # Persist the discard
+
+    def stop(self):
+        if self._async_setvcp_task.isRunning():
+            self._async_setvcp_task.stop()
 
     def write_template_config_files(self) -> None:
         """Write template config files to $HOME/.config/vdu_controls/"""
@@ -2446,6 +2481,11 @@ class VduController(QObject):
         except (subprocess.SubprocessError, ValueError, TimeoutError, DdcutilDisplayNotFound) as e:
             raise VduException(vdu_description=self.get_vdu_description(), vcp_code=vcp_code, exception=e,
                                operation="set_vcp_value") from e
+
+    def set_vcp_value_asynchronously(self, vcp_code: str, value: int, origin: VcpOrigin = VcpOrigin.NORMAL) -> None:
+        if not self._async_setvcp_task.isRunning():
+            self._async_setvcp_task.start()
+        self._async_setvcp_queue.put((vcp_code, value, origin))
 
     def get_range_restrictions(self, vcp_code, fallback: Tuple[int, int] | None = None) -> Tuple[int, int] | None:
         if vcp_code in self.capabilities_supported_by_this_vdu:
@@ -2977,14 +3017,7 @@ class VduControlBase(QWidget):
         if self.refresh_ui_only:  # Called from a GUI control when it was already responding to a vdu attribute change.
             log_info(f"Skip change {self.refresh_ui_only=}") if self.debug else None
             return  # Avoid repeating a setvcp by skipping the physical change
-        # Update VDU with what ever the user has changed in the GUI
-        while True:  # loop on error at the user's discretion.
-            try:
-                self.controller.set_vcp_value(self.vcp_capability.vcp_code, new_value, VcpOrigin.NORMAL)
-                break
-            except VduException as e:
-                if not self.controller.vdu_exception_handler(e, True):  # handler gets to decide if we should loop again
-                    break
+        self.controller.set_vcp_value_asynchronously(self.vcp_capability.vcp_code, new_value, VcpOrigin.NORMAL)
 
     @abstractmethod
     def get_current_text_value(self) -> str | None:  # Return text in correct base: continuous->base10 non-continuous->base16
@@ -3022,7 +3055,7 @@ class VduControlSlider(VduControlBase):
     GUI control for a DDC continuously variable attribute. A compound widget with icon, slider, and text-field.
     """
 
-    MIN_SET_INTERVAL = 500_000_000  # limit calls to ddcutil_service SetVcp - pick a generous sustainable interval.
+    MIN_SET_INTERVAL = 10_000_000  # limit set_vcp to a sustainable/reasonable interval.
 
     def __init__(self, controller: VduController, vcp_capability: VcpCapability) -> None:
         """Construct the slider control and initialize its values from the VDU."""
@@ -7357,6 +7390,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         if self.ddcutil is None:
             return
         detected_vdu_list, ddcutil_problem = self.detect_vdus()
+        for controller in self.vdu_controllers_map.values():
+            controller.stop()
         self.vdu_controllers_map = {}
         main_panel_error_handler = self.main_window.get_main_panel().display_vdu_exception
         for vdu_number, manufacturer, model_name, vdu_serial in detected_vdu_list:
