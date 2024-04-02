@@ -8051,6 +8051,8 @@ class VduAppWindow(QMainWindow):
 
     def update_status_indicators(self, preset=None, palette_change: bool = False) -> None:
         assert is_running_in_gui_thread()  # Boilerplate in case this is called from the wrong thread.
+        if self.main_panel is None:  # On deepin 23, events can trigger this method before initialization is complete
+            return
         title = self.app_name
         preset_icon = led1_color = led2_color = None
         if preset is None:  # Detects matching Preset based on current VDU control settings
