@@ -288,7 +288,7 @@ Version History
 * 2.0.2
   * Added a *refresh* annotation suffix for use with VCP-codes which cause multiple changes.
   * Make manual adjustment of the ambient Light Level more accurate and responsive.
-  * When using ddcutil-server, values change as sliders are dragged (rather than only on release).
+  * Updates are set to the VDU as sliders are dragged (rather than only on release).
   * Fix exception on monitors that return invalid/unexpected combo-box VCP values.
   * Fix exception on monitors with blank VCP value descriptions.
   * When refresh is pressed, only auto adjust ambient brightness if auto-brightness is enabled.

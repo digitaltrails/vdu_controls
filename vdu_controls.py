@@ -1271,15 +1271,11 @@ class Ddcutil:
     def __init__(self, common_args: List[str] | None = None, prefer_dbus_client: bool = True,
                  connected_vdus_changed_callback: Callable = None) -> None:
         super().__init__()
-
         self.common_args = common_args
-        self.is_speedy = False
-
         self.ddcutil_impl = None  # The service-interface implementations are duck-typed.
         if prefer_dbus_client:
             try:
                 self.ddcutil_impl = DdcutilDBusImpl(self.common_args, callback=connected_vdus_changed_callback)
-                self.is_speedy = True
             except DdcutilServiceNotFound as e:
                 log_warning("Failed to detect D-Bus ddcutil-service, falling back to the ddcutil command.")
 
@@ -2417,7 +2413,6 @@ class VduController(QObject):
         self.serial_number = serial_number
         self.manufacturer = manufacturer
         self.ddcutil = ddcutil
-        self.is_speedy = ddcutil.is_speedy
         self.vdu_exception_handler = vdu_exception_handler
 
         def handle_async_setvcp_exception(vcp_code: str, value: int, origin: VcpOrigin, e: VduException):
@@ -3049,7 +3044,6 @@ class VduControlBase(QWidget):
         self.controller = controller
         self.vcp_capability = vcp_capability
         self.current_value: int | None = None
-        self.is_speedy = controller.is_speedy
         # Using Qt signals to ensure GUI activity occurs in the GUI thread (this thread).
         self._refresh_ui_view_in_gui_thread_qtsignal.connect(self._refresh_ui_view_task)
         self.refresh_ui_only = False
@@ -3169,7 +3163,7 @@ class VduControlSlider(VduControlBase):
 
         def spinbox_value_changed() -> None:
             now_ns = time.time_ns()
-            if not self.sliding or (self.is_speedy and now_ns - self.last_move_ns > VduControlSlider.MIN_SET_INTERVAL):
+            if not self.sliding or now_ns - self.last_move_ns > VduControlSlider.MIN_SET_INTERVAL:
                 self.last_move_ns = now_ns
                 slider.setValue(self.spinbox.value())
 
