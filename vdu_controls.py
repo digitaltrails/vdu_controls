@@ -7478,7 +7478,6 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                             if control_panel.controller.get_full_id() in self.detected_vdu_list:
                                 control_panel.refresh_from_vdu()
                     except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
-                        self.refresh_lock.release()
                         if self.refresh_data_task.vdu_exception is None:
                             self.refresh_data_task.vdu_exception = VduException(vdu_description="unknown", operation="unknown",
                                                                                 exception=e)
