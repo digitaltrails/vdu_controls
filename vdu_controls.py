@@ -1135,8 +1135,6 @@ ASSUMED_CONTROLS_CONFIG_TEXT = ('\n'
 CONTINUOUS_TYPE = 'C'
 SIMPLE_NON_CONTINUOUS_TYPE = 'SNC'
 COMPLEX_NON_CONTINUOUS_TYPE = 'CNC'
-# The GUI treats SNC and CNC the same - only Ddcutil needs to distinguish them.
-GUI_NON_CONTINUOUS_TYPE = SIMPLE_NON_CONTINUOUS_TYPE
 
 LOG_SYSLOG_CAT = {syslog.LOG_INFO: "INFO:", syslog.LOG_ERR: "ERROR:", syslog.LOG_WARNING: "WARNING:", syslog.LOG_DEBUG: "DEBUG:"}
 log_to_syslog = False
@@ -2576,10 +2574,13 @@ class VduController(QObject):
                         vcp_type = SUPPORTED_VCP_BY_CODE[vcp_code].vcp_type
                 elif values[0] == VduController._LIMITED_RANGE_KEY:  # Special internal hacked config spec to specify range
                     vcp_type = CONTINUOUS_TYPE
-                else:
-                    vcp_type = GUI_NON_CONTINUOUS_TYPE
-                if vcp_type == COMPLEX_NON_CONTINUOUS_TYPE or vcp_type == SIMPLE_NON_CONTINUOUS_TYPE:
-                    vcp_type = GUI_NON_CONTINUOUS_TYPE  # Treat them the same in the GUI
+                else:  # two-byte or one-byte continuous type - cannot always trust the VDU metadata on this.
+                    try:  # See whether the max is really contained within one byte:
+                        max_value = max([int(v, 16) for v, _ in values])
+                        vcp_type = COMPLEX_NON_CONTINUOUS_TYPE if max_value > 0xff else SIMPLE_NON_CONTINUOUS_TYPE
+                    except ValueError:
+                        vcp_type = COMPLEX_NON_CONTINUOUS_TYPE  # Assume two byte
+
                 capability = VcpCapability(vcp_code, vcp_name, vcp_type=vcp_type, values=values, icon_source=None,
                                            can_transition=vcp_type == CONTINUOUS_TYPE, causes_config_change=requires_refresh)
                 feature_map[vcp_code] = capability
@@ -3278,7 +3279,7 @@ class VduControlPanel(QWidget):
                     alert = MessageBox(QMessageBox.Critical)
                     alert.setText(str(valueError))
                     alert.exec()
-            elif capability.vcp_type == GUI_NON_CONTINUOUS_TYPE:
+            elif capability.vcp_type in (SIMPLE_NON_CONTINUOUS_TYPE, COMPLEX_NON_CONTINUOUS_TYPE):
                 try:
                     control = VduControlComboBox(controller, capability)
                 except ValueError as valueError:
