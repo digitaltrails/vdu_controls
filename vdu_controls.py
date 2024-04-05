@@ -1653,6 +1653,8 @@ class DdcutilExeImpl:
 
 class DdcutilDBusImpl(QObject):
 
+    RETURN_ALL_BYTES = 2
+
     _metadata_cache: Dict[Tuple[str, int], Tuple[bool, bool]] = {}
     _current_connected_displays_changed_handler: Callable | None = None  # Only one instance and listener should exist at a time
     _current_service_initialization_handler: Callable | None = None  # Only one instance and listener should exist at a time
@@ -1805,7 +1807,8 @@ class DdcutilDBusImpl(QObject):
         vcp_code_array.endArray()
         with self.service_access_lock:
             raw = self._validate(self.ddcutil_proxy.call(
-                "GetMultipleVcp", -1, edid_txt, vcp_code_array, QDBusArgument(0, QMetaType.UInt)))[0]
+                "GetMultipleVcp", -1, edid_txt, vcp_code_array, QDBusArgument(DdcutilDBusImpl.RETURN_ALL_BYTES,
+                                                                              QMetaType.UInt)))[0]
             return [(int.from_bytes(vcp, 'big'), value, maximum, text_val) for vcp, value, maximum, text_val in raw]
 
     def _validate(self, result: QDBusMessage) -> List:
@@ -3051,7 +3054,10 @@ class VduControlBase(QWidget):
         self.debug = False  # Local debug switch because this is very noisy and only needed rarely.
 
     def update_from_vdu(self, vcp_value: VcpValue):  # Used for updating from the results of get_attributes() -> List[VcpValue]
-        self.current_value = vcp_value.current
+        if self.vcp_capability.vcp_type == SIMPLE_NON_CONTINUOUS_TYPE:  # Overrides metadata value-type, enforce simple
+            self.current_value = 0x00ff & vcp_value.current  # Mask off high byte
+        else:
+            self.current_value = vcp_value.current
         self.refresh_ui_view()
 
     def set_value(self, new_value: int, origin: VcpOrigin = VcpOrigin.NORMAL) -> None:  # Used by controllers to alter physical VDU
