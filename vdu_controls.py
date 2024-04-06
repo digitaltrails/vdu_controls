@@ -1653,7 +1653,7 @@ class DdcutilExeImpl:
 
 class DdcutilDBusImpl(QObject):
 
-    RETURN_ALL_BYTES = 2
+    RETURN_RAW_VALUES = 2
 
     _metadata_cache: Dict[Tuple[str, int], Tuple[bool, bool]] = {}
     _current_connected_displays_changed_handler: Callable | None = None  # Only one instance and listener should exist at a time
@@ -1807,7 +1807,7 @@ class DdcutilDBusImpl(QObject):
         vcp_code_array.endArray()
         with self.service_access_lock:
             raw = self._validate(self.ddcutil_proxy.call(
-                "GetMultipleVcp", -1, edid_txt, vcp_code_array, QDBusArgument(DdcutilDBusImpl.RETURN_ALL_BYTES,
+                "GetMultipleVcp", -1, edid_txt, vcp_code_array, QDBusArgument(DdcutilDBusImpl.RETURN_RAW_VALUES,
                                                                               QMetaType.UInt)))[0]
             return [(int.from_bytes(vcp, 'big'), value, maximum, text_val) for vcp, value, maximum, text_val in raw]
 
