@@ -285,6 +285,8 @@ Michael Hamilton
 
 Version History
 ---------------
+* 2.0.3
+  * React to DPMS awake signal from ddcutil-service
 * 2.0.2
   * Added a *refresh* annotation suffix for use with VCP-codes which cause multiple changes.
   * Make manual adjustment of the ambient Light Level more accurate and responsive.
