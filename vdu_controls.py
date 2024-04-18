@@ -1294,7 +1294,6 @@ class Ddcutil:
         global about_supporting_versions
         about_supporting_versions = \
             f"ddcutil-interface: {self.ddcutil_impl.get_interface_version_string()}; ddcutil: {version_info}"
-        self.status_values = self.ddcutil_impl.get_status_values()
         log_info(f"ddcutil version {self.ddcutil_version} "
                  f"{self.version_suffix}(dynamic-sleep={self.ddcutil_version >= (2, 0, 0)}) "
                  f"- interface {self.ddcutil_impl.get_interface_version_string()}")
@@ -1451,6 +1450,13 @@ class Ddcutil:
         return list(results_dict.values())
 
 
+class DdcEventType(Enum):  # Has to correspond to what the service supports
+    DPMS_AWAKE = 0
+    DPMS_ASLEEP = 1
+    DISPLAY_CONNECTED = 2
+    DISPLAY_DISCONNECTED = 3
+
+
 class DdcutilExeImpl:
     _VCP_CODE_REGEXP = re.compile(r"^VCP ([0-9A-F]{2}) ")  # VCP 2-digit-hex
     _C_PATTERN = re.compile(r'([0-9]+) ([0-9]+)')  # Match Continuous-Type getvcp result
@@ -1541,12 +1547,6 @@ class DdcutilExeImpl:
 
     def get_interface_version_string(self) -> str:
         return "Command Line - ddcutil"
-
-    def get_status_values(self) -> Dict[int, str]:
-        return {}
-
-    def set_listerner_callback(self, callback: callable) -> None:
-        pass  # Not implemented
 
     def _parse_edid(self, display_str: str) -> str | None:
         if edid_match := re.search(r'EDID hex dump:\n[^\n]+(\n([ \t]+[+]0).+)+', display_str):
@@ -1667,6 +1667,7 @@ class DdcutilDBusImpl(QObject):
         self.service_access_lock = Lock()
         self.listener_callback: Callable | None = callback
         self.dbus_timeout_millis = int(os.getenv("VDU_CONTROLS_DBUS_TIMEOUT_MILLIS", default='5000'))
+        self._status_values: Dict[int, str] = {}
         for try_count in range(1, 32):  # Approximating an infinite loop
             self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service()
             if len(self.common_args) != 0:  # have to restart with the common_args, wait and connect again
@@ -1764,8 +1765,10 @@ class DdcutilDBusImpl(QObject):
         return self._validate(self.ddcutil_props_proxy.call(
             "Get", self.dbus_interface_name, "ServiceInterfaceVersion"))[0] + " (D-Bus ddcutil-service - libddcutil)"
 
-    def get_status_values(self) -> Dict[int, str]:
-        return self._validate(self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "StatusValues"))[0]
+    def _get_status_values(self) -> Dict[int, str]:
+        if len(self._status_values) == 0:
+            self._status_values = self._validate(self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "StatusValues"))[0]
+        return self._status_values
 
     def detect(self, flags: int) -> List[Tuple]:
         with self.service_access_lock:
@@ -1815,17 +1818,16 @@ class DdcutilDBusImpl(QObject):
         if result.errorName():
             raise ValueError(f"D-Bus error {result.errorName()}: {result.errorMessage()}")
         result_arg_list = result.arguments()
-        if len(result_arg_list) >= 2:
-            status, message = result.arguments()[-2:]
+        if len(result_arg_list) >= 2:  # Normal retrieval calls return at least three items
+            status, message = result.arguments()[-2:]  # last two are always DDC status and message
             if status != 0:
-                status_values = self.get_status_values()
-                formatted_message = f"D-Bus  status={status_values.get(status, str(status))}: {message}"
+                formatted_message = f"D-Bus  {status=}: {message}"
                 log_debug(formatted_message) if log_debug_enabled else None
-                if status_values.get(status, "DDCRC_INVALID_DISPLAY") == "DDCRC_INVALID_DISPLAY":
+                if self._get_status_values().get(status, "DDCRC_INVALID_DISPLAY") == "DDCRC_INVALID_DISPLAY":
                     raise DdcutilDisplayNotFound(formatted_message)
                 raise ValueError(formatted_message)
-            return result_arg_list[:-2]
-        return result_arg_list
+            return result_arg_list[:-2]  # results with status and message stripped out.
+        return result_arg_list  # Must be something like a property retrieval, just return as is
 
 
 def si(widget: QWidget, icon_number: QStyle.StandardPixmap) -> QIcon:  # Qt bundled standard icons (which are themed)
@@ -7350,11 +7352,15 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         if self.main_config.is_set(ConfOption.DBUS_SIGNALS_ENABLED):
 
             def vdu_connectivity_changed_callback(edid_encoded: str, event_type: int, flags: int):
-                log_info(f"Connected VDUs changed {event_type=} {flags=} {edid_encoded:.30}...")
-                if event_type in (-1, 2, 3):
-                    self.start_refresh()
+                if event_type == DdcEventType.DPMS_AWAKE.value:
+                    log_info(f"DPMS awake event {event_type=} {edid_encoded=:.30}")
+                    if self.lux_auto_controller is not None and self.lux_auto_controller.is_auto_enabled():
+                        self.lux_auto_controller.adjust_brightness_now()  # don't wait for normal interval to finish
+                elif event_type == DdcEventType.DPMS_ASLEEP.value:
+                    log_info(f"DPMS asleep event {event_type=} {edid_encoded=:.30}")
                 else:
-                    log_info(f"DPMS event {event_type=} {edid_encoded=:30}...")
+                    log_info(f"Connected VDUs changed {event_type=} {flags=} {edid_encoded:.30}...")
+                    self.start_refresh()
 
             change_handler = vdu_connectivity_changed_callback
             log_debug("Enabled callback for VDU-connectivity-change D-Bus signals")
@@ -7470,8 +7476,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             self.main_window.run_in_gui_thread(self.start_refresh)
             return
         assert is_running_in_gui_thread()
-        if self.refresh_lock.locked():  # Already doing a refresh, don't do another one.
-            log_debug("Already doing a refresh, won't do another one")
+        if self.refresh_lock.locked():  # Already doing a refresh, don't do another one - possible race condition
+            log_info("Already doing a refresh, won't do another one")
             return
         log_info("Refresh commences")
 
