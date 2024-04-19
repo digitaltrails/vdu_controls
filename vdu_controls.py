@@ -7269,8 +7269,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
     def __init__(self, main_config: VduControlsConfig) -> None:
         super().__init__()
-        self.application_configuration_lock = Lock()
-        self.refresh_lock = Lock()
+        self.application_lock = Lock()
         self.main_config = main_config
         self.ddcutil: Ddcutil | None = None
         self.main_window: VduAppWindow | None = None
@@ -7313,7 +7312,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 self.main_window.indicate_busy(True)
                 QApplication.processEvents()
             log_debug("configure: try to obtain application_configuration_lock", trace=False) if log_debug_enabled else None
-            with self.application_configuration_lock:
+            with self.application_lock:
                 log_debug("Holding application_configuration_lock") if log_debug_enabled else None
                 self.unschedule_presets()  # Hopefully stops any timers from firing.
                 if self.lux_auto_controller is not None:
@@ -7476,14 +7475,14 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             self.main_window.run_in_gui_thread(self.start_refresh)
             return
         assert is_running_in_gui_thread()
-        if self.refresh_lock.locked():  # Already doing a refresh, don't do another one - possible race condition
+        if self.application_lock.locked():  # Already doing a refresh, don't do another one - possible race condition
             log_info("Already doing a refresh, won't do another one")
             return
         log_info("Refresh commences")
 
         def update_from_vdu() -> None:
             if self.ddcutil is not None:
-                with self.refresh_lock:
+                with self.application_lock:
                     try:
                         self.ddcutil.refresh_connection()
                         self.detected_vdu_list = self.ddcutil.detect_vdus()
@@ -7529,7 +7528,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             return
 
         log_debug("restore_preset: try to obtain application_configuration_lock", trace=False) if log_debug_enabled else None
-        with self.application_configuration_lock:  # The lock prevents a transition firing when the GUI/app is reconfiguring
+        with self.application_lock:  # The lock prevents a transition firing when the GUI/app is reconfiguring
             self.transitioning_dummy_preset = None
             if not immediately:
                 self.transitioning_dummy_preset = PresetTransitionDummy(preset)
