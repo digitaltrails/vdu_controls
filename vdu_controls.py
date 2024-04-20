@@ -721,6 +721,7 @@ import urllib.request
 from abc import abstractmethod
 from ast import literal_eval
 from collections import namedtuple
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from enum import Enum, IntFlag
 from functools import partial
@@ -1936,8 +1937,8 @@ SUPPORTED_VCP_BY_PROPERTY_NAME = {c.property_name(): c for c in SUPPORTED_VCP_BY
 class WorkerThread(QThread):
     finished_work_qtsignal = pyqtSignal(object)
 
-    def __init__(self, task_body: Callable[[], None], task_finished: Callable[[WorkerThread], None] | None = None,
-                 loop: bool = False) -> None:
+    def __init__(self, task_body: Callable[[WorkerThread], None], task_finished: Callable[[WorkerThread], None] | None = None,
+                 context: object | None = None, loop: bool = False) -> None:
         super().__init__()
         # init should always be initiated from the GUI thread to grant the worker's __init__ easy access to the GUI thread.
         log_debug(f"WorkerThread: init {self.__class__.__name__} from {thread_pid()=}") if log_debug_enabled else None
@@ -1945,6 +1946,7 @@ class WorkerThread(QThread):
         self.stop_requested = False
         self.task_body = task_body
         self.task_finished = task_finished
+        self.task_context = context
         self.loop = loop
         if self.task_finished is not None:
             self.finished_work_qtsignal.connect(self.task_finished)
@@ -1956,13 +1958,13 @@ class WorkerThread(QThread):
         try:
             log_debug(f"WorkerThread: {class_name=} running in {thread_pid()=} {self.task_body}") if log_debug_enabled else None
             while not self.stop_requested:
-                self.task_body()
+                self.task_body(self)  # Pass self so body can access context
                 if not self.loop:
                     break
         except VduException as e:
             self.vdu_exception = e
         log_debug(f"WorkerThread: {class_name=} terminating {thread_pid()=}") if log_debug_enabled else None
-        self.finished_work_qtsignal.emit(self)
+        self.finished_work_qtsignal.emit(self)  # Pass self so body can access context
 
     def stop(self) -> None:
         self.stop_requested = True
@@ -2358,7 +2360,7 @@ class VduControllerAsyncSetter(WorkerThread):  # Used to decouple the set-vcp fr
         super().__init__(task_body=self._async_setvcp_task_body, task_finished=None, loop=True)
         self._async_setvcp_queue: queue.Queue = queue.Queue()
 
-    def _async_setvcp_task_body(self):
+    def _async_setvcp_task_body(self, _: WorkerThread):
         controller = vcp_code = value = origin = None
         while not self._async_setvcp_queue.empty():  # Clear the queue and apply the last entry
             try:
@@ -3851,7 +3853,7 @@ class PresetTransitionWorker(WorkerThread):
                  progress_callable: Callable[[PresetTransitionWorker], None],
                  finished_callable: Callable[[PresetTransitionWorker], None],
                  immediately: bool = False, scheduled_activity: bool = False):
-        super().__init__(self.task_body, finished_callable)  # type: ignore
+        super().__init__(self._perform_transition, finished_callable)  # type: ignore
         log_debug(f"TransitionWorker: init {preset.name=} {immediately=} {scheduled_activity=}") if log_debug_enabled else None
         self.start_time = datetime.now()
         self.end_time: datetime | None = None
@@ -3885,7 +3887,7 @@ class PresetTransitionWorker(WorkerThread):
                         else:
                             self.preset_non_transitioning_controls.append(key)
 
-    def task_body(self) -> None:
+    def _perform_transition(self, _: PresetTransitionWorker) -> None:
         while (self.work_state != PresetTransitionState.STEPPING_COMPLETED and self.values_are_as_expected()
                and not self.main_controller.pause_background_tasks(self)):
             now = time.time()
@@ -5909,14 +5911,14 @@ class LuxMeterDevice(QObject):
                 time.sleep(0.1)
         return self.current_value
 
-    def update_current_value(self) -> None:
+    def update_current_value(self, _: WorkerThread) -> None:
         pass
 
     def set_current_value(self, new_value: float) -> None:
         self.current_value = new_value
         self.new_lux_value_qtsignal.emit(round(new_value))
 
-    def cleanup(self, worker: WorkerThread):
+    def cleanup(self, _: WorkerThread):
         pass
 
     def stop_metering(self) -> None:
@@ -6085,7 +6087,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
     _lux_dialog_message_qtsignal = pyqtSignal(str, int, MsgDestination)
 
     def __init__(self, auto_controller: LuxAutoController, single_shot: bool = False) -> None:
-        super().__init__(task_body=self.adjust_for_lux, task_finished=self.finished_callable)
+        super().__init__(task_body=self._adjust_for_lux, task_finished=self._adjust_for_lux_finished)
         self.single_shot = single_shot
         self.main_controller = auto_controller.main_controller
         self.consecutive_errors_map: Dict[str, int] = {}
@@ -6115,7 +6117,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
     def status_message(self, message: str, timeout: int = 0, destination: MsgDestination = MsgDestination.DEFAULT) -> None:
         self._lux_dialog_message_qtsignal.emit(message, timeout, destination)
 
-    def adjust_for_lux(self) -> None:
+    def _adjust_for_lux(self, _: WorkerThread) -> None:
         try:
             lux_auto_controller = self.main_controller.lux_auto_controller
             # Give any previous thread a chance to exit, plus let the GUI and presets settle down
@@ -6135,6 +6137,10 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                 self.idle_sampling(lux_meter)  # Sleep and sample for rest of cycle
         finally:
             log_info(f"LuxAutoWorker exiting (stop_requested={self.stop_requested}) {thread_pid()=}")
+
+    def _adjust_for_lux_finished(self, _: WorkerThread) -> None:
+        if self.vdu_exception:
+            log_error(f"LuxAutoWorker exited with exception={self.vdu_exception}")
 
     def idle_sampling(self, lux_meter):
         log_debug(f"LuxAutoWorker: sleeping {self.sleep_seconds=}") if log_debug_enabled else None
@@ -6316,10 +6322,6 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                     completed_profile.append(LuxPoint(lux_point.lux, preset.get_brightness(vdu_sid), lux_point.preset_name))
         completed_profile.append(LuxPoint(100000, 100))  # make sure we hava point at the end of the scale.
         return completed_profile
-
-    def finished_callable(self, _: WorkerThread) -> None:
-        if self.vdu_exception:
-            log_error(f"LuxAutoWorker exited with exception={self.vdu_exception}")
 
     def x_from_lux(self, lux: int) -> float:
         return ((math.log10(lux) - math.log10(1)) / (math.log10(100000) - math.log10(1))) if lux > 0 else 0
@@ -7265,6 +7267,16 @@ def parse_transition_type(string_value: str) -> PresetTransitionFlag:
     return transition_type
 
 
+@contextmanager  # https://stackoverflow.com/questions/31501487/non-blocking-lock-with-with-statement
+def non_blocking_lock(lock: Lock) -> Lock:  # Provide a way to use a with-statement with non-blocking locks
+    acquire_succeeded = lock.acquire(False)  # acquire_succeeded will be False if the lock is already locked.
+    try:
+        yield lock if acquire_succeeded else None  # return None to the with if the lock was not acquired
+    finally:
+        if acquire_succeeded:
+            lock.release()
+
+
 class VduAppController(QObject):  # Main controller containing methods for high level operations
 
     def __init__(self, main_config: VduControlsConfig) -> None:
@@ -7474,28 +7486,30 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             log_debug("Reinvoke start_refresh() in GUI thread.")
             self.main_window.run_in_gui_thread(self.start_refresh)
             return
-        assert is_running_in_gui_thread()
-        if self.application_lock.locked():  # Already doing a refresh, don't do another one - possible race condition
-            log_info("Already doing a refresh, won't do another one")
-            return
-        log_info("Refresh commences")
 
-        def update_from_vdu() -> None:
+        def update_from_vdu(worker: WorkerThread) -> None:
             if self.ddcutil is not None:
-                with self.application_lock:
-                    try:
-                        self.ddcutil.refresh_connection()
-                        self.detected_vdu_list = self.ddcutil.detect_vdus()
-                        for control_panel in self.main_window.get_main_panel().vdu_control_panels.values():
-                            if control_panel.controller.get_full_id() in self.detected_vdu_list:
-                                control_panel.refresh_from_vdu()
-                    except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
-                        if self.refresh_data_task.vdu_exception is None:
-                            self.refresh_data_task.vdu_exception = VduException(vdu_description="unknown", operation="unknown",
-                                                                                exception=e)
+                with non_blocking_lock(self.application_lock) as acquired_lock:
+                    if acquired_lock:  # if acquired_lock is not None, then we have successfully acquired the lock.
+                        try:
+                            log_info("Refresh commences")
+                            self.ddcutil.refresh_connection()
+                            self.detected_vdu_list = self.ddcutil.detect_vdus()
+                            for control_panel in self.main_window.get_main_panel().vdu_control_panels.values():
+                                if control_panel.controller.get_full_id() in self.detected_vdu_list:
+                                    control_panel.refresh_from_vdu()
+                        except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
+                            if self.refresh_data_task.vdu_exception is None:
+                                self.refresh_data_task.vdu_exception = VduException(vdu_description="unknown", operation="unknown",
+                                                                                    exception=e)
+                    else:
+                        log_info("Already doing a refresh, won't do another one")
+                        worker.stop()  # stop the thread - which also indicates we did not acquire the lock
 
-        def update_ui_view(_: WorkerThread) -> None:
+        def update_ui_view(worker: WorkerThread) -> None:
             # Invoke when the worker thread completes. Runs in the GUI thread and can refresh remaining UI views.
+            if worker.stop_requested:
+                return  # in this case, this means the worker never started anything
             try:  # No need for locking in here - running in the GUI thread effectively single threads the operation.
                 assert self.refresh_data_task is not None and is_running_in_gui_thread()
                 log_debug("Refresh - update UI view")
@@ -7515,9 +7529,11 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             finally:
                 self.main_window.indicate_busy(False)
 
-        self.main_window.indicate_busy(True)
         self.refresh_data_task = WorkerThread(task_body=update_from_vdu, task_finished=update_ui_view)
         self.refresh_data_task.start()
+        time.sleep(0.1)  # Sleep a bit to see if we acquire the application lock
+        if not self.refresh_data_task.stop_requested:  # if the thread has already stopped, it never acquired the application_lock
+            self.main_window.indicate_busy(True)  # Refresh has probably commenced, give the user some feedback
 
     def restore_preset(self, preset: Preset, finished_func: Callable[[PresetTransitionWorker], None] | None = None,
                        immediately: bool = False, scheduled_activity: bool = False) -> None:
