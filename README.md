@@ -286,7 +286,7 @@ Michael Hamilton
 Version History
 ---------------
 * 2.0.3
-  * React to DPMS awake signal from ddcutil-service by re-accessing ambient brightness.
+  * React to DPMS awake signal from ddcutil-service by re-assessing ambient brightness.
   * Avoid deadlocks by simplifying locking and obaying a locking hierarchy/protocol.
 * 2.0.2
   * Added a *refresh* annotation suffix for use with VCP-codes which cause multiple changes.
