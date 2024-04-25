@@ -213,28 +213,9 @@ main\-window or the system\-tray icon.  The main\-menu has \fIALT\-key\fP shortc
 (subject to sufficient letters being available to distinguish all user defined presets).
 .sp
 For further information, including screenshots, see \fI\%https://github.com/digitaltrails/vdu_controls\fP .
-.SS Does adjusting a VDU affect its lifespan or health?
 .sp
-There has been speculation that repeatably updating VDU settings might
-affect its lifespan.  If this is of concern to you, perhaps it might be better
-to adjust your ambient lighting rather than your VDU. Under the terms of its licence,
-there is no warranty for the program.
-.sp
-That said, \fBvdu_controls\fP does include features intended to partly address such concerns.
-Dragging sliders is limited to updating the VDU every 0.5 secs.  Ambient brightness stepping
-is limited to 1.0 seconds between stepped adjustment. There is a \fIstepping\fP setting that
-can disable any stepping so slider\-dragging and ambient\-light\-responses jump to the
-final value with no transitional changes.
-.sp
-The amount and frequency of changes can be reduced by creating fewer presets or by
-stepping ambient brightness curves so that they result in fewer adjustments.
-.sp
-The power\-supplies in some older VDUs may buzz/squeel audibly when the brightness is
-turned way down. This may not be a major issue because, in normal surroundings,
-older VDUs are often not usable below about 85\-90% brightness.
-.sp
-Going beyond the standard DDC features by attempting to experiment with hidden
-or undocumented features or values has the potential to make irreversible changes.
+The long term affects of repeatably rewriting a VDUs setting are not well understood, but some
+concerns have been expressed. See \fBLIMITATIONS\fP for further details.
 .SH CONFIGURATION
 .sp
 Configuration changes can be made via the \fBSettings\fP dialog or by editing the config\-files.
@@ -771,6 +752,29 @@ reduce the time taken to restore presets.
 .sp
 There\(aqs plenty of useful info for getting the best out of \fBddcutil\fP at \fI\%https://www.ddcutil.com/\fP\&.
 .SH LIMITATIONS
+.sp
+There has been speculation that repeatably updating VDU settings might
+affect VDU lifespan.  If this is of concern, perhaps consider first adjusting the
+ambient lighting rather than the VDU. Under the terms of its licence, there is no
+warranty for the program.
+.sp
+That said, \fBvdu_controls\fP does include features intended to partly address such
+concerns. Dragging sliders is limited to updating the VDU every 0.5 secs.  Ambient
+brightness stepping is limited to 1.0 seconds between stepped adjustment. The global
+\fIstepping\fP setting can be disabled, slider\-dragging and ambient\-light\-responses will
+then jump to their final values without any transitioning steps. Restoring a \fIpreset\fP
+defaults to jumping immediately without any transitional steps.
+.sp
+The amount and frequency of changes can be reduced by creating fewer presets or by
+stepping ambient brightness curves so that they result in fewer adjustments.
+.SS Other concerns
+.sp
+The power\-supplies in some older VDUs may buzz/squeel audibly when the brightness is
+turned way down. This may not be a major issue because, in normal surroundings,
+older VDUs are often not usable below about 85\-90% brightness.
+.sp
+Going beyond the standard DDC features by attempting to experiment with hidden
+or undocumented features or values has the potential to make irreversible changes.
 .sp
 Some controls change the number of connected devices (for example, some VDUs support a power\-off
 command). If such controls are used, \fBvdu_controls\fP will detect the change and will reconfigure
