@@ -42,7 +42,7 @@ Arguments supplied on the command line override config file equivalent settings.
       --system-tray|--no-system-tray
                             start up as an entry in the system tray.
                             ``--no-system-tray`` is the default.
-      --stepping|--no-stepping
+      --transitions|--no-transitions
                             sliders and ambient brightness adjust in steps
       --location latitude,longitude
                             local latitude and longitude for triggering presets
@@ -163,7 +163,7 @@ The config files are in INI-format divided into a number of sections as outlined
     # The vdu-controls-globals section is only required in $HOME/.config/vdu_controls/vdu_controls.conf
     system-tray-enabled = yes|no
     splash-screen-enabled = yes|no
-    stepping-enabled = yes|no
+    transitions-enabled = yes|no
     translations-enabled = yes|no
     weather-enabled = yes|no
     schedule-enabled = yes|no
@@ -557,23 +557,32 @@ There's plenty of useful info for getting the best out of ``ddcutil`` at https:/
 Limitations
 ===========
 
-There has been speculation that repeatably updating VDU settings might
-affect VDU lifespan.  If this is of concern, perhaps consider first adjusting the
-ambient lighting rather than the VDU. Under the terms of its licence, there is no
-warranty for the program.
+There has been speculation that repeatably altering VDU settings might
+affect VDU lifespan.  Possible reasons include the consumption of NVRAM
+write cycles, stressing the VDU power-supply, or increasing the LED panel
+burn-in.
 
-That said, ``vdu_controls`` does include a number of features intended to partly address such
-concerns:
+That said, ``vdu_controls`` does include a number of features that can be used
+to reduce the overall frequency of adjustments.
 
-+ Slider-dragging is limited to updating the VDU every 0.5 secs.
-+ Ambient brightness stepping is limited to 1.0 seconds between stepped adjustment.
-+ The global `stepping` setting can be disabled. Slider-dragging and ambient-light-responses
-  will then jump to their final values without any transitioning steps.
-+ Restoring a `preset` defaults to jumping immediately to the preset values
-  without any transitional steps.
-+ The amount and frequency of changes can be reduced by using fewer `presets` or by
-  stair-stepping ambient brightness response curves so that they result in fewer adjustments.
-+ The manual override can be engaged when faced with fluctuating levels of ambient brightness.
++ Inbuilt mitigations:
+  + Transitions during slider-dragging are limited to one update per second.
+  + Transitions during ambient-light-level brightness adjustment are limited to one
+    update per second.
+  + Automatic ambient brigntness adjustment only triggers above a sensitity threashold
+    which defaults to 10%.
+
++ Electable mitigations:
+  + Choose to restore pre-prepared 'presets' instead of dragging sliders.
+  + Refrain from adding transitions to `presets`.
+  + Turn off the global `transitions` setting, slider-dragging and ambient-light-responses
+    will then jump to their final values without any transitioning steps.
+  + Turn off `interpolation` for ambient brightness response curves, brightness will
+    stair-step instead of ramping through intermediate values.
+  + Attach `presets` to ambient brightness response curves, brightness will then tend
+    to jump to the closest presets.
+  + Engage the manual override when faced with rapidly fluctuating levels of ambient brightness.
+  + Consider adjusting the ambient lighting instead of the VDU.
 
 Other concerns
 --------------
@@ -2104,8 +2113,9 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
                                        tip=QT_TR_NOOP('start up in the system tray'), related='hide-on-focus-out')
     HIDE_ON_FOCUS_OUT = conf_opt_def(cname=QT_TR_NOOP('hide-on-focus-out'), default="no", restart=False,
                                      tip=QT_TR_NOOP('minimise the main window automatically on focus out'))
-    STEPPING_ENABLED = conf_opt_def(cname=QT_TR_NOOP('stepping-enabled'), default="no", restart=False,
-                                     tip=QT_TR_NOOP('sliders and ambient brightness adjust in steps'))
+    TRANSITIONS_ENABLED = conf_opt_def(cname=QT_TR_NOOP('transitions-enabled'), default="no", restart=False,
+                                       tip=QT_TR_NOOP('sliders and ambient-adjustment adjustments transition'
+                                                      ' through intermediate values'))
     TRANSLATIONS_ENABLED = conf_opt_def(cname=QT_TR_NOOP('translations-enabled'), default="no", restart=True,
                                         tip=QT_TR_NOOP('enable language translations'))
     WEATHER_ENABLED = conf_opt_def(cname=QT_TR_NOOP('weather-enabled'), default='yes', tip=QT_TR_NOOP('enable weather lookups'))
@@ -2475,7 +2485,7 @@ class VduController(QObject):
         self.config = None
         self.values_cache: Dict[str, int] = {}
         self.ignore_vdu = False
-        self.use_stepping = default_config.is_set(ConfOption.STEPPING_ENABLED)
+        self.use_transitions = default_config.is_set(ConfOption.TRANSITIONS_ENABLED)
         default_sleep_multiplier: float | None = default_config.get_sleep_multiplier(fallback=None)
         enabled_vcp_codes = default_config.get_all_enabled_vcp_codes()
         for config_name in (self.vdu_stable_id, self.vdu_model_id):
@@ -3154,8 +3164,8 @@ class VduControlSlider(VduControlBase):
     GUI control for a DDC continuously variable attribute. A compound widget with icon, slider, and text-field.
     """
 
-    # limit set_vcp to a sustainable interval - KDE powerdevel recommendation - 0.5s.
-    MIN_SET_INTERVAL_NS = int(float(os.getenv("VDU_CONTROLS_SLIDER_STEP_INTERVAL_SECS", default='0.5')) * 1_000_000_000)
+    # limit set_vcp to a sustainable interval - KDE powerdevel recommendation - 0.5s, ddcui 1.0 seconds
+    MIN_SET_INTERVAL_NS = int(float(os.getenv("VDU_CONTROLS_SLIDER_STEP_INTERVAL_SECS", default='1.0')) * 1_000_000_000)
 
     def __init__(self, controller: VduController, vcp_capability: VcpCapability) -> None:
         """Construct the slider control and initialize its values from the VDU."""
@@ -3217,7 +3227,7 @@ class VduControlSlider(VduControlBase):
 
         def spinbox_value_changed() -> None:
             now_ns = time.time_ns()
-            show_step = self.controller.use_stepping and now_ns - self.last_move_ns > VduControlSlider.MIN_SET_INTERVAL_NS
+            show_step = self.controller.use_transitions and now_ns - self.last_move_ns > VduControlSlider.MIN_SET_INTERVAL_NS
             if not self.sliding or show_step:
                 self.last_move_ns = now_ns
                 slider.setValue(self.spinbox.value())
@@ -6153,8 +6163,8 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         self.convergence_divisor = lux_config.getint('lux-meter', 'convergence-divisor', fallback=2)
         log_info(f"LuxAutoWorker: lux-meter.convergence-divisor={self.convergence_divisor}")
         self.step_pause_millis = lux_config.getint('lux-meter', 'step_pause_millis', fallback=100)
-        self.use_stepping = auto_controller.main_controller.main_config.is_set(ConfOption.STEPPING_ENABLED)
-        print(f"{self.use_stepping=}")
+        self.use_transitions = auto_controller.main_controller.main_config.is_set(ConfOption.TRANSITIONS_ENABLED)
+        print(f"{self.use_transitions=}")
         log_info(f"LuxAutoWorker: lux-meter.step_pause_millis={self.step_pause_millis}")
         self._lux_dialog_message_qtsignal.connect(LuxDialog.lux_dialog_message)
         self._lux_dialog_message_qtsignal.connect(self.main_controller.main_window.status_message)
@@ -6273,18 +6283,18 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                         self.unexpected_change = True
                         return False
                     # Definitely not-interpolating OR interpolating and brightness change is significant OR we have to activate a Preset
-                    if self.use_stepping:
+                    if self.use_transitions:
                         step_size = max(1, abs(diff) // self.convergence_divisor)  # TODO find a good heuristic
                         step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
                         new_brightness = current_brightness + step
                     else:
-                        print("no stepping")
+                        print("no transitions")
                         new_brightness = profile_brightness
                     # Marking as transient, prevents showing intermediate preset matches, first clears, last sets (if appropriate).
                     origin = VcpOrigin.TRANSIENT if not first_step and new_brightness != profile_brightness else VcpOrigin.NORMAL
                     self.main_controller.set_value(vdu_sid, BRIGHTNESS_VCP_CODE, new_brightness, origin=origin)
                     self.expected_brightness_map[vdu_sid] = new_brightness
-                    log_info(f"LuxAutoWorker {thread_pid()}: Start stepping {vdu_sid=} {current_brightness=} to {profile_brightness=} "
+                    log_info(f"LuxAutoWorker {thread_pid()}: Start transitions {vdu_sid=} {current_brightness=} to {profile_brightness=} "
                              f" {profile_preset_name=} {lux_summary_text}") if first_step else None
                     self.status_message(
                         f"{SUN_SYMBOL} {current_brightness}%{STEPPING_SYMBOL}{profile_brightness}% {vdu_sid}" +

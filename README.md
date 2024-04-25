@@ -224,23 +224,32 @@ VDU controls and optimisations can be specified in the global or VDU-specific co
 Does adjusting a VDU affect its lifespan or health?
 ---------------------------------------------------
 
-There has been speculation that repeatably updating VDU settings might
-affect VDU lifespan.  If this is of concern, perhaps consider first adjusting the ambient 
-lighting rather than the VDU. Under the terms of its licence, there is no 
-warranty for the program.
+There has been speculation that repeatably altering VDU settings might
+affect VDU lifespan.  Possible reasons include the consumption of NVRAM
+write cycles, stressing the VDU power-supply, or increasing the LED panel
+burn-in.  
 
-That said, ``vdu_controls`` does include a number of features that in part address such 
-concerns:
+That said, ``vdu_controls`` does include a number of features that can be used 
+to reduce the overall frequency of adjustments.
 
-+ Slider-dragging is limited to updating the VDU every 0.5 secs.  
-+ Ambient brightness stepping is limited to 1.0 seconds between stepped adjustment. 
-+ The global `stepping` setting can be disabled. Slider-dragging and ambient-light-responses
-  will then jump to their final values without any transitioning steps. 
-+ Restoring a `preset` defaults to jumping immediately to the preset values 
-  without any transitional steps.
-+ The amount and frequency of changes can be reduced by using fewer `presets` or by
-  stair-stepping ambient brightness response curves so that they result in fewer adjustments.
-+ The manual override can be engaged when faced with fluctuating levels of ambient brightness.
++ Inbuilt mitigations:
+  + Transitions during slider-dragging are limited to one update per second.
+  + Transitions during ambient-light-level brightness adjustment are limited to one 
+    update per second. 
+  + Automatic ambient brigntness adjustment only triggers above a sensitity threashold 
+    which defaults to 10%.
+
++ Electable mitigations:
+  + Choose to restore pre-prepared 'presets' instead of dragging sliders.
+  + Refrain from adding transitions to `presets`.
+  + Turn off the global `transitions` setting, slider-dragging and ambient-light-responses
+    will then jump to their final values without any transitioning steps.
+  + Turn off `interpolation` for ambient brightness response curves, brightness will
+    stair-step instead of ramping through intermediate values.
+  + Attach `presets` to ambient brightness response curves, brightness will then tend
+    to jump to the closest presets.
+  + Engage the manual override when faced with rapidly fluctuating levels of ambient brightness.
+  + Consider adjusting the ambient lighting instead of the VDU.
 
 #### Other concerns
 
