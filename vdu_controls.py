@@ -138,9 +138,10 @@ Does adjusting a VDU affect its lifespan or health?
 
 There has been speculation that repeatably updating VDU settings might
 affect its lifespan.  If this is of concern to you, perhaps it might be better
-to adjust your ambient lighting rather than your VDU.
+to adjust your ambient lighting rather than your VDU. Under the terms of its licence,
+there is no warranty for the program.
 
-``vdu_controls`` does include features intended to partly address such concerns.
+That said, ``vdu_controls`` does include features intended to partly address such concerns.
 Dragging sliders is limited to updating the VDU every 0.5 secs.  Ambient brightness stepping
 is limited to 1.0 seconds between stepped adjustment. There is a `stepping` setting that
 can disable any stepping so slider-dragging and ambient-light-responses jump to the

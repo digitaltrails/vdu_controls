@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Mar 29, 2024" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Apr 25, 2024" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.11.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -87,6 +87,9 @@ may be specified multiple times
 .B \-\-system\-tray|\-\-no\-system\-tray
 start up as an entry in the system tray.
 \fB\-\-no\-system\-tray\fP is the default.
+.TP
+.B \-\-stepping|\-\-no\-stepping
+sliders and ambient brightness adjust in steps
 .TP
 .B \-\-location latitude,longitude
 local latitude and longitude for triggering presets
@@ -210,6 +213,28 @@ main\-window or the system\-tray icon.  The main\-menu has \fIALT\-key\fP shortc
 (subject to sufficient letters being available to distinguish all user defined presets).
 .sp
 For further information, including screenshots, see \fI\%https://github.com/digitaltrails/vdu_controls\fP .
+.SS Does adjusting a VDU affect its lifespan or health?
+.sp
+There has been speculation that repeatably updating VDU settings might
+affect its lifespan.  If this is of concern to you, perhaps it might be better
+to adjust your ambient lighting rather than your VDU. Under the terms of its licence,
+there is no warranty for the program.
+.sp
+That said, \fBvdu_controls\fP does include features intended to partly address such concerns.
+Dragging sliders is limited to updating the VDU every 0.5 secs.  Ambient brightness stepping
+is limited to 1.0 seconds between stepped adjustment. There is a \fIstepping\fP setting that
+can disable any stepping so slider\-dragging and ambient\-light\-responses jump to the
+final value with no transitional changes.
+.sp
+The amount and frequency of changes can be reduced by creating fewer presets or by
+stepping ambient brightness curves so that they result in fewer adjustments.
+.sp
+The power\-supplies in some older VDUs may buzz/squeel audibly when the brightness is
+turned way down. This may not be a major issue because, in normal surroundings,
+older VDUs are often not usable below about 85\-90% brightness.
+.sp
+Going beyond the standard DDC features by attempting to experiment with hidden
+or undocumented features or values has the potential to make irreversible changes.
 .SH CONFIGURATION
 .sp
 Configuration changes can be made via the \fBSettings\fP dialog or by editing the config\-files.
@@ -254,6 +279,7 @@ The config files are in INI\-format divided into a number of sections as outline
 # The vdu\-controls\-globals section is only required in $HOME/.config/vdu_controls/vdu_controls.conf
 system\-tray\-enabled = yes|no
 splash\-screen\-enabled = yes|no
+stepping\-enabled = yes|no
 translations\-enabled = yes|no
 weather\-enabled = yes|no
 schedule\-enabled = yes|no
@@ -839,6 +865,11 @@ These  variables specify the locale for language translations and units of dista
 LC_ALL is used by python, LANGUAGE is used by Qt. Normally, they should all have the same
 value, for example: \fBDa_DK\fP\&. For these to have any effect on language, \fBSettings\fP
 \fBTranslations Enabled\fP must also be enabled.
+.TP
+.B VDU_CONTROLS_SLIDER_STEP_INTERVAL_SECS
+The slider step intervul throttles the speed at which sliders can update a VDU.
+It defaults to 0.5 seconds.  This is a precautionary throttle in case rapidly or
+repeatably updating a VDU might shorten its lifespan.
 .TP
 .B VDU_CONTROLS_IPINFO_URL
 This variable overrides the default ip\-address to location service URL (\fBhttps://ipinfo.io/json\fP).
