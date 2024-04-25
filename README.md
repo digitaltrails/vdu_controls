@@ -96,6 +96,29 @@ dark-theme, KDE, Deepin, GNOME, and others.
 ![Custom](screen-shots/Screenshot_tray-200.png) ![Custom](screen-shots/Screenshot_settings-300.png)
 ![Custom](screen-shots/presets.png) ![Custom](screen-shots/lux-profiles.png)
 
+Does adjusting a VDU affect its lifespan or health?
+---------------------------------------------------
+
+There has been speculation that repeatably updating VDU settings might
+affect its lifespan.  If this is of concern to you, perhaps it might be better 
+to adjust your ambient lighting rather than your VDU.
+
+``vdu_controls`` does include features intended to partly address such concerns.
+Dragging sliders is limited to updating the VDU every 0.5 secs.  Ambient brightness stepping
+is limited to 1.0 seconds between stepped adjustment. There is a `stepping` setting that
+can disable any stepping so slider-dragging and ambient-light-responses jump to the
+final value with no transitional changes.
+
+The amount and frequency of changes can be reduced by creating fewer presets or by
+stepping ambient brightness curves so that they result in fewer adjustments.
+
+The power-supplies in some older VDUs may buzz/squeel audibly when the brightness is
+turned way down. This may not be a major issue because, in normal surroundings,
+older VDUs are often not usable below about 85-90% brightness.
+
+Going beyond the standard DDC features by attempting to experiment with hidden 
+or undocumented features or values has the potential to make irreversible changes.
+
 Getting Started
 ---------------
 
@@ -127,7 +150,7 @@ It's best to confirm that ``ddcutil`` is functioning before using ``vdu_controls
   (including some extra steps for Nvidia GPU users).
 * See [https://www.ddcutil.com/i2c_permissions/](https://www.ddcutil.com/i2c_permissions/) for instructions on setting 
   and testing the required permissions.  
-* Fo some VUDs, DDC/CI over Display-Port to Display-Port connections may work when others 
+* Fo some VDUs, DDC/CI over Display-Port to Display-Port connections may work when others 
   connections don't (mainly with some Nvidia GPUs).
 
 As of ddcutil 1.4, installing a pre-packaged ddcutil will most likely set the correct udev rules to 
@@ -288,6 +311,10 @@ Version History
 * 2.0.3
   * React to DPMS awake signal from ddcutil-service by re-assessing ambient brightness.
   * Avoid deadlocks by simplifying locking and obaying a locking hierarchy/protocol.
+  * Added a couple of features to partially mitigate concerns about affects on VDU lifespan.
+    * Throttled slider-drag stepping to limit updating the VDU to every 0.5 seconds.
+    * Added a 'stepping' setting that can turn off all stepping during dragging or adjustments for ambient light.
+  
 * 2.0.2
   * Added a *refresh* annotation suffix for use with VCP-codes which cause multiple changes.
   * Make manual adjustment of the ambient Light Level more accurate and responsive.
