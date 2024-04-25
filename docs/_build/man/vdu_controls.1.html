@@ -572,17 +572,23 @@ presets.</p>
 might affect VDU lifespan. If this is of concern, perhaps consider first
 adjusting the ambient lighting rather than the VDU. Under the terms of
 its licence, there is no warranty for the program.</p>
-<p>That said, <code>vdu_controls</code> does include features intended
-to partly address such concerns. Dragging sliders is limited to updating
-the VDU every 0.5 secs. Ambient brightness stepping is limited to 1.0
-seconds between stepped adjustment. The global <code>stepping</code>
-setting can be disabled, slider-dragging and ambient-light-responses
-will then jump to their final values without any transitioning steps.
-Restoring a <code>preset</code> defaults to jumping immediately without
-any transitional steps.</p>
-<p>The amount and frequency of changes can be reduced by creating fewer
-presets or by stepping ambient brightness curves so that they result in
-fewer adjustments.</p>
+<p>That said, <code>vdu_controls</code> does include a number of
+features intended to partly address such concerns:</p>
+<ul>
+<li>Slider-dragging is limited to updating the VDU every 0.5 secs.</li>
+<li>Ambient brightness stepping is limited to 1.0 seconds between
+stepped adjustment.</li>
+<li>The global <code>stepping</code> setting can be disabled.
+Slider-dragging and ambient-light-responses will then jump to their
+final values without any transitioning steps.</li>
+<li>Restoring a <code>preset</code> defaults to jumping immediately to
+the preset values without any transitional steps.</li>
+<li>The amount and frequency of changes can be reduced by using fewer
+<code>presets</code> or by stair-stepping ambient brightness response
+curves so that they result in fewer adjustments.</li>
+<li>The manual override can be engaged when faced with fluctuating
+levels of ambient brightness.</li>
+</ul>
 <h2 id="other-concerns">Other concerns</h2>
 <p>The power-supplies in some older VDUs may buzz/squeel audibly when
 the brightness is turned way down. This may not be a major issue

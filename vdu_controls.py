@@ -562,15 +562,18 @@ affect VDU lifespan.  If this is of concern, perhaps consider first adjusting th
 ambient lighting rather than the VDU. Under the terms of its licence, there is no
 warranty for the program.
 
-That said, ``vdu_controls`` does include features intended to partly address such
-concerns. Dragging sliders is limited to updating the VDU every 0.5 secs.  Ambient
-brightness stepping is limited to 1.0 seconds between stepped adjustment. The global
-`stepping` setting can be disabled, slider-dragging and ambient-light-responses will
-then jump to their final values without any transitioning steps. Restoring a `preset`
-defaults to jumping immediately without any transitional steps.
+That said, ``vdu_controls`` does include a number of features intended to partly address such
+concerns:
 
-The amount and frequency of changes can be reduced by creating fewer presets or by
-stepping ambient brightness curves so that they result in fewer adjustments.
++ Slider-dragging is limited to updating the VDU every 0.5 secs.
++ Ambient brightness stepping is limited to 1.0 seconds between stepped adjustment.
++ The global `stepping` setting can be disabled. Slider-dragging and ambient-light-responses
+  will then jump to their final values without any transitioning steps.
++ Restoring a `preset` defaults to jumping immediately to the preset values
+  without any transitional steps.
++ The amount and frequency of changes can be reduced by using fewer `presets` or by
+  stair-stepping ambient brightness response curves so that they result in fewer adjustments.
++ The manual override can be engaged when faced with fluctuating levels of ambient brightness.
 
 Other concerns
 --------------

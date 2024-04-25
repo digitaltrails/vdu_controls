@@ -758,15 +758,25 @@ affect VDU lifespan.  If this is of concern, perhaps consider first adjusting th
 ambient lighting rather than the VDU. Under the terms of its licence, there is no
 warranty for the program.
 .sp
-That said, \fBvdu_controls\fP does include features intended to partly address such
-concerns. Dragging sliders is limited to updating the VDU every 0.5 secs.  Ambient
-brightness stepping is limited to 1.0 seconds between stepped adjustment. The global
-\fIstepping\fP setting can be disabled, slider\-dragging and ambient\-light\-responses will
-then jump to their final values without any transitioning steps. Restoring a \fIpreset\fP
-defaults to jumping immediately without any transitional steps.
-.sp
-The amount and frequency of changes can be reduced by creating fewer presets or by
-stepping ambient brightness curves so that they result in fewer adjustments.
+That said, \fBvdu_controls\fP does include a number of features intended to partly address such
+concerns:
+.INDENT 0.0
+.IP \(bu 2
+Slider\-dragging is limited to updating the VDU every 0.5 secs.
+.IP \(bu 2
+Ambient brightness stepping is limited to 1.0 seconds between stepped adjustment.
+.IP \(bu 2
+The global \fIstepping\fP setting can be disabled. Slider\-dragging and ambient\-light\-responses
+will then jump to their final values without any transitioning steps.
+.IP \(bu 2
+Restoring a \fIpreset\fP defaults to jumping immediately to the preset values
+without any transitional steps.
+.IP \(bu 2
+The amount and frequency of changes can be reduced by using fewer \fIpresets\fP or by
+stair\-stepping ambient brightness response curves so that they result in fewer adjustments.
+.IP \(bu 2
+The manual override can be engaged when faced with fluctuating levels of ambient brightness.
+.UNINDENT
 .SS Other concerns
 .sp
 The power\-supplies in some older VDUs may buzz/squeel audibly when the brightness is

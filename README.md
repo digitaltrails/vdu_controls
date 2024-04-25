@@ -96,12 +96,12 @@ dark-theme, KDE, Deepin, GNOME, and others.
 ![Custom](screen-shots/Screenshot_tray-200.png) ![Custom](screen-shots/Screenshot_settings-300.png)
 ![Custom](screen-shots/presets.png) ![Custom](screen-shots/lux-profiles.png)
 
-The long term affects of repeatably rewriting a VDUs setting are not well understood, but some
-concerns have been expressed. See [below](https://github.com/digitaltrails/vdu_controls?tab=readme-ov-file#does-adjusting-a-vdu-affect-its-lifespan-or-health)
-for further details.
-
 Getting Started
 ---------------
+
+> The long term affects of repeatably rewriting a VDUs setting are not well understood, but some
+> concerns have been expressed. See [below](https://github.com/digitaltrails/vdu_controls?tab=readme-ov-file#does-adjusting-a-vdu-affect-its-lifespan-or-health)
+> for further details.
 
 To get started with ``vdu_controls``, you only need to download the ``vdu_controls.py`` python script and
 check that the dependencies described below are in place.  Alternatively, should you wish to install ``vdu_controls`` 
@@ -229,15 +229,18 @@ affect VDU lifespan.  If this is of concern, perhaps consider first adjusting th
 lighting rather than the VDU. Under the terms of its licence, there is no 
 warranty for the program.
 
-That said, ``vdu_controls`` does include features intended to partly address such 
-concerns. Dragging sliders is limited to updating the VDU every 0.5 secs.  Ambient 
-brightness stepping is limited to 1.0 seconds between stepped adjustment. The global 
-`stepping` setting can be disabled, slider-dragging and ambient-light-responses will 
-then jump to their final values without any transitioning steps. Restoring a `preset` 
-defaults to jumping immediately without any transitional steps.
+That said, ``vdu_controls`` does include a number of features that in part address such 
+concerns:
 
-The amount and frequency of changes can be reduced by creating fewer presets or by
-stepping ambient brightness curves so that they result in fewer adjustments.
++ Slider-dragging is limited to updating the VDU every 0.5 secs.  
++ Ambient brightness stepping is limited to 1.0 seconds between stepped adjustment. 
++ The global `stepping` setting can be disabled. Slider-dragging and ambient-light-responses
+  will then jump to their final values without any transitioning steps. 
++ Restoring a `preset` defaults to jumping immediately to the preset values 
+  without any transitional steps.
++ The amount and frequency of changes can be reduced by using fewer `presets` or by
+  stair-stepping ambient brightness response curves so that they result in fewer adjustments.
++ The manual override can be engaged when faced with fluctuating levels of ambient brightness.
 
 #### Other concerns
 
