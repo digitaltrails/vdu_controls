@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Apr 25, 2024" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Apr 26, 2024" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.11.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -88,7 +88,7 @@ may be specified multiple times
 start up as an entry in the system tray.
 \fB\-\-no\-system\-tray\fP is the default.
 .TP
-.B \-\-stepping|\-\-no\-stepping
+.B \-\-transitions|\-\-no\-transitions
 sliders and ambient brightness adjust in steps
 .TP
 .B \-\-location latitude,longitude
@@ -260,7 +260,7 @@ The config files are in INI\-format divided into a number of sections as outline
 # The vdu\-controls\-globals section is only required in $HOME/.config/vdu_controls/vdu_controls.conf
 system\-tray\-enabled = yes|no
 splash\-screen\-enabled = yes|no
-stepping\-enabled = yes|no
+transitions\-enabled = yes|no
 translations\-enabled = yes|no
 weather\-enabled = yes|no
 schedule\-enabled = yes|no
@@ -753,29 +753,47 @@ reduce the time taken to restore presets.
 There\(aqs plenty of useful info for getting the best out of \fBddcutil\fP at \fI\%https://www.ddcutil.com/\fP\&.
 .SH LIMITATIONS
 .sp
-There has been speculation that repeatably updating VDU settings might
-affect VDU lifespan.  If this is of concern, perhaps consider first adjusting the
-ambient lighting rather than the VDU. Under the terms of its licence, there is no
-warranty for the program.
+There has been speculation that repeatably altering VDU settings might
+affect VDU lifespan.  Possible reasons include the consumption of NVRAM
+write cycles, stressing the VDU power\-supply, or increasing the LED panel
+burn\-in.
 .sp
-That said, \fBvdu_controls\fP does include a number of features intended to partly address such
-concerns:
+That said, \fBvdu_controls\fP does include a number of features that can be used
+to reduce the overall frequency of adjustments.
 .INDENT 0.0
 .IP \(bu 2
-Slider\-dragging is limited to updating the VDU every 0.5 secs.
+Inbuilt mitigations:
+.INDENT 2.0
 .IP \(bu 2
-Ambient brightness stepping is limited to 1.0 seconds between stepped adjustment.
+Transitions during slider\-dragging are limited to one update per second.
 .IP \(bu 2
-The global \fIstepping\fP setting can be disabled. Slider\-dragging and ambient\-light\-responses
+Transitions during ambient\-light\-level brightness adjustment are limited to one
+update per second.
+.IP \(bu 2
+Automatic ambient brigntness adjustment only triggers above a sensitity threashold
+which defaults to 10%.
+.UNINDENT
+.IP \(bu 2
+Electable mitigations:
+.INDENT 2.0
+.IP \(bu 2
+Choose to restore pre\-prepared \(aqpresets\(aq instead of dragging sliders.
+.IP \(bu 2
+Refrain from adding transitions to \fIpresets\fP\&.
+.IP \(bu 2
+Turn off the global \fItransitions\fP setting, sliders and ambient\-light\-responses
 will then jump to their final values without any transitioning steps.
 .IP \(bu 2
-Restoring a \fIpreset\fP defaults to jumping immediately to the preset values
-without any transitional steps.
+Turn off \fIinterpolation\fP for ambient brightness response curves, brightness will
+stair\-step instead of ramping through intermediate values.
 .IP \(bu 2
-The amount and frequency of changes can be reduced by using fewer \fIpresets\fP or by
-stair\-stepping ambient brightness response curves so that they result in fewer adjustments.
+Attach \fIpresets\fP to ambient brightness response curves, brightness will then tend
+to jump to the closest presets.
 .IP \(bu 2
-The manual override can be engaged when faced with fluctuating levels of ambient brightness.
+Engage the manual override when faced with rapidly fluctuating levels of ambient brightness.
+.IP \(bu 2
+Consider adjusting the ambient lighting instead of the VDU.
+.UNINDENT
 .UNINDENT
 .SS Other concerns
 .sp
@@ -880,9 +898,9 @@ LC_ALL is used by python, LANGUAGE is used by Qt. Normally, they should all have
 value, for example: \fBDa_DK\fP\&. For these to have any effect on language, \fBSettings\fP
 \fBTranslations Enabled\fP must also be enabled.
 .TP
-.B VDU_CONTROLS_SLIDER_STEP_INTERVAL_SECS
-The slider step intervul throttles the speed at which sliders can update a VDU.
-It defaults to 0.5 seconds.  This is a precautionary throttle in case rapidly or
+.B VDU_CONTROLS_UI_INTERVAL_SECS
+The user interface intervul throttles the speed at which the UI can update a VDU.
+It defaults to 1.0 seconds.  This is a precautionary throttle in case rapidly or
 repeatably updating a VDU might shorten its lifespan.
 .TP
 .B VDU_CONTROLS_IPINFO_URL

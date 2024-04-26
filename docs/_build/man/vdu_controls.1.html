@@ -34,7 +34,7 @@ equivalent settings.</p>
   --system-tray|--no-system-tray
                         start up as an entry in the system tray.
                         ``--no-system-tray`` is the default.
-  --stepping|--no-stepping
+  --transitions|--no-transitions
                         sliders and ambient brightness adjust in steps
   --location latitude,longitude
                         local latitude and longitude for triggering presets
@@ -157,7 +157,7 @@ as outlined below::</p>
 # The vdu-controls-globals section is only required in $HOME/.config/vdu_controls/vdu_controls.conf
 system-tray-enabled = yes|no
 splash-screen-enabled = yes|no
-stepping-enabled = yes|no
+transitions-enabled = yes|no
 translations-enabled = yes|no
 weather-enabled = yes|no
 schedule-enabled = yes|no
@@ -568,26 +568,40 @@ presets.</p>
 <p>There’s plenty of useful info for getting the best out of
 <code>ddcutil</code> at https://www.ddcutil.com/.</p>
 <h1 id="limitations">Limitations</h1>
-<p>There has been speculation that repeatably updating VDU settings
-might affect VDU lifespan. If this is of concern, perhaps consider first
-adjusting the ambient lighting rather than the VDU. Under the terms of
-its licence, there is no warranty for the program.</p>
+<p>There has been speculation that repeatably altering VDU settings
+might affect VDU lifespan. Possible reasons include the consumption of
+NVRAM write cycles, stressing the VDU power-supply, or increasing the
+LED panel burn-in.</p>
 <p>That said, <code>vdu_controls</code> does include a number of
-features intended to partly address such concerns:</p>
+features that can be used to reduce the overall frequency of
+adjustments.</p>
 <ul>
-<li>Slider-dragging is limited to updating the VDU every 0.5 secs.</li>
-<li>Ambient brightness stepping is limited to 1.0 seconds between
-stepped adjustment.</li>
-<li>The global <code>stepping</code> setting can be disabled.
-Slider-dragging and ambient-light-responses will then jump to their
-final values without any transitioning steps.</li>
-<li>Restoring a <code>preset</code> defaults to jumping immediately to
-the preset values without any transitional steps.</li>
-<li>The amount and frequency of changes can be reduced by using fewer
-<code>presets</code> or by stair-stepping ambient brightness response
-curves so that they result in fewer adjustments.</li>
-<li>The manual override can be engaged when faced with fluctuating
+<li><p>Inbuilt mitigations:</p>
+<ul>
+<li>Transitions during slider-dragging are limited to one update per
+second.</li>
+<li>Transitions during ambient-light-level brightness adjustment are
+limited to one update per second.</li>
+<li>Automatic ambient brigntness adjustment only triggers above a
+sensitity threashold which defaults to 10%.</li>
+</ul></li>
+<li><p>Electable mitigations:</p>
+<ul>
+<li>Choose to restore pre-prepared ‘presets’ instead of dragging
+sliders.</li>
+<li>Refrain from adding transitions to <code>presets</code>.</li>
+<li>Turn off the global <code>transitions</code> setting, sliders and
+ambient-light-responses will then jump to their final values without any
+transitioning steps.</li>
+<li>Turn off <code>interpolation</code> for ambient brightness response
+curves, brightness will stair-step instead of ramping through
+intermediate values.</li>
+<li>Attach <code>presets</code> to ambient brightness response curves,
+brightness will then tend to jump to the closest presets.</li>
+<li>Engage the manual override when faced with rapidly fluctuating
 levels of ambient brightness.</li>
+<li>Consider adjusting the ambient lighting instead of the VDU.</li>
+</ul></li>
 </ul>
 <h2 id="other-concerns">Other concerns</h2>
 <p>The power-supplies in some older VDUs may buzz/squeel audibly when
@@ -666,9 +680,9 @@ GPUs. Detailed ddcutil info at https://www.ddcutil.com/</p>
     value, for example: ``Da_DK``. For these to have any effect on language, ``Settings``
     ``Translations Enabled`` must also be enabled.
 
-VDU_CONTROLS_SLIDER_STEP_INTERVAL_SECS
-    The slider step intervul throttles the speed at which sliders can update a VDU.
-    It defaults to 0.5 seconds.  This is a precautionary throttle in case rapidly or
+VDU_CONTROLS_UI_INTERVAL_SECS
+    The user interface intervul throttles the speed at which the UI can update a VDU.
+    It defaults to 1.0 seconds.  This is a precautionary throttle in case rapidly or
     repeatably updating a VDU might shorten its lifespan.
 
 VDU_CONTROLS_IPINFO_URL

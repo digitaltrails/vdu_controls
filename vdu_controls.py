@@ -566,6 +566,7 @@ That said, ``vdu_controls`` does include a number of features that can be used
 to reduce the overall frequency of adjustments.
 
 + Inbuilt mitigations:
+
   + Transitions during slider-dragging are limited to one update per second.
   + Transitions during ambient-light-level brightness adjustment are limited to one
     update per second.
@@ -573,9 +574,10 @@ to reduce the overall frequency of adjustments.
     which defaults to 10%.
 
 + Electable mitigations:
+
   + Choose to restore pre-prepared 'presets' instead of dragging sliders.
   + Refrain from adding transitions to `presets`.
-  + Turn off the global `transitions` setting, slider-dragging and ambient-light-responses
+  + Turn off the global `transitions` setting, sliders and ambient-light-responses
     will then jump to their final values without any transitioning steps.
   + Turn off `interpolation` for ambient brightness response curves, brightness will
     stair-step instead of ramping through intermediate values.
@@ -674,9 +676,9 @@ Environment
         value, for example: ``Da_DK``. For these to have any effect on language, ``Settings``
         ``Translations Enabled`` must also be enabled.
 
-    VDU_CONTROLS_SLIDER_STEP_INTERVAL_SECS
-        The slider step intervul throttles the speed at which sliders can update a VDU.
-        It defaults to 0.5 seconds.  This is a precautionary throttle in case rapidly or
+    VDU_CONTROLS_UI_INTERVAL_SECS
+        The user interface intervul throttles the speed at which the UI can update a VDU.
+        It defaults to 1.0 seconds.  This is a precautionary throttle in case rapidly or
         repeatably updating a VDU might shorten its lifespan.
 
     VDU_CONTROLS_IPINFO_URL
@@ -2410,23 +2412,41 @@ class VduControllerAsyncSetter(WorkerThread):  # Used to decouple the set-vcp fr
     def __init__(self):
         super().__init__(task_body=self._async_setvcp_task_body, task_finished=None, loop=True)
         self._async_setvcp_queue: queue.Queue = queue.Queue()
+        # limit set_vcp to a sustainable interval - KDE powerdevel recommendation - 0.5s, ddcui 1.0 seconds
+        self._sleep_seconds = float(os.getenv("VDU_CONTROLS_UI_INTERVAL_SECS", '1.0'))
+        self.use_transitions = False;
 
     def _async_setvcp_task_body(self, _: WorkerThread):
-        controller = vcp_code = value = origin = None
-        while not self._async_setvcp_queue.empty():  # Clear the queue and apply the last entry
+        latest_pending = {}  # Handle bursts of UI setvcp requests, filtering out repeats for the same feature.
+        cycle_start = time.time()
+        while not self._async_setvcp_queue.empty():  # Keep going while there is something in the queue
             try:
                 controller, vcp_code, value, origin = self._async_setvcp_queue.get_nowait()
+                key = (controller, vcp_code)
+                if log_debug_enabled:
+                    log_debug(f"UI discard earlier op on {controller.vdu_number=} {vcp_code=}") if key in latest_pending else None
+                latest_pending[key] = (value, origin)  # keep the latest for each controller+vcp_code.
                 self._async_setvcp_queue.task_done()
             except queue.Empty:
-                break
-        if controller is not None:  # if last item in a non-empty queue
-            controller.set_vcp_value(vcp_code, value, origin, asynchronous_caller=True)  # use the last queued value
-            time.sleep(0.1)   # minimum time, enough for the VDU to recover, hopefully.
-        else:
-            time.sleep(0.25)  # when idle, sleep longer
+                pass
+            if latest_pending:  # some setvcp requests are pending,
+                if self.use_transitions:  # Need to transition the VDU by setting intermediate values
+                    if time.time() - cycle_start > self._sleep_seconds:  # time to refresh the actual VDU
+                        print("break")
+                        break
+                else:
+                    self.doze(0.2)  # wait a bit in case more arrive - might be dragging a slider
+        if latest_pending:  # nothing more has arrived, if any setvcp requests are pending, set for real now
+            for (controller, vcp_code), (value, origin) in latest_pending.items():
+                log_debug(f"UI set {controller.vdu_number=} {vcp_code=} {value=} {origin=}") if log_debug_enabled else None
+                controller.set_vcp_value(vcp_code, value, origin, asynchronous_caller=True)
+        self.doze(self._sleep_seconds)
 
     def queue_setvcp(self, controller: VduController, vcp_code: str, value: int, origin: VcpOrigin):
         self._async_setvcp_queue.put((controller, vcp_code, value, origin))
+
+    def enable_transitions(self, on: bool):
+        self.use_transitions = on
 
 
 class VduController(QObject):
@@ -2480,12 +2500,15 @@ class VduController(QObject):
             VduController._async_setvcp_task = VduControllerAsyncSetter()
             VduController._async_setvcp_task.start()
 
+
+
         self.vdu_model_id = proper_name(vdu_model_name.strip())
         self.capabilities_text: str | None = None
         self.config = None
         self.values_cache: Dict[str, int] = {}
         self.ignore_vdu = False
         self.use_transitions = default_config.is_set(ConfOption.TRANSITIONS_ENABLED)
+        VduController._async_setvcp_task.enable_transitions(self.use_transitions)
         default_sleep_multiplier: float | None = default_config.get_sleep_multiplier(fallback=None)
         enabled_vcp_codes = default_config.get_all_enabled_vcp_codes()
         for config_name in (self.vdu_stable_id, self.vdu_model_id):
@@ -3164,14 +3187,12 @@ class VduControlSlider(VduControlBase):
     GUI control for a DDC continuously variable attribute. A compound widget with icon, slider, and text-field.
     """
 
-    # limit set_vcp to a sustainable interval - KDE powerdevel recommendation - 0.5s, ddcui 1.0 seconds
-    MIN_SET_INTERVAL_NS = int(float(os.getenv("VDU_CONTROLS_SLIDER_STEP_INTERVAL_SECS", default='1.0')) * 1_000_000_000)
-
     def __init__(self, controller: VduController, vcp_capability: VcpCapability) -> None:
         """Construct the slider control and initialize its values from the VDU."""
         super().__init__(controller, vcp_capability)
         layout = QHBoxLayout()
-        self.last_move_ns = time.time_ns()
+        self.sliding = False
+        self.show_transitions = self.controller.use_transitions
         self.setLayout(layout)
         self.svg_icon: QSvgWidget | None = None
         if (vcp_capability.vcp_code in SUPPORTED_VCP_BY_CODE
@@ -3209,12 +3230,9 @@ class VduControlSlider(VduControlBase):
 
         def slider_changed(value: int) -> None:
             self.current_value = value
-            self.spinbox.setValue(value)
+            if self.slider.value() != self.spinbox.value():
+                self.spinbox.setValue(value)
             self.ui_change_vdu_attribute(value)
-
-        slider.valueChanged.connect(slider_changed)
-
-        self.sliding = False  # Stop the controls from circular feedback and from triggering self.ui_change_vdu_attribute()
 
         def slider_moved(value: int) -> None:
             try:
@@ -3223,15 +3241,13 @@ class VduControlSlider(VduControlBase):
             finally:
                 self.sliding = False
 
-        slider.sliderMoved.connect(slider_moved)
-
         def spinbox_value_changed() -> None:
-            now_ns = time.time_ns()
-            show_step = self.controller.use_transitions and now_ns - self.last_move_ns > VduControlSlider.MIN_SET_INTERVAL_NS
-            if not self.sliding or show_step:
-                self.last_move_ns = now_ns
-                slider.setValue(self.spinbox.value())
+            if not self.sliding or self.show_transitions:
+                if self.slider.value() != self.spinbox.value():
+                    slider.setValue(self.spinbox.value())
 
+        slider.valueChanged.connect(slider_changed)
+        slider.sliderMoved.connect(slider_moved)
         self.spinbox.valueChanged.connect(spinbox_value_changed)
 
     def update_from_vdu(self, vcp_value: VcpValue):

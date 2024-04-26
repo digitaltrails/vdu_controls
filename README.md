@@ -233,16 +233,19 @@ That said, ``vdu_controls`` does include a number of features that can be used
 to reduce the overall frequency of adjustments.
 
 + Inbuilt mitigations:
-  + Transitions during slider-dragging are limited to one update per second.
+
+  + Transitions due to UI inputs are limited to one update per second.
   + Transitions during ambient-light-level brightness adjustment are limited to one 
     update per second. 
   + Automatic ambient brigntness adjustment only triggers above a sensitity threashold 
     which defaults to 10%.
 
 + Electable mitigations:
+
+  + Minimise dragging sliders and spinning spinners. 
   + Choose to restore pre-prepared 'presets' instead of dragging sliders.
   + Refrain from adding transitions to `presets`.
-  + Turn off the global `transitions` setting, slider-dragging and ambient-light-responses
+  + Turn off the global `transitions` setting, sliders and ambient-light-response
     will then jump to their final values without any transitioning steps.
   + Turn off `interpolation` for ambient brightness response curves, brightness will
     stair-step instead of ramping through intermediate values.
