@@ -2421,6 +2421,7 @@ class VduControllerAsyncSetter(WorkerThread):  # Used to decouple the set-vcp fr
         cycle_start = time.time()
         while not self._async_setvcp_queue.empty():  # Keep going while there is something in the queue
             try:
+                # print(f"{self._async_setvcp_queue.qsize()=}")
                 controller, vcp_code, value, origin = self._async_setvcp_queue.get_nowait()
                 key = (controller, vcp_code)
                 if log_debug_enabled:
@@ -2432,9 +2433,8 @@ class VduControllerAsyncSetter(WorkerThread):  # Used to decouple the set-vcp fr
             if latest_pending:  # some setvcp requests are pending,
                 if self.use_transitions:  # Need to transition the VDU by setting intermediate values
                     if time.time() - cycle_start > self._sleep_seconds:  # time to refresh the actual VDU
-                        print("break")
                         break
-                else:
+                elif self._async_setvcp_queue.empty():
                     self.doze(0.2)  # wait a bit in case more arrive - might be dragging a slider
         if latest_pending:  # nothing more has arrived, if any setvcp requests are pending, set for real now
             for (controller, vcp_code), (value, origin) in latest_pending.items():
@@ -3225,30 +3225,18 @@ class VduControlSlider(VduControlBase):
             self.spinbox.setRange(int_min, int_max)
             self.slider.setRange(int_min, int_max)
 
+        self.slider.setTracking(True)
+        self.slider.valueChanged.connect(self.spinbox.setValue)
+        self.spinbox.valueChanged.connect(self.slider.setValue)
+
         self.spinbox.setValue(slider.value())
         layout.addWidget(self.spinbox)
 
         def slider_changed(value: int) -> None:
             self.current_value = value
-            if self.slider.value() != self.spinbox.value():
-                self.spinbox.setValue(value)
             self.ui_change_vdu_attribute(value)
 
-        def slider_moved(value: int) -> None:
-            try:
-                self.sliding = True
-                self.spinbox.setValue(value)
-            finally:
-                self.sliding = False
-
-        def spinbox_value_changed() -> None:
-            if not self.sliding or self.show_transitions:
-                if self.slider.value() != self.spinbox.value():
-                    slider.setValue(self.spinbox.value())
-
         slider.valueChanged.connect(slider_changed)
-        slider.sliderMoved.connect(slider_moved)
-        self.spinbox.valueChanged.connect(spinbox_value_changed)
 
     def update_from_vdu(self, vcp_value: VcpValue):
         if len(self.range_restriction) == 0:
