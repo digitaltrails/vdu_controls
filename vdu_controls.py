@@ -2434,9 +2434,10 @@ class VduControllerAsyncSetter(WorkerThread):  # Used to decouple the set-vcp fr
                 if self.use_transitions:  # Need to transition the VDU by setting intermediate values
                     if time.time() - cycle_start > self._sleep_seconds:  # time to refresh the actual VDU
                         break
-                elif self._async_setvcp_queue.empty():
+                if self._async_setvcp_queue.empty():
                     self.doze(0.2)  # wait a bit in case more arrive - might be dragging a slider
         if latest_pending:  # nothing more has arrived, if any setvcp requests are pending, set for real now
+            print(f"{len(latest_pending)=}")
             for (controller, vcp_code), (value, origin) in latest_pending.items():
                 log_debug(f"UI set {controller.vdu_number=} {vcp_code=} {value=} {origin=}") if log_debug_enabled else None
                 controller.set_vcp_value(vcp_code, value, origin, asynchronous_caller=True)
