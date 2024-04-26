@@ -333,10 +333,10 @@ Version History
 ---------------
 * 2.0.3
   * React to DPMS awake signal from ddcutil-service by re-assessing ambient brightness.
-  * Avoid deadlocks by simplifying locking and obaying a locking hierarchy/protocol.
-  * Added a couple of features to partially mitigate concerns about affects on VDU lifespan.
-    * Throttled slider-drag stepping to limit updating the VDU to every 0.5 seconds.
-    * Added a 'stepping' setting that can turn off all stepping during dragging or adjustments for ambient light.
+  * Add options that can be used to further reduce the number of writes to VDU NVRAM.
+    * Throttled UI-inputs to limit updating the VDU to a maximum of once per seconds.
+    * Added a 'transitions' setting that can turn off all transitions for UI-inputs and ambient lux-based adjustments.
+  * Simplified locking and conformed to a locking hierarchy/protocol to avoid potential deadlocks.
   
 * 2.0.2
   * Added a *refresh* annotation suffix for use with VCP-codes which cause multiple changes.
