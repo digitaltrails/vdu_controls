@@ -234,19 +234,16 @@ to reduce the overall frequency of adjustments.
 
 + Inbuilt mitigations:
 
-  + Transitions due to UI inputs are limited to one update per second.
-  + Transitions during ambient-light-level brightness adjustment are limited to one 
-    update per second. 
-  + Automatic ambient brigntness adjustment only triggers above a sensitity threashold 
-    which defaults to 10%.
+  + Sliders and spinners only update the VDU for fine/small adjustments of the controls.
+  + Transitions during ambient-light-level brightness adjustment are limited to changes
+    of greater than 20%.
+  + Automatic ambient brightness adjustment only triggers a change when the
+    proposed brightness differs from the current brightness by at least 10%.
 
 + Electable mitigations:
 
-  + Minimise dragging sliders and spinning spinners. 
   + Choose to restore pre-prepared 'presets' instead of dragging sliders.
   + Refrain from adding transitions to `presets`.
-  + Turn off the global `transitions` setting, sliders and ambient-light-response
-    will then jump to their final values without any transitioning steps.
   + Turn off `interpolation` for ambient brightness response curves, brightness will
     stair-step instead of ramping through intermediate values.
   + Attach `presets` to ambient brightness response curves, brightness will then tend
@@ -333,9 +330,7 @@ Version History
 ---------------
 * 2.0.3
   * React to DPMS awake signal from ddcutil-service by re-assessing ambient brightness.
-  * Add options that can be used to further reduce the number of writes to VDU NVRAM.
-    * Throttled UI-inputs to limit updating the VDU to a maximum of once per seconds.
-    * Added a 'transitions' setting that can turn off all transitions for UI-inputs and ambient lux-based adjustments.
+  * Reduce the number of writes to VDU NVRAM by sliders, spinners, and ambient brightness adjustments.
   * Simplified locking and conformed to a locking hierarchy/protocol to avoid potential deadlocks.
   
 * 2.0.2

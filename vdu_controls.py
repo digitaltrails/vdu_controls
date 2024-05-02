@@ -42,8 +42,6 @@ Arguments supplied on the command line override config file equivalent settings.
       --system-tray|--no-system-tray
                             start up as an entry in the system tray.
                             ``--no-system-tray`` is the default.
-      --transitions|--no-transitions
-                            sliders and ambient brightness adjust in steps
       --location latitude,longitude
                             local latitude and longitude for triggering presets
                             by solar elevation
@@ -163,7 +161,6 @@ The config files are in INI-format divided into a number of sections as outlined
     # The vdu-controls-globals section is only required in $HOME/.config/vdu_controls/vdu_controls.conf
     system-tray-enabled = yes|no
     splash-screen-enabled = yes|no
-    transitions-enabled = yes|no
     translations-enabled = yes|no
     weather-enabled = yes|no
     schedule-enabled = yes|no
@@ -336,7 +333,7 @@ slider controls such as brightness and contrast will be stepped by one until the
 reached.  Any non-continuous values will be set after all continuous values have reached their
 final values, for example, if input-source is included in a preset, it will be restored at the end.
 
-The Preset Dialog includes a combo-box for defining when to applt transitions to a preset:
+The Preset Dialog includes a combo-box for defining when to apply transitions to a preset:
 
  - ``None`` - change immediately;
  - ``On schedule`` - slowly change according to a solar elevation trigger;
@@ -567,18 +564,16 @@ to reduce the overall frequency of adjustments.
 
 + Inbuilt mitigations:
 
-  + Transitions during slider-dragging are limited to one update per second.
-  + Transitions during ambient-light-level brightness adjustment are limited to one
-    update per second.
-  + Automatic ambient brigntness adjustment only triggers above a sensitity threashold
-    which defaults to 10%.
+  + Sliders and spinners only update the VDU for fine/small adjustments of the controls.
+  + Transitions during ambient-light-level brightness adjustment are limited to changes
+    of greater than 20%.
+  + Automatic ambient brightness adjustment only triggers a change when the
+    proposed brightness differs from the current brightness by at least 10%.
 
 + Electable mitigations:
 
   + Choose to restore pre-prepared 'presets' instead of dragging sliders.
   + Refrain from adding transitions to `presets`.
-  + Turn off the global `transitions` setting, sliders and ambient-light-responses
-    will then jump to their final values without any transitioning steps.
   + Turn off `interpolation` for ambient brightness response curves, brightness will
     stair-step instead of ramping through intermediate values.
   + Attach `presets` to ambient brightness response curves, brightness will then tend
@@ -2115,9 +2110,6 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
                                        tip=QT_TR_NOOP('start up in the system tray'), related='hide-on-focus-out')
     HIDE_ON_FOCUS_OUT = conf_opt_def(cname=QT_TR_NOOP('hide-on-focus-out'), default="no", restart=False,
                                      tip=QT_TR_NOOP('minimise the main window automatically on focus out'))
-    TRANSITIONS_ENABLED = conf_opt_def(cname=QT_TR_NOOP('transitions-enabled'), default="no", restart=False,
-                                       tip=QT_TR_NOOP('sliders and ambient-adjustment adjustments transition'
-                                                      ' through intermediate values'))
     TRANSLATIONS_ENABLED = conf_opt_def(cname=QT_TR_NOOP('translations-enabled'), default="no", restart=True,
                                         tip=QT_TR_NOOP('enable language translations'))
     WEATHER_ENABLED = conf_opt_def(cname=QT_TR_NOOP('weather-enabled'), default='yes', tip=QT_TR_NOOP('enable weather lookups'))
@@ -2431,11 +2423,8 @@ class VduControllerAsyncSetter(WorkerThread):  # Used to decouple the set-vcp fr
             except queue.Empty:
                 pass
             if latest_pending:  # some setvcp requests are pending,
-                if self.use_transitions:  # Need to transition the VDU by setting intermediate values
-                    if time.time() - cycle_start > self._sleep_seconds:  # time to refresh the actual VDU
-                        break
                 if self._async_setvcp_queue.empty():
-                    self.doze(0.2)  # wait a bit in case more arrive - might be dragging a slider
+                    self.doze(0.25)  # wait a bit in case more arrive - might be dragging a slider or spinning a spinner
         if latest_pending:  # nothing more has arrived, if any setvcp requests are pending, set for real now
             print(f"{len(latest_pending)=}")
             for (controller, vcp_code), (value, origin) in latest_pending.items():
@@ -2445,9 +2434,6 @@ class VduControllerAsyncSetter(WorkerThread):  # Used to decouple the set-vcp fr
 
     def queue_setvcp(self, controller: VduController, vcp_code: str, value: int, origin: VcpOrigin):
         self._async_setvcp_queue.put((controller, vcp_code, value, origin))
-
-    def enable_transitions(self, on: bool):
-        self.use_transitions = on
 
 
 class VduController(QObject):
@@ -2501,15 +2487,11 @@ class VduController(QObject):
             VduController._async_setvcp_task = VduControllerAsyncSetter()
             VduController._async_setvcp_task.start()
 
-
-
         self.vdu_model_id = proper_name(vdu_model_name.strip())
         self.capabilities_text: str | None = None
         self.config = None
         self.values_cache: Dict[str, int] = {}
         self.ignore_vdu = False
-        self.use_transitions = default_config.is_set(ConfOption.TRANSITIONS_ENABLED)
-        VduController._async_setvcp_task.enable_transitions(self.use_transitions)
         default_sleep_multiplier: float | None = default_config.get_sleep_multiplier(fallback=None)
         enabled_vcp_codes = default_config.get_all_enabled_vcp_codes()
         for config_name in (self.vdu_stable_id, self.vdu_model_id):
@@ -3193,7 +3175,6 @@ class VduControlSlider(VduControlBase):
         super().__init__(controller, vcp_capability)
         layout = QHBoxLayout()
         self.sliding = False
-        self.show_transitions = self.controller.use_transitions
         self.setLayout(layout)
         self.svg_icon: QSvgWidget | None = None
         if (vcp_capability.vcp_code in SUPPORTED_VCP_BY_CODE
@@ -6168,8 +6149,6 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         self.convergence_divisor = lux_config.getint('lux-meter', 'convergence-divisor', fallback=2)
         log_info(f"LuxAutoWorker: lux-meter.convergence-divisor={self.convergence_divisor}")
         self.step_pause_millis = lux_config.getint('lux-meter', 'step_pause_millis', fallback=100)
-        self.use_transitions = auto_controller.main_controller.main_config.is_set(ConfOption.TRANSITIONS_ENABLED)
-        print(f"{self.use_transitions=}")
         log_info(f"LuxAutoWorker: lux-meter.step_pause_millis={self.step_pause_millis}")
         self._lux_dialog_message_qtsignal.connect(LuxDialog.lux_dialog_message)
         self._lux_dialog_message_qtsignal.connect(self.main_controller.main_window.status_message)
@@ -6287,14 +6266,13 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                         self.status_message(f"{SUN_SYMBOL} {ERROR_SYMBOL} {RAISED_HAND_SYMBOL} {vdu_sid}")
                         self.unexpected_change = True
                         return False
-                    # Definitely not-interpolating OR interpolating and brightness change is significant OR we have to activate a Preset
-                    if self.use_transitions:
+                    # Not-interpolating OR interpolating and brightness change is significant OR we have to activate a Preset
+                    if abs(diff) <= 20:
+                        new_brightness = profile_brightness
+                    else:
                         step_size = max(1, abs(diff) // self.convergence_divisor)  # TODO find a good heuristic
                         step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
                         new_brightness = current_brightness + step
-                    else:
-                        print("no transitions")
-                        new_brightness = profile_brightness
                     # Marking as transient, prevents showing intermediate preset matches, first clears, last sets (if appropriate).
                     origin = VcpOrigin.TRANSIENT if not first_step and new_brightness != profile_brightness else VcpOrigin.NORMAL
                     self.main_controller.set_value(vdu_sid, BRIGHTNESS_VCP_CODE, new_brightness, origin=origin)

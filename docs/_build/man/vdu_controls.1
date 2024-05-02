@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Apr 26, 2024" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "May 02, 2024" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.11.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -87,9 +87,6 @@ may be specified multiple times
 .B \-\-system\-tray|\-\-no\-system\-tray
 start up as an entry in the system tray.
 \fB\-\-no\-system\-tray\fP is the default.
-.TP
-.B \-\-transitions|\-\-no\-transitions
-sliders and ambient brightness adjust in steps
 .TP
 .B \-\-location latitude,longitude
 local latitude and longitude for triggering presets
@@ -260,7 +257,6 @@ The config files are in INI\-format divided into a number of sections as outline
 # The vdu\-controls\-globals section is only required in $HOME/.config/vdu_controls/vdu_controls.conf
 system\-tray\-enabled = yes|no
 splash\-screen\-enabled = yes|no
-transitions\-enabled = yes|no
 translations\-enabled = yes|no
 weather\-enabled = yes|no
 schedule\-enabled = yes|no
@@ -476,7 +472,7 @@ slider controls such as brightness and contrast will be stepped by one until the
 reached.  Any non\-continuous values will be set after all continuous values have reached their
 final values, for example, if input\-source is included in a preset, it will be restored at the end.
 .sp
-The Preset Dialog includes a combo\-box for defining when to applt transitions to a preset:
+The Preset Dialog includes a combo\-box for defining when to apply transitions to a preset:
 .INDENT 0.0
 .INDENT 3.5
 .INDENT 0.0
@@ -765,13 +761,13 @@ to reduce the overall frequency of adjustments.
 Inbuilt mitigations:
 .INDENT 2.0
 .IP \(bu 2
-Transitions during slider\-dragging are limited to one update per second.
+Sliders and spinners only update the VDU for fine/small adjustments of the controls.
 .IP \(bu 2
-Transitions during ambient\-light\-level brightness adjustment are limited to one
-update per second.
+Transitions during ambient\-light\-level brightness adjustment are limited to changes
+of greater than 20%.
 .IP \(bu 2
-Automatic ambient brigntness adjustment only triggers above a sensitity threashold
-which defaults to 10%.
+Automatic ambient brightness adjustment only triggers a change when the
+proposed brightness differs from the current brightness by at least 10%.
 .UNINDENT
 .IP \(bu 2
 Electable mitigations:
@@ -780,9 +776,6 @@ Electable mitigations:
 Choose to restore pre\-prepared \(aqpresets\(aq instead of dragging sliders.
 .IP \(bu 2
 Refrain from adding transitions to \fIpresets\fP\&.
-.IP \(bu 2
-Turn off the global \fItransitions\fP setting, sliders and ambient\-light\-responses
-will then jump to their final values without any transitioning steps.
 .IP \(bu 2
 Turn off \fIinterpolation\fP for ambient brightness response curves, brightness will
 stair\-step instead of ramping through intermediate values.

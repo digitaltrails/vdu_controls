@@ -34,8 +34,6 @@ equivalent settings.</p>
   --system-tray|--no-system-tray
                         start up as an entry in the system tray.
                         ``--no-system-tray`` is the default.
-  --transitions|--no-transitions
-                        sliders and ambient brightness adjust in steps
   --location latitude,longitude
                         local latitude and longitude for triggering presets
                         by solar elevation
@@ -157,7 +155,6 @@ as outlined below::</p>
 # The vdu-controls-globals section is only required in $HOME/.config/vdu_controls/vdu_controls.conf
 system-tray-enabled = yes|no
 splash-screen-enabled = yes|no
-transitions-enabled = yes|no
 translations-enabled = yes|no
 weather-enabled = yes|no
 schedule-enabled = yes|no
@@ -329,7 +326,7 @@ brightness and contrast will be stepped by one until the final values
 are reached. Any non-continuous values will be set after all continuous
 values have reached their final values, for example, if input-source is
 included in a preset, it will be restored at the end.</p>
-<p>The Preset Dialog includes a combo-box for defining when to applt
+<p>The Preset Dialog includes a combo-box for defining when to apply
 transitions to a preset:</p>
 <ul>
 <li><code>None</code> - change immediately;</li>
@@ -578,21 +575,19 @@ adjustments.</p>
 <ul>
 <li><p>Inbuilt mitigations:</p>
 <ul>
-<li>Transitions during slider-dragging are limited to one update per
-second.</li>
+<li>Sliders and spinners only update the VDU for fine/small adjustments
+of the controls.</li>
 <li>Transitions during ambient-light-level brightness adjustment are
-limited to one update per second.</li>
-<li>Automatic ambient brigntness adjustment only triggers above a
-sensitity threashold which defaults to 10%.</li>
+limited to changes of greater than 20%.</li>
+<li>Automatic ambient brightness adjustment only triggers a change when
+the proposed brightness differs from the current brightness by at least
+10%.</li>
 </ul></li>
 <li><p>Electable mitigations:</p>
 <ul>
 <li>Choose to restore pre-prepared ‘presets’ instead of dragging
 sliders.</li>
 <li>Refrain from adding transitions to <code>presets</code>.</li>
-<li>Turn off the global <code>transitions</code> setting, sliders and
-ambient-light-responses will then jump to their final values without any
-transitioning steps.</li>
 <li>Turn off <code>interpolation</code> for ambient brightness response
 curves, brightness will stair-step instead of ramping through
 intermediate values.</li>
