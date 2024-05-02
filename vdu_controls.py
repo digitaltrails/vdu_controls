@@ -564,7 +564,7 @@ to reduce the overall frequency of adjustments.
 
 + Inbuilt mitigations:
 
-  + Sliders and spinners only update the VDU for fine/small adjustments of the controls.
+  + Slider and spin-box controls only update the VDU when adjusments becomes small or stop.
   + Transitions during ambient-light-level brightness adjustment are limited to changes
     of greater than 20%.
   + Automatic ambient brightness adjustment only triggers a change when the
@@ -1947,6 +1947,22 @@ class DialogSingletonMixin:
         return DialogSingletonMixin._dialogs_map.get(cls.__name__)
 
 
+class ClickableSlider(QSlider):  # loosely based on https://stackoverflow.com/a/29639127/609575
+
+    def mousePressEvent(self, event):  # On mouse click, set value to the value at the click position
+        self.setValue(QStyle.sliderValueFromPosition(self.minimum(), self.maximum(), event.x(), self.width()))
+        super().mousePressEvent(event)
+
+
+class LineEditAll(QLineEdit):  # On mouse click, select the entire text - Make it easier to over-type
+    def __init__(self, *args):
+        super().__init__(*args)
+
+    def mousePressEvent(self, event):
+        super().mousePressEvent(event)
+        self.selectAll()
+
+
 # Enabling this would enable anything supported by ddcutil - but that isn't safe for the hardware
 # given the weird settings that appear to be available and the sometimes dodgy VDU-vendor DDC
 # implementations.  Plus the user might not be able to reset to factory for some of them?
@@ -2410,7 +2426,6 @@ class VduControllerAsyncSetter(WorkerThread):  # Used to decouple the set-vcp fr
 
     def _async_setvcp_task_body(self, _: WorkerThread):
         latest_pending = {}  # Handle bursts of UI setvcp requests, filtering out repeats for the same feature.
-        cycle_start = time.time()
         while not self._async_setvcp_queue.empty():  # Keep going while there is something in the queue
             try:
                 # print(f"{self._async_setvcp_queue.qsize()=}")
@@ -2422,15 +2437,14 @@ class VduControllerAsyncSetter(WorkerThread):  # Used to decouple the set-vcp fr
                 self._async_setvcp_queue.task_done()
             except queue.Empty:
                 pass
-            if latest_pending:  # some setvcp requests are pending,
-                if self._async_setvcp_queue.empty():
-                    self.doze(0.25)  # wait a bit in case more arrive - might be dragging a slider or spinning a spinner
+            if latest_pending and self._async_setvcp_queue.empty():  # some setvcp requests are pending,
+                self.doze(0.25)  # wait a bit in case more arrive - might be dragging a slider or spinning a spinner
         if latest_pending:  # nothing more has arrived, if any setvcp requests are pending, set for real now
-            print(f"{len(latest_pending)=}")
             for (controller, vcp_code), (value, origin) in latest_pending.items():
                 log_debug(f"UI set {controller.vdu_number=} {vcp_code=} {value=} {origin=}") if log_debug_enabled else None
                 controller.set_vcp_value(vcp_code, value, origin, asynchronous_caller=True)
-        self.doze(self._sleep_seconds)
+        else:
+            self.doze(self._sleep_seconds)
 
     def queue_setvcp(self, controller: VduController, vcp_code: str, value: int, origin: VcpOrigin):
         self._async_setvcp_queue.put((controller, vcp_code, value, origin))
@@ -3158,13 +3172,6 @@ class VduControlBase(QWidget):
             self.refresh_ui_only = False
 
 
-class ClickableSlider(QSlider):  # loosely based on https://stackoverflow.com/a/29639127/609575
-
-    def mousePressEvent(self, event):  # On mouse click, set value to the value at the click position
-        self.setValue(QStyle.sliderValueFromPosition(self.minimum(), self.maximum(), event.x(), self.width()))
-        super().mousePressEvent(event)
-
-
 class VduControlSlider(VduControlBase):
     """
     GUI control for a DDC continuously variable attribute. A compound widget with icon, slider, and text-field.
@@ -3202,6 +3209,7 @@ class VduControlSlider(VduControlBase):
         layout.addWidget(slider)
 
         self.spinbox = QSpinBox()
+        self.spinbox.setLineEdit(LineEditAll())
         if len(self.range_restriction) != 0:
             int_min, int_max = int(self.range_restriction[1]), int(self.range_restriction[2])
             self.spinbox.setRange(int_min, int_max)
@@ -7065,6 +7073,7 @@ class LuxAmbientSlider(QWidget):
         input_panel_layout.addWidget(lux_slider_panel, stretch=100)
 
         self.lux_input_field = QSpinBox()
+        self.lux_input_field.setLineEdit(LineEditAll())
         self.lux_input_field.setToolTip(tr("Ambient light level input (lux value)"))
         self.lux_input_field.setKeyboardTracking(False)
         self.lux_input_field.setRange(1, 100000)
