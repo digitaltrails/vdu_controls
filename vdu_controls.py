@@ -8172,6 +8172,7 @@ class VduAppWindow(QMainWindow):
         log_debug(f"respond {vdu_stable_id=} {vcp_code=} {value=} {origin.name=}") if log_debug_enabled else None
         if origin != VcpOrigin.TRANSIENT:  # Only want to indicate final status (not when just passing through a preset)
             self.update_status_indicators()
+            self.status_message("\u25B7", timeout=500, destination=MsgDestination.DEFAULT)
         if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) and self.main_controller.lux_auto_controller is not None:
             if vcp_code == BRIGHTNESS_VCP_CODE:
                 LuxDialog.lux_dialog_display_brightness(vdu_stable_id, value)
