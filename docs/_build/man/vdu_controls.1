@@ -891,10 +891,10 @@ LC_ALL is used by python, LANGUAGE is used by Qt. Normally, they should all have
 value, for example: \fBDa_DK\fP\&. For these to have any effect on language, \fBSettings\fP
 \fBTranslations Enabled\fP must also be enabled.
 .TP
-.B VDU_CONTROLS_UI_INTERVAL_SECS
-The user interface intervul throttles the speed at which the UI can update a VDU.
-It defaults to 1.0 seconds.  This is a precautionary throttle in case rapidly or
-repeatably updating a VDU might shorten its lifespan.
+.B VDU_CONTROLS_UI_IDLE_SECS
+The length of pause in slider or spin\-box control motion that triggers commit of
+the controls value to the VDU.  This is a precautionary throttle in case frequently
+updating a VDU might shorten its lifespan.  The default is 0.5 seconds.
 .TP
 .B VDU_CONTROLS_IPINFO_URL
 This variable overrides the default ip\-address to location service URL (\fBhttps://ipinfo.io/json\fP).

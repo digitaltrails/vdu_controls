@@ -675,10 +675,10 @@ GPUs. Detailed ddcutil info at https://www.ddcutil.com/</p>
     value, for example: ``Da_DK``. For these to have any effect on language, ``Settings``
     ``Translations Enabled`` must also be enabled.
 
-VDU_CONTROLS_UI_INTERVAL_SECS
-    The user interface intervul throttles the speed at which the UI can update a VDU.
-    It defaults to 1.0 seconds.  This is a precautionary throttle in case rapidly or
-    repeatably updating a VDU might shorten its lifespan.
+VDU_CONTROLS_UI_IDLE_SECS
+    The length of pause in slider or spin-box control motion that triggers commit of
+    the controls value to the VDU.  This is a precautionary throttle in case frequently
+    updating a VDU might shorten its lifespan.  The default is 0.5 seconds.
 
 VDU_CONTROLS_IPINFO_URL
     This variable overrides the default ip-address to location service URL (``https://ipinfo.io/json``).
