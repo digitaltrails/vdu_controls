@@ -2422,6 +2422,7 @@ class VduControllerAsyncSetter(WorkerThread):  # Used to decouple the set-vcp fr
         self._async_setvcp_queue: queue.Queue = queue.Queue()
         # limit set_vcp to a sustainable interval - KDE powerdevel recommendation - 0.5s, ddcui 1.0 seconds
         self._idle_seconds = float(os.getenv("VDU_CONTROLS_UI_IDLE_SECS", '0.5'))
+        log_info(f"env VDU_CONTROLS_UI_IDLE_SECS={self._idle_seconds}")
         self.use_transitions = False;
 
     def _async_setvcp_task_body(self, _: WorkerThread):
