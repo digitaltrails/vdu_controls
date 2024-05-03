@@ -671,10 +671,10 @@ Environment
         value, for example: ``Da_DK``. For these to have any effect on language, ``Settings``
         ``Translations Enabled`` must also be enabled.
 
-    VDU_CONTROLS_UI_INTERVAL_SECS
-        The user interface intervul throttles the speed at which the UI can update a VDU.
-        It defaults to 1.0 seconds.  This is a precautionary throttle in case rapidly or
-        repeatably updating a VDU might shorten its lifespan.
+    VDU_CONTROLS_UI_IDLE_SECS
+        The length of pause in slider or spin-box control motion that triggers commit of
+        the controls value to the VDU.  This is a precautionary throttle in case frequently
+        updating a VDU might shorten its lifespan.  The default is 0.5 seconds.
 
     VDU_CONTROLS_IPINFO_URL
         This variable overrides the default ip-address to location service URL (``https://ipinfo.io/json``).
@@ -2421,7 +2421,7 @@ class VduControllerAsyncSetter(WorkerThread):  # Used to decouple the set-vcp fr
         super().__init__(task_body=self._async_setvcp_task_body, task_finished=None, loop=True)
         self._async_setvcp_queue: queue.Queue = queue.Queue()
         # limit set_vcp to a sustainable interval - KDE powerdevel recommendation - 0.5s, ddcui 1.0 seconds
-        self._sleep_seconds = float(os.getenv("VDU_CONTROLS_UI_INTERVAL_SECS", '1.0'))
+        self._idle_seconds = float(os.getenv("VDU_CONTROLS_UI_IDLE_SECS", '0.5'))
         self.use_transitions = False;
 
     def _async_setvcp_task_body(self, _: WorkerThread):
@@ -2438,13 +2438,13 @@ class VduControllerAsyncSetter(WorkerThread):  # Used to decouple the set-vcp fr
             except queue.Empty:
                 pass
             if latest_pending and self._async_setvcp_queue.empty():  # some setvcp requests are pending,
-                self.doze(0.25)  # wait a bit in case more arrive - might be dragging a slider or spinning a spinner
+                self.doze(self._idle_seconds)  # wait a bit in case more arrive - might be dragging a slider or spinning a spinner
         if latest_pending:  # nothing more has arrived, if any setvcp requests are pending, set for real now
             for (controller, vcp_code), (value, origin) in latest_pending.items():
                 log_debug(f"UI set {controller.vdu_number=} {vcp_code=} {value=} {origin=}") if log_debug_enabled else None
                 controller.set_vcp_value(vcp_code, value, origin, asynchronous_caller=True)
         else:
-            self.doze(self._sleep_seconds)
+            self.doze(self._idle_seconds)
 
     def queue_setvcp(self, controller: VduController, vcp_code: str, value: int, origin: VcpOrigin):
         self._async_setvcp_queue.put((controller, vcp_code, value, origin))
