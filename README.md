@@ -331,7 +331,7 @@ Version History
 * 2.0.3
   * React to DPMS awake signal from ddcutil-service by re-assessing ambient brightness.
   * Reduce the number of writes to VDU NVRAM by sliders, spinners, and ambient brightness adjustments.
-  * Slider and spin-box controls now only update the VDU when adjusments becomes small or stop.
+  * Slider and spin-box controls now only update the VDU when adjustments becomes small or stop.
   * Spin-Boxes now select the entire text on focus in (enables easier overtyping and decreases VDU updates).
   * Simplified locking and conformed to a locking hierarchy/protocol to avoid potential deadlocks.
   
