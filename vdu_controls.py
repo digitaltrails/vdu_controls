@@ -564,7 +564,8 @@ to reduce the overall frequency of adjustments.
 
 + Inbuilt mitigations:
 
-  + Slider and spin-box controls only update the VDU when adjustments becomes small or stop.
+  + Slider and spin-box controls only update the VDU when adjustments become slow or stop
+    (when no change occurs in 0.5 seconds).
   + Transitions during ambient-light-level brightness adjustment are limited to changes
     of greater than 20%.
   + Automatic ambient brightness adjustment only triggers a change when the

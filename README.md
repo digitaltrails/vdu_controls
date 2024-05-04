@@ -234,7 +234,7 @@ to reduce the overall frequency of adjustments.
 
 + Inbuilt mitigations:
 
-  + Slider and spin-box controls only update the VDU when adjusments becomes small or stop.
+  + Slider and spin-box controls only update the VDU when adjusments become slow or stop.
   + Transitions during ambient-light-level brightness adjustment are limited to changes
     of greater than 20%.
   + Automatic ambient brightness adjustment only triggers a change when the
@@ -330,7 +330,8 @@ Version History
 ---------------
 * 2.0.3
   * Reduce the number of writes to VDU NVRAM by sliders, spinners, and ambient brightness adjustments.
-    * Slider and spin-box controls now only update the VDU when adjustments become small or stop (for 0.5 seconds).
+    * Slider and spin-box controls now only update the VDU when adjustments become slow or stop (when 
+      the control value remains constant for 0.5 seconds).
     * Spin-Boxes now select the entire text on focus in (enables easier overtyping and decreases VDU updates).
     *  Ambient lighting initiated changes in brightness of up to 20% are applied without any transitional 
        steps (plus the existing code ignores updates of less than 10%). 
