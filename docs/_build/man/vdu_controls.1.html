@@ -576,7 +576,7 @@ adjustments.</p>
 <li><p>Inbuilt mitigations:</p>
 <ul>
 <li>Slider and spin-box controls only update the VDU when adjustments
-becomes small or stop.</li>
+become slow or stop (when no change occurs in 0.5 seconds).</li>
 <li>Transitions during ambient-light-level brightness adjustment are
 limited to changes of greater than 20%.</li>
 <li>Automatic ambient brightness adjustment only triggers a change when
@@ -593,8 +593,8 @@ curves, brightness will stair-step instead of ramping through
 intermediate values.</li>
 <li>Attach <code>presets</code> to ambient brightness response curves,
 brightness will then tend to jump to the closest presets.</li>
-<li>Engage the manual override when faced with rapidly fluctuating
-levels of ambient brightness.</li>
+<li>If using a light-meter, engage the manual override when faced with
+rapidly fluctuating levels of ambient brightness.</li>
 <li>Consider adjusting the ambient lighting instead of the VDU.</li>
 </ul></li>
 </ul>
