@@ -230,26 +230,9 @@ write cycles, stressing the VDU power-supply, or increasing the LED panel
 burn-in.  
 
 That said, ``vdu_controls`` does include a number of features that can be used 
-to reduce the overall frequency of adjustments.
-
-+ Inbuilt mitigations:
-
-  + Slider and spin-box controls only update the VDU when adjusments become slow or stop.
-  + Transitions during ambient-light-level brightness adjustment are limited to changes
-    of greater than 20%.
-  + Automatic ambient brightness adjustment only triggers a change when the
-    proposed brightness differs from the current brightness by at least 10%.
-
-+ Electable mitigations:
-
-  + Choose to restore pre-prepared 'presets' instead of dragging sliders.
-  + Refrain from adding transitions to `presets`.
-  + Turn off `interpolation` for ambient brightness response curves, brightness will
-    stair-step instead of ramping through intermediate values.
-  + Attach `presets` to ambient brightness response curves, brightness will then tend
-    to jump to the closest presets.
-  + Engage the manual override when faced with rapidly fluctuating levels of ambient brightness.
-  + Consider adjusting the ambient lighting instead of the VDU.
+to reduce the overall frequency of adjustments, see **Limitations** in the
+[man page](https://htmlpreview.github.io/?https://raw.githubusercontent.com/digitaltrails/vdu_controls/master/docs/_build/man/vdu_controls.1.html)
+ for further details.
 
 #### Other concerns
 

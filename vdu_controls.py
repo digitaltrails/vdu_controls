@@ -579,7 +579,8 @@ to reduce the overall frequency of adjustments.
     stair-step instead of ramping through intermediate values.
   + Attach `presets` to ambient brightness response curves, brightness will then tend
     to jump to the closest presets.
-  + Engage the manual override when faced with rapidly fluctuating levels of ambient brightness.
+  + If using a light-meter, engage the manual override when faced with rapidly
+    fluctuating levels of ambient brightness.
   + Consider adjusting the ambient lighting instead of the VDU.
 
 Other concerns
