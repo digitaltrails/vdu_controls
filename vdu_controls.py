@@ -6139,7 +6139,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
 
     def __init__(self, auto_controller: LuxAutoController, single_shot: bool = False) -> None:
         super().__init__(task_body=self._adjust_for_lux, task_finished=self._adjust_for_lux_finished)
-        self.single_shot = single_shot
+        self.single_shot = single_shot  # Called for an on-demand single time assessment with immediate effect.
         self.main_controller = auto_controller.main_controller
         self.consecutive_errors_map: Dict[str, int] = {}
         self.expected_brightness_map: Dict[str, int] = {}
@@ -6259,40 +6259,36 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                 if diff == 0:
                     return False
                 # Check for interpolating, at the start, no Preset involved, and close enough to not bother with a change.
-                if self.single_shot:
-                    self.main_controller.set_value(vdu_sid, BRIGHTNESS_VCP_CODE, profile_brightness, origin=VcpOrigin.NORMAL)
-                    self.expected_brightness_map[vdu_sid] = profile_brightness
-                else:
-                    if (self.interpolation_enabled and first_step and profile_preset_name is None and
-                            abs(diff) < self.sensitivity_percent):
-                        self.status_message(f"{SUN_SYMBOL} {current_brightness}% {ALMOST_EQUAL_SYMBOL}"
-                                            f" {profile_brightness}% {vdu_sid} ({lux_summary_text})")
-                        log_info(f"LuxAutoWorker: {vdu_sid=} {current_brightness=} {profile_brightness=} ignored, too small")
-                        return False
-                    # Check if something else is changing the brightness, or maybe there was a ddcutil error
-                    if vdu_sid in self.expected_brightness_map and self.expected_brightness_map[vdu_sid] != current_brightness:
-                        log_info(
-                            f"LuxAutoWorker: {vdu_sid=}: {current_brightness=}% != step value {self.expected_brightness_map[vdu_sid]}%"
-                            f" something else altered the brightness - stop adjusting for lux.")
-                        self.status_message(f"{SUN_SYMBOL} {ERROR_SYMBOL} {RAISED_HAND_SYMBOL} {vdu_sid}")
-                        self.unexpected_change = True
-                        return False
-                    # Not-interpolating OR interpolating and brightness change is significant OR we have to activate a Preset
-                    if abs(diff) <= 20:
-                        new_brightness = profile_brightness
-                    else:
-                        step_size = max(1, abs(diff) // self.convergence_divisor)  # TODO find a good heuristic
-                        step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
-                        new_brightness = current_brightness + step
-                    # Marking as transient, prevents showing intermediate preset matches, first clears, last sets (if appropriate).
-                    origin = VcpOrigin.TRANSIENT if not first_step and new_brightness != profile_brightness else VcpOrigin.NORMAL
-                    self.main_controller.set_value(vdu_sid, BRIGHTNESS_VCP_CODE, new_brightness, origin=origin)
-                    self.expected_brightness_map[vdu_sid] = new_brightness
-                    log_info(f"LuxAutoWorker {thread_pid()}: Start transitions {vdu_sid=} {current_brightness=} to {profile_brightness=} "
-                             f" {profile_preset_name=} {lux_summary_text}") if first_step else None
-                    self.status_message(
-                        f"{SUN_SYMBOL} {current_brightness}%{STEPPING_SYMBOL}{profile_brightness}% {vdu_sid}" +
-                        f" ({lux_summary_text}) {profile_preset_name if profile_preset_name is not None else ''}")
+                if (self.interpolation_enabled and first_step and profile_preset_name is None and
+                        abs(diff) < self.sensitivity_percent):
+                    self.status_message(f"{SUN_SYMBOL} {current_brightness}% {ALMOST_EQUAL_SYMBOL}"
+                                        f" {profile_brightness}% {vdu_sid} ({lux_summary_text})")
+                    log_info(f"LuxAutoWorker: {vdu_sid=} {current_brightness=} {profile_brightness=} ignored, too small")
+                    return False
+                # Check if something else is changing the brightness, or maybe there was a ddcutil error
+                if vdu_sid in self.expected_brightness_map and self.expected_brightness_map[vdu_sid] != current_brightness:
+                    log_info(
+                        f"LuxAutoWorker: {vdu_sid=}: {current_brightness=}% != step value {self.expected_brightness_map[vdu_sid]}%"
+                        f" something else altered the brightness - stop adjusting for lux.")
+                    self.status_message(f"{SUN_SYMBOL} {ERROR_SYMBOL} {RAISED_HAND_SYMBOL} {vdu_sid}")
+                    self.unexpected_change = True
+                    return False
+                # Brightness change is significant OR we have to activate a Preset
+                if self.single_shot or abs(diff) <= 20:  # In manual single_shot or difference is too small for stepping.
+                    new_brightness = profile_brightness
+                else:  # Change requires moving in steps
+                    step_size = max(1, abs(diff) // self.convergence_divisor)  # TODO find a good heuristic
+                    step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
+                    new_brightness = current_brightness + step
+                # Marking as transient, prevents showing intermediate preset matches, first clears, last sets (if appropriate).
+                origin = VcpOrigin.TRANSIENT if not first_step and new_brightness != profile_brightness else VcpOrigin.NORMAL
+                self.main_controller.set_value(vdu_sid, BRIGHTNESS_VCP_CODE, new_brightness, origin=origin)
+                self.expected_brightness_map[vdu_sid] = new_brightness
+                log_info(f"LuxAutoWorker {thread_pid()}: Start transitions {vdu_sid=} {current_brightness=} to {profile_brightness=} "
+                         f" {profile_preset_name=} {lux_summary_text}") if first_step else None
+                self.status_message(
+                    f"{SUN_SYMBOL} {current_brightness}%{STEPPING_SYMBOL}{profile_brightness}% {vdu_sid}" +
+                    f" ({lux_summary_text}) {profile_preset_name if profile_preset_name is not None else ''}")
                 if self.consecutive_errors_map.get(vdu_sid, 0) > 0:
                     log_info(f"LuxAutoWorker: ddcutil to {vdu_sid} succeeded after {self.consecutive_errors_map[vdu_sid]} errors.")
                 self.consecutive_errors_map[vdu_sid] = 0
@@ -8175,7 +8171,8 @@ class VduAppWindow(QMainWindow):
         log_debug(f"respond {vdu_stable_id=} {vcp_code=} {value=} {origin.name=}") if log_debug_enabled else None
         if origin != VcpOrigin.TRANSIENT:  # Only want to indicate final status (not when just passing through a preset)
             self.update_status_indicators()
-            self.status_message("\u25B7", timeout=500, destination=MsgDestination.DEFAULT)
+            if origin != VcpOrigin.EXTERNAL:
+                self.status_message("\u25B7", timeout=500, destination=MsgDestination.DEFAULT)
         if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) and self.main_controller.lux_auto_controller is not None:
             if vcp_code == BRIGHTNESS_VCP_CODE:
                 LuxDialog.lux_dialog_display_brightness(vdu_stable_id, value)
