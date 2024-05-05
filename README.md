@@ -318,10 +318,10 @@ Version History
     * Spin-Boxes now select the entire text on focus in (enables easier overtyping and decreases VDU updates).
     *  Ambient lighting initiated changes in brightness of up to 20% are applied without any transitional 
        steps (plus the existing code ignores updates of less than 10%). 
+    * Set the default ambient-light brightness adjustment-interval to 5 minutes.
   * React to DPMS awake signal from ddcutil-service by re-assessing ambient brightness.
   * Simplified locking and conformed to a locking hierarchy/protocol to avoid potential deadlocks.
 
-  
 * 2.0.2
   * Added a *refresh* annotation suffix for use with VCP-codes which cause multiple changes.
   * Make manual adjustment of the ambient Light Level more accurate and responsive.

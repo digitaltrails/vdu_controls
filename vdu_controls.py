@@ -456,7 +456,7 @@ value:
 
  - Lux/Brightness Profiles may define brightness-steps so that
    brightness levels remain constant over set ranges of lux values.
- - Adjustments are only made at intervals of one or more minutes.
+ - Adjustments are only made at intervals of one or more minutes (defaults to 5 minutes).
  - Large adjustments are made with larger step sizes to shorten the transition period.
  - The adjustment task passes lux values through a smoothing low-pass filter.
 
@@ -581,6 +581,7 @@ to reduce the overall frequency of adjustments.
     to jump to the closest presets.
   + If using a light-meter, engage the manual override when faced with rapidly
     fluctuating levels of ambient brightness.
+  + Lengthen the light-metering adjustment-interval.
   + Consider adjusting the ambient lighting instead of the VDU.
 
 Other concerns
@@ -6159,8 +6160,10 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         log_info(f"LuxAutoWorker: lux-meter.interpolation-sensitivity-percent={self.sensitivity_percent}")
         self.convergence_divisor = lux_config.getint('lux-meter', 'convergence-divisor', fallback=2)
         log_info(f"LuxAutoWorker: lux-meter.convergence-divisor={self.convergence_divisor}")
-        self.step_pause_millis = lux_config.getint('lux-meter', 'step_pause_millis', fallback=100)
+        self.step_pause_millis = lux_config.getint('lux-meter', 'step-pause-millis', fallback=100)
         log_info(f"LuxAutoWorker: lux-meter.step_pause_millis={self.step_pause_millis}")
+        self.max_brightness_jump = lux_config.getint('lux-meter', 'max-brightness-jump', fallback=20)
+        log_info(f"LuxAutoWorker: lux-meter.max_brightness_jump={self.max_brightness_jump}")
         self._lux_dialog_message_qtsignal.connect(LuxDialog.lux_dialog_message)
         self._lux_dialog_message_qtsignal.connect(self.main_controller.main_window.status_message)
         self.status_message(f"{TIMER_RUNNING_SYMBOL} 00:00", 0, MsgDestination.COUNTDOWN)
@@ -6250,14 +6253,14 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         # if profile_brightness is -1, the profile has an attached preset with no brightness, it may have been
         # attached to trigger non-brightness settings at a given lux value (triggered below, after the loop).
         if profile_brightness < 0:
-            return False
+            return False  # Nothing more to do
         if self.main_controller.is_vcp_code_enabled(vdu_sid, BRIGHTNESS_VCP_CODE):  # can only adjust brightness controls
             try:
                 current_brightness = self.main_controller.get_value(vdu_sid, BRIGHTNESS_VCP_CODE)
                 diff = profile_brightness - current_brightness
                 # Check if already at the correct brightness.
                 if diff == 0:
-                    return False
+                    return False  # Nothing more to do
                 # Check for interpolating, at the start, no Preset involved, and close enough to not bother with a change.
                 if (self.interpolation_enabled and first_step and profile_preset_name is None and
                         abs(diff) < self.sensitivity_percent):
@@ -6274,7 +6277,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                     self.unexpected_change = True
                     return False
                 # Brightness change is significant OR we have to activate a Preset
-                if self.single_shot or abs(diff) <= 20:  # In manual single_shot or difference is too small for stepping.
+                if self.single_shot or abs(diff) <= self.max_brightness_jump:  # In single_shot or diff too small for stepping.
                     new_brightness = profile_brightness
                 else:  # Change requires moving in steps
                     step_size = max(1, abs(diff) // self.convergence_divisor)  # TODO find a good heuristic
@@ -6306,8 +6309,8 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                     if self.consecutive_errors_map[vdu_sid] == 2 or log_debug_enabled:
                         log_info(
                             f"LuxAutoWorker: {self.consecutive_errors_map[vdu_sid]} errors on {vdu_sid}, let this lux cycle end.")
-                    return False  # Report no changes, this allows the current adjustment cycle to end, will try again next cycle.
-        return True
+                    return False  # Make no changes, this allows the current adjustment cycle to end, will try again next cycle.
+        return True  # Still more work to do to reach the final target value
 
     def determine_brightness(self, vdu_sid: VduStableId, smoothed_lux: int, lux_profile: List[LuxPoint]) -> Tuple[int, str | None]:
         matched_point = LuxPoint(0, 0)
@@ -6445,7 +6448,7 @@ class LuxConfig(ConfIni):
         return []
 
     def get_interval_minutes(self) -> int:
-        return self.getint('lux-meter', 'interval-minutes', fallback=1)
+        return self.getint('lux-meter', 'interval-minutes', fallback=5)
 
     def is_auto_enabled(self) -> bool:
         return self.getboolean("lux-meter", "automatic-brightness", fallback=False)
