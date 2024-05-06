@@ -316,8 +316,8 @@ Version History
     * Slider and spin-box controls now only update the VDU when adjustments become slow or stop (when 
       the control value remains constant for 0.5 seconds).
     * Spin-Boxes now select the entire text on focus in (enables easier overtyping and decreases VDU updates).
-    *  Ambient lighting initiated changes in brightness of up to 20% are applied without any transitional 
-       steps (plus the existing code ignores updates of less than 10%). 
+    * Ambient lighting initiated changes in brightness of up to 20% are applied without any transitional 
+      steps (plus the existing code ignores updates of less than 10%). 
     * Set the default ambient-light brightness adjustment-interval to 5 minutes.
   * React to DPMS awake signal from ddcutil-service by re-assessing ambient brightness.
   * Simplified locking and conformed to a locking hierarchy/protocol to avoid potential deadlocks.
