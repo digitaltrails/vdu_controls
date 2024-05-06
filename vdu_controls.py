@@ -6147,23 +6147,23 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         self.adjust_now_requested = False
         self.unexpected_change = False
         lux_config = auto_controller.get_lux_config()
-        interval_minutes = lux_config.get_interval_minutes()
-        self.sleep_seconds = interval_minutes * 60
-        samples_per_minute = lux_config.getint('lux-meter', 'samples-per-minute', fallback=3)
+        log_info(f"LuxAutoWorker: lux-meter.interval-minutes={ lux_config.get_interval_minutes()}")
+        self.sleep_seconds = lux_config.get_interval_minutes() * 60
+
+        def get_prop(prop: str, fallback: bool | int | float | str) -> bool | int | float:
+            op = {bool: lux_config.getboolean, int: lux_config.getint, float: lux_config.getfloat}[type(fallback)]
+            value = op('lux-meter', prop, fallback=fallback)
+            log_info(f"LuxAutoWorker: lux-meter.{prop}={value}")
+            return value
+        
+        samples_per_minute = get_prop('samples-per-minute', fallback=3)
         self.sampling_interval_seconds = 60 // samples_per_minute
-        log_info(f"LuxAutoWorker: lux-meter.interval-minutes={interval_minutes} lux-meter.samples-per-minute={samples_per_minute}")
-        self.smoother = LuxSmooth(lux_config.getint('lux-meter', 'smoother-n', fallback=5),
-                                  alpha=lux_config.getfloat('lux-meter', 'smoother-alpha', fallback=0.5))
-        log_info(f"LuxAutoWorker: lux-meter.smoother-n={self.smoother.length} lux-meter.smoother-alpha={self.smoother.alpha}")
-        self.interpolation_enabled = lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True)
-        self.sensitivity_percent = lux_config.getint('lux-meter', 'interpolation-sensitivity-percent', fallback=10)
-        log_info(f"LuxAutoWorker: lux-meter.interpolation-sensitivity-percent={self.sensitivity_percent}")
-        self.convergence_divisor = lux_config.getint('lux-meter', 'convergence-divisor', fallback=2)
-        log_info(f"LuxAutoWorker: lux-meter.convergence-divisor={self.convergence_divisor}")
-        self.step_pause_millis = lux_config.getint('lux-meter', 'step-pause-millis', fallback=100)
-        log_info(f"LuxAutoWorker: lux-meter.step_pause_millis={self.step_pause_millis}")
-        self.max_brightness_jump = lux_config.getint('lux-meter', 'max-brightness-jump', fallback=20)
-        log_info(f"LuxAutoWorker: lux-meter.max_brightness_jump={self.max_brightness_jump}")
+        self.smoother = LuxSmooth(get_prop('smoother-n', fallback=5), alpha=get_prop('smoother-alpha', fallback=0.5))
+        self.interpolation_enabled = get_prop('interpolate-brightness', fallback=True)
+        self.sensitivity_percent = get_prop('interpolation-sensitivity-percent', fallback=10)
+        self.convergence_divisor = get_prop('convergence-divisor', fallback=2)
+        self.step_pause_millis = get_prop('step-pause-millis', fallback=100)
+        self.max_brightness_jump = get_prop('max-brightness-jump', fallback=20)
         self._lux_dialog_message_qtsignal.connect(LuxDialog.lux_dialog_message)
         self._lux_dialog_message_qtsignal.connect(self.main_controller.main_window.status_message)
         self.status_message(f"{TIMER_RUNNING_SYMBOL} 00:00", 0, MsgDestination.COUNTDOWN)
