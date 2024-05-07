@@ -830,6 +830,7 @@ RAISED_HAND_SYMBOL = '\u270b'  # RAISED HAND
 RIGHT_POINTER_WHITE = '\u25B9'  # WHITE RIGHT-POINTING SMALL TRIANGLE
 RIGHT_POINTER_BLACK = '\u25B8'  # BLACK RIGHT-POINTING SMALL TRIANGLE
 MENU_ACTIVE_PRESET_SYMBOL = '\u25c2'  # BLACK LEFT-POINTING SMALL TRIANGLE
+SET_VCP_SYMBOL = "\u25B7"  # WHITE RIGHT-POINTING TRIANGLE
 
 SolarElevationKey = namedtuple('SolarElevationKey', ['direction', 'elevation'])
 SolarElevationData = namedtuple('SolarElevationData', ['azimuth', 'zenith', 'when'])
@@ -1483,10 +1484,8 @@ class Ddcutil:
     def get_vcp_values(self, vdu_number: str, vcp_code_list: List[str]) -> List[VcpValue]:
         results_dict: Dict[str, VcpValue | None] = {vcp_code: None for vcp_code in vcp_code_list}
         # Try a few times in case there is a glitch due to a monitor being turned-off/on or slow to respond
-
         for attempt_count in range(DDCUTIL_RETRIES):
-            values = self.ddcutil_impl.get_vcp_values(self.get_edid_txt(vdu_number),
-                                                      [int(vcp, 16) for vcp in vcp_code_list])
+            values = self.ddcutil_impl.get_vcp_values(self.get_edid_txt(vdu_number), [int(vcp, 16) for vcp in vcp_code_list])
             for vcp, value, maxv, _ in values:
                 vcp_code = f'{vcp:02X}'
                 vcp_type = self.get_type(vdu_number, vcp_code)
@@ -1524,8 +1523,7 @@ class DdcutilExeImpl:
         self.version_suffix = ''
         self.DetectedAttributes = namedtuple("DetectedAttributes", ('display_number', 'usb_bus', 'usb_device',
                                                                     'manufacturer_id', 'model_name', 'serial_number',
-                                                                    'product_code',
-                                                                    'edid_txt', 'binary_serial_number'))
+                                                                    'product_code', 'edid_txt', 'binary_serial_number'))
         self.vdu_map_by_edid: Dict[str, Tuple] = {}
 
     def refresh_connection(self):
@@ -1605,7 +1603,7 @@ class DdcutilExeImpl:
         return None
 
     def detect(self, flags: int) -> List[Tuple]:
-        issue_warnings = False  # TODO
+        issue_warnings = False  # TODO - figure out what this is about
         args = ['detect', '--verbose', ]
         display_list = []
         result = self.__run__(*args)
@@ -1617,8 +1615,7 @@ class DdcutilExeImpl:
                 vdu_number = display_match.group(1)
                 log_debug(f"checking possible IDs for display {vdu_number}") if log_debug_enabled else None
                 ds_parts = {fm.group(1).strip(): fm.group(2).strip()
-                            for fm in
-                            re.finditer(r'[ \t]*([^:\n]+):[ \t]+([^\n]*)', display_str)}  # Create dict {name:value} pairs
+                            for fm in re.finditer(r'[ \t]*([^:\n]+):[ \t]+([^\n]*)', display_str)}  # Create dict {name:value} pairs
                 model_name = rubbish.sub('_', ds_parts.get('Model', 'unknown_model'))
                 manufacturer = rubbish.sub('_', ds_parts.get('Mfg id', 'unknown_mfg'))
                 serial_number = rubbish.sub('_', ds_parts.get('Serial number', ''))
@@ -1797,7 +1794,6 @@ class DdcutilDBusImpl(QObject):
                                               "com.ddcutil.DdcutilInterface",
                                               "ServiceEmitSignals",
                                               QDBusVariant(QDBusArgument(True, QMetaType.Bool)))
-            if self.listener_callback:
                 self.listener_callback('', -1, 0)
 
     @pyqtSlot(QDBusMessage)
@@ -2002,7 +1998,7 @@ class WorkerThread(QThread):
     finished_work_qtsignal = pyqtSignal(object)
 
     def __init__(self, task_body: Callable[[WorkerThread], None], task_finished: Callable[[WorkerThread], None] | None = None,
-                 context: object | None = None, loop: bool = False) -> None:
+                 loop: bool = False) -> None:
         super().__init__()
         # init should always be initiated from the GUI thread to grant the worker's __init__ easy access to the GUI thread.
         log_debug(f"WorkerThread: init {self.__class__.__name__} from {thread_pid()=}") if log_debug_enabled else None
@@ -2010,7 +2006,6 @@ class WorkerThread(QThread):
         self.stop_requested = False
         self.task_body = task_body
         self.task_finished = task_finished
-        self.task_context = context
         self.loop = loop
         if self.task_finished is not None:
             self.finished_work_qtsignal.connect(self.task_finished)
@@ -2426,7 +2421,6 @@ class VduControllerAsyncSetter(WorkerThread):  # Used to decouple the set-vcp fr
         # limit set_vcp to a sustainable interval - KDE powerdevel recommendation - 0.5s, ddcui 1.0 seconds
         self._idle_seconds = float(os.getenv("VDU_CONTROLS_UI_IDLE_SECS", '0.5'))
         log_info(f"env VDU_CONTROLS_UI_IDLE_SECS={self._idle_seconds}")
-        self.use_transitions = False;
 
     def _async_setvcp_task_body(self, _: WorkerThread):
         latest_pending = {}  # Handle bursts of UI setvcp requests, filtering out repeats for the same feature.
@@ -2520,8 +2514,7 @@ class VduController(QObject):
                 config.parse_file(config_path)
                 if default_config.is_set(ConfOption.DEBUG_ENABLED):
                     config.debug_dump()
-                multiplier = config.get_sleep_multiplier(fallback=default_sleep_multiplier)
-                if multiplier:
+                if multiplier := config.get_sleep_multiplier(fallback=default_sleep_multiplier):
                     self.ddcutil.set_sleep_multiplier(vdu_number, multiplier)
                 self.ddcutil.set_vdu_specific_args(vdu_number, config.get_ddcutil_extra_args(fallback=None))
                 enabled_vcp_codes = config.get_all_enabled_vcp_codes()
@@ -3017,8 +3010,7 @@ class SettingsEditorLocationWidget(SettingsEditorLineBase):
         self.text_input.setToolTip(tr("Latitude,Longitude for solar elevation calculations."))
 
         def detection_location() -> None:
-            data_csv = self.location_dialog()
-            if data_csv:
+            if data_csv := self.location_dialog():
                 self.text_input.setText(data_csv)
                 self.editing_finished()
 
@@ -3370,8 +3362,7 @@ class VduControlPanel(QWidget):
 
     def refresh_from_vdu(self) -> None:
         """Tell the control widgets to get fresh VDU data (maybe called from a task thread, so no GUI op's here)."""
-        values = self.controller.get_vcp_values([control.vcp_capability.vcp_code for control in self.vcp_controls])
-        if values:
+        if values := self.controller.get_vcp_values([control.vcp_capability.vcp_code for control in self.vcp_controls]):
             for control, value in zip(self.vcp_controls, values):
                 control.update_from_vdu(value)
 
@@ -3656,8 +3647,7 @@ class ContextMenu(QMenu):
     def indicate_preset_active(self, preset: Preset | None) -> None:
         changed = 0
         for action in self.actions():
-            action_preset_name = action.property(ContextMenu.PRESET_NAME_PROP)
-            if action_preset_name:  # Mark active preset or un-mark previous active preset
+            if action_preset_name := action.property(ContextMenu.PRESET_NAME_PROP): # Mark active preset or un-mark previous active
                 shortcut = action.property(ContextMenu.PRESET_SHORTCUT_PROP)
                 suffix = (' ' + MENU_ACTIVE_PRESET_SYMBOL) if preset is not None and preset.name == action_preset_name else ''
                 new_text = (shortcut.annotated_word if shortcut else action_preset_name) + suffix
@@ -6240,8 +6230,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             if profile_preset_name is not None:  # if a point had a Preset attached, activate it now
                 # Restoring the Preset's non-brightness settings. Invoke now, so it will happen in this thread's sleep period.
                 self.status_message(tr("Restoring preset {}").format(profile_preset_name), timeout=5000)
-                preset = self.main_controller.find_preset_by_name(profile_preset_name)  # Check that it still exists
-                if preset is not None:
+                if preset := self.main_controller.find_preset_by_name(profile_preset_name):  # Check that it still exists
                     self.main_controller.restore_preset(
                         preset, immediately=PresetTransitionFlag.SCHEDULED not in preset.get_transition_type(),
                         scheduled_activity=True)
@@ -6296,19 +6285,18 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                     log_info(f"LuxAutoWorker: ddcutil to {vdu_sid} succeeded after {self.consecutive_errors_map[vdu_sid]} errors.")
                 self.consecutive_errors_map[vdu_sid] = 0
             except VduException as ve:
-                self.consecutive_errors_map[vdu_sid] = self.consecutive_errors_map.get(vdu_sid, 0) + 1
-                if self.consecutive_errors_map[vdu_sid] == 1:
+                error_count = self.consecutive_errors_map[vdu_sid] = self.consecutive_errors_map.get(vdu_sid, 0) + 1
+                if error_count == 1:
                     log_warning(f"LuxAutoWorker: Brightness error on {vdu_sid}, will sleep and try again: {ve}", -1)
                     self.status_message(tr("{} Failed to adjust {}, will try again").format(ERROR_SYMBOL, vdu_sid))
                     self.doze(2)  # TODO do something better than this to make the message visible.
-                elif self.consecutive_errors_map[vdu_sid] > 1:
+                elif error_count > 1:
                     self.status_message(tr("{} Failed to adjust {}, {} errors so far. Sleeping {} minutes.").format(
-                        ERROR_SYMBOL, vdu_sid, self.consecutive_errors_map[vdu_sid],
+                        ERROR_SYMBOL, vdu_sid, error_count,
                         self.main_controller.get_lux_auto_controller().get_lux_config().get_interval_minutes()))  # TODO seems dodgy
                     self.doze(2)  # TODO do something better than this to make the message visible.
-                    if self.consecutive_errors_map[vdu_sid] == 2 or log_debug_enabled:
-                        log_info(
-                            f"LuxAutoWorker: {self.consecutive_errors_map[vdu_sid]} errors on {vdu_sid}, let this lux cycle end.")
+                    if error_count == 2 or log_debug_enabled:
+                        log_info(f"LuxAutoWorker: {error_count} errors on {vdu_sid}, let this lux cycle end.")
                     return False  # Make no changes, this allows the current adjustment cycle to end, will try again next cycle.
         return True  # Still more work to do to reach the final target value
 
@@ -8175,7 +8163,7 @@ class VduAppWindow(QMainWindow):
         if origin != VcpOrigin.TRANSIENT:  # Only want to indicate final status (not when just passing through a preset)
             self.update_status_indicators()
             if origin != VcpOrigin.EXTERNAL:
-                self.status_message("\u25B7", timeout=500, destination=MsgDestination.DEFAULT)
+                self.status_message(SET_VCP_SYMBOL, timeout=500, destination=MsgDestination.DEFAULT)
         if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) and self.main_controller.lux_auto_controller is not None:
             if vcp_code == BRIGHTNESS_VCP_CODE:
                 LuxDialog.lux_dialog_display_brightness(vdu_stable_id, value)
