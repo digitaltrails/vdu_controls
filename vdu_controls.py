@@ -515,6 +515,9 @@ heuristics::
       # an interpolated value needs to be to an attached preset's brightness in order
       # to prefer triggering the preset over applying the interpolated value.
       interpolation-sensitivity-percent=10
+      # Jump brightness in one step up to this maximum, after which transition in steps.
+      max-brightness-jump=20
+
 
 Improving Response Time: Dynamic Optimization and Sleep Multipliers
 -------------------------------------------------------------------
@@ -575,13 +578,10 @@ to reduce the overall frequency of adjustments.
 
   + Choose to restore pre-prepared 'presets' instead of dragging sliders.
   + Refrain from adding transitions to `presets`.
-  + Turn off `interpolation` for ambient brightness response curves, brightness will
-    stair-step instead of ramping through intermediate values.
-  + Attach `presets` to ambient brightness response curves, brightness will then tend
-    to jump to the closest presets.
-  + If using a light-meter, engage the manual override when faced with rapidly
-    fluctuating levels of ambient brightness.
-  + Lengthen the light-metering adjustment-interval.
+  + If using the ambient-light brightness response curves, tune the settings and
+    curves to minimise frequent small changes.
+  + If using a light-meter, disengage metered automatic adjustment when faced with
+    rapidly fluctuating levels of ambient brightness.
   + Consider adjusting the ambient lighting instead of the VDU.
 
 Other concerns

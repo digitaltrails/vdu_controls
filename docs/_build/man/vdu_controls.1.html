@@ -459,7 +459,8 @@ a final value:</p>
 <ul>
 <li>Lux/Brightness Profiles may define brightness-steps so that
 brightness levels remain constant over set ranges of lux values.</li>
-<li>Adjustments are only made at intervals of one or more minutes.</li>
+<li>Adjustments are only made at intervals of one or more minutes
+(defaults to 5 minutes).</li>
 <li>Large adjustments are made with larger step sizes to shorten the
 transition period.</li>
 <li>The adjustment task passes lux values through a smoothing low-pass
@@ -521,7 +522,9 @@ metering and auto-adjustment heuristics::</p>
   # be to trigger an actual VDU change in brightness? Also determines how close
   # an interpolated value needs to be to an attached preset&#39;s brightness in order
   # to prefer triggering the preset over applying the interpolated value.
-  interpolation-sensitivity-percent=10</code></pre>
+  interpolation-sensitivity-percent=10
+  # Jump brightness in one step up to this maximum, after which transition in steps.
+  max-brightness-jump=20</code></pre>
 <h2
 id="improving-response-time-dynamic-optimization-and-sleep-multipliers">Improving
 Response Time: Dynamic Optimization and Sleep Multipliers</h2>
@@ -588,13 +591,10 @@ the proposed brightness differs from the current brightness by at least
 <li>Choose to restore pre-prepared ‘presets’ instead of dragging
 sliders.</li>
 <li>Refrain from adding transitions to <code>presets</code>.</li>
-<li>Turn off <code>interpolation</code> for ambient brightness response
-curves, brightness will stair-step instead of ramping through
-intermediate values.</li>
-<li>Attach <code>presets</code> to ambient brightness response curves,
-brightness will then tend to jump to the closest presets.</li>
-<li>If using a light-meter, engage the manual override when faced with
-rapidly fluctuating levels of ambient brightness.</li>
+<li>If using the ambient-light brightness response curves, tune the
+settings and curves to minimise frequent small changes.</li>
+<li>If using a light-meter, disengage metered automatic adjustment when
+faced with rapidly fluctuating levels of ambient brightness.</li>
 <li>Consider adjusting the ambient lighting instead of the VDU.</li>
 </ul></li>
 </ul>

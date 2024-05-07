@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "May 04, 2024" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "May 07, 2024" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.11.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -648,7 +648,7 @@ value:
 Lux/Brightness Profiles may define brightness\-steps so that
 brightness levels remain constant over set ranges of lux values.
 .IP \(bu 2
-Adjustments are only made at intervals of one or more minutes.
+Adjustments are only made at intervals of one or more minutes (defaults to 5 minutes).
 .IP \(bu 2
 Large adjustments are made with larger step sizes to shorten the transition period.
 .IP \(bu 2
@@ -712,6 +712,8 @@ smoother\-alpha=0.5
 # an interpolated value needs to be to an attached preset\(aqs brightness in order
 # to prefer triggering the preset over applying the interpolated value.
 interpolation\-sensitivity\-percent=10
+# Jump brightness in one step up to this maximum, after which transition in steps.
+max\-brightness\-jump=20
 .ft P
 .fi
 .UNINDENT
@@ -778,14 +780,11 @@ Choose to restore pre\-prepared \(aqpresets\(aq instead of dragging sliders.
 .IP \(bu 2
 Refrain from adding transitions to \fIpresets\fP\&.
 .IP \(bu 2
-Turn off \fIinterpolation\fP for ambient brightness response curves, brightness will
-stair\-step instead of ramping through intermediate values.
+If using the ambient\-light brightness response curves, tune the settings and
+curves to minimise frequent small changes.
 .IP \(bu 2
-Attach \fIpresets\fP to ambient brightness response curves, brightness will then tend
-to jump to the closest presets.
-.IP \(bu 2
-If using a light\-meter, engage the manual override when faced with rapidly
-fluctuating levels of ambient brightness.
+If using a light\-meter, disengage metered automatic adjustment when faced with
+rapidly fluctuating levels of ambient brightness.
 .IP \(bu 2
 Consider adjusting the ambient lighting instead of the VDU.
 .UNINDENT
