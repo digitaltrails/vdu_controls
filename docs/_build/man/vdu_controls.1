@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "May 07, 2024" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "May 08, 2024" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.11.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -898,20 +898,23 @@ the controls value to the VDU.  This is a precautionary throttle in case frequen
 updating a VDU might shorten its lifespan.  The default is 0.5 seconds.
 .TP
 .B VDU_CONTROLS_IPINFO_URL
-This variable overrides the default ip\-address to location service URL (\fBhttps://ipinfo.io/json\fP).
+Override the default ip\-address to location service URL (\fBhttps://ipinfo.io/json\fP).
 .TP
 .B VDU_CONTROLS_WTTR_URL
-This variable overrides default weather service URL (\fBhttps://wttr.in\fP).
+Override the default weather service URL (\fBhttps://wttr.in\fP).
 .TP
 .B VDU_CONTROLS_WEATHER_KM
-This variable overrides the default maximum permissible spherical distance (in kilometres)
+Override the default maximum permissible spherical distance (in kilometres)
 between the \fBSettings\fP \fBLocation\fP and \fBwttr.in\fP reported location (\fB200 km\fP, 124 miles).
 .TP
 .B VDU_CONTROLS_DDCUTIL_ARGS
-This variable adds to the list of arguments passed to each exec of ddcutil.
+Add to the list of arguments passed to each exec of ddcutil.
+.TP
+.B VDU_CONTROLS_DDCUTIL_RETRIES
+Set the number of times to repeat a ddcutil getvcp or setvcp before returning an error.
 .TP
 .B VDU_CONTROLS_DEVELOPER
-This variable changes some search paths to be more convenient in a development
+Changes some search paths to be more convenient in a development
 scenario. (\fBno\fP or yes)
 .UNINDENT
 .UNINDENT

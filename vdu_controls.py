@@ -680,20 +680,23 @@ Environment
         updating a VDU might shorten its lifespan.  The default is 0.5 seconds.
 
     VDU_CONTROLS_IPINFO_URL
-        This variable overrides the default ip-address to location service URL (``https://ipinfo.io/json``).
+        Override the default ip-address to location service URL (``https://ipinfo.io/json``).
 
     VDU_CONTROLS_WTTR_URL
-        This variable overrides default weather service URL (``https://wttr.in``).
+        Override the default weather service URL (``https://wttr.in``).
 
     VDU_CONTROLS_WEATHER_KM
-        This variable overrides the default maximum permissible spherical distance (in kilometres)
+        Override the default maximum permissible spherical distance (in kilometres)
         between the ``Settings`` ``Location`` and ``wttr.in`` reported location (``200 km``, 124 miles).
 
     VDU_CONTROLS_DDCUTIL_ARGS
-        This variable adds to the list of arguments passed to each exec of ddcutil.
+        Add to the list of arguments passed to each exec of ddcutil.
+
+    VDU_CONTROLS_DDCUTIL_RETRIES
+        Set the number of times to repeat a ddcutil getvcp or setvcp before returning an error.
 
     VDU_CONTROLS_DEVELOPER
-        This variable changes some search paths to be more convenient in a development
+        Changes some search paths to be more convenient in a development
         scenario. (``no`` or yes)
 
 Files
