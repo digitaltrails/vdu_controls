@@ -1195,8 +1195,6 @@ log_debug_enabled = False  # Often used to guard needless computation: log_debug
 
 VduStableId = NewType('VduStableId', str)
 
-about_supporting_versions = ""
-
 
 def is_dark_theme() -> bool:
     # Heuristic for checking for a dark theme. Is the sample text lighter than the background?
@@ -1344,12 +1342,12 @@ class Ddcutil:
             self.ddcutil_version = tuple(int(i) for i in version_match.groups()[0:3])
             self.version_suffix = version_match.groups()[3]
         # self.version = (1, 2, 2)  # for testing for 1.2.2 compatibility
-        global about_supporting_versions
-        about_supporting_versions = \
-            f"ddcutil-interface: {self.ddcutil_impl.get_interface_version_string()}; ddcutil: {version_info}"
         log_info(f"ddcutil version {self.ddcutil_version} "
                  f"{self.version_suffix}(dynamic-sleep={self.ddcutil_version >= (2, 0, 0)}) "
                  f"- interface {self.ddcutil_impl.get_interface_version_string()}")
+
+    def ddcutil_version_info(self) -> (str, str):
+        return self.ddcutil_impl.get_interface_version_string(), self.ddcutil_impl.get_ddcutil_version_string()
 
     def refresh_connection(self):
         self.ddcutil_impl.refresh_connection()
@@ -7188,15 +7186,16 @@ class GreyScaleDialog(SubWinDialog):
 class AboutDialog(QMessageBox, DialogSingletonMixin):
 
     @staticmethod
-    def invoke() -> None:
+    def invoke(main_controller: VduAppController) -> None:
         if AboutDialog.exists():
             AboutDialog.get_instance().refresh_content()
             AboutDialog.show_existing_dialog()
         else:
-            AboutDialog()
+            AboutDialog(main_controller)
 
-    def __init__(self) -> None:
+    def __init__(self, main_controller: VduAppController) -> None:
         super().__init__()
+        self.main_controller = main_controller
         self.refresh_content()
         self.setModal(False)
         self.show()
@@ -7215,7 +7214,9 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
                     WEATHER_FORECAST_URL=WEATHER_FORECAST_URL)
         else:
             about_text = ABOUT_TEXT
-        about_text += f"<hr><p><small>{about_supporting_versions}</small>"
+        if self.main_controller and self.main_controller.ddcutil:
+            about_text += "<hr><p><small>ddcutil-interface: {}; ddcutil: {}</small>".format(
+                *self.main_controller.ddcutil.ddcutil_version_info())
         self.setInformativeText(about_text)
         self.setIcon(QMessageBox.Information)
 
@@ -7922,7 +7923,9 @@ class VduAppWindow(QMainWindow):
         self.app_context_menu = ContextMenu(
             app_controller=main_controller,
             main_window_action=partial(self.show_main_window, True) if gnome_tray_behaviour else None,
-            about_action=AboutDialog.invoke, help_action=HelpDialog.invoke, gray_scale_action=GreyScaleDialog,
+            about_action=partial(AboutDialog.invoke, self.main_controller),
+            help_action=HelpDialog.invoke,
+            gray_scale_action=GreyScaleDialog,
             lux_auto_action=self.main_controller.lux_auto_action if main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) else None,
             lux_check_action=self.main_controller.lux_check_action if main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) else None,
             lux_meter_action=partial(LuxDialog.invoke, self.main_controller) if main_config.is_set(
@@ -8447,7 +8450,6 @@ def initialise_locale_translations(app: QApplication) -> None:
             app.installTranslator(translator)
             log_info(tr("Using {} translations from {}").format(locale_name, qm_path.as_posix()))
 
-
 def main() -> None:
     # Allow control-c to terminate the program
     signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -8515,11 +8517,12 @@ def main() -> None:
     if main_config.is_set(ConfOption.TRANSLATIONS_ENABLED):
         initialise_locale_translations(app)
 
-    if args.about:
-        AboutDialog.invoke()
-
     main_controller = VduAppController(main_config)
+
     VduAppWindow(main_config, app, main_controller)  # may need to assign this to a variable to prevent garbage collection?
+
+    if args.about:
+        AboutDialog.invoke(main_controller)
 
     if args.create_config_files:
         main_controller.create_config_files()
