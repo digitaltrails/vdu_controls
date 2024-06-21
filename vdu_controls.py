@@ -699,6 +699,9 @@ Environment
         Changes some search paths to be more convenient in a development
         scenario. (``no`` or yes)
 
+    VDU_CONTROLS_DBUS_TIMEOUT_MILLIS
+        Dbus call wait timeout. Default is 10000, 10 seconds.
+
 Files
 =====
     $HOME/.config/vdu_controls/
