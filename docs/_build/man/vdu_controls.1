@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "May 08, 2024" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Jun 22, 2024" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 1.11.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -916,6 +916,9 @@ Set the number of times to repeat a ddcutil getvcp or setvcp before returning an
 .B VDU_CONTROLS_DEVELOPER
 Changes some search paths to be more convenient in a development
 scenario. (\fBno\fP or yes)
+.TP
+.B VDU_CONTROLS_DBUS_TIMEOUT_MILLIS
+Dbus call wait timeout. Default is 10000, 10 seconds.
 .UNINDENT
 .UNINDENT
 .UNINDENT
