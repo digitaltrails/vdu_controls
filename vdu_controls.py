@@ -1713,7 +1713,7 @@ class DdcutilDBusImpl(QObject):
         self.common_args = env_args + common_args if common_args else []
         self.service_access_lock = Lock()
         self.listener_callback: Callable | None = callback
-        self.dbus_timeout_millis = int(os.getenv("VDU_CONTROLS_DBUS_TIMEOUT_MILLIS", default='5000'))
+        self.dbus_timeout_millis = int(os.getenv("VDU_CONTROLS_DBUS_TIMEOUT_MILLIS", default='10000'))
         self._status_values: Dict[int, str] = {}
         for try_count in range(1, 32):  # Approximating an infinite loop
             self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service()
