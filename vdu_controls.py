@@ -796,7 +796,8 @@ from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
-    QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, qApp, QShortcut
+    QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, qApp, QShortcut, \
+    QDesktopWidget
 
 APPNAME = "VDU Controls"
 VDU_CONTROLS_VERSION = '2.0.4'
@@ -7906,6 +7907,7 @@ class VduAppWindow(QMainWindow):
         self.qt_state_key = self.objectName() + "_window_state"
         self.qt_settings = QSettings('vdu_controls.qt.state', 'vdu_controls')
         self.main_panel: VduControlsMainPanel | None = None
+        self.scroll_area: QScrollArea | None = None
         self.main_config = main_config
         self.hide_shortcuts = True
 
@@ -8089,6 +8091,9 @@ class VduAppWindow(QMainWindow):
         if self.main_panel is not None:
             self.main_panel.deleteLater()
             self.main_panel = None
+        if self.scroll_area is not None:
+            self.scroll_area.deleteLater()
+            self.scroll_area = None
         self.main_panel = VduControlsMainPanel()
         self.main_controller.initialize_vdu_controllers()
         refresh_button = ToolButton(REFRESH_ICON_SOURCE, tr("Refresh settings from monitors"))
@@ -8111,7 +8116,25 @@ class VduAppWindow(QMainWindow):
         # Wire-up after successful init to avoid deadlocks
         self.main_panel.vdu_vcp_changed_qtsignal.connect(self.respond_to_changes_handler)
         self.indicate_busy(True)
-        self.setCentralWidget(self.main_panel)
+        available_height = QDesktopWidget().availableGeometry().height() - 200  # Minus allowance for panel/tray
+        hint_height = self.main_panel.sizeHint().height()  # The hint is the actual required layout space
+        hint_width = self.main_panel.sizeHint().width()
+        log_debug(f" {hint_height=} {available_height=} {self.minimumHeight()=}")
+        if hint_height > available_height:
+            log_debug(f"Main panel too high, adding scroll-area {hint_height=} {available_height=}") if log_debug_enabled else None
+            self.setMaximumHeight(available_height)
+            self.setMinimumHeight(hint_height + 20 if hint_height < available_height else available_height)
+            self.setMinimumWidth(hint_width + 20)  # Allow extra space for disappearing scrollbars
+            self.scroll_area = QScrollArea()
+            self.scroll_area.setMaximumHeight(hint_height)
+            self.scroll_area.setWidgetResizable(True)
+            self.scroll_area.setWidget(self.main_panel)
+            self.setCentralWidget(self.scroll_area)
+        else:  # Don't mess with the size unnecessarily - let the user determine it?
+            self.setMinimumHeight(0)  # Reset to no specific restrictions (in case previously using QScrollArea).
+            self.setMinimumWidth(0)
+            self.setCentralWidget(self.main_panel)
+            #self.adjustSize()
         self.splash_message_qtsignal.emit(tr("Checking Presets"))
 
     def get_main_panel(self) -> VduControlsMainPanel:
