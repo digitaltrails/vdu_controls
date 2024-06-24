@@ -3804,8 +3804,9 @@ class VduControlsMainPanel(QWidget):
                 warn_omitted.setInformativeText(tr('The monitor will be omitted from the control panel.'))
                 warn_omitted.exec()
 
+        controllers_layout.addStretch(0);
         for control in extra_controls:
-            controllers_layout.addWidget(control)
+            controllers_layout.addWidget(control, 0, Qt.AlignBottom)
 
         if len(self.vdu_control_panels) == 0:
             no_vdu_widget = QWidget()
@@ -3825,7 +3826,7 @@ class VduControlsMainPanel(QWidget):
             controllers_layout.addWidget(no_vdu_widget)
 
         self.bottom_toolbar = VduPanelBottomToolBar(tool_buttons=tool_buttons, app_context_menu=app_context_menu, parent=self)
-        self.layout().addWidget(self.bottom_toolbar)
+        controllers_layout.addWidget(self.bottom_toolbar, 0, Qt.AlignBottom)
 
         def open_context_menu(position: QPoint) -> None:
             assert app_context_menu is not None
@@ -8117,24 +8118,26 @@ class VduAppWindow(QMainWindow):
         self.main_panel.vdu_vcp_changed_qtsignal.connect(self.respond_to_changes_handler)
         self.indicate_busy(True)
         available_height = QDesktopWidget().availableGeometry().height() - 200  # Minus allowance for panel/tray
+        #self.main_panel.adjustSize()
         hint_height = self.main_panel.sizeHint().height()  # The hint is the actual required layout space
         hint_width = self.main_panel.sizeHint().width()
         log_debug(f" {hint_height=} {available_height=} {self.minimumHeight()=}")
         if hint_height > available_height:
             log_debug(f"Main panel too high, adding scroll-area {hint_height=} {available_height=}") if log_debug_enabled else None
             self.setMaximumHeight(available_height)
-            self.setMinimumHeight(hint_height + 20 if hint_height < available_height else available_height)
             self.setMinimumWidth(hint_width + 20)  # Allow extra space for disappearing scrollbars
-            self.scroll_area = QScrollArea()
-            self.scroll_area.setMaximumHeight(hint_height)
-            self.scroll_area.setWidgetResizable(True)
-            self.scroll_area.setWidget(self.main_panel)
-            self.setCentralWidget(self.scroll_area)
+
         else:  # Don't mess with the size unnecessarily - let the user determine it?
-            self.setMinimumHeight(0)  # Reset to no specific restrictions (in case previously using QScrollArea).
-            self.setMinimumWidth(0)
-            self.setCentralWidget(self.main_panel)
-            #self.adjustSize()
+            self.setMinimumHeight(hint_height + 20)
+            self.setMinimumWidth(hint_width + 20)
+            if hint_height > self.height():
+                self.adjustSize()
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setWidget(self.main_panel)
+        #self.scroll_area.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding))
+
+        self.setCentralWidget(self.scroll_area)
         self.splash_message_qtsignal.emit(tr("Checking Presets"))
 
     def get_main_panel(self) -> VduControlsMainPanel:
