@@ -313,7 +313,7 @@ Version History
 ---------------
 * 2.0.4
   * The About-Dialog now refreshes the ddcutil version info on each invocation. 
-  * Increased dbus timeout to 10 seconds (numerous VDUs and errors may slow down VDU detection).
+  * Increased dbus timeout to 10 seconds (in case numerous VDUs or errors slow down VDU detection).
   * Dynamically enable a scroll-area when the main-panel exceeds the available screen height.
 * 2.0.3
   * Reduce the number of writes to VDU NVRAM by sliders, spinners, and ambient brightness adjustments.
