@@ -125,10 +125,6 @@ to reduce the overall frequency of adjustments:
  + If using a light-meter, disengage metered automatic adjustment when faced with rapidly fluctuating levels of ambient brightness.
  + Consider adjusting the ambient lighting instead of the VDU.
 
-, see **Limitations** in the
-[man page](https://htmlpreview.github.io/?https://raw.githubusercontent.com/digitaltrails/vdu_controls/master/docs/_build/man/vdu_controls.1.html)
- for further details.
-
 #### Other concerns
 
 The power-supplies in some older VDUs may buzz/squeel audibly when the brightness is
