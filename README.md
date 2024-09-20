@@ -109,7 +109,23 @@ testing over the past four years, that gives credence to the possibility of
 exhausting NVRAM write cycles (at least in VDUs of that vintage).
 
 All that said, ``vdu_controls`` does include a number of features that can be used 
-to reduce the overall frequency of adjustments, see **Limitations** in the
+to reduce the overall frequency of adjustments:
+
+#### Inbuilt mitigations:
+
+ + Slider and spin-box controls only update the VDU when adjustments become slow or stop (when no change occurs in 0.5 seconds).
+ + Transitions during ambient-light-level brightness adjustment are limited to changes of greater than 20%.
+ + Automatic ambient brightness adjustment only triggers a change when the proposed brightness differs from the current brightness by at least 10%.
+
+#### Electable mitigations:
+
+ + Choose to restore pre-prepared ‘presets’ instead of dragging sliders.
+ + Refrain from adding transitions to presets.
+ + If using the ambient-light brightness response curves, tune the settings and curves to minimise frequent small changes.
+ + If using a light-meter, disengage metered automatic adjustment when faced with rapidly fluctuating levels of ambient brightness.
+ + Consider adjusting the ambient lighting instead of the VDU.
+
+, see **Limitations** in the
 [man page](https://htmlpreview.github.io/?https://raw.githubusercontent.com/digitaltrails/vdu_controls/master/docs/_build/man/vdu_controls.1.html)
  for further details.
 
