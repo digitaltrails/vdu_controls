@@ -557,10 +557,8 @@ There's plenty of useful info for getting the best out of ``ddcutil`` at https:/
 Limitations
 ===========
 
-There has been speculation that repeatably altering VDU settings might
-affect VDU lifespan.  Possible reasons include the consumption of NVRAM
-write cycles, stressing the VDU power-supply, or increasing the LED panel
-burn-in.
+Repeatably altering VDU settings might affect VDU lifespan, exhausting the NVRAM write
+cycles, stressing the VDU power-supply, or increasing panel burn-in.
 
 That said, ``vdu_controls`` does include a number of features that can be used
 to reduce the overall frequency of adjustments.

@@ -96,6 +96,32 @@ dark-theme, KDE, Deepin, GNOME, and others.
 ![Custom](screen-shots/Screenshot_tray-200.png) ![Custom](screen-shots/Screenshot_settings-300.png)
 ![Custom](screen-shots/presets.png) ![Custom](screen-shots/lux-profiles.png)
 
+Does adjusting a VDU affect its lifespan or health?
+---------------------------------------------------
+
+Repeatably altering VDU settings might affect VDU lifespan.  Possible reasons 
+include the consumption of NVRAM write cycles, stressing the VDU power-supply, 
+or increasing the LED panel burn-in.  
+
+I have one 15 year old VDU for which settings can be altered, but extended loss 
+of power restores the factory defaults.  This VDU was used extensively for 
+testing over the past four years, that gives credence to the possibility of 
+exhausting NVRAM write cycles (at least in VDUs of that vintage).
+
+All that said, ``vdu_controls`` does include a number of features that can be used 
+to reduce the overall frequency of adjustments, see **Limitations** in the
+[man page](https://htmlpreview.github.io/?https://raw.githubusercontent.com/digitaltrails/vdu_controls/master/docs/_build/man/vdu_controls.1.html)
+ for further details.
+
+#### Other concerns
+
+The power-supplies in some older VDUs may buzz/squeel audibly when the brightness is
+turned way down. This may not be a major issue because, in normal surroundings,
+older VDUs are often not usable below about 85-90% brightness.
+
+Going beyond the standard DDC features by attempting to experiment with hidden 
+or undocumented features or values has the potential to make irreversible changes.
+
 Getting Started
 ---------------
 
@@ -221,28 +247,6 @@ See the context-menu or the  [man page](https://htmlpreview.github.io/?https://r
 
 VDU controls and optimisations can be specified in the global or VDU-specific config-files.
 
-Does adjusting a VDU affect its lifespan or health?
----------------------------------------------------
-
-There has been speculation that repeatably altering VDU settings might
-affect VDU lifespan.  Possible reasons include the consumption of NVRAM
-write cycles, stressing the VDU power-supply, or increasing the LED panel
-burn-in.  
-
-That said, ``vdu_controls`` does include a number of features that can be used 
-to reduce the overall frequency of adjustments, see **Limitations** in the
-[man page](https://htmlpreview.github.io/?https://raw.githubusercontent.com/digitaltrails/vdu_controls/master/docs/_build/man/vdu_controls.1.html)
- for further details.
-
-#### Other concerns
-
-The power-supplies in some older VDUs may buzz/squeel audibly when the brightness is
-turned way down. This may not be a major issue because, in normal surroundings,
-older VDUs are often not usable below about 85-90% brightness.
-
-Going beyond the standard DDC features by attempting to experiment with hidden 
-or undocumented features or values has the potential to make irreversible changes.
-
 Bugs and Suggestions
 --------------------
 If you encounter a bug or issue, or wish to make a suggestion, you're most welcome to raise 
@@ -315,6 +319,7 @@ Version History
   * The About-Dialog now refreshes the ddcutil version info on each invocation. 
   * Increased dbus timeout to 10 seconds (in case numerous VDUs or errors slow down VDU detection).
   * Dynamically enable a scroll-area when the main-panel exceeds the available screen height.
+  
 * 2.0.3
   * Reduce the number of writes to VDU NVRAM by sliders, spinners, and ambient brightness adjustments.
     * Slider and spin-box controls now only update the VDU when adjustments become slow or stop (when 
