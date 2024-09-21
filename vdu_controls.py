@@ -7387,6 +7387,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 self.main_window.initialise_app_icon()
                 self.main_window.create_main_control_panel()
                 SettingsEditor.reconfigure_instance(self.get_vdu_configs())
+            self.restore_vdu_default_presets()
             log_debug("configure: released application_configuration_lock") if log_debug_enabled else None
             if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED):
                 if self.lux_auto_controller is not None:
@@ -7636,6 +7637,23 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 self, preset, update_progress, restore_finished_callback, immediately, scheduled_activity)
             self.preset_transition_worker.start()
         log_debug("restore_preset: released application_configuration_lock") if log_debug_enabled else None
+
+    def restore_vdu_default_presets(self):
+        def activation_finished(worker: PresetTransitionWorker) -> None:
+            if worker.vdu_exception is not None:  # TODO the following ini variable isn't defined for the ini file
+                log_warning(f"Error during restoration of {worker.preset.name}")
+                return
+            self.status_message(tr("Restored {}").format(worker.preset.name), timeout=5, destination=MsgDestination.DEFAULT)
+            #activation_feedback(tr("Restored {}").format(preset.name))
+            log_info(f"Restored preset {worker.preset.name}")
+
+        for stable_id in self.vdu_controllers_map.keys():
+            log_info(f"Checking for default preset for {stable_id}")
+            for preset in self.preset_controller.find_presets_map().values():
+                preset_proper_name = proper_name(preset.name)
+                if stable_id == preset_proper_name:
+                    log_info(f"Default preset VDU {stable_id=} == {preset_proper_name=} - restore now...")
+                    self.restore_preset(preset, finished_func=activation_finished, immediately=True, scheduled_activity=False)
 
     def schedule_presets(self, reconfiguring: bool = False) -> Preset | None:
         # As well as scheduling, this method finds and returns the preset that should be applied at this time.
