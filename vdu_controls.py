@@ -516,7 +516,7 @@ heuristics::
       # to prefer triggering the preset over applying the interpolated value.
       interpolation-sensitivity-percent=10
       # Jump brightness in one step up to this maximum, after which transition in steps.
-      max-brightness-jump=20
+      max-brightness-jump=100
 
 
 Improving Response Time: Dynamic Optimization and Sleep Multipliers
@@ -567,8 +567,7 @@ to reduce the overall frequency of adjustments.
 
   + Slider and spin-box controls only update the VDU when adjustments become slow or stop
     (when no change occurs in 0.5 seconds).
-  + Transitions during ambient-light-level brightness adjustment are limited to changes
-    of greater than 20%.
+  + Automatic alterations for ambient-light-level jump with no transitioning steps (from v2.0.5 onward).
   + Automatic ambient brightness adjustment only triggers a change when the
     proposed brightness differs from the current brightness by at least 10%.
 
@@ -6157,7 +6156,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         self.sensitivity_percent = get_prop('interpolation-sensitivity-percent', fallback=10)
         self.convergence_divisor = get_prop('convergence-divisor', fallback=2)
         self.step_pause_millis = get_prop('step-pause-millis', fallback=100)
-        self.max_brightness_jump = get_prop('max-brightness-jump', fallback=20)
+        self.max_brightness_jump = get_prop('max-brightness-jump', fallback=100)
         self._lux_dialog_message_qtsignal.connect(LuxDialog.lux_dialog_message)
         self._lux_dialog_message_qtsignal.connect(self.main_controller.main_window.status_message)
         self.status_message(f"{TIMER_RUNNING_SYMBOL} 00:00", 0, MsgDestination.COUNTDOWN)

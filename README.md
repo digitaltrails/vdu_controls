@@ -114,7 +114,7 @@ to reduce the overall frequency of adjustments:
 #### Inbuilt mitigations:
 
  + Slider and spin-box controls only update the VDU when adjustments become slow or stop (when no change occurs in 0.5 seconds).
- + Transitions during ambient-light-level brightness adjustment are limited to changes of greater than 20%.
+ + Automatic alterations for ambient-light-level jump with no transitioning steps (from v2.0.5 onward).
  + Automatic ambient brightness adjustment only triggers a change when the proposed brightness differs from the current brightness by at least 10%.
 
 #### Electable mitigations:
@@ -327,6 +327,10 @@ Michael Hamilton
 
 Version History
 ---------------
+* 2.0.5
+  * Further minimise VDU NVRAM writes by defaulting to jumping between brightness values with 
+    no intermediate steps (default lux_meter.max-brightness-jump to 100%).
+
 * 2.0.4
   * The About-Dialog now refreshes the ddcutil version info on each invocation. 
   * Increased dbus timeout to 10 seconds (in case numerous VDUs or errors slow down VDU detection).
