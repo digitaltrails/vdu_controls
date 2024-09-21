@@ -7640,11 +7640,13 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
     def restore_vdu_default_presets(self):
         def activation_finished(worker: PresetTransitionWorker) -> None:
-            if worker.vdu_exception is not None:  # TODO the following ini variable isn't defined for the ini file
-                log_warning(f"Error during restoration of {worker.preset.name}")
+            if worker.vdu_exception is not None:
+                log_error(f"Error during restoration of {worker.preset.name}")
+                self.status_message(tr("Error during restoration of VDU defaults for {}").format(worker.preset.name),
+                                    timeout=5, destination=MsgDestination.DEFAULT)
                 return
-            self.status_message(tr("Restored {}").format(worker.preset.name), timeout=5, destination=MsgDestination.DEFAULT)
-            #activation_feedback(tr("Restored {}").format(preset.name))
+            self.status_message(tr("Restored VDU defaults for {}").format(worker.preset.name), timeout=5,
+                                destination=MsgDestination.DEFAULT)
             log_info(f"Restored preset {worker.preset.name}")
 
         for stable_id in self.vdu_controllers_map.keys():
