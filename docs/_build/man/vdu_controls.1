@@ -27,9 +27,9 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Jun 22, 2024" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Sep 22, 2024" "" "vdu_controls"
 .SH NAME
-vdu_controls \- vdu_controls 1.11.0
+vdu_controls \- vdu_controls 2.0.5
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
 .sp
 A control panel for DisplayPort, DVI, HDMI, or USB connected VDUs (\fIVisual Display Units\fP).
@@ -209,7 +209,7 @@ also available via the hamburger\-menu, and also via the right\-mouse button in 
 main\-window or the system\-tray icon.  The main\-menu has \fIALT\-key\fP shortcuts for all menu items
 (subject to sufficient letters being available to distinguish all user defined presets).
 .sp
-For further information, including screenshots, see \fI\%https://github.com/digitaltrails/vdu_controls\fP .
+For further information, including screenshots, see \X'tty: link https://github.com/digitaltrails/vdu_controls'\fI\%https://github.com/digitaltrails/vdu_controls\fP\X'tty: link' .
 .sp
 The long term affects of repeatably rewriting a VDUs setting are not well understood, but some
 concerns have been expressed. See \fBLIMITATIONS\fP for further details.
@@ -440,6 +440,13 @@ VDU failing to keep up with the associated stream of DDC commands.
 .sp
 While using the GUI to create or edit a preset, activation of scheduled presets and adjustments due
 to light\-metering are blocked until editing is complete.
+.SS Presets \- VDU initialization presets
+.sp
+For a VDU named \fIabc\fP with a serial number \fIxyz\fP, if a preset named \fIabx xyz\fP exists, that
+preset will be restored at startup or when ever the VDU is subsequently detected.
+.sp
+This feature is designed to restore settings that cannot be saved in the VDU’s NVRAM
+or for VDUs where the NVRAM capacity has been exhausted.
 .SS Presets \- solar elevation triggers
 .sp
 A preset may be set to automatically trigger when the sun rises to a specified elevation. The idea
@@ -498,10 +505,10 @@ that manner a transition can be abandoned by dragging a slider or choosing a dif
 .SS Presets \- supplementary weather requirements
 .sp
 A solar elevation trigger can have a weather requirement which will be checked against the weather
-reported by \fI\%https://wttr.in\fP\&.
+reported by \X'tty: link https://wttr.in'\fI\%https://wttr.in\fP\X'tty: link'\&.
 .sp
 By default, there are three possible weather requirements: \fBgood\fP, \fBbad\fP, and \fBall weather\fP\&.
-Each  requirement is defined by a file containing a list of WWO (\fI\%https://www.worldweatheronline.com\fP)
+Each  requirement is defined by a file containing a list of WWO (\X'tty: link https://www.worldweatheronline.com'\fI\%https://www.worldweatheronline.com\fP\X'tty: link')
 weather codes, one per line.  The three default requirements are contained in the files
 \fB$HOME/.config/vdu_controls/{good,bad,all}.weather\fP\&.  Additional weather requirements can be
 created by using a text editor to create further files.  The \fBall.weather\fP file exists primarily
@@ -516,7 +523,7 @@ To ensure \fBwttr.in\fP supplies the weather for your location, please ensure th
 enhanced to fill out a place\-name for you.  Should \fBwttr.in\fP not recognise a place\-name, the
 place\-name can be manually edited to something more suitable. The nearest big city or an
 airport\-code will do, for example: LHR, LAX, JFK.  You can use a web browser to test a place\-name,
-for example: \fI\%https://wttr.in/JFK\fP
+for example: \X'tty: link https://wttr.in/JFK'\fI\%https://wttr.in/JFK\fP\X'tty: link'
 .sp
 When weather requirements are in use, \fBvdu_controls\fP will check that the coordinates in
 \fBSettings\fP \fBLocation\fP are a reasonable match for those returned from \fBwttr.in\fP, a warning will
@@ -616,7 +623,7 @@ Further information on various lux metering options, as well as instructions for
 programming an Arduino with a GY\-30/BH1750, can be found at:
 .INDENT 0.0
 .INDENT 3.5
-\fI\%https://github.com/digitaltrails/vdu_controls/blob/master/Lux\-metering.md\fP
+\X'tty: link https://github.com/digitaltrails/vdu_controls/blob/master/Lux-metering.md'\fI\%https://github.com/digitaltrails/vdu_controls/blob/master/Lux\-metering.md\fP\X'tty: link'
 .UNINDENT
 .UNINDENT
 .sp
@@ -625,7 +632,7 @@ Example scripts for mapping a webcam\(aqs average\-brightness to approximate lux
 location:
 .INDENT 0.0
 .INDENT 3.5
-\fI\%https://github.com/digitaltrails/vdu_controls/tree/master/sample\-scripts\fP\&.
+\X'tty: link https://github.com/digitaltrails/vdu_controls/tree/master/sample-scripts'\fI\%https://github.com/digitaltrails/vdu_controls/tree/master/sample\-scripts\fP\X'tty: link'\&.
 .UNINDENT
 .UNINDENT
 .sp
@@ -713,7 +720,7 @@ smoother\-alpha=0.5
 # to prefer triggering the preset over applying the interpolated value.
 interpolation\-sensitivity\-percent=10
 # Jump brightness in one step up to this maximum, after which transition in steps.
-max\-brightness\-jump=20
+max\-brightness\-jump=100
 .ft P
 .fi
 .UNINDENT
@@ -748,13 +755,11 @@ If you have the choice, a \fBDisplayPort\fP to \fBDisplayPort\fP connection may 
 Reducing the number of enabled controls can speed up initialisation, decrease the refresh time, and
 reduce the time taken to restore presets.
 .sp
-There\(aqs plenty of useful info for getting the best out of \fBddcutil\fP at \fI\%https://www.ddcutil.com/\fP\&.
+There\(aqs plenty of useful info for getting the best out of \fBddcutil\fP at \X'tty: link https://www.ddcutil.com/'\fI\%https://www.ddcutil.com/\fP\X'tty: link'\&.
 .SH LIMITATIONS
 .sp
-There has been speculation that repeatably altering VDU settings might
-affect VDU lifespan.  Possible reasons include the consumption of NVRAM
-write cycles, stressing the VDU power\-supply, or increasing the LED panel
-burn\-in.
+Repeatably altering VDU settings might affect VDU lifespan, exhausting the NVRAM write
+cycles, stressing the VDU power\-supply, or increasing panel burn\-in.
 .sp
 That said, \fBvdu_controls\fP does include a number of features that can be used
 to reduce the overall frequency of adjustments.
@@ -766,8 +771,7 @@ Inbuilt mitigations:
 Slider and spin\-box controls only update the VDU when adjustments become slow or stop
 (when no change occurs in 0.5 seconds).
 .IP \(bu 2
-Transitions during ambient\-light\-level brightness adjustment are limited to changes
-of greater than 20%.
+Automatic alterations for ambient\-light\-level jump with no transitioning steps (from v2.0.5 onward).
 .IP \(bu 2
 Automatic ambient brightness adjustment only triggers a change when the
 proposed brightness differs from the current brightness by at least 10%.
@@ -880,7 +884,7 @@ ddcutil detect
 .UNINDENT
 .sp
 Read ddcutil documentation concerning config of i2c_dev with nvidia GPUs. Detailed ddcutil info
-at \fI\%https://www.ddcutil.com/\fP
+at \X'tty: link https://www.ddcutil.com/'\fI\%https://www.ddcutil.com/\fP\X'tty: link'
 .SH ENVIRONMENT
 .INDENT 0.0
 .INDENT 3.5
@@ -948,7 +952,7 @@ Location for system\-wide icons,  sample\-scripts, and  translations.
 .UNINDENT
 .SH REPORTING BUGS
 .sp
-\fI\%https://github.com/digitaltrails/vdu_controls/issues\fP
+\X'tty: link https://github.com/digitaltrails/vdu_controls/issues'\fI\%https://github.com/digitaltrails/vdu_controls/issues\fP\X'tty: link'
 .SH GNU LICENSE
 .sp
 This program is free software: you can redistribute it and/or modify it
@@ -961,7 +965,7 @@ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
 more details.
 .sp
 You should have received a copy of the GNU General Public License along
-with this program. If not, see \fI\%https://www.gnu.org/licenses/\fP\&.
+with this program. If not, see \X'tty: link https://www.gnu.org/licenses/'\fI\%https://www.gnu.org/licenses/\fP\X'tty: link'\&.
 .SH AUTHOR
 Michael Hamilton
 .SH COPYRIGHT

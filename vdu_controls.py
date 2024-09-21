@@ -298,6 +298,15 @@ VDU failing to keep up with the associated stream of DDC commands.
 While using the GUI to create or edit a preset, activation of scheduled presets and adjustments due
 to light-metering are blocked until editing is complete.
 
+Presets - VDU initialization presets
+------------------------------------
+
+For a VDU named `abc` with a serial number `xyz`, if a preset named `abx xyz` exists, that
+preset will be restored at startup or when ever the VDU is subsequently detected.
+
+This feature is designed to restore settings that cannot be saved in the VDU’s NVRAM
+or for VDUs where the NVRAM capacity has been exhausted.
+
 Presets - solar elevation triggers
 ----------------------------------
 
@@ -7387,7 +7396,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 self.main_window.initialise_app_icon()
                 self.main_window.create_main_control_panel()
                 SettingsEditor.reconfigure_instance(self.get_vdu_configs())
-            self.restore_vdu_default_presets()
+            self.restore_vdu_intialization_presets()
             log_debug("configure: released application_configuration_lock") if log_debug_enabled else None
             if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED):
                 if self.lux_auto_controller is not None:
@@ -7585,7 +7594,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             self.main_window.indicate_busy(True)  # Refresh has probably commenced, give the user some feedback
 
     def restore_preset(self, preset: Preset, finished_func: Callable[[PresetTransitionWorker], None] | None = None,
-                       immediately: bool = False, scheduled_activity: bool = False) -> None:
+                       immediately: bool = False, scheduled_activity: bool = False, wait: bool = False) -> None:
         # Starts the restore, but it will complete in the worker thread
         if not is_running_in_gui_thread():  # Transfer this request into the GUI thread
             log_debug(f"restore_preset {preset.name} transferring task to GUI thread") if log_debug_enabled else None
@@ -7636,26 +7645,31 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             self.preset_transition_worker = PresetTransitionWorker(
                 self, preset, update_progress, restore_finished_callback, immediately, scheduled_activity)
             self.preset_transition_worker.start()
+            if wait:
+                self.preset_transition_worker.wait()
         log_debug("restore_preset: released application_configuration_lock") if log_debug_enabled else None
 
-    def restore_vdu_default_presets(self):
-        def activation_finished(worker: PresetTransitionWorker) -> None:
+    def restore_vdu_intialization_presets(self):
+
+        def restored_initialization_preset(worker: PresetTransitionWorker) -> None:
             if worker.vdu_exception is not None:
                 log_error(f"Error during restoration of {worker.preset.name}")
-                self.status_message(tr("Error during restoration of VDU defaults for {}").format(worker.preset.name),
-                                    timeout=5, destination=MsgDestination.DEFAULT)
+                self.status_message(tr("Error during restoration preset {}").format(worker.preset.name),
+                                    timeout=5)
                 return
-            self.status_message(tr("Restored VDU defaults for {}").format(worker.preset.name), timeout=5,
-                                destination=MsgDestination.DEFAULT)
-            log_info(f"Restored preset {worker.preset.name}")
+            message = tr("Restored Preset\n{}").format(worker.preset.name)
+            self.status_message(message, timeout=5)
+            self.main_window.splash_message_qtsignal.emit(message)
+            log_info(f'Restore initialisation preset {worker.preset.name}')
+            time.sleep(1.0)  # Pause to give the message time to display - TODO find non-delaying solution
 
+        # Find presets that match the name of each VDU name+serial and restore them...
         for stable_id in self.vdu_controllers_map.keys():
-            log_info(f"Checking for default preset for {stable_id}")
+            log_info(f"Checking for intialisation preset for {stable_id}")
             for preset in self.preset_controller.find_presets_map().values():
                 preset_proper_name = proper_name(preset.name)
                 if stable_id == preset_proper_name:
-                    log_info(f"Default preset VDU {stable_id=} == {preset_proper_name=} - restore now...")
-                    self.restore_preset(preset, finished_func=activation_finished, immediately=True, scheduled_activity=False)
+                    self.restore_preset(preset, finished_func=restored_initialization_preset, immediately=True, wait=True)
 
     def schedule_presets(self, reconfiguring: bool = False) -> Preset | None:
         # As well as scheduling, this method finds and returns the preset that should be applied at this time.

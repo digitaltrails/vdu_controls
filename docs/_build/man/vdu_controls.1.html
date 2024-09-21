@@ -289,6 +289,15 @@ commands.</p>
 <p>While using the GUI to create or edit a preset, activation of
 scheduled presets and adjustments due to light-metering are blocked
 until editing is complete.</p>
+<h2 id="presets---vdu-initialization-presets">Presets - VDU
+initialization presets</h2>
+<p>For a VDU named <code>abc</code> with a serial number
+<code>xyz</code>, if a preset named <code>abx xyz</code> exists, that
+preset will be restored at startup or when ever the VDU is subsequently
+detected.</p>
+<p>This feature is designed to restore settings that cannot be saved in
+the VDU’s NVRAM or for VDUs where the NVRAM capacity has been
+exhausted.</p>
 <h2 id="presets---solar-elevation-triggers">Presets - solar elevation
 triggers</h2>
 <p>A preset may be set to automatically trigger when the sun rises to a
@@ -524,7 +533,7 @@ metering and auto-adjustment heuristics::</p>
   # to prefer triggering the preset over applying the interpolated value.
   interpolation-sensitivity-percent=10
   # Jump brightness in one step up to this maximum, after which transition in steps.
-  max-brightness-jump=20</code></pre>
+  max-brightness-jump=100</code></pre>
 <h2
 id="improving-response-time-dynamic-optimization-and-sleep-multipliers">Improving
 Response Time: Dynamic Optimization and Sleep Multipliers</h2>
@@ -568,10 +577,9 @@ presets.</p>
 <p>There’s plenty of useful info for getting the best out of
 <code>ddcutil</code> at https://www.ddcutil.com/.</p>
 <h1 id="limitations">Limitations</h1>
-<p>There has been speculation that repeatably altering VDU settings
-might affect VDU lifespan. Possible reasons include the consumption of
-NVRAM write cycles, stressing the VDU power-supply, or increasing the
-LED panel burn-in.</p>
+<p>Repeatably altering VDU settings might affect VDU lifespan,
+exhausting the NVRAM write cycles, stressing the VDU power-supply, or
+increasing panel burn-in.</p>
 <p>That said, <code>vdu_controls</code> does include a number of
 features that can be used to reduce the overall frequency of
 adjustments.</p>
@@ -580,8 +588,8 @@ adjustments.</p>
 <ul>
 <li>Slider and spin-box controls only update the VDU when adjustments
 become slow or stop (when no change occurs in 0.5 seconds).</li>
-<li>Transitions during ambient-light-level brightness adjustment are
-limited to changes of greater than 20%.</li>
+<li>Automatic alterations for ambient-light-level jump with no
+transitioning steps (from v2.0.5 onward).</li>
 <li>Automatic ambient brightness adjustment only triggers a change when
 the proposed brightness differs from the current brightness by at least
 10%.</li>
