@@ -3381,8 +3381,11 @@ class VduControlPanel(QWidget):
         """Return the number of VDU controls.  Might be zero if initialization discovered no controllable attributes."""
         return len(self.vcp_controls)
 
-    def is_preset_active(self, preset_ini: ConfIni) -> bool:
+    def is_preset_active(self, preset: Preset) -> bool:
         vdu_section = self.controller.vdu_stable_id
+        if vdu_section == proper_name(preset.name):
+            return False   # ignore VDU initialisation presets
+        preset_ini = preset.preset_ini
         for control in self.vcp_controls:
             if control.vcp_capability.property_name() in preset_ini[vdu_section]:
                 # Prior to version vdu_controls 1.21 we stored lower, but ddcutil expects upper
@@ -3851,7 +3854,7 @@ class VduControlsMainPanel(QWidget):
     def is_preset_active(self, preset: Preset) -> bool:
         for section in preset.preset_ini:
             if section not in ('metadata', 'preset') and (panel := self.vdu_control_panels.get(section, None)):
-                if not panel.is_preset_active(preset.preset_ini):
+                if not panel.is_preset_active(preset):
                     return False
         return True
 
@@ -7594,7 +7597,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             self.main_window.indicate_busy(True)  # Refresh has probably commenced, give the user some feedback
 
     def restore_preset(self, preset: Preset, finished_func: Callable[[PresetTransitionWorker], None] | None = None,
-                       immediately: bool = False, scheduled_activity: bool = False, wait: bool = False) -> None:
+                       immediately: bool = False, scheduled_activity: bool = False, initialization_preset: bool = False) -> None:
         # Starts the restore, but it will complete in the worker thread
         if not is_running_in_gui_thread():  # Transfer this request into the GUI thread
             log_debug(f"restore_preset {preset.name} transferring task to GUI thread") if log_debug_enabled else None
@@ -7631,9 +7634,10 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 if worker_thread.work_state == PresetTransitionState.FINISHED:
                     with open(PRESET_NAME_FILE, 'w', encoding="utf-8") as cps_file:
                         cps_file.write(preset.name)
-                    self.main_window.update_status_indicators(preset)
-                    self.main_window.display_preset_status(tr("Restored {} (elapsed time {} seconds)").format(
-                        preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=2)))
+                    if not initialization_preset:
+                        self.main_window.update_status_indicators(preset)
+                        self.main_window.display_preset_status(tr("Restored {} (elapsed time {} seconds)").format(
+                            preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=2)))
                     if finished_func is not None:
                         finished_func(worker_thread)
                 else:  # Interrupted or exception:
@@ -7645,7 +7649,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             self.preset_transition_worker = PresetTransitionWorker(
                 self, preset, update_progress, restore_finished_callback, immediately, scheduled_activity)
             self.preset_transition_worker.start()
-            if wait:
+            if initialization_preset:
                 self.preset_transition_worker.wait()
         log_debug("restore_preset: released application_configuration_lock") if log_debug_enabled else None
 
@@ -7669,7 +7673,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             for preset in self.preset_controller.find_presets_map().values():
                 preset_proper_name = proper_name(preset.name)
                 if stable_id == preset_proper_name:
-                    self.restore_preset(preset, finished_func=restored_initialization_preset, immediately=True, wait=True)
+                    self.restore_preset(preset, finished_func=restored_initialization_preset, initialization_preset=True)
 
     def schedule_presets(self, reconfiguring: bool = False) -> Preset | None:
         # As well as scheduling, this method finds and returns the preset that should be applied at this time.
