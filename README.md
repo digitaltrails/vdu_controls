@@ -103,13 +103,13 @@ Repeatably altering VDU settings might affect VDU lifespan.  Possible reasons
 include the consumption of NVRAM write cycles, stressing the VDU power-supply, 
 or increasing the LED panel burn-in.  
 
-I have one 15 year old VDU for which settings can be altered, but extended loss 
-of power restores the factory defaults.  This VDU was used extensively for 
-testing over the past four years, that gives credence to the possibility of 
-exhausting NVRAM write cycles (at least in VDUs of that vintage).
+I have a VDU manufactured in 2010 that allows settings to be adjusted, but 
+reverts to factory defaults whenever it loses power.  This VDU was used intensively
+for testing vdu_controls over the past four years.  This gives credence to the 
+possibility of exhausting VDU NVRAM, at least in VDUs of that vintage.
 
 All that said, ``vdu_controls`` does include a number of features that can be used 
-to reduce the overall frequency of adjustments:
+to reduce the frequency of writes to VDU NVRAM:
 
 #### Inbuilt mitigations:
 
