@@ -4009,7 +4009,7 @@ class PresetTransitionWorker(WorkerThread):
                 key = TransitionValueKey(vdu_stable_id=vdu_stable_id, vcp_code=vcp_code)
                 if key in self.expected_values:
                     if self.expected_values[key] != vcp_value.current:
-                        log_warning(f"Interrupted transition to {self.preset.name} {key.vdu_stable_id=} "
+                        log_warning(f"Interrupted transition to {self.preset.name} {key=} "
                                     f"something else changed the VDU: {self.expected_values[key]=} != {vcp_value.current=}")
                         self.work_state = PresetTransitionState.INTERRUPTED  # Something else is changing the controls, stop work
                         return False
