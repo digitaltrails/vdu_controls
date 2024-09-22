@@ -3384,7 +3384,6 @@ class VduControlPanel(QWidget):
     def is_preset_active(self, preset: Preset) -> bool:
         vdu_section = self.controller.vdu_stable_id
         if vdu_section == proper_name(preset.name):
-            log_info(f"{vdu_section=}={preset.name} ignore")
             return False   # ignore VDU initialization-presets
         count = 0
         preset_ini = preset.preset_ini
@@ -3392,10 +3391,8 @@ class VduControlPanel(QWidget):
             if control.vcp_capability.property_name() in preset_ini[vdu_section]:
                 # Prior to version vdu_controls 1.21 we stored lower, but ddcutil expects upper
                 if control.get_current_text_value() != preset_ini[vdu_section][control.vcp_capability.property_name()].upper():
-                    log_info(f"{vdu_section=} {preset.name} not active")
                     return False  # immediately fail if even one value differs
                 count += 1
-        log_info(f"{vdu_section=} {preset.name} active {count > 0}")
         return count > 0  # true unless no values were tested.
 
 
@@ -7661,13 +7658,11 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                         self.main_window.update_status_indicators(preset)
                         self.main_window.display_preset_status(tr("Restored {} (elapsed time {} seconds)").format(
                             preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=2)))
-                        if finished_func is not None:
-                            finished_func(worker_thread)
                     else:  # Interrupted or exception:
                         self.main_window.update_status_indicators()
                         self.main_window.display_preset_status(tr("Interrupted restoration of {}").format(preset.name))
-                        if finished_func is not None:
-                            finished_func(worker_thread)
+                if finished_func is not None:
+                    finished_func(worker_thread)
 
             self.preset_transition_worker = PresetTransitionWorker(
                 self, preset, update_progress, restore_finished_callback, immediately, scheduled_activity)
@@ -7681,8 +7676,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         def restored_initialization_preset(worker: PresetTransitionWorker) -> None:
             if worker.vdu_exception is not None:
                 log_error(f"Error during restoration of {worker.preset.name}")
-                self.status_message(tr("Error during restoration preset {}").format(worker.preset.name),
-                                    timeout=5)
+                self.status_message(tr("Error during restoration preset {}").format(worker.preset.name), timeout=5)
                 return
             message = tr("Restored Preset\n{}").format(worker.preset.name)
             self.status_message(message, timeout=5)
