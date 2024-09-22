@@ -21,7 +21,7 @@ A control panel for external monitors (*Visual Display Units*).
 > The  internal DDC/VDU interface has been rewritten to optionally use the
 > D-Bus [ddcutil-service](https://github.com/digitaltrails/ddcutil-service) instead
 > of the **ddcutil** command. The new **ddcutil-service** is a daemon I've written to
-> interface with **libddcutil**, it's faster and more reponsive than the older
+> interface with **libddcutil**, it's faster and more responsive than the older
 > command-based implementation. Should the ddcutil-service be unavailable,
 > the DDC/VDU interface reverts to using the ddcutil command.  Should you encounter 
 > any issues with using the service, ***Settings->D-Bus client enabled*** can 
