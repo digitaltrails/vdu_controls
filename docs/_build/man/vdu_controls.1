@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Sep 22, 2024" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Sep 23, 2024" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 2.0.5
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -479,6 +479,9 @@ slider controls such as brightness and contrast will be stepped by one until the
 reached.  Any non\-continuous values will be set after all continuous values have reached their
 final values, for example, if input\-source is included in a preset, it will be restored at the end.
 .sp
+When using transitions, be aware that they will increase the number of writes
+to VDU NVRAM and that NVRAM has limited write\-cycles (especially so for older hardware).
+.sp
 The Preset Dialog includes a combo\-box for defining when to apply transitions to a preset:
 .INDENT 0.0
 .INDENT 3.5
@@ -645,32 +648,35 @@ The examples may require customising for your own webcam and lighting conditions
 .SS Lux Metering and brightness transitions
 .sp
 Due to VDU hardware and DDC protocol limitations, gradual transitions from one brightness level to
-another are likely to be noticeable and potentially annoying.  The auto\-brightness adjustment
-feature includes several measures to reduce the amount of stepping when transitioning to a final
-value:
+another are likely to be noticeable and potentially annoying.  As well as being anoying
+excessive stepping may eat into VDU NVRAM lifespan.
+.sp
+The auto\-brightness adjustment feature includes several measures to reduce the number of
+changes passed to the VDU:
 .INDENT 0.0
 .INDENT 3.5
 .INDENT 0.0
 .IP \(bu 2
-Lux/Brightness Profiles may define brightness\-steps so that
-brightness levels remain constant over set ranges of lux values.
+Lux/Brightness Profiles may be altered for local conditionas so that
+brightness levels remain constant over set ranges of lux values (night, day, and so forth).
 .IP \(bu 2
-Adjustments are only made at intervals of one or more minutes (defaults to 5 minutes).
-.IP \(bu 2
-Large adjustments are made with larger step sizes to shorten the transition period.
+Adjustments are only made at intervals of one or more minutes (default is 10 minutes).
 .IP \(bu 2
 The adjustment task passes lux values through a smoothing low\-pass filter.
+.IP \(bu 2
+A VDU brightness profile may optionally be set to stair\-step with no interpolation
+of intermediate values.
 .UNINDENT
 .UNINDENT
 .UNINDENT
 .sp
 When ambient light conditions are fluctuating, for example, due to passing clouds, automatic adjust
-can be suspended.  The main\-panel, main\-menu, and light\-metering dialog each contain controls for
-toggling Auto/Manual.  Additionally, moving the manual slider turns off automatic adjustment.
+can be manually suspended.  The main\-panel, main\-menu, and light\-metering dialog each contain controls for
+toggling Auto/Manual.  Additionally, moving the manual lux\-slider turns off automatic adjustment.
 .sp
 The Light\-metering dialog includes an option to enable auto\-brightness interpolation. This option
 will enable the calculation of values between steps in the profiles. In order to avoid small
-fluctuating changes, interpolation won\(aqt result in brightness changes less than 10%.  During
+fluctuating changes, interpolation won\(aqt result in brightness changes less than 20%.  During
 interpolation, if a lux value is found to be in proximity to any attached preset, the preset
 values will be preferred over interpolated ones.
 .SS Light/Lux Metering and Presets

@@ -342,6 +342,9 @@ slider controls such as brightness and contrast will be stepped by one until the
 reached.  Any non-continuous values will be set after all continuous values have reached their
 final values, for example, if input-source is included in a preset, it will be restored at the end.
 
+When using transitions, be aware that they will increase the number of writes
+to VDU NVRAM and that NVRAM has limited write-cycles (especially so for older hardware).
+
 The Preset Dialog includes a combo-box for defining when to apply transitions to a preset:
 
  - ``None`` - change immediately;
@@ -459,23 +462,26 @@ Lux Metering and brightness transitions
 ---------------------------------------
 
 Due to VDU hardware and DDC protocol limitations, gradual transitions from one brightness level to
-another are likely to be noticeable and potentially annoying.  The auto-brightness adjustment
-feature includes several measures to reduce the amount of stepping when transitioning to a final
-value:
+another are likely to be noticeable and potentially annoying.  As well as being anoying
+excessive stepping may eat into VDU NVRAM lifespan.
 
- - Lux/Brightness Profiles may define brightness-steps so that
-   brightness levels remain constant over set ranges of lux values.
- - Adjustments are only made at intervals of one or more minutes (defaults to 5 minutes).
- - Large adjustments are made with larger step sizes to shorten the transition period.
+The auto-brightness adjustment feature includes several measures to reduce the number of
+changes passed to the VDU:
+
+ - Lux/Brightness Profiles may be altered for local conditionas so that
+   brightness levels remain constant over set ranges of lux values (night, day, and so forth).
+ - Adjustments are only made at intervals of one or more minutes (default is 10 minutes).
  - The adjustment task passes lux values through a smoothing low-pass filter.
+ - A VDU brightness profile may optionally be set to stair-step with no interpolation
+   of intermediate values.
 
 When ambient light conditions are fluctuating, for example, due to passing clouds, automatic adjust
-can be suspended.  The main-panel, main-menu, and light-metering dialog each contain controls for
-toggling Auto/Manual.  Additionally, moving the manual slider turns off automatic adjustment.
+can be manually suspended.  The main-panel, main-menu, and light-metering dialog each contain controls for
+toggling Auto/Manual.  Additionally, moving the manual lux-slider turns off automatic adjustment.
 
 The Light-metering dialog includes an option to enable auto-brightness interpolation. This option
 will enable the calculation of values between steps in the profiles. In order to avoid small
-fluctuating changes, interpolation won't result in brightness changes less than 10%.  During
+fluctuating changes, interpolation won't result in brightness changes less than 20%.  During
 interpolation, if a lux value is found to be in proximity to any attached preset, the preset
 values will be preferred over interpolated ones.
 
