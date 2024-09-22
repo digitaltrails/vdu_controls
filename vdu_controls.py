@@ -298,7 +298,7 @@ VDU failing to keep up with the associated stream of DDC commands.
 While using the GUI to create or edit a preset, activation of scheduled presets and adjustments due
 to light-metering are blocked until editing is complete.
 
-Presets - VDU initialization presets
+Presets - VDU initialization-presets
 ------------------------------------
 
 For a VDU named `abc` with a serial number `xyz`, if a preset named `abx xyz` exists, that
@@ -3914,6 +3914,7 @@ class PresetTransitionWorker(WorkerThread):
                  immediately: bool = False, scheduled_activity: bool = False):
         super().__init__(self._perform_transition, finished_callable)  # type: ignore
         log_debug(f"TransitionWorker: init {preset.name=} {immediately=} {scheduled_activity=}") if log_debug_enabled else None
+        self.change_count = 0
         self.start_time = datetime.now()
         self.end_time: datetime | None = None
         self.previous_step_start_time: float = 0.0
@@ -3947,7 +3948,7 @@ class PresetTransitionWorker(WorkerThread):
                             self.preset_non_transitioning_controls.append(key)
 
     def _perform_transition(self, _: PresetTransitionWorker) -> None:
-        while (self.work_state != PresetTransitionState.STEPPING_COMPLETED and self.values_are_as_expected()
+        while (self.values_are_as_expected() and self.work_state != PresetTransitionState.STEPPING_COMPLETED
                and not self.main_controller.pause_background_tasks(self)):
             now = time.time()
             if self.step_interval_seconds > 0:  # Delay if previous duration was too short due to speed or interruption/exception
@@ -3957,16 +3958,19 @@ class PresetTransitionWorker(WorkerThread):
             self.previous_step_start_time = time.time()
             if self.stop_requested:
                 return
-            self.step()
+            self.step()  # Perform one step here <---
             self.progress_qtsignal.emit(self)
         if self.work_state == PresetTransitionState.STEPPING_COMPLETED:  # Still TRANSIENT until we're all done.
             for key in self.preset_non_transitioning_controls:  # Finish by doing the non-transitioning controls
                 if self.stop_requested:
                     return
-                self.main_controller.set_value(key.vdu_stable_id, key.vcp_code, self.final_values[key], origin=VcpOrigin.TRANSIENT)
-                self.expected_values[key] = self.final_values[key]
+                if self.expected_values[key] != self.final_values[key]:
+                    self.change_count += 1
+                    self.main_controller.set_value(key.vdu_stable_id, key.vcp_code, self.final_values[key], origin=VcpOrigin.TRANSIENT)
+                    self.expected_values[key] = self.final_values[key]
             if self.values_are_as_expected():
-                log_info(f"Restored {self.preset.name}, elapsed: {self.total_elapsed_seconds():.2f} seconds")
+                log_info(f"Restored {self.preset.name}, elapsed: {self.total_elapsed_seconds():.2f} seconds "
+                         f"{self.change_count} changes")
                 self.work_state = PresetTransitionState.FINISHED
             else:
                 log_error(f"Failed to restore non transitioning controls {self.preset.name}")
@@ -3985,6 +3989,7 @@ class PresetTransitionWorker(WorkerThread):
                 step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
                 new_value = expected_value + step
                 self.expected_values[key] = new_value  # revise to new value
+                self.change_count += 1
                 self.main_controller.set_value(key.vdu_stable_id, key.vcp_code, new_value, origin=VcpOrigin.TRANSIENT)
                 more_to_do = more_to_do or new_value != final_value
             now = datetime.now()
@@ -7686,7 +7691,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
         # Find presets that match the name of each VDU name+serial and restore them...
         for stable_id in self.vdu_controllers_map.keys():
-            log_info(f"Checking for intialisation preset for {stable_id}")
+            log_info(f"Checking intialization-preset for {stable_id}")
             for preset in self.preset_controller.find_presets_map().values():
                 preset_proper_name = proper_name(preset.name)
                 if stable_id == preset_proper_name:
