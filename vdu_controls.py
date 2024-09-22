@@ -6380,17 +6380,19 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         # Brightness is a better indicator of nearness for deciding whether to activate a preset
         diff_current = abs(interpolated_brightness - current_point.brightness)
         diff_next = abs(interpolated_brightness - next_point.brightness)
-        log_debug(f"LuxAutoWorker: assess_preset_proximity {diff_current=} {diff_next=} "
-                  f"{current_point=} {next_point=}") if log_debug_enabled else None
+        preset_name = None
         if current_point.preset_name is not None and next_point.preset_name is not None:
             if diff_current > diff_next:  # Closer to next_point
                 diff_current = self.sensitivity_percent + 1  # veto result_point by making it ineligible
         if current_point.preset_name is not None and diff_current <= self.sensitivity_percent:
-            return current_point.preset_name
+            preset_name = current_point.preset_name
         # Either no next point or closer to next_point
-        if next_point.preset_name is not None and diff_next <= self.sensitivity_percent:
-            return next_point.preset_name
-        return None
+        elif next_point.preset_name is not None and diff_next <= self.sensitivity_percent:
+            preset_name = next_point.preset_name
+        log_debug(f"LuxAutoWorker: assess_preset_proximity {diff_current=} {diff_next=} "
+                  f"current_point={current_point} next_point={next_point}"
+                  f"{preset_name=}") if log_debug_enabled else None
+        return preset_name
 
     def create_complete_profile(self, profile_points: List[LuxPoint], vdu_sid: VduStableId):
         completed_profile = [LuxPoint(0, 0)]  # make sure we have a point at the origin of the scale
@@ -6476,7 +6478,7 @@ class LuxConfig(ConfIni):
         return []
 
     def get_interval_minutes(self) -> int:
-        return self.getint('lux-meter', 'interval-minutes', fallback=5)
+        return self.getint('lux-meter', 'interval-minutes', fallback=10)
 
     def is_auto_enabled(self) -> bool:
         return self.getboolean("lux-meter", "automatic-brightness", fallback=False)
