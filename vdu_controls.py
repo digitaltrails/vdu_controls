@@ -558,7 +558,7 @@ and vdu_controls attempt to manage the reliability by using repetition and by ad
 If you have the choice, a ``DisplayPort`` to ``DisplayPort`` connection may be more reliable than
 ``DVI`` or ``HDMI``.
 
-Reducing the number of enabled controls can speed up initialisation, decrease the refresh time, and
+Reducing the number of enabled controls can speed up initialization, decrease the refresh time, and
 reduce the time taken to restore presets.
 
 There's plenty of useful info for getting the best out of ``ddcutil`` at https://www.ddcutil.com/.
@@ -989,7 +989,7 @@ https://github.com/digitaltrails/vdu_controls/releases/tag/v{VERSION}</a>
 """
 
 CONFIG_DIR_PATH = Path.home().joinpath('.config', 'vdu_controls')
-PRESET_NAME_FILE = CONFIG_DIR_PATH.joinpath('current_preset.txt')
+CURRENT_PRESET_NAME_FILE = CONFIG_DIR_PATH.joinpath('current_preset.txt')
 CUSTOM_TRAY_ICON_FILE = CONFIG_DIR_PATH.joinpath('tray_icon.svg')
 LOCALE_TRANSLATIONS_PATHS = [
     Path.cwd().joinpath('translations')] if os.getenv('VDU_CONTROLS_DEVELOPER', default="no") == 'yes' else [] + [
@@ -3384,14 +3384,19 @@ class VduControlPanel(QWidget):
     def is_preset_active(self, preset: Preset) -> bool:
         vdu_section = self.controller.vdu_stable_id
         if vdu_section == proper_name(preset.name):
-            return False   # ignore VDU initialisation presets
+            log_info(f"{vdu_section=}={preset.name} ignore")
+            return False   # ignore VDU initialization-presets
+        count = 0
         preset_ini = preset.preset_ini
         for control in self.vcp_controls:
             if control.vcp_capability.property_name() in preset_ini[vdu_section]:
                 # Prior to version vdu_controls 1.21 we stored lower, but ddcutil expects upper
                 if control.get_current_text_value() != preset_ini[vdu_section][control.vcp_capability.property_name()].upper():
-                    return False
-        return True
+                    log_info(f"{vdu_section=} {preset.name} not active")
+                    return False  # immediately fail if even one value differs
+                count += 1
+        log_info(f"{vdu_section=} {preset.name} active {count > 0}")
+        return count > 0  # true unless no values were tested.
 
 
 class Preset:
@@ -4957,6 +4962,7 @@ class PresetChooseElevationWidget(QWidget):
 class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rather complex - break into parts?
     """A dialog for creating/updating/removing presets."""
     NO_ICON_ICON_NUMBER = QStyle.SP_ComputerIcon
+    INITIALISER_ICON_NUMBER = QStyle.SP_MessageBoxQuestion
 
     @staticmethod
     def invoke(main_controller: VduAppController, main_config: VduControlsConfig) -> None:
@@ -5043,11 +5049,16 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.preset_name_edit = QLineEdit()
         self.preset_name_edit.setToolTip(tr('Enter a new preset name.'))
         self.preset_name_edit.setClearButtonEnabled(True)
-
         self.preset_name_edit.textChanged.connect(self.change_edit_group_title)
         self.preset_name_edit.setValidator(QRegExpValidator(QRegExp("[A-Za-z0-9][A-Za-z0-9_ .-]{0,60}")))
 
+        self.vdu_init_menu = QMenu()
+        self.vdu_init_menu.triggered.connect(self.vdu_init_menu_triggered)
         edit_panel_layout.addWidget(self.preset_name_edit)
+        vdu_init_button = ToolButton(MENU_ICON_SOURCE, tr("Create Initializer Profile"), self)
+        vdu_init_button.setMenu(self.vdu_init_menu)
+        vdu_init_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        edit_panel_layout.addWidget(vdu_init_button)
 
         self.editor_groupbox = QGroupBox()
         self.editor_groupbox.setFlat(True)
@@ -5144,9 +5155,17 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
     def reset_editor(self):
         self.preset_name_edit.setText('')
         self.edit_choose_icon_button.reset()
+        for (section, option), checkbox in self.content_controls_map.items():
+            checkbox.setChecked(True)
 
     def status_message(self, message: str, timeout: int = 0) -> None:
         self.status_bar.showMessage(message, msecs=3000 if timeout == -1 else timeout)
+
+    def vdu_init_menu_triggered(self, action: QAction):
+        vdu_stable_id = action.data()
+        self.preset_name_edit.setText(vdu_stable_id)
+        for (section, option), checkbox in self.content_controls_map.items():
+            checkbox.setChecked(section == vdu_stable_id)
 
     def find_preset_widget(self, preset_name: str) -> PresetWidget | None:
         for i in range(self.preset_widgets_layout.count()):
@@ -5169,23 +5188,27 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         layout = QVBoxLayout()
         widget.setLayout(layout)
         self.content_controls_map = {}
-        for count, section in enumerate(self.base_ini.data_sections()):
+        self.vdu_init_menu.clear()
+        for count, vdu_section_name in enumerate(self.base_ini.data_sections()):
             if count > 0:
                 line = QFrame()
                 line.setFrameShape(QFrame.HLine)
                 line.setFrameShadow(QFrame.Sunken)
                 layout.addWidget(line)
-            group_box = QGroupBox(section)
+            group_box = QGroupBox(vdu_section_name)
             group_box.setFlat(True)
-            group_box.setToolTip(tr("Choose which settings to save for {}").format(section))
+            group_box.setToolTip(tr("Choose which settings to save for {}").format(vdu_section_name))
             group_layout = QHBoxLayout()
             group_box.setLayout(group_layout)
-            for option in self.base_ini[section]:
+            for option in self.base_ini[vdu_section_name]:
                 option_control = QCheckBox(translate_option(option))
                 group_layout.addWidget(option_control)
-                self.content_controls_map[(section, option)] = option_control
+                self.content_controls_map[(vdu_section_name, option)] = option_control
                 option_control.setChecked(True)
             layout.addWidget(group_box)
+            init_menu_action = QAction(vdu_section_name, self.vdu_init_menu)
+            init_menu_action.setData(vdu_section_name)
+            self.vdu_init_menu.addAction(init_menu_action)
         container.setWidget(widget)
 
     def set_widget_values_from_preset(self, preset: Preset):
@@ -7629,22 +7652,22 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                         self.restore_preset(preset, finished_func=finished_func, immediately=immediately)
                         return  # Don't do anything more the semi-recursive call above will take over from here
                 self.main_window.indicate_busy(False)
-                if self.main_window.tray is not None:
-                    self.main_window.refresh_tray_menu()
-                if worker_thread.work_state == PresetTransitionState.FINISHED:
-                    with open(PRESET_NAME_FILE, 'w', encoding="utf-8") as cps_file:
-                        cps_file.write(preset.name)
-                    if not initialization_preset:
+                if not initialization_preset:
+                    if self.main_window.tray is not None:
+                        self.main_window.refresh_tray_menu()
+                    if worker_thread.work_state == PresetTransitionState.FINISHED:
+                        with open(CURRENT_PRESET_NAME_FILE, 'w', encoding="utf-8") as cps_file:
+                            cps_file.write(preset.name)
                         self.main_window.update_status_indicators(preset)
                         self.main_window.display_preset_status(tr("Restored {} (elapsed time {} seconds)").format(
                             preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=2)))
-                    if finished_func is not None:
-                        finished_func(worker_thread)
-                else:  # Interrupted or exception:
-                    self.main_window.update_status_indicators()
-                    self.main_window.display_preset_status(tr("Interrupted restoration of {}").format(preset.name))
-                    if finished_func is not None:
-                        finished_func(worker_thread)
+                        if finished_func is not None:
+                            finished_func(worker_thread)
+                    else:  # Interrupted or exception:
+                        self.main_window.update_status_indicators()
+                        self.main_window.display_preset_status(tr("Interrupted restoration of {}").format(preset.name))
+                        if finished_func is not None:
+                            finished_func(worker_thread)
 
             self.preset_transition_worker = PresetTransitionWorker(
                 self, preset, update_progress, restore_finished_callback, immediately, scheduled_activity)
@@ -7664,7 +7687,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             message = tr("Restored Preset\n{}").format(worker.preset.name)
             self.status_message(message, timeout=5)
             self.main_window.splash_message_qtsignal.emit(message)
-            log_info(f'Restore initialisation preset {worker.preset.name}')
+            log_info(f'Restore initialization-preset {worker.preset.name}')
             time.sleep(1.0)  # Pause to give the message time to display - TODO find non-delaying solution
 
         # Find presets that match the name of each VDU name+serial and restore them...
@@ -7673,51 +7696,50 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             for preset in self.preset_controller.find_presets_map().values():
                 preset_proper_name = proper_name(preset.name)
                 if stable_id == preset_proper_name:
-                    self.restore_preset(preset, finished_func=restored_initialization_preset, initialization_preset=True)
+                    self.restore_preset(preset, finished_func=restored_initialization_preset,
+                                        immediately=True, initialization_preset=True)
 
     def schedule_presets(self, reconfiguring: bool = False) -> Preset | None:
         # As well as scheduling, this method finds and returns the preset that should be applied at this time.
         assert is_running_in_gui_thread()  # Needs to be run in the GUI thread so the timers also run in the GUI thread
-        if not self.main_config.is_set(ConfOption.SCHEDULE_ENABLED):
-            log_info("Scheduling is disabled")
-            return None
-        location = self.main_config.get_location()
-        if location is None:
-            return None
-        log_info(f"Scheduling presets {reconfiguring=}")
-        time_map = create_todays_elevation_map(latitude=location.latitude, longitude=location.longitude)
         most_recent_overdue = None
-        local_now = zoned_now()
-        latest_due = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
-        for preset in self.preset_controller.find_presets_map().values():
-            if reconfiguring:
-                preset.remove_elevation_trigger(quietly=True)
-            elevation_key = preset.get_solar_elevation()
-            if elevation_key is not None and preset.schedule_status == PresetScheduleStatus.UNSCHEDULED:
-                if elevation_data := time_map.get(elevation_key):
-                    when_today = elevation_data.when
-                    preset.elevation_time_today = when_today
-                    if when_today > local_now:
-                        preset.start_timer(when_today, self.activate_scheduled_preset)
+        location = self.main_config.get_location()
+        if location and self.main_config.is_set(ConfOption.SCHEDULE_ENABLED):
+            log_info(f"Scheduling presets {reconfiguring=}")
+            time_map = create_todays_elevation_map(latitude=location.latitude, longitude=location.longitude)
+            local_now = zoned_now()
+            latest_due = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
+            for preset in self.preset_controller.find_presets_map().values():
+                if reconfiguring:
+                    preset.remove_elevation_trigger(quietly=True)
+                elevation_key = preset.get_solar_elevation()
+                if elevation_key is not None and preset.schedule_status == PresetScheduleStatus.UNSCHEDULED:
+                    if elevation_data := time_map.get(elevation_key):
+                        when_today = elevation_data.when
+                        preset.elevation_time_today = when_today
+                        if when_today > local_now:
+                            preset.start_timer(when_today, self.activate_scheduled_preset)
+                        else:
+                            preset.schedule_status = PresetScheduleStatus.SKIPPED_SUPERSEDED
+                            if when_today > latest_due:
+                                # This may be the preset that should be applicable now, check if weather prevents it.
+                                # Reuse the weather, don't do multiple weather queries while scheduling.
+                                if self.is_weather_satisfactory(preset, use_cache=True):
+                                    most_recent_overdue = preset
+                                    latest_due = when_today
                     else:
-                        preset.schedule_status = PresetScheduleStatus.SKIPPED_SUPERSEDED
-                        if when_today > latest_due:
-                            # This may be the preset that should be applicable now, check if weather prevents it.
-                            # Reuse the weather, don't do multiple weather queries while scheduling.
-                            if self.is_weather_satisfactory(preset, use_cache=True):
-                                most_recent_overdue = preset
-                                latest_due = when_today
-                else:
-                    log_info(f"Solar activation skipping preset {preset.name} {elevation_key} degrees"
-                             " - the sun does not reach that elevation today.")
-        # set a timer to rerun this at the beginning of the next day.
-        tomorrow = zoned_now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
-        if self.daily_schedule_next_update != tomorrow:
-            millis = (tomorrow - zoned_now()) / timedelta(milliseconds=1)
-            log_info(f"Will update solar elevation activations tomorrow at {tomorrow} (in {round(millis / 1000 / 60)} minutes)")
-            QTimer.singleShot(int(millis), partial(self.schedule_presets, True))  # type: ignore
-            # Testing: QTimer.singleShot(int(1000*30), partial(self.schedule_presets, True))
-            self.daily_schedule_next_update = tomorrow
+                        log_info(f"Solar activation skipping preset {preset.name} {elevation_key} degrees"
+                                 " - the sun does not reach that elevation today.")
+            # set a timer to rerun this at the beginning of the next day.
+            tomorrow = zoned_now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+            if self.daily_schedule_next_update != tomorrow:
+                millis = (tomorrow - zoned_now()) / timedelta(milliseconds=1)
+                log_info(f"Will update solar elevation activations tomorrow at {tomorrow} (in {round(millis / 1000 / 60)} minutes)")
+                QTimer.singleShot(int(millis), partial(self.schedule_presets, True))  # type: ignore
+                # Testing: QTimer.singleShot(int(1000*30), partial(self.schedule_presets, True))
+                self.daily_schedule_next_update = tomorrow
+        else:
+            log_info(f"Scheduling is disabled or no location ({location=})")
         if reconfiguring:
             PresetsDialog.reconfigure_instance()
         return most_recent_overdue
@@ -7840,8 +7862,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
     def which_preset_is_active(self) -> Preset | None:
         # See if we have a record of which was last active, and see if it still is active
         main_panel = self.main_window.get_main_panel()
-        if PRESET_NAME_FILE.exists():
-            with open(PRESET_NAME_FILE, encoding="utf-8") as cps_file:
+        if CURRENT_PRESET_NAME_FILE.exists():
+            with open(CURRENT_PRESET_NAME_FILE, encoding="utf-8") as cps_file:
                 if preset_name := cps_file.read().strip():
                     preset = self.preset_controller.find_presets_map().get(preset_name)  # will be None if it has been deleted
                     if preset is not None and main_panel.is_preset_active(preset):

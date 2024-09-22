@@ -330,9 +330,10 @@ Version History
 * 2.0.5
   * Further minimise VDU NVRAM writes by defaulting to jumping between brightness values with 
     no intermediate steps (default lux_meter.max-brightness-jump to 100%).
-  * When a VDU is detected, if a preset exists with a name that matches the
-    name and serial-number of the VDU, the preset will be restored as part
-    of initialising the controls for that VDU.
+  * Added an option for a a VDU to have an initialization-preset that triggers at
+    startup or later when a VDU becomes available.
+  * Added a Preset-Dialog tool button that can populate the name of initializtion-preset.
+  * Fix refresh of Preset-Dialog on change of connected VDUs.
 
 * 2.0.4
   * The About-Dialog now refreshes the ddcutil version info on each invocation. 
