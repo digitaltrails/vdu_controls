@@ -481,7 +481,7 @@ toggling Auto/Manual.  Additionally, moving the manual lux-slider turns off auto
 
 The Light-metering dialog includes an option to enable auto-brightness interpolation. This option
 will enable the calculation of values between steps in the profiles. In order to avoid small
-fluctuating changes, interpolation won't result in brightness changes less than 20%.  During
+fluctuating changes, interpolation won't result in brightness changes less than 10%.  During
 interpolation, if a lux value is found to be in proximity to any attached preset, the preset
 values will be preferred over interpolated ones.
 
