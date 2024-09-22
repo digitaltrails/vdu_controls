@@ -5057,7 +5057,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.vdu_init_menu = QMenu()
         self.vdu_init_menu.triggered.connect(self.vdu_init_menu_triggered)
         edit_panel_layout.addWidget(self.preset_name_edit)
-        vdu_init_button = ToolButton(MENU_ICON_SOURCE, tr("Create Initializer Profile"), self)
+        vdu_init_button = ToolButton(MENU_ICON_SOURCE, tr("Create VDU specific\nInitialization-Preset"), self)
         vdu_init_button.setMenu(self.vdu_init_menu)
         vdu_init_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         edit_panel_layout.addWidget(vdu_init_button)
