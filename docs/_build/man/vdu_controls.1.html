@@ -17,6 +17,7 @@ a DDC control panel for monitors</h1>
                  [--sleep-multiplier multiplier] [--ddcutil-extra-args &#39;extra args&#39;]
                  [--dbus-client|--no-dbus-client]
                  [--dbus-signals|--no-dbus-signals]
+                 [--protect-nvram|--no-protect-nvram]
                  [--create-config-files] [--install] [--uninstall]</code></pre>
 <h2 id="optional-arguments">Optional arguments:</h2>
 <p>Arguments supplied on the command line override config file
@@ -593,8 +594,10 @@ adjustments.</p>
 <ul>
 <li>Slider and spin-box controls only update the VDU when adjustments
 become slow or stop (when no change occurs in 0.5 seconds).</li>
-<li>Automatic alterations for ambient-light-level jump with no
-transitioning steps (from v2.0.5 onward).</li>
+<li>Preset restoration only updates the VDU values that differ from its
+current values.</li>
+<li>Transitioning smoothly has been disabled by default and deprecated
+for version 2.1.0 onward.</li>
 <li>Automatic ambient brightness adjustment only triggers a change when
 the proposed brightness differs from the current brightness by at least
 10%.</li>

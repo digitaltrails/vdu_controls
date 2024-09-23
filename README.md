@@ -114,7 +114,8 @@ to reduce the frequency of writes to VDU NVRAM:
 #### Inbuilt mitigations:
 
  + Slider and spin-box controls only update the VDU when adjustments become slow or stop (when no change occurs in 0.5 seconds).
- + Automatic alterations for ambient-light-level jump with no transitioning steps (from v2.0.5 onward).
+ + Preset restoration only updates the VDU values that differ from its current values.
+ + Transitioning smoothly has been disabled by default and deprecated for version 2.1.0 onward.
  + Automatic ambient brightness adjustment only triggers a change when the proposed brightness differs from the current brightness by at least 10%.
 
 #### Electable mitigations:
@@ -327,14 +328,20 @@ Michael Hamilton
 
 Version History
 ---------------
-* 2.0.5
-  * Further minimise VDU NVRAM writes by defaulting to jumping between brightness values with 
-    no intermediate steps (default lux_meter.max-brightness-jump to 100%).
-  * Added an option for a a VDU to have an initialization-preset that triggers at
-    startup or later when a VDU becomes available.
-  * Added a Preset-Dialog tool button that can populate the name of initializtion-preset.
-  * Fix refresh of Preset-Dialog on change of connected VDUs.
-
+* 2.1.0
+  * Preset _smooth transitions_ have been deprecated.  All presets are now restored instantly no 
+    matter how they have been set to transition.  The deprecated smooth-transitions can be 
+    re-enabled by disabling `protect-nvram` in ___Settings___.   Unless objections are forthcoming, 
+    preset transition related settings will be removed in a future version.
+  * Preset restoration now includes additional checks to avoid unnecessarily setting VCP values when
+    they already the same as those in VDU.
+  * Lux-metered auto adjustment has been defaulted to 10 minute intervals (up from 5).
+  * Added VDU a ___Initializer-Preset___ feature to provide a replacement for dead NVRAM and 
+    a way to restore settings not persisted in VDU NVRAM.  A VDU's initializer-preset is 
+    automatically run if the target VDU is present at startup or is subsequently detected.
+  * The ___Preset-Dialog___ now includes a tool-button  to the right of the preset-name entry 
+    that will create VDU specific ___Initializer-Preset___.  
+  
 * 2.0.4
   * The About-Dialog now refreshes the ddcutil version info on each invocation. 
   * Increased dbus timeout to 10 seconds (in case numerous VDUs or errors slow down VDU detection).
