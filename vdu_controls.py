@@ -4591,8 +4591,11 @@ class PresetChooseTransitionWidget(QWidget):
             return
         if checked and self.protect_nvram:
             alert = MessageBox(QMessageBox.Warning)
-            alert.setText(tr('Transtions are currently disabled to protect VDU NVRAM'))
-            alert.setDetailedText(tr('The protect-nvram option has been enabled.'))
+            alert.setText(tr('Transtions have been deprecated to protect VDU NVRAM.'))
+            alert.setInformativeText('Setting this transition will have no effect '
+                                     'until protect-nvram is disabled in the Settings-Dialog.\n\n'
+                                     'Transitions are slated for removal, please '
+                                     'contact the developer if you wish to retain them.')
             alert.exec()
         for act in self.button_menu.actions():
             if act.isChecked():
