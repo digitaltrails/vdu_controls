@@ -22,6 +22,7 @@ Synopsis:
                      [--sleep-multiplier multiplier] [--ddcutil-extra-args 'extra args']
                      [--dbus-client|--no-dbus-client]
                      [--dbus-signals|--no-dbus-signals]
+                     [--protect-nvram|--no-protect-nvram]
                      [--create-config-files] [--install] [--uninstall]
 
 Optional arguments:
@@ -580,11 +581,12 @@ to reduce the overall frequency of adjustments.
 
 + Inbuilt mitigations:
 
-  + Slider and spin-box controls only update the VDU when adjustments become slow or stop
-    (when no change occurs in 0.5 seconds).
-  + Automatic alterations for ambient-light-level jump with no transitioning steps (from v2.0.5 onward).
-  + Automatic ambient brightness adjustment only triggers a change when the
-    proposed brightness differs from the current brightness by at least 10%.
+  + Slider and spin-box controls only update the VDU when adjustments become slow or stop (when
+    no change occurs in 0.5 seconds).
+  + Preset restoration only updates the VDU values that differ from its current values.
+  + Transitioning smoothly has been disabled by default and deprecated for version 2.1.0 onward.
+  + Automatic ambient brightness adjustment only triggers a change when the proposed brightness
+    differs from the current brightness by at least 10%.
 
 + Electable mitigations:
 
@@ -812,7 +814,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QDesktopWidget
 
 APPNAME = "VDU Controls"
-VDU_CONTROLS_VERSION = '2.0.5'
+VDU_CONTROLS_VERSION = '2.1.0'
 VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in VDU_CONTROLS_VERSION.split('.'))
 assert sys.version_info >= (3, 8), f'{APPNAME} utilises python version 3.8 or greater (your python is {sys.version}).'
 
@@ -2175,6 +2177,8 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
     CAPABILITIES_OVERRIDE = conf_opt_def(cname=QT_TR_NOOP('capabilities-override'), section=CI.DDCUTIL_CAPABILITIES,
                                          conf_type=CI.TYPE_LONG_TEXT, cmdline_arg='DISALLOWED',
                                          tip=QT_TR_NOOP('override/cache for ddcutil capabilities text'))
+    PROTECT_NVRAM_ENABLED = conf_opt_def(cname=QT_TR_NOOP('protect-nvram'), default="yes", restart=True,
+                                         tip=QT_TR_NOOP('alter options and defaults to maximise VDU NVRAM lifespan'))
     UNKNOWN = conf_opt_def(cname="UNKNOWN", section=CI.UNKNOWN_SECTION, conf_type=CI.TYPE_BOOL, cmdline_arg='DISALLOWED', tip='')
 
     def __init__(self, conf_name: str, section: str, cmdline_arg: str, conf_type: str, default: str | None,
@@ -4555,7 +4559,7 @@ class PresetChooseWeatherWidget(QWidget):
 
 class PresetChooseTransitionWidget(QWidget):
 
-    def __init__(self) -> None:
+    def __init__(self, protect_nvram: bool) -> None:
         super().__init__()
         layout = QHBoxLayout()
         self.setLayout(layout)
@@ -4564,6 +4568,7 @@ class PresetChooseTransitionWidget(QWidget):
         self.button_menu = QMenu()
         self.transition_type = PresetTransitionFlag.NONE
         self.is_setting = False
+        self.protect_nvram = protect_nvram
 
         for transition_type in PresetTransitionFlag.ALWAYS.component_values():
             action = QAction(transition_type.description(), self.button_menu)
@@ -4581,9 +4586,14 @@ class PresetChooseTransitionWidget(QWidget):
         layout.addWidget(self.step_seconds_widget, alignment=Qt.AlignRight)
         layout.addWidget(QLabel(tr("sec.")), alignment=Qt.AlignRight)
 
-    def update_value(self) -> None:
+    def update_value(self, checked: bool) -> None:
         if self.is_setting:
             return
+        if checked and self.protect_nvram:
+            alert = MessageBox(QMessageBox.Warning)
+            alert.setText(tr('Transtions are currently disabled to protect VDU NVRAM'))
+            alert.setDetailedText(tr('The protect-nvram option has been enabled.'))
+            alert.exec()
         for act in self.button_menu.actions():
             if act.isChecked():
                 self.transition_type |= act.data()
@@ -5087,7 +5097,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.editor_layout.addWidget(self.controls_title_widget)
         self.editor_layout.addWidget(self.editor_controls_widget)
 
-        self.editor_transitions_widget = PresetChooseTransitionWidget()
+        self.editor_transitions_widget = PresetChooseTransitionWidget(self.main_config.is_set(ConfOption.PROTECT_NVRAM_ENABLED))
         self.editor_layout.addWidget(self.editor_transitions_widget)
 
         self.editor_trigger_widget = PresetChooseElevationWidget(self.main_config)
@@ -7631,6 +7641,10 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
     def restore_preset(self, preset: Preset, finished_func: Callable[[PresetTransitionWorker], None] | None = None,
                        immediately: bool = False, scheduled_activity: bool = False, initialization_preset: bool = False) -> None:
+        if not immediately and self.main_config.is_set(ConfOption.PROTECT_NVRAM_ENABLED):
+            if preset.get_transition_type() != None:
+                log_warning(f"Setting protect-nvram prevents '{preset.name}' from transitioning, change will be immediate.")
+            immediately = True
         # Starts the restore, but it will complete in the worker thread
         if not is_running_in_gui_thread():  # Transfer this request into the GUI thread
             log_debug(f"restore_preset {preset.name} transferring task to GUI thread") if log_debug_enabled else None
