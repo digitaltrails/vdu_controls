@@ -1117,6 +1117,15 @@ MENU_ICON_SOURCE = b"""
 </svg>
 """
 
+VDU_CONNECTED_ICON_SOURCE = b"""
+<svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
+    <g class="ColorScheme-Text" stroke="currentColor" stroke-linecap="round"  stroke-width="2" transform="">
+        <path fill="None" d="M14 12 A 5 5 0 1 0 20 12 M 17 11 L 17 16.5 M 9 20 L 1 20 1 5 20 5 20 8"/>
+    </g>
+</svg>
+"""
+
 # view-refresh icon from breeze5-icons: LGPL-3.0-only
 REFRESH_ICON_SOURCE = b"""
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24">
@@ -5076,7 +5085,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.vdu_init_menu = QMenu()
         self.vdu_init_menu.triggered.connect(self.vdu_init_menu_triggered)
         edit_panel_layout.addWidget(self.preset_name_edit)
-        self.vdu_init_button = ToolButton(MENU_ICON_SOURCE, tr("Create VDU specific\nInitialization-Preset"), self)
+        self.vdu_init_button = ToolButton(VDU_CONNECTED_ICON_SOURCE, tr("Create VDU specific\nInitialization-Preset"), self)
         self.vdu_init_button.setMenu(self.vdu_init_menu)
         self.vdu_init_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         edit_panel_layout.addWidget(self.vdu_init_button)
@@ -5184,6 +5193,12 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
     def vdu_init_menu_triggered(self, action: QAction):
         vdu_stable_id = action.data()
+        confirm = MessageBox(QMessageBox.Information, buttons=QMessageBox.Ok | QMessageBox.Cancel)
+        confirm.setText(tr('Create an initialization-preset for {}.').format(vdu_stable_id))
+        confirm.setInformativeText(tr('Initialization-presets are restored  at startup '
+                                      'or when ever the VDU is subsequently detected.'))
+        if confirm.exec() == QMessageBox.Cancel:
+            return
         self.preset_name_edit.setText(vdu_stable_id)
         for (section, option), checkbox in self.content_controls_map.items():
             checkbox.setChecked(section == vdu_stable_id)
