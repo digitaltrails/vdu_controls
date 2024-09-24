@@ -3989,7 +3989,7 @@ class PresetTransitionWorker(WorkerThread):
                     self.expected_values[key] = self.final_values[key]
             if self.values_are_as_expected():
                 log_info(f"Restored {self.preset.name}, elapsed: {self.total_elapsed_seconds():.2f} seconds "
-                         f"{self.change_count} changes")
+                         f"{self.change_count} VCP-changes")
                 self.work_state = PresetTransitionState.FINISHED
             else:
                 log_error(f"Failed to restore non transitioning controls {self.preset.name}")
@@ -6300,7 +6300,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                 start_of_cycle = False
             self.doze(self.step_pause_millis / 1000.0)  # Let i2c settle down, then continue - TODO is this really necessary?
         if change_count != 0:  # If any work was done in previous steps, finish up the remaining tasks
-            log_info(f"LuxAutoWorker: stepping completed in {change_count} stepped adjustments, {profile_preset_name=}")
+            log_info(f"LuxAutoWorker: stepping completed {change_count} VCP-changes, {profile_preset_name=}")
             self.status_message(tr("Brightness adjustment completed"), timeout=5000)
             if profile_preset_name is not None:  # if a point had a Preset attached, activate it now
                 # Restoring the Preset's non-brightness settings. Invoke now, so it will happen in this thread's sleep period.
