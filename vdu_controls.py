@@ -7496,13 +7496,12 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             def vdu_connectivity_changed_callback(edid_encoded: str, event_type: int, flags: int):
                 if event_type == DdcEventType.DPMS_AWAKE.value:
                     log_info(f"DPMS awake event {event_type=} {edid_encoded=:.30}")
-                    if self.lux_auto_controller is not None and self.lux_auto_controller.is_auto_enabled():
-                        self.lux_auto_controller.adjust_brightness_now()  # don't wait for normal interval to finish
-                elif event_type == DdcEventType.DPMS_ASLEEP.value:
+                if event_type == DdcEventType.DPMS_ASLEEP.value:
                     log_info(f"DPMS asleep event {event_type=} {edid_encoded=:.30}")
+                    return
                 else:
                     log_info(f"Connected VDUs changed {event_type=} {flags=} {edid_encoded:.30}...")
-                    self.start_refresh()
+                self.start_refresh(ddcutil_event=True)
 
             change_handler = vdu_connectivity_changed_callback
             log_debug("Enabled callback for VDU-connectivity-change D-Bus signals")
@@ -7612,10 +7611,10 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             return False
         self.lux_auto_controller.adjust_brightness_now()
 
-    def start_refresh(self) -> None:
+    def start_refresh(self, ddcutil_event: bool = False) -> None:
         if not is_running_in_gui_thread():
             log_debug("Reinvoke start_refresh() in GUI thread.")
-            self.main_window.run_in_gui_thread(self.start_refresh)
+            self.main_window.run_in_gui_thread(self.start_refresh, ddcutil_event)
             return
 
         def update_from_vdu(worker: WorkerThread) -> None:
@@ -7626,9 +7625,13 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                             log_info("Refresh commences")
                             self.ddcutil.refresh_connection()
                             self.detected_vdu_list = self.ddcutil.detect_vdus()
+                            if ddcutil_event:
+                                self.restore_vdu_intialization_presets()
                             for control_panel in self.main_window.get_main_panel().vdu_control_panels.values():
                                 if control_panel.controller.get_full_id() in self.detected_vdu_list:
                                     control_panel.refresh_from_vdu()
+                            if self.lux_auto_controller is not None and self.lux_auto_controller.is_auto_enabled():
+                                self.lux_auto_controller.adjust_brightness_now()  # don't wait for normal interval to finish
                         except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
                             if self.refresh_data_task.vdu_exception is None:
                                 self.refresh_data_task.vdu_exception = VduException(vdu_description="unknown", operation="unknown",
@@ -7680,6 +7683,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
         log_debug("restore_preset: try to obtain application_configuration_lock", trace=False) if log_debug_enabled else None
         with self.application_lock:  # The lock prevents a transition firing when the GUI/app is reconfiguring
+            log_debug("restore_preset: holding application_configuration_lock", trace=False) if log_debug_enabled else None
             self.transitioning_dummy_preset = None
             if not immediately:
                 self.transitioning_dummy_preset = PresetTransitionDummy(preset)
