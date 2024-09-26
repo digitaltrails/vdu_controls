@@ -6322,6 +6322,9 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                         scheduled_activity=True)
         else:  # No work done, no adjustment necessary
             self.status_message(f"{SUN_SYMBOL} {SUCCESS_SYMBOL}", timeout=3000)
+            if profile_preset_name is not None:  # Make sure the right preset icon is displayed
+                if preset := self.main_controller.find_preset_by_name(profile_preset_name):
+                    self.main_controller.update_window_status_indicators(preset)
         log_info(f"LuxAutoWorker: adjustments completed {change_count} VCP-changes, {profile_preset_name=}")
 
     def step_one_vdu(self, vdu_sid: VduStableId, profile_brightness: int, profile_preset_name: str | None,
@@ -6978,7 +6981,7 @@ class LuxAutoController:
             else:
                 log_info("Lux auto-brightness settings refresh - monitoring is off.")  # TODO handle exception
                 self.stop_worker()
-            self.main_controller.display_lux_auto_indicators()  # Refresh indicators immediately
+            self.main_controller.update_window_status_indicators()  # Refresh indicators immediately
         except LuxDeviceException as lde:
             log_error(f"Error setting up lux meter {lde}", trace=True)
             alert = MessageBox(QMessageBox.Critical)
@@ -7481,7 +7484,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 self.main_window.initialise_app_icon()
                 self.main_window.create_main_control_panel()
                 SettingsEditor.reconfigure_instance(self.get_vdu_configs())
-            self.restore_vdu_intialization_presets()
+                self.restore_vdu_intialization_presets()
+
             log_debug("configure: released application_configuration_lock") if log_debug_enabled else None
             if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED):
                 if self.lux_auto_controller is not None:
@@ -7637,8 +7641,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                             log_info("Refresh commences - acquired application_lock")
                             self.ddcutil.refresh_connection()
                             self.detected_vdu_list = self.ddcutil.detect_vdus()
-                            if ddcutil_event:
-                                self.restore_vdu_intialization_presets()
+                            self.restore_vdu_intialization_presets()
                             for control_panel in self.main_window.get_main_panel().vdu_control_panels.values():
                                 if control_panel.controller.get_full_id() in self.detected_vdu_list:
                                     control_panel.refresh_from_vdu()
@@ -7754,6 +7757,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             self.main_window.splash_message_qtsignal.emit(message)
             log_info(f'Restore initialization-preset {worker.preset.name}')
             time.sleep(1.0)  # Pause to give the message time to display - TODO find non-delaying solution
+            self.main_window.update_status_indicators()  # Refresh to restore other non-init preset icons
 
         # Find presets that match the name of each VDU name+serial and restore them...
         for stable_id in self.vdu_controllers_map.keys():
@@ -7763,6 +7767,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 if stable_id == preset_proper_name:
                     self.restore_preset(preset, finished_func=restored_initialization_preset,
                                         immediately=True, initialization_preset=True)
+
 
     def schedule_presets(self, reconfiguring: bool = False) -> Preset | None:
         # As well as scheduling, this method finds and returns the preset that should be applied at this time.
@@ -7989,8 +7994,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     return True
         return False
 
-    def display_lux_auto_indicators(self):
-        self.main_window.update_status_indicators()
+    def update_window_status_indicators(self, preset: Preset | None = None):
+        if not is_running_in_gui_thread():
+            self.main_window.run_in_gui_thread(partial(self.main_window.update_status_indicators, preset))
 
     def get_vdu_description(self, vdu_stable_id: VduStableId):
         if controller := self.vdu_controllers_map.get(vdu_stable_id):
