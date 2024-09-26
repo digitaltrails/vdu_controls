@@ -76,8 +76,7 @@ others). The UI attempts to adapt to the quirks of the different tray implementa
 Named ``Preset`` configurations can be saved for later recall. For example, a user could create
 presets for night, day, photography, movies, and so forth.  Presets may be automatically triggered
 according to solar elevation, and can be further constrained by local weather conditions (as
-reported by [https://wttr.in](https://wttr.in)). Presets can be set to transition immediately or
-gradually.  Presets may also be activated by UNIX signals.
+reported by [https://wttr.in](https://wttr.in)).  Presets may also be activated by UNIX signals.
 
 From any application window, use `F1` to access help, and `F10` to access the context-menu.   The 
 context menu is also available via the right-mouse button in the main-window, the hamburger-menu item 
@@ -103,10 +102,10 @@ Repeatably altering VDU settings might affect VDU lifespan.  Possible reasons
 include the consumption of NVRAM write cycles, stressing the VDU power-supply, 
 or increasing the LED panel burn-in.  
 
-I have a VDU manufactured in 2010 that allows settings to be adjusted, but 
-reverts to factory defaults whenever it loses power.  This VDU was used intensively
-for testing vdu_controls over the past four years.  This gives credence to the 
-possibility of exhausting VDU NVRAM, at least in VDUs of that vintage.
+In respect to exhausting NVRAM, I can confirm that a vintage-2010 VDU used for 
+testing vdu_controls now reverts to factory defaults whenever it loses power.  
+This is after four years of use in development testing. I've subsequently 
+implemented the ___initialization-preset___ feature to work around the issue.
 
 All that said, ``vdu_controls`` does include a number of features that can be used 
 to reduce the frequency of writes to VDU NVRAM:
@@ -115,14 +114,15 @@ to reduce the frequency of writes to VDU NVRAM:
 
  + Slider and spin-box controls only update the VDU when adjustments become slow or stop (when no change occurs in 0.5 seconds).
  + Preset restoration only updates the VDU values that differ from its current values.
- + Transitioning smoothly has been disabled by default and deprecated for version 2.1.0 onward.
+ + Transitioning effects and transition controls have been disabled by default and are 
+   deprecated for version 2.1.0 onward.
  + Automatic ambient brightness adjustment only triggers a change when the proposed brightness differs from the current brightness by at least 10%.
 
 #### Electable mitigations:
 
  + Choose to restore pre-prepared ‘presets’ instead of dragging sliders.
  + Refrain from adding transitions to presets.
- + If using the ambient-light brightness response curves, tune the settings and curves to minimise frequent small changes.
+ + If using the ambient-light brightness response curves, tune the settings and curves to avoid frequent small changes.
  + If using a light-meter, disengage metered automatic adjustment when faced with rapidly fluctuating levels of ambient brightness.
  + Consider adjusting the ambient lighting instead of the VDU.
 
@@ -329,18 +329,22 @@ Michael Hamilton
 Version History
 ---------------
 * 2.1.0
-  * Preset _smooth transitions_ have been deprecated.  All presets are now restored instantly no 
-    matter how they have been set to transition.  The deprecated smooth-transitions can be 
-    re-enabled by disabling `protect-nvram` in ___Settings___.   Unless objections are forthcoming, 
-    preset transition related settings will be removed in a future version.
-  * Preset restoration now includes additional checks to avoid unnecessarily setting VCP values when
-    they already the same as those in VDU.
+  * Preset _transitions_ have been deprecated.  All presets are now restored instantly no 
+    matter how they have been set to transition.  The Preset-Dialog controls for assiging
+    transitions have been hidden.  Transitions and related controls can be
+    re-enabled by disabling `protect-nvram` in the _Settings-Dialog_.  __All 
+    transition related code may be removed in a future version, please contact me 
+    or comment on issue #93 if you prefer transitions to be retained.__
+  * To avoid unecessary updates, preset restoration always queries the VDU's existing
+    values. This may slow down preset restoration.
   * Lux-metered auto adjustment has been defaulted to 10 minute intervals (up from 5).
+  * Color-Preset (VCP code 0x14) has been added to the list of standard controls.
   * Added VDU a ___Initializer-Preset___ feature to provide a replacement for dead NVRAM and 
     a way to restore settings not persisted in VDU NVRAM.  A VDU's initializer-preset is 
     automatically run if the target VDU is present at startup or is subsequently detected.
   * The ___Preset-Dialog___ now includes a tool-button  to the right of the preset-name entry 
-    that will create VDU specific ___Initializer-Preset___.  
+    that will create VDU specific ___Initializer-Preset___.
+
   
 * 2.0.4
   * The About-Dialog now refreshes the ddcutil version info on each invocation. 

@@ -89,6 +89,8 @@ Arguments supplied on the command line override config file equivalent settings.
       --dbus-signals|--no-dbus-signals
                             enable D-Bus ddcutil-service VDU-connectivity-change signals
                             ``--dbus-signals`` is the default
+      --protect-nvram|--no-protect-nvram
+                            alter options and defaults to minimize VDU NVRAM writes
       --create-config-files
                             if they do not exist, create template config INI files
                             in $HOME/.config/vdu_controls/
@@ -811,7 +813,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
     QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, qApp, QShortcut, \
-    QDesktopWidget
+    QDesktopWidget, QSpacerItem
 
 APPNAME = "VDU Controls"
 VDU_CONTROLS_VERSION = '2.1.0'
@@ -2016,6 +2018,7 @@ SUPPORTED_VCP_BY_CODE: Dict[str: VcpCapability] = {
         '60': VcpCapability('60', QT_TR_NOOP('input source'), SNC, causes_config_change=True),
         'D6': VcpCapability('D6', QT_TR_NOOP('power mode'), SNC, causes_config_change=True),
         'CC': VcpCapability('CC', QT_TR_NOOP('OSD language'), SNC),
+        '14': VcpCapability('14', QT_TR_NOOP('color preset'), SNC),
         '0C': VcpCapability('0C', QT_TR_NOOP('color temperature'), CON, icon_source=COLOR_TEMPERATURE_SVG, enabled=True),
     }}
 
@@ -2187,7 +2190,7 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
                                          conf_type=CI.TYPE_LONG_TEXT, cmdline_arg='DISALLOWED',
                                          tip=QT_TR_NOOP('override/cache for ddcutil capabilities text'))
     PROTECT_NVRAM_ENABLED = conf_opt_def(cname=QT_TR_NOOP('protect-nvram'), default="yes", restart=True,
-                                         tip=QT_TR_NOOP('alter options and defaults to maximise VDU NVRAM lifespan'))
+                                         tip=QT_TR_NOOP('alter options and defaults to minimize VDU NVRAM writes'))
     UNKNOWN = conf_opt_def(cname="UNKNOWN", section=CI.UNKNOWN_SECTION, conf_type=CI.TYPE_BOOL, cmdline_arg='DISALLOWED', tip='')
 
     def __init__(self, conf_name: str, section: str, cmdline_arg: str, conf_type: str, default: str | None,
@@ -4568,7 +4571,7 @@ class PresetChooseWeatherWidget(QWidget):
 
 class PresetChooseTransitionWidget(QWidget):
 
-    def __init__(self, protect_nvram: bool) -> None:
+    def __init__(self) -> None:
         super().__init__()
         layout = QHBoxLayout()
         self.setLayout(layout)
@@ -4577,7 +4580,6 @@ class PresetChooseTransitionWidget(QWidget):
         self.button_menu = QMenu()
         self.transition_type = PresetTransitionFlag.NONE
         self.is_setting = False
-        self.protect_nvram = protect_nvram
 
         for transition_type in PresetTransitionFlag.ALWAYS.component_values():
             action = QAction(transition_type.description(), self.button_menu)
@@ -4598,12 +4600,10 @@ class PresetChooseTransitionWidget(QWidget):
     def update_value(self, checked: bool) -> None:
         if self.is_setting:
             return
-        if checked and self.protect_nvram:
+        if checked:
             alert = MessageBox(QMessageBox.Warning)
-            alert.setText(tr('Transtions have been deprecated to protect VDU NVRAM.'))
-            alert.setInformativeText('Setting this transition will have no effect '
-                                     'until protect-nvram is disabled in the Settings-Dialog.\n\n'
-                                     'Transitions are slated for removal, please '
+            alert.setText(tr('Transitions have been deprecated to minimize wear on VDU NVRAM.'))
+            alert.setInformativeText('Transitions are slated for removal, please '
                                      'contact the developer if you wish to retain them.')
             alert.exec()
         for act in self.button_menu.actions():
@@ -5109,8 +5109,11 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.editor_layout.addWidget(self.controls_title_widget)
         self.editor_layout.addWidget(self.editor_controls_widget)
 
-        self.editor_transitions_widget = PresetChooseTransitionWidget(self.main_config.is_set(ConfOption.PROTECT_NVRAM_ENABLED))
-        self.editor_layout.addWidget(self.editor_transitions_widget)
+        self.editor_transitions_widget = PresetChooseTransitionWidget()
+        if self.main_config.is_set(ConfOption.PROTECT_NVRAM_ENABLED):
+            self.editor_layout.addItem(QSpacerItem(1,10))
+        else:
+            self.editor_layout.addWidget(self.editor_transitions_widget)
 
         self.editor_trigger_widget = PresetChooseElevationWidget(self.main_config)
         self.editor_layout.addWidget(self.editor_trigger_widget)
@@ -6203,7 +6206,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
 
     _lux_dialog_message_qtsignal = pyqtSignal(str, int, MsgDestination)
 
-    def __init__(self, auto_controller: LuxAutoController, single_shot: bool = False) -> None:
+    def __init__(self, auto_controller: LuxAutoController, single_shot: bool = False, protect_nvram: bool = True) -> None:
         super().__init__(task_body=self._adjust_for_lux, task_finished=self._adjust_for_lux_finished)
         self.single_shot = single_shot  # Called for an on-demand single time assessment with immediate effect.
         self.main_controller = auto_controller.main_controller
@@ -6228,7 +6231,12 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         self.sensitivity_percent = get_prop('interpolation-sensitivity-percent', fallback=10)
         self.convergence_divisor = get_prop('convergence-divisor', fallback=2)
         self.step_pause_millis = get_prop('step-pause-millis', fallback=100)
-        self.max_brightness_jump = get_prop('max-brightness-jump', fallback=100)
+        if protect_nvram:
+            log_info("LuxAutoWorker: protect-nvram enabled, ignoring max-brightness-jump")
+            self.max_brightness_jump = 100
+        else:
+            self.max_brightness_jump = get_prop('max-brightness-jump', 20)
+            log_warning(f"LuxAutoWorker: protect-nvram={protect_nvram} max-brightness-jump={self.max_brightness_jump}")
         self._lux_dialog_message_qtsignal.connect(LuxDialog.lux_dialog_message)
         self._lux_dialog_message_qtsignal.connect(self.main_controller.main_window.status_message)
         self.status_message(f"{TIMER_RUNNING_SYMBOL} 00:00", 0, MsgDestination.COUNTDOWN)
@@ -6279,6 +6287,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         change_count, last_change_count = 0, -1
         start_of_cycle = True
         profile_preset_name = None
+        vdu_changes_count = {}
         while change_count != last_change_count:  # while brightness changing
             last_change_count = change_count
             if metered_lux := lux_meter.get_value():
@@ -6297,10 +6306,12 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                     profile_brightness, profile_preset_name = self.determine_brightness(vdu_sid, smoothed_lux, lux_profile)
                     if self.step_one_vdu(vdu_sid, profile_brightness, profile_preset_name, lux_summary_text, start_of_cycle):
                         change_count += 1
+                        vdu_changes_count[vdu_sid] = vdu_changes_count.get(vdu_sid, 0) + 1
+                    else:
+                        log_debug(f"LuxAutoWorker: finished {vdu_sid=} VCP-changes={vdu_changes_count.get(vdu_sid, 0)})")
                 start_of_cycle = False
             self.doze(self.step_pause_millis / 1000.0)  # Let i2c settle down, then continue - TODO is this really necessary?
         if change_count != 0:  # If any work was done in previous steps, finish up the remaining tasks
-            log_info(f"LuxAutoWorker: stepping completed {change_count} VCP-changes, {profile_preset_name=}")
             self.status_message(tr("Brightness adjustment completed"), timeout=5000)
             if profile_preset_name is not None:  # if a point had a Preset attached, activate it now
                 # Restoring the Preset's non-brightness settings. Invoke now, so it will happen in this thread's sleep period.
@@ -6311,6 +6322,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                         scheduled_activity=True)
         else:  # No work done, no adjustment necessary
             self.status_message(f"{SUN_SYMBOL} {SUCCESS_SYMBOL}", timeout=3000)
+        log_info(f"LuxAutoWorker: adjustments completed {change_count} VCP-changes, {profile_preset_name=}")
 
     def step_one_vdu(self, vdu_sid: VduStableId, profile_brightness: int, profile_preset_name: str | None,
                      lux_summary_text: str, first_step: bool) -> bool:
