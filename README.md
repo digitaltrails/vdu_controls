@@ -335,7 +335,7 @@ Version History
     re-enabled by disabling `protect-nvram` in the _Settings-Dialog_.  __All 
     transition related code may be removed in a future version, please contact me 
     or comment on issue #93 if you prefer transitions to be retained.__
-  * To avoid unecessary updates, preset restoration always queries the VDU's existing
+  * To avoid unnecessary updates, preset restoration always queries the VDU's existing
     values. This may slow down preset restoration.
   * Lux-metered auto adjustment has been defaulted to 10 minute intervals (up from 5).
   * Color-Preset (VCP code 0x14) has been added to the list of standard controls.
