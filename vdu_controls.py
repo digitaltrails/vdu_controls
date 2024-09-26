@@ -7423,7 +7423,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
     def __init__(self, main_config: VduControlsConfig) -> None:
         super().__init__()
-        self.application_lock = Lock()
+        self.application_lock = threading.RLock()
         self.main_config = main_config
         self.ddcutil: Ddcutil | None = None
         self.main_window: VduAppWindow | None = None
@@ -7634,7 +7634,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 with non_blocking_lock(self.application_lock) as acquired_lock:
                     if acquired_lock:  # if acquired_lock is not None, then we have successfully acquired the lock.
                         try:
-                            log_info("Refresh commences")
+                            log_info("Refresh commences - acquired application_lock")
                             self.ddcutil.refresh_connection()
                             self.detected_vdu_list = self.ddcutil.detect_vdus()
                             if ddcutil_event:
@@ -7737,9 +7737,10 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             self.preset_transition_worker = PresetTransitionWorker(
                 self, preset, update_progress, restore_finished_callback, immediately, scheduled_activity)
             self.preset_transition_worker.start()
-            if initialization_preset:
-                self.preset_transition_worker.wait()
         log_debug("restore_preset: released application_configuration_lock") if log_debug_enabled else None
+        if initialization_preset:
+            self.preset_transition_worker.wait()
+
 
     def restore_vdu_intialization_presets(self):
 
