@@ -109,7 +109,7 @@ this might indicate a sustainable limit of only 2.7 writes per day or 27 writes 
 day respectively.
 Some modern types of NVRAM have upper limits that are for practical purposes unlimited, but
 the level of uptake of such technologies by the manufacturers is unknown (brighter
-back-lights, along with scene and gaming options would seem to require increased
+back-lights, along with scene and gaming options, would appear to require increased
 durability).
 
 In respect to exhausting NVRAM, I can confirm that a vintage-2010 VDU, used 
