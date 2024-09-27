@@ -112,8 +112,8 @@ the level of uptake of such technologies by the manufacturers is unknown (bright
 back-lights, along with scene and gaming options, would appear to require increased
 durability).
 
-In respect to exhausting NVRAM, I can confirm that a vintage-2010 VDU, used 
-four years of intensive testing of vdu_controls, now reverts to factory defaults 
+I can confirm that a vintage-2010 VDU, which has been used for
+four years of intensive testing of vdu_controls, now reverts to its factory defaults 
 whenever it loses power.  This experience may indicates a write limit of 
 at least 100,000 for a VDU of this vintage. I've subsequently implemented
 the ___initialization-preset___ feature as a replacement for failed NVRAM.
