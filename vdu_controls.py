@@ -340,13 +340,14 @@ overdue dawn preset will be triggered at login.
 Presets - Smooth Transitions
 ----------------------------
 
+In order to minimize writes to VDU NVRAM, the smooth transtion of presets is deprecated
+and is now normally disabled. Transitions can be renabled by disabling `protect-nvram`
+in _Settings_.
+
 A preset may be set to ``Transition Smoothly``, in which case changes to controls continuous-value
 slider controls such as brightness and contrast will be stepped by one until the final values are
 reached.  Any non-continuous values will be set after all continuous values have reached their
 final values, for example, if input-source is included in a preset, it will be restored at the end.
-
-When using transitions, be aware that they will increase the number of writes
-to VDU NVRAM and that NVRAM has limited write-cycles (especially so for older hardware).
 
 The Preset Dialog includes a combo-box for defining when to apply transitions to a preset:
 
@@ -3496,7 +3497,8 @@ class Preset:
             return result
         return ''
 
-    def get_solar_elevation_description(self) -> str:
+    def get_solar_elevation_description(self, enabled: bool) -> str:
+        result = ''
         if elevation := self.get_solar_elevation():
             basic_desc = format_solar_elevation_description(elevation)
             weather_fn = self.get_weather_restriction_filename()
@@ -3511,10 +3513,11 @@ class Preset:
                 else:
                     template = tr("{} suspended for  {}")
                 result = template.format(basic_desc, self.elevation_time_today.strftime("%H:%M"))
-            else:
+            elif enabled:
                 result = basic_desc + ' ' + tr("the sun does not rise this high today")
-            return result
-        return ''
+            else:
+                result = basic_desc + ' ' + tr("(schedule is disabled in Settings)")
+        return result
 
     def get_transition_type(self) -> PresetTransitionFlag:
         return parse_transition_type(self.preset_ini.get('preset', 'transition-type', fallback="NONE"))
@@ -4173,8 +4176,8 @@ class PushButtonLeftJustified(QPushButton):
 
 
 class PresetWidget(QWidget):
-    def __init__(self, preset: Preset, restore_action=Callable, save_action=Callable, delete_action=Callable, edit_action=Callable,
-                 up_action=Callable, down_action=Callable):
+    def __init__(self, preset: Preset, restore_action: Callable, save_action: Callable, delete_action: Callable,
+                 edit_action: Callable, up_action: Callable, down_action: Callable, protect_nvram: bool):
         super().__init__()
         self.name = preset.name
         self.preset = preset
@@ -4228,26 +4231,28 @@ class PresetWidget(QWidget):
         delete_button.clicked.connect(partial(delete_action, preset=preset, target_widget=self))
         delete_button.setAutoDefault(False)
 
-        preset_transition_button = PushButtonLeftJustified()
-        preset_transition_button.setText(
-            f"{preset.get_transition_type().abbreviation()}"
-            f"{str(preset.get_step_interval_seconds()) if preset.get_step_interval_seconds() > 0 else ''}")
-        preset_transition_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
-        width = QFontMetrics(preset_transition_button.font()).horizontalAdvance(">____99")
-        preset_transition_button.setMaximumWidth(width + 5)
-        preset_transition_button.setFlat(True)
-        if preset.get_step_interval_seconds() > 0:
-            preset_transition_button.setToolTip(tr("Transition to {}, each step is {} seconds. {}").format(
-                preset.get_title_name(), preset.get_step_interval_seconds(), preset.get_transition_type().description()))
-        else:
-            preset_transition_button.setToolTip(tr("Transition to {}. {}").format(
-                preset.get_title_name(), preset.get_transition_type().description()))
-        preset_transition_button.clicked.connect(partial(restore_action, preset=preset, immediately=False))
-        preset_transition_button.setAutoDefault(False)
-        if preset.get_transition_type() == PresetTransitionFlag.NONE:
-            preset_transition_button.setDisabled(True)
-            preset_transition_button.setText('')
-        line_layout.addWidget(preset_transition_button)
+        if not protect_nvram:
+            preset_transition_button = PushButtonLeftJustified()
+            preset_transition_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
+            width = QFontMetrics(preset_transition_button.font()).horizontalAdvance(">____99")
+            preset_transition_button.setMaximumWidth(width + 5)
+            preset_transition_button.setFlat(True)
+            preset_transition_button.setText(
+                f"{preset.get_transition_type().abbreviation()}"
+                f"{str(preset.get_step_interval_seconds()) if preset.get_step_interval_seconds() > 0 else ''}")
+            if preset.get_step_interval_seconds() > 0:
+                preset_transition_button.setToolTip(tr("Transition to {}, each step is {} seconds. {}").format(
+                    preset.get_title_name(), preset.get_step_interval_seconds(), preset.get_transition_type().description()))
+            else:
+                preset_transition_button.setToolTip(tr("Transition to {}. {}").format(
+                    preset.get_title_name(), preset.get_transition_type().description()))
+            preset_transition_button.clicked.connect(partial(restore_action, preset=preset,
+                                                             immediately=preset.get_transition_type() == PresetTransitionFlag.NONE))
+            preset_transition_button.setAutoDefault(False)
+            if preset.get_transition_type() == PresetTransitionFlag.NONE:
+                 preset_transition_button.setDisabled(True)
+                 preset_transition_button.setText('')
+            line_layout.addWidget(preset_transition_button)
 
         line_layout.addSpacing(5)
         self.timer_control_button = PushButtonLeftJustified(parent=self)
@@ -4265,15 +4270,15 @@ class PresetWidget(QWidget):
         self.update_timer_button()
 
     def update_timer_button(self):
-        self.timer_control_button.setEnabled(
-            self.preset.schedule_status in (PresetScheduleStatus.SCHEDULED, PresetScheduleStatus.SUSPENDED))
+        enable = self.preset.schedule_status in (PresetScheduleStatus.SCHEDULED, PresetScheduleStatus.SUSPENDED)
+        self.timer_control_button.setEnabled(enable)
         if self.preset.schedule_status == PresetScheduleStatus.SCHEDULED:
             action_desc = tr("Press to skip: ")
         elif self.preset.schedule_status == PresetScheduleStatus.SUSPENDED:
             action_desc = tr("Press to re-enable: ")
         else:
             action_desc = ''
-        tip_text = f"{action_desc}{SUN_SYMBOL} {self.preset.get_solar_elevation_description()}"
+        tip_text = f"{action_desc}{SUN_SYMBOL} {self.preset.get_solar_elevation_description(enable)}"
         self.timer_control_button.setText(self.preset.get_solar_elevation_abbreviation())
         self.timer_control_button.setToolTip(tip_text)
 
@@ -5445,7 +5450,8 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
     def create_preset_widget(self, preset) -> PresetWidget:
         return PresetWidget(preset, restore_action=self.restore_preset, save_action=self.save_preset,
                             delete_action=self.delete_preset, edit_action=self.edit_preset,
-                            up_action=self.up_action, down_action=self.down_action)
+                            up_action=self.up_action, down_action=self.down_action,
+                            protect_nvram=self.main_config.is_set(ConfOption.PROTECT_NVRAM_ENABLED))
 
     def event(self, event: QEvent) -> bool:
         # PalletChange happens after the new style sheet is in use.
@@ -7440,7 +7446,6 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         self.preset_transition_worker: PresetTransitionWorker | None = None
         self.lux_auto_controller: LuxAutoController | None = LuxAutoController(self) if self.main_config.is_set(
             ConfOption.LUX_OPTIONS_ENABLED) else None
-        self.preset_controller = PresetController()
         self.transitioning_dummy_preset: PresetTransitionDummy | None = None
 
         def respond_to_unix_signal(signal_number: int) -> None:
