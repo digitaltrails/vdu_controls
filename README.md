@@ -102,10 +102,21 @@ Repeatably altering VDU settings might affect VDU lifespan.  Possible reasons
 include the consumption of NVRAM write cycles, stressing the VDU power-supply, 
 or increasing the LED panel burn-in.  
 
-In respect to exhausting NVRAM, I can confirm that a vintage-2010 VDU used for 
-testing vdu_controls now reverts to factory defaults whenever it loses power.  
-This is after four years of use in development testing. I've subsequently 
-implemented the ___initialization-preset___ feature to work around the issue.
+How many writes VDU NVRAM can accommodate is unknown, it is likely to vary by model
+and vintage. VDUs from past decades are likely to have NVRAM that can accommodate
+10,000 to 100,000 writes depending on the technology employed. For a ten year lifespan
+this might indicate a sustainable limit of only 2.7 writes per day or 27 writes per 
+day respectively.
+Some modern types of NVRAM have upper limits that are for practical purposes unlimited, but
+the level of uptake of such technologies by the manufacturers is unknown (brighter
+back-lights, along with scene and gaming options would seem to require increased
+durability).
+
+In respect to exhausting NVRAM, I can confirm that a vintage-2010 VDU, used 
+four years of intensive testing of vdu_controls, now reverts to factory defaults 
+whenever it loses power.  This experience may indicates a write limit of 
+at least 100,000 for a VDU of this vintage. I've subsequently implemented
+the ___initialization-preset___ feature as a replacement for failed NVRAM.
 
 All that said, ``vdu_controls`` does include a number of features that can be used 
 to reduce the frequency of writes to VDU NVRAM:
