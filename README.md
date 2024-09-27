@@ -104,7 +104,7 @@ or increasing the LED panel burn-in.
 
 How many writes VDU NVRAM can accommodate is unknown, it is likely to vary by model
 and vintage. VDUs from past decades are likely to have NVRAM that can accommodate
-10,000 to 100,000 writes depending on the technology employed. For a ten year lifespan
+10,000 to 100,000+ writes depending on the technology employed. For a ten year lifespan
 this might indicate a sustainable limit of only 2.7 writes per day or 27 writes per 
 day respectively.
 Some modern types of NVRAM have upper limits that are for practical purposes unlimited, but
