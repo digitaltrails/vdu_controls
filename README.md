@@ -114,7 +114,7 @@ durability).
 
 I can confirm that a vintage-2010 VDU, which has been used for
 four years of intensive testing of vdu_controls, now reverts to its factory defaults 
-whenever it loses power.  This experience may indicates a write limit of 
+whenever it loses power.  This experience may indicate a write limit of 
 at least 100,000 for a VDU of this vintage. I've subsequently implemented
 the ___initialization-preset___ feature as a replacement for failed NVRAM.
 
