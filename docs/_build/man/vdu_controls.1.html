@@ -332,15 +332,16 @@ and they’ve also set a preset to trigger at dawn, but they don’t
 actually log in until just after dawn, the overdue dawn preset will be
 triggered at login.</p>
 <h2 id="presets---smooth-transitions">Presets - Smooth Transitions</h2>
+<p>In order to minimize writes to VDU NVRAM, the smooth transtion of
+presets is deprecated and is now normally disabled. Transitions can be
+renabled by disabling <code>protect-nvram</code> in
+<em>Settings</em>.</p>
 <p>A preset may be set to <code>Transition Smoothly</code>, in which
 case changes to controls continuous-value slider controls such as
 brightness and contrast will be stepped by one until the final values
 are reached. Any non-continuous values will be set after all continuous
 values have reached their final values, for example, if input-source is
 included in a preset, it will be restored at the end.</p>
-<p>When using transitions, be aware that they will increase the number
-of writes to VDU NVRAM and that NVRAM has limited write-cycles
-(especially so for older hardware).</p>
 <p>The Preset Dialog includes a combo-box for defining when to apply
 transitions to a preset:</p>
 <ul>

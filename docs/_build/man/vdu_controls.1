@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Sep 26, 2024" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Sep 28, 2024" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 2.1.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -478,13 +478,14 @@ also set a preset to trigger at dawn, but they don\(aqt actually log in until ju
 overdue dawn preset will be triggered at login.
 .SS Presets \- Smooth Transitions
 .sp
+In order to minimize writes to VDU NVRAM, the smooth transtion of presets is deprecated
+and is now normally disabled. Transitions can be renabled by disabling \fIprotect\-nvram\fP
+in _Settings_.
+.sp
 A preset may be set to \fBTransition Smoothly\fP, in which case changes to controls continuous\-value
 slider controls such as brightness and contrast will be stepped by one until the final values are
 reached.  Any non\-continuous values will be set after all continuous values have reached their
 final values, for example, if input\-source is included in a preset, it will be restored at the end.
-.sp
-When using transitions, be aware that they will increase the number of writes
-to VDU NVRAM and that NVRAM has limited write\-cycles (especially so for older hardware).
 .sp
 The Preset Dialog includes a combo\-box for defining when to apply transitions to a preset:
 .INDENT 0.0
