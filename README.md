@@ -339,6 +339,9 @@ Michael Hamilton
 
 Version History
 ---------------
+* 2.1.1
+  * Removed --dbus-signals-enabled. DBus signals are now always enabled when --dbus-client
+    is enabled.
 * 2.1.0
   * Preset _transitions_ have been deprecated.  All presets are now restored instantly no 
     matter how they have been set to transition.  The Preset-Dialog controls for assigning
