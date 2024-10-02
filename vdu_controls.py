@@ -21,7 +21,6 @@ Synopsis:
                      [--syslog|--no-syslog]  [--debug|--no-debug] [--warnings|--no-warnings]
                      [--sleep-multiplier multiplier] [--ddcutil-extra-args 'extra args']
                      [--dbus-client|--no-dbus-client]
-                     [--dbus-signals|--no-dbus-signals]
                      [--protect-nvram|--no-protect-nvram]
                      [--create-config-files] [--install] [--uninstall]
 
@@ -86,9 +85,6 @@ Arguments supplied on the command line override config file equivalent settings.
       --dbus-client|--no-dbus-client
                             use the D-Bus ddcutil-service instead of the ddcutil command
                             ``--dbus-client`` is the default
-      --dbus-signals|--no-dbus-signals
-                            enable D-Bus ddcutil-service VDU-connectivity-change signals
-                            ``--dbus-signals`` is the default
       --protect-nvram|--no-protect-nvram
                             alter options and defaults to minimize VDU NVRAM writes
       --create-config-files
@@ -2177,9 +2173,6 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
                                   tip=QT_TR_NOOP('divert diagnostic output to the syslog'))
     DBUS_CLIENT_ENABLED = conf_opt_def(cname=QT_TR_NOOP('dbus-client-enabled'), default="yes",
                                        tip=QT_TR_NOOP('use the D-Bus ddcutil-server if available'))
-    DBUS_SIGNALS_ENABLED = conf_opt_def(cname=QT_TR_NOOP('dbus-signals-enabled'), default="yes",
-                                        tip=QT_TR_NOOP('enable D-Bus VDU-connectivity-change signals if available'),
-                                        requires='dbus-client-enabled')
     LOCATION = conf_opt_def(cname=QT_TR_NOOP('location'), conf_type=CI.TYPE_LOCATION, tip=QT_TR_NOOP('latitude,longitude'))
     SLEEP_MULTIPLIER = conf_opt_def(cname=QT_TR_NOOP('sleep-multiplier'), section=CI.DDCUTIL_PARAMETERS, conf_type=CI.TYPE_FLOAT,
                                     tip=QT_TR_NOOP('ddcutil --sleep-multiplier (0.1 .. 2.0, default none)'))
@@ -7512,7 +7505,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
     def create_ddcutil(self):
 
-        if self.main_config.is_set(ConfOption.DBUS_SIGNALS_ENABLED):
+        if self.main_config.is_set(ConfOption.DBUS_CLIENT_ENABLED):
 
             def vdu_connectivity_changed_callback(edid_encoded: str, event_type: int, flags: int):
                 if event_type == DdcEventType.DPMS_AWAKE.value:
