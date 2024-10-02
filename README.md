@@ -341,21 +341,21 @@ Version History
 ---------------
 * 2.1.0
   * Preset _transitions_ have been deprecated.  All presets are now restored instantly no 
-    matter how they have been set to transition.  The Preset-Dialog controls for assiging
-    transitions have been hidden.  Transitions and related controls can be
-    re-enabled by disabling `protect-nvram` in the _Settings-Dialog_.  __All 
-    transition related code may be removed in a future version, please contact me 
-    or comment on issue #93 if you prefer transitions to be retained.__
-  * To avoid unnecessary updates, preset restoration always queries the VDU's existing
+    matter how they have been set to transition.  The Preset-Dialog controls for assigning
+    transitions have been hidden.   __All  transition related code may be removed in a future 
+    version, please contact me or comment on issue #93 if you prefer transitions to be retained.__
+  * Transitions and related controls can be re-enabled by disabling `protect-nvram` in the _Settings-Dialog_. 
+  * To avoid unnecessary updates, preset restoration now queries the VDU's existing
     values. This may slow down preset restoration.
   * Lux-metered auto adjustment has been defaulted to 10 minute intervals (up from 5).
   * Color-Preset (VCP code 0x14) has been added to the list of standard controls.
-  * Added VDU a ___Initializer-Preset___ feature to provide a replacement for dead NVRAM and 
-    a way to restore settings not persisted in VDU NVRAM.  A VDU's initializer-preset is 
+  * Added a VDU  ___Initializer-Preset___ feature to provide a replacement for dead NVRAM.
+    This also provides a way to restore settings not persisted in VDU NVRAM.  A VDU's initializer-preset is 
     automatically run if the target VDU is present at startup or is subsequently detected.
+    Any preset that has a name that matches a VDU model and serial-number will be treated
+    as an Initializer-Preset. 
   * The ___Preset-Dialog___ now includes a tool-button  to the right of the preset-name entry 
-    that will create VDU specific ___Initializer-Preset___.
-
+    that will create a VDU specific ___Initializer-Preset___.
   
 * 2.0.4
   * The About-Dialog now refreshes the ddcutil version info on each invocation. 
