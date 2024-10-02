@@ -1478,6 +1478,7 @@ class Ddcutil:
         for attempt_count in range(DDCUTIL_RETRIES):
             try:
                 self.ddcutil_impl.set_vcp(edid_txt, int(vcp_code, 16), new_value)
+                log_debug(f"set_vcp: {vdu_number=} {vcp_code=} {new_value=}")
                 return
             except (subprocess.SubprocessError, DdcutilDisplayNotFound, ValueError) as e:
                 if not retry_on_error or attempt_count + 1 == DDCUTIL_RETRIES:
@@ -7510,7 +7511,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             def vdu_connectivity_changed_callback(edid_encoded: str, event_type: int, flags: int):
                 if event_type == DdcEventType.DPMS_AWAKE.value:
                     log_info(f"DPMS awake event {event_type=} {edid_encoded=:.30}")
-                if event_type == DdcEventType.DPMS_ASLEEP.value:
+                elif event_type == DdcEventType.DPMS_ASLEEP.value:
                     log_info(f"DPMS asleep event {event_type=} {edid_encoded=:.30}")
                     return
                 else:
@@ -7753,7 +7754,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             message = tr("Restored Preset\n{}").format(worker.preset.name)
             self.status_message(message, timeout=5)
             self.main_window.splash_message_qtsignal.emit(message)
-            log_info(f'Restore initialization-preset {worker.preset.name}')
+            log_info(f'Restored initialization-preset {worker.preset.name}')
             time.sleep(1.0)  # Pause to give the message time to display - TODO find non-delaying solution
             self.main_window.update_status_indicators()  # Refresh to restore other non-init preset icons
 
@@ -8039,7 +8040,7 @@ class VduAppWindow(QMainWindow):
         self.hide_shortcuts = True
 
         def run_in_gui(task: Callable):
-            log_debug("Running task in gui thread") if log_debug_enabled else None
+            log_debug(f"Running task in gui thread {repr(task)}") if log_debug_enabled else None
             task()  # Was using a partial, but it silently failed when task was a method with only self and no other arguments.
 
         self._run_in_gui_thread_qtsignal.connect(run_in_gui)
