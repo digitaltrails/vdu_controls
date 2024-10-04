@@ -7739,9 +7739,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             self.preset_transition_worker = PresetTransitionWorker(
                 self, preset, update_progress, restore_finished_callback, immediately, scheduled_activity)
             self.preset_transition_worker.start()
+            if initialization_preset:
+                self.preset_transition_worker.wait()
         log_debug("restore_preset: released application_configuration_lock") if log_debug_enabled else None
-        if initialization_preset:
-            self.preset_transition_worker.wait()
 
 
     def restore_vdu_intialization_presets(self):
