@@ -2467,8 +2467,11 @@ class VduControllerAsyncSetter(WorkerThread):  # Used to decouple the set-vcp fr
                 self.doze(self._idle_seconds)  # wait a bit in case more arrive - might be dragging a slider or spinning a spinner
         if latest_pending:  # nothing more has arrived, if any setvcp requests are pending, set for real now
             for (controller, vcp_code), (value, origin) in latest_pending.items():
-                log_debug(f"UI set {controller.vdu_number=} {vcp_code=} {value=} {origin=}") if log_debug_enabled else None
-                controller.set_vcp_value(vcp_code, value, origin, asynchronous_caller=True)
+                if controller.values_cache[vcp_code] != value:
+                    log_debug(f"UI set {controller.vdu_number=} {vcp_code=} {value=} {origin=}") if log_debug_enabled else None
+                    controller.set_vcp_value(vcp_code, value, origin, asynchronous_caller=True)
+                else:
+                    log_debug(f"UI nochange {controller.vdu_number=} {vcp_code=} {value=} {origin=}") if log_debug_enabled else None
         else:
             self.doze(self._idle_seconds)
 
@@ -3161,8 +3164,9 @@ class VduControlBase(QWidget):
         self.refresh_ui_view()
 
     def set_value(self, new_value: int, origin: VcpOrigin = VcpOrigin.NORMAL) -> None:  # Used by controllers to alter physical VDU
-        self.controller.set_vcp_value(self.vcp_capability.vcp_code, new_value, origin)
-        self.current_value = new_value
+        if self.controller.values_cache[self.vcp_capability.vcp_code] != new_value:
+            self.controller.set_vcp_value(self.vcp_capability.vcp_code, new_value, origin)
+            self.current_value = new_value
         self.refresh_ui_view()
 
     def ui_change_vdu_attribute(self, new_value: int) -> None:  # Used by UI controls to change values
