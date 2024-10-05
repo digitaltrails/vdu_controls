@@ -5221,6 +5221,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         for i in range(self.preset_widgets_layout.count()):
             w = self.preset_widgets_layout.itemAt(i).widget()
             if isinstance(w, PresetWidget):
+                w.update_timer_button()
                 w.indicate_active(preset is not None and w.name == preset.name)
 
     def populate_editor_controls_widget(self):
