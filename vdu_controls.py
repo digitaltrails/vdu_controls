@@ -2606,12 +2606,14 @@ class VduController(QObject):
             values = self.ddcutil.get_vcp_values(self.vdu_number, vcp_codes)
             for vcp_code, vcp_value in zip(vcp_codes, values):
                 value = vcp_value.current
-                if self.values_cache.get(vcp_code) != value:
+                cached_value = self.values_cache.get(vcp_code, None)
+                if value != cached_value:
                     self.values_cache[vcp_code] = value
-                    if log_debug_enabled:
-                        log_debug(f"vcp_value_changed: {self.vdu_stable_id} {vcp_code=} {value} origin={VcpOrigin.EXTERNAL.name}")
-                    self.vcp_value_changed_qtsignal.emit(self.vdu_stable_id, vcp_code, value, VcpOrigin.EXTERNAL,
-                                                         self.capabilities_supported_by_this_vdu[vcp_code].causes_config_change)
+                    if cached_value != None:  # Not just initialization, but an actual change...
+                        if log_debug_enabled:
+                            log_debug(f"vcp_value_changed: {self.vdu_stable_id} {vcp_code=} {value} origin={VcpOrigin.EXTERNAL.name}")
+                        self.vcp_value_changed_qtsignal.emit(self.vdu_stable_id, vcp_code, value, VcpOrigin.EXTERNAL,
+                                                             self.capabilities_supported_by_this_vdu[vcp_code].causes_config_change)
             return values
         except (subprocess.SubprocessError, ValueError, TimeoutError, DdcutilDisplayNotFound) as e:
             raise VduException(vdu_description=self.get_vdu_description(), vcp_code=",".join(vcp_codes), exception=e,
