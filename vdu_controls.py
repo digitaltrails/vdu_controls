@@ -2468,10 +2468,10 @@ class VduControllerAsyncSetter(WorkerThread):  # Used to decouple the set-vcp fr
         if latest_pending:  # nothing more has arrived, if any setvcp requests are pending, set for real now
             for (controller, vcp_code), (value, origin) in latest_pending.items():
                 if controller.values_cache[vcp_code] != value:
-                    log_debug(f"UI set {controller.vdu_number=} {vcp_code=} {value=} {origin=}") if log_debug_enabled else None
+                    log_debug(f"UI set {controller.vdu_number=} {vcp_code=} {value=} {origin}") if log_debug_enabled else None
                     controller.set_vcp_value(vcp_code, value, origin, asynchronous_caller=True)
                 else:
-                    log_debug(f"UI nochange {controller.vdu_number=} {vcp_code=} {value=} {origin=}") if log_debug_enabled else None
+                    log_debug(f"UI nochange {controller.vdu_number=} {vcp_code=} {value=} {origin}") if log_debug_enabled else None
         else:
             self.doze(self._idle_seconds)
 
@@ -2609,9 +2609,10 @@ class VduController(QObject):
                 cached_value = self.values_cache.get(vcp_code, None)
                 if value != cached_value:
                     self.values_cache[vcp_code] = value
-                    if cached_value != None:  # Not just initialization, but an actual change...
+                    if cached_value is not None:  # Not just initialization, but an actual change...
                         if log_debug_enabled:
-                            log_debug(f"vcp_value_changed: {self.vdu_stable_id} {vcp_code=} {value} origin={VcpOrigin.EXTERNAL.name}")
+                            log_debug(
+                                f"get_vcp signals vcp_value_changed: {self.vdu_stable_id} {vcp_code=} {value} {VcpOrigin.EXTERNAL}")
                         self.vcp_value_changed_qtsignal.emit(self.vdu_stable_id, vcp_code, value, VcpOrigin.EXTERNAL,
                                                              self.capabilities_supported_by_this_vdu[vcp_code].causes_config_change)
             return values
@@ -2627,7 +2628,7 @@ class VduController(QObject):
             self.ddcutil.set_vcp(self.vdu_number, vcp_code, value, retry_on_error=retry_on_error)
             self.values_cache[vcp_code] = value
             if log_debug_enabled:
-                log_debug(f"vcp_value_changed: {self.vdu_stable_id} {vcp_code=} {value} origin={origin.name}")
+                log_debug(f"set_vcp signals vcp_value_changed: {self.vdu_stable_id} {vcp_code=} {value} {origin}")
             self.vcp_value_changed_qtsignal.emit(self.vdu_stable_id, vcp_code, value, origin,
                                                  self.capabilities_supported_by_this_vdu[vcp_code].causes_config_change)
         except (subprocess.SubprocessError, ValueError, TimeoutError, DdcutilDisplayNotFound) as e:
@@ -8330,10 +8331,10 @@ class VduAppWindow(QMainWindow):
                                    causes_config_change: bool) -> None:
         # Update UI secondary displays
         if causes_config_change and origin == VcpOrigin.NORMAL:  # only respond if this is an internally initiated change
-            log_info(f"Must reconfigure due to change to: {vdu_stable_id=} {vcp_code=} {value=} {origin.name=}")
+            log_info(f"Must reconfigure due to change to: {vdu_stable_id=} {vcp_code=} {value=} {origin}")
             self.main_controller.configure_application()  # Special case, such as a power control causing the VDU to go offline.
             return
-        log_debug(f"respond {vdu_stable_id=} {vcp_code=} {value=} {origin.name=}") if log_debug_enabled else None
+        log_debug(f"respond {vdu_stable_id=} {vcp_code=} {value=} {origin}") if log_debug_enabled else None
         if origin != VcpOrigin.TRANSIENT:  # Only want to indicate final status (not when just passing through a preset)
             self.update_status_indicators()
             if origin != VcpOrigin.EXTERNAL:
