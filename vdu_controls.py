@@ -6290,7 +6290,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             self.doze(1)
 
     def stepping_brightness(self, lux_config: LuxConfig, lux_meter: LuxMeterDevice) -> None:
-        change_count, last_change_count = 0, -1
+        change_count, last_change_count, error_count = 0, -1, 0
         start_of_cycle = True
         profile_preset_name = None
         vdu_changes_count = {}
@@ -6298,9 +6298,9 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             last_change_count = change_count
             if metered_lux := lux_meter.get_value():
                 smoothed_lux = metered_lux if lux_meter.is_manual_control() else self.smoother.smooth(metered_lux)
-                lux_summary_text = self.lux_summary(metered_lux, smoothed_lux)
+                summary_text = self.lux_summary(metered_lux, smoothed_lux)
                 if start_of_cycle:
-                    self.status_message(f"{SUN_SYMBOL} {lux_summary_text} {PROCESSING_LUX_SYMBOL}", timeout=3000)
+                    self.status_message(f"{SUN_SYMBOL} {summary_text} {PROCESSING_LUX_SYMBOL}", timeout=3000)
                 # If interpolating, it may be that each VDU profile is closer to a different attached preset, if this happens,
                 # chose the preset associated with the brightest value.
                 for vdu_sid in self.main_controller.get_vdu_stable_id_list():  # For each VDU, do one step of its profile
@@ -6310,49 +6310,54 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                     value_range = self.main_controller.get_range(vdu_sid, BRIGHTNESS_VCP_CODE, fallback=(0, 100))
                     lux_profile = lux_config.get_vdu_lux_profile(vdu_sid, value_range)
                     profile_brightness, profile_preset_name = self.determine_brightness(vdu_sid, smoothed_lux, lux_profile)
-                    if self.step_one_vdu(vdu_sid, profile_brightness, profile_preset_name, lux_summary_text, start_of_cycle):
+                    step_status = self.step_one_vdu(vdu_sid, profile_brightness, profile_preset_name, summary_text, start_of_cycle)
+                    if step_status > 0:
                         change_count += 1
                         vdu_changes_count[vdu_sid] = vdu_changes_count.get(vdu_sid, 0) + 1
-                    else:
+                    elif step_status == 0:
                         log_debug(f"LuxAutoWorker: finished {vdu_sid=} VCP-changes={vdu_changes_count.get(vdu_sid, 0)})")
+                    else:
+                        error_count += 1
                 start_of_cycle = False
             self.doze(self.step_pause_millis / 1000.0)  # Let i2c settle down, then continue - TODO is this really necessary?
-        if change_count != 0:  # If any work was done in previous steps, finish up the remaining tasks
-            self.status_message(tr("Brightness adjustment completed"), timeout=5000)
-            if profile_preset_name is not None:  # if a point had a Preset attached, activate it now
-                # Restoring the Preset's non-brightness settings. Invoke now, so it will happen in this thread's sleep period.
-                self.status_message(tr("Restoring preset {}").format(profile_preset_name), timeout=5000)
-                if preset := self.main_controller.find_preset_by_name(profile_preset_name):  # Check that it still exists
-                    self.main_controller.restore_preset(
-                        preset, immediately=PresetTransitionFlag.SCHEDULED not in preset.get_transition_type(),
-                        background_activity=True)
-        else:  # No work done, no adjustment necessary
-            self.status_message(f"{SUN_SYMBOL} {SUCCESS_SYMBOL}", timeout=3000)
-            if profile_preset_name is not None:  # Make sure the right preset icon is displayed
-                if preset := self.main_controller.find_preset_by_name(profile_preset_name):
-                    self.main_controller.update_window_status_indicators(preset)
-        log_info(f"LuxAutoWorker: adjustments completed {change_count} VCP-changes, {profile_preset_name=}")
+        if error_count == 0:
+            if change_count != 0:  # If any work was done in previous steps, finish up the remaining tasks
+                self.status_message(tr("Brightness adjustment completed"), timeout=5000)
+                if profile_preset_name is not None:  # if a point had a Preset attached, activate it now
+                    # Restoring the Preset's non-brightness settings. Invoke now, so it will happen in this thread's sleep period.
+                    self.status_message(tr("Restoring preset {}").format(profile_preset_name), timeout=5000)
+                    if preset := self.main_controller.find_preset_by_name(profile_preset_name):  # Check that it still exists
+                        self.main_controller.restore_preset(
+                            preset, immediately=PresetTransitionFlag.SCHEDULED not in preset.get_transition_type(),
+                            background_activity=True)
+            else:  # No work done, no adjustment necessary
+                self.status_message(f"{SUN_SYMBOL} {SUCCESS_SYMBOL}", timeout=3000)
+                if profile_preset_name is not None:  # Make sure the right preset icon is displayed
+                    if preset := self.main_controller.find_preset_by_name(profile_preset_name):
+                        self.main_controller.update_window_status_indicators(preset)
+        log_info(f"LuxAutoWorker: adjustments completed VCP-changes: {vdu_changes_count if vdu_changes_count else 'None'}, "
+                 f"{profile_preset_name=} {error_count=}")
 
     def step_one_vdu(self, vdu_sid: VduStableId, profile_brightness: int, profile_preset_name: str | None,
-                     lux_summary_text: str, first_step: bool) -> bool:
+                     lux_summary_text: str, first_step: bool) -> int:
         # if profile_brightness is -1, the profile has an attached preset with no brightness, it may have been
         # attached to trigger non-brightness settings at a given lux value (triggered below, after the loop).
         if profile_brightness < 0:
-            return False  # Nothing more to do
+            return 0  # Nothing more to do
         if self.main_controller.is_vcp_code_enabled(vdu_sid, BRIGHTNESS_VCP_CODE):  # can only adjust brightness controls
             try:
                 current_brightness = self.main_controller.get_value(vdu_sid, BRIGHTNESS_VCP_CODE)
                 diff = profile_brightness - current_brightness
                 # Check if already at the correct brightness.
                 if diff == 0:
-                    return False  # Nothing more to do
+                    return 0  # Nothing more to do
                 # Check for interpolating, at the start, no Preset involved, and close enough to not bother with a change.
                 if (self.interpolation_enabled and first_step and profile_preset_name is None and
                         abs(diff) < self.sensitivity_percent):
                     self.status_message(f"{SUN_SYMBOL} {current_brightness}% {ALMOST_EQUAL_SYMBOL}"
                                         f" {profile_brightness}% {vdu_sid} ({lux_summary_text})")
                     log_info(f"LuxAutoWorker: {vdu_sid=} {current_brightness=} {profile_brightness=} ignored, too small")
-                    return False
+                    return 0
                 # Check if something else is changing the brightness, or maybe there was a ddcutil error
                 if vdu_sid in self.expected_brightness_map and self.expected_brightness_map[vdu_sid] != current_brightness:
                     log_info(
@@ -6360,7 +6365,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                         f" something else altered the brightness - stop adjusting for lux.")
                     self.status_message(f"{SUN_SYMBOL} {ERROR_SYMBOL} {RAISED_HAND_SYMBOL} {vdu_sid}")
                     self.unexpected_change = True
-                    return False
+                    return -1
                 # Brightness change is significant OR we have to activate a Preset
                 if self.single_shot or abs(diff) <= self.max_brightness_jump:  # In single_shot or diff too small for stepping.
                     new_brightness = profile_brightness
@@ -6393,8 +6398,8 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                     self.doze(2)  # TODO do something better than this to make the message visible.
                     if error_count == 2 or log_debug_enabled:
                         log_info(f"LuxAutoWorker: {error_count} errors on {vdu_sid}, let this lux cycle end.")
-                    return False  # Make no changes, this allows the current adjustment cycle to end, will try again next cycle.
-        return True  # Still more work to do to reach the final target value
+                    return -1  # Make no changes, this allows the current adjustment cycle to end, will try again next cycle.
+        return 1  # Still more work to do to reach the final target value
 
     def determine_brightness(self, vdu_sid: VduStableId, smoothed_lux: int, lux_profile: List[LuxPoint]) -> Tuple[int, str | None]:
         matched_point = LuxPoint(0, 0)
