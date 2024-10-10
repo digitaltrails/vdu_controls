@@ -3643,13 +3643,13 @@ class ContextMenu(QMenu):
 
     def insert_preset_menu_action(self, preset: Preset, issue_update: bool = True) -> None:
 
-        def restore_preset() -> None:
+        def menu_restore_preset() -> None:
             self.app_controller.restore_named_preset(self.sender().property(ContextMenu.PRESET_NAME_PROP))
 
         assert preset.name
         shortcut = self.allocate_preset_shortcut(preset.name)
         action_name = shortcut.annotated_word if shortcut else preset.name
-        action = self.addAction(preset.create_icon(), action_name, restore_preset)  # Have to add it first and then move/insert it.
+        action = self.addAction(preset.create_icon(), action_name, menu_restore_preset)  # Have to add it, then move/insert it.
         self.insertAction(self.presets_separator, action)  # Insert before the presets_separator
         action.setProperty(ContextMenu.BUSY_DISABLE_PROP, QVariant(True))
         action.setProperty(ContextMenu.PRESET_NAME_PROP, preset.name)
@@ -3936,9 +3936,9 @@ class PresetTransitionWorker(WorkerThread):
     def __init__(self, main_controller: VduAppController, preset: Preset,
                  progress_callable: Callable[[PresetTransitionWorker], None],
                  finished_callable: Callable[[PresetTransitionWorker], None],
-                 immediately: bool = False, scheduled_activity: bool = False):
+                 immediately: bool = False):
         super().__init__(self._perform_transition, finished_callable)  # type: ignore
-        log_debug(f"TransitionWorker: init {preset.name=} {immediately=} {scheduled_activity=}") if log_debug_enabled else None
+        log_debug(f"TransitionWorker: init {preset.name=} {immediately=}") if log_debug_enabled else None
         self.change_count = 0
         self.start_time = datetime.now()
         self.end_time: datetime | None = None
@@ -3954,7 +3954,6 @@ class PresetTransitionWorker(WorkerThread):
         self.transition_immediately = immediately
         self.work_state = \
             PresetTransitionState.STEPPING_COMPLETED if self.transition_immediately else PresetTransitionState.INITIALIZED
-        self.scheduled_activity = scheduled_activity
         self.progress_callable = progress_callable
         self.progress_qtsignal.connect(self.progress_callable)
         for vdu_stable_id in main_controller.get_vdu_stable_id_list():
@@ -6326,7 +6325,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                 if preset := self.main_controller.find_preset_by_name(profile_preset_name):  # Check that it still exists
                     self.main_controller.restore_preset(
                         preset, immediately=PresetTransitionFlag.SCHEDULED not in preset.get_transition_type(),
-                        scheduled_activity=True)
+                        background_activity=True)
         else:  # No work done, no adjustment necessary
             self.status_message(f"{SUN_SYMBOL} {SUCCESS_SYMBOL}", timeout=3000)
             if profile_preset_name is not None:  # Make sure the right preset icon is displayed
@@ -7451,13 +7450,13 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
         def respond_to_unix_signal(signal_number: int) -> None:
             if signal_number == signal.SIGHUP:
-                self.start_refresh()
+                self.start_refresh(external_event=True)
             elif PRESET_SIGNAL_MIN <= signal_number <= PRESET_SIGNAL_MAX:
                 if preset := self.preset_controller.get_preset(signal_number - PRESET_SIGNAL_MIN):
                     immediately = PresetTransitionFlag.SIGNAL not in preset.get_transition_type()
                     log_info(f"Signaled for {preset.name=} {preset.get_transition_type()=} {immediately=} {thread_pid()=}")
                     # Signals occur outside the GUI thread - initiate the restore in the GUI thread
-                    self.restore_preset(preset=preset, immediately=immediately)
+                    self.restore_preset(preset=preset, immediately=immediately, background_activity=True)
                 else:
                     # Cannot raise a Qt alert inside the signal handler in case another signal comes in.
                     log_warning(f"ignoring {signal_number=}, no preset associated with that signal number.")
@@ -7516,14 +7515,10 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         if self.main_config.is_set(ConfOption.DBUS_CLIENT_ENABLED):
 
             def vdu_connectivity_changed_callback(edid_encoded: str, event_type: int, flags: int):
-                if event_type == DdcEventType.DPMS_AWAKE.value:
-                    log_info(f"DPMS awake event {event_type=} {edid_encoded=:.30}")
-                elif event_type == DdcEventType.DPMS_ASLEEP.value:
-                    log_info(f"DPMS asleep event {event_type=} {edid_encoded=:.30}")
-                    return
-                else:
-                    log_info(f"Connected VDUs changed {event_type=} {flags=} {edid_encoded:.30}...")
-                self.start_refresh(ddcutil_event=True)
+                log_info(f"Connected VDUs event {DdcEventType(event_type)} {flags=} {edid_encoded:.30}...")
+                if event_type == DdcEventType.DPMS_ASLEEP.value:
+                    return  # Don't do anything, the VDUs are just asleep.
+                self.start_refresh(external_event=True)
 
             change_handler = vdu_connectivity_changed_callback
             log_debug("Enabled callback for VDU-connectivity-change D-Bus signals")
@@ -7633,10 +7628,10 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             return False
         self.lux_auto_controller.adjust_brightness_now()
 
-    def start_refresh(self, ddcutil_event: bool = False) -> None:
+    def start_refresh(self, external_event: bool = False) -> None:
         if not is_running_in_gui_thread():
-            log_debug("Reinvoke start_refresh() in GUI thread.")
-            self.main_window.run_in_gui_thread(self.start_refresh, ddcutil_event)
+            log_debug(f"Reinvoke start_refresh() in GUI thread {external_event=}") if log_debug_enabled else None
+            self.main_window.run_in_gui_thread(self.start_refresh, external_event)
             return
 
         def update_from_vdu(worker: WorkerThread) -> None:
@@ -7644,7 +7639,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 with non_blocking_lock(self.application_lock) as acquired_lock:
                     if acquired_lock:  # if acquired_lock is not None, then we have successfully acquired the lock.
                         try:
-                            log_info("Refresh commences - acquired application_lock")
+                            log_info(f"Refresh commences - acquired application_lock {external_event=}")
                             self.ddcutil.refresh_connection()
                             self.detected_vdu_list = self.ddcutil.detect_vdus()
                             self.restore_vdu_intialization_presets()
@@ -7658,7 +7653,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                                 self.refresh_data_task.vdu_exception = VduException(vdu_description="unknown", operation="unknown",
                                                                                     exception=e)
                     else:
-                        log_info("Already doing a refresh, won't do another one")
+                        log_info(f"Already doing a refresh, won't do another one ({external_event=})")
                         worker.stop()  # stop the thread - which also indicates we did not acquire the lock
 
         def update_ui_view(worker: WorkerThread) -> None:
@@ -7667,12 +7662,14 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 return  # in this case, this means the worker never started anything
             try:  # No need for locking in here - running in the GUI thread effectively single threads the operation.
                 assert self.refresh_data_task is not None and is_running_in_gui_thread()
-                log_debug("Refresh - update UI view")
+                log_debug(f"Refresh - update UI view {external_event=}") if log_debug_enabled else None
                 main_panel = self.main_window.get_main_panel()
                 if self.refresh_data_task.vdu_exception is not None:
-                    main_panel.display_vdu_exception(self.refresh_data_task.vdu_exception, can_retry=False)
+                    log_debug(f"Refresh - update UI view - exception {self.refresh_data_task.vdu_exception} {external_event=}")
+                    if not external_event:
+                        main_panel.display_vdu_exception(self.refresh_data_task.vdu_exception, can_retry=False)
                 if len(self.detected_vdu_list) == 0 or self.detected_vdu_list != self.previously_detected_vdu_list:
-                    log_info(f"Reconfiguring: detected vdu count={self.detected_vdu_list}")
+                    log_info(f"Reconfiguring: detected={self.detected_vdu_list} previously={self.previously_detected_vdu_list}")
                     self.configure_application()  # May cause a further refresh?
                     self.previously_detected_vdu_list = self.detected_vdu_list
                 if self.lux_auto_controller:
@@ -7691,15 +7688,19 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             self.main_window.indicate_busy(True)  # Refresh has probably commenced, give the user some feedback
 
     def restore_preset(self, preset: Preset, finished_func: Callable[[PresetTransitionWorker], None] | None = None,
-                       immediately: bool = False, scheduled_activity: bool = False, initialization_preset: bool = False) -> None:
+                       immediately: bool = False, background_activity: bool = False, initialization_preset: bool = False) -> None:
+        if initialization_preset:
+            background_activity = True
+            immediately = True
         if not immediately and self.main_config.is_set(ConfOption.PROTECT_NVRAM_ENABLED):
-            if preset.get_transition_type() != None:
+            if preset.get_transition_type() is not None:
                 log_warning(f"Setting protect-nvram prevents '{preset.name}' from transitioning, change will be immediate.")
             immediately = True
         # Starts the restore, but it will complete in the worker thread
         if not is_running_in_gui_thread():  # Transfer this request into the GUI thread
             log_debug(f"restore_preset {preset.name} transferring task to GUI thread") if log_debug_enabled else None
-            self.main_window.run_in_gui_thread(partial(self.restore_preset, preset, finished_func, immediately, scheduled_activity))
+            self.main_window.run_in_gui_thread(partial(self.restore_preset, preset, finished_func,
+                                                       immediately, background_activity, initialization_preset))
             return
 
         log_debug("restore_preset: try to obtain application_configuration_lock", trace=False) if log_debug_enabled else None
@@ -7722,11 +7723,10 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
             def restore_finished_callback(worker_thread: PresetTransitionWorker) -> None:
                 self.transitioning_dummy_preset = None
-                if worker_thread.vdu_exception is not None and not scheduled_activity:  # if it's a GUI request, ask if about retry
+                if worker_thread.vdu_exception is not None and not background_activity:  # if it's a GUI request, ask about retry
                     if self.main_window.get_main_panel().display_vdu_exception(worker_thread.vdu_exception, can_retry=True):
-                        # Try again (recursion) in new thread
-                        self.restore_preset(preset, finished_func=finished_func, immediately=immediately)
-                        return  # Don't do anything more the semi-recursive call above will take over from here
+                        self.restore_preset(preset, finished_func=finished_func, immediately=immediately)  # try again, new thread
+                        return  # Don't do anything more, the new thread will take over from here
                 self.main_window.indicate_busy(False)
                 if not initialization_preset:
                     if self.main_window.tray is not None:
@@ -7744,7 +7744,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     finished_func(worker_thread)
 
             self.preset_transition_worker = PresetTransitionWorker(
-                self, preset, update_progress, restore_finished_callback, immediately, scheduled_activity)
+                self, preset, update_progress, restore_finished_callback, immediately)
             self.preset_transition_worker.start()
             if initialization_preset:
                 self.preset_transition_worker.wait()
@@ -7767,12 +7767,11 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
         # Find presets that match the name of each VDU name+serial and restore them...
         for stable_id in self.vdu_controllers_map.keys():
-            log_info(f"Checking intialization-preset for {stable_id}")
             for preset in self.preset_controller.find_presets_map().values():
                 preset_proper_name = proper_name(preset.name)
                 if stable_id == preset_proper_name:
-                    self.restore_preset(preset, finished_func=restored_initialization_preset,
-                                        immediately=True, initialization_preset=True)
+                    log_info(f"Found intialization-preset for {stable_id}")
+                    self.restore_preset(preset, finished_func=restored_initialization_preset, initialization_preset=True)
 
 
     def schedule_presets(self, reconfiguring: bool = False) -> Preset | None:
@@ -7874,7 +7873,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         # Happens asynchronously in a thread
         self.restore_preset(preset, finished_func=activation_finished,
                             immediately=immediately or PresetTransitionFlag.SCHEDULED not in preset.get_transition_type(),
-                            scheduled_activity=True)
+                            background_activity=True)
 
     def is_weather_satisfactory(self, preset, use_cache: bool = False) -> bool:
         try:
@@ -8072,7 +8071,8 @@ class VduAppWindow(QMainWindow):
                 ConfOption.LUX_OPTIONS_ENABLED) else None,
             settings_action=self.main_controller.edit_config,
             presets_action=partial(PresetsDialog.invoke, self.main_controller, self.main_config),
-            refresh_action=self.main_controller.start_refresh, quit_action=self.quit_app,
+            refresh_action=self.main_controller.start_refresh,
+            quit_action=self.quit_app,
             hide_shortcuts=self.hide_shortcuts, parent=self)
 
         splash_pixmap = get_splash_image()
