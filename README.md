@@ -343,7 +343,7 @@ Version History
   * Removed --dbus-signals-enabled. DBus signals are now always enabled when --dbus-client
     is enabled.
   * Fix the active Preset icon display which was sometimes incorrect after DPMS-sleep or errors. 
-  * Minor changes to reduce internal unnecessary work and improve log messages.
+  * Minor changes to reduce unnecessary work and improve log messages.
 * 2.1.0
   * Preset _transitions_ have been deprecated.  All presets are now restored instantly no 
     matter how they have been set to transition.  The Preset-Dialog controls for assigning
