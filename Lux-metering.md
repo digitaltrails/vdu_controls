@@ -67,7 +67,13 @@ of Lux values. The sketch code I'm using is as follows:
 BH1750 lightMeter;
 
 void setup() {
-…  // Serial.println(F("BH1750 Lux values stream..."));
+  Serial.begin(9600);
+  // Initialize the I2C bus (BH1750 library doesn't do this automatically)
+  Wire.begin();
+  // On esp8266 you can select SCL and SDA pins using Wire.begin(D4, D3);
+  // For Wemos / Lolin D1 Mini Pro and the Ambient Light shield use
+  // Wire.begin(D2, D1);
+  lightMeter.begin();
 }
 
 void loop() {
@@ -96,7 +102,7 @@ appropriate group.  The `ls` command can be used to see what user and group
 owns the device:
 
 ```
-% ls -l /dev/ttyUSB0                                                                              1 ↵  10269  08:45:34
+% ls -l /dev/ttyUSB0
 crw-rw---- 1 root dialout 188, 0 Apr  7 07:32 /dev/ttyUSB0
 ```
 
@@ -124,7 +130,7 @@ rules to create a fixed-name symlink to your arduino device. For example:
 
 1) Find out some unique attributes of your arduino such as `ID_MODEL_ID` and `ID_VENDOR_ID`::
 
-       % udevadm info  /dev/ttyUSB1 | egrep  'ID_USB_VENDOR_ID|ID_USB_MODEL_ID'                      0|1 ↵  10054  17:57:36
+       % udevadm info  /dev/ttyUSB1 | egrep  'ID_USB_VENDOR_ID|ID_USB_MODEL_ID'
        E: ID_USB_MODEL_ID=7523
        E: ID_USB_VENDOR_ID=1a86
 
@@ -206,7 +212,7 @@ The `Video for Linux` command `v4l-ctl --list-ctrls-menu` can be
 used to find out what options a webcam supports, for example, here 
 is the output for a Logitech Webcam C270:
 ```
-% v4l2-ctl -d /dev/video0 --list-ctrls-menus                                                         1 ↵  10293  07:56:22
+% v4l2-ctl -d /dev/video0 --list-ctrls-menus
 
 User Controls
 
