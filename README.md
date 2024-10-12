@@ -139,12 +139,13 @@ to reduce the frequency of writes to VDU NVRAM:
 
 #### Other concerns
 
-The power-supplies in some older VDUs may buzz/squeel audibly when the brightness is
-turned way down. This may not be a major issue because, in normal surroundings,
-older VDUs are often not usable below about 85-90% brightness.
+Going beyond the standard DDC features by experimenting with undocumented-features 
+or undocumented-values has the potential to make **irreversible** changes.
+Consider the potential cost in time and money before trying anything speculative.
 
-Going beyond the standard DDC features by attempting to experiment with hidden 
-or undocumented features or values has the potential to make irreversible changes.
+The power-supplies in some older VDUs may buzz/squeel audibly when the brightness is
+turned way down. This may not be a major issue, in normal circumstances
+older VDUs are often not usable below 85-90% brightness.
 
 Getting Started
 ---------------
