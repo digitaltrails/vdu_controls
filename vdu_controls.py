@@ -2541,18 +2541,18 @@ class VduController(QObject):
             config_path = ConfIni.get_path(config_name)
             log_debug("checking for config file '" + config_path.as_posix() + "'") if log_debug_enabled else None
             if os.path.isfile(config_path) and os.access(config_path, os.R_OK):
-                config = VduControlsConfig(config_name)
-                config.parse_file(config_path)
+                self.config = VduControlsConfig(config_name)
+                self.config.parse_file(config_path)
                 if default_config.is_set(ConfOption.DEBUG_ENABLED):
-                    config.debug_dump()
-                if multiplier := config.get_sleep_multiplier(fallback=default_sleep_multiplier):
-                    self.ddcutil.set_sleep_multiplier(vdu_number, multiplier)
-                self.ddcutil.set_vdu_specific_args(vdu_number, config.get_ddcutil_extra_args(fallback=None))
-                enabled_vcp_codes = config.get_all_enabled_vcp_codes()
-                self.capabilities_text = config.get_capabilities_alt_text()  # cached, possibly edited, ddc capabilities
-                self.config = config
+                    self.config.debug_dump()
+                enabled_vcp_codes = self.config.get_all_enabled_vcp_codes()
+                self.capabilities_text = self.config.get_capabilities_alt_text()  # cached, possibly edited, ddc capabilities
+                self.ignore_vdu = self.capabilities_text == '' or self.capabilities_text == IGNORE_VDU_MARKER_TEXT
+                if not self.ignore_vdu:
+                    if multiplier := self.config.get_sleep_multiplier(fallback=default_sleep_multiplier):
+                        self.ddcutil.set_sleep_multiplier(vdu_number, multiplier)
+                    self.ddcutil.set_vdu_specific_args(vdu_number, self.config.get_ddcutil_extra_args(fallback=None))
                 break
-        # print(f"{self.capabilities_text=}")
         if not self.capabilities_text:
             if remedy == VduController.DISCARD_VDU:
                 self.capabilities_text = IGNORE_VDU_MARKER_TEXT
@@ -2564,15 +2564,12 @@ class VduController(QObject):
                 self.capabilities_text = ASSUMED_CONTROLS_CONFIG_TEXT
             else:
                 self.capabilities_text = ddcutil.query_capabilities(vdu_number)
-        self.ignore_vdu = self.capabilities_text == '' or self.capabilities_text == IGNORE_VDU_MARKER_TEXT
+            self.ignore_vdu = self.capabilities_text == '' or self.capabilities_text == IGNORE_VDU_MARKER_TEXT
         # print(f"{self.capabilities_text}")
         self.capabilities_supported_by_this_vdu = self._parse_capabilities(self.capabilities_text)
-        # print(f"{self.capabilities_supported_by_this_vdu=}")
         # Find those capabilities supported by this VDU AND enabled in the GUI:
         self.enabled_capabilities = [c for c in self.capabilities_supported_by_this_vdu.values() if c.vcp_code in enabled_vcp_codes]
-        # print(f"{self.enabled_capabilities=}")
-        if self.config is None:
-            # In memory only config - in case it's needed by a future config editor
+        if self.config is None:  # In memory only config - in case it's needed by a future config editor
             self.config = VduControlsConfig(self.vdu_stable_id,
                                             default_enabled_vcp_codes=[c.vcp_code for c in self.enabled_capabilities])
             self.config.set_capabilities_alt_text(self.capabilities_text)

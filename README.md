@@ -343,6 +343,7 @@ Version History
   * Removed --dbus-signals-enabled. DBus signals are now always enabled when --dbus-client
     is enabled.
   * Fix the active Preset icon display which was sometimes incorrect after DPMS-sleep or errors. 
+  * Fix a code regression when handling non-DDC-capable VDUs (fix status=-3020 exception).
   * Minor changes to reduce unnecessary work and improve log messages.
 * 2.1.0
   * Preset _transitions_ have been deprecated.  All presets are now restored instantly no 
