@@ -1342,6 +1342,7 @@ class Ddcutil:
     """
     Interface to the abstracted ddcutil service
     """
+    vcp_write_counters: Dict[str, int] = {}
 
     def __init__(self, common_args: List[str] | None = None, prefer_dbus_client: bool = True,
                  connected_vdus_changed_callback: Callable = None) -> None:
@@ -1360,7 +1361,6 @@ class Ddcutil:
         self.supported_codes: Dict[str, str] | None = None
         self.vcp_type_map: Dict[Tuple[str, str], str] = {}
         self.edid_txt_map: Dict[str, str] = {}
-
         self.ddcutil_version = (0, 0, 0)  # Dummy version for bootstrapping
         self.version_suffix = ''
         version_info = self.ddcutil_impl.get_ddcutil_version_string()
@@ -1477,6 +1477,7 @@ class Ddcutil:
         edid_txt = self.get_edid_txt(vdu_number)
         for attempt_count in range(DDCUTIL_RETRIES):
             try:
+                Ddcutil.vcp_write_counters[edid_txt] = Ddcutil.vcp_write_counters.get(edid_txt, 0) + 1
                 self.ddcutil_impl.set_vcp(edid_txt, int(vcp_code, 16), new_value)
                 log_debug(f"set_vcp: {vdu_number=} {vcp_code=} {new_value=}")
                 return
@@ -7323,8 +7324,9 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
         else:
             about_text = ABOUT_TEXT
         if self.main_controller and self.main_controller.ddcutil:
-            about_text += "<hr><p><small>ddcutil-interface: {}; ddcutil: {}</small>".format(
-                *self.main_controller.ddcutil.ddcutil_version_info())
+            counts_str = ','.join((str(v) for v in Ddcutil.vcp_write_counters.values())) if len(Ddcutil.vcp_write_counters) else '0'
+            about_text += "<hr><p><small>ddcutil-interface: {}; ddcutil: {} (write-counts: {})</small>".format(
+                *self.main_controller.ddcutil.ddcutil_version_info(), counts_str)
         self.setInformativeText(about_text)
         self.setIcon(QMessageBox.Information)
 
