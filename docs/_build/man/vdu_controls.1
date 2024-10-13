@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Sep 28, 2024" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Oct 14, 2024" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 2.1.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -51,7 +51,6 @@ A control panel for DisplayPort, DVI, HDMI, or USB connected VDUs (\fIVisual Dis
 [\-\-syslog|\-\-no\-syslog]  [\-\-debug|\-\-no\-debug] [\-\-warnings|\-\-no\-warnings]
 [\-\-sleep\-multiplier multiplier] [\-\-ddcutil\-extra\-args \(aqextra args\(aq]
 [\-\-dbus\-client|\-\-no\-dbus\-client]
-[\-\-dbus\-signals|\-\-no\-dbus\-signals]
 [\-\-protect\-nvram|\-\-no\-protect\-nvram]
 [\-\-create\-config\-files] [\-\-install] [\-\-uninstall]
 .UNINDENT
@@ -157,10 +156,6 @@ extra arguments to pass to ddcutil (enclosed in single quotes)
 .B \-\-dbus\-client|\-\-no\-dbus\-client
 use the D\-Bus ddcutil\-service instead of the ddcutil command
 \fB\-\-dbus\-client\fP is the default
-.TP
-.B \-\-dbus\-signals|\-\-no\-dbus\-signals
-enable D\-Bus ddcutil\-service VDU\-connectivity\-change signals
-\fB\-\-dbus\-signals\fP is the default
 .TP
 .B \-\-protect\-nvram|\-\-no\-protect\-nvram
 alter options and defaults to minimize VDU NVRAM writes
