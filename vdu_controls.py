@@ -597,6 +597,7 @@ to reduce the overall frequency of adjustments.
     rapidly fluctuating levels of ambient brightness.
   + The About-Dialog reports a count of setvcp writes per VDU, use those
     numbers to tune the number of writes to an acceptable levels.
+  + Hovering over a VDU-name in the main-window reveals the count for that VDU.
   + Consider adjusting the ambient lighting instead of the VDU.
 
 Other concerns
@@ -1394,6 +1395,11 @@ class Ddcutil:
 
     def get_edid_txt(self, vdu_number: str) -> str:
         return self.edid_txt_map.get(vdu_number, vdu_number)  # no edid probably means a simulated VDU
+
+    def get_write_count(self, vdu_number: str) -> int:
+        if edid_txt := self.get_edid_txt(vdu_number):
+            return Ddcutil.vcp_write_counters.get(edid_txt, 0)
+        return 0
 
     def detect_vdus(self) -> List[Tuple[str, str, str, str]]:
         """Return a list of (vdu_number, desc) tuples."""
@@ -2649,6 +2655,9 @@ class VduController(QObject):
                 return int(range_restriction[1]), int(range_restriction[2])
         return fallback
 
+    def get_write_count(self):
+        return self.ddcutil.get_write_count(self.vdu_number) if self.ddcutil else 0
+
     def _parse_capabilities(self, capabilities_text=None) -> Dict[str, VcpCapability]:
         """Return a map of vpc capabilities keyed by vcp code."""
 
@@ -3354,7 +3363,8 @@ class VduControlPanel(QWidget):
     def __init__(self, controller: VduController, vdu_exception_handler: Callable) -> None:
         super().__init__()
         layout = QVBoxLayout()
-        layout.addWidget(QLabel(tr('Monitor {}: {}').format(controller.vdu_number, controller.get_vdu_description())))
+        self.label = QLabel(tr('Monitor {}: {}').format(controller.vdu_number, controller.get_vdu_description()))
+        layout.addWidget(self.label)
         self.controller: VduController = controller
         self.vcp_controls: List[VduControlBase] = []
         self.vdu_exception_handler = vdu_exception_handler
@@ -3387,6 +3397,7 @@ class VduControlPanel(QWidget):
         if len(self.vcp_controls) != 0:
             self.setLayout(layout)
 
+        self.update_stats()
         try:
             self.refresh_from_vdu()
         except VduException as e:
@@ -3418,6 +3429,9 @@ class VduControlPanel(QWidget):
                     return False  # immediately fail if even one value differs
                 count += 1
         return count > 0  # true unless no values were tested.
+
+    def update_stats(self):
+        self.label.setToolTip(f"{self.label.text()}\nSet-VCP writes: {self.controller.get_write_count()}")
 
 
 class Preset:
@@ -8335,10 +8349,13 @@ class VduAppWindow(QMainWindow):
         if palette_change or (preset is not None and not isinstance(preset, PresetTransitionDummy)):
             self.refresh_preset_menu(palette_change=palette_change)
 
+
     def respond_to_changes_handler(self, vdu_stable_id: VduStableId, vcp_code: str, value: int, origin: VcpOrigin,
                                    causes_config_change: bool) -> None:
         # Update UI secondary displays
         AboutDialog.refresh()
+        for panel in self.main_panel.vdu_control_panels.values():
+            panel.update_stats()
         if causes_config_change and origin == VcpOrigin.NORMAL:  # only respond if this is an internally initiated change
             log_info(f"Must reconfigure due to change to: {vdu_stable_id=} {vcp_code=} {value=} {origin}")
             self.main_controller.configure_application()  # Special case, such as a power control causing the VDU to go offline.

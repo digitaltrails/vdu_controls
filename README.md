@@ -138,7 +138,8 @@ to reduce the frequency of writes to VDU NVRAM:
  + If using the ambient-light brightness response curves, tune the settings and curves to avoid frequent small changes.
  + If using a light-meter, disengage metered automatic adjustment when faced with rapidly fluctuating levels of ambient brightness.
  + The _About-Dialog_ reports the number of set-vcp/write calls made to each VDU, this can 
-   assist in tuning settings to minimise writes.
+   assist in tuning settings to minimise writes.  
+ + Hovering over a VDU-name in the main-window reveals the count for that VDU.
  + Consider adjusting the ambient lighting instead of the VDU.
 
 #### Other concerns
