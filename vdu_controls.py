@@ -31,7 +31,7 @@ Arguments supplied on the command line override config file equivalent settings.
 
       -h, --help            show this help message and exit
       --detailed-help       full help in Markdown format
-      --about               info about vdu_controls and per-VDU write-counts
+      --about               info about vdu_controls
       --show control_name
                             show specified control only, may be specified multiple times
       --hide control_name
@@ -2394,7 +2394,7 @@ class VduControlsConfig:
             See the --detailed-help for important licencing information.
             """)
         parser.add_argument('--detailed-help', default=False, action='store_true', help='Detailed help (in markdown format).')
-        parser.add_argument('--about', default=False, action='store_true', help='info about vdu_controls and per-VDU write-counts')
+        parser.add_argument('--about', default=False, action='store_true', help='info about vdu_controls')
         parser.add_argument('--show', default=[], action='append',
                             choices=[vcp.property_name() for vcp in SUPPORTED_VCP_BY_CODE.values()],
                             help='show specified control only (--show may be specified multiple times)')
