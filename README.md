@@ -352,7 +352,7 @@ Version History
   * Fix a code regression when handling non-DDC-capable VDUs (fix status=-3020 exception).
   * Minor changes to reduce unnecessary work and improve log messages.
   * The About-Dialog now includes counts of per-VDU set_vcp/NVRAM-writes.
-    Use the counts to assist with designing schedules or lux-profiles that minimise writes.
+  * Hovering over a VDU-name in the main-window reveals the count for that VDU.
 * 2.1.0
   * Preset _transitions_ have been deprecated.  All presets are now restored instantly no 
     matter how they have been set to transition.  The Preset-Dialog controls for assigning
