@@ -112,11 +112,13 @@ the level of uptake of such technologies by the manufacturers is unknown (bright
 back-lights, along with scene and gaming options, would appear to require increased
 durability).
 
-I can confirm that a vintage-2010 VDU, which has been used for
-four years of intensive testing of vdu_controls, now reverts to its factory defaults 
-whenever it loses power.  This experience may indicate a write limit of 
-at least 100,000 for a VDU of this vintage. I've subsequently implemented
-the ___initialization-preset___ feature as a replacement for failed NVRAM.
+A vintage-2010 VDU, that has been used for four years of intensive testing of 
+vdu_controls, now shows signs of of the NVRAM having bad blocks.  After loss of 
+power the VDU will sometimes revert to its factory defaults, but not always, which 
+suggests the NVRAM is being cycled through and only some of it is bad.  This experience
+may indicate a write limit of at least 100,000 for a VDU of this vintage. I've 
+subsequently implemented the ___initialization-preset___ feature as a fallback 
+for failed NVRAM, so the problem with this VDU is, for the most part, eliminated.
 
 All that said, ``vdu_controls`` does include a number of features that can be used 
 to reduce the frequency of writes to VDU NVRAM:
