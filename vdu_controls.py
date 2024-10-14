@@ -31,7 +31,7 @@ Arguments supplied on the command line override config file equivalent settings.
 
       -h, --help            show this help message and exit
       --detailed-help       full help in Markdown format
-      --about               info about vdu_controls
+      --about               info about vdu_controls and per-VDU write-counts
       --show control_name
                             show specified control only, may be specified multiple times
       --hide control_name
@@ -595,6 +595,8 @@ to reduce the overall frequency of adjustments.
     curves to minimise frequent small changes.
   + If using a light-meter, disengage metered automatic adjustment when faced with
     rapidly fluctuating levels of ambient brightness.
+  + The About-Dialog reports a count of setvcp writes per VDU, use those
+    numbers to tune the number of writes to an acceptable levels.
   + Consider adjusting the ambient lighting instead of the VDU.
 
 Other concerns
@@ -2392,7 +2394,7 @@ class VduControlsConfig:
             See the --detailed-help for important licencing information.
             """)
         parser.add_argument('--detailed-help', default=False, action='store_true', help='Detailed help (in markdown format).')
-        parser.add_argument('--about', default=False, action='store_true', help='about vdu_controls window')
+        parser.add_argument('--about', default=False, action='store_true', help='info about vdu_controls and per-VDU write-counts')
         parser.add_argument('--show', default=[], action='append',
                             choices=[vcp.property_name() for vcp in SUPPORTED_VCP_BY_CODE.values()],
                             help='show specified control only (--show may be specified multiple times)')
@@ -7302,6 +7304,13 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
         else:
             AboutDialog(main_controller)
 
+    @staticmethod
+    def refresh():
+        if AboutDialog.exists() and AboutDialog.get_instance().isVisible():
+            AboutDialog.get_instance().refresh_content()
+        else:
+            log_debug("About dialog - no refresh - not visible") if log_debug_enabled else None
+
     def __init__(self, main_controller: VduAppController) -> None:
         super().__init__()
         self.main_controller = main_controller
@@ -7325,7 +7334,7 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
             about_text = ABOUT_TEXT
         if self.main_controller and self.main_controller.ddcutil:
             counts_str = ','.join((str(v) for v in Ddcutil.vcp_write_counters.values())) if len(Ddcutil.vcp_write_counters) else '0'
-            about_text += "<hr><p><small>ddcutil-interface: {}; ddcutil: {} (write-counts: {})</small>".format(
+            about_text += "<hr><p><small>ddcutil-interface: {}; ddcutil: {} (writes: {})</small>".format(
                 *self.main_controller.ddcutil.ddcutil_version_info(), counts_str)
         self.setInformativeText(about_text)
         self.setIcon(QMessageBox.Information)
@@ -8329,6 +8338,7 @@ class VduAppWindow(QMainWindow):
     def respond_to_changes_handler(self, vdu_stable_id: VduStableId, vcp_code: str, value: int, origin: VcpOrigin,
                                    causes_config_change: bool) -> None:
         # Update UI secondary displays
+        AboutDialog.refresh()
         if causes_config_change and origin == VcpOrigin.NORMAL:  # only respond if this is an internally initiated change
             log_info(f"Must reconfigure due to change to: {vdu_stable_id=} {vcp_code=} {value=} {origin}")
             self.main_controller.configure_application()  # Special case, such as a power control causing the VDU to go offline.
