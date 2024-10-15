@@ -350,9 +350,9 @@ Version History
     is enabled.
   * Fix the active Preset icon display which was sometimes incorrect after DPMS-sleep or errors. 
   * Fix a code regression when handling non-DDC-capable VDUs (fix status=-3020 exception).
-  * Minor changes to reduce unnecessary work and improve log messages.
   * The About-Dialog now includes counts of per-VDU set_vcp/NVRAM-writes.
   * Hovering over a VDU-name in the main-window reveals the write count for that VDU.
+  * Minor changes to reduce unnecessary work and improve log messages.
 * 2.1.0
   * Preset _transitions_ have been deprecated.  All presets are now restored instantly no 
     matter how they have been set to transition.  The Preset-Dialog controls for assigning
