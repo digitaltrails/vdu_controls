@@ -1836,9 +1836,8 @@ class DdcutilDBusImpl(QObject):
     @pyqtSlot(QDBusMessage)
     def _connected_displays_changed_handler(self, message: QDBusMessage):
         log_info(f"Received display_change D-Bus signal {message.arguments()=} {id(self)=}")  # check old instances id()
-        with self.service_access_lock:
-            if self.listener_callback:
-                self.listener_callback(*message.arguments())
+        if self.listener_callback:
+            self.listener_callback(*message.arguments())
 
     def get_ddcutil_version_string(self) -> str:
         return self._validate(self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "DdcutilVersion"))[0]
