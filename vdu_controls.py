@@ -7656,9 +7656,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         self.lux_auto_controller.adjust_brightness_now()
 
     def start_refresh(self, external_event: bool = False) -> None:
-        if not is_running_in_gui_thread():
+        if not is_running_in_gui_thread():  # TODO this appears to never be true - remove???
             log_debug(f"Reinvoke start_refresh() in GUI thread {external_event=}") if log_debug_enabled else None
-            self.main_window.run_in_gui_thread(self.start_refresh, external_event)
+            self.main_window.run_in_gui_thread(partial(self.start_refresh, external_event))
             return
 
         def update_from_vdu(worker: WorkerThread) -> None:
