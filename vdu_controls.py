@@ -1485,8 +1485,8 @@ class Ddcutil:
         edid_txt = self.get_edid_txt(vdu_number)
         for attempt_count in range(DDCUTIL_RETRIES):
             try:
-                Ddcutil.vcp_write_counters[edid_txt] = Ddcutil.vcp_write_counters.get(edid_txt, 0) + 1
                 self.ddcutil_impl.set_vcp(edid_txt, int(vcp_code, 16), new_value)
+                Ddcutil.vcp_write_counters[edid_txt] = Ddcutil.vcp_write_counters.get(edid_txt, 0) + 1
                 log_debug(f"set_vcp: {vdu_number=} {vcp_code=} {new_value=}")
                 return
             except (subprocess.SubprocessError, DdcutilDisplayNotFound, ValueError) as e:
