@@ -345,6 +345,10 @@ Michael Hamilton
 
 Version History
 ---------------
+* 2.1.2
+  * When performing a set-vcp, don't increment the NVRAM write count if the VDU doesn't respond.
+  * Remove potential deadlock when hangling ddcutil-service change-events.
+  
 * 2.1.1
   * Removed --dbus-signals-enabled. DBus signals are now always enabled when --dbus-client
     is enabled.
@@ -353,6 +357,7 @@ Version History
   * The About-Dialog now includes counts of per-VDU set_vcp/NVRAM-writes.
   * Hovering over a VDU-name in the main-window reveals the write count for that VDU.
   * Minor changes to reduce unnecessary work and improve log messages.
+
 * 2.1.0
   * Preset _transitions_ have been deprecated.  All presets are now restored instantly no 
     matter how they have been set to transition.  The Preset-Dialog controls for assigning
