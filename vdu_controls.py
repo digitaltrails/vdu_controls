@@ -2475,7 +2475,7 @@ class VduControllerAsyncSetter(WorkerThread):  # Used to decouple the set-vcp fr
                 self.doze(self._idle_seconds)  # wait a bit in case more arrive - might be dragging a slider or spinning a spinner
         if latest_pending:  # nothing more has arrived, if any setvcp requests are pending, set for real now
             for (controller, vcp_code), (value, origin) in latest_pending.items():
-                if controller.values_cache[vcp_code] != value:
+                if controller.values_cache.get(vcp_code, None) != value:
                     log_debug(f"UI set {controller.vdu_number=} {vcp_code=} {value=} {origin}") if log_debug_enabled else None
                     controller.set_vcp_value(vcp_code, value, origin, asynchronous_caller=True)
                 else:
@@ -2518,6 +2518,7 @@ class VduController(QObject):
                  default_config: VduControlsConfig, ddcutil: Ddcutil,
                  vdu_exception_handler: Callable, remedy: int = 0) -> None:
         super().__init__()
+        self.no_longer_in_use = False
         if vdu_model_name.strip() == '':  # laptop monitors can sneak through with no model_name
             vdu_model_name = "Unknown"
         self.vdu_stable_id = VduStableId(proper_name(vdu_model_name, serial_number))
@@ -2627,6 +2628,9 @@ class VduController(QObject):
 
     def set_vcp_value(self, vcp_code: str, value: int, origin: VcpOrigin = VcpOrigin.NORMAL,
                       asynchronous_caller: bool = False) -> None:
+        if self.no_longer_in_use:
+            log_info(f"Expired controller discards set_vcp_value({vcp_code=}, {value=}, {origin=}) {asynchronous_caller=}")
+            return
         try:
             # raise subprocess.SubprocessError("set_attribute")  # for testing
             retry_on_error = vcp_code in SUPPORTED_VCP_BY_CODE and SUPPORTED_VCP_BY_CODE[vcp_code].retry_setvcp
@@ -7494,6 +7498,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
     def configure_application(self, main_window: VduAppWindow | None = None):
         try:
             log_info(f"Configuring application (reconfiguring={main_window is None})...")
+            for controller in self.vdu_controllers_map.values():
+                controller.no_longer_in_use = True
             if main_window is not None:  # First time through
                 assert self.main_window is None
                 self.main_window = main_window
