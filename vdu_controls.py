@@ -7531,13 +7531,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     LuxDialog.reconfigure_instance()
             self.main_window.update_status_indicators()
             # restore_preset tries to acquire the same lock, safe to unlock and let it relock...
-            if overdue := self.schedule_presets(True):
-                # This preset is the one that should be running now
-                log_info(f"Restoring preset '{overdue.name}' "
-                         f"because its scheduled to be active at this time ({zoned_now()}).")
-                self.main_window.splash_message_qtsignal.emit(tr("Restoring Preset\n{}").format(overdue.name))
-                # Weather check will have succeeded inside schedule_presets() above, don't do it again.
-                self.activate_scheduled_preset(overdue, check_weather=False, immediately=True)
+            self.schedule_presets(True)
+            self.activate_overdue_preset()
         finally:
             if self.main_window is not None:
                 self.main_window.indicate_busy(False)
@@ -7701,7 +7696,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     log_debug(f"Refresh - update UI view - exception {self.refresh_data_task.vdu_exception} {external_event=}")
                     if not external_event:
                         main_panel.display_vdu_exception(self.refresh_data_task.vdu_exception, can_retry=False)
-                if len(self.detected_vdu_list) == 0 or self.detected_vdu_list != self.previously_detected_vdu_list:
+                if len(self.detected_vdu_list) == 0 or self.detected_vdu_list != self.previously_detected_vdu_list or (
+                    external_event and False):  # TODO figure out what to do here, external events might require reconfiguration???
                     log_info(f"Reconfiguring: detected={self.detected_vdu_list} previously={self.previously_detected_vdu_list}")
                     self.configure_application()  # May cause a further refresh?
                     self.previously_detected_vdu_list = self.detected_vdu_list
@@ -7806,11 +7802,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     log_info(f"Found intialization-preset for {stable_id}")
                     self.restore_preset(preset, finished_func=restored_initialization_preset, initialization_preset=True)
 
-
-    def schedule_presets(self, reconfiguring: bool = False) -> Preset | None:
+    def schedule_presets(self, reconfiguring: bool = False) -> None:
         # As well as scheduling, this method finds and returns the preset that should be applied at this time.
         assert is_running_in_gui_thread()  # Needs to be run in the GUI thread so the timers also run in the GUI thread
-        most_recent_overdue = None
         location = self.main_config.get_location()
         if location and self.main_config.is_set(ConfOption.SCHEDULE_ENABLED):
             log_info(f"Scheduling presets {reconfiguring=}")
@@ -7828,13 +7822,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                         if when_today > local_now:
                             preset.start_timer(when_today, self.activate_scheduled_preset)
                         else:
-                            preset.schedule_status = PresetScheduleStatus.SKIPPED_SUPERSEDED
-                            if when_today > latest_due:
-                                # This may be the preset that should be applicable now, check if weather prevents it.
-                                # Reuse the weather, don't do multiple weather queries while scheduling.
-                                if self.is_weather_satisfactory(preset, use_cache=True):
-                                    most_recent_overdue = preset
-                                    latest_due = when_today
+                            if reconfiguring and preset.schedule_status != PresetScheduleStatus.SUCCEEDED:  # Not already succeeded
+                                preset.schedule_status = PresetScheduleStatus.SKIPPED_SUPERSEDED
                     else:
                         log_info(f"Solar activation skipping preset {preset.name} {elevation_key} degrees"
                                  " - the sun does not reach that elevation today.")
@@ -7850,12 +7839,34 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             log_info(f"Scheduling is disabled or no location ({location=})")
         if reconfiguring:
             PresetsDialog.reconfigure_instance()
-        return most_recent_overdue
 
     def unschedule_presets(self):
         for preset in self.preset_controller.find_presets_map().values():
             if preset.timer is not None and preset.timer.remainingTime() > 0:
                 preset.timer.stop()
+
+    def activate_overdue_preset(self):
+        if not self.main_config.is_set(ConfOption.SCHEDULE_ENABLED):
+            log_info(f"Scheduling is disabled")
+        elif location := self.main_config.get_location():
+            log_info("Searching schedule for preset that should be active now")
+            local_now = zoned_now()
+            candidate: Preset | None = None
+            for preset in self.preset_controller.find_presets_map().values():
+                if preset.elevation_time_today and preset.elevation_time_today < local_now:
+                    if self.is_weather_satisfactory(preset, use_cache=True):
+                        if candidate is None or preset.elevation_time_today > candidate.elevation_time_today:
+                            candidate = preset
+            if candidate:
+                # This preset is the one that should be running now
+                log_info(f"Restoring preset '{candidate.name}' "
+                         f"because its scheduled to be active at this time ({zoned_now()}).")
+                self.main_window.splash_message_qtsignal.emit(tr("Restoring Preset\n{}").format(candidate.name))
+                # Weather check will have succeeded inside schedule_presets() above, don't do it again.
+                self.activate_scheduled_preset(candidate, check_weather=False, immediately=True)
+        else:
+            log_info(f"Scheduling disabled due to undefined location ({location=})")
+
 
     def activate_scheduled_preset(self, preset: Preset, check_weather: bool = True, immediately: bool = False,
                                   activation_time: datetime | None = None, count=1) -> None:
