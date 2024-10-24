@@ -2059,7 +2059,7 @@ class WorkerThread(QThread):
                     break
         except VduException as e:
             self.vdu_exception = e
-        log_debug(f"WorkerThread: {class_name=} terminating {thread_pid()=}") if log_debug_enabled else None
+        log_debug(f"WorkerThread: {class_name=} finished {thread_pid()=}") if log_debug_enabled else None
         self.finished_work_qtsignal.emit(self)  # Pass self so body can access context
 
     def stop(self) -> None:
@@ -3955,10 +3955,11 @@ class PresetTransitionWorker(WorkerThread):
     def __init__(self, main_controller: VduAppController, preset: Preset,
                  progress_callable: Callable[[PresetTransitionWorker], None],
                  finished_callable: Callable[[PresetTransitionWorker], None],
-                 immediately: bool = False):
+                 immediately: bool = False, ignore_others: bool = True):
         super().__init__(self._perform_transition, finished_callable)  # type: ignore
         log_debug(f"TransitionWorker: init {preset.name=} {immediately=}") if log_debug_enabled else None
         self.change_count = 0
+        self.ignore_others = ignore_others
         self.start_time = datetime.now()
         self.end_time: datetime | None = None
         self.previous_step_start_time: float = 0.0
@@ -4051,7 +4052,7 @@ class PresetTransitionWorker(WorkerThread):
                     return True
                 key = TransitionValueKey(vdu_stable_id=vdu_stable_id, vcp_code=vcp_code)
                 if key in self.expected_values:
-                    if self.expected_values[key] != vcp_value.current:
+                    if not self.ignore_others and self.expected_values[key] != vcp_value.current:
                         log_warning(f"Interrupted transition to {self.preset.name} {key=} "
                                     f"something else changed the VDU: {self.expected_values[key]=} != {vcp_value.current=}")
                         self.work_state = PresetTransitionState.INTERRUPTED  # Something else is changing the controls, stop work
@@ -7475,7 +7476,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         self.daily_schedule_next_update = datetime.today()
         self.refresh_data_task: WorkerThread | None = None
         self.weather_query: WeatherQuery | None = None
-        self.preset_transition_worker: PresetTransitionWorker | None = None
+        self.preset_transition_workers: List[PresetTransitionWorker] = []
         self.lux_auto_controller: LuxAutoController | None = LuxAutoController(self) if self.main_config.is_set(
             ConfOption.LUX_OPTIONS_ENABLED) else None
         self.transitioning_dummy_preset: PresetTransitionDummy | None = None
@@ -7513,9 +7514,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 self.unschedule_presets()  # Hopefully stops any timers from firing.
                 if self.lux_auto_controller is not None:
                     self.lux_auto_controller.stop_worker()
-                if self.preset_transition_worker is not None:
-                    self.preset_transition_worker.stop()
-                    self.preset_transition_worker = None
+                for worker in self.preset_transition_workers:
+                    worker.stop()
+                self.preset_transition_workers.clear()
                 global log_to_syslog
                 log_to_syslog = self.main_config.is_set(ConfOption.SYSLOG_ENABLED)
                 self.create_ddcutil()
@@ -7523,7 +7524,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 self.main_window.initialise_app_icon()
                 self.main_window.create_main_control_panel()
                 SettingsEditor.reconfigure_instance(self.get_vdu_configs())
-                self.restore_vdu_intialization_presets()
+                self.restore_vdu_initialization_presets()
 
             log_debug("configure: released application_configuration_lock") if log_debug_enabled else None
             if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED):
@@ -7671,7 +7672,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                             log_info(f"Refresh commences - acquired application_lock {external_event=}")
                             self.ddcutil.refresh_connection()
                             self.detected_vdu_list = self.ddcutil.detect_vdus()
-                            self.restore_vdu_intialization_presets()
+                            self.restore_vdu_initialization_presets()
                             for control_panel in self.main_window.get_main_panel().vdu_control_panels.values():
                                 if control_panel.controller.get_full_id() in self.detected_vdu_list:
                                     control_panel.refresh_from_vdu()
@@ -7773,15 +7774,15 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 if finished_func is not None:
                     finished_func(worker_thread)
 
-            self.preset_transition_worker = PresetTransitionWorker(
-                self, preset, update_progress, restore_finished_callback, immediately)
-            self.preset_transition_worker.start()
+            self.preset_transition_workers.append(worker := PresetTransitionWorker(
+                self, preset, update_progress, restore_finished_callback, immediately, ignore_others=initialization_preset))
+            worker.start()
             if initialization_preset:
-                self.preset_transition_worker.wait()
+                worker.wait()
         log_debug("restore_preset: released application_configuration_lock") if log_debug_enabled else None
 
 
-    def restore_vdu_intialization_presets(self):
+    def restore_vdu_initialization_presets(self):
 
         def restored_initialization_preset(worker: PresetTransitionWorker) -> None:
             if worker.vdu_exception is not None:
@@ -7800,7 +7801,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             for preset in self.preset_controller.find_presets_map().values():
                 preset_proper_name = proper_name(preset.name)
                 if stable_id == preset_proper_name:
-                    log_info(f"Found intialization-preset for {stable_id}")
+                    log_info(f"Found initialization-preset for {stable_id}")
                     self.restore_preset(preset, finished_func=restored_initialization_preset, initialization_preset=True)
 
     def schedule_presets(self, reconfiguring: bool = False) -> None:
