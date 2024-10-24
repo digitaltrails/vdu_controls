@@ -2649,7 +2649,7 @@ class VduController(QObject):
 
     def set_vcp_value_asynchronously(self, vcp_code: str, value: int, origin: VcpOrigin = VcpOrigin.NORMAL) -> None:
         # Queue the change for the queue processing thread - avoids blocking the GUI.
-        VduController._async_setvcp_task.queue_setvcp(self, vcp_code, value, origin )
+        VduController._async_setvcp_task.queue_setvcp(self, vcp_code, value, origin)
 
     def get_range_restrictions(self, vcp_code, fallback: Tuple[int, int] | None = None) -> Tuple[int, int] | None:
         if vcp_code in self.capabilities_supported_by_this_vdu:
@@ -3844,6 +3844,7 @@ class VduControlsMainPanel(QWidget):
         self.setLayout(controllers_layout)
 
         warnings_enabled = main_config.is_set(ConfOption.WARNINGS_ENABLED)
+        self.vdu_control_panels.clear()
         for controller in self.main_controller.vdu_controllers_map.values():
             splash_message_qtsignal.emit(f"DDC ID {controller.vdu_number}\n{controller.get_vdu_description()}")
             vdu_control_panel = VduControlPanel(controller, self.display_vdu_exception)
