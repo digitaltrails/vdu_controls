@@ -349,7 +349,7 @@ Version History
   * When performing a set-vcp, don't increment the NVRAM write count if the VDU doesn't respond.
   * Remove potential deadlock when hangling ddcutil-service change-events.
   * Discard pending VDU VCP changes when reconfiguring VDU controllers.
-  * Fix Preset rescheduling at start-of-day, wasn't properly updating when triggered slightly before mignight.
+  * Fix new-day Preset scheduling. If the timer triggers slightly early at 23:59:59, schedule for the new-day.
   
 * 2.1.1
   * Removed --dbus-signals-enabled. DBus signals are now always enabled when --dbus-client
