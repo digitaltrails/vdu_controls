@@ -7509,9 +7509,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             if self.main_window.main_panel is not None:
                 self.main_window.indicate_busy(True)
                 QApplication.processEvents()
-            log_debug("configure: try to obtain application_configuration_lock", trace=False) if log_debug_enabled else None
+            log_debug("configure: try to obtain application_lock", trace=False) if log_debug_enabled else None
             with self.application_lock:
-                log_debug("Holding application_configuration_lock") if log_debug_enabled else None
+                log_debug("Holding application_lock") if log_debug_enabled else None
                 self.unschedule_presets()  # Hopefully stops any timers from firing.
                 if self.lux_auto_controller is not None:
                     self.lux_auto_controller.stop_worker()
@@ -7526,15 +7526,15 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 self.main_window.create_main_control_panel()
                 SettingsEditor.reconfigure_instance(self.get_vdu_configs())
                 self.restore_vdu_initialization_presets()
+                self.schedule_presets(True)
 
-            log_debug("configure: released application_configuration_lock") if log_debug_enabled else None
+            log_debug("configure: released application_lock") if log_debug_enabled else None
             if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED):
                 if self.lux_auto_controller is not None:
                     self.lux_auto_controller.initialize_from_config()
                     LuxDialog.reconfigure_instance()
             self.main_window.update_status_indicators()
             # restore_preset tries to acquire the same lock, safe to unlock and let it relock...
-            self.schedule_presets(True)
             self.activate_overdue_preset()
         finally:
             if self.main_window is not None:
@@ -7705,6 +7705,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     log_info(f"Reconfiguring: detected={self.detected_vdu_list} previously={self.previously_detected_vdu_list}")
                     self.configure_application()  # May cause a further refresh?
                     self.previously_detected_vdu_list = self.detected_vdu_list
+                else:
+                    self.check_preset_schedule()
                 self.activate_overdue_preset()
                 if self.lux_auto_controller:
                     if LuxDialog.exists():
@@ -7737,9 +7739,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                                                        immediately, background_activity, initialization_preset))
             return
 
-        log_debug("restore_preset: try to obtain application_configuration_lock", trace=False) if log_debug_enabled else None
+        log_debug("restore_preset: try to obtain application_lock", trace=False) if log_debug_enabled else None
         with self.application_lock:  # The lock prevents a transition firing when the GUI/app is reconfiguring
-            log_debug("restore_preset: holding application_configuration_lock", trace=False) if log_debug_enabled else None
+            log_debug("restore_preset: holding application_lock", trace=False) if log_debug_enabled else None
             self.transitioning_dummy_preset = None
             if not immediately:
                 self.transitioning_dummy_preset = PresetTransitionDummy(preset)
@@ -7782,7 +7784,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             worker.start()
             if initialization_preset:
                 worker.wait()
-        log_debug("restore_preset: released application_configuration_lock") if log_debug_enabled else None
+        log_debug("restore_preset: released application_lock") if log_debug_enabled else None
 
 
     def restore_vdu_initialization_presets(self):
@@ -7812,40 +7814,43 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         assert is_running_in_gui_thread()  # Needs to be run in the GUI thread so the timers also run in the GUI thread
         location = self.main_config.get_location()
         if location and self.main_config.is_set(ConfOption.SCHEDULE_ENABLED):
-            local_now = zoned_now()
-            ## local_now = local_now.replace(hour=23, minute=59, second=59)  # For testing
-            start_of_next_day = (local_now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-            if abs(start_of_next_day - local_now).seconds < 10:  # event fired early? Need to round-up to start of day.
-                log_info(f"Scheduling presets, altering {local_now} to correct day {start_of_next_day}")
-                local_now = start_of_next_day
-            log_info(f"Scheduling presets for {local_now} {reconfiguring=}")
-            time_map = create_elevation_map(local_now, latitude=location.latitude, longitude=location.longitude)
-            for preset in self.preset_controller.find_presets_map().values():
-                if reconfiguring:
-                    preset.remove_elevation_trigger(quietly=True)  # Also resets schedule_status
-                elevation_key = preset.get_solar_elevation()
-                if elevation_key is not None and preset.schedule_status == PresetScheduleStatus.UNSCHEDULED:
-                    if elevation_data := time_map.get(elevation_key):
-                        when_today = elevation_data.when
-                        preset.elevation_time_today = when_today
-                        if when_today > local_now:
-                            preset.start_timer(when_today, self.activate_scheduled_preset)
+            log_debug("schedule_presets: try to obtain application_lock") if log_debug_enabled else None
+            with self.application_lock:
+                log_debug("schedule_presets: holding application_lock") if log_debug_enabled else None
+                local_now = zoned_now()
+                ## local_now = local_now.replace(hour=23, minute=59, second=59)  # For testing
+                start_of_next_day = (local_now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+                if abs(start_of_next_day - local_now).seconds < 10:  # event fired early? Need to round-up to start of day.
+                    log_info(f"Scheduling presets, altering {local_now} to correct day {start_of_next_day}")
+                    local_now = start_of_next_day
+                log_info(f"Scheduling presets for {local_now} {reconfiguring=}")
+                time_map = create_elevation_map(local_now, latitude=location.latitude, longitude=location.longitude)
+                for preset in self.preset_controller.find_presets_map().values():
+                    if reconfiguring:
+                        preset.remove_elevation_trigger(quietly=True)  # Also resets schedule_status
+                    elevation_key = preset.get_solar_elevation()
+                    if elevation_key is not None and preset.schedule_status == PresetScheduleStatus.UNSCHEDULED:
+                        if elevation_data := time_map.get(elevation_key):
+                            when_today = elevation_data.when
+                            preset.elevation_time_today = when_today
+                            if when_today > local_now:
+                                preset.start_timer(when_today, self.activate_scheduled_preset)
+                            else:
+                                log_info(f"Skipped preset {preset.name}, passed assigned-time (status={preset.schedule_status})")
+                                if reconfiguring and preset.schedule_status != PresetScheduleStatus.SUCCEEDED:  # Not already succeeded
+                                    preset.schedule_status = PresetScheduleStatus.SKIPPED_SUPERSEDED
                         else:
-                            log_info(f"Skipped preset {preset.name}, passed assigned-time (status={preset.schedule_status})")
-                            if reconfiguring and preset.schedule_status != PresetScheduleStatus.SUCCEEDED:  # Not already succeeded
-                                preset.schedule_status = PresetScheduleStatus.SKIPPED_SUPERSEDED
-                    else:
-                        log_info(f"Skipped preset {preset.name} {elevation_key} degrees,"
-                                 " the sun does not reach that elevation today.")
-            # set a timer to rerun this at the start of the next day. Add extra 30s to avoid timer-accuracy and truncation-errors.
-            tomorrow = zoned_now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
-            if self.daily_schedule_next_update != tomorrow:
-                millis = (tomorrow - zoned_now()) / timedelta(milliseconds=1)  # Possible truncation error in the math?
-                ## millis = 1000 * 60 * 10  # For testing
-                log_info(f"Will update schedule for solar-activation at {tomorrow} (in {round(millis / 1000 / 60)} minutes)")
-                QTimer.singleShot(int(millis), partial(self.schedule_presets, True))  # type: ignore
-                # Testing: QTimer.singleShot(int(1000*30), partial(self.schedule_presets, True))
-                self.daily_schedule_next_update = tomorrow
+                            log_info(f"Skipped preset {preset.name} {elevation_key} degrees,"
+                                     " the sun does not reach that elevation today.")
+                # set a timer to rerun this at the start of the next day. Add extra 30s to avoid timer-accuracy and truncation-errors.
+                tomorrow = zoned_now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+                if self.daily_schedule_next_update != tomorrow:
+                    millis = (tomorrow - zoned_now()) / timedelta(milliseconds=1)  # Possible truncation error in the math?
+                    ## millis = 1000 * 60 * 1  # For testing
+                    log_info(f"Will update schedule for solar-activation at {tomorrow} (in {round(millis / 1000 / 60)} minutes)")
+                    QTimer.singleShot(int(millis), partial(self.schedule_presets, True))  # type: ignore
+                    self.daily_schedule_next_update = tomorrow
+            log_debug("schedule_presets: released application_lock") if log_debug_enabled else None
         else:
             log_info(f"Scheduling is disabled or no location ({location=})")
         if reconfiguring:
@@ -7855,6 +7860,14 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         for preset in self.preset_controller.find_presets_map().values():
             if preset.timer is not None and preset.timer.remainingTime() > 0:
                 preset.timer.stop()
+
+    def check_preset_schedule(self):
+        if self.main_config.is_set(ConfOption.SCHEDULE_ENABLED):
+            now = zoned_now()
+            with self.application_lock:
+                if self.daily_schedule_next_update is None or self.daily_schedule_next_update < now:
+                    log_info("check_preset_schedule: schedule appears to be out of date - refresh it...")
+                    self.schedule_presets(True)
 
     def activate_overdue_preset(self):
         if not self.main_config.is_set(ConfOption.SCHEDULE_ENABLED):
