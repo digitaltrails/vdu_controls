@@ -347,7 +347,7 @@ Version History
 ---------------
 * 2.1.2
   * When performing a set-vcp, don't increment the NVRAM write count if the VDU doesn't respond.
-  * Remove potential deadlock when hangling ddcutil-service change-events.
+  * Remove potential deadlock when handling ddcutil-service change-events.
   * Discard pending VDU VCP changes when reconfiguring VDU controllers.
   * Fix new-day Preset scheduling. If the timer triggers slightly early at 23:59:59, schedule for the new-day.
   
