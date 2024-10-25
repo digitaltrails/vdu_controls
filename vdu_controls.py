@@ -7701,7 +7701,6 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     log_debug(f"Refresh - update UI view - exception {self.refresh_data_task.vdu_exception} {external_event=}")
                     if not external_event:
                         main_panel.display_vdu_exception(self.refresh_data_task.vdu_exception, can_retry=False)
-                # TODO check if schedule is still active - if not reschedule
                 if len(self.detected_vdu_list) == 0 or self.detected_vdu_list != self.previously_detected_vdu_list or (
                     external_event and False):  # TODO figure out what to do here, external events might require reconfiguration???
                     log_info(f"Reconfiguring: detected={self.detected_vdu_list} previously={self.previously_detected_vdu_list}")
@@ -7864,7 +7863,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
     def check_preset_schedule(self):
         if self.main_config.is_set(ConfOption.SCHEDULE_ENABLED):
-            now = zoned_now()
+            log_debug("check_preset_schedule: try to acquire application_lock") if log_debug_enabled else None
             with self.application_lock:
                 log_debug("check_preset_schedule: holding application_lock") if log_debug_enabled else None
                 if self.daily_schedule_next_update is None or self.daily_schedule_next_update < zoned_now():
