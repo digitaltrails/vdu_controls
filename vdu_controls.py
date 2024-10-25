@@ -65,7 +65,7 @@ Arguments supplied on the command line override config file equivalent settings.
                             divert diagnostic output to the syslog (journald).
                             ``--no-syslog`` is the default.
       --hide-on-focus-out|--no-hide-on-focus-out
-                            minimise the main window automatically on focus out
+                            minimize the main window automatically on focus out
                             ``--no-hide-on-focus-out`` is the default.
       --splash|--no-splash
                             show the splash screen.  ``--splash`` is the default.
@@ -336,8 +336,8 @@ overdue dawn preset will be triggered at login.
 Presets - Smooth Transitions
 ----------------------------
 
-In order to minimize writes to VDU NVRAM, the smooth transtion of presets is deprecated
-and is now normally disabled. Transitions can be renabled by disabling `protect-nvram`
+In order to minimize writes to VDU NVRAM, the smooth transition of presets is deprecated
+and is now normally disabled. Transitions can be enabled by disabling `protect-nvram`
 in _Settings_.
 
 A preset may be set to ``Transition Smoothly``, in which case changes to controls continuous-value
@@ -468,7 +468,7 @@ excessive stepping may eat into VDU NVRAM lifespan.
 The auto-brightness adjustment feature includes several measures to reduce the number of
 changes passed to the VDU:
 
- - Lux/Brightness Profiles may be altered for local conditionas so that
+ - Lux/Brightness Profiles may be altered for local conditions so that
    brightness levels remain constant over set ranges of lux values (night, day, and so forth).
  - Adjustments are only made at intervals of one or more minutes (default is 10 minutes).
  - The adjustment task passes lux values through a smoothing low-pass filter.
@@ -592,7 +592,7 @@ to reduce the overall frequency of adjustments.
   + Choose to restore pre-prepared 'presets' instead of dragging sliders.
   + Refrain from adding transitions to `presets`.
   + If using the ambient-light brightness response curves, tune the settings and
-    curves to minimise frequent small changes.
+    curves to minimize frequent small changes.
   + If using a light-meter, disengage metered automatic adjustment when faced with
     rapidly fluctuating levels of ambient brightness.
   + The About-Dialog reports a count of setvcp writes per VDU. Hovering over
@@ -669,7 +669,7 @@ Software::
 
         zypper install python3 python3-qt5 noto-sans-math-fonts noto-sans-symbols2-fonts
         zypper install ddcutil
-        zypper install libddcutil ddcutil-service  # optional, but recommended if availabled
+        zypper install libddcutil ddcutil-service  # optional, but recommended if available
 
 If you wish to use a serial-port lux metering device, the ``pyserial`` module is a runtime requirement.
 
@@ -1355,10 +1355,10 @@ class Ddcutil:
         if prefer_dbus_client:
             try:
                 self.ddcutil_impl = DdcutilDBusImpl(self.common_args, callback=connected_vdus_changed_callback)
-            except DdcutilServiceNotFound as e:
+            except DdcutilServiceNotFound:
                 log_warning("Failed to detect D-Bus ddcutil-service, falling back to the ddcutil command.")
 
-        if self.ddcutil_impl is None:  # dbus not prefered or dbus failed to initialise
+        if self.ddcutil_impl is None:  # dbus not preferred or dbus failed to initialise
             self.ddcutil_impl = DdcutilExeImpl(self.common_args)
 
         self.supported_codes: Dict[str, str] | None = None
@@ -2160,7 +2160,7 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
     SYSTEM_TRAY_ENABLED = conf_opt_def(cname=QT_TR_NOOP('system-tray-enabled'), default="no", restart=True,
                                        tip=QT_TR_NOOP('start up in the system tray'), related='hide-on-focus-out')
     HIDE_ON_FOCUS_OUT = conf_opt_def(cname=QT_TR_NOOP('hide-on-focus-out'), default="no", restart=False,
-                                     tip=QT_TR_NOOP('minimise the main window automatically on focus out'))
+                                     tip=QT_TR_NOOP('minimize the main window automatically on focus out'))
     TRANSLATIONS_ENABLED = conf_opt_def(cname=QT_TR_NOOP('translations-enabled'), default="no", restart=True,
                                         tip=QT_TR_NOOP('enable language translations'))
     WEATHER_ENABLED = conf_opt_def(cname=QT_TR_NOOP('weather-enabled'), default='yes', tip=QT_TR_NOOP('enable weather lookups'))
@@ -3859,7 +3859,7 @@ class VduControlsMainPanel(QWidget):
                 warn_omitted.setInformativeText(tr('The monitor will be omitted from the control panel.'))
                 warn_omitted.exec()
 
-        controllers_layout.addStretch(0);
+        controllers_layout.addStretch(0)
         for control in extra_controls:
             controllers_layout.addWidget(control, 0, Qt.AlignBottom)
 
@@ -5906,7 +5906,7 @@ class LuxProfileChart(QLabel):
                 return True
         else:
             alert = MessageBox(QMessageBox.Information)
-            alert.setText(tr("There are not Presets."))
+            alert.setText(tr("There are no Presets."))
             alert.setInformativeText(tr("Use the Presets Dialog to create some."))
             alert.exec()
         return False
@@ -6028,16 +6028,16 @@ def lux_create_device(device_name: str) -> LuxMeterDevice:
     if device_name == LuxMeterManualDevice.device_name:
         return LuxMeterManualDevice()
     if not pathlib.Path(device_name).exists():
-        raise LuxDeviceException(tr("Failed to setup {} - path does not exist.").format(device_name))
+        raise LuxDeviceException(tr("Failed to set up {} - path does not exist.").format(device_name))
     if not os.access(device_name, os.R_OK):
-        raise LuxDeviceException(tr("Failed to setup {} - no read access to device.").format({device_name}))
+        raise LuxDeviceException(tr("Failed to set up {} - no read access to device.").format({device_name}))
     if pathlib.Path(device_name).is_char_device():
         return LuxMeterSerialDevice(device_name)
     elif pathlib.Path(device_name).is_fifo():
         return LuxMeterFifoDevice(device_name)
     elif pathlib.Path(device_name).exists() and os.access(device_name, os.X_OK):
         return LuxMeterRunnableDevice(device_name)
-    raise LuxDeviceException(tr("Failed to setup {} - not an recognised kind of device or not executable.").format(device_name))
+    raise LuxDeviceException(tr("Failed to set up {} - not an recognised kind of device or not executable.").format(device_name))
 
 
 class LuxMeterDevice(QObject):
@@ -7184,7 +7184,7 @@ class LuxAmbientSlider(QWidget):
         self.lux_slider.setTracking(False)  # Don't rewrite the ddc value too often - not sure of the implications
         lux_slider_panel_layout.addWidget(self.lux_slider, 1, 0, 1, 15, alignment=Qt.AlignTop)
 
-        # A hacky way to get custom labels without redifining paint
+        # A hacky way to get custom labels without redefining paint
         for col_num, span, value in ((0, 3, 1), (3, 3, 10), (6, 3, 100), (9, 3, 1000), (12, 3, 10000), (14, 1, 100000)):
             log10_button = QLabel(f"{value:2d}")
             app_font = QApplication.font()
@@ -7452,7 +7452,7 @@ def parse_transition_type(string_value: str) -> PresetTransitionFlag:
 
 
 @contextmanager  # https://stackoverflow.com/questions/31501487/non-blocking-lock-with-with-statement
-def non_blocking_lock(lock: Lock) -> Lock:  # Provide a way to use a with-statement with non-blocking locks
+def non_blocking_lock(lock: threading.RLock) -> threading.RLock:  # Provide a way to use a with-statement with non-blocking locks
     acquire_succeeded = lock.acquire(False)  # acquire_succeeded will be False if the lock is already locked.
     try:
         yield lock if acquire_succeeded else None  # return None to the with if the lock was not acquired
@@ -7686,7 +7686,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     else:
                         log_info(f"Application is already busy, can't do a refresh ({external_event=})")
                         worker.stop()  # stop the thread - which also indicates we did not acquire the lock
-                        return  # Prevents logging the unlock (because we don't have the lock if we reach here).
+                        return  # Prevents logging unlock (because we don't have the lock if we reach here).
                 log_debug(f"update_from_vdu: released application_lock") if log_debug_enabled else None
 
         def update_ui_view(worker: WorkerThread) -> None:
