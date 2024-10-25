@@ -4696,7 +4696,7 @@ class PresetChooseElevationChart(QLabel):
     def configure_for_location(self, location: GeoLocation | None) -> None:
         self.location = location
         if location is not None:
-            self.elevation_time_map = create_todays_elevation_map(latitude=location.latitude, longitude=location.longitude)
+            self.elevation_time_map = create_elevation_map(zoned_now(), latitude=location.latitude, longitude=location.longitude)
             self.elevation_key = None
             self.create_plot()
 
@@ -7812,9 +7812,14 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         assert is_running_in_gui_thread()  # Needs to be run in the GUI thread so the timers also run in the GUI thread
         location = self.main_config.get_location()
         if location and self.main_config.is_set(ConfOption.SCHEDULE_ENABLED):
-            time_map = create_todays_elevation_map(latitude=location.latitude, longitude=location.longitude)
             local_now = zoned_now()
+            ## local_now = local_now.replace(hour=23, minute=59, second=59)  # For testing
+            start_of_next_day = (local_now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+            if abs(start_of_next_day - local_now).seconds < 10:  # event fired early? Need to round-up to start of day.
+                log_info(f"Scheduling presets, altering {local_now} to correct day {start_of_next_day}")
+                local_now = start_of_next_day
             log_info(f"Scheduling presets for {local_now} {reconfiguring=}")
+            time_map = create_elevation_map(local_now, latitude=location.latitude, longitude=location.longitude)
             for preset in self.preset_controller.find_presets_map().values():
                 if reconfiguring:
                     preset.remove_elevation_trigger(quietly=True)  # Also resets schedule_status
@@ -7833,7 +7838,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                         log_info(f"Skipped preset {preset.name} {elevation_key} degrees,"
                                  " the sun does not reach that elevation today.")
             # set a timer to rerun this at the start of the next day. Add extra 30s to avoid timer-accuracy and truncation-errors.
-            tomorrow = zoned_now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1, seconds=30)
+            tomorrow = zoned_now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
             if self.daily_schedule_next_update != tomorrow:
                 millis = (tomorrow - zoned_now()) / timedelta(milliseconds=1)  # Possible truncation error in the math?
                 ## millis = 1000 * 60 * 10  # For testing
@@ -8618,11 +8623,10 @@ def spherical_kilometers(lat1, lon1, lat2, lon2) -> float:
     return 12742 * math.asin(math.sqrt(a))
 
 
-def create_todays_elevation_map(latitude: float, longitude: float) -> Dict[SolarElevationKey, SolarElevationData]:
+def create_elevation_map(local_now: datetime, latitude: float, longitude: float) -> Dict[SolarElevationKey, SolarElevationData]:
     # Create a minute-by-minute map of today's SolarElevations.
     # For a given dict[SolarElevation], record the first minute it occurs.
     elevation_time_map = {}
-    local_now = zoned_now()
     local_when = local_now.replace(hour=0, minute=0)
     while local_when.day == local_now.day:
         a, z = calc_solar_azimuth_zenith(local_when, latitude, longitude)
