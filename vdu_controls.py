@@ -7473,7 +7473,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         self.preset_controller = PresetController()
         self.detected_vdu_list: List[Tuple[str, str, str, str]] = []
         self.previously_detected_vdu_list: List[Tuple[str, str, str, str]] = []
-        self.daily_schedule_next_update = datetime.today()
+        self.daily_schedule_next_update = None
+        ## self.daily_schedule_next_update = zoned_now() + timedelta(seconds=60)  # For testing
         self.refresh_data_task: WorkerThread | None = None
         self.weather_query: WeatherQuery | None = None
         self.preset_transition_workers: List[PresetTransitionWorker] = []
@@ -7698,6 +7699,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     log_debug(f"Refresh - update UI view - exception {self.refresh_data_task.vdu_exception} {external_event=}")
                     if not external_event:
                         main_panel.display_vdu_exception(self.refresh_data_task.vdu_exception, can_retry=False)
+                # TODO check if schedule is still active - if not reschedule
                 if len(self.detected_vdu_list) == 0 or self.detected_vdu_list != self.previously_detected_vdu_list or (
                     external_event and False):  # TODO figure out what to do here, external events might require reconfiguration???
                     log_info(f"Reconfiguring: detected={self.detected_vdu_list} previously={self.previously_detected_vdu_list}")
@@ -7810,13 +7812,12 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         assert is_running_in_gui_thread()  # Needs to be run in the GUI thread so the timers also run in the GUI thread
         location = self.main_config.get_location()
         if location and self.main_config.is_set(ConfOption.SCHEDULE_ENABLED):
-            log_info(f"Scheduling presets {reconfiguring=}")
             time_map = create_todays_elevation_map(latitude=location.latitude, longitude=location.longitude)
             local_now = zoned_now()
-            latest_due = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
+            log_info(f"Scheduling presets for {local_now} {reconfiguring=}")
             for preset in self.preset_controller.find_presets_map().values():
                 if reconfiguring:
-                    preset.remove_elevation_trigger(quietly=True)
+                    preset.remove_elevation_trigger(quietly=True)  # Also resets schedule_status
                 elevation_key = preset.get_solar_elevation()
                 if elevation_key is not None and preset.schedule_status == PresetScheduleStatus.UNSCHEDULED:
                     if elevation_data := time_map.get(elevation_key):
@@ -7825,16 +7826,18 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                         if when_today > local_now:
                             preset.start_timer(when_today, self.activate_scheduled_preset)
                         else:
+                            log_info(f"Skipped preset {preset.name}, passed assigned-time (status={preset.schedule_status})")
                             if reconfiguring and preset.schedule_status != PresetScheduleStatus.SUCCEEDED:  # Not already succeeded
                                 preset.schedule_status = PresetScheduleStatus.SKIPPED_SUPERSEDED
                     else:
-                        log_info(f"Solar activation skipping preset {preset.name} {elevation_key} degrees"
-                                 " - the sun does not reach that elevation today.")
-            # set a timer to rerun this at the beginning of the next day.
-            tomorrow = zoned_now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+                        log_info(f"Skipped preset {preset.name} {elevation_key} degrees,"
+                                 " the sun does not reach that elevation today.")
+            # set a timer to rerun this at the start of the next day. Add extra 30s to avoid timer-accuracy and truncation-errors.
+            tomorrow = zoned_now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1, seconds=30)
             if self.daily_schedule_next_update != tomorrow:
-                millis = (tomorrow - zoned_now()) / timedelta(milliseconds=1)
-                log_info(f"Will update solar elevation activations tomorrow at {tomorrow} (in {round(millis / 1000 / 60)} minutes)")
+                millis = (tomorrow - zoned_now()) / timedelta(milliseconds=1)  # Possible truncation error in the math?
+                ## millis = 1000 * 60 * 10  # For testing
+                log_info(f"Will update schedule for solar-activation at {tomorrow} (in {round(millis / 1000 / 60)} minutes)")
                 QTimer.singleShot(int(millis), partial(self.schedule_presets, True))  # type: ignore
                 # Testing: QTimer.singleShot(int(1000*30), partial(self.schedule_presets, True))
                 self.daily_schedule_next_update = tomorrow
