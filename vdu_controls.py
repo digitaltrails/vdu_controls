@@ -7708,8 +7708,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     self.configure_application()  # May cause a further refresh?
                     self.previously_detected_vdu_list = self.detected_vdu_list
                 else:
-                    self.check_preset_schedule()
-                self.activate_overdue_preset()
+                    self.check_preset_schedule()  # Boilerplate check, things would have to be wacky for it to do anything
                 if self.lux_auto_controller:
                     if LuxDialog.exists():
                         lux_dialog: LuxDialog = LuxDialog.get_instance()  # type: ignore
@@ -7867,9 +7866,14 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         if self.main_config.is_set(ConfOption.SCHEDULE_ENABLED):
             now = zoned_now()
             with self.application_lock:
-                if self.daily_schedule_next_update is None or self.daily_schedule_next_update < now:
+                log_debug("check_preset_schedule: holding application_lock") if log_debug_enabled else None
+                if self.daily_schedule_next_update is None or self.daily_schedule_next_update < zoned_now():
                     log_info("check_preset_schedule: schedule appears to be out of date - refresh it...")
                     self.schedule_presets(True)
+                    self.activate_overdue_preset()
+                else:
+                    log_debug("check_preset_schedule: existing schedule is valid") if log_debug_enabled else None
+                log_debug("check_preset_schedule: released application_lock") if log_debug_enabled else None
 
     def activate_overdue_preset(self):
         if not self.main_config.is_set(ConfOption.SCHEDULE_ENABLED):
@@ -7893,8 +7897,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 preset_currently_in_use = self.which_preset_is_active()
                 if preset_currently_in_use == candidate:
                     log_info(f"activate_overdue_preset: skipped - already active {candidate.name}")
-                elif preset_currently_in_use is None or preset_currently_in_use.elevation_time_today is None:
-                    log_info(f"activate_overdue_preset: skipped - manually off scheduled presets")
+                #elif preset_currently_in_use is None or preset_currently_in_use.elevation_time_today is None: # Unnecessary
+                #    log_info(f"activate_overdue_preset: skipped - manually off scheduled presets")
                 else:
                     log_info(f"activate_overdue_preset: restoring preset '{candidate.name}' "
                              f"because its scheduled to be active at this time ({zoned_now()}).")
