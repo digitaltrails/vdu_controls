@@ -8471,7 +8471,8 @@ class VduAppWindow(QMainWindow):
             '\n 1: Retry obtaining the capabilities.'
             '\n 2: Temporarily ignore this monitor.'
             '\n 3: Apply standard brightness and contrast controls.'
-            '\n 4: Permanently discard this monitor from use with vdu_controls.'))
+            '\n 4: Permanently discard this monitor from use with vdu_controls.'
+            '\n\nPossibly just a timing error, maybe a retry will work\n(see Settings: sleep multiplier)\n\n'))
         choice = no_auto.exec()
         if choice == QMessageBox.Discard:
             warn = MessageBox(QMessageBox.Information)
