@@ -7876,9 +7876,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
     def activate_overdue_preset(self):
         if not self.main_config.is_set(ConfOption.SCHEDULE_ENABLED):
-            log_info(f"activate_overdue_preset: skipped - scheduling is disabled")
+            log_debug(f"activate_overdue_preset: skipped - scheduling is disabled") if log_debug_enabled else None
         elif location := self.main_config.get_location():
-            log_info("activate_overdue_preset: searching schedule for preset that should be active now...")
+            log_debug("activate_overdue_preset: searching schedule") if log_debug_enabled else None
             local_now = zoned_now()
             candidate: Preset | None = None
             for preset in self.preset_controller.find_presets_map().values():
@@ -7887,7 +7887,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                         if candidate is None or preset.elevation_time_today > candidate.elevation_time_today:
                             candidate = preset
             if not candidate:  # use last from "yesterday"
-                log_info("activate_overdue_preset: falling back to the last preset of the previous day (if any)...")
+                log_debug("activate_overdue_preset: fallback to last preset of previous day...") if log_debug_enabled else None
                 for preset in self.preset_controller.find_presets_map().values():
                     if preset.elevation_time_today:
                         if candidate is None or preset.elevation_time_today > candidate.elevation_time_today:
@@ -7895,7 +7895,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             if candidate:  # This preset is the one that should be running now
                 preset_currently_in_use = self.which_preset_is_active()
                 if preset_currently_in_use == candidate:
-                    log_info(f"activate_overdue_preset: skipped - already active {candidate.name}")
+                    log_debug(f"activate_overdue_preset: skipped, already active {candidate.name}") if log_debug_enabled else None
                 #elif preset_currently_in_use is None or preset_currently_in_use.elevation_time_today is None: # Unnecessary
                 #    log_info(f"activate_overdue_preset: skipped - manually off scheduled presets")
                 else:
@@ -7905,9 +7905,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     # Weather check will have succeeded inside schedule_presets() above, don't do it again.
                     self.activate_scheduled_preset(candidate, check_weather=False, immediately=True)
             else:
-                log_info("activate_overdue_preset: failed to identify a preset that should be active now.")
+                log_debug("activate_overdue_preset: failed to find a candidate preset.") if log_debug_enabled else None
         else:
-            log_info(f"Active Expected Preset: scheduling disabled due to undefined location ({location=})")
+            log_debug(f"activate_overdue_preset: skipped, undefined ({location=})") if log_debug_enabled else None
 
     def activate_scheduled_preset(self, preset: Preset, check_weather: bool = True, immediately: bool = False,
                                   activation_time: datetime | None = None, count=1) -> None:
