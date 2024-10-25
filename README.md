@@ -199,8 +199,7 @@ Installing
 
 As previously stated, the ``vdu_vontrols.py`` script is only file required beyond the prerequisites. There
 are also **OpenSUSE** RPMs available at: [https://software.opensuse.org/package/vdu_controls](https://software.opensuse.org/package/vdu_controls),
-some unoffical/unvetted **Fedora** RPMs available at: 
-[download.opensuse.org](https://download.opensuse.org/repositories/home:/mchnz/Fedora_37/)
+some unoffical **Fedora** RPMs available at: [build.opensuse.org](https://build.opensuse.org/projects/home:mchnz/packages/vdu_controls/repositories/Fedora_37/binaries)
 and an **archlinux** (**manjaro** compatible) **AUR** package at: [https://aur.archlinux.org/packages/vdu_controls](https://aur.archlinux.org/packages/vdu_controls)
 
 That makes three options for "installation": 
