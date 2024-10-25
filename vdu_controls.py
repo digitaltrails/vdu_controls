@@ -7465,7 +7465,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
     def __init__(self, main_config: VduControlsConfig) -> None:
         super().__init__()
-        self.application_lock = threading.RLock()
+        self.application_lock = threading.RLock()  # thread level, thread-safe, access lock
         self.main_config = main_config
         self.ddcutil: Ddcutil | None = None
         self.main_window: VduAppWindow | None = None
@@ -7511,7 +7511,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 QApplication.processEvents()
             log_debug("configure: try to obtain application_lock", trace=False) if log_debug_enabled else None
             with self.application_lock:
-                log_debug("Holding application_lock") if log_debug_enabled else None
+                log_debug("configure: holding application_lock") if log_debug_enabled else None
                 self.unschedule_presets()  # Hopefully stops any timers from firing.
                 if self.lux_auto_controller is not None:
                     self.lux_auto_controller.stop_worker()
@@ -7527,7 +7527,6 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 SettingsEditor.reconfigure_instance(self.get_vdu_configs())
                 self.restore_vdu_initialization_presets()
                 self.schedule_presets(True)
-
             log_debug("configure: released application_lock") if log_debug_enabled else None
             if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED):
                 if self.lux_auto_controller is not None:
@@ -7669,8 +7668,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             if self.ddcutil is not None:
                 with non_blocking_lock(self.application_lock) as acquired_lock:
                     if acquired_lock:  # if acquired_lock is not None, then we have successfully acquired the lock.
+                        log_debug(f"update_from_vdu: holding application_lock") if log_debug_enabled else None
                         try:
-                            log_info(f"Refresh commences - acquired application_lock {external_event=}")
+                            log_info(f"Refresh commences: {external_event=}") if log_debug_enabled else None
                             self.ddcutil.refresh_connection()
                             self.detected_vdu_list = self.ddcutil.detect_vdus()
                             self.restore_vdu_initialization_presets()
@@ -7684,8 +7684,10 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                                 self.refresh_data_task.vdu_exception = VduException(vdu_description="unknown", operation="unknown",
                                                                                     exception=e)
                     else:
-                        log_info(f"Already doing a refresh, won't do another one ({external_event=})")
+                        log_info(f"Application is already busy, can't do a refresh ({external_event=})")
                         worker.stop()  # stop the thread - which also indicates we did not acquire the lock
+                        return  # Prevents logging the unlock (because we don't have the lock if we reach here).
+                log_debug(f"update_from_vdu: released application_lock") if log_debug_enabled else None
 
         def update_ui_view(worker: WorkerThread) -> None:
             # Invoke when the worker thread completes. Runs in the GUI thread and can refresh remaining UI views.
@@ -7794,10 +7796,10 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 log_error(f"Error during restoration of {worker.preset.name}")
                 self.status_message(tr("Error during restoration preset {}").format(worker.preset.name), timeout=5)
                 return
+            log_info(f'Restored initialization-preset {worker.preset.name}')
             message = tr("Restored Preset\n{}").format(worker.preset.name)
             self.status_message(message, timeout=5)
             self.main_window.splash_message_qtsignal.emit(message)
-            log_info(f'Restored initialization-preset {worker.preset.name}')
             time.sleep(1.0)  # Pause to give the message time to display - TODO find non-delaying solution
             self.main_window.update_status_indicators()  # Refresh to restore other non-init preset icons
 
