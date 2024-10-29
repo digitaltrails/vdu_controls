@@ -593,9 +593,6 @@ to reduce the overall frequency of adjustments to acceptable levels.
     curves to minimize frequent small changes.
   + If using a light-meter, disengage metered automatic adjustment when faced with
     rapidly fluctuating levels of ambient brightness.
-  + The About-Dialog reports a count of setvcp writes per VDU. Hovering over
-    a VDU-name in the main-window reveals the count for that VDU. Use these
-    numbers to tune the number of writes to an acceptable levels.
   + Consider adjusting the ambient lighting instead of the VDU.
 
 + Monitoring to assist with making adjustments:
