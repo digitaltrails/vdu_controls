@@ -576,10 +576,9 @@ Repeatably altering VDU settings might affect VDU lifespan, exhausting the NVRAM
 cycles, stressing the VDU power-supply, or increasing panel burn-in.
 
 That said, ``vdu_controls`` does include a number of features that can be used
-to reduce the overall frequency of adjustments.
+to reduce the overall frequency of adjustments to acceptable levels.
 
 + Inbuilt mitigations:
-
   + Slider and spin-box controls only update the VDU when adjustments become slow or stop (when
     no change occurs in 0.5 seconds).
   + Preset restoration only updates the VDU values that differ from its current values.
@@ -588,7 +587,6 @@ to reduce the overall frequency of adjustments.
     differs from the current brightness by at least 10%.
 
 + Electable mitigations:
-
   + Choose to restore pre-prepared 'presets' instead of dragging sliders.
   + Refrain from adding transitions to `presets`.
   + If using the ambient-light brightness response curves, tune the settings and
@@ -599,6 +597,11 @@ to reduce the overall frequency of adjustments.
     a VDU-name in the main-window reveals the count for that VDU. Use these
     numbers to tune the number of writes to an acceptable levels.
   + Consider adjusting the ambient lighting instead of the VDU.
+
++ Monitoring to assist with making adjustments:
+  + Hovering over a VDU name in the main window reveals a popup that includes
+    the number of VCP (NVRAM) writes.
+  + The bottom of the About-dialog shows the same numbers. They update dynamically.
 
 Other concerns
 --------------

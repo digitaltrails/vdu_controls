@@ -142,6 +142,12 @@ to reduce the frequency of writes to VDU NVRAM:
    numbers to tune the number of writes to an acceptable levels. 
  + Consider adjusting the ambient lighting instead of the VDU.
 
+#### Monitoring to assist with making adjustments:
+
+  + Hovering over a VDU name in the main window reveals a popup that includes
+    the number of VCP (NVRAM) writes. 
+  + The bottom of the About-dialog shows the same numbers. They update dynamically.
+
 #### Other concerns
 
 Going beyond the standard DDC features by experimenting with undocumented-features 
