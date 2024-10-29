@@ -57,7 +57,7 @@ equivalent settings.</p>
                         divert diagnostic output to the syslog (journald).
                         ``--no-syslog`` is the default.
   --hide-on-focus-out|--no-hide-on-focus-out
-                        minimise the main window automatically on focus out
+                        minimize the main window automatically on focus out
                         ``--no-hide-on-focus-out`` is the default.
   --splash|--no-splash
                         show the splash screen.  ``--splash`` is the default.
@@ -328,9 +328,9 @@ and they’ve also set a preset to trigger at dawn, but they don’t
 actually log in until just after dawn, the overdue dawn preset will be
 triggered at login.</p>
 <h2 id="presets---smooth-transitions">Presets - Smooth Transitions</h2>
-<p>In order to minimize writes to VDU NVRAM, the smooth transtion of
+<p>In order to minimize writes to VDU NVRAM, the smooth transition of
 presets is deprecated and is now normally disabled. Transitions can be
-renabled by disabling <code>protect-nvram</code> in
+enabled by disabling <code>protect-nvram</code> in
 <em>Settings</em>.</p>
 <p>A preset may be set to <code>Transition Smoothly</code>, in which
 case changes to controls continuous-value slider controls such as
@@ -470,7 +470,7 @@ eat into VDU NVRAM lifespan.</p>
 <p>The auto-brightness adjustment feature includes several measures to
 reduce the number of changes passed to the VDU:</p>
 <ul>
-<li>Lux/Brightness Profiles may be altered for local conditionas so that
+<li>Lux/Brightness Profiles may be altered for local conditions so that
 brightness levels remain constant over set ranges of lux values (night,
 day, and so forth).</li>
 <li>Adjustments are only made at intervals of one or more minutes
@@ -586,10 +586,10 @@ presets.</p>
 exhausting the NVRAM write cycles, stressing the VDU power-supply, or
 increasing panel burn-in.</p>
 <p>That said, <code>vdu_controls</code> does include a number of
-features that can be used to reduce the overall frequency of
-adjustments.</p>
+features that can be used to reduce the overall frequency of adjustments
+to acceptable levels.</p>
 <ul>
-<li><p>Inbuilt mitigations:</p>
+<li>Inbuilt mitigations:
 <ul>
 <li>Slider and spin-box controls only update the VDU when adjustments
 become slow or stop (when no change occurs in 0.5 seconds).</li>
@@ -601,19 +601,26 @@ for version 2.1.0 onward.</li>
 the proposed brightness differs from the current brightness by at least
 10%.</li>
 </ul></li>
-<li><p>Electable mitigations:</p>
+<li>Electable mitigations:
 <ul>
 <li>Choose to restore pre-prepared ‘presets’ instead of dragging
 sliders.</li>
 <li>Refrain from adding transitions to <code>presets</code>.</li>
 <li>If using the ambient-light brightness response curves, tune the
-settings and curves to minimise frequent small changes.</li>
+settings and curves to minimize frequent small changes.</li>
 <li>If using a light-meter, disengage metered automatic adjustment when
 faced with rapidly fluctuating levels of ambient brightness.</li>
 <li>The About-Dialog reports a count of setvcp writes per VDU. Hovering
 over a VDU-name in the main-window reveals the count for that VDU. Use
 these numbers to tune the number of writes to an acceptable levels.</li>
 <li>Consider adjusting the ambient lighting instead of the VDU.</li>
+</ul></li>
+<li>Monitoring to assist with making adjustments:
+<ul>
+<li>Hovering over a VDU name in the main window reveals a popup that
+includes the number of VCP (NVRAM) writes.</li>
+<li>The bottom of the About-dialog shows the same numbers. They update
+dynamically.</li>
 </ul></li>
 </ul>
 <h2 id="other-concerns">Other concerns</h2>
@@ -678,7 +685,7 @@ disambiguate the noun/verb duality of “display” and “monitor”</p>
 <p>Software::</p>
 <pre><code>    zypper install python3 python3-qt5 noto-sans-math-fonts noto-sans-symbols2-fonts
     zypper install ddcutil
-    zypper install libddcutil ddcutil-service  # optional, but recommended if availabled</code></pre>
+    zypper install libddcutil ddcutil-service  # optional, but recommended if available</code></pre>
 <p>If you wish to use a serial-port lux metering device, the
 <code>pyserial</code> module is a runtime requirement.</p>
 <p>Get ddcutil working first. Check that the detect command detects your

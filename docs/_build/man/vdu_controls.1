@@ -27,9 +27,9 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Oct 15, 2024" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Oct 29, 2024" "" "vdu_controls"
 .SH NAME
-vdu_controls \- vdu_controls 2.1.1
+vdu_controls \- vdu_controls 2.1.2
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
 .sp
 A control panel for DisplayPort, DVI, HDMI, or USB connected VDUs (\fIVisual Display Units\fP).
@@ -123,7 +123,7 @@ divert diagnostic output to the syslog (journald).
 \fB\-\-no\-syslog\fP is the default.
 .TP
 .B \-\-hide\-on\-focus\-out|\-\-no\-hide\-on\-focus\-out
-minimise the main window automatically on focus out
+minimize the main window automatically on focus out
 \fB\-\-no\-hide\-on\-focus\-out\fP is the default.
 .TP
 .B \-\-splash|\-\-no\-splash
@@ -473,8 +473,8 @@ also set a preset to trigger at dawn, but they don\(aqt actually log in until ju
 overdue dawn preset will be triggered at login.
 .SS Presets \- Smooth Transitions
 .sp
-In order to minimize writes to VDU NVRAM, the smooth transtion of presets is deprecated
-and is now normally disabled. Transitions can be renabled by disabling \fIprotect\-nvram\fP
+In order to minimize writes to VDU NVRAM, the smooth transition of presets is deprecated
+and is now normally disabled. Transitions can be enabled by disabling \fIprotect\-nvram\fP
 in _Settings_.
 .sp
 A preset may be set to \fBTransition Smoothly\fP, in which case changes to controls continuous\-value
@@ -657,7 +657,7 @@ changes passed to the VDU:
 .INDENT 3.5
 .INDENT 0.0
 .IP \(bu 2
-Lux/Brightness Profiles may be altered for local conditionas so that
+Lux/Brightness Profiles may be altered for local conditions so that
 brightness levels remain constant over set ranges of lux values (night, day, and so forth).
 .IP \(bu 2
 Adjustments are only made at intervals of one or more minutes (default is 10 minutes).
@@ -768,14 +768,17 @@ Repeatably altering VDU settings might affect VDU lifespan, exhausting the NVRAM
 cycles, stressing the VDU power\-supply, or increasing panel burn\-in.
 .sp
 That said, \fBvdu_controls\fP does include a number of features that can be used
-to reduce the overall frequency of adjustments.
+to reduce the overall frequency of adjustments to acceptable levels.
 .INDENT 0.0
 .IP \(bu 2
 Inbuilt mitigations:
++ Slider and spin\-box controls only update the VDU when adjustments become slow or stop (when
 .INDENT 2.0
-.IP \(bu 2
-Slider and spin\-box controls only update the VDU when adjustments become slow or stop (when
+.INDENT 3.5
 no change occurs in 0.5 seconds).
+.UNINDENT
+.UNINDENT
+.INDENT 2.0
 .IP \(bu 2
 Preset restoration only updates the VDU values that differ from its current values.
 .IP \(bu 2
@@ -786,14 +789,15 @@ differs from the current brightness by at least 10%.
 .UNINDENT
 .IP \(bu 2
 Electable mitigations:
++ Choose to restore pre\-prepared \(aqpresets\(aq instead of dragging sliders.
++ Refrain from adding transitions to \fIpresets\fP\&.
++ If using the ambient\-light brightness response curves, tune the settings and
 .INDENT 2.0
-.IP \(bu 2
-Choose to restore pre\-prepared \(aqpresets\(aq instead of dragging sliders.
-.IP \(bu 2
-Refrain from adding transitions to \fIpresets\fP\&.
-.IP \(bu 2
-If using the ambient\-light brightness response curves, tune the settings and
-curves to minimise frequent small changes.
+.INDENT 3.5
+curves to minimize frequent small changes.
+.UNINDENT
+.UNINDENT
+.INDENT 2.0
 .IP \(bu 2
 If using a light\-meter, disengage metered automatic adjustment when faced with
 rapidly fluctuating levels of ambient brightness.
@@ -803,6 +807,18 @@ a VDU\-name in the main\-window reveals the count for that VDU. Use these
 numbers to tune the number of writes to an acceptable levels.
 .IP \(bu 2
 Consider adjusting the ambient lighting instead of the VDU.
+.UNINDENT
+.IP \(bu 2
+Monitoring to assist with making adjustments:
++ Hovering over a VDU name in the main window reveals a popup that includes
+.INDENT 2.0
+.INDENT 3.5
+the number of VCP (NVRAM) writes.
+.UNINDENT
+.UNINDENT
+.INDENT 2.0
+.IP \(bu 2
+The bottom of the About\-dialog shows the same numbers. They update dynamically.
 .UNINDENT
 .UNINDENT
 .SS Other concerns
@@ -879,7 +895,7 @@ Software:
 .ft C
 zypper install python3 python3\-qt5 noto\-sans\-math\-fonts noto\-sans\-symbols2\-fonts
 zypper install ddcutil
-zypper install libddcutil ddcutil\-service  # optional, but recommended if availabled
+zypper install libddcutil ddcutil\-service  # optional, but recommended if available
 .ft P
 .fi
 .UNINDENT
