@@ -1536,6 +1536,7 @@ class Ddcutil:
 
 
 class DdcEventType(Enum):  # Has to correspond to what the service supports
+    UNKNOWN = -1
     DPMS_AWAKE = 0
     DPMS_ASLEEP = 1
     DISPLAY_CONNECTED = 2
@@ -7545,6 +7546,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         if self.main_config.is_set(ConfOption.DBUS_CLIENT_ENABLED):
 
             def vdu_connectivity_changed_callback(edid_encoded: str, event_type: int, flags: int):
+                if not DdcEventType.UNKNOWN.value <= event_type <= DdcEventType.DISPLAY_DISCONNECTED.value:
+                    log_warning(f"Connected VDUs event - unknown {event_type=} treating as DPMS_UNKNOWN.")
+                    event_type = DdcEventType.UNKNOWN.value
                 log_info(f"Connected VDUs event {DdcEventType(event_type)} {flags=} {edid_encoded:.30}...")
                 if event_type == DdcEventType.DPMS_ASLEEP.value:
                     return  # Don't do anything, the VDUs are just asleep.

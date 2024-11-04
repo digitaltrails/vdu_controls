@@ -353,6 +353,7 @@ Version History
   * Remove potential deadlock when handling ddcutil-service change-events.
   * Discard pending VDU VCP changes when reconfiguring VDU controllers.
   * Fix new-day Preset scheduling. If the timer triggers slightly early at 23:59:59, schedule for the new-day.
+  * Handle ddcutil-service unexpected event types (don't raise an error dialog).
   
 * 2.1.1
   * Removed --dbus-signals-enabled. DBus signals are now always enabled when --dbus-client
