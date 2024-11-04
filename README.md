@@ -21,14 +21,18 @@ A control panel for external monitors (*Visual Display Units*).
 > The  internal DDC/VDU interface has been rewritten to optionally use the
 > D-Bus [ddcutil-service](https://github.com/digitaltrails/ddcutil-service) instead
 > of the **ddcutil** command. The new **ddcutil-service** is a daemon I've written to
-> interface with **libddcutil**, it's faster and more responsive than the older
-> command-based implementation. Should the ddcutil-service be unavailable,
-> the DDC/VDU interface reverts to using the ddcutil command.  Should you encounter 
-> any issues with using the service, ***Settings->D-Bus client enabled*** can 
-> be used to disable it and force the use of the command.
+> interface with **libddcutil**. The service is faster and more reliable making for 
+> a smoother control experience. The service is able to detect and forward DPMS 
+> connection-events so vdu_controls can automatically respond to changes in VDU 
+> connection status, such as hot-plugging, power on/off, or reconnects due to return
+> from PC-hibernation.
 > 
-> If you'd like to try the **ddcutil-service**, builds are available for OpenSUSE 
-> Tumbleweed and the Arch AUR:
+> Should the ddcutil-service be unavailable, the DDC/VDU interface reverts to using 
+> the ddcutil command.
+> 
+> Prebuild vdu_control OpenSUSE and AUR packages optionally recommand ddcutil-service. 
+> Depending packaging settings, the service may be automatically installed when you
+> install vdu_controls. 
 > 
 > OpenSUSE Tumbleweed RPM:
 > 
@@ -38,9 +42,9 @@ A control panel for external monitors (*Visual Display Units*).
 > 
 >    https://aur.archlinux.org/packages/ddcutil-service
 >
-> Otherwise it's written in C, so you'd need to build and install it.
-> It's one C file. It will build against any libddcutil from 1.4 onward.
-> It doesn't need to be installed as root, it can also be started
+> If your distro lacks a packaged version of the service, you could manually
+> build and install it from source. It's a single C file and will build against 
+> any libddcutil from 1.4 onward.  It needn't  be installed as root, it can be started
 > manually from the command line or installed as a single user D-Bus daemon.
 > For install/build details, see:
 > 
