@@ -353,6 +353,7 @@ Michael Hamilton
 Version History
 ---------------
 * 2.1.2
+  * Implemented a Preset schedular that accounts for time spent hibernating. 
   * When performing a set-vcp, don't increment the NVRAM write count if the VDU doesn't respond.
   * Remove potential deadlock when handling ddcutil-service change-events.
   * Discard pending VDU VCP changes when reconfiguring VDU controllers.

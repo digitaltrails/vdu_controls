@@ -2078,6 +2078,92 @@ class WorkerThread(QThread):
             time.sleep(seconds)
 
 
+class SchedulerJobType(Enum):
+    RESTORE_PRESET = 1
+    SCHEDULE_PRESETS = 2
+
+
+class SchedulerJob:  # designed to resemble a QTimer, which it was written to replace
+
+    def __init__(self, when: datetime, job_callable: Callable, job_type: SchedulerJobType):
+        assert when.tzinfo is not None
+        self.when = when.replace(second=0, microsecond=0)
+        self.job_callable = job_callable
+        self.job_type = job_type
+        assert Scheduler.instance
+        Scheduler.instance.add(self)
+
+    def remaining_time(self):
+        return (self.when - zoned_now()).seconds if Scheduler.instance.is_supervising(self) else -1
+
+    def stop(self):
+        assert Scheduler.instance
+        Scheduler.instance.remove(self)
+
+    def requeue(self):
+        assert Scheduler.instance and not Scheduler.instance.is_supervising(self)
+        Scheduler.instance.add(self)
+
+    def __str__(self):
+        return f"{self.job_type=} {self.when=:%Y-%m-%d %H:%M:%S}"
+
+# QTimer replacement - hibernation-tolerant scheduling at specific YYYYMMDD HHMM.
+# After hibernation, overdue events will trigger.
+class Scheduler(WorkerThread):
+    instance: Scheduler = None
+
+    @staticmethod
+    def initialize(app: VduAppWindow):
+        if not Scheduler.instance or Scheduler.instance.isFinished():
+            Scheduler.instance = Scheduler(app)
+            log_info("Scheduler: starting")
+            Scheduler.instance.start()
+        else:
+            Scheduler.instance.app = app
+
+    def __init__(self, app: VduAppWindow) -> None:
+        super().__init__(self.task_body, None, True)
+        self.app = app
+        self.pending_jobs_list: List[SchedulerJob] = []
+        self.lock = threading.RLock()
+
+    def task_body(self, _: WorkerThread):
+        with self.lock:
+            local_now = zoned_now()
+            #log_debug(f"Scheduler: check for work {local_now=:%Y-%m-%d %H:%M:%S} {self.pending_jobs_list=}")
+            overdue: Dict[SchedulerJobType, SchedulerJob] = {}
+            for job in self.pending_jobs_list:
+                if abs(local_now - job.when).seconds <= 5:  # just in case timing is off for some reason
+                    if job.job_type not in overdue or job.when > overdue[job.job_type].when:
+                        if log_debug_enabled and job.job_type in overdue:
+                            log_debug(f"Scheduler: {job=!s} overrides existing overdue[job=!s]") if log_debug_enabled else None
+                        overdue[job.job_type] = job  # Only most recent of each type should run
+            for job in overdue.values():
+                log_debug(f"Scheduler: Starting  {job=!s}") if log_debug_enabled else None
+                self.app.run_in_gui_thread(job.job_callable)
+                self.remove(job)
+        now = datetime.now()
+        next_time = (now + timedelta(seconds=60)).replace(second=0, microsecond=0)
+        sleep_seconds = (next_time - now).total_seconds()
+        #log_debug(f"Scheduler: sleeping {sleep_seconds=}") if log_debug_enabled else None
+        self.doze(sleep_seconds)
+
+    def add(self, job: SchedulerJob) -> SchedulerJob:
+        with self.lock:
+            self.pending_jobs_list.append(job)
+            log_debug(f"Scheduler: added {job=!s}") if log_debug_enabled else None
+            return job
+
+    def remove(self, job: SchedulerJob):
+        with self.lock:
+            if job in self.pending_jobs_list:
+                self.pending_jobs_list.remove(job)
+                log_debug(f"Scheduler: removed {job=!s}") if log_debug_enabled else None
+
+    def is_supervising(self, job: SchedulerJob):
+        return job in self.pending_jobs_list
+
+
 class ConfIni(configparser.ConfigParser):
     """ConfigParser is a little messy and its class name is a bit misleading, wrap it and bend it to our needs."""
 
@@ -3447,7 +3533,7 @@ class Preset:
         self.name = name
         self.path = ConfIni.get_path(proper_name('Preset', name))
         self.preset_ini = ConfIni()
-        self.timer: QTimer | None = None
+        self.scheduler_job: SchedulerJob | None = None
         self.timer_action: Callable[[Preset], None] | None = None
         self.schedule_status = PresetScheduleStatus.UNSCHEDULED
         self.elevation_time_today: datetime | None = None
@@ -3525,13 +3611,13 @@ class Preset:
                 Path(weather_fn).stem.replace('_', ' ')) if weather_fn is not None else ''
             # This might not work too well in translation - rethink?
             if self.elevation_time_today:
-                if self.timer and self.timer.remainingTime() > 0:
+                if self.scheduler_job and self.scheduler_job.remaining_time() > 0:
                     template = tr("{} later today at {}") + weather_suffix
                 elif self.elevation_time_today < zoned_now():
                     template = tr("{} earlier today at {}") + weather_suffix + f" ({tr(self.schedule_status.description())})"
                 else:
                     template = tr("{} suspended for  {}")
-                result = template.format(basic_desc, self.elevation_time_today.strftime("%H:%M"))
+                result = template.format(basic_desc, f"{self.elevation_time_today.replace(second=0, microsecond=0):%H:%M}")
             elif enabled:
                 result = basic_desc + ' ' + tr("the sun does not rise this high today")
             else:
@@ -3545,39 +3631,32 @@ class Preset:
         return self.preset_ini.getint('preset', 'transition-step-interval-seconds', fallback=0)
 
     def start_timer(self, when_local: datetime, preset_action: Callable[[Preset], None]) -> None:
-        if self.timer:
-            self.timer.stop()
-        else:
-            self.timer = QTimer()
-        self.timer.setSingleShot(True)
-        self.timer_action = preset_action
-        self.timer.timeout.connect(partial(preset_action, self))  # TODO the action may be running in an inappropriate thread
-        millis = round((when_local - zoned_now()) / timedelta(milliseconds=1))
-        self.timer.start(millis)
+        if self.scheduler_job:
+            self.scheduler_job.stop()
+        self.scheduler_job = SchedulerJob(when_local, partial(preset_action, self), SchedulerJobType.RESTORE_PRESET)
         self.schedule_status = PresetScheduleStatus.SCHEDULED
-        log_info(f"Scheduled preset '{self.name}' for {when_local} in {round(millis / 1000 / 60)} minutes "
+        log_info(f"Scheduled preset '{self.name}' for {when_local} in {round(self.scheduler_job.remaining_time() / 60)} minutes "
                  f"{self.get_solar_elevation()}")
 
     def remove_elevation_trigger(self, quietly: bool = False) -> None:
-        if self.timer:
+        if self.scheduler_job:
             log_info(f"Preset timer and schedule status cleared for '{self.name}'") if not quietly else None
-            self.timer.stop()
-            self.timer = None
+            self.scheduler_job.stop()
+            self.scheduler_job = None
         if self.elevation_time_today is not None:
             self.elevation_time_today = None
         self.schedule_status = PresetScheduleStatus.UNSCHEDULED
 
     def toggle_timer(self) -> None:
         if self.elevation_time_today and self.elevation_time_today > zoned_now():
-            if self.timer is not None:
-                if self.timer.remainingTime() > 0:
+            if self.scheduler_job is not None:
+                if self.scheduler_job.remaining_time() > 0:
                     log_info(f"Preset scheduled timer cleared for '{self.name}'")
-                    self.timer.stop()
+                    self.scheduler_job.stop()
                     self.schedule_status = PresetScheduleStatus.SUSPENDED
                 else:
                     log_info(f"Preset scheduled timer restored for '{self.name}'")
-                    assert self.timer_action is not None
-                    self.start_timer(self.elevation_time_today, self.timer_action)
+                    self.scheduler_job.requeue()
                     self.schedule_status = PresetScheduleStatus.SCHEDULED
 
     def is_weather_dependent(self) -> bool:
@@ -7474,7 +7553,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         self.preset_controller = PresetController()
         self.detected_vdu_list: List[Tuple[str, str, str, str]] = []
         self.previously_detected_vdu_list: List[Tuple[str, str, str, str]] = []
-        self.daily_schedule_next_update = None
+        self.daily_schedule_job: SchedulerJob | None = None
         ## self.daily_schedule_next_update = zoned_now() + timedelta(seconds=60)  # For testing
         self.refresh_data_task: WorkerThread | None = None
         self.weather_query: WeatherQuery | None = None
@@ -7846,14 +7925,13 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                         else:
                             log_info(f"Skipped preset {preset.name} {elevation_key} degrees,"
                                      " the sun does not reach that elevation today.")
-                # set a timer to rerun this at the start of the next day. Add extra 30s to avoid timer-accuracy and truncation-errors.
+                # set a timer to rerun this at the start of the next day. Add extra 30s to avoid accuracy and truncation-errors.
                 tomorrow = zoned_now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
-                if self.daily_schedule_next_update != tomorrow:
-                    millis = (tomorrow - zoned_now()) / timedelta(milliseconds=1)  # Possible truncation error in the math?
-                    ## millis = 1000 * 60 * 1  # For testing
-                    log_info(f"Will update schedule for solar-activation at {tomorrow} (in {round(millis / 1000 / 60)} minutes)")
-                    QTimer.singleShot(int(millis), partial(self.schedule_presets, True))  # type: ignore
-                    self.daily_schedule_next_update = tomorrow
+                if self.daily_schedule_job is None or self.daily_schedule_job.when < tomorrow:
+                    self.daily_schedule_job = SchedulerJob(tomorrow, partial(self.schedule_presets, True),
+                                                           SchedulerJobType.SCHEDULE_PRESETS)
+                    log_info(f"Will update schedule for solar-activation at {tomorrow} "
+                             f"(in {round(self.daily_schedule_job.remaining_time()/60)} minutes)")
             log_debug("schedule_presets: released application_lock") if log_debug_enabled else None
         else:
             log_info(f"Scheduling is disabled or no location ({location=})")
@@ -7862,15 +7940,15 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
     def unschedule_presets(self):
         for preset in self.preset_controller.find_presets_map().values():
-            if preset.timer is not None and preset.timer.remainingTime() > 0:
-                preset.timer.stop()
+            if preset.scheduler_job is not None and preset.scheduler_job.remaining_time() > 0:
+                preset.scheduler_job.stop()
 
     def check_preset_schedule(self):
         if self.main_config.is_set(ConfOption.SCHEDULE_ENABLED):
             log_debug("check_preset_schedule: try to acquire application_lock") if log_debug_enabled else None
             with self.application_lock:
                 log_debug("check_preset_schedule: holding application_lock") if log_debug_enabled else None
-                if self.daily_schedule_next_update is None or self.daily_schedule_next_update < zoned_now():
+                if self.daily_schedule_job is None or self.daily_schedule_job.when < zoned_now():
                     log_info("check_preset_schedule: schedule appears to be out of date - refresh it...")
                     self.schedule_presets(True)
                     self.activate_overdue_preset()
@@ -8133,6 +8211,7 @@ class VduAppWindow(QMainWindow):
         self.scroll_area: QScrollArea | None = None
         self.main_config = main_config
         self.hide_shortcuts = True
+        Scheduler.initialize(self)
 
         def run_in_gui(task: Callable):
             log_debug(f"Running task in gui thread {repr(task)}") if log_debug_enabled else None
