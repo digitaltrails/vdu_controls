@@ -6496,8 +6496,8 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                         ERROR_SYMBOL, vdu_sid, error_count,
                         self.main_controller.get_lux_auto_controller().get_lux_config().get_interval_minutes()))  # TODO seems dodgy
                     self.doze(2)  # TODO do something better than this to make the message visible.
-                    if error_count == 2 or log_debug_enabled:
-                        log_info(f"LuxAutoWorker: {error_count} errors on {vdu_sid}, let this lux cycle end.")
+                    if log_debug_enabled:
+                        log_debug(f"LuxAutoWorker: {error_count} errors on {vdu_sid}, let this lux cycle end.")
                     return -1  # Make no changes, this allows the current adjustment cycle to end, will try again next cycle.
         return 1  # Still more work to do to reach the final target value
 
