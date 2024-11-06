@@ -2090,13 +2090,20 @@ class SchedulerJob:  # designed to resemble a QTimer, which it was written to re
         self.when = when.replace(second=0, microsecond=0)
         self.job_callable = job_callable
         self.job_type = job_type
+        self.has_run = False
         assert Scheduler.instance
         Scheduler.instance.add(self)
 
     def remaining_time(self):
         return (self.when - zoned_now()).seconds if Scheduler.instance.is_supervising(self) else -1
 
-    def stop(self):
+    def run(self):
+        try:
+            self.job_callable()
+        finally:
+            self.has_run = True
+
+    def dequeue(self):
         assert Scheduler.instance
         Scheduler.instance.remove(self)
 
@@ -2121,6 +2128,11 @@ class Scheduler(WorkerThread):
         else:
             Scheduler.instance.app = app
 
+    @staticmethod
+    def check():
+        if Scheduler.instance:
+            Scheduler.instance.check_now()
+
     def __init__(self, app: VduAppWindow) -> None:
         super().__init__(self.task_body, None, True)
         self.app = app
@@ -2128,37 +2140,36 @@ class Scheduler(WorkerThread):
         self.lock = threading.RLock()
 
     def task_body(self, _: WorkerThread):
+        self.check_now()
+        now = datetime.now()  # want just over the next minute boundary e.g. 13:45:05
+        sleep_seconds = ((now + timedelta(seconds=60 + 30)).replace(second=5, microsecond=0) - now).seconds
+        # log_debug(f"Scheduler: sleeping {sleep_seconds=}") if log_debug_enabled else None
+        self.doze(sleep_seconds)
+
+    def check_now(self):
         with self.lock:
             local_now = zoned_now()
-            #log_debug(f"Scheduler: check for work {local_now=:%Y-%m-%d %H:%M:%S} {self.pending_jobs_list=}")
-            overdue: Dict[SchedulerJobType, SchedulerJob] = {}
-            for job in self.pending_jobs_list:
-                if abs(local_now - job.when).seconds <= 5:  # just in case timing is off for some reason
-                    if job.job_type not in overdue or job.when > overdue[job.job_type].when:
-                        if log_debug_enabled and job.job_type in overdue:
-                            log_debug(f"Scheduler: {job=!s} overrides existing overdue[job=!s]") if log_debug_enabled else None
-                        overdue[job.job_type] = job  # Only most recent of each type should run
-            for job in overdue.values():
-                log_debug(f"Scheduler: Starting  {job=!s}") if log_debug_enabled else None
-                self.app.run_in_gui_thread(job.job_callable)
-                self.remove(job)
-        now = datetime.now()
-        next_time = (now + timedelta(seconds=60)).replace(second=0, microsecond=0)
-        sleep_seconds = (next_time - now).total_seconds()
-        #log_debug(f"Scheduler: sleeping {sleep_seconds=}") if log_debug_enabled else None
-        self.doze(sleep_seconds)
+            overdue_list: List[SchedulerJobType] = [job for job in self.pending_jobs_list if job.when <= local_now]
+            run_now: Dict[SchedulerJobType, SchedulerJob] = {}
+            for job in overdue_list:
+                self.pending_jobs_list.remove(job)
+                if job.job_type not in run_now or (not job.has_run and job.when > run_now[job.job_type].when):
+                    run_now[job.job_type] = job  # Only most recent of each type should run
+            for job in run_now.values():
+                log_debug(f"Scheduler: Starting  {job=!s} queued={len(self.pending_jobs_list)}") if log_debug_enabled else None
+                self.app.run_in_gui_thread(job.run)
 
     def add(self, job: SchedulerJob) -> SchedulerJob:
         with self.lock:
             self.pending_jobs_list.append(job)
-            log_debug(f"Scheduler: added {job=!s}") if log_debug_enabled else None
+            log_debug(f"Scheduler: added {job=!s} queued={len(self.pending_jobs_list)}") if log_debug_enabled else None
             return job
 
     def remove(self, job: SchedulerJob):
         with self.lock:
             if job in self.pending_jobs_list:
                 self.pending_jobs_list.remove(job)
-                log_debug(f"Scheduler: removed {job=!s}") if log_debug_enabled else None
+                log_debug(f"Scheduler: removed {job=!s} queued={len(self.pending_jobs_list)}") if log_debug_enabled else None
 
     def is_supervising(self, job: SchedulerJob):
         return job in self.pending_jobs_list
@@ -3630,18 +3641,22 @@ class Preset:
     def get_step_interval_seconds(self) -> int:
         return self.preset_ini.getint('preset', 'transition-step-interval-seconds', fallback=0)
 
-    def start_timer(self, when_local: datetime, preset_action: Callable[[Preset], None]) -> None:
-        if self.scheduler_job:
-            self.scheduler_job.stop()
-        self.scheduler_job = SchedulerJob(when_local, partial(preset_action, self), SchedulerJobType.RESTORE_PRESET)
-        self.schedule_status = PresetScheduleStatus.SCHEDULED
-        log_info(f"Scheduled preset '{self.name}' for {when_local} in {round(self.scheduler_job.remaining_time() / 60)} minutes "
-                 f"{self.get_solar_elevation()}")
+    def schedule(self, when_today: datetime, schedule_action: Callable, editing: bool = False):
+        self.elevation_time_today = when_today
+        self.scheduler_job = SchedulerJob(when_today, partial(schedule_action, self), SchedulerJobType.RESTORE_PRESET)
+        log_info(f"Scheduled preset '{self.name}' for {when_today} in "
+                 f"{round(self.scheduler_job.remaining_time() / 60)} minutes {self.get_solar_elevation()}")
+        if when_today >= zoned_now():
+            self.schedule_status = PresetScheduleStatus.SCHEDULED
+        else:  # Note this is still scheduled and may trigger if it's the most recent overdue Preset
+            log_info(f"Skipped preset {self.name}, passed assigned-time (status={self.schedule_status})")
+            if not editing and self.schedule_status != PresetScheduleStatus.SUCCEEDED:  # Not already succeeded
+                self.schedule_status = PresetScheduleStatus.SKIPPED_SUPERSEDED
 
     def remove_elevation_trigger(self, quietly: bool = False) -> None:
         if self.scheduler_job:
             log_info(f"Preset timer and schedule status cleared for '{self.name}'") if not quietly else None
-            self.scheduler_job.stop()
+            self.scheduler_job.dequeue()
             self.scheduler_job = None
         if self.elevation_time_today is not None:
             self.elevation_time_today = None
@@ -3652,7 +3667,7 @@ class Preset:
             if self.scheduler_job is not None:
                 if self.scheduler_job.remaining_time() > 0:
                     log_info(f"Preset scheduled timer cleared for '{self.name}'")
-                    self.scheduler_job.stop()
+                    self.scheduler_job.dequeue()
                     self.schedule_status = PresetScheduleStatus.SUSPENDED
                 else:
                     log_info(f"Preset scheduled timer restored for '{self.name}'")
@@ -7606,7 +7621,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 self.main_window.create_main_control_panel()
                 SettingsEditor.reconfigure_instance(self.get_vdu_configs())
                 self.restore_vdu_initialization_presets()
-                self.schedule_presets(True)
+                self.schedule_presets()
             log_debug("configure: released application_lock") if log_debug_enabled else None
             if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED):
                 if self.lux_auto_controller is not None:
@@ -7614,7 +7629,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     LuxDialog.reconfigure_instance()
             self.main_window.update_status_indicators()
             # restore_preset tries to acquire the same lock, safe to unlock and let it relock...
-            self.activate_overdue_preset()
+            Scheduler.check()  # Immediately activate the currently applicable preset.
         finally:
             if self.main_window is not None:
                 self.main_window.indicate_busy(False)
@@ -7892,7 +7907,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     log_info(f"Found initialization-preset for {stable_id}")
                     self.restore_preset(preset, finished_func=restored_initialization_preset, initialization_preset=True)
 
-    def schedule_presets(self, reconfiguring: bool = False) -> None:
+    def schedule_presets(self, editing: bool = False) -> None:
         # As well as scheduling, this method finds and returns the preset that should be applied at this time.
         assert is_running_in_gui_thread()  # Needs to be run in the GUI thread so the timers also run in the GUI thread
         location = self.main_config.get_location()
@@ -7906,42 +7921,54 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 if abs(start_of_next_day - local_now).seconds < 10:  # event fired early? Need to round-up to start of day.
                     log_info(f"Scheduling presets, altering {local_now} to correct day {start_of_next_day}")
                     local_now = start_of_next_day
-                log_info(f"Scheduling presets for {local_now} {reconfiguring=}")
+                log_info(f"Scheduling presets for {local_now} {editing=}")
                 time_map = create_elevation_map(local_now, latitude=location.latitude, longitude=location.longitude)
+
+                # overdue_count = 0
+                # end_of_day_preset: Preset | None = None
                 for preset in self.preset_controller.find_presets_map().values():
-                    if reconfiguring:
+                    if not editing:
                         preset.remove_elevation_trigger(quietly=True)  # Also resets schedule_status
                     elevation_key = preset.get_solar_elevation()
                     if elevation_key is not None and preset.schedule_status == PresetScheduleStatus.UNSCHEDULED:
                         if elevation_data := time_map.get(elevation_key):
                             when_today = elevation_data.when
-                            preset.elevation_time_today = when_today
-                            if when_today > local_now:
-                                preset.start_timer(when_today, self.activate_scheduled_preset)
-                            else:
-                                log_info(f"Skipped preset {preset.name}, passed assigned-time (status={preset.schedule_status})")
-                                if reconfiguring and preset.schedule_status != PresetScheduleStatus.SUCCEEDED:  # Not already succeeded
-                                    preset.schedule_status = PresetScheduleStatus.SKIPPED_SUPERSEDED
+                            preset.schedule(when_today, self.activate_scheduled_preset, editing)
+                            # if when_today < local_now:
+                            #     overdue_count += 1
+                            # if end_of_day_preset is None or when_today > end_of_day_preset.elevation_time_today:
+                            #     end_of_day_preset = preset
                         else:
                             log_info(f"Skipped preset {preset.name} {elevation_key} degrees,"
                                      " the sun does not reach that elevation today.")
+
+                # if overdue_count == 0 and end_of_day_preset and end_of_day_preset.elevation_time_today.hour >= 15:
+                #     # Nothing already due today, schedule the item from >=15:00 yesterday to cover the start of the day
+                #
+                #     def activate_close_of_day_preset():
+                #         self.activate_scheduled_preset(end_of_day_preset, update_status=False)
+                #
+                #     local = local_now.replace(hour=0, minute=0, microsecond=0)
+                #     SchedulerJob(local, activate_close_of_day_preset, SchedulerJobType.RESTORE_PRESET)
+                #     log_info(f"Scheduled preset '{end_of_day_preset.name}' to trigger and cover start of day")
+
                 # set a timer to rerun this at the start of the next day. Add extra 30s to avoid accuracy and truncation-errors.
                 tomorrow = zoned_now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
                 if self.daily_schedule_job is None or self.daily_schedule_job.when < tomorrow:
-                    self.daily_schedule_job = SchedulerJob(tomorrow, partial(self.schedule_presets, True),
+                    self.daily_schedule_job = SchedulerJob(tomorrow, partial(self.schedule_presets),
                                                            SchedulerJobType.SCHEDULE_PRESETS)
                     log_info(f"Will update schedule for solar-activation at {tomorrow} "
                              f"(in {round(self.daily_schedule_job.remaining_time()/60)} minutes)")
             log_debug("schedule_presets: released application_lock") if log_debug_enabled else None
         else:
             log_info(f"Scheduling is disabled or no location ({location=})")
-        if reconfiguring:
+        if not editing:
             PresetsDialog.reconfigure_instance()
 
     def unschedule_presets(self):
         for preset in self.preset_controller.find_presets_map().values():
             if preset.scheduler_job is not None and preset.scheduler_job.remaining_time() > 0:
-                preset.scheduler_job.stop()
+                preset.scheduler_job.dequeue()
 
     def check_preset_schedule(self):
         if self.main_config.is_set(ConfOption.SCHEDULE_ENABLED):
@@ -7950,49 +7977,14 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 log_debug("check_preset_schedule: holding application_lock") if log_debug_enabled else None
                 if self.daily_schedule_job is None or self.daily_schedule_job.when < zoned_now():
                     log_info("check_preset_schedule: schedule appears to be out of date - refresh it...")
-                    self.schedule_presets(True)
-                    self.activate_overdue_preset()
+                    self.schedule_presets()
+                    Scheduler.check()  # immediately active the currently applicable preset
                 else:
                     log_debug("check_preset_schedule: existing schedule is valid") if log_debug_enabled else None
                 log_debug("check_preset_schedule: released application_lock") if log_debug_enabled else None
 
-    def activate_overdue_preset(self):
-        if not self.main_config.is_set(ConfOption.SCHEDULE_ENABLED):
-            log_debug(f"activate_overdue_preset: skipped - scheduling is disabled") if log_debug_enabled else None
-        elif location := self.main_config.get_location():
-            log_debug("activate_overdue_preset: searching schedule") if log_debug_enabled else None
-            local_now = zoned_now()
-            candidate: Preset | None = None
-            for preset in self.preset_controller.find_presets_map().values():
-                if preset.elevation_time_today and preset.elevation_time_today < local_now:
-                    if self.is_weather_satisfactory(preset, use_cache=True):
-                        if candidate is None or preset.elevation_time_today > candidate.elevation_time_today:
-                            candidate = preset
-            if not candidate:  # use last from "yesterday"
-                log_debug("activate_overdue_preset: fallback to last preset of previous day...") if log_debug_enabled else None
-                for preset in self.preset_controller.find_presets_map().values():
-                    if preset.elevation_time_today:
-                        if candidate is None or preset.elevation_time_today > candidate.elevation_time_today:
-                            candidate = preset
-            if candidate:  # This preset is the one that should be running now
-                preset_currently_in_use = self.which_preset_is_active()
-                if preset_currently_in_use == candidate:
-                    log_debug(f"activate_overdue_preset: skipped, already active {candidate.name}") if log_debug_enabled else None
-                #elif preset_currently_in_use is None or preset_currently_in_use.elevation_time_today is None: # Unnecessary
-                #    log_info(f"activate_overdue_preset: skipped - manually off scheduled presets")
-                else:
-                    log_info(f"activate_overdue_preset: restoring preset '{candidate.name}' "
-                             f"because its scheduled to be active at this time ({zoned_now()}).")
-                    self.main_window.splash_message_qtsignal.emit(tr("Restoring Preset\n{}").format(candidate.name))
-                    # Weather check will have succeeded inside schedule_presets() above, don't do it again.
-                    self.activate_scheduled_preset(candidate, check_weather=False, immediately=True)
-            else:
-                log_debug("activate_overdue_preset: failed to find a candidate preset.") if log_debug_enabled else None
-        else:
-            log_debug(f"activate_overdue_preset: skipped, undefined ({location=})") if log_debug_enabled else None
-
     def activate_scheduled_preset(self, preset: Preset, check_weather: bool = True, immediately: bool = False,
-                                  activation_time: datetime | None = None, count=1) -> None:
+                                  activation_time: datetime | None = None, count: int=1, update_status: bool = True) -> None:
         assert is_running_in_gui_thread()
         if not self.main_config.is_set(ConfOption.SCHEDULE_ENABLED):
             log_info(f"Schedule is disabled - not activating preset {preset.name}")
@@ -8001,7 +7993,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             activation_time = zoned_now()
         if preset.is_weather_dependent() and check_weather:
             if not self.is_weather_satisfactory(preset):
-                preset.schedule_status = PresetScheduleStatus.WEATHER_CANCELLATION
+                if update_status:
+                    preset.schedule_status = PresetScheduleStatus.WEATHER_CANCELLATION
                 message = tr("Preset {} activation was cancelled due to weather at {}").format(
                     preset.name, activation_time.isoformat(' ', 'seconds'))
                 self.main_window.display_preset_status(message)
@@ -8021,7 +8014,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                             and preset.elevation_time_today is not None and other.elevation_time_today is not None
                             and preset.elevation_time_today < other.elevation_time_today <= too_close):
                         log_info(f"Schedule restoration skipped {preset.name}, too close to {other.name}")
-                        preset.schedule_status = PresetScheduleStatus.SKIPPED_SUPERSEDED
+                        if update_status:
+                            preset.schedule_status = PresetScheduleStatus.SKIPPED_SUPERSEDED
                         activation_feedback(tr("Skipped, superseded"))
                         return
                 activation_feedback(tr("Error, trying again in {} seconds").format(secs))
@@ -8031,7 +8025,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     int(secs * 1000),
                     partial(self.activate_scheduled_preset, preset, check_weather, immediately, activation_time, count + 1))
                 return
-            preset.schedule_status = PresetScheduleStatus.SUCCEEDED
+            if update_status:
+                preset.schedule_status = PresetScheduleStatus.SUCCEEDED
             self.main_window.update_status_indicators(preset)
             activation_feedback(tr("Restored {}").format(preset.name))
             log_info(f"Restored preset {preset.name} on try {count=}") if count > 1 else None
@@ -8077,7 +8072,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             self.main_window.app_context_menu.insert_preset_menu_action(preset)
         self.main_window.update_status_indicators()
         preset.remove_elevation_trigger()
-        self.schedule_presets()
+        self.schedule_presets(editing=True)
 
     def save_preset_order(self, name_order: List[str]):
         self.preset_controller.save_order(name_order)
