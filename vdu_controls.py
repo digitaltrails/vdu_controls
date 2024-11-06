@@ -7924,33 +7924,15 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 log_info(f"Scheduling presets for {local_now} {editing=}")
                 time_map = create_elevation_map(local_now, latitude=location.latitude, longitude=location.longitude)
 
-                # overdue_count = 0
-                # end_of_day_preset: Preset | None = None
                 for preset in self.preset_controller.find_presets_map().values():
-                    if not editing:
-                        preset.remove_elevation_trigger(quietly=True)  # Also resets schedule_status
                     elevation_key = preset.get_solar_elevation()
                     if elevation_key is not None and preset.schedule_status == PresetScheduleStatus.UNSCHEDULED:
                         if elevation_data := time_map.get(elevation_key):
                             when_today = elevation_data.when
                             preset.schedule(when_today, self.activate_scheduled_preset, editing)
-                            # if when_today < local_now:
-                            #     overdue_count += 1
-                            # if end_of_day_preset is None or when_today > end_of_day_preset.elevation_time_today:
-                            #     end_of_day_preset = preset
                         else:
                             log_info(f"Skipped preset {preset.name} {elevation_key} degrees,"
                                      " the sun does not reach that elevation today.")
-
-                # if overdue_count == 0 and end_of_day_preset and end_of_day_preset.elevation_time_today.hour >= 15:
-                #     # Nothing already due today, schedule the item from >=15:00 yesterday to cover the start of the day
-                #
-                #     def activate_close_of_day_preset():
-                #         self.activate_scheduled_preset(end_of_day_preset, update_status=False)
-                #
-                #     local = local_now.replace(hour=0, minute=0, microsecond=0)
-                #     SchedulerJob(local, activate_close_of_day_preset, SchedulerJobType.RESTORE_PRESET)
-                #     log_info(f"Scheduled preset '{end_of_day_preset.name}' to trigger and cover start of day")
 
                 # set a timer to rerun this at the start of the next day. Add extra 30s to avoid accuracy and truncation-errors.
                 tomorrow = zoned_now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
