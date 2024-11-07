@@ -353,11 +353,11 @@ Michael Hamilton
 Version History
 ---------------
 * 2.1.2
-  * Implemented a Preset-schedular that accounts for time spent hibernating. 
+  * Replace the Preset-schedular with an implementation that remains accurate after hibernation. 
   * Fix the day-rollover which was sheduling for the wrong day if triggered slightly before midnight. 
   * When performing a set-vcp, don't increment the NVRAM write count if the VDU doesn't respond.
   * When reconfiguring VDU controllers, discard pending VDU VCP changes. 
-  * Eliminated a potential for deadlock when handling change-events from ddcutil-service.
+  * Eliminate a potential for deadlock when handling change-events from ddcutil-service.
   * Handle ddcutil-service unexpected event types (don't raise an error dialog).
   
 * 2.1.1
