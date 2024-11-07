@@ -867,11 +867,13 @@ def is_running_in_gui_thread() -> bool:
     return QThread.currentThread() == gui_thread
 
 
-def zoned_now() -> datetime:
+def zoned_now(rounded_to_minute=False) -> datetime:
+    now = datetime.now().astimezone()
     if TESTING_TIME_ZONE is not None:  # This is a testing only path that requires python > 3.8
         from zoneinfo import ZoneInfo
-        return datetime.now(ZoneInfo(TESTING_TIME_ZONE))  # for testing scheduling
-    return datetime.now().astimezone()
+        now = datetime.now(ZoneInfo(TESTING_TIME_ZONE))  # for testing scheduling
+    return (now + timedelta(seconds=30)).replace(second=0, microsecond=0) if rounded_to_minute else now
+
 
 
 def format_solar_elevation_abbreviation(elevation: SolarElevationKey) -> str:
@@ -7917,8 +7919,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     log_info(f"Found initialization-preset for {stable_id}")
                     self.restore_preset(preset, finished_func=restored_initialization_preset, initialization_preset=True)
 
-    def _schedule_create_timetable(self, start_of_day: datetime) -> Dict[datetime, Preset]:
-        log_info(f"_schedule_create_timetable: create timetable for {start_of_day}")
+    def schedule_create_timetable(self, start_of_day: datetime) -> Dict[datetime, Preset]:
+        log_info(f"Create preset timetable for {start_of_day}")
         timetable_for_today: Dict[datetime, Preset] = {}  # Create timetable for the entire day from 00:00:00 to 23:59:59
         location = self.main_config.get_location()
         time_map = create_elevation_map(start_of_day, latitude=location.latitude, longitude=location.longitude)
@@ -7928,8 +7930,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     preset.elevation_time_today = elevation_data.when
                     timetable_for_today[elevation_data.when] = preset
                 else:
-                    log_info(f"Skipped preset {preset.name} {elevation_key} degrees,"
-                             " the sun does not reach that elevation today.")
+                    log_info(f"Skipped preset {preset.name} {elevation_key} degrees, the sun does not reach that elevation today.")
         return timetable_for_today
 
     def schedule_presets(self) -> None:
@@ -7940,8 +7941,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             with self.application_lock:
                 log_debug("schedule_presets: holding application_lock") if log_debug_enabled else None
                 Scheduler.dequeue_all(SchedulerJobType.RESTORE_PRESET)
-                start_of_today = self._start_of_today()
-                timetable_for_today = self._schedule_create_timetable(start_of_today)
+                start_of_today = zoned_now(rounded_to_minute=True).replace(hour=0, minute=0)
+                timetable_for_today = self.schedule_create_timetable(start_of_today)
                 if len(timetable_for_today) > 0:  # Use the timetable to schedule jobs
                     now = zoned_now()
                     datetime_order_today = {k: v for k, v in sorted(list(timetable_for_today.items()))}
@@ -7980,21 +7981,14 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             with self.application_lock:
                 log_debug("schedule_alteration: holding application_lock") if log_debug_enabled else None
                 preset.remove_elevation_trigger(quietly=True)
-                start_of_today = self._start_of_today()
-                timetable_for_today = self._schedule_create_timetable(start_of_today)
+                start_of_today = zoned_now(rounded_to_minute=True).replace(hour=0, minute=0)
+                timetable_for_today = self.schedule_create_timetable(start_of_today)
                 if when := next((when for when, other in timetable_for_today.items() if other == preset), None):
                     if when > zoned_now():
                         preset.schedule(when, self.activate_scheduled_preset, overdue=False)
             log_debug("schedule_alteration: released application_lock") if log_debug_enabled else None
         else:
             log_info(f"schedule_alteration: Scheduling is disabled or no location ({location=})")
-
-    def _start_of_today(self):
-        today = zoned_now()
-        if today.hour == 23 and today.minute >= 59 and today.second > 55:
-            log_info(f"Scheduling presets, altered {today} to correct day")
-            today += timedelta(days=1)
-        return today.replace(hour=0, minute=0, second=0, microsecond=0)
 
     def activate_scheduled_preset(self, preset: Preset, check_weather: bool = True, immediately: bool = False,
                                   activation_time: datetime | None = None, count: int=1) -> None:
