@@ -353,7 +353,7 @@ Michael Hamilton
 Version History
 ---------------
 * 2.1.2
-  * Replace the Preset-schedular with an implementation that remains accurate after hibernation. 
+  * Replace the Preset-schedular with an implementation that remains accurate after PC-sleep/hibernation.
   * Fix the day-rollover which was sheduling for the wrong day if triggered slightly before midnight. 
   * When performing a set-vcp, don't increment the NVRAM write count if the VDU doesn't respond.
   * When reconfiguring VDU controllers, discard pending VDU VCP changes. 
