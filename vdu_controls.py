@@ -6307,7 +6307,8 @@ class LuxMeterManualDevice(LuxMeterDevice):
 
     @staticmethod
     def save_stored_value(new_value: float):
-        CONFIG_DIR_PATH.joinpath("lux_manual_value.txt").write_text(str(round(new_value)))
+        if CONFIG_DIR_PATH.exists():
+            CONFIG_DIR_PATH.joinpath("lux_manual_value.txt").write_text(str(round(new_value)))
 
     def set_current_value(self, new_value: float) -> None:
         self.save_stored_value(new_value)
