@@ -2113,6 +2113,9 @@ class SchedulerJob:  # designed to resemble a QTimer, which it was written to re
         assert Scheduler.instance and not Scheduler.instance.is_supervising(self)
         Scheduler.instance.add(self)
 
+    def __lt__(self, other: SchedulerJob):
+        return self.when < other.when
+
     def __str__(self):
         return f"{self.job_type=} {self.when=:%Y-%m-%d %H:%M:%S}"
 
@@ -2157,19 +2160,21 @@ class Scheduler(WorkerThread):
     def _cycle(self):
         with self.lock:
             local_now = zoned_now()
-            overdue_list: List[SchedulerJob] = [job for job in self.pending_jobs_list if job.when <= local_now]
             run_now: Dict[SchedulerJobType, SchedulerJob] = {}
-            for job in overdue_list:
-                self.pending_jobs_list.remove(job)
-                if job.job_type not in run_now or (not job.has_run and job.when > run_now[job.job_type].when):
-                    run_now[job.job_type] = job  # Only most recent of each type should run
+            for job in self.pending_jobs_list:
+                if job.when <= local_now:  # Eligable to be run now
+                    self.pending_jobs_list.remove(job)
+                    if job.job_type not in run_now or (not job.has_run and job.when > run_now[job.job_type].when):
+                        run_now[job.job_type] = job  # Only most recent of each type should run
+                else: # Rest of list isn't due to run yet, can stop looking
+                    break
             for job in run_now.values():
                 log_debug(f"Scheduler: Starting  {job=!s} queued={len(self.pending_jobs_list)}") if log_debug_enabled else None
                 self.app.run_in_gui_thread(job.run)
 
     def add(self, job: SchedulerJob) -> SchedulerJob:
         with self.lock:
-            self.pending_jobs_list.append(job)
+            self.pending_jobs_list = sorted(self.pending_jobs_list + [job])
             log_debug(f"Scheduler: added {job=!s} queued={len(self.pending_jobs_list)}") if log_debug_enabled else None
             return job
 
@@ -7934,7 +7939,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 else:
                     log_debug(f"schedule_create_timetable: Skipped preset {preset.name} {elevation_key} degrees,"
                               " the sun does not reach that elevation today.")
-        return timetable_for_day
+        return {when: preset for when, preset in sorted(list(timetable_for_day.items()))}
 
     def schedule_presets(self) -> None:
         assert is_running_in_gui_thread()  # Needs to be run in the GUI thread so the timers also run in the GUI thread
@@ -7948,21 +7953,20 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 timetable_for_today = self.schedule_create_timetable(start_of_today, location)
                 if len(timetable_for_today) > 0:  # Use the timetable to schedule jobs
                     now = zoned_now()
-                    datetime_order_today = {k: v for k, v in sorted(list(timetable_for_today.items()))}
-                    future_presets = [(when, preset) for when, preset in datetime_order_today.items() if when > now]
-                    for when, preset in future_presets:  # Schedule future part of day
-                        preset.schedule(when, self.activate_scheduled_preset)
+                    if future_presets := [(when, preset) for when, preset in timetable_for_today.items() if when > now]:
+                        for when, preset in future_presets:  # Schedule future part of day
+                            preset.schedule(when, self.activate_scheduled_preset)
                     # Schedule the preset that might apply right now, either the first overdue, or last from yesterday
-                    if overdue_presets := [(when, preset) for when, preset in datetime_order_today.items() if when <= now]:
+                    if overdue_presets := [(when, preset) for when, preset in timetable_for_today.items() if when <= now]:
                         when_overdue, most_recent_overdue_preset = overdue_presets[-1]  # first is the most recently applicable
-                        if most_recent_overdue_preset.schedule_status != PresetScheduleStatus.SUCCEEDED:
+                        if most_recent_overdue_preset.schedule_status != PresetScheduleStatus.SUCCEEDED:  # not already run
                             most_recent_overdue_preset.schedule(when_overdue, self.activate_scheduled_preset, overdue=True)
                         for when, preset in overdue_presets[:-1]:  # The rest have been superseded (if not already succeeded)
-                            if preset.schedule_status != PresetScheduleStatus.SUCCEEDED:
+                            if preset.schedule_status != PresetScheduleStatus.SUCCEEDED:  # not already run
                                 preset.schedule_status = PresetScheduleStatus.SKIPPED_SUPERSEDED
                                 log_info(f"Skipped preset {preset.name}, passed assigned-time (status={preset.schedule_status})")
                     else:  # Nothing overdue today, schedule the last from yesterday (assumed to be the last for today)
-                        last_preset_yesterday = list(datetime_order_today.values())[-1]  # last for yesterday same as last for today
+                        last_preset_yesterday = list(timetable_for_today.values())[-1]  # last for yesterday same as last for today
                         last_preset_yesterday.schedule(start_of_today, self.activate_scheduled_preset, overdue=True)
                 # set a timer to rerun this scheduler at the start of the next day.
                 Scheduler.dequeue_all(SchedulerJobType.SCHEDULE_PRESETS)
