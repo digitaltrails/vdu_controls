@@ -7838,9 +7838,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         if initialization_preset:
             background_activity = True
             immediately = True
-        if not immediately and self.main_config.is_set(ConfOption.PROTECT_NVRAM_ENABLED):
-            if preset.get_transition_type() is not None:
-                log_warning(f"Setting protect-nvram prevents '{preset.name}' from transitioning, change will be immediate.")
+        elif self.main_config.is_set(ConfOption.PROTECT_NVRAM_ENABLED):
             immediately = True
         # Starts the restore, but it will complete in the worker thread
         if not is_running_in_gui_thread():  # Transfer this request into the GUI thread
@@ -7883,16 +7881,20 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                         self.main_window.update_status_indicators(preset)
                         self.main_window.display_preset_status(tr("Restored {} (elapsed time {} seconds)").format(
                             preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=2)))
+                        if (self.main_config.is_set(ConfOption.PROTECT_NVRAM_ENABLED)
+                                and preset.get_transition_type() != PresetTransitionFlag.NONE):
+                            log_warning(f"Setting protect-nvram prevents '{preset.name}' from transitioning, change are immediate.")
                     else:  # Interrupted or exception:
                         self.main_window.update_status_indicators()
                         self.main_window.display_preset_status(tr("Interrupted restoration of {}").format(preset.name))
                 if finished_func is not None:
                     finished_func(worker_thread)
 
-            self.preset_transition_workers.append(worker := PresetTransitionWorker(
-                self, preset, update_progress, restore_finished_callback, immediately, ignore_others=initialization_preset))
+            worker = PresetTransitionWorker(self, preset, update_progress, restore_finished_callback,
+                                            immediately, ignore_others=initialization_preset)
+            self.preset_transition_workers.append(worker)
             worker.start()
-            if initialization_preset:
+            if initialization_preset:  # Don't allow anything else until it's finished
                 worker.wait()
         log_debug("restore_preset: released application_lock") if log_debug_enabled else None
 
@@ -7991,7 +7993,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             log_info(f"schedule_alteration: Scheduling is disabled or no location ({location=})")
 
     def activate_scheduled_preset(self, preset: Preset, check_weather: bool = True, immediately: bool = False,
-                                  activation_time: datetime | None = None, count: int=1) -> None:
+                                  activation_time: datetime | None = None, try_count: int=1) -> None:
         assert is_running_in_gui_thread()
         if not self.main_config.is_set(ConfOption.SCHEDULE_ENABLED):
             log_info(f"Schedule is disabled - not activating preset {preset.name}")
@@ -8027,19 +8029,19 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                         _activation_feedback(tr("Skipped, superseded"))
                         return
                 _activation_feedback(tr("Error, trying again in {} seconds").format(secs))
-                if count == 1:
+                if try_count == 1:
                     log_warning(f"Error during restoration of {preset.name}, retrying every {secs} seconds.")
                 QTimer.singleShot(
                     int(secs * 1000),
-                    partial(self.activate_scheduled_preset, preset, check_weather, immediately, activation_time, count + 1))
+                    partial(self.activate_scheduled_preset, preset, check_weather, immediately, activation_time, try_count + 1))
                 return
             if not off_schedule:
                 preset.schedule_status = PresetScheduleStatus.SUCCEEDED
             self.main_window.update_status_indicators(preset)
             _activation_feedback(tr("Restored {}").format(preset.name))
-            log_info(f"Restored preset {preset.name} on try {count=}") if count > 1 else None
+            log_info(f"Restored preset {preset.name} on try {try_count}") if try_count > 1 else None
 
-        log_info(f"Activating scheduled preset {preset.name} transition={immediately} {off_schedule=}") if count == 1 else None
+        log_info(f"Activating scheduled preset {preset.name} transition={immediately} {off_schedule=}") if try_count == 1 else None
         # Happens asynchronously in a thread
         self.restore_preset(preset, finished_func=_activation_finished,
                             immediately=immediately or PresetTransitionFlag.SCHEDULED not in preset.get_transition_type(),
