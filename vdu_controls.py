@@ -2133,6 +2133,7 @@ class Scheduler(WorkerThread):
     @staticmethod
     def check():
         if Scheduler.instance:
+            log_info("Scheduler: Checking schedule now")
             Scheduler.instance._cycle()
 
     @staticmethod
