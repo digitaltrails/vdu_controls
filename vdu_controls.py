@@ -8428,6 +8428,13 @@ class VduAppWindow(QMainWindow):
         # Wire-up after successful init to avoid deadlocks
         self.main_panel.vdu_vcp_changed_qtsignal.connect(self.respond_to_changes_handler)
         self.indicate_busy(True)
+
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setWidget(self.main_panel)
+        #self.scroll_area.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding))
+        self.setCentralWidget(self.scroll_area)
+
         available_height = QDesktopWidget().availableGeometry().height() - 200  # Minus allowance for panel/tray
         #self.main_panel.adjustSize()
         hint_height = self.main_panel.sizeHint().height()  # The hint is the actual required layout space
@@ -8440,15 +8447,11 @@ class VduAppWindow(QMainWindow):
 
         else:  # Don't mess with the size unnecessarily - let the user determine it?
             self.setMinimumHeight(hint_height + 20)
-            self.setMinimumWidth(hint_width + 20)
-            if hint_height > self.height():
+            if hint_height != self.height():
+                self.setMinimumWidth(self.width())
                 self.adjustSize()
-        self.scroll_area = QScrollArea()
-        self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setWidget(self.main_panel)
-        #self.scroll_area.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding))
+            self.setMinimumWidth(hint_width + 20)
 
-        self.setCentralWidget(self.scroll_area)
         self.splash_message_qtsignal.emit(tr("Checking Presets"))
 
     def get_main_panel(self) -> VduControlsMainPanel:
