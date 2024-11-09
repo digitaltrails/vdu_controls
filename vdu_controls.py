@@ -6876,6 +6876,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
             elif self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True):
                 self.lux_config.set('lux-meter', 'interpolate-brightness', 'no')
                 self.apply_settings()
+            self.profile_plot.create_plot()
 
         self.interpolate_checkbox.stateChanged.connect(set_interpolation)
 
