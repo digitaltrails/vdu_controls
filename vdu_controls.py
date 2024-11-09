@@ -797,6 +797,7 @@ from enum import Enum, IntFlag
 from functools import partial
 from importlib import import_module
 from pathlib import Path
+
 from threading import Lock
 from typing import List, Tuple, Mapping, Type, Dict, Callable, Any, NewType
 from urllib.error import URLError
@@ -1006,7 +1007,7 @@ CUSTOM_TRAY_ICON_FILE = CONFIG_DIR_PATH.joinpath('tray_icon.svg')
 LOCALE_TRANSLATIONS_PATHS = [
     Path.cwd().joinpath('translations')] if os.getenv('VDU_CONTROLS_DEVELOPER', default="no") == 'yes' else [] + [
     Path(CONFIG_DIR_PATH).joinpath('translations'), Path("/usr/share/vdu_controls/translations"), ]
-
+STANDARD_ICON_PATHS = (Path("/usr/share/vdu_controls/icons"), Path("/usr/share/icons/breeze/actions/24"), Path("/usr/share/icons"),)
 
 class MsgDestination(Enum):
     DEFAULT = 0
@@ -1521,20 +1522,20 @@ class Ddcutil:
         return self.supported_codes
 
     def get_vcp_values(self, vdu_number: str, vcp_code_list: List[str]) -> List[VcpValue]:
-        results_dict: Dict[str, VcpValue | None] = {vcp_code: None for vcp_code in vcp_code_list}
+        values_dict: Dict[str, VcpValue | None] = {vcp_code: None for vcp_code in vcp_code_list}
         # Try a few times in case there is a glitch due to a monitor being turned-off/on or slow to respond
         for attempt_count in range(DDCUTIL_RETRIES):
-            values = self.ddcutil_impl.get_vcp_values(self.get_edid_txt(vdu_number), [int(vcp, 16) for vcp in vcp_code_list])
-            for vcp, value, maxv, _ in values:
+            values_list = self.ddcutil_impl.get_vcp_values(self.get_edid_txt(vdu_number), [int(vcp, 16) for vcp in vcp_code_list])
+            for vcp, value, maxv, _ in values_list:
                 vcp_code = f'{vcp:02X}'
                 vcp_type = self.get_type(vdu_number, vcp_code)
-                results_dict[vcp_code] = VcpValue(value, maxv, vcp_type)
-            if None not in results_dict.values():
-                break  # Got all values - OK to stop
-        for vcp_code, value in results_dict.items():
-            if value is None:
+                values_dict[vcp_code] = VcpValue(value, maxv, vcp_type)
+            if None not in values_dict.values():
+                break  # Got all values - OK to stop, otherwise try again
+        for vcp_code, value in values_dict.items():
+            if value is None:  # If all attempts failed, the values_dict will be missing one or more values.
                 raise ValueError(f"getvcp: display-{vdu_number} - failed to obtain value for vcp_code {vcp_code}")
-        return list(results_dict.values())
+        return list(values_dict.values())
 
 
 class DdcEventType(Enum):  # Has to correspond to what the service supports
@@ -4449,7 +4450,7 @@ class PresetChooseIconButton(QPushButton):
         self.setAutoDefault(False)
         self.last_selected_icon_path: Path | None = None
         self.last_icon_dir = Path.home()
-        for path in (Path("/usr/share/vdu_controls/icons"), Path("/usr/share/icons/breeze/actions/24"), Path("/usr/share/icons"),):
+        for path in STANDARD_ICON_PATHS:
             if path.exists():
                 self.last_icon_dir = path
                 break
@@ -8444,7 +8445,6 @@ class VduAppWindow(QMainWindow):
             log_debug(f"Main panel too high, adding scroll-area {hint_height=} {available_height=}") if log_debug_enabled else None
             self.setMaximumHeight(available_height)
             self.setMinimumWidth(hint_width + 20)  # Allow extra space for disappearing scrollbars
-
         else:  # Don't mess with the size unnecessarily - let the user determine it?
             self.setMinimumHeight(hint_height + 20)
             if hint_height != self.height():
