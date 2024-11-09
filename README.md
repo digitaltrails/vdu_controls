@@ -359,6 +359,7 @@ Version History
   * When reconfiguring VDU controllers, discard pending VDU VCP changes. 
   * Eliminate a potential for deadlock when handling change-events from ddcutil-service.
   * Handle ddcutil-service unexpected event types (don't raise an error dialog).
+  * The main window height will automatically resize to accommodate the number of controls present.
   
 * 2.1.1
   * Removed --dbus-signals-enabled. DBus signals are now always enabled when --dbus-client
