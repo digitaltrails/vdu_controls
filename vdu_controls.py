@@ -6865,14 +6865,15 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.interval_selector.valueChanged.connect(_interval_selector_changed)
 
         def _set_interpolation(checked: int) -> None:
-            if (checked == Qt.Checked) and not self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True):
-                alert = MessageBox(QMessageBox.Warning)
-                alert.setText(tr('Interpolation may increase the number of writes to VDU NVRAM.'))
-                alert.setInformativeText('When designing brightness reponse curves consider minimizing '
-                                         'brightness changes to reduce wear on NVRAM.')
-                alert.exec()
-                self.lux_config.set('lux-meter', 'interpolate-brightness', 'yes')
-                self.apply_settings()
+            if checked == Qt.Checked:  # need to save setting if not already set
+                if not self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=False):
+                    alert = MessageBox(QMessageBox.Warning)
+                    alert.setText(tr('Interpolation may increase the number of writes to VDU NVRAM.'))
+                    alert.setInformativeText('When designing brightness reponse curves consider minimizing '
+                                             'brightness changes to reduce wear on NVRAM.')
+                    alert.exec()
+                    self.lux_config.set('lux-meter', 'interpolate-brightness', 'yes')
+                    self.apply_settings()
             elif self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True):
                 self.lux_config.set('lux-meter', 'interpolate-brightness', 'no')
                 self.apply_settings()

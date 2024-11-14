@@ -361,6 +361,7 @@ Version History
   * Handle ddcutil-service unexpected event types (don't raise an error dialog).
   * The main window height will automatically resize to accommodate the number of controls present.
   * Toggling lux brighness-interpolation now immediately updates the profile-plot to reflect the change.
+  * Fix the Lux Dialog, it was turning off interpolation when first constructed.
   
 * 2.1.1
   * Removed --dbus-signals-enabled. DBus signals are now always enabled when --dbus-client
