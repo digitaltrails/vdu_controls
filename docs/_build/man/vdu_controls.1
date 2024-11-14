@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Oct 29, 2024" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Nov 15, 2024" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 2.1.2
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -250,8 +250,7 @@ The config files are in INI\-format divided into a number of sections as outline
 .INDENT 0.0
 .INDENT 3.5
 .sp
-.nf
-.ft C
+.EX
 [vdu\-controls\-globals]
 # The vdu\-controls\-globals section is only required in $HOME/.config/vdu_controls/vdu_controls.conf
 system\-tray\-enabled = yes|no
@@ -287,8 +286,7 @@ sleep\-multiplier = 0.5
 [ddcutil\-capabilities]
 # The (possibly edited) output from \(dqddcutil \-\-display N capabilities\(dq with leading spaces retained.
 capabilities\-override =
-.ft P
-.fi
+.EE
 .UNINDENT
 .UNINDENT
 .sp
@@ -300,11 +298,9 @@ As well as using the \fBSettings\fP, config files may also be created by the com
 .INDENT 0.0
 .INDENT 3.5
 .sp
-.nf
-.ft C
+.EX
 vdu_controls \-\-create\-config\-files
-.ft P
-.fi
+.EE
 .UNINDENT
 .UNINDENT
 .sp
@@ -338,12 +334,10 @@ For the brightness example the completed edit would look like:
 .INDENT 0.0
 .INDENT 3.5
 .sp
-.nf
-.ft C
+.EX
 Feature: 10 (Brightness)
     Values: 20..80
-.ft P
-.fi
+.EE
 .UNINDENT
 .UNINDENT
 .sp
@@ -359,11 +353,9 @@ to the feature\-names within the \fBcapabilities override\fP\&.  For example:
 .INDENT 0.0
 .INDENT 3.5
 .sp
-.nf
-.ft C
+.EX
 Feature: 15 (Picture Mode)
-.ft P
-.fi
+.EE
 .UNINDENT
 .UNINDENT
 .sp
@@ -371,11 +363,9 @@ Can be annotated with:
 .INDENT 0.0
 .INDENT 3.5
 .sp
-.nf
-.ft C
+.EX
 Feature: 15 (Picture Mode *refresh*)
-.ft P
-.fi
+.EE
 .UNINDENT
 .UNINDENT
 .sp
@@ -412,8 +402,7 @@ section for each connected VDU, for example:
 .INDENT 0.0
 .INDENT 3.5
 .sp
-.nf
-.ft C
+.EX
 [preset]
 icon = /usr/share/icons/breeze/status/16/cloudstatus.svg
 solar\-elevation = eastern\-sky 40
@@ -427,8 +416,7 @@ osd\-language = 02
 [LG_HDR_4K_89765]
 brightness = 13
 audio\-speaker\-volume = 16
-.ft P
-.fi
+.EE
 .UNINDENT
 .UNINDENT
 .sp
@@ -546,11 +534,9 @@ Identify the running vdu_controls (assuming it is installed as /usr/bin/vdu_cont
 .INDENT 0.0
 .INDENT 3.5
 .sp
-.nf
-.ft C
+.EX
 ps axwww | grep \(aq[/]usr/bin/vdu_controls\(aq
-.ft P
-.fi
+.EE
 .UNINDENT
 .UNINDENT
 .sp
@@ -558,12 +544,10 @@ Combine this with kill to trigger a preset change:
 .INDENT 0.0
 .INDENT 3.5
 .sp
-.nf
-.ft C
+.EX
 kill \-40 $(ps axwww | grep \(aq[/]usr/bin/vdu_controls\(aq | awk \(aq{print $1}\(aq)
 kill \-41 $(ps axwww | grep \(aq[/]usr/bin/vdu_controls\(aq | awk \(aq{print $1}\(aq)
-.ft P
-.fi
+.EE
 .UNINDENT
 .UNINDENT
 .sp
@@ -571,11 +555,9 @@ Or if some other process has changed a VDUs settings, trigger vdu_controls to up
 .INDENT 0.0
 .INDENT 3.5
 .sp
-.nf
-.ft C
+.EX
 kill \-HUP $(ps axwww | grep \(aq[/]usr/bin/vdu_controls\(aq | awk \(aq{print $1}\(aq)
-.ft P
-.fi
+.EE
 .UNINDENT
 .UNINDENT
 .UNINDENT
@@ -648,7 +630,7 @@ The examples may require customising for your own webcam and lighting conditions
 .SS Lux Metering and brightness transitions
 .sp
 Due to VDU hardware and DDC protocol limitations, gradual transitions from one brightness level to
-another are likely to be noticeable and potentially annoying.  As well as being anoying
+another are likely to be noticeable and potentially annoying.  As well as being annoying
 excessive stepping may eat into VDU NVRAM lifespan.
 .sp
 The auto\-brightness adjustment feature includes several measures to reduce the number of
@@ -710,8 +692,7 @@ heuristics:
 .INDENT 0.0
 .INDENT 3.5
 .sp
-.nf
-.ft C
+.EX
 [lux\-meter]
 # How many times per minute to sample from the Lux meter (for auto\-adjustment)
 samples\-per\-minute=3
@@ -727,8 +708,7 @@ smoother\-alpha=0.5
 interpolation\-sensitivity\-percent=10
 # Jump brightness in one step up to this maximum, after which transition in steps.
 max\-brightness\-jump=100
-.ft P
-.fi
+.EE
 .UNINDENT
 .UNINDENT
 .SS Improving Response Time: Dynamic Optimization and Sleep Multipliers
@@ -887,13 +867,11 @@ Software:
 .INDENT 0.0
 .INDENT 3.5
 .sp
-.nf
-.ft C
+.EX
 zypper install python3 python3\-qt5 noto\-sans\-math\-fonts noto\-sans\-symbols2\-fonts
 zypper install ddcutil
 zypper install libddcutil ddcutil\-service  # optional, but recommended if available
-.ft P
-.fi
+.EE
 .UNINDENT
 .UNINDENT
 .sp
