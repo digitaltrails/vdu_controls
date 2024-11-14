@@ -2650,11 +2650,11 @@ class VduController(QObject):
         self.ddcutil = ddcutil
         self.vdu_exception_handler = vdu_exception_handler
 
-        def handle_async_setvcp_exception(vcp_code: str, value: int, origin: VcpOrigin, e: VduException):
+        def _handle_async_setvcp_exception(vcp_code: str, value: int, origin: VcpOrigin, e: VduException):
             if self.vdu_exception_handler(e, True):
                 self.set_vcp_value_asynchronously(vcp_code, value, origin)
 
-        self._async_setvcp_exception_qtsignal.connect(handle_async_setvcp_exception)
+        self._async_setvcp_exception_qtsignal.connect(_handle_async_setvcp_exception)
         if VduController._async_setvcp_task is None or VduController._async_setvcp_task.isFinished():
             VduController._async_setvcp_task = VduControllerAsyncSetter()
             VduController._async_setvcp_task.start()
@@ -2787,7 +2787,7 @@ class VduController(QObject):
         if capabilities_text == "Ignore VDU":
             return {}
 
-        def parse_values(values_str: str) -> List[str]:
+        def _parse_values(values_str: str) -> List[str]:
             values_list = []
             if stripped := values_str.strip():
                 lines_list = stripped.split('\n')
@@ -2808,7 +2808,7 @@ class VduController(QObject):
                 vcp_name = feature_match.group(2)
                 if requires_refresh := vcp_name.lower().endswith(VduController._FORCE_REFRESH_NAME_SUFFIX):
                     vcp_name = vcp_name.replace(VduController._FORCE_REFRESH_NAME_SUFFIX, "")
-                values = parse_values(feature_match.group(3))
+                values = _parse_values(feature_match.group(3))
                 # Guess type from existence or not of value list
                 if len(values) == 0:
                     vcp_type = CONTINUOUS_TYPE
@@ -2922,7 +2922,7 @@ class SettingsEditorTab(QWidget):
         self.ini_editable = self.ini_before.duplicate()
         self.field_list: List[SettingsEditorFieldBase] = []
 
-        def field(widget: SettingsEditorFieldBase) -> QWidget:
+        def _field(widget: SettingsEditorFieldBase) -> QWidget:
             self.field_list.append(widget)
             return widget
 
@@ -2939,15 +2939,15 @@ class SettingsEditorTab(QWidget):
                 if section_name != ConfIni.VDU_CONTROLS_GLOBALS or option_def != ConfOption.UNKNOWN:
                     if option_def.conf_type == ConfIni.TYPE_BOOL:
                         booleans_grid.addWidget(
-                            field(
+                            _field(
                                 SettingsEditorBooleanWidget(self, option_name, section_name,
                                                             option_def.help, option_def.related, option_def.requires)),
                             bool_count // grid_columns, bool_count % grid_columns)
                         bool_count += 1
                     else:
-                        layout.addWidget(field(widget_map[option_def.conf_type](self, option_name, section_name, option_def.help)))
+                        layout.addWidget(_field(widget_map[option_def.conf_type](self, option_name, section_name, option_def.help)))
 
-        def save_clicked() -> None:
+        def _save_clicked() -> None:
             if self.is_unsaved():
                 self.save()
             else:
@@ -2957,7 +2957,7 @@ class SettingsEditorTab(QWidget):
 
         self.status_bar = QStatusBar()
         save_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr("Save {}").format(vdu_config.config_name))
-        save_button.clicked.connect(save_clicked)
+        save_button.clicked.connect(_save_clicked)
         self.status_bar.addPermanentWidget(save_button, 0)
 
         save_all_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr("Save All").format(vdu_config.config_name))
@@ -2968,7 +2968,7 @@ class SettingsEditorTab(QWidget):
         quit_button.clicked.connect(editor_dialog.close)  # type: ignore
         self.status_bar.addPermanentWidget(quit_button, 0)
 
-        def settings_reset() -> None:
+        def _settings_reset() -> None:
             confirmation = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Reset | QMessageBox.Cancel)
             confirmation.setDefaultButton(QMessageBox.Cancel)
             confirmation.setText(tr('Reset settings under the {} tab?').format(vdu_config.config_name))
@@ -2980,7 +2980,7 @@ class SettingsEditorTab(QWidget):
             self.change_callback(None)
 
         reset_button = QPushButton(si(self, QStyle.SP_BrowserReload), tr("Reset").format(vdu_config.config_name))
-        reset_button.clicked.connect(settings_reset)
+        reset_button.clicked.connect(_settings_reset)
         reset_button.setToolTip(tr("Reset/remove existing settings under the {} tab.").format(vdu_config.config_name))
         self.status_bar.addWidget(reset_button, 0)
 
@@ -3054,7 +3054,7 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
         checkbox = QCheckBox(self.translate_option())
         checkbox.setChecked(section_editor.ini_editable.getboolean(section, option))
 
-        def toggled(is_checked: bool) -> None:
+        def _toggled(is_checked: bool) -> None:
             section_editor.ini_editable[section][option] = 'yes' if is_checked else 'no'
             if related:
                 info = MessageBox(QMessageBox.Information, QMessageBox.Ok)
@@ -3065,7 +3065,7 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
                 info.setText(tr("You will also need to set\n{}").format(tr(requires)))
                 info.exec()
 
-        checkbox.toggled.connect(toggled)
+        checkbox.toggled.connect(_toggled)
         self.layout().addWidget(checkbox)
         self.checkbox = checkbox
 
@@ -3127,10 +3127,10 @@ class SettingsEditorFloatWidget(SettingsEditorFieldBase):
         self.spinbox.setValue(value)
         self.layout().addWidget(self.spinbox)
 
-        def spinbox_value_changed() -> None:
+        def _spinbox_value_changed() -> None:
             section_editor.ini_editable[section][option] = locale.delocalize(f"{self.spinbox.value():.2f}")
 
-        self.spinbox.valueChanged.connect(spinbox_value_changed)
+        self.spinbox.valueChanged.connect(_spinbox_value_changed)
 
     def reset(self) -> None:
         self.spinbox.setValue(float(self.section_editor.ini_before.get(self.section, self.option)))
@@ -3175,13 +3175,13 @@ class SettingsEditorLocationWidget(SettingsEditorLineBase):
         self.text_input.setText(section_editor.ini_editable[section][option])
         self.text_input.setToolTip(tr("Latitude,Longitude for solar elevation calculations."))
 
-        def detection_location() -> None:
+        def _detection_location() -> None:
             if data_csv := self.location_dialog():
                 self.text_input.setText(data_csv)
                 self.editing_finished()
 
         detect_location_button = QPushButton(tr("Detect"))
-        detect_location_button.clicked.connect(detection_location)
+        detect_location_button.clicked.connect(_detection_location)
         detect_location_button.setToolTip(tr("Detect location by querying this desktop's external IP address."))
         self.layout().addWidget(detect_location_button)
         self.layout().addStretch(1)
@@ -3230,10 +3230,10 @@ class SettingsEditorLongTextWidget(SettingsEditorFieldBase):
         layout.addWidget(text_label)
         text_editor = QPlainTextEdit(section_editor.ini_editable[section][option])
 
-        def text_changed() -> None:
+        def _text_changed() -> None:
             section_editor.ini_editable[section][option] = text_editor.toPlainText()
 
-        text_editor.textChanged.connect(text_changed)
+        text_editor.textChanged.connect(_text_changed)
         layout.addWidget(text_editor)
         self.text_editor = text_editor
 
@@ -3385,11 +3385,11 @@ class VduControlSlider(VduControlBase):
         self.spinbox.setValue(slider.value())
         layout.addWidget(self.spinbox)
 
-        def slider_changed(value: int) -> None:
+        def _slider_changed(value: int) -> None:
             self.current_value = value
             self.ui_change_vdu_attribute(value)
 
-        slider.valueChanged.connect(slider_changed)
+        slider.valueChanged.connect(_slider_changed)
 
     def update_from_vdu(self, vcp_value: VcpValue):
         if len(self.range_restriction) == 0:
@@ -3432,12 +3432,12 @@ class VduControlComboBox(VduControlBase):
             self.keys.append(value)
             combo_box.addItem(self.translate_label(desc), value)
 
-        def index_changed(_: int) -> None:
+        def _index_changed(_: int) -> None:
             self.current_value = int(self.combo_box.currentData(), 16)
             if self.validate_value() >= 0:
                 self.ui_change_vdu_attribute(self.current_value)
 
-        combo_box.currentIndexChanged.connect(index_changed)
+        combo_box.currentIndexChanged.connect(_index_changed)
 
     def translate_label(self, source: str) -> str:
         canonical = source.lower()
@@ -3773,13 +3773,13 @@ class ContextMenu(QMenu):
 
     def insert_preset_menu_action(self, preset: Preset, issue_update: bool = True) -> None:
 
-        def menu_restore_preset() -> None:
+        def _menu_restore_preset() -> None:
             self.app_controller.restore_named_preset(self.sender().property(ContextMenu.PRESET_NAME_PROP))
 
         assert preset.name
         shortcut = self.allocate_preset_shortcut(preset.name)
         action_name = shortcut.annotated_word if shortcut else preset.name
-        action = self.addAction(preset.create_icon(), action_name, menu_restore_preset)  # Have to add it, then move/insert it.
+        action = self.addAction(preset.create_icon(), action_name, _menu_restore_preset)  # Have to add it, then move/insert it.
         self.insertAction(self.presets_separator, action)  # Insert before the presets_separator
         action.setProperty(ContextMenu.BUSY_DISABLE_PROP, QVariant(True))
         action.setProperty(ContextMenu.PRESET_NAME_PROP, preset.name)
@@ -3995,12 +3995,12 @@ class VduControlsMainPanel(QWidget):
         self.bottom_toolbar = VduPanelBottomToolBar(tool_buttons=tool_buttons, app_context_menu=app_context_menu, parent=self)
         controllers_layout.addWidget(self.bottom_toolbar, 0, Qt.AlignBottom)
 
-        def open_context_menu(position: QPoint) -> None:
+        def _open_context_menu(position: QPoint) -> None:
             assert app_context_menu is not None
             app_context_menu.exec(self.mapToGlobal(position))
 
         self.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.customContextMenuRequested.connect(open_context_menu)
+        self.customContextMenuRequested.connect(_open_context_menu)
 
     def indicate_busy(self, is_busy: bool = True, lock_controls: bool = True) -> None:
         if self.bottom_toolbar is not None:
@@ -4391,11 +4391,11 @@ class PresetWidget(QWidget):
         self.timer_control_button.setAutoDefault(False)
 
         if preset.get_solar_elevation() is not None:
-            def toggle_timer(_) -> None:
+            def _toggle_timer(_) -> None:
                 preset.toggle_timer()
                 self.update_timer_button()
 
-            self.timer_control_button.clicked.connect(toggle_timer)
+            self.timer_control_button.clicked.connect(_toggle_timer)
 
         line_layout.addWidget(self.timer_control_button)
         self.update_timer_button()
@@ -4588,7 +4588,7 @@ class PresetChooseWeatherWidget(QWidget):
         self.layout().addWidget(self.label)
         self.chooser = QComboBox()
 
-        def select_action(index: int) -> None:
+        def _select_action(index: int) -> None:
             self.required_weather_filepath = self.chooser.itemData(index)
             if self.chooser.itemData(index) is None:
                 self.info_label.setText('')
@@ -4605,7 +4605,7 @@ class PresetChooseWeatherWidget(QWidget):
                     self.chooser.setCurrentIndex(0)
             self.populate()
 
-        self.chooser.currentIndexChanged.connect(select_action)
+        self.chooser.currentIndexChanged.connect(_select_action)
         self.chooser.setToolTip(self.label.toolTip())
         self.layout().addWidget(self.chooser)
         self.info_label = QLabel()
@@ -4823,7 +4823,7 @@ class PresetChooseElevationChart(QLabel):
         pixmap = QPixmap(width, height)
         painter = QPainter(pixmap)
 
-        def reverse_x(x_val: int) -> int:  # makes thinking right-to-left a bit easier. MAYBE
+        def _reverse_x(x_val: int) -> int:  # makes thinking right-to-left a bit easier. MAYBE
             return width - x_val
 
         painter.fillRect(0, 0, width, origin_iy, QColor(0x5b93c5))
@@ -4846,7 +4846,7 @@ class PresetChooseElevationChart(QLabel):
                 a, z = calc_solar_azimuth_zenith(t, self.location.latitude, self.location.longitude)
                 sun_height = math.sin(math.radians(90.0 - z)) * range_iy
                 y = origin_iy - round(sun_height)
-                curve_points.append(QPoint(reverse_x(x), y))  # Save the plot points to a list
+                curve_points.append(QPoint(_reverse_x(x), y))  # Save the plot points to a list
                 if sun_height > max_sun_height:
                     max_sun_height = sun_height
                     solar_noon_x, solar_noon_y = x, y
@@ -4859,7 +4859,7 @@ class PresetChooseElevationChart(QLabel):
                 t += timedelta(minutes=1)
             if sun_plot_x == sys.maxsize:  # ev_key is for an elevation that does not occur today - draw sun at noon elev.
                 sun_plot_x, sun_plot_y = solar_noon_x, solar_noon_y
-            self.noon_x = reverse_x(solar_noon_x)
+            self.noon_x = _reverse_x(solar_noon_x)
             self.noon_y = solar_noon_y
 
             # Draw elevation curve for today from the accumulated plot points:
@@ -4868,14 +4868,14 @@ class PresetChooseElevationChart(QLabel):
 
             # Draw various annotations such the horizon-line, noon-line, E & W, and the current degrees:
             painter.setPen(QPen(Qt.white, std_line_width))
-            painter.drawLine(reverse_x(0), origin_iy, reverse_x(width), origin_iy)
-            painter.drawLine(reverse_x(solar_noon_x), origin_iy, reverse_x(solar_noon_x), 0)
+            painter.drawLine(_reverse_x(0), origin_iy, _reverse_x(width), origin_iy)
+            painter.drawLine(_reverse_x(solar_noon_x), origin_iy, _reverse_x(solar_noon_x), 0)
             painter.setPen(QPen(Qt.white, std_line_width))
             painter.setFont(QFont(QApplication.font().family(), width // 20, QFont.Weight.Bold))
-            painter.drawText(QPoint(reverse_x(70), origin_iy - 32), tr("E"))
-            painter.drawText(QPoint(reverse_x(width - 25), origin_iy - 32), tr("W"))
+            painter.drawText(QPoint(_reverse_x(70), origin_iy - 32), tr("E"))
+            painter.drawText(QPoint(_reverse_x(width - 25), origin_iy - 32), tr("W"))
             time_text = sun_plot_time.strftime("%H:%M") if sun_plot_time else "____"
-            painter.drawText(reverse_x(solar_noon_x + width // 4), origin_iy + int(height / 2.75),
+            painter.drawText(_reverse_x(solar_noon_x + width // 4), origin_iy + int(height / 2.75),
                              f"{ev_key.elevation if ev_key else 0:3d}{DEGREE_SYMBOL} {time_text}")
 
             # Draw pie/compass angle
@@ -4891,7 +4891,7 @@ class PresetChooseElevationChart(QLabel):
             painter.setBrush(QColor(255, 255, 255, 64))
             span_angle = -(angle_above_horz + 19)  # From start angle spanning counterclockwise back toward the right to -19.
             pie_width = pie_height = range_iy * 2
-            painter.drawPie(reverse_x(solar_noon_x) - pie_width // 2, origin_iy - pie_height // 2, pie_width, pie_height,
+            painter.drawPie(_reverse_x(solar_noon_x) - pie_width // 2, origin_iy - pie_height // 2, pie_width, pie_height,
                             angle_above_horz * 16, span_angle * 16)
 
             # Draw drag-dot
@@ -4902,20 +4902,20 @@ class PresetChooseElevationChart(QLabel):
                 ddot_radians = math.radians(angle_above_horz if ev_key else -19)
                 ddot_x = round(range_iy * math.cos(ddot_radians)) - 8
                 ddot_y = round(range_iy * math.sin(ddot_radians)) + 8
-                painter.drawEllipse(reverse_x(solar_noon_x - ddot_x), origin_iy - ddot_y, 16, 16)
+                painter.drawEllipse(_reverse_x(solar_noon_x - ddot_x), origin_iy - ddot_y, 16, 16)
                 if not self.in_drag:
                     painter.setPen(QPen(Qt.black, 1))
-                    painter.drawText(QPoint(reverse_x(solar_noon_x - ddot_x) + 10, origin_iy - ddot_y - 5), tr("Drag to change."))
+                    painter.drawText(QPoint(_reverse_x(solar_noon_x - ddot_x) + 10, origin_iy - ddot_y - 5), tr("Drag to change."))
 
             # Draw origin-dot
             painter.setPen(QPen(QColor(0xff965b), 2))
             if self.current_pos is not None and not self.in_drag:
                 if radius < self.radius_of_deletion:
                     painter.setPen(QPen(Qt.black, 1))
-                    painter.drawText(QPoint(reverse_x(solar_noon_x + 8) + 10, origin_iy - 8 - 5), tr("Click to delete."))
+                    painter.drawText(QPoint(_reverse_x(solar_noon_x + 8) + 10, origin_iy - 8 - 5), tr("Click to delete."))
                     painter.setPen(QPen(Qt.red, 2))
             painter.setBrush(painter.pen().color())
-            painter.drawEllipse(reverse_x(solar_noon_x + 8), origin_iy - 8, 16, 16)
+            painter.drawEllipse(_reverse_x(solar_noon_x + 8), origin_iy - 8, 16, 16)
 
             if ev_key:
                 # Draw a line representing the slider degrees and rise/set indicator - may be higher than sun for today:
@@ -4928,20 +4928,20 @@ class PresetChooseElevationChart(QLabel):
                 painter.setPen(sky_line_pen)
                 painter.setBrush(painter.pen().color())
                 if ev_key.direction == EASTERN_SKY:
-                    painter.drawLine(reverse_x(0), sky_line_y, reverse_x(solar_noon_x), sky_line_y)
+                    painter.drawLine(_reverse_x(0), sky_line_y, _reverse_x(solar_noon_x), sky_line_y)
                     painter.setPen(QPen(painter.pen().color(), 1))
-                    painter.drawPolygon(QPolygon([QPoint(reverse_x(0) - 20 + tx, sky_line_y - 10 + ty)
+                    painter.drawPolygon(QPolygon([QPoint(_reverse_x(0) - 20 + tx, sky_line_y - 10 + ty)
                                                   for tx, ty in [(-8, 0), (0, -16), (8, 0)]]))
                 else:
-                    painter.drawLine(reverse_x(solar_noon_x), sky_line_y, reverse_x(width), sky_line_y)
+                    painter.drawLine(_reverse_x(solar_noon_x), sky_line_y, _reverse_x(width), sky_line_y)
                     painter.setPen(QPen(painter.pen().color(), 1))
-                    painter.drawPolygon(QPolygon([QPoint(reverse_x(width - 18) + tx, sky_line_y + 10 + ty)
+                    painter.drawPolygon(QPolygon([QPoint(_reverse_x(width - 18) + tx, sky_line_y + 10 + ty)
                                                   for tx, ty in [(-8, 0), (0, 16), (8, 0)]]))
                 # Draw the sun
                 painter.setPen(QPen(QColor(0xff4a23), std_line_width))
                 if self.sun_image is None:
                     self.sun_image = create_image_from_svg_bytes(BRIGHTNESS_SVG.replace(SVG_LIGHT_THEME_COLOR, b"#ffdd30"))
-                painter.drawImage(QPoint(reverse_x(sun_plot_x) - self.sun_image.width() // 2,
+                painter.drawImage(QPoint(_reverse_x(sun_plot_x) - self.sun_image.width() // 2,
                                          sun_plot_y - self.sun_image.height() // 2), self.sun_image)
 
         painter.end()
@@ -5270,14 +5270,14 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
         self.edit_revert_button = QPushButton(si(self, QStyle.SP_DialogResetButton), tr('Revert'))
 
-        def revert_callable() -> None:
+        def _revert_callable() -> None:
             preset_widget = self.find_preset_widget(self.preset_name_edit.text().strip())
             if preset_widget is None:
                 self.preset_name_edit.setText('')
             else:
                 self.edit_preset(preset_widget.preset)
 
-        self.edit_revert_button.clicked.connect(revert_callable)
+        self.edit_revert_button.clicked.connect(_revert_callable)
         self.edit_revert_button.setToolTip(tr("Abandon edits, revert VDU and Preset settings."))
         self.status_bar.addPermanentWidget(self.edit_revert_button)
 
@@ -5504,7 +5504,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
     def edit_preset(self, preset: Preset) -> None:
 
-        def begin_editing(worker: PresetTransitionWorker | None = None) -> None:
+        def _begin_editing(worker: PresetTransitionWorker | None = None) -> None:
             if worker is None or worker.work_state == PresetTransitionState.FINISHED:
                 self.set_widget_values_from_preset(preset)
             else:
@@ -5513,7 +5513,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
         if preset:
             self.setDisabled(True)  # Stop any editing until after the preset is restored.
-            self.main_controller.restore_preset(preset, finished_func=begin_editing, immediately=True)
+            self.main_controller.restore_preset(preset, finished_func=_begin_editing, immediately=True)
 
     def save_preset(self, _: bool = False, from_widget: PresetWidget = None,
                     quiet: bool = False) -> QMessageBox.Ok | QMessageBox.Cancel:
@@ -6357,24 +6357,24 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         log_info(f"LuxAutoWorker: lux-meter.interval-minutes={ lux_config.get_interval_minutes()}")
         self.sleep_seconds = lux_config.get_interval_minutes() * 60
 
-        def get_prop(prop: str, fallback: bool | int | float | str) -> bool | int | float:
+        def _get_prop(prop: str, fallback: bool | int | float | str) -> bool | int | float:
             op = {bool: lux_config.getboolean, int: lux_config.getint, float: lux_config.getfloat}[type(fallback)]
             value = op('lux-meter', prop, fallback=fallback)
             log_info(f"LuxAutoWorker: lux-meter.{prop}={value}")
             return value
         
-        samples_per_minute = get_prop('samples-per-minute', fallback=3)
+        samples_per_minute = _get_prop('samples-per-minute', fallback=3)
         self.sampling_interval_seconds = 60 // samples_per_minute
-        self.smoother = LuxSmooth(get_prop('smoother-n', fallback=5), alpha=get_prop('smoother-alpha', fallback=0.5))
-        self.interpolation_enabled = get_prop('interpolate-brightness', fallback=True)
-        self.sensitivity_percent = get_prop('interpolation-sensitivity-percent', fallback=10)
-        self.convergence_divisor = get_prop('convergence-divisor', fallback=2)
-        self.step_pause_millis = get_prop('step-pause-millis', fallback=100)
+        self.smoother = LuxSmooth(_get_prop('smoother-n', fallback=5), alpha=_get_prop('smoother-alpha', fallback=0.5))
+        self.interpolation_enabled = _get_prop('interpolate-brightness', fallback=True)
+        self.sensitivity_percent = _get_prop('interpolation-sensitivity-percent', fallback=10)
+        self.convergence_divisor = _get_prop('convergence-divisor', fallback=2)
+        self.step_pause_millis = _get_prop('step-pause-millis', fallback=100)
         if protect_nvram:
             log_info("LuxAutoWorker: protect-nvram enabled, ignoring max-brightness-jump")
             self.max_brightness_jump = 100
         else:
-            self.max_brightness_jump = get_prop('max-brightness-jump', 20)
+            self.max_brightness_jump = _get_prop('max-brightness-jump', 20)
             log_warning(f"LuxAutoWorker: protect-nvram={protect_nvram} max-brightness-jump={self.max_brightness_jump}")
         self._lux_dialog_message_qtsignal.connect(LuxDialog.lux_dialog_message)
         self._lux_dialog_message_qtsignal.connect(self.main_controller.main_window.status_message)
@@ -6771,12 +6771,12 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
 
         self.profile_plot = LuxProfileChart(self)
 
-        def lux_changed(lux: int) -> None:
+        def _lux_changed(lux: int) -> None:
             if self.profile_plot:
                 self.profile_plot.current_lux = lux
                 self.profile_plot.create_plot()
 
-        self.lux_display_widget.lux_changed_qtsignal.connect(lux_changed)
+        self.lux_display_widget.lux_changed_qtsignal.connect(_lux_changed)
 
         main_layout.addWidget(self.profile_plot, 1)
 
@@ -6808,7 +6808,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.adjust_now_button.hide()
         self.status_layout.addWidget(self.status_bar)
 
-        def choose_device(index: int) -> None:
+        def _choose_device(index: int) -> None:
             current_dev = self.lux_config.get('lux-meter', "lux-device", fallback='')
             current_dev_type = self.lux_config.get('lux-meter', "lux-device-type", fallback='')
             while True:
@@ -6839,30 +6839,30 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                     self.apply_settings()
                     self.status_message(tr("Meter changed to {}.").format(new_dev_path))
 
-        self.meter_device_selector.activated.connect(choose_device)
+        self.meter_device_selector.activated.connect(_choose_device)
 
-        def set_auto_monitoring(checked: int) -> None:
+        def _set_auto_monitoring(checked: int) -> None:
             enable = checked == Qt.Checked
             if enable != self.lux_config.is_auto_enabled():
                 self.lux_config.set('lux-meter', 'automatic-brightness', 'yes' if enable else 'no')
                 self.adjust_now_button.setVisible(enable)
                 self.apply_settings()
 
-        self.enabled_checkbox.stateChanged.connect(set_auto_monitoring)
+        self.enabled_checkbox.stateChanged.connect(_set_auto_monitoring)
 
-        def apply_interval(value: int) -> None:
+        def _apply_interval(value: int) -> None:
             if self.interval_selector.value() == value and value != self.lux_config.get_interval_minutes():
                 self.lux_config.set('lux-meter', 'interval-minutes', str(value))
                 self.apply_settings()
                 self.status_message(tr("Interval changed to {} minutes.").format(value))
 
-        def interval_selector_changed(value: int) -> None:
+        def _interval_selector_changed(value: int) -> None:
             if self.interval_selector.value() == value and value != self.lux_config.get_interval_minutes():
-                QTimer.singleShot(1200, partial(apply_interval, value))  # kind of like focus out, no change in a while
+                QTimer.singleShot(1200, partial(_apply_interval, value))  # kind of like focus out, no change in a while
 
-        self.interval_selector.valueChanged.connect(interval_selector_changed)
+        self.interval_selector.valueChanged.connect(_interval_selector_changed)
 
-        def set_interpolation(checked: int) -> None:
+        def _set_interpolation(checked: int) -> None:
             if (checked == Qt.Checked) and not self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True):
                 alert = MessageBox(QMessageBox.Warning)
                 alert.setText(tr('Interpolation may increase the number of writes to VDU NVRAM.'))
@@ -6876,9 +6876,9 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                 self.apply_settings()
             self.profile_plot.create_plot()
 
-        self.interpolate_checkbox.stateChanged.connect(set_interpolation)
+        self.interpolate_checkbox.stateChanged.connect(_set_interpolation)
 
-        def select_profile(index: int) -> None:
+        def _select_profile(index: int) -> None:
             if self.profile_plot is not None:
                 profile_name = list(self.lux_profiles_map.keys())[index]
                 self.profile_plot.set_current_profile(profile_name)
@@ -6887,7 +6887,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                 self.lux_config.set('lux-ui', 'selected-profile', self.profile_selector.itemData(index))
                 self.apply_settings(requires_metering_restart=False)
 
-        self.profile_selector.currentIndexChanged.connect(select_profile)
+        self.profile_selector.currentIndexChanged.connect(_select_profile)
         self.reconfigure()
         self.make_visible()
 
@@ -7084,13 +7084,13 @@ class LuxAutoController:
             self.lux_slider = LuxAmbientSlider()
             self.lux_slider.new_lux_value_qtsignal.connect(self.update_manual_meter)
 
-            def toggle_lux_dialog():
+            def _toggle_lux_dialog():
                 if LuxDialog.exists() and LuxDialog.get_instance().isVisible():
                     LuxDialog.get_instance().close()
                 else:
                     LuxDialog.invoke(self.main_controller)
 
-            self.lux_slider.status_icon_pressed_qtsignal.connect(toggle_lux_dialog)
+            self.lux_slider.status_icon_pressed_qtsignal.connect(_toggle_lux_dialog)
         return self.lux_slider
 
     def stop_worker(self):
@@ -7317,29 +7317,29 @@ class LuxAmbientSlider(QWidget):
 
         top_layout.addWidget(input_panel, alignment=Qt.AlignTop)
 
-        def lux_slider_change(new_value: int) -> None:
+        def _lux_slider_change(new_value: int) -> None:
             real_value = round(10 ** (new_value / 1000))
             self.set_current_value(real_value, self.lux_slider)
             self.new_lux_value_qtsignal.emit(real_value)
 
-        self.lux_slider.valueChanged.connect(lux_slider_change)
+        self.lux_slider.valueChanged.connect(_lux_slider_change)
 
-        def lux_slider_moved(new_value: int) -> None:
+        def _lux_slider_moved(new_value: int) -> None:
             self.sliding = True
             new_lux_value = round(10 ** (new_value / 1000))
             self.set_current_value(new_lux_value, self.lux_slider)
 
-        self.lux_slider.sliderMoved.connect(lux_slider_moved)
+        self.lux_slider.sliderMoved.connect(_lux_slider_moved)
 
-        def lux_input_field_changed() -> None:
+        def _lux_input_field_changed() -> None:
             self.set_current_value(self.lux_input_field.value(), self.lux_input_field)
 
-        self.lux_input_field.valueChanged.connect(lux_input_field_changed)
+        self.lux_input_field.valueChanged.connect(_lux_input_field_changed)
 
-        def input_field_editing_finished():
+        def _input_field_editing_finished():
             self.set_current_value(self.lux_input_field.value(), self.lux_input_field)
 
-        self.lux_input_field.editingFinished.connect(input_field_editing_finished)
+        self.lux_input_field.editingFinished.connect(_input_field_editing_finished)
 
         col = 0
         log10_icon_size = QSize(native_font_height(scaled=1), native_font_height(scaled=1))
@@ -7658,7 +7658,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
         if self.main_config.is_set(ConfOption.DBUS_CLIENT_ENABLED):
 
-            def vdu_connectivity_changed_callback(edid_encoded: str, event_type: int, flags: int):
+            def _vdu_connectivity_changed_callback(edid_encoded: str, event_type: int, flags: int):
                 if not DdcEventType.UNKNOWN.value <= event_type <= DdcEventType.DISPLAY_DISCONNECTED.value:
                     log_warning(f"Connected VDUs event - unknown {event_type=} treating as DPMS_UNKNOWN.")
                     event_type = DdcEventType.UNKNOWN.value
@@ -7667,7 +7667,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     return  # Don't do anything, the VDUs are just asleep.
                 self.start_refresh(external_event=True)
 
-            change_handler = vdu_connectivity_changed_callback
+            change_handler = _vdu_connectivity_changed_callback
             log_debug("Enabled callback for VDU-connectivity-change D-Bus signals")
         else:
             change_handler = None
@@ -7781,11 +7781,11 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             self.main_window.run_in_gui_thread(partial(self.start_refresh, external_event))
             return
 
-        def update_from_vdu(worker: WorkerThread) -> None:
+        def _update_from_vdu(worker: WorkerThread) -> None:
             if self.ddcutil is not None:
                 with non_blocking_lock(self.application_lock) as acquired_lock:
                     if acquired_lock:  # if acquired_lock is not None, then we have successfully acquired the lock.
-                        log_debug(f"update_from_vdu: holding application_lock") if log_debug_enabled else None
+                        log_debug(f"_update_from_vdu: holding application_lock") if log_debug_enabled else None
                         try:
                             log_info(f"Refresh commences: {external_event=}") if log_debug_enabled else None
                             self.ddcutil.refresh_connection()
@@ -7804,9 +7804,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                         log_info(f"Application is already busy, can't do a refresh ({external_event=})")
                         worker.stop()  # stop the thread - which also indicates we did not acquire the lock
                         return  # Prevents logging unlock (because we don't have the lock if we reach here).
-                log_debug(f"update_from_vdu: released application_lock") if log_debug_enabled else None
+                log_debug(f"_update_from_vdu: released application_lock") if log_debug_enabled else None
 
-        def update_ui_view(worker: WorkerThread) -> None:
+        def _update_ui_view(worker: WorkerThread) -> None:
             # Invoke when the worker thread completes. Runs in the GUI thread and can refresh remaining UI views.
             if worker.stop_requested:
                 return  # in this case, this means the worker never started anything
@@ -7834,7 +7834,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             finally:
                 self.main_window.indicate_busy(False)
 
-        self.refresh_data_task = WorkerThread(task_body=update_from_vdu, task_finished=update_ui_view)
+        self.refresh_data_task = WorkerThread(task_body=_update_from_vdu, task_finished=_update_ui_view)
         self.refresh_data_task.start()
         time.sleep(0.1)  # Sleep a bit to see if we acquire the application lock
         if not self.refresh_data_task.stop_requested:  # if the thread has already stopped, it never acquired the application_lock
@@ -7865,14 +7865,14 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             self.main_window.indicate_busy(True, lock_controls=immediately)
             preset.load()
 
-            def update_progress(worker_thread: PresetTransitionWorker) -> None:
+            def _update_progress(worker_thread: PresetTransitionWorker) -> None:
                 self.main_window.display_preset_status(
                     tr("Transitioning to preset {} (elapsed time {} seconds)...").format(
                         preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=2)))
                 self.transitioning_dummy_preset.update_progress() if self.transitioning_dummy_preset else None
                 self.main_window.update_status_indicators(self.transitioning_dummy_preset)
 
-            def restore_finished_callback(worker_thread: PresetTransitionWorker) -> None:
+            def _restore_finished_callback(worker_thread: PresetTransitionWorker) -> None:
                 self.transitioning_dummy_preset = None
                 if worker_thread.vdu_exception is not None and not background_activity:  # if it's a GUI request, ask about retry
                     if self.main_window.get_main_panel().display_vdu_exception(worker_thread.vdu_exception, can_retry=True):
@@ -7897,7 +7897,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 if finished_func is not None:
                     finished_func(worker_thread)
 
-            worker = PresetTransitionWorker(self, preset, update_progress, restore_finished_callback,
+            worker = PresetTransitionWorker(self, preset, _update_progress, _restore_finished_callback,
                                             immediately, ignore_others=initialization_preset)
             self.preset_transition_workers.append(worker)
             worker.start()
@@ -7908,7 +7908,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
     def restore_vdu_initialization_presets(self):
 
-        def restored_initialization_preset(worker: PresetTransitionWorker) -> None:
+        def _restored_initialization_preset(worker: PresetTransitionWorker) -> None:
             if worker.vdu_exception is not None:
                 log_error(f"Error during restoration of {worker.preset.name}")
                 self.status_message(tr("Error during restoration preset {}").format(worker.preset.name), timeout=5)
@@ -7926,7 +7926,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 preset_proper_name = proper_name(preset.name)
                 if stable_id == preset_proper_name:
                     log_info(f"Found initialization-preset for {stable_id}")
-                    self.restore_preset(preset, finished_func=restored_initialization_preset, initialization_preset=True)
+                    self.restore_preset(preset, finished_func=_restored_initialization_preset, initialization_preset=True)
 
     def schedule_create_timetable(self, start_of_day: datetime, location: GeoLocation) -> Dict[datetime, Preset]:
         log_debug(f"Create preset timetable for {start_of_day}") if log_debug_enabled else None
@@ -8224,11 +8224,11 @@ class VduAppWindow(QMainWindow):
         self.main_config = main_config
         self.hide_shortcuts = True
 
-        def run_in_gui(task: Callable):
+        def _run_in_gui(task: Callable):
             log_debug(f"Running task in gui thread {repr(task)}") if log_debug_enabled else None
             task()  # Was using a partial, but it silently failed when task was a method with only self and no other arguments.
 
-        self._run_in_gui_thread_qtsignal.connect(run_in_gui)
+        self._run_in_gui_thread_qtsignal.connect(_run_in_gui)
         # Gnome tray doesn't normally provide a way to bring up the main app.
         self.os_desktop = os.environ.get('XDG_CURRENT_DESKTOP', default='unknown').lower()
         gnome_tray_behaviour = main_config.is_set(ConfOption.SYSTEM_TRAY_ENABLED) and 'gnome' in self.os_desktop
@@ -8296,12 +8296,12 @@ class VduAppWindow(QMainWindow):
         if splash is not None:
             splash.showMessage(tr('\n\nVDU Controls\nLooking for DDC monitors...\n'), Qt.AlignTop | Qt.AlignHCenter)
 
-        def splash_message_action(message) -> None:
+        def _splash_message_action(message) -> None:
             if splash is not None:
                 log_info(f"splash_message: {repr(message)}")
                 splash.showMessage(f"\n\n{APPNAME} {VDU_CONTROLS_VERSION}\n{message}", Qt.AlignTop | Qt.AlignHCenter)
 
-        self.splash_message_qtsignal.connect(splash_message_action)
+        self.splash_message_qtsignal.connect(_splash_message_action)
 
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
 
@@ -8351,12 +8351,12 @@ class VduAppWindow(QMainWindow):
                 # log_info(f"on_application_state_changed {state}")
                 self.active_event_count = 0  # Count following move/resize events as evidence of titlebar edge-grab activity.
 
-                def hide_func():
+                def _hide_func():
                     if self.active_event_count == 0 and self.is_inactive():  # No moving/resizing activity and is_inactive().
                         # log_info("Going to hide")
                         self.hide() if self.tray else self.showMinimized()  # Probably safe to hide now
 
-                QTimer.singleShot(self.inactive_pause_millis, hide_func)  # wait N ms and see if any move/resize events occur.
+                QTimer.singleShot(self.inactive_pause_millis, _hide_func)  # wait N ms and see if any move/resize events occur.
 
     def eventFilter(self, target: QObject, event: QEvent) -> bool:
         # log_info(f"eventFilter {event.__class__.__name__} {event.type()}")
