@@ -7944,7 +7944,6 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         return {when: preset for when, preset in sorted(list(timetable_for_day.items()))}
 
     def schedule_presets(self) -> None:
-        assert is_running_in_gui_thread()  # Needs to be run in the GUI thread so the timers also run in the GUI thread
         location = self.main_config.get_location()
         if location and self.main_config.is_set(ConfOption.SCHEDULE_ENABLED):
             log_debug("schedule_presets: try to obtain application_lock") if log_debug_enabled else None
@@ -7983,7 +7982,6 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         PresetsDialog.reconfigure_instance()
 
     def schedule_alteration(self, preset: Preset) -> None:
-        assert is_running_in_gui_thread()  # Needs to be run in the GUI thread so the timers also run in the GUI thread
         location = self.main_config.get_location()
         if location and self.main_config.is_set(ConfOption.SCHEDULE_ENABLED):
             log_debug("schedule_alteration: try to obtain application_lock") if log_debug_enabled else None
