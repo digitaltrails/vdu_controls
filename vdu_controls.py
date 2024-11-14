@@ -2043,7 +2043,6 @@ class WorkerThread(QThread):
         super().__init__()
         # init should always be initiated from the GUI thread to grant the worker's __init__ easy access to the GUI thread.
         log_debug(f"WorkerThread: init {self.__class__.__name__} from {thread_pid()=}") if log_debug_enabled else None
-        assert is_running_in_gui_thread()
         self.stop_requested = False
         self.task_body = task_body
         self.task_finished = task_finished
@@ -2088,10 +2087,10 @@ class SchedulerJobType(Enum):
 
 class SchedulerJob:  # designed to resemble a QTimer, which it was written to replace
 
-    def __init__(self, when: datetime, job_callable: Callable, job_type: SchedulerJobType):
+    def __init__(self, when: datetime, run: Callable, job_type: SchedulerJobType):
         assert when.tzinfo is not None
         self.when = when.replace(second=0, microsecond=0)
-        self.job_callable = job_callable
+        self.job_runnable = run
         self.job_type = job_type
         self.has_run = False
         assert Scheduler.instance
@@ -2100,9 +2099,9 @@ class SchedulerJob:  # designed to resemble a QTimer, which it was written to re
     def remaining_time(self):
         return (self.when - zoned_now()).seconds if Scheduler.instance.is_supervising(self) else -1
 
-    def run(self):
+    def run_job(self):
         try:
-            self.job_callable()
+            self.job_runnable()
         finally:
             self.has_run = True
 
@@ -2121,22 +2120,13 @@ class SchedulerJob:  # designed to resemble a QTimer, which it was written to re
         return f"{self.job_type=} {self.when=:%Y-%m-%d %H:%M:%S}"
 
 # QTimer replacement - hibernation-tolerant scheduling at specific YYYYMMDD HHMM.
-# After hibernation, overdue events will trigger.
+# After hibernation, overdue events will trigger.  (A implementation based on sched.scheduler might also work)
 class Scheduler(WorkerThread):
     instance: Scheduler = None
 
     @staticmethod
-    def initialize(app: VduAppWindow):
-        if not Scheduler.instance or Scheduler.instance.isFinished():
-            Scheduler.instance = Scheduler(app)
-            log_info("Scheduler: starting")
-            Scheduler.instance.start()
-        else:
-            Scheduler.instance.app = app
-
-    @staticmethod
     def check():
-        if Scheduler.instance:
+        if Scheduler.instance and Scheduler.instance.isRunning() and Scheduler.instance.pending_jobs_list:
             log_info("Scheduler: Checking schedule now")
             Scheduler.instance._cycle()
 
@@ -2145,9 +2135,8 @@ class Scheduler(WorkerThread):
         if Scheduler.instance:
             Scheduler.instance._remove_all(job_type)
 
-    def __init__(self, app: VduAppWindow) -> None:
+    def __init__(self) -> None:
         super().__init__(self.task_body, None, True)
-        self.app = app
         self.pending_jobs_list: List[SchedulerJob] = []
         self.lock = threading.RLock()
 
@@ -2156,27 +2145,35 @@ class Scheduler(WorkerThread):
         now = datetime.now()  # want just over the next minute boundary e.g. 13:45:05
         sleep_seconds = ((now + timedelta(seconds=60 + 30)).replace(second=5, microsecond=0) - now).seconds
         # log_debug(f"Scheduler: sleeping {sleep_seconds=}") if log_debug_enabled else None
-        self.doze(sleep_seconds)
+        self.doze(sleep_seconds)  # Have to wake every minute in case PC-sleep or hibernate has occurred.
 
     def _cycle(self):
         with self.lock:
             local_now = zoned_now()
             run_now: Dict[SchedulerJobType, SchedulerJob] = {}
             for job in self.pending_jobs_list:
-                if job.when <= local_now:  # Eligable to be run now
+                if job.when <= local_now:  # Eligible to run now
                     self.pending_jobs_list.remove(job)
                     if job.job_type not in run_now or (not job.has_run and job.when > run_now[job.job_type].when):
                         run_now[job.job_type] = job  # Only most recent of each type should run
                 else: # Rest of list isn't due to run yet, can stop looking
                     break
             for job in run_now.values():
-                log_debug(f"Scheduler: Starting  {job=!s} queued={len(self.pending_jobs_list)}") if log_debug_enabled else None
-                self.app.run_in_gui_thread(job.run)
+                log_debug(f"Scheduler: Starting job {job=!s} queued={len(self.pending_jobs_list)}") if log_debug_enabled else None
+                job.run_job()
+            if len(self.pending_jobs_list) == 0:
+                log_info(f"Scheduler: empty job queue, suspending schedule monitoring")
+                Scheduler.instance = Scheduler()  # Construct future scheduler, leave it idle
+                self.stop()
 
     def add(self, job: SchedulerJob) -> SchedulerJob:
         with self.lock:
+            assert not self.isFinished()
             self.pending_jobs_list = sorted(self.pending_jobs_list + [job])
             log_debug(f"Scheduler: added {job=!s} queued={len(self.pending_jobs_list)}") if log_debug_enabled else None
+            if not self.isRunning():
+                log_info("Scheduler: non-empty job queue, commencing schedule monitoring")
+                Scheduler.instance.start()
             return job
 
     def remove(self, job: SchedulerJob):
@@ -2196,6 +2193,8 @@ class Scheduler(WorkerThread):
 
     def is_supervising(self, job: SchedulerJob):
         return job in self.pending_jobs_list
+
+Scheduler.instance = Scheduler()
 
 
 class ConfIni(configparser.ConfigParser):
@@ -3568,7 +3567,6 @@ class Preset:
         self.path = ConfIni.get_path(proper_name('Preset', name))
         self.preset_ini = ConfIni()
         self.scheduler_job: SchedulerJob | None = None
-        self.timer_action: Callable[[Preset], None] | None = None
         self.schedule_status = PresetScheduleStatus.UNSCHEDULED
         self.elevation_time_today: datetime | None = None
 
@@ -7958,19 +7956,19 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     now = zoned_now()
                     if future_presets := [(when, preset) for when, preset in timetable_for_today.items() if when > now]:
                         for when, preset in future_presets:  # Schedule future part of day
-                            preset.schedule(when, self.activate_scheduled_preset)
+                            preset.schedule(when, self.activate_scheduled_preset_in_gui)
                     # Schedule the preset that might apply right now, either the first overdue, or last from yesterday
                     if overdue_presets := [(when, preset) for when, preset in timetable_for_today.items() if when <= now]:
                         when_overdue, most_recent_overdue_preset = overdue_presets[-1]  # first is the most recently applicable
                         if most_recent_overdue_preset.schedule_status != PresetScheduleStatus.SUCCEEDED:  # not already run
-                            most_recent_overdue_preset.schedule(when_overdue, self.activate_scheduled_preset, overdue=True)
+                            most_recent_overdue_preset.schedule(when_overdue, self.activate_scheduled_preset_in_gui, overdue=True)
                         for when, preset in overdue_presets[:-1]:  # The rest have been superseded (if not already succeeded)
                             if preset.schedule_status != PresetScheduleStatus.SUCCEEDED:  # not already run
                                 preset.schedule_status = PresetScheduleStatus.SKIPPED_SUPERSEDED
                                 log_info(f"Skipped preset {preset.name}, passed assigned-time (status={preset.schedule_status})")
                     else:  # Nothing overdue today, schedule the last from yesterday (assumed to be the last for today)
                         last_preset_yesterday = list(timetable_for_today.values())[-1]  # last for yesterday same as last for today
-                        last_preset_yesterday.schedule(start_of_today, self.activate_scheduled_preset, overdue=True)
+                        last_preset_yesterday.schedule(start_of_today, self.activate_scheduled_preset_in_gui, overdue=True)
                 # set a timer to rerun this scheduler at the start of the next day.
                 Scheduler.dequeue_all(SchedulerJobType.SCHEDULE_PRESETS)
                 tomorrow = zoned_now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
@@ -7995,13 +7993,16 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 timetable_for_today = self.schedule_create_timetable(start_of_today, location)
                 if when := next((t for t, p in timetable_for_today.items() if p == preset), None):
                     if when > zoned_now():  # if destined for the future, schedule it
-                        preset.schedule(when, self.activate_scheduled_preset, overdue=False)
+                        preset.schedule(when, self.activate_scheduled_preset_in_gui, overdue=False)
             log_debug("schedule_alteration: released application_lock") if log_debug_enabled else None
         else:
             log_info(f"schedule_alteration: Scheduling is disabled or no location ({location=})")
 
+    def activate_scheduled_preset_in_gui(self, preset):
+        self.main_window.run_in_gui_thread(partial(self.activate_scheduled_preset, preset))
+
     def activate_scheduled_preset(self, preset: Preset, check_weather: bool = True, immediately: bool = False,
-                                  activation_time: datetime | None = None, try_count: int=1) -> None:
+                                  activation_time: datetime | None = None, try_count: int=1) -> None:  # TODO: Some params unneeded?
         assert is_running_in_gui_thread()
         if not self.main_config.is_set(ConfOption.SCHEDULE_ENABLED):
             log_info(f"Schedule is disabled - not activating preset {preset.name}")
@@ -8222,7 +8223,6 @@ class VduAppWindow(QMainWindow):
         self.scroll_area: QScrollArea | None = None
         self.main_config = main_config
         self.hide_shortcuts = True
-        Scheduler.initialize(self)
 
         def run_in_gui(task: Callable):
             log_debug(f"Running task in gui thread {repr(task)}") if log_debug_enabled else None
