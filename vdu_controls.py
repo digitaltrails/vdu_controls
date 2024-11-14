@@ -6468,8 +6468,9 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                 if profile_preset_name is not None:  # Make sure the right preset icon is displayed
                     if preset := self.main_controller.find_preset_by_name(profile_preset_name):
                         self.main_controller.update_window_status_indicators(preset)
-        log_info(f"LuxAutoWorker: adjustments completed VCP-changes: {vdu_changes_count if vdu_changes_count else 'None'}, "
-                 f"{profile_preset_name=} {error_count=}")
+        if vdu_changes_count or error_count:
+            log_info(f"LuxAutoWorker: adjustments completed VCP-changes: {vdu_changes_count if vdu_changes_count else 'None'}, "
+                     f"{profile_preset_name=} {error_count=}")
 
     def step_one_vdu(self, vdu_sid: VduStableId, profile_brightness: int, profile_preset_name: str | None,
                      lux_summary_text: str, first_step: bool) -> int:
