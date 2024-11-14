@@ -462,7 +462,7 @@ Lux Metering and brightness transitions
 ---------------------------------------
 
 Due to VDU hardware and DDC protocol limitations, gradual transitions from one brightness level to
-another are likely to be noticeable and potentially annoying.  As well as being anoying
+another are likely to be noticeable and potentially annoying.  As well as being annoying
 excessive stepping may eat into VDU NVRAM lifespan.
 
 The auto-brightness adjustment feature includes several measures to reduce the number of
@@ -2084,7 +2084,8 @@ class SchedulerJobType(Enum):
     RESTORE_PRESET = 1
     SCHEDULE_PRESETS = 2
 
-
+# QTimer replacement - hibernation-tolerant scheduling at specific YYYYMMDD HHMM.
+# After hibernation, overdue events will trigger immediately.
 class SchedulerJob:  # designed to resemble a QTimer, which it was written to replace
 
     def __init__(self, when: datetime, run: Callable, job_type: SchedulerJobType):
@@ -2093,11 +2094,11 @@ class SchedulerJob:  # designed to resemble a QTimer, which it was written to re
         self.job_runnable = run
         self.job_type = job_type
         self.has_run = False
-        assert Scheduler.instance
-        Scheduler.instance.add(self)
+        assert ScheduleWorker.instance
+        ScheduleWorker.instance.add(self)
 
     def remaining_time(self):
-        return (self.when - zoned_now()).seconds if Scheduler.instance.is_supervising(self) else -1
+        return (self.when - zoned_now()).seconds if ScheduleWorker.instance.is_supervising(self) else -1
 
     def run_job(self):
         try:
@@ -2106,12 +2107,12 @@ class SchedulerJob:  # designed to resemble a QTimer, which it was written to re
             self.has_run = True
 
     def dequeue(self):
-        assert Scheduler.instance
-        Scheduler.instance.remove(self)
+        assert ScheduleWorker.instance
+        ScheduleWorker.instance.remove(self)
 
     def requeue(self):
-        assert Scheduler.instance and not Scheduler.instance.is_supervising(self)
-        Scheduler.instance.add(self)
+        assert ScheduleWorker.instance and not ScheduleWorker.instance.is_supervising(self)
+        ScheduleWorker.instance.add(self)
 
     def __lt__(self, other: SchedulerJob):
         return self.when < other.when
@@ -2119,21 +2120,21 @@ class SchedulerJob:  # designed to resemble a QTimer, which it was written to re
     def __str__(self):
         return f"{self.job_type=} {self.when=:%Y-%m-%d %H:%M:%S}"
 
-# QTimer replacement - hibernation-tolerant scheduling at specific YYYYMMDD HHMM.
-# After hibernation, overdue events will trigger.  (A implementation based on sched.scheduler might also work)
-class Scheduler(WorkerThread):
-    instance: Scheduler = None
+# Worker that runs SchedulerJobs - hibernation-tolerant scheduling at specific YYYYMMDD HHMM.
+# (An implementation based on sched.scheduler might also work - but the following is definitely going to work cross platform)
+class ScheduleWorker(WorkerThread):
+    instance: ScheduleWorker = None
 
     @staticmethod
     def check():
-        if Scheduler.instance and Scheduler.instance.isRunning() and Scheduler.instance.pending_jobs_list:
+        if ScheduleWorker.instance and ScheduleWorker.instance.isRunning() and ScheduleWorker.instance.pending_jobs_list:
             log_info("Scheduler: Checking schedule now")
-            Scheduler.instance._cycle()
+            ScheduleWorker.instance._cycle()
 
     @staticmethod
     def dequeue_all(job_type: SchedulerJobType | None = None):
-        if Scheduler.instance:
-            Scheduler.instance._remove_all(job_type)
+        if ScheduleWorker.instance:
+            ScheduleWorker.instance._remove_all(job_type)
 
     def __init__(self) -> None:
         super().__init__(self.task_body, None, True)
@@ -2161,9 +2162,9 @@ class Scheduler(WorkerThread):
             for job in run_now.values():
                 log_debug(f"Scheduler: Starting job {job=!s} queued={len(self.pending_jobs_list)}") if log_debug_enabled else None
                 job.run_job()
-            if len(self.pending_jobs_list) == 0:
+            if len(self.pending_jobs_list) == 0:  # Nothing to wait for, stop the existing schedule worker (self)
                 log_info(f"Scheduler: empty job queue, suspending schedule monitoring")
-                Scheduler.instance = Scheduler()  # Construct future scheduler, leave it idle
+                ScheduleWorker.instance = ScheduleWorker()  # Construct future schedule worker, leave it idle (not started)
                 self.stop()
 
     def add(self, job: SchedulerJob) -> SchedulerJob:
@@ -2171,9 +2172,9 @@ class Scheduler(WorkerThread):
             assert not self.isFinished()
             self.pending_jobs_list = sorted(self.pending_jobs_list + [job])
             log_debug(f"Scheduler: added {job=!s} queued={len(self.pending_jobs_list)}") if log_debug_enabled else None
-            if not self.isRunning():
+            if not self.isRunning():  # We don't start the worker until it has something to do
                 log_info("Scheduler: non-empty job queue, commencing schedule monitoring")
-                Scheduler.instance.start()
+                ScheduleWorker.instance.start()
             return job
 
     def remove(self, job: SchedulerJob):
@@ -2194,7 +2195,7 @@ class Scheduler(WorkerThread):
     def is_supervising(self, job: SchedulerJob):
         return job in self.pending_jobs_list
 
-Scheduler.instance = Scheduler()
+ScheduleWorker.instance = ScheduleWorker()  # Initialise the current worker, but don't start it.
 
 
 class ConfIni(configparser.ConfigParser):
@@ -2574,7 +2575,7 @@ class VduControllerAsyncSetter(WorkerThread):  # Used to decouple the set-vcp fr
     def __init__(self):
         super().__init__(task_body=self._async_setvcp_task_body, task_finished=None, loop=True)
         self._async_setvcp_queue: queue.Queue = queue.Queue()
-        # limit set_vcp to a sustainable interval - KDE powerdevel recommendation - 0.5s, ddcui 1.0 seconds
+        # limit set_vcp to a sustainable interval - KDE powerdevil recommendation - 0.5s, ddcui 1.0 seconds
         self._idle_seconds = float(os.getenv("VDU_CONTROLS_UI_IDLE_SECS", '0.5'))
         log_info(f"env VDU_CONTROLS_UI_IDLE_SECS={self._idle_seconds}")
 
@@ -7627,7 +7628,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             log_debug("configure: try to obtain application_lock", trace=False) if log_debug_enabled else None
             with self.application_lock:
                 log_debug("configure: holding application_lock") if log_debug_enabled else None
-                Scheduler.dequeue_all()
+                ScheduleWorker.dequeue_all()
                 if self.lux_auto_controller is not None:
                     self.lux_auto_controller.stop_worker()
                 for worker in self.preset_transition_workers:
@@ -7649,7 +7650,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     LuxDialog.reconfigure_instance()
             self.main_window.update_status_indicators()
             # restore_preset tries to acquire the same lock, safe to unlock and let it relock...
-            Scheduler.check()  # Immediately activate the currently applicable preset.
+            ScheduleWorker.check()  # Immediately activate the currently applicable preset.
         finally:
             if self.main_window is not None:
                 self.main_window.indicate_busy(False)
@@ -7825,7 +7826,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     self.configure_application()  # May cause a further refresh?
                     self.previously_detected_vdu_list = self.detected_vdu_list
                 else:
-                    Scheduler.check()  # immediately active the currently applicable preset
+                    ScheduleWorker.check()  # immediately active the currently applicable preset
                 if self.lux_auto_controller:
                     if LuxDialog.exists():
                         lux_dialog: LuxDialog = LuxDialog.get_instance()  # type: ignore
@@ -7949,7 +7950,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             log_debug("schedule_presets: try to obtain application_lock") if log_debug_enabled else None
             with self.application_lock:
                 log_debug("schedule_presets: holding application_lock") if log_debug_enabled else None
-                Scheduler.dequeue_all(SchedulerJobType.RESTORE_PRESET)
+                ScheduleWorker.dequeue_all(SchedulerJobType.RESTORE_PRESET)
                 start_of_today = zoned_now(rounded_to_minute=True).replace(hour=0, minute=0)
                 timetable_for_today = self.schedule_create_timetable(start_of_today, location)
                 if len(timetable_for_today) > 0:  # Use the timetable to schedule jobs
@@ -7970,7 +7971,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                         last_preset_yesterday = list(timetable_for_today.values())[-1]  # last for yesterday same as last for today
                         last_preset_yesterday.schedule(start_of_today, self.activate_scheduled_preset_in_gui, overdue=True)
                 # set a timer to rerun this scheduler at the start of the next day.
-                Scheduler.dequeue_all(SchedulerJobType.SCHEDULE_PRESETS)
+                ScheduleWorker.dequeue_all(SchedulerJobType.SCHEDULE_PRESETS)
                 tomorrow = zoned_now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
                 if self.daily_schedule_job is None or self.daily_schedule_job.when < tomorrow:
                     self.daily_schedule_job = SchedulerJob(tomorrow, self.schedule_presets, SchedulerJobType.SCHEDULE_PRESETS)
