@@ -353,14 +353,14 @@ Michael Hamilton
 Version History
 ---------------
 * 2.1.2
-  * Replace the Preset-schedular with an implementation that remains accurate after PC-sleep/hibernation.
-  * Fix the day-rollover which was sheduling for the wrong day if triggered slightly before midnight. 
+  * Replace the Preset-scheduler with an implementation that remains accurate after PC-sleep/hibernation.
+  * Fix the day-rollover which was scheduling for the wrong day if triggered at 12:59:59. 
   * When performing a set-vcp, don't increment the NVRAM write count if the VDU doesn't respond.
-  * When reconfiguring VDU controllers, discard pending VDU VCP changes. 
+  * When reconfiguring VDU controllers, discard pending VDU VCP changes from previous controllers. 
   * Eliminate a potential for deadlock when handling change-events from ddcutil-service.
-  * Handle ddcutil-service unexpected event types (don't raise an error dialog).
-  * The main window height will automatically resize to accommodate the number of controls present.
-  * Toggling lux brighness-interpolation now immediately updates the profile-plot to reflect the change.
+  * Better handle ddcutil-service unexpected event types (don't raise an error dialog).
+  * The main window height will now automatically resize to accommodate the number of controls present.
+  * Toggling lux brightness-interpolation now immediately updates the profile-plot to reflect the change.
   * Fix the Lux Dialog, it was turning off interpolation when first constructed.
   
 * 2.1.1
