@@ -7946,6 +7946,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         return {when: preset for when, preset in sorted(list(timetable_for_day.items()))}
 
     def schedule_presets(self) -> None:
+        assert is_running_in_gui_thread()
         location = self.main_config.get_location()
         if location and self.main_config.is_set(ConfOption.SCHEDULE_ENABLED):
             log_debug("schedule_presets: try to obtain application_lock") if log_debug_enabled else None
@@ -7975,7 +7976,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 ScheduleWorker.dequeue_all(SchedulerJobType.SCHEDULE_PRESETS)
                 tomorrow = zoned_now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
                 if self.daily_schedule_job is None or self.daily_schedule_job.when < tomorrow:
-                    self.daily_schedule_job = SchedulerJob(tomorrow, self.schedule_presets, SchedulerJobType.SCHEDULE_PRESETS)
+                    self.daily_schedule_job = SchedulerJob(tomorrow,
+                                                           partial(self.main_window.run_in_gui_thread, self.schedule_presets),
+                                                           SchedulerJobType.SCHEDULE_PRESETS)
                     log_info(f"Will update schedule for solar-activation at {tomorrow} "
                              f"(in {round(self.daily_schedule_job.remaining_time()/60)} minutes)")
             log_debug("schedule_presets: released application_lock") if log_debug_enabled else None
