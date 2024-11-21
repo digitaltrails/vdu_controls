@@ -4126,11 +4126,12 @@ class PresetTransitionWorker(WorkerThread):
                     self.main_controller.set_value(key.vdu_stable_id, key.vcp_code, self.final_values[key], origin=VcpOrigin.TRANSIENT)
                     self.expected_values[key] = self.final_values[key]
             if self.values_are_as_expected():
-                log_info(f"Restored {self.preset.name}, elapsed: {self.total_elapsed_seconds():.2f} seconds "
+                log_info(f"Restored preset '{self.preset.name}', elapsed: {self.total_elapsed_seconds():.2f} seconds "
                          f"{self.change_count} VCP-changes")
                 self.work_state = PresetTransitionState.FINISHED
             else:
                 log_error(f"Failed to restore non transitioning controls {self.preset.name}")
+            # self.vdu_exception = VduException("testing")
             self.end_time = datetime.now()
 
     def step(self) -> None:
@@ -4176,10 +4177,6 @@ class PresetTransitionWorker(WorkerThread):
 
     def total_elapsed_seconds(self) -> float:
         return ((self.end_time if self.end_time is not None else datetime.now()) - self.start_time).total_seconds()
-
-    def stop(self) -> None:
-        super().stop()
-        log_info("PresetTransitionWorker stopped on request")
 
 
 class PresetTransitionDummy(Preset):  # A wrapper that creates titles and icons that indicate a transition is in progress.
@@ -7594,7 +7591,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         ## self.daily_schedule_next_update = zoned_now() + timedelta(seconds=60)  # For testing
         self.refresh_data_task: WorkerThread | None = None
         self.weather_query: WeatherQuery | None = None
-        self.preset_transition_workers: List[PresetTransitionWorker] = []
+        self.preset_transition_workers: List[PresetTransitionWorker] = []  # Not sure if this actually needs to be a list.
         self.lux_auto_controller: LuxAutoController | None = LuxAutoController(self) if self.main_config.is_set(
             ConfOption.LUX_OPTIONS_ENABLED) else None
         self.transitioning_dummy_preset: PresetTransitionDummy | None = None
@@ -7632,9 +7629,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 ScheduleWorker.dequeue_all()
                 if self.lux_auto_controller is not None:
                     self.lux_auto_controller.stop_worker()
-                for worker in self.preset_transition_workers:
-                    worker.stop()
-                self.preset_transition_workers.clear()
+                self.stop_any_transitioning_presets()
                 global log_to_syslog
                 log_to_syslog = self.main_config.is_set(ConfOption.SYSLOG_ENABLED)
                 self.create_ddcutil()
@@ -7656,6 +7651,12 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             if self.main_window is not None:
                 self.main_window.indicate_busy(False)
         log_info("Completed configuring application")
+
+    def stop_any_transitioning_presets(self):
+        for running_worker in [worker for worker in self.preset_transition_workers if worker.isRunning()]:
+            running_worker.stop()
+            log_debug(f"Stop requested for PresetTransitionWorker {running_worker.preset.name=} {running_worker.start_time=!s}")
+        self.preset_transition_workers.clear()
 
     def create_ddcutil(self):
 
@@ -7879,7 +7880,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 self.transitioning_dummy_preset = None
                 if worker_thread.vdu_exception is not None and not background_activity:  # if it's a GUI request, ask about retry
                     if self.main_window.get_main_panel().display_vdu_exception(worker_thread.vdu_exception, can_retry=True):
-                        self.restore_preset(preset, finished_func=finished_func, immediately=immediately)  # try again, new thread
+                        self.restore_preset(preset, finished_func=finished_func, immediately=immediately)  # Try again, new thread
                         return  # Don't do anything more, the new thread will take over from here
                 self.main_window.indicate_busy(False)
                 if not initialization_preset:
@@ -7893,13 +7894,14 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                             preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=2)))
                         if (self.main_config.is_set(ConfOption.PROTECT_NVRAM_ENABLED)
                                 and preset.get_transition_type() != PresetTransitionFlag.NONE):
-                            log_warning(f"Setting protect-nvram prevents '{preset.name}' from transitioning, change are immediate.")
+                            log_warning(f"Setting protect-nvram prevents '{preset.name}' from transitioning, changes are immediate.")
                     else:  # Interrupted or exception:
                         self.main_window.update_status_indicators()
                         self.main_window.display_preset_status(tr("Interrupted restoration of {}").format(preset.name))
                 if finished_func is not None:
                     finished_func(worker_thread)
 
+            self.stop_any_transitioning_presets()  # During the lock it is safe to remove previous workers.
             worker = PresetTransitionWorker(self, preset, _update_progress, _restore_finished_callback,
                                             immediately, ignore_others=initialization_preset)
             self.preset_transition_workers.append(worker)
@@ -7913,10 +7915,10 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
         def _restored_initialization_preset(worker: PresetTransitionWorker) -> None:
             if worker.vdu_exception is not None:
-                log_error(f"Error during restoration of {worker.preset.name}")
+                log_error(f"Error during restoration of '{worker.preset.name}'")
                 self.status_message(tr("Error during restoration preset {}").format(worker.preset.name), timeout=5)
                 return
-            log_info(f'Restored initialization-preset {worker.preset.name}')
+            log_info(f"Restored initialization-preset '{worker.preset.name}'")
             message = tr("Restored Preset\n{}").format(worker.preset.name)
             self.status_message(message, timeout=5)
             self.main_window.splash_message_qtsignal.emit(message)
@@ -7975,6 +7977,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 # set a timer to rerun this scheduler at the start of the next day.
                 ScheduleWorker.dequeue_all(SchedulerJobType.SCHEDULE_PRESETS)
                 tomorrow = zoned_now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+                # tomorrow = zoned_now().replace(second=0, microsecond=0) + timedelta(minutes=2) # testing
                 if self.daily_schedule_job is None or self.daily_schedule_job.when < tomorrow:
                     self.daily_schedule_job = SchedulerJob(tomorrow,
                                                            partial(self.main_window.run_in_gui_thread, self.schedule_presets),
