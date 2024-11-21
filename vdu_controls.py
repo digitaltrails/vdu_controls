@@ -2066,6 +2066,7 @@ class WorkerThread(QThread):
         self.finished_work_qtsignal.emit(self)  # Pass self so body can access context
 
     def stop(self) -> None:
+        log_debug(f"WorkerThread: stop requested {thread_pid()=} {self.task_body}") if log_debug_enabled else None
         self.stop_requested = True
         while self.isRunning():
             time.sleep(0.1)
@@ -2075,9 +2076,8 @@ class WorkerThread(QThread):
             if self.stop_requested:
                 return
             time.sleep(sleep_unit)
-            seconds -= sleep_unit
-        if not self.stop_requested and seconds > 0.0:
-            time.sleep(seconds)
+        if remainder := 0 if self.stop_requested else (seconds - int(seconds)):
+            time.sleep(remainder)
 
 
 class SchedulerJobType(Enum):
@@ -2165,7 +2165,7 @@ class ScheduleWorker(WorkerThread):
             if len(self.pending_jobs_list) == 0:  # Nothing to wait for, stop the existing schedule worker (self)
                 log_info(f"Scheduler: empty job queue, suspending schedule monitoring")
                 ScheduleWorker.instance = ScheduleWorker()  # Construct future schedule worker, leave it idle (not started)
-                self.stop()
+                self.stop_requested = True  # Don't call stop() from within the task loop, just set the flag
 
     def add(self, job: SchedulerJob) -> SchedulerJob:
         with self.lock:
