@@ -2094,11 +2094,10 @@ class SchedulerJob:  # designed to resemble a QTimer, which it was written to re
         self.job_runnable = run
         self.job_type = job_type
         self.has_run = False
-        assert ScheduleWorker.instance
-        ScheduleWorker.instance.add(self)
+        ScheduleWorker.get_instance().add(self)
 
     def remaining_time(self):
-        return (self.when - zoned_now()).seconds if ScheduleWorker.instance.is_supervising(self) else -1
+        return (self.when - zoned_now()).seconds if ScheduleWorker.get_instance().is_supervising(self) else -1
 
     def run_job(self):
         try:
@@ -2107,12 +2106,11 @@ class SchedulerJob:  # designed to resemble a QTimer, which it was written to re
             self.has_run = True
 
     def dequeue(self):
-        assert ScheduleWorker.instance
-        ScheduleWorker.instance.remove(self)
+        ScheduleWorker.get_instance().remove(self)
 
     def requeue(self):
-        assert ScheduleWorker.instance and not ScheduleWorker.instance.is_supervising(self)
-        ScheduleWorker.instance.add(self)
+        assert not ScheduleWorker.get_instance().is_supervising(self)
+        ScheduleWorker.ScheduleWorker.get_instance().add(self)
 
     def __lt__(self, other: SchedulerJob):
         return self.when < other.when
@@ -2123,33 +2121,49 @@ class SchedulerJob:  # designed to resemble a QTimer, which it was written to re
 # Worker that runs SchedulerJobs - hibernation-tolerant scheduling at specific YYYYMMDD HHMM.
 # (An implementation based on sched.scheduler might also work - but the following is definitely going to work cross platform)
 class ScheduleWorker(WorkerThread):
-    instance: ScheduleWorker = None
+    _instance: ScheduleWorker = None
+    _scheduler_lock = threading.RLock()
+
+    @staticmethod
+    def get_instance():
+        with ScheduleWorker._scheduler_lock:
+            if ScheduleWorker._instance is None or ScheduleWorker._instance.isFinished():
+                ScheduleWorker._instance = ScheduleWorker()
+                ScheduleWorker._instance.start()
+            return ScheduleWorker._instance
+
+    @staticmethod
+    def shutdown():
+        with ScheduleWorker._scheduler_lock:
+            if ScheduleWorker._instance is not None and ScheduleWorker._instance.isRunning():
+                ScheduleWorker._instance._remove_all()
+                ScheduleWorker._instance.stop()
 
     @staticmethod
     def check():
-        if ScheduleWorker.instance and ScheduleWorker.instance.isRunning() and ScheduleWorker.instance.pending_jobs_list:
-            log_info("Scheduler: Checking schedule now")
-            ScheduleWorker.instance._cycle()
+        with ScheduleWorker._scheduler_lock:
+            if ScheduleWorker._instance and ScheduleWorker._instance.isRunning():
+                log_info(f"Scheduler: Checking schedule now (queue length={len(ScheduleWorker._instance.pending_jobs_list)})")
+                ScheduleWorker._instance._cycle()
 
     @staticmethod
     def dequeue_all(job_type: SchedulerJobType | None = None):
-        if ScheduleWorker.instance:
-            ScheduleWorker.instance._remove_all(job_type)
+        with ScheduleWorker._scheduler_lock:
+            if ScheduleWorker._instance:
+                ScheduleWorker._instance._remove_all(job_type)
 
     def __init__(self) -> None:
         super().__init__(self.task_body, None, True)
         self.pending_jobs_list: List[SchedulerJob] = []
-        self.lock = threading.RLock()
 
     def task_body(self, _: WorkerThread):
         self._cycle()
         now = datetime.now()  # want just over the next minute boundary e.g. 13:45:05
         sleep_seconds = ((now + timedelta(seconds=60 + 30)).replace(second=5, microsecond=0) - now).seconds
-        # log_debug(f"Scheduler: sleeping {sleep_seconds=}") if log_debug_enabled else None
         self.doze(sleep_seconds)  # Have to wake every minute in case PC-sleep or hibernate has occurred.
 
     def _cycle(self):
-        with self.lock:
+        with ScheduleWorker._scheduler_lock:
             local_now = zoned_now()
             run_now: Dict[SchedulerJobType, SchedulerJob] = {}
             for job in self.pending_jobs_list:
@@ -2162,40 +2176,28 @@ class ScheduleWorker(WorkerThread):
             for job in run_now.values():
                 log_debug(f"Scheduler: Starting job {job=!s} queued={len(self.pending_jobs_list)}") if log_debug_enabled else None
                 job.run_job()
-            if len(self.pending_jobs_list) == 0:  # Nothing to wait for, stop the existing schedule worker (self)
-                log_info(f"Scheduler: empty job queue, suspending schedule monitoring")
-                ScheduleWorker.instance = ScheduleWorker()  # Construct future schedule worker, leave it idle (not started)
-                self.stop_requested = True  # Don't call stop() from within the task loop, just set the flag
 
     def add(self, job: SchedulerJob) -> SchedulerJob:
-        with self.lock:
-            assert not self.isFinished()
+        with ScheduleWorker._scheduler_lock:
+            assert job not in self.pending_jobs_list
             self.pending_jobs_list = sorted(self.pending_jobs_list + [job])
             log_debug(f"Scheduler: added {job=!s} queued={len(self.pending_jobs_list)}") if log_debug_enabled else None
-            if not self.isRunning():  # We don't start the worker until it has something to do
-                log_info("Scheduler: non-empty job queue, commencing schedule monitoring")
-                ScheduleWorker.instance.start()
             return job
 
     def remove(self, job: SchedulerJob):
-        with self.lock:
+        with ScheduleWorker._scheduler_lock:
             if job in self.pending_jobs_list:
                 self.pending_jobs_list.remove(job)
                 log_debug(f"Scheduler: removed {job=!s} queued={len(self.pending_jobs_list)}") if log_debug_enabled else None
 
     def _remove_all(self, job_type: SchedulerJobType | None = None):
-        with self.lock:
-            if job_type is None:
-                self.pending_jobs_list.clear()
-                log_debug(f"Scheduler: removed all jobs.") if log_debug_enabled else None
-            else:
-                for job in [j for j in self.pending_jobs_list if j.job_type == job_type]:
-                    self.remove(job)
+        with ScheduleWorker._scheduler_lock:
+            for job in [j for j in self.pending_jobs_list if job_type is None or j.job_type == job_type]:
+                self.remove(job)
+            log_debug(f"Scheduler: remove type {job_type!s} ({len(self.pending_jobs_list)} remain)") if log_debug_enabled else None
 
     def is_supervising(self, job: SchedulerJob):
         return job in self.pending_jobs_list
-
-ScheduleWorker.instance = ScheduleWorker()  # Initialise the current worker, but don't start it.
 
 
 class ConfIni(configparser.ConfigParser):
@@ -7587,8 +7589,6 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         self.preset_controller = PresetController()
         self.detected_vdu_list: List[Tuple[str, str, str, str]] = []
         self.previously_detected_vdu_list: List[Tuple[str, str, str, str]] = []
-        self.daily_schedule_job: SchedulerJob | None = None
-        ## self.daily_schedule_next_update = zoned_now() + timedelta(seconds=60)  # For testing
         self.refresh_data_task: WorkerThread | None = None
         self.weather_query: WeatherQuery | None = None
         self.preset_transition_workers: List[PresetTransitionWorker] = []  # Not sure if this actually needs to be a list.
@@ -7978,15 +7978,15 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 ScheduleWorker.dequeue_all(SchedulerJobType.SCHEDULE_PRESETS)
                 tomorrow = zoned_now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
                 # tomorrow = zoned_now().replace(second=0, microsecond=0) + timedelta(minutes=2) # testing
-                if self.daily_schedule_job is None or self.daily_schedule_job.when < tomorrow:
-                    self.daily_schedule_job = SchedulerJob(tomorrow,
-                                                           partial(self.main_window.run_in_gui_thread, self.schedule_presets),
-                                                           SchedulerJobType.SCHEDULE_PRESETS)
-                    log_info(f"Will update schedule for solar-activation at {tomorrow} "
-                             f"(in {round(self.daily_schedule_job.remaining_time()/60)} minutes)")
+                daily_schedule_job = SchedulerJob(tomorrow,
+                                                  partial(self.main_window.run_in_gui_thread, self.schedule_presets),
+                                                  SchedulerJobType.SCHEDULE_PRESETS)
+                log_info(f"Will update schedule for Presets at {tomorrow} "
+                         f"(in {round(daily_schedule_job.remaining_time()/60)} minutes)")
             log_debug("schedule_presets: released application_lock") if log_debug_enabled else None
         else:
             log_info(f"Scheduling is disabled or no location ({location=})")
+            ScheduleWorker.shutdown()
         PresetsDialog.reconfigure_instance()
 
     def schedule_alteration(self, preset: Preset) -> None:
