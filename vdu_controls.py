@@ -2094,6 +2094,7 @@ class SchedulerJob:  # designed to resemble a QTimer, which it was written to re
         self.job_runnable = run
         self.job_type = job_type
         self.has_run = False
+        self.attempts = 0
         ScheduleWorker.get_instance().add(self)
 
     def remaining_time(self):
@@ -2101,6 +2102,7 @@ class SchedulerJob:  # designed to resemble a QTimer, which it was written to re
 
     def run_job(self):
         try:
+            self.attempts += 1
             self.job_runnable()
         finally:
             self.has_run = True
@@ -2110,13 +2112,13 @@ class SchedulerJob:  # designed to resemble a QTimer, which it was written to re
 
     def requeue(self):
         assert not ScheduleWorker.get_instance().is_supervising(self)
-        ScheduleWorker.ScheduleWorker.get_instance().add(self)
+        ScheduleWorker.get_instance().add(self)
 
     def __lt__(self, other: SchedulerJob):
         return self.when < other.when
 
     def __str__(self):
-        return f"{self.job_type=} {self.when=:%Y-%m-%d %H:%M:%S}"
+        return f"[{self.job_type=} {self.when=:%Y-%m-%d %H:%M:%S} {self.attempts=}]"
 
 # Worker that runs SchedulerJobs - hibernation-tolerant scheduling at specific YYYYMMDD HHMM.
 # (An implementation based on sched.scheduler might also work - but the following is definitely going to work cross platform)
@@ -2174,7 +2176,7 @@ class ScheduleWorker(WorkerThread):
                 else: # Rest of list isn't due to run yet, can stop looking
                     break
             for job in run_now.values():
-                log_debug(f"Scheduler: Starting job {job=!s} queued={len(self.pending_jobs_list)}") if log_debug_enabled else None
+                log_debug(f"Scheduler: Starting {job=!s} queued={len(self.pending_jobs_list)}") if log_debug_enabled else None
                 job.run_job()
 
     def add(self, job: SchedulerJob) -> SchedulerJob:
@@ -7612,7 +7614,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         global unix_signal_handler
         unix_signal_handler.received_unix_signal_qtsignal.connect(respond_to_unix_signal)
 
-    def configure_application(self, main_window: VduAppWindow | None = None):
+    def configure_application(self, main_window: VduAppWindow | None = None, check_schedule: bool = True):
         try:
             log_info(f"Configuring application (reconfiguring={main_window is None})...")
             for controller in self.vdu_controllers_map.values():
@@ -7639,14 +7641,13 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 SettingsEditor.reconfigure_instance(self.get_vdu_configs())
                 self.restore_vdu_initialization_presets()
                 self.schedule_presets()
+                ScheduleWorker.check() if check_schedule else None
             log_debug("configure: released application_lock") if log_debug_enabled else None
             if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED):
                 if self.lux_auto_controller is not None:
                     self.lux_auto_controller.initialize_from_config()
                     LuxDialog.reconfigure_instance()
             self.main_window.update_status_indicators()
-            # restore_preset tries to acquire the same lock, safe to unlock and let it relock...
-            ScheduleWorker.check()  # Immediately activate the currently applicable preset.
         finally:
             if self.main_window is not None:
                 self.main_window.indicate_busy(False)
@@ -7798,8 +7799,6 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                             for control_panel in self.main_window.get_main_panel().vdu_control_panels.values():
                                 if control_panel.controller.get_full_id() in self.detected_vdu_list:
                                     control_panel.refresh_from_vdu()
-                            if self.lux_auto_controller is not None and self.lux_auto_controller.is_auto_enabled():
-                                self.lux_auto_controller.adjust_brightness_now()  # don't wait for normal interval to finish
                         except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
                             if self.refresh_data_task.vdu_exception is None:
                                 self.refresh_data_task.vdu_exception = VduException(vdu_description="unknown", operation="unknown",
@@ -7825,14 +7824,12 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 if len(self.detected_vdu_list) == 0 or self.detected_vdu_list != self.previously_detected_vdu_list or (
                     external_event and False):  # TODO figure out what to do here, external events might require reconfiguration???
                     log_info(f"Reconfiguring: detected={self.detected_vdu_list} previously={self.previously_detected_vdu_list}")
-                    self.configure_application()  # May cause a further refresh?
+                    self.configure_application(check_schedule=False)  # May cause a further refresh?
                     self.previously_detected_vdu_list = self.detected_vdu_list
-                else:
-                    ScheduleWorker.check()  # immediately active the currently applicable preset
+                ScheduleWorker.check()  # immediately active the currently applicable preset
                 if self.lux_auto_controller:
                     if LuxDialog.exists():
-                        lux_dialog: LuxDialog = LuxDialog.get_instance()  # type: ignore
-                        lux_dialog.reconfigure()  # in case the number of connected monitors have changed.
+                        LuxDialog.get_instance().reconfigure()  # in case the number of connected monitors have changed.
                     if self.lux_auto_controller.is_auto_enabled():
                         self.lux_auto_controller.adjust_brightness_now()
             finally:
@@ -8009,10 +8006,10 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         self.main_window.run_in_gui_thread(partial(self.activate_scheduled_preset, preset))
 
     def activate_scheduled_preset(self, preset: Preset, check_weather: bool = True, immediately: bool = False,
-                                  activation_time: datetime | None = None, try_count: int=1) -> None:  # TODO: Some params unneeded?
+                                  activation_time: datetime | None = None) -> None:  # TODO: Some params unneeded?
         assert is_running_in_gui_thread()
         if not self.main_config.is_set(ConfOption.SCHEDULE_ENABLED):
-            log_info(f"Schedule is disabled - not activating preset {preset.name}")
+            log_info(f"Schedule is disabled - not activating preset '{preset.name}'")
             return
         if activation_time is None:
             activation_time = zoned_now()
@@ -8032,32 +8029,31 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
         def _activation_finished(worker: PresetTransitionWorker) -> None:
             assert preset.elevation_time_today is not None
+            attempts = preset.scheduler_job.attempts
             if worker.vdu_exception is not None:  # TODO the following ini variable isn't defined for the ini file
-                secs = self.main_config.ini_content.getint('vdu-controls-globals', 'restore-error-sleep-seconds', fallback=60)
-                too_close = zoned_now() + timedelta(seconds=secs + 60)  # retry if more than a minute before any others
+                too_close = zoned_now() + timedelta(seconds=60)  # retry if more than a minute before any others
                 for other in self.preset_controller.find_presets_map().values():  # Skip retry if another is due soon
                     if (other.name != preset.name
                             and preset.elevation_time_today is not None and other.elevation_time_today is not None
                             and preset.elevation_time_today < other.elevation_time_today <= too_close):
-                        log_info(f"Schedule restoration skipped {preset.name}, too close to {other.name}")
+                        log_info(f"Schedule restoration skipped '{preset.name}', too close to {other.name}")
                         if not off_schedule:
                             preset.schedule_status = PresetScheduleStatus.SKIPPED_SUPERSEDED
                         _activation_feedback(tr("Skipped, superseded"))
                         return
-                _activation_feedback(tr("Error, trying again in {} seconds").format(secs))
-                if try_count == 1:
-                    log_warning(f"Error during restoration of {preset.name}, retrying every {secs} seconds.")
-                QTimer.singleShot(
-                    int(secs * 1000),
-                    partial(self.activate_scheduled_preset, preset, check_weather, immediately, activation_time, try_count + 1))
+                _activation_feedback(tr("Error, trying again in {} seconds").format(60))
+                if attempts == 1:
+                    log_warning(f"Error during restoration of '{preset.name}', retrying every {60} seconds.")
+                preset.scheduler_job.requeue()  # retry
                 return
             if not off_schedule:
                 preset.schedule_status = PresetScheduleStatus.SUCCEEDED
             self.main_window.update_status_indicators(preset)
             _activation_feedback(tr("Restored {}").format(preset.name))
-            log_info(f"Restored preset {preset.name} on try {try_count}") if try_count > 1 else None
+            log_info(f"Restored preset '{preset.name}' on try {attempts}") if attempts > 1 else None
 
-        log_info(f"Activating scheduled preset {preset.name} transition={immediately} {off_schedule=}") if try_count == 1 else None
+        if preset.scheduler_job.attempts == 1:
+            log_info(f"Activating scheduled preset {preset.name} transition={immediately} {off_schedule=}")
         # Happens asynchronously in a thread
         self.restore_preset(preset, finished_func=_activation_finished,
                             immediately=immediately or PresetTransitionFlag.SCHEDULED not in preset.get_transition_type(),
