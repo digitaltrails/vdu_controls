@@ -2072,11 +2072,11 @@ class WorkerThread(QThread):
             time.sleep(0.1)
 
     def doze(self, seconds: float, sleep_unit: float = 0.5):
-        for i in range(0, int(seconds)):
+        for i in range(0, int(seconds/sleep_unit)):
             if self.stop_requested:
                 return
             time.sleep(sleep_unit)
-        if remainder := 0 if self.stop_requested else (seconds - int(seconds)):
+        if remainder := (0 if self.stop_requested else (seconds - int(seconds))):
             time.sleep(remainder)
 
 
@@ -2118,7 +2118,7 @@ class SchedulerJob:  # designed to resemble a QTimer, which it was written to re
         return self.when < other.when
 
     def __str__(self):
-        return f"[{self.job_type=} {self.when=:%Y-%m-%d %H:%M:%S} {self.attempts=}]"
+        return f"[{self.job_type=} {self.when=:%Y-%m-%d %H:%M:%S} {self.attempts=} {self.has_run=}]"
 
 # Worker that runs SchedulerJobs - hibernation-tolerant scheduling at specific YYYYMMDD HHMM.
 # (An implementation based on sched.scheduler might also work - but the following is definitely going to work cross platform)
@@ -2173,8 +2173,6 @@ class ScheduleWorker(WorkerThread):
                     self.pending_jobs_list.remove(job)
                     if job.job_type not in run_now or (not job.has_run and job.when > run_now[job.job_type].when):
                         run_now[job.job_type] = job  # Only most recent of each type should run
-                else: # Rest of list isn't due to run yet, can stop looking
-                    break
             for job in run_now.values():
                 log_debug(f"Scheduler: Starting {job=!s} queued={len(self.pending_jobs_list)}") if log_debug_enabled else None
                 job.run_job()
@@ -2182,7 +2180,7 @@ class ScheduleWorker(WorkerThread):
     def add(self, job: SchedulerJob) -> SchedulerJob:
         with ScheduleWorker._scheduler_lock:
             assert job not in self.pending_jobs_list
-            self.pending_jobs_list = sorted(self.pending_jobs_list + [job])
+            self.pending_jobs_list.append(job)
             log_debug(f"Scheduler: added {job=!s} queued={len(self.pending_jobs_list)}") if log_debug_enabled else None
             return job
 
@@ -4135,7 +4133,6 @@ class PresetTransitionWorker(WorkerThread):
                 self.work_state = PresetTransitionState.FINISHED
             else:
                 log_error(f"Failed to restore non transitioning controls {self.preset.name}")
-            # self.vdu_exception = VduException("testing")
             self.end_time = datetime.now()
 
     def step(self) -> None:
