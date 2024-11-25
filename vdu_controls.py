@@ -7852,9 +7852,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                                                        immediately, background_activity, initialization_preset))
             return
 
-        log_debug("restore_preset: try to obtain application_lock", trace=False) if log_debug_enabled else None
+        log_debug(f"restore_preset: '{preset.name}' try to obtain application_lock", trace=False) if log_debug_enabled else None
         with self.application_lock:  # The lock prevents a transition firing when the GUI/app is reconfiguring
-            log_debug("restore_preset: holding application_lock", trace=False) if log_debug_enabled else None
+            log_debug(f"restore_preset: '{preset.name}' holding application_lock", trace=False) if log_debug_enabled else None
             self.transitioning_dummy_preset = None
             if not immediately:
                 self.transitioning_dummy_preset = PresetTransitionDummy(preset)
@@ -7902,7 +7902,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             worker.start()
             if initialization_preset:  # Don't allow anything else until it's finished
                 worker.wait()
-        log_debug("restore_preset: released application_lock") if log_debug_enabled else None
+        log_debug(f"restore_preset: '{preset.name}' released application_lock") if log_debug_enabled else None
 
 
     def restore_vdu_initialization_presets(self):
