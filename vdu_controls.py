@@ -2088,10 +2088,11 @@ class SchedulerJobType(Enum):
 # After hibernation, overdue events will trigger immediately.
 class SchedulerJob:  # designed to resemble a QTimer, which it was written to replace
 
-    def __init__(self, when: datetime, run: Callable, job_type: SchedulerJobType):
+    def __init__(self, when: datetime, job_type: SchedulerJobType, run_callable: Callable, skip_callabled: Callable | None = None):
         assert when.tzinfo is not None
         self.when = when.replace(second=0, microsecond=0)
-        self.job_runnable = run
+        self.run_callable = run_callable
+        self.skip_callable = skip_callabled
         self.job_type = job_type
         self.has_run = False
         self.attempts = 0
@@ -2103,7 +2104,7 @@ class SchedulerJob:  # designed to resemble a QTimer, which it was written to re
     def run_job(self):
         try:
             self.attempts += 1
-            self.job_runnable()
+            self.run_callable()
         finally:
             self.has_run = True
 
@@ -2112,6 +2113,7 @@ class SchedulerJob:  # designed to resemble a QTimer, which it was written to re
 
     def requeue(self):
         assert not ScheduleWorker.get_instance().is_supervising(self)
+        self.has_run = False
         ScheduleWorker.get_instance().add(self)
 
     def __lt__(self, other: SchedulerJob):
@@ -2145,7 +2147,7 @@ class ScheduleWorker(WorkerThread):
     def check():
         with ScheduleWorker._scheduler_lock:
             if ScheduleWorker._instance and ScheduleWorker._instance.isRunning():
-                log_info(f"Scheduler: Checking schedule now (queue length={len(ScheduleWorker._instance.pending_jobs_list)})")
+                log_info(f"Scheduler: off-schedule check requested (queue length={len(ScheduleWorker._instance.pending_jobs_list)})")
                 ScheduleWorker._instance._cycle()
 
     @staticmethod
@@ -2171,8 +2173,15 @@ class ScheduleWorker(WorkerThread):
             for job in self.pending_jobs_list:
                 if job.when <= local_now:  # Eligible to run now
                     self.pending_jobs_list.remove(job)
-                    if job.job_type not in run_now or (not job.has_run and job.when > run_now[job.job_type].when):
-                        run_now[job.job_type] = job  # Only most recent of each type should run
+                    if not job.has_run:   # Only most recent of each type should run
+                        if existing_job := run_now.get(job.job_type, None):
+                            if job.when > existing_job.when:
+                                existing_job.skip_callable()
+                                run_now[job.job_type] = job
+                            else:
+                                job.skip_callable()
+                        else:
+                            run_now[job.job_type] = job
             for job in run_now.values():
                 log_debug(f"Scheduler: Starting {job=!s} queued={len(self.pending_jobs_list)}") if log_debug_enabled else None
                 job.run_job()
@@ -3665,8 +3674,9 @@ class Preset:
     def get_step_interval_seconds(self) -> int:
         return self.preset_ini.getint('preset', 'transition-step-interval-seconds', fallback=0)
 
-    def schedule(self, when_today: datetime, schedule_action: Callable, overdue: bool=False):
-        self.scheduler_job = SchedulerJob(when_today, partial(schedule_action, self), SchedulerJobType.RESTORE_PRESET)
+    def schedule(self, when_today: datetime, run_action: Callable, skip_action: Callable | None = None, overdue: bool=False):
+        self.scheduler_job = SchedulerJob(when_today, SchedulerJobType.RESTORE_PRESET, partial(run_action, self),
+                                          partial(skip_action, self) if skip_action else None)
         if not overdue:
             self.elevation_time_today = when_today
             self.schedule_status = PresetScheduleStatus.SCHEDULED
@@ -3703,17 +3713,17 @@ class Preset:
             return True
         path = Path(weather_restriction_filename)
         if not path.exists():
-            log_error(f"Preset {self.name} missing weather requirements file: {weather_restriction_filename}")
+            log_error(f"Preset '{self.name}' missing weather requirements file: {weather_restriction_filename}")
             return True
         with open(path, encoding="utf-8") as weather_file:
             code_list = weather_file.readlines()
             for code_line in code_list:
                 parts = code_line.split()
                 if parts and weather.weather_code.strip() == parts[0]:
-                    log_info(f"Preset {self.name} met {path.name} requirements. Current weather is: "
+                    log_info(f"Preset '{self.name}' met {path.name} requirements. Current weather is: "
                              f"{weather.area_name} {weather.weather_code} {weather.weather_desc}")
                     return True
-        log_info(f"Preset {self.name} failed {path.name} requirements. Current weather is: "
+        log_info(f"Preset '{self.name}' failed {path.name} requirements. Current weather is: "
                  f"{weather.area_name} {weather.weather_code} {weather.weather_desc}")
         return False
 
@@ -7847,7 +7857,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             immediately = True
         # Starts the restore, but it will complete in the worker thread
         if not is_running_in_gui_thread():  # Transfer this request into the GUI thread
-            log_debug(f"restore_preset {preset.name} transferring task to GUI thread") if log_debug_enabled else None
+            log_debug(f"restore_preset: '{preset.name}' transferring task to GUI thread") if log_debug_enabled else None
             self.main_window.run_in_gui_thread(partial(self.restore_preset, preset, finished_func,
                                                        immediately, background_activity, initialization_preset))
             return
@@ -7894,11 +7904,10 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                         self.main_window.display_preset_status(tr("Interrupted restoration of {}").format(preset.name))
                 if finished_func is not None:
                     finished_func(worker_thread)
-
-            self.stop_any_transitioning_presets()  # During the lock it is safe to remove previous workers.
             worker = PresetTransitionWorker(self, preset, _update_progress, _restore_finished_callback,
                                             immediately, ignore_others=initialization_preset)
             self.preset_transition_workers.append(worker)
+            log_debug(f"restore_preset: '{preset.name}' handover to WorkerThread") if log_debug_enabled else None
             worker.start()
             if initialization_preset:  # Don't allow anything else until it's finished
                 worker.wait()
@@ -7937,7 +7946,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     preset.elevation_time_today = elevation_data.when
                     timetable_for_day[elevation_data.when] = preset
                 else:
-                    log_debug(f"schedule_create_timetable: Skipped preset {preset.name} {elevation_key} degrees,"
+                    log_debug(f"schedule_create_timetable: Skipped preset '{preset.name}' {elevation_key} degrees,"
                               " the sun does not reach that elevation today.")
         return {when: preset for when, preset in sorted(list(timetable_for_day.items()))}
 
@@ -7955,7 +7964,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     now = zoned_now()
                     if future_presets := [(when, preset) for when, preset in timetable_for_today.items() if when > now]:
                         for when, preset in future_presets:  # Schedule future part of day
-                            preset.schedule(when, self.activate_scheduled_preset_in_gui)
+                            preset.schedule(when, self.activate_scheduled_preset_in_gui, self.skip_scheduled_preset)
                     # Schedule the preset that might apply right now, either the first overdue, or last from yesterday
                     if overdue_presets := [(when, preset) for when, preset in timetable_for_today.items() if when <= now]:
                         when_overdue, most_recent_overdue_preset = overdue_presets[-1]  # first is the most recently applicable
@@ -7964,7 +7973,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                         for when, preset in overdue_presets[:-1]:  # The rest have been superseded (if not already succeeded)
                             if preset.schedule_status != PresetScheduleStatus.SUCCEEDED:  # not already run
                                 preset.schedule_status = PresetScheduleStatus.SKIPPED_SUPERSEDED
-                                log_info(f"Skipped preset {preset.name}, passed assigned-time (status={preset.schedule_status})")
+                                log_info(f"Skipped preset '{preset.name}', passed assigned-time (status={preset.schedule_status})")
                     else:  # Nothing overdue today, schedule the last from yesterday (assumed to be the last for today)
                         last_preset_yesterday = list(timetable_for_today.values())[-1]  # last for yesterday same as last for today
                         last_preset_yesterday.schedule(start_of_today, self.activate_scheduled_preset_in_gui, overdue=True)
@@ -7972,9 +7981,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 ScheduleWorker.dequeue_all(SchedulerJobType.SCHEDULE_PRESETS)
                 tomorrow = zoned_now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
                 # tomorrow = zoned_now().replace(second=0, microsecond=0) + timedelta(minutes=2) # testing
-                daily_schedule_job = SchedulerJob(tomorrow,
-                                                  partial(self.main_window.run_in_gui_thread, self.schedule_presets),
-                                                  SchedulerJobType.SCHEDULE_PRESETS)
+                daily_schedule_job = SchedulerJob(tomorrow, SchedulerJobType.SCHEDULE_PRESETS,
+                                                  partial(self.main_window.run_in_gui_thread, self.schedule_presets))
                 log_info(f"Will update schedule for Presets at {tomorrow} "
                          f"(in {round(daily_schedule_job.remaining_time()/60)} minutes)")
             log_debug("schedule_presets: released application_lock") if log_debug_enabled else None
@@ -8041,7 +8049,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 _activation_feedback(tr("Error, trying again in {} seconds").format(60))
                 if attempts == 1:
                     log_warning(f"Error during restoration of '{preset.name}', retrying every {60} seconds.")
-                preset.scheduler_job.requeue()  # retry
+                preset.scheduler_job.requeue()  # retry - retain old schedule time to maintain proper schedule order.
                 return
             if not off_schedule:
                 preset.schedule_status = PresetScheduleStatus.SUCCEEDED
@@ -8050,11 +8058,16 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             log_info(f"Restored preset '{preset.name}' on try {attempts}") if attempts > 1 else None
 
         if preset.scheduler_job.attempts == 1:
-            log_info(f"Activating scheduled preset {preset.name} transition={immediately} {off_schedule=}")
+            log_info(f"Activating scheduled preset '{preset.name}' transition={immediately} {off_schedule=}")
         # Happens asynchronously in a thread
         self.restore_preset(preset, finished_func=_activation_finished,
                             immediately=immediately or PresetTransitionFlag.SCHEDULED not in preset.get_transition_type(),
                             background_activity=True)
+
+    def skip_scheduled_preset(self, preset: Preset,):
+        assert is_running_in_gui_thread()
+        preset.schedule_status = PresetScheduleStatus.SKIPPED_SUPERSEDED
+        self.main_window.update_status_indicators(preset)
 
     def is_weather_satisfactory(self, preset, use_cache: bool = False) -> bool:
         try:
@@ -8063,7 +8076,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     self.weather_query = WeatherQuery(location)
                     self.weather_query.run_query()
                     if not self.weather_query.proximity_ok:
-                        log_error(f"Preset {preset.name} weather location is {self.weather_query.proximity_km} km from "
+                        log_error(f"Preset '{preset.name}' weather location is {self.weather_query.proximity_km} km from "
                                   f"Settings Location, check settings.")
                         weather_bad_location_dialog(self.weather_query)
             if not preset.check_weather(self.weather_query):
