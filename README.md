@@ -30,7 +30,7 @@ A control panel for external monitors (*Visual Display Units*).
 > Should the ddcutil-service be unavailable, the DDC/VDU interface reverts to using 
 > the ddcutil command.
 > 
-> Prebuild vdu_control OpenSUSE and AUR packages optionally recommand ddcutil-service. 
+> Prebuilt vdu_control OpenSUSE and AUR packages optionally recommand ddcutil-service. 
 > Depending packaging settings, the service may be automatically installed when you
 > install vdu_controls. 
 > 
