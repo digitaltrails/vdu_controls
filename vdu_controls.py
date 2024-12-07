@@ -817,7 +817,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QDesktopWidget, QSpacerItem
 
 APPNAME = "VDU Controls"
-VDU_CONTROLS_VERSION = '2.1.2'
+VDU_CONTROLS_VERSION = '2.1.3'
 VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in VDU_CONTROLS_VERSION.split('.'))
 assert sys.version_info >= (3, 8), f'{APPNAME} utilises python version 3.8 or greater (your python is {sys.version}).'
 
@@ -2675,7 +2675,7 @@ class VduController(QObject):
         self.capabilities_text: str | None = None
         self.config = None
         self.values_cache: Dict[str, int] = {}
-        self.ignore_vdu = False
+        self.ignore_vdu = remedy ==  VduController.IGNORE_VDU
         default_sleep_multiplier: float | None = default_config.get_sleep_multiplier(fallback=None)
         enabled_vcp_codes = default_config.get_all_enabled_vcp_codes()
         for config_name in (self.vdu_stable_id, self.vdu_model_id):
@@ -2688,7 +2688,7 @@ class VduController(QObject):
                     self.config.debug_dump()
                 enabled_vcp_codes = self.config.get_all_enabled_vcp_codes()
                 self.capabilities_text = self.config.get_capabilities_alt_text()  # cached, possibly edited, ddc capabilities
-                self.ignore_vdu = self.capabilities_text == '' or self.capabilities_text == IGNORE_VDU_MARKER_TEXT
+                self.ignore_vdu = self.ignore_vdu or self.capabilities_text == '' or self.capabilities_text == IGNORE_VDU_MARKER_TEXT
                 if not self.ignore_vdu:
                     if multiplier := self.config.get_sleep_multiplier(fallback=default_sleep_multiplier):
                         self.ddcutil.set_sleep_multiplier(vdu_number, multiplier)
@@ -7638,6 +7638,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 ScheduleWorker.dequeue_all()
                 if self.lux_auto_controller is not None:
                     self.lux_auto_controller.stop_worker()
+                    self.lux_auto_controller.lux_slider = None
                 self.stop_any_transitioning_presets()
                 global log_to_syslog
                 log_to_syslog = self.main_config.is_set(ConfOption.SYSLOG_ENABLED)

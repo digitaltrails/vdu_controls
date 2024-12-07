@@ -18,7 +18,7 @@
 
 
 Name:           vdu_controls
-Version:        2.1.2
+Version:        2.1.3
 Release:        0
 Summary:        Visual Display Unit virtual control panel
 License:        GPL-3.0-or-later

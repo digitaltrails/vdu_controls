@@ -352,6 +352,9 @@ Michael Hamilton
 
 Version History
 ---------------
+* 2.1.3
+  * Fix the ignore-VDU user-electable remedy for when ddcutil cannot communicate with a VDU.  
+
 * 2.1.2
   * Replace the Preset-scheduler with an implementation that remains accurate after PC-sleep/hibernation.
   * Fix the day-rollover which was scheduling for the wrong day if triggered at 12:59:59. 
