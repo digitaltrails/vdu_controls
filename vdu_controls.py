@@ -6436,9 +6436,9 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         start_of_cycle = True
         profile_preset_name = None
         vdu_changes_count = {}
-        while change_count != last_change_count:  # while brightness changing
-            last_change_count = change_count
-            if metered_lux := lux_meter.get_value():
+        if metered_lux := lux_meter.get_value():  # Measure once - changing VDU brightness can feed back to the lux-meter.
+            while change_count != last_change_count:  # while brightness changing
+                last_change_count = change_count
                 smoothed_lux = metered_lux if lux_meter.is_manual_control() else self.smoother.smooth(metered_lux)
                 summary_text = self.lux_summary(metered_lux, smoothed_lux)
                 if start_of_cycle:
@@ -6461,7 +6461,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                     else:
                         error_count += 1
                 start_of_cycle = False
-            self.doze(self.step_pause_millis / 1000.0)  # Let i2c settle down, then continue - TODO is this really necessary?
+                self.doze(self.step_pause_millis / 1000.0)  # Let i2c settle down, then continue - TODO is this really necessary?
         if error_count == 0:
             if change_count != 0:  # If any work was done in previous steps, finish up the remaining tasks
                 self.status_message(tr("Brightness adjustment completed"), timeout=5000)

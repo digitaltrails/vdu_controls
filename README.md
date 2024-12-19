@@ -354,6 +354,7 @@ Version History
 ---------------
 * 2.1.3
   * Fix the ignore-VDU user-electable remedy for when ddcutil cannot communicate with a VDU.  
+  * Avoid abrupt u-turns in automatic brightness, don't reassess the lux level while making an adjustment.
 
 * 2.1.2
   * Replace the Preset-scheduler with an implementation that remains accurate after PC-sleep/hibernation.
