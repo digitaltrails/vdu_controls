@@ -1641,6 +1641,7 @@ class DdcutilExeImpl:
             edid = "".join(re.findall('((?: [0-9a-f][0-9a-f]){16})', edid_match.group(0))).replace(' ', '')
             log_debug(f"{edid=}") if log_debug_enabled else None
             return edid
+        log_error(f"Failed to parse edid in {display_str=}")
         return None
 
     def detect(self, flags: int) -> List[Tuple]:
