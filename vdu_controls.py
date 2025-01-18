@@ -1637,7 +1637,7 @@ class DdcutilExeImpl:
         return "Command Line - ddcutil"
 
     def _parse_edid(self, display_str: str) -> str | None:
-        if edid_match := re.search(r'EDID hex dump:\n[^\n]+(\n([ \t]+[+]0).+)+', display_str):
+        if edid_match := re.search(r'EDID hex dump:\n[^\n]+(\n([ \t]*[+]0).+)+', display_str):
             edid = "".join(re.findall('((?: [0-9a-f][0-9a-f]){16})', edid_match.group(0))).replace(' ', '')
             log_debug(f"{edid=}") if log_debug_enabled else None
             return edid
