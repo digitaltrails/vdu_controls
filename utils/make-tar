@@ -10,6 +10,7 @@ source="$2"
 
 if [ $source == "git" ]
 then
+    set -x
     git archive --format tgz --prefix=vdu_controls-$version/ HEAD > /home/michael/rpmbuild/SOURCES/vdu_controls-$version.tar.gz
     exit 0
 fi
