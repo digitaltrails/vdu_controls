@@ -353,7 +353,7 @@ Michael Hamilton
 Version History
 ---------------
 * 2.1.3
-  * Fix the ignore-VDU user-electable remedy for when ddcutil cannot communicate with a VDU.  
+  * Fix the error-dialog option "Ignore-VDU" when ddcutil cannot communicate with a VDU.  
   * Avoid abrupt u-turns in automatic brightness, don't reassess the lux level while making an adjustment.
   * Update the EDID-parser to accept the command line output from ddcutil 2.2 (for those not using ddcutil-service).
 
