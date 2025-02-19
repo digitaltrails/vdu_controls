@@ -352,6 +352,9 @@ Michael Hamilton
 
 Version History
 ---------------
+* 2.1,4
+  * Add back a way to server side ddcutil-service connectivity detection (--dbus-events). 
+
 * 2.1.3
   * Fix the error-dialog option "Ignore-VDU" when ddcutil cannot communicate with a VDU.  
   * Avoid abrupt u-turns in automatic brightness, don't reassess the lux level while making an adjustment.
