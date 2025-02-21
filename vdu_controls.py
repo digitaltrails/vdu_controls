@@ -21,6 +21,7 @@ Synopsis:
                      [--syslog|--no-syslog]  [--debug|--no-debug] [--warnings|--no-warnings]
                      [--sleep-multiplier multiplier] [--ddcutil-extra-args 'extra args']
                      [--dbus-client|--no-dbus-client]
+                     [--dbus-events|--no-dbus-events]
                      [--protect-nvram|--no-protect-nvram]
                      [--create-config-files] [--install] [--uninstall]
 
@@ -85,6 +86,9 @@ Arguments supplied on the command line override config file equivalent settings.
       --dbus-client|--no-dbus-client
                             use the D-Bus ddcutil-service instead of the ddcutil command
                             ``--dbus-client`` is the default
+      --dbus-events|--no-dbus-events
+                            enable D-Bus ddcutil-service client events
+                            ``--dbus-events`` is the default
       --protect-nvram|--no-protect-nvram
                             alter options and defaults to minimize VDU NVRAM writes
       --create-config-files
@@ -1814,11 +1818,12 @@ class DdcutilDBusImpl(QObject):
                                 "ConnectedDisplaysChanged", self._connected_displays_changed_handler)
         DdcutilDBusImpl._current_connected_displays_changed_handler = self._connected_displays_changed_handler
         ddcutil_dbus_iface.setTimeout(self.dbus_timeout_millis)
-        if self.listener_callback:  # In case the service has restarted
-            ddcutil_dbus_props.call("Set",
-                                    "com.ddcutil.DdcutilInterface",
-                                    "ServiceEmitSignals",
-                                    QDBusVariant(QDBusArgument(True, QMetaType.Bool)))
+        # This is intended to provide the user with an easy way enable or disable events in the server.
+        log_info(f"Remotely configuring ddcutil-service ServiceEmitSignals={self.listener_callback is not None}")
+        ddcutil_dbus_props.call("Set",
+                                "com.ddcutil.DdcutilInterface",
+                                "ServiceEmitSignals",
+                                QDBusVariant(QDBusArgument(self.listener_callback is not None, QMetaType.Bool)))
         return ddcutil_dbus_iface, ddcutil_dbus_props
 
     def refresh_connection(self):
@@ -2315,6 +2320,8 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
                                   tip=QT_TR_NOOP('divert diagnostic output to the syslog'))
     DBUS_CLIENT_ENABLED = conf_opt_def(cname=QT_TR_NOOP('dbus-client-enabled'), default="yes",
                                        tip=QT_TR_NOOP('use the D-Bus ddcutil-server if available'))
+    DBUS_EVENTS_ENABLED = conf_opt_def(cname=QT_TR_NOOP('dbus-events-enabled'), default="yes",
+                                       tip=QT_TR_NOOP('enable D-Bus ddcutil-server events'), requires='dbus-client-enabled')
     LOCATION = conf_opt_def(cname=QT_TR_NOOP('location'), conf_type=CI.TYPE_LOCATION, tip=QT_TR_NOOP('latitude,longitude'))
     SLEEP_MULTIPLIER = conf_opt_def(cname=QT_TR_NOOP('sleep-multiplier'), section=CI.DDCUTIL_PARAMETERS, conf_type=CI.TYPE_FLOAT,
                                     tip=QT_TR_NOOP('ddcutil --sleep-multiplier (0.1 .. 2.0, default none)'))
@@ -7670,7 +7677,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
     def create_ddcutil(self):
 
-        if self.main_config.is_set(ConfOption.DBUS_CLIENT_ENABLED):
+        if self.main_config.is_set(ConfOption.DBUS_CLIENT_ENABLED) and self.main_config.is_set(ConfOption.DBUS_EVENTS_ENABLED):
 
             def _vdu_connectivity_changed_callback(edid_encoded: str, event_type: int, flags: int):
                 if not DdcEventType.UNKNOWN.value <= event_type <= DdcEventType.DISPLAY_DISCONNECTED.value:
@@ -7684,7 +7691,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             change_handler = _vdu_connectivity_changed_callback
             log_debug("Enabled callback for VDU-connectivity-change D-Bus signals")
         else:
-            change_handler = None
+            change_handler = None  # This will force disabling the eventing/polling inside the server, not just the client.
 
         try:
             self.ddcutil = Ddcutil(common_args=self.main_config.get_ddcutil_extra_args(),
