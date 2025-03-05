@@ -632,10 +632,13 @@ that this will now become the brightness for *Vivid* until the VDU is reset to i
 To avoid confusion, it may be advisable to stick to one picture-mode for use with vdu_controls,
 preserving the others unaltered.
 
-The ``ddcutil-service`` has some ability to signal hot-plug events, such as connecting
-a new VDU or powering one down. Not all GPU-drivers support an efficient means of event detection,
-as a result there may be a delay of many seconds before ``ddcutil-service`` passes these events
-to ``vdu_controls``.
+When ``DBUS client`` is enabled, ``vdu_controls`` will receive DBUS signals from
+``ddcutil-service`` for DPMS events and VDU hot-plug events (connection/disconnection).
+The reliability and timeliness of DPMS/hot-plug detection may vary depending on the model of GPU,
+version of GPU driver, model of VDU, and type of VDU connector-cable.  In some cases the service's
+polling for DPMS or hot-plug status may wake some VDU models.  Should problems occur, there are
+``ddcutil-service`` or ``libddcutil`` options that may help. As a last resort, ``ddcutil-service``
+DBUS events can be disabled in the ``vdu_controls`` settings panel.
 
 Builtin laptop displays normally don't implement DDC and those displays are not supported, but a
 laptop's externally connected VDUs are likely to be controllable.

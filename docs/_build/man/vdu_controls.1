@@ -27,9 +27,9 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Feb 18, 2025" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Mar 05, 2025" "" "vdu_controls"
 .SH NAME
-vdu_controls \- vdu_controls 2.1.3
+vdu_controls \- vdu_controls 2.1.4
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
 .sp
 A control panel for DisplayPort, DVI, HDMI, or USB connected VDUs (\fIVisual Display Units\fP).
@@ -51,6 +51,7 @@ A control panel for DisplayPort, DVI, HDMI, or USB connected VDUs (\fIVisual Dis
 [\-\-syslog|\-\-no\-syslog]  [\-\-debug|\-\-no\-debug] [\-\-warnings|\-\-no\-warnings]
 [\-\-sleep\-multiplier multiplier] [\-\-ddcutil\-extra\-args \(aqextra args\(aq]
 [\-\-dbus\-client|\-\-no\-dbus\-client]
+[\-\-dbus\-events|\-\-no\-dbus\-events]
 [\-\-protect\-nvram|\-\-no\-protect\-nvram]
 [\-\-create\-config\-files] [\-\-install] [\-\-uninstall]
 .UNINDENT
@@ -156,6 +157,10 @@ extra arguments to pass to ddcutil (enclosed in single quotes)
 .B \-\-dbus\-client|\-\-no\-dbus\-client
 use the D\-Bus ddcutil\-service instead of the ddcutil command
 \fB\-\-dbus\-client\fP is the default
+.TP
+.B \-\-dbus\-events|\-\-no\-dbus\-events
+enable D\-Bus ddcutil\-service client events
+\fB\-\-dbus\-events\fP is the default
 .TP
 .B \-\-protect\-nvram|\-\-no\-protect\-nvram
 alter options and defaults to minimize VDU NVRAM writes
@@ -824,10 +829,13 @@ that this will now become the brightness for \fIVivid\fP until the VDU is reset 
 To avoid confusion, it may be advisable to stick to one picture\-mode for use with vdu_controls,
 preserving the others unaltered.
 .sp
-The \fBddcutil\-service\fP has some ability to signal hot\-plug events, such as connecting
-a new VDU or powering one down. Not all GPU\-drivers support an efficient means of event detection,
-as a result there may be a delay of many seconds before \fBddcutil\-service\fP passes these events
-to \fBvdu_controls\fP\&.
+When \fBDBUS client\fP is enabled, \fBvdu_controls\fP will receive DBUS signals from
+\fBddcutil\-service\fP for DPMS events and VDU hot\-plug events (connection/disconnection).
+The reliability and timeliness of DPMS/hot\-plug detection may vary depending on the model of GPU,
+version of GPU driver, model of VDU, and type of VDU connector\-cable.  In some cases the service\(aqs
+polling for DPMS or hot\-plug status may wake some VDU models.  Should problems occur, there are
+\fBddcutil\-service\fP or \fBlibddcutil\fP options that may help. As a last resort, \fBddcutil\-service\fP
+DBUS events can be disabled in the \fBvdu_controls\fP settings panel.
 .sp
 Builtin laptop displays normally don\(aqt implement DDC and those displays are not supported, but a
 laptop\(aqs externally connected VDUs are likely to be controllable.

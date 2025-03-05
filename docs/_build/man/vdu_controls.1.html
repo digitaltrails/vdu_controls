@@ -16,6 +16,7 @@ a DDC control panel for monitors</h1>
                  [--syslog|--no-syslog]  [--debug|--no-debug] [--warnings|--no-warnings]
                  [--sleep-multiplier multiplier] [--ddcutil-extra-args &#39;extra args&#39;]
                  [--dbus-client|--no-dbus-client]
+                 [--dbus-events|--no-dbus-events]
                  [--protect-nvram|--no-protect-nvram]
                  [--create-config-files] [--install] [--uninstall]</code></pre>
 <h2 id="optional-arguments">Optional arguments:</h2>
@@ -77,6 +78,9 @@ equivalent settings.</p>
   --dbus-client|--no-dbus-client
                         use the D-Bus ddcutil-service instead of the ddcutil command
                         ``--dbus-client`` is the default
+  --dbus-events|--no-dbus-events
+                        enable D-Bus ddcutil-service client events
+                        ``--dbus-events`` is the default
   --protect-nvram|--no-protect-nvram
                         alter options and defaults to minimize VDU NVRAM writes
   --create-config-files
@@ -649,11 +653,16 @@ likely that this will now become the brightness for <em>Vivid</em> until
 the VDU is reset to its defaults. To avoid confusion, it may be
 advisable to stick to one picture-mode for use with vdu_controls,
 preserving the others unaltered.</p>
-<p>The <code>ddcutil-service</code> has some ability to signal hot-plug
-events, such as connecting a new VDU or powering one down. Not all
-GPU-drivers support an efficient means of event detection, as a result
-there may be a delay of many seconds before <code>ddcutil-service</code>
-passes these events to <code>vdu_controls</code>.</p>
+<p>When <code>DBUS client</code> is enabled, <code>vdu_controls</code>
+will receive DBUS signals from <code>ddcutil-service</code> for DPMS
+events and VDU hot-plug events (connection/disconnection). The
+reliability and timeliness of DPMS/hot-plug detection may vary depending
+on the model of GPU, version of GPU driver, model of VDU, and type of
+VDU connector-cable. In some cases the service’s polling for DPMS or
+hot-plug status may wake some VDU models. Should problems occur, there
+are <code>ddcutil-service</code> or <code>libddcutil</code> options that
+may help. As a last resort, <code>ddcutil-service</code> DBUS events can
+be disabled in the <code>vdu_controls</code> settings panel.</p>
 <p>Builtin laptop displays normally don’t implement DDC and those
 displays are not supported, but a laptop’s externally connected VDUs are
 likely to be controllable.</p>
