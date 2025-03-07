@@ -249,6 +249,22 @@ Can be annotated with::
 With this annotation, when ever *Picture Mode* is altered, vdu_controls will
 reload all configuration files and refresh all control values from the VDUs.
 
+DBUS dccutil-service
+--------------------
+
+When available, ``vdu_controls`` defaults to interacting with VDUs via the DBUS ``ddcutil-service``
+service rather than the ``ddcutil`` command. The service should be both faster and more
+reliable - noticeably so when multiple VDUs need to be controlled. Whether to use the service
+can be controlled by the ``DBUS client`` checkbox in the settings dialog.
+
+When using the service, you may optionally enable service detection of DPMS events and
+VDU connectivity events (hot-plugging cables or power-cycling VDUs).  Whether to enable events
+is controlled by the ``DBUS events`` checkbox in the settings dialog.  The reliability
+and timeliness of events may vary depending on the model of GPU, version of GPU driver,
+model of VDU, and type of VDU connector-cable.  In some cases the service polling for DPMS or
+connection status may wake some VDU models.  Both ``ddcutil-service`` or ``libddcutil`` offer
+options for finer control over which events are detected and how.
+
 Presets
 -------
 
@@ -604,6 +620,12 @@ to reduce the overall frequency of adjustments to acceptable levels.
     the number of VCP (NVRAM) writes.
   + The bottom of the About-dialog shows the same numbers. They update dynamically.
 
+Laptops
+-------
+
+Builtin laptop displays normally don't implement DDC and those displays are not supported, but a
+laptop's externally connected VDUs are likely to be controllable.
+
 Other concerns
 --------------
 
@@ -632,16 +654,6 @@ that this will now become the brightness for *Vivid* until the VDU is reset to i
 To avoid confusion, it may be advisable to stick to one picture-mode for use with vdu_controls,
 preserving the others unaltered.
 
-When ``DBUS client`` is enabled, ``vdu_controls`` will receive DBUS signals from
-``ddcutil-service`` for DPMS events and VDU hot-plug events (connection/disconnection).
-The reliability and timeliness of DPMS/hot-plug detection may vary depending on the model of GPU,
-version of GPU driver, model of VDU, and type of VDU connector-cable.  In some cases the service's
-polling for DPMS or hot-plug status may wake some VDU models.  Should problems occur, there are
-``ddcutil-service`` or ``libddcutil`` options that may help. As a last resort, ``ddcutil-service``
-DBUS events can be disabled in the ``vdu_controls`` settings panel.
-
-Builtin laptop displays normally don't implement DDC and those displays are not supported, but a
-laptop's externally connected VDUs are likely to be controllable.
 
 Examples
 ========
@@ -2323,7 +2335,7 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
                                   tip=QT_TR_NOOP('divert diagnostic output to the syslog'))
     DBUS_CLIENT_ENABLED = conf_opt_def(cname=QT_TR_NOOP('dbus-client-enabled'), default="yes",
                                        tip=QT_TR_NOOP('use the D-Bus ddcutil-server if available'))
-    DBUS_EVENTS_ENABLED = conf_opt_def(cname=QT_TR_NOOP('dbus-events-enabled'), default="yes",
+    DBUS_EVENTS_ENABLED = conf_opt_def(cname=QT_TR_NOOP('dbus-events-enabled'), default="no",
                                        tip=QT_TR_NOOP('enable D-Bus ddcutil-server events'), requires='dbus-client-enabled')
     LOCATION = conf_opt_def(cname=QT_TR_NOOP('location'), conf_type=CI.TYPE_LOCATION, tip=QT_TR_NOOP('latitude,longitude'))
     SLEEP_MULTIPLIER = conf_opt_def(cname=QT_TR_NOOP('sleep-multiplier'), section=CI.DDCUTIL_PARAMETERS, conf_type=CI.TYPE_FLOAT,

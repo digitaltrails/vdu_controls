@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Mar 05, 2025" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Mar 07, 2025" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 2.1.4
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -376,6 +376,20 @@ Feature: 15 (Picture Mode *refresh*)
 .sp
 With this annotation, when ever \fIPicture Mode\fP is altered, vdu_controls will
 reload all configuration files and refresh all control values from the VDUs.
+.SS DBUS dccutil\-service
+.sp
+When available, \fBvdu_controls\fP defaults to interacting with VDUs via the DBUS \fBddcutil\-service\fP
+service rather than the \fBddcutil\fP command. The service should be both faster and more
+reliable \- noticeably so when multiple VDUs need to be controlled. Whether to use the service
+can be controlled by the \fBDBUS client\fP checkbox in the settings dialog.
+.sp
+When using the service, you may optionally enable service detection of DPMS events and
+VDU connectivity events (hot\-plugging cables or power\-cycling VDUs).  Whether to enable events
+is controlled by the \fBDBUS events\fP checkbox in the settings dialog.  The reliability
+and timeliness of events may vary depending on the model of GPU, version of GPU driver,
+model of VDU, and type of VDU connector\-cable.  In some cases the service polling for DPMS or
+connection status may wake some VDU models.  Both \fBddcutil\-service\fP or \fBlibddcutil\fP offer
+options for finer control over which events are detected and how.
 .SS Presets
 .sp
 A custom named preset can be used to save the current VDU settings for later recall. Any number of
@@ -802,6 +816,10 @@ the number of VCP (NVRAM) writes.
 The bottom of the About\-dialog shows the same numbers. They update dynamically.
 .UNINDENT
 .UNINDENT
+.SS Laptops
+.sp
+Builtin laptop displays normally don\(aqt implement DDC and those displays are not supported, but a
+laptop\(aqs externally connected VDUs are likely to be controllable.
 .SS Other concerns
 .sp
 The power\-supplies in some older VDUs may buzz/squeel audibly when the brightness is
@@ -828,17 +846,6 @@ VDU\(aqs \fIVivid\fP picture\-mode, if you use vdu_controls to change the bright
 that this will now become the brightness for \fIVivid\fP until the VDU is reset to its defaults.
 To avoid confusion, it may be advisable to stick to one picture\-mode for use with vdu_controls,
 preserving the others unaltered.
-.sp
-When \fBDBUS client\fP is enabled, \fBvdu_controls\fP will receive DBUS signals from
-\fBddcutil\-service\fP for DPMS events and VDU hot\-plug events (connection/disconnection).
-The reliability and timeliness of DPMS/hot\-plug detection may vary depending on the model of GPU,
-version of GPU driver, model of VDU, and type of VDU connector\-cable.  In some cases the service\(aqs
-polling for DPMS or hot\-plug status may wake some VDU models.  Should problems occur, there are
-\fBddcutil\-service\fP or \fBlibddcutil\fP options that may help. As a last resort, \fBddcutil\-service\fP
-DBUS events can be disabled in the \fBvdu_controls\fP settings panel.
-.sp
-Builtin laptop displays normally don\(aqt implement DDC and those displays are not supported, but a
-laptop\(aqs externally connected VDUs are likely to be controllable.
 .SH EXAMPLES
 .INDENT 0.0
 .INDENT 3.5

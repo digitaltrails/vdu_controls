@@ -354,6 +354,7 @@ Version History
 ---------------
 * 2.1,4
   * Provide a way to enable/disable server side ddcutil-service connectivity detection (dbus events). 
+  * Default dbus events to off (less troublesome for some user's VDUs/GPUs).
 
 * 2.1.3
   * Fix the error-dialog option "Ignore-VDU" when ddcutil cannot communicate with a VDU.  
