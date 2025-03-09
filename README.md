@@ -353,8 +353,8 @@ Michael Hamilton
 Version History
 ---------------
 * 2.1,4
-  * Provide a way to enable/disable server side ddcutil-service DPMS+connectivity detection (dbus events). 
-  * Default dbus events to off (less troublesome for some VDUs/GPUs/drivers).
+  * Provide a setting for enabling dbus-events - ddcutil-service DPMS and hotplug detection. 
+  * Default the dbus-event setting to off, which is less troublesome for some VDUs/GPUs/drivers.
 
 * 2.1.3
   * Fix the error-dialog option "Ignore-VDU" when ddcutil cannot communicate with a VDU.  
