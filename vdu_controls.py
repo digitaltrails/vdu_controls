@@ -2924,6 +2924,20 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
                 tab.set_label(vdu_label)
                 self.tabs.setTabText(self.tabs.indexOf(tab), vdu_label)
 
+    def cross_validate(self) -> bool:
+        labels_in_use = {'vdu_controls': 'vdu_controls globals'}
+        for tab in self.editor_tab_list:
+            if vdu_label := tab.ini_editable.get(*ConfOption.VDU_LABEL.conf_id, fallback=None):
+                if existing_use := labels_in_use.get(vdu_label, None):
+                    alert = MessageBox(QMessageBox.Critical, QMessageBox.Close)
+                    alert.setText(tr("Cannot save duplicate VDU label '{}'").format(vdu_label))
+                    alert.setInformativeText(tr("Alter the label for {} or {} and try again.").format(
+                        tab.config_path.stem, existing_use))
+                    alert.exec()
+                    return False
+                else:
+                    labels_in_use[vdu_label] = tab.config_path.stem
+        return True
 
     def save_all(self, warn_if_nothing_to_save: bool = True) -> int:
         what_changed: Dict[str, str] = {}
@@ -3057,16 +3071,17 @@ class SettingsEditorTab(QWidget):
                 confirmation.setText(message)
                 answer = confirmation.exec()
                 if answer == QMessageBox.Save:
-                    self.status_message(tr("Saving {} ...").format(self.config_path.name))
-                    QApplication.processEvents()
-                    self.ini_editable.save(self.config_path)
-                    self.ini_before = self.ini_editable.duplicate()  # Saved ini becomes the new "before"
-                    if what_changed is None:  # Not accumulating what has changed, implement change now.
-                        self.change_callback(self.unsaved_changes_map)
-                    else:  # Accumulating what has changed, just add to the dictionary.
-                        what_changed.update(self.unsaved_changes_map)
-                    self.unsaved_changes_map = {}
-                    self.status_message(tr("Saved {}").format(self.config_path.name), msecs=3000)
+                    if SettingsEditor.get_instance().cross_validate():
+                        self.status_message(tr("Saving {} ...").format(self.config_path.name))
+                        QApplication.processEvents()
+                        self.ini_editable.save(self.config_path)
+                        self.ini_before = self.ini_editable.duplicate()  # Saved ini becomes the new "before"
+                        if what_changed is None:  # Not accumulating what has changed, implement change now.
+                            self.change_callback(self.unsaved_changes_map)
+                        else:  # Accumulating what has changed, just add to the dictionary.
+                            what_changed.update(self.unsaved_changes_map)
+                        self.unsaved_changes_map = {}
+                        self.status_message(tr("Saved {}").format(self.config_path.name), msecs=3000)
                 elif answer == QMessageBox.Discard:
                     self.status_message(tr("Discarded changes to {}").format(self.config_path.name), msecs=3000)
                     self.ini_editable = self.ini_before.duplicate()  # Revert
