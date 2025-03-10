@@ -352,6 +352,9 @@ Michael Hamilton
 
 Version History
 ---------------
+* 2.1.5
+  * Add a vdu_label for user-defined friendly names for VDUs
+
 * 2.1,4
   * Provide a setting for enabling dbus-events - ddcutil-service DPMS and hotplug detection. 
   * Default the dbus-event setting to off, which is less troublesome for some VDUs/GPUs/drivers.

@@ -836,7 +836,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QDesktopWidget, QSpacerItem
 
 APPNAME = "VDU Controls"
-VDU_CONTROLS_VERSION = '2.1.4'
+VDU_CONTROLS_VERSION = '2.1.5'
 VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in VDU_CONTROLS_VERSION.split('.'))
 assert sys.version_info >= (3, 8), f'{APPNAME} utilises python version 3.8 or greater (your python is {sys.version}).'
 
@@ -2305,8 +2305,9 @@ CI = ConfIni  # Shorthand for next series of declarations only
 
 
 def conf_opt_def(cname: str, section: str = CI.VDU_CONTROLS_GLOBALS, conf_type: str = CI.TYPE_BOOL, default: str | None = None,
-                 restart: bool = False, cmdline_arg: str = 'DEFAULT', tip: str = '', related: str = '', requires: str = ''):
-    return cname, section, cmdline_arg, conf_type, default, restart, tip, related, requires
+                 global_allowed: bool = True, restart: bool = False, cmdline_arg: str = 'DEFAULT', tip: str = '', related: str = '',
+                 requires: str = ''):
+    return cname, section, cmdline_arg, conf_type, default, restart, tip, related, requires, global_allowed
 
 
 class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration - not really Enum - alternatives?
@@ -2342,6 +2343,8 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
                                     tip=QT_TR_NOOP('ddcutil --sleep-multiplier (0.1 .. 2.0, default none)'))
     DDCUTIL_EXTRA_ARGS = conf_opt_def(cname=QT_TR_NOOP('ddcutil-extra-args'), section=CI.DDCUTIL_PARAMETERS, conf_type=CI.TYPE_TEXT,
                                       tip=QT_TR_NOOP('ddcutil extra arguments (default none)'))
+    VDU_LABEL = conf_opt_def(cname=QT_TR_NOOP('vdu_label'), section=CI.VDU_CONTROLS_WIDGETS, conf_type=CI.TYPE_TEXT,
+                             global_allowed=False, cmdline_arg='DISALLOWED', tip=QT_TR_NOOP('Label to display for this VDU'))
     ENABLE_VCP_CODES = conf_opt_def(cname=QT_TR_NOOP('enable-vcp-codes'), section=CI.VDU_CONTROLS_WIDGETS, conf_type=CI.TYPE_CSV,
                                     cmdline_arg='DISALLOWED', tip=QT_TR_NOOP('CSV list of VCP Hex-code capabilities to enable'))
     CAPABILITIES_OVERRIDE = conf_opt_def(cname=QT_TR_NOOP('capabilities-override'), section=CI.DDCUTIL_CAPABILITIES,
@@ -2352,7 +2355,7 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
     UNKNOWN = conf_opt_def(cname="UNKNOWN", section=CI.UNKNOWN_SECTION, conf_type=CI.TYPE_BOOL, cmdline_arg='DISALLOWED', tip='')
 
     def __init__(self, conf_name: str, section: str, cmdline_arg: str, conf_type: str, default: str | None,
-                 restart_required: bool, help_text: str, related: str, requires: str):
+                 restart_required: bool, help_text: str, related: str, requires: str, global_allowed):
         self.conf_name, self.conf_section, self.conf_type, self.default_value = conf_name, section, conf_type, default
         self.conf_id = self.conf_section, self.conf_name
         self.restart_required = restart_required
@@ -2362,6 +2365,7 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
         self.default_value = default
         self.related = related
         self.requires = requires
+        self.global_allowed = global_allowed
 
     def add_cmdline_arg(self, parser: argparse.ArgumentParser) -> None:
         if self.cmdline_arg != "DISALLOWED":
@@ -2382,11 +2386,11 @@ class VduControlsConfig:
     Includes a method that can fold in values from command line arguments parsed by the standard argparse package.
     """
 
-    def __init__(self, config_name: str, default_enabled_vcp_codes: List | None = None, include_globals: bool = False) -> None:
+    def __init__(self, config_name: str, default_enabled_vcp_codes: List | None = None, main_config: bool = False) -> None:
         self.config_name = config_name
         self.ini_content = ConfIni()
 
-        if include_globals:
+        if main_config:
             self.ini_content[ConfIni.VDU_CONTROLS_GLOBALS] = {}
             for option in ConfOption:  # Add in options for all supported controls
                 if option.conf_section == ConfIni.VDU_CONTROLS_GLOBALS:
@@ -2401,6 +2405,8 @@ class VduControlsConfig:
             self.ini_content[ConfIni.VDU_CONTROLS_WIDGETS][item.property_name()] = 'yes' if item.enabled else 'no'
 
         self.ini_content.set(*ConfOption.ENABLE_VCP_CODES.conf_id, '')
+        if not main_config:
+            self.ini_content.set(*ConfOption.VDU_LABEL.conf_id, '')
         self.ini_content.set(*ConfOption.SLEEP_MULTIPLIER.conf_id, str('0.0'))
         self.ini_content.set(*ConfOption.DDCUTIL_EXTRA_ARGS.conf_id, '')
         self.ini_content.set(*ConfOption.CAPABILITIES_OVERRIDE.conf_id, '')
@@ -2430,7 +2436,9 @@ class VduControlsConfig:
                     del self.ini_content[ConfIni.VDU_CONTROLS_WIDGETS][option_name]
                     log_debug(f"Removed {self.config_name} {option_name} - not supported by VDU") if log_debug_enabled else None
 
-    def get_config_name(self) -> str:
+    def get_config_label(self) -> str:
+        if vdu_label := self.get_vdu_label():
+            return vdu_label
         return self.config_name
 
     def is_set(self, option: ConfOption, fallback=False) -> bool:
@@ -2494,6 +2502,9 @@ class VduControlsConfig:
         except ValueError as ve:
             log_error("Problem with geolocation:", ve)
             return None
+
+    def get_vdu_label(self):
+        return self.ini_content.get(*ConfOption.VDU_LABEL.conf_id, fallback=None)
 
     def parse_file(self, config_path: Path) -> None:
         """Parse config values from file"""
@@ -2753,6 +2764,8 @@ class VduController(QObject):
 
     def get_vdu_description(self) -> str:
         """Return a unique description using the serial-number (if defined) or vdu_number."""
+        if label := self.config.get_vdu_label():
+            return label
         return self.model_name + ':' + (self.serial_number if len(self.serial_number) != 0 else self.vdu_number)
 
     def get_full_id(self) -> Tuple[str, str, str, str]:
@@ -2893,7 +2906,7 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
         self.setLayout(QVBoxLayout())
         self.tabs = QTabWidget()
         self.layout().addWidget(self.tabs)
-        self.editor_tab_list = []
+        self.editor_tab_list: List[SettingsEditorTab] = []
         self.change_callback = change_callback
         self.reconfigure([default_config, *vdu_config_list])
         self.make_visible()
@@ -2903,8 +2916,14 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
             if ConfIni.get_path(config.config_name) not in [tab.config_path for tab in self.editor_tab_list]:
                 tab = SettingsEditorTab(self, config, self.change_callback, parent=self.tabs)
                 tab.save_all_clicked_qtsignal.connect(self.save_all)  # type: ignore
-                self.tabs.addTab(tab, config.get_config_name())
+                self.tabs.addTab(tab, config.get_config_label())
+                self.tabs.setTabToolTip(self.tabs.indexOf(tab), config.file_path.as_posix())
                 self.editor_tab_list.append(tab)
+        for tab in self.editor_tab_list:
+            if vdu_label := tab.ini_editable.get(*ConfOption.VDU_LABEL.conf_id, fallback=None):
+                tab.set_label(vdu_label)
+                self.tabs.setTabText(self.tabs.indexOf(tab), vdu_label)
+
 
     def save_all(self, warn_if_nothing_to_save: bool = True) -> int:
         what_changed: Dict[str, str] = {}
@@ -2991,11 +3010,13 @@ class SettingsEditorTab(QWidget):
                 decline_save_alert.exec()
 
         self.status_bar = QStatusBar()
-        save_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr("Save {}").format(vdu_config.config_name))
-        save_button.clicked.connect(_save_clicked)
-        self.status_bar.addPermanentWidget(save_button, 0)
+        self.save_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), '')
+        self.save_button.setToolTip(vdu_config.file_path.as_posix())
+        self.save_button.clicked.connect(_save_clicked)
+        self.set_label(vdu_config.get_config_label())
+        self.status_bar.addPermanentWidget(self.save_button, 0)
 
-        save_all_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr("Save All").format(vdu_config.config_name))
+        save_all_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr("Save All"))
         save_all_button.clicked.connect(self.save_all_clicked_qtsignal)
         self.status_bar.addPermanentWidget(save_all_button, 0)
 
@@ -3020,6 +3041,9 @@ class SettingsEditorTab(QWidget):
         self.status_bar.addWidget(reset_button, 0)
 
         layout.addWidget(self.status_bar)
+
+    def set_label(self, label_str):
+        self.save_button.setText(tr("Save {}").format(label_str))
 
     def save(self, force: bool = False, what_changed: Dict[str, str] | None = None) -> int:
         # what_changed is an output parameter, if passed, it will be updated with what has changed.
@@ -8871,7 +8895,7 @@ def main() -> None:
     global unix_signal_handler
     unix_signal_handler = SignalWakeupHandler(app)
 
-    main_config = VduControlsConfig('vdu_controls', include_globals=True)
+    main_config = VduControlsConfig('vdu_controls', main_config=True)
     default_config_path = ConfIni.get_path('vdu_controls')
     log_info("Looking for config file '" + default_config_path.as_posix() + "'")
     if Path.is_file(default_config_path) and os.access(default_config_path, os.R_OK):
