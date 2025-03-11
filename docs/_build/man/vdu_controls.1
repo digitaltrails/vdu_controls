@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Mar 07, 2025" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Mar 11, 2025" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 2.1.4
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -246,6 +246,8 @@ Correct manufacturer built\-in metadata.
 .IP \(bu 2
 Customise which controls are to be provided for each VDU.
 .IP \(bu 2
+Define a user\-friendly label for each VDU.
+.IP \(bu 2
 Set optimal \fBddcutil\fP DDC parameters for each VDU.
 .UNINDENT
 .UNINDENT
@@ -283,6 +285,9 @@ osd\-language = yes|no
 
 # Enable ddcutil supported codes not enabled in vdu_controls by default, CSV list of two\-digit hex values.
 enable\-vcp\-codes = NN, NN, NN
+
+# User friendly VDU name
+vdu_label = My Main Monitor (on the right)
 
 [ddcutil\-parameters]
 # Useful values appear to be >=0.1
@@ -402,8 +407,8 @@ applying presets.  The \fBmain\-menu\fP also includes a shortcut for applying ea
 .sp
 Any small SVG or PNG can be assigned as a preset\(aqs icon.  Monochrome SVG icons that conform to the
 Plasma color conventions will be automatically inverted if the desktop them is changed from dark to
-light. If a preset lacks an icon, an icon will be created from its initials (of its first and last
-words). A starter set of icons is included in \fB/usr/share/vdu_controls/icons/\fP\&.
+light. If a preset lacks an icon, an icon will be created from the initials of the first and last
+words of its name. A starter set of icons is included in \fB/usr/share/vdu_controls/icons/\fP\&.
 .sp
 Any time the current VDUs settings match those of a preset, the preset\(aqs name and icon will
 automatically show in the window\-title, tray tooltip, tray icon.
@@ -480,11 +485,10 @@ also set a preset to trigger at dawn, but they don\(aqt actually log in until ju
 overdue dawn preset will be triggered at login.
 .SS Presets \- Smooth Transitions
 .sp
-In order to minimize writes to VDU NVRAM, the smooth transition of presets is deprecated
-and is now normally disabled. Transitions can be enabled by disabling \fIprotect\-nvram\fP
-in _Settings_.
+__To minimize writes to VDU NVRAM, smooth\-transitions have been deprecated and are disabled by
+default. To reenable smooth transitions, uncheck the \fBprotect\-nvram\fP option in _Settings_.__
 .sp
-A preset may be set to \fBTransition Smoothly\fP, in which case changes to controls continuous\-value
+A preset may be set to \fBSmoothly Transition\fP, in which case changes to controls continuous\-value
 slider controls such as brightness and contrast will be stepped by one until the final values are
 reached.  Any non\-continuous values will be set after all continuous values have reached their
 final values, for example, if input\-source is included in a preset, it will be restored at the end.

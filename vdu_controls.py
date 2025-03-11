@@ -282,8 +282,8 @@ applying presets.  The ``main-menu`` also includes a shortcut for applying each 
 
 Any small SVG or PNG can be assigned as a preset's icon.  Monochrome SVG icons that conform to the
 Plasma color conventions will be automatically inverted if the desktop them is changed from dark to
-light. If a preset lacks an icon, an icon will be created from its initials (of its first and last
-words). A starter set of icons is included in ``/usr/share/vdu_controls/icons/``.
+light. If a preset lacks an icon, an icon will be created from the initials of the first and last
+words of its name. A starter set of icons is included in ``/usr/share/vdu_controls/icons/``.
 
 Any time the current VDUs settings match those of a preset, the preset's name and icon will
 automatically show in the window-title, tray tooltip, tray icon.
@@ -360,11 +360,10 @@ overdue dawn preset will be triggered at login.
 Presets - Smooth Transitions
 ----------------------------
 
-In order to minimize writes to VDU NVRAM, the smooth transition of presets is deprecated
-and is now normally disabled. Transitions can be enabled by disabling `protect-nvram`
-in _Settings_.
+__To minimize writes to VDU NVRAM, smooth-transitions have been deprecated and are disabled by
+default. To reenable smooth transitions, uncheck the ``protect-nvram`` option in _Settings_.__
 
-A preset may be set to ``Transition Smoothly``, in which case changes to controls continuous-value
+A preset may be set to ``Smoothly Transition``, in which case changes to controls continuous-value
 slider controls such as brightness and contrast will be stepped by one until the final values are
 reached.  Any non-continuous values will be set after all continuous values have reached their
 final values, for example, if input-source is included in a preset, it will be restored at the end.

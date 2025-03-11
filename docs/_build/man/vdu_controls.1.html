@@ -150,6 +150,7 @@ files are named according to the following scheme:</p>
 <ul>
 <li>Correct manufacturer built-in metadata.</li>
 <li>Customise which controls are to be provided for each VDU.</li>
+<li>Define a user-friendly label for each VDU.</li>
 <li>Set optimal <code>ddcutil</code> DDC parameters for each VDU.</li>
 </ul>
 <p>The config files are in INI-format divided into a number of sections
@@ -181,6 +182,9 @@ osd-language = yes|no
 
 # Enable ddcutil supported codes not enabled in vdu_controls by default, CSV list of two-digit hex values.
 enable-vcp-codes = NN, NN, NN
+
+# User friendly VDU name
+vdu_label = My Main Monitor (on the right)
 
 [ddcutil-parameters]
 # Useful values appear to be &gt;=0.1
@@ -271,9 +275,9 @@ existing presets.</p>
 <p>Any small SVG or PNG can be assigned as a preset’s icon. Monochrome
 SVG icons that conform to the Plasma color conventions will be
 automatically inverted if the desktop them is changed from dark to
-light. If a preset lacks an icon, an icon will be created from its
-initials (of its first and last words). A starter set of icons is
-included in <code>/usr/share/vdu_controls/icons/</code>.</p>
+light. If a preset lacks an icon, an icon will be created from the
+initials of the first and last words of its name. A starter set of icons
+is included in <code>/usr/share/vdu_controls/icons/</code>.</p>
 <p>Any time the current VDUs settings match those of a preset, the
 preset’s name and icon will automatically show in the window-title, tray
 tooltip, tray icon.</p>
@@ -349,11 +353,11 @@ and they’ve also set a preset to trigger at dawn, but they don’t
 actually log in until just after dawn, the overdue dawn preset will be
 triggered at login.</p>
 <h2 id="presets---smooth-transitions">Presets - Smooth Transitions</h2>
-<p>In order to minimize writes to VDU NVRAM, the smooth transition of
-presets is deprecated and is now normally disabled. Transitions can be
-enabled by disabling <code>protect-nvram</code> in
-<em>Settings</em>.</p>
-<p>A preset may be set to <code>Transition Smoothly</code>, in which
+<p><strong>To minimize writes to VDU NVRAM, smooth-transitions have been
+deprecated and are disabled by default. To reenable smooth transitions,
+uncheck the <code>protect-nvram</code> option in
+<em>Settings</em>.</strong></p>
+<p>A preset may be set to <code>Smoothly Transition</code>, in which
 case changes to controls continuous-value slider controls such as
 brightness and contrast will be stepped by one until the final values
 are reached. Any non-continuous values will be set after all continuous
