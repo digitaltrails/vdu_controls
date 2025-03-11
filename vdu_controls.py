@@ -5234,6 +5234,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
     def is_instance_editing() -> bool:
         if presets_dialog := PresetsDialog.get_instance():
             return presets_dialog.preset_name_edit.text() != ''
+        return False
 
     @staticmethod
     def instance_indicate_active_preset(preset: Preset = None):
@@ -7839,21 +7840,18 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         for controller in self.vdu_controllers_map.values():
             controller.write_template_config_files()
 
-    def lux_auto_action(self) -> bool:
-        if self.lux_auto_controller is None:
-            return False
-        try:
-            self.main_window.setDisabled(True)
-            self.lux_auto_controller.toggle_auto()
-            self.main_window.update_status_indicators()
-            return self.lux_auto_controller.is_auto_enabled()
-        finally:
-            self.main_window.setDisabled(False)
+    def lux_auto_action(self) -> None:
+        if self.lux_auto_controller:
+            try:
+                self.main_window.setDisabled(True)
+                self.lux_auto_controller.toggle_auto()
+                self.main_window.update_status_indicators()
+            finally:
+                self.main_window.setDisabled(False)
 
-    def lux_check_action(self) -> bool:
-        if self.lux_auto_controller is None:
-            return False
-        self.lux_auto_controller.adjust_brightness_now()
+    def lux_check_action(self) -> None:
+        if self.lux_auto_controller:
+            self.lux_auto_controller.adjust_brightness_now()
 
     def start_refresh(self, external_event: bool = False) -> None:
         if not is_running_in_gui_thread():  # TODO this appears to never be true - remove???
