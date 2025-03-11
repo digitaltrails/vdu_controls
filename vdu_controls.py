@@ -156,6 +156,7 @@ The VDU-specific config files can be used to:
 
  - Correct manufacturer built-in metadata.
  - Customise which controls are to be provided for each VDU.
+ - Define a user-friendly label for each VDU.
  - Set optimal ``ddcutil`` DDC parameters for each VDU.
 
 The config files are in INI-format divided into a number of sections as outlined below::
@@ -187,6 +188,9 @@ The config files are in INI-format divided into a number of sections as outlined
 
     # Enable ddcutil supported codes not enabled in vdu_controls by default, CSV list of two-digit hex values.
     enable-vcp-codes = NN, NN, NN
+
+    # User friendly VDU name
+    vdu_label = My Main Monitor (on the right)
 
     [ddcutil-parameters]
     # Useful values appear to be >=0.1
@@ -2267,6 +2271,10 @@ class ConfIni(configparser.ConfigParser):
                 log_error(f"Illegal version number {version} should be i.j.k where i, j and k are integers.", trace=True)
         return 1, 6, 0
 
+    def get_non_empty_str(self, section, option, fallback):
+        value = super().get(section, option, fallback=fallback)
+        return value if value is not None and value.strip() != '' else fallback
+
     def save(self, config_path) -> None:
         if not config_path.parent.is_dir():
             os.makedirs(config_path.parent)
@@ -2436,10 +2444,8 @@ class VduControlsConfig:
                     del self.ini_content[ConfIni.VDU_CONTROLS_WIDGETS][option_name]
                     log_debug(f"Removed {self.config_name} {option_name} - not supported by VDU") if log_debug_enabled else None
 
-    def get_config_label(self) -> str:
-        if vdu_label := self.get_vdu_label():
-            return vdu_label
-        return self.config_name
+    def get_vdu_label(self):
+        return self.ini_content.get_non_empty_str(*ConfOption.VDU_LABEL.conf_id, fallback=self.config_name)
 
     def is_set(self, option: ConfOption, fallback=False) -> bool:
         return self.ini_content.getboolean(option.conf_section, option.conf_name, fallback=fallback)
@@ -2502,9 +2508,6 @@ class VduControlsConfig:
         except ValueError as ve:
             log_error("Problem with geolocation:", ve)
             return None
-
-    def get_vdu_label(self):
-        return self.ini_content.get(*ConfOption.VDU_LABEL.conf_id, fallback=None)
 
     def parse_file(self, config_path: Path) -> None:
         """Parse config values from file"""
@@ -2763,10 +2766,7 @@ class VduController(QObject):
             self.config = config
 
     def get_vdu_description(self) -> str:
-        """Return a unique description using the serial-number (if defined) or vdu_number."""
-        if label := self.config.get_vdu_label():
-            return label
-        return self.model_name + ':' + (self.serial_number if len(self.serial_number) != 0 else self.vdu_number)
+        return self.config.get_vdu_label()
 
     def get_full_id(self) -> Tuple[str, str, str, str]:
         """Return a tuple that defines this VDU: (vdu_number, manufacturer, model, serial-number)."""
@@ -2913,26 +2913,31 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
 
     def reconfigure(self, config_list: List[VduControlsConfig]) -> None:
         for config in config_list:
-            if ConfIni.get_path(config.config_name) not in [tab.config_path for tab in self.editor_tab_list]:
+            vdu_label = config.get_vdu_label()
+            conf_key = ConfIni.get_path(config.config_name)
+            if tabs_found := [tab for tab in self.editor_tab_list if tab.config_path == conf_key]:
+                assert len(tabs_found) == 1
+                tab = tabs_found[0]
+            else:
                 tab = SettingsEditorTab(self, config, self.change_callback, parent=self.tabs)
                 tab.save_all_clicked_qtsignal.connect(self.save_all)  # type: ignore
-                self.tabs.addTab(tab, config.get_config_label())
-                self.tabs.setTabToolTip(self.tabs.indexOf(tab), config.file_path.as_posix())
+                self.tabs.addTab(tab, vdu_label)
                 self.editor_tab_list.append(tab)
-        for tab in self.editor_tab_list:
-            if vdu_label := tab.ini_editable.get(*ConfOption.VDU_LABEL.conf_id, fallback=None):
-                tab.set_label(vdu_label)
-                self.tabs.setTabText(self.tabs.indexOf(tab), vdu_label)
+            tab.set_label(vdu_label)
+            self.tabs.setTabText(self.tabs.indexOf(tab), vdu_label)
+            if config.file_path:
+                self.tabs.setTabToolTip(self.tabs.indexOf(tab), config.file_path.as_posix())
 
     def cross_validate(self) -> bool:
         labels_in_use = {'vdu_controls': 'vdu_controls globals'}
         for tab in self.editor_tab_list:
             if vdu_label := tab.ini_editable.get(*ConfOption.VDU_LABEL.conf_id, fallback=None):
                 if existing_use := labels_in_use.get(vdu_label, None):
-                    alert = MessageBox(QMessageBox.Critical, QMessageBox.Close)
-                    alert.setText(tr("Cannot save duplicate VDU label '{}'").format(vdu_label))
-                    alert.setInformativeText(tr("Alter the label for {} or {} and try again.").format(
-                        tab.config_path.stem, existing_use))
+                    alert = MessageBox(QMessageBox.Critical, QMessageBox.Ok)
+                    alert.setText(tr("Cannot save <tt>{}</tt>").format(tab.config_path.name))
+                    alert.setInformativeText(
+                        tr("Duplicate VDU label: <i>{}</i><hr/>Alter the label for {} or {} and try again.").format(
+                            vdu_label, tab.config_path.stem, existing_use))
                     alert.exec()
                     return False
                 else:
@@ -3025,9 +3030,10 @@ class SettingsEditorTab(QWidget):
 
         self.status_bar = QStatusBar()
         self.save_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), '')
-        self.save_button.setToolTip(vdu_config.file_path.as_posix())
+        if vdu_config.file_path:
+            self.save_button.setToolTip(vdu_config.file_path.as_posix())
         self.save_button.clicked.connect(_save_clicked)
-        self.set_label(vdu_config.get_config_label())
+        self.set_label(vdu_config.get_vdu_label())
         self.status_bar.addPermanentWidget(self.save_button, 0)
 
         save_all_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr("Save All"))
@@ -3064,14 +3070,14 @@ class SettingsEditorTab(QWidget):
         if self.is_unsaved() or force:
             try:
                 self.setEnabled(False)  # Saving may take a while, give some feedback by disabling and enabling when done
-                confirmation = MessageBox(QMessageBox.Question, buttons=QMessageBox.Save | QMessageBox.Cancel | QMessageBox.Discard,
-                                          default=QMessageBox.Save)
-                message = tr('Update existing {}?') if self.config_path.exists() else tr("Create new {}?")
-                message = message.format(self.config_path.as_posix())
-                confirmation.setText(message)
-                answer = confirmation.exec()
-                if answer == QMessageBox.Save:
-                    if SettingsEditor.get_instance().cross_validate():
+                if SettingsEditor.get_instance().cross_validate():
+                    confirmation = MessageBox(QMessageBox.Question, buttons=QMessageBox.Save | QMessageBox.Cancel | QMessageBox.Discard,
+                                              default=QMessageBox.Save)
+                    message = tr('Update existing {}?') if self.config_path.exists() else tr("Create new {}?")
+                    message = message.format(self.config_path.as_posix())
+                    confirmation.setText(message)
+                    answer = confirmation.exec()
+                    if answer == QMessageBox.Save:
                         self.status_message(tr("Saving {} ...").format(self.config_path.name))
                         QApplication.processEvents()
                         self.ini_editable.save(self.config_path)
@@ -3082,11 +3088,11 @@ class SettingsEditorTab(QWidget):
                             what_changed.update(self.unsaved_changes_map)
                         self.unsaved_changes_map = {}
                         self.status_message(tr("Saved {}").format(self.config_path.name), msecs=3000)
-                elif answer == QMessageBox.Discard:
-                    self.status_message(tr("Discarded changes to {}").format(self.config_path.name), msecs=3000)
-                    self.ini_editable = self.ini_before.duplicate()  # Revert
-                    self.reset()
-                return answer
+                    elif answer == QMessageBox.Discard:
+                        self.status_message(tr("Discarded changes to {}").format(self.config_path.name), msecs=3000)
+                        self.ini_editable = self.ini_before.duplicate()  # Revert
+                        self.reset()
+                    return answer
             finally:
                 self.setEnabled(True)
         return QMessageBox.Cancel

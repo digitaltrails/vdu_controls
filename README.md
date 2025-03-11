@@ -353,7 +353,8 @@ Michael Hamilton
 Version History
 ---------------
 * 2.1.5
-  * Add a vdu_label for user-defined friendly names for VDUs
+  * Add a vdu_label setting for user-defined/user-friendly VDU names.
+  * Hovering over a settings-dialog tab-name or save-button reveals the settings-filename as a tooltip. 
 
 * 2.1,4
   * Provide a setting for enabling dbus-events - ddcutil-service DPMS and hotplug detection. 
