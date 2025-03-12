@@ -356,7 +356,8 @@ Version History
   * Add a vdu_label setting for user-defined/user-friendly VDU names.
   * Hovering over a settings-dialog tab-name or save-button reveals the settings-filename as a tooltip. 
   * For Wayland, if smart-window is enabled, switch the app's Qt platform to XWayland (xcb). (Wayland
-    does not allow applications to precisely place their own windows!)
+    doesn't allow applications to precisely place their own windows!)
+  * Save and restore main app position and geometry when its hidden or restored from the system tray.
 
 * 2.1,4
   * Provide a setting for enabling dbus-events - ddcutil-service DPMS and hotplug detection. 
