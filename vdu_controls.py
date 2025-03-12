@@ -8445,17 +8445,23 @@ class VduAppWindow(QMainWindow):
 
     def show_main_window(self, toggle: bool = False) -> None:
         if toggle and self.isVisible():
+            self.app_save_window_state()
             self.hide()
         else:
             if len(self.qt_settings.allKeys()) == 0 and self.main_config.is_set(ConfOption.SMART_WINDOW):
                 # No previous state - guess a position near the tray. Use the mouse pos as a guess to where the
                 # system tray is.  The Linux Qt x,y geometry returned by the tray icon is 0,0, so we can't use that.
-                p = QCursor.pos()
-                wg = self.geometry()
+                cursor_pos = QCursor.pos()
+                app_geometry = self.geometry()
                 # Also try to cope with the tray not being at the bottom right of the screen.
-                x = p.x() - wg.width() if p.x() > wg.width() else p.x()
-                y = p.y() - wg.height() if p.y() > wg.height() else p.y()
-                self.setGeometry(x, y, wg.width(), wg.height())
+                x = cursor_pos.x() - app_geometry.width() if cursor_pos.x() > app_geometry.width() else cursor_pos.x()
+                y = cursor_pos.y() - app_geometry.height() if cursor_pos.y() > app_geometry.height() else cursor_pos.y()
+                log_debug(f"setGeometry {x=} {y=} {app_geometry.width()=} {app_geometry.height()=} "
+                          f"{cursor_pos.x()=} {cursor_pos.y()=}")
+                self.setGeometry(x, y, app_geometry.width(), app_geometry.height())
+                log_debug(f"Initial window {cursor_pos.x()=} {cursor_pos.x()=} {self.geometry()}") if log_debug_enabled else None
+            else:
+                self.app_restore_window_state()
             self.show()
             self.raise_()  # Attempt to force it to the top with raise and activate
             self.activateWindow()
@@ -8610,6 +8616,7 @@ class VduAppWindow(QMainWindow):
 
     def app_save_window_state(self) -> None:
         if self.main_config.is_set(ConfOption.SMART_WINDOW, fallback=True):
+            log_debug(f"app_save_window_state: {self.pos()=} {self.geometry()=}") if log_debug_enabled else None
             self.qt_settings.setValue(self.qt_geometry_key, self.saveGeometry())
             self.qt_settings.setValue(self.qt_state_key, self.saveState())
 
@@ -8619,6 +8626,7 @@ class VduAppWindow(QMainWindow):
                 self.restoreGeometry(geometry)
             if window_state := self.qt_settings.value(self.qt_state_key, None):
                 self.restoreState(window_state)
+            log_debug(f"app_restore_window_state: {self.pos()=} {self.geometry()=}") if log_debug_enabled else None
 
     def status_message(self, message: str, timeout: int, destination: MsgDestination):
         assert (self.main_panel is not None)
@@ -8901,23 +8909,28 @@ def main() -> None:
     except locale.Error:
         log_warning(f"Could not set the default locale - may not be an issue...", trace=True)
 
-    # Call QApplication before parsing arguments, it will parse and remove Qt session restoration arguments.
-    app = QApplication(sys.argv)
-    log_info(f"{APPNAME} {VDU_CONTROLS_VERSION} {sys.argv[0]}  ")
-    log_info(f"python-locale: {locale.getlocale()} Qt-locale: {QLocale.system().name()}")
-    log_info(f"app-style: {app.style().objectName()} (detected a {'dark' if is_dark_theme() else 'light'} theme)")
-
-    # Wayland needs this set in order to find/use the app's desktop icon.
-    QGuiApplication.setDesktopFileName("vdu_controls")
-
-    global unix_signal_handler
-    unix_signal_handler = SignalWakeupHandler(app)
-
     main_config = VduControlsConfig('vdu_controls', main_config=True)
     default_config_path = ConfIni.get_path('vdu_controls')
     log_info("Looking for config file '" + default_config_path.as_posix() + "'")
     if Path.is_file(default_config_path) and os.access(default_config_path, os.R_OK):
         main_config.parse_file(default_config_path)
+
+    if os.environ.get('XDG_SESSION_TYPE') != 'x11':  # If Wayland we can't do smart window placement - use XWayland
+        if main_config.is_set(ConfOption.SMART_WINDOW):
+            log_warning(f"{ConfOption.SMART_WINDOW.conf_id}: Wayland disallows programmatic window placement. Switching to XWayland.")
+            os.environ['QT_QPA_PLATFORM'] = 'xcb'  # Force the use of XWayland
+
+    # Wayland needs this set in order to find/use the app's desktop icon.
+    QGuiApplication.setDesktopFileName("vdu_controls")
+    # Call QApplication before parsing arguments, it will parse and remove Qt session restoration arguments.
+    app = QApplication(sys.argv)
+    global unix_signal_handler
+    unix_signal_handler = SignalWakeupHandler(app)
+
+    log_info(f"{APPNAME} {VDU_CONTROLS_VERSION} {sys.argv[0]}  ")
+    log_info(f"python-locale: {locale.getlocale()} Qt-locale: {QLocale.system().name()}")
+    log_info(f"platform: {QGuiApplication.platformName()}")
+    log_info(f"app-style: {app.style().objectName()} (detected a {'dark' if is_dark_theme() else 'light'} theme)")
 
     args = main_config.parse_global_args()
     global log_debug_enabled
