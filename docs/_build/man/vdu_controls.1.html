@@ -262,7 +262,7 @@ connection status may wake some VDU models. Both
 <code>ddcutil-service</code> or <code>libddcutil</code> offer options
 for finer control over which events are detected and how.</p>
 <h2 id="presets">Presets</h2>
-<p>A custom named preset can be used to save the current VDU settings
+<p>A named <em>Preset</em> can be used to save the current VDU settings
 for later recall. Any number of presets can be created for different
 lighting conditions or different applications, for example:
 <em>Night</em>, <em>Day</em>, <em>Overcast</em>, <em>Sunny</em>,
@@ -270,8 +270,8 @@ lighting conditions or different applications, for example:
 name and icon.</p>
 <p>The <code>Presets</code> item in <code>main-menu</code> will bring up
 a <code>Presets</code> dialog for managing and applying presets. The
-<code>main-menu</code> also includes a shortcut for applying each
-existing presets.</p>
+<code>main-menu</code> also includes an item for each existing
+preset.</p>
 <p>Any small SVG or PNG can be assigned as a preset’s icon. Monochrome
 SVG icons that conform to the Plasma color conventions will be
 automatically inverted if the desktop them is changed from dark to
@@ -320,8 +320,8 @@ initialization-presets</h2>
 preset will be restored at startup or when ever the VDU is subsequently
 detected.</p>
 <p>This feature is designed to restore settings that cannot be saved in
-the VDU’s NVRAM or for VDUs where the NVRAM capacity has been
-exhausted.</p>
+the VDU’s NVRAM or for VDUs where the NVRAM capacity has been exhausted
+or is faulty.</p>
 <h2 id="presets---solar-elevation-triggers">Presets - solar elevation
 triggers</h2>
 <p>A preset may be set to automatically trigger when the sun rises to a
@@ -650,6 +650,11 @@ dynamically.</li>
 displays are not supported, but a laptop’s externally connected VDUs are
 likely to be controllable.</p>
 <h2 id="other-concerns">Other concerns</h2>
+<p>The user interface is written to be cross-platform, with minor tweaks
+being applied for KDE, GNOME, and the rest. X11 and Wayland are both
+supported. Under Wayland, the use of the <code>smart-windows</code>
+option forces the application to run under XWayland (Wayland-proper
+doesn’t support applications precisely positioning their windows).</p>
 <p>The power-supplies in some older VDUs may buzz/squeel audibly when
 the brightness is turned way down. This may not be a major issue
 because, in normal surroundings, older VDUs are often not usable below

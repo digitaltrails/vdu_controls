@@ -27,9 +27,9 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Mar 11, 2025" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Mar 13, 2025" "" "vdu_controls"
 .SH NAME
-vdu_controls \- vdu_controls 2.1.4
+vdu_controls \- vdu_controls 2.2.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
 .sp
 A control panel for DisplayPort, DVI, HDMI, or USB connected VDUs (\fIVisual Display Units\fP).
@@ -397,13 +397,13 @@ connection status may wake some VDU models.  Both \fBddcutil\-service\fP or \fBl
 options for finer control over which events are detected and how.
 .SS Presets
 .sp
-A custom named preset can be used to save the current VDU settings for later recall. Any number of
+A named _Preset_ can be used to save the current VDU settings for later recall. Any number of
 presets can be created for different lighting conditions or different applications, for example:
 \fINight\fP, \fIDay\fP, \fIOvercast\fP, \fISunny\fP, \fIPhotography\fP, and \fIVideo\fP\&. Each presets can be assigned a
 name and icon.
 .sp
 The \fBPresets\fP item in \fBmain\-menu\fP will bring up a \fBPresets\fP dialog for managing and
-applying presets.  The \fBmain\-menu\fP also includes a shortcut for applying each existing presets.
+applying presets.  The \fBmain\-menu\fP also includes an item for each existing preset.
 .sp
 Any small SVG or PNG can be assigned as a preset\(aqs icon.  Monochrome SVG icons that conform to the
 Plasma color conventions will be automatically inverted if the desktop them is changed from dark to
@@ -457,7 +457,7 @@ For a VDU named \fIabc\fP with a serial number \fIxyz\fP, if a preset named \fIa
 preset will be restored at startup or when ever the VDU is subsequently detected.
 .sp
 This feature is designed to restore settings that cannot be saved in the VDU’s NVRAM
-or for VDUs where the NVRAM capacity has been exhausted.
+or for VDUs where the NVRAM capacity has been exhausted or is faulty.
 .SS Presets \- solar elevation triggers
 .sp
 A preset may be set to automatically trigger when the sun rises to a specified elevation. The idea
@@ -825,6 +825,11 @@ The bottom of the About\-dialog shows the same numbers. They update dynamically.
 Builtin laptop displays normally don\(aqt implement DDC and those displays are not supported, but a
 laptop\(aqs externally connected VDUs are likely to be controllable.
 .SS Other concerns
+.sp
+The user interface is written to be cross\-platform, with minor tweaks being applied
+for KDE, GNOME, and the rest.   X11 and Wayland are both supported. Under Wayland,
+the use of the \fBsmart\-windows\fP option forces the application to run under XWayland
+(Wayland\-proper doesn\(aqt support applications precisely positioning their windows).
 .sp
 The power\-supplies in some older VDUs may buzz/squeel audibly when the brightness is
 turned way down. This may not be a major issue because, in normal surroundings,
