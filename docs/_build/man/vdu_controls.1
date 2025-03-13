@@ -140,7 +140,7 @@ monochrome themed system\-tray.
 .TP
 .B \-\-smart\-window|\-\-no\-smart\-window
 smart main window placement and geometry.
-\fB\-\-smart\-window\fP is the default.
+\fB\-\-smart\-window\fP is the default (may force UI to XWayland).
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -196,7 +196,7 @@ From \fBvdu_controls 2.0\fP onward, \fBvdu_controls\fP defaults to using the \fB
 Should the \fBddcutil\-service\fP be unavailable, \fBvdu_controls\fP will fall back to running the
 \fBddcutil\fP command to perform each request.
 .sp
-The UI\(aqs look\-and\-feel adjusts itself for dark and light desktop themes. The application may
+The UI\(aqs look\-and\-feel dynamically adjusts to dark and light themes. The application may
 optionally run in the system tray of KDE, Deepin, GNOME, and Xfce (and possibly others).
 .sp
 The UI provides an optional \fBambient\-light slider\fP for simultaneously adjusting
@@ -824,12 +824,15 @@ The bottom of the About\-dialog shows the same numbers. They update dynamically.
 .sp
 Builtin laptop displays normally don\(aqt implement DDC and those displays are not supported, but a
 laptop\(aqs externally connected VDUs are likely to be controllable.
-.SS Other concerns
+.SS Cross\-platform differences
 .sp
-The user interface is written to be cross\-platform, with minor tweaks being applied
-for KDE, GNOME, and the rest.   X11 and Wayland are both supported. Under Wayland,
-the use of the \fBsmart\-windows\fP option forces the application to run under XWayland
-(Wayland\-proper doesn\(aqt support applications precisely positioning their windows).
+Wayland doesn\(aqt allow an application to precisely position its windows.  When the \fBsmart\-window\fP
+option is enabled, the application switches it\(aqs underlying platform to XWayland so that the
+main window position can be saved and restored.
+.sp
+The UI attempts to step around minor differences between KDE, GNOME, and the rest, the UI on
+each may not be exactly the same.
+.SS Other concerns
 .sp
 The power\-supplies in some older VDUs may buzz/squeel audibly when the brightness is
 turned way down. This may not be a major issue because, in normal surroundings,

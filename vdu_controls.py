@@ -78,7 +78,7 @@ Arguments supplied on the command line override config file equivalent settings.
                             ``--no-mono-light-tray`` is the default.
       --smart-window|--no-smart-window
                             smart main window placement and geometry.
-                            ``--smart-window`` is the default.
+                            ``--smart-window`` is the default (may force UI to XWayland).
       --sleep-multiplier    set the default ddcutil sleep multiplier
                             protocol reliability multiplier for ddcutil (typically
                             0.1 .. 2.0, default is 1.0)
@@ -115,7 +115,7 @@ From ``vdu_controls 2.0`` onward, ``vdu_controls`` defaults to using the ``D-Bus
 Should the ``ddcutil-service`` be unavailable, ``vdu_controls`` will fall back to running the
 ``ddcutil`` command to perform each request.
 
-The UI's look-and-feel adjusts itself for dark and light desktop themes. The application may
+The UI's look-and-feel dynamically adjusts to dark and light themes. The application may
 optionally run in the system tray of KDE, Deepin, GNOME, and Xfce (and possibly others).
 
 The UI provides an optional ``ambient-light slider`` for simultaneously adjusting
@@ -629,13 +629,18 @@ Laptops
 Builtin laptop displays normally don't implement DDC and those displays are not supported, but a
 laptop's externally connected VDUs are likely to be controllable.
 
+Cross-platform differences
+--------------------------
+
+Wayland doesn't allow an application to precisely position its windows.  When the ``smart-window``
+option is enabled, the application switches it's underlying platform to XWayland so that the
+main window position can be saved and restored.
+
+The UI attempts to step around minor differences between KDE, GNOME, and the rest, the UI on
+each may not be exactly the same.
+
 Other concerns
 --------------
-
-The user interface is written to be cross-platform, with minor tweaks being applied
-for KDE, GNOME, and the rest.   X11 and Wayland are both supported. Under Wayland,
-the use of the ``smart-windows`` option forces the application to run under XWayland
-(Wayland-proper doesn't support applications precisely positioning their windows).
 
 The power-supplies in some older VDUs may buzz/squeel audibly when the brightness is
 turned way down. This may not be a major issue because, in normal surroundings,
