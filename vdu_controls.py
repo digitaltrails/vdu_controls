@@ -272,13 +272,13 @@ options for finer control over which events are detected and how.
 Presets
 -------
 
-A custom named preset can be used to save the current VDU settings for later recall. Any number of
+A named _Preset_ can be used to save the current VDU settings for later recall. Any number of
 presets can be created for different lighting conditions or different applications, for example:
 *Night*, *Day*, *Overcast*, *Sunny*, *Photography*, and *Video*. Each presets can be assigned a
 name and icon.
 
 The ``Presets`` item in ``main-menu`` will bring up a ``Presets`` dialog for managing and
-applying presets.  The ``main-menu`` also includes a shortcut for applying each existing presets.
+applying presets.  The ``main-menu`` also includes an item for each existing preset.
 
 Any small SVG or PNG can be assigned as a preset's icon.  Monochrome SVG icons that conform to the
 Plasma color conventions will be automatically inverted if the desktop them is changed from dark to
@@ -328,7 +328,7 @@ For a VDU named `abc` with a serial number `xyz`, if a preset named `abx xyz` ex
 preset will be restored at startup or when ever the VDU is subsequently detected.
 
 This feature is designed to restore settings that cannot be saved in the VDU’s NVRAM
-or for VDUs where the NVRAM capacity has been exhausted.
+or for VDUs where the NVRAM capacity has been exhausted or is faulty.
 
 Presets - solar elevation triggers
 ----------------------------------
@@ -631,6 +631,11 @@ laptop's externally connected VDUs are likely to be controllable.
 
 Other concerns
 --------------
+
+The user interface is written to be cross-platform, with minor tweaks being applied
+for KDE, GNOME, and the rest.   X11 and Wayland are both supported. Under Wayland,
+the use of the ``smart-windows`` option forces the application to run under XWayland
+(Wayland-proper doesn't support applications precisely positioning their windows).
 
 The power-supplies in some older VDUs may buzz/squeel audibly when the brightness is
 turned way down. This may not be a major issue because, in normal surroundings,
@@ -2333,7 +2338,7 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
     WARNINGS_ENABLED = conf_opt_def(cname=QT_TR_NOOP('warnings-enabled'), default="no",
                                     tip=QT_TR_NOOP('popup warnings if a VDU lacks an enabled control'))
     SMART_WINDOW = conf_opt_def(cname=QT_TR_NOOP('smart-window'), default="yes",
-                                tip=QT_TR_NOOP('smart main window placement and geometry'))
+                                tip=QT_TR_NOOP('smart main window placement and geometry (X11 and XWayland)'), restart=True)
     MONOCHROME_TRAY_ENABLED = conf_opt_def(cname=QT_TR_NOOP('monochrome-tray-enabled'), default="no", restart=False,
                                            tip=QT_TR_NOOP('monochrome dark themed system tray'))
     MONO_LIGHT_TRAY_ENABLED = conf_opt_def(cname=QT_TR_NOOP('mono-light-tray-enabled'), default="no", restart=False,

@@ -93,7 +93,7 @@ cases a webcam).  When lux metering is enabled, ``vdu_controls`` can vary bright
 to customisable  lux/VDU-brightness profiles. See [Lux Metering](./Lux-metering.md) for more details.
 
 The UI's look-and-feel dynamically adjusts to the desktop theme and desktop environment: light-theme,
-dark-theme, KDE, Deepin, GNOME, and others.
+dark-theme, KDE, Deepin, GNOME, and others.  Both X11 and Wayland are supported.
 
 ![Default](screen-shots/Screenshot_Large-330.png)  ![Custom](screen-shots/Screenshot_Small-227.png) 
 ![Custom](screen-shots/Screenshot_tray-200.png) ![Custom](screen-shots/Screenshot_settings-300.png)
@@ -358,7 +358,8 @@ Version History
   * For Wayland, if smart-window is enabled, switch the app's Qt platform to XWayland (xcb). (Wayland
     doesn't allow applications to precisely place their own windows!)
   * Save and restore main app position and geometry when its hidden or restored from the system tray.
-
+  * Altering the smart-window option now requires a restart (to switch between Wayland and XWayland). 
+  
 * 2.1,4
   * Provide a setting for enabling dbus-events - ddcutil-service DPMS and hotplug detection. 
   * Default the dbus-event setting to off, which is less troublesome for some VDUs/GPUs/drivers.
