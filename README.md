@@ -353,8 +353,8 @@ Michael Hamilton
 Version History
 ---------------
 * 2.2.0
-  * Add a vdu-name setting for user-defined/user-friendly VDU names.
-  * Add an option to order lists and tabs by name/vdu-name.
+  * Add a vdu-name setting for assigning meaningful/user-friendly names to each VDU.
+  * Implement an order-by-name option that orders lists and tabs by VDU name.
   * Hovering over a settings-dialog tab-name or save-button reveals the settings-filename as a tooltip. 
   * For Wayland, if smart-window is enabled, switch the app's Qt platform to XWayland (xcb). (Wayland
     doesn't allow applications to precisely place their own windows!)
