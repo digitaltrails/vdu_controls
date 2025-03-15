@@ -13,16 +13,17 @@ Synopsis:
                      [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                      [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                      [--enable-vcp-code vcp_code] [--schedule|--no-schedule]
-                     [--location latitude,longitude] [--weather|--no-weather]
-                     [--lux-options|--no-lux-options] [--translations|--no-translations]
                      [--splash|--no-splash] [--system-tray|--no-system-tray]
-                     [--monochrome-tray|--no-monochrome-tray] [--mono-light-tray|--no-mono-light-tray]
                      [--hide-on-focus-out|--no-hide-on-focus-out] [--smart-window|--no-smart-window]
-                     [--syslog|--no-syslog]  [--debug|--no-debug] [--warnings|--no-warnings]
-                     [--sleep-multiplier multiplier] [--ddcutil-extra-args 'extra args']
-                     [--dbus-client|--no-dbus-client]
-                     [--dbus-events|--no-dbus-events]
+                     [--monochrome-tray|--no-monochrome-tray] [--mono-light-tray|--no-mono-light-tray]
                      [--protect-nvram|--no-protect-nvram]
+                     [--lux-options|--no-lux-options]
+                     [--schedule|--no-schedule] [--weather|--no-weather]
+                     [--dbus-client|--no-dbus-client] [--dbus-events|--no-dbus-events]
+                     [--syslog|--no-syslog] [--debug|--no-debug] [--warnings|--no-warnings]
+                     [--translations|--no-translations]
+                     [--location latitude,longitude]
+                     [--sleep-multiplier multiplier] [--ddcutil-extra-args 'extra args']
                      [--create-config-files] [--install] [--uninstall]
 
 Optional arguments:
@@ -40,57 +41,60 @@ Arguments supplied on the command line override config file equivalent settings.
       --enable-vcp-code vcp_code
                             enable a control for a vcp-code unavailable via hide/show,
                             may be specified multiple times
+      --splash|--no-splash
+                            show the splash screen.  ``--splash`` is the default.
       --system-tray|--no-system-tray
                             start up as an entry in the system tray.
                             ``--no-system-tray`` is the default.
-      --location latitude,longitude
-                            local latitude and longitude for triggering presets
-                            by solar elevation
-      --translations|--no-translations
-                            enable/disable language translations.
-                            ``--no-translations`` is the default.
-      --schedule|--no-schedule
-                            enable/disable preset scheduling. ``--schedule`` is the default.
-      --weather|--no-weather
-                            enable/disable weather lookups. ``--weather`` is the default.
-      --lux-options|--no-lux-options
-                            enable/disable ambient light metering options.
-                            ``--lux-options`` is the default.
-      --debug|--no-debug
-                            enable/disable additional debug information.
-                            ``--no-debug`` is the default.
-      --warnings--no-warnings
-                            popup a warning when a VDU lacks an enabled control.
-                            ``--no-warnings`` is the default.
-      --syslog|-no-syslog
-                            divert diagnostic output to the syslog (journald).
-                            ``--no-syslog`` is the default.
       --hide-on-focus-out|--no-hide-on-focus-out
                             minimize the main window automatically on focus out
                             ``--no-hide-on-focus-out`` is the default.
-      --splash|--no-splash
-                            show the splash screen.  ``--splash`` is the default.
+      --smart-window|--no-smart-window
+                            smart main window placement and geometry.
+                            ``--smart-window`` is the default (may force UI to XWayland).
       --monochrome-tray|--no-monochrome-tray
                             monochrome dark themed system-tray.
                             ``--no-monochrome-tray`` is the default.
       --mono-light-tray|--no-mono-light-tray
                             monochrome themed system-tray.
                             ``--no-mono-light-tray`` is the default.
-      --smart-window|--no-smart-window
-                            smart main window placement and geometry.
-                            ``--smart-window`` is the default (may force UI to XWayland).
-      --sleep-multiplier    set the default ddcutil sleep multiplier
-                            protocol reliability multiplier for ddcutil (typically
-                            0.1 .. 2.0, default is 1.0)
-      --ddcutil-extra-args  extra arguments to pass to ddcutil (enclosed in single quotes)
+      --protect-nvram|--no-protect-nvram
+                            alter options and defaults to minimize VDU NVRAM writes
+      --order-by-name|--no-order-by-name
+                            order tabs, lists, and dropdowns by VDU name
+      --lux-options|--no-lux-options
+                            enable/disable ambient light metering options.
+                            ``--lux-options`` is the default.
+      --schedule|--no-schedule
+                            enable/disable preset scheduling. ``--schedule`` is the default.
+      --weather|--no-weather
+                            enable/disable weather lookups. ``--weather`` is the default.
       --dbus-client|--no-dbus-client
                             use the D-Bus ddcutil-service instead of the ddcutil command
                             ``--dbus-client`` is the default
       --dbus-events|--no-dbus-events
                             enable D-Bus ddcutil-service client events
                             ``--dbus-events`` is the default
-      --protect-nvram|--no-protect-nvram
-                            alter options and defaults to minimize VDU NVRAM writes
+      --syslog|-no-syslog
+                            divert diagnostic output to the syslog (journald).
+                            ``--no-syslog`` is the default.
+      --debug|--no-debug
+                            enable/disable additional debug information.
+                            ``--no-debug`` is the default.
+      --warnings--no-warnings
+                            popup a warning when a VDU lacks an enabled control.
+                            ``--no-warnings`` is the default.
+      --translations|--no-translations
+                            enable/disable language translations.
+                            ``--no-translations`` is the default.
+      --location latitude,longitude
+                            local latitude and longitude for triggering presets
+                            by solar elevation
+      --sleep-multiplier    set the default ddcutil sleep multiplier
+                            protocol reliability multiplier for ddcutil (typically
+                            0.1 .. 2.0, default is 1.0)
+      --ddcutil-extra-args  extra arguments to pass to ddcutil (enclosed in single quotes)
+
       --create-config-files
                             if they do not exist, create template config INI files
                             in $HOME/.config/vdu_controls/
@@ -190,7 +194,7 @@ The config files are in INI-format divided into a number of sections as outlined
     enable-vcp-codes = NN, NN, NN
 
     # User friendly VDU name
-    vdu_label = My Main Monitor (on the right)
+    vdu_name = My Main Monitor (on the right)
 
     [ddcutil-parameters]
     # Useful values appear to be >=0.1
@@ -829,6 +833,7 @@ from enum import Enum, IntFlag
 from functools import partial
 from importlib import import_module
 from pathlib import Path
+from pickle import FALSE
 
 from threading import Lock
 from typing import List, Tuple, Mapping, Type, Dict, Callable, Any, NewType
@@ -906,7 +911,6 @@ def zoned_now(rounded_to_minute: bool = False) -> datetime:
         from zoneinfo import ZoneInfo
         now = datetime.now(ZoneInfo(TESTING_TIME_ZONE))  # for testing scheduling
     return (now + timedelta(seconds=30)).replace(second=0, microsecond=0) if rounded_to_minute else now
-
 
 
 def format_solar_elevation_abbreviation(elevation: SolarElevationKey) -> str:
@@ -2328,47 +2332,49 @@ def conf_opt_def(cname: str, section: str = CI.VDU_CONTROLS_GLOBALS, conf_type: 
 
 
 class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration - not really Enum - alternatives?
+    SPLASH_SCREEN_ENABLED = conf_opt_def(cname=QT_TR_NOOP('splash-screen-enabled'), default='yes', cmdline_arg='splash',
+                                         tip=QT_TR_NOOP('enable the startup splash screen'))
     SYSTEM_TRAY_ENABLED = conf_opt_def(cname=QT_TR_NOOP('system-tray-enabled'), default="no", restart=True,
                                        tip=QT_TR_NOOP('start up in the system tray'), related='hide-on-focus-out')
     HIDE_ON_FOCUS_OUT = conf_opt_def(cname=QT_TR_NOOP('hide-on-focus-out'), default="no", restart=False,
                                      tip=QT_TR_NOOP('minimize the main window automatically on focus out'))
-    TRANSLATIONS_ENABLED = conf_opt_def(cname=QT_TR_NOOP('translations-enabled'), default="no", restart=True,
-                                        tip=QT_TR_NOOP('enable language translations'))
-    WEATHER_ENABLED = conf_opt_def(cname=QT_TR_NOOP('weather-enabled'), default='yes', tip=QT_TR_NOOP('enable weather lookups'))
-    SCHEDULE_ENABLED = conf_opt_def(cname=QT_TR_NOOP('schedule-enabled'), default='yes', tip=QT_TR_NOOP('enable preset schedule'))
-    LUX_OPTIONS_ENABLED = conf_opt_def(cname=QT_TR_NOOP('lux-options-enabled'), default="yes", restart=True,
-                                       tip=QT_TR_NOOP('enable light metering options'))
-    SPLASH_SCREEN_ENABLED = conf_opt_def(cname=QT_TR_NOOP('splash-screen-enabled'), default='yes', cmdline_arg='splash',
-                                         tip=QT_TR_NOOP('enable the startup splash screen'))
-    WARNINGS_ENABLED = conf_opt_def(cname=QT_TR_NOOP('warnings-enabled'), default="no",
-                                    tip=QT_TR_NOOP('popup warnings if a VDU lacks an enabled control'))
     SMART_WINDOW = conf_opt_def(cname=QT_TR_NOOP('smart-window'), default="yes",
                                 tip=QT_TR_NOOP('smart main window placement and geometry (X11 and XWayland)'), restart=True)
     MONOCHROME_TRAY_ENABLED = conf_opt_def(cname=QT_TR_NOOP('monochrome-tray-enabled'), default="no", restart=False,
                                            tip=QT_TR_NOOP('monochrome dark themed system tray'))
     MONO_LIGHT_TRAY_ENABLED = conf_opt_def(cname=QT_TR_NOOP('mono-light-tray-enabled'), default="no", restart=False,
                                            tip=QT_TR_NOOP('monochrome light themed system tray'))
-    DEBUG_ENABLED = conf_opt_def(cname=QT_TR_NOOP('debug-enabled'), default="no", tip=QT_TR_NOOP('output extra debug information'))
-    SYSLOG_ENABLED = conf_opt_def(cname=QT_TR_NOOP('syslog-enabled'), default="no",
-                                  tip=QT_TR_NOOP('divert diagnostic output to the syslog'))
+    PROTECT_NVRAM_ENABLED = conf_opt_def(cname=QT_TR_NOOP('protect-nvram'), default="yes", restart=True,
+                                         tip=QT_TR_NOOP('alter options and defaults to minimize VDU NVRAM writes'))
+    ORDER_BY_NAME = conf_opt_def(cname=QT_TR_NOOP('order-by-name'), default="no",
+                                 tip=QT_TR_NOOP('order lists and tabs by vdu-name'))
+    LUX_OPTIONS_ENABLED = conf_opt_def(cname=QT_TR_NOOP('lux-options-enabled'), default="yes", restart=True,
+                                       tip=QT_TR_NOOP('enable light metering options'))
+    SCHEDULE_ENABLED = conf_opt_def(cname=QT_TR_NOOP('schedule-enabled'), default='yes', tip=QT_TR_NOOP('enable preset schedule'))
+    WEATHER_ENABLED = conf_opt_def(cname=QT_TR_NOOP('weather-enabled'), default='yes', tip=QT_TR_NOOP('enable weather lookups'))
     DBUS_CLIENT_ENABLED = conf_opt_def(cname=QT_TR_NOOP('dbus-client-enabled'), default="yes",
                                        tip=QT_TR_NOOP('use the D-Bus ddcutil-server if available'))
     DBUS_EVENTS_ENABLED = conf_opt_def(cname=QT_TR_NOOP('dbus-events-enabled'), default="no",
                                        tip=QT_TR_NOOP('enable D-Bus ddcutil-server events'), requires='dbus-client-enabled')
+    SYSLOG_ENABLED = conf_opt_def(cname=QT_TR_NOOP('syslog-enabled'), default="no",
+                                  tip=QT_TR_NOOP('divert diagnostic output to the syslog'))
+    DEBUG_ENABLED = conf_opt_def(cname=QT_TR_NOOP('debug-enabled'), default="no", tip=QT_TR_NOOP('output extra debug information'))
+    WARNINGS_ENABLED = conf_opt_def(cname=QT_TR_NOOP('warnings-enabled'), default="no",
+                                    tip=QT_TR_NOOP('popup warnings if a VDU lacks an enabled control'))
+    TRANSLATIONS_ENABLED = conf_opt_def(cname=QT_TR_NOOP('translations-enabled'), default="no", restart=True,
+                                        tip=QT_TR_NOOP('enable language translations, currently not updated (no known users)'))
     LOCATION = conf_opt_def(cname=QT_TR_NOOP('location'), conf_type=CI.TYPE_LOCATION, tip=QT_TR_NOOP('latitude,longitude'))
     SLEEP_MULTIPLIER = conf_opt_def(cname=QT_TR_NOOP('sleep-multiplier'), section=CI.DDCUTIL_PARAMETERS, conf_type=CI.TYPE_FLOAT,
                                     tip=QT_TR_NOOP('ddcutil --sleep-multiplier (0.1 .. 2.0, default none)'))
     DDCUTIL_EXTRA_ARGS = conf_opt_def(cname=QT_TR_NOOP('ddcutil-extra-args'), section=CI.DDCUTIL_PARAMETERS, conf_type=CI.TYPE_TEXT,
                                       tip=QT_TR_NOOP('ddcutil extra arguments (default none)'))
-    VDU_LABEL = conf_opt_def(cname=QT_TR_NOOP('vdu_label'), section=CI.VDU_CONTROLS_WIDGETS, conf_type=CI.TYPE_TEXT,
-                             global_allowed=False, cmdline_arg='DISALLOWED', tip=QT_TR_NOOP('Label to display for this VDU'))
+    VDU_NAME = conf_opt_def(cname=QT_TR_NOOP('vdu-name'), section=CI.VDU_CONTROLS_WIDGETS, conf_type=CI.TYPE_TEXT,
+                            global_allowed=False, cmdline_arg='DISALLOWED', tip=QT_TR_NOOP('Name to display for this VDU'))
     ENABLE_VCP_CODES = conf_opt_def(cname=QT_TR_NOOP('enable-vcp-codes'), section=CI.VDU_CONTROLS_WIDGETS, conf_type=CI.TYPE_CSV,
                                     cmdline_arg='DISALLOWED', tip=QT_TR_NOOP('CSV list of VCP Hex-code capabilities to enable'))
     CAPABILITIES_OVERRIDE = conf_opt_def(cname=QT_TR_NOOP('capabilities-override'), section=CI.DDCUTIL_CAPABILITIES,
                                          conf_type=CI.TYPE_LONG_TEXT, cmdline_arg='DISALLOWED',
                                          tip=QT_TR_NOOP('override/cache for ddcutil capabilities text'))
-    PROTECT_NVRAM_ENABLED = conf_opt_def(cname=QT_TR_NOOP('protect-nvram'), default="yes", restart=True,
-                                         tip=QT_TR_NOOP('alter options and defaults to minimize VDU NVRAM writes'))
     UNKNOWN = conf_opt_def(cname="UNKNOWN", section=CI.UNKNOWN_SECTION, conf_type=CI.TYPE_BOOL, cmdline_arg='DISALLOWED', tip='')
 
     def __init__(self, conf_name: str, section: str, cmdline_arg: str, conf_type: str, default: str | None,
@@ -2423,7 +2429,7 @@ class VduControlsConfig:
 
         self.ini_content.set(*ConfOption.ENABLE_VCP_CODES.conf_id, '')
         if not main_config:
-            self.ini_content.set(*ConfOption.VDU_LABEL.conf_id, '')
+            self.ini_content.set(*ConfOption.VDU_NAME.conf_id, '')
         self.ini_content.set(*ConfOption.SLEEP_MULTIPLIER.conf_id, str('0.0'))
         self.ini_content.set(*ConfOption.DDCUTIL_EXTRA_ARGS.conf_id, '')
         self.ini_content.set(*ConfOption.CAPABILITIES_OVERRIDE.conf_id, '')
@@ -2453,8 +2459,8 @@ class VduControlsConfig:
                     del self.ini_content[ConfIni.VDU_CONTROLS_WIDGETS][option_name]
                     log_debug(f"Removed {self.config_name} {option_name} - not supported by VDU") if log_debug_enabled else None
 
-    def get_vdu_label(self):
-        return self.ini_content.get_non_empty_str(*ConfOption.VDU_LABEL.conf_id, fallback=self.config_name)
+    def get_vdu_preferred_name(self):
+        return self.ini_content.get_non_empty_str(*ConfOption.VDU_NAME.conf_id, fallback=self.config_name)
 
     def is_set(self, option: ConfOption, fallback=False) -> bool:
         return self.ini_content.getboolean(option.conf_section, option.conf_name, fallback=fallback)
@@ -2585,7 +2591,7 @@ class VduControlsConfig:
                             choices=[vcp.property_name() for vcp in SUPPORTED_VCP_BY_CODE.values()],
                             help='hide/disable a control (--hide may be specified multiple times)')
         parser.add_argument('--enable-vcp-code', type=str, action='append',
-                            help='enable controls for an unsupported vcp-code hex value (may be specified multiple times)')
+                            help='enable controls for an unsupported vcp-code hex value (maybe specified multiple times)')
         for option in ConfOption:
             if option.cmdline_arg is not None:
                 option.add_cmdline_arg(parser)
@@ -2774,8 +2780,8 @@ class VduController(QObject):
             config.write_file(save_config_path)
             self.config = config
 
-    def get_vdu_description(self) -> str:
-        return self.config.get_vdu_label()
+    def get_vdu_preferred_name(self, upper: bool = False) -> str:
+        return self.config.get_vdu_preferred_name().upper() if upper else self.config.get_vdu_preferred_name()
 
     def get_full_id(self) -> Tuple[str, str, str, str]:
         """Return a tuple that defines this VDU: (vdu_number, manufacturer, model, serial-number)."""
@@ -2800,7 +2806,7 @@ class VduController(QObject):
                                                              self.capabilities_supported_by_this_vdu[vcp_code].causes_config_change)
             return values
         except (subprocess.SubprocessError, ValueError, TimeoutError, DdcutilDisplayNotFound) as e:
-            raise VduException(vdu_description=self.get_vdu_description(), vcp_code=",".join(vcp_codes), exception=e,
+            raise VduException(vdu_description=self.get_vdu_preferred_name(), vcp_code=",".join(vcp_codes), exception=e,
                                operation="get_vcp_values") from e
 
     def set_vcp_value(self, vcp_code: str, value: int, origin: VcpOrigin = VcpOrigin.NORMAL,
@@ -2818,7 +2824,7 @@ class VduController(QObject):
             self.vcp_value_changed_qtsignal.emit(self.vdu_stable_id, vcp_code, value, origin,
                                                  self.capabilities_supported_by_this_vdu[vcp_code].causes_config_change)
         except (subprocess.SubprocessError, ValueError, TimeoutError, DdcutilDisplayNotFound) as e:
-            vdu_exception = VduException(vdu_description=self.get_vdu_description(), vcp_code=vcp_code, exception=e,
+            vdu_exception = VduException(vdu_description=self.get_vdu_preferred_name(), vcp_code=vcp_code, exception=e,
                                          operation="set_vcp_value")
             if not asynchronous_caller:
                 raise vdu_exception from e
@@ -2922,7 +2928,7 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
 
     def reconfigure(self, config_list: List[VduControlsConfig]) -> None:
         for config in config_list:
-            vdu_label = config.get_vdu_label()
+            vdu_label = config.get_vdu_preferred_name()
             conf_key = ConfIni.get_path(config.config_name)
             if tabs_found := [tab for tab in self.editor_tab_list if tab.config_path == conf_key]:
                 assert len(tabs_found) == 1
@@ -2940,7 +2946,7 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
     def cross_validate(self) -> bool:
         labels_in_use = {'vdu_controls': 'vdu_controls globals'}
         for tab in self.editor_tab_list:
-            if vdu_label := tab.ini_editable.get(*ConfOption.VDU_LABEL.conf_id, fallback=None):
+            if vdu_label := tab.ini_editable.get(*ConfOption.VDU_NAME.conf_id, fallback=None):
                 if existing_use := labels_in_use.get(vdu_label, None):
                     alert = MessageBox(QMessageBox.Critical, QMessageBox.Ok)
                     alert.setText(tr("Cannot save <tt>{}</tt>").format(tab.config_path.name))
@@ -3017,18 +3023,20 @@ class SettingsEditorTab(QWidget):
             layout.addWidget(booleans_panel)
             bool_count, grid_columns = 0, 5  # booleans are counted and laid out according to grid_columns.
             for option_name in self.ini_editable[section_name]:
-                option_def = vdu_config.get_conf_option(section_name, option_name)
-                if section_name != ConfIni.VDU_CONTROLS_GLOBALS or option_def != ConfOption.UNKNOWN:
-                    if option_def.conf_type == ConfIni.TYPE_BOOL:
-                        booleans_grid.addWidget(
-                            _field(
-                                SettingsEditorBooleanWidget(self, option_name, section_name,
-                                                            option_def.help, option_def.related, option_def.requires)),
-                            bool_count // grid_columns, bool_count % grid_columns)
-                        bool_count += 1
-                    else:
-                        layout.addWidget(_field(widget_map[option_def.conf_type](self, option_name, section_name, option_def.help)))
-
+                try:
+                    option_def = vdu_config.get_conf_option(section_name, option_name)
+                    if section_name != ConfIni.VDU_CONTROLS_GLOBALS or option_def != ConfOption.UNKNOWN:
+                        if option_def.conf_type == ConfIni.TYPE_BOOL:
+                            booleans_grid.addWidget(
+                                _field(
+                                    SettingsEditorBooleanWidget(self, option_name, section_name,
+                                                                option_def.help, option_def.related, option_def.requires)),
+                                bool_count // grid_columns, bool_count % grid_columns)
+                            bool_count += 1
+                        else:
+                            layout.addWidget(_field(widget_map[option_def.conf_type](self, option_name, section_name, option_def.help)))
+                except ValueError:  # Probably an old no longer valid option, or a typo.
+                    log_warning(f"Ignoring invalid option name {option_name} in {section_name}")
         def _save_clicked() -> None:
             if self.is_unsaved():
                 self.save()
@@ -3042,7 +3050,7 @@ class SettingsEditorTab(QWidget):
         if vdu_config.file_path:
             self.save_button.setToolTip(vdu_config.file_path.as_posix())
         self.save_button.clicked.connect(_save_clicked)
-        self.set_label(vdu_config.get_vdu_label())
+        self.set_label(vdu_config.get_vdu_preferred_name())
         self.status_bar.addPermanentWidget(self.save_button, 0)
 
         save_all_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr("Save All"))
@@ -3555,13 +3563,13 @@ class VduControlComboBox(VduControlBase):
             alert.setText(
                 tr("Display {vnum} {vdesc} feature {code} '({cdesc})' has an undefined value '{value}'. "
                    "Valid values are {valid}.").format(
-                    vdesc=self.controller.get_vdu_description(), vnum=self.controller.vdu_number,
+                    vdesc=self.controller.get_vdu_preferred_name(), vnum=self.controller.vdu_number,
                     code=self.vcp_capability.vcp_code, cdesc=self.vcp_capability.name,
                     value=value, valid=self.keys))
             alert.setInformativeText(
                 tr('If you want to extend the set of permitted values, you can edit the metadata '
                    'for {} in the settings panel.  For more details see the man page concerning '
-                   'VDU/VDU-model config files.').format(self.controller.get_vdu_description()))
+                   'VDU/VDU-model config files.').format(self.controller.get_vdu_preferred_name()))
             alert.exec()
             return -1
         return self.keys.index(value)
@@ -3575,7 +3583,7 @@ class VduControlPanel(QWidget):
     def __init__(self, controller: VduController, vdu_exception_handler: Callable) -> None:
         super().__init__()
         layout = QVBoxLayout()
-        self.label = QLabel(tr('Monitor {}: {}').format(controller.vdu_number, controller.get_vdu_description()))
+        self.label = QLabel(tr('Monitor {}: {}').format(controller.vdu_number, controller.get_vdu_preferred_name()))
         layout.addWidget(self.label)
         self.controller: VduController = controller
         self.vcp_controls: List[VduControlBase] = []
@@ -4048,7 +4056,7 @@ class VduControlsMainPanel(QWidget):
         warnings_enabled = main_config.is_set(ConfOption.WARNINGS_ENABLED)
         self.vdu_control_panels.clear()
         for controller in self.main_controller.vdu_controllers_map.values():
-            splash_message_qtsignal.emit(f"DDC ID {controller.vdu_number}\n{controller.get_vdu_description()}")
+            splash_message_qtsignal.emit(f"DDC ID {controller.vdu_number}\n{controller.get_vdu_preferred_name()}")
             vdu_control_panel = VduControlPanel(controller, self.display_vdu_exception)
             controller.vcp_value_changed_qtsignal.connect(self.vdu_vcp_changed_qtsignal)
             if vdu_control_panel.number_of_controls() != 0:
@@ -4057,7 +4065,7 @@ class VduControlsMainPanel(QWidget):
             elif warnings_enabled:
                 warn_omitted = MessageBox(QMessageBox.Warning)
                 warn_omitted.setText(tr('Monitor {} {} lacks any accessible controls.').format(
-                    controller.vdu_number, controller.get_vdu_description()))
+                    controller.vdu_number, controller.get_vdu_preferred_name()))
                 warn_omitted.setInformativeText(tr('The monitor will be omitted from the control panel.'))
                 warn_omitted.exec()
 
@@ -5214,7 +5222,6 @@ class PresetChooseElevationWidget(QWidget):
 class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rather complex - break into parts?
     """A dialog for creating/updating/removing presets."""
     NO_ICON_ICON_NUMBER = QStyle.SP_ComputerIcon
-    INITIALISER_ICON_NUMBER = QStyle.SP_MessageBoxQuestion
 
     @staticmethod
     def invoke(main_controller: VduAppController, main_config: VduControlsConfig) -> None:
@@ -7035,7 +7042,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                     color = QColor.fromHsl(int(index * 137.508) % 255, random.randint(64, 128), random.randint(192, 200))
                     self.drawing_color_map[vdu_sid] = color
                     color_icon = create_icon_from_svg_bytes(SWATCH_ICON_SOURCE.replace(b"#ffffff", bytes(color.name(), 'utf-8')))
-                    self.profile_selector.addItem(color_icon, self.main_controller.get_vdu_description(vdu_sid), userData=vdu_sid)
+                    self.profile_selector.addItem(color_icon, self.main_controller.get_vdu_preferred_name(vdu_sid), userData=vdu_sid)
                     if vdu_sid == candidate_id:
                         self.profile_selector.setCurrentIndex(index)
                         self.profile_plot.current_vdu_sid = candidate_id
@@ -7822,6 +7829,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         if len(self.vdu_controllers_map) == 0:
             if self.main_config.is_set(ConfOption.WARNINGS_ENABLED):
                 self.main_window.display_no_controllers_error_dialog(ddcutil_problem)
+        if self.main_config.is_set(ConfOption.ORDER_BY_NAME):
+            self.vdu_controllers_map = {c.vdu_stable_id: c for c in
+                                        sorted(self.vdu_controllers_map.values(), key=VduController.get_vdu_preferred_name)}
 
     def settings_changed(self, changed_settings: List) -> None:
         if changed_settings is None:  # Special value - means settings have been reset/removed - needs restart.
@@ -8271,9 +8281,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         if not is_running_in_gui_thread():
             self.main_window.run_in_gui_thread(partial(self.main_window.update_status_indicators, preset))
 
-    def get_vdu_description(self, vdu_stable_id: VduStableId):
+    def get_vdu_preferred_name(self, vdu_stable_id: VduStableId):
         if controller := self.vdu_controllers_map.get(vdu_stable_id):
-            return controller.get_vdu_description()
+            return controller.get_vdu_preferred_name()
         log_error(f"get_vdu_description: No controller for {vdu_stable_id}")
         return vdu_stable_id
 

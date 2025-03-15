@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Mar 13, 2025" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Mar 14, 2025" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 2.2.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -43,16 +43,17 @@ A control panel for DisplayPort, DVI, HDMI, or USB connected VDUs (\fIVisual Dis
 [\-\-show {brightness,contrast,audio\-volume,input\-source,power\-mode,osd\-language}]
 [\-\-hide {brightness,contrast,audio\-volume,input\-source,power\-mode,osd\-language}]
 [\-\-enable\-vcp\-code vcp_code] [\-\-schedule|\-\-no\-schedule]
-[\-\-location latitude,longitude] [\-\-weather|\-\-no\-weather]
-[\-\-lux\-options|\-\-no\-lux\-options] [\-\-translations|\-\-no\-translations]
 [\-\-splash|\-\-no\-splash] [\-\-system\-tray|\-\-no\-system\-tray]
-[\-\-monochrome\-tray|\-\-no\-monochrome\-tray] [\-\-mono\-light\-tray|\-\-no\-mono\-light\-tray]
 [\-\-hide\-on\-focus\-out|\-\-no\-hide\-on\-focus\-out] [\-\-smart\-window|\-\-no\-smart\-window]
-[\-\-syslog|\-\-no\-syslog]  [\-\-debug|\-\-no\-debug] [\-\-warnings|\-\-no\-warnings]
-[\-\-sleep\-multiplier multiplier] [\-\-ddcutil\-extra\-args \(aqextra args\(aq]
-[\-\-dbus\-client|\-\-no\-dbus\-client]
-[\-\-dbus\-events|\-\-no\-dbus\-events]
+[\-\-monochrome\-tray|\-\-no\-monochrome\-tray] [\-\-mono\-light\-tray|\-\-no\-mono\-light\-tray]
 [\-\-protect\-nvram|\-\-no\-protect\-nvram]
+[\-\-lux\-options|\-\-no\-lux\-options]
+[\-\-schedule|\-\-no\-schedule] [\-\-weather|\-\-no\-weather]
+[\-\-dbus\-client|\-\-no\-dbus\-client] [\-\-dbus\-events|\-\-no\-dbus\-events]
+[\-\-syslog|\-\-no\-syslog] [\-\-debug|\-\-no\-debug] [\-\-warnings|\-\-no\-warnings]
+[\-\-translations|\-\-no\-translations]
+[\-\-location latitude,longitude]
+[\-\-sleep\-multiplier multiplier] [\-\-ddcutil\-extra\-args \(aqextra args\(aq]
 [\-\-create\-config\-files] [\-\-install] [\-\-uninstall]
 .UNINDENT
 .UNINDENT
@@ -85,17 +86,38 @@ may be specified multiple times
 .UNINDENT
 .INDENT 0.0
 .TP
+.B \-\-splash|\-\-no\-splash
+show the splash screen.  \fB\-\-splash\fP is the default.
+.TP
 .B \-\-system\-tray|\-\-no\-system\-tray
 start up as an entry in the system tray.
 \fB\-\-no\-system\-tray\fP is the default.
 .TP
-.B \-\-location latitude,longitude
-local latitude and longitude for triggering presets
-by solar elevation
+.B \-\-hide\-on\-focus\-out|\-\-no\-hide\-on\-focus\-out
+minimize the main window automatically on focus out
+\fB\-\-no\-hide\-on\-focus\-out\fP is the default.
 .TP
-.B \-\-translations|\-\-no\-translations
-enable/disable language translations.
-\fB\-\-no\-translations\fP is the default.
+.B \-\-smart\-window|\-\-no\-smart\-window
+smart main window placement and geometry.
+\fB\-\-smart\-window\fP is the default (may force UI to XWayland).
+.TP
+.B \-\-monochrome\-tray|\-\-no\-monochrome\-tray
+monochrome dark themed system\-tray.
+\fB\-\-no\-monochrome\-tray\fP is the default.
+.TP
+.B \-\-mono\-light\-tray|\-\-no\-mono\-light\-tray
+monochrome themed system\-tray.
+\fB\-\-no\-mono\-light\-tray\fP is the default.
+.TP
+.B \-\-protect\-nvram|\-\-no\-protect\-nvram
+alter options and defaults to minimize VDU NVRAM writes
+.TP
+.B \-\-order\-by\-name|\-\-no\-order\-by\-name
+order tabs, lists, and dropdowns by VDU name
+.TP
+.B \-\-lux\-options|\-\-no\-lux\-options
+enable/disable ambient light metering options.
+\fB\-\-lux\-options\fP is the default.
 .TP
 .B \-\-schedule|\-\-no\-schedule
 enable/disable preset scheduling. \fB\-\-schedule\fP is the default.
@@ -103,9 +125,17 @@ enable/disable preset scheduling. \fB\-\-schedule\fP is the default.
 .B \-\-weather|\-\-no\-weather
 enable/disable weather lookups. \fB\-\-weather\fP is the default.
 .TP
-.B \-\-lux\-options|\-\-no\-lux\-options
-enable/disable ambient light metering options.
-\fB\-\-lux\-options\fP is the default.
+.B \-\-dbus\-client|\-\-no\-dbus\-client
+use the D\-Bus ddcutil\-service instead of the ddcutil command
+\fB\-\-dbus\-client\fP is the default
+.TP
+.B \-\-dbus\-events|\-\-no\-dbus\-events
+enable D\-Bus ddcutil\-service client events
+\fB\-\-dbus\-events\fP is the default
+.TP
+.B \-\-syslog|\-no\-syslog
+divert diagnostic output to the syslog (journald).
+\fB\-\-no\-syslog\fP is the default.
 .TP
 .B \-\-debug|\-\-no\-debug
 enable/disable additional debug information.
@@ -119,28 +149,13 @@ popup a warning when a VDU lacks an enabled control.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B \-\-syslog|\-no\-syslog
-divert diagnostic output to the syslog (journald).
-\fB\-\-no\-syslog\fP is the default.
+.B \-\-translations|\-\-no\-translations
+enable/disable language translations.
+\fB\-\-no\-translations\fP is the default.
 .TP
-.B \-\-hide\-on\-focus\-out|\-\-no\-hide\-on\-focus\-out
-minimize the main window automatically on focus out
-\fB\-\-no\-hide\-on\-focus\-out\fP is the default.
-.TP
-.B \-\-splash|\-\-no\-splash
-show the splash screen.  \fB\-\-splash\fP is the default.
-.TP
-.B \-\-monochrome\-tray|\-\-no\-monochrome\-tray
-monochrome dark themed system\-tray.
-\fB\-\-no\-monochrome\-tray\fP is the default.
-.TP
-.B \-\-mono\-light\-tray|\-\-no\-mono\-light\-tray
-monochrome themed system\-tray.
-\fB\-\-no\-mono\-light\-tray\fP is the default.
-.TP
-.B \-\-smart\-window|\-\-no\-smart\-window
-smart main window placement and geometry.
-\fB\-\-smart\-window\fP is the default (may force UI to XWayland).
+.B \-\-location latitude,longitude
+local latitude and longitude for triggering presets
+by solar elevation
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -151,21 +166,6 @@ protocol reliability multiplier for ddcutil (typically
 .TP
 .B  \-\-ddcutil\-extra\-args
 extra arguments to pass to ddcutil (enclosed in single quotes)
-.UNINDENT
-.INDENT 0.0
-.TP
-.B \-\-dbus\-client|\-\-no\-dbus\-client
-use the D\-Bus ddcutil\-service instead of the ddcutil command
-\fB\-\-dbus\-client\fP is the default
-.TP
-.B \-\-dbus\-events|\-\-no\-dbus\-events
-enable D\-Bus ddcutil\-service client events
-\fB\-\-dbus\-events\fP is the default
-.TP
-.B \-\-protect\-nvram|\-\-no\-protect\-nvram
-alter options and defaults to minimize VDU NVRAM writes
-.UNINDENT
-.INDENT 0.0
 .TP
 .B  \-\-create\-config\-files
 if they do not exist, create template config INI files
@@ -287,7 +287,7 @@ osd\-language = yes|no
 enable\-vcp\-codes = NN, NN, NN
 
 # User friendly VDU name
-vdu_label = My Main Monitor (on the right)
+vdu_name = My Main Monitor (on the right)
 
 [ddcutil\-parameters]
 # Useful values appear to be >=0.1
