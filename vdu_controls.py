@@ -858,6 +858,8 @@ VDU_CONTROLS_VERSION = '2.2.0'
 VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in VDU_CONTROLS_VERSION.split('.'))
 assert sys.version_info >= (3, 8), f'{APPNAME} utilises python version 3.8 or greater (your python is {sys.version}).'
 
+GNOME_LIKE = ('gnome', 'cosmic')
+
 WESTERN_SKY = 'western-sky'
 EASTERN_SKY = 'eastern-sky'
 
@@ -8328,9 +8330,10 @@ class VduAppWindow(QMainWindow):
             task()  # Was using a partial, but it silently failed when task was a method with only self and no other arguments.
 
         self._run_in_gui_thread_qtsignal.connect(_run_in_gui)
-        # Gnome tray doesn't normally provide a way to bring up the main app.
-        self.os_desktop = os.environ.get('XDG_CURRENT_DESKTOP', default='unknown').lower()
-        gnome_tray_behaviour = main_config.is_set(ConfOption.SYSTEM_TRAY_ENABLED) and 'gnome' in self.os_desktop
+
+        os_desktop = os.environ.get('XDG_CURRENT_DESKTOP', default='unknown').lower()
+        gnome_tray_behaviour = main_config.is_set(ConfOption.SYSTEM_TRAY_ENABLED) and any(dt in os_desktop for dt in GNOME_LIKE)
+        log_info(f"{os_desktop=} {gnome_tray_behaviour=}")  # Gnome tray doesn't provide a way to bring up the main app.
 
         global log_debug_enabled
         if log_debug_enabled:
@@ -8405,7 +8408,6 @@ class VduAppWindow(QMainWindow):
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
 
         self.main_controller.configure_application(self)
-        self.app_restore_window_state()
 
         self.inactive_pause_millis = int(os.environ.get('VDU_CONTROLS_INACTIVE_PAUSE_MILLIS', default='1200'))
         self.active_event_count = 0
@@ -8465,26 +8467,26 @@ class VduAppWindow(QMainWindow):
 
     def show_main_window(self, toggle: bool = False) -> None:
         if toggle and self.isVisible():
-            self.app_save_window_state()
             self.hide()
         else:
-            if len(self.qt_settings.allKeys()) == 0 and self.main_config.is_set(ConfOption.SMART_WINDOW):
-                # No previous state - guess a position near the tray. Use the mouse pos as a guess to where the
-                # system tray is.  The Linux Qt x,y geometry returned by the tray icon is 0,0, so we can't use that.
-                cursor_pos = QCursor.pos()
-                app_geometry = self.geometry()
-                # Also try to cope with the tray not being at the bottom right of the screen.
-                x = cursor_pos.x() - app_geometry.width() if cursor_pos.x() > app_geometry.width() else cursor_pos.x()
-                y = cursor_pos.y() - app_geometry.height() if cursor_pos.y() > app_geometry.height() else cursor_pos.y()
-                log_debug(f"setGeometry {x=} {y=} {app_geometry.width()=} {app_geometry.height()=} "
-                          f"{cursor_pos.x()=} {cursor_pos.y()=}")
-                self.setGeometry(x, y, app_geometry.width(), app_geometry.height())
-                log_debug(f"Initial window {cursor_pos.x()=} {cursor_pos.x()=} {self.geometry()}") if log_debug_enabled else None
-            else:
-                self.app_restore_window_state()
             self.show()
             self.raise_()  # Attempt to force it to the top with raise and activate
             self.activateWindow()
+
+    def show(self):
+        if self.main_config.is_set(ConfOption.SMART_WINDOW):
+            if len(self.qt_settings.allKeys()) == 0:  # No previous state
+                self.app_decide_window_position()  # decide initial position relative to cursor
+                self.app_save_window_state()
+            else:
+                self.app_restore_window_state()  # restore previously saved position
+        super().show()
+
+    def hide(self):
+        if self.main_config.is_set(ConfOption.SMART_WINDOW):
+            if self.isVisible():  # Only save position if really on screen
+                self.app_save_window_state()
+        super().hide()
 
     def quit_app(self) -> None:
         self.app_save_window_state()
@@ -8546,7 +8548,7 @@ class VduAppWindow(QMainWindow):
         #self.main_panel.adjustSize()
         hint_height = self.main_panel.sizeHint().height()  # The hint is the actual required layout space
         hint_width = self.main_panel.sizeHint().width()
-        log_debug(f" {hint_height=} {available_height=} {self.minimumHeight()=}")
+        log_debug(f"create_main_control_panel: {hint_height=} {available_height=} {self.minimumHeight()=}")
         if hint_height > available_height:
             log_debug(f"Main panel too high, adding scroll-area {hint_height=} {available_height=}") if log_debug_enabled else None
             self.setMaximumHeight(available_height)
@@ -8647,6 +8649,20 @@ class VduAppWindow(QMainWindow):
             if window_state := self.qt_settings.value(self.qt_state_key, None):
                 self.restoreState(window_state)
             log_debug(f"app_restore_window_state: {self.pos()=} {self.geometry()=}") if log_debug_enabled else None
+
+    def app_decide_window_position(self):
+        # Guess a window position near the tray. Use the mouse/cursor-pos as a guess to where the
+        # system tray is.  Under Linux Qt the position of the tray icon is reported as 0,0, so we can't use that.
+        cursor_x, cursor_y = QCursor.pos().x(), QCursor.pos().y()
+        app_width, app_height = self.geometry().width(), self.geometry().height()
+        desktop_width, desktop_height = (QApplication.desktop().availableGeometry().width(),
+                                         QApplication.desktop().availableGeometry().height())
+        # The following calculations allow for the tray being on any edge of the desktop...
+        margin = min(abs(desktop_height - cursor_y), abs(desktop_width - cursor_x), 100) + 25 if self.tray else 0
+        x = cursor_x - app_width - margin if cursor_x > app_width else cursor_x + margin
+        y = cursor_y - app_height - margin if cursor_y > app_height else cursor_y + margin
+        log_debug(f"decide_window_position: {x=} {y=} {app_width=} {app_height=} {cursor_x=} {cursor_y=} {margin=}")
+        self.setGeometry(x, y, app_width, app_height)
 
     def status_message(self, message: str, timeout: int, destination: MsgDestination):
         assert (self.main_panel is not None)
@@ -8937,11 +8953,10 @@ def main() -> None:
 
     if os.environ.get('XDG_SESSION_TYPE') != 'x11':  # If Wayland we can't do smart window placement - use XWayland
         if main_config.is_set(ConfOption.SMART_WINDOW):
-            log_warning(f"{ConfOption.SMART_WINDOW.conf_id}: Wayland disallows programmatic window placement. Switching to XWayland.")
+            log_warning(f"{ConfOption.SMART_WINDOW.conf_id}: Wayland disallows app window placement. Switching to XWayland.")
             os.environ['QT_QPA_PLATFORM'] = 'xcb'  # Force the use of XWayland
 
-    # Wayland needs this set in order to find/use the app's desktop icon.
-    QGuiApplication.setDesktopFileName("vdu_controls")
+    QGuiApplication.setDesktopFileName("vdu_controls")  # Wayland needs this set in order to find/use the app's desktop icon.
     # Call QApplication before parsing arguments, it will parse and remove Qt session restoration arguments.
     app = QApplication(sys.argv)
     global unix_signal_handler
