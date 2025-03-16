@@ -356,10 +356,10 @@ Version History
   * Add a vdu-name setting for assigning meaningful/user-friendly names to each VDU.
   * Implement an order-by-name option that orders lists and tabs by VDU name.
   * Hovering over a settings-dialog tab-name or save-button reveals the settings-filename as a tooltip. 
-  * For Wayland, if smart-window is enabled, switch the app's Qt platform to XWayland (xcb). (Wayland
-    doesn't allow applications to precisely place their own windows!)
-  * Save and restore main app position and geometry when its hidden or restored from the system tray.
-  * Altering the smart-window option now requires a restart (to switch between Wayland and XWayland). 
+  * If smart-window is enabled in a Wayland desktop, automatically use XWayland. (Wayland
+    doesn't allow an application to precisely place it's own windows!)
+  * Altering the smart-window option now requires a restart (due to the Wayland/XWayland changes).
+  * The smart-window option save/restore of main-window has been made more consistent.
   
 * 2.1,4
   * Provide a setting for enabling dbus-events - ddcutil-service DPMS and hotplug detection. 
