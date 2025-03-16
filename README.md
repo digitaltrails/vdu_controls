@@ -353,7 +353,7 @@ Michael Hamilton
 Version History
 ---------------
 * 2.2.0
-  * Add a vdu-name setting for assigning meaningful/user-friendly names to each VDU.
+  * Add a vdu-name option for assigning meaningful/user-friendly names to each VDU.
   * Implement an order-by-name option that orders lists and tabs by VDU name.
   * Hovering over a settings-dialog tab-name or save-button reveals the settings-filename as a tooltip. 
   * If smart-window is enabled in a Wayland desktop, automatically use XWayland. (Wayland
