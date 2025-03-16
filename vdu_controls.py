@@ -637,8 +637,8 @@ Cross-platform differences
 --------------------------
 
 Wayland doesn't allow an application to precisely position its windows.  When the ``smart-window``
-option is enabled, the application switches it's underlying platform to XWayland so that the
-main window position can be saved and restored.
+option is enabled and the desktop platform is Wayland, the application switches it's platform to
+X11 (xcb) so that it runs in XWayland.
 
 The UI attempts to step around minor differences between KDE, GNOME, and the rest, the UI on
 each may not be exactly the same.

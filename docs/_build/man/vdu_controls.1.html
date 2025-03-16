@@ -655,9 +655,9 @@ displays are not supported, but a laptop’s externally connected VDUs are
 likely to be controllable.</p>
 <h2 id="cross-platform-differences">Cross-platform differences</h2>
 <p>Wayland doesn’t allow an application to precisely position its
-windows. When the <code>smart-window</code> option is enabled, the
-application switches it’s underlying platform to XWayland so that the
-main window position can be saved and restored.</p>
+windows. When the <code>smart-window</code> option is enabled and the
+desktop platform is Wayland, the application switches it’s platform to
+X11 (xcb) so that it runs in XWayland.</p>
 <p>The UI attempts to step around minor differences between KDE, GNOME,
 and the rest, the UI on each may not be exactly the same.</p>
 <h2 id="other-concerns">Other concerns</h2>

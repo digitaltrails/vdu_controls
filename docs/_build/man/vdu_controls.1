@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Mar 14, 2025" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Mar 16, 2025" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 2.2.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -827,8 +827,8 @@ laptop\(aqs externally connected VDUs are likely to be controllable.
 .SS Cross\-platform differences
 .sp
 Wayland doesn\(aqt allow an application to precisely position its windows.  When the \fBsmart\-window\fP
-option is enabled, the application switches it\(aqs underlying platform to XWayland so that the
-main window position can be saved and restored.
+option is enabled and the desktop platform is Wayland, the application switches it\(aqs platform to
+X11 (xcb) so that it runs in XWayland.
 .sp
 The UI attempts to step around minor differences between KDE, GNOME, and the rest, the UI on
 each may not be exactly the same.
