@@ -1444,7 +1444,7 @@ class Ddcutil:
 
     def detect_vdus(self) -> List[Tuple[str, str, str, str]]:
         """Return a list of (vdu_number, desc) tuples."""
-        display_list = []
+        result_list = []
         vdu_list = self.ddcutil_impl.detect(1)
         # Going to get rid of anything that is not a-z A-Z 0-9 as potential rubbish
         rubbish = re.compile('[^a-zA-Z0-9]+')
@@ -1482,10 +1482,10 @@ class Ddcutil:
                 model_name, main_id = model_and_main_id
                 log_debug(
                     f"Unique key for {vdu_number=} {manufacturer=} is ({model_name=} {main_id=})") if log_debug_enabled else None
-                display_list.append((vdu_number, manufacturer, model_name, main_id))
+                result_list.append((vdu_number, manufacturer, model_name, main_id))
                 key_already_assigned[vdu_number] = 1
-        # display_list.append(("3", "maker_y", "model_z", "1234")) # For testing bad VDUs:
-        return display_list
+        # result_list.append(("3", "maker_y", "model_z", "1234")) # For testing bad VDUs:
+        return result_list
 
     def query_capabilities(self, vdu_number: str) -> str:
         edid_txt = self.get_edid_txt(vdu_number)
@@ -1685,7 +1685,7 @@ class DdcutilExeImpl:
     def detect(self, flags: int) -> List[Tuple]:
         issue_warnings = False  # TODO - figure out what this is about
         args = ['detect', '--verbose', ]
-        display_list = []
+        result_list = []
         result = self.__run__(*args)
         # Going to get rid of anything that is not a-z A-Z 0-9 as potential rubbish
         rubbish = re.compile('[^a-zA-Z0-9]+')
@@ -1705,9 +1705,9 @@ class DdcutilExeImpl:
                 edid_txt = self._parse_edid(display_str)
                 vdu_attributes = self.DetectedAttributes(vdu_number, '', '', manufacturer, model_name, serial_number, '', edid_txt,
                                                          bin_serial_number)
-                display_list.append(vdu_attributes)
+                result_list.append(vdu_attributes)
                 self.vdu_map_by_edid[edid_txt] = vdu_attributes
-        return display_list
+        return result_list
 
     def get_capabilities(self, edid_txt: str) -> Tuple[
             str, int, int, Dict[bytes, str], Dict[bytes, Tuple[bytes, str, Dict[bytes, str]]], str]:
@@ -4012,7 +4012,7 @@ class VduPanelBottomToolBar(QToolBar):
         QApplication.sendPostedEvents(self, 0)  # Flush any change events before resetting the flag
         QApplication.processEvents()  # Force the flushed events to be processed now
 
-    def display_active_preset(self, preset: Preset | None) -> None:
+    def show_active_preset(self, preset: Preset | None) -> None:
         if preset is not None:
             self.preset_action.setToolTip(f"{preset.get_title_name()} preset")
             self.preset_action.setIcon(preset.create_icon())
@@ -4059,7 +4059,7 @@ class VduControlsMainPanel(QWidget):
         self.vdu_control_panels.clear()
         for controller in self.main_controller.vdu_controllers_map.values():
             splash_message_qtsignal.emit(f"DDC ID {controller.vdu_number}\n{controller.get_vdu_preferred_name()}")
-            vdu_control_panel = VduControlPanel(controller, self.display_vdu_exception)
+            vdu_control_panel = VduControlPanel(controller, self.show_vdu_exception)
             controller.vcp_value_changed_qtsignal.connect(self.vdu_vcp_changed_qtsignal)
             if vdu_control_panel.number_of_controls() != 0:
                 self.vdu_control_panels[controller.vdu_stable_id] = vdu_control_panel
@@ -4116,11 +4116,11 @@ class VduControlsMainPanel(QWidget):
                     return False
         return True
 
-    def display_active_preset(self, preset: Preset | None) -> None:
+    def show_active_preset(self, preset: Preset | None) -> None:
         if self.bottom_toolbar:
-            self.bottom_toolbar.display_active_preset(preset)
+            self.bottom_toolbar.show_active_preset(preset)
 
-    def display_vdu_exception(self, exception: VduException, can_retry: bool = False) -> bool:
+    def show_vdu_exception(self, exception: VduException, can_retry: bool = False) -> bool:
         log_error(f"{exception.vdu_description} {exception.operation} {exception.attr_id} {exception.cause}")
         if self.alert is not None:  # Dismiss any existing alert
             self.alert.done(QMessageBox.Close)
@@ -5144,7 +5144,7 @@ class PresetChooseElevationWidget(QWidget):
         self._slider_select_elevation_qtsignal.emit(
             chart.elevation_steps[value] if 0 <= value < len(chart.elevation_steps) else None)
 
-    def display_elevation_description(self) -> None:
+    def show_elevation_description(self) -> None:
         if self.elevation_key is None:
             self.title_label.setText(self.title_prefix)
             return
@@ -5162,10 +5162,10 @@ class PresetChooseElevationWidget(QWidget):
                 when_text += " " + tr("twilight")
             else:
                 when_text += " " + tr("nighttime")
-        display_text = "{} {} ({}, {})".format(
+        desc_text = "{} {} ({}, {})".format(
             self.title_prefix, format_solar_elevation_abbreviation(self.elevation_key), tr(self.elevation_key.direction), when_text)
-        if display_text != self.title_label.text():
-            self.title_label.setText(display_text)
+        if desc_text != self.title_label.text():
+            self.title_label.setText(desc_text)
 
     def configure_for_location(self, location: GeoLocation | None) -> None:
         self.elevation_chart.configure_for_location(location)
@@ -5204,14 +5204,14 @@ class PresetChooseElevationWidget(QWidget):
                 self.slider.setToolTip(f"{self.elevation_key.elevation}{DEGREE_SYMBOL}")
                 self.elevation_chart.set_elevation_key(self.elevation_key)
                 self.weather_widget.setEnabled(True)
-                self.display_elevation_description()
+                self.show_elevation_description()
                 return
         self.elevation_key = None
         self.slider.setValue(-1)
         self.elevation_chart.set_elevation_key(None)
         self.weather_widget.setEnabled(False)
         self.weather_widget.chooser.setCurrentIndex(0)
-        self.display_elevation_description()
+        self.show_elevation_description()
 
     def get_required_weather_filename(self) -> str | None:
         path = self.weather_widget.get_required_weather_filepath()
@@ -5228,10 +5228,10 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
     @staticmethod
     def invoke(main_controller: VduAppController, main_config: VduControlsConfig) -> None:
         PresetsDialog.show_existing_dialog() if PresetsDialog.exists() else PresetsDialog(main_controller, main_config)
-        PresetsDialog.display_status_message('')
+        PresetsDialog.show_status_message('')
 
     @staticmethod
-    def display_status_message(message: str = '', timeout: int = 0) -> None:
+    def show_status_message(message: str = '', timeout: int = 0) -> None:
         if presets_dialog := PresetsDialog.get_instance():  # type: ignore
             if message != '':
                 presets_dialog.status_message(message, timeout=timeout)
@@ -6173,7 +6173,7 @@ class LuxProfileChart(QLabel):
         return round((math.log10(lux) - math.log10(1)) / ((math.log10(100000) - math.log10(1)) / self.plot_width)) if lux > 0 else 0
 
 
-class LuxDisplayWidget(QWidget):
+class LuxGauge(QWidget):
     lux_changed_qtsignal = pyqtSignal(int)
 
     def __init__(self, parent: LuxDialog | None = None) -> None:
@@ -6193,7 +6193,7 @@ class LuxDisplayWidget(QWidget):
         self.current_meter: LuxMeterDevice | None = None
         self.updates_enabled = True
 
-    def display_lux(self, lux: int) -> None:
+    def show_lux(self, lux: int) -> None:
         self.history = self.history[-self.max_history:]
         self.history.append(lux)
         if self.updates_enabled:
@@ -6213,15 +6213,15 @@ class LuxDisplayWidget(QWidget):
 
     def connect_meter(self, lux_meter: LuxMeterDevice | None) -> None:
         if self.current_meter:
-            self.current_meter.new_lux_value_qtsignal.disconnect(self.display_lux)
+            self.current_meter.new_lux_value_qtsignal.disconnect(self.show_lux)
         self.current_meter = lux_meter
         if self.current_meter:
-            self.current_meter.new_lux_value_qtsignal.connect(self.display_lux)
+            self.current_meter.new_lux_value_qtsignal.connect(self.show_lux)
             if isinstance(lux_meter, LuxMeterManualDevice):
-                self.display_lux(round(lux_meter.get_value()))
-            self.enable_display_updates(True)
+                self.show_lux(round(lux_meter.get_value()))
+            self.enable_gauge(True)
 
-    def enable_display_updates(self, enable: bool = True) -> None:
+    def enable_gauge(self, enable: bool = True) -> None:
         if enable:
             self.history = (self.history + [0] * 2)[-self.max_history:]  # Make a little gap in the history to show where we are
             self.update_plot()
@@ -6805,7 +6805,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
             lux_dialog.status_message(message, timeout, destination)
 
     @staticmethod
-    def lux_dialog_display_brightness(vdu_stable_id: VduStableId, brightness: int) -> None:
+    def lux_dialog_show_brightness(vdu_stable_id: VduStableId, brightness: int) -> None:
         if lux_dialog := LuxDialog.get_instance():  # type: ignore
             lux_dialog.current_brightness_map[vdu_stable_id] = brightness
             lux_dialog.profile_plot.show_changes(profile_changes=False)
@@ -6833,9 +6833,9 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         grid_layout = QGridLayout()
         top_box.setLayout(grid_layout)
 
-        self.lux_display_widget = LuxDisplayWidget(parent=self)
-        self.lux_display_widget.display_lux(0)
-        grid_layout.addWidget(self.lux_display_widget, 0, 0, 4, 2, alignment=Qt.AlignLeft | Qt.AlignTop)
+        self.lux_gauge_widget = LuxGauge(parent=self)
+        self.lux_gauge_widget.show_lux(0)
+        grid_layout.addWidget(self.lux_gauge_widget, 0, 0, 4, 2, alignment=Qt.AlignLeft | Qt.AlignTop)
 
         existing_device = self.lux_config.get_device_name()
         existing_device_type = self.lux_config.get('lux-meter', 'lux-device-type', fallback='')
@@ -6873,7 +6873,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                 self.profile_plot.current_lux = lux
                 self.profile_plot.create_plot()
 
-        self.lux_display_widget.lux_changed_qtsignal.connect(_lux_changed)
+        self.lux_gauge_widget.lux_changed_qtsignal.connect(_lux_changed)
 
         main_layout.addWidget(self.profile_plot, 1)
 
@@ -7055,7 +7055,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.status_message('')
 
     def make_visible(self) -> None:
-        self.lux_display_widget.enable_display_updates(True)
+        self.lux_gauge_widget.enable_gauge(True)
         super().make_visible()
 
     def is_interpolating(self) -> bool:
@@ -7086,7 +7086,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.lux_config.save(self.path)
         if requires_metering_restart:
             self.main_controller.get_lux_auto_controller().initialize_from_config()  # Causes the LuxAutoWorker to restart
-            self.lux_display_widget.connect_meter(None)
+            self.lux_gauge_widget.connect_meter(None)
             meter_device = self.main_controller.get_lux_auto_controller().lux_meter
             self.configure_ui(meter_device)  # Use the new meter for a new lux-display metering thread
             if meter_device is not None and self.lux_config.is_auto_enabled():
@@ -7094,7 +7094,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
 
     def configure_ui(self, meter_device: LuxMeterDevice | None) -> None:
         if meter_device is not None:  # Set this up first because altering the checkboxes will cause events to use the outcome.
-            self.lux_display_widget.connect_meter(meter_device)
+            self.lux_gauge_widget.connect_meter(meter_device)
         manual_metering_enabled = self.meter_device_selector.currentData().name == LuxDeviceType.MANUAL_INPUT.name
         if manual_metering_enabled or meter_device is None:
             self.enabled_checkbox.setChecked(False)
@@ -7127,7 +7127,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
             elif answer == QMessageBox.Cancel:
                 event.ignore()
                 return
-        self.lux_display_widget.enable_display_updates(False)  # Stop updating the display
+        self.lux_gauge_widget.enable_gauge(False)  # Stop updating the display
         super().closeEvent(event)
 
     def status_message(self, message: str, timeout: int = 0, destination: MsgDestination = MsgDestination.DEFAULT) -> None:
@@ -7777,7 +7777,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                                    prefer_dbus_client=self.main_config.is_set(ConfOption.DBUS_CLIENT_ENABLED),
                                    connected_vdus_changed_callback=change_handler)
         except (subprocess.SubprocessError, ValueError, re.error, OSError, DdcutilServiceNotFound) as e:
-            self.main_window.display_no_controllers_error_dialog(e)
+            self.main_window.show_no_controllers_error_dialog(e)
 
     def detect_vdus(self) -> Tuple[List[Tuple[str, str, str, str]], Exception | None]:
         if self.ddcutil is None:
@@ -7809,7 +7809,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             return
         detected_vdu_list, ddcutil_problem = self.detect_vdus()
         self.vdu_controllers_map = {}
-        main_panel_error_handler = self.main_window.get_main_panel().display_vdu_exception
+        main_panel_error_handler = self.main_window.get_main_panel().show_vdu_exception
         for vdu_number, manufacturer, model_name, vdu_serial in detected_vdu_list:
             controller = None
             while True:
@@ -7830,7 +7830,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 self.vdu_controllers_map[controller.vdu_stable_id] = controller
         if len(self.vdu_controllers_map) == 0:
             if self.main_config.is_set(ConfOption.WARNINGS_ENABLED):
-                self.main_window.display_no_controllers_error_dialog(ddcutil_problem)
+                self.main_window.show_no_controllers_error_dialog(ddcutil_problem)
         if self.main_config.is_set(ConfOption.ORDER_BY_NAME):
             self.vdu_controllers_map = {c.vdu_stable_id: c for c in
                                         sorted(self.vdu_controllers_map.values(), key=VduController.get_vdu_preferred_name)}
@@ -7915,7 +7915,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 if self.refresh_data_task.vdu_exception is not None:
                     log_debug(f"Refresh - update UI view - exception {self.refresh_data_task.vdu_exception} {external_event=}")
                     if not external_event:
-                        main_panel.display_vdu_exception(self.refresh_data_task.vdu_exception, can_retry=False)
+                        main_panel.show_vdu_exception(self.refresh_data_task.vdu_exception, can_retry=False)
                 if len(self.detected_vdu_list) == 0 or self.detected_vdu_list != self.previously_detected_vdu_list or (
                     external_event and False):  # TODO figure out what to do here, external events might require reconfiguration???
                     log_info(f"Reconfiguring: detected={self.detected_vdu_list} previously={self.previously_detected_vdu_list}")
@@ -7956,13 +7956,13 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             self.transitioning_dummy_preset = None
             if not immediately:
                 self.transitioning_dummy_preset = PresetTransitionDummy(preset)
-                self.main_window.display_preset_status(tr("Transitioning to preset {}").format(preset.name))
+                self.main_window.show_preset_status(tr("Transitioning to preset {}").format(preset.name))
                 self.main_window.update_status_indicators(self.transitioning_dummy_preset)
             self.main_window.indicate_busy(True, lock_controls=immediately)
             preset.load()
 
             def _update_progress(worker_thread: PresetTransitionWorker) -> None:
-                self.main_window.display_preset_status(
+                self.main_window.show_preset_status(
                     tr("Transitioning to preset {} (elapsed time {} seconds)...").format(
                         preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=2)))
                 self.transitioning_dummy_preset.update_progress() if self.transitioning_dummy_preset else None
@@ -7971,7 +7971,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             def _restore_finished_callback(worker_thread: PresetTransitionWorker) -> None:
                 self.transitioning_dummy_preset = None
                 if worker_thread.vdu_exception is not None and not background_activity:  # if it's a GUI request, ask about retry
-                    if self.main_window.get_main_panel().display_vdu_exception(worker_thread.vdu_exception, can_retry=True):
+                    if self.main_window.get_main_panel().show_vdu_exception(worker_thread.vdu_exception, can_retry=True):
                         self.restore_preset(preset, finished_func=finished_func, immediately=immediately)  # Try again, new thread
                         return  # Don't do anything more, the new thread will take over from here
                 self.main_window.indicate_busy(False)
@@ -7982,14 +7982,14 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                         with open(CURRENT_PRESET_NAME_FILE, 'w', encoding="utf-8") as cps_file:
                             cps_file.write(preset.name)
                         self.main_window.update_status_indicators(preset)
-                        self.main_window.display_preset_status(tr("Restored {} (elapsed time {} seconds)").format(
+                        self.main_window.show_preset_status(tr("Restored {} (elapsed time {} seconds)").format(
                             preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=2)))
                         if (self.main_config.is_set(ConfOption.PROTECT_NVRAM_ENABLED)
                                 and preset.get_transition_type() != PresetTransitionFlag.NONE):
                             log_warning(f"Setting protect-nvram prevents '{preset.name}' from transitioning, changes are immediate.")
                     else:  # Interrupted or exception:
                         self.main_window.update_status_indicators()
-                        self.main_window.display_preset_status(tr("Interrupted restoration of {}").format(preset.name))
+                        self.main_window.show_preset_status(tr("Interrupted restoration of {}").format(preset.name))
                 if finished_func is not None:
                     finished_func(worker_thread)
             worker = PresetTransitionWorker(self, preset, _update_progress, _restore_finished_callback,
@@ -8113,11 +8113,11 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     preset.schedule_status = PresetScheduleStatus.WEATHER_CANCELLATION
                 message = tr("Preset {} activation was cancelled due to weather at {}").format(
                     preset.name, activation_time.isoformat(' ', 'seconds'))
-                self.main_window.display_preset_status(message)
+                self.main_window.show_preset_status(message)
                 return
 
         def _activation_feedback(msg: str):
-            self.main_window.display_preset_status(f"{TIME_CLOCK_SYMBOL} " + tr("Preset {} activating at {}").format(
+            self.main_window.show_preset_status(f"{TIME_CLOCK_SYMBOL} " + tr("Preset {} activating at {}").format(
                 preset.name, f"{activation_time:%H:%M}") + f" - {msg}")
 
         def _activation_finished(worker: PresetTransitionWorker) -> None:
@@ -8571,8 +8571,8 @@ class VduAppWindow(QMainWindow):
             self.main_panel.indicate_busy(is_busy, lock_controls)
         self.app_context_menu.indicate_busy(is_busy)
 
-    def display_preset_status(self, message: str, timeout: int = 3000):
-        PresetsDialog.display_status_message(message=message, timeout=timeout)
+    def show_preset_status(self, message: str, timeout: int = 3000):
+        PresetsDialog.show_status_message(message=message, timeout=timeout)
         self.status_message(message, timeout=timeout, destination=MsgDestination.DEFAULT)
 
     def update_status_indicators(self, preset=None, palette_change: bool = False) -> None:
@@ -8584,11 +8584,11 @@ class VduAppWindow(QMainWindow):
         if preset is None:  # Detects matching Preset based on current VDU control settings
             preset = self.main_controller.which_preset_is_active()
         if preset is None:  # Clears the indicators
-            self.get_main_panel().display_active_preset(None)
+            self.get_main_panel().show_active_preset(None)
             self.app_context_menu.indicate_preset_active(None)
             PresetsDialog.instance_indicate_active_preset(None)
         else:  # Set indicators to specific preset
-            self.get_main_panel().display_active_preset(preset)
+            self.get_main_panel().show_active_preset(preset)
             self.app_context_menu.indicate_preset_active(preset)
             PresetsDialog.instance_indicate_active_preset(preset)
             title = f"{preset.get_title_name()} {PRESET_APP_SEPARATOR_SYMBOL} {title}"
@@ -8627,7 +8627,7 @@ class VduAppWindow(QMainWindow):
                 self.status_message(SET_VCP_SYMBOL, timeout=500, destination=MsgDestination.DEFAULT)
         if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) and self.main_controller.lux_auto_controller is not None:
             if vcp_code == BRIGHTNESS_VCP_CODE:
-                LuxDialog.lux_dialog_display_brightness(vdu_stable_id, value)
+                LuxDialog.lux_dialog_show_brightness(vdu_stable_id, value)
 
     def refresh_tray_menu(self) -> None:
         assert is_running_in_gui_thread()
@@ -8683,7 +8683,7 @@ class VduAppWindow(QMainWindow):
     def refresh_preset_menu(self, palette_change: bool = False, reorder: bool = False):
         self.app_context_menu.refresh_preset_menu(palette_change=palette_change, reorder=reorder)
 
-    def display_no_controllers_error_dialog(self, ddcutil_problem: Exception):
+    def show_no_controllers_error_dialog(self, ddcutil_problem: Exception):
         log_error("No controllable monitors found.")
         no_vdus_alert = MessageBox(QMessageBox.Critical)
         no_vdus_alert.setText(tr('No controllable monitors found.'))
