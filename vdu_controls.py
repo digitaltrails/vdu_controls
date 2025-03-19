@@ -2948,14 +2948,13 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
         for tab in self.editor_tab_list:
             if vdu_label := tab.ini_editable.get(*ConfOption.VDU_NAME.conf_id, fallback=None):
                 if existing_use := labels_in_use.get(vdu_label, None):
-                    MBox(MBox.Critical, msg=tr("Cannot save <tt>{}</tt>").format(tab.config_path.name),
-                         info=tr("Duplicate VDU label: <i>{}</i><hr/>Alter the label for {} or {} and try again.").format(
-                               vdu_label, tab.config_path.stem, existing_use),
-                         buttons=MBox.Ok).exec()
-                    return False
+                    return MBox(MBox.Critical, msg=tr("Cannot save <tt>{}</tt>").format(tab.config_path.name),
+                                info=tr("Duplicate VDU label: <i>{}</i><hr/>Alter the label for {} or {} and try again.").format(
+                                    vdu_label, tab.config_path.stem, existing_use),
+                                buttons=MBox.Close | MBox.Discard, default=MBox.Close).exec()
                 else:
                     labels_in_use[vdu_label] = tab.config_path.stem
-        return True
+        return MBox.Ok
 
     def save_all(self, warn_if_nothing_to_save: bool = True) -> int:
         what_changed: Dict[str, str] = {}
@@ -3080,26 +3079,27 @@ class SettingsEditorTab(QWidget):
         if self.is_unsaved() or force:
             try:
                 self.setEnabled(False)  # Saving may take a while, give some feedback by disabling and enabling when done
-                if SettingsEditor.get_instance().cross_validate():
+                answer = SettingsEditor.get_instance().cross_validate()
+                if answer == MBox.Ok:
                     msg = (tr('Update existing {}?') if self.config_path.exists() else tr("Create new {}?")).format(
                         self.config_path.as_posix())
                     answer = MBox(MBox.Question, msg=msg, buttons=MBox.Save | MBox.Cancel | MBox.Discard, default=MBox.Save).exec()
-                    if answer == MBox.Save:
-                        self.status_message(tr("Saving {} ...").format(self.config_path.name))
-                        QApplication.processEvents()
-                        self.ini_editable.save(self.config_path)
-                        self.ini_before = self.ini_editable.duplicate()  # Saved ini becomes the new "before"
-                        if what_changed is None:  # Not accumulating what has changed, implement change now.
-                            self.change_callback(self.unsaved_changes_map)
-                        else:  # Accumulating what has changed, just add to the dictionary.
-                            what_changed.update(self.unsaved_changes_map)
-                        self.unsaved_changes_map = {}
-                        self.status_message(tr("Saved {}").format(self.config_path.name), msecs=3000)
-                    elif answer == MBox.Discard:
-                        self.status_message(tr("Discarded changes to {}").format(self.config_path.name), msecs=3000)
-                        self.ini_editable = self.ini_before.duplicate()  # Revert
-                        self.reset()
-                    return answer
+                if answer == MBox.Save:
+                    self.status_message(tr("Saving {} ...").format(self.config_path.name))
+                    QApplication.processEvents()
+                    self.ini_editable.save(self.config_path)
+                    self.ini_before = self.ini_editable.duplicate()  # Saved ini becomes the new "before"
+                    if what_changed is None:  # Not accumulating what has changed, implement change now.
+                        self.change_callback(self.unsaved_changes_map)
+                    else:  # Accumulating what has changed, just add to the dictionary.
+                        what_changed.update(self.unsaved_changes_map)
+                    self.unsaved_changes_map = {}
+                    self.status_message(tr("Saved {}").format(self.config_path.name), msecs=3000)
+                elif answer == MBox.Discard:
+                    self.status_message(tr("Discarded changes to {}").format(self.config_path.name), msecs=3000)
+                    self.ini_editable = self.ini_before.duplicate()  # Revert
+                    self.reset()
+                return answer
             finally:
                 self.setEnabled(True)
         return MBox.Cancel
