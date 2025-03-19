@@ -796,7 +796,6 @@ with this program. If not, see https://www.gnu.org/licenses/.
 # vdu_controls Copyright (C) 2021 Michael Hamilton
 
 from __future__ import annotations
-
 import argparse
 import base64
 import configparser
@@ -834,7 +833,6 @@ from functools import partial
 from importlib import import_module
 from pathlib import Path
 from pickle import FALSE
-
 from threading import Lock
 from typing import List, Tuple, Mapping, Type, Dict, Callable, Any, NewType
 from urllib.error import URLError
@@ -1236,7 +1234,7 @@ EXIT_CODE_FOR_RESTART = 1959
 # Number of times to retry getting/setting attributes - in case a monitor is slow after being powered up.
 DDCUTIL_RETRIES = int(os.getenv("VDU_CONTROLS_DDCUTIL_RETRIES", default='4'))
 
-# Use a slight hack to make QMessageBox resizable.
+# Use a slight hack to make MsgBox.resizable.
 RESIZABLE_MESSAGEBOX_HACK = True
 
 IGNORE_VDU_MARKER_TEXT = 'Ignore VDU'
@@ -2950,12 +2948,10 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
         for tab in self.editor_tab_list:
             if vdu_label := tab.ini_editable.get(*ConfOption.VDU_NAME.conf_id, fallback=None):
                 if existing_use := labels_in_use.get(vdu_label, None):
-                    alert = MessageBox(QMessageBox.Critical, QMessageBox.Ok)
-                    alert.setText(tr("Cannot save <tt>{}</tt>").format(tab.config_path.name))
-                    alert.setInformativeText(
-                        tr("Duplicate VDU label: <i>{}</i><hr/>Alter the label for {} or {} and try again.").format(
-                            vdu_label, tab.config_path.stem, existing_use))
-                    alert.exec()
+                    MBox(MBox.Critical, msg=tr("Cannot save <tt>{}</tt>").format(tab.config_path.name),
+                         info=tr("Duplicate VDU label: <i>{}</i><hr/>Alter the label for {} or {} and try again.").format(
+                               vdu_label, tab.config_path.stem, existing_use),
+                         buttons=MBox.Ok).exec()
                     return False
                 else:
                     labels_in_use[vdu_label] = tab.config_path.stem
@@ -2971,23 +2967,22 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
             for editor in save_order:
                 if editor.is_unsaved():
                     nothing_to_save = False
-                    if editor.save(what_changed=what_changed) == QMessageBox.Cancel:
-                        return QMessageBox.Cancel
+                    if editor.save(what_changed=what_changed) == MBox.Cancel:
+                        return MBox.Cancel
             if warn_if_nothing_to_save and nothing_to_save:
-                alert = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Yes | QMessageBox.No, default=QMessageBox.No)
-                alert.setText(tr("Nothing needs saving. Do you wish to save anyway?"))
-                if alert.exec() == QMessageBox.Yes:
+                if MBox(MBox.Critical, msg=tr("Nothing needs saving. Do you wish to save anyway?"),
+                        buttons=MBox.Yes | MBox.No, default=MBox.No).exec() == MBox.Yes:
                     for editor in save_order:
-                        if editor.save(force=True, what_changed=what_changed) == QMessageBox.Cancel:
-                            return QMessageBox.Cancel
+                        if editor.save(force=True, what_changed=what_changed) == MBox.Cancel:
+                            return MBox.Cancel
         finally:
             self.setEnabled(True)
             if len(what_changed) > 0:
                 self.change_callback(what_changed)
-        return QMessageBox.Ok
+        return MBox.Ok
 
     def closeEvent(self, event) -> None:
-        if self.save_all(warn_if_nothing_to_save=False) == QMessageBox.Cancel:
+        if self.save_all(warn_if_nothing_to_save=False) == MBox.Cancel:
             event.ignore()
         else:
             super().closeEvent(event)
@@ -3039,13 +3034,12 @@ class SettingsEditorTab(QWidget):
                             layout.addWidget(_field(widget_map[option_def.conf_type](self, option_name, section_name, option_def.help)))
                 except ValueError:  # Probably an old no longer valid option, or a typo.
                     log_warning(f"Ignoring invalid option name {option_name} in {section_name}")
+
         def _save_clicked() -> None:
             if self.is_unsaved():
                 self.save()
             else:
-                decline_save_alert = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Ok)
-                decline_save_alert.setText(tr('No unsaved changes for {}.').format(vdu_config.config_name))
-                decline_save_alert.exec()
+                MBox(MBox.Critical, msg=tr('No unsaved changes for {}.').format(vdu_config.config_name), buttons=MBox.Ok).exec()
 
         self.status_bar = QStatusBar()
         self.save_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), '')
@@ -3064,12 +3058,9 @@ class SettingsEditorTab(QWidget):
         self.status_bar.addPermanentWidget(quit_button, 0)
 
         def _settings_reset() -> None:
-            confirmation = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Reset | QMessageBox.Cancel)
-            confirmation.setDefaultButton(QMessageBox.Cancel)
-            confirmation.setText(tr('Reset settings under the {} tab?').format(vdu_config.config_name))
-            confirmation.setInformativeText(
-                tr("All existing settings under the {} tab will be removed.").format(vdu_config.config_name))
-            if confirmation.exec() == QMessageBox.Cancel:
+            if MBox(MBox.Critical, msg=tr('Reset settings under the {} tab?').format(vdu_config.config_name),
+                    info=tr("All existing settings under the {} tab will be removed.").format(vdu_config.config_name),
+                    buttons=MBox.Reset | MBox.Cancel, default=MBox.Cancel).exec() == MBox.Cancel:
                 return
             os.remove(self.config_path) if self.config_path.exists() else None
             self.change_callback(None)
@@ -3090,13 +3081,10 @@ class SettingsEditorTab(QWidget):
             try:
                 self.setEnabled(False)  # Saving may take a while, give some feedback by disabling and enabling when done
                 if SettingsEditor.get_instance().cross_validate():
-                    confirmation = MessageBox(QMessageBox.Question, buttons=QMessageBox.Save | QMessageBox.Cancel | QMessageBox.Discard,
-                                              default=QMessageBox.Save)
-                    message = tr('Update existing {}?') if self.config_path.exists() else tr("Create new {}?")
-                    message = message.format(self.config_path.as_posix())
-                    confirmation.setText(message)
-                    answer = confirmation.exec()
-                    if answer == QMessageBox.Save:
+                    msg = (tr('Update existing {}?') if self.config_path.exists() else tr("Create new {}?")).format(
+                        self.config_path.as_posix())
+                    answer = MBox(MBox.Question, msg=msg, buttons=MBox.Save | MBox.Cancel | MBox.Discard, default=MBox.Save).exec()
+                    if answer == MBox.Save:
                         self.status_message(tr("Saving {} ...").format(self.config_path.name))
                         QApplication.processEvents()
                         self.ini_editable.save(self.config_path)
@@ -3107,14 +3095,14 @@ class SettingsEditorTab(QWidget):
                             what_changed.update(self.unsaved_changes_map)
                         self.unsaved_changes_map = {}
                         self.status_message(tr("Saved {}").format(self.config_path.name), msecs=3000)
-                    elif answer == QMessageBox.Discard:
+                    elif answer == MBox.Discard:
                         self.status_message(tr("Discarded changes to {}").format(self.config_path.name), msecs=3000)
                         self.ini_editable = self.ini_before.duplicate()  # Revert
                         self.reset()
                     return answer
             finally:
                 self.setEnabled(True)
-        return QMessageBox.Cancel
+        return MBox.Cancel
 
     def status_message(self, message: str, msecs: int = 0):  # Display a message on the visible tab.
         self.parent().currentWidget().status_bar.showMessage(message, msecs)
@@ -3156,13 +3144,9 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
         def _toggled(is_checked: bool) -> None:
             section_editor.ini_editable[section][option] = 'yes' if is_checked else 'no'
             if related:
-                info = MessageBox(QMessageBox.Information, QMessageBox.Ok)
-                info.setText(tr("You may also wish to set\n{}").format(tr(related)))
-                info.exec()
+                MBox(MBox.Information, msg=tr("You may also wish to set\n{}").format(tr(related)), buttons=MBox.Ok).exec()
             if is_checked and requires:
-                info = MessageBox(QMessageBox.Information, QMessageBox.Ok)
-                info.setText(tr("You will also need to set\n{}").format(tr(requires)))
-                info.exec()
+                MBox(MBox.Information, msg=tr("You will also need to set\n{}").format(tr(requires)), buttons=MBox.Ok).exec()
 
         checkbox.toggled.connect(_toggled)
         self.layout().addWidget(checkbox)
@@ -3293,19 +3277,15 @@ class SettingsEditorLocationWidget(SettingsEditorLineBase):
             return load(res)
 
     def location_dialog(self) -> str | None:
-        ask_permission = MessageBox(QMessageBox.Question, buttons=QMessageBox.Yes | QMessageBox.No)
-        ask_permission.setText(tr('Query {} to obtain information based on your IP-address?').format(IP_ADDRESS_INFO_URL))
-        if ask_permission.exec() == QMessageBox.Yes:
+        if MBox(MBox.Question, msg=tr('Query {} to obtain information based on your IP-address?').format(IP_ADDRESS_INFO_URL),
+                buttons=MBox.Yes | MBox.No).exec() == MBox.Yes:
             try:
                 ipinfo = self.retrieve_ipinfo()
-                info_text = f"{tr('Use the following info?')}\n" f"{ipinfo['loc']}\n" + \
+                msg = f"{tr('Use the following info?')}\n" f"{ipinfo['loc']}\n" + \
                             ','.join([ipinfo[key] for key in ('city', 'region', 'country') if key in ipinfo])
-                full_text = f"Queried {IP_ADDRESS_INFO_URL}\n" + \
+                details = f"Queried {IP_ADDRESS_INFO_URL}\n" + \
                             '\n'.join([f"{name}: {value}" for name, value in ipinfo.items()])
-                confirm = MessageBox(QMessageBox.Information, buttons=QMessageBox.Yes | QMessageBox.No)
-                confirm.setText(info_text)
-                confirm.setDetailedText(full_text)
-                if confirm.exec() == QMessageBox.Yes:
+                if MBox(MBox.Information, msg=msg, details=details, buttons=MBox.Yes | MBox.No).exec() == MBox.Yes:
                     data = ipinfo['loc']
                     # Get location name for weather lookups.
                     for key in ('city', 'region', 'country'):
@@ -3314,9 +3294,7 @@ class SettingsEditorLocationWidget(SettingsEditorLineBase):
                             break
                     return data
             except (URLError, KeyError) as e:
-                error_dialog = MessageBox(QMessageBox.Critical)
-                error_dialog.setText(tr("Failed to obtain info from {}: {}").format(IP_ADDRESS_INFO_URL, e))
-                error_dialog.exec()
+                MBox(MBox.Critical, msg=tr("Failed to obtain info from {}: {}").format(IP_ADDRESS_INFO_URL, e)).exec()
         return ''
 
 
@@ -3345,15 +3323,6 @@ class SettingsEditorTextWidget(SettingsEditorLongTextWidget):
     def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
         super().__init__(section_editor, option, section, tooltip)
         self.setMaximumHeight(native_font_height(scaled=3))
-
-
-def restart_application(reason: str) -> None:
-    # Force a restart of the application.  Some settings changes need this (run in system tray).
-    alert = MessageBox(QMessageBox.Warning)
-    alert.setText(reason)
-    alert.setInformativeText(tr('When this message is dismissed, vdu_controls will restart.'))
-    alert.exec()
-    QCoreApplication.exit(EXIT_CODE_FOR_RESTART)
 
 
 class VduException(Exception):
@@ -3561,18 +3530,15 @@ class VduControlComboBox(VduControlBase):
             self.keys.append(self.current_value)
             self.combo_box.addItem('UNKNOWN-' + value, self.current_value)
             self.combo_box.model().item(self.combo_box.count() - 1).setEnabled(False)
-            alert = MessageBox(QMessageBox.Critical)
-            alert.setText(
-                tr("Display {vnum} {vdesc} feature {code} '({cdesc})' has an undefined value '{value}'. "
-                   "Valid values are {valid}.").format(
-                    vdesc=self.controller.get_vdu_preferred_name(), vnum=self.controller.vdu_number,
-                    code=self.vcp_capability.vcp_code, cdesc=self.vcp_capability.name,
-                    value=value, valid=self.keys))
-            alert.setInformativeText(
-                tr('If you want to extend the set of permitted values, you can edit the metadata '
-                   'for {} in the settings panel.  For more details see the man page concerning '
-                   'VDU/VDU-model config files.').format(self.controller.get_vdu_preferred_name()))
-            alert.exec()
+            MBox(MBox.Critical,
+                 msg=tr("Display {vnum} {vdesc} feature {code} '({cdesc})' has an undefined value '{value}'. "
+                        "Valid values are {valid}.").format(
+                     vdesc=self.controller.get_vdu_preferred_name(), vnum=self.controller.vdu_number,
+                     code=self.vcp_capability.vcp_code, cdesc=self.vcp_capability.name,
+                     value=value, valid=self.keys),
+                 info=tr('If you want to extend the set of permitted values, you can edit the metadata '
+                         'for {} in the settings panel.  For more details see the man page concerning '
+                         'VDU/VDU-model config files.').format(self.controller.get_vdu_preferred_name())).exec()
             return -1
         return self.keys.index(value)
 
@@ -3597,19 +3563,14 @@ class VduControlPanel(QWidget):
                 try:
                     control = VduControlSlider(controller, capability)
                 except ValueError as valueError:
-                    alert = MessageBox(QMessageBox.Critical)
-                    alert.setText(str(valueError))
-                    alert.exec()
+                    MBox(MBox.Critical, msg=str(valueError)).exec()
             elif capability.vcp_type in (SIMPLE_NON_CONTINUOUS_TYPE, COMPLEX_NON_CONTINUOUS_TYPE):
                 try:
                     control = VduControlComboBox(controller, capability)
                 except ValueError as valueError:
-                    alert = MessageBox(QMessageBox.Critical)
-                    alert.setText(valueError.args[0])
-                    alert.setInformativeText(
-                        tr('If you want to extend the set of permitted values, see the man page concerning '
-                           'VDU/VDU-model config files .').format(capability.vcp_code, capability.name))
-                    alert.exec()
+                    MBox(MBox.Critical, msg=valueError.args[0],
+                         info=tr('If you want to extend the set of permitted values, see the man page concerning '
+                                 'VDU/VDU-model config files .').format(capability.vcp_code, capability.name)).exec()
             else:
                 raise TypeError(f'No GUI support for VCP type {capability.vcp_type} for vcp_code {capability.vcp_code}')
             if control is not None:
@@ -3653,7 +3614,9 @@ class VduControlPanel(QWidget):
         return count > 0  # true unless no values were tested.
 
     def update_stats(self):
-        self.label.setToolTip(f"{self.label.text()}\nSet-VCP writes: {self.controller.get_write_count()}")
+        name, sid = self.controller.get_vdu_preferred_name(), self.controller.vdu_stable_id
+        self.label.setToolTip(tr("{}\nSet-VCP writes: {}").format(sid if id == name else f"{name}\n({sid})",
+                                                                  self.controller.get_write_count()))
 
 
 class Preset:
@@ -4065,11 +4028,10 @@ class VduControlsMainPanel(QWidget):
                 self.vdu_control_panels[controller.vdu_stable_id] = vdu_control_panel
                 controllers_layout.addWidget(vdu_control_panel)
             elif warnings_enabled:
-                warn_omitted = MessageBox(QMessageBox.Warning)
-                warn_omitted.setText(tr('Monitor {} {} lacks any accessible controls.').format(
-                    controller.vdu_number, controller.get_vdu_preferred_name()))
-                warn_omitted.setInformativeText(tr('The monitor will be omitted from the control panel.'))
-                warn_omitted.exec()
+                MBox(MBox.Warning,
+                     msg=tr('Monitor {} {} lacks any accessible controls.').format(controller.vdu_number,
+                                                                                   controller.get_vdu_preferred_name()),
+                     info=tr('The monitor will be omitted from the control panel.')).exec()
 
         controllers_layout.addStretch(0)
         for control in extra_controls:
@@ -4122,29 +4084,27 @@ class VduControlsMainPanel(QWidget):
 
     def show_vdu_exception(self, exception: VduException, can_retry: bool = False) -> bool:
         log_error(f"{exception.vdu_description} {exception.operation} {exception.attr_id} {exception.cause}")
-        if self.alert is not None:  # Dismiss any existing alert
-            self.alert.done(QMessageBox.Close)
-        self.alert = MessageBox(QMessageBox.Critical,
-                                buttons=QMessageBox.Close | QMessageBox.Retry if can_retry else QMessageBox.Close,
-                                default=QMessageBox.Retry if can_retry else QMessageBox.Close)
+        msg = tr("Set value: Failed to communicate with display {}").format(exception.vdu_description)
         if exception.is_display_not_found_error():
-            self.alert.setInformativeText(tr('Monitor appears to be switched off or disconnected.'))
+            info = tr('Monitor appears to be switched off or disconnected.')
         else:
-            self.alert.setInformativeText(
-                tr('Is the monitor switched off?') + '<br>' + tr('Is the sleep-multiplier setting too low?'))
-        self.alert.setText(tr("Set value: Failed to communicate with display {}").format(exception.vdu_description))
+            info = tr('Is the monitor switched off?') + '<br>' + tr('Is the sleep-multiplier setting too low?')
         if isinstance(exception.cause, subprocess.SubprocessError):
-            self.alert.setDetailedText(
-                exception.cause.stderr.decode('utf-8', errors='surrogateescape') + '\n' + str(exception.cause))
+            details = exception.cause.stderr.decode('utf-8', errors='surrogateescape') + '\n' + str(exception.cause)
         else:
-            self.alert.setDetailedText(str(exception.cause))
+            details = str(exception.cause)
+        if self.alert is not None:  # Dismiss any existing alert
+            self.alert.done(MBox.Close)
+        self.alert = MBox(MBox.Critical, msg=msg, info=info, details=details,
+                          buttons=MBox.Close | MBox.Retry if can_retry else MBox.Close,
+                          default=MBox.Retry if can_retry else MBox.Close)
         self.alert.setAttribute(Qt.WA_DeleteOnClose)
         answer = self.alert.exec()
         self.alert = None
-        # if answer != QMessageBox.Retry:
+        # if answer != MBox.Retry:
         #     log_info("Signaling change in connected vdus")  # Can't do this - it can result in repeated looping.
         #     self.main_controller.start_refresh()
-        return answer == QMessageBox.Retry
+        return answer == MBox.Retry
 
     def status_message(self, message: str, timeout: int):
         self.bottom_toolbar.status_area.showMessage(message, timeout) if self.bottom_toolbar else None
@@ -4364,19 +4324,22 @@ class FasterFileDialog(QFileDialog):  # Takes 5 seconds versus 30+ seconds for Q
             QtCore.qInstallMessageHandler(original_handler)
 
 
-class MessageBox(QMessageBox):
-    def __init__(self, icon: QIcon, buttons: QMessageBox.StandardButtons = QMessageBox.NoButton,
+class MBox(QMessageBox):
+    def __init__(self, icon: QIcon, msg: str | None = None, info: str | None = None, details: str | None = None,
+                 buttons: QMessageBox.StandardButtons = QMessageBox.NoButton,
                  default: QMessageBox.StandardButton | None = None) -> None:
         super().__init__(icon, APPNAME, '', buttons=buttons)
-        if default is not None:
-            self.setDefaultButton(default)
         if RESIZABLE_MESSAGEBOX_HACK:
             self.setMouseTracking(True)
             self.setSizeGripEnabled(True)
+        self.setDefaultButton(default) if default else None
+        self.setText(msg) if msg else None
+        self.setInformativeText(info) if info else None
+        self.setDetailedText(details) if details else None
 
     def event(self, event: QEvent):
-        # https://www.qtcentre.org/threads/24888-Resizing-a-QMessageBox?p=251312#post251312
-        # The "least evil" way to make QMessageBox resizable, by ArmanS
+        # https://www.qtcentre.org/threads/24888-Resizing-a-MsgBox.p=251312#post251312
+        # The "least evil" way to make MsgBox.resizable, by ArmanS
         result = super().event(event)
         if RESIZABLE_MESSAGEBOX_HACK:
             if event.type() == QEvent.MouseMove or event == QEvent.MouseButtonPress:
@@ -4659,15 +4622,11 @@ class WeatherQuery:
 def weather_bad_location_dialog(weather) -> None:
     kilometres = weather.proximity_km
     use_km = QLocale.system().measurementSystem() == QLocale.MetricSystem
-    msg = MessageBox(QMessageBox.Warning)
-    msg.setText(
-        tr("The site {} reports your location as {}, {}, {},{} "
-           "which is about {} {} from the latitude and longitude specified in Settings."
-           ).format(WEATHER_FORECAST_URL, weather.area_name, weather.country_name, weather.latitude, weather.longitude,
-                    round(kilometres if use_km else kilometres * 0.621371), 'km' if use_km else 'miles'))
-    msg.setInformativeText(tr("Please check the location specified in Settings."))
-    msg.setDetailedText(f"{weather}")
-    msg.exec()
+    msg = MBox(MBox.Warning, msg=tr("The site {} reports your location as {}, {}, {},{} "
+                                    "which is about {} {} from the latitude and longitude specified in Settings."
+                                    ).format(WEATHER_FORECAST_URL, weather.area_name, weather.country_name, weather.latitude, weather.longitude,
+                                             round(kilometres if use_km else kilometres * 0.621371), 'km' if use_km else 'miles'),
+               info=tr("Please check the location specified in Settings."), details=f"{weather}").exec()
 
 
 class PresetChooseWeatherWidget(QWidget):
@@ -4758,19 +4717,15 @@ class PresetChooseWeatherWidget(QWidget):
             weather = WeatherQuery(location)
             weather.run_query()
             if weather.proximity_ok:
-                msg = MessageBox(QMessageBox.Information)
-                msg.setText(tr("Weather for {} will be retrieved from {}").format(place_name, WEATHER_FORECAST_URL))
-                msg.exec()
+                MBox(MBox.Information,
+                     msg=tr("Weather for {} will be retrieved from {}").format(place_name, WEATHER_FORECAST_URL)).exec()
                 with open(vf_file_path, 'w', encoding="utf-8") as vf:
                     vf.write(place_name)
             else:
                 weather_bad_location_dialog(weather)
         except ValueError as e:
             log_error(f"Failed to validate location: {e}", trace=True)
-            msg = MessageBox(QMessageBox.Critical)
-            msg.setText(tr("Failed to validate weather location: {}").format(e.args[0]))
-            msg.setInformativeText(e.args[1])
-            msg.exec()
+            MBox(MBox.Critical, msg=tr("Failed to validate weather location: {}").format(e.args[0]), info=e.args[1]).exec()
 
     def populate(self) -> None:
         if self.chooser.count() == 0:
@@ -4833,11 +4788,9 @@ class PresetChooseTransitionWidget(QWidget):
         if self.is_setting:
             return
         if checked:
-            alert = MessageBox(QMessageBox.Warning)
-            alert.setText(tr('Transitions have been deprecated to minimize wear on VDU NVRAM.'))
-            alert.setInformativeText('Transitions are slated for removal, please '
-                                     'contact the developer if you wish to retain them.')
-            alert.exec()
+            MBox(MBox.Warning,
+                 msg=tr('Transitions have been deprecated to minimize wear on VDU NVRAM.'),
+                 info=tr('Transitions are slated for removal, please contact the developer if you wish to retain them.')).exec()
         for act in self.button_menu.actions():
             if act.isChecked():
                 self.transition_type |= act.data()
@@ -5314,11 +5267,11 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.preset_name_edit.textChanged.connect(self.change_edit_group_title)
         self.preset_name_edit.setValidator(QRegExpValidator(QRegExp("[A-Za-z0-9][A-Za-z0-9_ .-]{0,60}")))
 
-        self.vdu_init_menu = QMenu()
-        self.vdu_init_menu.triggered.connect(self.vdu_init_menu_triggered)
+        self.vip_menu = QMenu()
+        self.vip_menu.triggered.connect(self.vip_menu_triggered)
         edit_panel_layout.addWidget(self.preset_name_edit)
         self.vdu_init_button = ToolButton(VDU_CONNECTED_ICON_SOURCE, tr("Create VDU specific\nInitialization-Preset"), self)
-        self.vdu_init_button.setMenu(self.vdu_init_menu)
+        self.vdu_init_button.setMenu(self.vip_menu)
         self.vdu_init_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         edit_panel_layout.addWidget(self.vdu_init_button)
 
@@ -5426,13 +5379,11 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
     def status_message(self, message: str, timeout: int = 0) -> None:
         self.status_bar.showMessage(message, msecs=3000 if timeout == -1 else timeout)
 
-    def vdu_init_menu_triggered(self, action: QAction):
+    def vip_menu_triggered(self, action: QAction):
         vdu_stable_id = action.data()
-        confirm = MessageBox(QMessageBox.Information, buttons=QMessageBox.Ok | QMessageBox.Cancel)
-        confirm.setText(tr('Create an initialization-preset for {}.').format(vdu_stable_id))
-        confirm.setInformativeText(tr('Initialization-presets are restored  at startup '
-                                      'or when ever the VDU is subsequently detected.'))
-        if confirm.exec() == QMessageBox.Cancel:
+        if MBox(MBox.Information, msg=tr('Create an initialization-preset for {}.').format(action.text()),
+                info=tr('Initialization-presets are restored  at startup or when ever the VDU is subsequently detected.'),
+                buttons=MBox.Ok | MBox.Cancel).exec() == MBox.Cancel:
             return
         self.preset_name_edit.setText(vdu_stable_id)
         for (section, option), checkbox in self.content_controls_map.items():
@@ -5460,16 +5411,17 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         layout = QVBoxLayout()
         widget.setLayout(layout)
         self.content_controls_map = {}
-        self.vdu_init_menu.clear()
+        self.vip_menu.clear()  # VIP - VDU Initialization Preset
         for count, vdu_section_name in enumerate(self.base_ini.data_sections()):
+            vdu_name = self.main_controller.get_vdu_preferred_name(vdu_section_name)
             if count > 0:
                 line = QFrame()
                 line.setFrameShape(QFrame.HLine)
                 line.setFrameShadow(QFrame.Sunken)
                 layout.addWidget(line)
-            group_box = QGroupBox(vdu_section_name)
+            group_box = QGroupBox(vdu_name)
             group_box.setFlat(True)
-            group_box.setToolTip(tr("Choose which settings to save for {}").format(vdu_section_name))
+            group_box.setToolTip(tr("Choose which settings to save for {}").format(vdu_name))
             group_layout = QHBoxLayout()
             group_box.setLayout(group_layout)
             for option in self.base_ini[vdu_section_name]:
@@ -5478,9 +5430,10 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
                 self.content_controls_map[(vdu_section_name, option)] = option_control
                 option_control.setChecked(True)
             layout.addWidget(group_box)
-            init_menu_action = QAction(vdu_section_name, self.vdu_init_menu)
-            init_menu_action.setData(vdu_section_name)
-            self.vdu_init_menu.addAction(init_menu_action)
+            vip_action = QAction(f"{vdu_section_name} ({vdu_name})" if vdu_section_name != vdu_name else vdu_section_name,
+                                 self.vip_menu)
+            vip_action.setData(vdu_section_name)
+            self.vip_menu.addAction(vip_action)
         container.setWidget(widget)
 
     def set_widget_values_from_preset(self, preset: Preset):
@@ -5557,9 +5510,8 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.main_controller.restore_preset(preset, immediately=immediately)
 
     def delete_preset(self, preset: Preset, target_widget: QWidget) -> None:
-        confirmation = MessageBox(QMessageBox.Question, buttons=QMessageBox.Ok | QMessageBox.Cancel, default=QMessageBox.Cancel)
-        confirmation.setText(tr('Delete {}?').format(preset.name))
-        if confirmation.exec() == QMessageBox.Cancel:
+        if MBox(MBox.Question, msg=tr('Delete {}?').format(preset.name),
+                buttons=MBox.Ok | MBox.Cancel, default=MBox.Cancel).exec() == MBox.Cancel:
             return
         self.main_controller.delete_preset(preset)
         self.preset_widgets_layout.removeWidget(target_widget)
@@ -5611,20 +5563,19 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
             self.setDisabled(True)  # Stop any editing until after the preset is restored.
             self.main_controller.restore_preset(preset, finished_func=_begin_editing, immediately=True)
 
-    def save_preset(self, _: bool = False, from_widget: PresetWidget = None,
-                    quiet: bool = False) -> QMessageBox.Ok | QMessageBox.Cancel:
+    def save_preset(self, _: bool = False, from_widget: PresetWidget = None, quiet: bool = False) -> MBox.Ok | MBox.Cancel:
         preset: Preset | None = None
         widget_to_replace: PresetWidget | None = None
         if from_widget:  # A from_widget is requesting that the Preset's VDU current settings be updated.
             widget_to_replace = None  # Updating from widget, no change to icons or symbols, so no need to update the widget.
             preset = from_widget.preset  # Just update the widget's preset from the VDUs current settings
-        elif preset_name := self.preset_name_edit.text().strip():  # Saving from the save button, this may be new Preset or update.
+        elif preset_name := self.preset_name_edit.text().strip().replace('_', ' '):  # Saving from the save button, this may be new Preset or update.
             if widget_to_replace := self.find_preset_widget(preset_name):  # Already exists, update preset, replace widget
                 preset = widget_to_replace.preset  # Use the widget's existing Preset.
             else:
                 preset = Preset(preset_name)  # New Preset
         if preset is None or (quiet and not self.has_changes(preset)):  # Not found (weird), OR don't care if no changes made.
-            return QMessageBox.Ok  # Nothing more to do, everything is OK
+            return MBox.Ok  # Nothing more to do, everything is OK
 
         preset_path = ConfIni.get_path(proper_name('Preset', preset.name))
         if preset_path.exists():  # Existing Preset
@@ -5634,15 +5585,12 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
                 question = tr("Replace existing '{}' preset?").format(preset.name)
         else:  # New Preset
             question = tr("Save current edit?")
-        confirmation = MessageBox(
-            QMessageBox.Question, buttons=QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel, default=QMessageBox.Save)
-        confirmation.setText(question)
-        answer = confirmation.exec()
-        if answer == QMessageBox.Discard:
+        answer = MBox(MBox.Question, msg=question, buttons=MBox.Save | MBox.Discard | MBox.Cancel, default=MBox.Save).exec()
+        if answer == MBox.Discard:
             self.reset_editor()
-            return QMessageBox.Ok
-        elif answer == QMessageBox.Cancel:
-            return QMessageBox.Cancel
+            return MBox.Ok
+        elif answer == MBox.Cancel:
+            return MBox.Cancel
 
         self.populate_ini_from_gui(preset.preset_ini)  # Initialises the options from the GUI, but does not get the VDU values.
         self.main_controller.populate_ini_from_vdus(preset.preset_ini, update_only=True)  # populate from VDU control values.
@@ -5650,11 +5598,9 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         if duplicated_presets := [other_preset for other_name, other_preset in self.main_controller.find_presets_map().items()
                                   if other_name != preset.name
                                      and preset.preset_ini.diff(other_preset.preset_ini, vdu_settings_only=True) == {}]:
-            duplicates_warning = MessageBox(QMessageBox.Warning,
-                                            buttons=QMessageBox.Save | QMessageBox.Cancel, default=QMessageBox.Cancel)
-            duplicates_warning.setText(tr("Duplicates existing Preset {}, save anyway?").format(duplicated_presets[0].name))
-            if duplicates_warning.exec() == QMessageBox.Cancel:
-                return QMessageBox.Cancel
+            if MBox(MBox.Warning, msg=tr("Duplicates existing Preset {}, save anyway?").format(duplicated_presets[0].name),
+                    buttons=MBox.Save | MBox.Cancel, default=MBox.Cancel).exec() == MBox.Cancel:
+                return MBox.Cancel
 
         self.main_controller.save_preset(preset)
 
@@ -5673,7 +5619,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
         self.reset_editor()
         self.status_message(tr("Saved {}").format(preset.name), timeout=-1)
-        return QMessageBox.Save
+        return MBox.Save
 
     def create_preset_widget(self, preset) -> PresetWidget:
         return PresetWidget(preset, restore_action=self.restore_preset, save_action=self.save_preset,
@@ -5689,7 +5635,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         return super().event(event)
 
     def closeEvent(self, event) -> None:
-        if self.save_preset(quiet=True) == QMessageBox.Cancel:
+        if self.save_preset(quiet=True) == MBox.Cancel:
             event.ignore()
         else:
             self.reset_editor()
@@ -5699,10 +5645,8 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 def exception_handler(e_type, e_value, e_traceback) -> None:
     """Overarching error handler in case something unexpected happens."""
     log_error("\n" + ''.join(traceback.format_exception(e_type, e_value, e_traceback)))
-    alert = MessageBox(QMessageBox.Critical)
-    alert.setText(tr('Error: {}').format(''.join(traceback.format_exception_only(e_type, e_value))))
-    alert.setDetailedText(tr('Details: {}').format(''.join(traceback.format_exception(e_type, e_value, e_traceback))))
-    alert.exec()
+    MBox(MBox.Critical, msg=tr('Error: {}').format(''.join(traceback.format_exception_only(e_type, e_value))),
+         details=tr('Details: {}').format(''.join(traceback.format_exception(e_type, e_value, e_traceback)))).exec()
 
 
 def handle_theme(svg_bytes: bytes) -> bytes:
@@ -6113,10 +6057,7 @@ class LuxProfileChart(QLabel):
                     profile.sort()
                 return True
         else:
-            alert = MessageBox(QMessageBox.Information)
-            alert.setText(tr("There are no Presets."))
-            alert.setInformativeText(tr("Use the Presets Dialog to create some."))
-            alert.exec()
+            MBox(MBox.Information, msg=tr("There are no Presets."), info=tr("Use the Presets Dialog to create some.")).exec()
         return False
 
     def show_changes(self, profile_changes=True) -> None:
@@ -6962,11 +6903,9 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         def _set_interpolation(checked: int) -> None:
             if checked == Qt.Checked:  # need to save setting if not already set
                 if not self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=False):
-                    alert = MessageBox(QMessageBox.Warning)
-                    alert.setText(tr('Interpolation may increase the number of writes to VDU NVRAM.'))
-                    alert.setInformativeText('When designing brightness reponse curves consider minimizing '
-                                             'brightness changes to reduce wear on NVRAM.')
-                    alert.exec()
+                    MBox(MBox.Warning, msg=tr('Interpolation may increase the number of writes to VDU NVRAM.'),
+                         info=tr('When designing brightness response curves consider minimizing '
+                                   'brightness changes to reduce wear on NVRAM.')).exec()
                     self.lux_config.set('lux-meter', 'interpolate-brightness', 'yes')
                     self.apply_settings()
             elif self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True):
@@ -7069,16 +7008,13 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                 (required_type == LuxDeviceType.FIFO and path.is_fifo()) or
                 (required_type == LuxDeviceType.EXECUTABLE and path.exists() and os.access(device, os.X_OK))):
             if not os.access(device, os.R_OK):
-                alert = MessageBox(QMessageBox.Critical)
-                alert.setText(tr("No read access to {}").format(device))
+                info = None
                 if path.is_char_device() and path.group() != "root":
-                    alert.setInformativeText(tr("You might need to be a member of the {} group.").format(path.group()))
-                alert.exec()
+                    info=tr("You might need to be a member of the {} group.").format(path.group())
+                MBox(MBox.Critical, msg=tr("No read access to {}").format(device), info=info).exec()
                 return False
         else:
-            alert = MessageBox(QMessageBox.Critical)
-            alert.setText(tr("Expecting {}, but {} was selected.").format(tr(required_type.description), device))
-            alert.exec()
+            MBox(MBox.Critical, msg=tr("Expecting {}, but {} was selected.").format(tr(required_type.description), device)).exec()
             return False
         return True
 
@@ -7118,13 +7054,11 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
 
     def closeEvent(self, event) -> None:
         if self.has_profile_changes:
-            alert = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
-                               default=QMessageBox.Cancel)
-            alert.setText(tr("There are unsaved profile changes?"))
-            answer = alert.exec()
-            if answer == QMessageBox.Save:
+            answer = MBox(MBox.Critical, msg=tr("There are unsaved profile changes?"),
+                          buttons=MBox.Save | MBox.Discard | MBox.Cancel, default=MBox.Cancel).exec()
+            if answer == MBox.Save:
                 self.save_profiles()
-            elif answer == QMessageBox.Cancel:
+            elif answer == MBox.Cancel:
                 event.ignore()
                 return
         self.lux_gauge_widget.enable_gauge(False)  # Stop updating the display
@@ -7227,10 +7161,8 @@ class LuxAutoController:
             self.main_controller.update_window_status_indicators()  # Refresh indicators immediately
         except LuxDeviceException as lde:
             log_error(f"Error setting up lux meter {lde}", trace=True)
-            alert = MessageBox(QMessageBox.Critical)
-            alert.setText(tr("Error setting up lux meter: {}").format(self.lux_config.get_device_name()))
-            alert.setInformativeText(str(lde))
-            alert.exec()
+            MBox(MBox.Critical, msg=tr("Error setting up lux meter: {}").format(self.lux_config.get_device_name()),
+                 info=str(lde)).exec()
         if self.lux_tool_button:
             self.lux_tool_button.refresh_icon(self.current_auto_svg())  # Refresh indicators immediately
         if self.lux_lighting_check_button:
@@ -7568,7 +7500,7 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
             about_text += "<hr><p><small>ddcutil-interface: {}; ddcutil: {} (writes: {})</small>".format(
                 *self.main_controller.ddcutil.ddcutil_version_info(), counts_str)
         self.setInformativeText(about_text)
-        self.setIcon(QMessageBox.Information)
+        self.setIcon(MBox.Information)
 
 
 class HelpDialog(SubWinDialog, DialogSingletonMixin):
@@ -7837,12 +7769,12 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
     def settings_changed(self, changed_settings: List) -> None:
         if changed_settings is None:  # Special value - means settings have been reset/removed - needs restart.
-            restart_application(tr("A settings reset requires vdu_controls to restart."))
+            self.restart_application(tr("A settings reset requires vdu_controls to restart."))
             return
         for setting in ConfOption:
             if setting.restart_required and (setting.conf_section, setting.conf_name) in changed_settings:
-                restart_application(tr("The change to the {} option requires "
-                                       "vdu_controls to restart.").format(tr(setting.conf_name)))
+                self.restart_application(tr("The change to the {} option requires "
+                                        "vdu_controls to restart.").format(tr(setting.conf_name)))
                 return
         self.main_config.reload()
         global log_debug_enabled
@@ -8170,10 +8102,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             if not preset.check_weather(self.weather_query):
                 return False
         except ValueError as e:
-            msg = MessageBox(QMessageBox.Warning)
-            msg.setText(tr("Ignoring weather requirements, unable to query local weather: {}").format(str(e.args[0])))
-            msg.setInformativeText(e.args[1])
-            msg.exec()
+            MBox(MBox.Warning, msg=tr("Ignoring weather requirements, unable to query local weather: {}").format(str(e.args[0])),
+                 info=e.args[1]).exec()
         return True
 
     def find_preset_by_name(self, preset_name: str) -> Preset | None:
@@ -8305,6 +8235,12 @@ class VduAppController(QObject):  # Main controller containing methods for high 
     def status_message(self, message: str, timeout: int, destination: MsgDestination = MsgDestination.DEFAULT):
         self.main_window.status_message(message, timeout, destination)
 
+    def restart_application(self, reason: str):
+        # Force a restart of the application.  Some settings changes need this (run in system tray).
+        MBox(MBox.Warning, msg=reason, info=tr('When this message is dismissed, vdu_controls will restart.')).exec()
+        self.main_window.app_save_window_state()
+        QCoreApplication.exit(EXIT_CODE_FOR_RESTART)
+
 
 class VduAppWindow(QMainWindow):
     splash_message_qtsignal = pyqtSignal(str)
@@ -8427,10 +8363,11 @@ class VduAppWindow(QMainWindow):
             splash = None
 
         if main_config.file_path is None or main_config.ini_content.get_version() < VDU_CONTROLS_VERSION_TUPLE:  # New version...
-            release_alert = MessageBox(QMessageBox.Information, buttons=QMessageBox.Close)
             welcome = tr("Welcome to vdu_controls version {}").format(VDU_CONTROLS_VERSION)
             note = tr("Please read the online release notes:")
-            release_alert.setText(RELEASE_ANNOUNCEMENT.format(WELCOME=welcome, NOTE=note, VERSION=VDU_CONTROLS_VERSION))
+            release_alert = MBox(MBox.Information,
+                                 msg=RELEASE_ANNOUNCEMENT.format(WELCOME=welcome, NOTE=note, VERSION=VDU_CONTROLS_VERSION),
+                                 buttons=MBox.Close)
             release_alert.setTextFormat(Qt.RichText)
             release_alert.exec()
             main_config.write_file(ConfIni.get_path('vdu_controls'), overwrite=True)  # Stops release notes from being repeated.
@@ -8685,52 +8622,39 @@ class VduAppWindow(QMainWindow):
 
     def show_no_controllers_error_dialog(self, ddcutil_problem: Exception):
         log_error("No controllable monitors found.")
-        no_vdus_alert = MessageBox(QMessageBox.Critical)
-        no_vdus_alert.setText(tr('No controllable monitors found.'))
         if isinstance(ddcutil_problem, subprocess.SubprocessError):
             problem_text = ddcutil_problem.stderr.decode('utf-8', errors='surrogateescape') + '\n' + str(ddcutil_problem)
         else:
             problem_text = str(ddcutil_problem)
         log_error(f"Most recent error: {problem_text}".encode("unicode_escape").decode("utf-8"))
-        no_vdus_alert.setInformativeText(
-            tr("Is ddcutil or ddcutil-service installed and working?") + "\n\n" +
-            tr("Most recent error: {}").format(problem_text) + "\n" + '_' * 80)
-        no_vdus_alert.exec()
+        MBox(MBox.Critical, msg=tr('No controllable monitors found.'),
+             info=tr("Is ddcutil or ddcutil-service installed and working?") + "\n\n" +
+                  tr("Most recent error: {}").format(problem_text) + "\n" + '_' * 80).exec()
 
     def ask_for_vdu_controller_remedy(self, vdu_number: str, model_name: str, vdu_serial: str):
-        no_auto = MessageBox(QMessageBox.Critical,
-                             buttons=QMessageBox.Discard | QMessageBox.Ignore | QMessageBox.Apply | QMessageBox.Retry)
-        no_auto.setText(
-            tr('Failed to obtain capabilities for monitor {} {} {}.').format(vdu_number, model_name, vdu_serial))
-        no_auto.setInformativeText(tr(
-            'Cannot automatically configure this monitor.'
-            '\n You can choose to:'
-            '\n 1: Retry obtaining the capabilities.'
-            '\n 2: Temporarily ignore this monitor.'
-            '\n 3: Apply standard brightness and contrast controls.'
-            '\n 4: Permanently discard this monitor from use with vdu_controls.'
-            '\n\nPossibly just a timing error, maybe a retry will work\n(see Settings: sleep multiplier)\n\n'))
-        choice = no_auto.exec()
-        if choice == QMessageBox.Discard:
-            warn = MessageBox(QMessageBox.Information)
-            warn.setText(tr('Discarding {} monitor.').format(model_name))
-            warn.setInformativeText(tr('Remove "{}" from {} capabilities override to reverse this decision.').format(
-                    IGNORE_VDU_MARKER_TEXT, model_name))
-            warn.exec()
+        msg = tr('Failed to obtain capabilities for monitor {} {} {}.').format(vdu_number, model_name, vdu_serial)
+        info = tr('Cannot automatically configure this monitor.'
+                  '\n You can choose to:'
+                  '\n 1: Retry obtaining the capabilities.'
+                  '\n 2: Temporarily ignore this monitor.'
+                  '\n 3: Apply standard brightness and contrast controls.'
+                  '\n 4: Permanently discard this monitor from use with vdu_controls.'
+                  '\n\nPossibly just a timing error, maybe a retry will work\n(see Settings: sleep multiplier)\n\n')
+        choice = MBox(MBox.Critical, msg=msg, info=info, buttons=MBox.Discard | MBox.Ignore | MBox.Apply | MBox.Retry).exec()
+        if choice == MBox.Discard:
+            MBox(MBox.Information, msg=tr('Discarding {} monitor.').format(model_name),
+                 info=tr('Remove "{}" from {} capabilities override to reverse this decision.').format(
+                       IGNORE_VDU_MARKER_TEXT, model_name)).exec()
             return VduController.DISCARD_VDU
-        elif choice == QMessageBox.Ignore:
-            warn = MessageBox(QMessageBox.Information)
-            warn.setText(tr('Ignoring {} monitor for now.').format(model_name))
-            warn.setInformativeText(tr('Will retry when vdu_controls is next started'))
-            warn.exec()
+        elif choice == MBox.Ignore:
+            MBox(MBox.Information, msg=tr('Ignoring {} monitor for now.').format(model_name),
+                 info=tr('Will retry when vdu_controls is next started')).exec()
             return VduController.IGNORE_VDU
-        elif choice == QMessageBox.Apply:
-            warn = MessageBox(QMessageBox.Information)
-            warn.setText(tr('Assuming {} has brightness and contrast controls.').format(model_name))
-            warn.setInformativeText(tr('Wrote {} config files to {}.').format(model_name, CONFIG_DIR_PATH) +
-                                    tr('\nPlease check these files and edit or remove them if they '
-                                       'cause further issues.'))
-            warn.exec()
+        elif choice == MBox.Apply:
+            MBox(MBox.Information, msg=tr('Assuming {} has brightness and contrast controls.').format(model_name),
+                 info=tr('Wrote {} config files to {}.').format(model_name, CONFIG_DIR_PATH) +
+                      tr('\nPlease check these files and edit or remove them if they '
+                         'cause further issues.')).exec()
             return VduController.ASSUME_STANDARD_CONTROLS
         return VduController.NORMAL_VDU
 
@@ -8786,7 +8710,6 @@ class SignalWakeupHandler(QtNetwork.QAbstractSocket):
 # FUNCTION TO COMPUTE SOLAR AZIMUTH AND ZENITH ANGLE
 # Extracted from a larger gist by Antti Lipponen: https://gist.github.com/anttilipp/1c482c8cc529918b7b973339f8c28895
 # which was translated to Python from http://www.psa.es/sdg/sunpos.htm
-#
 # Converted to only use the python math library (instead of numpy) by me for vdu_controls.
 # Coding style also altered for use with vdu_controls.
 def calc_solar_azimuth_zenith(localised_time: datetime, latitude: float, longitude: float) -> Tuple[float, float]:
@@ -8993,12 +8916,10 @@ def main() -> None:
         initialise_locale_translations(app)
 
     main_controller = VduAppController(main_config)
-
     VduAppWindow(main_config, app, main_controller)  # may need to assign this to a variable to prevent garbage collection?
 
     if args.about:
         AboutDialog.invoke(main_controller)
-
     if args.create_config_files:
         main_controller.create_config_files()
 
@@ -9008,11 +8929,10 @@ def main() -> None:
         log_info(f"Trying to restart - this only works if {app.arguments()[0]} is executable and on your PATH): ", )
         restart_status = QProcess.startDetached(app.arguments()[0], app.arguments()[1:])
         if not restart_status:
-            dialog = MessageBox(QMessageBox.Critical, buttons=QMessageBox.Close)
-            dialog.setText(tr("Restart of {} failed.  Please restart manually.").format(app.arguments()[0]))
-            dialog.setInformativeText(tr("This is probably because {} is not"
-                                         " executable or is not on your PATH.").format(app.arguments()[0]))
-            dialog.exec()
+            MBox(MBox.Critical, msg=tr("Restart of {} failed.  Please restart manually.").format(app.arguments()[0]),
+                 info=tr("This is probably because {} is not"
+                         " executable or is not on your PATH.").format(app.arguments()[0]),
+                 buttons=MBox.Close).exec()
     sys.exit(rc)
 
 
