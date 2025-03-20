@@ -119,7 +119,7 @@ From ``vdu_controls 2.0`` onward, ``vdu_controls`` defaults to using the ``D-Bus
 Should the ``ddcutil-service`` be unavailable, ``vdu_controls`` will fall back to running the
 ``ddcutil`` command to perform each request.
 
-The UI's look-and-feel dynamically adjusts to dark and light themes. The application may
+The UI look-and-feel dynamically adjusts to dark and light themes. The application may
 optionally run in the system tray of KDE, Deepin, GNOME, and Xfce (and possibly others).
 
 The UI provides an optional ``ambient-light slider`` for simultaneously adjusting
@@ -567,7 +567,7 @@ Improving Response Time: Dynamic Optimization and Sleep Multipliers
 If you are using ``ddcutil`` version 2.0 or greater, ``vdu_controls`` will default to using the
 ``ddcutil`` *dynamic sleep optimiser*.  The optimiser automatically tunes and caches VDU specific
 timings when ever ``ddcutil`` is run.  Any reliability-issues or errors may be automatically
-resolved as the optimiser refines it's cached timings.  Should problems persist, the
+resolved as the optimiser refines its cached timings.  Should problems persist, the
 optimiser can be disabled by adding `--disable-dynamic-sleep` to the **ddcutil extra arguments** in
 the **Settings Dialog** (either globally on the **vdu_controls tab** or selectively under each VDU's
 tab).  If dynamic sleep is disabled, multipliers can then be manually assigned. The optimiser's
@@ -637,7 +637,7 @@ Cross-platform differences
 --------------------------
 
 Wayland doesn't allow an application to precisely position its windows.  When the ``smart-window``
-option is enabled and the desktop platform is Wayland, the application switches it's platform to
+option is enabled and the desktop platform is Wayland, the application switches its platform to
 X11 (xcb) so that it runs in XWayland.
 
 The UI attempts to step around minor differences between KDE, GNOME, and the rest, the UI on
@@ -1045,6 +1045,7 @@ LOCALE_TRANSLATIONS_PATHS = [
     Path(CONFIG_DIR_PATH).joinpath('translations'), Path("/usr/share/vdu_controls/translations"), ]
 STANDARD_ICON_PATHS = (Path("/usr/share/vdu_controls/icons"), Path("/usr/share/icons/breeze/actions/24"), Path("/usr/share/icons"),)
 
+
 class MsgDestination(Enum):
     DEFAULT = 0
     COUNTDOWN = 1
@@ -1237,7 +1238,7 @@ DDCUTIL_RETRIES = int(os.getenv("VDU_CONTROLS_DDCUTIL_RETRIES", default='4'))
 # Use a slight hack to make MsgBox.resizable.
 RESIZABLE_MESSAGEBOX_HACK = True
 
-IGNORE_VDU_MARKER_TEXT = 'Ignore VDU'
+IGNORE_VDU_MARKER_STR = 'Ignore VDU'
 
 ASSUMED_CONTROLS_CONFIG_VCP_CODES = ['10', '12']
 ASSUMED_CONTROLS_CONFIG_TEXT = ('\n'
@@ -1464,8 +1465,7 @@ class Ddcutil:
             for candidate in serial_number, bin_serial_number, man_date, i2c_bus_id, f"DisplayNum{vdu_number}":
                 if candidate.strip() != '':
                     possibly_unique = (model_name, candidate)
-                    if possibly_unique in key_prospects:
-                        # Not unique - it's already been encountered.
+                    if possibly_unique in key_prospects:  # Not unique - it has already been encountered.
                         log_info(f"Ignoring non-unique key {possibly_unique[0]}_{possibly_unique[1]}"
                                  f" - it matches displays {vdu_number} and {key_prospects[possibly_unique][0]}")
                         del key_prospects[possibly_unique]
@@ -1681,7 +1681,6 @@ class DdcutilExeImpl:
         return None
 
     def detect(self, flags: int) -> List[Tuple]:
-        issue_warnings = False  # TODO - figure out what this is about
         args = ['detect', '--verbose', ]
         result_list = []
         result = self.__run__(*args)
@@ -1776,7 +1775,6 @@ class DdcutilExeImpl:
 
 
 class DdcutilDBusImpl(QObject):
-
     RETURN_RAW_VALUES = 2
 
     _metadata_cache: Dict[Tuple[str, int], Tuple[bool, bool]] = {}
@@ -1866,7 +1864,7 @@ class DdcutilDBusImpl(QObject):
 
     @pyqtSlot(QDBusMessage)
     def _service_initialization_handler(self, message: QDBusMessage):
-        log_info(f"Received service_initialized D-Bus signal {message.arguments()=} {id(self)=}")   # check old instances... id()
+        log_info(f"Received service_initialized D-Bus signal {message.arguments()=} {id(self)=}")  # check old instances... id()
         with self.service_access_lock:
             if self.listener_callback:  # In case the service has restarted
                 self.ddcutil_props_proxy.call("Set",
@@ -2110,7 +2108,7 @@ class WorkerThread(QThread):
             time.sleep(0.1)
 
     def doze(self, seconds: float, sleep_unit: float = 0.5):
-        for i in range(0, int(seconds/sleep_unit)):
+        for i in range(0, int(seconds / sleep_unit)):
             if self.stop_requested:
                 return
             time.sleep(sleep_unit)
@@ -2121,6 +2119,7 @@ class WorkerThread(QThread):
 class SchedulerJobType(Enum):
     RESTORE_PRESET = 1
     SCHEDULE_PRESETS = 2
+
 
 # QTimer replacement - hibernation-tolerant scheduling at specific YYYYMMDD HHMM.
 # After hibernation, overdue events will trigger immediately.
@@ -2160,6 +2159,7 @@ class SchedulerJob:  # designed to resemble a QTimer, which it was written to re
     def __str__(self):
         return f"[{self.job_type=} {self.when=:%Y-%m-%d %H:%M:%S} {self.attempts=} {self.has_run=}]"
 
+
 # Worker that runs SchedulerJobs - hibernation-tolerant scheduling at specific YYYYMMDD HHMM.
 # (An implementation based on sched.scheduler might also work - but the following is definitely going to work cross platform)
 class ScheduleWorker(WorkerThread):
@@ -2185,7 +2185,7 @@ class ScheduleWorker(WorkerThread):
     def check():
         with ScheduleWorker._scheduler_lock:
             if ScheduleWorker._instance and ScheduleWorker._instance.isRunning():
-                log_info(f"Scheduler: off-schedule check requested (queue length={len(ScheduleWorker._instance.pending_jobs_list)})")
+                log_info(f"Scheduler: off-schedule check requested (queue len={len(ScheduleWorker._instance.pending_jobs_list)})")
                 ScheduleWorker._instance._cycle()
 
     @staticmethod
@@ -2211,7 +2211,7 @@ class ScheduleWorker(WorkerThread):
             for job in self.pending_jobs_list:
                 if job.when <= local_now:  # Eligible to run now
                     self.pending_jobs_list.remove(job)
-                    if not job.has_run:   # Only most recent of each type should run
+                    if not job.has_run:  # Only most recent of each type should run
                         if existing_job := run_now.get(job.job_type, None):
                             if job.when > existing_job.when:
                                 existing_job.skip_callable()
@@ -2727,7 +2727,7 @@ class VduController(QObject):
         self.capabilities_text: str | None = None
         self.config = None
         self.values_cache: Dict[str, int] = {}
-        self.ignore_vdu = remedy ==  VduController.IGNORE_VDU
+        self.ignore_vdu = remedy == VduController.IGNORE_VDU
         default_sleep_multiplier: float | None = default_config.get_sleep_multiplier(fallback=None)
         enabled_vcp_codes = default_config.get_all_enabled_vcp_codes()
         for config_name in (self.vdu_stable_id, self.vdu_model_id):
@@ -2740,7 +2740,7 @@ class VduController(QObject):
                     self.config.debug_dump()
                 enabled_vcp_codes = self.config.get_all_enabled_vcp_codes()
                 self.capabilities_text = self.config.get_capabilities_alt_text()  # cached, possibly edited, ddc capabilities
-                self.ignore_vdu = self.ignore_vdu or self.capabilities_text == '' or self.capabilities_text == IGNORE_VDU_MARKER_TEXT
+                self.ignore_vdu = self.ignore_vdu or self.capabilities_text == '' or self.capabilities_text == IGNORE_VDU_MARKER_STR
                 if not self.ignore_vdu:
                     if multiplier := self.config.get_sleep_multiplier(fallback=default_sleep_multiplier):
                         self.ddcutil.set_sleep_multiplier(vdu_number, multiplier)
@@ -2748,7 +2748,7 @@ class VduController(QObject):
                 break
         if not self.capabilities_text:
             if remedy == VduController.DISCARD_VDU:
-                self.capabilities_text = IGNORE_VDU_MARKER_TEXT
+                self.capabilities_text = IGNORE_VDU_MARKER_STR
                 log_info(f"Capabilities override set to ignore VDU {vdu_number=} {vdu_model_name=} {self.vdu_stable_id=}")
             elif remedy == VduController.IGNORE_VDU:
                 self.capabilities_text = ''
@@ -2757,7 +2757,7 @@ class VduController(QObject):
                 self.capabilities_text = ASSUMED_CONTROLS_CONFIG_TEXT
             else:
                 self.capabilities_text = ddcutil.query_capabilities(vdu_number)
-            self.ignore_vdu = self.capabilities_text == '' or self.capabilities_text == IGNORE_VDU_MARKER_TEXT
+            self.ignore_vdu = self.capabilities_text == '' or self.capabilities_text == IGNORE_VDU_MARKER_STR
         # print(f"{self.capabilities_text}")
         self.capabilities_supported_by_this_vdu = self._parse_capabilities(self.capabilities_text)
         # Find those capabilities supported by this VDU AND enabled in the GUI:
@@ -2766,8 +2766,7 @@ class VduController(QObject):
             self.config = VduControlsConfig(self.vdu_stable_id,
                                             default_enabled_vcp_codes=[c.vcp_code for c in self.enabled_capabilities])
             self.config.set_capabilities_alt_text(self.capabilities_text)
-        self.config.restrict_to_actual_capabilities(
-            self.capabilities_supported_by_this_vdu)  # TODO Might be possible to make this redundant now.
+        self.config.restrict_to_actual_capabilities(self.capabilities_supported_by_this_vdu)
         if remedy == VduController.DISCARD_VDU:
             self.write_template_config_files()  # Persist the discard
 
@@ -3282,9 +3281,9 @@ class SettingsEditorLocationWidget(SettingsEditorLineBase):
             try:
                 ipinfo = self.retrieve_ipinfo()
                 msg = f"{tr('Use the following info?')}\n" f"{ipinfo['loc']}\n" + \
-                            ','.join([ipinfo[key] for key in ('city', 'region', 'country') if key in ipinfo])
+                      ','.join([ipinfo[key] for key in ('city', 'region', 'country') if key in ipinfo])
                 details = f"Queried {IP_ADDRESS_INFO_URL}\n" + \
-                            '\n'.join([f"{name}: {value}" for name, value in ipinfo.items()])
+                          '\n'.join([f"{name}: {value}" for name, value in ipinfo.items()])
                 if MBox(MBox.Information, msg=msg, details=details, buttons=MBox.Yes | MBox.No).exec() == MBox.Yes:
                     data = ipinfo['loc']
                     # Get location name for weather lookups.
@@ -3590,7 +3589,7 @@ class VduControlPanel(QWidget):
         return next((c for c in self.vcp_controls if c.vcp_capability.vcp_code == vcp_code), None)
 
     def refresh_from_vdu(self) -> None:
-        """Tell the control widgets to get fresh VDU data (maybe called from a task thread, so no GUI op's here)."""
+        """Tell the control widgets to get fresh VDU data (maybe called from a task thread, so no GUI operations here)."""
         if values := self.controller.get_vcp_values([control.vcp_capability.vcp_code for control in self.vcp_controls]):
             for control, value in zip(self.vcp_controls, values):
                 control.update_from_vdu(value)
@@ -3602,7 +3601,7 @@ class VduControlPanel(QWidget):
     def is_preset_active(self, preset: Preset) -> bool:
         vdu_section = self.controller.vdu_stable_id
         if vdu_section == proper_name(preset.name):
-            return False   # ignore VDU initialization-presets
+            return False  # ignore VDU initialization-presets
         count = 0
         preset_ini = preset.preset_ini
         for control in self.vcp_controls:
@@ -3724,7 +3723,7 @@ class Preset:
     def get_step_interval_seconds(self) -> int:
         return self.preset_ini.getint('preset', 'transition-step-interval-seconds', fallback=0)
 
-    def schedule(self, when_today: datetime, run_action: Callable, skip_action: Callable | None = None, overdue: bool=False):
+    def schedule(self, when_today: datetime, run_action: Callable, skip_action: Callable | None = None, overdue: bool = False):
         self.scheduler_job = SchedulerJob(when_today, SchedulerJobType.RESTORE_PRESET, partial(run_action, self),
                                           partial(skip_action, self) if skip_action else None)
         if not overdue:
@@ -3881,7 +3880,7 @@ class ContextMenu(QMenu):
     def indicate_preset_active(self, preset: Preset | None) -> None:
         changed = 0
         for action in self.actions():
-            if action_preset_name := action.property(ContextMenu.PRESET_NAME_PROP): # Mark active preset or un-mark previous active
+            if action_preset_name := action.property(ContextMenu.PRESET_NAME_PROP):  # Mark active preset or un-mark previous active
                 shortcut = action.property(ContextMenu.PRESET_SHORTCUT_PROP)
                 suffix = (' ' + MENU_ACTIVE_PRESET_SYMBOL) if preset is not None and preset.name == action_preset_name else ''
                 new_text = (shortcut.annotated_word if shortcut else action_preset_name) + suffix
@@ -4440,8 +4439,8 @@ class PresetWidget(QWidget):
                                                              immediately=preset.get_transition_type() == PresetTransitionFlag.NONE))
             preset_transition_button.setAutoDefault(False)
             if preset.get_transition_type() == PresetTransitionFlag.NONE:
-                 preset_transition_button.setDisabled(True)
-                 preset_transition_button.setText('')
+                preset_transition_button.setDisabled(True)
+                preset_transition_button.setText('')
             line_layout.addWidget(preset_transition_button)
 
         line_layout.addSpacing(5)
@@ -5296,7 +5295,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
         self.editor_transitions_widget = PresetChooseTransitionWidget()
         if self.main_config.is_set(ConfOption.PROTECT_NVRAM_ENABLED):
-            self.editor_layout.addItem(QSpacerItem(1,10))
+            self.editor_layout.addItem(QSpacerItem(1, 10))
         else:
             self.editor_layout.addWidget(self.editor_transitions_widget)
 
@@ -5458,7 +5457,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
     def populate_ini_from_gui(self, preset_ini: ConfIni) -> None:  # initialise ini options based on GUI checkbox and field values
         for key, checkbox in self.content_controls_map.items():  # Populate ini options to indicate which settings need to be saved
-            section, option = key  # TODO check/test following logic
+            section, option = key
             if checkbox.isChecked():  # If this property is enabled, set its value
                 if not preset_ini.has_section(section):
                     preset_ini.add_section(section)
@@ -6391,7 +6390,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         self.adjust_now_requested = False
         self.unexpected_change = False
         lux_config = auto_controller.get_lux_config()
-        log_info(f"LuxAutoWorker: lux-meter.interval-minutes={ lux_config.get_interval_minutes()}")
+        log_info(f"LuxAutoWorker: lux-meter.interval-minutes={lux_config.get_interval_minutes()}")
         self.sleep_seconds = lux_config.get_interval_minutes() * 60
 
         def _get_prop(prop: str, fallback: bool | int | float | str) -> bool | int | float:
@@ -6399,7 +6398,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             value = op('lux-meter', prop, fallback=fallback)
             log_info(f"LuxAutoWorker: lux-meter.{prop}={value}")
             return value
-        
+
         samples_per_minute = _get_prop('samples-per-minute', fallback=3)
         self.sampling_interval_seconds = 60 // samples_per_minute
         self.smoother = LuxSmooth(_get_prop('smoother-n', fallback=5), alpha=_get_prop('smoother-alpha', fallback=0.5))
@@ -6565,7 +6564,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                 elif error_count > 1:
                     self.status_message(tr("{} Failed to adjust {}, {} errors so far. Sleeping {} minutes.").format(
                         ERROR_SYMBOL, vdu_sid, error_count,
-                        self.main_controller.get_lux_auto_controller().get_lux_config().get_interval_minutes()))  # TODO seems dodgy
+                        self.main_controller.get_lux_auto_controller().get_lux_config().get_interval_minutes()))
                     self.doze(2)  # TODO do something better than this to make the message visible.
                     if log_debug_enabled:
                         log_debug(f"LuxAutoWorker: {error_count} errors on {vdu_sid}, let this lux cycle end.")
@@ -6592,7 +6591,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                             preset_name = self.assess_preset_proximity(result_brightness, matched_point, profile_point)
                     break
         if preset_name is not None:  # Lookup preset brightness. Might be -1 if the preset doesn't have a brightness for this VDU
-            presets = self.main_controller.find_presets_map()  # TODO check
+            presets = self.main_controller.find_presets_map()
             if preset_name in presets:  # Change the result to the preset's current brightness value
                 result_brightness = presets[preset_name].get_brightness(vdu_sid)
         log_debug(
@@ -6905,7 +6904,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                 if not self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=False):
                     MBox(MBox.Warning, msg=tr('Interpolation may increase the number of writes to VDU NVRAM.'),
                          info=tr('When designing brightness response curves consider minimizing '
-                                   'brightness changes to reduce wear on NVRAM.')).exec()
+                                 'brightness changes to reduce wear on NVRAM.')).exec()
                     self.lux_config.set('lux-meter', 'interpolate-brightness', 'yes')
                     self.apply_settings()
             elif self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True):
@@ -7010,7 +7009,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
             if not os.access(device, os.R_OK):
                 info = None
                 if path.is_char_device() and path.group() != "root":
-                    info=tr("You might need to be a member of the {} group.").format(path.group())
+                    info = tr("You might need to be a member of the {} group.").format(path.group())
                 MBox(MBox.Critical, msg=tr("No read access to {}").format(device), info=info).exec()
                 return False
         else:
@@ -7156,7 +7155,7 @@ class LuxAutoController:
                 log_info("Lux auto-brightness settings refresh - restart monitoring.")
                 self.start_worker()
             else:
-                log_info("Lux auto-brightness settings refresh - monitoring is off.")  # TODO handle exception
+                log_info("Lux auto-brightness settings refresh - monitoring is off.")
                 self.stop_worker()
             self.main_controller.update_window_status_indicators()  # Refresh indicators immediately
         except LuxDeviceException as lde:
@@ -7206,7 +7205,7 @@ class LuxAutoController:
 
     def adjust_brightness_now(self) -> None:
         if self.is_auto_enabled():
-            if self.lux_auto_brightness_worker is not None:  # TODO it might not actually be running
+            if self.lux_auto_brightness_worker is not None:
                 self.lux_auto_brightness_worker.adjust_now_requested = True
         else:
             self.start_worker(single_shot=True)
@@ -7774,7 +7773,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         for setting in ConfOption:
             if setting.restart_required and (setting.conf_section, setting.conf_name) in changed_settings:
                 self.restart_application(tr("The change to the {} option requires "
-                                        "vdu_controls to restart.").format(tr(setting.conf_name)))
+                                            "vdu_controls to restart.").format(tr(setting.conf_name)))
                 return
         self.main_config.reload()
         global log_debug_enabled
@@ -7809,7 +7808,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
     def start_refresh(self, external_event: bool = False) -> None:
         if not is_running_in_gui_thread():  # TODO this appears to never be true - remove???
-            log_debug(f"Reinvoke start_refresh() in GUI thread {external_event=}") if log_debug_enabled else None
+            log_debug(f"Re-invoke start_refresh() in GUI thread {external_event=}") if log_debug_enabled else None
             self.main_window.run_in_gui_thread(partial(self.start_refresh, external_event))
             return
 
@@ -7849,7 +7848,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     if not external_event:
                         main_panel.show_vdu_exception(self.refresh_data_task.vdu_exception, can_retry=False)
                 if len(self.detected_vdu_list) == 0 or self.detected_vdu_list != self.previously_detected_vdu_list or (
-                    external_event and False):  # TODO figure out what to do here, external events might require reconfiguration???
+                        external_event and False):  # TODO what to do here, external events might require reconfiguration???
                     log_info(f"Reconfiguring: detected={self.detected_vdu_list} previously={self.previously_detected_vdu_list}")
                     self.configure_application(check_schedule=False)  # May cause a further refresh?
                     self.previously_detected_vdu_list = self.detected_vdu_list
@@ -7918,12 +7917,13 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                             preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=2)))
                         if (self.main_config.is_set(ConfOption.PROTECT_NVRAM_ENABLED)
                                 and preset.get_transition_type() != PresetTransitionFlag.NONE):
-                            log_warning(f"Setting protect-nvram prevents '{preset.name}' from transitioning, changes are immediate.")
+                            log_warning(f"Global protect-nvram prevents '{preset.name}' from transitioning, changes are immediate.")
                     else:  # Interrupted or exception:
                         self.main_window.update_status_indicators()
                         self.main_window.show_preset_status(tr("Interrupted restoration of {}").format(preset.name))
                 if finished_func is not None:
                     finished_func(worker_thread)
+
             worker = PresetTransitionWorker(self, preset, _update_progress, _restore_finished_callback,
                                             immediately, ignore_others=initialization_preset)
             self.preset_transition_workers.append(worker)
@@ -7932,7 +7932,6 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             if initialization_preset:  # Don't allow anything else until it's finished
                 worker.wait()
         log_debug(f"restore_preset: '{preset.name}' released application_lock") if log_debug_enabled else None
-
 
     def restore_vdu_initialization_presets(self):
 
@@ -8004,7 +8003,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 daily_schedule_job = SchedulerJob(tomorrow, SchedulerJobType.SCHEDULE_PRESETS,
                                                   partial(self.main_window.run_in_gui_thread, self.schedule_presets))
                 log_info(f"Will update schedule for Presets at {tomorrow} "
-                         f"(in {round(daily_schedule_job.remaining_time()/60)} minutes)")
+                         f"(in {round(daily_schedule_job.remaining_time() / 60)} minutes)")
             log_debug("schedule_presets: released application_lock") if log_debug_enabled else None
         else:
             log_info(f"Scheduling is disabled or no location ({location=})")
@@ -8031,7 +8030,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         self.main_window.run_in_gui_thread(partial(self.activate_scheduled_preset, preset))
 
     def activate_scheduled_preset(self, preset: Preset, check_weather: bool = True, immediately: bool = False,
-                                  activation_time: datetime | None = None) -> None:  # TODO: Some params unneeded?
+                                  activation_time: datetime | None = None) -> None:
         assert is_running_in_gui_thread()
         if not self.main_config.is_set(ConfOption.SCHEDULE_ENABLED):
             log_info(f"Schedule is disabled - not activating preset '{preset.name}'")
@@ -8055,7 +8054,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         def _activation_finished(worker: PresetTransitionWorker) -> None:
             assert preset.elevation_time_today is not None
             attempts = preset.scheduler_job.attempts
-            if worker.vdu_exception is not None:  # TODO the following ini variable isn't defined for the ini file
+            if worker.vdu_exception is not None:
                 too_close = zoned_now() + timedelta(seconds=60)  # retry if more than a minute before any others
                 for other in self.preset_controller.find_presets_map().values():  # Skip retry if another is due soon
                     if (other.name != preset.name
@@ -8084,7 +8083,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                             immediately=immediately or PresetTransitionFlag.SCHEDULED not in preset.get_transition_type(),
                             background_activity=True)
 
-    def skip_scheduled_preset(self, preset: Preset,):
+    def skip_scheduled_preset(self, preset: Preset):
         assert is_running_in_gui_thread()
         preset.schedule_status = PresetScheduleStatus.SKIPPED_SUPERSEDED
         self.main_window.update_status_indicators(preset)
@@ -8478,11 +8477,11 @@ class VduAppWindow(QMainWindow):
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setWidget(self.main_panel)
-        #self.scroll_area.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding))
+        # self.scroll_area.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding))
         self.setCentralWidget(self.scroll_area)
 
         available_height = QDesktopWidget().availableGeometry().height() - 200  # Minus allowance for panel/tray
-        #self.main_panel.adjustSize()
+        # self.main_panel.adjustSize()
         hint_height = self.main_panel.sizeHint().height()  # The hint is the actual required layout space
         hint_width = self.main_panel.sizeHint().width()
         log_debug(f"create_main_control_panel: {hint_height=} {available_height=} {self.minimumHeight()=}")
@@ -8545,7 +8544,6 @@ class VduAppWindow(QMainWindow):
             self.tray.setIcon(create_decorated_app_icon(self.tray_icon, preset_icon, led1_color, led2_color))
         if palette_change or (preset is not None and not isinstance(preset, PresetTransitionDummy)):
             self.refresh_preset_menu(palette_change=palette_change)
-
 
     def respond_to_changes_handler(self, vdu_stable_id: VduStableId, vcp_code: str, value: int, origin: VcpOrigin,
                                    causes_config_change: bool) -> None:
@@ -8643,8 +8641,8 @@ class VduAppWindow(QMainWindow):
         choice = MBox(MBox.Critical, msg=msg, info=info, buttons=MBox.Discard | MBox.Ignore | MBox.Apply | MBox.Retry).exec()
         if choice == MBox.Discard:
             MBox(MBox.Information, msg=tr('Discarding {} monitor.').format(model_name),
-                 info=tr('Remove "{}" from {} capabilities override to reverse this decision.').format(
-                       IGNORE_VDU_MARKER_TEXT, model_name)).exec()
+                 info=tr('Remove "{}" from {} capabilities override to reverse this decision.').format(IGNORE_VDU_MARKER_STR,
+                                                                                                       model_name)).exec()
             return VduController.DISCARD_VDU
         elif choice == MBox.Ignore:
             MBox(MBox.Information, msg=tr('Ignoring {} monitor for now.').format(model_name),
@@ -8843,6 +8841,7 @@ def initialise_locale_translations(app: QApplication) -> None:
         if translator.load(qm_path.name, qm_path.parent.as_posix()):
             app.installTranslator(translator)
             log_info(tr("Using {} translations from {}").format(locale_name, qm_path.as_posix()))
+
 
 def main() -> None:
     # Allow control-c to terminate the program
