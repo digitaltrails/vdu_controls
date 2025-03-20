@@ -360,7 +360,7 @@ Version History
     doesn't allow an application to precisely place it's own windows!)
   * Altering the smart-window option now requires a restart (due to the Wayland/XWayland changes).
   * The smart-window option save/restore of main-window has been made more consistent.
-  * COSMIC is treated as GNOME-like (the tray-menu includes a control-panel item).  
+  * The COSMIC desktop is treated as GNOME-like (the system-tray right-mouse menu includes a "control-panel" menu-item).  
 
 * 2.1,4
   * Provide a setting for enabling dbus-events - ddcutil-service DPMS and hotplug detection. 
