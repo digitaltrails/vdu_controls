@@ -352,6 +352,10 @@ Michael Hamilton
 
 Version History
 ---------------
+
+* 2.2.1
+  * Change value-commit slider-idle-time to 0.25 seconds for better interactivity.
+
 * 2.2.0
   * Add a vdu-name option for assigning meaningful/user-friendly names to each VDU.
   * Implement an order-by-name option that orders lists and tabs by VDU name.

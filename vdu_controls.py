@@ -728,8 +728,8 @@ Environment
 
     VDU_CONTROLS_UI_IDLE_SECS
         The length of pause in slider or spin-box control motion that triggers commit of
-        the controls value to the VDU.  This is a precautionary throttle in case frequently
-        updating a VDU might shorten its lifespan.  The default is 0.5 seconds.
+        the controls value to the VDU.  This prevents altering a slider from constantly updating
+        a VDU, which might shorten its NVRAM lifespan. The default is 0.5 seconds.
 
     VDU_CONTROLS_IPINFO_URL
         Override the default ip-address to location service URL (``https://ipinfo.io/json``).
@@ -852,7 +852,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QDesktopWidget, QSpacerItem
 
 APPNAME = "VDU Controls"
-VDU_CONTROLS_VERSION = '2.2.0'
+VDU_CONTROLS_VERSION = '2.2.1'
 VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in VDU_CONTROLS_VERSION.split('.'))
 assert sys.version_info >= (3, 8), f'{APPNAME} utilises python version 3.8 or greater (your python is {sys.version}).'
 
