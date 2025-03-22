@@ -354,7 +354,7 @@ Version History
 ---------------
 
 * 2.2.1
-  * Change value-commit slider-idle-time to 0.25 seconds for better interactivity.
+  * Slider responsiveness improved by fixing the interuptable-sleep (doze) implementation.
 
 * 2.2.0
   * Add a vdu-name option for assigning meaningful/user-friendly names to each VDU.
