@@ -2108,16 +2108,12 @@ class WorkerThread(QThread):
             time.sleep(0.1)
 
     def doze(self, seconds: float, sleep_unit: float = 0.5):
-        slept = 0.0
-        for i in range(0, int(seconds / sleep_unit)):
-            if self.stop_requested:
-                return
+        while seconds >= sleep_unit and not self.stop_requested:
             time.sleep(sleep_unit)
-            slept += sleep_unit
+            seconds -= sleep_unit
         if not self.stop_requested:
-            remainder = seconds - slept
-            if remainder > 0.0:
-                time.sleep(remainder)
+            if seconds > 0.1:
+                time.sleep(seconds)
 
 
 class SchedulerJobType(Enum):
