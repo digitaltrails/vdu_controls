@@ -827,6 +827,7 @@ from abc import abstractmethod
 from ast import literal_eval
 from collections import namedtuple
 from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from enum import Enum, IntFlag
 from functools import partial
@@ -2350,6 +2351,8 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
                                  tip=QT_TR_NOOP('order lists and tabs by vdu-name'))
     LUX_OPTIONS_ENABLED = conf_opt_def(cname=QT_TR_NOOP('lux-options-enabled'), default="yes", restart=True,
                                        tip=QT_TR_NOOP('enable light metering options'))
+    LUX_TRAY_ICON = conf_opt_def(cname=QT_TR_NOOP('lux-tray-icon'), default="yes", restart=False,
+                                       tip=QT_TR_NOOP('enable lux light-level system-tray icon'))
     SCHEDULE_ENABLED = conf_opt_def(cname=QT_TR_NOOP('schedule-enabled'), default='yes', tip=QT_TR_NOOP('enable preset schedule'))
     WEATHER_ENABLED = conf_opt_def(cname=QT_TR_NOOP('weather-enabled'), default='yes', tip=QT_TR_NOOP('enable weather lookups'))
     DBUS_CLIENT_ENABLED = conf_opt_def(cname=QT_TR_NOOP('dbus-client-enabled'), default="yes",
@@ -3789,8 +3792,8 @@ class ContextMenu(QMenu):
     ALT = 'Alt+{}'
 
     def __init__(self, app_controller: VduAppController, main_window_action, about_action, help_action, gray_scale_action,
-                 lux_auto_action, lux_check_action, lux_meter_action, settings_action, presets_action, refresh_action, quit_action,
-                 hide_shortcuts: bool, parent: QWidget) -> None:
+                 lux_auto_action, lux_check_action, lux_meter_action, settings_action, presets_dialog_action, refresh_action,
+                 quit_action, hide_shortcuts: bool, parent: QWidget) -> None:
         super().__init__(parent=parent)
         self.app_controller = app_controller
         self.reserved_shortcuts = []
@@ -3798,7 +3801,7 @@ class ContextMenu(QMenu):
         if main_window_action is not None:
             self._add_action(QStyle.SP_ComputerIcon, tr('&Control Panel'), main_window_action)
             self.addSeparator()
-        self._add_action(QStyle.SP_ComputerIcon, tr('&Presets'), presets_action)
+        self._add_action(QStyle.SP_ComputerIcon, tr('&Presets'), presets_dialog_action)
         self.presets_separator = self.addSeparator()  # Important for finding where to add a preset
         self._add_action(QStyle.SP_ComputerIcon, tr('&Grey Scale'), gray_scale_action)
         if lux_meter_action is not None:
@@ -3936,6 +3939,7 @@ class VduPanelBottomToolBar(QToolBar):
 
     def __init__(self, tool_buttons: List[ToolButton], app_context_menu: ContextMenu, parent: VduControlsMainPanel) -> None:
         super().__init__(parent=parent)
+        self.preset_edit_target = None
         self.tool_buttons = tool_buttons
         for button in self.tool_buttons:
             self.addWidget(button)
@@ -3948,7 +3952,11 @@ class VduPanelBottomToolBar(QToolBar):
         self.menu_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         self.preset_action = self.addAction(QIcon(), "")
         self.preset_action.setVisible(False)
-        self.preset_action.triggered.connect(self.menu_button.click)
+
+        def edit_current_preset():
+            parent.main_controller.show_presets_dialog(self.preset_edit_target)
+
+        self.preset_action.triggered.connect(edit_current_preset)
         self.addWidget(self.menu_button)
         self.installEventFilter(self)
 
@@ -3976,13 +3984,15 @@ class VduPanelBottomToolBar(QToolBar):
 
     def show_active_preset(self, preset: Preset | None) -> None:
         if preset is not None:
-            self.preset_action.setToolTip(f"{preset.get_title_name()} preset")
+            self.preset_action.setToolTip(tr("{} preset").format(preset.get_title_name()))
             self.preset_action.setIcon(preset.create_icon())
             self.preset_action.setVisible(True)
+            self.preset_edit_target = preset
         else:
             self.preset_action.setToolTip("")
             self.preset_action.setIcon(QIcon())
             self.preset_action.setVisible(False)
+            self.preset_edit_target = None
         self.layout().update()
 
 
@@ -5211,6 +5221,11 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
     def instance_indicate_active_preset(preset: Preset = None):
         if presets_dialog := PresetsDialog.get_instance():
             presets_dialog.indicate_active_preset(preset)
+
+    @staticmethod
+    def instance_edit_preset(preset: Preset = None):
+        if presets_dialog := PresetsDialog.get_instance():
+            presets_dialog.edit_preset(preset)
 
     def __init__(self, main_controller: VduAppController, main_config: VduControlsConfig) -> None:
         super().__init__()
@@ -6499,11 +6514,14 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                         self.main_controller.restore_preset(
                             preset, immediately=PresetTransitionFlag.SCHEDULED not in preset.get_transition_type(),
                             background_activity=True)
+                    else:
+                        self.main_controller.update_window_status_indicators()
             else:  # No work done, no adjustment necessary
                 self.status_message(f"{SUN_SYMBOL} {SUCCESS_SYMBOL}", timeout=3000)
                 if profile_preset_name is not None:  # Make sure the right preset icon is displayed
-                    if preset := self.main_controller.find_preset_by_name(profile_preset_name):
-                        self.main_controller.update_window_status_indicators(preset)
+                    self.main_controller.update_window_status_indicators(self.main_controller.find_preset_by_name(profile_preset_name))
+                else:
+                    self.main_controller.update_window_status_indicators()
         if vdu_changes_count or error_count:
             log_info(f"LuxAutoWorker: adjustments completed VCP-changes: {vdu_changes_count if vdu_changes_count else 'None'}, "
                      f"{profile_preset_name=} {error_count=}")
@@ -7124,6 +7142,11 @@ class LuxAutoController:
             self.lux_slider.status_icon_pressed_qtsignal.connect(_toggle_lux_dialog)
         return self.lux_slider
 
+    def get_lux_zone(self) -> LuxZone | None:
+        if self.lux_slider and self.lux_slider.current_zone:
+            return self.lux_slider.current_zone
+        return None
+
     def stop_worker(self):
         if self.lux_auto_brightness_worker is not None:
             self.lux_auto_brightness_worker.stop()
@@ -7256,7 +7279,7 @@ LUX_RISE_SET_SVG = b"""<?xml version="1.0" encoding="utf-8"?>
     </g>
 </svg>"""
 
-LUX_ROOM_SVG = b"""<?xml version="1.0" encoding="utf-8"?>
+LUX_SUBDUED_SVG = b"""<?xml version="1.0" encoding="utf-8"?>
 <svg width="24px" height="24px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
     <g class="ColorScheme-Text" stroke="currentColor" stroke-width="1.25" stroke-linecap="round">
@@ -7267,7 +7290,7 @@ LUX_ROOM_SVG = b"""<?xml version="1.0" encoding="utf-8"?>
     </g>
 </svg>"""
 
-LUX_NIGHT_SVG = b"""<?xml version="1.0" encoding="utf-8"?>
+LUX_DARK_SVG = b"""<?xml version="1.0" encoding="utf-8"?>
 <!-- Copyright 2024 Michael Hamilton License Creative Commons - Attribution CC BY -->
 <svg width="24px" height="24px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
@@ -7278,6 +7301,14 @@ LUX_NIGHT_SVG = b"""<?xml version="1.0" encoding="utf-8"?>
 </svg>
 """
 
+@dataclass
+class LuxZone:
+    name: str
+    icon_svg: bytes
+    min_lux: int
+    max_lux: int
+    icon_svg_lux: int
+    column_span: int
 
 class LuxAmbientSlider(QWidget):
     new_lux_value_qtsignal = pyqtSignal(int)
@@ -7286,21 +7317,22 @@ class LuxAmbientSlider(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self.in_flux = False
-        self.zones = {  # Using col span as a hacky way to line up icons above the slider
-            tr('Sunlight'): (20000, 100000, 45000, LUX_SUNLIGHT_SVG, 2),
-            tr('Daylight'): (1000, 20000, 6000, LUX_DAYLIGHT_SVG, 2),
-            tr('Overcast'): (400, 1000, 900, LUX_OVERCAST_SVG, 3),
-            tr('Rise/set'): (100, 400, 130, LUX_RISE_SET_SVG, 2),
-            tr('Room'): (15, 100, 20, LUX_ROOM_SVG, 3),
-            tr('Night'): (0, 15, 2, LUX_NIGHT_SVG, 3),
-        }
+        self.zones = [  # Using col span as a hacky way to line up icons above the slider
+            LuxZone(tr("Sunlight"), LUX_SUNLIGHT_SVG, 20000, 100000, 45000, column_span=2),
+            LuxZone(tr("Daylight"), LUX_DAYLIGHT_SVG, 1000, 20000, 6000, column_span=2),
+            LuxZone(tr("Overcast"), LUX_OVERCAST_SVG, 400, 1000, 900, column_span=3),
+            LuxZone(tr("Rise/set"), LUX_RISE_SET_SVG, 100, 400, 130, column_span=2),
+            LuxZone(tr("Subdued"), LUX_SUBDUED_SVG, 15, 100, 20, column_span=3),
+            LuxZone(tr("Dark"), LUX_DARK_SVG, 0, 15, 2, column_span=3),
+        ]
         self.current_value = 10000
 
         self.status_icon = QPushButton()
         self.status_icon.setIconSize(QSize(native_font_height(scaled=1.8), native_font_height(scaled=1.8)))
         self.status_icon.setFlat(True)
         self.status_icon.pressed.connect(self.status_icon_pressed_qtsignal)
-        self.svg_icon_current_source: bytes | None = None
+        self.current_name: str | None = None
+        self.current_zone: LuxZone | None = None
 
         top_layout = QVBoxLayout()
         self.setLayout(top_layout)
@@ -7373,16 +7405,16 @@ class LuxAmbientSlider(QWidget):
         col = 0
         log10_icon_size = QSize(native_font_height(scaled=1), native_font_height(scaled=1))
         self.label_map: Dict[QLabel, bytes] = {}
-        for key, (_, _, icon_value, svg_bytes, span) in reversed(self.zones.items()):
+        for zone in reversed(self.zones):
             log10_button = QPushButton()
             log10_button.setIconSize(log10_icon_size)
-            log10_button.setIcon(create_icon_from_svg_bytes(svg_bytes))
+            log10_button.setIcon(create_icon_from_svg_bytes(zone.icon_svg))
             log10_button.setFlat(True)
-            log10_button.setToolTip(key)
-            log10_button.pressed.connect(partial(self.lux_input_field.setValue, icon_value))
-            lux_slider_panel_layout.addWidget(log10_button, 0, col, 1, span, alignment=Qt.AlignBottom | Qt.AlignHCenter)
-            self.label_map[log10_button] = svg_bytes
-            col += span
+            log10_button.setToolTip(zone.name)
+            log10_button.pressed.connect(partial(self.lux_input_field.setValue, zone.icon_svg_lux))
+            lux_slider_panel_layout.addWidget(log10_button, 0, col, 1, zone.column_span, alignment=Qt.AlignBottom | Qt.AlignHCenter)
+            self.label_map[log10_button] = zone.icon_svg
+            col += zone.column_span
 
         self.set_current_value(round(LuxMeterManualDevice.get_stored_value()))  # trigger side-effects.
 
@@ -7392,12 +7424,11 @@ class LuxAmbientSlider(QWidget):
                 if source is None:
                     self.blockSignals(True)
                 self.in_flux = True
-                for name, data in self.zones.items():
-                    lower, upper, _, svg, span = data
-                    if lower < value <= upper:
-                        if self.svg_icon_current_source != svg:
-                            self.svg_icon_current_source = svg
-                            self.status_icon.setIcon(create_icon_from_svg_bytes(self.svg_icon_current_source))
+                for zone in self.zones:
+                    if zone.min_lux < value <= zone.max_lux:
+                        if self.current_zone != zone:
+                            self.current_zone = zone
+                            self.status_icon.setIcon(create_icon_from_svg_bytes(zone.icon_svg))
                             self.status_icon.setToolTip(tr("Open/Close Light-Meter Dialog"))
                 self.current_value = max(1, value)  # restrict to non-negative and something valid for log10
                 if source != self.lux_slider:
@@ -7411,7 +7442,8 @@ class LuxAmbientSlider(QWidget):
 
     def event(self, event: QEvent) -> bool:
         if event.type() == QEvent.PaletteChange:  # PalletChange happens after the new style sheet is in use.
-            self.status_icon.setIcon(create_icon_from_svg_bytes(self.svg_icon_current_source))
+            if self.current_zone:
+                self.status_icon.setIcon(create_icon_from_svg_bytes(self.current_zone.icon_svg))
             for slider_button, svg_bytes in self.label_map.items():
                 slider_button.setIcon(create_icon_from_svg_bytes(svg_bytes))
         return super().event(event)
@@ -7785,6 +7817,11 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
     def edit_config(self) -> None:
         SettingsEditor.invoke(self.main_config, self.get_vdu_configs(), self.settings_changed)
+
+    def show_presets_dialog(self, preset: Preset | None = None) -> None:
+        PresetsDialog.invoke(self, self.main_config)
+        if preset:
+            PresetsDialog.instance_edit_preset(preset)
 
     def get_vdu_configs(self) -> List[VduControlsConfig]:
         return [vdu.config for vdu in self.vdu_controllers_map.values() if vdu.config is not None]
@@ -8286,7 +8323,7 @@ class VduAppWindow(QMainWindow):
             lux_meter_action=partial(LuxDialog.invoke, self.main_controller) if main_config.is_set(
                 ConfOption.LUX_OPTIONS_ENABLED) else None,
             settings_action=self.main_controller.edit_config,
-            presets_action=partial(PresetsDialog.invoke, self.main_controller, self.main_config),
+            presets_dialog_action=self.main_controller.show_presets_dialog,
             refresh_action=self.main_controller.start_refresh,
             quit_action=self.quit_app,
             hide_shortcuts=self.hide_shortcuts, parent=self)
@@ -8511,12 +8548,12 @@ class VduAppWindow(QMainWindow):
         PresetsDialog.show_status_message(message=message, timeout=timeout)
         self.status_message(message, timeout=timeout, destination=MsgDestination.DEFAULT)
 
-    def update_status_indicators(self, preset=None, palette_change: bool = False) -> None:
+    def update_status_indicators(self, preset: Preset|None = None, palette_change: bool = False) -> None:
         assert is_running_in_gui_thread()  # Boilerplate in case this is called from the wrong thread.
         if self.main_panel is None:  # On deepin 23, events can trigger this method before initialization is complete
             return
         title = self.app_name
-        preset_icon = led1_color = led2_color = None
+        tray_embedded_icon = led1_color = led2_color = None
         if preset is None:  # Detects matching Preset based on current VDU control settings
             preset = self.main_controller.which_preset_is_active()
         if preset is None:  # Clears the indicators
@@ -8528,20 +8565,25 @@ class VduAppWindow(QMainWindow):
             self.app_context_menu.indicate_preset_active(preset)
             PresetsDialog.instance_indicate_active_preset(preset)
             title = f"{preset.get_title_name()} {PRESET_APP_SEPARATOR_SYMBOL} {title}"
-            preset_icon = preset.create_icon(themed=False, monochrome=self.main_config.is_set(ConfOption.MONOCHROME_TRAY_ENABLED))
+            tray_embedded_icon = preset.create_icon(themed=False, monochrome=self.main_config.is_set(ConfOption.MONOCHROME_TRAY_ENABLED))
             led1_color = PRESET_TRANSITIONING_LED_COLOR if isinstance(preset, PresetTransitionDummy) else None
         if self.main_controller.lux_auto_controller is not None:
             if self.main_controller.lux_auto_controller.is_auto_enabled():
                 title = f"{tr('Auto')}/{title}"
                 led2_color = AUTO_LUX_LED_COLOR
-            menu_icon = create_icon_from_svg_bytes(self.main_controller.lux_auto_controller.current_auto_svg())  # NB cache involved
-            self.app_context_menu.update_lux_auto_icon(menu_icon)  # Won't actually update if it hasn't changed
+            menu_lux_icon = create_icon_from_svg_bytes(self.main_controller.lux_auto_controller.current_auto_svg())  # NB cache involved
+            self.app_context_menu.update_lux_auto_icon(menu_lux_icon)  # Won't actually update if it hasn't changed
+            if tray_embedded_icon is None and self.main_config.is_set(ConfOption.LUX_TRAY_ICON):
+                if zone := self.main_controller.lux_auto_controller.get_lux_zone():
+                    tray_embedded_icon = create_icon_from_svg_bytes(zone.icon_svg)
+                    title = title + '\n' + tr("Lighting: {}").format(zone.name.lower())
+
         if self.windowTitle() != title:  # Don't change if not needed - prevent flickering.
             self.setWindowTitle(title)
-            self.app.setWindowIcon(create_decorated_app_icon(self.app_icon, preset_icon, led1_color, led2_color))
+            self.app.setWindowIcon(create_decorated_app_icon(self.app_icon, tray_embedded_icon, led1_color, led2_color))
         if self.tray:
             self.tray.setToolTip(title)
-            self.tray.setIcon(create_decorated_app_icon(self.tray_icon, preset_icon, led1_color, led2_color))
+            self.tray.setIcon(create_decorated_app_icon(self.tray_icon, tray_embedded_icon, led1_color, led2_color))
         if palette_change or (preset is not None and not isinstance(preset, PresetTransitionDummy)):
             self.refresh_preset_menu(palette_change=palette_change)
 

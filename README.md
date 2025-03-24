@@ -354,6 +354,7 @@ Version History
 ---------------
 
 * 2.2.1
+  * Show light-level icon on tray if no preset active (when lux options are enabled). 
   * Slider responsiveness improved by fixing the interuptable-sleep (doze) implementation.
 
 * 2.2.0
