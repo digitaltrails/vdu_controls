@@ -2322,63 +2322,63 @@ class ConfIni(configparser.ConfigParser):
     def get_path(config_name: str) -> Path:
         return CONFIG_DIR_PATH.joinpath(config_name + '.conf')
 
-
-CI = ConfIni  # Shorthand for next series of declarations only
-
-
-def conf_opt_def(cname: str, section: str = CI.VDU_CONTROLS_GLOBALS, conf_type: str = CI.TYPE_BOOL, default: str | None = None,
-                 global_allowed: bool = True, restart: bool = False, cmdline_arg: str = 'DEFAULT', tip: str = '', related: str = '',
-                 requires: str = ''):
-    return cname, section, cmdline_arg, conf_type, default, restart, tip, related, requires, global_allowed
-
-
 class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration - not really Enum - alternatives?
-    SPLASH_SCREEN_ENABLED = conf_opt_def(cname=QT_TR_NOOP('splash-screen-enabled'), default='yes', cmdline_arg='splash',
-                                         tip=QT_TR_NOOP('enable the startup splash screen'))
-    SYSTEM_TRAY_ENABLED = conf_opt_def(cname=QT_TR_NOOP('system-tray-enabled'), default="no", restart=True,
-                                       tip=QT_TR_NOOP('start up in the system tray'), related='hide-on-focus-out')
-    HIDE_ON_FOCUS_OUT = conf_opt_def(cname=QT_TR_NOOP('hide-on-focus-out'), default="no", restart=False,
-                                     tip=QT_TR_NOOP('minimize the main window automatically on focus out'))
-    SMART_WINDOW = conf_opt_def(cname=QT_TR_NOOP('smart-window'), default="yes",
-                                tip=QT_TR_NOOP('smart main window placement and geometry (X11 and XWayland)'), restart=True)
-    MONOCHROME_TRAY_ENABLED = conf_opt_def(cname=QT_TR_NOOP('monochrome-tray-enabled'), default="no", restart=False,
-                                           tip=QT_TR_NOOP('monochrome dark themed system tray'))
-    MONO_LIGHT_TRAY_ENABLED = conf_opt_def(cname=QT_TR_NOOP('mono-light-tray-enabled'), default="no", restart=False,
-                                           tip=QT_TR_NOOP('monochrome light themed system tray'))
-    PROTECT_NVRAM_ENABLED = conf_opt_def(cname=QT_TR_NOOP('protect-nvram'), default="yes", restart=True,
-                                         tip=QT_TR_NOOP('alter options and defaults to minimize VDU NVRAM writes'))
-    ORDER_BY_NAME = conf_opt_def(cname=QT_TR_NOOP('order-by-name'), default="no",
-                                 tip=QT_TR_NOOP('order lists and tabs by vdu-name'))
-    LUX_OPTIONS_ENABLED = conf_opt_def(cname=QT_TR_NOOP('lux-options-enabled'), default="yes", restart=True,
-                                       tip=QT_TR_NOOP('enable light metering options'))
-    LUX_TRAY_ICON = conf_opt_def(cname=QT_TR_NOOP('lux-tray-icon'), default="yes", restart=False,
-                                       tip=QT_TR_NOOP('enable lux light-level system-tray icon'))
-    SCHEDULE_ENABLED = conf_opt_def(cname=QT_TR_NOOP('schedule-enabled'), default='yes', tip=QT_TR_NOOP('enable preset schedule'))
-    WEATHER_ENABLED = conf_opt_def(cname=QT_TR_NOOP('weather-enabled'), default='yes', tip=QT_TR_NOOP('enable weather lookups'))
-    DBUS_CLIENT_ENABLED = conf_opt_def(cname=QT_TR_NOOP('dbus-client-enabled'), default="yes",
-                                       tip=QT_TR_NOOP('use the D-Bus ddcutil-server if available'))
-    DBUS_EVENTS_ENABLED = conf_opt_def(cname=QT_TR_NOOP('dbus-events-enabled'), default="no",
-                                       tip=QT_TR_NOOP('enable D-Bus ddcutil-server events'), requires='dbus-client-enabled')
-    SYSLOG_ENABLED = conf_opt_def(cname=QT_TR_NOOP('syslog-enabled'), default="no",
-                                  tip=QT_TR_NOOP('divert diagnostic output to the syslog'))
-    DEBUG_ENABLED = conf_opt_def(cname=QT_TR_NOOP('debug-enabled'), default="no", tip=QT_TR_NOOP('output extra debug information'))
-    WARNINGS_ENABLED = conf_opt_def(cname=QT_TR_NOOP('warnings-enabled'), default="no",
-                                    tip=QT_TR_NOOP('popup warnings if a VDU lacks an enabled control'))
-    TRANSLATIONS_ENABLED = conf_opt_def(cname=QT_TR_NOOP('translations-enabled'), default="no", restart=True,
-                                        tip=QT_TR_NOOP('enable language translations, currently not updated (no known users)'))
-    LOCATION = conf_opt_def(cname=QT_TR_NOOP('location'), conf_type=CI.TYPE_LOCATION, tip=QT_TR_NOOP('latitude,longitude'))
-    SLEEP_MULTIPLIER = conf_opt_def(cname=QT_TR_NOOP('sleep-multiplier'), section=CI.DDCUTIL_PARAMETERS, conf_type=CI.TYPE_FLOAT,
-                                    tip=QT_TR_NOOP('ddcutil --sleep-multiplier (0.1 .. 2.0, default none)'))
-    DDCUTIL_EXTRA_ARGS = conf_opt_def(cname=QT_TR_NOOP('ddcutil-extra-args'), section=CI.DDCUTIL_PARAMETERS, conf_type=CI.TYPE_TEXT,
-                                      tip=QT_TR_NOOP('ddcutil extra arguments (default none)'))
-    VDU_NAME = conf_opt_def(cname=QT_TR_NOOP('vdu-name'), section=CI.VDU_CONTROLS_WIDGETS, conf_type=CI.TYPE_TEXT,
-                            global_allowed=False, cmdline_arg='DISALLOWED', tip=QT_TR_NOOP('Name to display for this VDU'))
-    ENABLE_VCP_CODES = conf_opt_def(cname=QT_TR_NOOP('enable-vcp-codes'), section=CI.VDU_CONTROLS_WIDGETS, conf_type=CI.TYPE_CSV,
-                                    cmdline_arg='DISALLOWED', tip=QT_TR_NOOP('CSV list of VCP Hex-code capabilities to enable'))
-    CAPABILITIES_OVERRIDE = conf_opt_def(cname=QT_TR_NOOP('capabilities-override'), section=CI.DDCUTIL_CAPABILITIES,
-                                         conf_type=CI.TYPE_LONG_TEXT, cmdline_arg='DISALLOWED',
-                                         tip=QT_TR_NOOP('override/cache for ddcutil capabilities text'))
-    UNKNOWN = conf_opt_def(cname="UNKNOWN", section=CI.UNKNOWN_SECTION, conf_type=CI.TYPE_BOOL, cmdline_arg='DISALLOWED', tip='')
+
+    _ignore_ = ['CI']
+    CI = ConfIni  # Shorthand for next series of declarations only
+
+    @staticmethod
+    def _def(cname: str, section: str = CI.VDU_CONTROLS_GLOBALS, conf_type: str = CI.TYPE_BOOL, default: str | None = None,
+             global_allowed: bool = True, restart: bool = False, cmdline_arg: str = 'DEFAULT', tip: str = '',
+             related: str = '', requires: str = '') -> tuple[str, str, str, str, str | None, bool, str, str, str, bool]:
+        return cname, section, cmdline_arg, conf_type, default, restart, tip, related, requires, global_allowed
+
+    SPLASH_SCREEN_ENABLED = _def(cname=QT_TR_NOOP('splash-screen-enabled'), default='yes', cmdline_arg='splash',
+                                 tip=QT_TR_NOOP('enable the startup splash screen'))
+    SYSTEM_TRAY_ENABLED = _def(cname=QT_TR_NOOP('system-tray-enabled'), default="no", restart=True,
+                               tip=QT_TR_NOOP('start up in the system tray'), related='hide-on-focus-out')
+    HIDE_ON_FOCUS_OUT = _def(cname=QT_TR_NOOP('hide-on-focus-out'), default="no", restart=False,
+                             tip=QT_TR_NOOP('minimize the main window automatically on focus out'))
+    SMART_WINDOW = _def(cname=QT_TR_NOOP('smart-window'), default="yes",
+                        tip=QT_TR_NOOP('smart main window placement and geometry (X11 and XWayland)'), restart=True)
+    MONOCHROME_TRAY_ENABLED = _def(cname=QT_TR_NOOP('monochrome-tray-enabled'), default="no", restart=False,
+                                   tip=QT_TR_NOOP('monochrome dark themed system tray'))
+    MONO_LIGHT_TRAY_ENABLED = _def(cname=QT_TR_NOOP('mono-light-tray-enabled'), default="no", restart=False,
+                                   tip=QT_TR_NOOP('monochrome light themed system tray'))
+    PROTECT_NVRAM_ENABLED = _def(cname=QT_TR_NOOP('protect-nvram'), default="yes", restart=True,
+                                 tip=QT_TR_NOOP('alter options and defaults to minimize VDU NVRAM writes'))
+    ORDER_BY_NAME = _def(cname=QT_TR_NOOP('order-by-name'), default="no",
+                         tip=QT_TR_NOOP('order lists and tabs by vdu-name'))
+    LUX_OPTIONS_ENABLED = _def(cname=QT_TR_NOOP('lux-options-enabled'), default="yes", restart=True,
+                               tip=QT_TR_NOOP('enable light metering options'))
+    LUX_TRAY_ICON = _def(cname=QT_TR_NOOP('lux-tray-icon'), default="yes", restart=False,
+                         tip=QT_TR_NOOP('enable lux light-level system-tray icon'))
+    SCHEDULE_ENABLED = _def(cname=QT_TR_NOOP('schedule-enabled'), default='yes', tip=QT_TR_NOOP('enable preset schedule'))
+    WEATHER_ENABLED = _def(cname=QT_TR_NOOP('weather-enabled'), default='yes', tip=QT_TR_NOOP('enable weather lookups'))
+    DBUS_CLIENT_ENABLED = _def(cname=QT_TR_NOOP('dbus-client-enabled'), default="yes",
+                               tip=QT_TR_NOOP('use the D-Bus ddcutil-server if available'))
+    DBUS_EVENTS_ENABLED = _def(cname=QT_TR_NOOP('dbus-events-enabled'), default="no",
+                               tip=QT_TR_NOOP('enable D-Bus ddcutil-server events'), requires='dbus-client-enabled')
+    SYSLOG_ENABLED = _def(cname=QT_TR_NOOP('syslog-enabled'), default="no",
+                          tip=QT_TR_NOOP('divert diagnostic output to the syslog'))
+    DEBUG_ENABLED = _def(cname=QT_TR_NOOP('debug-enabled'), default="no", tip=QT_TR_NOOP('output extra debug information'))
+    WARNINGS_ENABLED = _def(cname=QT_TR_NOOP('warnings-enabled'), default="no",
+                            tip=QT_TR_NOOP('popup warnings if a VDU lacks an enabled control'))
+    TRANSLATIONS_ENABLED = _def(cname=QT_TR_NOOP('translations-enabled'), default="no", restart=True,
+                                tip=QT_TR_NOOP('enable language translations, currently not updated (no known users)'))
+    LOCATION = _def(cname=QT_TR_NOOP('location'), conf_type=CI.TYPE_LOCATION, tip=QT_TR_NOOP('latitude,longitude'))
+    SLEEP_MULTIPLIER = _def(cname=QT_TR_NOOP('sleep-multiplier'), section=CI.DDCUTIL_PARAMETERS, conf_type=CI.TYPE_FLOAT,
+                            tip=QT_TR_NOOP('ddcutil --sleep-multiplier (0.1 .. 2.0, default none)'))
+    DDCUTIL_EXTRA_ARGS = _def(cname=QT_TR_NOOP('ddcutil-extra-args'), section=CI.DDCUTIL_PARAMETERS, conf_type=CI.TYPE_TEXT,
+                              tip=QT_TR_NOOP('ddcutil extra arguments (default none)'))
+    VDU_NAME = _def(cname=QT_TR_NOOP('vdu-name'), section=CI.VDU_CONTROLS_WIDGETS, conf_type=CI.TYPE_TEXT,
+                    global_allowed=False, cmdline_arg='DISALLOWED', tip=QT_TR_NOOP('Name to display for this VDU'))
+    ENABLE_VCP_CODES = _def(cname=QT_TR_NOOP('enable-vcp-codes'), section=CI.VDU_CONTROLS_WIDGETS, conf_type=CI.TYPE_CSV,
+                            cmdline_arg='DISALLOWED', tip=QT_TR_NOOP('CSV list of VCP Hex-code capabilities to enable'))
+    CAPABILITIES_OVERRIDE = _def(cname=QT_TR_NOOP('capabilities-override'), section=CI.DDCUTIL_CAPABILITIES,
+                                 conf_type=CI.TYPE_LONG_TEXT, cmdline_arg='DISALLOWED',
+                                 tip=QT_TR_NOOP('override/cache for ddcutil capabilities text'))
+    UNKNOWN = _def(cname="UNKNOWN", section=CI.UNKNOWN_SECTION, conf_type=CI.TYPE_BOOL, cmdline_arg='DISALLOWED', tip='')
 
     def __init__(self, conf_name: str, section: str, cmdline_arg: str, conf_type: str, default: str | None,
                  restart_required: bool, help_text: str, related: str, requires: str, global_allowed):
@@ -2395,12 +2395,12 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
 
     def add_cmdline_arg(self, parser: argparse.ArgumentParser) -> None:
         if self.cmdline_arg != "DISALLOWED":
-            if self.conf_type == CI.TYPE_BOOL:  # Store strings for bools, allows us to differentiate yes/no and not supplied.
+            if self.conf_type == ConfIni.TYPE_BOOL:  # Store strings for bools, allows us to differentiate yes/no and not supplied.
                 parser.add_argument(f"--{self.cmdline_arg}", dest=self.cmdline_var, action='store_const', const='yes',
                                     help=self.help + ' ' + (tr('(default)') if self.default_value == 'yes' else ''))
                 parser.add_argument(f"--no-{self.cmdline_arg}", dest=self.cmdline_var, action='store_const', const='no',
                                     help=tr('(default)') if self.default_value == 'no' else '')
-            elif self.conf_type == CI.TYPE_FLOAT:
+            elif self.conf_type == ConfIni.TYPE_FLOAT:
                 parser.add_argument(f"--{self.cmdline_arg}", type=float, default=self.default_value, help=self.help)
             else:
                 parser.add_argument(f"--{self.cmdline_arg}", type=str, default=self.default_value, help=self.help)
