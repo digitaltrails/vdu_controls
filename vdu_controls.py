@@ -2979,7 +2979,7 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
             if config.file_path:
                 self.tabs.setTabToolTip(self.tabs.indexOf(tab), config.file_path.as_posix())
 
-    def cross_validate(self) -> bool:
+    def cross_validate(self) -> int:
         labels_in_use = {'vdu_controls': 'vdu_controls globals'}
         for tab in self.editor_tab_list:
             if vdu_label := tab.ini_editable.get(*ConfOption.VDU_NAME.conf_id, fallback=None):
