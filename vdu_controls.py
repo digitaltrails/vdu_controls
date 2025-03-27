@@ -1392,6 +1392,7 @@ class Ddcutil:
                  connected_vdus_changed_callback: Callable = None) -> None:
         super().__init__()
         self.common_args = common_args
+        self.virtual_impl_dict: Dict[str, DdcutilVirtualImpl] = {}
         self.ddcutil_impl = None  # The service-interface implementations are duck-typed.
         if prefer_dbus_client:
             try:
@@ -1419,12 +1420,30 @@ class Ddcutil:
     def ddcutil_version_info(self) -> (str, str):
         return self.ddcutil_impl.get_interface_version_string(), self.ddcutil_impl.get_ddcutil_version_string()
 
+    def add_virtual_ddcutil_impl(self, custom_exe: str, common_args: List[str] | None = None):
+        log_info(f"add_virtual_ddcutil_impl {custom_exe} {common_args}")
+        try:
+            custom_imp = DdcutilVirtualImpl(custom_exe, common_args)
+            for attr in custom_imp.detect(1):
+                log_info(f"add_virtual_ddcutil_impl VDU {attr.edid_txt}")
+                self.virtual_impl_dict[attr.edid_txt] = custom_imp
+        except Exception as e:
+            log_error(f"add_virtual_ddcutil_impl {e}")
+
+    def _impl(self, edid: str):
+        if virtual_impl := self.virtual_impl_dict.get(edid):  # edid is for a virtual implementation
+            return virtual_impl  # A virtual ddcutil implementation - probably a laptop panel
+        return self.ddcutil_impl  # Use real implementation
+
     def refresh_connection(self):
+        for virtual_impl in self.virtual_impl_dict.values():
+            virtual_impl.refresh_connection()
         self.ddcutil_impl.refresh_connection()
 
     def set_sleep_multiplier(self, vdu_number: str, sleep_multiplier: float | None):
         try:
-            self.ddcutil_impl.set_sleep_multiplier(self.get_edid_txt(vdu_number), sleep_multiplier)
+            edid = self.get_edid_txt(vdu_number)
+            self._impl(edid).set_sleep_multiplier(edid, sleep_multiplier)
         except ValueError as e:
             if str(e).find('com.ddcutil.DdcutilService.Error.MultiplierLocked') > 0:
                 log_warning(f"Ignoring: {e}")
@@ -1432,7 +1451,8 @@ class Ddcutil:
                 raise
 
     def set_vdu_specific_args(self, vdu_number: str, extra_args: List[str]):
-        self.ddcutil_impl.set_vdu_specific_args(self.get_edid_txt(vdu_number), extra_args)
+        edid = self.get_edid_txt(vdu_number)
+        self._impl(edid).set_vdu_specific_args(edid, extra_args)
 
     def get_edid_txt(self, vdu_number: str) -> str:
         return self.edid_txt_map.get(vdu_number, vdu_number)  # no edid probably means a simulated VDU
@@ -1446,6 +1466,8 @@ class Ddcutil:
         """Return a list of (vdu_number, desc) tuples."""
         result_list = []
         vdu_list = self.ddcutil_impl.detect(1)
+        for virtual_impl in self.virtual_impl_dict.values():
+            vdu_list += virtual_impl.detect(1)
         # Going to get rid of anything that is not a-z A-Z 0-9 as potential rubbish
         rubbish = re.compile('[^a-zA-Z0-9]+')
         # This isn't efficient, it doesn't need to be, so I'm keeping re-defs close to where they are used.
@@ -1488,7 +1510,7 @@ class Ddcutil:
 
     def query_capabilities(self, vdu_number: str) -> str:
         edid_txt = self.get_edid_txt(vdu_number)
-        model, mccs_major, mccs_minor, _, features, full_text = self.ddcutil_impl.get_capabilities(edid_txt)
+        model, mccs_major, mccs_minor, _, features, full_text = self._impl(edid_txt).get_capabilities(edid_txt)
         if full_text:  # The service supplies pre-assembled capabilities text.
             return full_text
         capability_text = f"Model: {model}\nMCCS version: {mccs_major}.{mccs_minor}\nVCP Features:\n"
@@ -1515,7 +1537,7 @@ class Ddcutil:
         vcp_type_key = (edid_txt, vcp_code)
         if type_str := self.vcp_type_map.get(vcp_type_key):
             return type_str
-        is_complex, is_continuous = self.ddcutil_impl.get_type(edid_txt, int(vcp_code, 16))
+        is_complex, is_continuous = self._impl(edid_txt).get_type(edid_txt, int(vcp_code, 16))
         type_str = CONTINUOUS_TYPE if is_continuous else (COMPLEX_NON_CONTINUOUS_TYPE if is_complex else SIMPLE_NON_CONTINUOUS_TYPE)
         self.vcp_type_map[vcp_type_key] = type_str
         return type_str
@@ -1523,9 +1545,10 @@ class Ddcutil:
     def set_vcp(self, vdu_number: str, vcp_code: str, new_value: int, retry_on_error: bool = False) -> None:
         """Send a new value to a specific VDU and vcp_code."""
         edid_txt = self.get_edid_txt(vdu_number)
+        impl = self._impl(edid_txt)
         for attempt_count in range(DDCUTIL_RETRIES):
             try:
-                self.ddcutil_impl.set_vcp(edid_txt, int(vcp_code, 16), new_value)
+                impl.set_vcp(edid_txt, int(vcp_code, 16), new_value)
                 Ddcutil.vcp_write_counters[edid_txt] = Ddcutil.vcp_write_counters.get(edid_txt, 0) + 1
                 log_debug(f"set_vcp: {vdu_number=} {vcp_code=} {new_value=}")
                 return
@@ -1560,9 +1583,11 @@ class Ddcutil:
 
     def get_vcp_values(self, vdu_number: str, vcp_code_list: List[str]) -> List[VcpValue]:
         values_dict: Dict[str, VcpValue | None] = {vcp_code: None for vcp_code in vcp_code_list}
+        edid_txt = self.get_edid_txt(vdu_number)
+        impl = self._impl(edid_txt)
         # Try a few times in case there is a glitch due to a monitor being turned-off/on or slow to respond
         for attempt_count in range(DDCUTIL_RETRIES):
-            values_list = self.ddcutil_impl.get_vcp_values(self.get_edid_txt(vdu_number), [int(vcp, 16) for vcp in vcp_code_list])
+            values_list = impl.get_vcp_values(edid_txt, [int(vcp, 16) for vcp in vcp_code_list])
             for vcp, value, maxv, _ in values_list:
                 vcp_code = f'{vcp:02X}'
                 vcp_type = self.get_type(vdu_number, vcp_code)
@@ -1571,7 +1596,7 @@ class Ddcutil:
                 break  # Got all values - OK to stop, otherwise try again
         for vcp_code, value in values_dict.items():
             if value is None:  # If all attempts failed, the values_dict will be missing one or more values.
-                raise ValueError(f"getvcp: display-{vdu_number} - failed to obtain value for vcp_code {vcp_code}")
+                raise ValueError(f"getvcp: display-{vdu_number} - failed to obtain value for vcp_code {vcp_code:02X}")
         return list(values_dict.values())
 
 
@@ -1599,6 +1624,7 @@ class DdcutilExeImpl:
         self.ddcutil_version = (0, 0, 0)
         self.ddcutil_version_string = "0.0.0"
         self.version_suffix = ''
+        self.ddcutil_exe = 'ddcutil'
         self.DetectedAttributes = namedtuple("DetectedAttributes", ('display_number', 'usb_bus', 'usb_device',
                                                                     'manufacturer_id', 'model_name', 'serial_number',
                                                                     'product_code', 'edid_txt', 'binary_serial_number'))
@@ -1635,7 +1661,7 @@ class DdcutilExeImpl:
         if self.ddcutil_version[0] >= 2:
             if log_to_syslog and '--syslog' not in args:
                 syslog_args = ['--syslog', 'DEBUG' if log_debug_enabled else 'ERROR']
-        process_args = ['ddcutil'] + self.common_args + multiplier_args + syslog_args + extra_args + list(args) + edid_args
+        process_args = [self.ddcutil_exe] + self.common_args + multiplier_args + syslog_args + extra_args + list(args) + edid_args
         try:
             with self.ddcutil_access_lock:
                 now = time.time()
@@ -1747,7 +1773,7 @@ class DdcutilExeImpl:
                 for vcp_code, vcp_value in results_dict.items():
                     if vcp_value is None:
                         raise ValueError(f"getvcp: {self._get_vdu_human_name(edid_txt)}"
-                                         f" - failed to obtain value for vcp_code {vcp_code}")
+                                         f" - failed to obtain value for vcp_code {vcp_code:02X}")
                 return [(vcp_code, v.current, v.max, v.vcp_type) for vcp_code, v in results_dict.items()]
             except (subprocess.SubprocessError, ValueError, DdcutilDisplayNotFound):
                 if attempt_count + 1 == DDCUTIL_RETRIES:  # Don't log here, it creates too much noise in the logs
@@ -1774,6 +1800,12 @@ class DdcutilExeImpl:
                 raise TypeError(f'Unsupported VCP type {type_indicator} vcp_code {vcp_code}')
         raise ValueError(f"VDU vcp_code {vcp_code} failed to parse vcp value '{result}'")
 
+
+class DdcutilVirtualImpl(DdcutilExeImpl):
+
+    def __init__(self, ddcutil_exe: str, common_args: List[str] | None = None):
+        super().__init__(common_args)
+        self.ddcutil_exe = ddcutil_exe
 
 class DdcutilDBusImpl(QObject):
     RETURN_RAW_VALUES = 2
@@ -2367,6 +2399,8 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
     TRANSLATIONS_ENABLED = _def(cname=QT_TR_NOOP('translations-enabled'), default="no", restart=True,
                                 tip=QT_TR_NOOP('enable language translations, currently not updated (no known users)'))
     LOCATION = _def(cname=QT_TR_NOOP('location'), conf_type=CI.TYPE_LOCATION, tip=QT_TR_NOOP('latitude,longitude'))
+    VIRTUAL_DDCUTIL = _def(cname=QT_TR_NOOP('virtual-ddcutil'), conf_type=CI.TYPE_TEXT,
+                           tip=QT_TR_NOOP('additional ddcutil command emulator (for a laptop panel)'))
     SLEEP_MULTIPLIER = _def(cname=QT_TR_NOOP('sleep-multiplier'), section=CI.DDCUTIL_PARAMETERS, conf_type=CI.TYPE_FLOAT,
                             tip=QT_TR_NOOP('ddcutil --sleep-multiplier (0.1 .. 2.0, default none)'))
     DDCUTIL_EXTRA_ARGS = _def(cname=QT_TR_NOOP('ddcutil-extra-args'), section=CI.DDCUTIL_PARAMETERS, conf_type=CI.TYPE_TEXT,
@@ -7739,6 +7773,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             self.ddcutil = Ddcutil(common_args=self.main_config.get_ddcutil_extra_args(),
                                    prefer_dbus_client=self.main_config.is_set(ConfOption.DBUS_CLIENT_ENABLED),
                                    connected_vdus_changed_callback=change_handler)
+            if custom_exe := self.main_config.ini_content.get(ConfOption.VIRTUAL_DDCUTIL.conf_section, ConfOption.VIRTUAL_DDCUTIL.conf_name, fallback=None):
+                self.ddcutil.add_virtual_ddcutil_impl(custom_exe, common_args=self.main_config.get_ddcutil_extra_args())
         except (subprocess.SubprocessError, ValueError, re.error, OSError, DdcutilServiceNotFound) as e:
             self.main_window.show_no_controllers_error_dialog(e)
 
