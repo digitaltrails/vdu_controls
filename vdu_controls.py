@@ -2953,14 +2953,19 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
     def __init__(self, default_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig], change_callback) -> None:
         super().__init__()
         self.setWindowTitle(tr('Settings'))
-        self.setMinimumWidth(native_pixels(1024))
         self.setLayout(QVBoxLayout())
-        self.tabs = QTabWidget()
-        self.layout().addWidget(self.tabs)
+        self.settings_scroll_area = QScrollArea(self)
+        self.settings_scroll_area.setWidgetResizable(True)
+        self.tabs_widget = QTabWidget(self.settings_scroll_area)
+        self.settings_scroll_area.setWidget(self.tabs_widget)
+        self.layout().addWidget(self.settings_scroll_area)
         self.editor_tab_list: List[SettingsEditorTab] = []
         self.change_callback = change_callback
         self.reconfigure([default_config, *vdu_config_list])
         self.make_visible()
+
+    def sizeHint(self):
+        return QSize(native_pixels(1480), native_pixels(1000))
 
     def reconfigure(self, config_list: List[VduControlsConfig]) -> None:
         for config in config_list:
@@ -2970,14 +2975,14 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
                 assert len(tabs_found) == 1
                 tab = tabs_found[0]
             else:
-                tab = SettingsEditorTab(self, config, self.change_callback, parent=self.tabs)
+                tab = SettingsEditorTab(self, config, self.change_callback, parent=self.tabs_widget)
                 tab.save_all_clicked_qtsignal.connect(self.save_all)  # type: ignore
-                self.tabs.addTab(tab, vdu_label)
+                self.tabs_widget.addTab(tab, vdu_label)
                 self.editor_tab_list.append(tab)
             tab.set_label(vdu_label)
-            self.tabs.setTabText(self.tabs.indexOf(tab), vdu_label)
+            self.tabs_widget.setTabText(self.tabs_widget.indexOf(tab), vdu_label)
             if config.file_path:
-                self.tabs.setTabToolTip(self.tabs.indexOf(tab), config.file_path.as_posix())
+                self.tabs_widget.setTabToolTip(self.tabs_widget.indexOf(tab), config.file_path.as_posix())
 
     def cross_validate(self) -> int:
         labels_in_use = {'vdu_controls': 'vdu_controls globals'}

@@ -358,9 +358,10 @@ Version History
   * Slider responsiveness improved by fixing the interuptable-sleep (doze) implementation.
   * Added a virtual-ddcutil option which may define an emulated ddcutil-command that 
     interfaces to a laptop-panel. The emulator runs in an addition to the real ddcutil 
-    inteface (dbus or command) - so proper monitors and laptop-panels can be jointly 
+    inteface (dbus or command) - so that monitors and laptop-panels can be jointly 
     managed.
   * Added sample-scripts/laptop-vitual-ddcutil.bash as a virtual-ddcutil starter kit.
+  * The Settings-Dialog is now scrollable (because it was getting quite large).
 
 * 2.2.0
   * Add a vdu-name option for assigning meaningful/user-friendly names to each VDU.
