@@ -1,10 +1,13 @@
 #!/bin/bash
-# laptop-virtual-ddcutil.bash - laptop panel virtual ddcutil
+# laptop-ddcutil-emulator.bash - laptop panel virtual ddcutil
 # ==========================================================
 # Copyright (C) 2025 Michael Hamilton
 #
 # This script is a template for integrating a laptop panel into vdu_controls
 # by emulating a basic ddcutil command set.
+#
+# This template needs editing to create an implementation specific to
+# actual hardware, such as Intel or AMD driven laptop-panels.
 #
 # The bash getvcp and setvcp functions need completing with what ever
 # command line code is appropriate for getting and setting the brightness
@@ -14,13 +17,13 @@
 # The script needs to be executable, and can be tested on the command
 # line as follows:
 #
-#   chmod u+x laptop-virtual-ddcutil.bash
-#   ./laptop-virtual-ddcutil.bash getvcp 10 12
-#   ./laptop-virtual-ddcutil.bash setvcp 10 75
-#   ./laptop-virtual-ddcutil.bash setvcp 12 60
-#   ./laptop-virtual-ddcutil.bash setvcp 12 x3C
-#   ./laptop-virtual-ddcutil.bash detect
-#   ./laptop-virtual-ddcutil.bash capabilities
+#   chmod u+x laptop-ddcutil-emulator.bash
+#   ./laptop-ddcutil-emulator.bash getvcp 10 12
+#   ./laptop-ddcutil-emulator.bash setvcp 10 75
+#   ./laptop-ddcutil-emulator.bash setvcp 12 60
+#   ./laptop-ddcutil-emulator.bash setvcp 12 x3C
+#   ./laptop-ddcutil-emulator.bash detect
+#   ./laptop-ddcutil-emulator.bash capabilities
 #
 # GNU License
 # ===========

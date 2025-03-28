@@ -1392,7 +1392,7 @@ class Ddcutil:
                  connected_vdus_changed_callback: Callable = None) -> None:
         super().__init__()
         self.common_args = common_args
-        self.virtual_impl_dict: Dict[str, DdcutilVirtualImpl] = {}
+        self.ddcutil_emulators_by_edid: Dict[str, DdcutilEmulatorImpl] = {}
         self.ddcutil_impl = None  # The service-interface implementations are duck-typed.
         if prefer_dbus_client:
             try:
@@ -1420,25 +1420,25 @@ class Ddcutil:
     def ddcutil_version_info(self) -> (str, str):
         return self.ddcutil_impl.get_interface_version_string(), self.ddcutil_impl.get_ddcutil_version_string()
 
-    def add_virtual_ddcutil_impl(self, custom_exe: str, common_args: List[str] | None = None):
-        log_info(f"add_virtual_ddcutil_impl {custom_exe} {common_args}")
+    def add_ddcutil_emulator(self, emulator_exectable: str, common_args: List[str] | None = None):
+        log_info(f"add_ddcutil_emulator: {emulator_exectable} {common_args}")
         try:
-            custom_imp = DdcutilVirtualImpl(custom_exe, common_args)
+            custom_imp = DdcutilEmulatorImpl(emulator_exectable, common_args)
             for attr in custom_imp.detect(1):
-                log_info(f"add_virtual_ddcutil_impl VDU {attr.edid_txt}")
-                self.virtual_impl_dict[attr.edid_txt] = custom_imp
+                log_info(f"add_ddcutil_emulator: VDU edid={attr.edid_txt}")
+                self.ddcutil_emulators_by_edid[attr.edid_txt] = custom_imp
         except Exception as e:
-            log_error(f"add_virtual_ddcutil_impl {e}")
+            log_error(f"add_ddcutil_emulator exception: {e}")
 
     def _impl(self, edid: str):
-        if virtual_impl := self.virtual_impl_dict.get(edid):  # edid is for a virtual implementation
-            return virtual_impl  # A virtual ddcutil implementation - probably a laptop panel
+        if emulator_impl := self.ddcutil_emulators_by_edid.get(edid):  # edid is for a virtual implementation
+            return emulator_impl  # A virtual ddcutil implementation - probably a laptop panel
         return self.ddcutil_impl  # Use real implementation
 
     def refresh_connection(self):
-        for virtual_impl in self.virtual_impl_dict.values():
-            virtual_impl.refresh_connection()
         self.ddcutil_impl.refresh_connection()
+        for emulator_impl in self.ddcutil_emulators_by_edid.values():
+            emulator_impl.refresh_connection()
 
     def set_sleep_multiplier(self, vdu_number: str, sleep_multiplier: float | None):
         try:
@@ -1466,8 +1466,8 @@ class Ddcutil:
         """Return a list of (vdu_number, desc) tuples."""
         result_list = []
         vdu_list = self.ddcutil_impl.detect(1)
-        for virtual_impl in self.virtual_impl_dict.values():
-            vdu_list += virtual_impl.detect(1)
+        for emulator_impl in self.ddcutil_emulators_by_edid.values():
+            vdu_list += emulator_impl.detect(1)
         # Going to get rid of anything that is not a-z A-Z 0-9 as potential rubbish
         rubbish = re.compile('[^a-zA-Z0-9]+')
         # This isn't efficient, it doesn't need to be, so I'm keeping re-defs close to where they are used.
@@ -1801,7 +1801,7 @@ class DdcutilExeImpl:
         raise ValueError(f"VDU vcp_code {vcp_code} failed to parse vcp value '{result}'")
 
 
-class DdcutilVirtualImpl(DdcutilExeImpl):
+class DdcutilEmulatorImpl(DdcutilExeImpl):
 
     def __init__(self, ddcutil_exe: str, common_args: List[str] | None = None):
         super().__init__(common_args)
@@ -1823,23 +1823,31 @@ class DdcutilDBusImpl(QObject):
         self.listener_callback: Callable | None = callback
         self.dbus_timeout_millis = int(os.getenv("VDU_CONTROLS_DBUS_TIMEOUT_MILLIS", default='10000'))
         self._status_values: Dict[int, str] = {}
-        for try_count in range(1, 32):  # Approximating an infinite loop
+        for try_count in range(1, 5):  # Approximating an infinite loop
             self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service()
             if len(self.common_args) != 0:  # have to restart with the common_args, wait and connect again
-                self._validate(self.ddcutil_proxy.call("Restart", " ".join(self.common_args),
-                                                       QDBusArgument(0, QMetaType.UInt), QDBusArgument(0, QMetaType.UInt)))
-            else:  # Retrieve the attributes returned by detect and also use the retrieval as a self check
-                self_check_op = self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "AttributesReturnedByDetect")
-                if self_check_op.errorName():
-                    log_error(f'Sanity check try {try_count}: {self.dbus_interface_name} failed: {self_check_op.errorMessage()}')
-                    if try_count >= 4:  # Give up
-                        self._connect_to_service(disconnect=True)  # disconnect handler references to facilitate garbage collection
-                        raise DdcutilServiceNotFound(
-                            f"Error contacting D-Bus service {self.dbus_interface_name} {self_check_op.errorMessage()}")
-                else:
-                    self.DetectedAttributes = namedtuple("DetectedAttributes", self_check_op.arguments()[0])
-                    self.vdu_map_by_edid: Dict[str, Tuple] = {}
-                    break
+                try:
+                    log_info(f"Restarting dbus service with common args {self.common_args}")
+                    self._validate(self.ddcutil_proxy.call("Restart", " ".join(self.common_args),
+                                                           QDBusArgument(0, QMetaType.UInt), QDBusArgument(0, QMetaType.UInt)))
+                    time.sleep(2)  # Should be enough time
+                    log_info("Reconnecting after dbus service restart.")
+                    self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service() # connect again
+                except [ValueError, DdcutilDisplayNotFound]:
+                    log_warning(f"Failed to restart with common_args {self.common_args} on try {try_count}")
+            # Retrieve the attributes returned by detect and also use the retrieval as a self check
+            self_check_op = self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "AttributesReturnedByDetect")
+            if self_check_op.errorName():
+                log_error(f'Sanity check try {try_count}: {self.dbus_interface_name} failed: {self_check_op.errorMessage()}')
+            else:
+                self.DetectedAttributes = namedtuple("DetectedAttributes", self_check_op.arguments()[0])
+                self.vdu_map_by_edid: Dict[str, Tuple] = {}
+                break
+            if try_count >= 4:  # Give up
+                self._connect_to_service(disconnect=True)  # disconnect handler references to facilitate garbage collection
+                raise DdcutilServiceNotFound(
+                    f"Error contacting D-Bus service {self.dbus_interface_name} {self_check_op.errorMessage()}")
+            log_info("looping")
             time.sleep(2)  # Try again
 
     def set_sleep_multiplier(self, edid_txt: str, sleep_multiplier: float):
@@ -2399,8 +2407,8 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
     TRANSLATIONS_ENABLED = _def(cname=QT_TR_NOOP('translations-enabled'), default="no", restart=True,
                                 tip=QT_TR_NOOP('enable language translations, currently not updated (no known users)'))
     LOCATION = _def(cname=QT_TR_NOOP('location'), conf_type=CI.TYPE_LOCATION, tip=QT_TR_NOOP('latitude,longitude'))
-    VIRTUAL_DDCUTIL = _def(cname=QT_TR_NOOP('virtual-ddcutil'), conf_type=CI.TYPE_TEXT,
-                           tip=QT_TR_NOOP('additional ddcutil command emulator (for a laptop panel)'))
+    DDCUTIL_EMULATOR = _def(cname=QT_TR_NOOP('ddcutil-emulator'), conf_type=CI.TYPE_TEXT,
+                            tip=QT_TR_NOOP('additional command-line ddcutil emulator for a laptop panel'))
     SLEEP_MULTIPLIER = _def(cname=QT_TR_NOOP('sleep-multiplier'), section=CI.DDCUTIL_PARAMETERS, conf_type=CI.TYPE_FLOAT,
                             tip=QT_TR_NOOP('ddcutil --sleep-multiplier (0.1 .. 2.0, default none)'))
     DDCUTIL_EXTRA_ARGS = _def(cname=QT_TR_NOOP('ddcutil-extra-args'), section=CI.DDCUTIL_PARAMETERS, conf_type=CI.TYPE_TEXT,
@@ -3022,6 +3030,24 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
         return MBox.Ok
 
     def closeEvent(self, event) -> None:
+        main_ini = self.editor_tab_list[0].ini_editable
+        if emulator := main_ini.get(ConfOption.DDCUTIL_EMULATOR.conf_section, ConfOption.DDCUTIL_EMULATOR.conf_name, fallback=None):
+            mb = MBox(MBox.Warning,
+                      msg="<b>ddcutil-emulator - for integrating non-DDC laptop-panels</b><br/><br/>"
+                          "The <i>ddcutil-emulator</i> option is a beta feature for integrating non-DDC laptop-panels.<br/><br/>"
+                          "In addition to real-DDC displays detected by ddcutil/dccutil-service, the emulator may add one "
+                          "or more emulated-DDC displays.<br/><br/>"
+                          "This feature may be subject to change as development progresses.<br/><br/>"
+                          "<b>Feedback would be appreciated.</b> ",
+                      info="<hr/>Submit feedback to<br/> <a href='https://github.com/digitaltrails/vdu_controls/issues/44'>"
+                           "https://github.com/digitaltrails/vdu_controls/issues/44</a><br/>"
+                           "or by email to <a href='mailto:michael@actrix.gen.nz?subject=ddcutil-emulator'>"
+                           "michael@actrix.gen.nz</a>.",
+                      details=f"{ConfOption.DDCUTIL_EMULATOR.conf_name}={emulator}",
+                      buttons=MBox.Close)
+            mb.setTextFormat(Qt.AutoText)
+            mb.exec()
+
         if self.save_all(warn_if_nothing_to_save=False) == MBox.Cancel:
             event.ignore()
         else:
@@ -7778,8 +7804,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             self.ddcutil = Ddcutil(common_args=self.main_config.get_ddcutil_extra_args(),
                                    prefer_dbus_client=self.main_config.is_set(ConfOption.DBUS_CLIENT_ENABLED),
                                    connected_vdus_changed_callback=change_handler)
-            if custom_exe := self.main_config.ini_content.get(ConfOption.VIRTUAL_DDCUTIL.conf_section, ConfOption.VIRTUAL_DDCUTIL.conf_name, fallback=None):
-                self.ddcutil.add_virtual_ddcutil_impl(custom_exe, common_args=self.main_config.get_ddcutil_extra_args())
+            if emulator := self.main_config.ini_content.get(ConfOption.DDCUTIL_EMULATOR.conf_section,
+                                                            ConfOption.DDCUTIL_EMULATOR.conf_name, fallback=None):
+                self.ddcutil.add_ddcutil_emulator(emulator, common_args=self.main_config.get_ddcutil_extra_args())
         except (subprocess.SubprocessError, ValueError, re.error, OSError, DdcutilServiceNotFound) as e:
             self.main_window.show_no_controllers_error_dialog(e)
 
@@ -8638,7 +8665,7 @@ class VduAppWindow(QMainWindow):
             log_info(f"Must reconfigure due to change to: {vdu_stable_id=} {vcp_code=} {value=} {origin}")
             self.main_controller.configure_application()  # Special case, such as a power control causing the VDU to go offline.
             return
-        log_debug(f"respond {vdu_stable_id=} {vcp_code=} {value=} {origin}") if log_debug_enabled else None
+        log_debug(f"respond_to_changes_handler {vdu_stable_id=} {vcp_code=} {value=} {origin}") if log_debug_enabled else None
         if origin != VcpOrigin.TRANSIENT:  # Only want to indicate final status (not when just passing through a preset)
             self.update_status_indicators()
             if origin != VcpOrigin.EXTERNAL:
