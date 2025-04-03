@@ -3086,6 +3086,7 @@ class SettingsEditorTab(QWidget):
             layout.addWidget(QLabel(f"<b>{title}</b>"))
             booleans_panel = QWidget()
             booleans_grid = QGridLayout()
+            booleans_grid.setVerticalSpacing(0)
             booleans_panel.setLayout(booleans_grid)
             layout.addWidget(booleans_panel)
             bool_count, grid_columns = 0, 5  # booleans are counted and laid out according to grid_columns.
@@ -3209,6 +3210,7 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
                  tooltip: str, related: str, requires: str) -> None:
         super().__init__(section_editor, option, section, tooltip)
         self.setLayout(QHBoxLayout())
+        self.layout().setContentsMargins(0,0,0,0)
         checkbox = QCheckBox(self.translate_option())
         checkbox.setChecked(section_editor.ini_editable.getboolean(section, option))
 
