@@ -2972,6 +2972,10 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
         self.reconfigure([default_config, *vdu_config_list])
         self.make_visible()
 
+    def make_visible(self) -> None:
+        self.settings_scroll_area.verticalScrollBar().setValue(0)
+        super().make_visible()
+
     def sizeHint(self):
         return QSize(native_pixels(1480), native_pixels(1000))
 
