@@ -107,6 +107,7 @@ ln -s -f %{_datadir}/icons %{_datadir}/%{name}/icons/system-icons
 %{_datadir}/%{name}/sample-scripts/lux-from-webcam.bash
 %{_datadir}/%{name}/sample-scripts/lux-from-webcam.py
 %{_datadir}/%{name}/sample-scripts/vlux_meter.py
+%{_datadir}/%{name}/sample-scripts/laptop-ddcutil-emulator.bash
 %ghost %{_datadir}/%{name}/icons/system-icons
 
 # Build service notes:
