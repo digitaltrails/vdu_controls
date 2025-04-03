@@ -365,6 +365,7 @@ Version History
     The script must be customisated to provide an emulator for a given target platform 
     (Intel driven panel, AMD driven panel, ...)
   * The Settings-Dialog is now scrollable (because it was getting quite large).
+  * Renamed some of the lux light levels.
 
 * 2.2.0
   * Add a vdu-name option for assigning meaningful/user-friendly names to each VDU.

@@ -5041,7 +5041,7 @@ class PresetChooseElevationChart(QLabel):
             painter.drawEllipse(_reverse_x(solar_noon_x + 8), origin_iy - 8, 16, 16)
 
             if ev_key:
-                # Draw a line representing the slider degrees and rise/set indicator - may be higher than sun for today:
+                # Draw a line representing the slider degrees and Twilight indicator - may be higher than sun for today:
                 sky_line_y = origin_iy - round(math.sin(math.radians(ev_key.elevation)) * range_iy)
                 if sky_line_y >= solar_noon_y:
                     sky_line_pen = QPen(Qt.white, 2)
@@ -7334,7 +7334,7 @@ LUX_OVERCAST_SVG = b"""<?xml version="1.0" encoding="utf-8"?>
     </g>
 </svg>"""
 
-LUX_RISE_SET_SVG = b"""<?xml version="1.0" encoding="utf-8"?>
+LUX_TWILIGHT_SVG = b"""<?xml version="1.0" encoding="utf-8"?>
 <svg width="24px" height="24px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
     <g class="ColorScheme-Text" stroke="currentColor" stroke-linecap="round" stroke-width="1.25">
@@ -7386,7 +7386,7 @@ class LuxAmbientSlider(QWidget):
             LuxZone(tr("Sunlight"), LUX_SUNLIGHT_SVG, 20000, 100000, 45000, column_span=2),
             LuxZone(tr("Daylight"), LUX_DAYLIGHT_SVG, 1000, 20000, 6000, column_span=2),
             LuxZone(tr("Overcast"), LUX_OVERCAST_SVG, 400, 1000, 900, column_span=3),
-            LuxZone(tr("Rise/set"), LUX_RISE_SET_SVG, 100, 400, 130, column_span=2),
+            LuxZone(tr("Twilight"), LUX_TWILIGHT_SVG, 100, 400, 130, column_span=2),
             LuxZone(tr("Subdued"), LUX_SUBDUED_SVG, 15, 100, 20, column_span=3),
             LuxZone(tr("Dark"), LUX_DARK_SVG, 0, 15, 2, column_span=3),
         ]
