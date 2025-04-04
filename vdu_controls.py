@@ -3210,7 +3210,9 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
                  tooltip: str, related: str, requires: str) -> None:
         super().__init__(section_editor, option, section, tooltip)
         self.setLayout(QHBoxLayout())
-        self.layout().setContentsMargins(0,0,0,0)
+        margins = self.layout().contentsMargins()
+        margins.setTop(0)  # Squish up a bit, save space and stay closer to the parent label
+        self.layout().setContentsMargins(margins)
         checkbox = QCheckBox(self.translate_option())
         checkbox.setChecked(section_editor.ini_editable.getboolean(section, option))
 
