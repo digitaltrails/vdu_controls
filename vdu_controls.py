@@ -3212,6 +3212,7 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
         self.setLayout(QHBoxLayout())
         margins = self.layout().contentsMargins()
         margins.setTop(0)  # Squish up a bit, save space and stay closer to the parent label
+        margins.setRight(0)
         self.layout().setContentsMargins(margins)
         checkbox = QCheckBox(self.translate_option())
         checkbox.setChecked(section_editor.ini_editable.getboolean(section, option))
