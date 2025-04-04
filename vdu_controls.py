@@ -2307,6 +2307,7 @@ class ConfIni(configparser.ConfigParser):
     TYPE_LONG_TEXT = 'long_text'
     TYPE_TEXT = 'mediumtext'
     TYPE_LOCATION = 'location'
+    TYPE_PATH = 'path'
 
     def __init__(self) -> None:
         super().__init__(interpolation=None)
@@ -2407,7 +2408,7 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
     TRANSLATIONS_ENABLED = _def(cname=QT_TR_NOOP('translations-enabled'), default="no", restart=True,
                                 tip=QT_TR_NOOP('enable language translations, currently not updated (no known users)'))
     LOCATION = _def(cname=QT_TR_NOOP('location'), conf_type=CI.TYPE_LOCATION, tip=QT_TR_NOOP('latitude,longitude'))
-    DDCUTIL_EMULATOR = _def(cname=QT_TR_NOOP('ddcutil-emulator'), conf_type=CI.TYPE_TEXT,
+    DDCUTIL_EMULATOR = _def(cname=QT_TR_NOOP('ddcutil-emulator'), conf_type=CI.TYPE_PATH,
                             tip=QT_TR_NOOP('additional command-line ddcutil emulator for a laptop panel'))
     SLEEP_MULTIPLIER = _def(cname=QT_TR_NOOP('sleep-multiplier'), section=CI.DDCUTIL_PARAMETERS, conf_type=CI.TYPE_FLOAT,
                             tip=QT_TR_NOOP('ddcutil --sleep-multiplier (0.1 .. 2.0, default none)'))
@@ -3034,24 +3035,6 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
         return MBox.Ok
 
     def closeEvent(self, event) -> None:
-        main_ini = self.editor_tab_list[0].ini_editable
-        if emulator := main_ini.get(ConfOption.DDCUTIL_EMULATOR.conf_section, ConfOption.DDCUTIL_EMULATOR.conf_name, fallback=None):
-            mb = MBox(MBox.Warning,
-                      msg="<b>ddcutil-emulator - for integrating non-DDC laptop-panels</b><br/><br/>"
-                          "The <i>ddcutil-emulator</i> option is a beta feature for integrating non-DDC laptop-panels.<br/><br/>"
-                          "In addition to real-DDC displays detected by ddcutil/dccutil-service, the emulator may add one "
-                          "or more emulated-DDC displays.<br/><br/>"
-                          "This feature may be subject to change as development progresses.<br/><br/>"
-                          "<b>Feedback would be appreciated.</b> ",
-                      info="<hr/>Submit feedback to<br/> <a href='https://github.com/digitaltrails/vdu_controls/issues/44'>"
-                           "https://github.com/digitaltrails/vdu_controls/issues/44</a><br/>"
-                           "or by email to <a href='mailto:michael@actrix.gen.nz?subject=ddcutil-emulator'>"
-                           "michael@actrix.gen.nz</a>.",
-                      details=f"{ConfOption.DDCUTIL_EMULATOR.conf_name}={emulator}",
-                      buttons=MBox.Close)
-            mb.setTextFormat(Qt.AutoText)
-            mb.exec()
-
         if self.save_all(warn_if_nothing_to_save=False) == MBox.Cancel:
             event.ignore()
         else:
@@ -3067,7 +3050,8 @@ class SettingsEditorTab(QWidget):
         super().__init__(parent=parent)
         widget_map = {ConfIni.TYPE_BOOL: SettingsEditorBooleanWidget, ConfIni.TYPE_FLOAT: SettingsEditorFloatWidget,
                       ConfIni.TYPE_LONG_TEXT: SettingsEditorLongTextWidget, ConfIni.TYPE_TEXT: SettingsEditorTextWidget,
-                      ConfIni.TYPE_CSV: SettingsEditorCsvWidget, ConfIni.TYPE_LOCATION: SettingsEditorLocationWidget}
+                      ConfIni.TYPE_CSV: SettingsEditorCsvWidget, ConfIni.TYPE_LOCATION: SettingsEditorLocationWidget,
+                      ConfIni.TYPE_PATH: SettingsEditorPathWidget,}
         layout = QVBoxLayout()
         self.change_callback = change_callback
         self.unsaved_changes_map: Dict[Tuple[str, str], str] = {}
@@ -3399,6 +3383,57 @@ class SettingsEditorTextWidget(SettingsEditorLongTextWidget):
     def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
         super().__init__(section_editor, option, section, tooltip)
         self.setMaximumHeight(native_font_height(scaled=3))
+
+
+class SettingsEditorPathValidator(QValidator):
+
+    def validate(self, text, pos):
+        if text != '':
+            if not Path(text).exists() or not Path(text).is_file():
+                MBox(MBox.Critical, msg=tr("The selected file does not exist or is not an ordinary file.")).exec()
+                return QValidator.Invalid, text, pos
+            elif not os.access(text, os.X_OK):
+                MBox(MBox.Critical, msg=tr("The selected file lacks execute permission.")).exec()
+                return QValidator.Invalid, text, pos
+        return QValidator.Acceptable, text, pos
+
+
+class SettingsEditorPathWidget(SettingsEditorLineBase):
+
+    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
+        super().__init__(section_editor, option, section, tooltip)
+        self.text_input.setText(section_editor.ini_editable[section][option])
+        self.layout().addWidget(button := QPushButton(si(self, QStyle.SP_DriveFDIcon), ''))
+        self.validator = SettingsEditorPathValidator()
+
+        def _choose_emulator(index: int) -> None:
+            current_path = self.text_input.text()
+            new_path = FasterFileDialog.getOpenFileName(
+                self, tr("Select: {}").format(tr(self.text_label.text())), current_path,
+                qdir_filter=QDir.Files | QDir.Readable | QDir.Executable)[0]
+            self.text_input.setText(new_path)
+            self.editing_finished()
+
+        button.clicked.connect(_choose_emulator)
+
+    def editing_finished(self) -> None:
+        super().editing_finished()
+        if not self.has_error and self.text_input.text() != '':
+            if self.section_editor.ini_editable[self.section][self.option] != self.section_editor.ini_before[self.section][
+                self.option]:
+                mb = MBox(MBox.Information,
+                          msg="If you've developed a <i>ddcutil-emulator</i> for integrating a non-DDC laptop-panels, "
+                              "please consider contributing it to the <b>vdu_controls</b> project."
+                              "<br/>_______________________________________________________________________________________</br>",
+                          info="Submit feedback and contributions to<br/> "
+                               "<a href='https://github.com/digitaltrails/vdu_controls/issues/44'>"
+                               "https://github.com/digitaltrails/vdu_controls/issues/44</a><br/>"
+                               "or by email to <a href='mailto:michael@actrix.gen.nz?subject=ddcutil-emulator'>"
+                               "michael@actrix.gen.nz</a>.",
+                          details=f"{ConfOption.DDCUTIL_EMULATOR.conf_name}={self.text_input.text()}",
+                          buttons=MBox.Close)
+                mb.setTextFormat(Qt.AutoText)
+                mb.exec()
 
 
 class VduException(Exception):
@@ -4395,13 +4430,14 @@ class FasterFileDialog(QFileDialog):  # Takes 5 seconds versus 30+ seconds for Q
     @staticmethod
     def getOpenFileName(parent: QWidget | None = None, caption: str = '', directory: str = '', filter_str: str = '',
                         initial_filter: str = '',
-                        options: QFileDialog.Options | QFileDialog.Option = QFileDialog.ReadOnly) -> Tuple[str, str]:
+                        options: QFileDialog.Options | QFileDialog.Option = QFileDialog.ReadOnly,
+                        qdir_filter: int = QDir.AllEntries | QDir.AllDirs | QDir.Hidden | QDir.System) -> Tuple[str, str]:
         original_handler = QtCore.qInstallMessageHandler(lambda mode, context, message: None)
         try:  # Get rid of another annoying message: 'qtimeline::start: already running'
             dialog = QFileDialog(parent=parent, caption=caption, directory=directory, filter=filter_str)
             dialog.setOptions(options)
             dialog.setFileMode(QFileDialog.ExistingFile)
-            dialog.setFilter(QDir.AllEntries | QDir.AllDirs | QDir.Hidden | QDir.System)
+            dialog.setFilter(qdir_filter)
             return (dialog.selectedFiles()[0], filter) if dialog.exec() else ('', '')  # match QFileDilog.getOpenFileName()
         finally:
             QtCore.qInstallMessageHandler(original_handler)
@@ -6274,7 +6310,7 @@ def lux_create_device(device_name: str) -> LuxMeterDevice:
         return LuxMeterFifoDevice(device_name)
     elif pathlib.Path(device_name).exists() and os.access(device_name, os.X_OK):
         return LuxMeterRunnableDevice(device_name)
-    raise LuxDeviceException(tr("Failed to set up {} - not an recognised kind of device or not executable.").format(device_name))
+    raise LuxDeviceException(tr("Failed to set up {} - not a recognised kind of device or not executable.").format(device_name))
 
 
 class LuxMeterDevice(QObject):
