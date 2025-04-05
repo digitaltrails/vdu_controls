@@ -3097,12 +3097,18 @@ class SettingsEditorTab(QWidget):
                 MBox(MBox.Critical, msg=tr('No unsaved changes for {}.').format(vdu_config.config_name), buttons=MBox.Ok).exec()
 
         self.status_bar = QStatusBar()
+
+        self.revert_button = QPushButton(si(self, QStyle.SP_DialogResetButton), '')
+        self.revert_button.clicked.connect(self.revert)  # type: ignore
+        self.status_bar.addPermanentWidget(self.revert_button, 0)
+
         self.save_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), '')
-        if vdu_config.file_path:
-            self.save_button.setToolTip(vdu_config.file_path.as_posix())
         self.save_button.clicked.connect(_save_clicked)
-        self.set_label(vdu_config.get_vdu_preferred_name())
         self.status_bar.addPermanentWidget(self.save_button, 0)
+
+
+
+        self.status_bar.addPermanentWidget(QLabel('    '))
 
         save_all_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr("Save All"))
         save_all_button.clicked.connect(self.save_all_clicked_qtsignal)
@@ -3120,15 +3126,24 @@ class SettingsEditorTab(QWidget):
             os.remove(self.config_path) if self.config_path.exists() else None
             self.change_callback(None)
 
-        reset_button = QPushButton(si(self, QStyle.SP_BrowserReload), tr("Reset").format(vdu_config.config_name))
-        reset_button.clicked.connect(_settings_reset)
-        reset_button.setToolTip(tr("Reset/remove existing settings under the {} tab.").format(vdu_config.config_name))
-        self.status_bar.addWidget(reset_button, 0)
+        self.restore_defaults_button = QPushButton(si(self, QStyle.SP_DialogDiscardButton), '')
+        self.restore_defaults_button.clicked.connect(_settings_reset)
+
+        self.set_label(vdu_config.get_vdu_preferred_name())
+
+        if vdu_config.file_path:
+            self.revert_button.setToolTip(tr("Discard changes, restore settings from\n{}").format(vdu_config.file_path.as_posix()))
+            self.save_button.setToolTip(tr("Save change to {}").format(vdu_config.file_path.as_posix()))
+            self.restore_defaults_button.setToolTip(tr("Clear settings and restore application defaults for {}").format(vdu_config.config_name))
+
+        self.status_bar.addWidget(self.restore_defaults_button, 0)
 
         layout.addWidget(self.status_bar)
 
     def set_label(self, label_str):
+        self.revert_button.setText(tr("Revert {}").format(label_str))
         self.save_button.setText(tr("Save {}").format(label_str))
+        self.restore_defaults_button.setText(tr("Clear {}").format(label_str))
 
     def save(self, force: bool = False, what_changed: Dict[str, str] | None = None) -> int:
         # what_changed is an output parameter, if passed, it will be updated with what has changed.
@@ -3152,9 +3167,7 @@ class SettingsEditorTab(QWidget):
                     self.unsaved_changes_map = {}
                     self.status_message(tr("Saved {}").format(self.config_path.name), msecs=3000)
                 elif answer == MBox.Discard:
-                    self.status_message(tr("Discarded changes to {}").format(self.config_path.name), msecs=3000)
-                    self.ini_editable = self.ini_before.duplicate()  # Revert
-                    self.reset()
+                    self.revert()
                 return answer
             finally:
                 self.setEnabled(True)
@@ -3166,6 +3179,14 @@ class SettingsEditorTab(QWidget):
     def reset(self) -> None:
         for field in self.field_list:
             field.reset()
+
+    def revert(self) -> None:
+        if self.is_unsaved():
+            self.status_message(tr("Discarded changes to {}").format(self.config_path.name), msecs=3000)
+            self.ini_editable = self.ini_before.duplicate()  # Revert
+            self.reset()
+        else:
+            self.status_message(tr("Nothing to discard").format(self.config_path.name), msecs=3000)
 
     def is_unsaved(self) -> bool:
         if self.config_path.exists():
@@ -3251,6 +3272,7 @@ class SettingsEditorLineBase(SettingsEditorFieldBase):
 
     def reset(self) -> None:
         self.text_input.setText(self.section_editor.ini_before[self.section][self.option])
+        self.editing_finished()
 
 
 class SettingsEditorFloatWidget(SettingsEditorFieldBase):
@@ -3368,7 +3390,7 @@ class SettingsEditorLongTextWidget(SettingsEditorFieldBase):
         text_editor = QPlainTextEdit(section_editor.ini_editable[section][option])
 
         def _text_changed() -> None:
-            section_editor.ini_editable[section][option] = text_editor.toPlainText()
+            section_editor.ini_editable[section][option] = text_editor.toPlainText().strip()
 
         text_editor.textChanged.connect(_text_changed)
         layout.addWidget(text_editor)
@@ -3388,7 +3410,7 @@ class SettingsEditorTextWidget(SettingsEditorLongTextWidget):
 class SettingsEditorPathValidator(QValidator):
 
     def validate(self, text, pos):
-        if text != '':
+        if text.strip():
             if not Path(text).exists() or not Path(text).is_file():
                 MBox(MBox.Critical, msg=tr("The selected file does not exist or is not an ordinary file.")).exec()
                 return QValidator.Invalid, text, pos
@@ -3418,7 +3440,7 @@ class SettingsEditorPathWidget(SettingsEditorLineBase):
 
     def editing_finished(self) -> None:
         super().editing_finished()
-        if not self.has_error and self.text_input.text() != '':
+        if not self.has_error and self.text_input.text().strip() != '':
             if self.section_editor.ini_editable[self.section][self.option] != self.section_editor.ini_before[self.section][
                 self.option]:
                 mb = MBox(MBox.Information,
@@ -3429,9 +3451,7 @@ class SettingsEditorPathWidget(SettingsEditorLineBase):
                                "<a href='https://github.com/digitaltrails/vdu_controls/issues/44'>"
                                "https://github.com/digitaltrails/vdu_controls/issues/44</a><br/>"
                                "or by email to <a href='mailto:michael@actrix.gen.nz?subject=ddcutil-emulator'>"
-                               "michael@actrix.gen.nz</a>.",
-                          details=f"{ConfOption.DDCUTIL_EMULATOR.conf_name}={self.text_input.text()}",
-                          buttons=MBox.Close)
+                               "michael@actrix.gen.nz</a>.", buttons=MBox.Close)
                 mb.setTextFormat(Qt.AutoText)
                 mb.exec()
 
