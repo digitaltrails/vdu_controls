@@ -357,7 +357,7 @@ Version History
   * Show light-level icon on tray if no preset active (when lux options are enabled). 
   * Slider responsiveness improved by fixing the interuptable-sleep (doze) implementation.
   * Added a ddcutil-emulator option which may define an interface for laptop-panels 
-    or other non-DDC capable displays. Currently, no working emulatores are implemented or 
+    or other non-DDC capable displays. Currently, no working emulators are implemented or 
     packaged, but a sample-scripts/laptop-ddcutil-emulator.bash is included as a starter
     kit.
   * The Settings-Dialog is now scrollable (because it was getting quite large).
