@@ -2970,50 +2970,49 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
         self.editor_tab_list: List[SettingsEditorTab] = []
         self.change_callback = change_callback
 
-        self.status_bar = QStatusBar()
+        self.bottom_status_bar = QStatusBar()
 
-        self.tab_specific_buttons_label = QLabel(tr('Current tab:'))
-        self.tab_specific_buttons = QFrame(self)
-        tsb_layout = QHBoxLayout()
-        self.tab_specific_buttons.setLayout(tsb_layout)
-        tsb_layout.addWidget(self.tab_specific_buttons_label)
+        self.tab_ops = QFrame(self)  # Groups operations that target the current tab
+        self.tab_ops.setLayout(QHBoxLayout())
+        self.tab_ops_label = QLabel(tr('Current tab:'))
+        self.tab_ops.layout().addWidget(self.tab_ops_label)
 
-        def _restore_application_defaults():
+        def _tab_ops_restore_application_defaults() -> None:
             self.tabs_widget.currentWidget().restore_application_defaults()
 
-        self.restore_defaults_button = QPushButton(si(self, QStyle.SP_DialogDiscardButton), tr('Defaults'))
-        self.restore_defaults_button.clicked.connect(_restore_application_defaults)  # type: ignore
-        tsb_layout.addWidget(self.restore_defaults_button)
+        self.tab_ops_restore_defaults_button = QPushButton(si(self, QStyle.SP_DialogDiscardButton), tr('Defaults'))
+        self.tab_ops_restore_defaults_button.clicked.connect(_tab_ops_restore_application_defaults)  # type: ignore
+        self.tab_ops.layout().addWidget(self.tab_ops_restore_defaults_button)
 
-        def _revert_current_tab() -> None:
+        def _tab_ops_revert_current_tab() -> None:
             self.tabs_widget.currentWidget().revert_changes()
 
-        self.revert_button = QPushButton(si(self, QStyle.SP_DialogResetButton), tr('Revert'))
-        self.revert_button.clicked.connect(_revert_current_tab)  # type: ignore
-        tsb_layout.addWidget(self.revert_button)
+        self.tab_ops_revert_button = QPushButton(si(self, QStyle.SP_DialogResetButton), tr('Revert'))
+        self.tab_ops_revert_button.clicked.connect(_tab_ops_revert_current_tab)  # type: ignore
+        self.tab_ops.layout().addWidget(self.tab_ops_revert_button)
 
-        def _save_current_tab() -> None:
+        def _tab_ops_save_current_tab() -> None:
             self.tabs_widget.currentWidget().save()
 
-        self.save_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr('Save'))
-        self.save_button.clicked.connect(_save_current_tab)   # type: ignore
-        tsb_layout.addWidget(self.save_button)
-        self.status_bar.addPermanentWidget(self.tab_specific_buttons, 0)
+        self.tab_ops_save_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr('Save'))
+        self.tab_ops_save_button.clicked.connect(_tab_ops_save_current_tab)   # type: ignore
+        self.tab_ops.layout().addWidget(self.tab_ops_save_button)
 
-        self.status_bar.addPermanentWidget(QLabel('                    '))
+        self.bottom_status_bar.addPermanentWidget(self.tab_ops, 0)
+        self.bottom_status_bar.addPermanentWidget(QLabel('                    '))
 
         save_all_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr("Save All"))
         save_all_button.clicked.connect(partial(self.save_all, True))
-        self.status_bar.addPermanentWidget(save_all_button, 0)
+        self.bottom_status_bar.addPermanentWidget(save_all_button, 0)
 
         quit_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), tr("Close"))
         quit_button.clicked.connect(self.close)  # type: ignore
-        self.status_bar.addPermanentWidget(quit_button, 0)
+        self.bottom_status_bar.addPermanentWidget(quit_button, 0)
 
-        self.layout().addWidget(self.status_bar)
+        self.layout().addWidget(self.bottom_status_bar)
 
         def _tab_changed(index: int) -> None:
-            self.update_tab_specific_group(self.tabs_widget.widget(index))
+            self.update_tab_ops(self.tabs_widget.widget(index))
 
         self.tabs_widget.currentChanged.connect(_tab_changed)
 
@@ -3021,7 +3020,7 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
         self.make_visible()
         
     def status_message(self, message: str, msecs: int = 0):  # Display a message on the visible tab.
-        self.status_bar.showMessage(message, msecs)
+        self.bottom_status_bar.showMessage(message, msecs)
 
     def make_visible(self) -> None:
         self.settings_scroll_area.verticalScrollBar().setValue(0)
@@ -3030,12 +3029,12 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
     def sizeHint(self):
         return QSize(native_pixels(1480), native_pixels(1000))
 
-    def update_tab_specific_group(self, tab: SettingsEditorTab) -> None:
-        self.tab_specific_buttons_label.setText(tr('{}: ').format(tab.preferred_name))
-        self.tab_specific_buttons.setToolTip(tr('{}: {}').format(tab.preferred_name, tab.config_path.as_posix()))
-        self.save_button.setToolTip(tr('Save {} to \n{}').format(tab.preferred_name, tab.config_path.as_posix()))
-        self.revert_button.setToolTip(tr('Revert {} from \n{}').format(tab.preferred_name, tab.config_path.as_posix()))
-        self.restore_defaults_button.setToolTip(
+    def update_tab_ops(self, tab: SettingsEditorTab) -> None:
+        self.tab_ops_label.setText(tr('{}: ').format(tab.preferred_name))
+        self.tab_ops.setToolTip(tr('{}: {}').format(tab.preferred_name, tab.config_path.as_posix()))
+        self.tab_ops_save_button.setToolTip(tr('Save {} to \n{}').format(tab.preferred_name, tab.config_path.as_posix()))
+        self.tab_ops_revert_button.setToolTip(tr('Revert {} from \n{}').format(tab.preferred_name, tab.config_path.as_posix()))
+        self.tab_ops_restore_defaults_button.setToolTip(
             tr('Remove {}\nand restore {} to application defaults').format(tab.config_path.as_posix(), tab.preferred_name))
 
     def reconfigure(self, config_list: List[VduControlsConfig]) -> None:
@@ -3053,7 +3052,7 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
             tab.set_preferred_name(vdu_label)
             self.tabs_widget.setTabText(self.tabs_widget.indexOf(tab), vdu_label)
             if tab == self.tabs_widget.currentWidget():
-                self.update_tab_specific_group(tab)
+                self.update_tab_ops(tab)
             if config.file_path:
                 self.tabs_widget.setTabToolTip(self.tabs_widget.indexOf(tab), config.file_path.as_posix())
 
@@ -3193,12 +3192,10 @@ class SettingsEditorTab(QWidget):
 
     def revert_changes(self) -> None:
         if self.is_unsaved():
-            message = tr("Discarded changes to {}").format(self.config_path.name)
-            self.editor_dialog.status_message(message, 3000)
+            self.editor_dialog.status_message(tr("Discarded changes to {}").format(self.config_path.name), 3000)
             self.ini_editable = self.ini_before.duplicate()  # Revert
         else:
-            message1 = tr("Nothing to discard").format(self.config_path.name)
-            self.editor_dialog.status_message(message1, 3000)
+            self.editor_dialog.status_message(tr("Nothing to discard").format(self.config_path.name), 3000)
         self.reset()
 
     def restore_application_defaults(self):
