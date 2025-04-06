@@ -27,9 +27,9 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Mar 16, 2025" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Apr 06, 2025" "" "vdu_controls"
 .SH NAME
-vdu_controls \- vdu_controls 2.2.0
+vdu_controls \- vdu_controls 2.3.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
 .sp
 A control panel for DisplayPort, DVI, HDMI, or USB connected VDUs (\fIVisual Display Units\fP).
@@ -52,7 +52,7 @@ A control panel for DisplayPort, DVI, HDMI, or USB connected VDUs (\fIVisual Dis
 [\-\-dbus\-client|\-\-no\-dbus\-client] [\-\-dbus\-events|\-\-no\-dbus\-events]
 [\-\-syslog|\-\-no\-syslog] [\-\-debug|\-\-no\-debug] [\-\-warnings|\-\-no\-warnings]
 [\-\-translations|\-\-no\-translations]
-[\-\-location latitude,longitude]
+[\-\-location latitude,longitude] [\-\-ddcutil\-emulator emulator\-path]
 [\-\-sleep\-multiplier multiplier] [\-\-ddcutil\-extra\-args \(aqextra args\(aq]
 [\-\-create\-config\-files] [\-\-install] [\-\-uninstall]
 .UNINDENT
@@ -159,6 +159,9 @@ by solar elevation
 .UNINDENT
 .INDENT 0.0
 .TP
+.BI \-\-ddcutil\-emulator \ emulator\-path
+additional command\-line ddcutil emulator for a laptop panel
+.TP
 .B  \-\-sleep\-multiplier
 set the default ddcutil sleep multiplier
 protocol reliability multiplier for ddcutil (typically
@@ -196,7 +199,7 @@ From \fBvdu_controls 2.0\fP onward, \fBvdu_controls\fP defaults to using the \fB
 Should the \fBddcutil\-service\fP be unavailable, \fBvdu_controls\fP will fall back to running the
 \fBddcutil\fP command to perform each request.
 .sp
-The UI\(aqs look\-and\-feel dynamically adjusts to dark and light themes. The application may
+The UI look\-and\-feel dynamically adjusts to dark and light themes. The application may
 optionally run in the system tray of KDE, Deepin, GNOME, and Xfce (and possibly others).
 .sp
 The UI provides an optional \fBambient\-light slider\fP for simultaneously adjusting
@@ -739,7 +742,7 @@ max\-brightness\-jump=100
 If you are using \fBddcutil\fP version 2.0 or greater, \fBvdu_controls\fP will default to using the
 \fBddcutil\fP \fIdynamic sleep optimiser\fP\&.  The optimiser automatically tunes and caches VDU specific
 timings when ever \fBddcutil\fP is run.  Any reliability\-issues or errors may be automatically
-resolved as the optimiser refines it\(aqs cached timings.  Should problems persist, the
+resolved as the optimiser refines its cached timings.  Should problems persist, the
 optimiser can be disabled by adding \fI\-\-disable\-dynamic\-sleep\fP to the \fBddcutil extra arguments\fP in
 the \fBSettings Dialog\fP (either globally on the \fBvdu_controls tab\fP or selectively under each VDU\(aqs
 tab).  If dynamic sleep is disabled, multipliers can then be manually assigned. The optimiser\(aqs
@@ -822,12 +825,17 @@ The bottom of the About\-dialog shows the same numbers. They update dynamically.
 .UNINDENT
 .SS Laptops
 .sp
-Builtin laptop displays normally don\(aqt implement DDC and those displays are not supported, but a
-laptop\(aqs externally connected VDUs are likely to be controllable.
+A laptop\(aqs builtin\-panel normally doesn\(aqt implement DDC and cannot be controlled
+by \fBddcutil\fP or \fBddcutil\-service\fP\&.  Laptop panel brightness are controlled
+by a variety of methods that vary by vendor and hardware.  If you have a laptop
+where such adjustments can be scripted, you can use the \fB\-\-ddcutil\-emulator\fP
+option and provide \fBvdu_controls\fP with a ddcutil\-like script for getting and
+setting the panel brightness, then \fBvdu_controls\fP will treat the laptop panel
+just like any other VDU.  A template script is provided in the \fBsample\-scripts\fP\&.
 .SS Cross\-platform differences
 .sp
 Wayland doesn\(aqt allow an application to precisely position its windows.  When the \fBsmart\-window\fP
-option is enabled and the desktop platform is Wayland, the application switches it\(aqs platform to
+option is enabled and the desktop platform is Wayland, the application switches its platform to
 X11 (xcb) so that it runs in XWayland.
 .sp
 The UI attempts to step around minor differences between KDE, GNOME, and the rest, the UI on
@@ -927,8 +935,8 @@ value, for example: \fBDa_DK\fP\&. For these to have any effect on language, \fB
 .TP
 .B VDU_CONTROLS_UI_IDLE_SECS
 The length of pause in slider or spin\-box control motion that triggers commit of
-the controls value to the VDU.  This is a precautionary throttle in case frequently
-updating a VDU might shorten its lifespan.  The default is 0.5 seconds.
+the controls value to the VDU.  This prevents altering a slider from constantly updating
+a VDU, which might shorten its NVRAM lifespan. The default is 0.5 seconds.
 .TP
 .B VDU_CONTROLS_IPINFO_URL
 Override the default ip\-address to location service URL (\fBhttps://ipinfo.io/json\fP).

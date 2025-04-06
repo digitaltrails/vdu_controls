@@ -22,7 +22,7 @@ Synopsis:
                      [--dbus-client|--no-dbus-client] [--dbus-events|--no-dbus-events]
                      [--syslog|--no-syslog] [--debug|--no-debug] [--warnings|--no-warnings]
                      [--translations|--no-translations]
-                     [--location latitude,longitude]
+                     [--location latitude,longitude] [--ddcutil-emulator emulator-path]
                      [--sleep-multiplier multiplier] [--ddcutil-extra-args 'extra args']
                      [--create-config-files] [--install] [--uninstall]
 
@@ -90,6 +90,8 @@ Arguments supplied on the command line override config file equivalent settings.
       --location latitude,longitude
                             local latitude and longitude for triggering presets
                             by solar elevation
+      --ddcutil-emulator emulator-path
+                            additional command-line ddcutil emulator for a laptop panel
       --sleep-multiplier    set the default ddcutil sleep multiplier
                             protocol reliability multiplier for ddcutil (typically
                             0.1 .. 2.0, default is 1.0)
@@ -630,8 +632,13 @@ to reduce the overall frequency of adjustments to acceptable levels.
 Laptops
 -------
 
-Builtin laptop displays normally don't implement DDC and those displays are not supported, but a
-laptop's externally connected VDUs are likely to be controllable.
+A laptop's builtin-panel normally doesn't implement DDC and cannot be controlled
+by ``ddcutil`` or ``ddcutil-service``.  Laptop panel brightness are controlled
+by a variety of methods that vary by vendor and hardware.  If you have a laptop
+where such adjustments can be scripted, you can use the ``--ddcutil-emulator``
+option and provide ``vdu_controls`` with a ddcutil-like script for getting and
+setting the panel brightness, then ``vdu_controls`` will treat the laptop panel
+just like any other VDU.  A template script is provided in the ``sample-scripts``.
 
 Cross-platform differences
 --------------------------
@@ -852,7 +859,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QDesktopWidget, QSpacerItem
 
 APPNAME = "VDU Controls"
-VDU_CONTROLS_VERSION = '2.2.1'
+VDU_CONTROLS_VERSION = '2.3.0'
 VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in VDU_CONTROLS_VERSION.split('.'))
 assert sys.version_info >= (3, 8), f'{APPNAME} utilises python version 3.8 or greater (your python is {sys.version}).'
 

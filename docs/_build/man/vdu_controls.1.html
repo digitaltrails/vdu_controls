@@ -17,7 +17,7 @@ a DDC control panel for monitors</h1>
                  [--dbus-client|--no-dbus-client] [--dbus-events|--no-dbus-events]
                  [--syslog|--no-syslog] [--debug|--no-debug] [--warnings|--no-warnings]
                  [--translations|--no-translations]
-                 [--location latitude,longitude]
+                 [--location latitude,longitude] [--ddcutil-emulator emulator-path]
                  [--sleep-multiplier multiplier] [--ddcutil-extra-args &#39;extra args&#39;]
                  [--create-config-files] [--install] [--uninstall]</code></pre>
 <h2 id="optional-arguments">Optional arguments:</h2>
@@ -82,6 +82,8 @@ equivalent settings.</p>
   --location latitude,longitude
                         local latitude and longitude for triggering presets
                         by solar elevation
+  --ddcutil-emulator emulator-path
+                        additional command-line ddcutil emulator for a laptop panel
   --sleep-multiplier    set the default ddcutil sleep multiplier
                         protocol reliability multiplier for ddcutil (typically
                         0.1 .. 2.0, default is 1.0)
@@ -111,7 +113,7 @@ defaults to using the <code>D-Bus ddcutil-service</code>. Should the
 <code>ddcutil-service</code> be unavailable, <code>vdu_controls</code>
 will fall back to running the <code>ddcutil</code> command to perform
 each request.</p>
-<p>The UI’s look-and-feel dynamically adjusts to dark and light themes.
+<p>The UI look-and-feel dynamically adjusts to dark and light themes.
 The application may optionally run in the system tray of KDE, Deepin,
 GNOME, and Xfce (and possibly others).</p>
 <p>The UI provides an optional <code>ambient-light slider</code> for
@@ -576,7 +578,7 @@ Response Time: Dynamic Optimization and Sleep Multipliers</h2>
 <em>dynamic sleep optimiser</em>. The optimiser automatically tunes and
 caches VDU specific timings when ever <code>ddcutil</code> is run. Any
 reliability-issues or errors may be automatically resolved as the
-optimiser refines it’s cached timings. Should problems persist, the
+optimiser refines its cached timings. Should problems persist, the
 optimiser can be disabled by adding <code>--disable-dynamic-sleep</code>
 to the <strong>ddcutil extra arguments</strong> in the <strong>Settings
 Dialog</strong> (either globally on the <strong>vdu_controls
@@ -650,13 +652,19 @@ dynamically.</li>
 </ul></li>
 </ul>
 <h2 id="laptops">Laptops</h2>
-<p>Builtin laptop displays normally don’t implement DDC and those
-displays are not supported, but a laptop’s externally connected VDUs are
-likely to be controllable.</p>
+<p>A laptop’s builtin-panel normally doesn’t implement DDC and cannot be
+controlled by <code>ddcutil</code> or <code>ddcutil-service</code>.
+Laptop panel brightness are controlled by a variety of methods that vary
+by vendor and hardware. If you have a laptop where such adjustments can
+be scripted, you can use the <code>--ddcutil-emulator</code> option and
+provide <code>vdu_controls</code> with a ddcutil-like script for getting
+and setting the panel brightness, then <code>vdu_controls</code> will
+treat the laptop panel just like any other VDU. A template script is
+provided in the <code>sample-scripts</code>.</p>
 <h2 id="cross-platform-differences">Cross-platform differences</h2>
 <p>Wayland doesn’t allow an application to precisely position its
 windows. When the <code>smart-window</code> option is enabled and the
-desktop platform is Wayland, the application switches it’s platform to
+desktop platform is Wayland, the application switches its platform to
 X11 (xcb) so that it runs in XWayland.</p>
 <p>The UI attempts to step around minor differences between KDE, GNOME,
 and the rest, the UI on each may not be exactly the same.</p>
@@ -731,8 +739,8 @@ GPUs. Detailed ddcutil info at https://www.ddcutil.com/</p>
 
 VDU_CONTROLS_UI_IDLE_SECS
     The length of pause in slider or spin-box control motion that triggers commit of
-    the controls value to the VDU.  This is a precautionary throttle in case frequently
-    updating a VDU might shorten its lifespan.  The default is 0.5 seconds.
+    the controls value to the VDU.  This prevents altering a slider from constantly updating
+    a VDU, which might shorten its NVRAM lifespan. The default is 0.5 seconds.
 
 VDU_CONTROLS_IPINFO_URL
     Override the default ip-address to location service URL (``https://ipinfo.io/json``).

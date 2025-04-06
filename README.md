@@ -353,7 +353,7 @@ Michael Hamilton
 Version History
 ---------------
 
-* 2.2.1
+* 2.3.0
   * Show light-level icon on tray if no preset active (when lux options are enabled). 
   * Slider responsiveness improved by fixing the interuptable-sleep (doze) implementation.
   * Added a ddcutil-emulator option which may define an emulated ddcutil-command that 
