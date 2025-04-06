@@ -356,13 +356,10 @@ Version History
 * 2.3.0
   * Show light-level icon on tray if no preset active (when lux options are enabled). 
   * Slider responsiveness improved by fixing the interuptable-sleep (doze) implementation.
-  * Added a ddcutil-emulator option which may define an emulated ddcutil-command that 
-    interfaces to laptop-panels or any other non-DDC capable displays. In addition to real-DDC 
-    displays detected by ddcutil/dccutil-service, an emulator may add a number of
-    emulated-DDC displays.  Currently, no emulatores are implemented or packaged.
-  * A sample-scripts/laptop-ddcutil-emulator.bash is provided as a starter kit.
-    The script must be customisated to provide a get/set brightness for a given target
-    platform (Intel driven panel, AMD driven panel, ...)
+  * Added a ddcutil-emulator option which may define an interface for laptop-panels 
+    or other non-DDC capable displays. Currently, no emulatores are implemented or 
+    packaged, but a sample-scripts/laptop-ddcutil-emulator.bash is included as a starter
+    kit.
   * The Settings-Dialog is now scrollable (because it was getting quite large).
   * Renamed some of the lux light levels.
 
