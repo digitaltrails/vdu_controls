@@ -2369,12 +2369,12 @@ class ConfIni(configparser.ConfigParser):
     def get_path(config_name: str) -> Path:
         return CONFIG_DIR_PATH.joinpath(config_name + '.conf')
 
-class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration - not really Enum - alternatives?
+class ConfOption(Enum):  # An Enum with tuples for values is used for convenience for scope/iteration
 
     _ignore_ = ['CI']
     CI = ConfIni  # Shorthand for next series of declarations only
 
-    @staticmethod
+    @staticmethod  # Tricky way of creating a tuple with default values for some tuple members.
     def _def(cname: str, section: str = CI.VDU_CONTROLS_GLOBALS, conf_type: str = CI.TYPE_BOOL, default: str | None = None,
              global_allowed: bool = True, restart: bool = False, cmdline_arg: str = 'DEFAULT', tip: str = '',
              related: str = '', requires: str = '') -> tuple[str, str, str, str, str | None, bool, str, str, str, bool]:
@@ -2431,7 +2431,9 @@ class ConfOption(Enum):  # TODO Enum is used for convenience for scope/iteration
 
     def __init__(self, conf_name: str, section: str, cmdline_arg: str, conf_type: str, default: str | None,
                  restart_required: bool, help_text: str, related: str, requires: str, global_allowed):
-        self.conf_name, self.conf_section, self.conf_type, self.default_value = conf_name, section, conf_type, default
+        self.conf_name = conf_name
+        self.conf_section = section
+        self.conf_type = conf_type
         self.conf_id = self.conf_section, self.conf_name
         self.restart_required = restart_required
         self.help = help_text
