@@ -1281,7 +1281,7 @@ def is_dark_theme() -> bool:
     return dark_theme_found
 
 
-DEVELOPERS_NATIVE_FONT_HEIGHT = 32  # The font height being used on my development desktop.
+DEVELOPERS_NATIVE_FONT_HEIGHT = 32  # The font height in physical pixels being used on my development desktop.
 native_font_height_pixels: int | None = None  # A metric for use in sizing components relative to DEVELOPERS_NATIVE_FONT_HEIGHT.
 
 
@@ -2297,51 +2297,28 @@ class ScheduleWorker(WorkerThread):
 class ConfIni(configparser.ConfigParser):
     """ConfigParser is a little messy and its class name is a bit misleading, wrap it and bend it to our needs."""
 
-    METADATA_SECTION = "metadata"  # INI version tracking section
-    METADATA_VERSION_OPTION = "version"
-    METADATA_TIMESTAMP_OPTION = "timestamp"
-
-    VDU_CONTROLS_GLOBALS = QT_TR_NOOP('vdu-controls-globals')  # Data sections
-    VDU_CONTROLS_WIDGETS = QT_TR_NOOP('vdu-controls-widgets')
-    DDCUTIL_PARAMETERS = QT_TR_NOOP('ddcutil-parameters')
-    DDCUTIL_CAPABILITIES = QT_TR_NOOP('ddcutil-capabilities')
-    UNKNOWN_SECTION = QT_TR_NOOP('unknown')
-
-    TYPE_BOOL = 'bool'  # Supported types
-    TYPE_FLOAT = 'float'
-    TYPE_CSV = 'csv'
-    TYPE_LONG_TEXT = 'long_text'
-    TYPE_TEXT = 'mediumtext'
-    TYPE_LOCATION = 'location'
-    TYPE_PATH = 'path'
-
     def __init__(self) -> None:
         super().__init__(interpolation=None)
-        if not self.has_section(ConfIni.METADATA_SECTION):
-            self.add_section(ConfIni.METADATA_SECTION)
+        if not self.has_section(ConfSec.METADATA_SECTION):
+            self.add_section(ConfSec.METADATA_SECTION)
 
     def data_sections(self) -> List:  # Section other than metadata and DEFAULT - real data.
-        return [s for s in self.sections() if s != configparser.DEFAULTSECT and s != ConfIni.METADATA_SECTION]
+        return [s for s in self.sections() if s != configparser.DEFAULTSECT and s != ConfSec.METADATA_SECTION]
 
     def get_version(self) -> Tuple:
-        if self.has_option(ConfIni.METADATA_SECTION, ConfIni.METADATA_VERSION_OPTION):
-            version = self[ConfIni.METADATA_SECTION][ConfIni.METADATA_VERSION_OPTION]
+        if version := self.get(*ConfOpt.METADATA_VERSION_OPTION.conf_id, fallback=None):
             try:
                 return tuple(int(i) for i in version.split('.'))
             except ValueError:
                 log_error(f"Illegal version number {version} should be i.j.k where i, j and k are integers.", trace=True)
         return 1, 6, 0
 
-    def get_non_empty_str(self, section, option, fallback):
-        value = super().get(section, option, fallback=fallback)
-        return value if value is not None and value.strip() != '' else fallback
-
     def save(self, config_path) -> None:
         if not config_path.parent.is_dir():
             os.makedirs(config_path.parent)
         with open(config_path, 'w', encoding="utf-8") as config_file:
-            self[ConfIni.METADATA_SECTION][ConfIni.METADATA_VERSION_OPTION] = VDU_CONTROLS_VERSION
-            self[ConfIni.METADATA_SECTION][ConfIni.METADATA_TIMESTAMP_OPTION] = str(zoned_now())
+            self[ConfOpt.METADATA_VERSION_OPTION.conf_section][ConfOpt.METADATA_VERSION_OPTION.conf_name] = VDU_CONTROLS_VERSION
+            self[ConfOpt.METADATA_TIMESTAMP_OPTION.conf_section][ConfOpt.METADATA_TIMESTAMP_OPTION.conf_name] = str(zoned_now())
             self.write(config_file)
         log_info(f"Wrote config to {config_path.as_posix()}")
 
@@ -2349,7 +2326,7 @@ class ConfIni(configparser.ConfigParser):
         if new_ini is None:
             new_ini = ConfIni()
         for section in self:
-            if section != configparser.DEFAULTSECT and section != ConfIni.METADATA_SECTION:
+            if section != configparser.DEFAULTSECT and section != ConfSec.METADATA_SECTION:
                 new_ini.add_section(section)
             for option in self[section]:
                 new_ini[section][option] = self[section][option]
@@ -2358,7 +2335,7 @@ class ConfIni(configparser.ConfigParser):
     def diff(self, other: ConfIni, vdu_settings_only: bool = False) -> Dict[Tuple[str, str], str]:
         values = []
         for subject in (self, other):
-            sections = set(subject.sections()) - {configparser.DEFAULTSECT, ConfIni.METADATA_SECTION}
+            sections = set(subject.sections()) - {configparser.DEFAULTSECT, ConfSec.METADATA_SECTION}
             if vdu_settings_only:
                 sections -= {'preset'}
             values.append([(section, option, value) for section in sections for option, value in subject[section].items()])
@@ -2369,13 +2346,30 @@ class ConfIni(configparser.ConfigParser):
     def get_path(config_name: str) -> Path:
         return CONFIG_DIR_PATH.joinpath(config_name + '.conf')
 
-class ConfOption(Enum):  # An Enum with tuples for values is used for convenience for scope/iteration
 
-    _ignore_ = ['CI']
-    CI = ConfIni  # Shorthand for next series of declarations only
+class ConfType:  # Supported types constants (in Python 3.11 this could be a StrEnum)
+    BOOL = 'bool'
+    FLOAT = 'float'
+    CSV = 'csv'
+    LONG_TEXT = 'long_text'
+    TEXT = 'text'
+    LOCATION = 'location'
+    PATH = 'path'
+
+
+class ConfSec:  # Data section constants (in Python 3.11 this could be a StrEnum)
+    METADATA_SECTION = QT_TR_NOOP("metadata")  # INI version tracking section
+    VDU_CONTROLS_GLOBALS = QT_TR_NOOP('vdu-controls-globals')
+    VDU_CONTROLS_WIDGETS = QT_TR_NOOP('vdu-controls-widgets')
+    DDCUTIL_PARAMETERS = QT_TR_NOOP('ddcutil-parameters')
+    DDCUTIL_CAPABILITIES = QT_TR_NOOP('ddcutil-capabilities')
+    UNKNOWN_SECTION = QT_TR_NOOP('unknown')
+
+
+class ConfOpt(Enum):  # An Enum with tuples for values is used for convenience for scope/iteration
 
     @staticmethod  # Tricky way of creating a tuple with default values for some tuple members.
-    def _def(cname: str, section: str = CI.VDU_CONTROLS_GLOBALS, conf_type: str = CI.TYPE_BOOL, default: str | None = None,
+    def _def(cname: str, section: str = ConfSec.VDU_CONTROLS_GLOBALS, conf_type: str = ConfType.BOOL, default: str | None = None,
              global_allowed: bool = True, restart: bool = False, cmdline_arg: str = 'DEFAULT', tip: str = '',
              related: str = '', requires: str = '') -> tuple[str, str, str, str, str | None, bool, str, str, str, bool]:
         return cname, section, cmdline_arg, conf_type, default, restart, tip, related, requires, global_allowed
@@ -2413,21 +2407,24 @@ class ConfOption(Enum):  # An Enum with tuples for values is used for convenienc
                             tip=QT_TR_NOOP('popup warnings if a VDU lacks an enabled control'))
     TRANSLATIONS_ENABLED = _def(cname=QT_TR_NOOP('translations-enabled'), default="no", restart=True,
                                 tip=QT_TR_NOOP('enable language translations, currently not updated (no known users)'))
-    LOCATION = _def(cname=QT_TR_NOOP('location'), conf_type=CI.TYPE_LOCATION, tip=QT_TR_NOOP('latitude,longitude'))
-    DDCUTIL_EMULATOR = _def(cname=QT_TR_NOOP('ddcutil-emulator'), conf_type=CI.TYPE_PATH,
+    LOCATION = _def(cname=QT_TR_NOOP('location'), conf_type=ConfType.LOCATION, tip=QT_TR_NOOP('latitude,longitude'))
+    DDCUTIL_EMULATOR = _def(cname=QT_TR_NOOP('ddcutil-emulator'), conf_type=ConfType.PATH,
                             tip=QT_TR_NOOP('additional command-line ddcutil emulator for a laptop panel'))
-    SLEEP_MULTIPLIER = _def(cname=QT_TR_NOOP('sleep-multiplier'), section=CI.DDCUTIL_PARAMETERS, conf_type=CI.TYPE_FLOAT,
+    SLEEP_MULTIPLIER = _def(cname=QT_TR_NOOP('sleep-multiplier'), section=ConfSec.DDCUTIL_PARAMETERS, conf_type=ConfType.FLOAT,
                             tip=QT_TR_NOOP('ddcutil --sleep-multiplier (0.1 .. 2.0, default none)'))
-    DDCUTIL_EXTRA_ARGS = _def(cname=QT_TR_NOOP('ddcutil-extra-args'), section=CI.DDCUTIL_PARAMETERS, conf_type=CI.TYPE_TEXT,
+    DDCUTIL_EXTRA_ARGS = _def(cname=QT_TR_NOOP('ddcutil-extra-args'), section=ConfSec.DDCUTIL_PARAMETERS, conf_type=ConfType.TEXT,
                               tip=QT_TR_NOOP('ddcutil extra arguments (default none)'))
-    VDU_NAME = _def(cname=QT_TR_NOOP('vdu-name'), section=CI.VDU_CONTROLS_WIDGETS, conf_type=CI.TYPE_TEXT,
+    VDU_NAME = _def(cname=QT_TR_NOOP('vdu-name'), section=ConfSec.VDU_CONTROLS_WIDGETS, conf_type=ConfType.TEXT,
                     global_allowed=False, cmdline_arg='DISALLOWED', tip=QT_TR_NOOP('Name to display for this VDU'))
-    ENABLE_VCP_CODES = _def(cname=QT_TR_NOOP('enable-vcp-codes'), section=CI.VDU_CONTROLS_WIDGETS, conf_type=CI.TYPE_CSV,
+    ENABLE_VCP_CODES = _def(cname=QT_TR_NOOP('enable-vcp-codes'), section=ConfSec.VDU_CONTROLS_WIDGETS, conf_type=ConfType.CSV,
                             cmdline_arg='DISALLOWED', tip=QT_TR_NOOP('CSV list of VCP Hex-code capabilities to enable'))
-    CAPABILITIES_OVERRIDE = _def(cname=QT_TR_NOOP('capabilities-override'), section=CI.DDCUTIL_CAPABILITIES,
-                                 conf_type=CI.TYPE_LONG_TEXT, cmdline_arg='DISALLOWED',
-                                 tip=QT_TR_NOOP('override/cache for ddcutil capabilities text'))
-    UNKNOWN = _def(cname="UNKNOWN", section=CI.UNKNOWN_SECTION, conf_type=CI.TYPE_BOOL, cmdline_arg='DISALLOWED', tip='')
+    CAPABILITIES_OVERRIDE = _def(cname=QT_TR_NOOP('capabilities-override'), section=ConfSec.DDCUTIL_CAPABILITIES,
+                                 conf_type=ConfType.LONG_TEXT, cmdline_arg='DISALLOWED')
+    METADATA_VERSION_OPTION = _def(cname=QT_TR_NOOP('version'), section=ConfSec.METADATA_SECTION,
+                                 conf_type=ConfType.BOOL, cmdline_arg='DISALLOWED')
+    METADATA_TIMESTAMP_OPTION = _def(cname=QT_TR_NOOP('timestamp'), section=ConfSec.METADATA_SECTION,
+                                 conf_type=ConfType.BOOL, cmdline_arg='DISALLOWED')
+    UNKNOWN = _def(cname="UNKNOWN", section=ConfSec.UNKNOWN_SECTION, conf_type=ConfType.BOOL, cmdline_arg='DISALLOWED', tip='')
 
     def __init__(self, conf_name: str, section: str, cmdline_arg: str, conf_type: str, default: str | None,
                  restart_required: bool, help_text: str, related: str, requires: str, global_allowed):
@@ -2446,12 +2443,12 @@ class ConfOption(Enum):  # An Enum with tuples for values is used for convenienc
 
     def add_cmdline_arg(self, parser: argparse.ArgumentParser) -> None:
         if self.cmdline_arg != "DISALLOWED":
-            if self.conf_type == ConfIni.TYPE_BOOL:  # Store strings for bools, allows us to differentiate yes/no and not supplied.
+            if self.conf_type == ConfType.BOOL:  # Store strings for bools, allows us to differentiate yes/no and not supplied.
                 parser.add_argument(f"--{self.cmdline_arg}", dest=self.cmdline_var, action='store_const', const='yes',
                                     help=self.help + ' ' + (tr('(default)') if self.default_value == 'yes' else ''))
                 parser.add_argument(f"--no-{self.cmdline_arg}", dest=self.cmdline_var, action='store_const', const='no',
                                     help=tr('(default)') if self.default_value == 'no' else '')
-            elif self.conf_type == ConfIni.TYPE_FLOAT:
+            elif self.conf_type == ConfType.FLOAT:
                 parser.add_argument(f"--{self.cmdline_arg}", type=float, default=self.default_value, help=self.help)
             else:
                 parser.add_argument(f"--{self.cmdline_arg}", type=str, default=self.default_value, help=self.help)
@@ -2468,25 +2465,25 @@ class VduControlsConfig:
         self.ini_content = ConfIni()
 
         if main_config:
-            self.ini_content[ConfIni.VDU_CONTROLS_GLOBALS] = {}
-            for option in ConfOption:  # Add in options for all supported controls
-                if option.conf_section == ConfIni.VDU_CONTROLS_GLOBALS:
+            self.ini_content[ConfSec.VDU_CONTROLS_GLOBALS] = {}
+            for option in ConfOpt:  # Add in options for all supported controls
+                if option.conf_section == ConfSec.VDU_CONTROLS_GLOBALS:
                     default_str = str(option.default_value) if option.default_value is not None else ''
                     self.ini_content.set(*option.conf_id, default_str)
 
-        self.ini_content[ConfIni.VDU_CONTROLS_WIDGETS] = {}
-        self.ini_content[ConfIni.DDCUTIL_PARAMETERS] = {}
-        self.ini_content[ConfIni.DDCUTIL_CAPABILITIES] = {}
+        self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS] = {}
+        self.ini_content[ConfSec.DDCUTIL_PARAMETERS] = {}
+        self.ini_content[ConfSec.DDCUTIL_CAPABILITIES] = {}
 
         for item in SUPPORTED_VCP_BY_CODE.values():
-            self.ini_content[ConfIni.VDU_CONTROLS_WIDGETS][item.property_name()] = 'yes' if item.enabled else 'no'
+            self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS][item.property_name()] = 'yes' if item.enabled else 'no'
 
-        self.ini_content.set(*ConfOption.ENABLE_VCP_CODES.conf_id, '')
+        self.ini_content.set(*ConfOpt.ENABLE_VCP_CODES.conf_id, '')
         if not main_config:
-            self.ini_content.set(*ConfOption.VDU_NAME.conf_id, '')
-        self.ini_content.set(*ConfOption.SLEEP_MULTIPLIER.conf_id, str('0.0'))
-        self.ini_content.set(*ConfOption.DDCUTIL_EXTRA_ARGS.conf_id, '')
-        self.ini_content.set(*ConfOption.CAPABILITIES_OVERRIDE.conf_id, '')
+            self.ini_content.set(*ConfOpt.VDU_NAME.conf_id, '')
+        self.ini_content.set(*ConfOpt.SLEEP_MULTIPLIER.conf_id, str('0.0'))
+        self.ini_content.set(*ConfOpt.DDCUTIL_EXTRA_ARGS.conf_id, '')
+        self.ini_content.set(*ConfOpt.CAPABILITIES_OVERRIDE.conf_id, '')
 
         if default_enabled_vcp_codes is not None:
             for code in default_enabled_vcp_codes:
@@ -2496,30 +2493,31 @@ class VduControlsConfig:
                     self.enable_unsupported_vcp_code(code)
         self.file_path: Path | None = None
 
-    def get_conf_option(self, section_name: str, option_name: str) -> ConfOption:
-        for option in ConfOption:  # Inefficient, but a small number of iterations
+    def get_conf_option(self, section_name: str, option_name: str) -> ConfOpt:
+        for option in ConfOpt:  # Inefficient, but a small number of iterations
             if option.conf_section == section_name and option.conf_name == option_name:
                 return option
-        return ConfOption.UNKNOWN
+        return ConfOpt.UNKNOWN
 
     def restrict_to_actual_capabilities(self, supported_by_this_vdu: Dict[str, VcpCapability]) -> None:
-        for option_name in self.ini_content[ConfIni.VDU_CONTROLS_WIDGETS]:
-            if self.get_conf_option(ConfIni.VDU_CONTROLS_WIDGETS, option_name).conf_type == ConfIni.TYPE_BOOL:
+        for option_name in self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS]:
+            if self.get_conf_option(ConfSec.VDU_CONTROLS_WIDGETS, option_name).conf_type == ConfType.BOOL:
                 if option_name in SUPPORTED_VCP_BY_PROPERTY_NAME and \
                         SUPPORTED_VCP_BY_PROPERTY_NAME[option_name].vcp_code not in supported_by_this_vdu:
-                    del self.ini_content[ConfIni.VDU_CONTROLS_WIDGETS][option_name]
+                    del self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS][option_name]
                     log_debug(f"Removed {self.config_name} {option_name} - not supported by VDU") if log_debug_enabled else None
                 elif option_name.startswith('unsupported-') and option_name[len('unsupported-'):] not in supported_by_this_vdu:
-                    del self.ini_content[ConfIni.VDU_CONTROLS_WIDGETS][option_name]
+                    del self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS][option_name]
                     log_debug(f"Removed {self.config_name} {option_name} - not supported by VDU") if log_debug_enabled else None
 
     def get_vdu_preferred_name(self):
-        return self.ini_content.get_non_empty_str(*ConfOption.VDU_NAME.conf_id, fallback=self.config_name)
+        custom_name = self.ini_content.get(*ConfOpt.VDU_NAME.conf_id, fallback=None)
+        return custom_name if custom_name is not None and custom_name.strip() != '' else self.config_name
 
-    def is_set(self, option: ConfOption, fallback=False) -> bool:
+    def is_set(self, option: ConfOpt, fallback=False) -> bool:
         return self.ini_content.getboolean(option.conf_section, option.conf_name, fallback=fallback)
 
-    def set_option_from_args(self, option: ConfOption, arg_values: Dict[str, Any]):
+    def set_option_from_args(self, option: ConfOpt, arg_values: Dict[str, Any]):
         if option.cmdline_var is not None and option.cmdline_var in arg_values and arg_values[option.cmdline_var] is not None:
             str_value = str(arg_values[option.cmdline_var])
             if str_value != self.ini_content[option.conf_section][option.conf_name]:
@@ -2528,36 +2526,36 @@ class VduControlsConfig:
                 self.ini_content[option.conf_section][option.conf_name] = str_value
 
     def get_sleep_multiplier(self, fallback: float = None) -> float | None:
-        value = self.ini_content.getfloat(*ConfOption.SLEEP_MULTIPLIER.conf_id, fallback=0.0)
+        value = self.ini_content.getfloat(*ConfOpt.SLEEP_MULTIPLIER.conf_id, fallback=0.0)
         return fallback if math.isclose(value, 0.0) else value
 
     def get_ddcutil_extra_args(self, fallback: List[str] | None = None) -> List[str]:
         fallback = [] if fallback is None else fallback
-        value = self.ini_content.get(*ConfOption.DDCUTIL_EXTRA_ARGS.conf_id, fallback=None)
+        value = self.ini_content.get(*ConfOpt.DDCUTIL_EXTRA_ARGS.conf_id, fallback=None)
         return fallback if value is None or value.strip() == '' else value.split()
 
     def get_capabilities_alt_text(self) -> str:
-        return self.ini_content.get(*ConfOption.CAPABILITIES_OVERRIDE.conf_id)
+        return self.ini_content.get(*ConfOpt.CAPABILITIES_OVERRIDE.conf_id)
 
     def set_capabilities_alt_text(self, alt_text: str) -> None:
-        self.ini_content.set(*ConfOption.CAPABILITIES_OVERRIDE.conf_id, alt_text)
+        self.ini_content.set(*ConfOpt.CAPABILITIES_OVERRIDE.conf_id, alt_text)
 
     def enable_supported_vcp_code(self, vcp_code: str) -> None:
-        self.ini_content[ConfIni.VDU_CONTROLS_WIDGETS][SUPPORTED_VCP_BY_CODE[vcp_code].property_name()] = 'yes'
+        self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS][SUPPORTED_VCP_BY_CODE[vcp_code].property_name()] = 'yes'
 
     def enable_unsupported_vcp_code(self, vcp_code: str) -> None:
-        self.ini_content[ConfIni.VDU_CONTROLS_WIDGETS][f'unsupported-{vcp_code}'] = 'yes'
+        self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS][f'unsupported-{vcp_code}'] = 'yes'
 
     def disable_supported_vcp_code(self, vcp_code: str) -> None:
-        self.ini_content[ConfIni.VDU_CONTROLS_WIDGETS][SUPPORTED_VCP_BY_CODE[vcp_code].property_name()] = 'no'
+        self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS][SUPPORTED_VCP_BY_CODE[vcp_code].property_name()] = 'no'
 
     def get_all_enabled_vcp_codes(self) -> List[str]:
         # No very efficient
         enabled_vcp_codes = []
         for control_name, control_def in SUPPORTED_VCP_BY_PROPERTY_NAME.items():
-            if self.ini_content[ConfIni.VDU_CONTROLS_WIDGETS].getboolean(control_name, fallback=False):
+            if self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS].getboolean(control_name, fallback=False):
                 enabled_vcp_codes.append(control_def.vcp_code)
-        enable_codes_str = self.ini_content.get(*ConfOption.ENABLE_VCP_CODES.conf_id, fallback='')
+        enable_codes_str = self.ini_content.get(*ConfOpt.ENABLE_VCP_CODES.conf_id, fallback='')
         for vcp_code in enable_codes_str.split(","):
             if code := vcp_code.strip().upper():
                 if code not in enabled_vcp_codes:
@@ -2569,7 +2567,7 @@ class VduControlsConfig:
 
     def get_location(self) -> GeoLocation | None:
         try:
-            spec = self.ini_content.get(*ConfOption.LOCATION.conf_id, fallback=None)
+            spec = self.ini_content.get(*ConfOpt.LOCATION.conf_id, fallback=None)
             if spec is None or spec.strip() == '':
                 return None
             parts = spec.split(',')
@@ -2586,7 +2584,7 @@ class VduControlsConfig:
         log_info("Using config file '" + config_path.as_posix() + "'")
         if re.search(r'(\[ddcutil-capabilities])|(\[ddcutil-parameters])|(\[vdu-controls-\w])', config_text) is None:
             log_info(f"Old style config file {basename} overrides ddcutils capabilities")
-            self.ini_content.set(*ConfOption.CAPABILITIES_OVERRIDE.conf_id, config_text)
+            self.ini_content.set(*ConfOpt.CAPABILITIES_OVERRIDE.conf_id, config_text)
             return
         self.ini_content.read_string(config_text)
         # Manually extract the text preserving meaningful indentation
@@ -2595,7 +2593,7 @@ class VduControlsConfig:
         alt_text = preserve_indents_match.group(1) if preserve_indents_match is not None else ''
         # Remove excess indentation while preserving the minimum existing indentation.
         alt_text = inspect.cleandoc(alt_text)
-        self.ini_content.set(*ConfOption.CAPABILITIES_OVERRIDE.conf_id, alt_text)
+        self.ini_content.set(*ConfOpt.CAPABILITIES_OVERRIDE.conf_id, alt_text)
 
     def reload(self) -> None:
         log_info(f"Reloading config: {self.file_path}")
@@ -2646,7 +2644,7 @@ class VduControlsConfig:
                             help='hide/disable a control (--hide may be specified multiple times)')
         parser.add_argument('--enable-vcp-code', type=str, action='append',
                             help='enable controls for an unsupported vcp-code hex value (maybe specified multiple times)')
-        for option in ConfOption:
+        for option in ConfOpt:
             if option.cmdline_arg is not None:
                 option.add_cmdline_arg(parser)
         parser.add_argument('--create-config-files', action='store_true',
@@ -2667,7 +2665,7 @@ class VduControlsConfig:
             sys.exit()
 
         arg_values = vars(parsed_args)
-        for option in ConfOption:
+        for option in ConfOpt:
             if option.cmdline_arg is not None:
                 self.set_option_from_args(option, arg_values)
         if len(parsed_args.show) != 0:
@@ -2790,7 +2788,7 @@ class VduController(QObject):
             if os.path.isfile(config_path) and os.access(config_path, os.R_OK):
                 self.config = VduControlsConfig(config_name)
                 self.config.parse_file(config_path)
-                if default_config.is_set(ConfOption.DEBUG_ENABLED):
+                if default_config.is_set(ConfOpt.DEBUG_ENABLED):
                     self.config.debug_dump()
                 enabled_vcp_codes = self.config.get_all_enabled_vcp_codes()
                 self.capabilities_text = self.config.get_capabilities_alt_text()  # cached, possibly edited, ddc capabilities
@@ -2971,20 +2969,16 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
         super().__init__()
         self.setWindowTitle(tr('Settings'))
         self.setLayout(QVBoxLayout())
-        self.settings_scroll_area = QScrollArea(self)
-        self.settings_scroll_area.setWidgetResizable(True)
-        self.tabs_widget = QTabWidget(self.settings_scroll_area)
-        self.settings_scroll_area.setWidget(self.tabs_widget)
-        self.layout().addWidget(self.settings_scroll_area)
+        self.tabs_widget = QTabWidget(self)
+        self.layout().addWidget(self.tabs_widget)
         self.editor_tab_list: List[SettingsEditorTab] = []
-        self.change_callback = change_callback
-
         self.bottom_status_bar = QStatusBar()
-
         self.tab_ops = QFrame(self)  # Groups operations that target the current tab
         self.tab_ops.setLayout(QHBoxLayout())
-        self.tab_ops_label = QLabel(tr('Current tab:'))
+        self.tab_ops_label = QLabel('')
         self.tab_ops.layout().addWidget(self.tab_ops_label)
+
+        self.change_callback = change_callback
 
         def _tab_ops_restore_application_defaults() -> None:
             self.tabs_widget.currentWidget().restore_application_defaults()
@@ -3031,10 +3025,6 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
     def status_message(self, message: str, msecs: int = 0):  # Display a message on the visible tab.
         self.bottom_status_bar.showMessage(message, msecs)
 
-    def make_visible(self) -> None:
-        self.settings_scroll_area.verticalScrollBar().setValue(0)
-        super().make_visible()
-
     def sizeHint(self):
         return QSize(native_pixels(1480), native_pixels(1000))
 
@@ -3068,7 +3058,7 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
     def cross_validate(self) -> int:
         labels_in_use = {'vdu_controls': 'vdu_controls globals'}
         for tab in self.editor_tab_list:
-            if vdu_label := tab.ini_editable.get(*ConfOption.VDU_NAME.conf_id, fallback=None):
+            if vdu_label := tab.ini_editable.get(*ConfOpt.VDU_NAME.conf_id, fallback=None):
                 if existing_use := labels_in_use.get(vdu_label, None):
                     return MBox(MBox.Critical, msg=tr("Cannot save <tt>{}</tt>").format(tab.config_path.name),
                                 info=tr("Duplicate VDU label: <i>{}</i><hr/>Alter the label for {} or {} and try again.").format(
@@ -3116,14 +3106,21 @@ class SettingsEditorTab(QWidget):
     def __init__(self, editor_dialog: SettingsEditor, vdu_config: VduControlsConfig, change_callback: Callable,
                  parent: QTabWidget) -> None:
         super().__init__(parent=parent)
-        widget_map = {ConfIni.TYPE_BOOL: SettingsEditorBooleanWidget, ConfIni.TYPE_FLOAT: SettingsEditorFloatWidget,
-                      ConfIni.TYPE_LONG_TEXT: SettingsEditorLongTextWidget, ConfIni.TYPE_TEXT: SettingsEditorTextWidget,
-                      ConfIni.TYPE_CSV: SettingsEditorCsvWidget, ConfIni.TYPE_LOCATION: SettingsEditorLocationWidget,
-                      ConfIni.TYPE_PATH: SettingsEditorPathWidget,}
-        layout = QVBoxLayout()
+        widget_map = {ConfType.BOOL: SettingsEditorBooleanWidget, ConfType.FLOAT: SettingsEditorFloatWidget,
+                      ConfType.LONG_TEXT: SettingsEditorLongTextWidget, ConfType.TEXT: SettingsEditorTextWidget,
+                      ConfType.CSV: SettingsEditorCsvWidget, ConfType.LOCATION: SettingsEditorLocationWidget,
+                      ConfType.PATH: SettingsEditorPathWidget, }
+        content = QWidget()
+        content_layout = QVBoxLayout()
+        content.setLayout(content_layout)
+        scroll_area = QScrollArea(self)
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setWidget(content)
+        self.setLayout(QVBoxLayout())
+        self.layout().addWidget(scroll_area)
+
         self.change_callback = change_callback
         self.unsaved_changes_map: Dict[Tuple[str, str], str] = {}
-        self.setLayout(layout)
         self.config_path = ConfIni.get_path(vdu_config.config_name)
         self.ini_before = vdu_config.ini_content
         self.ini_editable = self.ini_before.duplicate()
@@ -3137,18 +3134,22 @@ class SettingsEditorTab(QWidget):
 
         for section_name in self.ini_editable.data_sections():
             title = tr(section_name).replace('-', ' ')
-            layout.addWidget(QLabel(f"<b>{title}</b>"))
-            booleans_panel = QWidget()
-            booleans_grid = QGridLayout()
-            booleans_grid.setVerticalSpacing(0)
-            booleans_panel.setLayout(booleans_grid)
-            layout.addWidget(booleans_panel)
-            bool_count, grid_columns = 0, 5  # booleans are counted and laid out according to grid_columns.
+            content_layout.addWidget(QLabel(f"<b>{title}</b>"))
+            bool_count = 0
+            booleans_grid: QGridLayout | None = None  # Only create when bool_count > 0
+            grid_columns = 5  # booleans are counted and laid out according to grid_columns.
             for option_name in self.ini_editable[section_name]:
                 try:
                     option_def = vdu_config.get_conf_option(section_name, option_name)
-                    if section_name != ConfIni.VDU_CONTROLS_GLOBALS or option_def != ConfOption.UNKNOWN:
-                        if option_def.conf_type == ConfIni.TYPE_BOOL:
+                    # If it's unknown it's probably a boolean switch for a VCP code
+                    if section_name != ConfSec.VDU_CONTROLS_GLOBALS or option_def != ConfOpt.UNKNOWN:
+                        if option_def.conf_type == ConfType.BOOL:
+                            if bool_count == 0:  # Need to create a grid now
+                                booleans_grid = QGridLayout()
+                                booleans_grid.setVerticalSpacing(0)
+                                booleans_panel = QWidget()
+                                booleans_panel.setLayout(booleans_grid)
+                                content_layout.addWidget(booleans_panel)
                             booleans_grid.addWidget(
                                 _field(
                                     SettingsEditorBooleanWidget(self, option_name, section_name,
@@ -3156,7 +3157,7 @@ class SettingsEditorTab(QWidget):
                                 bool_count // grid_columns, bool_count % grid_columns)
                             bool_count += 1
                         else:
-                            layout.addWidget(_field(widget_map[option_def.conf_type](self, option_name, section_name, option_def.help)))
+                            content_layout.addWidget(_field(widget_map[option_def.conf_type](self, option_name, section_name, option_def.help)))
                 except ValueError:  # Probably an old no longer valid option, or a typo.
                     log_warning(f"Ignoring invalid option name {option_name} in {section_name}")
 
@@ -4185,7 +4186,7 @@ class VduControlsMainPanel(QWidget):
         controllers_layout = QVBoxLayout()
         self.setLayout(controllers_layout)
 
-        warnings_enabled = main_config.is_set(ConfOption.WARNINGS_ENABLED)
+        warnings_enabled = main_config.is_set(ConfOpt.WARNINGS_ENABLED)
         self.vdu_control_panels.clear()
         for controller in self.main_controller.vdu_controllers_map.values():
             splash_message_qtsignal.emit(f"DDC ID {controller.vdu_number}\n{controller.get_vdu_preferred_name()}")
@@ -4871,7 +4872,7 @@ class PresetChooseWeatherWidget(QWidget):
                     "Thundery Snow Showers\n395 Heavy Snow Showers\n")
 
     def verify_weather_location(self, location: GeoLocation) -> None:
-        if not self.main_config.is_set(ConfOption.WEATHER_ENABLED):
+        if not self.main_config.is_set(ConfOpt.WEATHER_ENABLED):
             return
         place_name = location.place_name if location.place_name is not None else 'IP-address'
         # Only do this check if the location has changed.
@@ -5356,10 +5357,10 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         if presets_dialog := PresetsDialog.get_instance():  # type: ignore
             if message != '':
                 presets_dialog.status_message(message, timeout=timeout)
-            elif not presets_dialog.main_config.is_set(ConfOption.SCHEDULE_ENABLED):
+            elif not presets_dialog.main_config.is_set(ConfOpt.SCHEDULE_ENABLED):
                 presets_dialog.status_message(
                     WARNING_SYMBOL + ' ' + tr('Solar-trigger scheduling is disabled in the Setting-Dialog.'))
-            elif not presets_dialog.main_config.is_set(ConfOption.WEATHER_ENABLED):
+            elif not presets_dialog.main_config.is_set(ConfOpt.WEATHER_ENABLED):
                 presets_dialog.status_message(WARNING_SYMBOL + ' ' + tr('Weather lookup is disabled in the Setting-Dialog.'),
                                               timeout=60000)
             else:
@@ -5468,7 +5469,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.editor_layout.addWidget(self.editor_controls_widget)
 
         self.editor_transitions_widget = PresetChooseTransitionWidget()
-        if self.main_config.is_set(ConfOption.PROTECT_NVRAM_ENABLED):
+        if self.main_config.is_set(ConfOpt.PROTECT_NVRAM_ENABLED):
             self.editor_layout.addItem(QSpacerItem(1, 10))
         else:
             self.editor_layout.addWidget(self.editor_transitions_widget)
@@ -5798,7 +5799,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         return PresetWidget(preset, restore_action=self.restore_preset, save_action=self.save_preset,
                             delete_action=self.delete_preset, edit_action=self.edit_preset,
                             up_action=self.up_action, down_action=self.down_action,
-                            protect_nvram=self.main_config.is_set(ConfOption.PROTECT_NVRAM_ENABLED))
+                            protect_nvram=self.main_config.is_set(ConfOpt.PROTECT_NVRAM_ENABLED))
 
     def event(self, event: QEvent) -> bool:
         # PalletChange happens after the new style sheet is in use.
@@ -7811,7 +7812,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         self.weather_query: WeatherQuery | None = None
         self.preset_transition_workers: List[PresetTransitionWorker] = []  # Not sure if this actually needs to be a list.
         self.lux_auto_controller: LuxAutoController | None = LuxAutoController(self) if self.main_config.is_set(
-            ConfOption.LUX_OPTIONS_ENABLED) else None
+            ConfOpt.LUX_OPTIONS_ENABLED) else None
         self.transitioning_dummy_preset: PresetTransitionDummy | None = None
 
         def respond_to_unix_signal(signal_number: int) -> None:
@@ -7850,7 +7851,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     self.lux_auto_controller.lux_slider = None
                 self.stop_any_transitioning_presets()
                 global log_to_syslog
-                log_to_syslog = self.main_config.is_set(ConfOption.SYSLOG_ENABLED)
+                log_to_syslog = self.main_config.is_set(ConfOpt.SYSLOG_ENABLED)
                 self.create_ddcutil()
                 self.preset_controller.reinitialize()
                 self.main_window.initialise_app_icon()
@@ -7860,7 +7861,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 self.schedule_presets()
                 ScheduleWorker.check() if check_schedule else None
             log_debug("configure: released application_lock") if log_debug_enabled else None
-            if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED):
+            if self.main_config.is_set(ConfOpt.LUX_OPTIONS_ENABLED):
                 if self.lux_auto_controller is not None:
                     self.lux_auto_controller.initialize_from_config()
                     LuxDialog.reconfigure_instance()
@@ -7878,7 +7879,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
     def create_ddcutil(self):
 
-        if self.main_config.is_set(ConfOption.DBUS_CLIENT_ENABLED) and self.main_config.is_set(ConfOption.DBUS_EVENTS_ENABLED):
+        if self.main_config.is_set(ConfOpt.DBUS_CLIENT_ENABLED) and self.main_config.is_set(ConfOpt.DBUS_EVENTS_ENABLED):
 
             def _vdu_connectivity_changed_callback(edid_encoded: str, event_type: int, flags: int):
                 if not DdcEventType.UNKNOWN.value <= event_type <= DdcEventType.DISPLAY_DISCONNECTED.value:
@@ -7896,10 +7897,10 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
         try:
             self.ddcutil = Ddcutil(common_args=self.main_config.get_ddcutil_extra_args(),
-                                   prefer_dbus_client=self.main_config.is_set(ConfOption.DBUS_CLIENT_ENABLED),
+                                   prefer_dbus_client=self.main_config.is_set(ConfOpt.DBUS_CLIENT_ENABLED),
                                    connected_vdus_changed_callback=change_handler)
-            if emulator := self.main_config.ini_content.get(ConfOption.DDCUTIL_EMULATOR.conf_section,
-                                                            ConfOption.DDCUTIL_EMULATOR.conf_name, fallback=None):
+            if emulator := self.main_config.ini_content.get(ConfOpt.DDCUTIL_EMULATOR.conf_section,
+                                                            ConfOpt.DDCUTIL_EMULATOR.conf_name, fallback=None):
                 self.ddcutil.add_ddcutil_emulator(emulator, common_args=self.main_config.get_ddcutil_extra_args())
         except (subprocess.SubprocessError, ValueError, re.error, OSError, DdcutilServiceNotFound) as e:
             self.main_window.show_no_controllers_error_dialog(e)
@@ -7954,9 +7955,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             if controller is not None:
                 self.vdu_controllers_map[controller.vdu_stable_id] = controller
         if len(self.vdu_controllers_map) == 0:
-            if self.main_config.is_set(ConfOption.WARNINGS_ENABLED):
+            if self.main_config.is_set(ConfOpt.WARNINGS_ENABLED):
                 self.main_window.show_no_controllers_error_dialog(ddcutil_problem)
-        if self.main_config.is_set(ConfOption.ORDER_BY_NAME):
+        if self.main_config.is_set(ConfOpt.ORDER_BY_NAME):
             self.vdu_controllers_map = {c.vdu_stable_id: c for c in
                                         sorted(self.vdu_controllers_map.values(), key=VduController.get_vdu_preferred_name)}
 
@@ -7964,7 +7965,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         if changed_settings is None:  # Special value - means settings have been reset/removed - needs restart.
             self.restart_application(tr("A settings reset requires vdu_controls to restart."))
             return
-        for setting in ConfOption:
+        for setting in ConfOpt:
             if setting.restart_required and (setting.conf_section, setting.conf_name) in changed_settings:
                 self.restart_application(tr("The change to the {} option requires "
                                             "vdu_controls to restart.").format(tr(setting.conf_name)))
@@ -7972,8 +7973,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         self.main_config.reload()
         global log_debug_enabled
         global log_to_syslog
-        log_to_syslog = self.main_config.is_set(ConfOption.SYSLOG_ENABLED)
-        log_debug_enabled = self.main_config.is_set(ConfOption.DEBUG_ENABLED)
+        log_to_syslog = self.main_config.is_set(ConfOpt.SYSLOG_ENABLED)
+        log_debug_enabled = self.main_config.is_set(ConfOpt.DEBUG_ENABLED)
         log_info("Reconfiguring due to settings change.")
         self.configure_application()
 
@@ -8071,7 +8072,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         if initialization_preset:
             background_activity = True
             immediately = True
-        elif self.main_config.is_set(ConfOption.PROTECT_NVRAM_ENABLED):
+        elif self.main_config.is_set(ConfOpt.PROTECT_NVRAM_ENABLED):
             immediately = True
         # Starts the restore, but it will complete in the worker thread
         if not is_running_in_gui_thread():  # Transfer this request into the GUI thread
@@ -8114,7 +8115,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                         self.main_window.update_status_indicators(preset)
                         self.main_window.show_preset_status(tr("Restored {} (elapsed time {} seconds)").format(
                             preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=2)))
-                        if (self.main_config.is_set(ConfOption.PROTECT_NVRAM_ENABLED)
+                        if (self.main_config.is_set(ConfOpt.PROTECT_NVRAM_ENABLED)
                                 and preset.get_transition_type() != PresetTransitionFlag.NONE):
                             log_warning(f"Global protect-nvram prevents '{preset.name}' from transitioning, changes are immediate.")
                     else:  # Interrupted or exception:
@@ -8171,7 +8172,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
     def schedule_presets(self) -> None:
         assert is_running_in_gui_thread()
         location = self.main_config.get_location()
-        if location and self.main_config.is_set(ConfOption.SCHEDULE_ENABLED):
+        if location and self.main_config.is_set(ConfOpt.SCHEDULE_ENABLED):
             log_debug("schedule_presets: try to obtain application_lock") if log_debug_enabled else None
             with self.application_lock:
                 log_debug("schedule_presets: holding application_lock") if log_debug_enabled else None
@@ -8211,7 +8212,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
     def schedule_alteration(self, preset: Preset) -> None:
         location = self.main_config.get_location()
-        if location and self.main_config.is_set(ConfOption.SCHEDULE_ENABLED):
+        if location and self.main_config.is_set(ConfOpt.SCHEDULE_ENABLED):
             log_debug("schedule_alteration: try to obtain application_lock") if log_debug_enabled else None
             with self.application_lock:
                 log_debug("schedule_alteration: holding application_lock") if log_debug_enabled else None
@@ -8231,13 +8232,13 @@ class VduAppController(QObject):  # Main controller containing methods for high 
     def activate_scheduled_preset(self, preset: Preset, check_weather: bool = True, immediately: bool = False,
                                   activation_time: datetime | None = None) -> None:
         assert is_running_in_gui_thread()
-        if not self.main_config.is_set(ConfOption.SCHEDULE_ENABLED):
+        if not self.main_config.is_set(ConfOpt.SCHEDULE_ENABLED):
             log_info(f"Schedule is disabled - not activating preset '{preset.name}'")
             return
         if activation_time is None:
             activation_time = zoned_now()
         off_schedule = activation_time < preset.elevation_time_today  # Too early, must be an off-schedule catchup from yesterday
-        if preset.is_weather_dependent() and check_weather and self.main_config.is_set(ConfOption.WEATHER_ENABLED):
+        if preset.is_weather_dependent() and check_weather and self.main_config.is_set(ConfOpt.WEATHER_ENABLED):
             if not self.is_weather_satisfactory(preset):
                 if not off_schedule:
                     preset.schedule_status = PresetScheduleStatus.WEATHER_CANCELLATION
@@ -8466,7 +8467,7 @@ class VduAppWindow(QMainWindow):
         self._run_in_gui_thread_qtsignal.connect(_run_in_gui)
 
         os_desktop = os.environ.get('XDG_CURRENT_DESKTOP', default='unknown').lower()
-        gnome_tray_behaviour = main_config.is_set(ConfOption.SYSTEM_TRAY_ENABLED) and any(dt in os_desktop for dt in GNOME_LIKE)
+        gnome_tray_behaviour = main_config.is_set(ConfOpt.SYSTEM_TRAY_ENABLED) and any(dt in os_desktop for dt in GNOME_LIKE)
         log_info(f"{os_desktop=} {gnome_tray_behaviour=}")  # Gnome tray doesn't provide a way to bring up the main app.
 
         global log_debug_enabled
@@ -8480,10 +8481,10 @@ class VduAppWindow(QMainWindow):
             about_action=partial(AboutDialog.invoke, self.main_controller),
             help_action=HelpDialog.invoke,
             gray_scale_action=GreyScaleDialog,
-            lux_auto_action=self.main_controller.lux_auto_action if main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) else None,
-            lux_check_action=self.main_controller.lux_check_action if main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) else None,
+            lux_auto_action=self.main_controller.lux_auto_action if main_config.is_set(ConfOpt.LUX_OPTIONS_ENABLED) else None,
+            lux_check_action=self.main_controller.lux_check_action if main_config.is_set(ConfOpt.LUX_OPTIONS_ENABLED) else None,
             lux_meter_action=partial(LuxDialog.invoke, self.main_controller) if main_config.is_set(
-                ConfOption.LUX_OPTIONS_ENABLED) else None,
+                ConfOpt.LUX_OPTIONS_ENABLED) else None,
             settings_action=self.main_controller.edit_config,
             presets_dialog_action=self.main_controller.show_presets_dialog,
             refresh_action=self.main_controller.start_refresh,
@@ -8493,7 +8494,7 @@ class VduAppWindow(QMainWindow):
         splash_pixmap = get_splash_image()
         splash = QSplashScreen(
             splash_pixmap.scaledToWidth(native_font_height(scaled=26)).scaledToHeight(native_font_height(scaled=13)),
-            Qt.WindowStaysOnTopHint) if main_config.is_set(ConfOption.SPLASH_SCREEN_ENABLED) else None
+            Qt.WindowStaysOnTopHint) if main_config.is_set(ConfOpt.SPLASH_SCREEN_ENABLED) else None
         if splash is not None:
             splash.show()
             splash.raise_()  # Attempt to force it to the top with raise and activate
@@ -8510,7 +8511,7 @@ class VduAppWindow(QMainWindow):
         f10_shortcut.activated.connect(f10_func)
 
         self.tray = None
-        if main_config.is_set(ConfOption.SYSTEM_TRAY_ENABLED):
+        if main_config.is_set(ConfOpt.SYSTEM_TRAY_ENABLED):
             if not QSystemTrayIcon.isSystemTrayAvailable():
                 log_warning("no system tray, waiting to see if one becomes available.")
                 for _ in range(0, SYSTEM_TRAY_WAIT_SECONDS):
@@ -8580,7 +8581,7 @@ class VduAppWindow(QMainWindow):
         return True  # inactive and no dialogs are active
 
     def on_application_state_changed(self, _: Qt.ApplicationState):
-        if self.main_config.is_set(ConfOption.HIDE_ON_FOCUS_OUT):
+        if self.main_config.is_set(ConfOpt.HIDE_ON_FOCUS_OUT):
             if self.is_inactive():
                 # The user may be using the title-bar or window-edges to move/resize the window. Monitor for no move/resize events
                 # which probably indicates a real focus out.  This is needed for gnome and xfce.
@@ -8609,7 +8610,7 @@ class VduAppWindow(QMainWindow):
             self.activateWindow()
 
     def show(self):
-        if self.main_config.is_set(ConfOption.SMART_WINDOW):
+        if self.main_config.is_set(ConfOpt.SMART_WINDOW):
             if len(self.qt_settings.allKeys()) == 0:  # No previous state
                 self.app_decide_window_position()  # decide initial position relative to cursor
                 self.app_save_window_state()
@@ -8618,7 +8619,7 @@ class VduAppWindow(QMainWindow):
         super().show()
 
     def hide(self):
-        if self.main_config.is_set(ConfOption.SMART_WINDOW):
+        if self.main_config.is_set(ConfOpt.SMART_WINDOW):
             if self.isVisible():  # Only save position if really on screen
                 self.app_save_window_state()
         super().hide()
@@ -8631,8 +8632,8 @@ class VduAppWindow(QMainWindow):
         global mono_light_tray
         self.app_icon = QIcon()
         self.app_icon.addPixmap(get_splash_image() if splash_pixmap is None else splash_pixmap)
-        mono_light_tray = self.main_config.is_set(ConfOption.MONO_LIGHT_TRAY_ENABLED)
-        monochrome_tray = mono_light_tray or self.main_config.is_set(ConfOption.MONOCHROME_TRAY_ENABLED)
+        mono_light_tray = self.main_config.is_set(ConfOpt.MONO_LIGHT_TRAY_ENABLED)
+        monochrome_tray = mono_light_tray or self.main_config.is_set(ConfOpt.MONOCHROME_TRAY_ENABLED)
         if CUSTOM_TRAY_ICON_FILE.exists() and os.access(CUSTOM_TRAY_ICON_FILE.as_posix(), os.R_OK):
             log_info(f"Loading custom app_icon: {CUSTOM_TRAY_ICON_FILE} {monochrome_tray=} {mono_light_tray=}")
             self.tray_icon = create_icon_from_path(CUSTOM_TRAY_ICON_FILE, themed=False, monochrome=monochrome_tray)
@@ -8727,7 +8728,7 @@ class VduAppWindow(QMainWindow):
             self.app_context_menu.indicate_preset_active(preset)
             PresetsDialog.instance_indicate_active_preset(preset)
             title = f"{preset.get_title_name()} {PRESET_APP_SEPARATOR_SYMBOL} {title}"
-            tray_embedded_icon = preset.create_icon(themed=False, monochrome=self.main_config.is_set(ConfOption.MONOCHROME_TRAY_ENABLED))
+            tray_embedded_icon = preset.create_icon(themed=False, monochrome=self.main_config.is_set(ConfOpt.MONOCHROME_TRAY_ENABLED))
             led1_color = PRESET_TRANSITIONING_LED_COLOR if isinstance(preset, PresetTransitionDummy) else None
         if self.main_controller.lux_auto_controller is not None:
             if self.main_controller.lux_auto_controller.is_auto_enabled():
@@ -8735,7 +8736,7 @@ class VduAppWindow(QMainWindow):
                 led2_color = AUTO_LUX_LED_COLOR
             menu_lux_icon = create_icon_from_svg_bytes(self.main_controller.lux_auto_controller.current_auto_svg())  # NB cache involved
             self.app_context_menu.update_lux_auto_icon(menu_lux_icon)  # Won't actually update if it hasn't changed
-            if tray_embedded_icon is None and self.main_config.is_set(ConfOption.LUX_TRAY_ICON):
+            if tray_embedded_icon is None and self.main_config.is_set(ConfOpt.LUX_TRAY_ICON):
                 if zone := self.main_controller.lux_auto_controller.get_lux_zone():
                     tray_embedded_icon = create_icon_from_svg_bytes(zone.icon_svg)
                     title = title + '\n' + tr("Lighting: {}").format(zone.name.lower())
@@ -8764,7 +8765,7 @@ class VduAppWindow(QMainWindow):
             self.update_status_indicators()
             if origin != VcpOrigin.EXTERNAL:
                 self.status_message(SET_VCP_SYMBOL, timeout=500, destination=MsgDestination.DEFAULT)
-        if self.main_config.is_set(ConfOption.LUX_OPTIONS_ENABLED) and self.main_controller.lux_auto_controller is not None:
+        if self.main_config.is_set(ConfOpt.LUX_OPTIONS_ENABLED) and self.main_controller.lux_auto_controller is not None:
             if vcp_code == BRIGHTNESS_VCP_CODE:
                 LuxDialog.lux_dialog_show_brightness(vdu_stable_id, value)
 
@@ -8776,13 +8777,13 @@ class VduAppWindow(QMainWindow):
         self.app_save_window_state()
 
     def app_save_window_state(self) -> None:
-        if self.main_config.is_set(ConfOption.SMART_WINDOW, fallback=True):
+        if self.main_config.is_set(ConfOpt.SMART_WINDOW, fallback=True):
             log_debug(f"app_save_window_state: {self.pos()=} {self.geometry()=}") if log_debug_enabled else None
             self.qt_settings.setValue(self.qt_geometry_key, self.saveGeometry())
             self.qt_settings.setValue(self.qt_state_key, self.saveState())
 
     def app_restore_window_state(self) -> None:
-        if self.main_config.is_set(ConfOption.SMART_WINDOW, fallback=True):
+        if self.main_config.is_set(ConfOpt.SMART_WINDOW, fallback=True):
             if geometry := self.qt_settings.value(self.qt_geometry_key, None):
                 self.restoreGeometry(geometry)
             if window_state := self.qt_settings.value(self.qt_state_key, None):
@@ -9078,8 +9079,8 @@ def main() -> None:
         main_config.parse_file(default_config_path)
 
     if os.environ.get('XDG_SESSION_TYPE') != 'x11':  # If Wayland we can't do smart window placement - use XWayland
-        if main_config.is_set(ConfOption.SMART_WINDOW):
-            log_warning(f"{ConfOption.SMART_WINDOW.conf_id}: Wayland disallows app window placement. Switching to XWayland.")
+        if main_config.is_set(ConfOpt.SMART_WINDOW):
+            log_warning(f"{ConfOpt.SMART_WINDOW.conf_id}: Wayland disallows app window placement. Switching to XWayland.")
             os.environ['QT_QPA_PLATFORM'] = 'xcb'  # Force the use of XWayland
 
     QGuiApplication.setDesktopFileName("vdu_controls")  # Wayland needs this set in order to find/use the app's desktop icon.
@@ -9096,9 +9097,9 @@ def main() -> None:
     args = main_config.parse_global_args()
     global log_debug_enabled
     global log_to_syslog
-    log_info(f"Logging to {'syslog' if main_config.is_set(ConfOption.SYSLOG_ENABLED) else 'stdout'}")
-    log_to_syslog = main_config.is_set(ConfOption.SYSLOG_ENABLED)
-    log_debug_enabled = main_config.is_set(ConfOption.DEBUG_ENABLED)
+    log_info(f"Logging to {'syslog' if main_config.is_set(ConfOpt.SYSLOG_ENABLED) else 'stdout'}")
+    log_to_syslog = main_config.is_set(ConfOpt.SYSLOG_ENABLED)
+    log_debug_enabled = main_config.is_set(ConfOpt.DEBUG_ENABLED)
     if args.syslog:
         log_to_syslog = True
     if args.debug:
@@ -9115,7 +9116,7 @@ def main() -> None:
         print(__doc__)
         sys.exit()
 
-    if main_config.is_set(ConfOption.TRANSLATIONS_ENABLED):
+    if main_config.is_set(ConfOpt.TRANSLATIONS_ENABLED):
         initialise_locale_translations(app)
 
     main_controller = VduAppController(main_config)
