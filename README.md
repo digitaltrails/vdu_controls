@@ -355,14 +355,14 @@ Version History
 
 * 2.3.0
   * Show light-level icon on tray if no preset active (when lux options are enabled). 
-  * Slider responsiveness improved by fixing the interuptable-sleep (doze) implementation.
+  * Renamed two light-light levels more appropriately (subdued, twilight). 
+  * Slider responsiveness improved by fixing the interruptable-sleep (doze) implementation.
+  * The Settings-Dialog has been reorganised to make it scrollable.
   * Added a ddcutil-emulator option which may define an interface for laptop-panels 
     or other non-DDC capable displays. Currently, no working emulators are implemented or 
     packaged, but a sample-scripts/laptop-ddcutil-emulator.bash is included as a starter
     kit.
-  * The Settings-Dialog is now scrollable (because it was getting quite large).
-  * Renamed some of the lux light levels.
-
+  
 * 2.2.0
   * Add a vdu-name option for assigning meaningful/user-friendly names to each VDU.
   * Implement an order-by-name option that orders lists and tabs by VDU name.
