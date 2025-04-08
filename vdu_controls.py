@@ -3978,7 +3978,8 @@ class ContextMenu(QMenu):
 
     def _add_action(self, qt_icon_number: QIcon, text: str, func: Callable, extra_shortcut: str | None = None) -> QAction:
         action = self.addAction(si(self, qt_icon_number), text, func)
-        shortcut_letter = text[text.index('&') + 1].upper() if text.find('&') >= 0 else None
+        amp_pos =  text.find('&')
+        shortcut_letter = text[amp_pos + 1].upper() if (0 <= amp_pos < len(text) - 1) else None
         if shortcut_letter is not None:
             log_debug(f"Reserve shortcut '{shortcut_letter}'") if log_debug_enabled else None
             if shortcut_letter in self.reserved_shortcuts:
@@ -8585,12 +8586,10 @@ class VduAppWindow(QMainWindow):
             if self.is_inactive():
                 # The user may be using the title-bar or window-edges to move/resize the window. Monitor for no move/resize events
                 # which probably indicates a real focus out.  This is needed for gnome and xfce.
-                # log_info(f"on_application_state_changed {state}")
                 self.active_event_count = 0  # Count following move/resize events as evidence of titlebar edge-grab activity.
 
                 def _hide_func():
                     if self.active_event_count == 0 and self.is_inactive():  # No moving/resizing activity and is_inactive().
-                        # log_info("Going to hide")
                         self.hide() if self.tray else self.showMinimized()  # Probably safe to hide now
 
                 QTimer.singleShot(self.inactive_pause_millis, _hide_func)  # wait N ms and see if any move/resize events occur.
@@ -8677,11 +8676,9 @@ class VduAppWindow(QMainWindow):
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setWidget(self.main_panel)
-        # self.scroll_area.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding))
         self.setCentralWidget(self.scroll_area)
 
         available_height = QDesktopWidget().availableGeometry().height() - 200  # Minus allowance for panel/tray
-        # self.main_panel.adjustSize()
         hint_height = self.main_panel.sizeHint().height()  # The hint is the actual required layout space
         hint_width = self.main_panel.sizeHint().width()
         log_debug(f"create_main_control_panel: {hint_height=} {available_height=} {self.minimumHeight()=}")
