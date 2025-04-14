@@ -7287,7 +7287,8 @@ class LuxAutoController:
     def update_manual_slider(self, value: int):
         if self.is_auto_enabled() and not isinstance(self.lux_meter, LuxMeterManualDevice):
             LuxMeterManualDevice.save_stored_value(value)
-            self.lux_slider.set_current_value(value)
+            if self.lux_slider:  # May not exist during intialization
+                self.lux_slider.set_current_value(value)
 
     def create_manual_input_control(self) -> LuxAmbientSlider:
         if self.lux_slider is None:
@@ -7948,11 +7949,12 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                               trace=True)
                     remedy = self.main_window.ask_for_vdu_controller_remedy(vdu_number, model_name, vdu_serial)
                     if remedy == VduController.NORMAL_VDU:
-                        continue  # Try again
+                        time.sleep(1.0)  # Slow things down in case something is wrong with the GUI or VDU interactions.
+                        continue  # Loop and retry as a normal VDU
                     controller = VduController(vdu_number, model_name, vdu_serial, manufacturer, self.main_config,
                                                self.ddcutil, main_panel_error_handler, remedy)
                     controller.write_template_config_files()
-                break
+                break  # Normally expect to just pass through the loop once
             if controller is not None:
                 self.vdu_controllers_map[controller.vdu_stable_id] = controller
         if len(self.vdu_controllers_map) == 0:
@@ -8626,6 +8628,7 @@ class VduAppWindow(QMainWindow):
     def quit_app(self) -> None:
         self.app_save_window_state()
         self.app.quit()
+        sys.exit(0)  # Just in case self.app.quit() errors
 
     def initialise_app_icon(self, splash_pixmap: QPixmap | None = None):
         global mono_light_tray
@@ -8856,7 +8859,9 @@ class VduAppWindow(QMainWindow):
                       tr('\nPlease check these files and edit or remove them if they '
                          'cause further issues.')).exec()
             return VduController.ASSUME_STANDARD_CONTROLS
-        return VduController.NORMAL_VDU
+        elif choice == MBox.Retry:
+            return VduController.NORMAL_VDU
+        return VduController.IGNORE_VDU
 
     def run_in_gui_thread(self, task: Callable):
         self._run_in_gui_thread_qtsignal.emit(task)
