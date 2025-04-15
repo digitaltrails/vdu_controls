@@ -362,7 +362,7 @@ Version History
     or other non-DDC capable displays. Currently, no working emulators are implemented or 
     packaged, but a sample-scripts/laptop-ddcutil-emulator.bash is included as a starter
     kit.
-  * Fix an infinite loop if menu-quit is used when the initialization modal error dialog is showing.
+  * Fix an infinite loop if menu->quit is used when the "Failed to obtain capabilities" dialog is showing.
   
 * 2.2.0
   * Add a vdu-name option for assigning meaningful/user-friendly names to each VDU.
