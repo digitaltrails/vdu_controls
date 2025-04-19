@@ -360,7 +360,7 @@ Version History
   * The Settings-Dialog has been reorganized to make it scrollable.
   * Support a user-defined ddcutil-emulator executable for controlling laptop-panels 
     or other non-DDC-capable displays. A sample template emulator written in bash 
-    is included as a DIY starter kit.
+    is included as a DIY starter kit (sample-scripts/laptop-ddcutil-emulator.bash).
   * Fix an infinite loop if menu->quit is used when the "Failed to obtain capabilities" dialog is showing.
   
 * 2.2.0
