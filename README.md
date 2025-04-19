@@ -354,14 +354,13 @@ Version History
 ---------------
 
 * 2.3.0
-  * Show light-level icon on tray if no preset active (when lux options are enabled). 
+  * When lux options are enabled, show the icon for current light-level in the tray (only if no preset is active). 
   * Renamed two light-light levels more appropriately (subdued, twilight). 
-  * Slider responsiveness improved by fixing the interruptable-sleep (doze) implementation.
-  * The Settings-Dialog has been reorganised to make it scrollable.
-  * Added a ddcutil-emulator option which may define an interface for laptop-panels 
-    or other non-DDC capable displays. Currently, no working emulators are implemented or 
-    packaged, but a sample-scripts/laptop-ddcutil-emulator.bash is included as a starter
-    kit.
+  * Fixed the doze function, this improves the responsiveness of all slider controls.
+  * The Settings-Dialog has been reorganized to make it scrollable.
+  * Support a user-defined ddcutil-emulator executable for controlling laptop-panels 
+    or other non-DDC-capable displays. A sample template emulator written in bash 
+    is included as a DIY starter kit.
   * Fix an infinite loop if menu->quit is used when the "Failed to obtain capabilities" dialog is showing.
   
 * 2.2.0
