@@ -233,7 +233,7 @@ the **capabilities override**:
  3. add a **Values:** **min..max** specification to line the following the feature definition,
  4. save the changes.
 
-For the brightness example the completed edit would look like::
+For the brightness example, the completed edit would look like::
 
     Feature: 10 (Brightness)
         Values: 20..80
@@ -872,8 +872,8 @@ IP_ADDRESS_INFO_URL = os.getenv('VDU_CONTROLS_IPINFO_URL', default='https://ipin
 WEATHER_FORECAST_URL = os.getenv('VDU_CONTROLS_WTTR_URL', default='https://wttr.in')
 TESTING_TIME_ZONE = os.getenv('VDU_CONTROLS_TEST_TIME_ZONE')  # for example 'Europe/Berlin' 'Asia/Shanghai'
 
-TIME_CLOCK_SYMBOL = '\u25F4'  # WHITE CIRCLE WITH UPPER LEFT QUADRANT
-WEATHER_RESTRICTION_SYMBOL = '\u2614'  # UMBRELLA WITH RAIN DROPS
+TIME_CLOCK_SYMBOL = '\u25F4'  # WHITE CIRCLE WITH UPPER-LEFT QUADRANT
+WEATHER_RESTRICTION_SYMBOL = '\u2614'  # UMBRELLA WITH RAINDROPS
 TOO_HIGH_SYMBOL = '\u29BB'  # CIRCLE WITH SUPERIMPOSED X
 DEGREE_SYMBOL = '\u00B0'  # DEGREE SIGN
 SUN_SYMBOL = '\u2600'  # BLACK SUN WITH RAYS
@@ -914,7 +914,7 @@ def is_running_in_gui_thread() -> bool:
 
 def zoned_now(rounded_to_minute: bool = False) -> datetime:
     now = datetime.now().astimezone()
-    if TESTING_TIME_ZONE is not None:  # This is a testing only path that requires python > 3.8
+    if TESTING_TIME_ZONE is not None:  # This is a testing-only path that requires python > 3.8
         from zoneinfo import ZoneInfo
         now = datetime.now(ZoneInfo(TESTING_TIME_ZONE))  # for testing scheduling
     return (now + timedelta(seconds=30)).replace(second=0, microsecond=0) if rounded_to_minute else now
@@ -956,7 +956,7 @@ def tr(source_text: str, disambiguation: str | None = None) -> str:
     pass -ts-function=new_name to pylupdate5.
 
     For future internationalization:
-    1) Generate template file from this code, for example for French:
+    1) Generate template file from this code, for example, for French:
        ALWAYS BACKUP THE CURRENT .ts FILE BEFORE RUNNING AN UPDATE - it can go wrong!
            pylupdate5 vdu_controls.py -ts translations/fr_FR.ts
        where translations is a subdirectory of your current working directory.
@@ -984,7 +984,7 @@ def tr(source_text: str, disambiguation: str | None = None) -> str:
 
 def translate_option(option_text) -> str:
     # We can't be sure of the case in capability descriptions retrieved from the monitors.
-    # If there is no direct translation, we try canonical version of the name (all lowercase with '-' replaced with ' ').
+    # If there is no direct translation, we try a canonical version of the name (all lowercase with '-' replaced with ' ').
     if (translation := tr(option_text)) != option_text:  # Probably a command line option
         return translation
     canonical = option_text.lower().replace('-', ' ')
@@ -1064,7 +1064,7 @@ PRESET_SIGNAL_MAX = 55
 
 unix_signal_handler: SignalWakeupHandler | None = None
 
-# On Plasma Wayland the system tray may not be immediately available at login - so keep trying for...
+# On Plasma Wayland, the system tray may not be immediately available at login - so keep trying for...
 SYSTEM_TRAY_WAIT_SECONDS = 20
 
 SVG_LIGHT_THEME_COLOR = b"#232629"
@@ -1233,7 +1233,7 @@ GREY_SCALE_SVG = f'''
 </svg>
 '''.encode()
 
-#: A high resolution image, will fall back to an internal PNG if this file isn't found on the local system
+#: A high resolution image. We will fall back to an internal PNG if this file isn't found on the local system
 DEFAULT_SPLASH_PNG = "/usr/share/icons/hicolor/256x256/apps/vdu_controls.png"
 
 #: Internal special exit code used to signal that the exit handler should restart the program.
@@ -1389,9 +1389,7 @@ VcpValue = namedtuple('VcpValue', ['current', 'max', 'vcp_type'])  # A getvcp co
 
 
 class Ddcutil:
-    """
-    Interface to the abstracted ddcutil service
-    """
+    """Interface to the abstracted ddcutil service"""
     vcp_write_counters: Dict[str, int] = {}
 
     def __init__(self, common_args: List[str] | None = None, prefer_dbus_client: bool = True,
@@ -1785,6 +1783,7 @@ class DdcutilExeImpl:
                 if attempt_count + 1 == DDCUTIL_RETRIES:  # Don't log here, it creates too much noise in the logs
                     raise  # Too many failures, pass the buck upstairs
             time.sleep(attempt_count * 0.25)
+        raise ValueError(f"Exceeded {DDCUTIL_RETRIES} attempts to get vcp values.")
 
     def __parse_vcp_value(self, vcp_code: int, result: str) -> VcpValue | None:
         if not (specific_vcp_value_pattern := DdcutilExeImpl._SPECIFIC_VCP_VALUE_PATTERN_CACHE.get(vcp_code, None)):
@@ -2020,7 +2019,7 @@ class GeoLocation:
 class DialogSingletonMixin:
     """
     A mixin that can augment a QDialog or QMessageBox with code to enforce a singleton UI.
-    For example, it is used so that only ones settings editor can be active at a time.
+    For example, it is used so that only one settings editor can be active at a time.
     """
     _dialogs_map: Dict[str, DialogSingletonMixin] = {}
 
@@ -2087,7 +2086,7 @@ class LineEditAll(QLineEdit):  # On mouse click, select the entire text - Make i
 
 # Enabling this would enable anything supported by ddcutil - but that isn't safe for the hardware
 # given the weird settings that appear to be available and the sometimes dodgy VDU-vendor DDC
-# implementations.  Plus the user might not be able to reset to factory for some of them?
+# implementations.  Plus, the user might not be able to reset to factory for some of them?
 SUPPORT_ALL_VCP = False
 
 BRIGHTNESS_VCP_CODE = BRIT = '10'
@@ -3141,7 +3140,7 @@ class SettingsEditorTab(QWidget):
             for option_name in self.ini_editable[section_name]:
                 try:
                     option_def = vdu_config.get_conf_option(section_name, option_name)
-                    # If it's unknown it's probably a boolean switch for a VCP code
+                    # If it's unknown, it's probably a boolean switch for a VCP code
                     if section_name != ConfSec.VDU_CONTROLS_GLOBALS or option_def != ConfOpt.UNKNOWN:
                         if option_def.conf_type == ConfType.BOOL:
                             if bool_count == 0:  # Need to create a grid now
@@ -3158,7 +3157,7 @@ class SettingsEditorTab(QWidget):
                             bool_count += 1
                         else:
                             content_layout.addWidget(_field(widget_map[option_def.conf_type](self, option_name, section_name, option_def.help)))
-                except ValueError:  # Probably an old no longer valid option, or a typo.
+                except ValueError:  # Probably an old no-longer-valid option, or a typo.
                     log_warning(f"Ignoring invalid option name {option_name} in {section_name}")
 
     def set_preferred_name(self, label_str):
@@ -3565,9 +3564,7 @@ class VduControlBase(QWidget):
 
 
 class VduControlSlider(VduControlBase):
-    """
-    GUI control for a DDC continuously variable attribute. A compound widget with icon, slider, and text-field.
-    """
+    """GUI control for a DDC continuously variable attribute. A compound widget with icon, slider, and text-field."""
 
     def __init__(self, controller: VduController, vcp_capability: VcpCapability) -> None:
         """Construct the slider control and initialize its values from the VDU."""
@@ -3644,9 +3641,7 @@ class VduControlSlider(VduControlBase):
 
 
 class VduControlComboBox(VduControlBase):
-    """
-    GUI control for a DDC non-continuously variable attribute, one that has a list of choices.
-    """
+    """GUI control for a DDC non-continuously variable attribute, one that has a list of choices."""
 
     def __init__(self, controller: VduController, vcp_capability: VcpCapability) -> None:
         super().__init__(controller, vcp_capability)
@@ -3705,9 +3700,7 @@ class VduControlComboBox(VduControlBase):
 
 
 class VduControlPanel(QWidget):
-    """
-    Widget that contains all the controls for a single VDU (monitor/display).
-    """
+    """Widget that contains all the controls for a single VDU (monitor/display)."""
 
     def __init__(self, controller: VduController, vdu_exception_handler: Callable) -> None:
         super().__init__()
@@ -3781,9 +3774,7 @@ class VduControlPanel(QWidget):
 
 
 class Preset:
-    """
-    A config/ini file of user-created settings presets - such as Sunny, Cloudy, Night, etc.
-    """
+    """A config/ini file of user-created settings presets - such as Sunny, Cloudy, Night, etc."""
 
     def __init__(self, name) -> None:
         self.name = name
@@ -8918,9 +8909,8 @@ class SignalWakeupHandler(QtNetwork.QAbstractSocket):
 # Converted to only use the python math library (instead of numpy) by me for vdu_controls.
 # Coding style also altered for use with vdu_controls.
 def calc_solar_azimuth_zenith(localised_time: datetime, latitude: float, longitude: float) -> Tuple[float, float]:
-    """
-    Return azimuth degrees clockwise from true north and zenith in degrees from vertical direction.
-    """
+    """Return azimuth degrees clockwise from true north and zenith in degrees from vertical direction."""
+
     utc_date_time = localised_time if localised_time.tzinfo is None else localised_time.astimezone(timezone.utc)
     # UTC from now on...
     hours, minutes, seconds = utc_date_time.hour, utc_date_time.minute, utc_date_time.second
