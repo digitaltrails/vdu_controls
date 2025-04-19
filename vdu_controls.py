@@ -8429,7 +8429,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         self.main_window.status_message(message, timeout, destination)
 
     def restart_application(self, reason: str):
-        # Force a restart of the application.  Some settings changes need this (run in system tray).
+        # Force a restart of the application.  Some settings changes need this (for example, run in the system tray).
         MBox(MBox.Warning, msg=reason, info=tr('When this message is dismissed, vdu_controls will restart.')).exec()
         self.main_window.app_save_window_state()
         QCoreApplication.exit(EXIT_CODE_FOR_RESTART)
@@ -8577,9 +8577,9 @@ class VduAppWindow(QMainWindow):
     def on_application_state_changed(self, _: Qt.ApplicationState):
         if self.main_config.is_set(ConfOpt.HIDE_ON_FOCUS_OUT):
             if self.is_inactive():
-                # The user may be using the title-bar or window-edges to move/resize the window. Monitor for no move/resize events
-                # which probably indicates a real focus out.  This is needed for gnome and xfce.
-                self.active_event_count = 0  # Count following move/resize events as evidence of titlebar edge-grab activity.
+                # The user may be using the title-bar or window-edges to move/resize the window. Monitor for the lack of
+                # move/resize events, treat that as a real focus out.  This is needed for gnome and xfce.
+                self.active_event_count = 0  # Count the following move/resize events as evidence of titlebar edge-grab activity.
 
                 def _hide_func():
                     if self.active_event_count == 0 and self.is_inactive():  # No moving/resizing activity and is_inactive().
@@ -9122,6 +9122,7 @@ def main() -> None:
     rc = app.exec_()
     log_info(f"App exit {rc=} {'EXIT_CODE_FOR_RESTART' if rc == EXIT_CODE_FOR_RESTART else ''}")
     if rc == EXIT_CODE_FOR_RESTART:
+        rc = 0
         log_info(f"Trying to restart - this only works if {app.arguments()[0]} is executable and on your PATH): ", )
         restart_status = QProcess.startDetached(app.arguments()[0], app.arguments()[1:])
         if not restart_status:
