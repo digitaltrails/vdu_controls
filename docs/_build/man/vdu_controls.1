@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Apr 06, 2025" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Apr 20, 2025" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 2.3.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -94,7 +94,7 @@ start up as an entry in the system tray.
 \fB\-\-no\-system\-tray\fP is the default.
 .TP
 .B \-\-hide\-on\-focus\-out|\-\-no\-hide\-on\-focus\-out
-minimize the main window automatically on focus out
+minimize the main window automatically on focus out.
 \fB\-\-no\-hide\-on\-focus\-out\fP is the default.
 .TP
 .B \-\-smart\-window|\-\-no\-smart\-window
@@ -110,10 +110,10 @@ monochrome themed system\-tray.
 \fB\-\-no\-mono\-light\-tray\fP is the default.
 .TP
 .B \-\-protect\-nvram|\-\-no\-protect\-nvram
-alter options and defaults to minimize VDU NVRAM writes
+alter options and defaults to minimize VDU NVRAM writes.
 .TP
 .B \-\-order\-by\-name|\-\-no\-order\-by\-name
-order tabs, lists, and dropdowns by VDU name
+order tabs, lists, and dropdowns by VDU name.
 .TP
 .B \-\-lux\-options|\-\-no\-lux\-options
 enable/disable ambient light metering options.
@@ -126,7 +126,7 @@ enable/disable preset scheduling. \fB\-\-schedule\fP is the default.
 enable/disable weather lookups. \fB\-\-weather\fP is the default.
 .TP
 .B \-\-dbus\-client|\-\-no\-dbus\-client
-use the D\-Bus ddcutil\-service instead of the ddcutil command
+use the D\-Bus ddcutil\-service instead of the ddcutil command.
 \fB\-\-dbus\-client\fP is the default
 .TP
 .B \-\-dbus\-events|\-\-no\-dbus\-events
@@ -155,7 +155,7 @@ enable/disable language translations.
 .TP
 .B \-\-location latitude,longitude
 local latitude and longitude for triggering presets
-by solar elevation
+by solar elevation.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -163,12 +163,12 @@ by solar elevation
 additional command\-line ddcutil emulator for a laptop panel
 .TP
 .B  \-\-sleep\-multiplier
-set the default ddcutil sleep multiplier
+set the default ddcutil sleep multiplier.
 protocol reliability multiplier for ddcutil (typically
 0.1 .. 2.0, default is 1.0)
 .TP
 .B  \-\-ddcutil\-extra\-args
-extra arguments to pass to ddcutil (enclosed in single quotes)
+extra arguments to pass to ddcutil (enclosed in single quotes).
 .TP
 .B  \-\-create\-config\-files
 if they do not exist, create template config INI files
@@ -204,7 +204,7 @@ optionally run in the system tray of KDE, Deepin, GNOME, and Xfce (and possibly 
 .sp
 The UI provides an optional \fBambient\-light slider\fP for simultaneously adjusting
 all VDUs according to custom per\-VDU ambient lux/brightness profiles.  Options are included
-for automated adjustment by accessing a hardware light\-meters, webcams, or other devices.
+for automated adjustment by accessing hardware light\-meters, webcams, or other devices.
 .sp
 Named \fBPreset\fP configurations can be saved and recalled. For example, presets may be created
 for night, day, photography, movies, and so forth.   Presets can be triggered by specific ambient
@@ -218,7 +218,7 @@ main\-window or the system\-tray icon.  The main\-menu has \fIALT\-key\fP shortc
 .sp
 For further information, including screenshots, see \X'tty: link https://github.com/digitaltrails/vdu_controls'\fI\%https://github.com/digitaltrails/vdu_controls\fP\X'tty: link' .
 .sp
-The long term affects of repeatably rewriting a VDUs setting are not well understood, but some
+The long\-term effects of repeatably rewriting a VDUs setting are not well understood, but some
 concerns have been expressed. See \fBLIMITATIONS\fP for further details.
 .SH CONFIGURATION
 .sp
@@ -247,7 +247,7 @@ The VDU\-specific config files can be used to:
 .IP \(bu 2
 Correct manufacturer built\-in metadata.
 .IP \(bu 2
-Customise which controls are to be provided for each VDU.
+Customize which controls are to be provided for each VDU.
 .IP \(bu 2
 Define a user\-friendly label for each VDU.
 .IP \(bu 2
@@ -304,7 +304,7 @@ capabilities\-override =
 .UNINDENT
 .sp
 Config files can only be used to enable and alter definitions of VCP codes supported by \fBddcutil\fP\&.
-Unsupported manufacturer specific features should only be experimented with caution, some
+Unsupported manufacturer\-specific features should only be experimented with caution, some
 may have irreversible consequences, including bricking the hardware.
 .sp
 As well as using the \fBSettings\fP, config files may also be created by the command line option:
@@ -343,7 +343,7 @@ save the changes.
 .UNINDENT
 .UNINDENT
 .sp
-For the brightness example the completed edit would look like:
+For the brightness example, the completed edit would look like:
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -361,7 +361,7 @@ Altering the values of some VCP codes may result in a cascade of changes to othe
 codes.  For example, changing a VCP value for \fIPicture Mode\fP might result in changes
 to several VCP\-code features, including brightness, contrast, and others. Exactly
 which codes have these kinds of side effects isn\(aqt indicated in the metadata
-obtained from each VDU, however vdu_controls supports adding \fIrefresh\fP annotations
+obtained from each VDU, however, vdu_controls supports adding \fIrefresh\fP annotations
 to the feature\-names within the \fBcapabilities override\fP\&.  For example:
 .INDENT 0.0
 .INDENT 3.5
@@ -388,21 +388,21 @@ reload all configuration files and refresh all control values from the VDUs.
 .sp
 When available, \fBvdu_controls\fP defaults to interacting with VDUs via the DBUS \fBddcutil\-service\fP
 service rather than the \fBddcutil\fP command. The service should be both faster and more
-reliable \- noticeably so when multiple VDUs need to be controlled. Whether to use the service
+reliable (especially when multiple VDUs need to be controlled). Whether to use the service
 can be controlled by the \fBDBUS client\fP checkbox in the settings dialog.
 .sp
 When using the service, you may optionally enable service detection of DPMS events and
 VDU connectivity events (hot\-plugging cables or power\-cycling VDUs).  Whether to enable events
 is controlled by the \fBDBUS events\fP checkbox in the settings dialog.  The reliability
 and timeliness of events may vary depending on the model of GPU, version of GPU driver,
-model of VDU, and type of VDU connector\-cable.  In some cases the service polling for DPMS or
+model of VDU, and type of VDU connector\-cable.  In some cases, the service polling for DPMS or
 connection status may wake some VDU models.  Both \fBddcutil\-service\fP or \fBlibddcutil\fP offer
 options for finer control over which events are detected and how.
 .SS Presets
 .sp
 A named _Preset_ can be used to save the current VDU settings for later recall. Any number of
-presets can be created for different lighting conditions or different applications, for example:
-\fINight\fP, \fIDay\fP, \fIOvercast\fP, \fISunny\fP, \fIPhotography\fP, and \fIVideo\fP\&. Each presets can be assigned a
+presets can be created for different lighting conditions or different applications, for example,
+\fINight\fP, \fIDay\fP, \fIOvercast\fP, \fISunny\fP, \fIPhotography\fP, and \fIVideo\fP\&. Each preset can be assigned a
 name and icon.
 .sp
 The \fBPresets\fP item in \fBmain\-menu\fP will bring up a \fBPresets\fP dialog for managing and
@@ -464,7 +464,7 @@ or for VDUs where the NVRAM capacity has been exhausted or is faulty.
 .SS Presets \- solar elevation triggers
 .sp
 A preset may be set to automatically trigger when the sun rises to a specified elevation. The idea
-being to allow a preset to trigger relative to dawn or dusk, or when the sun rises above some
+is to allow a preset to trigger relative to dawn or dusk, or when the sun rises above some
 surrounding terrain (the time of which will vary as the seasons change).
 .sp
 If a preset has an elevation, the preset will be triggered each day at a time calculated according
@@ -484,12 +484,12 @@ a trigger intended for the brightest part of the day if the day is particularly 
 .sp
 At startup \fBvdu_controls\fP will restore the most recent preset that would have been triggered for
 this day (if any).  For example, say a user has \fBvdu_controls\fP set to run at login, and they\(aqve
-also set a preset to trigger at dawn, but they don\(aqt actually log in until just after dawn, the
+also set a preset to trigger at dawn, but they don\(aqt log in until just after dawn, the
 overdue dawn preset will be triggered at login.
 .SS Presets \- Smooth Transitions
 .sp
 __To minimize writes to VDU NVRAM, smooth\-transitions have been deprecated and are disabled by
-default. To reenable smooth transitions, uncheck the \fBprotect\-nvram\fP option in _Settings_.__
+default. To re\-enable smooth transitions, uncheck the \fBprotect\-nvram\fP option in _Settings_.__
 .sp
 A preset may be set to \fBSmoothly Transition\fP, in which case changes to controls continuous\-value
 slider controls such as brightness and contrast will be stepped by one until the final values are
@@ -512,13 +512,13 @@ The Preset Dialog includes a combo\-box for defining when to apply transitions t
 .UNINDENT
 .UNINDENT
 .sp
-Normally a transition single\-steps the controls as quickly as possible.  In practice this means each
+Normally a transition single\-steps the controls as quickly as possible.  In practice, this means each
 step takes one or more seconds and increases linearly depending on the number of VDUs and number of
 controls being altered.  The Presets Dialog includes a \fBTransition Step seconds\fP control that can
 be used to increase the step interval and extend a transition over a longer period of time.
 .sp
 If any transitioning controls change independently of the transition, the transition will cease.  In
-that manner a transition can be abandoned by dragging a slider or choosing a different preset.
+that manner, a transition can be abandoned by dragging a slider or choosing a different preset.
 .SS Presets \- supplementary weather requirements
 .sp
 A solar elevation trigger can have a weather requirement which will be checked against the weather
@@ -546,12 +546,12 @@ When weather requirements are in use, \fBvdu_controls\fP will check that the coo
 \fBSettings\fP \fBLocation\fP are a reasonable match for those returned from \fBwttr.in\fP, a warning will
 be issued if they are more than 200 km (124 miles) apart.
 .sp
-If the place\-name is left blank, the \fBwttr.in\fP server will try to guess you location from your
+If the place\-name is left blank, the \fBwttr.in\fP server will try to guess your location from your
 external IP address.  The guess may not be accurate and may vary over time.
 .SS Presets \- remote control
 .sp
-Scripts may use UNIX/Linux signals may be used to instruct a running \fBvdu_controls\fP to invoke a
-preset or to initiate \(dqRefresh settings from monitors\(dq.  Signals in the range 40 to 55 correspond to
+UNIX/Linux signals may be used to cause \fBvdu_controls\fP to restore a preset or to initiate a
+refresh of the application from the connected monitors.  Signals in the range 40 to 55 correspond to
 first to last presets (if any are defined).  Additionally, SIGHUP can be used to initiate \(dqRefresh
 settings from monitors\(dq.  For example:
 .INDENT 0.0
@@ -577,7 +577,7 @@ kill \-41 $(ps axwww | grep \(aq[/]usr/bin/vdu_controls\(aq | awk \(aq{print $1}
 .UNINDENT
 .UNINDENT
 .sp
-Or if some other process has changed a VDUs settings, trigger vdu_controls to update its UI:
+If some other activity has changed a VDU\(aqs settings, trigger vdu_controls to update its UI:
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -593,11 +593,11 @@ Any other signals will be handled normally (in many cases they will result in pr
 .SS Ambient Light Levels and Light/Lux Metering
 .sp
 The default UI includes an \fBambient\-light slider\fP which will simultaneously adjust all VDUs
-according to custom per\-VDU lux/brightness profiles.  As well as indicating the ambient light
-level manually via the slider, \fBvdu_controls\fP can be configured to periodically read from a
-hardware lux metering device and adjust brightness automatically.  The Lux\-Dialog provides
-controls for setting up light metering and VDU lux/brightness profiles.  If ambient light level
-controls are not required, the Settings Dialog includes an option to disable and hide them.
+according to custom per\-VDU lux/brightness profiles.  As well manually adjusting the ambient light
+level, the adjustment can be automated by setting up a hardware lux metering device.  The
+Lux\-Dialog provides options for setting up light metering and VDU lux/brightness profiles.
+If ambient light level controls are not required, the Settings Dialog includes an option to
+disable and hide them.
 .sp
 As well as the manual\-slider, a metering device may be a serial\-device, a UNIX FIFO (named\-pipe),
 or an executable (script or program):
@@ -624,8 +624,8 @@ Possible hardware devices include:
 An Arduino with a GY\-30/BH1750 lux meter writing to a usb serial\-port.
 .IP \(bu 2
 A webcam periodically sampled to produce approximate lux values.  Values
-might be estimated by analysing image content or image settings that
-contribute to exposure, such ISO values, apertures, and shutter speed.
+might be estimated by analyzing image content or image settings that
+contribute to exposure, such as ISO values, apertures, and shutter speed.
 .UNINDENT
 .UNINDENT
 .UNINDENT
@@ -652,11 +652,11 @@ webcam and writes to a FIFO (\fI$HOME/.cache/vlux_fifo\fP). Controls are include
 image\-brightness to lux mappings, and for defining a crop from which to sample brightness values.
 The script optionally runs in the system\-tray.
 .sp
-The examples may require customising for your own webcam and lighting conditions.
+The examples may require customizing for your own webcam and lighting conditions.
 .SS Lux Metering and brightness transitions
 .sp
 Due to VDU hardware and DDC protocol limitations, gradual transitions from one brightness level to
-another are likely to be noticeable and potentially annoying.  As well as being annoying
+another are likely to be noticeable and potentially annoying.  As well as being annoying,
 excessive stepping may eat into VDU NVRAM lifespan.
 .sp
 The auto\-brightness adjustment feature includes several measures to reduce the number of
@@ -683,19 +683,19 @@ can be manually suspended.  The main\-panel, main\-menu, and light\-metering dia
 toggling Auto/Manual.  Additionally, moving the manual lux\-slider turns off automatic adjustment.
 .sp
 The Light\-metering dialog includes an option to enable auto\-brightness interpolation. This option
-will enable the calculation of values between steps in the profiles. In order to avoid small
+will enable the calculation of values between steps in the profiles. To avoid small
 fluctuating changes, interpolation won\(aqt result in brightness changes less than 10%.  During
-interpolation, if a lux value is found to be in proximity to any attached preset, the preset
+interpolation, if a lux value is found to be close to any attached\-preset, the preset
 values will be preferred over interpolated ones.
 .SS Light/Lux Metering and Presets
 .sp
 The Light\-Metering Dialog includes the ability to set a Preset to trigger at a lux value.  This feature
 is accessed by hovering under the bottom axis of the Lux Profile Chart.
 .sp
-When a preset is tied to a lux value, the preset\(aqs VDU brightness values become fixed points on the
+When a preset is attached to a lux value, the preset\(aqs brightness values become fixed points on the
 Lux Profile Chart.  When the specified metered lux value is achieved, the stepping process will
 restore the preset\(aqs brightness values and then trigger the full restoration of the preset.  This
-ordering of events reduces the likelihood of metered\-stepping, and preset\-restoration from clashing.
+ordering of events reduces the likelihood of metered\-stepping and preset\-restoration from clashing.
 .sp
 A preset that does not include a VDU\(aqs brightness may be attached to a lux point to restore one or
 more non\-brightness controls.  For example, on reaching a particular lux level, an attached preset
@@ -705,7 +705,7 @@ If a preset is attached to a lux value and then detached, the preset\(aqs profil
 converted to normal (editable) profile points. Attach/detach is a quick way to copy VDU brightness
 values from presets if you don\(aqt want to permanently attach them.
 .sp
-If you utilise light\-metered auto\-brightness and preset\-scheduling together, their combined effects
+If you use light\-metered auto\-brightness and preset\-scheduling together, their combined effects
 may conflict. For example, a scheduled preset may set a reduced brightness, but soon after,
 light\-metering might increase it.  If you wish to use the two together, design your lux/brightness
 profile steps to match the brightness levels of specific presets, for example, a full\-sun preset and
@@ -740,12 +740,12 @@ max\-brightness\-jump=100
 .SS Improving Response Time: Dynamic Optimization and Sleep Multipliers
 .sp
 If you are using \fBddcutil\fP version 2.0 or greater, \fBvdu_controls\fP will default to using the
-\fBddcutil\fP \fIdynamic sleep optimiser\fP\&.  The optimiser automatically tunes and caches VDU specific
+\fBddcutil\fP \fIdynamic sleep optimizer\fP\&.  The optimizer automatically tunes and caches VDU specific
 timings when ever \fBddcutil\fP is run.  Any reliability\-issues or errors may be automatically
-resolved as the optimiser refines its cached timings.  Should problems persist, the
-optimiser can be disabled by adding \fI\-\-disable\-dynamic\-sleep\fP to the \fBddcutil extra arguments\fP in
+resolved as the optimizer refines its cached timings.  Should problems persist, the
+optimizer can be disabled by adding \fI\-\-disable\-dynamic\-sleep\fP to the \fBddcutil extra arguments\fP in
 the \fBSettings Dialog\fP (either globally on the \fBvdu_controls tab\fP or selectively under each VDU\(aqs
-tab).  If dynamic sleep is disabled, multipliers can then be manually assigned. The optimiser\(aqs
+tab).  If dynamic sleep is disabled, multipliers can then be manually assigned. The optimizer\(aqs
 heuristics continue to be refined, it may be that some issues may be resolved by moving to a more
 recent version of \fBlibddcutil/ddcutil\fP\&.
 .sp
@@ -754,7 +754,7 @@ For versions of \fBddcutil\fP prior to 2.0, you can manually set the \fBvdu_cont
 protocol interactions at the risk of increased protocol errors. The default sleep multiplier of 1.0
 has to be quite conservative, many VDUs can cope with smaller multipliers. A bit of experimentation
 with multiplier values may greatly speed up responsiveness. In a multi\-VDU setup individual sleep
-multipliers can be configured (see previous section).
+multipliers can be configured.
 .SS Improving Response Time and Reliability: Connections and Controls
 .sp
 \fBDDC/I2C\fP is not a totally reliable form of communication. VDUs may vary in their responsiveness
@@ -826,20 +826,20 @@ The bottom of the About\-dialog shows the same numbers. They update dynamically.
 .SS Laptops
 .sp
 A laptop\(aqs builtin\-panel normally doesn\(aqt implement DDC and cannot be controlled
-by \fBddcutil\fP or \fBddcutil\-service\fP\&.  Laptop panel brightness are controlled
+by \fBddcutil\fP or \fBddcutil\-service\fP\&.  Laptop panel brightness is controlled
 by a variety of methods that vary by vendor and hardware.  If you have a laptop
 where such adjustments can be scripted, you can use the \fB\-\-ddcutil\-emulator\fP
 option and provide \fBvdu_controls\fP with a ddcutil\-like script for getting and
-setting the panel brightness, then \fBvdu_controls\fP will treat the laptop panel
+setting the panel brightness; then \fBvdu_controls\fP will treat the laptop panel
 just like any other VDU.  A template script is provided in the \fBsample\-scripts\fP\&.
 .SS Cross\-platform differences
 .sp
-Wayland doesn\(aqt allow an application to precisely position its windows.  When the \fBsmart\-window\fP
-option is enabled and the desktop platform is Wayland, the application switches its platform to
-X11 (xcb) so that it runs in XWayland.
+Wayland doesn\(aqt allow an application to precisely position its windows.  When the
+\fBsmart\-window\fP option is enabled and the desktop platform is Wayland, the
+application switches its platform to X11 (xcb) so that it runs in XWayland.
 .sp
-The UI attempts to step around minor differences between KDE, GNOME, and the rest, the UI on
-each may not be exactly the same.
+The UI attempts to step around minor differences between KDE, GNOME, and the rest,
+the UI on each may not be exactly the same.
 .SS Other concerns
 .sp
 The power\-supplies in some older VDUs may buzz/squeel audibly when the brightness is
@@ -852,7 +852,7 @@ or undocumented features or values has the potential to make irreversible change
 Some controls change the number of connected devices (for example, some VDUs support a power\-off
 command). If such controls are used, \fBvdu_controls\fP will detect the change and will reconfigure
 the controls for the new situation (for example, DDC VDU 2 may now be DDC VDU 1).  If you change
-settings independently of \fBvdu_controls\fP, for example, by using a VDU\(aqs physical controls,  the
+settings independently of \fBvdu_controls\fP, for example, by using a VDU\(aqs physical controls, the
 \fBvdu_controls\fP UI includes a refresh button to force it to assess the new configuration.
 .sp
 Some VDU settings may disable or enable other settings in the VDU. For example, setting a VDU to a
@@ -861,7 +861,7 @@ will not be aware of the restriction resulting in its contrast\-control erring o
 nothing.
 .sp
 If your VDUs support \fIpicture\-modes\fP, altering any controls in vdu_controls will most likely
-result in the picture\-mode being customised.  For example, say you have selected the
+result in the picture\-mode being customized.  For example, say you have selected the
 VDU\(aqs \fIVivid\fP picture\-mode, if you use vdu_controls to change the brightness, it\(aqs likely
 that this will now become the brightness for \fIVivid\fP until the VDU is reset to its defaults.
 To avoid confusion, it may be advisable to stick to one picture\-mode for use with vdu_controls,
@@ -930,7 +930,7 @@ at \X'tty: link https://www.ddcutil.com/'\fI\%https://www.ddcutil.com/\fP\X'tty:
 .B LC_ALL, LANG, LANGUAGE
 These  variables specify the locale for language translations and units of distance.
 LC_ALL is used by python, LANGUAGE is used by Qt. Normally, they should all have the same
-value, for example: \fBDa_DK\fP\&. For these to have any effect on language, \fBSettings\fP
+value, for example, \fBDa_DK\fP\&. For these to have any effect on language, \fBSettings\fP
 \fBTranslations Enabled\fP must also be enabled.
 .TP
 .B VDU_CONTROLS_UI_IDLE_SECS
@@ -939,13 +939,13 @@ the controls value to the VDU.  This prevents altering a slider from constantly 
 a VDU, which might shorten its NVRAM lifespan. The default is 0.5 seconds.
 .TP
 .B VDU_CONTROLS_IPINFO_URL
-Override the default ip\-address to location service URL (\fBhttps://ipinfo.io/json\fP).
+Overrides the default ip\-address to location service URL (\fBhttps://ipinfo.io/json\fP).
 .TP
 .B VDU_CONTROLS_WTTR_URL
-Override the default weather service URL (\fBhttps://wttr.in\fP).
+Overrides the default weather service URL (\fBhttps://wttr.in\fP).
 .TP
 .B VDU_CONTROLS_WEATHER_KM
-Override the default maximum permissible spherical distance (in kilometres)
+Overrides the default maximum permissible spherical distance (in kilometres)
 between the \fBSettings\fP \fBLocation\fP and \fBwttr.in\fP reported location (\fB200 km\fP, 124 miles).
 .TP
 .B VDU_CONTROLS_DDCUTIL_ARGS
