@@ -47,7 +47,7 @@ Arguments supplied on the command line override config file equivalent settings.
                             start up as an entry in the system tray.
                             ``--no-system-tray`` is the default.
       --hide-on-focus-out|--no-hide-on-focus-out
-                            minimize the main window automatically on focus out
+                            minimize the main window automatically on focus out.
                             ``--no-hide-on-focus-out`` is the default.
       --smart-window|--no-smart-window
                             smart main window placement and geometry.
@@ -59,9 +59,9 @@ Arguments supplied on the command line override config file equivalent settings.
                             monochrome themed system-tray.
                             ``--no-mono-light-tray`` is the default.
       --protect-nvram|--no-protect-nvram
-                            alter options and defaults to minimize VDU NVRAM writes
+                            alter options and defaults to minimize VDU NVRAM writes.
       --order-by-name|--no-order-by-name
-                            order tabs, lists, and dropdowns by VDU name
+                            order tabs, lists, and dropdowns by VDU name.
       --lux-options|--no-lux-options
                             enable/disable ambient light metering options.
                             ``--lux-options`` is the default.
@@ -70,7 +70,7 @@ Arguments supplied on the command line override config file equivalent settings.
       --weather|--no-weather
                             enable/disable weather lookups. ``--weather`` is the default.
       --dbus-client|--no-dbus-client
-                            use the D-Bus ddcutil-service instead of the ddcutil command
+                            use the D-Bus ddcutil-service instead of the ddcutil command.
                             ``--dbus-client`` is the default
       --dbus-events|--no-dbus-events
                             enable D-Bus ddcutil-service client events
@@ -89,13 +89,13 @@ Arguments supplied on the command line override config file equivalent settings.
                             ``--no-translations`` is the default.
       --location latitude,longitude
                             local latitude and longitude for triggering presets
-                            by solar elevation
+                            by solar elevation.
       --ddcutil-emulator emulator-path
                             additional command-line ddcutil emulator for a laptop panel
-      --sleep-multiplier    set the default ddcutil sleep multiplier
+      --sleep-multiplier    set the default ddcutil sleep multiplier.
                             protocol reliability multiplier for ddcutil (typically
                             0.1 .. 2.0, default is 1.0)
-      --ddcutil-extra-args  extra arguments to pass to ddcutil (enclosed in single quotes)
+      --ddcutil-extra-args  extra arguments to pass to ddcutil (enclosed in single quotes).
 
       --create-config-files
                             if they do not exist, create template config INI files
@@ -126,7 +126,7 @@ optionally run in the system tray of KDE, Deepin, GNOME, and Xfce (and possibly 
 
 The UI provides an optional ``ambient-light slider`` for simultaneously adjusting
 all VDUs according to custom per-VDU ambient lux/brightness profiles.  Options are included
-for automated adjustment by accessing a hardware light-meters, webcams, or other devices.
+for automated adjustment by accessing hardware light-meters, webcams, or other devices.
 
 Named ``Preset`` configurations can be saved and recalled. For example, presets may be created
 for night, day, photography, movies, and so forth.   Presets can be triggered by specific ambient
@@ -140,7 +140,7 @@ main-window or the system-tray icon.  The main-menu has `ALT-key` shortcuts for 
 
 For further information, including screenshots, see https://github.com/digitaltrails/vdu_controls .
 
-The long term affects of repeatably rewriting a VDUs setting are not well understood, but some
+The long-term effects of repeatably rewriting a VDUs setting are not well understood, but some
 concerns have been expressed. See **LIMITATIONS** for further details.
 
 Configuration
@@ -161,7 +161,7 @@ tabs specific to each VDU.  The config files are named according to the followin
 The VDU-specific config files can be used to:
 
  - Correct manufacturer built-in metadata.
- - Customise which controls are to be provided for each VDU.
+ - Customize which controls are to be provided for each VDU.
  - Define a user-friendly label for each VDU.
  - Set optimal ``ddcutil`` DDC parameters for each VDU.
 
@@ -207,7 +207,7 @@ The config files are in INI-format divided into a number of sections as outlined
     capabilities-override =
 
 Config files can only be used to enable and alter definitions of VCP codes supported by ``ddcutil``.
-Unsupported manufacturer specific features should only be experimented with caution, some
+Unsupported manufacturer-specific features should only be experimented with caution, some
 may have irreversible consequences, including bricking the hardware.
 
 As well as using the ``Settings``, config files may also be created by the command line option::
@@ -247,7 +247,7 @@ Altering the values of some VCP codes may result in a cascade of changes to othe
 codes.  For example, changing a VCP value for *Picture Mode* might result in changes
 to several VCP-code features, including brightness, contrast, and others. Exactly
 which codes have these kinds of side effects isn't indicated in the metadata
-obtained from each VDU, however vdu_controls supports adding *refresh* annotations
+obtained from each VDU, however, vdu_controls supports adding *refresh* annotations
 to the feature-names within the **capabilities override**.  For example::
 
     Feature: 15 (Picture Mode)
@@ -264,14 +264,14 @@ DBUS dccutil-service
 
 When available, ``vdu_controls`` defaults to interacting with VDUs via the DBUS ``ddcutil-service``
 service rather than the ``ddcutil`` command. The service should be both faster and more
-reliable - noticeably so when multiple VDUs need to be controlled. Whether to use the service
+reliable (especially when multiple VDUs need to be controlled). Whether to use the service
 can be controlled by the ``DBUS client`` checkbox in the settings dialog.
 
 When using the service, you may optionally enable service detection of DPMS events and
 VDU connectivity events (hot-plugging cables or power-cycling VDUs).  Whether to enable events
 is controlled by the ``DBUS events`` checkbox in the settings dialog.  The reliability
 and timeliness of events may vary depending on the model of GPU, version of GPU driver,
-model of VDU, and type of VDU connector-cable.  In some cases the service polling for DPMS or
+model of VDU, and type of VDU connector-cable.  In some cases, the service polling for DPMS or
 connection status may wake some VDU models.  Both ``ddcutil-service`` or ``libddcutil`` offer
 options for finer control over which events are detected and how.
 
@@ -279,8 +279,8 @@ Presets
 -------
 
 A named _Preset_ can be used to save the current VDU settings for later recall. Any number of
-presets can be created for different lighting conditions or different applications, for example:
-*Night*, *Day*, *Overcast*, *Sunny*, *Photography*, and *Video*. Each presets can be assigned a
+presets can be created for different lighting conditions or different applications, for example,
+*Night*, *Day*, *Overcast*, *Sunny*, *Photography*, and *Video*. Each preset can be assigned a
 name and icon.
 
 The ``Presets`` item in ``main-menu`` will bring up a ``Presets`` dialog for managing and
@@ -340,7 +340,7 @@ Presets - solar elevation triggers
 ----------------------------------
 
 A preset may be set to automatically trigger when the sun rises to a specified elevation. The idea
-being to allow a preset to trigger relative to dawn or dusk, or when the sun rises above some
+is to allow a preset to trigger relative to dawn or dusk, or when the sun rises above some
 surrounding terrain (the time of which will vary as the seasons change).
 
 If a preset has an elevation, the preset will be triggered each day at a time calculated according
@@ -360,14 +360,14 @@ a trigger intended for the brightest part of the day if the day is particularly 
 
 At startup ``vdu_controls`` will restore the most recent preset that would have been triggered for
 this day (if any).  For example, say a user has ``vdu_controls`` set to run at login, and they've
-also set a preset to trigger at dawn, but they don't actually log in until just after dawn, the
+also set a preset to trigger at dawn, but they don't log in until just after dawn, the
 overdue dawn preset will be triggered at login.
 
 Presets - Smooth Transitions
 ----------------------------
 
 __To minimize writes to VDU NVRAM, smooth-transitions have been deprecated and are disabled by
-default. To reenable smooth transitions, uncheck the ``protect-nvram`` option in _Settings_.__
+default. To re-enable smooth transitions, uncheck the ``protect-nvram`` option in _Settings_.__
 
 A preset may be set to ``Smoothly Transition``, in which case changes to controls continuous-value
 slider controls such as brightness and contrast will be stepped by one until the final values are
@@ -381,13 +381,13 @@ The Preset Dialog includes a combo-box for defining when to apply transitions to
  - ``On signal`` - slowly change on the appropriate UNIX signal;
  - ``On menu`` - slowly change when selected in the main-menu;
 
-Normally a transition single-steps the controls as quickly as possible.  In practice this means each
+Normally a transition single-steps the controls as quickly as possible.  In practice, this means each
 step takes one or more seconds and increases linearly depending on the number of VDUs and number of
 controls being altered.  The Presets Dialog includes a ``Transition Step seconds`` control that can
 be used to increase the step interval and extend a transition over a longer period of time.
 
 If any transitioning controls change independently of the transition, the transition will cease.  In
-that manner a transition can be abandoned by dragging a slider or choosing a different preset.
+that manner, a transition can be abandoned by dragging a slider or choosing a different preset.
 
 Presets - supplementary weather requirements
 --------------------------------------------
@@ -417,14 +417,14 @@ When weather requirements are in use, ``vdu_controls`` will check that the coord
 ``Settings`` ``Location`` are a reasonable match for those returned from ``wttr.in``, a warning will
 be issued if they are more than 200 km (124 miles) apart.
 
-If the place-name is left blank, the ``wttr.in`` server will try to guess you location from your
+If the place-name is left blank, the ``wttr.in`` server will try to guess your location from your
 external IP address.  The guess may not be accurate and may vary over time.
 
 Presets - remote control
 ------------------------
 
-Scripts may use UNIX/Linux signals may be used to instruct a running ``vdu_controls`` to invoke a
-preset or to initiate "Refresh settings from monitors".  Signals in the range 40 to 55 correspond to
+UNIX/Linux signals may be used to cause ``vdu_controls`` to restore a preset or to initiate a
+refresh of the application from the connected monitors.  Signals in the range 40 to 55 correspond to
 first to last presets (if any are defined).  Additionally, SIGHUP can be used to initiate "Refresh
 settings from monitors".  For example:
 
@@ -437,7 +437,7 @@ settings from monitors".  For example:
         kill -40 $(ps axwww | grep '[/]usr/bin/vdu_controls' | awk '{print $1}')
         kill -41 $(ps axwww | grep '[/]usr/bin/vdu_controls' | awk '{print $1}')
 
-    Or if some other process has changed a VDUs settings, trigger vdu_controls to update its UI::
+    If some other activity has changed a VDU's settings, trigger vdu_controls to update its UI::
 
         kill -HUP $(ps axwww | grep '[/]usr/bin/vdu_controls' | awk '{print $1}')
 
@@ -447,11 +447,11 @@ Ambient Light Levels and Light/Lux Metering
 -------------------------------------------
 
 The default UI includes an ``ambient-light slider`` which will simultaneously adjust all VDUs
-according to custom per-VDU lux/brightness profiles.  As well as indicating the ambient light
-level manually via the slider, ``vdu_controls`` can be configured to periodically read from a
-hardware lux metering device and adjust brightness automatically.  The Lux-Dialog provides
-controls for setting up light metering and VDU lux/brightness profiles.  If ambient light level
-controls are not required, the Settings Dialog includes an option to disable and hide them.
+according to custom per-VDU lux/brightness profiles.  As well manually adjusting the ambient light
+level, the adjustment can be automated by setting up a hardware lux metering device.  The
+Lux-Dialog provides options for setting up light metering and VDU lux/brightness profiles.
+If ambient light level controls are not required, the Settings Dialog includes an option to
+disable and hide them.
 
 As well as the manual-slider, a metering device may be a serial-device, a UNIX FIFO (named-pipe),
 or an executable (script or program):
@@ -466,8 +466,8 @@ Possible hardware devices include:
 
  - An Arduino with a GY-30/BH1750 lux meter writing to a usb serial-port.
  - A webcam periodically sampled to produce approximate lux values.  Values
-   might be estimated by analysing image content or image settings that
-   contribute to exposure, such ISO values, apertures, and shutter speed.
+   might be estimated by analyzing image content or image settings that
+   contribute to exposure, such as ISO values, apertures, and shutter speed.
 
 Further information on various lux metering options, as well as instructions for constructing and
 programming an Arduino with a GY-30/BH1750, can be found at:
@@ -485,13 +485,13 @@ webcam and writes to a FIFO (`$HOME/.cache/vlux_fifo`). Controls are included fo
 image-brightness to lux mappings, and for defining a crop from which to sample brightness values.
 The script optionally runs in the system-tray.
 
-The examples may require customising for your own webcam and lighting conditions.
+The examples may require customizing for your own webcam and lighting conditions.
 
 Lux Metering and brightness transitions
 ---------------------------------------
 
 Due to VDU hardware and DDC protocol limitations, gradual transitions from one brightness level to
-another are likely to be noticeable and potentially annoying.  As well as being annoying
+another are likely to be noticeable and potentially annoying.  As well as being annoying,
 excessive stepping may eat into VDU NVRAM lifespan.
 
 The auto-brightness adjustment feature includes several measures to reduce the number of
@@ -509,9 +509,9 @@ can be manually suspended.  The main-panel, main-menu, and light-metering dialog
 toggling Auto/Manual.  Additionally, moving the manual lux-slider turns off automatic adjustment.
 
 The Light-metering dialog includes an option to enable auto-brightness interpolation. This option
-will enable the calculation of values between steps in the profiles. In order to avoid small
+will enable the calculation of values between steps in the profiles. To avoid small
 fluctuating changes, interpolation won't result in brightness changes less than 10%.  During
-interpolation, if a lux value is found to be in proximity to any attached preset, the preset
+interpolation, if a lux value is found to be close to any attached-preset, the preset
 values will be preferred over interpolated ones.
 
 Light/Lux Metering and Presets
@@ -520,10 +520,10 @@ Light/Lux Metering and Presets
 The Light-Metering Dialog includes the ability to set a Preset to trigger at a lux value.  This feature
 is accessed by hovering under the bottom axis of the Lux Profile Chart.
 
-When a preset is tied to a lux value, the preset's VDU brightness values become fixed points on the
+When a preset is attached to a lux value, the preset's brightness values become fixed points on the
 Lux Profile Chart.  When the specified metered lux value is achieved, the stepping process will
 restore the preset's brightness values and then trigger the full restoration of the preset.  This
-ordering of events reduces the likelihood of metered-stepping, and preset-restoration from clashing.
+ordering of events reduces the likelihood of metered-stepping and preset-restoration from clashing.
 
 A preset that does not include a VDU's brightness may be attached to a lux point to restore one or
 more non-brightness controls.  For example, on reaching a particular lux level, an attached preset
@@ -533,7 +533,7 @@ If a preset is attached to a lux value and then detached, the preset's profile p
 converted to normal (editable) profile points. Attach/detach is a quick way to copy VDU brightness
 values from presets if you don't want to permanently attach them.
 
-If you utilise light-metered auto-brightness and preset-scheduling together, their combined effects
+If you use light-metered auto-brightness and preset-scheduling together, their combined effects
 may conflict. For example, a scheduled preset may set a reduced brightness, but soon after,
 light-metering might increase it.  If you wish to use the two together, design your lux/brightness
 profile steps to match the brightness levels of specific presets, for example, a full-sun preset and
@@ -567,12 +567,12 @@ Improving Response Time: Dynamic Optimization and Sleep Multipliers
 -------------------------------------------------------------------
 
 If you are using ``ddcutil`` version 2.0 or greater, ``vdu_controls`` will default to using the
-``ddcutil`` *dynamic sleep optimiser*.  The optimiser automatically tunes and caches VDU specific
+``ddcutil`` *dynamic sleep optimizer*.  The optimizer automatically tunes and caches VDU specific
 timings when ever ``ddcutil`` is run.  Any reliability-issues or errors may be automatically
-resolved as the optimiser refines its cached timings.  Should problems persist, the
-optimiser can be disabled by adding `--disable-dynamic-sleep` to the **ddcutil extra arguments** in
+resolved as the optimizer refines its cached timings.  Should problems persist, the
+optimizer can be disabled by adding `--disable-dynamic-sleep` to the **ddcutil extra arguments** in
 the **Settings Dialog** (either globally on the **vdu_controls tab** or selectively under each VDU's
-tab).  If dynamic sleep is disabled, multipliers can then be manually assigned. The optimiser's
+tab).  If dynamic sleep is disabled, multipliers can then be manually assigned. The optimizer's
 heuristics continue to be refined, it may be that some issues may be resolved by moving to a more
 recent version of ``libddcutil/ddcutil``.
 
@@ -581,7 +581,7 @@ For versions of ``ddcutil`` prior to 2.0, you can manually set the ``vdu_control
 protocol interactions at the risk of increased protocol errors. The default sleep multiplier of 1.0
 has to be quite conservative, many VDUs can cope with smaller multipliers. A bit of experimentation
 with multiplier values may greatly speed up responsiveness. In a multi-VDU setup individual sleep
-multipliers can be configured (see previous section).
+multipliers can be configured.
 
 Improving Response Time and Reliability: Connections and Controls
 -----------------------------------------------------------------
@@ -633,22 +633,22 @@ Laptops
 -------
 
 A laptop's builtin-panel normally doesn't implement DDC and cannot be controlled
-by ``ddcutil`` or ``ddcutil-service``.  Laptop panel brightness are controlled
+by ``ddcutil`` or ``ddcutil-service``.  Laptop panel brightness is controlled
 by a variety of methods that vary by vendor and hardware.  If you have a laptop
 where such adjustments can be scripted, you can use the ``--ddcutil-emulator``
 option and provide ``vdu_controls`` with a ddcutil-like script for getting and
-setting the panel brightness, then ``vdu_controls`` will treat the laptop panel
+setting the panel brightness; then ``vdu_controls`` will treat the laptop panel
 just like any other VDU.  A template script is provided in the ``sample-scripts``.
 
 Cross-platform differences
 --------------------------
 
-Wayland doesn't allow an application to precisely position its windows.  When the ``smart-window``
-option is enabled and the desktop platform is Wayland, the application switches its platform to
-X11 (xcb) so that it runs in XWayland.
+Wayland doesn't allow an application to precisely position its windows.  When the
+``smart-window`` option is enabled and the desktop platform is Wayland, the
+application switches its platform to X11 (xcb) so that it runs in XWayland.
 
-The UI attempts to step around minor differences between KDE, GNOME, and the rest, the UI on
-each may not be exactly the same.
+The UI attempts to step around minor differences between KDE, GNOME, and the rest,
+the UI on each may not be exactly the same.
 
 Other concerns
 --------------
@@ -663,7 +663,7 @@ or undocumented features or values has the potential to make irreversible change
 Some controls change the number of connected devices (for example, some VDUs support a power-off
 command). If such controls are used, ``vdu_controls`` will detect the change and will reconfigure
 the controls for the new situation (for example, DDC VDU 2 may now be DDC VDU 1).  If you change
-settings independently of ``vdu_controls``, for example, by using a VDU's physical controls,  the
+settings independently of ``vdu_controls``, for example, by using a VDU's physical controls, the
 ``vdu_controls`` UI includes a refresh button to force it to assess the new configuration.
 
 Some VDU settings may disable or enable other settings in the VDU. For example, setting a VDU to a
@@ -672,7 +672,7 @@ will not be aware of the restriction resulting in its contrast-control erring or
 nothing.
 
 If your VDUs support *picture-modes*, altering any controls in vdu_controls will most likely
-result in the picture-mode being customised.  For example, say you have selected the
+result in the picture-mode being customized.  For example, say you have selected the
 VDU's *Vivid* picture-mode, if you use vdu_controls to change the brightness, it's likely
 that this will now become the brightness for *Vivid* until the VDU is reset to its defaults.
 To avoid confusion, it may be advisable to stick to one picture-mode for use with vdu_controls,
@@ -730,7 +730,7 @@ Environment
     LC_ALL, LANG, LANGUAGE
         These  variables specify the locale for language translations and units of distance.
         LC_ALL is used by python, LANGUAGE is used by Qt. Normally, they should all have the same
-        value, for example: ``Da_DK``. For these to have any effect on language, ``Settings``
+        value, for example, ``Da_DK``. For these to have any effect on language, ``Settings``
         ``Translations Enabled`` must also be enabled.
 
     VDU_CONTROLS_UI_IDLE_SECS
@@ -739,13 +739,13 @@ Environment
         a VDU, which might shorten its NVRAM lifespan. The default is 0.5 seconds.
 
     VDU_CONTROLS_IPINFO_URL
-        Override the default ip-address to location service URL (``https://ipinfo.io/json``).
+        Overrides the default ip-address to location service URL (``https://ipinfo.io/json``).
 
     VDU_CONTROLS_WTTR_URL
-        Override the default weather service URL (``https://wttr.in``).
+         Overrides the default weather service URL (``https://wttr.in``).
 
     VDU_CONTROLS_WEATHER_KM
-        Override the default maximum permissible spherical distance (in kilometres)
+        Overrides the default maximum permissible spherical distance (in kilometres)
         between the ``Settings`` ``Location`` and ``wttr.in`` reported location (``200 km``, 124 miles).
 
     VDU_CONTROLS_DDCUTIL_ARGS
