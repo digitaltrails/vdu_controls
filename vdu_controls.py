@@ -870,7 +870,7 @@ EASTERN_SKY = 'eastern-sky'
 
 IP_ADDRESS_INFO_URL = os.getenv('VDU_CONTROLS_IPINFO_URL', default='https://ipinfo.io/json')
 WEATHER_FORECAST_URL = os.getenv('VDU_CONTROLS_WTTR_URL', default='https://wttr.in')
-TESTING_TIME_ZONE = os.getenv('VDU_CONTROLS_TEST_TIME_ZONE')  # for example 'Europe/Berlin' 'Asia/Shanghai'
+TESTING_TIME_ZONE = os.getenv('VDU_CONTROLS_TEST_TIME_ZONE')  # for example, 'Europe/Berlin' 'Asia/Shanghai'
 
 TIME_CLOCK_SYMBOL = '\u25F4'  # WHITE CIRCLE WITH UPPER-LEFT QUADRANT
 WEATHER_RESTRICTION_SYMBOL = '\u2614'  # UMBRELLA WITH RAINDROPS
@@ -1812,6 +1812,7 @@ class DdcutilEmulatorImpl(DdcutilExeImpl):
         super().__init__(common_args)
         self.ddcutil_exe = ddcutil_exe
 
+
 class DdcutilDBusImpl(QObject):
     RETURN_RAW_VALUES = 2
 
@@ -2294,7 +2295,7 @@ class ScheduleWorker(WorkerThread):
 
 
 class ConfIni(configparser.ConfigParser):
-    """ConfigParser is a little messy and its class name is a bit misleading, wrap it and bend it to our needs."""
+    """ConfigParser is a little messy, and its class name is a bit misleading, wrap it and bend it to our needs."""
 
     def __init__(self) -> None:
         super().__init__(interpolation=None)
@@ -2952,7 +2953,7 @@ class SubWinDialog(QDialog):  # Fix for gnome: QDialog must be a subwindow, othe
 class SettingsEditor(SubWinDialog, DialogSingletonMixin):
     """
     Application Settings Editor, edits a default global settings file, and a settings file for each VDU.
-    The files are in INI format.  Internally the settings are VduControlsConfig wrappers around the standard class ConfigIni.
+    The files are in INI format.  Internally, the settings are VduControlsConfig wrappers around the standard class ConfigIni.
     """
 
     @staticmethod

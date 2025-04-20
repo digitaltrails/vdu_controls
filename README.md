@@ -354,14 +354,14 @@ Version History
 ---------------
 
 * 2.3.0
-  * When lux options are enabled, show the icon for current light-level in the tray (only if no preset is active). 
-  * Renamed two light-light levels more appropriately (subdued, twilight). 
-  * Fixed the doze function, this improves the responsiveness of all slider controls.
-  * The Settings-Dialog has been reorganized to make it scrollable.
-  * Support a user-defined ddcutil-emulator executable for controlling laptop-panels 
-    or other non-DDC-capable displays. A sample template emulator written in bash 
-    is included as a DIY starter kit (sample-scripts/laptop-ddcutil-emulator.bash).
+  * Fix the doze function, this improves the responsiveness of all slider controls.
   * Fix an infinite loop if menu->quit is used when the "Failed to obtain capabilities" dialog is showing.
+  * The Settings-Dialog has been reorganized to make it scrollable.
+  * When lux options are enabled, the tray will show the icon for current light-level (if no preset is active). 
+  * Renamed two light-light levels more appropriately (room becomes subdued, rise-set becomes twilight).
+  * Support a user-defined ddcutil-emulator executable for controlling laptop-panels 
+    or other non-DDC-capable displays. An template sample emulator written in bash 
+    is included as a DIY starter (sample-scripts/laptop-ddcutil-emulator.bash).
   
 * 2.2.0
   * Add a vdu-name option for assigning meaningful/user-friendly names to each VDU.
