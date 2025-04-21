@@ -9128,8 +9128,7 @@ def main() -> None:
         restart_status = QProcess.startDetached(app.arguments()[0], app.arguments()[1:])
         if not restart_status:
             MBox(MBox.Critical, msg=tr("Restart of {} failed.  Please restart manually.").format(app.arguments()[0]),
-                 info=tr("This is probably because {} is not"
-                         " executable or is not on your PATH.").format(app.arguments()[0]),
+                 info=tr("This is probably because {} is not executable or is not on your PATH.").format(app.arguments()[0]),
                  buttons=MBox.Close).exec()
     sys.exit(rc)
 
