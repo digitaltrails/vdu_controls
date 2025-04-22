@@ -1345,22 +1345,23 @@ def thread_pid():
     return threading.get_native_id()  # More unique than get_ident (internal IDs get recycled immediately) - see with htop -H.
 
 
+@dataclass
 class VcpCapability:
     """Representation of a VCP (Virtual Control Panel) capability for a VDU."""
+    vcp_code: str
+    name: str
+    vcp_type: str | None = None
+    values: List | None = None
+    causes_config_change: bool = False
+    icon_source: bytes | None = None
+    enabled: bool = False
+    can_transition: bool = False
+    retry_setvcp: bool = True
 
-    def __init__(self, vcp_code: str, vcp_name: str, vcp_type: str | None = None, values: List | None = None,
-                 causes_config_change: bool = False, icon_source: bytes | None = None, enabled: bool = False,
-                 can_transition: bool = False, retry_setvcp: bool = True):
-        self.vcp_code = vcp_code
-        self.name = vcp_name
-        self.vcp_type = vcp_type
-        self.icon_source = icon_source
-        self.causes_config_change = causes_config_change
-        self.enabled = enabled
-        self.can_transition = can_transition
-        self.retry_setvcp = retry_setvcp and not causes_config_change  # Safe to repeat set on error
+    def __post_init__(self):
+        self.retry_setvcp = self.retry_setvcp and not self.causes_config_change  # Safe to repeat set on error
         # For non-continuous types of VCP (VCP types SNC or CNC). Also for special cases, such as restricted brightness ranges.
-        self.values = [] if values is None else values
+        self.values = [] if self.values is None else self.values
 
     def property_name(self) -> str:
         return re.sub('[^A-Za-z0-9_-]', '-', self.name).lower()
