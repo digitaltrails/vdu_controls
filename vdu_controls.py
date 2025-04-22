@@ -3503,9 +3503,7 @@ class VduException(Exception):
 
 
 class VduControlBase(QWidget):
-    """
-    Base GUI control for a DDC attribute.
-    """
+    """Base GUI control for a DDC attribute."""
 
     _refresh_ui_view_in_gui_thread_qtsignal = pyqtSignal()
 
@@ -3725,7 +3723,7 @@ class VduControlPanel(QWidget):
                 except ValueError as valueError:
                     MBox(MBox.Critical, msg=valueError.args[0],
                          info=tr('If you want to extend the set of permitted values, see the man page concerning '
-                                 'VDU/VDU-model config files .').format(capability.vcp_code, capability.name)).exec()
+                                 'VDU/VDU-model config files.').format(capability.vcp_code, capability.name)).exec()
             else:
                 raise TypeError(f'No GUI support for VCP type {capability.vcp_type} for vcp_code {capability.vcp_code}')
             if control is not None:
@@ -7606,9 +7604,9 @@ class LuxAmbientSlider(QWidget):
 class GreyScaleDialog(SubWinDialog):
     """Creates a dialog with a grey scale VDU calibration image.  Non-model. Have as many as you like - one per VDU."""
 
-    # This stops garbage collection of independent instances of this dialog until the user closes them.
-    # If you don't do this the dialog will disappear before it becomes visible.  Could also pass a parent
-    # which would achieve the same thing - but would alter where the dialog appears.
+    # This stops garbage-collection of independent instances of this dialog until the user closes them.
+    # If we don't do this, the dialog will disappear before it becomes visible. We could also pass a parent
+    # which would achieve the same thing, but would alter where the dialog appears.
     _active_list: List[QDialog] = []
 
     def __init__(self) -> None:
@@ -7905,8 +7903,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         ddcutil_problem = None
         try:
             self.detected_vdu_list = []
-            log_debug("Detecting connected monitors, looping detection until it stabilises.") if log_debug_enabled else None
-            # Loop in case the session is initialising/restoring which can make detection unreliable.
+            log_debug("Detecting connected monitors, looping detection until it stabilizes.") if log_debug_enabled else None
+            # Loop in case the session is initializing/restoring which can make detection unreliable.
             # Limit to a reasonable number of iterations.
             for i in range(1, 11):
                 prev_num = len(self.detected_vdu_list)
@@ -8010,7 +8008,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         def _update_from_vdu(worker: WorkerThread) -> None:
             if self.ddcutil is not None:
                 with non_blocking_lock(self.application_lock) as acquired_lock:
-                    if acquired_lock:  # if acquired_lock is not None, then we have successfully acquired the lock.
+                    if acquired_lock:  # If acquired_lock is not None, then we have successfully acquired the lock.
                         log_debug(f"_update_from_vdu: holding application_lock") if log_debug_enabled else None
                         try:
                             log_info(f"Refresh commences: {external_event=}") if log_debug_enabled else None
@@ -8026,7 +8024,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                                                                                     exception=e)
                     else:
                         log_info(f"Application is already busy, can't do a refresh ({external_event=})")
-                        worker.stop()  # stop the thread - which also indicates we did not acquire the lock
+                        worker.stop()  # Stop the thread - which also indicates we did not acquire the lock.
                         return  # Prevents logging unlock (because we don't have the lock if we reach here).
                 log_debug(f"_update_from_vdu: released application_lock") if log_debug_enabled else None
 
@@ -8050,7 +8048,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 ScheduleWorker.check()  # immediately active the currently applicable preset
                 if self.lux_auto_controller:
                     if LuxDialog.exists():
-                        LuxDialog.get_instance().reconfigure()  # in case the number of connected monitors have changed.
+                        LuxDialog.get_instance().reconfigure()  # Incase the number of connected monitors has changed.
                     if self.lux_auto_controller.is_auto_enabled():
                         self.lux_auto_controller.adjust_brightness_now()
             finally:
@@ -8152,7 +8150,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
     def schedule_create_timetable(self, start_of_day: datetime, location: GeoLocation) -> Dict[datetime, Preset]:
         log_debug(f"Create preset timetable for {start_of_day}") if log_debug_enabled else None
-        timetable_for_day: Dict[datetime, Preset] = {}  # Create timetable for the entire day from 00:00:00 to 23:59:59
+        timetable_for_day: Dict[datetime, Preset] = {}  # Create a timetable for the entire day from 00:00:00 to 23:59:59
         time_elevation_map = create_elevation_map(start_of_day, latitude=location.latitude, longitude=location.longitude)
         for preset in self.preset_controller.find_presets_map().values():
             if elevation_key := preset.get_solar_elevation():
@@ -8638,7 +8636,7 @@ class VduAppWindow(QMainWindow):
             self.tray_icon = self.app_icon
 
     def create_main_control_panel(self) -> None:
-        # Call on initialisation and whenever the number of connected VDUs changes.
+        # Call on initialization and whenever the number of connected VDUs changes.
         if self.main_panel is not None:
             self.main_panel.deleteLater()
             self.main_panel = None
@@ -8869,13 +8867,13 @@ class SignalWakeupHandler(QtNetwork.QAbstractSocket):
     # But, since Python 2.6 and in Python 3 you can cause Qt to run a Python function when a signal with a handler is
     # received using signal.set_wakeup_fd().
     #
-    # This is possible, because, contrary to the documentation, the low-level signal handler doesn't only set a flag
+    # This is possible because, contrary to the documentation, the low-level signal handler doesn't only set a flag
     # for the virtual machine, but it may also write a byte into the file descriptor set by set_wakeup_fd(). Python 2
     # writes a NUL byte, Python 3 writes the signal number.
     #
     # So by subclassing a Qt class that takes a file descriptor and provides a readReady() signal, like e.g.
     # QAbstractSocket, the event loop will execute a Python function every time a signal (with a handler) is received
-    # causing the signal handler to execute nearly instantaneous without need for timers:
+    # causing the signal handler to execute nearly instantaneously without the need for timers:
     # '''
 
     received_unix_signal_qtsignal = pyqtSignal(int)
@@ -8920,16 +8918,16 @@ def calc_solar_azimuth_zenith(localised_time: datetime, latitude: float, longitu
     earth_mean_radius = 6371.01
     astronomical_unit = 149597890
 
-    # Calculate difference in days between the current Julian Day and JD 2451545.0, which is noon 1 January 2000 Universal Time
+    # Calculate the difference in days between the current Julian Day and JD 2451545.0, which is noon 1 January 2000 Universal Time
 
-    # Calculate time of the day in UT decimal hours
+    # Calculate the time of the day in UT decimal hours
     decimal_hours = hours + (minutes + seconds / 60.) / 60.
     # Calculate current Julian Day
     aux1 = int((month - 14.) / 12.)
     aux2 = int((1461. * (year + 4800. + aux1)) / 4.) + int((367. * (month - 2. - 12. * aux1)) / 12.) - int(
         (3. * int((year + 4900. + aux1) / 100.)) / 4.) + day - 32075.
     julian_date = aux2 - 0.5 + decimal_hours / 24.
-    # Calculate difference between current Julian Day and JD 2451545.0
+    # Calculate the difference between current Julian Day and JD 2451545.0
     elapsed_julian_days = julian_date - 2451545.0
 
     # Calculate ecliptic coordinates (ecliptic longitude and obliquity of the ecliptic in radians but
@@ -8941,7 +8939,7 @@ def calc_solar_azimuth_zenith(localised_time: datetime, latitude: float, longitu
         2. * mean_anomaly) - 0.0001134 - 0.0000203 * math.sin(omega)
     ecliptic_obliquity = 0.4090928 - 6.2140e-9 * elapsed_julian_days + 0.0000396 * math.cos(omega)
 
-    # Calculate celestial coordinates ( right ascension and declination ) in radians but without limiting
+    # Calculate celestial coordinates (right ascension and declination) in radians but without limiting
     # the angle to be less than 2*Pi (i.e., the result may be greater than 2*Pi)
     sin_ecliptic_longitude = math.sin(ecliptic_longitude)
     dy = math.cos(ecliptic_obliquity) * sin_ecliptic_longitude
@@ -8969,7 +8967,7 @@ def calc_solar_azimuth_zenith(localised_time: datetime, latitude: float, longitu
     # Parallax Correction
     parallax = (earth_mean_radius / astronomical_unit) * math.sin(zenith_angle)
     zenith_angle = (zenith_angle + parallax) / (math.pi / 180.)
-    # Return azimuth as clockwise angle from true north
+    # Return azimuth as a clockwise angle from true north
     return azimuth, zenith_angle
 
 
@@ -9021,7 +9019,7 @@ def initialise_locale_translations(app: QApplication) -> None:
 
     # If there is a .ts XML file in the path newer than the associated .qm binary file, load the messages
     # from the XML into a map and use them directly.  This is useful while developing and possibly useful
-    # for users that want to do their own localisation.
+    # for users that want to do their own localization.
     if ts_path is not None and (qm_path is None or os.path.getmtime(ts_path) > os.path.getmtime(qm_path)):
         log_info(tr("Using newer .ts file {} translations from {}").format(locale_name, ts_path.as_posix()))
         import xml.etree.ElementTree as XmlElementTree
@@ -9059,7 +9057,7 @@ def main() -> None:
     # This is supposed to set the locale for all categories to the user’s default setting.
     # This can error on some distros when the required language isn't installed, or if LANG
     # is set without also specifying the UTF-8 encoding, so LANG=da_DK might fail,
-    # but LANG=da_DK.UTF-8 should work. For our purposes failure is not important.
+    # but LANG=da_DK.UTF-8 should work. For our purposes, failure is not important.
     try:
         locale.setlocale(locale.LC_ALL, '')
     except locale.Error:
@@ -9076,7 +9074,7 @@ def main() -> None:
             log_warning(f"{ConfOpt.SMART_WINDOW.conf_id}: Wayland disallows app window placement. Switching to XWayland.")
             os.environ['QT_QPA_PLATFORM'] = 'xcb'  # Force the use of XWayland
 
-    QGuiApplication.setDesktopFileName("vdu_controls")  # Wayland needs this set in order to find/use the app's desktop icon.
+    QGuiApplication.setDesktopFileName("vdu_controls")  # Wayland needs this set to find/use the app's desktop icon.
     # Call QApplication before parsing arguments, it will parse and remove Qt session restoration arguments.
     app = QApplication(sys.argv)
     global unix_signal_handler
@@ -9135,7 +9133,7 @@ def main() -> None:
 
 # A fallback in case the hard coded splash screen PNG doesn't exist (which probably means KDE is not installed).
 # Based on video-display.png from oxygen5-icon-theme-5: LGPL-3.0-only.
-# convert vdu_controls.png -depth 8 -colors 24 smallest.png; exiftool -all= smallest.png; base64 -w 120 smallest.png
+# Convert vdu_controls.png -depth 8 -colors 24 smallest.png; exiftool -all= smallest.png; base64 -w 120 smallest.png
 FALLBACK_SPLASH_PNG_BASE64 = b"""
 iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAMAAABrrFhUAAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAABLUExURQICAjE0
 O76+wGttcSgrLgcICHd9gxscIRARFS1on2GKoUSS2Fes2UN60WGy4VKs5zd0y0Wc4zuK1j+V4ZOYnayvs7y/ws7R1P///6WsmEMAAAAHdFJOUwFgeb76L/4C
