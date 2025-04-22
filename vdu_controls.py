@@ -4543,44 +4543,25 @@ class PresetWidget(QWidget):
         self.preset_name_button.setAutoDefault(False)
         line_layout.addSpacing(20)
 
-        save_button = QPushButton()
-        save_button.setIcon(si(self, QStyle.SP_DriveFDIcon))
-        save_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
-        save_button.setFlat(True)
-        save_button.setContentsMargins(0, 0, 0, 0)
-        save_button.setToolTip(tr("Update this preset from the current VDU settings."))
-        line_layout.addWidget(save_button)
-        save_button.clicked.connect(partial(save_action, from_widget=self))
-        save_button.setAutoDefault(False)
+        def _add_button(icon_num: int, tip: str, action: Callable):
+            button = QPushButton()
+            button.setIcon(si(self, icon_num))
+            button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
+            button.setFlat(True)
+            button.setContentsMargins(0, 0, 0, 0)
+            button.setToolTip(tip)
+            line_layout.addWidget(button)
+            button.clicked.connect(action)
+            button.setAutoDefault(False)
 
-        up_button = QPushButton()
-        up_button.setIcon(si(self, QStyle.SP_ArrowUp))
-        up_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
-        up_button.setFlat(True)
-        up_button.setContentsMargins(0, 0, 0, 0)
-        up_button.setToolTip(tr("Move up the menu order."))
-        line_layout.addWidget(up_button)
-        up_button.clicked.connect(partial(up_action, preset=preset, target_widget=self))
-        up_button.setAutoDefault(False)
-
-        down_button = QPushButton()
-        down_button.setIcon(si(self, QStyle.SP_ArrowDown))
-        down_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
-        down_button.setFlat(True)
-        down_button.setContentsMargins(0, 0, 0, 0)
-        down_button.setToolTip(tr("Move down the menu order."))
-        line_layout.addWidget(down_button)
-        down_button.clicked.connect(partial(down_action, preset=preset, target_widget=self))
-        down_button.setAutoDefault(False)
-
-        delete_button = QPushButton()
-        delete_button.setIcon(si(self, QStyle.SP_DialogDiscardButton))
-        delete_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
-        delete_button.setFlat(True)
-        delete_button.setToolTip(tr('Delete this preset.'))
-        line_layout.addWidget(delete_button)
-        delete_button.clicked.connect(partial(delete_action, preset=preset, target_widget=self))
-        delete_button.setAutoDefault(False)
+        _add_button(QStyle.SP_DriveFDIcon, tr("Update this preset from the current VDU settings."),
+                    partial(save_action, from_widget=self))
+        _add_button(QStyle.SP_ArrowUp, tr("Move up the menu order."),
+                    partial(up_action, preset=preset, target_widget=self))
+        _add_button(QStyle.SP_ArrowDown, tr("Move down the menu order."),
+                    partial(down_action, preset=preset, target_widget=self))
+        _add_button(QStyle.SP_DialogDiscardButton, tr('Delete this preset.'),
+                    partial(delete_action, preset=preset, target_widget=self))
 
         if not protect_nvram:
             preset_transition_button = PushButtonLeftJustified()
