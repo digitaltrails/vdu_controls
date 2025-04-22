@@ -2003,11 +2003,11 @@ def si(widget: QWidget, icon_number: QStyle.StandardPixmap) -> QIcon:  # Qt bund
     return widget.style().standardIcon(icon_number)
 
 
+@dataclass
 class GeoLocation:
-    def __init__(self, latitude: float, longitude: float, place_name: str | None) -> None:
-        self.latitude: float = latitude
-        self.longitude: float = longitude
-        self.place_name: str | None = place_name
+    latitude: float
+    longitude: float
+    place_name: str | None
 
     def __eq__(self, other) -> bool:
         if other is None:
@@ -6821,12 +6821,11 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         log_info("LuxAutoWorker stopped on request")
 
 
+@dataclass
 class LuxPoint:
-
-    def __init__(self, lux: int, brightness: int, preset_name: str | None = None) -> None:
-        self.lux = lux
-        self.brightness = brightness
-        self.preset_name = preset_name
+    lux: int
+    brightness: int
+    preset_name: str | None = None
 
     def __lt__(self, other) -> bool:
         return self.lux < other.lux
@@ -7454,6 +7453,7 @@ LUX_DARK_SVG = b"""<?xml version="1.0" encoding="utf-8"?>
 </svg>
 """
 
+
 @dataclass
 class LuxZone:
     name: str
@@ -7462,6 +7462,7 @@ class LuxZone:
     max_lux: int
     icon_svg_lux: int
     column_span: int
+
 
 class LuxAmbientSlider(QWidget):
     new_lux_value_qtsignal = pyqtSignal(int)
