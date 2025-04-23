@@ -5454,18 +5454,6 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
         self.status_bar = QStatusBar()
 
-        self.edit_clear_button = QPushButton(si(self, QStyle.SP_DialogCancelButton), tr('Clear'))
-        self.edit_clear_button.clicked.connect(self.reset_editor)
-        self.edit_clear_button.setToolTip(tr("Clear edits and enter a new preset using the defaults."))
-        self.status_bar.addPermanentWidget(self.edit_clear_button)
-
-        self.edit_save_button = QPushButton(si(self, QStyle.SP_DialogSaveButton), tr('Save'))
-        self.edit_save_button.clicked.connect(self.save_preset)
-        self.edit_save_button.setToolTip(tr("Save current VDU settings to Preset."))
-        self.status_bar.addPermanentWidget(self.edit_save_button)
-
-        self.edit_revert_button = QPushButton(si(self, QStyle.SP_DialogResetButton), tr('Revert'))
-
         def _revert_callable() -> None:
             preset_widget = self.find_preset_widget(self.preset_name_edit.text().strip())
             if preset_widget is None:
@@ -5473,13 +5461,20 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
             else:
                 self.edit_preset(preset_widget.preset)
 
-        self.edit_revert_button.clicked.connect(_revert_callable)
-        self.edit_revert_button.setToolTip(tr("Abandon edits, revert VDU and Preset settings."))
-        self.status_bar.addPermanentWidget(self.edit_revert_button)
+        def _add_bar_button(icon_num: int, name: str, tip: str | None, action: Callable) -> QPushButton:
+            button = QPushButton(si(self, icon_num),name)
+            button.clicked.connect(action)
+            button.setToolTip(tip) if tip else None
+            self.status_bar.addPermanentWidget(button)
+            return button
 
-        self.close_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), tr('Close'))
-        self.close_button.clicked.connect(self.close)
-        self.status_bar.addPermanentWidget(self.close_button, 0)
+        self.edit_clear_button = _add_bar_button(QStyle.SP_DialogCancelButton, tr('Clear'),
+                                                 tr("Clear edits and enter a new preset using the defaults."), self.reset_editor)
+        self.edit_save_button = _add_bar_button(QStyle.SP_DialogSaveButton, tr('Save'),
+                                                tr("Save current VDU settings to Preset."), self.save_preset)
+        self.edit_revert_button = _add_bar_button(QStyle.SP_DialogResetButton, tr('Revert'),
+                                                  tr("Abandon edits, revert VDU and Preset settings."), _revert_callable)
+        self.close_button = _add_bar_button(QStyle.SP_DialogCloseButton, tr('Close'), None, self.close)
         layout.addWidget(self.status_bar)
 
         self.edit_choose_icon_button.set_preset(None)
