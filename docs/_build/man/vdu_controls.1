@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Apr 20, 2025" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Apr 24, 2025" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 2.3.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -191,7 +191,7 @@ box, \fBvdu_controls\fP offers a subset of controls including brightness, contra
 controls.  Additional controls can be enabled via the \fBSettings\fP dialog.
 .sp
 \fBvdu_controls\fP interacts with VDUs by using \fBddcutil\fP to issue standard VESA
-\fIVirtual Control Panel\fP  (\fIVCP\fP) commands via the VESA  \fIDisplay Data Channel\fP (\fIDDC\fP).
+\fIVirtual Control Panel\fP  (\fIVCP\fP) commands via the VESA \fIDisplay Data Channel\fP (\fIDDC\fP).
 \fBDdcutil\fP provides a robust interface that is tolerant of the vagaries of the many OEM DDC
 implementations.
 .sp
@@ -394,8 +394,8 @@ can be controlled by the \fBDBUS client\fP checkbox in the settings dialog.
 When using the service, you may optionally enable service detection of DPMS events and
 VDU connectivity events (hot\-plugging cables or power\-cycling VDUs).  Whether to enable events
 is controlled by the \fBDBUS events\fP checkbox in the settings dialog.  The reliability
-and timeliness of events may vary depending on the model of GPU, version of GPU driver,
-model of VDU, and type of VDU connector\-cable.  In some cases, the service polling for DPMS or
+and timeliness of events may vary depending on the GPU model, GPU driver, VDU model,
+and VDU connector\-cable (DP, HDMI, ...).  In some cases, the service polling for DPMS or
 connection status may wake some VDU models.  Both \fBddcutil\-service\fP or \fBlibddcutil\fP offer
 options for finer control over which events are detected and how.
 .SS Presets
@@ -533,11 +533,11 @@ as a convenient resource that lists all possible codes.
 .sp
 Because reported current weather conditions may be inaccurate or out of date, it\(aqs best to use
 weather requirements as a coarse measure. Going beyond good and bad may not be very practical.
-What\(aqs possible might depend on you local weather conditions.
+What\(aqs possible might depend on your local weather conditions.
 .sp
 To ensure \fBwttr.in\fP supplies the weather for your location, please ensure that \fBSettings\fP
 \fBLocation\fP includes a place\-name suffix.  The \fBSettings\fP \fBLocation\fP \fBDetect\fP button has been
-enhanced to fill out a place\-name for you.  Should \fBwttr.in\fP not recognise a place\-name, the
+enhanced to fill out a place\-name for you.  Should \fBwttr.in\fP not recognize a place\-name, the
 place\-name can be manually edited to something more suitable. The nearest big city or an
 airport\-code will do, for example: LHR, LAX, JFK.  You can use a web browser to test a place\-name,
 for example: \X'tty: link https://wttr.in/JFK'\fI\%https://wttr.in/JFK\fP\X'tty: link'
@@ -639,7 +639,7 @@ programming an Arduino with a GY\-30/BH1750, can be found at:
 .UNINDENT
 .sp
 Example scripts for mapping a webcam\(aqs average\-brightness to approximate lux values are included in
-\fB/usr/share/vdu_controls/sample\-scripts/\fP or they can also be downloaded from the following
+\fB/usr/share/vdu_controls/sample\-scripts/\fP, or they can also be downloaded from the following
 location:
 .INDENT 0.0
 .INDENT 3.5
@@ -983,7 +983,7 @@ Location for user supplied translations.
 Location for Qt/desktop state such as the past window sizes and locations.
 .TP
 .B /usr/share/vdu_controls
-Location for system\-wide icons,  sample\-scripts, and  translations.
+Location for system\-wide icons, sample\-scripts, and translations.
 .UNINDENT
 .UNINDENT
 .UNINDENT

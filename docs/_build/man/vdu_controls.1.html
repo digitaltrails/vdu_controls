@@ -262,12 +262,12 @@ Whether to use the service can be controlled by the
 of DPMS events and VDU connectivity events (hot-plugging cables or
 power-cycling VDUs). Whether to enable events is controlled by the
 <code>DBUS events</code> checkbox in the settings dialog. The
-reliability and timeliness of events may vary depending on the model of
-GPU, version of GPU driver, model of VDU, and type of VDU
-connector-cable. In some cases, the service polling for DPMS or
-connection status may wake some VDU models. Both
-<code>ddcutil-service</code> or <code>libddcutil</code> offer options
-for finer control over which events are detected and how.</p>
+reliability and timeliness of events may vary depending on the GPU
+model, GPU driver, VDU model, and VDU connector-cable (DP, HDMI, …). In
+some cases, the service polling for DPMS or connection status may wake
+some VDU models. Both <code>ddcutil-service</code> or
+<code>libddcutil</code> offer options for finer control over which
+events are detected and how.</p>
 <h2 id="presets">Presets</h2>
 <p>A named <em>Preset</em> can be used to save the current VDU settings
 for later recall. Any number of presets can be created for different
@@ -407,12 +407,12 @@ as a convenient resource that lists all possible codes.</p>
 <p>Because reported current weather conditions may be inaccurate or out
 of date, it’s best to use weather requirements as a coarse measure.
 Going beyond good and bad may not be very practical. What’s possible
-might depend on you local weather conditions.</p>
+might depend on your local weather conditions.</p>
 <p>To ensure <code>wttr.in</code> supplies the weather for your
 location, please ensure that <code>Settings</code> <code>Location</code>
 includes a place-name suffix. The <code>Settings</code>
 <code>Location</code> <code>Detect</code> button has been enhanced to
-fill out a place-name for you. Should <code>wttr.in</code> not recognise
+fill out a place-name for you. Should <code>wttr.in</code> not recognize
 a place-name, the place-name can be manually edited to something more
 suitable. The nearest big city or an airport-code will do, for example:
 LHR, LAX, JFK. You can use a web browser to test a place-name, for
@@ -481,8 +481,8 @@ GY-30/BH1750, can be found at:</p>
 <pre><code>https://github.com/digitaltrails/vdu_controls/blob/master/Lux-metering.md</code></pre>
 <p>Example scripts for mapping a webcam’s average-brightness to
 approximate lux values are included in
-<code>/usr/share/vdu_controls/sample-scripts/</code> or they can also be
-downloaded from the following location:</p>
+<code>/usr/share/vdu_controls/sample-scripts/</code>, or they can also
+be downloaded from the following location:</p>
 <pre><code>https://github.com/digitaltrails/vdu_controls/tree/master/sample-scripts.</code></pre>
 <p>The examples include <code>vlux_meter.py</code>, a beta-release
 Qt-GUI python-script that meters from a webcam and writes to a FIFO
@@ -779,7 +779,7 @@ $HOME/.config/vdu_controls.qt.state/
     Location for Qt/desktop state such as the past window sizes and locations.
 
 /usr/share/vdu_controls
-    Location for system-wide icons,  sample-scripts, and  translations.</code></pre>
+    Location for system-wide icons, sample-scripts, and translations.</code></pre>
 <h1 id="reporting-bugs">Reporting Bugs</h1>
 <p>https://github.com/digitaltrails/vdu_controls/issues</p>
 <h1 id="gnu-license">GNU License</h1>
