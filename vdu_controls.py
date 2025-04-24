@@ -113,7 +113,7 @@ box, ``vdu_controls`` offers a subset of controls including brightness, contrast
 controls.  Additional controls can be enabled via the ``Settings`` dialog.
 
 ``vdu_controls`` interacts with VDUs by using ``ddcutil`` to issue standard VESA
-*Virtual Control Panel*  (*VCP*) commands via the VESA  *Display Data Channel* (*DDC*).
+*Virtual Control Panel*  (*VCP*) commands via the VESA *Display Data Channel* (*DDC*).
 ``Ddcutil`` provides a robust interface that is tolerant of the vagaries of the many OEM DDC
 implementations.
 
@@ -270,8 +270,8 @@ can be controlled by the ``DBUS client`` checkbox in the settings dialog.
 When using the service, you may optionally enable service detection of DPMS events and
 VDU connectivity events (hot-plugging cables or power-cycling VDUs).  Whether to enable events
 is controlled by the ``DBUS events`` checkbox in the settings dialog.  The reliability
-and timeliness of events may vary depending on the model of GPU, version of GPU driver,
-model of VDU, and type of VDU connector-cable.  In some cases, the service polling for DPMS or
+and timeliness of events may vary depending on the GPU model, GPU driver, VDU model,
+and VDU connector-cable (DP, HDMI, ...).  In some cases, the service polling for DPMS or
 connection status may wake some VDU models.  Both ``ddcutil-service`` or ``libddcutil`` offer
 options for finer control over which events are detected and how.
 
@@ -404,11 +404,11 @@ as a convenient resource that lists all possible codes.
 
 Because reported current weather conditions may be inaccurate or out of date, it's best to use
 weather requirements as a coarse measure. Going beyond good and bad may not be very practical.
-What's possible might depend on you local weather conditions.
+What's possible might depend on your local weather conditions.
 
 To ensure ``wttr.in`` supplies the weather for your location, please ensure that ``Settings``
 ``Location`` includes a place-name suffix.  The ``Settings`` ``Location`` ``Detect`` button has been
-enhanced to fill out a place-name for you.  Should ``wttr.in`` not recognise a place-name, the
+enhanced to fill out a place-name for you.  Should ``wttr.in`` not recognize a place-name, the
 place-name can be manually edited to something more suitable. The nearest big city or an
 airport-code will do, for example: LHR, LAX, JFK.  You can use a web browser to test a place-name,
 for example: https://wttr.in/JFK
@@ -475,7 +475,7 @@ programming an Arduino with a GY-30/BH1750, can be found at:
     https://github.com/digitaltrails/vdu_controls/blob/master/Lux-metering.md
 
 Example scripts for mapping a webcam's average-brightness to approximate lux values are included in
-``/usr/share/vdu_controls/sample-scripts/`` or they can also be downloaded from the following
+``/usr/share/vdu_controls/sample-scripts/``, or they can also be downloaded from the following
 location:
 
     https://github.com/digitaltrails/vdu_controls/tree/master/sample-scripts.
@@ -778,7 +778,7 @@ Files
         Location for Qt/desktop state such as the past window sizes and locations.
 
     /usr/share/vdu_controls
-        Location for system-wide icons,  sample-scripts, and  translations.
+        Location for system-wide icons, sample-scripts, and translations.
 
 Reporting Bugs
 ==============
@@ -844,8 +844,7 @@ from threading import Lock
 from typing import List, Tuple, Mapping, Type, Dict, Callable, Any, NewType
 from urllib.error import URLError
 
-from PyQt5 import QtCore
-from PyQt5 import QtNetwork
+from PyQt5 import QtCore, QtNetwork
 from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
     QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir
 from PyQt5.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusArgument, QDBusVariant
@@ -3073,9 +3072,8 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
         what_changed: Dict[str, str] = {}
         try:
             nothing_to_save = True
-            # Do the main config last - it may cause a restart of the app
             self.setEnabled(False)
-            save_order = self.editor_tab_list[1:] + [self.editor_tab_list[0]]
+            save_order = self.editor_tab_list[1:] + [self.editor_tab_list[0]]  # Main config last, it may cause a restart of the app
             for editor in save_order:
                 if editor.is_unsaved():
                     nothing_to_save = False
@@ -5053,7 +5051,7 @@ class PresetChooseElevationChart(QLabel):
             self.noon_x = _reverse_x(solar_noon_x)
             self.noon_y = solar_noon_y
 
-            # Draw elevation curve for today from the accumulated plot points:
+            # Draw an elevation curve for today from the accumulated plot points:
             painter.setPen(QPen(QColor(0xff965b), std_line_width))
             painter.drawPoints(QPolygon(curve_points))
 
