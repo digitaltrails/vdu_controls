@@ -5665,17 +5665,10 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
     def change_edit_group_title(self) -> None:
         changed_text = self.preset_name_edit.text()
-        if changed_text.strip() == "":
-            self.editor_controls_widget.setDisabled(True)
-            self.editor_transitions_widget.setDisabled(True)
-            self.editor_trigger_widget.setDisabled(True)
-            self.edit_clear_button.setDisabled(True)
-            self.edit_save_button.setDisabled(True)
+        if disable_controls := changed_text.strip() == "":
             self.edit_revert_button.setDisabled(True)
             self.editor_title.setText(tr("Create new preset:"))
             self.editor_controls_prompt.setText(tr("Controls to include:"))
-            self.controls_title_widget.setDisabled(True)
-            self.editor_transitions_widget.setDisabled(True)
         else:
             if self.find_preset_widget(changed_text):  # Already exists
                 self.edit_revert_button.setDisabled(False)
@@ -5684,13 +5677,13 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
                 self.edit_revert_button.setDisabled(True)
                 self.editor_title.setText(tr("Create new preset:"))
             self.editor_controls_prompt.setText(tr("Controls to include in {}:").format(changed_text))
-            self.editor_controls_widget.setDisabled(False)
-            self.editor_transitions_widget.setDisabled(False)
-            self.editor_trigger_widget.setDisabled(False)
-            self.controls_title_widget.setDisabled(False)
-            self.editor_transitions_widget.setDisabled(False)
-            self.edit_save_button.setDisabled(False)
-            self.edit_clear_button.setDisabled(False)
+        self.editor_controls_widget.setDisabled(disable_controls)
+        self.editor_transitions_widget.setDisabled(disable_controls)
+        self.editor_trigger_widget.setDisabled(disable_controls)
+        self.controls_title_widget.setDisabled(disable_controls)
+        self.editor_transitions_widget.setDisabled(disable_controls)
+        self.edit_save_button.setDisabled(disable_controls)
+        self.edit_clear_button.setDisabled(disable_controls)
 
     def edit_preset(self, preset: Preset) -> None:
 
