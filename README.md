@@ -360,8 +360,8 @@ Version History
   * When lux options are enabled, the tray will show the icon for current light-level (if no preset is active). 
   * Renamed two light-light levels more appropriately (room becomes subdued, rise-set becomes twilight).
   * Support a user-defined ddcutil-emulator executable for controlling laptop-panels 
-    or other non-DDC-capable displays. An template sample emulator written in bash 
-    is included as a DIY starter (sample-scripts/laptop-ddcutil-emulator.bash).
+    or other non-DDC-capable displays. A template sample emulator written in bash is included 
+    as a DIY starter (sample-scripts/laptop-ddcutil-emulator.bash).
   
 * 2.2.0
   * Add a vdu-name option for assigning meaningful/user-friendly names to each VDU.
