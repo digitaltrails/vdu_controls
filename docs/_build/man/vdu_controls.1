@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Apr 24, 2025" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Apr 26, 2025" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 2.3.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -44,7 +44,8 @@ A control panel for DisplayPort, DVI, HDMI, or USB connected VDUs (\fIVisual Dis
 [\-\-hide {brightness,contrast,audio\-volume,input\-source,power\-mode,osd\-language}]
 [\-\-enable\-vcp\-code vcp_code] [\-\-schedule|\-\-no\-schedule]
 [\-\-splash|\-\-no\-splash] [\-\-system\-tray|\-\-no\-system\-tray]
-[\-\-hide\-on\-focus\-out|\-\-no\-hide\-on\-focus\-out] [\-\-smart\-window|\-\-no\-smart\-window]
+[\-\-hide\-on\-focus\-out|\-\-no\-hide\-on\-focus\-out]
+[\-\-smart\-window|\-\-no\-smart\-window] [\-smart\-uses\-xcb|\-smart\-uses\-xcb]
 [\-\-monochrome\-tray|\-\-no\-monochrome\-tray] [\-\-mono\-light\-tray|\-\-no\-mono\-light\-tray]
 [\-\-protect\-nvram|\-\-no\-protect\-nvram]
 [\-\-lux\-options|\-\-no\-lux\-options]
@@ -101,8 +102,12 @@ minimize the main window automatically on focus out.
 smart main window placement and geometry.
 \fB\-\-smart\-window\fP is the default (may force UI to XWayland).
 .TP
+.B \-\-smart\-uses\-xcb|\-\-no\-smart\-uses\-xcb
+if \fB\-\-smart\-window\fP is enabled, use XWayland (force xcb).
+\fB\-\-smart\-uses\-xcb\fP is the default.
+.TP
 .B \-\-monochrome\-tray|\-\-no\-monochrome\-tray
-monochrome dark themed system\-tray.
+monochrome dark\-themed system\-tray.
 \fB\-\-no\-monochrome\-tray\fP is the default.
 .TP
 .B \-\-mono\-light\-tray|\-\-no\-mono\-light\-tray
@@ -191,7 +196,7 @@ box, \fBvdu_controls\fP offers a subset of controls including brightness, contra
 controls.  Additional controls can be enabled via the \fBSettings\fP dialog.
 .sp
 \fBvdu_controls\fP interacts with VDUs by using \fBddcutil\fP to issue standard VESA
-\fIVirtual Control Panel\fP  (\fIVCP\fP) commands via the VESA \fIDisplay Data Channel\fP (\fIDDC\fP).
+\fIVirtual Control Panel\fP (\fIVCP\fP) commands via the VESA \fIDisplay Data Channel\fP (\fIDDC\fP).
 \fBDdcutil\fP provides a robust interface that is tolerant of the vagaries of the many OEM DDC
 implementations.
 .sp

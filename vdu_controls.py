@@ -14,7 +14,8 @@ Synopsis:
                      [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                      [--enable-vcp-code vcp_code] [--schedule|--no-schedule]
                      [--splash|--no-splash] [--system-tray|--no-system-tray]
-                     [--hide-on-focus-out|--no-hide-on-focus-out] [--smart-window|--no-smart-window]
+                     [--hide-on-focus-out|--no-hide-on-focus-out]
+                     [--smart-window|--no-smart-window] [-smart-uses-xcb|-smart-uses-xcb]
                      [--monochrome-tray|--no-monochrome-tray] [--mono-light-tray|--no-mono-light-tray]
                      [--protect-nvram|--no-protect-nvram]
                      [--lux-options|--no-lux-options]
@@ -52,8 +53,11 @@ Arguments supplied on the command line override config file equivalent settings.
       --smart-window|--no-smart-window
                             smart main window placement and geometry.
                             ``--smart-window`` is the default (may force UI to XWayland).
+      --smart-uses-xcb|--no-smart-uses-xcb
+                            if ``--smart-window`` is enabled, use XWayland (force xcb).
+                            ``--smart-uses-xcb`` is the default.
       --monochrome-tray|--no-monochrome-tray
-                            monochrome dark themed system-tray.
+                            monochrome dark-themed system-tray.
                             ``--no-monochrome-tray`` is the default.
       --mono-light-tray|--no-mono-light-tray
                             monochrome themed system-tray.
@@ -113,7 +117,7 @@ box, ``vdu_controls`` offers a subset of controls including brightness, contrast
 controls.  Additional controls can be enabled via the ``Settings`` dialog.
 
 ``vdu_controls`` interacts with VDUs by using ``ddcutil`` to issue standard VESA
-*Virtual Control Panel*  (*VCP*) commands via the VESA *Display Data Channel* (*DDC*).
+*Virtual Control Panel* (*VCP*) commands via the VESA *Display Data Channel* (*DDC*).
 ``Ddcutil`` provides a robust interface that is tolerant of the vagaries of the many OEM DDC
 implementations.
 
@@ -2382,6 +2386,8 @@ class ConfOpt(Enum):  # An Enum with tuples for values is used for convenience f
                              tip=QT_TR_NOOP('minimize the main window automatically on focus out'))
     SMART_WINDOW = _def(cname=QT_TR_NOOP('smart-window'), default="yes",
                         tip=QT_TR_NOOP('smart main window placement and geometry (X11 and XWayland)'), restart=True)
+    SMART_USES_XCB = _def(cname=QT_TR_NOOP('smart-uses-xcb'), default="yes", restart=True,
+                                tip=QT_TR_NOOP('if smart-window is enabled, use Xwayland in Wayland'))
     MONOCHROME_TRAY_ENABLED = _def(cname=QT_TR_NOOP('monochrome-tray-enabled'), default="no", restart=False,
                                    tip=QT_TR_NOOP('monochrome dark themed system tray'))
     MONO_LIGHT_TRAY_ENABLED = _def(cname=QT_TR_NOOP('mono-light-tray-enabled'), default="no", restart=False,
@@ -7648,8 +7654,11 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
             about_text = ABOUT_TEXT
         if self.main_controller and self.main_controller.ddcutil:
             counts_str = ','.join((str(v) for v in Ddcutil.vcp_write_counters.values())) if len(Ddcutil.vcp_write_counters) else '0'
-            about_text += "<hr><p><small>ddcutil-interface: {}; ddcutil: {} (writes: {})</small>".format(
-                *self.main_controller.ddcutil.ddcutil_version_info(), counts_str)
+            about_text += ("<hr><p><small>desktop {}; platform: {} ({});<br/>"
+                           "ddcutil-interface: {}; ddcutil: {} (writes: {});</small>".format(
+                os.environ.get('XDG_CURRENT_DESKTOP', default='unknown'),
+                os.environ.get('XDG_SESSION_TYPE', default='unknown'), os.environ.get('QT_QPA_PLATFORM', default='native'),
+                *self.main_controller.ddcutil.ddcutil_version_info(), counts_str))
         self.setInformativeText(about_text)
         self.setIcon(MBox.Information)
 
@@ -9038,7 +9047,7 @@ def main() -> None:
         main_config.parse_file(default_config_path)
 
     if os.environ.get('XDG_SESSION_TYPE') != 'x11':  # If Wayland we can't do smart window placement - use XWayland
-        if main_config.is_set(ConfOpt.SMART_WINDOW):
+        if main_config.is_set(ConfOpt.SMART_WINDOW) and main_config.is_set(ConfOpt.SMART_USES_XCB):
             log_warning(f"{ConfOpt.SMART_WINDOW.conf_id}: Wayland disallows app window placement. Switching to XWayland.")
             os.environ['QT_QPA_PLATFORM'] = 'xcb'  # Force the use of XWayland
 

@@ -363,6 +363,8 @@ Version History
     or other non-DDC-capable displays. A template sample emulator written in bash is included 
     as a DIY starter (sample-scripts/laptop-ddcutil-emulator.bash).
   * Internal refactoring for clarity/brevity.
+  * Add smart-uses-xcb option to control the use of XWayland under Wayland (defaults to yes).
+  * The About Dialog now includes some desktop and platform information.
   
 * 2.2.0
   * Add a vdu-name option for assigning meaningful/user-friendly names to each VDU.

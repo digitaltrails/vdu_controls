@@ -9,7 +9,8 @@ a DDC control panel for monitors</h1>
                  [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
                  [--enable-vcp-code vcp_code] [--schedule|--no-schedule]
                  [--splash|--no-splash] [--system-tray|--no-system-tray]
-                 [--hide-on-focus-out|--no-hide-on-focus-out] [--smart-window|--no-smart-window]
+                 [--hide-on-focus-out|--no-hide-on-focus-out]
+                 [--smart-window|--no-smart-window] [-smart-uses-xcb|-smart-uses-xcb]
                  [--monochrome-tray|--no-monochrome-tray] [--mono-light-tray|--no-mono-light-tray]
                  [--protect-nvram|--no-protect-nvram]
                  [--lux-options|--no-lux-options]
@@ -44,8 +45,11 @@ equivalent settings.</p>
   --smart-window|--no-smart-window
                         smart main window placement and geometry.
                         ``--smart-window`` is the default (may force UI to XWayland).
+  --smart-uses-xcb|--no-smart-uses-xcb
+                        if ``--smart-window`` is enabled, use XWayland (force xcb).
+                        ``--smart-uses-xcb`` is the default.
   --monochrome-tray|--no-monochrome-tray
-                        monochrome dark themed system-tray.
+                        monochrome dark-themed system-tray.
                         ``--no-monochrome-tray`` is the default.
   --mono-light-tray|--no-mono-light-tray
                         monochrome themed system-tray.
