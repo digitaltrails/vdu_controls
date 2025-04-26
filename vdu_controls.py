@@ -7657,7 +7657,7 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
             about_text += ("<hr><p><small>desktop: {}; platform: {} ({});<br/>"
                            "ddcutil-interface: {}; ddcutil: {} (writes: {});</small>".format(
                 os.environ.get('XDG_CURRENT_DESKTOP', default='unknown'),
-                os.environ.get('XDG_SESSION_TYPE', default='unknown'), os.environ.get('QT_QPA_PLATFORM', default='native'),
+                os.environ.get('XDG_SESSION_TYPE', default='unknown'), QApplication.platformName(),
                 *self.main_controller.ddcutil.ddcutil_version_info(), counts_str))
         self.setInformativeText(about_text)
         self.setIcon(MBox.Information)
