@@ -7654,7 +7654,7 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
             about_text = ABOUT_TEXT
         if self.main_controller and self.main_controller.ddcutil:
             counts_str = ','.join((str(v) for v in Ddcutil.vcp_write_counters.values())) if len(Ddcutil.vcp_write_counters) else '0'
-            about_text += ("<hr><p><small>desktop {}; platform: {} ({});<br/>"
+            about_text += ("<hr><p><small>desktop: {}; platform: {} ({});<br/>"
                            "ddcutil-interface: {}; ddcutil: {} (writes: {});</small>".format(
                 os.environ.get('XDG_CURRENT_DESKTOP', default='unknown'),
                 os.environ.get('XDG_SESSION_TYPE', default='unknown'), os.environ.get('QT_QPA_PLATFORM', default='native'),
