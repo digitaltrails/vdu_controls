@@ -362,6 +362,7 @@ Version History
   * Support a user-defined ddcutil-emulator executable for controlling laptop-panels 
     or other non-DDC-capable displays. A template sample emulator written in bash is included 
     as a DIY starter (sample-scripts/laptop-ddcutil-emulator.bash).
+  * Internal refactoring for clarity/brevity.
   
 * 2.2.0
   * Add a vdu-name option for assigning meaningful/user-friendly names to each VDU.

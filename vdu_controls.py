@@ -1410,7 +1410,7 @@ class Ddcutil:
         self.supported_codes: Dict[str, str] | None = None
         self.vcp_type_map: Dict[Tuple[str, str], str] = {}
         self.edid_txt_map: Dict[str, str] = {}
-        self.ddcutil_version = (0, 0, 0)  # Dummy version for bootstrapping
+        self.ddcutil_version = (0, 0, 0)  # Initial version for bootstrapping
         self.version_suffix = ''
         version_info = self.ddcutil_impl.get_ddcutil_version_string()
         if version_match := re.match(r'[a-z]* ?([0-9]+).([0-9]+).([0-9]+)-?([^\n]*)', version_info):
@@ -2086,7 +2086,7 @@ class LineEditAll(QLineEdit):  # On mouse click, select the entire text - Make i
 
 
 # Enabling this would enable anything supported by ddcutil - but that isn't safe for the hardware
-# given the weird settings that appear to be available and the sometimes dodgy VDU-vendor DDC
+# given the undocumented settings that appear to be available and the sometimes dodgy VDU-vendor DDC
 # implementations.  Plus, the user might not be able to reset to factory for some of them?
 SUPPORT_ALL_VCP = False
 
@@ -2258,7 +2258,7 @@ class ScheduleWorker(WorkerThread):
             for job in self.pending_jobs_list:
                 if job.when <= local_now:  # Eligible to run now
                     self.pending_jobs_list.remove(job)
-                    if not job.has_run:  # Only most recent of each type should run
+                    if not job.has_run:  # Only the most recent of each type should run
                         if existing_job := run_now.get(job.job_type, None):
                             if job.when > existing_job.when:
                                 existing_job.skip_callable()
@@ -2549,8 +2549,7 @@ class VduControlsConfig:
     def disable_supported_vcp_code(self, vcp_code: str) -> None:
         self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS][SUPPORTED_VCP_BY_CODE[vcp_code].property_name()] = 'no'
 
-    def get_all_enabled_vcp_codes(self) -> List[str]:
-        # No very efficient
+    def get_all_enabled_vcp_codes(self) -> List[str]:  # Not very efficient
         enabled_vcp_codes = []
         for control_name, control_def in SUPPORTED_VCP_BY_PROPERTY_NAME.items():
             if self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS].getboolean(control_name, fallback=False):
