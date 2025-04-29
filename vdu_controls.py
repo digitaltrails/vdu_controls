@@ -866,8 +866,6 @@ VDU_CONTROLS_VERSION = '2.3.0'
 VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in VDU_CONTROLS_VERSION.split('.'))
 assert sys.version_info >= (3, 8), f'{APPNAME} utilises python version 3.8 or greater (your python is {sys.version}).'
 
-GNOME_LIKE = ('gnome', 'cosmic')
-
 WESTERN_SKY = 'western-sky'
 EASTERN_SKY = 'eastern-sky'
 
@@ -909,6 +907,14 @@ SolarElevationData = namedtuple('SolarElevationData', ['azimuth', 'zenith', 'whe
 Shortcut = namedtuple('Shortcut', ['letter', 'annotated_word'])
 
 gui_thread: QThread | None = None
+
+
+def is_gnome_desktop() -> bool:
+    return os.environ.get('XDG_CURRENT_DESKTOP', default='unknown').lower() == 'gnome'
+
+
+def is_cosmic_desktop() -> bool:
+    return os.environ.get('XDG_CURRENT_DESKTOP', default='unknown').lower() == 'cosmic'
 
 
 def is_running_in_gui_thread() -> bool:
@@ -1276,12 +1282,9 @@ VduStableId = NewType('VduStableId', str)
 
 
 def is_dark_theme() -> bool:
-    # Heuristic for checking for a dark theme. Is the sample text lighter than the background?
-    label = QLabel("am I in the dark?")
-    text_hsv_value = label.palette().color(QPalette.WindowText).value()
-    bg_hsv_value = label.palette().color(QPalette.Background).value()
-    dark_theme_found = text_hsv_value > bg_hsv_value
-    return dark_theme_found
+    palette = QPalette()
+    text_color, window_color = palette.color(QPalette.WindowText), palette.color(QPalette.Window)
+    return text_color.lightness() > window_color.lightness()
 
 
 DEVELOPERS_NATIVE_FONT_HEIGHT = 32  # The font height in physical pixels being used on my development desktop.
@@ -2951,8 +2954,8 @@ class VduController(QObject):
 
 class SubWinDialog(QDialog):  # Fix for gnome: QDialog must be a subwindow, otherwise it will always stay on top of other windows.
 
-    def __init__(self, parent: QWidget | None = None, flags: Qt.WindowType = Qt.SubWindow) -> None:
-        super().__init__(parent, flags)
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent, Qt.SubWindow if is_gnome_desktop() else Qt.Window)
 
 
 class SettingsEditor(SubWinDialog, DialogSingletonMixin):
@@ -8437,8 +8440,8 @@ class VduAppWindow(QMainWindow):
         self._run_in_gui_thread_qtsignal.connect(_run_in_gui)
 
         os_desktop = os.environ.get('XDG_CURRENT_DESKTOP', default='unknown').lower()
-        gnome_tray_behaviour = main_config.is_set(ConfOpt.SYSTEM_TRAY_ENABLED) and any(dt in os_desktop for dt in GNOME_LIKE)
-        log_info(f"{os_desktop=} {gnome_tray_behaviour=}")  # Gnome tray doesn't provide a way to bring up the main app.
+        use_gnome_like_tray = main_config.is_set(ConfOpt.SYSTEM_TRAY_ENABLED) and (is_gnome_desktop() or is_gnome_desktop())
+        log_info(f"{os_desktop=} {use_gnome_like_tray=}")  # Gnome tray doesn't provide a way to bring up the main app.
 
         global log_debug_enabled
         if log_debug_enabled:
@@ -8447,7 +8450,7 @@ class VduAppWindow(QMainWindow):
 
         self.app_context_menu = ContextMenu(
             app_controller=main_controller,
-            main_window_action=partial(self.show_main_window, True) if gnome_tray_behaviour else None,
+            main_window_action=partial(self.show_main_window, True) if use_gnome_like_tray else None,
             about_action=partial(AboutDialog.invoke, self.main_controller),
             help_action=HelpDialog.invoke,
             gray_scale_action=GreyScaleDialog,
@@ -8783,6 +8786,7 @@ class VduAppWindow(QMainWindow):
     def event(self, event: QEvent) -> bool:
         # PalletChange happens after the new style sheet is in use.
         if event.type() == QEvent.PaletteChange:
+            log_info("PaletteChange event: New style sheet in use, update icons")
             self.initialise_app_icon()
             self.update_status_indicators(palette_change=True)
         return super().event(event)
