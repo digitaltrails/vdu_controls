@@ -8440,7 +8440,7 @@ class VduAppWindow(QMainWindow):
         self._run_in_gui_thread_qtsignal.connect(_run_in_gui)
 
         os_desktop = os.environ.get('XDG_CURRENT_DESKTOP', default='unknown').lower()
-        use_gnome_like_tray = main_config.is_set(ConfOpt.SYSTEM_TRAY_ENABLED) and (is_gnome_desktop() or is_gnome_desktop())
+        use_gnome_like_tray = main_config.is_set(ConfOpt.SYSTEM_TRAY_ENABLED) and (is_gnome_desktop() or is_cosmic_desktop())
         log_info(f"{os_desktop=} {use_gnome_like_tray=}")  # Gnome tray doesn't provide a way to bring up the main app.
 
         global log_debug_enabled
