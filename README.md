@@ -363,7 +363,7 @@ Version History
     or other non-DDC-capable displays. A template sample emulator written in bash is included 
     as a DIY starter (sample-scripts/laptop-ddcutil-emulator.bash).
   * Add smart-uses-xcb option to control the use of XWayland under Wayland (defaults to yes).
-  * Fix/show title-bars on sub-windows in COSMIC. 
+  * Fix title-bars on sub-windows in COSMIC. 
   * The About Dialog now includes some desktop and platform information.
   
 * 2.2.0
