@@ -362,7 +362,7 @@ Version History
   * Support a user-defined ddcutil-emulator executable for controlling laptop-panels 
     or other non-DDC-capable displays. A template sample emulator written in bash is included 
     as a DIY starter (sample-scripts/laptop-ddcutil-emulator.bash).
-  * Add smart-uses-xcb option to control the use of XWayland under Wayland (defaults to yes).
+  * Add smart-uses-xcb option to control the use of XWayland for the smart positioning of windows (defaults to yes).
   * Fix title-bars on sub-windows in COSMIC. 
   * The About Dialog now includes some desktop and platform information.
   
