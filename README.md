@@ -353,6 +353,11 @@ Michael Hamilton
 Version History
 ---------------
 
+* 2.3.1
+  * Fix size of Lux Dialog scale, adjust for display DPI.
+  * Fix size of Solar Elevation chart, adjust for display DPI.
+  * Code refactoring for clarity/brevity.
+
 * 2.3.0
   * Fix the doze function, this improves the responsiveness of all slider controls.
   * Fix an infinite loop if menu->quit is used when the "Failed to obtain capabilities" dialog is showing.
