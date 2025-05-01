@@ -263,7 +263,7 @@ Can be annotated with::
 With this annotation, when ever *Picture Mode* is altered, vdu_controls will
 reload all configuration files and refresh all control values from the VDUs.
 
-DBUS dccutil-service
+DBUS ddcutil-service
 --------------------
 
 When available, ``vdu_controls`` defaults to interacting with VDUs via the DBUS ``ddcutil-service``
@@ -1432,10 +1432,10 @@ class Ddcutil:
     def ddcutil_version_info(self) -> (str, str):
         return self.ddcutil_impl.get_interface_version_string(), self.ddcutil_impl.get_ddcutil_version_string()
 
-    def add_ddcutil_emulator(self, emulator_exectable: str, common_args: List[str] | None = None):
-        log_info(f"add_ddcutil_emulator: {emulator_exectable} {common_args}")
+    def add_ddcutil_emulator(self, emulator_executable: str, common_args: List[str] | None = None):
+        log_info(f"add_ddcutil_emulator: {emulator_executable} {common_args}")
         try:
-            custom_imp = DdcutilEmulatorImpl(emulator_exectable, common_args)
+            custom_imp = DdcutilEmulatorImpl(emulator_executable, common_args)
             for attr in custom_imp.detect(1):
                 log_info(f"add_ddcutil_emulator: VDU edid={attr.edid_txt}")
                 self.ddcutil_emulators_by_edid[attr.edid_txt] = custom_imp
