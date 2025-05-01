@@ -807,6 +807,7 @@ with this program. If not, see https://www.gnu.org/licenses/.
 # vdu_controls Copyright (C) 2021 Michael Hamilton
 
 from __future__ import annotations
+
 import argparse
 import base64
 import configparser
@@ -859,7 +860,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
     QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, qApp, QShortcut, \
-    QDesktopWidget, QSpacerItem, QLayout
+    QDesktopWidget, QSpacerItem
 
 APPNAME = "VDU Controls"
 VDU_CONTROLS_VERSION = '2.3.1'
