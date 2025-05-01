@@ -859,7 +859,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
     QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, qApp, QShortcut, \
-    QDesktopWidget, QSpacerItem
+    QDesktopWidget, QSpacerItem, QLayout
 
 APPNAME = "VDU Controls"
 VDU_CONTROLS_VERSION = '2.3.1'
@@ -2958,6 +2958,21 @@ class SubWinDialog(QDialog):  # Fix for gnome: QDialog must be a subwindow, othe
         super().__init__(parent, Qt.SubWindow if is_gnome_desktop() else Qt.Window)
 
 
+class StdButton(QPushButton):  # Reduce some repetitiveness in the code
+
+    def __init__(self, icon: QIcon | None = None, title: str = '', clicked: Callable | None = None, auto_default=True,
+                 tip: str | None = None, flat: bool = False, margins: bool = True, icon_size: QSize | None = None):
+        super().__init__()
+        self.setIcon(icon) if icon else None
+        self.setIconSize(icon_size) if icon_size else None
+        self.setText(title) if title else None
+        self.clicked.connect(clicked) if clicked else None
+        self.setToolTip(tip) if tip else None
+        self.setFlat(flat)
+        self.setContentsMargins(0,0,0,0) if not margins else None
+        self.setAutoDefault(auto_default)
+
+
 class SettingsEditor(SubWinDialog, DialogSingletonMixin):
     """
     Application Settings Editor, edits a default global settings file, and a settings file for each VDU.
@@ -2985,39 +3000,36 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
         self.tab_ops.setLayout(QHBoxLayout())
         self.tab_ops_label = QLabel('')
         self.tab_ops.layout().addWidget(self.tab_ops_label)
-
         self.change_callback = change_callback
 
-        def _tab_ops_restore_application_defaults() -> None:
+        def _tab_restore_defaults() -> None:
             self.tabs_widget.currentWidget().restore_application_defaults()
 
-        self.tab_ops_restore_defaults_button = QPushButton(si(self, QStyle.SP_DialogDiscardButton), tr('Defaults'))
-        self.tab_ops_restore_defaults_button.clicked.connect(_tab_ops_restore_application_defaults)  # type: ignore
-        self.tab_ops.layout().addWidget(self.tab_ops_restore_defaults_button)
+        self.tab_restore_defaults_button = StdButton(icon=si(self, QStyle.SP_DialogDiscardButton), title=(tr('Defaults')),
+                                                     clicked=_tab_restore_defaults)
+        self.tab_ops.layout().addWidget(self.tab_restore_defaults_button)
 
-        def _tab_ops_revert_current_tab() -> None:
+        def _tab_revert_current_tab() -> None:
             self.tabs_widget.currentWidget().revert_changes()
 
-        self.tab_ops_revert_button = QPushButton(si(self, QStyle.SP_DialogResetButton), tr('Revert'))
-        self.tab_ops_revert_button.clicked.connect(_tab_ops_revert_current_tab)  # type: ignore
-        self.tab_ops.layout().addWidget(self.tab_ops_revert_button)
+        self.tab_revert_button = StdButton(icon=si(self, QStyle.SP_DialogResetButton), title=(tr('Revert')),
+                                           clicked=_tab_revert_current_tab)
+        self.tab_ops.layout().addWidget(self.tab_revert_button)
 
-        def _tab_ops_save_current_tab() -> None:
+        def _tab_save_current_tab() -> None:
             self.tabs_widget.currentWidget().save()
 
-        self.tab_ops_save_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr('Save'))
-        self.tab_ops_save_button.clicked.connect(_tab_ops_save_current_tab)   # type: ignore
-        self.tab_ops.layout().addWidget(self.tab_ops_save_button)
+        self.tab_save_button = StdButton(icon=si(self, QStyle.SP_DriveFDIcon), title=(tr('Save')), clicked=_tab_save_current_tab)
+        self.tab_ops.layout().addWidget(self.tab_save_button)
 
         self.bottom_status_bar.addPermanentWidget(self.tab_ops, 0)
         self.bottom_status_bar.addPermanentWidget(QLabel('                    '))
 
-        save_all_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr("Save All"))
-        save_all_button.clicked.connect(partial(self.save_all, True))
+        save_all_button = StdButton(icon=si(self, QStyle.SP_DriveFDIcon), title=(tr("Save All")),
+                                    clicked=(partial(self.save_all, True)))
         self.bottom_status_bar.addPermanentWidget(save_all_button, 0)
 
-        quit_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), tr("Close"))
-        quit_button.clicked.connect(self.close)  # type: ignore
+        quit_button = StdButton(icon=si(self, QStyle.SP_DialogCloseButton), title=(tr("Close")), clicked=self.close)
         self.bottom_status_bar.addPermanentWidget(quit_button, 0)
 
         self.layout().addWidget(self.bottom_status_bar)
@@ -3039,9 +3051,9 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
     def update_tab_ops(self, tab: SettingsEditorTab) -> None:
         self.tab_ops_label.setText(tr('{}: ').format(tab.preferred_name))
         self.tab_ops.setToolTip(tr('{}: {}').format(tab.preferred_name, tab.config_path.as_posix()))
-        self.tab_ops_save_button.setToolTip(tr('Save {} to \n{}').format(tab.preferred_name, tab.config_path.as_posix()))
-        self.tab_ops_revert_button.setToolTip(tr('Revert {} from \n{}').format(tab.preferred_name, tab.config_path.as_posix()))
-        self.tab_ops_restore_defaults_button.setToolTip(
+        self.tab_save_button.setToolTip(tr('Save {} to \n{}').format(tab.preferred_name, tab.config_path.as_posix()))
+        self.tab_revert_button.setToolTip(tr('Revert {} from \n{}').format(tab.preferred_name, tab.config_path.as_posix()))
+        self.tab_restore_defaults_button.setToolTip(
             tr('Remove {}\nand restore {} to application defaults').format(tab.config_path.as_posix(), tab.preferred_name))
 
     def reconfigure(self, config_list: List[VduControlsConfig]) -> None:
@@ -3382,9 +3394,8 @@ class SettingsEditorLocationWidget(SettingsEditorLineBase):
                 self.text_input.setText(data_csv)
                 self.editing_finished()
 
-        detect_location_button = QPushButton(tr("Detect"))
-        detect_location_button.clicked.connect(_detection_location)
-        detect_location_button.setToolTip(tr("Detect location by querying this desktop's external IP address."))
+        detect_location_button = StdButton(title=tr("Detect"), clicked=_detection_location,
+                                           tip=tr("Detect location by querying this desktop's external IP address."))
         self.layout().addWidget(detect_location_button)
         self.layout().addStretch(1)
 
@@ -3462,8 +3473,6 @@ class SettingsEditorPathWidget(SettingsEditorLineBase):
     def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
         super().__init__(section_editor, option, section, tooltip)
         self.text_input.setText(section_editor.ini_editable[section][option])
-        self.layout().addWidget(button := QPushButton(si(self, QStyle.SP_DriveFDIcon), ''))
-        self.validator = SettingsEditorPathValidator()
 
         def _choose_emulator(index: int) -> None:
             current_path = self.text_input.text()
@@ -3473,7 +3482,9 @@ class SettingsEditorPathWidget(SettingsEditorLineBase):
             self.text_input.setText(new_path)
             self.editing_finished()
 
-        button.clicked.connect(_choose_emulator)
+        self.layout().addWidget(StdButton(si(self, QStyle.SP_DriveFDIcon), clicked =_choose_emulator))
+        self.validator = SettingsEditorPathValidator()
+
 
     def editing_finished(self) -> None:
         super().editing_finished()
@@ -4548,26 +4559,17 @@ class PresetWidget(QWidget):
         self.preset_name_button.setToolTip(tr('Activate this Preset and edit its options.'))
         self.preset_name_button.setAutoDefault(False)
         line_layout.addSpacing(20)
-
-        def _add_button(icon_num: int, tip: str, action: Callable):
-            button = QPushButton()
-            button.setIcon(si(self, icon_num))
+        for button in (
+                StdButton(icon=si(self, QStyle.SP_DriveFDIcon), tip=tr("Update this preset from the current VDU settings."),
+                          clicked=partial(save_action, from_widget=self), flat=True),
+                StdButton(icon=si(self, QStyle.SP_ArrowUp), tip=tr("Move up the menu order."),
+                          clicked=partial(up_action, preset=preset, target_widget=self), flat=True),
+                StdButton(icon=si(self, QStyle.SP_ArrowDown), tip=tr("Move down the menu order."),
+                          clicked=partial(down_action, preset=preset, target_widget=self), flat=True),
+                StdButton(icon=si(self, QStyle.SP_DialogDiscardButton), tip=tr('Delete this preset.'),
+                          clicked=partial(delete_action, preset=preset, target_widget=self), flat=True)):
             button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
-            button.setFlat(True)
-            button.setContentsMargins(0, 0, 0, 0)
-            button.setToolTip(tip)
             line_layout.addWidget(button)
-            button.clicked.connect(action)
-            button.setAutoDefault(False)
-
-        _add_button(QStyle.SP_DriveFDIcon, tr("Update this preset from the current VDU settings."),
-                    partial(save_action, from_widget=self))
-        _add_button(QStyle.SP_ArrowUp, tr("Move up the menu order."),
-                    partial(up_action, preset=preset, target_widget=self))
-        _add_button(QStyle.SP_ArrowDown, tr("Move down the menu order."),
-                    partial(down_action, preset=preset, target_widget=self))
-        _add_button(QStyle.SP_DialogDiscardButton, tr('Delete this preset.'),
-                    partial(delete_action, preset=preset, target_widget=self))
 
         if not protect_nvram:
             preset_transition_button = PushButtonLeftJustified()
@@ -4628,14 +4630,11 @@ class PresetWidget(QWidget):
             self.preset_name_button.setFont(font)
 
 
-class PresetActivationButton(QPushButton):
+class PresetActivationButton(StdButton):
     def __init__(self, preset: Preset) -> None:
-        super().__init__()
+        super().__init__(icon=preset.create_icon(), icon_size=QSize(native_font_height(), native_font_height()),
+                         title=preset.get_title_name(), tip=tr("Restore {} (immediately)").format(preset.get_title_name()))
         self.preset = preset
-        self.setIconSize(QSize(native_font_height(), native_font_height()))
-        self.setIcon(preset.create_icon())
-        self.setText(preset.get_title_name())
-        self.setToolTip(tr("Restore {} (immediately)").format(preset.get_title_name()))
 
     def event(self, event: QEvent) -> bool:
         # PalletChange happens after the new style sheet is in use.
@@ -4644,15 +4643,14 @@ class PresetActivationButton(QPushButton):
         return super().event(event)
 
 
-class PresetChooseIconButton(QPushButton):
+class PresetChooseIconButton(StdButton):
 
     def __init__(self) -> None:
-        super().__init__()
+        super().__init__(icon_size=QSize(native_font_height(), native_font_height()),
+                         clicked=self.choose_preset_icon_action,  flat=True, auto_default=False,
+                         tip=tr('Choose a preset icon.'))
         self.setIcon(si(self, PresetsDialog.NO_ICON_ICON_NUMBER))
-        self.setToolTip(tr('Choose a preset icon.'))
-        self.setIconSize(QSize(native_font_height(), native_font_height()))
         self.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
-        self.setAutoDefault(False)
         self.last_selected_icon_path: Path | None = None
         self.last_icon_dir = Path.home()
         for path in STANDARD_ICON_PATHS:
@@ -4660,7 +4658,6 @@ class PresetChooseIconButton(QPushButton):
                 self.last_icon_dir = path
                 break
         self.preset: Preset | None = None
-        self.clicked.connect(self.choose_preset_icon_action)
 
     def set_preset(self, preset: Preset | None) -> None:
         self.preset = preset
@@ -4911,7 +4908,7 @@ class PresetChooseTransitionWidget(QWidget):
         layout = QHBoxLayout()
         self.setLayout(layout)
         layout.addWidget(QLabel(tr("Transition")), alignment=Qt.AlignLeft)
-        self.transition_type_widget = QPushButton(PresetTransitionFlag.NONE.description())
+        self.transition_type_widget = StdButton(title=PresetTransitionFlag.NONE.description())
         self.button_menu = QMenu()
         self.transition_type = PresetTransitionFlag.NONE
         self.is_setting = False
@@ -5467,20 +5464,15 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
             else:
                 self.edit_preset(preset_widget.preset)
 
-        def _add_bar_button(icon_num: int, name: str, tip: str | None, action: Callable) -> QPushButton:
-            button = QPushButton(si(self, icon_num),name)
-            button.clicked.connect(action)
-            button.setToolTip(tip) if tip else None
+        self.edit_clear_button = StdButton(icon=si(self, QStyle.SP_DialogCancelButton), title=tr('Clear'), clicked=self.reset_editor,
+                                           tip=tr("Clear edits and enter a new preset using the defaults."))
+        self.edit_save_button = StdButton(icon=si(self, QStyle.SP_DialogSaveButton), title=tr('Save'), clicked=self.save_preset,
+                                          tip=tr("Save current VDU settings to Preset."))
+        self.edit_revert_button = StdButton(icon=si(self, QStyle.SP_DialogResetButton), title=tr('Revert'), clicked=_revert_callable,
+                                            tip=tr("Abandon edits, revert VDU and Preset settings."))
+        self.close_button = StdButton(icon=si(self, QStyle.SP_DialogCloseButton), title=tr('Close'), clicked=self.close)
+        for button in (self.edit_clear_button, self.edit_save_button, self.edit_revert_button, self.close_button):
             self.status_bar.addPermanentWidget(button)
-            return button
-
-        self.edit_clear_button = _add_bar_button(QStyle.SP_DialogCancelButton, tr('Clear'),
-                                                 tr("Clear edits and enter a new preset using the defaults."), self.reset_editor)
-        self.edit_save_button = _add_bar_button(QStyle.SP_DialogSaveButton, tr('Save'),
-                                                tr("Save current VDU settings to Preset."), self.save_preset)
-        self.edit_revert_button = _add_bar_button(QStyle.SP_DialogResetButton, tr('Revert'),
-                                                  tr("Abandon edits, revert VDU and Preset settings."), _revert_callable)
-        self.close_button = _add_bar_button(QStyle.SP_DialogCloseButton, tr('Close'), None, self.close)
         layout.addWidget(self.status_bar)
 
         self.edit_choose_icon_button.set_preset(None)
@@ -6962,29 +6954,18 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         main_layout.addWidget(self.profile_plot, 1)
 
         self.status_bar = QStatusBar()
-
-        save_button = QPushButton(si(self, QStyle.SP_DriveFDIcon), tr("Save Profile"))
-        save_button.setToolTip(tr("Apply and save profile-chart changes."))
-        save_button.clicked.connect(self.save_profiles)
-        self.save_button = save_button
-        self.status_bar.addPermanentWidget(save_button, 0)
-
-        revert_button = QPushButton(si(self, QStyle.SP_DialogResetButton), tr("Revert Profile"))
-        revert_button.setToolTip(tr("Abandon profile-chart changes, revert to last saved."))
-        revert_button.clicked.connect(self.reconfigure)
-        self.revert_button = revert_button
-        self.status_bar.addPermanentWidget(revert_button, 0)
-
-        quit_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), tr("Close"))
-        quit_button.clicked.connect(self.close)  # type: ignore
-        self.status_bar.addPermanentWidget(quit_button, 0)
-
-        self.adjust_now_button = QPushButton()
-        self.adjust_now_button.clicked.connect(self.main_controller.get_lux_auto_controller().adjust_brightness_now)
-        self.adjust_now_button.setToolTip(tr("Press to expire the timer and immediately evaluate brightness."))
+        self.save_button = StdButton(icon=si(self, QStyle.SP_DriveFDIcon), title=tr("Save Profile"), clicked=self.save_profiles,
+                                     tip=tr("Apply and save profile-chart changes."))
+        self.revert_button = StdButton(icon=si(self, QStyle.SP_DialogResetButton), title=tr("Revert Profile"),
+                                       clicked=self.reconfigure, tip=tr("Abandon profile-chart changes, revert to last saved."))
+        quit_button = StdButton(icon=si(self, QStyle.SP_DialogCloseButton), title=tr("Close"), clicked=self.close)
+        for button in (self.save_button, self.revert_button, quit_button):
+            self.status_bar.addPermanentWidget(button, 0)
 
         self.status_layout = QHBoxLayout()
         main_layout.addLayout(self.status_layout)
+        self.adjust_now_button = StdButton(clicked=self.main_controller.get_lux_auto_controller().adjust_brightness_now,
+                                           tip=tr("Press to expire the timer and immediately evaluate brightness."))
         self.status_layout.addWidget(self.adjust_now_button, 0)
         self.adjust_now_button.hide()
         self.status_layout.addWidget(self.status_bar)
@@ -7456,10 +7437,8 @@ class LuxAmbientSlider(QWidget):
         ]
         self.current_value = 10000
 
-        self.status_icon = QPushButton()
-        self.status_icon.setIconSize(QSize(native_font_height(scaled=1.8), native_font_height(scaled=1.8)))
-        self.status_icon.setFlat(True)
-        self.status_icon.pressed.connect(self.status_icon_pressed_qtsignal)
+        self.status_icon = StdButton(icon_size=QSize(native_font_height(scaled=1.8), native_font_height(scaled=1.8)), flat=True,
+                                     clicked=self.status_icon_pressed_qtsignal)
         self.current_name: str | None = None
         self.current_zone: LuxZone | None = None
 
@@ -7535,12 +7514,8 @@ class LuxAmbientSlider(QWidget):
         log10_icon_size = QSize(native_font_height(scaled=1), native_font_height(scaled=1))
         self.label_map: Dict[QLabel, bytes] = {}
         for zone in reversed(self.zones):
-            log10_button = QPushButton()
-            log10_button.setIconSize(log10_icon_size)
-            log10_button.setIcon(create_icon_from_svg_bytes(zone.icon_svg))
-            log10_button.setFlat(True)
-            log10_button.setToolTip(zone.name)
-            log10_button.pressed.connect(partial(self.lux_input_field.setValue, zone.icon_svg_lux))
+            log10_button = StdButton(icon=create_icon_from_svg_bytes(zone.icon_svg), icon_size=log10_icon_size,
+                                     clicked=partial(self.lux_input_field.setValue, zone.icon_svg_lux), flat=True, tip=zone.name)
             lux_slider_panel_layout.addWidget(log10_button, 0, col, 1, zone.column_span, alignment=Qt.AlignBottom | Qt.AlignHCenter)
             self.label_map[log10_button] = zone.icon_svg
             col += zone.column_span
@@ -7605,8 +7580,7 @@ class GreyScaleDialog(SubWinDialog):
             'Use the content-menu to create additional charts and\n'
             'drag them onto each display.\n\nThis chart is resizable. '))
         layout.addWidget(svg_widget)
-        close_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), tr("Close"))
-        close_button.clicked.connect(self.hide)
+        close_button = StdButton(icon=si(self, QStyle.SP_DialogCloseButton), title=tr("Close"), clicked=self.hide)
         layout.addWidget(close_button, 0, Qt.AlignRight)
         self.show()
         self.raise_()
@@ -7681,8 +7655,7 @@ class HelpDialog(SubWinDialog, DialogSingletonMixin):
         markdown_view.setViewportMargins(native_pixels(80), native_pixels(80), native_pixels(50), native_pixels(30))
         markdown_view.setMarkdown(re.sub(r"^$([^ ])", r"<br/>\n\1", __doc__, flags=re.MULTILINE))  # hack Qt markdown
         layout.addWidget(markdown_view)
-        close_button = QPushButton(si(self, QStyle.SP_DialogCloseButton), tr("Close"))
-        close_button.clicked.connect(self.hide)
+        close_button = StdButton(icon=si(self, QStyle.SP_DialogCloseButton), title=tr("Close"), clicked=self.hide)
         layout.addWidget(close_button, 0, Qt.AlignRight)
         self.setLayout(layout)
         self.make_visible()
