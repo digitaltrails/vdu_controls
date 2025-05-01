@@ -4528,7 +4528,7 @@ class MBox(QMessageBox):
 
 
 class PushButtonLeftJustified(QPushButton):
-    def __init__(self, text: str | None = None, parent: QWidget | None = None) -> None:
+    def __init__(self, text: str | None = None, parent: QWidget | None = None, flat: bool = False) -> None:
         super().__init__(parent=parent)
         self.label = QLabel()
         layout = QVBoxLayout()
@@ -4536,8 +4536,8 @@ class PushButtonLeftJustified(QPushButton):
         self.layout().addWidget(self.label)
         self.setContentsMargins(0, 0, 0, 0)  # Not sure if this helps
         layout.setContentsMargins(0, 0, 0, 0)  # Seems to fix top/bottom clipping on openbox and xfce
-        if text is not None:
-            self.setText(text)
+        self.setText(text) if text is not None else None
+        self.setFlat(flat)
 
     def setText(self, text: str) -> None:
         self.label.setText(text)
@@ -4572,11 +4572,10 @@ class PresetWidget(QWidget):
             line_layout.addWidget(button)
 
         if not protect_nvram:
-            preset_transition_button = PushButtonLeftJustified()
+            preset_transition_button = PushButtonLeftJustified(flat=True)
             preset_transition_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
             width = QFontMetrics(preset_transition_button.font()).horizontalAdvance(">____99")
             preset_transition_button.setMaximumWidth(width + 5)
-            preset_transition_button.setFlat(True)
             preset_transition_button.setText(
                 f"{preset.get_transition_type().abbreviation()}"
                 f"{str(preset.get_step_interval_seconds()) if preset.get_step_interval_seconds() > 0 else ''}")
@@ -4595,8 +4594,7 @@ class PresetWidget(QWidget):
             line_layout.addWidget(preset_transition_button)
 
         line_layout.addSpacing(5)
-        self.timer_control_button = PushButtonLeftJustified(parent=self)
-        self.timer_control_button.setFlat(True)
+        self.timer_control_button = PushButtonLeftJustified(parent=self, flat=True)
         self.timer_control_button.setAutoDefault(False)
 
         if preset.get_solar_elevation() is not None:
@@ -7433,8 +7431,7 @@ class LuxAmbientSlider(QWidget):
             LuxZone(tr("Overcast"), LUX_OVERCAST_SVG, 400, 1000, 900, column_span=3),
             LuxZone(tr("Twilight"), LUX_TWILIGHT_SVG, 100, 400, 130, column_span=2),
             LuxZone(tr("Subdued"), LUX_SUBDUED_SVG, 15, 100, 20, column_span=3),
-            LuxZone(tr("Dark"), LUX_DARK_SVG, 0, 15, 2, column_span=3),
-        ]
+            LuxZone(tr("Dark"), LUX_DARK_SVG, 0, 15, 2, column_span=3), ]
         self.current_value = 10000
 
         self.status_icon = StdButton(icon_size=QSize(native_font_height(scaled=1.8), native_font_height(scaled=1.8)), flat=True,
