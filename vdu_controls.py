@@ -862,7 +862,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QDesktopWidget, QSpacerItem
 
 APPNAME = "VDU Controls"
-VDU_CONTROLS_VERSION = '2.3.0'
+VDU_CONTROLS_VERSION = '2.3.1'
 VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in VDU_CONTROLS_VERSION.split('.'))
 assert sys.version_info >= (3, 8), f'{APPNAME} utilises python version 3.8 or greater (your python is {sys.version}).'
 
