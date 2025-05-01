@@ -3602,7 +3602,7 @@ class VduControlSlider(VduControlBase):
             layout.addWidget(QLabel(tr(vcp_capability.name)))
 
         self.slider = slider = ClickableSlider()
-        slider.setMinimumWidth(200)
+        slider.setMinimumWidth(native_pixels(200))
         self.range_restriction = vcp_capability.values
         if len(self.range_restriction) != 0:
             slider.setRange(int(self.range_restriction[1]), int(self.range_restriction[2]))
@@ -4966,8 +4966,7 @@ class PresetChooseElevationChart(QLabel):
 
     def __init__(self) -> None:
         super().__init__()
-        self.setMinimumHeight(150)
-        self.setMinimumWidth(200)
+        self.setMinimumSize(native_pixels(200), native_pixels(150))
         self.sun_image: QImage | None = None
         self.setMouseTracking(True)
         self.in_drag = False
@@ -5228,7 +5227,7 @@ class PresetChooseElevationWidget(QWidget):
         self.configure_for_location(self.location)
         self.slider.valueChanged.connect(self.sliding)
 
-        self.setMinimumWidth(400)
+        self.setMinimumWidth(native_pixels(400))
         self.sun_image: QImage | None = None
 
     def sliding(self) -> None:
@@ -5368,8 +5367,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.main_config = main_config
         self.content_controls_map: Dict[Tuple[str, str], QWidget] = {}
         self.resize(native_pixels(1600), native_pixels(950))
-        self.setMinimumWidth(native_pixels(1350))
-        self.setMinimumHeight(native_pixels(600))
+        self.setMinimumSize(native_pixels(1350), native_pixels(600))
         layout = QVBoxLayout()
         self.setLayout(layout)
 
@@ -5425,8 +5423,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
         self.editor_groupbox = QGroupBox()
         self.editor_groupbox.setFlat(True)
-        self.editor_groupbox.setMinimumHeight(native_pixels(768))
-        self.editor_groupbox.setMinimumWidth(native_pixels(550))
+        self.editor_groupbox.setMinimumSize(native_pixels(550), native_pixels(768))
         self.editor_layout = QVBoxLayout()
         self.editor_title = QLabel(tr("New Preset:"))
         self.editor_title.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
@@ -5953,8 +5950,8 @@ class LuxProfileChart(QLabel):
         self.current_lux = 0
         self.snap_to_margin = lux_dialog.lux_config.getint('lux-ui', 'snap-to-margin-pixels', fallback=4)
         self.current_vdu_sid = VduStableId('') if len(self.profiles_map) == 0 else list(self.profiles_map.keys())[0]
-        self.pixmap_width = 600
-        self.pixmap_height = 550
+        self.pixmap_width = native_pixels(600)
+        self.pixmap_height = native_pixels(550)
         self.plot_width, self.plot_height = self.pixmap_width - 200, self.pixmap_height - 150
         self.x_origin, self.y_origin = 120, self.plot_height + 50
         self.setMouseTracking(True)  # Enable mouse move events so we can draw cross-hairs
@@ -6894,7 +6891,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.drawing_color_map: Dict[VduStableId, QColor] = {}
         self.current_brightness_map: Dict[VduStableId, int] = {}
         self.has_profile_changes = False
-        self.setMinimumWidth(950)
+        self.setMinimumWidth(native_pixels(950))
         self.path = ConfIni.get_path('AutoLux')
         self.device_name = ''
         self.lux_config = main_controller.get_lux_auto_controller().get_lux_config()
@@ -7454,7 +7451,7 @@ class LuxAmbientSlider(QWidget):
 
         self.lux_slider = ClickableSlider()
         self.lux_slider.setToolTip(tr("Ambient light level input (lux value)"))
-        self.lux_slider.setMinimumWidth(200)
+        self.lux_slider.setMinimumWidth(native_pixels(200))
         self.lux_slider.setRange(int(math.log10(1) * 1000), int(math.log10(100000) * 1000))
         self.lux_slider.setSingleStep(1)
         self.lux_slider.setPageStep(100)
@@ -7567,8 +7564,7 @@ class GreyScaleDialog(SubWinDialog):
         self.setModal(False)
         svg_widget = QSvgWidget()
         svg_widget.renderer().load(GREY_SCALE_SVG)
-        svg_widget.setMinimumWidth(native_pixels(600))
-        svg_widget.setMinimumHeight(native_pixels(400))
+        svg_widget.setMinimumSize(native_pixels(600), native_pixels(400))
         svg_widget.setToolTip(tr(
             'Grey Scale Reference for VDU adjustment.\n\n'
             'Set contrast toward the maximum (for HDR monitors\n'
