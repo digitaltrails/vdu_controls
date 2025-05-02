@@ -3823,7 +3823,7 @@ class Preset:
         self.scheduler_job: SchedulerJob | None = None
         self.schedule_status = PresetScheduleStatus.UNSCHEDULED
         self.elevation_time_today: datetime | None = None
-        self.in_transition = False
+        self.in_transition_step = 0
 
     def get_title_name(self) -> str:
         return self.name
@@ -8029,7 +8029,6 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         log_debug(f"restore_preset: '{preset.name}' try to obtain application_lock", trace=False) if log_debug_enabled else None
         with self.application_lock:  # The lock prevents a transition firing when the GUI/app is reconfiguring
             log_debug(f"restore_preset: '{preset.name}' holding application_lock", trace=False) if log_debug_enabled else None
-            preset.in_transition = True
             if not immediately:
                 self.main_window.show_preset_status(tr("Transitioning to preset {}").format(preset.name))
                 self.main_window.update_status_indicators(preset)  # TODO - create a transitioning indicator
@@ -8037,6 +8036,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             preset.load()
 
             def _update_progress(worker_thread: PresetTransitionWorker) -> None:
+                preset.in_transition_step += 1
                 self.main_window.show_preset_status(
                     tr("Transitioning to preset {} (elapsed time {} seconds)...").format(
                         preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=2)))
@@ -8049,8 +8049,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     if self.main_window.get_main_panel().show_vdu_exception(worker_thread.vdu_exception, can_retry=True):
                         self.restore_preset(preset, finished_func=finished_func, immediately=immediately)  # Try again, new thread
                         return  # Don't do anything more, the new thread will take over from here
+                preset.in_transition_step = 0
                 self.main_window.indicate_busy(False)
-                preset.in_transition = False
                 if not initialization_preset:
                     if self.main_window.tray is not None:
                         self.main_window.refresh_tray_menu()
@@ -8670,7 +8670,7 @@ class VduAppWindow(QMainWindow):
             PresetsDialog.instance_indicate_active_preset(preset)
             title = f"{preset.get_title_name()} {PRESET_APP_SEPARATOR_SYMBOL} {title}"
             tray_embedded_icon = preset.create_icon(get_tray_theme_type(self.main_config))
-            led1_color = PRESET_TRANSITIONING_LED_COLOR if preset.in_transition else None   # TODO transitioning indicator
+            led1_color = PRESET_TRANSITIONING_LED_COLOR if preset.in_transition_step > 0 else None   # TODO transitioning indicator
         if self.main_controller.lux_auto_controller is not None:
             if self.main_controller.lux_auto_controller.is_auto_enabled():
                 title = f"{tr('Auto')}/{title}"
