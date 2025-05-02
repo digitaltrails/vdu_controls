@@ -3823,6 +3823,7 @@ class Preset:
         self.scheduler_job: SchedulerJob | None = None
         self.schedule_status = PresetScheduleStatus.UNSCHEDULED
         self.elevation_time_today: datetime | None = None
+        self.in_transition = False
 
     def get_title_name(self) -> str:
         return self.name
@@ -4434,28 +4435,6 @@ class PresetTransitionWorker(WorkerThread):
 
     def total_elapsed_seconds(self) -> float:
         return ((self.end_time if self.end_time is not None else datetime.now()) - self.start_time).total_seconds()
-
-
-# TODO remove as a maintenance hassle
-class PresetTransitionDummy(Preset):  # A wrapper that creates titles and icons that indicate a transition is in progress.
-
-    def __init__(self, wrapped: Preset) -> None:
-        super().__init__(wrapped.name)
-        self.wrapped = wrapped
-        self.count = 1
-        self.arrows = (RIGHT_POINTER_BLACK, RIGHT_POINTER_WHITE)  # self.clocks = ('\u25F7','\u25F6', '\u25F5', '\u25F4')
-        self.icons = None
-
-    def update_progress(self) -> None:
-        self.count += 1
-
-    def get_title_name(self) -> str:
-        return self.arrows[self.count % 2] + self.name
-
-    def create_icon(self, theme_type: ThemeType = ThemeType.UNDECIDED) -> QIcon:
-        if not self.icons:
-            self.icons = (self.wrapped.create_icon(theme_type), create_icon_from_svg_bytes(TRANSITION_ICON_SOURCE, theme_type))
-        return self.icons[self.count % 2]
 
 
 class PresetController:
@@ -7779,7 +7758,6 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         self.preset_transition_workers: List[PresetTransitionWorker] = []  # Not sure if this actually needs to be a list.
         self.lux_auto_controller: LuxAutoController | None = LuxAutoController(self) if self.main_config.is_set(
             ConfOpt.LUX_OPTIONS_ENABLED) else None
-        self.transitioning_dummy_preset: PresetTransitionDummy | None = None
 
         def respond_to_unix_signal(signal_number: int) -> None:
             if signal_number == signal.SIGHUP:
@@ -8051,11 +8029,10 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         log_debug(f"restore_preset: '{preset.name}' try to obtain application_lock", trace=False) if log_debug_enabled else None
         with self.application_lock:  # The lock prevents a transition firing when the GUI/app is reconfiguring
             log_debug(f"restore_preset: '{preset.name}' holding application_lock", trace=False) if log_debug_enabled else None
-            self.transitioning_dummy_preset = None
+            preset.in_transition = True
             if not immediately:
-                self.transitioning_dummy_preset = PresetTransitionDummy(preset)
                 self.main_window.show_preset_status(tr("Transitioning to preset {}").format(preset.name))
-                self.main_window.update_status_indicators(self.transitioning_dummy_preset)
+                self.main_window.update_status_indicators(preset)  # TODO - create a transitioning indicator
             self.main_window.indicate_busy(True, lock_controls=immediately)
             preset.load()
 
@@ -8063,16 +8040,17 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 self.main_window.show_preset_status(
                     tr("Transitioning to preset {} (elapsed time {} seconds)...").format(
                         preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=2)))
-                self.transitioning_dummy_preset.update_progress() if self.transitioning_dummy_preset else None
-                self.main_window.update_status_indicators(self.transitioning_dummy_preset)
+                #self.transitioning_dummy_preset.update_progress() if self.transitioning_dummy_preset else None
+                self.main_window.update_status_indicators(preset)
 
             def _restore_finished_callback(worker_thread: PresetTransitionWorker) -> None:
-                self.transitioning_dummy_preset = None
+                # self.transitioning_dummy_preset = None
                 if worker_thread.vdu_exception is not None and not background_activity:  # if it's a GUI request, ask about retry
                     if self.main_window.get_main_panel().show_vdu_exception(worker_thread.vdu_exception, can_retry=True):
                         self.restore_preset(preset, finished_func=finished_func, immediately=immediately)  # Try again, new thread
                         return  # Don't do anything more, the new thread will take over from here
                 self.main_window.indicate_busy(False)
+                preset.in_transition = False
                 if not initialization_preset:
                     if self.main_window.tray is not None:
                         self.main_window.refresh_tray_menu()
@@ -8692,7 +8670,7 @@ class VduAppWindow(QMainWindow):
             PresetsDialog.instance_indicate_active_preset(preset)
             title = f"{preset.get_title_name()} {PRESET_APP_SEPARATOR_SYMBOL} {title}"
             tray_embedded_icon = preset.create_icon(get_tray_theme_type(self.main_config))
-            led1_color = PRESET_TRANSITIONING_LED_COLOR if isinstance(preset, PresetTransitionDummy) else None
+            led1_color = PRESET_TRANSITIONING_LED_COLOR if preset.in_transition else None   # TODO transitioning indicator
         if self.main_controller.lux_auto_controller is not None:
             if self.main_controller.lux_auto_controller.is_auto_enabled():
                 title = f"{tr('Auto')}/{title}"
@@ -8710,7 +8688,7 @@ class VduAppWindow(QMainWindow):
         if self.tray:
             self.tray.setToolTip(title)
             self.tray.setIcon(create_decorated_app_icon(self.tray_icon, tray_embedded_icon, led1_color, led2_color))
-        if palette_change or (preset is not None and not isinstance(preset, PresetTransitionDummy)):
+        if palette_change or preset is not None:
             self.refresh_preset_menu(palette_change=palette_change)
 
     def respond_to_changes_handler(self, vdu_stable_id: VduStableId, vcp_code: str, value: int, origin: VcpOrigin,
