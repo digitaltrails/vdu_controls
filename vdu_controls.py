@@ -1243,6 +1243,14 @@ GREY_SCALE_SVG = f'''
 </svg>
 '''.encode()
 
+class ThemeType(Enum):
+    UNTHEMED = 0,
+    POLYCHROME = 1,
+    POLYCHROME_LIGHT = 1,
+    POLYCHROME_DARK = 2,
+    MONOCHROME_LIGHT = 3,
+    MONOCHROME_DARK = 4,
+
 #: A high resolution image. We will fall back to an internal PNG if this file isn't found on the local system
 DEFAULT_SPLASH_PNG = "/usr/share/icons/hicolor/256x256/apps/vdu_controls.png"
 
@@ -3811,15 +3819,15 @@ class Preset:
             return Path(path_text) if path_text else None
         return None
 
-    def create_icon(self, themed: bool = True, monochrome=False) -> QIcon:
+    def create_icon(self, theme_type: ThemeType = ThemeType.POLYCHROME) -> QIcon:
         icon_path = self.get_icon_path()
         if icon_path and icon_path.exists():
-            return create_icon_from_path(icon_path, themed, monochrome)
+            return create_icon_from_path(icon_path, theme_type)
         else:
             # Only room for two letters at most - use first and last if more than one word.
             full_acronym = [word[0] for word in re.split(r"[ _-]", self.name) if word != '']
             abbreviation = full_acronym[0] if len(full_acronym) == 1 else full_acronym[0] + full_acronym[-1]
-            return create_icon_from_text(abbreviation, themed, monochrome)
+            return create_icon_from_text(abbreviation, theme_type)
 
     def load(self) -> ConfIni:
         if self.path.exists():
@@ -5775,10 +5783,6 @@ def exception_handler(e_type, e_value, e_traceback) -> None:
          details=tr('Details: {}').format(''.join(traceback.format_exception(e_type, e_value, e_traceback)))).exec()
 
 
-def handle_theme(svg_bytes: bytes) -> bytes:
-    return svg_bytes.replace(SVG_LIGHT_THEME_COLOR, SVG_DARK_THEME_COLOR) if is_dark_theme() else svg_bytes
-
-
 def create_pixmap_from_svg_bytes(svg_bytes: bytes) -> QPixmap:
     """There is no QIcon option for loading SVG from a string, only from a SVG file, so roll our own."""
     return QPixmap.fromImage(create_image_from_svg_bytes(svg_bytes))
@@ -5796,13 +5800,9 @@ def create_image_from_svg_bytes(svg_bytes) -> QImage:
 
 svg_icon_cache: Dict[bytes, QIcon] = {}
 
-
-def create_icon_from_svg_bytes(svg_bytes: bytes, themed: bool = True, monochrome: bool = False) -> QIcon:
+def create_icon_from_svg_bytes(svg_bytes: bytes, theme_type: ThemeType = ThemeType.POLYCHROME) -> QIcon:
     """There is no QIcon option for loading SVG from a string, only from a SVG file, so roll our own."""
-    if monochrome:
-        svg_bytes = handle_monochrome(svg_bytes)
-    elif themed:
-        svg_bytes = handle_theme(svg_bytes)
+    svg_bytes = handle_theme(svg_bytes, theme_type)
     if icon := svg_icon_cache.get(svg_bytes):
         return icon
     icon = QIcon(create_pixmap_from_svg_bytes(svg_bytes))
@@ -5810,19 +5810,21 @@ def create_icon_from_svg_bytes(svg_bytes: bytes, themed: bool = True, monochrome
     return icon
 
 
-def handle_monochrome(svg_bytes):
-    if mono_light_tray:
+def handle_theme(svg_bytes: bytes, theme_type: ThemeType = ThemeType.POLYCHROME):
+    if theme_type == ThemeType.MONOCHROME_LIGHT:
         return svg_bytes.replace(SVG_LIGHT_THEME_COLOR, b"#000000").replace(b"#ffffff", b"#000000")
-    else:
+    elif theme_type == ThemeType.MONOCHROME_DARK:
         return svg_bytes.replace(SVG_LIGHT_THEME_COLOR, b"#ffffff").replace(b"#000000", b"#ffffff")
+    elif theme_type == ThemeType.POLYCHROME:
+        return svg_bytes.replace(SVG_LIGHT_THEME_COLOR, SVG_DARK_THEME_COLOR) if is_dark_theme() else svg_bytes
+    return svg_bytes
 
-
-def create_icon_from_path(path: Path, themed: bool = True, monochrome: bool = False) -> QIcon:
+def create_icon_from_path(path: Path, theme_type: ThemeType = ThemeType.POLYCHROME) -> QIcon:
     if path.exists():
         if path.suffix == '.svg':
             with open(path, 'rb') as icon_file:
                 icon_bytes = icon_file.read()
-                icon = create_icon_from_svg_bytes(icon_bytes, themed, monochrome)
+                icon = create_icon_from_svg_bytes(icon_bytes, theme_type)
         else:  # Hope the file contains something QIcon can cope with:
             icon = QIcon(path.as_posix())
         return icon
@@ -5830,7 +5832,7 @@ def create_icon_from_path(path: Path, themed: bool = True, monochrome: bool = Fa
     return QApplication.style().standardIcon(QStyle.SP_MessageBoxQuestion)
 
 
-def create_icon_from_text(text: str, themed: bool = True, monochrome: bool = False) -> QIcon:
+def create_icon_from_text(text: str, theme_type: ThemeType = ThemeType.POLYCHROME) -> QIcon:
     pixmap = QPixmap(32, 32)
     pixmap.fill(Qt.transparent)
     painter = QPainter(pixmap)
@@ -5839,11 +5841,14 @@ def create_icon_from_text(text: str, themed: bool = True, monochrome: bool = Fal
     font.setWeight(QFont.Medium)
     painter.setFont(font)
     painter.setOpacity(1.0)
-    if monochrome:
+    if theme_type == ThemeType.MONOCHROME_LIGHT:
+        painter.setPen(QColor("#000000" if mono_light_tray else "#ffffff"))
+    elif theme_type == ThemeType.MONOCHROME_DARK:
         painter.setPen(QColor("#000000" if mono_light_tray else "#ffffff"))
     else:
         painter.setPen(
-            QColor((SVG_DARK_THEME_TEXT_COLOR if themed and is_dark_theme() else SVG_LIGHT_THEME_TEXT_COLOR).decode("utf-8")))
+            QColor((SVG_DARK_THEME_TEXT_COLOR if theme_type == ThemeType.POLYCHROME and
+                                                 is_dark_theme() else SVG_LIGHT_THEME_TEXT_COLOR).decode("utf-8")))
     painter.drawText(pixmap.rect(), Qt.AlignTop, text)
     painter.end()
     return QIcon(pixmap)
@@ -8568,14 +8573,18 @@ class VduAppWindow(QMainWindow):
         global mono_light_tray
         self.app_icon = QIcon()
         self.app_icon.addPixmap(get_splash_image() if splash_pixmap is None else splash_pixmap)
-        mono_light_tray = self.main_config.is_set(ConfOpt.MONO_LIGHT_TRAY_ENABLED)
-        monochrome_tray = mono_light_tray or self.main_config.is_set(ConfOpt.MONOCHROME_TRAY_ENABLED)
+        if self.main_config.is_set(ConfOpt.MONO_LIGHT_TRAY_ENABLED):
+            theme_type = ThemeType.MONOCHROME_LIGHT
+        elif self.main_config.is_set(ConfOpt.MONOCHROME_TRAY_ENABLED):
+            theme_type = ThemeType.MONOCHROME_DARK
+        else:
+            theme_type = ThemeType.UNTHEMED
         if CUSTOM_TRAY_ICON_FILE.exists() and os.access(CUSTOM_TRAY_ICON_FILE.as_posix(), os.R_OK):
-            log_info(f"Loading custom app_icon: {CUSTOM_TRAY_ICON_FILE} {monochrome_tray=} {mono_light_tray=}")
-            self.tray_icon = create_icon_from_path(CUSTOM_TRAY_ICON_FILE, themed=False, monochrome=monochrome_tray)
-        elif monochrome_tray:  # Special monochrome system-tray - unthemed, colors in tray may differ from desktop
-            log_info(f"Using monochrome app_icon: {monochrome_tray=} {mono_light_tray=}")
-            self.tray_icon = create_icon_from_svg_bytes(MONOCHROME_APP_ICON, monochrome=True)
+            log_info(f"Loading custom app_icon: {CUSTOM_TRAY_ICON_FILE} {theme_type=}")
+            self.tray_icon = create_icon_from_path(CUSTOM_TRAY_ICON_FILE, theme_type)
+        elif theme_type in (ThemeType.MONOCHROME_LIGHT, ThemeType.MONOCHROME_DARK):  # Special monochrome system-tray - unthemed, colors in tray may differ from desktop
+            log_info(f"Using monochrome app_icon: {theme_type=}")
+            self.tray_icon = create_icon_from_svg_bytes(MONOCHROME_APP_ICON, theme_type)
         else:  # non-themed color icon based on the splash screen image
             self.tray_icon = self.app_icon
 
@@ -8662,7 +8671,13 @@ class VduAppWindow(QMainWindow):
             self.app_context_menu.indicate_preset_active(preset)
             PresetsDialog.instance_indicate_active_preset(preset)
             title = f"{preset.get_title_name()} {PRESET_APP_SEPARATOR_SYMBOL} {title}"
-            tray_embedded_icon = preset.create_icon(themed=False, monochrome=self.main_config.is_set(ConfOpt.MONOCHROME_TRAY_ENABLED))
+            if self.main_config.is_set(ConfOpt.MONO_LIGHT_TRAY_ENABLED):
+                theme_type = ThemeType.MONOCHROME_LIGHT
+            elif self.main_config.is_set(ConfOpt.MONOCHROME_TRAY_ENABLED):
+                theme_type = ThemeType.MONOCHROME_DARK
+            else:
+                theme_type = ThemeType.UNTHEMED
+            tray_embedded_icon = preset.create_icon(theme_type)
             led1_color = PRESET_TRANSITIONING_LED_COLOR if isinstance(preset, PresetTransitionDummy) else None
         if self.main_controller.lux_auto_controller is not None:
             if self.main_controller.lux_auto_controller.is_auto_enabled():
@@ -8672,7 +8687,14 @@ class VduAppWindow(QMainWindow):
             self.app_context_menu.update_lux_auto_icon(menu_lux_icon)  # Won't actually update if it hasn't changed
             if tray_embedded_icon is None and self.main_config.is_set(ConfOpt.LUX_TRAY_ICON):
                 if zone := self.main_controller.lux_auto_controller.get_lux_zone():
-                    tray_embedded_icon = create_icon_from_svg_bytes(zone.icon_svg)
+                    if self.main_config.is_set(ConfOpt.MONO_LIGHT_TRAY_ENABLED):
+                        theme_type = ThemeType.MONOCHROME_LIGHT
+                    elif self.main_config.is_set(ConfOpt.MONOCHROME_TRAY_ENABLED):
+                        theme_type = ThemeType.MONOCHROME_DARK
+                    else:
+                        theme_type = ThemeType.POLYCHROME
+                    log_info(f"{theme_type=}")
+                    tray_embedded_icon = create_icon_from_svg_bytes(zone.icon_svg, theme_type)
                     title = title + '\n' + tr("Lighting: {}").format(zone.name.lower())
 
         if self.windowTitle() != title:  # Don't change if not needed - prevent flickering.
