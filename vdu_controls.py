@@ -6141,7 +6141,7 @@ class LuxProfileChart(QLabel):
         local_pos = self.mapFromGlobal(event.globalPos())
         x = local_pos.x() - self.x_origin
         y = self.y_origin - local_pos.y()
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.LeftButton:  # click along bottom (y=0) to attache presets
             changed = self.lux_point_edit(x, y) if y >= 0 else self.lux_preset_edit(x)
         if changed:
             self.show_changes()
@@ -6164,16 +6164,16 @@ class LuxProfileChart(QLabel):
     def lux_preset_edit(self, x) -> bool:
         if point := self.find_preset_point_close_to(x):  # Delete
             self.preset_points.remove(point)
+            # May not find a preset_name if the chart is not yet committed/saved.
+            preset = self.main_controller.find_preset_by_name(point.preset_name) if point.preset_name else None
             for vdu_sid, profile in self.profiles_map.items():
+                preset_brightness = preset.get_brightness(vdu_sid) if preset is not None else -1
                 for profile_point in profile:
                     if profile_point == point:  # Note: these will not be the same object
-                        # May not have a preset_name if not yet committed/saved.
-                        preset = self.main_controller.find_preset_by_name(point.preset_name) if point.preset_name else None
-                        preset_brightness = preset.get_brightness(vdu_sid) if preset is not None else -1
                         if preset_brightness >= 0:  # Convert to normal point - as a convenience for the user
                             profile_point.preset_name = None
                             profile_point.brightness = preset_brightness
-                        else:  # A Preset without a brightness value for this VDU - remove the point
+                        else:  # Either an uncommitted LuxPoint or Preset without a brightness value, just remove it.
                             profile.remove(profile_point)
                         break
             return True
