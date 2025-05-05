@@ -6167,9 +6167,9 @@ class LuxProfileChart(QLabel):
             # May not find a preset_name if the chart is not yet committed/saved.
             preset = self.main_controller.find_preset_by_name(point.preset_name) if point.preset_name else None
             for vdu_sid, profile in self.profiles_map.items():
-                preset_brightness = preset.get_brightness(vdu_sid) if preset is not None else -1
                 for profile_point in profile:
                     if profile_point == point:  # Note: these will not be the same object
+                        preset_brightness = preset.get_brightness(vdu_sid) if preset is not None else -1
                         if preset_brightness >= 0:  # Convert to normal point - as a convenience for the user
                             profile_point.preset_name = None
                             profile_point.brightness = preset_brightness
@@ -6716,28 +6716,34 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         return LuxStepStatus.MORE_TO_DO  # Still more work to do to reach the final target value
 
     def determine_brightness(self, vdu_sid: VduStableId, smoothed_lux: int, lux_profile: List[LuxPoint]) -> Tuple[int, str | None]:
-        matched_point = LuxPoint(0, 0)
+        previous_normal_point = matched_point = LuxPoint(0, 0)
         result_brightness = 0
         preset_name = None
         for profile_point in self.create_complete_profile(lux_profile, vdu_sid):
             # Moving up the lux steps, seeking the step below smoothed_lux
-            if profile_point.brightness >= 0:
-                if smoothed_lux >= profile_point.lux:  # Possible result, there may be something higher, keep going...
-                    # if step_point.brightness is -1, this is a Preset that doesn't change the VDU's brightness control
+            log_debug(f"determine_brightness check {smoothed_lux=} {profile_point=}") if log_debug_enabled else None
+            if smoothed_lux > profile_point.lux:  # Possible result, there may be something higher, keep going...
+                # if profile_point.brightness is -1, this is a Preset that doesn't change the VDU's brightness control
+                if profile_point.brightness >= 0:  # else use existing result_brightness
                     result_brightness = profile_point.brightness
-                    matched_point = profile_point
-                    if matched_point.preset_name is not None:
-                        preset_name = profile_point.preset_name
-                else:  # Step is too high, if interpolating check against next point, if not, the previous match is the result.
-                    if self.interpolation_enabled:  # Only interpolate if lux is not an exact match and next_point has a brightness
-                        if smoothed_lux != matched_point.lux and profile_point.brightness >= 0:
-                            result_brightness = self.interpolate_brightness(smoothed_lux, matched_point, profile_point)
-                            preset_name = self.assess_preset_proximity(result_brightness, matched_point, profile_point)
-                    break
+                matched_point = profile_point
+                preset_name = profile_point.preset_name
+            else:  # Step is too high, if interpolating check against the following point, if not, the previous match is the result.
+                if self.interpolation_enabled:  # Only interpolate if lux is not an exact match and next_point has a brightness
+                    if smoothed_lux != matched_point.lux and profile_point.brightness >= 0:
+                        # if profile_point.brightness is -1, this is a Preset that doesn't change the VDU's brightness control
+                        lower_point = matched_point if matched_point.brightness >= 0 else previous_normal_point
+                        result_brightness = self.interpolate_brightness(smoothed_lux, lower_point, profile_point)
+                        preset_name = self.assess_preset_proximity(result_brightness, lower_point, matched_point, profile_point)
+                break
+            if profile_point.brightness > 0:
+                previous_normal_point = profile_point
         if preset_name is not None:  # Lookup preset brightness. Might be -1 if the preset doesn't have a brightness for this VDU
             presets = self.main_controller.find_presets_map()
             if preset_name in presets:  # Change the result to the preset's current brightness value
-                result_brightness = presets[preset_name].get_brightness(vdu_sid)
+                preset_brightness = presets[preset_name].get_brightness(vdu_sid)
+                if preset_brightness > -1:
+                    result_brightness = preset_brightness
         log_debug(
             f"LuxAutoWorker: determine_brightness {vdu_sid=} {result_brightness=}% {preset_name=}") if log_debug_enabled else None
         return result_brightness, preset_name  # Brightness will be -1 if attached preset has no brightness
@@ -6755,9 +6761,11 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                 x_smoothed - x_current_point) / (x_next_point - x_current_point)
         return round(interpolated_brightness)
 
-    def assess_preset_proximity(self, interpolated_brightness: float, current_point: LuxPoint, next_point: LuxPoint) -> str | None:
+    def assess_preset_proximity(self, interpolated_brightness: float,
+                                previous_normal_point: LuxPoint, current_point: LuxPoint, next_point: LuxPoint) -> str | None:
         # Brightness is a better indicator of nearness for deciding whether to activate a preset
-        diff_current = abs(interpolated_brightness - current_point.brightness)
+        lower_point_brightness = current_point.brightness if current_point.brightness >= 0 else previous_normal_point.brightness
+        diff_current = abs(interpolated_brightness - lower_point_brightness)
         diff_next = abs(interpolated_brightness - next_point.brightness)
         preset_name = None
         if current_point.preset_name is not None and next_point.preset_name is not None:
@@ -6768,8 +6776,9 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         # Either no next point or closer to next_point
         elif next_point.preset_name is not None and diff_next <= self.sensitivity_percent:
             preset_name = next_point.preset_name
-        log_debug(f"LuxAutoWorker: assess_preset_proximity {diff_current=} {diff_next=} "
-                  f"current_point={current_point} next_point={next_point} {preset_name=}") if log_debug_enabled else None
+        if log_debug_enabled:
+            log_debug(f"LuxAutoWorker: assess_preset_proximity {diff_current=} {diff_next=} {self.sensitivity_percent=} "
+                      f"{previous_normal_point=} {current_point=} {next_point=} {preset_name=}")
         return preset_name
 
     def create_complete_profile(self, profile_points: List[LuxPoint], vdu_sid: VduStableId):
