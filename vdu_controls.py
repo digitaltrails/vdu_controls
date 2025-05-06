@@ -6163,7 +6163,8 @@ class LuxProfileChart(QLabel):
             for vdu_sid, profile in self.profiles_map.items():
                 for profile_point in profile:
                     if profile_point == point:  # Note: these will not be the same object
-                        if profile_point.preset_name:  # Convert to normal point - as a convenience for the user
+                        if profile_point.preset_name and profile_point.brightness > 0:
+                            # Convert to normal point - as a convenience for the user
                             profile_point.preset_name = None
                         else:  # Either an uncommitted LuxPoint or Preset without a brightness value, just remove it.
                             profile.remove(profile_point)
