@@ -6029,11 +6029,7 @@ class LuxProfileChart(QLabel):
             histogram_bar_color.setAlpha(50)
             for point_data in vdu_data:
                 lux = point_data.lux
-                if point_data.preset_name is None:
-                    brightness = point_data.brightness
-                else:
-                    preset = self.main_controller.find_preset_by_name(point_data.preset_name)
-                    brightness = preset.get_brightness(vdu_sid) if preset is not None else -1
+                brightness = point_data.brightness
                 if brightness >= 0:
                     x = self.x_origin + self.x_from_lux(lux)
                     y = self.y_origin - self.y_from_percent(brightness)
@@ -6164,15 +6160,11 @@ class LuxProfileChart(QLabel):
     def lux_preset_edit(self, x) -> bool:
         if point := self.find_preset_point_close_to(x):  # Delete
             self.preset_points.remove(point)
-            # May not find a preset_name if the chart is not yet committed/saved.
-            preset = self.main_controller.find_preset_by_name(point.preset_name) if point.preset_name else None
             for vdu_sid, profile in self.profiles_map.items():
                 for profile_point in profile:
                     if profile_point == point:  # Note: these will not be the same object
-                        preset_brightness = preset.get_brightness(vdu_sid) if preset is not None else -1
-                        if preset_brightness >= 0:  # Convert to normal point - as a convenience for the user
+                        if profile_point.preset_name:  # Convert to normal point - as a convenience for the user
                             profile_point.preset_name = None
-                            profile_point.brightness = preset_brightness
                         else:  # Either an uncommitted LuxPoint or Preset without a brightness value, just remove it.
                             profile.remove(profile_point)
                         break
@@ -6184,13 +6176,16 @@ class LuxProfileChart(QLabel):
             ask_preset.setOption(QInputDialog.UseListViewForComboBoxItems)
             if ask_preset.exec() == QDialog.Accepted:
                 preset_name = ask_preset.textValue()
-                point = LuxPoint(self.lux_from_x(x), -1, preset_name)
-                self.preset_points.append(point)
-                self.preset_points.sort()
-                for profile in self.profiles_map.values():
-                    profile.append(point)
-                    profile.sort()
-                return True
+                if preset := self.main_controller.find_preset_by_name(preset_name):
+                    point = LuxPoint(self.lux_from_x(x), -1, preset_name)
+                    self.preset_points.append(point)
+                    self.preset_points.sort()
+                    for vdu_sid, profile in self.profiles_map.items():
+                        preset_brightness = preset.get_brightness(vdu_sid) if preset is not None else -1
+                        point = LuxPoint(self.lux_from_x(x), preset_brightness, preset_name)
+                        profile.append(point)
+                        profile.sort()
+                    return True
         else:
             MBox(MBox.Information, msg=tr("There are no Presets."), info=tr("Use the Presets Dialog to create some.")).exec()
         return False
@@ -6563,7 +6558,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
 
     def _adjust_for_lux(self, _: WorkerThread) -> None:
         try:
-            lux_auto_controller = self.main_controller.lux_auto_controller
+            lux_auto_controller = self.main_controller.get_lux_auto_controller()
             # Give any previous thread a chance to exit, plus let the GUI and presets settle down
             self.doze(2) if not self.single_shot else None
             log_info(f"LuxAutoWorker monitoring commences {thread_pid()=}")
@@ -6571,7 +6566,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             while not self.stop_requested and not self.main_controller.pause_background_tasks(self):
                 self.expected_brightness_map.clear()
                 if lux_meter := lux_auto_controller.lux_meter:
-                    self.stepping_brightness(lux_auto_controller.lux_config, lux_meter)
+                    self.stepping_brightness(lux_auto_controller, lux_meter)
                     if self.single_shot:
                         break
                 else:  # In app config change - things are in a state of flux
@@ -6599,7 +6594,8 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             self.status_message(f"{TIMER_RUNNING_SYMBOL} {second // 60:02d}:{second % 60:02d}", 0, MsgDestination.COUNTDOWN)
             self.doze(1)
 
-    def stepping_brightness(self, lux_config: LuxConfig, lux_meter: LuxMeterDevice) -> None:
+    def stepping_brightness(self, lux_auto_controller: LuxAutoController, lux_meter: LuxMeterDevice) -> None:
+        lux_config = lux_auto_controller.get_lux_config()
         change_count, last_change_count, error_count = 0, -1, 0
         start_of_cycle = True
         profile_preset_name = None
@@ -6618,7 +6614,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                         return
                     # In case the lux reading changes, reevaluate target brightness every time...
                     value_range = self.main_controller.get_range(vdu_sid, BRIGHTNESS_VCP_CODE, fallback=(0, 100))
-                    lux_profile = lux_config.get_vdu_lux_profile(vdu_sid, value_range)
+                    lux_profile = lux_auto_controller.get_lux_profile(vdu_sid, value_range)
                     profile_brightness, profile_preset_name = self.determine_brightness(vdu_sid, smoothed_lux, lux_profile)
                     step_status = self.step_one_vdu(vdu_sid, profile_brightness, profile_preset_name, summary_text, start_of_cycle)
                     if step_status == LuxStepStatus.MORE_TO_DO:
@@ -6719,7 +6715,8 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         previous_normal_point = matched_point = LuxPoint(0, 0)
         result_brightness = 0
         preset_name = None
-        for profile_point in self.create_complete_profile(lux_profile, vdu_sid):
+        # Update/bind the current Preset values onto the LuxPoints and wrap with min and max values.
+        for profile_point in [LuxPoint(0, 0), *lux_profile, LuxPoint(100000, 100)]:
             # Moving up the lux steps, seeking the step below smoothed_lux
             log_debug(f"determine_brightness check {smoothed_lux=} {profile_point=}") if log_debug_enabled else None
             if smoothed_lux > profile_point.lux:  # Possible result, there may be something higher, keep going...
@@ -6738,12 +6735,6 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                 break
             if profile_point.brightness > 0:
                 previous_normal_point = profile_point
-        if preset_name is not None:  # Lookup preset brightness. Might be -1 if the preset doesn't have a brightness for this VDU
-            presets = self.main_controller.find_presets_map()
-            if preset_name in presets:  # Change the result to the preset's current brightness value
-                preset_brightness = presets[preset_name].get_brightness(vdu_sid)
-                if preset_brightness > -1:
-                    result_brightness = preset_brightness
         log_debug(
             f"LuxAutoWorker: determine_brightness {vdu_sid=} {result_brightness=}% {preset_name=}") if log_debug_enabled else None
         return result_brightness, preset_name  # Brightness will be -1 if attached preset has no brightness
@@ -6780,18 +6771,6 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             log_debug(f"LuxAutoWorker: assess_preset_proximity {diff_current=} {diff_next=} {self.sensitivity_percent=} "
                       f"{previous_normal_point=} {current_point=} {next_point=} {preset_name=}")
         return preset_name
-
-    def create_complete_profile(self, profile_points: List[LuxPoint], vdu_sid: VduStableId):
-        completed_profile = [LuxPoint(0, 0)]  # make sure we have a point at the origin of the scale
-        for lux_point in profile_points:
-            if lux_point.preset_name is None:
-                completed_profile.append(lux_point)
-            else:  # Lookup the Preset's brightness for this particular VDU - get latest/current value from the actual Preset.
-                if preset := self.main_controller.find_preset_by_name(lux_point.preset_name):
-                    # Profile brightness for this VDU will be -1 if this VDU's brightness-control doesn't participate in the Preset.
-                    completed_profile.append(LuxPoint(lux_point.lux, preset.get_brightness(vdu_sid), lux_point.preset_name))
-        completed_profile.append(LuxPoint(100000, 100))  # make sure we hava point at the end of the scale.
-        return completed_profile
 
     def lux_summary(self, metered_lux: float, smoothed_lux: int) -> str:
         lux_int = round(metered_lux)  # 256 bit char in lux_summary_text can cause issues if stdout not utf8 (force utf8 for stdout)
@@ -6837,23 +6816,6 @@ class LuxConfig(ConfIni):
 
     def get_device_name(self) -> str:
         return self.get("lux-meter", "lux-device", fallback='')
-
-    def get_vdu_lux_profile(self, vdu_stable_id: VduStableId, brightness_range) -> List[LuxPoint]:
-        if self.has_option('lux-profile', vdu_stable_id):
-            lux_points = [LuxPoint(v[0], v[1]) for v in literal_eval(self.get('lux-profile', vdu_stable_id))]
-        else:  # Create a default profile:
-            if brightness_range is not None:
-                min_v, max_v = brightness_range
-                min_v = max(10, min_v)  # Don't go all the way down to zero.
-                segments = 5
-                lux_points = [LuxPoint(10 ** lux, brightness)
-                              for lux, brightness in zip(range(0, 6), range(min_v, max_v + 1, (max_v - min_v) // segments))]
-            else:
-                lux_points = []
-        if self.has_option('lux-presets', 'lux-preset-points'):
-            lux_points = lux_points + self.get_preset_points()
-            lux_points.sort()
-        return lux_points
 
     def get_preset_points(self) -> List[LuxPoint]:
         if self.has_option('lux-presets', 'lux-preset-points'):
@@ -7077,7 +7039,8 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
     def reconfigure(self) -> None:
         assert self.profile_plot is not None
         # Make a copy of the config so the profile changes aren't applied until Apply is pressed.
-        self.lux_config = self.main_controller.get_lux_auto_controller().get_lux_config().duplicate(LuxConfig())  # type: ignore
+        lux_auto_controller = self.main_controller.get_lux_auto_controller()
+        self.lux_config = lux_auto_controller.get_lux_config().duplicate(LuxConfig())  # type: ignore
         self.device_name = self.lux_config.get("lux-meter", "lux-device", fallback='')
         self.enabled_checkbox.setChecked(self.lux_config.is_auto_enabled())
         self.interpolate_checkbox.setChecked(self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True))
@@ -7100,7 +7063,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                     self.current_brightness_map[vdu_sid] = 0
                     log_warning("VDU may not be available:", str(ve), trace=True)
             # All VDUs have a profile, even if they have no brightness control - because a preset may be attached to a lux value.
-            self.lux_profiles_map[vdu_sid] = self.lux_config.get_vdu_lux_profile(vdu_sid, value_range)
+            self.lux_profiles_map[vdu_sid] = lux_auto_controller.get_lux_profile(vdu_sid, value_range)
             connected_id_list.append(vdu_sid)
         self.preset_points.clear()  # Edit out deleted presets by starting from scratch
         for preset_point in self.lux_config.get_preset_points():
@@ -7356,6 +7319,29 @@ class LuxAutoController:
                 self.lux_auto_brightness_worker.adjust_now_requested = True
         else:
             self.start_worker(True, self.main_controller.main_config.is_set(ConfOpt.PROTECT_NVRAM_ENABLED))
+
+    def get_lux_profile(self, vdu_stable_id: VduStableId, brightness_range) -> List[LuxPoint]:
+        if self.lux_config.has_option('lux-profile', vdu_stable_id):
+            lux_points = [LuxPoint(v[0], v[1]) for v in literal_eval(self.lux_config.get('lux-profile', vdu_stable_id))]
+        else:  # Create a default profile:
+            if brightness_range is not None:
+                min_v, max_v = brightness_range
+                min_v = max(10, min_v)  # Don't go all the way down to zero.
+                segments = 5
+                lux_points = [LuxPoint(10 ** lux, brightness)
+                              for lux, brightness in zip(range(0, 6), range(min_v, max_v + 1, (max_v - min_v) // segments))]
+            else:
+                lux_points = []
+        if self.lux_config.has_option('lux-presets', 'lux-preset-points'):
+            lux_points = lux_points + self.lux_config.get_preset_points()
+            lux_points.sort()
+        for lux_point in lux_points:
+            # Look up the Preset's brightness for this particular VDU - get latest/current value from the actual Preset.
+            if lux_point.preset_name is not None:  # See if the named preset still exists.
+                if preset := self.main_controller.find_preset_by_name(lux_point.preset_name):
+                    # Profile brightness for this VDU will be -1 if this VDU's brightness-control doesn't participate in the Preset.
+                    lux_point.brightness = preset.get_brightness(vdu_stable_id)
+        return lux_points
 
 
 LUX_SUNLIGHT_SVG = b"""<?xml version="1.0" encoding="utf-8"?>
