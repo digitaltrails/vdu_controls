@@ -5262,6 +5262,9 @@ class PresetChooseElevationWidget(QWidget):
                 when_text += " " + tr("twilight")
             else:
                 when_text += " " + tr("nighttime")
+        if elevation_data is not None:
+            if lux := calculate_solar_lux(elevation_data.when, self.location.latitude, self.location.longitude):
+                when_text += tr(" {:,} lux").format(lux)
         desc_text = "{} {} ({}, {})".format(
             self.title_prefix, format_solar_elevation_abbreviation(self.elevation_key), tr(self.elevation_key.direction), when_text)
         if desc_text != self.title_label.text():
@@ -8922,6 +8925,28 @@ def calc_solar_azimuth_zenith(localised_time: datetime, latitude: float, longitu
     zenith_angle = (zenith_angle + parallax) / (math.pi / 180.)
     # Return azimuth as a clockwise angle from true north
     return azimuth, zenith_angle
+
+
+def true_noon(longitude, when: datetime) -> datetime:
+    b = (360 / 365.25) * (when.timetuple().tm_yday - 81)  # Estimate the Equation of Time (in minutes)
+    eot = 9.87 * math.sin(math.radians(2 * b)) - 7.53 * math.cos(math.radians(b)) - 1.5 * math.sin(math.radians(b))
+    offset = 4 * longitude + eot   # Calculate the time offset from UTC (in minutes)
+    true_noon_utc_minutes = 12 * 60 - offset  # Calculate true noon in UTC (12:00 UTC +/- offset)
+    hours = int(true_noon_utc_minutes // 60)
+    minutes = int(true_noon_utc_minutes % 60)
+    when.replace(hour=hours, minute=minutes)
+    return when
+
+
+def calculate_solar_lux(localised_time: datetime, latitude: float, longitude: float) -> int:
+    # The Calculation of Illumination in lux from Sun and Sky By E. ELVEGÅRD and G. SJÖSTEDT
+    # https://www.brikbase.org/sites/default/files/ies_030.pdf
+    _, zenith = calc_solar_azimuth_zenith(true_noon(longitude, localised_time), latitude, longitude)
+    solar_altitude = 90 - zenith
+    al_e8_illumination_unit = 77000  # E8 in Lux
+    air_mass = 1.8
+    illumination = 1.6 * al_e8_illumination_unit * math.sin(math.radians(solar_altitude)) * 10 ** (-0.1 * air_mass)
+    return int(illumination if solar_altitude > 0 else 0)
 
 
 # Spherical distance from https://stackoverflow.com/a/21623206/609575
