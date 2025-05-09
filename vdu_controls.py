@@ -6293,8 +6293,8 @@ class LuxGauge(QWidget):
             painter.drawLine(i, self.lux_plot.height(), i, self.lux_plot.height() - self.y_from_lux(self.history[i]))
         painter.end()
         self.lux_plot.setPixmap(pixmap)
-        self.stats_label.setText(tr("Eo={:,} lux    DF={:,.4f}").format(LuxMeterCalculatorDevice.calculate_lux(),
-                                                                        LuxMeterCalculatorDevice.get_daylight_factor()))
+        if (eo := LuxMeterCalculatorDevice.calculate_lux()) and (df := LuxMeterCalculatorDevice.get_daylight_factor()):
+            self.stats_label.setText(tr("Eo={:,} lux    DF={:,.4f}").format(eo, df))
 
     def connect_meter(self, lux_meter: LuxMeterDevice | None) -> None:
         if self.current_meter:
