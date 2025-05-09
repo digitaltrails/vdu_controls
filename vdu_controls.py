@@ -6308,11 +6308,11 @@ class LuxGauge(QWidget):
             (math.log10(lux) - math.log10(1)) / ((math.log10(100000) - math.log10(1)) / self.lux_plot.height())) if lux > 0 else 0
 
 
-def lux_create_device(device_name: str, main_config: VduControlsConfig) -> LuxMeterDevice:
+def lux_create_device(device_name: str) -> LuxMeterDevice:
     if device_name == LuxMeterSliderDevice.device_name:
         return LuxMeterSliderDevice()
     if device_name == LuxMeterCalculatorDevice.device_name:
-        return LuxMeterCalculatorDevice(main_config.get_location())
+        return LuxMeterCalculatorDevice()
     if not pathlib.Path(device_name).exists():
         raise LuxDeviceException(tr("Failed to set up {} - path does not exist.").format(device_name))
     if not os.access(device_name, os.R_OK):
@@ -6462,9 +6462,8 @@ class LuxMeterCalculatorDevice(LuxMeterDevice):
     device_name = 'solar-lux-calculator'
     location: GeoLocation | None = None
 
-    def __init__(self, location: GeoLocation) -> None:
+    def __init__(self) -> None:
         super().__init__(requires_worker=False)
-        LuxMeterCalculatorDevice.location = location
         if LuxMeterCalculatorDevice.location is None:
             log_error("LuxMeterCalculatorDevice - location is not set.")
         else:
@@ -6492,7 +6491,8 @@ class LuxMeterCalculatorDevice(LuxMeterDevice):
     def update_daylight_factor(new_lux_value: float):
         if location := LuxMeterCalculatorDevice.location:
             if (solar_lux := calculate_solar_lux(zoned_now(), location.latitude, location.longitude, 1.0)) > 10:
-                daylight_factor = abs(solar_lux - new_lux_value) / (solar_lux if solar_lux > 0 else 300.0)
+                daylight_factor =  new_lux_value / (solar_lux if solar_lux > 0 else 300.0)
+                log_debug(f"LuxMeterCalculatorDevice: {new_lux_value=} {solar_lux=} {daylight_factor=}")
                 if CONFIG_DIR_PATH.exists():
                     CONFIG_DIR_PATH.joinpath("lux_daylight_factor.txt").write_text(str(daylight_factor))
 
@@ -6765,7 +6765,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         # Update/bind the current Preset values onto the LuxPoints and wrap with min and max values.
         for profile_point in [LuxPoint(0, 0), *lux_profile, LuxPoint(100000, 100)]:
             # Moving up the lux steps, seeking the step below smoothed_lux
-            log_debug(f"determine_brightness check {smoothed_lux=} {profile_point=}") if log_debug_enabled else None
+            # log_debug(f"determine_brightness check {smoothed_lux=} {profile_point=}") if log_debug_enabled else None
             if smoothed_lux > profile_point.lux:  # Possible result, there may be something higher, keep going...
                 # if profile_point.brightness is -1, this is a Preset that doesn't change the VDU's brightness control
                 if profile_point.brightness >= 0:  # else use existing result_brightness
@@ -6784,7 +6784,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                 previous_normal_point = profile_point
         log_debug(
             f"LuxAutoWorker: determine_brightness {vdu_sid=} {result_brightness=}% {preset_name=}") if log_debug_enabled else None
-        return result_brightness, preset_name  # Brightness will be -1 if attached preset has no brightness
+        return result_brightness, preset_name  # Brightness will be -1 if the attached preset has no brightness
 
     def interpolate_brightness(self, smoothed_lux: int, current_point: LuxPoint, next_point: LuxPoint) -> int:
 
@@ -7165,7 +7165,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                  msg=tr("During daylight, calibrate the Daylight-Factor by dragging the main-window's Ambient-Light-Level slider."),
                  info=tr("______________________________________________________________\n"
                          "Dragging the slider will establish the difference between solar-lux and your perceived-lux.\n\n"
-                         "DF = (solar_lux - perceived_lux) / solar_lux\n"
+                         "DF = perceived_lux / solar_lux\n"
                          "interior_lux = DF x solar_lux\n\n"
                          "After dragging the slider, reengage light-metered brightness adjustment to apply the change.")).exec()
             return True
@@ -7280,7 +7280,7 @@ class LuxAutoController:
 
     def create_manual_input_control(self) -> LuxAmbientSlider:
         if self.lux_slider is None:
-            self.lux_slider = LuxAmbientSlider()
+            self.lux_slider = LuxAmbientSlider(self)
             self.lux_slider.new_lux_value_qtsignal.connect(self.update_manual_meter)
 
             def _toggle_lux_dialog():
@@ -7323,7 +7323,8 @@ class LuxAutoController:
             device_name = self.lux_config.get_device_name().strip()
             if not device_name:
                 device_name = LuxMeterSliderDevice.device_name
-            self.lux_meter = lux_create_device(device_name, self.main_controller.main_config)
+            LuxMeterCalculatorDevice.location = self.main_controller.main_config.get_location()
+            self.lux_meter = lux_create_device(device_name)
             if self.lux_config.is_auto_enabled():
                 log_info("Lux auto-brightness settings refresh - restart monitoring.")
                 self.start_worker(False, self.main_controller.main_config.is_set(ConfOpt.PROTECT_NVRAM_ENABLED))
@@ -7489,8 +7490,9 @@ class LuxAmbientSlider(QWidget):
     new_lux_value_qtsignal = pyqtSignal(int)
     status_icon_pressed_qtsignal = pyqtSignal()
 
-    def __init__(self) -> None:
+    def __init__(self, controller: LuxAutoController) -> None:
         super().__init__()
+        self.controller = controller
         self.in_flux = False
         self.zones = [  # Using col span as a hacky way to line up icons above the slider
             LuxZone(tr("Sunlight"), LUX_SUNLIGHT_SVG, 20000, 100000, 45000, column_span=2),
@@ -7603,7 +7605,8 @@ class LuxAmbientSlider(QWidget):
                     self.lux_slider.setValue(round(math.log10(self.current_value) * 1000))
                 if source != self.lux_input_field:
                     self.lux_input_field.setValue(self.current_value)
-                if source == self.lux_slider or source == self.lux_input_field:
+                if source == self.lux_slider or source == self.lux_input_field or not isinstance(self.controller.lux_meter,
+                                                                                                 LuxMeterCalculatorDevice):
                     LuxMeterCalculatorDevice.update_daylight_factor(self.current_value)
             finally:
                 self.in_flux = False
