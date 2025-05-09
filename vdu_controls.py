@@ -6267,6 +6267,13 @@ class LuxGauge(QWidget):
         self.lux_plot.setFixedHeight(100)
         self.layout().addWidget(self.lux_plot)
         self.current_meter: LuxMeterDevice | None = None
+        self.stats_label = QLabel()
+        self.setToolTip(
+            tr("Lux: perceived illumination inside (Ei)\n"
+               "Eo: theoretical outside solar illumination calculated for the\n"
+               "    geolocation at the current date and time.\n"
+               "DF: Daylight Factor\nEi = DF x Eo"))
+        self.layout().addWidget(self.stats_label)
         self.updates_enabled = True
 
     def show_lux(self, lux: int) -> None:
@@ -6286,6 +6293,8 @@ class LuxGauge(QWidget):
             painter.drawLine(i, self.lux_plot.height(), i, self.lux_plot.height() - self.y_from_lux(self.history[i]))
         painter.end()
         self.lux_plot.setPixmap(pixmap)
+        self.stats_label.setText(tr("Eo={:,} lux    DF={:,.4f}").format(LuxMeterCalculatorDevice.calculate_lux(),
+                                                                        LuxMeterCalculatorDevice.get_daylight_factor()))
 
     def connect_meter(self, lux_meter: LuxMeterDevice | None) -> None:
         if self.current_meter:
@@ -6470,11 +6479,12 @@ class LuxMeterCalculatorDevice(LuxMeterDevice):
             _ = self.get_value()
 
     def get_value(self) -> float | None:
+        self.set_current_value(LuxMeterCalculatorDevice.calculate_lux(LuxMeterCalculatorDevice.get_daylight_factor()))
+
+    @staticmethod
+    def calculate_lux(daylight_factor: float = 1.0) -> float | None:
         if location := LuxMeterCalculatorDevice.location:
-            daylight_factor = LuxMeterCalculatorDevice.get_daylight_factor()
-            self.set_current_value(
-                calculate_solar_lux(zoned_now(), location.latitude, location.longitude, daylight_factor))
-            return self.current_value
+            return calculate_solar_lux(zoned_now(), location.latitude, location.longitude, daylight_factor)
         return None
 
     @staticmethod
