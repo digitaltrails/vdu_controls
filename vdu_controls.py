@@ -6480,6 +6480,7 @@ class LuxMeterCalculatorDevice(LuxMeterDevice):
 
     def get_value(self) -> float | None:
         self.set_current_value(LuxMeterCalculatorDevice.calculate_lux(LuxMeterCalculatorDevice.get_daylight_factor()))
+        return self.current_value
 
     @staticmethod
     def calculate_lux(daylight_factor: float = 1.0) -> float | None:
@@ -6657,6 +6658,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         start_of_cycle = True
         profile_preset_name = None
         vdu_changes_count = {}
+        log_debug(f"stepping_brightness {lux_meter.get_value()=} {lux_meter=}") if log_debug_enabled else None
         if metered_lux := lux_meter.get_value():  # Measure once - changing VDU brightness can feed back to the lux-meter.
             while change_count != last_change_count:  # while brightness changing
                 last_change_count = change_count
@@ -6703,9 +6705,8 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                     self.main_controller.update_window_status_indicators(self.main_controller.find_preset_by_name(profile_preset_name))
                 else:
                     self.main_controller.update_window_status_indicators()
-        if vdu_changes_count or error_count:
-            log_info(f"LuxAutoWorker: adjustments completed VCP-changes: {vdu_changes_count if vdu_changes_count else 'None'}, "
-                     f"{profile_preset_name=} {error_count=}")
+        if log_debug_enabled or vdu_changes_count or error_count:
+            log_info(f"LuxAutoWorker: adjustments completed {vdu_changes_count=}, {profile_preset_name=} {error_count=}")
 
     def step_one_vdu(self, vdu_sid: VduStableId, profile_brightness: int, profile_preset_name: str | None,
                      lux_summary_text: str, first_step: bool) -> LuxStepStatus:
@@ -6857,8 +6858,8 @@ class LuxPoint:
 
 
 class LuxDeviceType(namedtuple('LuxDevice', 'name description'), Enum):
-    MANUAL_INPUT = "None", QT_TR_NOOP("No meter - manual input only")
-    CALCULATOR = "calculator", QT_TR_NOOP("Geolocation and datetime")
+    MANUAL_INPUT = "None", QT_TR_NOOP("No meter, manual input only")
+    CALCULATOR = "calculator", QT_TR_NOOP("Geolocated, semi-automatic")
     ARDUINO = "arduino", QT_TR_NOOP("Arduino tty device")
     FIFO = "fifo", QT_TR_NOOP("Linux FIFO")
     EXECUTABLE = "executable", QT_TR_NOOP("Script/program")
@@ -7172,12 +7173,22 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                      info=tr("Please set a location in the main Settings-Dialog.")).exec()
                 return False
             MBox(MBox.Information,
-                 msg=tr("During daylight, calibrate the Daylight-Factor by dragging the main-window's Ambient-Light-Level slider."),
+                 msg=tr("Semi-automatic indoor lux for geolocation and local datetime.\n\n"
+                        "During daytime, solar outdoor lux is automatically calculated for\n" 
+                        "the geolocation and datetime. The outdoor lux is multiplied by a\n"
+                        "Daylight-Factor (DF, DF <= 1.0) to produce an indoor value.\n\n"
+                        "The DF ratio is manually set by dragging the main-window's\n"
+                        "Ambient-Light-Level slider to indicate a correct indoor lux\n"
+                        "value (DF=indoor_lux/outdoor_lux).\n\n"
+                        "After dragging, the resulting DF is applied to all future\n"
+                        "automatically calculated values, drag again to readjust.\n\n"
+                        "Hence semi-automatic, automatic after dragging to set DF.\n"),
                  info=tr("______________________________________________________________\n"
-                         "Dragging the slider will establish the difference between solar-lux and your perceived-lux.\n\n"
-                         "DF = perceived_lux / solar_lux\n"
-                         "interior_lux = DF x solar_lux\n\n"
-                         "After dragging the slider, reengage light-metered brightness adjustment to apply the change.")).exec()
+                         "DF = Ei / Eo\n"
+                         "Ei = DF x Eo\n\n"
+                         "Eo: Outdoor Illumination in Lux, calculated from geolocation and local datetime.\n"
+                         "Ei: Indoor Illumination in Lux, either dragged, or calculated automatically from Eo.\n"
+                         "DF: Daylight factor, the ratio of indoor to outdoor illumination.")).exec()
             return True
         path = pathlib.Path(device)
         if ((required_type == LuxDeviceType.ARDUINO and path.is_char_device()) or
@@ -7268,7 +7279,7 @@ class LuxAutoController:
 
     def create_tool_button(self) -> ToolButton:  # Used when the application UI has to reinitialize
         # Used when the application UI has to reinitialize
-        self.lux_tool_button = ToolButton(AUTO_LUX_ON_SVG, tr("Toggle light metered brightness adjustment"))
+        self.lux_tool_button = ToolButton(AUTO_LUX_ON_SVG, tr("Toggle automatic light metered brightness adjustment"))
         return self.lux_tool_button
 
     def create_lighting_check_button(self) -> ToolButton:
@@ -7277,7 +7288,7 @@ class LuxAutoController:
         return self.lux_lighting_check_button
 
     def update_manual_meter(self, value: int):
-        if self.is_auto_enabled():
+        if self.is_auto_enabled() and not isinstance(self.lux_meter, LuxMeterCalculatorDevice):  # goto manual unless on semi-auto
             self.set_auto(False)
         self.lux_meter.set_current_value(value)
         self.adjust_brightness_now()
