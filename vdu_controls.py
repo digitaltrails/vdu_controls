@@ -5263,7 +5263,7 @@ class PresetChooseElevationWidget(QWidget):
             else:
                 when_text += " " + tr("nighttime")
         if elevation_data is not None:
-            if lux := calculate_solar_lux(elevation_data.when, self.location.latitude, self.location.longitude):
+            if lux := calculate_solar_lux(elevation_data.when, self.location.latitude, self.location.longitude, False):
                 when_text += tr(" {:,} lux").format(lux)
         desc_text = "{} {} ({}, {})".format(
             self.title_prefix, format_solar_elevation_abbreviation(self.elevation_key), tr(self.elevation_key.direction), when_text)
@@ -6292,7 +6292,7 @@ class LuxGauge(QWidget):
         self.current_meter = lux_meter
         if self.current_meter:
             self.current_meter.new_lux_value_qtsignal.connect(self.show_lux)
-            if isinstance(lux_meter, LuxMeterManualDevice):
+            if isinstance(lux_meter, LuxMeterSliderDevice):
                 self.show_lux(round(lux_meter.get_value()))
             self.enable_gauge(True)
 
@@ -6307,9 +6307,11 @@ class LuxGauge(QWidget):
             (math.log10(lux) - math.log10(1)) / ((math.log10(100000) - math.log10(1)) / self.lux_plot.height())) if lux > 0 else 0
 
 
-def lux_create_device(device_name: str) -> LuxMeterDevice:
-    if device_name == LuxMeterManualDevice.device_name:
-        return LuxMeterManualDevice()
+def lux_create_device(device_name: str, main_config: VduControlsConfig) -> LuxMeterDevice:
+    if device_name == LuxMeterSliderDevice.device_name:
+        return LuxMeterSliderDevice()
+    if device_name == LuxMeterCalculatorDevice.device_name:
+        return LuxMeterCalculatorDevice(main_config.get_location())
     if not pathlib.Path(device_name).exists():
         raise LuxDeviceException(tr("Failed to set up {} - path does not exist.").format(device_name))
     if not os.access(device_name, os.R_OK):
@@ -6319,8 +6321,8 @@ def lux_create_device(device_name: str) -> LuxMeterDevice:
     elif pathlib.Path(device_name).is_fifo():
         return LuxMeterFifoDevice(device_name)
     elif pathlib.Path(device_name).exists() and os.access(device_name, os.X_OK):
-        return LuxMeterRunnableDevice(device_name)
-    raise LuxDeviceException(tr("Failed to set up {} - not a recognised kind of device or not executable.").format(device_name))
+        return LuxMeterExecutableDevice(device_name)
+    raise LuxDeviceException(tr("Failed to set up {} - not a recognized kind of device or not executable.").format(device_name))
 
 
 class LuxMeterDevice(QObject):
@@ -6330,7 +6332,8 @@ class LuxMeterDevice(QObject):
         super().__init__()
         self.current_value: float | None = None
         self.requires_worker = requires_worker
-        if requires_worker:
+        if self.requires_worker:
+            log_info(f"LuxMeterDevice: starting worker for {self.__class__}")
             self.worker = WorkerThread(task_body=self.update_current_value, task_finished=self.cleanup, loop=True)
 
     def get_value(self) -> float | None:  # an un-smoothed raw value - TODO should smoothing be moved here?
@@ -6366,7 +6369,7 @@ class LuxMeterFifoDevice(LuxMeterDevice):
         self.fifo: int | None = None
         self.buffer = b''
 
-    def update_current_value(self, new_value: float | None = None) -> None:
+    def update_current_value(self, _: WorkerThread) -> None:
         try:
             if self.fifo is None:
                 log_info(f"Initialising fifo {self.device_name} - waiting on fifo data.")
@@ -6393,14 +6396,14 @@ class LuxMeterFifoDevice(LuxMeterDevice):
             self.fifo = None
 
 
-class LuxMeterRunnableDevice(LuxMeterDevice):
+class LuxMeterExecutableDevice(LuxMeterDevice):
 
     def __init__(self, device_name: str) -> None:
         super().__init__()
         self.runnable = device_name
         self.sleep_time = float(os.getenv("LUX_METER_RUNNABLE_SLEEP", default='60.0'))
 
-    def update_current_value(self, new_value: float | None = None) -> None:
+    def update_current_value(self, _: WorkerThread) -> None:
         try:
             result = subprocess.run([self.runnable], stdout=subprocess.PIPE, check=True)
             self.set_current_value(float(result.stdout))
@@ -6422,7 +6425,7 @@ class LuxMeterSerialDevice(LuxMeterDevice):
         except ModuleNotFoundError as mnf:
             raise LuxDeviceException(tr("The required pyserial serial-port module is not installed on this system.")) from mnf
 
-    def update_current_value(self, new_value: float | None = None) -> None:
+    def update_current_value(self, _: WorkerThread) -> None:
         problem = None
         try:
             if self.serial_device is None:
@@ -6454,7 +6457,26 @@ class LuxMeterSerialDevice(LuxMeterDevice):
             self.serial_device = None
 
 
-class LuxMeterManualDevice(LuxMeterDevice):
+class LuxMeterCalculatorDevice(LuxMeterDevice):
+    device_name = 'solar-lux-calculator'
+
+    def __init__(self, location: GeoLocation) -> None:
+        super().__init__(requires_worker=False)
+        self.location = location
+        if self.location is None:
+            log_error("LuxMeterCalculatorDevice - location is not set.")
+        else:
+            _ = self.get_value()
+
+    def get_value(self) -> float | None:
+        if self.location:
+            self.set_current_value(
+                calculate_solar_lux(zoned_now(), self.location.latitude, self.location.longitude, True))
+            return self.current_value
+        return None
+
+
+class LuxMeterSliderDevice(LuxMeterDevice):
     device_name = 'Slider-Control'
 
     def __init__(self) -> None:
@@ -6805,6 +6827,7 @@ class LuxPoint:
 
 class LuxDeviceType(namedtuple('LuxDevice', 'name description'), Enum):
     MANUAL_INPUT = "None", QT_TR_NOOP("No meter - manual input only")
+    CALCULATOR = "calculator", QT_TR_NOOP("Geolocation and datetime")
     ARDUINO = "arduino", QT_TR_NOOP("Arduino tty device")
     FIFO = "fifo", QT_TR_NOOP("Linux FIFO")
     EXECUTABLE = "executable", QT_TR_NOOP("Script/program")
@@ -6958,8 +6981,9 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
             while True:
                 new_dev_type = self.meter_device_selector.itemData(index)
                 if new_dev_type == LuxDeviceType.MANUAL_INPUT:
-                    new_dev_path = LuxMeterManualDevice.device_name
-                    break
+                    new_dev_path = LuxMeterSliderDevice.device_name
+                elif new_dev_type == LuxDeviceType.CALCULATOR:
+                    new_dev_path = LuxMeterCalculatorDevice.device_name
                 elif new_dev_type in (LuxDeviceType.ARDUINO, LuxDeviceType.FIFO, LuxDeviceType.EXECUTABLE):
                     if current_dev_type == new_dev_type.name:
                         default_file = current_dev
@@ -6967,9 +6991,9 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                         default_file = "/dev/arduino" if new_dev_type == LuxDeviceType.ARDUINO else Path.home().as_posix()
                     new_dev_path = FasterFileDialog.getOpenFileName(
                         self, tr("Select: {}").format(tr(new_dev_type.description)), default_file)[0]
-                    if new_dev_path == '' or self.validate_device(new_dev_path, required_type=new_dev_type):
-                        break
-            if new_dev_path == '':
+                if new_dev_path == '' or self.validate_device(new_dev_path, required_type=new_dev_type):
+                    break
+            if new_dev_path == '':  # Mothing selected, set back to what was in config
                 for dev_num in range(self.meter_device_selector.count()):
                     config_device_type = self.lux_config.get('lux-meter', 'lux-device-type', fallback='')
                     if self.meter_device_selector.itemData(dev_num).name == config_device_type:
@@ -7096,8 +7120,9 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                         self.profile_plot.current_vdu_sid = candidate_id
         finally:
             self.profile_selector.blockSignals(False)
-        self.configure_ui(self.main_controller.get_lux_auto_controller().lux_meter)
+        self.configure_ui(lux_auto_controller.lux_meter)
         self.profile_plot.create_plot()
+        lux_auto_controller.lux_meter.get_value() if lux_auto_controller.lux_meter else None  # prime the UI
         self.status_message('')
 
     def make_visible(self) -> None:
@@ -7109,6 +7134,12 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
 
     def validate_device(self, device, required_type: LuxDeviceType) -> bool:
         if required_type == LuxDeviceType.MANUAL_INPUT:
+            return True
+        if required_type == LuxDeviceType.CALCULATOR:
+            if self.main_controller.main_config.get_location() is None:
+                MBox(MBox.Critical, msg=tr("Cannot configure a solar lux calculator, no location is defined."),
+                     info=tr("Please set a location in the main Settings-Dialog.")).exec()
+                return False
             return True
         path = pathlib.Path(device)
         if ((required_type == LuxDeviceType.ARDUINO and path.is_char_device()) or
@@ -7214,8 +7245,8 @@ class LuxAutoController:
         self.adjust_brightness_now()
 
     def update_manual_slider(self, value: int):
-        if self.is_auto_enabled() and not isinstance(self.lux_meter, LuxMeterManualDevice):
-            LuxMeterManualDevice.save_stored_value(value)
+        if self.is_auto_enabled() and not isinstance(self.lux_meter, LuxMeterSliderDevice):
+            LuxMeterSliderDevice.save_stored_value(value)
             if self.lux_slider:  # May not exist during intialization
                 self.lux_slider.set_current_value(value)
 
@@ -7263,8 +7294,8 @@ class LuxAutoController:
                 self.lux_meter.stop_metering()
             device_name = self.lux_config.get_device_name().strip()
             if not device_name:
-                device_name = LuxMeterManualDevice.device_name
-            self.lux_meter = lux_create_device(device_name)
+                device_name = LuxMeterSliderDevice.device_name
+            self.lux_meter = lux_create_device(device_name, self.main_controller.main_config)
             if self.lux_config.is_auto_enabled():
                 log_info("Lux auto-brightness settings refresh - restart monitoring.")
                 self.start_worker(False, self.main_controller.main_config.is_set(ConfOpt.PROTECT_NVRAM_ENABLED))
@@ -7525,7 +7556,7 @@ class LuxAmbientSlider(QWidget):
             self.label_map[log10_button] = zone.icon_svg
             col += zone.column_span
 
-        self.set_current_value(round(LuxMeterManualDevice.get_stored_value()))  # trigger side-effects.
+        self.set_current_value(round(LuxMeterSliderDevice.get_stored_value()))  # trigger side-effects.
 
     def set_current_value(self, value: int, source: QWidget | None = None) -> None:
         if not self.in_flux:
@@ -8938,15 +8969,17 @@ def true_noon(longitude, when: datetime) -> datetime:
     return when
 
 
-def calculate_solar_lux(localised_time: datetime, latitude: float, longitude: float) -> int:
+def calculate_solar_lux(localised_time: datetime, latitude: float, longitude: float, apply_daylight_factor) -> int:
     # The Calculation of Illumination in lux from Sun and Sky By E. ELVEGÅRD and G. SJÖSTEDT
     # https://www.brikbase.org/sites/default/files/ies_030.pdf
-    _, zenith = calc_solar_azimuth_zenith(true_noon(longitude, localised_time), latitude, longitude)
+    azimuth, zenith = calc_solar_azimuth_zenith(true_noon(longitude, localised_time), latitude, longitude)
+    daylight_factor = 0.04  # lookup_daylight_factor(azimuth, zenith, datetime)  # note sure how this will work yet
     solar_altitude = 90 - zenith
     al_e8_illumination_unit = 77000  # E8 in Lux
     air_mass = 1.8
     illumination = 1.6 * al_e8_illumination_unit * math.sin(math.radians(solar_altitude)) * 10 ** (-0.1 * air_mass)
-    return int(illumination if solar_altitude > 0 else 0)
+    lux = illumination if solar_altitude > 0 else 0
+    return int(daylight_factor * lux) if apply_daylight_factor else int(lux)
 
 
 # Spherical distance from https://stackoverflow.com/a/21623206/609575
