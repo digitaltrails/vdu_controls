@@ -846,6 +846,7 @@ from functools import partial
 from importlib import import_module
 from pathlib import Path
 from threading import Lock
+from time import daylight
 from typing import List, Tuple, Mapping, Type, Dict, Callable, Any, NewType
 from urllib.error import URLError
 
@@ -5263,7 +5264,7 @@ class PresetChooseElevationWidget(QWidget):
             else:
                 when_text += " " + tr("nighttime")
         if elevation_data is not None:
-            if lux := calculate_solar_lux(elevation_data.when, self.location.latitude, self.location.longitude, False):
+            if lux := calculate_solar_lux(elevation_data.when, self.location.latitude, self.location.longitude, 1.0):
                 when_text += tr(" {:,} lux").format(lux)
         desc_text = "{} {} ({}, {})".format(
             self.title_prefix, format_solar_elevation_abbreviation(self.elevation_key), tr(self.elevation_key.direction), when_text)
@@ -6459,21 +6460,41 @@ class LuxMeterSerialDevice(LuxMeterDevice):
 
 class LuxMeterCalculatorDevice(LuxMeterDevice):
     device_name = 'solar-lux-calculator'
+    location: GeoLocation | None = None
 
     def __init__(self, location: GeoLocation) -> None:
         super().__init__(requires_worker=False)
-        self.location = location
-        if self.location is None:
+        LuxMeterCalculatorDevice.location = location
+        if LuxMeterCalculatorDevice.location is None:
             log_error("LuxMeterCalculatorDevice - location is not set.")
         else:
             _ = self.get_value()
 
     def get_value(self) -> float | None:
-        if self.location:
+        if location := LuxMeterCalculatorDevice.location:
+            daylight_factor = LuxMeterCalculatorDevice.get_daylight_factor()
             self.set_current_value(
-                calculate_solar_lux(zoned_now(), self.location.latitude, self.location.longitude, True))
+                calculate_solar_lux(zoned_now(), location.latitude, location.longitude, daylight_factor))
             return self.current_value
         return None
+
+    @staticmethod
+    def get_daylight_factor() -> float:
+        persisted_path = CONFIG_DIR_PATH.joinpath("lux_daylight_factor.txt")
+        if persisted_path.exists():
+            try:
+                return float(persisted_path.read_text())
+            except ValueError:
+                persisted_path.unlink()
+        return 1.0
+
+    @staticmethod
+    def update_daylight_factor(new_lux_value: float):
+        if location := LuxMeterCalculatorDevice.location:
+            if (solar_lux := calculate_solar_lux(zoned_now(), location.latitude, location.longitude, 1.0)) > 10:
+                daylight_factor = abs(solar_lux - new_lux_value) / (solar_lux if solar_lux > 0 else 300.0)
+                if CONFIG_DIR_PATH.exists():
+                    CONFIG_DIR_PATH.joinpath("lux_daylight_factor.txt").write_text(str(daylight_factor))
 
 
 class LuxMeterSliderDevice(LuxMeterDevice):
@@ -7140,6 +7161,13 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                 MBox(MBox.Critical, msg=tr("Cannot configure a solar lux calculator, no location is defined."),
                      info=tr("Please set a location in the main Settings-Dialog.")).exec()
                 return False
+            MBox(MBox.Information,
+                 msg=tr("During daylight, calibrate the Daylight-Factor by dragging the main-window's Ambient-Light-Level slider."),
+                 info=tr("______________________________________________________________\n"
+                         "Dragging the slider will establish the difference between solar-lux and your perceived-lux.\n\n"
+                         "DF = (solar_lux - perceived_lux) / solar_lux\n"
+                         "interior_lux = DF x solar_lux\n\n"
+                         "After dragging the slider, reengage light-metered brightness adjustment to apply the change.")).exec()
             return True
         path = pathlib.Path(device)
         if ((required_type == LuxDeviceType.ARDUINO and path.is_char_device()) or
@@ -7575,6 +7603,8 @@ class LuxAmbientSlider(QWidget):
                     self.lux_slider.setValue(round(math.log10(self.current_value) * 1000))
                 if source != self.lux_input_field:
                     self.lux_input_field.setValue(self.current_value)
+                if source == self.lux_slider or source == self.lux_input_field:
+                    LuxMeterCalculatorDevice.update_daylight_factor(self.current_value)
             finally:
                 self.in_flux = False
                 if source is None:
@@ -8969,17 +8999,18 @@ def true_noon(longitude, when: datetime) -> datetime:
     return when
 
 
-def calculate_solar_lux(localised_time: datetime, latitude: float, longitude: float, apply_daylight_factor) -> int:
+def calculate_solar_lux(localised_time: datetime, latitude: float, longitude: float, daylight_factor: float) -> int:
     # The Calculation of Illumination in lux from Sun and Sky By E. ELVEGÅRD and G. SJÖSTEDT
     # https://www.brikbase.org/sites/default/files/ies_030.pdf
+    illumination = 10  # Some meaningful minimum for after sunset
     azimuth, zenith = calc_solar_azimuth_zenith(true_noon(longitude, localised_time), latitude, longitude)
-    daylight_factor = 0.04  # lookup_daylight_factor(azimuth, zenith, datetime)  # note sure how this will work yet
     solar_altitude = 90 - zenith
-    al_e8_illumination_unit = 77000  # E8 in Lux
-    air_mass = 1.8
-    illumination = 1.6 * al_e8_illumination_unit * math.sin(math.radians(solar_altitude)) * 10 ** (-0.1 * air_mass)
-    lux = illumination if solar_altitude > 0 else 0
-    return int(daylight_factor * lux) if apply_daylight_factor else int(lux)
+    if solar_altitude >= 3:
+        al_e8_illumination_unit = 77000  # E8 in Lux
+        air_mass = 1.8
+        solar_lux = 1.6 * al_e8_illumination_unit * math.sin(math.radians(solar_altitude)) * 10 ** (-0.1 * air_mass)
+        illumination = int(daylight_factor * solar_lux)
+    return illumination
 
 
 # Spherical distance from https://stackoverflow.com/a/21623206/609575
