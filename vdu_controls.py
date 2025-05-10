@@ -9031,7 +9031,7 @@ def calculate_solar_lux(localised_time: datetime, latitude: float, longitude: fl
     solar_altitude = 90 - zenith
     if solar_altitude >= 3:
         al_e8_illumination_unit = 77000  # E8 in Lux
-        air_mass = 1.8
+        air_mass = 1.0 / math.cos(math.radians(zenith)) # approximation:  https://en.wikipedia.org/wiki/Air_mass_(solar_energy)
         solar_lux = 1.6 * al_e8_illumination_unit * math.sin(math.radians(solar_altitude)) * 10 ** (-0.1 * air_mass)
         illumination = int(daylight_factor * solar_lux)
     return illumination
