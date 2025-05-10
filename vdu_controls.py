@@ -6501,7 +6501,7 @@ class LuxMeterCalculatorDevice(LuxMeterDevice):
     @staticmethod
     def update_daylight_factor(new_lux_value: float):
         if location := LuxMeterCalculatorDevice.location:
-            if (solar_lux := calculate_solar_lux(zoned_now(), location.latitude, location.longitude, 1.0)) > 10:
+            if (solar_lux := calculate_solar_lux(zoned_now(), location.latitude, location.longitude, 1.0)) > CALCULATED_LUX_MINIMUM:
                 daylight_factor =  new_lux_value / (solar_lux if solar_lux > 0 else 300.0)
                 log_debug(f"LuxMeterCalculatorDevice: {new_lux_value=} {solar_lux=} {daylight_factor=}")
                 if CONFIG_DIR_PATH.exists():
@@ -9019,10 +9019,13 @@ def true_noon(longitude, when: datetime) -> datetime:
     return when
 
 
+CALCULATED_LUX_MINIMUM = 16
+
+
 def calculate_solar_lux(localised_time: datetime, latitude: float, longitude: float, daylight_factor: float) -> int:
     # The Calculation of Illumination in lux from Sun and Sky By E. ELVEGÅRD and G. SJÖSTEDT
     # https://www.brikbase.org/sites/default/files/ies_030.pdf
-    illumination = 10  # Some meaningful minimum for after sunset
+    illumination = CALCULATED_LUX_MINIMUM  # Some meaningful minimum for after sunset
     azimuth, zenith = calc_solar_azimuth_zenith(true_noon(longitude, localised_time), latitude, longitude)
     solar_altitude = 90 - zenith
     if solar_altitude >= 3:
