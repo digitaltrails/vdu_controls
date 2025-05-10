@@ -7173,22 +7173,18 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                      info=tr("Please set a location in the main Settings-Dialog.")).exec()
                 return False
             MBox(MBox.Information,
-                 msg=tr("Semi-automatic indoor lux for geolocation and local datetime.\n\n"
-                        "During daytime, solar outdoor lux is automatically calculated for\n" 
-                        "the geolocation and datetime. The outdoor lux is multiplied by a\n"
-                        "Daylight-Factor (DF, DF <= 1.0) to produce an indoor value.\n\n"
-                        "The DF ratio is manually set by dragging the main-window's\n"
-                        "Ambient-Light-Level slider to indicate a correct indoor lux\n"
-                        "value (DF=indoor_lux/outdoor_lux).\n\n"
-                        "After dragging, the resulting DF is applied to all future\n"
-                        "automatically calculated values, drag again to readjust.\n\n"
-                        "Hence semi-automatic, automatic after dragging to set DF.\n"),
-                 info=tr("______________________________________________________________\n"
-                         "DF = Ei / Eo\n"
-                         "Ei = DF x Eo\n\n"
-                         "Eo: Outdoor Illumination in Lux, calculated from geolocation and local datetime.\n"
-                         "Ei: Indoor Illumination in Lux, either dragged, or calculated automatically from Eo.\n"
-                         "DF: Daylight factor, the ratio of indoor to outdoor illumination.")).exec()
+                 msg=tr("Semi-automatic lux adjustment.\n"
+                        "________________________________________________________________________________________\n\n"
+                        "You set the ambient light-level by dragging its slider in the main-\n" 
+                        "panel, then vdu_controls will periodically update the light-level\n"
+                        "in proportion to the calculated solar-outdoor light-level for the\n"
+                        "given datatime for your geolocation. Hence semi-automatic.\n"),
+                 details=tr("Calculation of indoor illumination from solar illumination:\n"
+                            "    Ei = DF x Eo\n"
+                            "    DF = Ei / Eo\n"
+                            "Ei: Indoor Illumination, either dragged, or calculated automatically from Eo.\n"
+                            "Eo: Outdoor Illumination, calculated from geolocation and local datetime.\n"
+                            "DF: Daylight factor, the ratio of indoor to outdoor illumination.")).exec()
             return True
         path = pathlib.Path(device)
         if ((required_type == LuxDeviceType.ARDUINO and path.is_char_device()) or
