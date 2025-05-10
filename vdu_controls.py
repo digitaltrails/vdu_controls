@@ -6295,6 +6295,9 @@ class LuxGauge(QWidget):
         self.lux_plot.setPixmap(pixmap)
         if (eo := LuxMeterCalculatorDevice.calculate_lux()) and (df := LuxMeterCalculatorDevice.get_daylight_factor()):
             self.stats_label.setText(tr("Eo={:,} lux    DF={:,.4f}").format(eo, df))
+        else:
+            self.stats_label.setText(tr("Eo=?   DF=?   (location not set)"))
+
 
     def connect_meter(self, lux_meter: LuxMeterDevice | None) -> None:
         if self.current_meter:
@@ -6503,7 +6506,7 @@ class LuxMeterCalculatorDevice(LuxMeterDevice):
         if location := LuxMeterCalculatorDevice.location:
             if (solar_lux := calculate_solar_lux(zoned_now(), location.latitude, location.longitude, 1.0)) > CALCULATED_LUX_MINIMUM:
                 daylight_factor =  new_lux_value / (solar_lux if solar_lux > 0 else 300.0)
-                log_debug(f"LuxMeterCalculatorDevice: {new_lux_value=} {solar_lux=} {daylight_factor=}")
+                # log_debug(f"LuxMeterCalculatorDevice: {new_lux_value=} {solar_lux=} {daylight_factor=}")
                 if CONFIG_DIR_PATH.exists():
                     CONFIG_DIR_PATH.joinpath("lux_daylight_factor.txt").write_text(str(daylight_factor))
 
@@ -7010,21 +7013,20 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         def _choose_device(index: int) -> None:
             current_dev = self.lux_config.get('lux-meter', "lux-device", fallback='')
             current_dev_type = self.lux_config.get('lux-meter', "lux-device-type", fallback='')
-            while True:
-                new_dev_type = self.meter_device_selector.itemData(index)
-                if new_dev_type == LuxDeviceType.MANUAL_INPUT:
-                    new_dev_path = LuxMeterSliderDevice.device_name
-                elif new_dev_type == LuxDeviceType.CALCULATOR:
-                    new_dev_path = LuxMeterCalculatorDevice.device_name
-                elif new_dev_type in (LuxDeviceType.ARDUINO, LuxDeviceType.FIFO, LuxDeviceType.EXECUTABLE):
-                    if current_dev_type == new_dev_type.name:
-                        default_file = current_dev
-                    else:
-                        default_file = "/dev/arduino" if new_dev_type == LuxDeviceType.ARDUINO else Path.home().as_posix()
-                    new_dev_path = FasterFileDialog.getOpenFileName(
-                        self, tr("Select: {}").format(tr(new_dev_type.description)), default_file)[0]
-                if new_dev_path == '' or self.validate_device(new_dev_path, required_type=new_dev_type):
-                    break
+            new_dev_type = self.meter_device_selector.itemData(index)
+            if new_dev_type == LuxDeviceType.MANUAL_INPUT:
+                new_dev_path = LuxMeterSliderDevice.device_name
+            elif new_dev_type == LuxDeviceType.CALCULATOR:
+                new_dev_path = LuxMeterCalculatorDevice.device_name
+            elif new_dev_type in (LuxDeviceType.ARDUINO, LuxDeviceType.FIFO, LuxDeviceType.EXECUTABLE):
+                if current_dev_type == new_dev_type.name:
+                    default_file = current_dev
+                else:
+                    default_file = "/dev/arduino" if new_dev_type == LuxDeviceType.ARDUINO else Path.home().as_posix()
+                new_dev_path = FasterFileDialog.getOpenFileName(
+                    self, tr("Select: {}").format(tr(new_dev_type.description)), default_file)[0]
+            if not self.validate_device(new_dev_path, required_type=new_dev_type):
+                new_dev_path = ''
             if new_dev_path == '':  # Mothing selected, set back to what was in config
                 for dev_num in range(self.meter_device_selector.count()):
                     config_device_type = self.lux_config.get('lux-meter', 'lux-device-type', fallback='')
@@ -7177,13 +7179,13 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                         "________________________________________________________________________________________\n\n"
                         "You set the ambient light-level by dragging its slider in the main-\n" 
                         "panel, then vdu_controls will periodically update the light-level\n"
-                        "in proportion to the calculated solar-outdoor light-level for the\n"
-                        "given datatime for your geolocation. Hence semi-automatic.\n"),
+                        "in proportion to the estimated solar outdoor light-level at your\n"
+                        "geolocation and datetime. Hence semi-automatic.\n"),
                  details=tr("Calculation of indoor illumination from solar illumination:\n"
                             "    Ei = DF x Eo\n"
                             "    DF = Ei / Eo\n"
                             "Ei: Indoor Illumination, either dragged, or calculated automatically from Eo.\n"
-                            "Eo: Outdoor Illumination, calculated from geolocation and local datetime.\n"
+                            "Eo: Outdoor Illumination, calculated from geolocation and datetime.\n"
                             "DF: Daylight factor, the ratio of indoor to outdoor illumination.")).exec()
             return True
         path = pathlib.Path(device)
