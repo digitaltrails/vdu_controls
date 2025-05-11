@@ -2814,7 +2814,7 @@ class VduController(QObject):
         self.ignore_vdu = remedy == VduController.IGNORE_VDU
         default_sleep_multiplier: float | None = default_config.get_sleep_multiplier(fallback=None)
         enabled_vcp_codes = default_config.get_all_enabled_vcp_codes()
-        for config_name in (self.vdu_stable_id, self.vdu_model_id):
+        for config_name in (self.vdu_stable_id, self.vdu_model_id):  # Allow for shared single model file (not encouraged).
             config_path = ConfIni.get_path(config_name)
             log_debug("checking for config file '" + config_path.as_posix() + "'") if log_debug_enabled else None
             if os.path.isfile(config_path) and os.access(config_path, os.R_OK):
@@ -2856,12 +2856,12 @@ class VduController(QObject):
 
     def write_template_config_files(self) -> None:
         """Write template config files to $HOME/.config/vdu_controls/"""
-        for config_name in (self.vdu_stable_id, self.vdu_model_id):
-            save_config_path = ConfIni.get_path(config_name)
-            config = VduControlsConfig(config_name, default_enabled_vcp_codes=[c.vcp_code for c in self.enabled_capabilities])
-            config.set_capabilities_alt_text(self.capabilities_text if self.capabilities_text is not None else '')
-            config.write_file(save_config_path)
-            self.config = config
+        config_name = self.vdu_stable_id
+        save_config_path = ConfIni.get_path(config_name)
+        config = VduControlsConfig(config_name, default_enabled_vcp_codes=[c.vcp_code for c in self.enabled_capabilities])
+        config.set_capabilities_alt_text(self.capabilities_text if self.capabilities_text is not None else '')
+        config.write_file(save_config_path)
+        self.config = config
 
     def get_vdu_preferred_name(self, upper: bool = False) -> str:
         return self.config.get_vdu_preferred_name().upper() if upper else self.config.get_vdu_preferred_name()
