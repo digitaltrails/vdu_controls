@@ -7180,13 +7180,17 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                         "You set the ambient light-level by dragging its slider in the main-\n" 
                         "panel, then vdu_controls will periodically update the light-level\n"
                         "in proportion to the estimated solar outdoor light-level at your\n"
-                        "geolocation and datetime. Hence semi-automatic.\n"),
-                 details=tr("Calculation of indoor illumination from solar illumination:\n"
+                        "geolocation and datetime.\n\n" 
+                        "If conditions change due to cloud, weather, or other factors, re-adjust\n"
+                        "the slider to revise the proportion in use (the Daylight Factor).\n\n"
+                        "Hence, ambient light control is semi-automatic.\n"),
+                 details=tr("Estimation of indoor illumination (Ei) from solar illumination (Eo):\n"
                             "    Ei = DF x Eo\n"
                             "    DF = Ei / Eo\n"
-                            "Ei: Indoor Illumination, either dragged, or calculated automatically from Eo.\n"
-                            "Eo: Outdoor Illumination, calculated from geolocation and datetime.\n"
-                            "DF: Daylight factor, the ratio of indoor to outdoor illumination.")).exec()
+                            "Ei:\tIndoor Illumination, either dragged, or calculated automatically from Eo.\n"
+                            "Eo:\tSolar/Outdoor Illumination, calculated from geolocation and datetime.\n"
+                            "DF:\tDaylight factor, the ratio of indoor to outdoor illumination. Calculated\n"
+                            "\twhenever the Ambient Light Level slider is dragged.")).exec()
             return True
         path = pathlib.Path(device)
         if ((required_type == LuxDeviceType.ARDUINO and path.is_char_device()) or
