@@ -1500,7 +1500,7 @@ class Ddcutil:
     def detect_vdus(self) -> List[Tuple[str, str, str, str]]:
         """Return a list of (vdu_number, desc) tuples."""
         result_list = []
-        vdu_list = self.ddcutil_impl.detect(1)
+        vdu_list = self.ddcutil_impl.detect(0)
         for emulator_impl in self.ddcutil_emulators_by_edid.values():
             vdu_list += emulator_impl.detect(1)
         # Going to get rid of anything that is not a-z A-Z 0-9 as potential rubbish
@@ -1529,7 +1529,7 @@ class Ddcutil:
                         del key_prospects[possibly_unique]
                     else:
                         key_prospects[possibly_unique] = vdu_number, manufacturer
-        # Try and pin down a unique id that won't change even if other monitors are turned off. Ideally this should
+        # Try and pin down a unique id that won't change even if other monitors are turned off. Ideally, this should
         # yield the same result for the same monitor - DisplayNum is the worst for that, so it's the fallback.
         key_already_assigned = {}
         for model_and_main_id, vdu_number_and_manufacturer in key_prospects.items():
