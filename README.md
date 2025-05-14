@@ -354,6 +354,7 @@ Version History
 ---------------
 
 * 2.3.1
+  * New option, semi-automatic light-level estimation based on geolocated solar-lux.
   * Fix size of Lux Dialog scale, adjust for display DPI.
   * Fix size of Solar Elevation chart, adjust for display DPI.
   * Fix Lux brightness adjustment, allow protect-nvam to be disabled.
