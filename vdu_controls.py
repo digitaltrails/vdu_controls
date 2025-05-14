@@ -864,7 +864,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QDesktopWidget, QSpacerItem
 
 APPNAME = "VDU Controls"
-VDU_CONTROLS_VERSION = '2.3.1'
+VDU_CONTROLS_VERSION = '2.4.0'
 VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in VDU_CONTROLS_VERSION.split('.'))
 assert sys.version_info >= (3, 8), f'{APPNAME} utilises python version 3.8 or greater (your python is {sys.version}).'
 
@@ -7836,6 +7836,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
     def __init__(self, main_config: VduControlsConfig) -> None:
         super().__init__()
+        self.find_vdu_config_files()
         self.application_lock = threading.RLock()  # thread level, thread-safe, access lock
         self.main_config = main_config
         self.ddcutil: Ddcutil | None = None
@@ -8466,6 +8467,17 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         log_info(f"Resuming {task.__class__.__name__}") if i > 0 else None
         self.main_window.status_message('', timeout=1, destination=MsgDestination.DEFAULT)
         return False
+
+    def find_vdu_config_files(self) -> List[Path]:
+        found = []
+        for conf_file in [f for f in sorted(CONFIG_DIR_PATH.glob('*_*_*.conf')) if f.is_file()]:
+            conf = ConfIni()
+            conf.read(conf_file.as_posix())
+            if conf.has_section(ConfOpt.CAPABILITIES_OVERRIDE.conf_id[0]) and conf.get(*ConfOpt.CAPABILITIES_OVERRIDE.conf_id):
+                found.append(conf_file)
+        log_debug(f"find_vdu_config_files {found}")
+        return found
+
 
     def status_message(self, message: str, timeout: int, destination: MsgDestination = MsgDestination.DEFAULT):
         self.main_window.status_message(message, timeout, destination)
