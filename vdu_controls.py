@@ -451,14 +451,24 @@ Ambient Light Levels and Light/Lux Metering
 -------------------------------------------
 
 The default UI includes an ``ambient-light slider`` which will simultaneously adjust all VDUs
-according to custom per-VDU lux/brightness profiles.  As well manually adjusting the ambient light
-level, the adjustment can be automated by setting up a hardware lux metering device.  The
-Lux-Dialog provides options for setting up light metering and VDU lux/brightness profiles.
+according to custom per-VDU lux/brightness profiles.  As well as manually adjusting the ambient light
+level, the adjustment can be automatically driven by hardware light-metering or semi-automatic
+driven based on geolocation and local-datetime.
+
+The Lux-Dialog provides options for setting up light metering and VDU lux/brightness profiles.
 If ambient light level controls are not required, the Settings Dialog includes an option to
 disable and hide them.
 
-As well as the manual-slider, a metering device may be a serial-device, a UNIX FIFO (named-pipe),
-or an executable (script or program):
+Semi-automatic ambient-light level adjustment uses an estimate scaled in proportion
+to the expected natural sunlight for your location and date-time. You set the ambient
+light-level by dragging its slider in the main-panel.  Vdu_controls will then
+periodically scale the light-level proportionally to the expected solar outdoor light-level.
+If conditions change due to cloud, weather, or other factors, re-adjust the slider to
+revise the proportionality (the Daylight Factor).
+
+Fully automatic ambient-light level adjustment requires setting up a hardware lux metering device.
+A metering device may be a serial-device, a UNIX FIFO (named-pipe), or an executable (script or
+program):
 
  - A serial-device must periodically supply one floating-point lux-value
    terminated by a carriage-return newline.

@@ -27,12 +27,12 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Apr 26, 2025" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "May 14, 2025" "" "vdu_controls"
 .SH NAME
-vdu_controls \- vdu_controls 2.3.0
+vdu_controls \- vdu_controls 2.4.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
 .sp
-A control panel for DisplayPort, DVI, HDMI, or USB connected VDUs (\fIVisual Display Units\fP).
+A control panel for DisplayPort, DVI, HDMI, or USB\-connected VDUs (\fIVisual Display Units\fP).
 .SH SYNOPSIS:
 .INDENT 0.0
 .INDENT 3.5
@@ -240,7 +240,7 @@ Application wide default config: \fB$HOME/.config/vdu_controls/vdu_controls.conf
 .IP \(bu 2
 VDU model and serial number config: \fB$HOME/.config/vdu_controls/<model>_<serial|display_num>.conf\fP
 .IP \(bu 2
-VDU model only config: \fB$HOME/.config/vdu_controls/<model>.conf\fP
+VDU model\-only config: \fB$HOME/.config/vdu_controls/<model>.conf\fP (deprecated, no longer created).
 .UNINDENT
 .UNINDENT
 .UNINDENT
@@ -309,7 +309,7 @@ capabilities\-override =
 .UNINDENT
 .sp
 Config files can only be used to enable and alter definitions of VCP codes supported by \fBddcutil\fP\&.
-Unsupported manufacturer\-specific features should only be experimented with caution, some
+Unsupported manufacturer\-specific features should only be enabled with caution; some
 may have irreversible consequences, including bricking the hardware.
 .sp
 As well as using the \fBSettings\fP, config files may also be created by the command line option:
@@ -341,7 +341,7 @@ Open the \fISettings\fP tab for the VDU, navigate to the \(dqcapabilities overri
 .IP 2. 3
 locate the feature, in this example, the brightness,
 .IP 3. 3
-add a \fBValues:\fP \fBmin..max\fP specification to line the following the feature definition,
+add a \fBValues:\fP \fBmin..max\fP specification to the line following the feature definition,
 .IP 4. 3
 save the changes.
 .UNINDENT
@@ -389,7 +389,7 @@ Feature: 15 (Picture Mode *refresh*)
 .sp
 With this annotation, when ever \fIPicture Mode\fP is altered, vdu_controls will
 reload all configuration files and refresh all control values from the VDUs.
-.SS DBUS dccutil\-service
+.SS DBUS ddcutil\-service
 .sp
 When available, \fBvdu_controls\fP defaults to interacting with VDUs via the DBUS \fBddcutil\-service\fP
 service rather than the \fBddcutil\fP command. The service should be both faster and more
@@ -598,14 +598,24 @@ Any other signals will be handled normally (in many cases they will result in pr
 .SS Ambient Light Levels and Light/Lux Metering
 .sp
 The default UI includes an \fBambient\-light slider\fP which will simultaneously adjust all VDUs
-according to custom per\-VDU lux/brightness profiles.  As well manually adjusting the ambient light
-level, the adjustment can be automated by setting up a hardware lux metering device.  The
-Lux\-Dialog provides options for setting up light metering and VDU lux/brightness profiles.
+according to custom per\-VDU lux/brightness profiles.  As well as manually adjusting the ambient light
+level, the adjustment can be automatically driven by hardware light\-metering or semi\-automatic
+driven based on geolocation and local\-datetime.
+.sp
+The Lux\-Dialog provides options for setting up light metering and VDU lux/brightness profiles.
 If ambient light level controls are not required, the Settings Dialog includes an option to
 disable and hide them.
 .sp
-As well as the manual\-slider, a metering device may be a serial\-device, a UNIX FIFO (named\-pipe),
-or an executable (script or program):
+Semi\-automatic ambient\-light level adjustment uses an estimate scaled in proportion
+to the expected natural sunlight for your location and date\-time. You set the ambient
+light\-level by dragging its slider in the main\-panel.  Vdu_controls will then
+periodically scale the light\-level proportionally to the expected solar outdoor light\-level.
+If conditions change due to cloud, weather, or other factors, re\-adjust the slider to
+revise the proportionality (the Daylight Factor).
+.sp
+Fully automatic ambient\-light level adjustment requires setting up a hardware lux metering device.
+A metering device may be a serial\-device, a UNIX FIFO (named\-pipe), or an executable (script or
+program):
 .INDENT 0.0
 .INDENT 3.5
 .INDENT 0.0
@@ -713,8 +723,8 @@ values from presets if you don\(aqt want to permanently attach them.
 If you use light\-metered auto\-brightness and preset\-scheduling together, their combined effects
 may conflict. For example, a scheduled preset may set a reduced brightness, but soon after,
 light\-metering might increase it.  If you wish to use the two together, design your lux/brightness
-profile steps to match the brightness levels of specific presets, for example, a full\-sun preset and
-the matching step in a lux/brightness Profile might both be assigned the same brightness level.
+profile steps to match the brightness levels of specific presets \- for example, a full\-sun preset
+and the matching step in a lux/brightness Profile might both be assigned the same brightness level.
 .SS Lux Metering Internal Parameters
 .sp
 The following internal constants can be altered by manually editing
@@ -758,7 +768,7 @@ For versions of \fBddcutil\fP prior to 2.0, you can manually set the \fBvdu_cont
 \fBsleep\-multiplier\fP passed to \fBddcutil\fP\&.  A sleep multiplier less than one will speed up the i2c
 protocol interactions at the risk of increased protocol errors. The default sleep multiplier of 1.0
 has to be quite conservative, many VDUs can cope with smaller multipliers. A bit of experimentation
-with multiplier values may greatly speed up responsiveness. In a multi\-VDU setup individual sleep
+with multiplier values may greatly speed up responsiveness. In a multi\-VDU setup, individual sleep
 multipliers can be configured.
 .SS Improving Response Time and Reliability: Connections and Controls
 .sp
