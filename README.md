@@ -282,7 +282,7 @@ in a number of ways:
 See the context-menu or the  [man page](https://htmlpreview.github.io/?https://raw.githubusercontent.com/digitaltrails/vdu_controls/master/docs/_build/man/vdu_controls.1.html)
  for details.
 
-VDU controls and optimisations can be specified in the global or VDU-specific config-files.
+VDU controls and optimizations can be specified in the global or VDU-specific config-files.
 
 Bugs and Suggestions
 --------------------
@@ -357,6 +357,8 @@ Version History
   * Fix size of Lux Dialog scale, adjust for display DPI.
   * Fix size of Solar Elevation chart, adjust for display DPI.
   * Fix Lux brightness adjustment, allow protect-nvam to be disabled.
+  * Don't create model-only config files, they're confusing and likely not used (they can still be created manually).
+  * Fix dbus ddcutil-service detect, only request valid displays.
   * Code refactoring for clarity/brevity.
 
 * 2.3.0

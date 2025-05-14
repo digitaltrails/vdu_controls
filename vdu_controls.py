@@ -3,7 +3,7 @@
 vdu_controls - a DDC control panel for monitors
 ===============================================
 
-A control panel for DisplayPort, DVI, HDMI, or USB connected VDUs (*Visual Display Units*).
+A control panel for DisplayPort, DVI, HDMI, or USB-connected VDUs (*Visual Display Units*).
 
 Synopsis:
 =========
@@ -160,7 +160,7 @@ tabs specific to each VDU.  The config files are named according to the followin
 
  - Application wide default config: ``$HOME/.config/vdu_controls/vdu_controls.conf``
  - VDU model and serial number config: ``$HOME/.config/vdu_controls/<model>_<serial|display_num>.conf``
- - VDU model only config: ``$HOME/.config/vdu_controls/<model>.conf``
+ - VDU model-only config: ``$HOME/.config/vdu_controls/<model>.conf`` (deprecated, no longer created).
 
 The VDU-specific config files can be used to:
 
@@ -211,7 +211,7 @@ The config files are in INI-format divided into a number of sections as outlined
     capabilities-override =
 
 Config files can only be used to enable and alter definitions of VCP codes supported by ``ddcutil``.
-Unsupported manufacturer-specific features should only be experimented with caution, some
+Unsupported manufacturer-specific features should only be enabled with caution; some
 may have irreversible consequences, including bricking the hardware.
 
 As well as using the ``Settings``, config files may also be created by the command line option::
@@ -234,7 +234,7 @@ the **capabilities override**:
 
  1. Open the *Settings* tab for the VDU, navigate to the "capabilities override* field
  2. locate the feature, in this example, the brightness,
- 3. add a **Values:** **min..max** specification to line the following the feature definition,
+ 3. add a **Values:** **min..max** specification to the line following the feature definition,
  4. save the changes.
 
 For the brightness example, the completed edit would look like::
@@ -540,8 +540,8 @@ values from presets if you don't want to permanently attach them.
 If you use light-metered auto-brightness and preset-scheduling together, their combined effects
 may conflict. For example, a scheduled preset may set a reduced brightness, but soon after,
 light-metering might increase it.  If you wish to use the two together, design your lux/brightness
-profile steps to match the brightness levels of specific presets, for example, a full-sun preset and
-the matching step in a lux/brightness Profile might both be assigned the same brightness level.
+profile steps to match the brightness levels of specific presets - for example, a full-sun preset
+and the matching step in a lux/brightness Profile might both be assigned the same brightness level.
 
 Lux Metering Internal Parameters
 --------------------------------
@@ -584,7 +584,7 @@ For versions of ``ddcutil`` prior to 2.0, you can manually set the ``vdu_control
 ``sleep-multiplier`` passed to ``ddcutil``.  A sleep multiplier less than one will speed up the i2c
 protocol interactions at the risk of increased protocol errors. The default sleep multiplier of 1.0
 has to be quite conservative, many VDUs can cope with smaller multipliers. A bit of experimentation
-with multiplier values may greatly speed up responsiveness. In a multi-VDU setup individual sleep
+with multiplier values may greatly speed up responsiveness. In a multi-VDU setup, individual sleep
 multipliers can be configured.
 
 Improving Response Time and Reliability: Connections and Controls
