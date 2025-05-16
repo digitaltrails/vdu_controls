@@ -13,7 +13,7 @@ Description
 ![Custom](screen-shots/ambient-slider-example.png) 
 
 `vdu_controls` is a virtual-control-panel for external Visual Display Units
-(VDUs/monitors/displays). Typically means displays connected by DisplayPort, 
+(VDUs/monitors/displays). Typically this means displays connected by DisplayPort, 
 DVI, HDMI, or USB, and not builtin laptop panels (although there is 
 a DIY scripting option for integration a laptop display, see below.)
 
@@ -103,13 +103,14 @@ or increasing the LED panel burn-in.
 
 How many writes VDU NVRAM can accommodate is unknown, it is likely to vary by model
 and vintage. VDUs from past decades are likely to have NVRAM that can accommodate
-10,000 to 100,000+ writes depending on the technology employed. For a ten year lifespan
+10,000 to 100,000+ writes depending on the technology used. For a ten year lifespan
 this might indicate a sustainable limit of only 2.7 writes per day or 27 writes per 
 day respectively.
-Some modern types of NVRAM have upper limits that are for practical purposes unlimited, but
-the level of uptake of such technologies by the manufacturers is unknown (brighter
-back-lights, along with scene and gaming options, would appear to require increased
-durability).
+
+Some modern types of NVRAM have upper limits that are for practical purposes unlimited. 
+Brighter back-lights, along with scene and gaming options, would appear to require 
+moving to NVRAM with increased durability. However, the uptake of such technologies 
+by the manufacturers is unknown. 
 
 A vintage-2010 VDU, that has been used for four years of intensive testing of 
 vdu_controls, now shows signs of of the NVRAM having bad blocks.  After loss of 
@@ -130,7 +131,7 @@ to reduce the frequency of writes to VDU NVRAM:
 
 There are also some things you can do to futher minimise NVRAM writes:
 
- + Drag sliders to target values with no in-between pauses.
+ + Drag sliders to target values with no in-between pauses greater than 0.5 seconds.
  + Choose to restore pre-prepared ‘presets’ instead of dragging sliders.
  + Leave `protect-nvram` enabled which disables transitions for presets.
  + If using the ambient-light brightness response curves, tune the settings and curves to avoid frequent small changes.
