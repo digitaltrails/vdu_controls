@@ -360,6 +360,7 @@ Version History
   * Fix Lux brightness adjustment, allow protect-nvam to be disabled.
   * Don't create model-only config files, they're confusing and likely not used (they can still be created manually).
   * Fix dbus ddcutil-service detect, only request valid displays.
+  * Prevent a lux adjustment infinite loop if no brightness controls are enabled.
   * Code refactoring for clarity/brevity.
 
 * 2.3.0
