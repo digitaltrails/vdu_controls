@@ -8,79 +8,45 @@ A control panel for external monitors (*Visual Display Units*).
 > *scheduled-presets* and *ambient-light-control*.  The relevant KDE 6 options can 
 > be found under ***System Settings -> System -> Energy Saving***.
 
-> **vdu_controls version 2.0** adds manual ambient-light-level input.  This allows all connected VDU's
-> to be simultatiniously adjusted by moving one slider.  This is an alternative
-> to fully automatic control via hardware lux-metering.  When the ambient-light-level
-> is changed, each VDU us adjusted according to its own custom light-level/brighness
-> profile defined under ***Settings->Light-Metering***. This new option is enabled
-> by default, but can be disabled by unchecking  ***Settings->Lux options enabled***.
->
->  ![Custom](screen-shots/ambient-slider-example.png) 
->
-> The second major change in 2.0 is actually far more wide-reaching, but much less visibile.
-> The  internal DDC/VDU interface has been rewritten to optionally use the
-> D-Bus [ddcutil-service](https://github.com/digitaltrails/ddcutil-service) instead
-> of the **ddcutil** command. The new **ddcutil-service** is a daemon I've written to
-> interface with **libddcutil**. The service is faster and more reliable making for 
-> a smoother control experience. The service is able to detect and forward DPMS 
-> connection-events so vdu_controls can automatically respond to changes in VDU 
-> connection status, such as hot-plugging, power on/off, or reconnects due to return
-> from PC-hibernation.
-> 
-> Should the ddcutil-service be unavailable, the DDC/VDU interface reverts to using 
-> the ddcutil command.
-> 
-> Prebuilt vdu_control OpenSUSE and AUR packages optionally recommand ddcutil-service. 
-> Depending packaging settings, the service may be automatically installed when you
-> install vdu_controls. 
-> 
-> OpenSUSE Tumbleweed RPM:
-> 
->    https://software.opensuse.org/package/ddcutil-service
-> 
-> AUR (Arch Linux User Repository):
-> 
->    https://aur.archlinux.org/packages/ddcutil-service
->
-> If your distro lacks a packaged version of the service, you could manually
-> build and install it from source. It's a single C file and will build against 
-> any libddcutil from 1.4 onward.  It needn't  be installed as root, it can be started
-> manually from the command line or installed as a single user D-Bus daemon.
-> For install/build details, see:
-> 
->    https://github.com/digitaltrails/ddcutil-service
-> 
-> The service can be installed for on demand access via the D-BUS daemon. It can also
-> run manually from the command line.  Once the service is running, any new 
-> instance of vdu_controls should automatically find and connect to the service.
-> When using the service, the bottom line of vdu_controls **About Dialog** will
-> list **ddcutil-interface** as **1.0.0 (QtDBus client)**.  Use of the service can
-> be manually toggled via `vdu_controls->Settins->dbus client enabled`.
-> 
-> The service may also be accessed from generic D-Bus clients such as d-feet 
-> dbus-send and busctl.
-> 
-
 Description
 -----------
+![Custom](screen-shots/ambient-slider-example.png) 
 
-``vdu_controls`` is a virtual control panel for externally connected VDUs.  The application detects 
-DVI, DP, HDMI, or USB connected VDUs.  It provides controls for settings such as brightness and contrast.
+`vdu_controls` is a virtual-control-panel for external Visual Display Units
+(VDUs/monitors/displays). Typically means displays connected by DisplayPort, 
+DVI, HDMI, or USB, and not builtin laptop panels (although there is 
+a DIY scripting option for integration a laptop display, see below.)
 
-The application interacts with VDUs via the VESA *Display Data Channel* (*DDC*) *Virtual Control Panel*  (*VCP*) 
-commands set.  DDC VCP interactions are mediated by the ``ddcutil`` command line utility.  ``Ddcutil`` provides
-a robust interface that is tolerant of the vagaries of the many OEM DDC implementations.
+By default, `vdu_controls` offers a subset of controls including brightness, 
+contrast, and audio controls.  Additional controls can be enabled via the 
+`Settings dialog`.  
 
-By default ``vdu_controls`` offers a subset of controls including brightness, contrast and audio controls.  Additional
-controls can be enabled via the ``Settings`` dialog.  
+For convenience, a single ambient-light-level slider can  simultaniously adjust
+all displays according their own custom profiles;
+**one slider to rule them all**.  Each display's custom profile is
+an Ambient-Lux to Display-Brightness curve. Realtively flat profiles
+can be created for older displays and a more sloped profiles for newer HDR 
+displays.
 
-``vdu_controls`` may optionally run as an entry in the system tray of KDE, Deepin, GNOME, and Xfce (and possibly
-others). The UI attempts to adapt to the quirks of the different tray implementations.
+Hardware light-metering can be integrated to achieve **fully automatic** brightness
+control. Several means of integration are supported.  (An _arduino_
+based meter can be built for around $30.)
 
-Named ``Preset`` configurations can be saved for later recall. For example, a user could create
-presets for night, day, photography, movies, and so forth.  Presets may be automatically triggered
-according to solar elevation, and can be further constrained by local weather conditions (as
-reported by [https://wttr.in](https://wttr.in)).  Presets may also be activated by UNIX signals.
+There is an option for **semi-automatic** control based on estimating
+solor-illumation for you geolocation and local datetime.  This estimate,
+combined with where you set the ambient-light-slider, is used to periodically
+update display brightness. (Readjust the slider for changing ambient conditions
+such as bad-weather.)
+
+Custom **Preset** collections of control-settings can be saved
+for later recall. For example, a user might create presets for _night_, 
+_day_, _photography_, _movies_, and so forth.  Presets may be set to 
+automatically trigger according to ambient light levels or solar-elevation, 
+display hotplug-events, or UNIX signals.
+
+`vdu_controls` may optionally run as an entry in the **system tray** of KDE, Deepin, 
+GNOME, COSMIC, and Xfce (and possibly others). The UI attempts to adapt to the 
+quirks of the different tray implementations.
 
 From any application window, use `F1` to access help, and `F10` to access the context-menu.   The 
 context menu is also available via the right-mouse button in the main-window, the hamburger-menu item 
@@ -88,16 +54,45 @@ on the bottom right of the main window, and the right-mouse button on the system
 context-menu provides `ALT-key` shortcuts for all menu items (subject to sufficient letters being
 available to support all user defined Presets).
 
-_Version 1.10_ introduces options for using lux readings from a hardware lux meter (or in some 
-cases a webcam).  When lux metering is enabled, ``vdu_controls`` can vary brightness according 
-to customisable  lux/VDU-brightness profiles. See [Lux Metering](./Lux-metering.md) for more details.
-
-The UI's look-and-feel dynamically adjusts to the desktop theme and desktop environment: light-theme,
-dark-theme, KDE, Deepin, GNOME, and others.  Both X11 and Wayland are supported.
+The UI's look-and-feel dynamically adjusts to the desktop theme and desktop 
+environment on both X11 and Wayland. Light and dark themes are automatically 
+detected on KDE, Deepin, GNOME, and others (those that support Qt theming 
+events).  
 
 ![Default](screen-shots/Screenshot_Large-330.png)  ![Custom](screen-shots/Screenshot_Small-227.png) 
 ![Custom](screen-shots/Screenshot_tray-200.png) ![Custom](screen-shots/Screenshot_settings-300.png)
 ![Custom](screen-shots/presets.png) ![Custom](screen-shots/lux-profiles.png)
+
+#### Technical background
+
+Historically, there was little need to frequently adjust display brightness.
+Most displays were just set to something confortable and that's where they 
+remained.
+This changed on the introduction of HDR (High Dynamic Range) displays. HDR
+displays use brighter backlights to achive increased dymanic range and contrast.
+These brighter displays better cope with very bright conditions, but they 
+often need to be turned down when the ambient light level descreases. I
+created `vdu_controls` to allow me to more easily adjust my own displays.
+
+`vdu_controls` communicates with displays by using either 
+[ddcutil](https://www.ddcutil.com/), a command line utility, 
+or the [ddcutil-service](https://github.com/digitaltrails/ddcutil-service), 
+a D-Bus service interface to the [libddcutil](https://www.ddcutil.com/api_main/) 
+library.
+The `ddcutil` command line utility is commonly available in most Linux 
+distributions. The D-Bus `ddcutil-service` is relatively new and less widely
+distributed, it is the more preferable of the two because its faster, 
+more reliable, and more featured.  If `ddcutil-service` is detected it is 
+prefered by default, otherwise `vdu_controls` falls back to `ddcutil`.
+(ddcutil-service is relatively easy to build, does not run as root, 
+a custom DIY install realtively simple.)
+
+Both `ddcutil` and `libddcutil` interface to the VESA standard
+*Display Data Channel* (**DDC**) *Virtual Control Panel*  (**VCP**) interface.
+They  provide a robust interface that is tolerant of the vagaries of the many 
+OEM DDC implementations and GPU drivers. `Vdu_controls` includes a plugin
+option for interfacing to non DDC displays, such as laptops, but no plugins 
+are currently bundled.
 
 Does adjusting a VDU affect its lifespan or health?
 ---------------------------------------------------
@@ -127,27 +122,27 @@ for failed NVRAM, so the problem with this VDU is, for the most part, eliminated
 All that said, ``vdu_controls`` does include a number of features that can be used 
 to reduce the frequency of writes to VDU NVRAM:
 
-#### Inbuilt mitigations:
-
  + Slider and spin-box controls only update the VDU when adjustments become slow or stop (when no change occurs in 0.5 seconds).
  + Preset restoration only updates the VDU values that differ from its current values.
  + Transitioning effects and transition controls have been disabled by default and are 
    deprecated for version 2.1.0 onward.
  + Automatic ambient brightness adjustment only triggers a change when the proposed brightness differs from the current brightness by at least 10%.
 
-#### Electable mitigations:
+There are also some things you can do to futher minimise NVRAM writes:
 
+ + Drag sliders to target values with no in-between pauses.
  + Choose to restore pre-prepared ‘presets’ instead of dragging sliders.
- + Refrain from adding transitions to presets.
+ + Leave `protect-nvram` enabled which disables transitions for presets.
  + If using the ambient-light brightness response curves, tune the settings and curves to avoid frequent small changes.
- + If using a light-meter, disengage metered automatic adjustment when faced with rapidly fluctuating levels of ambient brightness.
+ + If using a light-meter, disengage automatic adjustment when ambient light levels
+   are  fluctuating (under condtions such as intermittent cloud cover).
  + Consider adjusting the ambient lighting instead of the VDU.
 
-#### Monitoring to assist with making adjustments:
+Some feedback is provided to help with making reducing NVRAM usage:
 
-  + Hovering over a VDU name in the main window reveals a popup that includes
+  + Hovering over a display name in the main window reveals a tooltip that includes
     the number of VCP (NVRAM) writes. 
-  + The bottom of the About-dialog shows the same numbers. They update dynamically.
+  + The bottom of the About-Dialog shows the same numbers. They update dynamically.
 
 #### Other concerns
 
