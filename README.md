@@ -147,9 +147,10 @@ Some feedback is provided to help with making reducing NVRAM usage:
 
 #### Other concerns
 
-Going beyond the standard DDC features by experimenting with undocumented-features 
-or undocumented-values has the potential to make **irreversible** changes.
-Consider the potential cost in time and money before trying anything speculative.
+> [!Caution]
+> Going beyond the standard DDC features by experimenting with undocumented-features 
+> or undocumented-values has the potential to make **irreversible** changes.
+> Consider the potential cost in time and money before trying anything speculative.
 
 The power-supplies in some older VDUs may buzz/squeel audibly when the brightness is
 turned way down. This may not be a major issue, in normal circumstances
@@ -158,8 +159,9 @@ older VDUs are often not usable below 85-90% brightness.
 Getting Started
 ---------------
 
+> [!Caution]
 > The long term affects of repeatably rewriting a VDUs setting are not well understood, but some
-> concerns have been expressed. See [below](https://github.com/digitaltrails/vdu_controls?tab=readme-ov-file#does-adjusting-a-vdu-affect-its-lifespan-or-health)
+> concerns have been expressed. See [above](https://github.com/digitaltrails/vdu_controls?tab=readme-ov-file#does-adjusting-a-vdu-affect-its-lifespan-or-health)
 > for further details.
 
 To get started with ``vdu_controls``, you only need to download the ``vdu_controls.py`` python script and
@@ -167,9 +169,12 @@ check that the dependencies described below are in place.  Alternatively, should
 for all users, RPMs are available for **OpenSUSE**, **Fedora**, and there is an  **archlinux** AUR package
 which also works in **Manjaro**.  See the *Install* section below. 
 
-> Development is **trunk-based**.  It is my intention that the trunk should 
-> always be usable as a daily-driver.  That being said, a download of trunk is likely to 
-> be less stable than downloading one of the formal [releases](https://github.com/digitaltrails/vdu_controls/releases) 
+> [!Note]
+> Development is **trunk-based**.  It is my intention that the trunk 
+> ([master](https://github.com/digitaltrails/vdu_controls)) should always be usable
+> as a daily-driver.  If you want the latest features, download from master. 
+> That being said, a download of trunk may sometimes be less stable than downloading 
+> one of the formal [releases](https://github.com/digitaltrails/vdu_controls/releases) 
 > or installing one of the packages that are available in various distros.
 
 Dependencies
