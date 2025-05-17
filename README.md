@@ -15,7 +15,7 @@ Description
 `vdu_controls` is a virtual-control-panel for external Visual Display Units
 (VDUs/monitors/displays). Typically this means displays connected by DisplayPort, 
 DVI, HDMI, or USB, and not builtin laptop panels (although there is 
-a DIY scripting option for integration a laptop display, see below.)
+a DIY scripting option for integrating laptop panels, see below.)
 
 By default, `vdu_controls` offers a subset of controls including brightness, 
 contrast, and audio controls.  Additional controls can be enabled via the 
@@ -28,15 +28,14 @@ an Ambient-Lux to Display-Brightness curve. Realtively flat profiles
 can be created for older displays and a more sloped profiles for newer HDR 
 displays.
 
-Hardware light-metering can be integrated to achieve **fully automatic** brightness
-control. Several means of integration are supported.  (An _arduino_
+Several means are supported for integrating a hardware light-meter to
+achieve **fully automatic** brightness control. (An _arduino_
 based meter can be built for around $30.)
 
-There is an option for **semi-automatic** control based on estimating
-solor-illumation for you geolocation and local datetime.  This estimate,
-combined with where you set the ambient-light-slider, is used to periodically
-update display brightness. (Readjust the slider for changing ambient conditions
-such as bad-weather.)
+The value of the ambient-light-slider can be combined with a
+periodic estimate of solor-illumation to achieve **semi-automatic** 
+brightness control.  The slider can be adjusted to revise the
+estimation for changing ambient conditions, such as bad-weather.
 
 Custom **Preset** collections of control-settings can be saved
 for later recall. For example, a user might create presets for _night_, 
@@ -120,8 +119,8 @@ may indicate a write limit of at least 100,000 for a VDU of this vintage. I've
 subsequently implemented the ___initialization-preset___ feature as a fallback 
 for failed NVRAM, so the problem with this VDU is, for the most part, eliminated.
 
-All that said, ``vdu_controls`` does include a number of features that can be used 
-to reduce the frequency of writes to VDU NVRAM:
+All that said, ``vdu_controls`` does include a number of features that reduce 
+the frequency of writes to VDU NVRAM:
 
  + Slider and spin-box controls only update the VDU when adjustments become slow or stop (when no change occurs in 0.5 seconds).
  + Preset restoration only updates the VDU values that differ from its current values.
