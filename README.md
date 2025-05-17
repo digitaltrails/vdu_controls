@@ -236,9 +236,9 @@ That makes three options for "installation":
    ```
 
 > [!NOTE]
-> Please note the first two options only install ``vdu-controls`` for the current user.  The script and desktop-file 
-> installed for a single user could be modified and copied into /usr or /usr/local hierarchies should you 
-> wish to do so.  If using the first two options, you might want to follow up by manually downloading
+> The first two options above, only install ``vdu-controls`` for the current user.  The script and desktop-file 
+> installed for a single user could be modified and copied into /usr or /usr/local hierarchies. 
+> If using the first two options, you might want to follow up by manually downloading
 > some of the other items such as the [starter set of icons](icons) for use when creating Presets.
 
 Executing the program
