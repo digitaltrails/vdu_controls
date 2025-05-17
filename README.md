@@ -12,52 +12,51 @@ Description
 -----------
 ![Custom](screen-shots/ambient-slider-example.png) 
 
-``vdu_controls`` is a virtual-control-panel for external Visual Display Units
-(VDUs/monitors/displays). Typically this means displays connected by DisplayPort, 
-DVI, HDMI, or USB, but _not_ builtin laptop panels (although there is 
-a plugin scripting option for integrating laptop panels, see below.)
+``vdu_controls`` is a virtual control panel for external Visual Display Units 
+(VDUs, monitors, displays). It supports displays connected via DisplayPort, 
+DVI, HDMI, or USB - but not built-in laptop panels (though laptop integration
+is possible via plugin scripting; see below).
 
-By default, `vdu_controls` offers a subset of controls, including brightness, 
-contrast, and audio controls.  Additional controls can be enabled via the 
-`Settings dialog`.  
+By default, `vdu_controls` offers a subset of controls - these include brightness, 
+contrast, and audio controls - with additional options available via the 
+**Settings dialog**.
 
-For convenience, a single ambient-light-level slider can  simultaniously adjust
-all displays according their own custom profiles;
-**one slider to rule them all**.  Each display's custom profile is
-a curve relating ambient light-level to display-brightness. Realtively flat curves
-can be created for older displays and a more sloped ones for newer HDR 
+For convenience, a single **ambient-light-level slider** can  simultaniously
+adjust _all_ displays, each following its own custom profile:
+_one slider to rule them all_.  Each profile defines a a curve that maps 
+ambient light-level to display-brightness. Realtively flat curves
+can be created for older displays and steeper ones for newer HDR 
 displays.
 
 Several methods are supported for integrating a hardware light-meter to
 achieve **fully automatic** brightness control. (An _arduino_
 based meter [can be built for around $10](https://github.com/digitaltrails/vdu_controls/blob/master/Lux-metering.md).)
 
-The position of the ambient-light-slider can be combined with a
-estimate of local solar-illumation to achieve **semi-automatic** 
-brightness control throughout daylight hours.  Should the ambient
-conditions change, such as a change in the weather, adjusting 
-the slider revises the ratio between indoor-illumination and 
-outdoor solar-illumination.
+The ambient-light-level slider can be combined with an estimate of 
+local solar illumination to achieve **semi-automatic brightness control**
+throughout the day.  Adjusting the slider sets the
+ratio between indoor-illumination and outdoor solar-illumination.
+Brightness is automatically adjusted as the sun moves across the sky. 
+Should circumstances change, adjusting the slider updates 
+the ratio.
 
-Collections of control-settings can be saved as **Presets** 
-for later recall. For example, a user might create _presets_ for _night_, 
-_day_, _photography_, _movies_, and so forth.  Presets may be set to 
+Favorite settings can be saved as named **Presets**, such as
+_night_, _day_, _photography_, _movies_, and so forth.  Presets may be set to 
 automatically trigger according to ambient light levels or solar-elevation, 
 display hotplug-events, or UNIX signals.
 
-The application may optionally run as an entry in the **system tray** of KDE, Deepin, 
-GNOME, COSMIC, and Xfce (and possibly others). The UI attempts to adapt to the 
-quirks of the different tray implementations.
+The application may optionally run in the **system tray** of KDE, Deepin, 
+GNOME, COSMIC, and Xfce (and possibly others). It automatically adapts to the 
+different tray implementations.
 
-The UI's look-and-feel dynamically adjusts to the desktop theme and desktop 
-environment for both X11 and Wayland. Light and dark themes are automatically 
-detected on KDE, Deepin, GNOME, and others (those that support Qt theming 
-events).  
+The UI automatically adjusts to **light and dark desktop-themes**.
+Where a desktop supports Qt theming events, the UI dynamically adjusts 
+to light/dark theme changes.
 
-From any application window, use `F1` to access help, and `F10` to access the context-menu.   The 
-context menu is also available via the right-mouse button in the main-window, the hamburger-menu item 
+From any application window, use **F1** to access **help**, and **F10** to access the context-menu.   The 
+**Context Menu** is also available via the right-mouse button in the main-window, the hamburger-menu item 
 on the bottom right of the main window, and the right-mouse button on the system-tray icon. The 
-context-menu provides `ALT-key` shortcuts for all menu items (subject to sufficient letters being
+context-menu provides **ALT-_key_ shortcuts** for all menu items (subject to sufficient letters being
 available to support all user defined Presets).
 
 ![Default](screen-shots/Screenshot_Large-330.png)  ![Custom](screen-shots/Screenshot_Small-227.png) 
@@ -67,11 +66,11 @@ available to support all user defined Presets).
 #### Technical background
 
 Historically, there was little need to frequently adjust display brightness.
-This changed with the introduction of HDR (High Dynamic Range) displays, these
-displays use brighter backlights to achive increased dymanic range and contrast.
-Consequently, newer displays can cope better with very bright conditions, but they 
-often need to be turned down when the ambient light level descreases. I
-created `vdu_controls` to allow me to more easily adjust my own displays.
+This changed with the introduction of displays offerring HDR (High Dynamic Range)
+and increased contrast. These newer displays can cope better with very bright
+conditions, but they often need to be turned down when the ambient light level
+descreases. I created `vdu_controls` to allow me to more easily adjust my own 
+displays.
 
 `vdu_controls` communicates with displays by using either 
 [ddcutil](https://www.ddcutil.com/), a command line utility, 
@@ -85,7 +84,7 @@ available `vdu_controls` falls back to the `ddcutil` command.
 (ddcutil-service is relatively easy to build, does not run as root, 
 a custom DIY install realtively simple.)
 
-Both `ddcutil` and `libddcutil` interface to the VESA standard
+Both `ddcutil` and `libddcutil` interface to the **VESA** standard
 *Display Data Channel* (**DDC**) *Virtual Control Panel*  (**VCP**) interface.
 Both the command and the library  provide a robust interface that supports 
 many different OEM DDC implementations and GPU drivers. 
