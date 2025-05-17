@@ -17,15 +17,15 @@ Description
 DVI, HDMI, or USB, but _not_ builtin laptop panels (although there is 
 a plugin scripting option for integrating laptop panels, see below.)
 
-By default, `vdu_controls` offers a subset of controls including brightness, 
+By default, `vdu_controls` offers a subset of controls, including brightness, 
 contrast, and audio controls.  Additional controls can be enabled via the 
 `Settings dialog`.  
 
 For convenience, a single ambient-light-level slider can  simultaniously adjust
 all displays according their own custom profiles;
 **one slider to rule them all**.  Each display's custom profile is
-an Ambient-Lux to Display-Brightness curve. Realtively flat profiles
-can be created for older displays and a more sloped profiles for newer HDR 
+a curve relating ambient light-level to display-brightness. Realtively flat curves
+can be created for older displays and a more sloped ones for newer HDR 
 displays.
 
 Several methods are supported for integrating a hardware light-meter to
