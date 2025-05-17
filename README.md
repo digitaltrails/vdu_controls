@@ -64,6 +64,12 @@ available to support all user defined Presets).
 ![Custom](screen-shots/Screenshot_tray-200.png) ![Custom](screen-shots/Screenshot_settings-300.png)
 ![Custom](screen-shots/presets.png) ![Custom](screen-shots/lux-profiles.png)
 
+> [!TIP]
+> A formatted versions of the manual page is available for preview on github:
+> [vdu_controls.1](https://htmlpreview.github.io/?https://raw.githubusercontent.com/digitaltrails/vdu_controls/master/docs/_build/man/vdu_controls.1.html)
+>
+> Within the GUI, tool-tips are often available when hovering over UI components.
+
 #### Technical background
 
 Historically, there was little need to frequently adjust display brightness.
@@ -282,8 +288,6 @@ in a number of ways:
 
 See the context-menu or the  [man page](https://htmlpreview.github.io/?https://raw.githubusercontent.com/digitaltrails/vdu_controls/master/docs/_build/man/vdu_controls.1.html)
  for details.
-
-VDU controls and optimizations can be specified in the global or VDU-specific config-files.
 
 Bugs and Suggestions
 --------------------
