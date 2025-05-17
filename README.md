@@ -60,15 +60,14 @@ on the bottom right of the main window, and the right-mouse button on the system
 context-menu provides **ALT-_key_ shortcuts** for all menu items (subject to sufficient letters being
 available to support all user defined Presets).
 
+> [!TIP]
+> A formatted versions of the [vdu_controls.1](https://htmlpreview.github.io/?https://raw.githubusercontent.com/digitaltrails/vdu_controls/master/docs/_build/man/vdu_controls.1.html) manual page is available for preview on github.
+> 
+> Within the UI, **tool-tips** are often available when hovering over UI components.
+
 ![Default](screen-shots/Screenshot_Large-330.png)  ![Custom](screen-shots/Screenshot_Small-227.png) 
 ![Custom](screen-shots/Screenshot_tray-200.png) ![Custom](screen-shots/Screenshot_settings-300.png)
 ![Custom](screen-shots/presets.png) ![Custom](screen-shots/lux-profiles.png)
-
-> [!TIP]
-> A formatted versions of the manual page is available for preview on github:
-> [vdu_controls.1](https://htmlpreview.github.io/?https://raw.githubusercontent.com/digitaltrails/vdu_controls/master/docs/_build/man/vdu_controls.1.html)
->
-> Within the GUI, tool-tips are often available when hovering over UI components.
 
 #### Technical background
 
