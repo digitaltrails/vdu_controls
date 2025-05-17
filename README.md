@@ -198,9 +198,10 @@ It's best to confirm that ``ddcutil`` is functioning before using ``vdu_controls
 * Fo some VDUs, DDC/CI over Display-Port to Display-Port connections may work when others 
   connections don't (mainly with some Nvidia GPUs).
 
-As of ddcutil 1.4, installing a pre-packaged ddcutil will most likely set the correct udev rules to 
-grant users access to the required devices.  If you are using an earlier ddcutil, it may be necessary to follow 
-all the steps detailed in the links above.  
+> [!NOTE]
+> As of ddcutil 1.4, installing a pre-packaged ddcutil will most likely set the correct udev rules to 
+> grant users access to the required devices.  If you are using an earlier ddcutil, it may be necessary to follow 
+> all the steps detailed in the links above.  
 
 Installing
 ----------
@@ -234,10 +235,11 @@ That makes three options for "installation":
    /usr/share/man/man1/vdu_controls.1.gz
    ```
 
-Please note the first two options only install ``vdu-controls`` for the current user.  The script and desktop-file 
-installed for a single user could be modified and copied into /usr or /usr/local hierarchies should you 
-wish to do so.  If using the first two options, you might want to follow up by manually downloading
-some of the other items such as the [starter set of icons](icons) for use when creating Presets.
+> [!NOTE]
+> Please note the first two options only install ``vdu-controls`` for the current user.  The script and desktop-file 
+> installed for a single user could be modified and copied into /usr or /usr/local hierarchies should you 
+> wish to do so.  If using the first two options, you might want to follow up by manually downloading
+> some of the other items such as the [starter set of icons](icons) for use when creating Presets.
 
 Executing the program
 ---------------------
