@@ -12,10 +12,10 @@ Description
 -----------
 ![Custom](screen-shots/ambient-slider-example.png) 
 
-`vdu_controls` is a virtual-control-panel for external Visual Display Units
+``vdu_controls`` is a virtual-control-panel for external Visual Display Units
 (VDUs/monitors/displays). Typically this means displays connected by DisplayPort, 
-DVI, HDMI, or USB, and not builtin laptop panels (although there is 
-a DIY scripting option for integrating laptop panels, see below.)
+DVI, HDMI, or USB, but _not_ builtin laptop panels (although there is 
+a plugin scripting option for integrating laptop panels, see below.)
 
 By default, `vdu_controls` offers a subset of controls including brightness, 
 contrast, and audio controls.  Additional controls can be enabled via the 
@@ -28,35 +28,37 @@ an Ambient-Lux to Display-Brightness curve. Realtively flat profiles
 can be created for older displays and a more sloped profiles for newer HDR 
 displays.
 
-Several means are supported for integrating a hardware light-meter to
+Several methods are supported for integrating a hardware light-meter to
 achieve **fully automatic** brightness control. (An _arduino_
-based meter can be built for around $30.)
+based meter [can be built for around $10](https://github.com/digitaltrails/vdu_controls/blob/master/Lux-metering.md).)
 
-The value of the ambient-light-slider can be combined with a
-periodic estimate of solor-illumation to achieve **semi-automatic** 
-brightness control.  The slider can be adjusted to revise the
-estimation for changing ambient conditions, such as bad-weather.
+The position of the ambient-light-slider can be combined with a
+estimate of local solor-illumation to achieve **semi-automatic** 
+brightness control throughout daylight hours.  Should the ambient
+conditions change, such as a change in the weather, adjusting 
+the slider revises the ratio between indoor-illumination and 
+outdoor solar-illumination.
 
-Custom **Preset** collections of control-settings can be saved
-for later recall. For example, a user might create presets for _night_, 
+Collections of control-settings can be saved as **Presets** 
+for later recall. For example, a user might create _presets_ for _night_, 
 _day_, _photography_, _movies_, and so forth.  Presets may be set to 
 automatically trigger according to ambient light levels or solar-elevation, 
 display hotplug-events, or UNIX signals.
 
-`vdu_controls` may optionally run as an entry in the **system tray** of KDE, Deepin, 
+The application may optionally run as an entry in the **system tray** of KDE, Deepin, 
 GNOME, COSMIC, and Xfce (and possibly others). The UI attempts to adapt to the 
 quirks of the different tray implementations.
+
+The UI's look-and-feel dynamically adjusts to the desktop theme and desktop 
+environment for both X11 and Wayland. Light and dark themes are automatically 
+detected on KDE, Deepin, GNOME, and others (those that support Qt theming 
+events).  
 
 From any application window, use `F1` to access help, and `F10` to access the context-menu.   The 
 context menu is also available via the right-mouse button in the main-window, the hamburger-menu item 
 on the bottom right of the main window, and the right-mouse button on the system-tray icon. The 
 context-menu provides `ALT-key` shortcuts for all menu items (subject to sufficient letters being
 available to support all user defined Presets).
-
-The UI's look-and-feel dynamically adjusts to the desktop theme and desktop 
-environment on both X11 and Wayland. Light and dark themes are automatically 
-detected on KDE, Deepin, GNOME, and others (those that support Qt theming 
-events).  
 
 ![Default](screen-shots/Screenshot_Large-330.png)  ![Custom](screen-shots/Screenshot_Small-227.png) 
 ![Custom](screen-shots/Screenshot_tray-200.png) ![Custom](screen-shots/Screenshot_settings-300.png)
@@ -65,33 +67,32 @@ events).
 #### Technical background
 
 Historically, there was little need to frequently adjust display brightness.
-Most displays were just set to something confortable and that's where they 
-remained.
-This changed on the introduction of HDR (High Dynamic Range) displays. HDR
+This changed with the introduction of HDR (High Dynamic Range) displays, these
 displays use brighter backlights to achive increased dymanic range and contrast.
-These brighter displays better cope with very bright conditions, but they 
+Consequently, newer displays can cope better with very bright conditions, but they 
 often need to be turned down when the ambient light level descreases. I
 created `vdu_controls` to allow me to more easily adjust my own displays.
 
 `vdu_controls` communicates with displays by using either 
 [ddcutil](https://www.ddcutil.com/), a command line utility, 
 or the [ddcutil-service](https://github.com/digitaltrails/ddcutil-service), 
-a D-Bus service interface to the [libddcutil](https://www.ddcutil.com/api_main/) 
-library.
+a D-Bus interface to [libddcutil](https://www.ddcutil.com/api_main/).
 The `ddcutil` command line utility is commonly available in most Linux 
 distributions. The D-Bus `ddcutil-service` is relatively new and less widely
-distributed, it is the more preferable of the two because its faster, 
-more reliable, and more featured.  If `ddcutil-service` is detected it is 
-prefered by default, otherwise `vdu_controls` falls back to `ddcutil`.
+distributed.  The service is preferred, it's faster, more reliable, 
+and supports DPMS and hotplug events.  If `ddcutil-service` isn't 
+available `vdu_controls` falls back to the `ddcutil` command.
 (ddcutil-service is relatively easy to build, does not run as root, 
 a custom DIY install realtively simple.)
 
 Both `ddcutil` and `libddcutil` interface to the VESA standard
 *Display Data Channel* (**DDC**) *Virtual Control Panel*  (**VCP**) interface.
-They  provide a robust interface that is tolerant of the vagaries of the many 
-OEM DDC implementations and GPU drivers. `Vdu_controls` includes a plugin
-option for interfacing to non DDC displays, such as laptops, but no plugins 
-are currently bundled.
+Both the command and the library  provide a robust interface that supports 
+many different OEM DDC implementations and GPU drivers. 
+
+`Vdu_controls` supports a _virtual-DDC plugin_ for interfacing to non DDC 
+displays, such as laptops. No complete plugins are currently available (a 
+sample incomplete template bash script is included).
 
 Does adjusting a VDU affect its lifespan or health?
 ---------------------------------------------------
