@@ -164,11 +164,6 @@ older VDUs are often not usable below 85-90% brightness.
 Getting Started
 ---------------
 
-> [!Caution]
-> The long term affects of repeatably rewriting a VDUs setting are not well understood, but some
-> concerns have been expressed. See [above](https://github.com/digitaltrails/vdu_controls?tab=readme-ov-file#does-adjusting-a-vdu-affect-its-lifespan-or-health)
-> for further details.
-
 To get started with ``vdu_controls``, you only need to download the ``vdu_controls.py`` python script and
 check that the dependencies described below are in place.  Alternatively, should you wish to install ``vdu_controls`` 
 for all users, RPMs are available for **OpenSUSE**, **Fedora**, and there is an  **archlinux** AUR package
