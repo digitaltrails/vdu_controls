@@ -3,6 +3,7 @@ vdu_controls - a DDC control panel for monitors
 
 A control panel for external monitors (*Visual Display Units*).
 
+> [!WARNING]
 > **KDE 6** introduced energy saving brighness dimming after 5 minutes of idle
 > time.  This may interfere with changes made via **vdu_controls**, including
 > *scheduled-presets* and *ambient-light-control*.  The relevant KDE 6 options can 
@@ -80,7 +81,7 @@ The `ddcutil` command line utility is commonly available in most Linux
 distributions. The D-Bus `ddcutil-service` is relatively new and less widely
 distributed.  The service is preferred, it's faster, more reliable, 
 and supports DPMS and hotplug events.  If `ddcutil-service` isn't 
-available `vdu_controls` falls back to the `ddcutil` command.
+available, `vdu_controls` falls back to the `ddcutil` command.
 (ddcutil-service is relatively easy to build, does not run as root, 
 a custom DIY install realtively simple.)
 
