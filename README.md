@@ -33,7 +33,7 @@ achieve **fully automatic** brightness control. (An _arduino_
 based meter [can be built for around $10](https://github.com/digitaltrails/vdu_controls/blob/master/Lux-metering.md).)
 
 The position of the ambient-light-slider can be combined with a
-estimate of local solor-illumation to achieve **semi-automatic** 
+estimate of local solar-illumation to achieve **semi-automatic** 
 brightness control throughout daylight hours.  Should the ambient
 conditions change, such as a change in the weather, adjusting 
 the slider revises the ratio between indoor-illumination and 
