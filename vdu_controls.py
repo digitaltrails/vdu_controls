@@ -6495,6 +6495,9 @@ class LuxMeterCalculatorDevice(LuxMeterDevice):
         self.set_current_value(LuxMeterCalculatorDevice.calculate_lux(LuxMeterCalculatorDevice.get_daylight_factor()))
         return self.current_value
 
+    def is_manual_control(self):
+        return True
+
     @staticmethod
     def calculate_lux(daylight_factor: float = 1.0) -> float | None:
         if location := LuxMeterCalculatorDevice.location:
@@ -7307,7 +7310,7 @@ class LuxAutoController:
     def update_manual_slider(self, value: int):
         if self.is_auto_enabled() and not isinstance(self.lux_meter, LuxMeterSliderDevice):
             LuxMeterSliderDevice.save_stored_value(value)
-            if self.lux_slider:  # May not exist during intialization
+            if self.lux_slider:  # May not exist during initialization
                 self.lux_slider.set_current_value(value)
 
     def create_manual_input_control(self) -> LuxAmbientSlider:
@@ -7413,6 +7416,8 @@ class LuxAutoController:
         if self.is_auto_enabled():
             if self.lux_auto_brightness_worker is not None:
                 self.lux_auto_brightness_worker.adjust_now_requested = True
+            else:
+                log_error("adjust_brightness_now: No worker - unexpected - error?")
         else:
             self.start_worker(True, self.main_controller.main_config.is_set(ConfOpt.PROTECT_NVRAM_ENABLED))
 
