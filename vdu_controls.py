@@ -6669,7 +6669,6 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             self.doze(1)
 
     def stepping_brightness(self, lux_auto_controller: LuxAutoController, lux_meter: LuxMeterDevice) -> None:
-        lux_config = lux_auto_controller.get_lux_config()
         change_count, last_change_count, error_count = 0, -1, 0
         start_of_cycle = True
         profile_preset_name = None
