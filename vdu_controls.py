@@ -6305,7 +6305,7 @@ class LuxGauge(QWidget):
         self.lux_plot.setPixmap(pixmap)
         df, location = LuxMeterSemiAutoDevice.get_df_and_location()
         if df and location:
-            eo = calculate_solar_lux(zoned_now(), location, df)
+            eo = calculate_solar_lux(zoned_now(), location, 1.0)
             self.stats_label.setText(tr("Eo={:,} lux    DF={:,.4f}").format(eo, df))
         else:
             self.stats_label.setText(tr("Eo=?   DF=?   (location not set)"))
