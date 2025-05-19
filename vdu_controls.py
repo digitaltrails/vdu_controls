@@ -9058,7 +9058,9 @@ def calculate_solar_lux(localised_time: datetime, location: GeoLocation, dayligh
     # https://www.brikbase.org/sites/default/files/ies_030.pdf
     latitude, longitude = location.latitude, location.longitude
     azimuth, zenith = calc_solar_azimuth_zenith(true_noon(longitude, localised_time), latitude, longitude)
-    solar_altitude = max(90 - zenith, 3)   # After sunset use 3 degrees as a minimum, the practical limit for the algorithm
+    solar_altitude = 90 - zenith   # After sunset use
+    if solar_altitude < 3:  # 3 degrees is a minimum, the functional limit for the algorithm
+        return 10  # some reasonable minimum value
     al_e8_illumination_unit = 77000  # E8 in Lux
     air_mass = 1.0 / math.cos(math.radians(zenith)) # approximation:  https://en.wikipedia.org/wiki/Air_mass_(solar_energy)
     solar_lux = 1.6 * al_e8_illumination_unit * math.sin(math.radians(solar_altitude)) * 10 ** (-0.1 * air_mass)
