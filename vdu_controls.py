@@ -6376,7 +6376,7 @@ class LuxMeterDevice(QObject):
         pass
 
     def set_current_value(self, new_value: float) -> None:
-        self.current_value = min(new_value, 1.0)  # Never less than 1 - for safety - don't want to dim to zero.
+        self.current_value = max(new_value, 1.0)  # Never less than 1 - for safety - don't want to dim to zero.
         self.new_lux_value_qtsignal.emit(round(new_value))
 
     def cleanup(self, _: WorkerThread):
