@@ -6259,7 +6259,7 @@ class LuxProfileChart(QLabel):
         return round((math.log10(lux) - math.log10(1)) / ((math.log10(100000) - math.log10(1)) / self.plot_width)) if lux > 0 else 0
 
 
-class LuxGauge(QWidget):
+class LuxGaugeWidget(QWidget):
     lux_changed_qtsignal = pyqtSignal(int)
 
     def __init__(self, parent: LuxDialog) -> None:
@@ -6286,7 +6286,7 @@ class LuxGauge(QWidget):
         self.layout().addWidget(self.stats_label)
         self.updates_enabled = True
 
-    def show_lux(self, lux: int) -> None:
+    def append_new_value(self, lux: int) -> None:
         self.history = self.history[-self.max_history:]
         self.history.append(lux)
         if self.updates_enabled:
@@ -6313,12 +6313,12 @@ class LuxGauge(QWidget):
 
     def connect_meter(self, lux_meter: LuxMeterDevice | None) -> None:
         if self.current_meter:
-            self.current_meter.new_lux_value_qtsignal.disconnect(self.show_lux)
+            self.current_meter.new_lux_value_qtsignal.disconnect(self.append_new_value)
         self.current_meter = lux_meter
         if self.current_meter:
-            self.current_meter.new_lux_value_qtsignal.connect(self.show_lux)
+            self.current_meter.new_lux_value_qtsignal.connect(self.append_new_value)
             if lux_meter.has_manual_capability:
-                self.show_lux(round(lux_meter.get_value()))
+                self.append_new_value(round(lux_meter.get_value()))
             self.enable_gauge(True)
 
     def enable_gauge(self, enable: bool = True) -> None:
@@ -6954,8 +6954,8 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         grid_layout = QGridLayout()
         top_box.setLayout(grid_layout)
 
-        self.lux_gauge_widget = LuxGauge(self)
-        self.lux_gauge_widget.show_lux(0)
+        self.lux_gauge_widget = LuxGaugeWidget(self)
+        self.lux_gauge_widget.append_new_value(0)
         grid_layout.addWidget(self.lux_gauge_widget, 0, 0, 4, 2, alignment=Qt.AlignLeft | Qt.AlignTop)
 
         existing_device = self.lux_config.get_device_name()
