@@ -6376,7 +6376,7 @@ class LuxMeterDevice(QObject):
         pass
 
     def set_current_value(self, new_value: float) -> None:
-        self.current_value = new_value
+        self.current_value = min(new_value, 1.0)  # Never less than 1 - for safety - don't want to dim to zero.
         self.new_lux_value_qtsignal.emit(round(new_value))
 
     def cleanup(self, _: WorkerThread):
@@ -6610,6 +6610,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         self.sensitivity_percent = _get_prop('interpolation-sensitivity-percent', fallback=10)
         self.convergence_divisor = _get_prop('convergence-divisor', fallback=2)
         self.step_pause_millis = _get_prop('step-pause-millis', fallback=100)
+        self.protect_nvram = protect_nvram
         if protect_nvram:
             log_info("LuxAutoWorker: protect-nvram={protect_nvram} ignoring max-brightness-jump")
             self.max_brightness_jump = 100
@@ -6742,8 +6743,8 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                     f" something else altered the brightness - stop adjusting for lux.")
                 self.status_message(f"{SUN_SYMBOL} {ERROR_SYMBOL} {RAISED_HAND_SYMBOL} {vdu_sid}")
                 return LuxStepStatus.UNEXPECTED_CHANGE
-            # Brightness change is significant OR we have to activate a Preset
-            if self.single_shot or abs(diff) <= self.max_brightness_jump:  # In single_shot or diff too small for stepping.
+            # significant OR we have to activate a Preset
+            if self.single_shot or self.protect_nvram or abs(diff) <= self.max_brightness_jump:
                 new_brightness = profile_brightness
             else:  # Change requires moving in steps
                 step_size = max(1, abs(diff) // self.convergence_divisor)  # TODO find a good heuristic
