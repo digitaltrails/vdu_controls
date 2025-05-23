@@ -5277,7 +5277,7 @@ class PresetChooseElevationWidget(QWidget):
             else:
                 when_text += " " + tr("nighttime")
         if elevation_data is not None and self.location:
-            if lux := calculate_solar_lux(elevation_data.when, self.location, 1.0):
+            if lux := calc_solar_lux(elevation_data.when, self.location, 1.0):
                 when_text += tr(" {:,} lux").format(lux)
         desc_text = "{} {} ({}, {})".format(
             self.title_prefix, format_solar_elevation_abbreviation(self.elevation_key), tr(self.elevation_key.direction), when_text)
@@ -6307,7 +6307,6 @@ class LuxGaugeWidget(QWidget):
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.HighQualityAntialiasing)
         plot_height = self.plot_widget.height()
-
         # Create a plot of recent historical lux readings.
         lux_plot_width = self.max_history  # Do not change one without considering the other
         painter.fillRect(0, 0, lux_plot_width, plot_height, QColor(0x6baee8))  # 0x5b93c5))
@@ -6321,7 +6320,7 @@ class LuxGaugeWidget(QWidget):
             else:
                 painter.drawLine(i, plot_height, i, plot_height - self.y_from_lux(0, plot_height))
         # Create second plot of Eo and Ei
-        margin = 5
+        margin = 4
         painter.setPen(QPen(QColor(0xfefefe), margin))
         painter.drawLine(lux_plot_width + margin // 2, plot_height, lux_plot_width + margin // 2, 0)
         df_plot_width = self.plot_widget.width() - lux_plot_width - margin
@@ -6338,9 +6337,9 @@ class LuxGaugeWidget(QWidget):
         df, location = LuxMeterSemiAutoDevice.get_df_and_location()
         if df and location:
             for i in range(df_plot_left, df_plot_left + df_plot_width):
-                eo_y = plot_height - self.y_from_lux(calculate_solar_lux(t, location, 1.0), plot_height)
+                eo_y = plot_height - self.y_from_lux(calc_solar_lux(t, location, 1.0), plot_height)
                 eo_points.append(QPoint(i, eo_y))
-                eo_x = plot_height - self.y_from_lux(calculate_solar_lux(t, location, df), plot_height)
+                eo_x = plot_height - self.y_from_lux(calc_solar_lux(t, location, df), plot_height)
                 ei_points.append(QPoint(i, eo_x))
                 t += timedelta(minutes=minutes_per_point)
                 painter.drawLine(i, plot_height, i, eo_y)  # Fill under eo line
@@ -6350,7 +6349,7 @@ class LuxGaugeWidget(QWidget):
             painter.setPen(QPen(QColor(0xff8500), 3))
             painter.drawPolyline(ei_points)
         # Now plot the history as well
-        painter.setPen(QPen(lux_reading_color, 2))
+        painter.setPen(QPen(lux_reading_color, 1))
         most_recent_df_xy = (None, None) # Indicate the last history position with a red dot
         for item in self.history:  # Block fill for history
             if item and item.when > df_plot_day:
@@ -6359,16 +6358,25 @@ class LuxGaugeWidget(QWidget):
                 item_y_pos = plot_height - self.y_from_lux(item.lux, plot_height)
                 painter.drawLine(i, plot_height, i, item_y_pos)
                 most_recent_df_xy = (i, item_y_pos)
+        dot_size = 8
+        half_dot_size = dot_size // 2
         for x, y in (most_recent_lux_xy, most_recent_df_xy):
             if x is not None and y is not None:
-                painter.setPen(QPen(Qt.red, 4))
+                painter.setPen(QPen(Qt.red, half_dot_size))
                 painter.setBrush(Qt.white)
-                painter.drawEllipse(x - 4, y, 8, 8)
-        painter.end()
+                painter.drawEllipse(x - half_dot_size, y - half_dot_size, dot_size, dot_size)
+        painter.setPen(QPen(Qt.white, 2))
+        painter.setFont(QFont(QApplication.font().family(), font_height := plot_height // 20, QFont.Weight.Normal))
+        middle = (self.plot_widget.width() + margin) // 2
+        for i in (10, 100, 1_000, 10_000, 100_000):
+            painter.drawLine(middle - 4, y := plot_height - self.y_from_lux(i, plot_height), middle + 4, y)
+            painter.drawText(QPoint(middle + 6, y + font_height), str(i))
+        painter.setPen(QPen(Qt.white, 1))
+        painter.end()  # End of plotting
         self.plot_widget.setPixmap(pixmap)
         # Add some text to the bottom
         if df and location:
-            eo = calculate_solar_lux(zoned_now(), location, 1.0)
+            eo = calc_solar_lux(zoned_now(), location, 1.0)
             self.stats_label.setText(tr("Eo={:,} lux    DF={:,.4f}").format(eo, df))
         else:
             self.stats_label.setText(tr("Eo=?   DF=?   (location not set)"))
@@ -6381,7 +6389,8 @@ class LuxGaugeWidget(QWidget):
         if self.current_meter:
             self.current_meter.new_lux_value_qtsignal.connect(self.append_new_value)
             if lux_meter.has_manual_capability:
-                self.append_new_value(round(lux_meter.get_value()))
+                if lux := lux_meter.get_value():
+                    self.append_new_value(round(lux))
             self.enable_gauge(True)
 
     def enable_gauge(self, enable: bool = True) -> None:
@@ -6392,7 +6401,7 @@ class LuxGaugeWidget(QWidget):
 
     def y_from_lux(self, lux: int, required_height: int) -> int:
         return round(
-            (math.log10(lux) - math.log10(1)) / ((math.log10(100000) - math.log10(1)) / required_height)) if lux > 0 else 0
+            (math.log10(lux) - math.log10(1)) / ((math.log10(200000) - math.log10(1)) / required_height)) if lux > 0 else 0
 
 
 def lux_create_device(device_name: str) -> LuxMeterDevice:
@@ -6551,7 +6560,7 @@ class LuxMeterManualDevice(LuxMeterDevice):
 
     def __init__(self, semi_auto: bool = False) -> None:
         super().__init__(requires_worker=False, manual=True, semi_auto=semi_auto)
-        self.current_value: float | None = 10000
+        self.current_value: float = LuxMeterManualDevice.get_stored_value()
 
     def get_value(self) -> float | None:
         self.current_value = self.get_stored_value()
@@ -6590,8 +6599,8 @@ class LuxMeterSemiAutoDevice(LuxMeterManualDevice):  # is both manual and automa
     def get_value(self) -> float | None:
         df, location = LuxMeterSemiAutoDevice.get_df_and_location()
         if location:
-            lux = calculate_solar_lux(zoned_now(), location, df)
-            self.set_current_value(lux)
+            if lux := calc_solar_lux(zoned_now(), location, df):
+                self.set_current_value(lux)  # only set if in daylight
         return self.current_value
 
     @staticmethod
@@ -6607,11 +6616,12 @@ class LuxMeterSemiAutoDevice(LuxMeterManualDevice):  # is both manual and automa
     @staticmethod
     def update_df(new_lux_value: float):
         if location := LuxMeterSemiAutoDevice.location:
-            solar_lux = calculate_solar_lux(zoned_now(), location, 1.0)
-            daylight_factor =  new_lux_value / (solar_lux if solar_lux > 0 else 300.0)
-            # log_debug(f"LuxMeterSemiAutoDevice: {new_lux_value=} {solar_lux=} {daylight_factor=}")
-            if CONFIG_DIR_PATH.exists():
-                CONFIG_DIR_PATH.joinpath("lux_daylight_factor.txt").write_text(str(daylight_factor))
+            solar_lux = calc_solar_lux(zoned_now(), location, 1.0)
+            if solar_lux > 0:  # the daylight factor can only be calculated during daylight.
+                daylight_factor =  new_lux_value / solar_lux
+                # log_debug(f"LuxMeterSemiAutoDevice: {new_lux_value=} {solar_lux=} {daylight_factor=}")
+                if CONFIG_DIR_PATH.exists():
+                    CONFIG_DIR_PATH.joinpath("lux_daylight_factor.txt").write_text(str(daylight_factor))
 
     @staticmethod
     def update_location(location: GeoLocation | None):
@@ -9117,20 +9127,19 @@ def true_noon(longitude, when: datetime) -> datetime:
     return when
 
 
-def calculate_solar_lux(localised_time: datetime, location: GeoLocation, daylight_factor: float) -> int:
+def calc_solar_lux(localised_time: datetime, location: GeoLocation, daylight_factor: float) -> int:
     # The Calculation of Illumination in lux from Sun and Sky By E. ELVEGÅRD and G. SJÖSTEDT
     # https://www.brikbase.org/sites/default/files/ies_030.pdf
-    minimum_eo = 5
     latitude, longitude = location.latitude, location.longitude
     azimuth, zenith = calc_solar_azimuth_zenith(true_noon(longitude, localised_time), latitude, longitude)
     solar_altitude = 90 - zenith   # After sunset use
     if solar_altitude < 3:  # 3 degrees is a minimum, the functional limit for the algorithm
-        return minimum_eo  # some reasonable minimum value
+        return 0
     al_e8_illumination_unit = 77000  # E8 in Lux
     air_mass = 1.0 / math.cos(math.radians(zenith)) # approximation:  https://en.wikipedia.org/wiki/Air_mass_(solar_energy)
     solar_lux = 1.6 * al_e8_illumination_unit * math.sin(math.radians(solar_altitude)) * 10 ** (-0.1 * air_mass)
     illumination = int(daylight_factor * solar_lux)
-    return max(illumination, minimum_eo)  # Enforce a reasonable minimum value
+    return illumination
 
 
 # Spherical distance from https://stackoverflow.com/a/21623206/609575
