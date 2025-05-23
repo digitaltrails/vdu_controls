@@ -6358,6 +6358,14 @@ class LuxGaugeWidget(QWidget):
                 item_y_pos = plot_height - self.y_from_lux(item.lux, plot_height)
                 painter.drawLine(i, plot_height, i, item_y_pos)
                 most_recent_df_xy = (i, item_y_pos)
+        # Add text to the axis
+        painter.setPen(QPen(Qt.white, 2))
+        painter.setFont(QFont(QApplication.font().family(), font_height := plot_height // 20, QFont.Weight.Normal))
+        middle = (self.plot_widget.width() + margin) // 2
+        for i in (10, 100, 1_000, 10_000, 100_000):
+            painter.drawLine(middle - 4, y := plot_height - self.y_from_lux(i, plot_height), middle + 4, y)
+            painter.drawText(QPoint(middle + 6, y + font_height), str(i))
+        # Draw dots at current points
         dot_size = 8
         half_dot_size = dot_size // 2
         for x, y in (most_recent_lux_xy, most_recent_df_xy):
@@ -6365,13 +6373,6 @@ class LuxGaugeWidget(QWidget):
                 painter.setPen(QPen(Qt.red, half_dot_size))
                 painter.setBrush(Qt.white)
                 painter.drawEllipse(x - half_dot_size, y - half_dot_size, dot_size, dot_size)
-        painter.setPen(QPen(Qt.white, 2))
-        painter.setFont(QFont(QApplication.font().family(), font_height := plot_height // 20, QFont.Weight.Normal))
-        middle = (self.plot_widget.width() + margin) // 2
-        for i in (10, 100, 1_000, 10_000, 100_000):
-            painter.drawLine(middle - 4, y := plot_height - self.y_from_lux(i, plot_height), middle + 4, y)
-            painter.drawText(QPoint(middle + 6, y + font_height), str(i))
-        painter.setPen(QPen(Qt.white, 1))
         painter.end()  # End of plotting
         self.plot_widget.setPixmap(pixmap)
         # Add some text to the bottom
