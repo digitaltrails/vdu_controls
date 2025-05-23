@@ -18,11 +18,11 @@ Description
 DVI, HDMI, or USB - but not built-in laptop panels (though laptop integration
 is possible via plugin scripting; see below).
 
-By default, `vdu_controls` offers a subset of controls - these include brightness, 
-contrast, and audio controls - with additional options available via the 
+A subset of controls is shown by default - these include brightness, 
+contrast, and audio controls - with additional options available in the 
 **Settings dialog**.
 
-For convenience, a single **ambient-light-level slider** can  simultaniously
+For convenience, a single **ambient-light-level slider** can simultaniously
 adjust _all_ displays, each following its own custom profile:
 _one slider to rule them all_.  Each profile defines a a curve that maps 
 ambient light-level to display-brightness. Realtively flat curves
@@ -356,6 +356,7 @@ Version History
 
 * 2.4.0
   * New option, semi-automatic ambient-light-level estimation based on geolocated solar-illumination.
+  * The Lux-Dialog now plots geolocated solar-illumination and indoor estimates.
   * Fix size of Lux Dialog scale, adjust for display DPI.
   * Fix size of Solar Elevation chart, adjust for display DPI.
   * Fix Lux brightness adjustment, allow protect-nvam to be disabled.
