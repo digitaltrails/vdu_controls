@@ -6328,7 +6328,7 @@ class LuxGaugeWidget(QWidget):
                 most_recent_lux_xy = (i, y)
             else:
                 painter.drawLine(i, plot_height, i, plot_height - self.y_from_lux(0, plot_height))
-        if most_recent_lux_xy[0] and most_recent_lux_xy[1]:
+        if most_recent_lux_xy[0] is not None:
             painter.setPen(QPen(Qt.red, 2))
             painter.drawLine(most_recent_lux_xy[0], plot_height, most_recent_lux_xy[0], most_recent_lux_xy[1])
         # Create plot of Eo (outside illumination) and Ei (inside illumination)
