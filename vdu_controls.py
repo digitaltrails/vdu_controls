@@ -6320,14 +6320,13 @@ class LuxGaugeWidget(QWidget):
         painter.fillRect(0, 0, lux_plot_width, plot_height, self.common_background_color)
         painter.setPen(QPen(self.lux_bar_color, 1))
         most_recent_lux_xy = (None, None)  # draw pos of most recent
-        history_tail = self.history[-lux_plot_width:]
-        for i in range(len(history_tail)):  # i corresponds to x position
-            if item := self.history[i]:
-                y = plot_height - self.y_from_lux(item.lux, plot_height)
-                painter.drawLine(i, plot_height, i, y)
-                most_recent_lux_xy = (i, y)
+        for x, item in enumerate(self.history[-lux_plot_width:]):  # list position corresponds to x position
+            if item:
+                y = self._y_from_lux(item.lux, plot_height)
+                painter.drawLine(x, plot_height, x, y)
+                most_recent_lux_xy = (x, y)
             else:
-                painter.drawLine(i, plot_height, i, plot_height - self.y_from_lux(0, plot_height))
+                painter.drawLine(x, plot_height, x, self._y_from_lux(0, plot_height))
         if most_recent_lux_xy[0] is not None:
             painter.setPen(QPen(Qt.red, 2))
             painter.drawLine(most_recent_lux_xy[0], plot_height, most_recent_lux_xy[0], most_recent_lux_xy[1])
@@ -6348,7 +6347,7 @@ class LuxGaugeWidget(QWidget):
             if item and item.when > df_plot_day:
                 t = (item.when - df_plot_day).total_seconds() // 60
                 i = int(df_plot_left + t // minutes_per_point)
-                item_y_pos = plot_height - self.y_from_lux(item.lux, plot_height)
+                item_y_pos = self._y_from_lux(item.lux, plot_height)
                 painter.drawLine(i, plot_height, i, item_y_pos)
                 most_recent_df_xy = (i, item_y_pos)
                 most_recent_item = item
@@ -6360,9 +6359,9 @@ class LuxGaugeWidget(QWidget):
         df, location = LuxMeterSemiAutoDevice.get_df_and_location()
         if df and location:
             for i in range(df_plot_left, df_plot_left + df_plot_width):
-                eo_y = plot_height - self.y_from_lux(calc_solar_lux(t, location, 1.0), plot_height)
+                eo_y = self._y_from_lux(calc_solar_lux(t, location, 1.0), plot_height)
                 eo_points.append(QPoint(i, eo_y))
-                eo_x = plot_height - self.y_from_lux(calc_solar_lux(t, location, df), plot_height)
+                eo_x = self._y_from_lux(calc_solar_lux(t, location, df), plot_height)
                 ei_points.append(QPoint(i, eo_x))
                 t += timedelta(minutes=minutes_per_point)
                 painter.drawLine(i, plot_height, i, eo_y)  # Fill under eo line
@@ -6376,7 +6375,7 @@ class LuxGaugeWidget(QWidget):
         painter.setFont(QFont(QApplication.font().family(), font_height := plot_height // 20, QFont.Weight.Normal))
         middle = df_plot_left - margin // 2
         for i in (10, 100, 1_000, 10_000, 100_000):
-            painter.drawLine(middle - 4, y := plot_height - self.y_from_lux(i, plot_height), middle + 4, y)
+            painter.drawLine(middle - 4, y := self._y_from_lux(i, plot_height), middle + 4, y)
             painter.drawText(QPoint(middle + 6, y + font_height), str(i))
         # Draw the sun
         if most_recent_df_xy and most_recent_item and most_recent_df_xy[0]:
@@ -6384,8 +6383,9 @@ class LuxGaugeWidget(QWidget):
                 self.sun_image = create_image_from_svg_bytes(SUN_SVG.replace(SVG_LIGHT_THEME_COLOR, b"#feC053")).scaled(36, 36)
             t = (most_recent_item.when - df_plot_day).total_seconds() // 60
             i = int(df_plot_left + t // minutes_per_point)
-            sun_y = plot_height - self.y_from_lux(calc_solar_lux(most_recent_item.when, location, 1.0), plot_height)
-            painter.drawImage(QPoint(i - self.sun_image.width() // 2, sun_y - self.sun_image.height() // 2 - 1), self.sun_image)
+            sun_y = self._y_from_lux(calc_solar_lux(most_recent_item.when, location, 1.0), plot_height)
+            if sun_y <= plot_height - self.sun_image.height() // 2 - 1:
+                painter.drawImage(QPoint(i - self.sun_image.width() // 2, sun_y - self.sun_image.height() // 2 - 1), self.sun_image)
         # Draw dots at current points
         dot_size = 8
         half_dot_size = dot_size // 2
@@ -6420,9 +6420,9 @@ class LuxGaugeWidget(QWidget):
             self.update_plot()
         self.updates_enabled = enable
 
-    def y_from_lux(self, lux: int, required_height: int) -> int:
-        return round(
-            (math.log10(lux) - math.log10(1)) / ((math.log10(200000) - math.log10(1)) / required_height)) if lux > 0 else 0
+    def _y_from_lux(self, lux: int, required_height: int) -> int:
+        return required_height - (
+            round((math.log10(lux) - math.log10(1)) / ((math.log10(200000) - math.log10(1)) / required_height)) if lux > 0 else 0)
 
 
 def lux_create_device(device_name: str) -> LuxMeterDevice:
