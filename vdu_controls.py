@@ -6284,10 +6284,10 @@ class LuxGaugeWidget(QWidget):
         big_font.setPointSize(big_font.pointSize() + 8)
         self.current_lux_display.setFont(big_font)
         self.layout().addWidget(self.current_lux_display)
-        self.max_history = 150
+        self.max_history = 240
         self.history: List[LuxGaugeHistory | None] = [None] * (self.max_history // 10)
         self.plot_widget = QLabel()
-        self.plot_widget.setFixedWidth(self.max_history * 2)
+        self.plot_widget.setFixedWidth(300)
         self.plot_widget.setFixedHeight(100)
         self.sun_image = None
         self.layout().addWidget(self.plot_widget)
@@ -6316,19 +6316,21 @@ class LuxGaugeWidget(QWidget):
         painter.setRenderHint(QPainter.HighQualityAntialiasing)
         plot_height = self.plot_widget.height()
         # Create a plot of recent historical lux readings.
-        lux_plot_width = self.max_history  # Do not change one without considering the other
+        lux_plot_width = self.plot_widget.height()
         painter.fillRect(0, 0, lux_plot_width, plot_height, self.common_background_color)
         painter.setPen(QPen(self.lux_bar_color, 1))
         most_recent_lux_xy = (None, None)  # draw pos of most recent
-        for i in range(len(self.history)):  # i corresponds to x position
+        hlen = len(self.history)
+        for i in range(hlen - lux_plot_width if hlen > lux_plot_width else hlen):  # i corresponds to x position
             if item := self.history[i]:
                 y = plot_height - self.y_from_lux(item.lux, plot_height)
                 painter.drawLine(i, plot_height, i, y)
                 most_recent_lux_xy = (i, y)
             else:
                 painter.drawLine(i, plot_height, i, plot_height - self.y_from_lux(0, plot_height))
-        painter.setPen(QPen(Qt.red, 2))
-        painter.drawLine(most_recent_lux_xy[0], plot_height, most_recent_lux_xy[0], most_recent_lux_xy[1])
+        if most_recent_lux_xy[0] and most_recent_lux_xy[1]:
+            painter.setPen(QPen(Qt.red, 2))
+            painter.drawLine(most_recent_lux_xy[0], plot_height, most_recent_lux_xy[0], most_recent_lux_xy[1])
         # Create plot of Eo (outside illumination) and Ei (inside illumination)
         margin = 4
         painter.setPen(QPen(self.white_line_color, margin))
@@ -6338,6 +6340,19 @@ class LuxGaugeWidget(QWidget):
         df_plot_day = zoned_now().replace(hour=0, minute=0, second=0, microsecond=0)
         df_plot_left = lux_plot_width + margin #plot_width - df_plot_width - 30
         painter.fillRect(df_plot_left, 0, df_plot_left + df_plot_width, plot_height, self.common_background_color)
+        # Plot the history as a block
+        painter.setPen(QPen(self.lux_bar_color, 1))
+        most_recent_df_xy = (None, None) # Indicate the last history position with a red dot
+        most_recent_item = None
+        for item in self.history:  # Block fill for history
+            if item and item.when > df_plot_day:
+                t = (item.when - df_plot_day).total_seconds() // 60
+                i = int(df_plot_left + t // minutes_per_point)
+                item_y_pos = plot_height - self.y_from_lux(item.lux, plot_height)
+                painter.drawLine(i, plot_height, i, item_y_pos)
+                most_recent_df_xy = (i, item_y_pos)
+                most_recent_item = item
+        # Plot Eo and Ei
         eo_points = []
         ei_points = []
         painter.setPen(QPen(self.white_transparent_color, 2))
@@ -6356,22 +6371,10 @@ class LuxGaugeWidget(QWidget):
             painter.drawPolyline(eo_points)
             painter.setPen(QPen(self.white_line_color, 6))
             painter.drawPolyline(ei_points)
-        # Now plot the history as well
-        painter.setPen(QPen(self.lux_bar_color, 1))
-        most_recent_df_xy = (None, None) # Indicate the last history position with a red dot
-        most_recent_item = None
-        for item in self.history:  # Block fill for history
-            if item and item.when > df_plot_day:
-                t = (item.when - df_plot_day).total_seconds() // 60
-                i = int(df_plot_left + t // minutes_per_point)
-                item_y_pos = plot_height - self.y_from_lux(item.lux, plot_height)
-                painter.drawLine(i, plot_height, i, item_y_pos)
-                most_recent_df_xy = (i, item_y_pos)
-                most_recent_item = item
         # Add text to the axis
         painter.setPen(QPen(self.white_line_color, 2))
         painter.setFont(QFont(QApplication.font().family(), font_height := plot_height // 20, QFont.Weight.Normal))
-        middle = (self.plot_widget.width() + margin) // 2
+        middle = df_plot_left - margin // 2
         for i in (10, 100, 1_000, 10_000, 100_000):
             painter.drawLine(middle - 4, y := plot_height - self.y_from_lux(i, plot_height), middle + 4, y)
             painter.drawText(QPoint(middle + 6, y + font_height), str(i))
