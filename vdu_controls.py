@@ -6294,10 +6294,11 @@ class LuxGaugeWidget(QWidget):
         self.current_meter: LuxMeterDevice | None = None
         self.stats_label = QLabel()
         self.setToolTip(
-            tr("Lux: perceived illumination inside (Ei)\n"
-               "Eo: theoretical outside solar illumination calculated for the\n"
-               "    geolocation at the current date and time.\n"
-               "DF: Daylight Factor\nEi = DF x Eo"))
+            tr("Lux/Ei:\t Estimated illumination inside.\n"
+               "Eo:\t Outside solar illumination calculated for the\n"
+               "\t geolocation at the current date and time.\n"
+               "DF:\t Daylight Factor (Ei/Eo).\n\n"
+               "Eo = unit_constants * sin(radians(solar_altitude)) * 10 ** (-0.1 * air_mass)\nEi = DF x Eo"))
         self.layout().addWidget(self.stats_label)
         self.updates_enabled = True
 
