@@ -6320,8 +6320,8 @@ class LuxGaugeWidget(QWidget):
         painter.fillRect(0, 0, lux_plot_width, plot_height, self.common_background_color)
         painter.setPen(QPen(self.lux_bar_color, 1))
         most_recent_lux_xy = (None, None)  # draw pos of most recent
-        hlen = len(self.history)
-        for i in range(hlen - lux_plot_width if hlen > lux_plot_width else hlen):  # i corresponds to x position
+        history_tail = self.history[-lux_plot_width:]
+        for i in range(len(history_tail)):  # i corresponds to x position
             if item := self.history[i]:
                 y = plot_height - self.y_from_lux(item.lux, plot_height)
                 painter.drawLine(i, plot_height, i, y)
