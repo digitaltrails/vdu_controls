@@ -1130,6 +1130,8 @@ BRIGHTNESS_SVG = b"""
 </svg>
 """
 
+SUN_SVG = re.sub(b'm0 1c1.662777 0 3 1.3372234[^"]+"', b'"', BRIGHTNESS_SVG)
+
 # modified contrast icon from breeze5-icons: LGPL-3.0-only
 CONTRAST_SVG = b"""
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24">
@@ -6271,6 +6273,11 @@ class LuxGaugeWidget(QWidget):
 
     def __init__(self, parent: LuxDialog) -> None:
         super().__init__(parent=parent)
+        self.lux_bar_color = QColor(0xfec053)
+        self.white_line_color = w = QColor(0xfefefe)
+        self.white_transparent_color = QColor(w.red(), w.green(), w.blue(), 30)
+        self.orange_line_color = QColor(0xff8500)
+        self.common_background_color = QColor(0x5b93c5)
         self.setLayout(QVBoxLayout())
         self.current_lux_display = QLabel()
         big_font = self.current_lux_display.font()
@@ -6282,6 +6289,7 @@ class LuxGaugeWidget(QWidget):
         self.plot_widget = QLabel()
         self.plot_widget.setFixedWidth(self.max_history * 2)
         self.plot_widget.setFixedHeight(100)
+        self.sun_image = None
         self.layout().addWidget(self.plot_widget)
         self.current_meter: LuxMeterDevice | None = None
         self.stats_label = QLabel()
@@ -6302,15 +6310,14 @@ class LuxGaugeWidget(QWidget):
             self.lux_changed_qtsignal.emit(lux)
 
     def update_plot(self):
-        lux_reading_color = QColor(0xfec053)
         pixmap = QPixmap(self.plot_widget.width(), self.plot_widget.height())
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.HighQualityAntialiasing)
         plot_height = self.plot_widget.height()
         # Create a plot of recent historical lux readings.
         lux_plot_width = self.max_history  # Do not change one without considering the other
-        painter.fillRect(0, 0, lux_plot_width, plot_height, QColor(0x6baee8))  # 0x5b93c5))
-        painter.setPen(QPen(lux_reading_color, 1))  # fbc21b 0xffdd30 #fec053
+        painter.fillRect(0, 0, lux_plot_width, plot_height, self.common_background_color)
+        painter.setPen(QPen(self.lux_bar_color, 1))
         most_recent_lux_xy = (None, None)  # draw pos of most recent
         for i in range(len(self.history)):  # i corresponds to x position
             if item := self.history[i]:
@@ -6319,20 +6326,20 @@ class LuxGaugeWidget(QWidget):
                 most_recent_lux_xy = (i, y)
             else:
                 painter.drawLine(i, plot_height, i, plot_height - self.y_from_lux(0, plot_height))
-        # Create second plot of Eo and Ei
+        painter.setPen(QPen(Qt.red, 2))
+        painter.drawLine(most_recent_lux_xy[0], plot_height, most_recent_lux_xy[0], most_recent_lux_xy[1])
+        # Create plot of Eo (outside illumination) and Ei (inside illumination)
         margin = 4
-        painter.setPen(QPen(QColor(0xfefefe), margin))
+        painter.setPen(QPen(self.white_line_color, margin))
         painter.drawLine(lux_plot_width + margin // 2, plot_height, lux_plot_width + margin // 2, 0)
         df_plot_width = self.plot_widget.width() - lux_plot_width - margin
         minutes_per_point = (24 * 60) / df_plot_width
         df_plot_day = zoned_now().replace(hour=0, minute=0, second=0, microsecond=0)
         df_plot_left = lux_plot_width + margin #plot_width - df_plot_width - 30
-        painter.fillRect(df_plot_left, 0, df_plot_left + df_plot_width, plot_height, QColor(0x6baee8))  # 0x5b93c5))
-
-        # Create plot of Eo (outside illumination) and Ei (inside illumination)
+        painter.fillRect(df_plot_left, 0, df_plot_left + df_plot_width, plot_height, self.common_background_color)
         eo_points = []
         ei_points = []
-        painter.setPen(QPen(QColor(0xfe, 0xfe, 0xfe, 40), 2))
+        painter.setPen(QPen(self.white_transparent_color, 2))
         t = df_plot_day + timedelta(minutes=0)
         df, location = LuxMeterSemiAutoDevice.get_df_and_location()
         if df and location:
@@ -6344,13 +6351,14 @@ class LuxGaugeWidget(QWidget):
                 t += timedelta(minutes=minutes_per_point)
                 painter.drawLine(i, plot_height, i, eo_y)  # Fill under eo line
             # Actually plot the two datasets
-            painter.setPen(QPen(QColor(0xfefefe), 6))
+            painter.setPen(QPen(self.orange_line_color, 6))
             painter.drawPolyline(eo_points)
-            painter.setPen(QPen(QColor(0xff8500), 3))
+            painter.setPen(QPen(self.white_line_color, 6))
             painter.drawPolyline(ei_points)
         # Now plot the history as well
-        painter.setPen(QPen(lux_reading_color, 1))
+        painter.setPen(QPen(self.lux_bar_color, 1))
         most_recent_df_xy = (None, None) # Indicate the last history position with a red dot
+        most_recent_item = None
         for item in self.history:  # Block fill for history
             if item and item.when > df_plot_day:
                 t = (item.when - df_plot_day).total_seconds() // 60
@@ -6358,20 +6366,29 @@ class LuxGaugeWidget(QWidget):
                 item_y_pos = plot_height - self.y_from_lux(item.lux, plot_height)
                 painter.drawLine(i, plot_height, i, item_y_pos)
                 most_recent_df_xy = (i, item_y_pos)
+                most_recent_item = item
         # Add text to the axis
-        painter.setPen(QPen(Qt.white, 2))
+        painter.setPen(QPen(self.white_line_color, 2))
         painter.setFont(QFont(QApplication.font().family(), font_height := plot_height // 20, QFont.Weight.Normal))
         middle = (self.plot_widget.width() + margin) // 2
         for i in (10, 100, 1_000, 10_000, 100_000):
             painter.drawLine(middle - 4, y := plot_height - self.y_from_lux(i, plot_height), middle + 4, y)
             painter.drawText(QPoint(middle + 6, y + font_height), str(i))
+        # Draw the sun
+        if most_recent_df_xy and most_recent_item and most_recent_df_xy[0]:
+            if self.sun_image is None:
+                self.sun_image = create_image_from_svg_bytes(SUN_SVG.replace(SVG_LIGHT_THEME_COLOR, b"#feC053")).scaled(36, 36)
+            t = (most_recent_item.when - df_plot_day).total_seconds() // 60
+            i = int(df_plot_left + t // minutes_per_point)
+            sun_y = plot_height - self.y_from_lux(calc_solar_lux(most_recent_item.when, location, 1.0), plot_height)
+            painter.drawImage(QPoint(i - self.sun_image.width() // 2, sun_y - self.sun_image.height() // 2 - 1), self.sun_image)
         # Draw dots at current points
         dot_size = 8
         half_dot_size = dot_size // 2
         for x, y in (most_recent_lux_xy, most_recent_df_xy):
             if x is not None and y is not None:
                 painter.setPen(QPen(Qt.red, half_dot_size))
-                painter.setBrush(Qt.white)
+                painter.setBrush(self.white_line_color)
                 painter.drawEllipse(x - half_dot_size, y - half_dot_size, dot_size, dot_size)
         painter.end()  # End of plotting
         self.plot_widget.setPixmap(pixmap)
@@ -6381,7 +6398,6 @@ class LuxGaugeWidget(QWidget):
             self.stats_label.setText(tr("Eo={:,} lux    DF={:,.4f}").format(eo, df))
         else:
             self.stats_label.setText(tr("Eo=?   DF=?   (location not set)"))
-
 
     def connect_meter(self, lux_meter: LuxMeterDevice | None) -> None:
         if self.current_meter:
