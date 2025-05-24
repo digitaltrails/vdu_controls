@@ -6386,6 +6386,9 @@ class LuxGaugeWidget(QWidget):
             sun_y = self._y_from_lux(calc_solar_lux(most_recent_item.when, location, 1.0), plot_height)
             if sun_y <= plot_height - self.sun_image.height() // 2 - 1:
                 painter.drawImage(QPoint(i - self.sun_image.width() // 2, sun_y - self.sun_image.height() // 2 - 1), self.sun_image)
+        if most_recent_df_xy[0] is not None:
+            painter.setPen(QPen(Qt.red, 2))
+            painter.drawLine(most_recent_df_xy[0], plot_height, most_recent_df_xy[0], most_recent_df_xy[1])
         # Draw dots at current points
         dot_size = 8
         half_dot_size = dot_size // 2
