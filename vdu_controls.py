@@ -6366,9 +6366,9 @@ class LuxGaugeWidget(QWidget):
                 t += timedelta(minutes=minutes_per_point)
                 painter.drawLine(i, plot_height, i, eo_y)  # Fill under eo line
             # Actually plot the two datasets
-            painter.setPen(QPen(self.orange_line_color, 6))
+            painter.setPen(QPen(self.orange_line_color, 5))
             painter.drawPolyline(eo_points)
-            painter.setPen(QPen(self.white_line_color, 6))
+            painter.setPen(QPen(self.white_line_color, 5))
             painter.drawPolyline(ei_points)
         # Add text to the axis
         painter.setPen(QPen(self.white_line_color, 2))
