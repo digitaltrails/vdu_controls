@@ -6663,7 +6663,7 @@ class LuxToDo:
     preset_name: str
     current_brightness: int | None = None
 
-class LuxAutoWorkerNew(WorkerThread):  # Why is this so complicated?
+class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
 
     _lux_dialog_message_qtsignal = pyqtSignal(str, int, MsgDestination)
 
@@ -6807,18 +6807,25 @@ class LuxAutoWorkerNew(WorkerThread):  # Why is this so complicated?
                         # if profile_point.brightness is -1, this is a Preset that doesn't change the VDU's brightness control
                         lower_point = matched_point if matched_point.brightness >= 0 else previous_normal_point
                         proposed_brightness = self.interpolate_brightness(smoothed_lux, lower_point, profile_point)
-                        preset_name = self.assess_preset_proximity(proposed_brightness, lower_point, matched_point, profile_point)
                 break
             if profile_point.brightness > 0:
                 previous_normal_point = profile_point
-        log_debug(
-            f"LuxAutoWorker: determine_brightness {vdu_sid=} {proposed_brightness=}% {preset_name=}") if log_debug_enabled else None
         current_brightness = self.main_controller.get_value(vdu_sid, BRIGHTNESS_VCP_CODE)
-        diff = proposed_brightness - current_brightness
-        if self.interpolation_enabled and preset_name is None and abs(diff) < self.sensitivity_percent:
-            log_info(f"LuxAutoWorker: {vdu_sid=} {current_brightness=} {proposed_brightness=} ignored, too small")
-            self.status_message(f"{SUN_SYMBOL} {current_brightness}% {ALMOST_EQUAL_SYMBOL} {proposed_brightness}% {vdu_sid}")
-            return None
+        if ((preset_name := self.assess_preset_proximity(proposed_brightness, lower_point, matched_point, profile_point)) and
+                (preset := self.main_controller.find_preset_by_name(preset_name)) and
+                (preset_brightness := preset.get_brightness(vdu_sid))):
+            proposed_brightness = preset_brightness
+            log_debug(
+                f"LuxAutoWorker: determine_brightness {vdu_sid=} using Preset '{preset_name=}'" 
+                f" brightness {proposed_brightness=}% ") if log_debug_enabled else None
+        else:
+            log_debug(
+                f"LuxAutoWorker: determine_brightness {vdu_sid=} {proposed_brightness=}%") if log_debug_enabled else None
+            diff = proposed_brightness - current_brightness
+            if self.interpolation_enabled and preset_name is None and abs(diff) < self.sensitivity_percent:
+                log_info(f"LuxAutoWorker: {vdu_sid=} {current_brightness=} {proposed_brightness=} ignored, too small")
+                self.status_message(f"{SUN_SYMBOL} {current_brightness}% {ALMOST_EQUAL_SYMBOL} {proposed_brightness}% {vdu_sid}")
+                return None
         return LuxToDo(vdu_sid, proposed_brightness, preset_name, current_brightness)  # Brightness will be -1 if the attached preset has no brightness
 
     def interpolate_brightness(self, smoothed_lux: int, current_point: LuxPoint, next_point: LuxPoint) -> int:
@@ -7351,7 +7358,7 @@ class LuxAutoController:
             if self.lux_meter is not None:
                 if self.lux_auto_brightness_worker is not None:
                     self.stop_worker()
-                self.lux_auto_brightness_worker = LuxAutoWorkerNew(self, single_shot)
+                self.lux_auto_brightness_worker = LuxAutoWorker(self, single_shot)
                 self.lux_auto_brightness_worker.start()
                 try:
                     self.lux_meter.new_lux_value_qtsignal.connect(self.update_manual_slider, type=Qt.UniqueConnection)
