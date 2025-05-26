@@ -4416,6 +4416,7 @@ class BulkChangeWorker(WorkerThread):
             for vcp_code, vcp_value in self.main_controller.get_vdu_values(vdu_sid,
                                                                            [item.vcp_code for item in vdu_items_by_code.values()]):
                 vdu_current_value = vcp_value.current
+                item = vdu_items_by_code[vcp_code]
                 if item.current_value is not None and item.current_value != vdu_current_value and not self.ignore_others:
                     log_warning(f"Interrupted bulk change {id=} "
                                 f"something else changed the VDU: {vdu_current_value=} != {item.current_value=}")
@@ -4763,11 +4764,11 @@ class WeatherQuery:
 def weather_bad_location_dialog(weather) -> None:
     kilometres = weather.proximity_km
     use_km = QLocale.system().measurementSystem() == QLocale.MetricSystem
-    msg = MBox(MBox.Warning, msg=tr("The site {} reports your location as {}, {}, {},{} "
-                                    "which is about {} {} from the latitude and longitude specified in Settings."
-                                    ).format(WEATHER_FORECAST_URL, weather.area_name, weather.country_name, weather.latitude, weather.longitude,
-                                             round(kilometres if use_km else kilometres * 0.621371), 'km' if use_km else 'miles'),
-               info=tr("Please check the location specified in Settings."), details=f"{weather}").exec()
+    MBox(MBox.Warning, msg=tr("The site {} reports your location as {}, {}, {},{} "
+                              "which is about {} {} from the latitude and longitude specified in Settings."
+                              ).format(WEATHER_FORECAST_URL, weather.area_name, weather.country_name, weather.latitude, weather.longitude,
+                                       round(kilometres if use_km else kilometres * 0.621371), 'km' if use_km else 'miles'),
+         info=tr("Please check the location specified in Settings."), details=f"{weather}").exec()
 
 
 class PresetChooseWeatherWidget(QWidget):
@@ -5509,7 +5510,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
     def reset_editor(self):
         self.preset_name_edit.setText('')
         self.edit_choose_icon_button.reset()
-        for (section, option), checkbox in self.content_controls_map.items():
+        for checkbox in self.content_controls_map.values():
             checkbox.setChecked(True)
 
     def status_message(self, message: str, timeout: int = 0) -> None:
@@ -6739,21 +6740,21 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
 
     def do_work(self, to_do_list: List[LuxToDo]):
         to_do_preset_names = []
-        bulk_change = BulkChangeWorker('LuxAutoBulk', main_controller=self.main_controller,
-                                       progress_callable=self._to_do_progress, finished_callable=self._to_do_finished,
-                                       step_interval=self.step_pause_millis / 1000.0, context=to_do_preset_names)
+        bulk_changer = BulkChangeWorker('LuxAutoBulk', main_controller=self.main_controller,
+                                        progress_callable=self._to_do_progress, finished_callable=self._to_do_finished,
+                                        step_interval=self.step_pause_millis / 1000.0, context=to_do_preset_names)
         for to_do in to_do_list:
             if to_do.brightness != -1:
                 bulk_change_item = BulkChangeItem(to_do.vdu_sid, BRIGHTNESS_VCP_CODE, to_do.brightness,
                                                   current_value=to_do.current_brightness,
                                                   transition=True)  # only transitions if protect-nvram is False.
-                bulk_change.add_item(bulk_change_item)
+                bulk_changer.add_item(bulk_change_item)
             if to_do.preset_name and to_do.preset_name not in to_do_preset_names:
                 to_do_preset_names.append(to_do.preset_name)
-        bulk_change.start()
-        bulk_change.wait()  # Do we need to wait - maybe not
+        bulk_changer.start()
+        bulk_changer.wait()  # Do we need to wait - maybe not
 
-    def _to_do_progress(self):
+    def _to_do_progress(self, _: BulkChangeWorker):
         self.status_message(f"{SUN_SYMBOL} {STEPPING_SYMBOL}")
 
     def _to_do_finished(self, worker: BulkChangeWorker):
@@ -6793,10 +6794,9 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             self.status_message(f"{TIMER_RUNNING_SYMBOL} {second // 60:02d}:{second % 60:02d}", 0, MsgDestination.COUNTDOWN)
             self.doze(1)
 
-    def determine_changes(self, vdu_sid: VduStableId, smoothed_lux: int, lux_profile: List[LuxPoint]) -> LuxToDo:
-        previous_normal_point = matched_point = LuxPoint(0, 0)
+    def determine_changes(self, vdu_sid: VduStableId, smoothed_lux: int, lux_profile: List[LuxPoint]) -> LuxToDo | None:
+        previous_normal_point = matched_point = lower_point = LuxPoint(0, 0)
         proposed_brightness = 0
-        preset_name = None
         # Update/bind the current Preset values onto the LuxPoints and wrap with min and max values.
         for profile_point in [LuxPoint(0, 0), *lux_profile, LuxPoint(100000, 100)]:
             # Moving up the lux steps, seeking the step below smoothed_lux
@@ -6805,7 +6805,6 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                 if profile_point.brightness >= 0:  # else use existing result_brightness
                     proposed_brightness = profile_point.brightness
                 matched_point = profile_point
-                preset_name = profile_point.preset_name
             else:  # Step is too high, if interpolating check against the following point, if not, the previous match is the result.
                 if self.interpolation_enabled:  # Only interpolate if lux is not an exact match and next_point has a brightness
                     if smoothed_lux != matched_point.lux and profile_point.brightness >= 0:
@@ -7953,7 +7952,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
     def stop_any_transitioning_presets(self):
         for running_worker in [worker for worker in self.preset_transition_workers if worker.isRunning()]:
             running_worker.stop()
-            log_debug(f"Stop requested for PresetTransitionWorker {running_worker.preset.name=} {running_worker.start_time=!s}")
+            log_debug(f"Stop requested for {running_worker.name=} {running_worker.start_time=!s}")
         self.preset_transition_workers.clear()
 
     def create_ddcutil(self):
