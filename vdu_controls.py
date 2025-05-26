@@ -883,7 +883,7 @@ EASTERN_SKY = 'eastern-sky'
 IP_ADDRESS_INFO_URL = os.getenv('VDU_CONTROLS_IPINFO_URL', default='https://ipinfo.io/json')
 WEATHER_FORECAST_URL = os.getenv('VDU_CONTROLS_WTTR_URL', default='https://wttr.in')
 TESTING_TIME_ZONE = os.getenv('VDU_CONTROLS_TEST_TIME_ZONE')  # for example, 'Europe/Berlin' 'Asia/Shanghai'
-TESTING_TIME_DELTA = None  # timedelta(hours=-4)
+TESTING_TIME_DELTA = None  # timedelta(hours=-6.2)
 
 TIME_CLOCK_SYMBOL = '\u25F4'  # WHITE CIRCLE WITH UPPER-LEFT QUADRANT
 WEATHER_RESTRICTION_SYMBOL = '\u2614'  # UMBRELLA WITH RAINDROPS
@@ -4325,132 +4325,109 @@ class VduControlsMainPanel(QWidget):
     def status_message(self, message: str, timeout: int):
         self.bottom_toolbar.status_area.showMessage(message, timeout) if self.bottom_toolbar else None
 
+@dataclass
+class BulkChangeItem:
+    vdu_sid: VduStableId
+    vcp_code: str
+    final_value: int
+    starting_value: int | None = None
+    current_value: int | None = None
+    transition: bool = False
 
-class PresetTransitionState(Enum):
-    INITIALIZED = 0
-    PARTIAL = 1
-    STEPPING_COMPLETED = 2
-    FINISHED = 3
-    INTERRUPTED = 4
-
-
-TransitionValueKey = namedtuple('TransitionValueKey', ['vdu_stable_id', 'vcp_code'])
-
-
-class PresetTransitionWorker(WorkerThread):
+class BulkChangeWorker(WorkerThread):
     progress_qtsignal = pyqtSignal(object)
 
-    def __init__(self, main_controller: VduAppController, preset: Preset,
-                 progress_callable: Callable[[PresetTransitionWorker], None],
-                 finished_callable: Callable[[PresetTransitionWorker], None],
-                 immediately: bool = False, ignore_others: bool = True):
-        super().__init__(self._perform_transition, finished_callable)  # type: ignore
-        log_debug(f"TransitionWorker: init {preset.name=} {immediately=}") if log_debug_enabled else None
-        self.change_count = 0
+    def __init__(self, name: str, main_controller: VduAppController,
+                 progress_callable: Callable[[BulkChangeWorker], None],
+                 finished_callable: Callable[[BulkChangeWorker], None],
+                 step_interval: float = 0.0, ignore_others: bool = True, context: object|None = None) -> None:
+        super().__init__(task_body=self._perform_changes, task_finished=finished_callable)  # type: ignore
+        log_debug(f"BulkChangeHandler: {name} init {ignore_others=}") if log_debug_enabled else None
+        self.name = name
         self.ignore_others = ignore_others
-        self.start_time = datetime.now()
+        self.context = context
+        self.start_time: datetime | None = None
         self.end_time: datetime | None = None
-        self.previous_step_start_time: float = 0.0
-        self.last_progress_time = datetime.now()
         self.main_controller = main_controller
-        self.preset = preset
-        self.step_interval_seconds = self.preset.get_step_interval_seconds()
-        self.preset_non_transitioning_controls: List[TransitionValueKey] = []  # specific to this preset
-        self.preset_transitioning_controls: List[TransitionValueKey] = []  # specific to this preset
-        self.final_values: Dict[TransitionValueKey, int] = {}
-        self.expected_values: Dict[TransitionValueKey, int | None] = {}
-        self.transition_immediately = immediately
-        self.work_state = \
-            PresetTransitionState.STEPPING_COMPLETED if self.transition_immediately else PresetTransitionState.INITIALIZED
         self.progress_callable = progress_callable
         self.progress_qtsignal.connect(self.progress_callable)
-        for vdu_stable_id in main_controller.get_vdu_stable_id_list():
-            if vdu_stable_id in self.preset.preset_ini:
-                for vcp_capability in main_controller.get_enabled_capabilities(vdu_stable_id):
-                    property_name = vcp_capability.property_name()
-                    if property_name in self.preset.preset_ini[vdu_stable_id]:
-                        key = TransitionValueKey(vdu_stable_id=vdu_stable_id, vcp_code=vcp_capability.vcp_code)
-                        if vcp_capability.vcp_type == CONTINUOUS_TYPE:
-                            self.final_values[key] = self.preset.preset_ini.getint(vdu_stable_id, property_name)
-                        else:
-                            self.final_values[key] = int(self.preset.preset_ini[vdu_stable_id][property_name], 16)
-                        if vcp_capability.can_transition and not self.transition_immediately:
-                            self.preset_transitioning_controls.append(key)
-                        else:
-                            self.preset_non_transitioning_controls.append(key)
+        self.to_do_list: List[BulkChangeItem] = []
+        self.step_interval = step_interval
+        self.protect_nvram = self.main_controller.main_config.is_set(ConfOpt.PROTECT_NVRAM_ENABLED)
+        self.change_count = 0
+        self.completed = False
 
-    def _perform_transition(self, _: PresetTransitionWorker) -> None:
-        while (self.values_are_as_expected() and self.work_state != PresetTransitionState.STEPPING_COMPLETED
-               and not self.main_controller.pause_background_tasks(self)):
-            now = time.time()
-            if self.step_interval_seconds > 0:  # Delay if previous duration was too short due to speed or interruption/exception
-                previous_duration = now - self.previous_step_start_time
-                if previous_duration < self.step_interval_seconds:
-                    self.doze(self.step_interval_seconds - previous_duration)
-            self.previous_step_start_time = time.time()
-            if self.stop_requested:
-                return
-            self.step()  # Perform one step here <---
-            self.progress_qtsignal.emit(self)
-        if self.work_state == PresetTransitionState.STEPPING_COMPLETED:  # Still TRANSIENT until we're all done.
-            for key in self.preset_non_transitioning_controls:  # Finish by doing the non-transitioning controls
-                if self.stop_requested:
-                    return
-                if self.expected_values[key] != self.final_values[key]:
-                    self.change_count += 1
-                    self.main_controller.set_value(key.vdu_stable_id, key.vcp_code, self.final_values[key], origin=VcpOrigin.TRANSIENT)
-                    self.expected_values[key] = self.final_values[key]
-            if self.values_are_as_expected():
-                log_info(f"Restored preset '{self.preset.name}', elapsed: {self.total_elapsed_seconds():.2f} seconds "
-                         f"{self.change_count} VCP-changes")
-                self.work_state = PresetTransitionState.FINISHED
-            else:
-                log_error(f"Failed to restore non transitioning controls {self.preset.name}")
-            self.end_time = datetime.now()
+    def add_item(self, item: BulkChangeItem):
+        if self.protect_nvram or self.step_interval < 0.1:
+            item.transition = False
+        self.to_do_list.append(item)
 
-    def step(self) -> None:
-        more_to_do = False
-        for key in self.preset_transitioning_controls:  # Step each control by step or negative step...
+    def _perform_changes(self, _: BulkChangeWorker):
+        self.start_time = zoned_now()
+        if any([item.current_value is None for item in self.to_do_list]):  # has parent filled out expected values.
+            self._refresh_current_values_from_vdu()
+        self._do_stepped_changes()  # transitions in a series of steps
+        if not self.stop_requested:
+            self._do_normal_changes()
+            self.completed = len([item for item in self.to_do_list if item.current_value != item.final_value]) == 0
+        self.end_time = zoned_now()
+        worker = self
+        log_info(f"BulkChangeWorker: {worker.name} {worker.completed=} {worker.change_count=} {worker.total_elapsed_seconds()=}")
+
+    def _do_normal_changes(self):
+        for item in [item for item in self.to_do_list if not item.transition and item.current_value != item.final_value]:
             if self.stop_requested:
-                return
-            final_value = self.final_values[key]
-            expected_value = self.expected_values[key]
-            diff = final_value - expected_value
-            if diff != 0:
-                step_size = 5
-                step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
-                new_value = expected_value + step
-                self.expected_values[key] = new_value  # revise to new value
+                break
+            if item.final_value != item.current_value:
+                self.main_controller.set_value(item.vdu_sid, item.vcp_code, item.final_value)
+                item.current_value = item.final_value
                 self.change_count += 1
-                self.main_controller.set_value(key.vdu_stable_id, key.vcp_code, new_value, origin=VcpOrigin.TRANSIENT)
-                more_to_do = more_to_do or new_value != final_value
-            now = datetime.now()
-            if (now - self.last_progress_time).total_seconds() >= 1.0:
-                self.last_progress_time = now
-                self.progress_qtsignal.emit(self)
-        # Some transitioning controls are not at their final values, need to step again
-        self.work_state = PresetTransitionState.PARTIAL if more_to_do else PresetTransitionState.STEPPING_COMPLETED
 
-    def values_are_as_expected(self) -> bool:
-        for vdu_stable_id in self.main_controller.get_vdu_stable_id_list():  # Check that no one else is changing the controls
+    def _do_stepped_changes(self):
+        while step_changes := [item for item in self.to_do_list if item.transition and item.current_value != item.final_value]:
             if self.stop_requested:
-                return True
-            for vcp_code, vcp_value in self.main_controller.get_vdu_current_values(vdu_stable_id):
+                break
+            for item in step_changes:
                 if self.stop_requested:
-                    return True
-                key = TransitionValueKey(vdu_stable_id=vdu_stable_id, vcp_code=vcp_code)
-                if key in self.expected_values:
-                    if not self.ignore_others and self.expected_values[key] != vcp_value.current:
-                        log_warning(f"Interrupted transition to {self.preset.name} {key=} "
-                                    f"something else changed the VDU: {self.expected_values[key]=} != {vcp_value.current=}")
-                        self.work_state = PresetTransitionState.INTERRUPTED  # Something else is changing the controls, stop work
-                        return False
-                else:
-                    self.expected_values[key] = vcp_value.current  # must be first time through, initialize value
-        return self.work_state != PresetTransitionState.INTERRUPTED
+                    break
+                diff = item.final_value - item.current_value
+                step_size = max(5, abs(diff) // 2) # TODO find a good heuristic
+                step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
+                new_value = item.current_value + step
+                origin = VcpOrigin.TRANSIENT if new_value != item.final_value else VcpOrigin.NORMAL
+                self.main_controller.set_value(item.vdu_sid, item.vcp_code, new_value, origin)
+                item.current_value = new_value
+                self.change_count += 1
+                # self.doze(0.1)  # TODO do we need to pause to let things settle?
+            self.progress_qtsignal.emit(self)
+            self.doze(self.step_interval)
+            self._refresh_current_values_from_vdu()
+            if self.stop_requested:
+                    break
+
+    def _refresh_current_values_from_vdu(self):
+        log_debug(f"BulkChangeWorker {self.name} having to get current_values from VDU") if log_debug_enabled else None
+        items_by_vdu: Dict[VduStableId, Dict[str: LuxToDo]] = {}
+        for item in self.to_do_list:
+            if item.vdu_sid not in items_by_vdu:
+                items_by_vdu[item.vdu_sid] = {}
+            items_by_vdu[item.vdu_sid][item.vcp_code] = item
+        for vdu_sid, vdu_items_by_code in items_by_vdu.items():
+            for vcp_code, vcp_value in self.main_controller.get_vdu_values(vdu_sid,
+                                                                           [item.vcp_code for item in vdu_items_by_code.values()]):
+                vdu_current_value = vcp_value.current
+                if item.current_value is not None and item.current_value != vdu_current_value and not self.ignore_others:
+                    log_warning(f"Interrupted bulk change {id=} "
+                                f"something else changed the VDU: {vdu_current_value=} != {item.current_value=}")
+                    self.stop_requested = True
+                    break
+                vdu_items_by_code[vcp_code].current_value = vdu_current_value
+
+    def completed_items(self):
+        return [item for item in self.to_do_list if item.current_value == item.final_value]
 
     def total_elapsed_seconds(self) -> float:
-        return ((self.end_time if self.end_time is not None else datetime.now()) - self.start_time).total_seconds()
+        return ((self.end_time if self.end_time is not None else zoned_now()) - self.start_time).total_seconds()
 
 
 class PresetController:
@@ -5704,8 +5681,8 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
     def edit_preset(self, preset: Preset) -> None:
 
-        def _begin_editing(worker: PresetTransitionWorker | None = None) -> None:
-            if worker is None or worker.work_state == PresetTransitionState.FINISHED:
+        def _begin_editing(worker: BulkChangeWorker | None = None) -> None:
+            if worker is None or worker.completed:
                 self.set_widget_values_from_preset(preset)
             else:
                 self.status_message(tr(f"Failed to restore {preset.name} for editing."))
@@ -6679,11 +6656,18 @@ class LuxStepStatus(Enum):
     MORE_TO_DO = 1,
 
 
-class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
+@dataclass
+class LuxToDo:
+    vdu_sid: VduStableId
+    brightness: int
+    preset_name: str
+    current_brightness: int | None = None
+
+class LuxAutoWorkerNew(WorkerThread):  # Why is this so complicated?
 
     _lux_dialog_message_qtsignal = pyqtSignal(str, int, MsgDestination)
 
-    def __init__(self, auto_controller: LuxAutoController, single_shot: bool, protect_nvram: bool) -> None:
+    def __init__(self, auto_controller: LuxAutoController, single_shot: bool) -> None:
         super().__init__(task_body=self._adjust_for_lux, task_finished=self._adjust_for_lux_finished)
         self.single_shot = single_shot  # Called for an on-demand single time assessment with immediate effect.
         self.main_controller = auto_controller.main_controller
@@ -6691,7 +6675,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         self.expected_brightness_map: Dict[str, int] = {}
         self.adjust_now_requested = False
         lux_config = auto_controller.get_lux_config()
-        log_info(f"LuxAutoWorker: lux-meter.interval-minutes={lux_config.get_interval_minutes()} {single_shot=} {protect_nvram=}")
+        log_info(f"LuxAutoWorker: lux-meter.interval-minutes={lux_config.get_interval_minutes()} {single_shot=}")
         self.sleep_seconds = lux_config.get_interval_minutes() * 60
 
         def _get_prop(prop: str, fallback: bool | int | float | str) -> bool | int | float:
@@ -6705,15 +6689,8 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         self.smoother = LuxSmooth(_get_prop('smoother-n', fallback=5), alpha=_get_prop('smoother-alpha', fallback=0.5))
         self.interpolation_enabled = _get_prop('interpolate-brightness', fallback=True)
         self.sensitivity_percent = _get_prop('interpolation-sensitivity-percent', fallback=10)
-        self.convergence_divisor = _get_prop('convergence-divisor', fallback=2)
-        self.step_pause_millis = _get_prop('step-pause-millis', fallback=100)
-        self.protect_nvram = protect_nvram
-        if protect_nvram:
-            log_info("LuxAutoWorker: protect-nvram={protect_nvram} ignoring max-brightness-jump")
-            self.max_brightness_jump = 100
-        else:
-            self.max_brightness_jump = _get_prop('max-brightness-jump', 20)
-            log_warning(f"LuxAutoWorker: protect-nvram={protect_nvram} max-brightness-jump={self.max_brightness_jump}")
+        #self.convergence_divisor = _get_prop('convergence-divisor', fallback=2)
+        self.step_pause_millis = _get_prop('step-pause-millis', fallback=1000)
         self._lux_dialog_message_qtsignal.connect(LuxDialog.lux_dialog_message)
         self._lux_dialog_message_qtsignal.connect(self.main_controller.main_window.status_message)
         self.status_message(f"{TIMER_RUNNING_SYMBOL} 00:00", 0, MsgDestination.COUNTDOWN)
@@ -6729,9 +6706,12 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             log_info(f"LuxAutoWorker monitoring commences {thread_pid()=}")
             assert lux_auto_controller is not None
             while not self.stop_requested and not self.main_controller.pause_background_tasks(self):
-                self.expected_brightness_map.clear()
+                #self.expected_brightness_map.clear()
                 if lux_meter := lux_auto_controller.lux_meter:
-                    self.stepping_brightness(lux_auto_controller, lux_meter)
+                    if metered_lux := lux_meter.get_value():
+                        if to_do_list := self.determine_required_work(lux_auto_controller, metered_lux,
+                                                                      not lux_meter.has_manual_capability):
+                            self.do_work(to_do_list)
                     if self.single_shot:
                         break
                 else:  # In app config change - things are in a state of flux
@@ -6740,6 +6720,55 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                 self.idle_sampling(lux_meter)  # Sleep and sample for rest of cycle
         finally:
             log_info(f"LuxAutoWorker exiting (stop_requested={self.stop_requested}) {thread_pid()=}")
+
+    def determine_required_work(self, lux_auto_controller: LuxAutoController, metered_lux: int, requires_smoothing) -> List[LuxToDo]:
+        lux = self.smoother.smooth(metered_lux) if requires_smoothing else metered_lux
+        summary_text = self.lux_summary(metered_lux, lux)
+        self.status_message(f"{SUN_SYMBOL} {summary_text} {PROCESSING_LUX_SYMBOL}", timeout=3000)
+        to_do_list: List[LuxToDo] = []
+        for vdu_sid in self.main_controller.get_vdu_stable_id_list():  # For each VDU, do one step of its profile
+            if self.stop_requested:
+                return []
+            value_range = self.main_controller.get_range(vdu_sid, BRIGHTNESS_VCP_CODE, fallback=(0, 100))
+            lux_profile = lux_auto_controller.get_lux_profile(vdu_sid, value_range)
+            if to_do := self.determine_changes(vdu_sid, lux, lux_profile):
+                to_do_list.append(to_do)
+        return to_do_list
+
+    def do_work(self, to_do_list: List[LuxToDo]):
+        to_do_preset_names = []
+        bulk_change = BulkChangeWorker('LuxAuto', main_controller=self.main_controller,
+                                       progress_callable=self._to_do_progress, finished_callable=self._to_do_finished,
+                                       step_interval=self.step_pause_millis / 1000.0,
+                                       context=to_do_preset_names)
+        for to_do in to_do_list:
+            if to_do.brightness != -1:
+                bulk_change_item = BulkChangeItem(to_do.vdu_sid, BRIGHTNESS_VCP_CODE, to_do.brightness,
+                                                  current_value=to_do.current_brightness,
+                                                  transition=True)  # can transition if protect-nvram is not set.
+                bulk_change.add_item(bulk_change_item)
+            if to_do.preset_name and to_do.preset_name not in to_do_preset_names:
+                to_do_preset_names.append(to_do.preset_name)
+        bulk_change.start()
+        bulk_change.wait()  # Do we need to wait - maybe not
+
+    def _to_do_progress(self):
+        self.status_message(f"{SUN_SYMBOL} {STEPPING_SYMBOL}")
+
+    def _to_do_finished(self, worker: BulkChangeWorker):
+        if  worker.completed:
+            to_do_preset_names = worker.context
+            for preset_name in to_do_preset_names:  # if a point had a Preset attached, activate it now
+                # Restoring the Preset's non-brightness settings. Invoke now, so it will happen in this thread's sleep period.
+                self.status_message(tr("Restoring preset {}").format(preset_name), timeout=5000)
+                if preset := self.main_controller.find_preset_by_name(preset_name):  # Check that it still exists
+                    self.main_controller.restore_preset(
+                        preset, immediately=PresetTransitionFlag.SCHEDULED not in preset.get_transition_type(),
+                        background_activity=True)
+                else:
+                    self.main_controller.update_window_status_indicators()
+        else:
+            self.status_message(f"{SUN_SYMBOL} {ERROR_SYMBOL} {RAISED_HAND_SYMBOL}")
 
     def _adjust_for_lux_finished(self, _: WorkerThread) -> None:
         if self.vdu_exception:
@@ -6759,133 +6788,17 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             self.status_message(f"{TIMER_RUNNING_SYMBOL} {second // 60:02d}:{second % 60:02d}", 0, MsgDestination.COUNTDOWN)
             self.doze(1)
 
-    def stepping_brightness(self, lux_auto_controller: LuxAutoController, lux_meter: LuxMeterDevice) -> None:
-        change_count, last_change_count, error_count = 0, -1, 0
-        start_of_cycle = True
-        profile_preset_name = None
-        vdu_changes_count = {}
-        log_debug(f"stepping_brightness {lux_meter.get_value()=} {lux_meter=}") if log_debug_enabled else None
-        if metered_lux := lux_meter.get_value():  # Measure once - changing VDU brightness can feed back to the lux-meter.
-            while change_count != last_change_count:  # while brightness changing
-                last_change_count = change_count
-                smoothed_lux = metered_lux if lux_meter.has_manual_capability else self.smoother.smooth(metered_lux)
-                summary_text = self.lux_summary(metered_lux, smoothed_lux)
-                if start_of_cycle:
-                    self.status_message(f"{SUN_SYMBOL} {summary_text} {PROCESSING_LUX_SYMBOL}", timeout=3000)
-                # If interpolating, it may be that each VDU profile is closer to a different attached preset, if this happens,
-                # chose the preset associated with the brightest value.
-                for vdu_sid in self.main_controller.get_vdu_stable_id_list():  # For each VDU, do one step of its profile
-                    if self.stop_requested:
-                        return
-                    # In case the lux reading changes, reevaluate target brightness every time...
-                    value_range = self.main_controller.get_range(vdu_sid, BRIGHTNESS_VCP_CODE, fallback=(0, 100))
-                    lux_profile = lux_auto_controller.get_lux_profile(vdu_sid, value_range)
-                    profile_brightness, profile_preset_name = self.determine_brightness(vdu_sid, smoothed_lux, lux_profile)
-                    step_status = self.step_one_vdu(vdu_sid, profile_brightness, profile_preset_name, summary_text, start_of_cycle)
-                    if step_status == LuxStepStatus.MORE_TO_DO:
-                        change_count += 1
-                        vdu_changes_count[vdu_sid] = vdu_changes_count.get(vdu_sid, 0) + 1
-                    elif step_status == LuxStepStatus.FINISHED:
-                        log_debug(f"LuxAutoWorker: finished {vdu_sid=} VCP-changes={vdu_changes_count.get(vdu_sid, 0)})")
-                    elif step_status == LuxStepStatus.UNEXPECTED_CHANGE:
-                        return
-                    else:
-                        error_count += 1
-                start_of_cycle = False
-                self.doze(self.step_pause_millis / 1000.0)  # Let i2c settle down, then continue - TODO is this really necessary?
-        if error_count == 0:
-            if change_count != 0:  # If any work was done in previous steps, finish up the remaining tasks
-                self.status_message(tr("Brightness adjustment completed"), timeout=5000)
-                if profile_preset_name is not None:  # if a point had a Preset attached, activate it now
-                    # Restoring the Preset's non-brightness settings. Invoke now, so it will happen in this thread's sleep period.
-                    self.status_message(tr("Restoring preset {}").format(profile_preset_name), timeout=5000)
-                    if preset := self.main_controller.find_preset_by_name(profile_preset_name):  # Check that it still exists
-                        self.main_controller.restore_preset(
-                            preset, immediately=PresetTransitionFlag.SCHEDULED not in preset.get_transition_type(),
-                            background_activity=True)
-                    else:
-                        self.main_controller.update_window_status_indicators()
-            else:  # No work done, no adjustment necessary
-                self.status_message(f"{SUN_SYMBOL} {SUCCESS_SYMBOL}", timeout=3000)
-                if profile_preset_name is not None:  # Make sure the right preset icon is displayed
-                    self.main_controller.update_window_status_indicators(self.main_controller.find_preset_by_name(profile_preset_name))
-                else:
-                    self.main_controller.update_window_status_indicators()
-        if log_debug_enabled or vdu_changes_count or error_count:
-            log_info(f"LuxAutoWorker: adjustments completed {vdu_changes_count=}, {profile_preset_name=} {error_count=}")
-
-    def step_one_vdu(self, vdu_sid: VduStableId, profile_brightness: int, profile_preset_name: str | None,
-                     lux_summary_text: str, first_step: bool) -> LuxStepStatus:
-        # if profile_brightness is -1, the profile has an attached preset with no brightness; it may have been
-        # attached to trigger non-brightness settings at a given lux value (triggered below, after the loop).
-        if profile_brightness < 0 or not self.main_controller.is_vcp_code_enabled(vdu_sid, BRIGHTNESS_VCP_CODE):
-            return LuxStepStatus.FINISHED  # Nothing more to do (can only adjust brightness controls)
-        try:
-            current_brightness = self.main_controller.get_value(vdu_sid, BRIGHTNESS_VCP_CODE)
-            diff = profile_brightness - current_brightness
-            # Check if already at the correct brightness.
-            if diff == 0:
-                return LuxStepStatus.FINISHED  # Nothing more to do
-            # Check for interpolating, at the start, no Preset involved, and close enough to not bother with a change.
-            if (self.interpolation_enabled and first_step and profile_preset_name is None and
-                    abs(diff) < self.sensitivity_percent):
-                self.status_message(f"{SUN_SYMBOL} {current_brightness}% {ALMOST_EQUAL_SYMBOL}"
-                                    f" {profile_brightness}% {vdu_sid} ({lux_summary_text})")
-                log_info(f"LuxAutoWorker: {vdu_sid=} {current_brightness=} {profile_brightness=} ignored, too small")
-                return LuxStepStatus.FINISHED
-            # Check if something else is changing the brightness, or maybe there was a ddcutil error
-            if self.expected_brightness_map.get(vdu_sid, current_brightness) != current_brightness:
-                log_info(
-                    f"LuxAutoWorker: {vdu_sid=}: {current_brightness=}% != step value {self.expected_brightness_map[vdu_sid]}%"
-                    f" something else altered the brightness - stop adjusting for lux.")
-                self.status_message(f"{SUN_SYMBOL} {ERROR_SYMBOL} {RAISED_HAND_SYMBOL} {vdu_sid}")
-                return LuxStepStatus.UNEXPECTED_CHANGE
-            # significant OR we have to activate a Preset
-            if self.single_shot or self.protect_nvram or abs(diff) <= self.max_brightness_jump:
-                new_brightness = profile_brightness
-            else:  # Change requires moving in steps
-                step_size = max(1, abs(diff) // self.convergence_divisor)  # TODO find a good heuristic
-                step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
-                new_brightness = current_brightness + step
-            # Marking as transient, prevents showing intermediate preset matches, first clears, last sets (if appropriate).
-            origin = VcpOrigin.TRANSIENT if not first_step and new_brightness != profile_brightness else VcpOrigin.NORMAL
-            self.main_controller.set_value(vdu_sid, BRIGHTNESS_VCP_CODE, new_brightness, origin=origin)
-            self.expected_brightness_map[vdu_sid] = new_brightness
-            log_info(f"LuxAutoWorker {thread_pid()}: Start transition {vdu_sid=} {current_brightness=} to {profile_brightness=}"
-                     f" {profile_preset_name=} {lux_summary_text}") if first_step else None
-            self.status_message(
-                f"{SUN_SYMBOL} {current_brightness}%{STEPPING_SYMBOL}{profile_brightness}% {vdu_sid}" +
-                f" ({lux_summary_text}) {profile_preset_name if profile_preset_name is not None else ''}")
-            if self.consecutive_errors_map.get(vdu_sid, 0) > 0:
-                log_info(f"LuxAutoWorker: ddcutil to {vdu_sid} succeeded after {self.consecutive_errors_map[vdu_sid]} errors.")
-            self.consecutive_errors_map[vdu_sid] = 0
-        except VduException as ve:
-            error_count = self.consecutive_errors_map[vdu_sid] = self.consecutive_errors_map.get(vdu_sid, 0) + 1
-            if error_count == 1:
-                log_warning(f"LuxAutoWorker: Brightness error on {vdu_sid}, will sleep and try again: {ve}", -1)
-                self.status_message(tr("{} Failed to adjust {}, will try again").format(ERROR_SYMBOL, vdu_sid))
-                self.doze(2)  # TODO do something better than this to make the message visible.
-            elif error_count > 1:
-                self.status_message(tr("{} Failed to adjust {}, {} errors so far. Sleeping {} minutes.").format(
-                    ERROR_SYMBOL, vdu_sid, error_count,
-                    self.main_controller.get_lux_auto_controller().get_lux_config().get_interval_minutes()))
-                self.doze(2)  # TODO do something better than this to make the message visible.
-                log_debug(f"LuxAutoWorker: {error_count=} on {vdu_sid}, let this lux cycle end.") if log_debug_enabled else None
-                return LuxStepStatus.ENCOUNTERED_ERROR  # Make no changes, will try again next cycle.
-        return LuxStepStatus.MORE_TO_DO  # Still more work to do to reach the final target value
-
-    def determine_brightness(self, vdu_sid: VduStableId, smoothed_lux: int, lux_profile: List[LuxPoint]) -> Tuple[int, str | None]:
+    def determine_changes(self, vdu_sid: VduStableId, smoothed_lux: int, lux_profile: List[LuxPoint]) -> LuxToDo:
         previous_normal_point = matched_point = LuxPoint(0, 0)
-        result_brightness = 0
+        proposed_brightness = 0
         preset_name = None
         # Update/bind the current Preset values onto the LuxPoints and wrap with min and max values.
         for profile_point in [LuxPoint(0, 0), *lux_profile, LuxPoint(100000, 100)]:
             # Moving up the lux steps, seeking the step below smoothed_lux
-            # log_debug(f"determine_brightness check {smoothed_lux=} {profile_point=}") if log_debug_enabled else None
             if smoothed_lux > profile_point.lux:  # Possible result, there may be something higher, keep going...
                 # if profile_point.brightness is -1, this is a Preset that doesn't change the VDU's brightness control
                 if profile_point.brightness >= 0:  # else use existing result_brightness
-                    result_brightness = profile_point.brightness
+                    proposed_brightness = profile_point.brightness
                 matched_point = profile_point
                 preset_name = profile_point.preset_name
             else:  # Step is too high, if interpolating check against the following point, if not, the previous match is the result.
@@ -6893,14 +6806,20 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                     if smoothed_lux != matched_point.lux and profile_point.brightness >= 0:
                         # if profile_point.brightness is -1, this is a Preset that doesn't change the VDU's brightness control
                         lower_point = matched_point if matched_point.brightness >= 0 else previous_normal_point
-                        result_brightness = self.interpolate_brightness(smoothed_lux, lower_point, profile_point)
-                        preset_name = self.assess_preset_proximity(result_brightness, lower_point, matched_point, profile_point)
+                        proposed_brightness = self.interpolate_brightness(smoothed_lux, lower_point, profile_point)
+                        preset_name = self.assess_preset_proximity(proposed_brightness, lower_point, matched_point, profile_point)
                 break
             if profile_point.brightness > 0:
                 previous_normal_point = profile_point
         log_debug(
-            f"LuxAutoWorker: determine_brightness {vdu_sid=} {result_brightness=}% {preset_name=}") if log_debug_enabled else None
-        return result_brightness, preset_name  # Brightness will be -1 if the attached preset has no brightness
+            f"LuxAutoWorker: determine_brightness {vdu_sid=} {proposed_brightness=}% {preset_name=}") if log_debug_enabled else None
+        current_brightness = self.main_controller.get_value(vdu_sid, BRIGHTNESS_VCP_CODE)
+        diff = proposed_brightness - current_brightness
+        if self.interpolation_enabled and preset_name is None and abs(diff) < self.sensitivity_percent:
+            log_info(f"LuxAutoWorker: {vdu_sid=} {current_brightness=} {proposed_brightness=} ignored, too small")
+            self.status_message(f"{SUN_SYMBOL} {current_brightness}% {ALMOST_EQUAL_SYMBOL} {proposed_brightness}% {vdu_sid}")
+            return None
+        return LuxToDo(vdu_sid, proposed_brightness, preset_name, current_brightness)  # Brightness will be -1 if the attached preset has no brightness
 
     def interpolate_brightness(self, smoothed_lux: int, current_point: LuxPoint, next_point: LuxPoint) -> int:
 
@@ -6930,9 +6849,8 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         # Either no next point or closer to next_point
         elif next_point.preset_name is not None and diff_next <= self.sensitivity_percent:
             preset_name = next_point.preset_name
-        if log_debug_enabled:
-            log_debug(f"LuxAutoWorker: assess_preset_proximity {diff_current=} {diff_next=} {self.sensitivity_percent=} "
-                      f"{previous_normal_point=} {current_point=} {next_point=} {preset_name=}")
+        log_debug(f"LuxAutoWorker: assess_preset_proximity {diff_current=} {diff_next=} {self.sensitivity_percent=} "
+                  f"{previous_normal_point=} {current_point=} {next_point=} {preset_name=}") if log_debug_enabled else None
         return preset_name
 
     def lux_summary(self, metered_lux: float, smoothed_lux: int) -> str:
@@ -7428,12 +7346,12 @@ class LuxAutoController:
             self.lux_auto_brightness_worker.stop()
             self.lux_auto_brightness_worker = None
 
-    def start_worker(self, single_shot: bool, protect_nvram: bool):
+    def start_worker(self, single_shot: bool):
         if self.lux_config.is_auto_enabled() or single_shot:
             if self.lux_meter is not None:
                 if self.lux_auto_brightness_worker is not None:
                     self.stop_worker()
-                self.lux_auto_brightness_worker = LuxAutoWorker(self, single_shot, protect_nvram)
+                self.lux_auto_brightness_worker = LuxAutoWorkerNew(self, single_shot)
                 self.lux_auto_brightness_worker.start()
                 try:
                     self.lux_meter.new_lux_value_qtsignal.connect(self.update_manual_slider, type=Qt.UniqueConnection)
@@ -7453,7 +7371,7 @@ class LuxAutoController:
             self.lux_meter = lux_create_device(device_name)
             if self.lux_config.is_auto_enabled():
                 log_info("Lux auto-brightness settings refresh - restart monitoring.")
-                self.start_worker(False, self.main_controller.main_config.is_set(ConfOpt.PROTECT_NVRAM_ENABLED))
+                self.start_worker(single_shot=False)
             else:
                 log_info("Lux auto-brightness settings refresh - monitoring is off.")
                 self.stop_worker()
@@ -7514,7 +7432,7 @@ class LuxAutoController:
             else:
                 log_error("adjust_brightness_now: No worker - unexpected - error?")
         else:
-            self.start_worker(True, self.main_controller.main_config.is_set(ConfOpt.PROTECT_NVRAM_ENABLED))
+            self.start_worker(single_shot=True)
 
     def get_lux_profile(self, vdu_stable_id: VduStableId, brightness_range) -> List[LuxPoint]:
         if self.lux_config.has_option('lux-profile', vdu_stable_id):
@@ -8217,7 +8135,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         if not self.refresh_data_task.stop_requested:  # if the thread has already stopped, it never acquired the application_lock
             self.main_window.indicate_busy(True)  # Refresh has probably commenced, give the user some feedback
 
-    def restore_preset(self, preset: Preset, finished_func: Callable[[PresetTransitionWorker], None] | None = None,
+    def restore_preset(self, preset: Preset, finished_func: Callable[[BulkChangeWorker], None] | None = None,
                        immediately: bool = False, background_activity: bool = False, initialization_preset: bool = False) -> None:
         if initialization_preset:
             background_activity = True
@@ -8240,7 +8158,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             self.main_window.indicate_busy(True, lock_controls=immediately)
             preset.load()
 
-            def _update_progress(worker_thread: PresetTransitionWorker) -> None:
+            def _update_progress(worker_thread: BulkChangeWorker) -> None:
                 preset.in_transition_step += 1
                 self.main_window.show_preset_status(
                     tr("Transitioning to preset {} (elapsed time {} seconds)...").format(
@@ -8248,7 +8166,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 #self.transitioning_dummy_preset.update_progress() if self.transitioning_dummy_preset else None
                 self.main_window.update_status_indicators(preset)
 
-            def _restore_finished_callback(worker_thread: PresetTransitionWorker) -> None:
+            def _restore_finished_callback(worker_thread: BulkChangeWorker) -> None:
                 # self.transitioning_dummy_preset = None
                 if worker_thread.vdu_exception is not None and not background_activity:  # if it's a GUI request, ask about retry
                     if self.main_window.get_main_panel().show_vdu_exception(worker_thread.vdu_exception, can_retry=True):
@@ -8259,7 +8177,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 if not initialization_preset:
                     if self.main_window.tray is not None:
                         self.main_window.refresh_tray_menu()
-                    if worker_thread.work_state == PresetTransitionState.FINISHED:
+                    if worker_thread.completed:
                         with open(CURRENT_PRESET_NAME_FILE, 'w', encoding="utf-8") as cps_file:
                             cps_file.write(preset.name)
                         self.main_window.update_status_indicators(preset)
@@ -8274,8 +8192,20 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 if finished_func is not None:
                     finished_func(worker_thread)
 
-            worker = PresetTransitionWorker(self, preset, _update_progress, _restore_finished_callback,
-                                            immediately, ignore_others=initialization_preset)
+            worker = BulkChangeWorker('RestorePreset', self, _update_progress, _restore_finished_callback,
+                                      step_interval=0.0 if immediately else 5.0,
+                                      ignore_others=initialization_preset, context=preset)
+            for vdu_stable_id in self.get_vdu_stable_id_list():
+                if vdu_stable_id in preset.preset_ini:
+                    for vcp_capability in self.get_enabled_capabilities(vdu_stable_id):
+                        property_name = vcp_capability.property_name()
+                        if property_name in preset.preset_ini[vdu_stable_id]:
+                            if vcp_capability.vcp_type == CONTINUOUS_TYPE:
+                                final_value = preset.preset_ini.getint(vdu_stable_id, property_name)
+                            else:
+                                final_value = int(preset.preset_ini[vdu_stable_id][property_name], 16)
+                            worker.add_item(BulkChangeItem(vdu_stable_id, vcp_capability.vcp_code, final_value,
+                                                           transition=vcp_capability.can_transition))
             self.preset_transition_workers.append(worker)
             log_debug(f"restore_preset: '{preset.name}' handover to WorkerThread") if log_debug_enabled else None
             worker.start()
@@ -8285,13 +8215,13 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
     def restore_vdu_initialization_presets(self):
 
-        def _restored_initialization_preset(worker: PresetTransitionWorker) -> None:
+        def _restored_initialization_preset(worker: BulkChangeWorker) -> None:
             if worker.vdu_exception is not None:
                 log_error(f"Error during restoration of '{worker.preset.name}'")
                 self.status_message(tr("Error during restoration preset {}").format(worker.preset.name), timeout=5)
                 return
-            log_info(f"Restored initialization-preset '{worker.preset.name}'")
-            message = tr("Restored Preset\n{}").format(worker.preset.name)
+            log_info(f"Restored initialization-preset '{worker.context.name}'")
+            message = tr("Restored Preset\n{}").format(worker.context.name)
             self.status_message(message, timeout=5)
             self.main_window.splash_message_qtsignal.emit(message)
             time.sleep(1.0)  # Pause to give the message time to display - TODO find non-delaying solution
@@ -8518,9 +8448,10 @@ class VduAppController(QObject):  # Main controller containing methods for high 
     def get_vdu_stable_id_list(self) -> List[VduStableId]:
         return [stable_id for stable_id, vdu_controller in self.vdu_controllers_map.items() if not vdu_controller.ignore_vdu]
 
-    def get_vdu_current_values(self, vdu_stable_id: VduStableId):
+    def get_vdu_values(self, vdu_stable_id: VduStableId, vcp_codes: List[str] | None) -> List[Tuple[str, VcpValue]]:
         if controller := self.vdu_controllers_map.get(vdu_stable_id):
-            vcp_codes = [capability.vcp_code for capability in controller.enabled_capabilities]
+            if not vcp_codes:
+                vcp_codes = [capability.vcp_code for capability in controller.enabled_capabilities]
             return [(code, value) for code, value in zip(vcp_codes, controller.get_vcp_values(vcp_codes))]
         return []
 
