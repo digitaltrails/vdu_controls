@@ -8200,7 +8200,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                                 preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=2)))
                         if (self.main_config.is_set(ConfOpt.PROTECT_NVRAM_ENABLED)
                                 and preset.get_transition_type() != PresetTransitionFlag.NONE):
-                            log_warning(f"Global protect-nvram prevents '{preset.name}' from transitioning, changes are immediate.")
+                            log_warning(f"restore-preset: protect-nvram prevents '{preset.name}' from transitioning, changes are immediate.")
                     else:  # Interrupted or exception:
                         self.main_window.update_status_indicators()
                         self.main_window.show_preset_status(tr("Interrupted restoration of {}").format(preset.name))
