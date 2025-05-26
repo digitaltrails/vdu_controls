@@ -6739,15 +6739,14 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
 
     def do_work(self, to_do_list: List[LuxToDo]):
         to_do_preset_names = []
-        bulk_change = BulkChangeWorker('LuxAuto', main_controller=self.main_controller,
+        bulk_change = BulkChangeWorker('LuxAutoBulk', main_controller=self.main_controller,
                                        progress_callable=self._to_do_progress, finished_callable=self._to_do_finished,
-                                       step_interval=self.step_pause_millis / 1000.0,
-                                       context=to_do_preset_names)
+                                       step_interval=self.step_pause_millis / 1000.0, context=to_do_preset_names)
         for to_do in to_do_list:
             if to_do.brightness != -1:
                 bulk_change_item = BulkChangeItem(to_do.vdu_sid, BRIGHTNESS_VCP_CODE, to_do.brightness,
                                                   current_value=to_do.current_brightness,
-                                                  transition=True)  # can transition if protect-nvram is not set.
+                                                  transition=True)  # only transitions if protect-nvram is False.
                 bulk_change.add_item(bulk_change_item)
             if to_do.preset_name and to_do.preset_name not in to_do_preset_names:
                 to_do_preset_names.append(to_do.preset_name)
