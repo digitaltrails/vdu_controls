@@ -6676,13 +6676,13 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         self.expected_brightness_map: Dict[str, int] = {}
         self.adjust_now_requested = False
         lux_config = auto_controller.get_lux_config()
-        log_info(f"LuxAutoWorker: lux-meter.interval-minutes={lux_config.get_interval_minutes()} {single_shot=}")
+        log_info(f"LuxAuto: lux-meter.interval-minutes={lux_config.get_interval_minutes()} {single_shot=}")
         self.sleep_seconds = lux_config.get_interval_minutes() * 60
 
         def _get_prop(prop: str, fallback: bool | int | float | str) -> bool | int | float:
             op = {bool: lux_config.getboolean, int: lux_config.getint, float: lux_config.getfloat}[type(fallback)]
             value = op('lux-meter', prop, fallback=fallback)
-            log_info(f"LuxAutoWorker: lux-meter.{prop}={value}")
+            log_info(f"LuxAuto: lux-meter.{prop}={value}")
             return value
 
         samples_per_minute = _get_prop('samples-per-minute', fallback=3)
@@ -6776,7 +6776,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             log_error(f"LuxAutoWorker exited with exception={self.vdu_exception}")
 
     def idle_sampling(self, lux_meter: LuxMeterDevice, busy_main_controller: str | None):
-        log_debug(f"LuxAutoWorker: sleeping {self.sleep_seconds=}") if log_debug_enabled else None
+        log_debug(f"LuxAuto: sleeping {self.sleep_seconds=}") if log_debug_enabled else None
         if busy_main_controller:
             self.status_message(
                 tr("Task waiting for {} to finish.").format(busy_main_controller), timeout=0, destination=MsgDestination.DEFAULT)
@@ -6819,14 +6819,13 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                 (preset_brightness := preset.get_brightness(vdu_sid))):
             proposed_brightness = preset_brightness
             log_debug(
-                f"LuxAutoWorker: determine_brightness {vdu_sid=} using {preset.name=}" 
+                f"LuxAuto: determine_brightness {vdu_sid=} using {preset.name=}" 
                 f" brightness {proposed_brightness=}% ") if log_debug_enabled else None
         else:
-            log_debug(
-                f"LuxAutoWorker: determine_brightness {vdu_sid=} {proposed_brightness=}%") if log_debug_enabled else None
+            log_debug(f"LuxAuto: determine_brightness {vdu_sid=} {proposed_brightness=}%") if log_debug_enabled else None
             diff = proposed_brightness - current_brightness
             if self.interpolation_enabled and preset is None and abs(diff) < self.sensitivity_percent:
-                log_info(f"LuxAutoWorker: {vdu_sid=} {current_brightness=} {proposed_brightness=} ignored, too small")
+                log_info(f"LuxAuto: {vdu_sid=} {current_brightness=} {proposed_brightness=} ignored, too small")
                 self.status_message(f"{SUN_SYMBOL} {current_brightness}% {ALMOST_EQUAL_SYMBOL} {proposed_brightness}% {vdu_sid}")
                 return None
         return LuxToDo(vdu_sid, proposed_brightness, preset.name if preset else None, current_brightness)
@@ -6859,13 +6858,13 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         # Either no next point or closer to next_point
         elif next_point.preset_name is not None and diff_next <= self.sensitivity_percent:
             preset_name = next_point.preset_name
-        log_debug(f"LuxAutoWorker: assess_preset_proximity {diff_current=} {diff_next=} {self.sensitivity_percent=} "
+        log_debug(f"LuxAuto: assess_preset_proximity {diff_current=} {diff_next=} {self.sensitivity_percent=} "
                   f"{previous_normal_point=} {current_point=} {next_point=} {preset_name=}") if log_debug_enabled else None
         if preset_name:
             if preset := self.main_controller.find_preset_by_name(preset_name):
                 return preset
             else:
-                log_warning(f"LuxAutoWorker: assess_preset_proximity preset {preset_name} no longer exists - ignored")
+                log_warning(f"LuxAuto: assess_preset_proximity preset {preset_name} no longer exists - ignored")
         return None
 
     def lux_summary(self, metered_lux: float, smoothed_lux: int) -> str:
