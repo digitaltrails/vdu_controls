@@ -7564,7 +7564,7 @@ class LuxAmbientSlider(QWidget):
             LuxZone(tr("Overcast"), LUX_OVERCAST_SVG, 400, 1000, 900, column_span=3),
             LuxZone(tr("Twilight"), LUX_TWILIGHT_SVG, 100, 400, 130, column_span=2),
             LuxZone(tr("Subdued"), LUX_SUBDUED_SVG, 15, 100, 20, column_span=3),
-            LuxZone(tr("Dark"), LUX_DARK_SVG, 0, 15, 2, column_span=3), ]
+            LuxZone(tr("Dark"), LUX_DARK_SVG, 0, 15, 2, column_span=4), ]
         self.current_value = 10000
 
         self.status_icon = StdButton(icon_size=QSize(native_font_height(scaled=1.8), native_font_height(scaled=1.8)), flat=True,
