@@ -7891,7 +7891,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         self.previously_detected_vdu_list: List[Tuple[str, str, str, str]] = []
         self.refresh_data_task: WorkerThread | None = None
         self.weather_query: WeatherQuery | None = None
-        self.preset_transition_workers: List[PresetTransitionWorker] = []  # Not sure if this actually needs to be a list.
+        self.preset_transition_workers: List[BulkChangeWorker] = []  # Not sure if this actually needs to be a list.
         self.lux_auto_controller: LuxAutoController | None = LuxAutoController(self) if self.main_config.is_set(
             ConfOpt.LUX_OPTIONS_ENABLED) else None
 
@@ -8345,7 +8345,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             self.main_window.show_preset_status(f"{TIME_CLOCK_SYMBOL} " + tr("Preset {} activating at {}").format(
                 preset.name, f"{activation_time:%H:%M}") + f" - {msg}")
 
-        def _activation_finished(worker: PresetTransitionWorker) -> None:
+        def _activation_finished(worker: BulkChangeWorker) -> None:
             assert preset.elevation_time_today is not None
             attempts = preset.scheduler_job.attempts
             if worker.vdu_exception is not None:
