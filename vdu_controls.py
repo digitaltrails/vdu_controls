@@ -4407,7 +4407,7 @@ class BulkChangeWorker(WorkerThread):
 
     def _refresh_current_values_from_vdu(self):
         log_debug(f"BulkChangeWorker {self.name} having to get current_values from VDU") if log_debug_enabled else None
-        items_by_vdu: Dict[VduStableId, Dict[str: LuxToDo]] = {}
+        items_by_vdu: Dict[VduStableId, Dict[str: BulkChangeItem]] = {}
         for item in self.to_do_list:
             if item.vdu_sid not in items_by_vdu:
                 items_by_vdu[item.vdu_sid] = {}
@@ -6815,22 +6815,21 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             if profile_point.brightness > 0:
                 previous_normal_point = profile_point
         current_brightness = self.main_controller.get_value(vdu_sid, BRIGHTNESS_VCP_CODE)
-        if ((preset_name := self.assess_preset_proximity(proposed_brightness, lower_point, matched_point, profile_point)) and
-                (preset := self.main_controller.find_preset_by_name(preset_name)) and
+        if ((preset := self.assess_preset_proximity(proposed_brightness, lower_point, matched_point, profile_point)) and
                 (preset_brightness := preset.get_brightness(vdu_sid))):
             proposed_brightness = preset_brightness
             log_debug(
-                f"LuxAutoWorker: determine_brightness {vdu_sid=} using Preset '{preset_name=}'" 
+                f"LuxAutoWorker: determine_brightness {vdu_sid=} using {preset.name=}" 
                 f" brightness {proposed_brightness=}% ") if log_debug_enabled else None
         else:
             log_debug(
                 f"LuxAutoWorker: determine_brightness {vdu_sid=} {proposed_brightness=}%") if log_debug_enabled else None
             diff = proposed_brightness - current_brightness
-            if self.interpolation_enabled and preset_name is None and abs(diff) < self.sensitivity_percent:
+            if self.interpolation_enabled and preset is None and abs(diff) < self.sensitivity_percent:
                 log_info(f"LuxAutoWorker: {vdu_sid=} {current_brightness=} {proposed_brightness=} ignored, too small")
                 self.status_message(f"{SUN_SYMBOL} {current_brightness}% {ALMOST_EQUAL_SYMBOL} {proposed_brightness}% {vdu_sid}")
                 return None
-        return LuxToDo(vdu_sid, proposed_brightness, preset_name, current_brightness)  # Brightness will be -1 if the attached preset has no brightness
+        return LuxToDo(vdu_sid, proposed_brightness, preset.name if preset else None, current_brightness)
 
     def interpolate_brightness(self, smoothed_lux: int, current_point: LuxPoint, next_point: LuxPoint) -> int:
 
@@ -6846,7 +6845,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         return round(interpolated_brightness)
 
     def assess_preset_proximity(self, interpolated_brightness: float,
-                                previous_normal_point: LuxPoint, current_point: LuxPoint, next_point: LuxPoint) -> str | None:
+                                previous_normal_point: LuxPoint, current_point: LuxPoint, next_point: LuxPoint) -> Preset | None:
         # Brightness is a better indicator of nearness for deciding whether to activate a preset
         lower_point_brightness = current_point.brightness if current_point.brightness >= 0 else previous_normal_point.brightness
         diff_current = abs(interpolated_brightness - lower_point_brightness)
@@ -6862,7 +6861,12 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             preset_name = next_point.preset_name
         log_debug(f"LuxAutoWorker: assess_preset_proximity {diff_current=} {diff_next=} {self.sensitivity_percent=} "
                   f"{previous_normal_point=} {current_point=} {next_point=} {preset_name=}") if log_debug_enabled else None
-        return preset_name
+        if preset_name:
+            if preset := self.main_controller.find_preset_by_name(preset_name):
+                return preset
+            else:
+                log_warning(f"LuxAutoWorker: assess_preset_proximity preset {preset_name} no longer exists - ignored")
+        return None
 
     def lux_summary(self, metered_lux: float, smoothed_lux: int) -> str:
         lux_int = round(metered_lux)  # 256 bit char in lux_summary_text can cause issues if stdout not utf8 (force utf8 for stdout)
