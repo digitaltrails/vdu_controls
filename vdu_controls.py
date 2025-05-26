@@ -6705,19 +6705,21 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             self.doze(2) if not self.single_shot else None
             log_info(f"LuxAutoWorker monitoring commences {thread_pid()=}")
             assert lux_auto_controller is not None
-            while not self.stop_requested and not self.main_controller.pause_background_tasks(self):
+            while not self.stop_requested:
                 #self.expected_brightness_map.clear()
+                busy_main_controller = self.main_controller.busy_doing()
                 if lux_meter := lux_auto_controller.lux_meter:
                     if metered_lux := lux_meter.get_value():
-                        if to_do_list := self.determine_required_work(lux_auto_controller, metered_lux,
-                                                                      not lux_meter.has_manual_capability):
-                            self.do_work(to_do_list)
+                        if not busy_main_controller:
+                            if to_do_list := self.determine_required_work(lux_auto_controller, metered_lux,
+                                                                          not lux_meter.has_manual_capability):
+                                self.do_work(to_do_list)
                     if self.single_shot:
                         break
                 else:  # In app config change - things are in a state of flux
                     log_error("Exiting, no lux meter available.")
                     break
-                self.idle_sampling(lux_meter)  # Sleep and sample for rest of cycle
+                self.idle_sampling(lux_meter, busy_main_controller)  # Sleep and sample for rest of cycle
         finally:
             log_info(f"LuxAutoWorker exiting (stop_requested={self.stop_requested}) {thread_pid()=}")
 
@@ -6760,7 +6762,6 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             to_do_preset_names = worker.context
             for preset_name in to_do_preset_names:  # if a point had a Preset attached, activate it now
                 # Restoring the Preset's non-brightness settings. Invoke now, so it will happen in this thread's sleep period.
-                self.status_message(tr("Restoring preset {}").format(preset_name), timeout=5000)
                 if preset := self.main_controller.find_preset_by_name(preset_name):  # Check that it still exists
                     self.main_controller.restore_preset(
                         preset, immediately=PresetTransitionFlag.SCHEDULED not in preset.get_transition_type(),
@@ -6774,9 +6775,14 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         if self.vdu_exception:
             log_error(f"LuxAutoWorker exited with exception={self.vdu_exception}")
 
-    def idle_sampling(self, lux_meter):
+    def idle_sampling(self, lux_meter: LuxMeterDevice, busy_main_controller: str | None):
         log_debug(f"LuxAutoWorker: sleeping {self.sleep_seconds=}") if log_debug_enabled else None
+        if busy_main_controller:
+            self.status_message(
+                tr("Task waiting for {} to finish.").format(busy_main_controller), timeout=0, destination=MsgDestination.DEFAULT)
         for second in range(self.sleep_seconds, -1, -1):  # Short sleeps, checking for requests in between
+            if busy_main_controller and not self.main_controller.busy_doing():
+                break  # the main controller is no longer busy
             if self.stop_requested or self.adjust_now_requested:  # Respond to stop requests while sleeping
                 self.adjust_now_requested = False
                 break
@@ -8188,8 +8194,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                         with open(CURRENT_PRESET_NAME_FILE, 'w', encoding="utf-8") as cps_file:
                             cps_file.write(preset.name)
                         self.main_window.update_status_indicators(preset)
-                        self.main_window.show_preset_status(tr("Restored {} (elapsed time {} seconds)").format(
-                            preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=2)))
+                        if worker_thread.change_count != 0:
+                            self.main_window.show_preset_status(tr("Restored {} (elapsed time {} seconds)").format(
+                                preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=2)))
                         if (self.main_config.is_set(ConfOpt.PROTECT_NVRAM_ENABLED)
                                 and preset.get_transition_type() != PresetTransitionFlag.NONE):
                             log_warning(f"Global protect-nvram prevents '{preset.name}' from transitioning, changes are immediate.")
@@ -8506,18 +8513,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         log_error(f"get_vdu_description: No controller for {vdu_stable_id}")
         return vdu_stable_id
 
-    def pause_background_tasks(self, task: WorkerThread) -> bool:
-        i = 0
-        while PresetsDialog.is_instance_editing() and not task.stop_requested:
-            log_info(f"Pausing {task.__class__.__name__} while preset is being edited.") if i == 0 else None
-            if i % 30 == 0:
-                self.main_window.status_message(
-                    tr("Task waiting for Preset editing to finish."), timeout=0, destination=MsgDestination.DEFAULT)
-            i += 1
-            time.sleep(2)
-        log_info(f"Resuming {task.__class__.__name__}") if i > 0 else None
-        self.main_window.status_message('', timeout=1, destination=MsgDestination.DEFAULT)
-        return False
+    def busy_doing(self) -> str | None:
+        return tr("Preset editing") if PresetsDialog.is_instance_editing() else None
 
     def find_vdu_config_files(self) -> List[Path]:
         found = []
