@@ -360,9 +360,11 @@ Version History
   * Fix size of Lux Dialog scale, adjust for display DPI.
   * Fix size of Solar Elevation chart, adjust for display DPI.
   * Fix Lux brightness adjustment, allow protect-nvam to be disabled.
-  * Don't create model-only config files, they're confusing and likely not used (they can still be created manually).
   * Fix dbus ddcutil-service detect, only request valid displays.
   * Prevent a lux adjustment infinite loop if no brightness controls are enabled.
+  * Refactored Preset-restoration and ambient-brightness-adjustment for simplicity and reuse - there 
+    may be subtle differences in behavior (bugs or features?).
+  * Don't create model-only config files, they're confusing and likely not used (they can still be created manually).
 
 * 2.3.0
   * Fix the doze function, this improves the responsiveness of all slider controls.
