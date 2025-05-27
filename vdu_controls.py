@@ -6758,7 +6758,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         self.status_message(f"{SUN_SYMBOL} {STEPPING_SYMBOL}")
 
     def _to_do_finished(self, worker: BulkChangeWorker):
-        if  worker.completed:
+        if worker.completed:
             to_do_preset_names = worker.context
             for preset_name in to_do_preset_names:  # if a point had a Preset attached, activate it now
                 # Restoring the Preset's non-brightness settings. Invoke now, so it will happen in this thread's sleep period.
@@ -8089,10 +8089,6 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             self.lux_auto_controller.adjust_brightness_now()
 
     def start_refresh(self, external_event: bool = False) -> None:
-        if not is_running_in_gui_thread():  # TODO this appears to never be true - remove???
-            log_debug(f"Re-invoke start_refresh() in GUI thread {external_event=}") if log_debug_enabled else None
-            self.main_window.run_in_gui_thread(partial(self.start_refresh, external_event))
-            return
 
         def _update_from_vdu(worker: WorkerThread) -> None:
             if self.ddcutil is not None:
@@ -8143,6 +8139,10 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             finally:
                 self.main_window.indicate_busy(False)
 
+        if not is_running_in_gui_thread():  # TODO this appears to never be true - remove???
+            log_debug(f"Re-invoke start_refresh() in GUI thread {external_event=}") if log_debug_enabled else None
+            self.main_window.run_in_gui_thread(partial(self.start_refresh, external_event))
+            return
         self.refresh_data_task = WorkerThread(task_body=_update_from_vdu, task_finished=_update_ui_view)
         self.refresh_data_task.start()
         time.sleep(0.1)  # Sleep a bit to see if we acquire the application lock
@@ -8165,12 +8165,6 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
         log_debug(f"restore_preset: '{preset.name}' try to obtain application_lock", trace=False) if log_debug_enabled else None
         with self.application_lock:  # The lock prevents a transition firing when the GUI/app is reconfiguring
-            log_debug(f"restore_preset: '{preset.name}' holding application_lock", trace=False) if log_debug_enabled else None
-            if not immediately:
-                self.main_window.show_preset_status(tr("Transitioning to preset {}").format(preset.name))
-                self.main_window.update_status_indicators(preset)  # TODO - create a transitioning indicator
-            self.main_window.indicate_busy(True, lock_controls=immediately)
-            preset.load()
 
             def _update_progress(worker_thread: BulkChangeWorker) -> None:
                 preset.in_transition_step += 1
@@ -8207,6 +8201,12 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 if finished_func is not None:
                     finished_func(worker_thread)
 
+            log_debug(f"restore_preset: '{preset.name}' holding application_lock", trace=False) if log_debug_enabled else None
+            if not immediately:
+                self.main_window.show_preset_status(tr("Transitioning to preset {}").format(preset.name))
+                self.main_window.update_status_indicators(preset)  # TODO - create a transitioning indicator
+            self.main_window.indicate_busy(True, lock_controls=immediately)
+            preset.load()
             worker = BulkChangeWorker('RestorePreset', self, _update_progress, _restore_finished_callback,
                                       step_interval=0.0 if immediately else 5.0,
                                       ignore_others=initialization_preset, context=preset)
@@ -8327,20 +8327,6 @@ class VduAppController(QObject):  # Main controller containing methods for high 
     def activate_scheduled_preset(self, preset: Preset, check_weather: bool = True, immediately: bool = False,
                                   activation_time: datetime | None = None) -> None:
         assert is_running_in_gui_thread()
-        if not self.main_config.is_set(ConfOpt.SCHEDULE_ENABLED):
-            log_info(f"Schedule is disabled - not activating preset '{preset.name}'")
-            return
-        if activation_time is None:
-            activation_time = zoned_now()
-        off_schedule = activation_time < preset.elevation_time_today  # Too early, must be an off-schedule catchup from yesterday
-        if preset.is_weather_dependent() and check_weather and self.main_config.is_set(ConfOpt.WEATHER_ENABLED):
-            if not self.is_weather_satisfactory(preset):
-                if not off_schedule:
-                    preset.schedule_status = PresetScheduleStatus.WEATHER_CANCELLATION
-                message = tr("Preset {} activation was cancelled due to weather at {}").format(
-                    preset.name, activation_time.isoformat(' ', 'seconds'))
-                self.main_window.show_preset_status(message)
-                return
 
         def _activation_feedback(msg: str):
             self.main_window.show_preset_status(f"{TIME_CLOCK_SYMBOL} " + tr("Preset {} activating at {}").format(
@@ -8371,6 +8357,20 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             _activation_feedback(tr("Restored {}").format(preset.name))
             log_info(f"Restored preset '{preset.name}' on try {attempts}") if attempts > 1 else None
 
+        if not self.main_config.is_set(ConfOpt.SCHEDULE_ENABLED):
+            log_info(f"Schedule is disabled - not activating preset '{preset.name}'")
+            return
+        if activation_time is None:
+            activation_time = zoned_now()
+        off_schedule = activation_time < preset.elevation_time_today  # Too early, must be an off-schedule catchup from yesterday
+        if preset.is_weather_dependent() and check_weather and self.main_config.is_set(ConfOpt.WEATHER_ENABLED):
+            if not self.is_weather_satisfactory(preset):
+                if not off_schedule:
+                    preset.schedule_status = PresetScheduleStatus.WEATHER_CANCELLATION
+                message = tr("Preset {} activation was cancelled due to weather at {}").format(
+                    preset.name, activation_time.isoformat(' ', 'seconds'))
+                self.main_window.show_preset_status(message)
+                return
         if preset.scheduler_job.attempts == 1:
             log_info(f"Activating scheduled preset '{preset.name}' transition={immediately} {off_schedule=}")
         # Happens asynchronously in a thread
@@ -8475,8 +8475,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             return controller.enabled_capabilities
         return []
 
-    def get_range(self, vdu_stable_id: VduStableId, vcp_code: str, fallback: Tuple[int, int] | None = None) -> Tuple[
-                                                                                                                   int, int] | None:
+    def get_range(self, vdu_stable_id: VduStableId, vcp_code: str,
+                  fallback: Tuple[int, int] | None = None) -> Tuple[int, int] | None:
         if controller := self.vdu_controllers_map.get(vdu_stable_id):
             return controller.get_range_restrictions(vcp_code, fallback)
         log_error(f"get_range: No controller for {vdu_stable_id}")
@@ -8526,7 +8526,6 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 found.append(conf_file)
         log_debug(f"find_vdu_config_files {found}")
         return found
-
 
     def status_message(self, message: str, timeout: int, destination: MsgDestination = MsgDestination.DEFAULT):
         self.main_window.status_message(message, timeout, destination)
