@@ -864,7 +864,8 @@ from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QR
     QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir
 from PyQt5.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusArgument, QDBusVariant
 from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QRegExpValidator, \
-    QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon
+    QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon, \
+    QDoubleValidator
 from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
@@ -2180,7 +2181,7 @@ class WorkerThread(QThread):
             self.finished_work_qtsignal.connect(self.task_finished)
         self.vdu_exception: VduException | None = None
 
-    def run(self) -> None:
+    def run(self) -> None:  # called by QThread start(), or call it directly to run synchronously in an existing thread.
         # Long-running task, runs in a separate thread
         class_name = self.__class__.__name__
         try:
@@ -3929,6 +3930,11 @@ class Preset:
                 result = basic_desc + ' ' + tr("(schedule is disabled in Settings)")
         return result
 
+    def get_daylight_factor(self) -> float | None:
+        if self.preset_ini.get('preset', 'daylight-factor', fallback=None):
+            return self.preset_ini.getfloat('preset', 'daylight-factor', fallback=None)
+        return None
+
     def get_transition_type(self) -> PresetTransitionFlag:
         return parse_transition_type(self.preset_ini.get('preset', 'transition-type', fallback="NONE"))
 
@@ -5185,6 +5191,35 @@ class PresetChooseElevationChart(QLabel):
         self.create_plot()
         super().leaveEvent(event)
 
+class PresetDaylightFactorWidget(QWidget):
+
+    def __init__(self):
+        super().__init__()
+        self.setLayout(QHBoxLayout())
+        self.df_checkbox = QCheckBox()
+        self.df_label = QLabel(tr("Daylight-Factor"))
+        self.df_input = QLineEdit()
+        self.df_input.setValidator(QDoubleValidator())
+        self.setEnabled(False)
+        self.df_checkbox.toggled.connect(self.setEnabled)
+        self.setToolTip(tr("Save the current semi-automatic Light-Metering Daylight-Factor (DF) as part of the Preset."))
+
+        def df_init(state):
+            if state == Qt.CheckState.Checked:
+                if self.df_input.text() == '':
+                    self.df_input.setText(f"{LuxMeterSemiAutoDevice.get_df_and_location()[0]:.4f}")
+            else:
+                self.df_input.setText('')
+
+        self.df_checkbox.stateChanged.connect(df_init)
+        for widget in (self.df_checkbox, self.df_label, self.df_input):
+            self.layout().addWidget(widget)
+
+    def setEnabled(self, enabled):
+        self.df_checkbox.setChecked(enabled)
+        self.df_label.setEnabled(enabled)
+        self.df_input.setEnabled(enabled)
+
 
 class PresetChooseElevationWidget(QWidget):
     _slider_select_elevation_qtsignal = pyqtSignal(object)
@@ -5204,6 +5239,8 @@ class PresetChooseElevationWidget(QWidget):
         self.elevation_chart = PresetChooseElevationChart()
         self.elevation_chart.selected_elevation_qtsignal.connect(self.set_elevation_key)
 
+        self.df_widget = PresetDaylightFactorWidget()
+
         self.slider = QSlider(Qt.Horizontal)
         self.slider.setTracking(True)
         self.slider.setMinimum(-1)
@@ -5219,6 +5256,7 @@ class PresetChooseElevationWidget(QWidget):
         chart_slider_layout = QVBoxLayout()
         chart_slider_layout.addWidget(self.elevation_chart, 1)
         chart_slider_layout.addWidget(self.slider)
+        chart_slider_layout.addWidget(self.df_widget, 0)
         bottom_layout.addLayout(chart_slider_layout, 1)
 
         self.weather_widget = PresetChooseWeatherWidget(self.location, main_config)
@@ -5585,6 +5623,9 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
                 preset.preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None))
             self.editor_transitions_widget.set_transition_type(preset.get_transition_type())
             self.editor_transitions_widget.set_step_seconds(preset.get_step_interval_seconds())
+            df = preset.get_daylight_factor()
+            self.editor_trigger_widget.df_widget.setEnabled(df is not None)
+            self.editor_trigger_widget.df_widget.df_input.setText(f"{df:.4f}" if df is not None else '')
 
     def has_changes(self, preset: Preset) -> bool:
         preset_ini_copy = preset.preset_ini.duplicate()
@@ -5612,6 +5653,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
             preset_ini.set('preset', 'solar-elevation-weather-restriction', weather_filename)
         preset_ini.set('preset', 'transition-type', str(self.editor_transitions_widget.get_transition_type()))
         preset_ini.set('preset', 'transition-step-interval-seconds', str(self.editor_transitions_widget.get_step_seconds()))
+        preset_ini.set('preset', 'daylight-factor', str(self.editor_trigger_widget.df_widget.df_input.text()))
 
     def get_preset_widgets(self) -> List[PresetWidget]:
         return [self.preset_widgets_layout.itemAt(i).widget()
@@ -6616,14 +6658,20 @@ class LuxMeterSemiAutoDevice(LuxMeterManualDevice):  # is both manual and automa
         return 1.0, LuxMeterSemiAutoDevice.location
 
     @staticmethod
-    def update_df(new_lux_value: float):
+    def update_df_from_lux_value(new_lux_value: float):
         if location := LuxMeterSemiAutoDevice.location:
             solar_lux = calc_solar_lux(zoned_now(), location, 1.0)
             if solar_lux > 0:  # the daylight factor can only be calculated during daylight.
                 daylight_factor =  new_lux_value / solar_lux
                 # log_debug(f"LuxMeterSemiAutoDevice: {new_lux_value=} {solar_lux=} {daylight_factor=}")
-                if CONFIG_DIR_PATH.exists():
-                    CONFIG_DIR_PATH.joinpath("lux_daylight_factor.txt").write_text(str(daylight_factor))
+                LuxMeterSemiAutoDevice.set_df(daylight_factor, internal=True)
+
+    @staticmethod
+    def set_df(daylight_factor: float, internal: bool = False):
+        if CONFIG_DIR_PATH.exists():
+            CONFIG_DIR_PATH.joinpath("lux_daylight_factor.txt").write_text(str(daylight_factor))
+        if not internal:
+            LuxDialog.reconfigure_instance()
 
     @staticmethod
     def update_location(location: GeoLocation | None):
@@ -6753,8 +6801,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                 bulk_changer.add_item(bulk_change_item)
             if to_do.preset_name and to_do.preset_name not in to_do_preset_names:
                 to_do_preset_names.append(to_do.preset_name)
-        bulk_changer.start()
-        bulk_changer.wait()  # Do we need to wait - maybe not
+        bulk_changer.run()  # Call run instead of start; run in this thread instead of a new thread.
 
     def _to_do_progress(self, _: BulkChangeWorker):
         self.status_message(f"{SUN_SYMBOL} {STEPPING_SYMBOL}")
@@ -7686,7 +7733,7 @@ class LuxAmbientSlider(QWidget):
                 if source == self.lux_slider or source == self.lux_input_field or non_semi_auto_meter:
                     if location := self.controller.main_controller.main_config.get_location():
                         LuxMeterSemiAutoDevice.update_location(location)  # in case it's changed
-                        LuxMeterSemiAutoDevice.update_df(self.current_value)
+                        LuxMeterSemiAutoDevice.update_df_from_lux_value(self.current_value)
             finally:
                 self.in_flux = False
                 if source is None:
@@ -8206,6 +8253,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                         if (self.main_config.is_set(ConfOpt.PROTECT_NVRAM_ENABLED)
                                 and preset.get_transition_type() != PresetTransitionFlag.NONE):
                             log_warning(f"restore-preset: protect-nvram prevents '{preset.name}' from transitioning, changes are immediate.")
+                        if df := preset.get_daylight_factor():
+                            log_info(f"Daylight-Factor {df:.4f} read from Preset {preset.name}")
+                            LuxMeterSemiAutoDevice.set_df(df)
                     else:  # Interrupted or exception:
                         self.main_window.update_status_indicators()
                         self.main_window.show_preset_status(tr("Interrupted restoration of {}").format(preset.name))
@@ -8218,7 +8268,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 self.main_window.update_status_indicators(preset)  # TODO - create a transitioning indicator
             self.main_window.indicate_busy(True, lock_controls=immediately)
             preset.load()
-            worker = BulkChangeWorker('RestorePreset', self, _update_progress, _restore_finished_callback,
+            bulk_changer = BulkChangeWorker('RestorePreset', self, _update_progress, _restore_finished_callback,
                                       step_interval=0.0 if immediately else 5.0,
                                       ignore_others=initialization_preset, context=preset)
             for vdu_stable_id in self.get_vdu_stable_id_list():
@@ -8230,13 +8280,13 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                                 final_value = preset.preset_ini.getint(vdu_stable_id, property_name)
                             else:
                                 final_value = int(preset.preset_ini[vdu_stable_id][property_name], 16)
-                            worker.add_item(BulkChangeItem(vdu_stable_id, vcp_capability.vcp_code, final_value,
+                            bulk_changer.add_item(BulkChangeItem(vdu_stable_id, vcp_capability.vcp_code, final_value,
                                                            transition=vcp_capability.can_transition))
-            self.preset_transition_workers.append(worker)
+            self.preset_transition_workers.append(bulk_changer)
             log_debug(f"restore_preset: '{preset.name}' handover to WorkerThread") if log_debug_enabled else None
-            worker.start()
+            bulk_changer.start()
             if initialization_preset:  # Don't allow anything else until it's finished
-                worker.wait()
+                bulk_changer.wait()
         log_debug(f"restore_preset: '{preset.name}' released application_lock") if log_debug_enabled else None
 
     def restore_vdu_initialization_presets(self):
