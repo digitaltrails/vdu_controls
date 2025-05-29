@@ -4353,7 +4353,6 @@ class BulkChangeWorker(WorkerThread):
         self.ignore_others = ignore_others
         self.context = context
         self.start_time: datetime | None = None
-        self.end_time: datetime | None = None
         self.main_controller = main_controller
         self.progress_callable = progress_callable
         self.progress_qtsignal.connect(self.progress_callable)
@@ -4361,6 +4360,7 @@ class BulkChangeWorker(WorkerThread):
         self.step_interval = step_interval
         self.protect_nvram = self.main_controller.main_config.is_set(ConfOpt.PROTECT_NVRAM_ENABLED)
         self.change_count = 0
+        self.total_elapsed_seconds = 0.0
         self.completed = False
 
     def add_item(self, item: BulkChangeItem):
@@ -4370,15 +4370,16 @@ class BulkChangeWorker(WorkerThread):
 
     def _perform_changes(self, _: BulkChangeWorker):
         self.start_time = zoned_now()
-        if any([item.current_value is None for item in self.to_do_list]):  # has parent filled out expected values.
-            self._refresh_current_values_from_vdu()
-        self._do_stepped_changes()  # transitions in a series of steps
-        if not self.stop_requested:
-            self._do_normal_changes()
-            self.completed = len([item for item in self.to_do_list if item.current_value != item.final_value]) == 0
-        self.end_time = zoned_now()
-        worker = self
-        log_info(f"BulkChangeWorker: {worker.name} {worker.completed=} {worker.change_count=} {worker.total_elapsed_seconds()=}")
+        try:
+            if any([item.current_value is None for item in self.to_do_list]):  # has parent filled out expected values.
+                self._refresh_current_values_from_vdu()
+            self._do_stepped_changes()  # transitions in a series of steps
+            if not self.stop_requested:
+                self._do_normal_changes()
+                self.completed = len([item for item in self.to_do_list if item.current_value != item.final_value]) == 0
+        finally:
+            (_ :=self).total_elapsed_seconds = (self.start_time - zoned_now()).total_seconds()
+            log_info(f"BulkChangeWorker: {_.name} {_.completed=} {_.change_count=} {_.total_elapsed_seconds=:.3f}")
 
     def _do_normal_changes(self):
         for item in [item for item in self.to_do_list if not item.transition and item.current_value != item.final_value]:
@@ -4432,9 +4433,6 @@ class BulkChangeWorker(WorkerThread):
 
     def completed_items(self):
         return [item for item in self.to_do_list if item.current_value == item.final_value]
-
-    def total_elapsed_seconds(self) -> float:
-        return ((self.end_time if self.end_time is not None else zoned_now()) - self.start_time).total_seconds()
 
 
 class PresetController:
@@ -6307,20 +6305,26 @@ class LuxGaugeWidget(QWidget):
         self.max_history = 240
         self.history: List[LuxGaugeHistory | None] = [None] * (self.max_history // 10)
         self.plot_widget = QLabel()
-        self.plot_widget.setFixedWidth(300)
+        self.plot_widget.setFixedWidth(340)
         self.plot_widget.setFixedHeight(100)
         self.sun_image = None
         self.layout().addWidget(self.plot_widget)
         self.current_meter: LuxMeterDevice | None = None
         self.stats_label = QLabel()
-        self.setToolTip(
-            tr("Lux/Ei:\t Estimated illumination inside.\n"
-               "Eo:\t Outside solar illumination calculated for the\n"
-               "\t geolocation at the current date and time.\n"
-               "DF:\t Daylight Factor (Ei/Eo).\n\n"
-               "Eo = unit_constants * sin(radians(solar_altitude)) * 10 ** (-0.1 * air_mass)\nEi = DF x Eo"))
+        self.help_text = tr("Left:\t Rolling display of metered lux (ML).\n"
+                            "Right:\t 1) Estimated outside solar illumination (Eo) for\n"
+                            "\t     the set geolocation for the current day.\n"
+                            "\t 2) Estimated inside illumination (Ei = DF * Eo).\n"
+                            "________________________________________________________________________________\n"
+                            "Daylight Factor DF = ML/Eo\n" \
+                            "Eo = unit_constants * sin(radians(solar_altitude)) * 10 ** (-0.1 * air_mass)\n"
+                            "Estimates of Ei are used by the semi-automatic brightness option.")
+        self.setToolTip(self.help_text)
         self.layout().addWidget(self.stats_label)
         self.updates_enabled = True
+
+    def mousePressEvent(self, a0):
+        MBox(MBox.Information, msg=self.help_text).exec()
 
     def append_new_value(self, lux: int) -> None:
         self.history = self.history[-self.max_history:]
@@ -6336,7 +6340,7 @@ class LuxGaugeWidget(QWidget):
         painter.setRenderHint(QPainter.HighQualityAntialiasing)
         plot_height = self.plot_widget.height()
         # Create a plot of recent historical lux readings.
-        lux_plot_width = self.plot_widget.height()
+        lux_plot_width = self.plot_widget.height()  # Square with height
         painter.fillRect(0, 0, lux_plot_width, plot_height, self.common_background_color)
         painter.setPen(QPen(self.lux_bar_color, 1))
         most_recent_lux_xy = (None, None)  # draw pos of most recent
@@ -6359,7 +6363,7 @@ class LuxGaugeWidget(QWidget):
         df_plot_day = zoned_now().replace(hour=0, minute=0, second=0, microsecond=0)
         df_plot_left = lux_plot_width + margin #plot_width - df_plot_width - 30
         painter.fillRect(df_plot_left, 0, df_plot_left + df_plot_width, plot_height, self.common_background_color)
-        # Plot the history as a block
+        # Plot the DF, Eo, Ei history as a block
         painter.setPen(QPen(self.lux_bar_color, 1))
         most_recent_df_xy = (None, None) # Indicate the last history position with a red dot
         most_recent_item = None
@@ -6397,6 +6401,9 @@ class LuxGaugeWidget(QWidget):
         for i in (10, 100, 1_000, 10_000, 100_000):
             painter.drawLine(middle - 4, y := self._y_from_lux(i, plot_height), middle + 4, y)
             painter.drawText(QPoint(middle + 6, y + font_height), str(i))
+        # draw hour ticks along bottom
+        for hx in range((hw := 60 // round(minutes_per_point)), hw * 25, hw):
+            painter.drawLine(x := df_plot_left + hx, plot_height, x, plot_height - (16 if hx == (12 * hw) else 8))
         # Draw the sun
         if most_recent_df_xy and most_recent_item and most_recent_df_xy[0]:
             if self.sun_image is None:
@@ -6808,15 +6815,16 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
 
     def _to_do_finished(self, worker: BulkChangeWorker):
         if worker.completed:
-            to_do_preset_names = worker.context
-            for preset_name in to_do_preset_names:  # if a point had a Preset attached, activate it now
-                # Restoring the Preset's non-brightness settings. Invoke now, so it will happen in this thread's sleep period.
-                if preset := self.main_controller.find_preset_by_name(preset_name):  # Check that it still exists
-                    self.main_controller.restore_preset(
-                        preset, immediately=PresetTransitionFlag.SCHEDULED not in preset.get_transition_type(),
-                        background_activity=True)
-                else:
-                    self.main_controller.update_window_status_indicators()
+            if to_do_preset_names := worker.context:
+                self.doze(0.5)  # Give the user a chance to read messages
+                for preset_name in to_do_preset_names:  # if a point had a Preset attached, activate it now
+                    # Restoring the Preset's non-brightness settings. Invoke now, so it will happen in this thread's sleep period.
+                    if preset := self.main_controller.find_preset_by_name(preset_name):  # Check that it still exists
+                        self.main_controller.restore_preset(
+                            preset, immediately=PresetTransitionFlag.SCHEDULED not in preset.get_transition_type(),
+                            background_activity=True)
+                    else:
+                        self.main_controller.update_window_status_indicators()
         else:
             log_debug("LuxAuto: bulk worker failed to complete.") if log_debug_enabled else None
             self.status_message(f"{SUN_SYMBOL} {ERROR_SYMBOL} {RAISED_HAND_SYMBOL}")
@@ -7281,7 +7289,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                         "Should circumstances change due to factors such as cloud or rain,\n"
                         "adjusting the slider updates the ratio.\n"),
                  details=tr("Estimation of indoor illumination (Ei) from solar illumination (Eo):\n"
-                            "    Ei = DF x Eo\n"
+                            "    Ei = DF * Eo\n"
                             "    DF = Ei / Eo\n"
                             "Ei:\tIndoor Illumination, from slider, or calculated automatically from Eo.\n"
                             "Eo:\tSolar/Outdoor Illumination, calculated from geolocation and datetime.\n"
@@ -8228,7 +8236,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 preset.in_transition_step += 1
                 self.main_window.show_preset_status(
                     tr("Transitioning to preset {} (elapsed time {} seconds)...").format(
-                        preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=2)))
+                        preset.name, f"{worker_thread.total_elapsed_seconds:.2f}"))
                 #self.transitioning_dummy_preset.update_progress() if self.transitioning_dummy_preset else None
                 self.main_window.update_status_indicators(preset)
 
@@ -8249,7 +8257,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                         self.main_window.update_status_indicators(preset)
                         if worker_thread.change_count != 0:
                             self.main_window.show_preset_status(tr("Restored {} (elapsed time {} seconds)").format(
-                                preset.name, round(worker_thread.total_elapsed_seconds(), ndigits=2)))
+                                preset.name, f"{worker_thread.total_elapsed_seconds:.2f}"))
+                        else:
+                            self.main_window.show_preset_status(tr("Already on {} (no changes)").format(preset.name))
                         if (self.main_config.is_set(ConfOpt.PROTECT_NVRAM_ENABLED)
                                 and preset.get_transition_type() != PresetTransitionFlag.NONE):
                             log_warning(f"restore-preset: protect-nvram prevents '{preset.name}' from transitioning, changes are immediate.")
