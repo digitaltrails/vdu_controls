@@ -4379,7 +4379,8 @@ class BulkChangeWorker(WorkerThread):
                 self.completed = len([item for item in self.to_do_list if item.current_value != item.final_value]) == 0
         finally:
             (_ :=self).total_elapsed_seconds = (self.start_time - zoned_now()).total_seconds()
-            log_info(f"BulkChangeWorker: {_.name} {_.completed=} {_.change_count=} {_.total_elapsed_seconds=:.3f}")
+            if log_debug_enabled:
+                log_debug(f"BulkChangeWorker: {_.name} {_.completed=} {_.change_count=} {_.total_elapsed_seconds=:.3f}")
 
     def _do_normal_changes(self):
         for item in [item for item in self.to_do_list if not item.transition and item.current_value != item.final_value]:
@@ -8258,11 +8259,13 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                         if worker_thread.change_count != 0:
                             self.main_window.show_preset_status(tr("Restored {} (elapsed time {} seconds)").format(
                                 preset.name, f"{worker_thread.total_elapsed_seconds:.2f}"))
+                            if (self.main_config.is_set(ConfOpt.PROTECT_NVRAM_ENABLED)
+                                    and preset.get_transition_type() != PresetTransitionFlag.NONE):
+                                log_warning(
+                                    f"restore-preset: protect-nvram prevents '{preset.name}' from stepping, changes are immediate.")
                         else:
-                            self.main_window.show_preset_status(tr("Already on {} (no changes)").format(preset.name))
-                        if (self.main_config.is_set(ConfOpt.PROTECT_NVRAM_ENABLED)
-                                and preset.get_transition_type() != PresetTransitionFlag.NONE):
-                            log_warning(f"restore-preset: protect-nvram prevents '{preset.name}' from transitioning, changes are immediate.")
+                            self.main_window.show_preset_status(tr("Already on Preset {} (no changes)").format(preset.name))
+
                         if df := preset.get_daylight_factor():
                             log_info(f"Daylight-Factor {df:.4f} read from Preset {preset.name}")
                             LuxMeterSemiAutoDevice.set_df(df)
