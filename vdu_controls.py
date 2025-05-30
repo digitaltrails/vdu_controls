@@ -3627,7 +3627,6 @@ class VduControlSlider(VduControlBase):
         """Construct the slider control and initialize its values from the VDU."""
         super().__init__(controller, vcp_capability)
         layout = QHBoxLayout()
-        self.sliding = False
         self.setLayout(layout)
         self.svg_icon: QSvgWidget | None = None
         if (vcp_capability.vcp_code in SUPPORTED_VCP_BY_CODE
@@ -6292,6 +6291,9 @@ class LuxGaugeWidget(QWidget):
 
     def __init__(self, parent: LuxDialog) -> None:
         super().__init__(parent=parent)
+        self.max_history = 240
+        self.history: List[LuxGaugeHistory | None] = [None] * (self.max_history // 10)
+        self.sun_image = None
         self.lux_bar_color = QColor(0xfec053)
         self.white_line_color = w = QColor(0xfefefe)
         self.white_transparent_color = QColor(w.red(), w.green(), w.blue(), 30)
@@ -6303,12 +6305,9 @@ class LuxGaugeWidget(QWidget):
         big_font.setPointSize(big_font.pointSize() + 8)
         self.current_lux_display.setFont(big_font)
         self.layout().addWidget(self.current_lux_display)
-        self.max_history = 240
-        self.history: List[LuxGaugeHistory | None] = [None] * (self.max_history // 10)
         self.plot_widget = QLabel()
         self.plot_widget.setFixedWidth(340)
         self.plot_widget.setFixedHeight(100)
-        self.sun_image = None
         self.layout().addWidget(self.plot_widget)
         self.current_meter: LuxMeterDevice | None = None
         self.stats_label = QLabel()
@@ -6677,7 +6676,7 @@ class LuxMeterSemiAutoDevice(LuxMeterManualDevice):  # is both manual and automa
     @staticmethod
     def set_df(daylight_factor: float, internal: bool = False):
         if CONFIG_DIR_PATH.exists():
-            CONFIG_DIR_PATH.joinpath("lux_daylight_factor.txt").write_text(str(daylight_factor))
+            CONFIG_DIR_PATH.joinpath("lux_daylight_factor.txt").write_text(f"{daylight_factor:.4f}")
         if not internal:
             LuxDialog.reconfigure_instance()
 
@@ -7652,17 +7651,17 @@ class LuxAmbientSlider(QWidget):
         lux_slider_panel_layout = QGridLayout()
         lux_slider_panel.setLayout(lux_slider_panel_layout)
 
-        self.lux_slider = ClickableSlider()
-        self.lux_slider.setToolTip(tr("Ambient light level input (lux value)"))
-        self.lux_slider.setMinimumWidth(native_pixels(200))
-        self.lux_slider.setRange(int(math.log10(1) * 1000), int(math.log10(100000) * 1000))
-        self.lux_slider.setSingleStep(1)
-        self.lux_slider.setPageStep(100)
-        self.lux_slider.setTickInterval(1000)
-        self.lux_slider.setTickPosition(QSlider.TicksBelow)
-        self.lux_slider.setOrientation(Qt.Horizontal)  # type: ignore
-        self.lux_slider.setTracking(False)  # Don't rewrite the ddc value too often - not sure of the implications
-        lux_slider_panel_layout.addWidget(self.lux_slider, 1, 0, 1, 15, alignment=Qt.AlignTop)
+        self.slider = ClickableSlider()
+        self.slider.setToolTip(tr("Ambient light level input (lux value)"))
+        self.slider.setMinimumWidth(native_pixels(200))
+        self.slider.setRange(int(math.log10(1) * 1000), int(math.log10(100000) * 1000))
+        self.slider.setSingleStep(1)
+        self.slider.setPageStep(100)
+        self.slider.setTickInterval(1000)
+        self.slider.setTickPosition(QSlider.TicksBelow)
+        self.slider.setOrientation(Qt.Horizontal)  # type: ignore
+        self.slider.setTracking(False)  # Don't rewrite the ddc value too often - not sure of the implications
+        lux_slider_panel_layout.addWidget(self.slider, 1, 0, 1, 15, alignment=Qt.AlignTop)
 
         # A hacky way to get custom labels without redefining paint
         for col_num, span, value in ((0, 3, 1), (3, 3, 10), (6, 3, 100), (9, 3, 1000), (12, 3, 10000), (14, 1, 100000)):
@@ -7685,17 +7684,16 @@ class LuxAmbientSlider(QWidget):
 
         def _lux_slider_change(new_value: int) -> None:
             real_value = round(10 ** (new_value / 1000))
-            self.set_current_value(real_value, self.lux_slider)
+            self.set_current_value(real_value, self.slider)
             self.new_lux_value_qtsignal.emit(real_value)
 
-        self.lux_slider.valueChanged.connect(_lux_slider_change)
+        self.slider.valueChanged.connect(_lux_slider_change)
 
         def _lux_slider_moved(new_value: int) -> None:
-            self.sliding = True
             new_lux_value = round(10 ** (new_value / 1000))
-            self.set_current_value(new_lux_value, self.lux_slider)
+            self.set_current_value(new_lux_value, self.slider)
 
-        self.lux_slider.sliderMoved.connect(_lux_slider_moved)
+        self.slider.sliderMoved.connect(_lux_slider_moved)
 
         def _lux_input_field_changed() -> None:
             self.set_current_value(self.lux_input_field.value(), self.lux_input_field)
@@ -7733,13 +7731,13 @@ class LuxAmbientSlider(QWidget):
                             self.status_icon.setIcon(create_icon_from_svg_bytes(zone.icon_svg))
                             self.status_icon.setToolTip(tr("Open/Close Light-Meter Dialog"))
                 self.current_value = max(1, value)  # restrict to non-negative and something valid for log10
-                if source != self.lux_slider:
-                    self.lux_slider.setValue(round(math.log10(self.current_value) * 1000))
+                if source != self.slider:
+                    self.slider.setValue(round(math.log10(self.current_value) * 1000))
                 if source != self.lux_input_field:
                     self.lux_input_field.setValue(self.current_value)
                 # We can use values from non-semi-auto meters to calibrate the semi-auto-meter.
                 non_semi_auto_meter = self.controller.lux_meter and not self.controller.lux_meter.has_semi_auto_capability
-                if source == self.lux_slider or source == self.lux_input_field or non_semi_auto_meter:
+                if source == self.slider or source == self.lux_input_field or non_semi_auto_meter:
                     if location := self.controller.main_controller.main_config.get_location():
                         LuxMeterSemiAutoDevice.update_location(location)  # in case it's changed
                         LuxMeterSemiAutoDevice.update_df_from_lux_value(self.current_value)
