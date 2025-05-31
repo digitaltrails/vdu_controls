@@ -7284,7 +7284,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                         "solar illumination to achieve semi-automatic brightness control\n"
                         "throughout the day.\n\n"
                         "Adjusting the slider sets the ratio between indoor-illumination and\n"
-                        "outdoor solar-illumination.\n\n"
+                        "outdoor solar-illumination - the Daylight Factor.\n\n"
                         "Brightness is automatically adjusted as the sun moves across the sky.\n\n"
                         "Should circumstances change due to factors such as cloud or rain,\n"
                         "adjusting the slider updates the ratio.\n"),
@@ -7293,8 +7293,8 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                             "    DF = Ei / Eo\n"
                             "Ei:\tIndoor Illumination, from slider, or calculated automatically from Eo.\n"
                             "Eo:\tSolar/Outdoor Illumination, calculated from geolocation and datetime.\n"
-                            "DF:\tDaylight factor, the ratio of indoor to outdoor illumination. Calculated\n"
-                            "\twhenever the Ambient Light Level slider is altered.")).exec()
+                            "DF:\tDaylight factor, the ratio of indoor to outdoor illumination. Updated\n"
+                            "\twhenever the Ambient Light Level slider is manually altered.")).exec()
             return True
         path = pathlib.Path(device)
         if ((required_type == LuxDeviceType.ARDUINO and path.is_char_device()) or
