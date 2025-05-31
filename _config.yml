@@ -1,3 +1,4 @@
 theme: jekyll-theme-minimal
 title: vdu_controls
 description: Bookmark this to keep an eye on my project updates!
+show_downloads: true
