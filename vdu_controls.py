@@ -7141,9 +7141,8 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                     self.lux_config.set('lux-meter', "lux-device-type", new_dev_type.name)
                     self.lux_config.save(self.path)
                     self.apply_settings()
-                    meter_device = self.main_controller.get_lux_auto_controller().lux_meter
-                    if meter_device and meter_device.has_auto_capability:  # Enable auto if the meter is full auto or semi-auto
-                        self.main_controller.get_lux_auto_controller().set_auto(True)
+                    if (device := self.main_controller.get_lux_auto_controller().lux_meter) and device.has_auto_capability:
+                        self.main_controller.get_lux_auto_controller().set_auto(True) # Enable auto if the meter is full auto or semi-auto
                     self.status_message(tr("Meter changed to {}.").format(new_dev_path))
 
         self.meter_device_selector.activated.connect(_choose_device)
@@ -7278,6 +7277,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
             if self.main_controller.main_config.get_location() is None:
                 MBox(MBox.Critical, msg=tr("Cannot configure a solar lux calculator, no location is defined."),
                      info=tr("Please set a location in the main Settings-Dialog.")).exec()
+                self.main_controller.edit_config(tab_number=0)
                 return False
             MBox(MBox.Information,
                  msg=tr("Semi-automatic lux adjustment.\n"                      
@@ -8127,8 +8127,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         log_info("Reconfiguring due to settings change.")
         self.configure_application()
 
-    def edit_config(self) -> None:
+    def edit_config(self, tab_number: int | None = None) -> None:
         SettingsEditor.invoke(self.main_config, self.get_vdu_configs(), self.settings_changed)
+        SettingsEditor.get_instance().tabs_widget.setCurrentIndex(tab_number) if tab_number is not None else None
 
     def show_presets_dialog(self, preset: Preset | None = None) -> None:
         PresetsDialog.invoke(self, self.main_config)
