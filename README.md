@@ -3,7 +3,7 @@ vdu_controls - a DDC control panel for monitors
 
 A control panel for external monitors (*Visual Display Units*).
 
-> [! WARNING]
+> [!WARNING]
 > **KDE 6** introduced energy saving brighness dimming after 5 minutes of idle
 > time.  This may interfere with changes made via **vdu_controls**, including
 > *scheduled-presets* and *ambient-light-control*.  The relevant KDE 6 options can 
