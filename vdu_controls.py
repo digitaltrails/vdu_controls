@@ -6410,9 +6410,11 @@ class LuxGaugeWidget(QWidget):
                 self.sun_image = create_image_from_svg_bytes(SUN_SVG.replace(SVG_LIGHT_THEME_COLOR, b"#feC053")).scaled(36, 36)
             t = (most_recent_item.when - df_plot_day).total_seconds() // 60
             i = int(df_plot_left + t // minutes_per_point)
-            sun_y = self._y_from_lux(calc_solar_lux(most_recent_item.when, location, 1.0), plot_height)
-            if sun_y <= plot_height - self.sun_image.height() // 2 - 1:
-                painter.drawImage(QPoint(i - self.sun_image.width() // 2, sun_y - self.sun_image.height() // 2 - 1), self.sun_image)
+            if location:
+                sun_y = self._y_from_lux(calc_solar_lux(most_recent_item.when, location, 1.0), plot_height)
+                if sun_y <= plot_height - self.sun_image.height() // 2 - 1:
+                    painter.drawImage(QPoint(i - self.sun_image.width() // 2, sun_y - self.sun_image.height() // 2 - 1),
+                                      self.sun_image)
         if most_recent_df_xy[0] is not None:
             painter.setPen(QPen(Qt.red, 2))
             painter.drawLine(most_recent_df_xy[0], plot_height, most_recent_df_xy[0], most_recent_df_xy[1])
