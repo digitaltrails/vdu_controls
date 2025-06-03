@@ -6795,6 +6795,17 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             lux_profile = lux_auto_controller.get_lux_profile(vdu_sid, value_range)
             if to_do := self.determine_changes(vdu_sid, lux, lux_profile):
                 to_do_list.append(to_do)
+        if to_do_list:  # See if all items are in agreement on whether a preset should be used
+            if any(x.preset_name for x in to_do_list) and all(y.preset_name == to_do_list[0].preset_name for y in to_do_list):
+                log_info(f"LuxAuto: all profiles are close to the preset {to_do_list[0].preset_name} brightness values, using it.")
+                for item in to_do_list:
+                    if preset := self.main_controller.find_preset_by_name(item.preset_name):
+                        if (preset_brightness := preset.get_brightness(item.vdu_sid)) > 0:
+                            item.brightness = preset_brightness
+            else:
+                log_info("LuxAuto: some brightness profiles are not near the Preset values, ignoring Presets.")
+                for item in to_do_list:
+                    item.preset_name = None
         return to_do_list
 
     def do_work(self, to_do_list: List[LuxToDo]):
@@ -6822,10 +6833,12 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                 for preset_name in to_do_preset_names:  # if a point had a Preset attached, activate it now
                     # Restoring the Preset's non-brightness settings. Invoke now, so it will happen in this thread's sleep period.
                     if preset := self.main_controller.find_preset_by_name(preset_name):  # Check that it still exists
+                        log_debug("LuxAuto: restoring Preset {preset.name}") if log_debug_enabled else None
                         self.main_controller.restore_preset(
                             preset, immediately=PresetTransitionFlag.SCHEDULED not in preset.get_transition_type(),
                             background_activity=True)
                     else:
+                        log_debug("LuxAuto: Preset {preset.name} no longer exists - ignoring") if log_debug_enabled else None
                         self.main_controller.update_window_status_indicators()
         else:
             log_debug("LuxAuto: bulk worker failed to complete.") if log_debug_enabled else None
@@ -6878,24 +6891,18 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             if profile_point.brightness > 0:
                 previous_normal_point = profile_point
         try:
+            preset_name = self.assess_preset_proximity(proposed_brightness, lower_point, matched_point, profile_point)
             current_brightness = self.main_controller.get_value(vdu_sid, BRIGHTNESS_VCP_CODE)
-            if ((preset := self.assess_preset_proximity(proposed_brightness, lower_point, matched_point, profile_point)) and
-                    (preset_brightness := preset.get_brightness(vdu_sid))):
-                proposed_brightness = preset_brightness
-                log_debug(
-                    f"LuxAuto: determine_brightness {vdu_sid=} using {preset.name=}" 
-                    f" brightness {proposed_brightness=}% ") if log_debug_enabled else None
-            else:
-                log_debug(f"LuxAuto: determine_brightness {vdu_sid=} {proposed_brightness=}%") if log_debug_enabled else None
-                diff = proposed_brightness - current_brightness
-                if self.interpolation_enabled and preset is None and abs(diff) < self.sensitivity_percent:
-                    log_info(f"LuxAuto: {vdu_sid=} {current_brightness=} {proposed_brightness=} ignored, too small")
-                    self.status_message(f"{SUN_SYMBOL} {current_brightness}% {ALMOST_EQUAL_SYMBOL} {proposed_brightness}% {vdu_sid}")
-                    return None
-            return LuxToDo(vdu_sid, proposed_brightness, preset.name if preset else None, current_brightness)
+            log_debug(f"LuxAuto: {vdu_sid=} {current_brightness=}% {proposed_brightness=}%") if log_debug_enabled else None
+            diff = proposed_brightness - current_brightness
+            if self.interpolation_enabled and preset_name is None and abs(diff) < self.sensitivity_percent:
+                log_info(f"LuxAuto: {vdu_sid=} {current_brightness=} {proposed_brightness=} ignored, too small")
+                self.status_message(f"{SUN_SYMBOL} {current_brightness}% {ALMOST_EQUAL_SYMBOL} {proposed_brightness}% {vdu_sid}")
+                return None
+            return LuxToDo(vdu_sid, proposed_brightness, preset_name, current_brightness)
         except VduException as e:
             self.consecutive_error_count += 1
-            log_debug(f"LuxAuto: attempt to get brightness failed: {e}") if log_debug_enabled else None
+            log_debug(f"LuxAuto: determine_changes - attempt to get brightness failed: {e}") if log_debug_enabled else None
         return None
 
     def interpolate_brightness(self, smoothed_lux: int, current_point: LuxPoint, next_point: LuxPoint) -> int:
@@ -6912,7 +6919,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         return round(interpolated_brightness)
 
     def assess_preset_proximity(self, interpolated_brightness: float,
-                                previous_normal_point: LuxPoint, current_point: LuxPoint, next_point: LuxPoint) -> Preset | None:
+                                previous_normal_point: LuxPoint, current_point: LuxPoint, next_point: LuxPoint) -> str | None:
         # Brightness is a better indicator of nearness for deciding whether to activate a preset
         lower_point_brightness = current_point.brightness if current_point.brightness >= 0 else previous_normal_point.brightness
         diff_current = abs(interpolated_brightness - lower_point_brightness)
@@ -6928,12 +6935,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             preset_name = next_point.preset_name
         log_debug(f"LuxAuto: assess_preset_proximity {diff_current=} {diff_next=} {self.sensitivity_percent=} "
                   f"{previous_normal_point=} {current_point=} {next_point=} {preset_name=}") if log_debug_enabled else None
-        if preset_name:
-            if preset := self.main_controller.find_preset_by_name(preset_name):
-                return preset
-            else:
-                log_warning(f"LuxAuto: assess_preset_proximity preset {preset_name} no longer exists - ignored")
-        return None
+        return preset_name
 
     def lux_summary(self, metered_lux: float, smoothed_lux: int) -> str:
         lux_int = round(metered_lux)  # 256 bit char in lux_summary_text can cause issues if stdout not utf8 (force utf8 for stdout)
