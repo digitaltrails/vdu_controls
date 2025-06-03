@@ -6833,7 +6833,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                 for preset_name in to_do_preset_names:  # if a point had a Preset attached, activate it now
                     # Restoring the Preset's non-brightness settings. Invoke now, so it will happen in this thread's sleep period.
                     if preset := self.main_controller.find_preset_by_name(preset_name):  # Check that it still exists
-                        log_debug("LuxAuto: restoring Preset {preset.name}") if log_debug_enabled else None
+                        log_debug(f"LuxAuto: restoring Preset {preset.name=}") if log_debug_enabled else None
                         self.main_controller.restore_preset(
                             preset, immediately=PresetTransitionFlag.SCHEDULED not in preset.get_transition_type(),
                             background_activity=True)
