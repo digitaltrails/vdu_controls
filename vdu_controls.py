@@ -6932,24 +6932,17 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                 x_smoothed - x_current_point) / (x_next_point - x_current_point)
         return round(interpolated_brightness)
 
-    def assess_preset_proximity(self, interpolated_brightness: float,
-                                previous_normal_point: LuxPoint, current_point: LuxPoint, next_point: LuxPoint) -> str | None:
+    def assess_preset_proximity(self, proposed_brightness: float,
+                                previous_normal_point: LuxPoint, matched_point: LuxPoint, next_point: LuxPoint) -> str | None:
         # Brightness is a better indicator of nearness for deciding whether to activate a preset
-        lower_point_brightness = current_point.brightness if current_point.brightness >= 0 else previous_normal_point.brightness
-        diff_current = abs(interpolated_brightness - lower_point_brightness)
-        diff_next = abs(interpolated_brightness - next_point.brightness)
-        preset_name = None
-        if current_point.preset_name is not None and next_point.preset_name is not None:
-            if diff_current > diff_next:  # Closer to next_point
-                diff_current = self.sensitivity_percent + 1  # veto result_point by making it ineligible
-        if current_point.preset_name is not None and diff_current <= self.sensitivity_percent:
-            preset_name = current_point.preset_name
-        # Either no next point or closer to next_point
-        elif next_point.preset_name is not None and diff_next <= self.sensitivity_percent:
-            preset_name = next_point.preset_name
-        log_debug(f"LuxAuto: assess_preset_proximity {diff_current=} {diff_next=} {self.sensitivity_percent=} "
-                  f"{previous_normal_point=} {current_point=} {next_point=} {preset_name=}") if log_debug_enabled else None
-        return preset_name
+        ordered = sorted([(abs(proposed_brightness - matched_point.brightness), matched_point),
+                          (abs(proposed_brightness - previous_normal_point.brightness), previous_normal_point),
+                          (abs(proposed_brightness - next_point.brightness), next_point)], key=lambda x: x[0])
+        for diff, item in ordered:
+            if diff < self.sensitivity_percent and (pick := item.preset_name):
+                log_debug(f"ALuxAuto: assess_preset_proximity {pick=}") if log_debug_enabled else None
+                return pick
+        return None
 
     def lux_summary(self, metered_lux: float, smoothed_lux: int) -> str:
         lux_int = round(metered_lux)  # 256 bit char in lux_summary_text can cause issues if stdout not utf8 (force utf8 for stdout)
