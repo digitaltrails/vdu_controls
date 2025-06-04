@@ -3887,6 +3887,9 @@ class Preset:
             return self.preset_ini.getint(vdu_stable_id, 'brightness', fallback=-1)
         return -1
 
+    def get_vdu_sids(self):
+        return [section_name for section_name in self.preset_ini.data_sections() if section_name != 'preset']
+
     def get_solar_elevation(self) -> SolarElevationKey | None:
         if elevation_spec := self.preset_ini.get('preset', 'solar-elevation', fallback=None):
             solar_elevation = parse_solar_elevation_ini_text(elevation_spec)
@@ -6718,7 +6721,7 @@ class LuxStepStatus(Enum):
 class LuxToDo:
     vdu_sid: VduStableId
     brightness: int
-    preset_name: str
+    preset_name: str | None
     current_brightness: int | None = None
 
 class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
@@ -6795,18 +6798,29 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             lux_profile = lux_auto_controller.get_lux_profile(vdu_sid, value_range)
             if to_do := self.determine_changes(vdu_sid, lux, lux_profile):
                 to_do_list.append(to_do)
-        if to_do_list:  # See if all items are in agreement on whether a preset should be used
-            if any(x.preset_name for x in to_do_list) and all(y.preset_name == to_do_list[0].preset_name for y in to_do_list):
-                log_info(f"LuxAuto: all profiles are close to the preset {to_do_list[0].preset_name} brightness values, using it.")
-                for item in to_do_list:
-                    if preset := self.main_controller.find_preset_by_name(item.preset_name):
-                        if (preset_brightness := preset.get_brightness(item.vdu_sid)) > 0:
-                            item.brightness = preset_brightness
-            else:
-                log_info("LuxAuto: some brightness profiles are not near the Preset values, ignoring Presets.")
-                for item in to_do_list:
-                    item.preset_name = None
+        self.assess_presets_collectively(to_do_list)
         return to_do_list
+
+    def assess_presets_collectively(self, to_do_list: List[LuxToDo]) -> None:
+         if to_do_list:  # See if all items are in agreement on whether a preset should be used
+             for preset_name in [x.preset_name for x in to_do_list]:
+                 if preset := self.main_controller.find_preset_by_name(preset_name):
+                     sids_present = set(self.main_controller.get_vdu_stable_id_list())
+                     sids_present_and_in_preset = sids_present.intersection(set(preset.get_vdu_sids()))
+                     items_with_this_preset = [x for x in to_do_list if x.preset_name == preset_name]
+                     sids_of_items_with_this_preset = set([x.vdu_sid for x in items_with_this_preset])
+                     log_debug(f"LuxAuto: {sids_present_and_in_preset=} {sids_of_items_with_this_preset=}")
+                     if sids_present_and_in_preset == sids_of_items_with_this_preset:
+                         log_debug(f"LuxAuto: applying Preset {preset_name}")
+                         for item in items_with_this_preset:
+                             if (preset_brightness := preset.get_brightness(item.vdu_sid)) > 0:
+                                 item.brightness = preset_brightness
+                     else:
+                         log_debug(f"LuxAuto: ignoring Preset {preset_name} doesn't match for all VDUs present.")
+                         for item in items_with_this_preset:
+                             item.preset_name = None
+                 else:
+                     log_debug(f"LuxAuto: ignoring Preset {preset_name} no longer exists.")
 
     def do_work(self, to_do_list: List[LuxToDo]):
         to_do_preset_names = []
@@ -7531,7 +7545,15 @@ class LuxAutoController:
             else:
                 lux_points = []
         if self.lux_config.has_option('lux-presets', 'lux-preset-points'):
-            lux_points = lux_points + self.lux_config.get_preset_points()
+            preset_points = self.lux_config.get_preset_points()
+            stand_alone_preset_points = []
+            for lux_point in lux_points:  # Fold in preset points where they overlap existing
+                for preset_point in preset_points:
+                    if lux_point.brightness == preset_point.brightness:
+                        lux_point.preset_name = preset_point.preset_name
+                    else:
+                        stand_alone_preset_points.append(preset_point)
+            lux_points = lux_points + stand_alone_preset_points
             lux_points.sort()
         for lux_point in lux_points:
             # Look up the Preset's brightness for this particular VDU - get latest/current value from the actual Preset.
