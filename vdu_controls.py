@@ -6206,7 +6206,7 @@ class LuxProfileChart(QLabel):
                         if profile_point.preset_name and profile_point.brightness > 0:
                             # Convert to normal point - as a convenience for the user
                             profile_point.preset_name = None
-                        else:  # Either an uncommitted LuxPoint or Preset without a brightness value, just remove it.
+                        else:  # Either an uncommitted LuxPoint or Preset without a brightness value, remove it.
                             profile.remove(profile_point)
                         break
             return True
@@ -6907,16 +6907,17 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         try:
             preset_name = self.assess_preset_proximity(proposed_brightness, lower_point, matched_point, profile_point)
             current_brightness = self.main_controller.get_value(vdu_sid, BRIGHTNESS_VCP_CODE)
-            log_debug(f"LuxAuto: {vdu_sid=} {current_brightness=}% {proposed_brightness=}%") if log_debug_enabled else None
             diff = proposed_brightness - current_brightness
             if self.interpolation_enabled and preset_name is None and abs(diff) < self.sensitivity_percent:
                 log_info(f"LuxAuto: {vdu_sid=} {current_brightness=} {proposed_brightness=} ignored, too small")
-                self.status_message(f"{SUN_SYMBOL} {current_brightness}% {ALMOST_EQUAL_SYMBOL} {proposed_brightness}% {vdu_sid}")
+                self.status_message(f"{SUN_SYMBOL} {proposed_brightness}% {ALMOST_EQUAL_SYMBOL} {current_brightness}% {vdu_sid}")
                 return None
+            if log_debug_enabled:
+                log_debug(f"LuxAuto: {vdu_sid=} {current_brightness=}% {proposed_brightness=}% {preset_name=}")
             return LuxToDo(vdu_sid, proposed_brightness, preset_name, current_brightness)
         except VduException as e:
             self.consecutive_error_count += 1
-            log_debug(f"LuxAuto: determine_changes - attempt to get brightness failed: {e}") if log_debug_enabled else None
+            log_debug(f"LuxAuto: {self.consecutive_error_count=} error getting brightness: {e}") if log_debug_enabled else None
         return None
 
     def interpolate_brightness(self, smoothed_lux: int, current_point: LuxPoint, next_point: LuxPoint) -> int:
@@ -6940,7 +6941,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                           (abs(proposed_brightness - next_point.brightness), next_point)], key=lambda x: x[0])
         for diff, item in ordered:
             if diff < self.sensitivity_percent and (pick := item.preset_name):
-                log_debug(f"ALuxAuto: assess_preset_proximity {pick=}") if log_debug_enabled else None
+                log_debug(f"LuxAuto: assess_preset_proximity {pick=}") if log_debug_enabled else None
                 return pick
         return None
 
@@ -6961,14 +6962,18 @@ class LuxPoint:
     brightness: int
     preset_name: str | None = None
 
-    def __lt__(self, other) -> bool:
+    def __lt__(self, other) -> bool:  # Brightness doesn't matter for comparion purposes.
         return self.lux < other.lux
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other) -> bool:  # Brightness doesn't matter for comparion purposes.
         return self.lux == other.lux and self.preset_name == other.preset_name
+
+    def __hash__(self):  # Brightness doesn't matter for comparion purposes.
+        return hash((self.lux, self.preset_name))
 
     def __str__(self):
         return f"({self.lux} lux, {self.brightness}%, preset={self.preset_name})"
+
 
 
 class LuxDeviceType(namedtuple('LuxDevice', 'name description'), Enum):
@@ -7526,8 +7531,8 @@ class LuxAutoController:
             self.start_worker(single_shot=True)
 
     def get_lux_profile(self, vdu_stable_id: VduStableId, brightness_range) -> List[LuxPoint]:
-        if self.lux_config.has_option('lux-profile', vdu_stable_id):
-            lux_points = [LuxPoint(v[0], v[1]) for v in literal_eval(self.lux_config.get('lux-profile', vdu_stable_id))]
+        if self.lux_config.has_option('lux-profile', vdu_stable_id):  # initialize removing duplicate points
+            lux_points = list(set([LuxPoint(v[0], v[1]) for v in literal_eval(self.lux_config.get('lux-profile', vdu_stable_id))]))
         else:  # Create a default profile:
             if brightness_range is not None:
                 min_v, max_v = brightness_range
@@ -7542,7 +7547,7 @@ class LuxAutoController:
             stand_alone_preset_points = []
             for lux_point in lux_points:  # Fold in preset points where they overlap existing
                 for preset_point in preset_points:
-                    if lux_point.brightness == preset_point.brightness:
+                    if lux_point.lux == preset_point.lux:  # Overlap is evaluated by lux only.
                         lux_point.preset_name = preset_point.preset_name
                     else:
                         stand_alone_preset_points.append(preset_point)
