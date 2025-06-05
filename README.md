@@ -355,7 +355,7 @@ Version History
 ---------------
 
 * 2.4.0
-  * Added a capability to estimate the solar-illumination for a given geolocation and time. 
+  * Added an ability to estimate the solar-illumination for a given geolocation and time. 
   * Added semi-automatic ambient-light-level adjustment proportional to solar-illumination.
   * When the ambient-light-level slider is adjusted, it has the side-effect of determining 
     the daylight-factor, the ratio of indoor-illuminaton/solar-illumination.
@@ -363,9 +363,10 @@ Version History
     solar-illumination and indoor-illumination for the current day.
   * The Preset-Dialog includes an option to save/restore the daylight-factor. This can be
     used to save daylight factors for various condtions, or to activate them at a solar-elevation.
-  * The Lux-Dialog scale now adjusts for display DPI.
-  * The Solar Elevation chart now adjusts for display DPI.
+  * The Lux-Dialog scale adjusts for display DPI.
+  * The Solar Elevation chart adjusts for display DPI.
   * Fixed Lux brightness adjustment; protect-nvam can now be disabled.
+  * Prevent duplicate Lux-profile points which confuse the lux evaluation process.
   * Fixed dbus ddcutil-service detect; only request valid displays.
   * Prevent a lux-adjustment infinite-loop if no brightness controls are enabled.
   * Preset-restoration and ambient-brightness-adjustment now use the same code for
