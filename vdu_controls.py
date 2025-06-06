@@ -6910,7 +6910,8 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             diff = proposed_brightness - current_brightness
             if self.interpolation_enabled and preset_name is None and abs(diff) < self.sensitivity_percent:
                 log_info(f"LuxAuto: {vdu_sid=} {current_brightness=} {proposed_brightness=} ignored, too small")
-                self.status_message(f"{SUN_SYMBOL} {proposed_brightness}% {ALMOST_EQUAL_SYMBOL} {current_brightness}% {vdu_sid}")
+                self.status_message(f"{SUN_SYMBOL} {proposed_brightness}% {ALMOST_EQUAL_SYMBOL} {current_brightness}% {vdu_sid}",
+                                    timeout=5000)
                 return None
             if log_debug_enabled:
                 log_debug(f"LuxAuto: {vdu_sid=} {current_brightness=}% {proposed_brightness=}% {preset_name=}")
