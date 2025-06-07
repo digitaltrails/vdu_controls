@@ -3457,8 +3457,7 @@ class SettingsEditorLocationWidget(SettingsEditorLineBase):
                           '\n'.join([f"{name}: {value}" for name, value in ipinfo.items()])
                 if MBox(MBox.Information, msg=msg, details=details, buttons=MBox.Yes | MBox.No).exec() == MBox.Yes:
                     data = ipinfo['loc']
-                    # Get location name for weather lookups.
-                    for key in ('city', 'region', 'country'):
+                    for key in ('city', 'region', 'country'): # Get location name for weather lookups.
                         if key in ipinfo:
                             data = data + ',' + ipinfo[key]
                             break
@@ -7295,16 +7294,15 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                 self.main_controller.edit_config(tab_number=0)
                 return False
             MBox(MBox.Information,
-                 msg=tr("Semi-automatic lux adjustment.\n"                      
+                 msg=tr("Semi-automatic lux adjustment: quick start instructions.\n"                      
                         "________________________________________________________________________________________\n\n"
-                        "The ambient-light-level slider is combined with an estimate of local\n"
-                        "solar illumination to achieve semi-automatic brightness control\n"
-                        "throughout the day.\n\n"
-                        "Adjusting the slider sets the ratio between indoor-illumination and\n"
-                        "outdoor solar-illumination - the Daylight Factor.\n\n"
-                        "Brightness is automatically adjusted as the sun moves across the sky.\n\n"
-                        "Should circumstances change due to factors such as cloud or rain,\n"
-                        "adjusting the slider updates the ratio.\n"),
+                        "Set a preferred brightness level using the ambient-light-level slider.\n\n"
+                        "Starting from your chosen level; the application adjusts brightness following\n"
+                        "a trajectory based on the expected sunlight for your location.\n\n"
+                        "If conditions change, adjust the slider to alter the trajectory.\n\n"
+                        "The trajectory is shown in the Light Metering Dialog, along with the estimate\n"
+                        "of outdoor lux (Eo) and the Daylight-Factor (DF), the ratio of indoor to\n"
+                        "outdoor lux.\n"),
                  details=tr("Estimation of indoor illumination (Ei) from solar illumination (Eo):\n"
                             "    Ei = DF * Eo\n"
                             "    DF = Ei / Eo\n"
