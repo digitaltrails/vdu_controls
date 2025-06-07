@@ -452,11 +452,13 @@ Ambient Light Levels and Light/Lux Metering
 -------------------------------------------
 
 The default UI includes an ``ambient-light slider`` which will simultaneously adjust all VDUs
-according to custom per-VDU lux/brightness profiles.  As well manual adjustment, the
-slider-value can be semi-automatically adjusted based on geolocation and local-datetime, or
-automatically adjusted by hardware light-metering.
+according to custom VDU profiles.  As well as manual adjustment, the
+slider-value can adjust semi-automatically based on geolocation and local-datetime, or
+fully-automatically by hardware light-metering.
 
-The ``Lux-Dialog`` provides options for setting up light metering and lux/brightness profiles.
+The ``Light-Metering`` dialog provides options for setting up light-metering, adjustment
+intervals, and per-VDU lux/brightness profiles.  The metering dialog additionally provides a
+rolling display of current metered light level and VDU brightness levels.
 
 ``Semi-automatic ambient-light level adjustment`` periodically adjusts the light-level in
 proportion to the estimated sunlight for your geolocation. Set the
