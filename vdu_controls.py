@@ -6325,7 +6325,7 @@ class LuxGaugeWidget(QWidget):
                             "________________________________________________________________________________\n"
                             "Daylight Factor DF = ML/Eo\n" \
                             "Eo = unit_constants * sin(radians(solar_altitude)) * 10 ** (-0.1 * air_mass)\n"
-                            "Estimates of Ei are used by the semi-automatic brightness option.")
+                            "Estimates of Ei are used by the semi-automatic metering option.")
         self.setToolTip(self.help_text)
         self.layout().addWidget(self.stats_label)
         self.updates_enabled = True
