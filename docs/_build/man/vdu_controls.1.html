@@ -122,8 +122,10 @@ The application may optionally run in the system tray of KDE, Deepin,
 GNOME, and Xfce (and possibly others).</p>
 <p>The UI provides an optional <code>ambient-light slider</code> for
 simultaneously adjusting all VDUs according to custom per-VDU ambient
-lux/brightness profiles. Options are included for automated adjustment
-by accessing hardware light-meters, webcams, or other devices.</p>
+lux/brightness profiles. Options are included for semi-automatic
+adjustment proportional to daylight at a given geographic location, or
+fully automatic adjustment by accessing hardware light-meters, webcams,
+or other devices.</p>
 <p>Named <code>Preset</code> configurations can be saved and recalled.
 For example, presets may be created for night, day, photography, movies,
 and so forth. Presets can be triggered by specific ambient light levels,
@@ -453,24 +455,24 @@ result in process termination).</p>
 and Light/Lux Metering</h2>
 <p>The default UI includes an <code>ambient-light slider</code> which
 will simultaneously adjust all VDUs according to custom per-VDU
-lux/brightness profiles. As well as manually adjusting the ambient light
-level, the adjustment can be automatically driven by hardware
-light-metering or semi-automatic driven based on geolocation and
-local-datetime.</p>
-<p>The Lux-Dialog provides options for setting up light metering and VDU
-lux/brightness profiles. If ambient light level controls are not
-required, the Settings Dialog includes an option to disable and hide
-them.</p>
-<p>Semi-automatic ambient-light level adjustment uses an estimate scaled
-in proportion to the expected natural sunlight for your location and
-date-time. You set the ambient light-level by dragging its slider in the
-main-panel. Vdu_controls will then periodically scale the light-level
-proportionally to the expected solar outdoor light-level. If conditions
-change due to cloud, weather, or other factors, re-adjust the slider to
-revise the proportionality (the Daylight Factor).</p>
-<p>Fully automatic ambient-light level adjustment requires setting up a
-hardware lux metering device. A metering device may be a serial-device,
-a UNIX FIFO (named-pipe), or an executable (script or program):</p>
+lux/brightness profiles. As well manual adjustment, the slider-value can
+be semi-automatically adjusted based on geolocation and local-datetime,
+or automatically adjusted by hardware light-metering.</p>
+<p>The <code>Lux-Dialog</code> provides options for setting up light
+metering and lux/brightness profiles.</p>
+<p><code>Semi-automatic ambient-light level adjustment</code>
+periodically adjusts the light-level in proportion to the estimated
+sunlight for your geolocation. Set the current light level by adjusting
+the ambient-light-level slider. Starting from your chosen level, the
+application will adjust the light-level following a trajectory based on
+the estimated sunlight. If conditions change, adjust the slider to alter
+the trajectory. The trajectory is plotted in the Light-Metering dialog,
+along with the estimate of outdoor lux (Eo) and the Daylight-Factor (DF)
+- the ratio of indoor to outdoor lux.</p>
+<p><code>Fully-automatic ambient-light level adjustment</code> requires
+setting up a hardware lux metering device. A metering device may be a
+serial-device, a UNIX FIFO (named-pipe), or an executable (script or
+program):</p>
 <ul>
 <li>A serial-device must periodically supply one floating-point
 lux-value terminated by a carriage-return newline.</li>
@@ -505,6 +507,8 @@ sample brightness values. The script optionally runs in the
 system-tray.</p>
 <p>The examples may require customizing for your own webcam and lighting
 conditions.</p>
+<p>If ambient light level controls are not required, the Settings Dialog
+includes an option to disable and hide them.</p>
 <h2 id="lux-metering-and-brightness-transitions">Lux Metering and
 brightness transitions</h2>
 <p>Due to VDU hardware and DDC protocol limitations, gradual transitions

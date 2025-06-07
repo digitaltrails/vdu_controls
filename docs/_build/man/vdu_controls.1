@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "May 14, 2025" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Jun 07, 2025" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 2.4.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -209,7 +209,8 @@ optionally run in the system tray of KDE, Deepin, GNOME, and Xfce (and possibly 
 .sp
 The UI provides an optional \fBambient\-light slider\fP for simultaneously adjusting
 all VDUs according to custom per\-VDU ambient lux/brightness profiles.  Options are included
-for automated adjustment by accessing hardware light\-meters, webcams, or other devices.
+for semi\-automatic adjustment proportional to daylight at a given geographic location, or
+fully automatic adjustment by accessing hardware light\-meters, webcams, or other devices.
 .sp
 Named \fBPreset\fP configurations can be saved and recalled. For example, presets may be created
 for night, day, photography, movies, and so forth.   Presets can be triggered by specific ambient
@@ -598,22 +599,21 @@ Any other signals will be handled normally (in many cases they will result in pr
 .SS Ambient Light Levels and Light/Lux Metering
 .sp
 The default UI includes an \fBambient\-light slider\fP which will simultaneously adjust all VDUs
-according to custom per\-VDU lux/brightness profiles.  As well as manually adjusting the ambient light
-level, the adjustment can be automatically driven by hardware light\-metering or semi\-automatic
-driven based on geolocation and local\-datetime.
+according to custom per\-VDU lux/brightness profiles.  As well manual adjustment, the
+slider\-value can be semi\-automatically adjusted based on geolocation and local\-datetime, or
+automatically adjusted by hardware light\-metering.
 .sp
-The Lux\-Dialog provides options for setting up light metering and VDU lux/brightness profiles.
-If ambient light level controls are not required, the Settings Dialog includes an option to
-disable and hide them.
+The \fBLux\-Dialog\fP provides options for setting up light metering and lux/brightness profiles.
 .sp
-Semi\-automatic ambient\-light level adjustment uses an estimate scaled in proportion
-to the expected natural sunlight for your location and date\-time. You set the ambient
-light\-level by dragging its slider in the main\-panel.  Vdu_controls will then
-periodically scale the light\-level proportionally to the expected solar outdoor light\-level.
-If conditions change due to cloud, weather, or other factors, re\-adjust the slider to
-revise the proportionality (the Daylight Factor).
+\fBSemi\-automatic ambient\-light level adjustment\fP periodically adjusts the light\-level in
+proportion to the estimated sunlight for your geolocation. Set the
+current light level by adjusting the ambient\-light\-level slider.  Starting from your chosen level,
+the application will adjust the light\-level following a trajectory based on the estimated sunlight.
+If conditions change, adjust the slider to alter the trajectory.  The trajectory is plotted in
+the Light\-Metering dialog, along with the estimate of outdoor lux (Eo) and the Daylight\-Factor
+(DF) \- the ratio of indoor to outdoor lux.
 .sp
-Fully automatic ambient\-light level adjustment requires setting up a hardware lux metering device.
+\fBFully\-automatic ambient\-light level adjustment\fP requires setting up a hardware lux metering device.
 A metering device may be a serial\-device, a UNIX FIFO (named\-pipe), or an executable (script or
 program):
 .INDENT 0.0
@@ -668,6 +668,9 @@ image\-brightness to lux mappings, and for defining a crop from which to sample 
 The script optionally runs in the system\-tray.
 .sp
 The examples may require customizing for your own webcam and lighting conditions.
+.sp
+If ambient light level controls are not required, the Settings Dialog includes an option to
+disable and hide them.
 .SS Lux Metering and brightness transitions
 .sp
 Due to VDU hardware and DDC protocol limitations, gradual transitions from one brightness level to
