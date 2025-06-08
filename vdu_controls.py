@@ -6465,8 +6465,6 @@ class LuxGaugeWidget(QWidget):
 
 
 def lux_create_device(device_name: str) -> LuxMeterDevice:
-    if device_name == LuxMeterManualDevice.device_name:
-        return LuxMeterManualDevice()
     if device_name == LuxMeterSemiAutoDevice.device_name:
         return LuxMeterSemiAutoDevice()
     if not pathlib.Path(device_name).exists():
@@ -6517,6 +6515,9 @@ class LuxMeterDevice(QObject):
     def stop_metering(self) -> None:
         if self.requires_worker:
             self.worker.stop()
+
+    def get_status(self) -> Tuple[bool, str]:  # True if OK, plus any message
+        return True, ''
 
 
 class LuxMeterFifoDevice(LuxMeterDevice):
@@ -6615,16 +6616,31 @@ class LuxMeterSerialDevice(LuxMeterDevice):
             self.serial_device = None
 
 
-class LuxMeterManualDevice(LuxMeterDevice):
-    device_name = 'Slider-Control'
+class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - semi-automatic
+    obsolete_device_name = 'Slider-Control'
+    device_name = 'solar-lux-calculator'
+    location: GeoLocation | None = None
 
-    def __init__(self, semi_auto: bool = False) -> None:
-        super().__init__(requires_worker=False, manual=True, semi_auto=semi_auto)
-        self.current_value: float = LuxMeterManualDevice.get_stored_value()
+    def __init__(self) -> None:
+        super().__init__(requires_worker=False, manual=True, semi_auto=True)
+        self.current_value: float = LuxMeterSemiAutoDevice.get_stored_value()
 
     def get_value(self) -> float | None:
-        self.current_value = self.get_stored_value()
+        df, location = LuxMeterSemiAutoDevice.get_df_and_location()
+        if location:
+            if lux := calc_solar_lux(zoned_now(), location, df):
+                self.set_current_value(lux)  # only set if in daylight
         return self.current_value
+
+    def set_current_value(self, new_value: float) -> None:
+        self.save_stored_value(new_value)
+        super().set_current_value(new_value)
+
+    def stop_metering(self) -> None:
+        pass
+
+    def get_status(self) -> Tuple[bool, str]:
+        return (False, tr('No location defined.')) if self.location is None else super().get_status()
 
     @staticmethod
     def get_stored_value() -> float:
@@ -6636,32 +6652,10 @@ class LuxMeterManualDevice(LuxMeterDevice):
                 persisted_path.unlink()
         return 1000.0
 
-    def set_current_value(self, new_value: float) -> None:
-        self.save_stored_value(new_value)
-        super().set_current_value(new_value)
-
-    def stop_metering(self) -> None:
-        pass
-
     @staticmethod
     def save_stored_value(new_value: float):
         if CONFIG_DIR_PATH.exists():
             CONFIG_DIR_PATH.joinpath("lux_manual_value.txt").write_text(str(round(new_value)))
-
-
-class LuxMeterSemiAutoDevice(LuxMeterManualDevice):  # is both manual and automatic - semi-automatic
-    device_name = 'solar-lux-calculator'
-    location: GeoLocation | None = None
-
-    def __init__(self) -> None:
-        super().__init__(semi_auto=True)
-
-    def get_value(self) -> float | None:
-        df, location = LuxMeterSemiAutoDevice.get_df_and_location()
-        if location:
-            if lux := calc_solar_lux(zoned_now(), location, df):
-                self.set_current_value(lux)  # only set if in daylight
-        return self.current_value
 
     @staticmethod
     def get_df_and_location() -> Tuple[float, GeoLocation | None]:
@@ -6692,6 +6686,7 @@ class LuxMeterSemiAutoDevice(LuxMeterManualDevice):  # is both manual and automa
     @staticmethod
     def update_location(location: GeoLocation | None):
         LuxMeterSemiAutoDevice.location = location
+
 
 class LuxSmooth:
     def __init__(self, n: int, alpha: float = 0.5) -> None:
@@ -6773,11 +6768,14 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                 error_count = self.consecutive_error_count
                 busy_main_controller = self.main_controller.busy_doing()
                 if lux_meter := lux_auto_controller.lux_meter:
-                    if metered_lux := lux_meter.get_value():
-                        if not busy_main_controller:
-                            if to_do_list := self.assemble_required_work(lux_auto_controller, metered_lux,
-                                                                         not lux_meter.has_manual_capability):
-                                self.do_work(to_do_list)
+                    if (status := lux_meter.get_status())[0]:
+                        if metered_lux := lux_meter.get_value():
+                            if not busy_main_controller:
+                                if to_do_list := self.assemble_required_work(lux_auto_controller, metered_lux,
+                                                                             not lux_meter.has_manual_capability):
+                                    self.do_work(to_do_list)
+                    elif status[1]:
+                        self.status_message(status[1], timeout=5000)
                     if self.single_shot:
                         break
                 else:  # In app config change - things are in a state of flux
@@ -6980,10 +6978,8 @@ class LuxPoint:
         return f"({self.lux} lux, {self.brightness}%, preset={self.preset_name})"
 
 
-
 class LuxDeviceType(namedtuple('LuxDevice', 'name description'), Enum):
-    MANUAL_INPUT = "None", QT_TR_NOOP("No meter, manual input only")
-    CALCULATOR = "calculator", QT_TR_NOOP("Geolocated, semi-automatic")
+    SEMI_AUTO = "calculator", QT_TR_NOOP("Semi-automatic geolocated")
     ARDUINO = "arduino", QT_TR_NOOP("Arduino tty device")
     FIFO = "fifo", QT_TR_NOOP("Linux FIFO")
     EXECUTABLE = "executable", QT_TR_NOOP("Script/program")
@@ -7078,11 +7074,11 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         existing_device_type = self.lux_config.get('lux-meter', 'lux-device-type', fallback='')
         self.meter_device_selector = QComboBox()
         for i, dev_type in enumerate(LuxDeviceType):
-            if dev_type.name == existing_device_type:
+            if dev_type.name == existing_device_type:  # List existing device and device type, set it as selected.
                 self.meter_device_selector.addItem(f"{tr(dev_type.description)}: {existing_device}", dev_type)
                 self.meter_device_selector.setCurrentIndex(i)
             else:
-                self.meter_device_selector.addItem(tr(dev_type.description), dev_type)
+                self.meter_device_selector.addItem(tr(dev_type.description), dev_type)  # List device type only.
 
         grid_layout.addWidget(self.meter_device_selector, 0, 2, 1, 3)
 
@@ -7132,12 +7128,10 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.status_layout.addWidget(self.status_bar)
 
         def _choose_device(index: int) -> None:
-            current_dev = self.lux_config.get('lux-meter', "lux-device", fallback='')
-            current_dev_type = self.lux_config.get('lux-meter', "lux-device-type", fallback='')
+            current_dev = self.lux_config.get('lux-meter', "lux-device", fallback=LuxMeterSemiAutoDevice.device_name)
+            current_dev_type = self.lux_config.get('lux-meter', "lux-device-type", fallback=LuxDeviceType.SEMI_AUTO.name)
             new_dev_type = self.meter_device_selector.itemData(index)
-            if new_dev_type == LuxDeviceType.MANUAL_INPUT:
-                new_dev_path = LuxMeterManualDevice.device_name
-            elif new_dev_type == LuxDeviceType.CALCULATOR:
+            if new_dev_type == LuxDeviceType.SEMI_AUTO:
                 new_dev_path = LuxMeterSemiAutoDevice.device_name
             elif new_dev_type in (LuxDeviceType.ARDUINO, LuxDeviceType.FIFO, LuxDeviceType.EXECUTABLE):
                 if current_dev_type == new_dev_type.name:
@@ -7290,9 +7284,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         return self.interpolate_checkbox.isChecked()
 
     def validate_device(self, device, required_type: LuxDeviceType) -> bool:
-        if required_type == LuxDeviceType.MANUAL_INPUT:
-            return True
-        if required_type == LuxDeviceType.CALCULATOR:
+        if required_type == LuxDeviceType.SEMI_AUTO:
             if self.main_controller.main_config.get_location() is None:
                 MBox(MBox.Critical, msg=tr("Cannot configure a solar lux calculator, no location is defined."),
                      info=tr("Please set a location in the main Settings-Dialog.")).exec()
@@ -7342,9 +7334,8 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
     def configure_ui(self, meter_device: LuxMeterDevice | None) -> None:
         if meter_device is not None:  # Set this up first because altering the checkboxes will cause events to use the outcome.
             self.lux_gauge_widget.connect_meter(meter_device)
-        manual_metering_enabled = self.meter_device_selector.currentData().name == LuxDeviceType.MANUAL_INPUT.name
-        if manual_metering_enabled or meter_device is None or (meter_device.has_semi_auto_capability
-                                                               and self.main_controller.main_config.get_location() is None):
+        if meter_device is None or (meter_device.has_semi_auto_capability
+                                    and self.main_controller.main_config.get_location() is None):
             self.enabled_checkbox.setChecked(False)
             self.enabled_checkbox.setEnabled(False)
             self.interval_label.setEnabled(False)
@@ -7465,8 +7456,8 @@ class LuxAutoController:
             if self.lux_meter is not None:
                 self.lux_meter.stop_metering()
             device_name = self.lux_config.get_device_name().strip()
-            if not device_name:
-                device_name = LuxMeterManualDevice.device_name
+            if not device_name or device_name == LuxMeterSemiAutoDevice.obsolete_device_name:
+                device_name = LuxMeterSemiAutoDevice.device_name
             LuxMeterSemiAutoDevice.update_location(self.main_controller.main_config.get_location())
             self.lux_meter = lux_create_device(device_name)
             if self.lux_config.is_auto_enabled():
@@ -7504,11 +7495,7 @@ class LuxAutoController:
     def set_auto(self, enable: bool):
         assert self.lux_config is not None
         if enable:
-            if self.lux_config.get("lux-meter", "lux-device-type",
-                                   fallback=LuxDeviceType.MANUAL_INPUT.name) == LuxDeviceType.MANUAL_INPUT.name:
-                message = tr("Cannot enable auto, no metering device set.")
-                enable = False
-            elif self.lux_meter and self.lux_meter.has_semi_auto_capability and not self.main_controller.main_config.get_location():
+            if self.lux_meter and self.lux_meter.has_semi_auto_capability and not self.main_controller.main_config.get_location():
                 message = tr("Auto disabled, no location defined.")
                 enable = False
             elif self.lux_config.is_auto_enabled():
@@ -7743,7 +7730,7 @@ class LuxAmbientSlider(QWidget):
             self.label_map[log10_button] = zone.icon_svg
             col += zone.column_span
 
-        self.set_current_value(round(LuxMeterManualDevice.get_stored_value()))  # trigger side-effects.
+        self.set_current_value(round(LuxMeterSemiAutoDevice.get_stored_value()))  # trigger side-effects.
 
     def set_current_value(self, value: int, source: QWidget | None = None) -> None:
         # log_debug("set_current_value ", value, source, self.in_flux)
@@ -8179,7 +8166,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 self.main_window.setDisabled(False)
 
     def lux_check_action(self) -> None:
-        if self.lux_auto_controller:
+        if self.lux_auto_controller and self.lux_auto_controller.is_auto_enabled():
             self.lux_auto_controller.adjust_brightness_now()
 
     def start_refresh(self, external_event: bool = False) -> None:
