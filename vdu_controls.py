@@ -5212,7 +5212,7 @@ class PresetDaylightFactorWidget(QWidget):
         def df_init(state):
             if state == Qt.CheckState.Checked:
                 if self.df_input.text() == '':
-                    self.df_input.setText(f"{LuxMeterSemiAutoDevice.get_df_and_location()[0]:.4f}")
+                    self.df_input.setText(f"{LuxMeterSemiAutoDevice.get_daylight_factor():.4f}")
             else:
                 self.df_input.setText('')
 
@@ -6387,8 +6387,8 @@ class LuxGaugeWidget(QWidget):
         ei_points = []
         painter.setPen(QPen(self.white_transparent_color, 2))
         t = df_plot_day + timedelta(minutes=0)
-        df, location = LuxMeterSemiAutoDevice.get_df_and_location()
-        if df and location:
+        df = LuxMeterSemiAutoDevice.get_daylight_factor()
+        if location := LuxMeterSemiAutoDevice.get_location():
             for i in range(df_plot_left, df_plot_left + df_plot_width):
                 eo_y = self._y_from_lux(calc_solar_lux(t, location, 1.0), plot_height)
                 eo_points.append(QPoint(i, eo_y))
@@ -6436,7 +6436,7 @@ class LuxGaugeWidget(QWidget):
         painter.end()  # End of plotting
         self.plot_widget.setPixmap(pixmap)
         # Add some text to the bottom
-        if df and location:
+        if location:
             eo = calc_solar_lux(zoned_now(), location, 1.0)
             self.stats_label.setText(tr("Eo={:,} lux    DF={:,.4f}").format(eo, df))
         else:
@@ -6620,20 +6620,21 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
     obsolete_device_name = 'Slider-Control'
     device_name = 'solar-lux-calculator'
     location: GeoLocation | None = None
+    daylight_factor: float | None = None
 
     def __init__(self) -> None:
         super().__init__(requires_worker=False, manual=True, semi_auto=True)
         self.current_value: float = LuxMeterSemiAutoDevice.get_stored_value()
 
     def get_value(self) -> float | None:
-        df, location = LuxMeterSemiAutoDevice.get_df_and_location()
-        if location:
-            if lux := calc_solar_lux(zoned_now(), location, df):
+        if location := LuxMeterSemiAutoDevice.get_location():
+            if lux := calc_solar_lux(zoned_now(), location, LuxMeterSemiAutoDevice.get_daylight_factor()):
                 self.set_current_value(lux)  # only set if in daylight
         return self.current_value
 
     def set_current_value(self, new_value: float) -> None:
-        self.save_stored_value(new_value)
+        if (new_value := round(new_value)) != round(self.current_value):
+            self.save_stored_value(new_value)
         super().set_current_value(new_value)
 
     def stop_metering(self) -> None:
@@ -6649,6 +6650,7 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
             try:
                 return float(persisted_path.read_text())
             except ValueError:
+                log_error(f"LuxSemiAuto: failed to parse stored lux value, removing {persisted_path.as_posix()}")
                 persisted_path.unlink()
         return 1000.0
 
@@ -6658,33 +6660,48 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
             CONFIG_DIR_PATH.joinpath("lux_manual_value.txt").write_text(str(round(new_value)))
 
     @staticmethod
-    def get_df_and_location() -> Tuple[float, GeoLocation | None]:
-        persisted_path = CONFIG_DIR_PATH.joinpath("lux_daylight_factor.txt")
-        if persisted_path.exists():
-            try:
-                return float(persisted_path.read_text()), LuxMeterSemiAutoDevice.location
-            except ValueError:
-                persisted_path.unlink()
-        return 1.0, LuxMeterSemiAutoDevice.location
+    def get_daylight_factor() -> float:
+        if LuxMeterSemiAutoDevice.daylight_factor is None:
+            daylight_factor = 1.0
+            persisted_path = CONFIG_DIR_PATH.joinpath("lux_daylight_factor.txt")
+            if persisted_path.exists():
+                try:
+                    daylight_factor = float(persisted_path.read_text())
+                except ValueError:
+                    log_error(f"LuxSemiAuto: failed to parse daylight_factor, removing {persisted_path.as_posix()}")
+                    persisted_path.unlink()
+            else:
+                log_error(f"LuxSemiAuto: {persisted_path.as_posix()} does not exist")
+            log_debug(f'LuxSemiAuto: {daylight_factor=} ({persisted_path.as_posix()})') if log_debug_enabled else None
+            LuxMeterSemiAutoDevice.daylight_factor = daylight_factor
+        return LuxMeterSemiAutoDevice.daylight_factor
 
     @staticmethod
     def update_df_from_lux_value(new_lux_value: float):
         if location := LuxMeterSemiAutoDevice.location:
             solar_lux = calc_solar_lux(zoned_now(), location, 1.0)
-            if solar_lux > 0:  # the daylight factor can only be calculated during daylight.
+            if solar_lux > 0:  # the daylight factor can only be calculated for reasonable daylight lux levels.
                 daylight_factor =  new_lux_value / solar_lux
-                # log_debug(f"LuxMeterSemiAutoDevice: {new_lux_value=} {solar_lux=} {daylight_factor=}")
-                LuxMeterSemiAutoDevice.set_df(daylight_factor, internal=True)
+                LuxMeterSemiAutoDevice.set_daylight_factor(daylight_factor, internal=True)
 
     @staticmethod
-    def set_df(daylight_factor: float, internal: bool = False):
-        if CONFIG_DIR_PATH.exists():
-            CONFIG_DIR_PATH.joinpath("lux_daylight_factor.txt").write_text(f"{daylight_factor:.4f}")
-        if not internal:
-            LuxDialog.reconfigure_instance()
+    def set_daylight_factor(daylight_factor: float, internal: bool = False):
+        daylight_factor = round(daylight_factor, 4)
+        if LuxMeterSemiAutoDevice.daylight_factor is None or abs(LuxMeterSemiAutoDevice.daylight_factor - daylight_factor) > 0.001:
+            if CONFIG_DIR_PATH.exists():
+                persisted_path = CONFIG_DIR_PATH.joinpath("lux_daylight_factor.txt")
+                log_debug(f"LuxSemiAuto: save {daylight_factor=} to {persisted_path.as_posix()}") if log_debug_enabled else None
+                LuxMeterSemiAutoDevice.daylight_factor = daylight_factor
+                persisted_path.write_text(f"{daylight_factor:.4f}")
+            if not internal:
+                LuxDialog.reconfigure_instance()
 
     @staticmethod
-    def update_location(location: GeoLocation | None):
+    def get_location() -> GeoLocation | None:
+        return LuxMeterSemiAutoDevice.location
+
+    @staticmethod
+    def set_location(location: GeoLocation | None):
         LuxMeterSemiAutoDevice.location = location
 
 
@@ -7458,7 +7475,7 @@ class LuxAutoController:
             device_name = self.lux_config.get_device_name().strip()
             if not device_name or device_name == LuxMeterSemiAutoDevice.obsolete_device_name:
                 device_name = LuxMeterSemiAutoDevice.device_name
-            LuxMeterSemiAutoDevice.update_location(self.main_controller.main_config.get_location())
+            LuxMeterSemiAutoDevice.set_location(self.main_controller.main_config.get_location())
             self.lux_meter = lux_create_device(device_name)
             if self.lux_config.is_auto_enabled():
                 log_info("Lux auto-brightness settings refresh - restart monitoring.")
@@ -7730,11 +7747,11 @@ class LuxAmbientSlider(QWidget):
             self.label_map[log10_button] = zone.icon_svg
             col += zone.column_span
 
-        self.set_current_value(round(LuxMeterSemiAutoDevice.get_stored_value()))  # trigger side-effects.
+        self.set_current_value(round(LuxMeterSemiAutoDevice.get_stored_value()))  # don't trigger side-effects.
 
     def set_current_value(self, value: int, source: QWidget | None = None) -> None:
         # log_debug("set_current_value ", value, source, self.in_flux)
-        if not self.in_flux:
+        if not self.in_flux and value != self.current_value:
             try:
                 if source is None:
                     self.blockSignals(True)
@@ -7754,7 +7771,7 @@ class LuxAmbientSlider(QWidget):
                 non_semi_auto_meter = self.controller.lux_meter and not self.controller.lux_meter.has_semi_auto_capability
                 if source == self.slider or source == self.lux_input_field or non_semi_auto_meter:
                     if location := self.controller.main_controller.main_config.get_location():
-                        LuxMeterSemiAutoDevice.update_location(location)  # in case it's changed
+                        LuxMeterSemiAutoDevice.set_location(location)  # in case it's changed
                         LuxMeterSemiAutoDevice.update_df_from_lux_value(self.current_value)
             finally:
                 self.in_flux = False
@@ -8282,7 +8299,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
                         if df := preset.get_daylight_factor():
                             log_info(f"Daylight-Factor {df:.4f} read from Preset {preset.name}")
-                            LuxMeterSemiAutoDevice.set_df(df)
+                            LuxMeterSemiAutoDevice.set_daylight_factor(df)
                     else:  # Interrupted or exception:
                         self.main_window.update_status_indicators()
                         self.main_window.show_preset_status(tr("Interrupted restoration of {}").format(preset.name))
