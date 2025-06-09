@@ -7549,23 +7549,21 @@ class LuxAutoController:
                               for lux, brightness in zip(range(0, 6), range(min_v, max_v + 1, (max_v - min_v) // segments))]
             else:
                 lux_points = []
-        if self.lux_config.has_option('lux-presets', 'lux-preset-points'):
-            preset_points = self.lux_config.get_preset_points()
-            stand_alone_preset_points = []
-            for lux_point in lux_points:  # Fold in preset points where they overlap existing
-                for preset_point in preset_points:
-                    if lux_point.lux == preset_point.lux:  # Overlap is evaluated by lux only.
-                        lux_point.preset_name = preset_point.preset_name
+        if self.lux_config.has_option('lux-presets', 'lux-preset-points'):  # Merge in preset points
+            merge_map = {point.lux: point for point in  lux_points}
+            for preset_point in self.lux_config.get_preset_points():
+                # Look up the Preset's brightness for this VDU - get value from the actual Preset.
+                if preset := self.main_controller.find_preset_by_name(preset_point.preset_name):  # Drop any that no longer exist
+                    if point := merge_map.get(preset_point.lux):
+                        point.preset_name = preset_point.preset_name  # Merge both points
                     else:
-                        stand_alone_preset_points.append(preset_point)
-            lux_points = lux_points + stand_alone_preset_points
+                        merge_map[preset_point.lux] = preset_point  # Add this point on its own
+                        point = preset_point
+                    # Point brightness for this VDU will be -1 if this VDU's brightness-control doesn't participate in the Preset.
+                    point.brightness = preset.get_brightness(vdu_stable_id)
+            lux_points = list(merge_map.values())
             lux_points.sort()
-        for lux_point in lux_points:
-            # Look up the Preset's brightness for this particular VDU - get latest/current value from the actual Preset.
-            if lux_point.preset_name is not None:  # See if the named preset still exists.
-                if preset := self.main_controller.find_preset_by_name(lux_point.preset_name):
-                    # Profile brightness for this VDU will be -1 if this VDU's brightness-control doesn't participate in the Preset.
-                    lux_point.brightness = preset.get_brightness(vdu_stable_id)
+        log_debug(f"LuxAuto: get_lux_profile({vdu_stable_id=}) => {lux_points=}") if log_debug_enabled else None
         return lux_points
 
 
