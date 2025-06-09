@@ -876,7 +876,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSl
     QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
     QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
     QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, qApp, QShortcut, \
-    QDesktopWidget, QSpacerItem
+    QDesktopWidget, QSpacerItem, QListWidget, QListWidgetItem
 
 APPNAME = "VDU Controls"
 VDU_CONTROLS_VERSION = '2.4.0'
@@ -7112,8 +7112,10 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.interpolate_checkbox = QCheckBox(tr("Interpolate brightness values"))
         grid_layout.addWidget(self.interpolate_checkbox, 3, 2, 1, 3)
 
-        self.profile_selector = QComboBox(self)
-        main_layout.addWidget(self.profile_selector)
+        self.profile_selector_widget = QListWidget(self)
+        selector_scroller = QScrollArea()
+        selector_scroller.setWidget(self.profile_selector_widget)
+        main_layout.addWidget(selector_scroller)
 
         self.profile_plot = LuxProfileChart(self)
 
@@ -7217,11 +7219,12 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                 profile_name = list(self.lux_profiles_map.keys())[index]
                 self.profile_plot.set_current_profile(profile_name)
                 self.status_message(tr("Editing profile {}").format(profile_name))
-            if self.lux_config.get('lux-ui', 'selected-profile', fallback=None) != self.profile_selector.itemData(index):
-                self.lux_config.set('lux-ui', 'selected-profile', self.profile_selector.itemData(index))
+            data = self.profile_selector_widget.item(index).data(Qt.UserRole)
+            if self.lux_config.get('lux-ui', 'selected-profile', fallback=None) != data:
+                self.lux_config.set('lux-ui', 'selected-profile', data)
                 self.apply_settings(requires_metering_restart=False)
 
-        self.profile_selector.currentIndexChanged.connect(_select_profile)
+        self.profile_selector_widget.currentRowChanged.connect(_select_profile)
         self.reconfigure()
         self.make_visible()
 
@@ -7266,27 +7269,28 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                 self.preset_points.append(preset_point)
 
         self.interval_selector.setValue(self.lux_config.get_interval_minutes())
-
-        existing_id_list = [self.profile_selector.itemData(index) for index in range(0, self.profile_selector.count())]
+        existing_id_list = [item.data(Qt.UserRole) for item in self.profile_selector_widget.findItems('*', Qt.MatchWildcard)]
         candidate_id = self.lux_config.get('lux-ui', 'selected-profile', fallback=None)
         if connected_id_list and (candidate_id is None or candidate_id not in connected_id_list):
             candidate_id = connected_id_list[0]
         try:
-            self.profile_selector.blockSignals(True)  # Stop initialization from causing signal until all data is aligned.
+            self.profile_selector_widget.blockSignals(True) # Stop initialization from causing signal until all data is aligned.
             if connected_id_list != existing_id_list:  # List of connected VDUs has changed
-                self.profile_selector.clear()
+                self.profile_selector_widget.clear()
                 random.seed(int(self.lux_config.get("lux-ui", "vdu_color_seed", fallback='0x543fff'), 16))
                 self.drawing_color_map.clear()
                 for index, vdu_sid in enumerate(self.main_controller.get_vdu_stable_id_list()):
                     color = QColor.fromHsl(int(index * 137.508) % 255, random.randint(64, 128), random.randint(192, 200))
                     self.drawing_color_map[vdu_sid] = color
                     color_icon = create_icon_from_svg_bytes(SWATCH_ICON_SOURCE.replace(b"#ffffff", bytes(color.name(), 'utf-8')))
-                    self.profile_selector.addItem(color_icon, self.main_controller.get_vdu_preferred_name(vdu_sid), userData=vdu_sid)
+                    key_item = QListWidgetItem(color_icon, self.main_controller.get_vdu_preferred_name(vdu_sid))
+                    key_item.setData(Qt.UserRole, vdu_sid)
+                    self.profile_selector_widget.addItem(key_item)
                     if vdu_sid == candidate_id:
-                        self.profile_selector.setCurrentIndex(index)
+                        self.profile_selector_widget.setCurrentRow(index)
                         self.profile_plot.current_vdu_sid = candidate_id
         finally:
-            self.profile_selector.blockSignals(False)
+            self.profile_selector_widget.blockSignals(False)
         self.configure_ui(lux_auto_controller.lux_meter)
         self.profile_plot.create_plot()
         lux_auto_controller.lux_meter.get_value() if lux_auto_controller.lux_meter else None  # prime the UI
