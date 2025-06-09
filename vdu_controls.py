@@ -7112,11 +7112,6 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.interpolate_checkbox = QCheckBox(tr("Interpolate brightness values"))
         grid_layout.addWidget(self.interpolate_checkbox, 3, 2, 1, 3)
 
-        self.profile_selector_widget = QListWidget(self)
-        selector_scroller = QScrollArea()
-        selector_scroller.setWidget(self.profile_selector_widget)
-        main_layout.addWidget(selector_scroller)
-
         self.profile_plot = LuxProfileChart(self)
 
         def _lux_changed(lux: int) -> None:
@@ -7127,6 +7122,11 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.lux_gauge_widget.lux_changed_qtsignal.connect(_lux_changed)
 
         main_layout.addWidget(self.profile_plot, 1)
+
+        self.profile_selector_scroller = QScrollArea(parent=self)
+        self.profile_selector_widget = QListWidget(parent=self.profile_selector_scroller)
+        self.profile_selector_scroller.setWidget(self.profile_selector_widget)
+        main_layout.addWidget(self.profile_selector_scroller)
 
         self.status_bar = QStatusBar()
         self.save_button = StdButton(icon=si(self, QStyle.SP_DriveFDIcon), title=tr("Save Profile"), clicked=self.save_profiles,
@@ -7279,7 +7279,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                 self.profile_selector_widget.clear()
                 random.seed(int(self.lux_config.get("lux-ui", "vdu_color_seed", fallback='0x543fff'), 16))
                 self.drawing_color_map.clear()
-                for index, vdu_sid in enumerate(self.main_controller.get_vdu_stable_id_list()):
+                for index, vdu_sid in enumerate(connected_id_list):
                     color = QColor.fromHsl(int(index * 137.508) % 255, random.randint(64, 128), random.randint(192, 200))
                     self.drawing_color_map[vdu_sid] = color
                     color_icon = create_icon_from_svg_bytes(SWATCH_ICON_SOURCE.replace(b"#ffffff", bytes(color.name(), 'utf-8')))
@@ -7289,6 +7289,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                     if vdu_sid == candidate_id:
                         self.profile_selector_widget.setCurrentRow(index)
                         self.profile_plot.current_vdu_sid = candidate_id
+                self.profile_selector_scroller.setFixedHeight(native_font_height(scaled=1.4) * min(4, len(connected_id_list)))
         finally:
             self.profile_selector_widget.blockSignals(False)
         self.configure_ui(lux_auto_controller.lux_meter)
