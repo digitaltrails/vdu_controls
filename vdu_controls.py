@@ -6677,10 +6677,10 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
         return LuxMeterSemiAutoDevice.daylight_factor
 
     @staticmethod
-    def update_df_from_lux_value(new_lux_value: float):
+    def update_df_from_lux_value(new_lux_value: float, non_semi_source):
         if location := LuxMeterSemiAutoDevice.location:
             solar_lux = calc_solar_lux(zoned_now(), location, 1.0)
-            if solar_lux > 0:  # the daylight factor can only be calculated for reasonable daylight lux levels.
+            if solar_lux > (4000 if non_semi_source else 0):  # only for reasonable daylight lux levels or if the user is driving.
                 daylight_factor =  new_lux_value / solar_lux
                 LuxMeterSemiAutoDevice.set_daylight_factor(daylight_factor, internal=True)
 
@@ -6765,7 +6765,6 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         self.smoother = LuxSmooth(_get_prop('smoother-n', fallback=5), alpha=_get_prop('smoother-alpha', fallback=0.5))
         self.interpolation_enabled = _get_prop('interpolate-brightness', fallback=True)
         self.sensitivity_percent = _get_prop('interpolation-sensitivity-percent', fallback=10)
-        #self.convergence_divisor = _get_prop('convergence-divisor', fallback=2)
         self.step_pause_millis = _get_prop('step-pause-millis', fallback=1000)
         self._lux_dialog_message_qtsignal.connect(LuxDialog.lux_dialog_message)
         self._lux_dialog_message_qtsignal.connect(self.main_controller.main_window.status_message)
@@ -6795,7 +6794,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                         self.status_message(status[1], timeout=5000)
                     if self.single_shot:
                         break
-                else:  # In app config change - things are in a state of flux
+                else:  # In-app config change - things are in a state of flux
                     log_error("Exiting, no lux meter available.")
                     break
                 if error_count == self.consecutive_error_count:  # no change - must be OK now
@@ -7772,7 +7771,7 @@ class LuxAmbientSlider(QWidget):
                 if source == self.slider or source == self.lux_input_field or non_semi_auto_meter:
                     if location := self.controller.main_controller.main_config.get_location():
                         LuxMeterSemiAutoDevice.set_location(location)  # in case it's changed
-                        LuxMeterSemiAutoDevice.update_df_from_lux_value(self.current_value)
+                        LuxMeterSemiAutoDevice.update_df_from_lux_value(self.current_value, non_semi_auto_meter)
             finally:
                 self.in_flux = False
                 if source is None:
