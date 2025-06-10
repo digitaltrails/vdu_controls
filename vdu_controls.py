@@ -7121,12 +7121,16 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
 
         self.lux_gauge_widget.lux_changed_qtsignal.connect(_lux_changed)
 
-        main_layout.addWidget(self.profile_plot, 1)
+        main_layout.addWidget(self.profile_plot, stretch=1)
 
-        self.profile_selector_scroller = QScrollArea(parent=self)
-        self.profile_selector_widget = QListWidget(parent=self.profile_selector_scroller)
-        self.profile_selector_scroller.setWidget(self.profile_selector_widget)
-        main_layout.addWidget(self.profile_selector_scroller)
+        self.profile_selector_widget = QListWidget(parent=self)
+        self.profile_selector_widget.setResizeMode(QListWidget.Adjust)
+        self.profile_selector_widget.setSizeAdjustPolicy(QListWidget.AdjustToContents)
+        self.profile_selector_widget.setFlow(QListWidget.LeftToRight)
+        self.profile_selector_widget.setSpacing(0)
+        self.profile_selector_widget.setMinimumHeight(native_font_height(scaled=1.4))
+
+        main_layout.addWidget(self.profile_selector_widget, stretch=0)
 
         self.status_bar = QStatusBar()
         self.save_button = StdButton(icon=si(self, QStyle.SP_DriveFDIcon), title=tr("Save Profile"), clicked=self.save_profiles,
@@ -7289,7 +7293,8 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                     if vdu_sid == candidate_id:
                         self.profile_selector_widget.setCurrentRow(index)
                         self.profile_plot.current_vdu_sid = candidate_id
-                self.profile_selector_scroller.setFixedHeight(native_font_height(scaled=1.4) * min(4, len(connected_id_list)))
+                self.profile_selector_widget.setFixedHeight(
+                    native_font_height(scaled=1.4) * min(max(1, len(connected_id_list) - 2), 5))  # TODO do better
         finally:
             self.profile_selector_widget.blockSignals(False)
         self.configure_ui(lux_auto_controller.lux_meter)
