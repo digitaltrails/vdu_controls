@@ -7294,7 +7294,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                         self.profile_selector_widget.setCurrentRow(index)
                         self.profile_plot.current_vdu_sid = candidate_id
                 self.profile_selector_widget.setFixedHeight(
-                    native_font_height(scaled=1.4) * (1 if len(connected_id_list) <= 3 else 5))
+                    native_font_height(scaled=1.5) * (1 if len(connected_id_list) <= 3 else 5))
         finally:
             self.profile_selector_widget.blockSignals(False)
         self.configure_ui(lux_auto_controller.lux_meter)
