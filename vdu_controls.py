@@ -1065,14 +1065,13 @@ At your request, weather for your location may be retrieved from <a href="{WEATH
 </quote>
 """
 
-RELEASE_ANNOUNCEMENT = """
-<h3>{WELCOME}</h3>
-
-{NOTE}<br>
+RELEASE_WELCOME = QT_TR_NOOP("Welcome to vdu_controls {}").format(VDU_CONTROLS_VERSION)
+RELEASE_NOTE = QT_TR_NOOP("Please read the online release notes:")
+RELEASE_ANNOUNCEMENT = """<h3>{WELCOME}</h3>{NOTE}<br/>
 <a href="https://github.com/digitaltrails/vdu_controls/releases/tag/v{VERSION}">
 https://github.com/digitaltrails/vdu_controls/releases/tag/v{VERSION}</a>
-<hr>
-"""
+<br/>___________________________________________________________________________"""
+RELEASE_INFO = QT_TR_NOOP('New Feature Release: semi-automatic brightness adjustment by geolocation.')
 
 CONFIG_DIR_PATH = Path.home().joinpath('.config', 'vdu_controls')
 CURRENT_PRESET_NAME_FILE = CONFIG_DIR_PATH.joinpath('current_preset.txt')
@@ -8770,12 +8769,10 @@ class VduAppWindow(QMainWindow):
             splash = None
 
         if main_config.file_path is None or main_config.ini_content.get_version() < VDU_CONTROLS_VERSION_TUPLE:  # New version...
-            welcome = tr("Welcome to vdu_controls version {}").format(VDU_CONTROLS_VERSION)
-            note = tr("Please read the online release notes:")
-            release_alert = MBox(MBox.Information,
-                                 msg=RELEASE_ANNOUNCEMENT.format(WELCOME=welcome, NOTE=note, VERSION=VDU_CONTROLS_VERSION),
-                                 info='New Feature Release: semi-automatic brightness adjustment by Geolocation.',
-                                 buttons=MBox.Close)
+            release_alert = MBox(
+                MBox.Information,
+                msg=RELEASE_ANNOUNCEMENT.format(WELCOME=tr(RELEASE_WELCOME), NOTE=tr(RELEASE_NOTE), VERSION=VDU_CONTROLS_VERSION),
+                info=RELEASE_INFO, buttons=MBox.Close)
             release_alert.setTextFormat(Qt.RichText)
             release_alert.exec()
             main_config.write_file(ConfIni.get_path('vdu_controls'), overwrite=True)  # Stops release notes from being repeated.
