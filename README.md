@@ -356,20 +356,21 @@ Version History
 
 * 2.4.0
   * Added an ability to estimate the solar-illumination for a given geolocation and time. 
-  * Added semi-automatic ambient-light-level adjustment proportional to solar-illumination.
-  * When the ambient-light-level slider is adjusted, it has the side-effect of determining 
-    the daylight-factor, the ratio of indoor-illumination/solar-illumination.
-  * The Lux-Dialog, displays the current daylight-factor and includes a plot of estimates for 
-    solar-illumination and indoor-illumination for the current day.
-  * The Preset-Dialog includes an option to save/restore the daylight-factor. This can be
+  * Added semi-automatic brighness adjustment proportional to geolocated solar-illumination.
+  * Ambient-light-level slider: when the slider is manually adjusted, it has the side-effect
+    of determining the ratio of indoor-illumination/solar-illumination (the the daylight-factor, DF).
+  * Light-Metering dialog: semi-automatic metering replaces manual metering.
+  * Light-Metering dialog: added a display of estimated outdoor-lux (Eo) and the current daylight-factor (DF).
+  * Light-Metering dialog: added a plot of the current day's estimated solar and indoor illumination.
+  * Light-Metering dialog: replaced the profile-selector combo-box with a list for easier accessibility.
+  * Light-Metering dialog: added the ability to dynamically adjust for display DPI.
+  * Preset dialog: added an option to save/restore the daylight-factor. This can be
     used to save daylight factors for various conditions, or to activate them at a solar-elevation.
-  * The Lux-Dialog scale adjusts for display DPI.
-  * The Solar Elevation chart adjusts for display DPI.
-  * Fixed Lux brightness adjustment; protect-nvam can now be disabled.
-  * Prevent duplicate Lux-profile points which confuse the lux evaluation process.
-  * Fixed dbus ddcutil-service detect; only request valid displays.
-  * Prevent a lux-adjustment infinite-loop if no brightness controls are enabled.
-  * Preset-restoration and ambient-brightness-adjustment now use the same code for
+  * Settings dialog: disabling protect-nvam now works properly for adjustments due to light-metering.
+  * Duplicate Lux-profile points are filtered out to prevent confusing the UI and lux evaluation process.
+  * DBus ddcutil-service: altered the detection parameters to request only valid displays (prevents errors).
+  * Ambient-light brightness adjustment: prevent an infinite-loop if no brightness controls are enabled.
+  * Preset-restoration and ambient-light brightness-adjustment now share the same code for
     background operations.
   * Model-only config files are no longer created, they're confusing and likely not used (they
     can still be created manually).
