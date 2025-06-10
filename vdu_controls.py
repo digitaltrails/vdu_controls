@@ -7112,6 +7112,15 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.interpolate_checkbox = QCheckBox(tr("Interpolate brightness values"))
         grid_layout.addWidget(self.interpolate_checkbox, 3, 2, 1, 3)
 
+        self.profile_selector_widget = QListWidget(parent=self)
+        self.profile_selector_widget.setResizeMode(QListWidget.Adjust)
+        self.profile_selector_widget.setSizeAdjustPolicy(QListWidget.AdjustToContents)
+        self.profile_selector_widget.setFlow(QListWidget.LeftToRight)
+        self.profile_selector_widget.setSpacing(0)
+        self.profile_selector_widget.setMinimumHeight(native_font_height(scaled=1.4))
+
+        main_layout.addWidget(self.profile_selector_widget, stretch=0)
+
         self.profile_plot = LuxProfileChart(self)
 
         def _lux_changed(lux: int) -> None:
@@ -7122,15 +7131,6 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.lux_gauge_widget.lux_changed_qtsignal.connect(_lux_changed)
 
         main_layout.addWidget(self.profile_plot, stretch=1)
-
-        self.profile_selector_widget = QListWidget(parent=self)
-        self.profile_selector_widget.setResizeMode(QListWidget.Adjust)
-        self.profile_selector_widget.setSizeAdjustPolicy(QListWidget.AdjustToContents)
-        self.profile_selector_widget.setFlow(QListWidget.LeftToRight)
-        self.profile_selector_widget.setSpacing(0)
-        self.profile_selector_widget.setMinimumHeight(native_font_height(scaled=1.4))
-
-        main_layout.addWidget(self.profile_selector_widget, stretch=0)
 
         self.status_bar = QStatusBar()
         self.save_button = StdButton(icon=si(self, QStyle.SP_DriveFDIcon), title=tr("Save Profile"), clicked=self.save_profiles,
@@ -7294,7 +7294,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                         self.profile_selector_widget.setCurrentRow(index)
                         self.profile_plot.current_vdu_sid = candidate_id
                 self.profile_selector_widget.setFixedHeight(
-                    native_font_height(scaled=1.4) * min(max(1, len(connected_id_list) - 2), 5))  # TODO do better
+                    native_font_height(scaled=1.4) * (1 if len(connected_id_list) <= 3 else 5))
         finally:
             self.profile_selector_widget.blockSignals(False)
         self.configure_ui(lux_auto_controller.lux_meter)
