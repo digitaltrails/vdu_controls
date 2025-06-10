@@ -355,7 +355,7 @@ Version History
 ---------------
 
 * 2.4.0
-  * Added an ability to estimate the solar-illumination for a given geolocation and time. 
+  * Added the ability to estimate the solar-illumination for a given geolocation and time. 
   * Added semi-automatic brighness adjustment proportional to geolocated solar-illumination.
   * Ambient-light-level slider: when the slider is manually adjusted, it has the side-effect
     of determining the ratio of indoor-illumination/solar-illumination (the the daylight-factor, DF).
@@ -373,7 +373,7 @@ Version History
   * Preset-restoration and ambient-light brightness-adjustment now share the same code for
     background operations.
   * Model-only config files are no longer created, they're confusing and likely not used (they
-    can still be created manually).
+    can still be created manually with a text editor).
 
 * 2.3.0
   * Fix the doze function, this improves the responsiveness of all slider controls.
