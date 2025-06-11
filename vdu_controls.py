@@ -7072,6 +7072,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.path = ConfIni.get_path('AutoLux')
         self.device_name = ''
         self.lux_config = main_controller.get_lux_auto_controller().get_lux_config()
+        self.have_shown_interpolation_warning = False
 
         main_layout = QVBoxLayout()
         self.setLayout(main_layout)
@@ -7132,9 +7133,9 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         main_layout.addWidget(self.profile_plot, stretch=1)
 
         self.status_bar = QStatusBar()
-        self.save_button = StdButton(icon=si(self, QStyle.SP_DriveFDIcon), title=tr("Save Profile"), clicked=self.save_profiles,
+        self.save_button = StdButton(icon=si(self, QStyle.SP_DriveFDIcon), title=tr("Save Profiles"), clicked=self.save_profiles,
                                      tip=tr("Apply and save profile-chart changes."))
-        self.revert_button = StdButton(icon=si(self, QStyle.SP_DialogResetButton), title=tr("Revert Profile"),
+        self.revert_button = StdButton(icon=si(self, QStyle.SP_DialogResetButton), title=tr("Revert Profiles"),
                                        clicked=self.reconfigure, tip=tr("Abandon profile-chart changes, revert to last saved."))
         quit_button = StdButton(icon=si(self, QStyle.SP_DialogCloseButton), title=tr("Close"), clicked=self.close)
         for button in (self.save_button, self.revert_button, quit_button):
@@ -7204,15 +7205,15 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
 
         def _set_interpolation(checked: int) -> None:
             if checked == Qt.Checked:  # need to save setting if not already set
-                if not self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=False):
+                self.lux_config.set('lux-meter', 'interpolate-brightness', 'yes')
+                if not self.have_shown_interpolation_warning:
+                    self.have_shown_interpolation_warning = True  # Only show once per session.
                     MBox(MBox.Warning, msg=tr('Interpolation may increase the number of writes to VDU NVRAM.'),
                          info=tr('When designing brightness response curves consider minimizing '
                                  'brightness changes to reduce wear on NVRAM.')).exec()
-                    self.lux_config.set('lux-meter', 'interpolate-brightness', 'yes')
-                    self.apply_settings()
             elif self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True):
                 self.lux_config.set('lux-meter', 'interpolate-brightness', 'no')
-                self.apply_settings()
+            self.apply_settings()
             self.profile_plot.create_plot()
 
         self.interpolate_checkbox.stateChanged.connect(_set_interpolation)
@@ -7244,7 +7245,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.lux_config = lux_auto_controller.get_lux_config().duplicate(LuxConfig())  # type: ignore
         self.device_name = self.lux_config.get("lux-meter", "lux-device", fallback='')
         self.enabled_checkbox.setChecked(self.lux_config.is_auto_enabled())
-        self.interpolate_checkbox.setChecked(self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True))
+        self.interpolate_checkbox.setChecked(self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=False))
         self.has_profile_changes = False
         self.current_brightness_map.clear()
         self.save_button.setEnabled(False)
@@ -7550,14 +7551,9 @@ class LuxAutoController:
         if self.lux_config.has_option('lux-profile', vdu_stable_id):  # initialize removing duplicate points
             lux_points = list(set([LuxPoint(v[0], v[1]) for v in literal_eval(self.lux_config.get('lux-profile', vdu_stable_id))]))
         else:  # Create a default profile:
-            if brightness_range is not None:
-                min_v, max_v = brightness_range
-                min_v = max(10, min_v)  # Don't go all the way down to zero.
-                segments = 5
-                lux_points = [LuxPoint(10 ** lux, brightness)
-                              for lux, brightness in zip(range(0, 6), range(min_v, max_v + 1, (max_v - min_v) // segments))]
-            else:
-                lux_points = []
+                min_v, max_v = (0, 100) if brightness_range is None else brightness_range
+                defaults = [(0, 0.6), (100, 0.8), (1_000, 0.9), (10_000, 0.9), (100_000, 0.9)]
+                lux_points = [LuxPoint(lux, min_v + round(r * (max_v - min_v))) for lux, r in defaults]
         if self.lux_config.has_option('lux-presets', 'lux-preset-points'):  # Merge in preset points
             merge_map = {point.lux: point for point in  lux_points}
             for preset_point in self.lux_config.get_preset_points():
