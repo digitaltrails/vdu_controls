@@ -37,8 +37,11 @@ In versions >= 2.4, the _ambient-light-level_ slider has been combined with an
 estimate of local solar-illumination to achieve **semi-automatic brightness 
 control** throughout the day. Adjusting the slider sets the ratio between 
 indoor-illumination and outdoor solar-illumination. Should circumstances change, 
-adjusting the slider updates the ratio.   (Solar-illumination is estimated 
-for a  location by using the local date-time to determine a sun-angle, and from
+adjusting the slider updates the ratio.  See the 
+[2.4 release notes](https://github.com/digitaltrails/vdu_controls/releases/tag/v2.3.0) 
+for a brief tutorial.
+(Solar-illumination is estimated for a  location by using the local date-time 
+to determine a sun-angle, and from
 that estimates for illumination, and air-mass.)
 
 Favorite settings can be saved as named **Presets**, such as
