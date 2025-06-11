@@ -7072,7 +7072,6 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.path = ConfIni.get_path('AutoLux')
         self.device_name = ''
         self.lux_config = main_controller.get_lux_auto_controller().get_lux_config()
-        self.have_shown_interpolation_warning = False
 
         main_layout = QVBoxLayout()
         self.setLayout(main_layout)
@@ -7205,9 +7204,8 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
 
         def _set_interpolation(checked: int) -> None:
             if checked == Qt.Checked:  # need to save setting if not already set
-                self.lux_config.set('lux-meter', 'interpolate-brightness', 'yes')
-                if not self.have_shown_interpolation_warning:
-                    self.have_shown_interpolation_warning = True  # Only show once per session.
+                if not self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=False):  # altering value
+                    self.lux_config.set('lux-meter', 'interpolate-brightness', 'yes')
                     MBox(MBox.Warning, msg=tr('Interpolation may increase the number of writes to VDU NVRAM.'),
                          info=tr('When designing brightness response curves consider minimizing '
                                  'brightness changes to reduce wear on NVRAM.')).exec()
