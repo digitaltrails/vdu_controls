@@ -33,13 +33,13 @@ Several methods are supported for integrating a hardware light-meter to
 achieve **fully automatic** brightness control. (An _arduino_
 based meter [can be built for around $10](https://github.com/digitaltrails/vdu_controls/blob/master/Lux-metering.md).)
 
-In versions >= 2.4, the ambient-light-level slider can be combined with an estimate of 
-local solar illumination to achieve **semi-automatic brightness control**
-throughout the day.  Adjusting the slider sets the
-ratio between indoor-illumination and outdoor solar-illumination.
-Brightness is automatically adjusted as the sun moves across the sky. 
-Should circumstances change, adjusting the slider updates 
-the ratio.
+In versions >= 2.4, the _ambient-light-level_ slider has been combined with an 
+estimate of local solar-illumination to achieve **semi-automatic brightness 
+control** throughout the day. Adjusting the slider sets the ratio between 
+indoor-illumination and outdoor solar-illumination. Should circumstances change, 
+adjusting the slider updates the ratio.   (Solar-illumination is estimated 
+for a  location by using the local date-time to determine a sun-angle and 
+as well as an allowance for atmospheric density.)
 
 Favorite settings can be saved as named **Presets**, such as
 _night_, _day_, _photography_, _movies_, and so forth.  Presets may be set to 
@@ -345,6 +345,8 @@ Acknowledgements
 * Christopher Laws ([claws](https://github.com/claws)) for the [BH1750 library](https://github.com/claws/BH1750) 
   and [example build](https://github.com/claws/BH1750#example) (lux-metering).
 * Plus others who have supplied feedback and suggestions.
+* E. ELVEGÅRD and G. SJÖSTEDT: The Calculation of Illumination from Sun and Sky By E. ELVEGÅRD and G. SJÖSTEDT (1940)
+  [Illuminating Engineering Society, 100 Significant Papers](https://www.ies.org/research/publications/100-significant-papers/)
 
 Author
 ------
