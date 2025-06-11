@@ -345,7 +345,7 @@ Acknowledgements
 * Christopher Laws ([claws](https://github.com/claws)) for the [BH1750 library](https://github.com/claws/BH1750) 
   and [example build](https://github.com/claws/BH1750#example) (lux-metering).
 * Plus others who have supplied feedback and suggestions.
-* E. ELVEGÅRD and G. SJÖSTEDT: The Calculation of Illumination from Sun and Sky By E. ELVEGÅRD and G. SJÖSTEDT (1940)
+* E. Elvegård and G. Sjöstedt, "The Calculation of Illumination from Sun and Sky," _Illuminating Engineering_, Apr. 1940.
   [Illuminating Engineering Society, 100 Significant Papers](https://www.ies.org/research/publications/100-significant-papers/)
 
 Author

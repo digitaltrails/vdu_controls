@@ -9192,8 +9192,8 @@ def true_noon(longitude, when: datetime) -> datetime:
 
 
 def calc_solar_lux(localised_time: datetime, location: GeoLocation, daylight_factor: float) -> int:
-    # The Calculation of Illumination in lux from Sun and Sky By E. ELVEGÅRD and G. SJÖSTEDT
-    # https://www.brikbase.org/sites/default/files/ies_030.pdf
+    # E. Elvegård and G. Sjöstedt, "The Calculation of Illumination from Sun and Sky," _Illuminating Engineering_, Apr. 1940.
+    # [Illuminating Engineering Society, 100 Significant Papers](https://www.ies.org/research/publications/100-significant-papers/)
     latitude, longitude = location.latitude, location.longitude
     azimuth, zenith = calc_solar_azimuth_zenith(true_noon(longitude, localised_time), latitude, longitude)
     solar_altitude = 90 - zenith   # After sunset use
