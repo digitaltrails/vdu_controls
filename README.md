@@ -38,8 +38,8 @@ estimate of local solar-illumination to achieve **semi-automatic brightness
 control** throughout the day. Adjusting the slider sets the ratio between 
 indoor-illumination and outdoor solar-illumination. Should circumstances change, 
 adjusting the slider updates the ratio.   (Solar-illumination is estimated 
-for a  location by using the local date-time to determine a sun-angle and 
-as well as an allowance for atmospheric density.)
+for a  location by using the local date-time to determine a sun-angle, and from
+that estimates for illumination, and air-mass.)
 
 Favorite settings can be saved as named **Presets**, such as
 _night_, _day_, _photography_, _movies_, and so forth.  Presets may be set to 
