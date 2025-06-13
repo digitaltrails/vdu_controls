@@ -864,7 +864,7 @@ from threading import Lock
 from typing import List, Tuple, Mapping, Type, Dict, Callable, Any, NewType
 from urllib.error import URLError
 
-qt_version_preference=os.environ.get('VDU_CONTROLS_QT_VERSION', '5')  # Change to '5' to force the use of Qt5
+qt_version_preference=os.environ.get('VDU_CONTROLS_QT_VERSION', '6')  # Change to '5' to force the use of Qt5
 if qt_version_preference == '6':
     try:
         from PyQt6 import QtCore, QtNetwork
@@ -3154,10 +3154,10 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
                     return MBox(MIcon.Critical, msg=tr("Cannot save <tt>{}</tt>").format(tab.config_path.name),
                                 info=tr("Duplicate VDU label: <i>{}</i><hr/>Alter the label for {} or {} and try again.").format(
                                     vdu_label, tab.config_path.stem, existing_use),
-                                buttons=MButton.Close | MButton.Discard, default=MButton.Close).exec()
+                                buttons=MBtn.Close | MBtn.Discard, default=MBtn.Close).exec()
                 else:
                     labels_in_use[vdu_label] = tab.config_path.stem
-        return MButton.Ok
+        return MBtn.Ok
 
     def save_all(self, warn_if_nothing_to_save: bool = True) -> int:
         what_changed: Dict[str, str] = {}
@@ -3168,22 +3168,22 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
             for editor in save_order:
                 if editor.is_unsaved():
                     nothing_to_save = False
-                    if editor.save(what_changed=what_changed, warn_if_no_changes=False) == MButton.Cancel:
-                        return MButton.Cancel
+                    if editor.save(what_changed=what_changed, warn_if_no_changes=False) == MBtn.Cancel:
+                        return MBtn.Cancel
             if warn_if_nothing_to_save and nothing_to_save:
                 if MBox(MIcon.Critical, msg=tr("Nothing needs saving. Do you wish to save anyway?"),
-                        buttons=MButton.Yes | MButton.No, default=MButton.No).exec() == MButton.Yes:
+                        buttons=MBtn.Yes | MBtn.No, default=MBtn.No).exec() == MBtn.Yes:
                     for editor in save_order:
-                        if editor.save(force=True, what_changed=what_changed, warn_if_no_changes=False) == MButton.Cancel:
-                            return MButton.Cancel
+                        if editor.save(force=True, what_changed=what_changed, warn_if_no_changes=False) == MBtn.Cancel:
+                            return MBtn.Cancel
         finally:
             self.setEnabled(True)
             if len(what_changed) > 0:
                 self.change_callback(what_changed)
-        return MButton.Ok
+        return MBtn.Ok
 
     def closeEvent(self, event) -> None:
-        if self.save_all(warn_if_nothing_to_save=False) == MButton.Cancel:
+        if self.save_all(warn_if_nothing_to_save=False) == MBtn.Cancel:
             event.ignore()
         else:
             super().closeEvent(event)
@@ -3260,11 +3260,11 @@ class SettingsEditorTab(QWidget):
             try:
                 self.setEnabled(False)  # Saving may take a while, give some feedback by disabling and enabling when done
                 answer = SettingsEditor.get_instance().cross_validate()
-                if answer == MButton.Ok:
+                if answer == MBtn.Ok:
                     msg = (tr('Update existing {}?') if self.config_path.exists() else tr("Create new {}?")).format(
                         self.config_path.as_posix())
-                    answer = MBox(MIcon.Question, msg=msg, buttons=MButton.Save | MButton.Cancel | MButton.Discard, default=MButton.Save).exec()
-                if answer == MButton.Save:
+                    answer = MBox(MIcon.Question, msg=msg, buttons=MBtn.Save | MBtn.Cancel | MBtn.Discard, default=MBtn.Save).exec()
+                if answer == MBtn.Save:
                     message = tr("Saving {} ...").format(self.config_path.name)
                     self.editor_dialog.status_message(message, 0)
                     QApplication.processEvents()
@@ -3277,14 +3277,14 @@ class SettingsEditorTab(QWidget):
                     self.unsaved_changes_map = {}
                     message1 = tr("Saved {}").format(self.config_path.name)
                     self.editor_dialog.status_message(message1, 3000)
-                elif answer == MButton.Discard:
+                elif answer == MBtn.Discard:
                     self.revert_changes()
                 return answer
             finally:
                 self.setEnabled(True)
         elif warn_if_no_changes:
-            MBox(MIcon.Critical, msg=tr('No unsaved changes for {}.').format(self.config_path.name), buttons=MButton.Ok).exec()
-        return MButton.Cancel
+            MBox(MIcon.Critical, msg=tr('No unsaved changes for {}.').format(self.config_path.name), buttons=MBtn.Ok).exec()
+        return MBtn.Cancel
 
     def reset(self) -> None:
         for field in self.field_list:
@@ -3302,7 +3302,7 @@ class SettingsEditorTab(QWidget):
         if MBox(MIcon.Critical,
                 msg=tr("Are you sure you want to restore {} to application defaults?").format(self.preferred_name),
                 info=tr("The file {} will be renamed to {}.old").format(self.config_path.name, self.config_path.stem),
-                buttons=MButton.Yes | MButton.No, default=MButton.No).exec() == MButton.No:
+                buttons=MBtn.Yes | MBtn.No, default=MBtn.No).exec() == MBtn.No:
             return
         if self.config_path.exists():
             self.config_path.rename(Path(self.config_path.parent, self.config_path.stem + 'old'))
@@ -3345,9 +3345,9 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
         def _toggled(is_checked: bool) -> None:
             section_editor.ini_editable[section][option] = 'yes' if is_checked else 'no'
             if related:
-                MBox(MIcon.Information, msg=tr("You may also wish to set\n{}").format(tr(related)), buttons=MButton.Ok).exec()
+                MBox(MIcon.Information, msg=tr("You may also wish to set\n{}").format(tr(related)), buttons=MBtn.Ok).exec()
             if is_checked and requires:
-                MBox(MIcon.Information, msg=tr("You will also need to set\n{}").format(tr(requires)), buttons=MButton.Ok).exec()
+                MBox(MIcon.Information, msg=tr("You will also need to set\n{}").format(tr(requires)), buttons=MBtn.Ok).exec()
 
         checkbox.toggled.connect(_toggled)
         self.layout().addWidget(checkbox)
@@ -3479,14 +3479,14 @@ class SettingsEditorLocationWidget(SettingsEditorLineBase):
 
     def location_dialog(self) -> str | None:
         if MBox(MIcon.Question, msg=tr('Query {} to obtain information based on your IP-address?').format(IP_ADDRESS_INFO_URL),
-                buttons=MButton.Yes | MButton.No).exec() == MButton.Yes:
+                buttons=MBtn.Yes | MBtn.No).exec() == MBtn.Yes:
             try:
                 ipinfo = self.retrieve_ipinfo()
                 msg = f"{tr('Use the following info?')}\n" f"{ipinfo['loc']}\n" + \
                       ','.join([ipinfo[key] for key in ('city', 'region', 'country') if key in ipinfo])
                 details = f"Queried {IP_ADDRESS_INFO_URL}\n" + \
                           '\n'.join([f"{name}: {value}" for name, value in ipinfo.items()])
-                if MBox(MIcon.Information, msg=msg, details=details, buttons=MButton.Yes | MButton.No).exec() == MButton.Yes:
+                if MBox(MIcon.Information, msg=msg, details=details, buttons=MBtn.Yes | MBtn.No).exec() == MBtn.Yes:
                     data = ipinfo['loc']
                     for key in ('city', 'region', 'country'): # Get location name for weather lookups.
                         if key in ipinfo:
@@ -3569,7 +3569,7 @@ class SettingsEditorPathWidget(SettingsEditorLineBase):
                                "<a href='https://github.com/digitaltrails/vdu_controls/issues/44'>"
                                "https://github.com/digitaltrails/vdu_controls/issues/44</a><br/>"
                                "or by email to <a href='mailto:michael@actrix.gen.nz?subject=ddcutil-emulator'>"
-                               "michael@actrix.gen.nz</a>.", buttons=MButton.Close)
+                               "michael@actrix.gen.nz</a>.", buttons=MBtn.Close)
                 mb.setTextFormat(Qt.TextFormat.AutoText)
                 mb.exec()
 
@@ -4351,14 +4351,14 @@ class VduControlsMainPanel(QWidget):
         else:
             details = str(exception.cause)
         if self.alert is not None:  # Dismiss any existing alert
-            self.alert.done(MButton.Close)
+            self.alert.done(MBtn.Close)
         self.alert = MBox(MIcon.Critical, msg=msg, info=info, details=details,
-                          buttons=MButton.Close | MButton.Retry if can_retry else MButton.Close,
-                          default=MButton.Retry if can_retry else MButton.Close)
+                          buttons=MBtn.Close | MBtn.Retry if can_retry else MBtn.Close,
+                          default=MBtn.Retry if can_retry else MBtn.Close)
         self.alert.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         answer = self.alert.exec()
         self.alert = None
-        return answer == MButton.Retry
+        return answer == MBtn.Retry
 
     def status_message(self, message: str, timeout: int):
         self.bottom_toolbar.status_area.showMessage(message, timeout) if self.bottom_toolbar else None
@@ -4539,12 +4539,12 @@ class FasterFileDialog(QFileDialog):  # Takes 5 seconds versus 30+ seconds for Q
 
 
 MIcon = QMessageBox.Icon
-MButton = QMessageBox.StandardButton
+MBtn = QMessageBox.StandardButton
 
 class MBox(QMessageBox):
 
     def __init__(self, icon: QIcon, msg: str | None = None, info: str | None = None, details: str | None = None,
-                 buttons: QMessageBox.StandardButton = MButton.NoButton,
+                 buttons: QMessageBox.StandardButton = MBtn.NoButton,
                  default: QMessageBox.StandardButton | None = None) -> None:
         super().__init__(icon, APPNAME, '', buttons=buttons)
         if RESIZABLE_MESSAGEBOX_HACK:
@@ -5592,7 +5592,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         vdu_stable_id = action.data()
         if MBox(MIcon.Information, msg=tr('Create an initialization-preset for {}.').format(action.text()),
                 info=tr('Initialization-presets are restored  at startup or when ever the VDU is subsequently detected.'),
-                buttons=MButton.OK | MButton.Cancel).exec() == MButton.Cancel:
+                buttons=MBtn.Ok | MBtn.Cancel).exec() == MBtn.Cancel:
             return
         self.preset_name_edit.setText(vdu_stable_id)
         for (section, option), checkbox in self.content_controls_map.items():
@@ -5724,7 +5724,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
     def delete_preset(self, preset: Preset, target_widget: QWidget) -> None:
         if MBox(MIcon.Question, msg=tr('Delete {}?').format(preset.name),
-                buttons=MButton.Ok | MButton.Cancel, default=MButton.Cancel).exec() == MButton.Cancel:
+                buttons=MBtn.Ok | MBtn.Cancel, default=MBtn.Cancel).exec() == MBtn.Cancel:
             return
         self.main_controller.delete_preset(preset)
         self.preset_widgets_layout.removeWidget(target_widget)
@@ -5769,7 +5769,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
             self.setDisabled(True)  # Stop any editing until after the preset is restored.
             self.main_controller.restore_preset(preset, finished_func=_begin_editing, immediately=True)
 
-    def save_preset(self, _: bool = False, from_widget: PresetWidget = None, quiet: bool = False) -> MButton.Ok | MButton.Cancel:
+    def save_preset(self, _: bool = False, from_widget: PresetWidget = None, quiet: bool = False) -> MBtn.Ok | MBtn.Cancel:
         preset: Preset | None = None
         widget_to_replace: PresetWidget | None = None
         if from_widget:  # A from_widget is requesting that the Preset's VDU current settings be updated.
@@ -5781,7 +5781,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
             else:
                 preset = Preset(preset_name)  # New Preset
         if preset is None or (quiet and not self.has_changes(preset)):  # Not found (weird), OR don't care if no changes made.
-            return MButton.OK  # Nothing more to do, everything is OK
+            return MBtn.Ok  # Nothing more to do, everything is OK
 
         preset_path = ConfIni.get_path(proper_name('Preset', preset.name))
         if preset_path.exists():  # Existing Preset
@@ -5791,12 +5791,12 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
                 question = tr("Replace existing '{}' preset?").format(preset.name)
         else:  # New Preset
             question = tr("Save current edit?")
-        answer = MBox(MIcon.Question, msg=question, buttons=MButton.Save | MButton.Discard | MButton.Cancel, default=MButton.Save).exec()
-        if answer == MButton.Discard:
+        answer = MBox(MIcon.Question, msg=question, buttons=MBtn.Save | MBtn.Discard | MBtn.Cancel, default=MBtn.Save).exec()
+        if answer == MBtn.Discard:
             self.reset_editor()
-            return MButton.OK
-        elif answer == MButton.Cancel:
-            return MButton.Cancel
+            return MBtn.Ok
+        elif answer == MBtn.Cancel:
+            return MBtn.Cancel
 
         self.populate_ini_from_gui(preset.preset_ini)  # Initialises the options from the GUI, but does not get the VDU values.
         self.main_controller.populate_ini_from_vdus(preset.preset_ini, update_only=True)  # populate from VDU control values.
@@ -5805,8 +5805,8 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
                                   if other_name != preset.name
                                      and preset.preset_ini.diff(other_preset.preset_ini, vdu_settings_only=True) == {}]:
             if MBox(MIcon.Warning, msg=tr("Duplicates existing Preset {}, save anyway?").format(duplicated_presets[0].name),
-                    buttons=MButton.Save | MButton.Cancel, default=MButton.Cancel).exec() == MButton.Cancel:
-                return MButton.Cancel
+                    buttons=MBtn.Save | MBtn.Cancel, default=MBtn.Cancel).exec() == MBtn.Cancel:
+                return MBtn.Cancel
 
         self.main_controller.save_preset(preset)
 
@@ -5825,7 +5825,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
         self.reset_editor()
         self.status_message(tr("Saved {}").format(preset.name), timeout=-1)
-        return MButton.Save
+        return MBtn.Save
 
     def create_preset_widget(self, preset) -> PresetWidget:
         return PresetWidget(preset, restore_action=self.restore_preset, save_action=self.save_preset,
@@ -5841,7 +5841,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         return super().event(event)
 
     def closeEvent(self, event) -> None:
-        if self.save_preset(quiet=True) == MButton.Cancel:
+        if self.save_preset(quiet=True) == MBtn.Cancel:
             event.ignore()
         else:
             self.reset_editor()
@@ -7413,10 +7413,10 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
     def closeEvent(self, event) -> None:
         if self.has_profile_changes:
             answer = MBox(MIcon.Critical, msg=tr("There are unsaved profile changes?"),
-                          buttons=MButton.Save | MButton.Discard | MButton.Cancel, default=MButton.Cancel).exec()
-            if answer == MButton.Save:
+                          buttons=MBtn.Save | MBtn.Discard | MBtn.Cancel, default=MBtn.Cancel).exec()
+            if answer == MBtn.Save:
                 self.save_profiles()
-            elif answer == MButton.Cancel:
+            elif answer == MBtn.Cancel:
                 event.ignore()
                 return
         self.lux_gauge_widget.enable_gauge(False)  # Stop updating the display
@@ -8799,7 +8799,7 @@ class VduAppWindow(QMainWindow):
             release_alert = MBox(
                 MIcon.Information,
                 msg=RELEASE_ANNOUNCEMENT.format(WELCOME=tr(RELEASE_WELCOME), NOTE=tr(RELEASE_NOTE), VERSION=VDU_CONTROLS_VERSION),
-                info=RELEASE_INFO, buttons=MButton.Close)
+                info=RELEASE_INFO, buttons=MBtn.Close)
             release_alert.setTextFormat(Qt.TextFormat.RichText)
             release_alert.exec()
             main_config.write_file(ConfIni.get_path('vdu_controls'), overwrite=True)  # Stops release notes from being repeated.
@@ -9073,23 +9073,23 @@ class VduAppWindow(QMainWindow):
                   '\n 3: Apply standard brightness and contrast controls.'
                   '\n 4: Permanently discard this monitor from use with vdu_controls.'
                   '\n\nPossibly just a timing error, maybe a retry will work\n(see Settings: sleep multiplier)\n\n')
-        choice = MBox(MIcon.Critical, msg=msg, info=info, buttons=MButton.Discard | MButton.Ignore | MButton.Apply | MButton.Retry).exec()
-        if choice == MButton.Discard:
+        choice = MBox(MIcon.Critical, msg=msg, info=info, buttons=MBtn.Discard | MBtn.Ignore | MBtn.Apply | MBtn.Retry).exec()
+        if choice == MBtn.Discard:
             MBox(MIcon.Information, msg=tr('Discarding {} monitor.').format(model_name),
                  info=tr('Remove "{}" from {} capabilities override to reverse this decision.').format(IGNORE_VDU_MARKER_STR,
                                                                                                        model_name)).exec()
             return VduController.DISCARD_VDU
-        elif choice == MButton.Ignore:
+        elif choice == MBtn.Ignore:
             MBox(MIcon.Information, msg=tr('Ignoring {} monitor for now.').format(model_name),
                  info=tr('Will retry when vdu_controls is next started')).exec()
             return VduController.IGNORE_VDU
-        elif choice == MButton.Apply:
+        elif choice == MBtn.Apply:
             MBox(MIcon.Information, msg=tr('Assuming {} has brightness and contrast controls.').format(model_name),
                  info=tr('Wrote {} config files to {}.').format(model_name, CONFIG_DIR_PATH) +
                       tr('\nPlease check these files and edit or remove them if they '
                          'cause further issues.')).exec()
             return VduController.ASSUME_STANDARD_CONTROLS
-        elif choice == MButton.Retry:
+        elif choice == MBtn.Retry:
             return VduController.NORMAL_VDU
         return VduController.IGNORE_VDU
 
@@ -9396,7 +9396,7 @@ def main() -> None:
         if not restart_status:
             MBox(MIcon.Critical, msg=tr("Restart of {} failed.  Please restart manually.").format(app.arguments()[0]),
                  info=tr("This is probably because {} is not executable or is not on your PATH.").format(app.arguments()[0]),
-                 buttons=MButton.Close).exec()
+                 buttons=MBtn.Close).exec()
     sys.exit(rc)
 
 
