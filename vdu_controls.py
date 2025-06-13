@@ -864,19 +864,42 @@ from threading import Lock
 from typing import List, Tuple, Mapping, Type, Dict, Callable, Any, NewType
 from urllib.error import URLError
 
-from PyQt5 import QtCore, QtNetwork
-from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QRegExp, QPoint, QObject, QEvent, \
-    QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir
-from PyQt5.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusArgument, QDBusVariant
-from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QRegExpValidator, \
-    QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon, \
-    QDoubleValidator
-from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
-    QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
-    QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
-    QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, qApp, QShortcut, \
-    QDesktopWidget, QSpacerItem, QListWidget, QListWidgetItem
+qt_version_preference=os.environ.get('VDU_CONTROLS_QT_VERSION', '5')  # Change to '5' to force the use of Qt5
+if qt_version_preference == '6':
+    try:
+        from PyQt6 import QtCore, QtNetwork
+        from PyQt6.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QPoint, QObject, QEvent, \
+            QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir, QRegularExpression
+        from PyQt6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusArgument, QDBusVariant
+        from PyQt6.QtGui import QAction, QShortcut, QPixmap, QIcon, QCursor, QImage, QPainter, QRegularExpressionValidator, \
+            QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon, \
+            QDoubleValidator, QScreen
+        from PyQt6.QtSvg import QSvgRenderer
+        from PyQt6.QtSvgWidgets import QSvgWidget
+        from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
+            QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
+            QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QMainWindow, QToolBar, QToolButton, QFileDialog, \
+            QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, \
+            QSpacerItem, QListWidget, QListWidgetItem
+        os.environ['QT_ENABLE_HIGHDPI_SCALING'] = '0'  # Only way to duplicate qt5 look without reworking all layouts
+    except (ImportError, ModuleNotFoundError) as e:
+        qt_version_preference = '5'
+if qt_version_preference == '5':
+    from PyQt5 import QtCore, QtNetwork
+    from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QPoint, QObject, QEvent, \
+        QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir, QRegularExpression
+    from PyQt5.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusArgument, QDBusVariant
+    from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QRegularExpressionValidator, \
+        QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon, \
+        QDoubleValidator
+    from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
+    from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
+        QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
+        QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
+        QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, QShortcut, \
+        QSpacerItem, QListWidget, QListWidgetItem
+
+StdPixmap = QStyle.StandardPixmap
 
 APPNAME = "VDU Controls"
 VDU_CONTROLS_VERSION = '2.4.0'
@@ -925,6 +948,10 @@ SolarElevationData = namedtuple('SolarElevationData', ['azimuth', 'zenith', 'whe
 Shortcut = namedtuple('Shortcut', ['letter', 'annotated_word'])
 
 gui_thread: QThread | None = None
+
+
+def intV(type_id: QMetaType|int) -> int:
+    return type_id.value if isinstance(type_id, Enum) else type_id  # awfulness of enums in pyqt6
 
 
 def is_gnome_desktop() -> bool:
@@ -1315,7 +1342,7 @@ VduStableId = NewType('VduStableId', str)
 
 def is_dark_theme() -> bool:
     palette = QPalette()
-    text_color, window_color = palette.color(QPalette.WindowText), palette.color(QPalette.Window)
+    text_color, window_color = palette.color(QPalette.ColorRole.WindowText), palette.color(QPalette.ColorRole.Window)
     return text_color.lightness() > window_color.lightness()
 
 
@@ -1886,7 +1913,7 @@ class DdcutilDBusImpl(QObject):
                 try:
                     log_info(f"Restarting dbus service with common args {self.common_args}")
                     self._validate(self.ddcutil_proxy.call("Restart", " ".join(self.common_args),
-                                                           QDBusArgument(0, QMetaType.UInt), QDBusArgument(0, QMetaType.UInt)))
+                                                           QDBusArgument(0, intV(QMetaType.Type.UInt)), QDBusArgument(0, intV(QMetaType.Type.UInt))))
                     time.sleep(2)  # Should be enough time
                     log_info("Reconnecting after dbus service restart.")
                     self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service() # connect again
@@ -1910,8 +1937,8 @@ class DdcutilDBusImpl(QObject):
     def set_sleep_multiplier(self, edid_txt: str, sleep_multiplier: float):
         with self.service_access_lock:
             self._validate(self.ddcutil_proxy.call("SetSleepMultiplier", -1, edid_txt,
-                                                   QDBusArgument(sleep_multiplier, QMetaType.Double),
-                                                   QDBusArgument(0, QMetaType.UInt)))
+                                                   QDBusArgument(sleep_multiplier, intV(QMetaType.Type.Double)),
+                                                   QDBusArgument(0, intV(QMetaType.Type.UInt))))
 
     def set_vdu_specific_args(self, vdu_number: str, extra_args: List[str]):
         pass  # TODO not implemented
@@ -1951,7 +1978,7 @@ class DdcutilDBusImpl(QObject):
         ddcutil_dbus_props.call("Set",
                                 "com.ddcutil.DdcutilInterface",
                                 "ServiceEmitSignals",
-                                QDBusVariant(QDBusArgument(self.listener_callback is not None, QMetaType.Bool)))
+                                QDBusVariant(QDBusArgument(self.listener_callback is not None, intV(QMetaType.Type.Bool))))
         return ddcutil_dbus_iface, ddcutil_dbus_props
 
     def refresh_connection(self):
@@ -1968,7 +1995,7 @@ class DdcutilDBusImpl(QObject):
                 self.ddcutil_props_proxy.call("Set",
                                               "com.ddcutil.DdcutilInterface",
                                               "ServiceEmitSignals",
-                                              QDBusVariant(QDBusArgument(True, QMetaType.Bool)))
+                                              QDBusVariant(QDBusArgument(True, intV(QMetaType.Type.Bool))))
                 self.listener_callback('', -1, 0)
 
     @pyqtSlot(QDBusMessage)
@@ -1991,7 +2018,7 @@ class DdcutilDBusImpl(QObject):
 
     def detect(self, flags: int) -> List[Tuple]:
         with self.service_access_lock:
-            result = self.ddcutil_proxy.call("Detect", QDBusArgument(flags, QMetaType.UInt))
+            result = self.ddcutil_proxy.call("Detect", QDBusArgument(flags, intV(QMetaType.Type.UInt)))
             vdu_list = [self.DetectedAttributes(*vdu) for vdu in self._validate(result)[1]]
             self.vdu_map_by_edid = {vdu.edid_txt: vdu for vdu in vdu_list}
             return vdu_list
@@ -2001,7 +2028,7 @@ class DdcutilDBusImpl(QObject):
         with self.service_access_lock:
             model, mccs_major, mccs_minor, commands, capabilities = \
                 self._validate(self.ddcutil_proxy.call(
-                    "GetCapabilitiesMetadata", -1, edid_txt, QDBusArgument(0, QMetaType.UInt)))
+                    "GetCapabilitiesMetadata", -1, edid_txt, QDBusArgument(0, intV(QMetaType.Type.UInt))))
             return model, int.from_bytes(mccs_major, 'big'), int.from_bytes(mccs_minor, 'big'), commands, capabilities, ''
 
     def get_type(self, edid_txt: str, vcp_code_int: int) -> Tuple[bool, bool]:
@@ -2010,27 +2037,27 @@ class DdcutilDBusImpl(QObject):
             return DdcutilDBusImpl._metadata_cache[key]
         with self.service_access_lock:
             _, _, _, _, _, is_complex, is_continuous = self._validate(self.ddcutil_proxy.call(
-                "GetVcpMetadata", -1, edid_txt, QDBusArgument(vcp_code_int, QMetaType.UChar), QDBusArgument(0, QMetaType.UInt)))
+                "GetVcpMetadata", -1, edid_txt, QDBusArgument(vcp_code_int, intV(QMetaType.Type.UChar)), QDBusArgument(0, intV(QMetaType.Type.UInt))))
             DdcutilDBusImpl._metadata_cache[key] = (is_complex, is_continuous)
             return is_complex, is_continuous
 
     def set_vcp(self, edid_txt: str, vcp_code_int: int, new_value_int: int) -> None:
         with self.service_access_lock:
             self._validate(self.ddcutil_proxy.call("SetVcp", -1, edid_txt,
-                                                   QDBusArgument(vcp_code_int, QMetaType.UChar),
-                                                   QDBusArgument(new_value_int, QMetaType.UShort),
-                                                   QDBusArgument(0, QMetaType.UInt)))
+                                                   QDBusArgument(vcp_code_int, intV(QMetaType.Type.UChar)),
+                                                   QDBusArgument(new_value_int, intV(QMetaType.Type.UShort)),
+                                                   QDBusArgument(0, intV(QMetaType.Type.UInt))))
 
     def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[Tuple[int, int, int, str]]:
         vcp_code_array = QDBusArgument()
-        vcp_code_array.beginArray(QMetaType.UChar)
+        vcp_code_array.beginArray(intV(QMetaType.Type.UChar))
         for vcp_code_int in vcp_code_int_list:
-            vcp_code_array.add(QDBusArgument(vcp_code_int, QMetaType.UChar))
+            vcp_code_array.add(QDBusArgument(vcp_code_int, intV(QMetaType.Type.UChar)))
         vcp_code_array.endArray()
         with self.service_access_lock:
             raw = self._validate(self.ddcutil_proxy.call(
                 "GetMultipleVcp", -1, edid_txt, vcp_code_array, QDBusArgument(DdcutilDBusImpl.RETURN_RAW_VALUES,
-                                                                              QMetaType.UInt)))[0]
+                                                                              intV(QMetaType.Type.UInt))))[0]
             return [(int.from_bytes(vcp, 'big'), value, maximum, text_val) for vcp, value, maximum, text_val in raw]
 
     def _validate(self, result: QDBusMessage) -> List:
@@ -2122,8 +2149,8 @@ class DialogSingletonMixin:
 
 class ClickableSlider(QSlider):  # loosely based on https://stackoverflow.com/a/29639127/609575
 
-    def mousePressEvent(self, event):  # On mouse click, set value to the value at the click position
-        self.setValue(QStyle.sliderValueFromPosition(self.minimum(), self.maximum(), event.x(), self.width()))
+    def mousePressEvent(self, event: QMouseEvent):  # On mouse click, set value to the value at the click position
+        self.setValue(QStyle.sliderValueFromPosition(self.minimum(), self.maximum(), event.pos().x(), self.width()))
         super().mousePressEvent(event)
 
 
@@ -2376,7 +2403,7 @@ class ConfIni(configparser.ConfigParser):
     def duplicate(self, new_ini=None) -> ConfIni:
         if new_ini is None:
             new_ini = ConfIni()
-        for section in self:
+        for section in self.sections():
             if section != configparser.DEFAULTSECT and section != ConfSec.METADATA_SECTION:
                 new_ini.add_section(section)
             for option in self[section]:
@@ -2999,7 +3026,7 @@ class VduController(QObject):
 class SubWinDialog(QDialog):  # Fix for gnome: QDialog must be a subwindow, otherwise it will always stay on top of other windows.
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__(parent, Qt.SubWindow if is_gnome_desktop() else Qt.Window)
+        super().__init__(parent, Qt.WindowType.SubWindow if is_gnome_desktop() else Qt.WindowType.Window)
 
 
 class StdButton(QPushButton):  # Reduce some repetitiveness in the code
@@ -3049,31 +3076,31 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
         def _tab_restore_defaults() -> None:
             self.tabs_widget.currentWidget().restore_application_defaults()
 
-        self.tab_restore_defaults_button = StdButton(icon=si(self, QStyle.SP_DialogDiscardButton), title=(tr('Defaults')),
+        self.tab_restore_defaults_button = StdButton(icon=si(self, StdPixmap.SP_DialogDiscardButton), title=(tr('Defaults')),
                                                      clicked=_tab_restore_defaults)
         self.tab_ops.layout().addWidget(self.tab_restore_defaults_button)
 
         def _tab_revert_current_tab() -> None:
             self.tabs_widget.currentWidget().revert_changes()
 
-        self.tab_revert_button = StdButton(icon=si(self, QStyle.SP_DialogResetButton), title=(tr('Revert')),
+        self.tab_revert_button = StdButton(icon=si(self, StdPixmap.SP_DialogResetButton), title=(tr('Revert')),
                                            clicked=_tab_revert_current_tab)
         self.tab_ops.layout().addWidget(self.tab_revert_button)
 
         def _tab_save_current_tab() -> None:
             self.tabs_widget.currentWidget().save()
 
-        self.tab_save_button = StdButton(icon=si(self, QStyle.SP_DriveFDIcon), title=(tr('Save')), clicked=_tab_save_current_tab)
+        self.tab_save_button = StdButton(icon=si(self, StdPixmap.SP_DriveFDIcon), title=(tr('Save')), clicked=_tab_save_current_tab)
         self.tab_ops.layout().addWidget(self.tab_save_button)
 
         self.bottom_status_bar.addPermanentWidget(self.tab_ops, 0)
         self.bottom_status_bar.addPermanentWidget(QLabel('                    '))
 
-        save_all_button = StdButton(icon=si(self, QStyle.SP_DriveFDIcon), title=(tr("Save All")),
+        save_all_button = StdButton(icon=si(self, StdPixmap.SP_DriveFDIcon), title=(tr("Save All")),
                                     clicked=(partial(self.save_all, True)))
         self.bottom_status_bar.addPermanentWidget(save_all_button, 0)
 
-        quit_button = StdButton(icon=si(self, QStyle.SP_DialogCloseButton), title=(tr("Close")), clicked=self.close)
+        quit_button = StdButton(icon=si(self, StdPixmap.SP_DialogCloseButton), title=(tr("Close")), clicked=self.close)
         self.bottom_status_bar.addPermanentWidget(quit_button, 0)
 
         self.layout().addWidget(self.bottom_status_bar)
@@ -3124,13 +3151,13 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
         for tab in self.editor_tab_list:
             if vdu_label := tab.ini_editable.get(*ConfOpt.VDU_NAME.conf_id, fallback=None):
                 if existing_use := labels_in_use.get(vdu_label, None):
-                    return MBox(MBox.Critical, msg=tr("Cannot save <tt>{}</tt>").format(tab.config_path.name),
+                    return MBox(MIcon.Critical, msg=tr("Cannot save <tt>{}</tt>").format(tab.config_path.name),
                                 info=tr("Duplicate VDU label: <i>{}</i><hr/>Alter the label for {} or {} and try again.").format(
                                     vdu_label, tab.config_path.stem, existing_use),
-                                buttons=MBox.Close | MBox.Discard, default=MBox.Close).exec()
+                                buttons=MButton.Close | MButton.Discard, default=MButton.Close).exec()
                 else:
                     labels_in_use[vdu_label] = tab.config_path.stem
-        return MBox.Ok
+        return MButton.Ok
 
     def save_all(self, warn_if_nothing_to_save: bool = True) -> int:
         what_changed: Dict[str, str] = {}
@@ -3141,22 +3168,22 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
             for editor in save_order:
                 if editor.is_unsaved():
                     nothing_to_save = False
-                    if editor.save(what_changed=what_changed, warn_if_no_changes=False) == MBox.Cancel:
-                        return MBox.Cancel
+                    if editor.save(what_changed=what_changed, warn_if_no_changes=False) == MButton.Cancel:
+                        return MButton.Cancel
             if warn_if_nothing_to_save and nothing_to_save:
-                if MBox(MBox.Critical, msg=tr("Nothing needs saving. Do you wish to save anyway?"),
-                        buttons=MBox.Yes | MBox.No, default=MBox.No).exec() == MBox.Yes:
+                if MBox(MIcon.Critical, msg=tr("Nothing needs saving. Do you wish to save anyway?"),
+                        buttons=MButton.Yes | MButton.No, default=MButton.No).exec() == MButton.Yes:
                     for editor in save_order:
-                        if editor.save(force=True, what_changed=what_changed, warn_if_no_changes=False) == MBox.Cancel:
-                            return MBox.Cancel
+                        if editor.save(force=True, what_changed=what_changed, warn_if_no_changes=False) == MButton.Cancel:
+                            return MButton.Cancel
         finally:
             self.setEnabled(True)
             if len(what_changed) > 0:
                 self.change_callback(what_changed)
-        return MBox.Ok
+        return MButton.Ok
 
     def closeEvent(self, event) -> None:
-        if self.save_all(warn_if_nothing_to_save=False) == MBox.Cancel:
+        if self.save_all(warn_if_nothing_to_save=False) == MButton.Cancel:
             event.ignore()
         else:
             super().closeEvent(event)
@@ -3233,11 +3260,11 @@ class SettingsEditorTab(QWidget):
             try:
                 self.setEnabled(False)  # Saving may take a while, give some feedback by disabling and enabling when done
                 answer = SettingsEditor.get_instance().cross_validate()
-                if answer == MBox.Ok:
+                if answer == MButton.Ok:
                     msg = (tr('Update existing {}?') if self.config_path.exists() else tr("Create new {}?")).format(
                         self.config_path.as_posix())
-                    answer = MBox(MBox.Question, msg=msg, buttons=MBox.Save | MBox.Cancel | MBox.Discard, default=MBox.Save).exec()
-                if answer == MBox.Save:
+                    answer = MBox(MIcon.Question, msg=msg, buttons=MButton.Save | MButton.Cancel | MButton.Discard, default=MButton.Save).exec()
+                if answer == MButton.Save:
                     message = tr("Saving {} ...").format(self.config_path.name)
                     self.editor_dialog.status_message(message, 0)
                     QApplication.processEvents()
@@ -3250,14 +3277,14 @@ class SettingsEditorTab(QWidget):
                     self.unsaved_changes_map = {}
                     message1 = tr("Saved {}").format(self.config_path.name)
                     self.editor_dialog.status_message(message1, 3000)
-                elif answer == MBox.Discard:
+                elif answer == MButton.Discard:
                     self.revert_changes()
                 return answer
             finally:
                 self.setEnabled(True)
         elif warn_if_no_changes:
-            MBox(MBox.Critical, msg=tr('No unsaved changes for {}.').format(self.config_path.name), buttons=MBox.Ok).exec()
-        return MBox.Cancel
+            MBox(MIcon.Critical, msg=tr('No unsaved changes for {}.').format(self.config_path.name), buttons=MButton.Ok).exec()
+        return MButton.Cancel
 
     def reset(self) -> None:
         for field in self.field_list:
@@ -3272,10 +3299,10 @@ class SettingsEditorTab(QWidget):
         self.reset()
 
     def restore_application_defaults(self):
-        if MBox(MBox.Critical,
+        if MBox(MIcon.Critical,
                 msg=tr("Are you sure you want to restore {} to application defaults?").format(self.preferred_name),
                 info=tr("The file {} will be renamed to {}.old").format(self.config_path.name, self.config_path.stem),
-                buttons=MBox.Yes | MBox.No, default=MBox.No).exec() == MBox.No:
+                buttons=MButton.Yes | MButton.No, default=MButton.No).exec() == MButton.No:
             return
         if self.config_path.exists():
             self.config_path.rename(Path(self.config_path.parent, self.config_path.stem + 'old'))
@@ -3318,9 +3345,9 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
         def _toggled(is_checked: bool) -> None:
             section_editor.ini_editable[section][option] = 'yes' if is_checked else 'no'
             if related:
-                MBox(MBox.Information, msg=tr("You may also wish to set\n{}").format(tr(related)), buttons=MBox.Ok).exec()
+                MBox(MIcon.Information, msg=tr("You may also wish to set\n{}").format(tr(related)), buttons=MButton.Ok).exec()
             if is_checked and requires:
-                MBox(MBox.Information, msg=tr("You will also need to set\n{}").format(tr(requires)), buttons=MBox.Ok).exec()
+                MBox(MIcon.Information, msg=tr("You will also need to set\n{}").format(tr(requires)), buttons=MButton.Ok).exec()
 
         checkbox.toggled.connect(_toggled)
         self.layout().addWidget(checkbox)
@@ -3334,7 +3361,7 @@ class SettingsEditorLineBase(SettingsEditorFieldBase):
     def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
         super().__init__(section_editor, option, section, tooltip)
         layout = QHBoxLayout()
-        layout.setAlignment(Qt.AlignLeft)
+        layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self.setLayout(layout)
         self.text_label = QLabel(self.translate_option())
         layout.addWidget(self.text_label)
@@ -3342,8 +3369,8 @@ class SettingsEditorLineBase(SettingsEditorFieldBase):
         self.validator: QValidator | None = None
         self.valid_palette = self.text_input.palette()
         self.error_palette = self.text_input.palette()
-        self.error_palette.setColor(QPalette.Text, Qt.red)
-        self.error_palette.setColor(QPalette.Window, Qt.red)
+        self.error_palette.setColor(QPalette.ColorRole.Text, Qt.GlobalColor.red)
+        self.error_palette.setColor(QPalette.ColorRole.Window, Qt.GlobalColor.red)
         self.text_input.inputRejected.connect(partial(self.set_error_indication, True))
         self.text_input.textEdited.connect(partial(self.set_error_indication, False))
         self.text_input.editingFinished.connect(self.editing_finished)
@@ -3352,7 +3379,7 @@ class SettingsEditorLineBase(SettingsEditorFieldBase):
     def editing_finished(self) -> None:
         text = self.text_input.text()
         if self.validator is not None:
-            self.has_error = self.validator.validate(text, 0)[0] != QValidator.Acceptable
+            self.has_error = self.validator.validate(text, 0)[0] != QValidator.State.Acceptable
             self.set_error_indication(self.has_error)
         if not self.has_error:
             internal_value = str(text)  # Why did I do this - is text not really a string?
@@ -3372,7 +3399,7 @@ class SettingsEditorFloatWidget(SettingsEditorFieldBase):
     def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
         super().__init__(section_editor, option, section, tooltip)
         self.setLayout(QHBoxLayout())
-        self.layout().setAlignment(Qt.AlignLeft)
+        self.layout().setAlignment(Qt.AlignmentFlag.AlignLeft)
         self.text_label = QLabel(self.translate_option())
         self.layout().addWidget(self.text_label)
         self.spinbox = QDoubleSpinBox()
@@ -3399,27 +3426,27 @@ class SettingsEditorCsvWidget(SettingsEditorLineBase):
         super().__init__(section_editor, option, section, tooltip)
         # TODO - should probably also allow spaces as well as commas, but the regexp is getting a bit tricky?
         # Validator matches CSV of two digit hex or the empty string.
-        self.validator = QRegExpValidator(QRegExp(r"^([0-9a-fA-F]{2}([ \t]*,[ \t]*[0-9a-fA-F]{2})*)|$"))
+        self.validator = QRegularExpressionValidator(QRegularExpression(r"^([0-9a-fA-F]{2}([ \t]*,[ \t]*[0-9a-fA-F]{2})*)|$"))
         self.text_input.setText(section_editor.ini_editable[section][option])
 
 
-class LatitudeLongitudeValidator(QRegExpValidator):
+class LatitudeLongitudeValidator(QRegularExpressionValidator):
 
     def __init__(self) -> None:
-        super().__init__(QRegExp(r"^([+-]*[0-9.,]+[,;][+-]*[0-9.,]+)([,;]\w+)?|$"))
+        super().__init__(QRegularExpression(r"^([+-]*[0-9.,]+[,;][+-]*[0-9.,]+)([,;]\w+)?|$"))
 
     def validate(self, text: str, pos: int) -> Tuple[QValidator.State, str, int]:
         result = super().validate(text, pos)
-        if result[0] == QValidator.Acceptable:
+        if result[0] == QValidator.State.Acceptable:
             if text != '':
                 try:
                     lat, lon = [float(i) for i in text.split(',')[:2]]
                     if -90.0 <= lat <= 90.0:
                         if -180.0 <= lon <= 180.0:
-                            return QValidator.Acceptable, text, pos
-                    return QValidator.Invalid, text, pos
+                            return QValidator.State.Acceptable, text, pos
+                    return QValidator.State.Invalid, text, pos
                 except ValueError:
-                    return QValidator.Intermediate, text, pos
+                    return QValidator.State.Intermediate, text, pos
         return result
 
 
@@ -3451,15 +3478,15 @@ class SettingsEditorLocationWidget(SettingsEditorLineBase):
             return load(res)
 
     def location_dialog(self) -> str | None:
-        if MBox(MBox.Question, msg=tr('Query {} to obtain information based on your IP-address?').format(IP_ADDRESS_INFO_URL),
-                buttons=MBox.Yes | MBox.No).exec() == MBox.Yes:
+        if MBox(MIcon.Question, msg=tr('Query {} to obtain information based on your IP-address?').format(IP_ADDRESS_INFO_URL),
+                buttons=MButton.Yes | MButton.No).exec() == MButton.Yes:
             try:
                 ipinfo = self.retrieve_ipinfo()
                 msg = f"{tr('Use the following info?')}\n" f"{ipinfo['loc']}\n" + \
                       ','.join([ipinfo[key] for key in ('city', 'region', 'country') if key in ipinfo])
                 details = f"Queried {IP_ADDRESS_INFO_URL}\n" + \
                           '\n'.join([f"{name}: {value}" for name, value in ipinfo.items()])
-                if MBox(MBox.Information, msg=msg, details=details, buttons=MBox.Yes | MBox.No).exec() == MBox.Yes:
+                if MBox(MIcon.Information, msg=msg, details=details, buttons=MButton.Yes | MButton.No).exec() == MButton.Yes:
                     data = ipinfo['loc']
                     for key in ('city', 'region', 'country'): # Get location name for weather lookups.
                         if key in ipinfo:
@@ -3467,7 +3494,7 @@ class SettingsEditorLocationWidget(SettingsEditorLineBase):
                             break
                     return data
             except (URLError, KeyError) as e:
-                MBox(MBox.Critical, msg=tr("Failed to obtain info from {}: {}").format(IP_ADDRESS_INFO_URL, e)).exec()
+                MBox(MIcon.Critical, msg=tr("Failed to obtain info from {}: {}").format(IP_ADDRESS_INFO_URL, e)).exec()
         return ''
 
 
@@ -3503,12 +3530,12 @@ class SettingsEditorPathValidator(QValidator):
     def validate(self, text, pos):
         if text.strip():
             if not Path(text).exists() or not Path(text).is_file():
-                MBox(MBox.Critical, msg=tr("The selected file does not exist or is not an ordinary file.")).exec()
-                return QValidator.Invalid, text, pos
+                MBox(MIcon.Critical, msg=tr("The selected file does not exist or is not an ordinary file.")).exec()
+                return QValidator.State.Invalid, text, pos
             elif not os.access(text, os.X_OK):
-                MBox(MBox.Critical, msg=tr("The selected file lacks execute permission.")).exec()
-                return QValidator.Invalid, text, pos
-        return QValidator.Acceptable, text, pos
+                MBox(MIcon.Critical, msg=tr("The selected file lacks execute permission.")).exec()
+                return QValidator.State.Invalid, text, pos
+        return QValidator.State.Acceptable, text, pos
 
 
 class SettingsEditorPathWidget(SettingsEditorLineBase):
@@ -3521,11 +3548,11 @@ class SettingsEditorPathWidget(SettingsEditorLineBase):
             current_path = self.text_input.text()
             new_path = FasterFileDialog.getOpenFileName(
                 self, tr("Select: {}").format(tr(self.text_label.text())), current_path,
-                qdir_filter=QDir.Files | QDir.Readable | QDir.Executable)[0]
+                qdir_filter=QDir.Filter.Files | QDir.Filter.Readable | QDir.Filter.Executable)[0]
             self.text_input.setText(new_path)
             self.editing_finished()
 
-        self.layout().addWidget(StdButton(si(self, QStyle.SP_DriveFDIcon), clicked =_choose_emulator))
+        self.layout().addWidget(StdButton(si(self, StdPixmap.SP_DriveFDIcon), clicked =_choose_emulator))
         self.validator = SettingsEditorPathValidator()
 
 
@@ -3534,7 +3561,7 @@ class SettingsEditorPathWidget(SettingsEditorLineBase):
         if not self.has_error and self.text_input.text().strip() != '':
             if self.section_editor.ini_editable[self.section][self.option] != self.section_editor.ini_before[self.section][
                 self.option]:
-                mb = MBox(MBox.Information,
+                mb = MBox(MIcon.Information,
                           msg="If you've developed a <i>ddcutil-emulator</i> for integrating a non-DDC laptop-panels, "
                               "please consider contributing it to the <b>vdu_controls</b> project."
                               "<br/>_______________________________________________________________________________________</br>",
@@ -3542,8 +3569,8 @@ class SettingsEditorPathWidget(SettingsEditorLineBase):
                                "<a href='https://github.com/digitaltrails/vdu_controls/issues/44'>"
                                "https://github.com/digitaltrails/vdu_controls/issues/44</a><br/>"
                                "or by email to <a href='mailto:michael@actrix.gen.nz?subject=ddcutil-emulator'>"
-                               "michael@actrix.gen.nz</a>.", buttons=MBox.Close)
-                mb.setTextFormat(Qt.AutoText)
+                               "michael@actrix.gen.nz</a>.", buttons=MButton.Close)
+                mb.setTextFormat(Qt.TextFormat.AutoText)
                 mb.exec()
 
 
@@ -3651,8 +3678,8 @@ class VduControlSlider(VduControlBase):
         slider.setSingleStep(1)
         slider.setPageStep(10)
         slider.setTickInterval(10)
-        slider.setTickPosition(QSlider.TicksBelow)
-        slider.setOrientation(Qt.Horizontal)  # type: ignore
+        slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        slider.setOrientation(Qt.Orientation.Horizontal)  # type: ignore
         slider.setTracking(False)  # Don't rewrite the ddc value too often - not sure of the implications
         layout.addWidget(slider)
 
@@ -3691,7 +3718,7 @@ class VduControlSlider(VduControlBase):
             self.slider.setValue(clamp(int(self.current_value), self.slider.minimum(), self.slider.maximum()))
 
     def event(self, event: QEvent) -> bool:
-        if event.type() == QEvent.PaletteChange:  # PalletChange happens after the new style sheet is in use.
+        if event.type() == QEvent.Type.PaletteChange:  # PalletChange happens after the new style sheet is in use.
             icon_source = SUPPORTED_VCP_BY_CODE[self.vcp_capability.vcp_code].icon_source
             if icon_source is not None:
                 assert self.svg_icon is not None  # Because it must have been loaded from source earlier
@@ -3745,7 +3772,7 @@ class VduControlComboBox(VduControlBase):
             self.keys.append(self.current_value)
             self.combo_box.addItem('UNKNOWN-' + value, self.current_value)
             self.combo_box.model().item(self.combo_box.count() - 1).setEnabled(False)
-            MBox(MBox.Critical,
+            MBox(MIcon.Critical,
                  msg=tr("Display {vnum} {vdesc} feature {code} '({cdesc})' has an undefined value '{value}'. "
                         "Valid values are {valid}.").format(
                      vdesc=self.controller.get_vdu_preferred_name(), vnum=self.controller.vdu_number,
@@ -3776,12 +3803,12 @@ class VduControlPanel(QWidget):
                 try:
                     control = VduControlSlider(controller, capability)
                 except ValueError as valueError:
-                    MBox(MBox.Critical, msg=str(valueError)).exec()
+                    MBox(MIcon.Critical, msg=str(valueError)).exec()
             elif capability.vcp_type in (SIMPLE_NON_CONTINUOUS_TYPE, COMPLEX_NON_CONTINUOUS_TYPE):
                 try:
                     control = VduControlComboBox(controller, capability)
                 except ValueError as valueError:
-                    MBox(MBox.Critical, msg=valueError.args[0],
+                    MBox(MIcon.Critical, msg=valueError.args[0],
                          info=tr('If you want to extend the set of permitted values, see the man page concerning '
                                  'VDU/VDU-model config files.').format(capability.vcp_code, capability.name)).exec()
             else:
@@ -4019,21 +4046,21 @@ class ContextMenu(QMenu):
         self.reserved_shortcuts = []
         self.hide_shortcuts = hide_shortcuts
         if main_window_action is not None:
-            self._add_action(QStyle.SP_ComputerIcon, tr('&Control Panel'), main_window_action)
+            self._add_action(StdPixmap.SP_ComputerIcon, tr('&Control Panel'), main_window_action)
             self.addSeparator()
-        self._add_action(QStyle.SP_ComputerIcon, tr('&Presets'), presets_dialog_action)
+        self._add_action(StdPixmap.SP_ComputerIcon, tr('&Presets'), presets_dialog_action)
         self.presets_separator = self.addSeparator()  # Important for finding where to add a preset
-        self._add_action(QStyle.SP_ComputerIcon, tr('&Grey Scale'), gray_scale_action)
+        self._add_action(StdPixmap.SP_ComputerIcon, tr('&Grey Scale'), gray_scale_action)
         if lux_meter_action is not None:
-            self.lux_auto_action = self._add_action(QStyle.SP_ComputerIcon, tr('&Auto/Manual'), lux_auto_action)
-            self.lux_check_action = self._add_action(QStyle.SP_MediaSeekForward, tr('Lighting &Check'), lux_check_action)
-            self._add_action(QStyle.SP_ComputerIcon, tr('&Light-Metering'), lux_meter_action)
-        self._add_action(QStyle.SP_ComputerIcon, tr('&Settings'), settings_action, 'Ctrl+Shift+,')
-        self._add_action(QStyle.SP_BrowserReload, tr('&Refresh'), refresh_action, QKeySequence.Refresh).setProperty(
+            self.lux_auto_action = self._add_action(StdPixmap.SP_ComputerIcon, tr('&Auto/Manual'), lux_auto_action)
+            self.lux_check_action = self._add_action(StdPixmap.SP_MediaSeekForward, tr('Lighting &Check'), lux_check_action)
+            self._add_action(StdPixmap.SP_ComputerIcon, tr('&Light-Metering'), lux_meter_action)
+        self._add_action(StdPixmap.SP_ComputerIcon, tr('&Settings'), settings_action, 'Ctrl+Shift+,')
+        self._add_action(StdPixmap.SP_BrowserReload, tr('&Refresh'), refresh_action, QKeySequence.StandardKey.Refresh).setProperty(
             ContextMenu.BUSY_DISABLE_PROP, QVariant(True))
-        self._add_action(QStyle.SP_MessageBoxInformation, tr('Abou&t'), about_action)
-        self._add_action(QStyle.SP_DialogHelpButton, tr('&Help'), help_action, QKeySequence.HelpContents)
-        self._add_action(QStyle.SP_DialogCloseButton, tr('&Quit'), quit_action, QKeySequence.Quit)
+        self._add_action(StdPixmap.SP_MessageBoxInformation, tr('Abou&t'), about_action)
+        self._add_action(StdPixmap.SP_DialogHelpButton, tr('&Help'), help_action, QKeySequence.StandardKey.HelpContents)
+        self._add_action(StdPixmap.SP_DialogCloseButton, tr('&Quit'), quit_action, QKeySequence.StandardKey.Quit)
         self.reserved_shortcuts_basic = self.reserved_shortcuts.copy()
         self.auto_lux_icon = None
 
@@ -4048,7 +4075,7 @@ class ContextMenu(QMenu):
             else:
                 self.reserved_shortcuts.append(shortcut_letter)
                 action.setShortcuts(self.shortcut_list(ContextMenu.ALT.format(shortcut_letter.upper()), extra_shortcut))
-                action.setShortcutContext(Qt.ApplicationShortcut)
+                action.setShortcutContext(Qt.ShortcutContext.ApplicationShortcut)
         return action
 
     def get_preset_menu_action(self, name: str) -> QAction | None:
@@ -4072,7 +4099,7 @@ class ContextMenu(QMenu):
         if shortcut:
             action.setProperty(ContextMenu.PRESET_SHORTCUT_PROP, shortcut)
             action.setShortcuts(self.shortcut_list(ContextMenu.ALT.format(shortcut.letter.upper())))
-            action.setShortcutContext(Qt.ApplicationShortcut)
+            action.setShortcutContext(Qt.ShortcutContext.ApplicationShortcut)
         else:
             log_warning(f"Failed to allocate shortcut for {preset.name} reserved shortcuts={self.reserved_shortcuts}")
         self.update() if issue_update else None
@@ -4183,7 +4210,7 @@ class VduPanelBottomToolBar(QToolBar):
 
     def eventFilter(self, target: QObject, event: QEvent) -> bool:
         # PalletChange happens after the new style sheet is in use.
-        if event.type() == QEvent.PaletteChange:
+        if event.type() == QEvent.Type.PaletteChange:
             for button in self.tool_buttons:
                 button.refresh_icon()
             self.menu_button.refresh_icon()
@@ -4258,14 +4285,14 @@ class VduControlsMainPanel(QWidget):
                 self.vdu_control_panels[controller.vdu_stable_id] = vdu_control_panel
                 controllers_layout.addWidget(vdu_control_panel)
             elif warnings_enabled:
-                MBox(MBox.Warning,
+                MBox(MIcon.Warning,
                      msg=tr('Monitor {} {} lacks any accessible controls.').format(controller.vdu_number,
                                                                                    controller.get_vdu_preferred_name()),
                      info=tr('The monitor will be omitted from the control panel.')).exec()
 
         controllers_layout.addStretch(0)
         for control in extra_controls:
-            controllers_layout.addWidget(control, 0, Qt.AlignBottom)
+            controllers_layout.addWidget(control, 0, Qt.AlignmentFlag.AlignBottom)
 
         if len(self.vdu_control_panels) == 0:
             no_vdu_widget = QWidget()
@@ -4274,10 +4301,10 @@ class VduControlsMainPanel(QWidget):
             no_vdu_text = QLabel(tr('No controllable monitors found.\n'
                                     'Use the refresh button if any become available.\n'
                                     'Check that ddcutil and i2c are installed and configured.'))
-            no_vdu_text.setAlignment(Qt.AlignLeft)
+            no_vdu_text.setAlignment(Qt.AlignmentFlag.AlignLeft)
             no_vdu_image = QLabel()
-            no_vdu_image.setPixmap(QApplication.style().standardIcon(QStyle.SP_MessageBoxWarning).pixmap(QSize(64, 64)))
-            no_vdu_image.setAlignment(Qt.AlignVCenter)
+            no_vdu_image.setPixmap(QApplication.style().standardIcon(StdPixmap.SP_MessageBoxWarning).pixmap(QSize(64, 64)))
+            no_vdu_image.setAlignment(Qt.AlignmentFlag.AlignVCenter)
             no_vdu_layout.addSpacing(32)
             no_vdu_layout.addWidget(no_vdu_image)
             no_vdu_layout.addWidget(no_vdu_text)
@@ -4285,13 +4312,13 @@ class VduControlsMainPanel(QWidget):
             controllers_layout.addWidget(no_vdu_widget)
 
         self.bottom_toolbar = VduPanelBottomToolBar(tool_buttons=tool_buttons, app_context_menu=app_context_menu, parent=self)
-        controllers_layout.addWidget(self.bottom_toolbar, 0, Qt.AlignBottom)
+        controllers_layout.addWidget(self.bottom_toolbar, 0, Qt.AlignmentFlag.AlignBottom)
 
         def _open_context_menu(position: QPoint) -> None:
             assert app_context_menu is not None
             app_context_menu.exec(self.mapToGlobal(position))
 
-        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(_open_context_menu)
 
     def indicate_busy(self, is_busy: bool = True, lock_controls: bool = True) -> None:
@@ -4324,14 +4351,14 @@ class VduControlsMainPanel(QWidget):
         else:
             details = str(exception.cause)
         if self.alert is not None:  # Dismiss any existing alert
-            self.alert.done(MBox.Close)
-        self.alert = MBox(MBox.Critical, msg=msg, info=info, details=details,
-                          buttons=MBox.Close | MBox.Retry if can_retry else MBox.Close,
-                          default=MBox.Retry if can_retry else MBox.Close)
-        self.alert.setAttribute(Qt.WA_DeleteOnClose)
+            self.alert.done(MButton.Close)
+        self.alert = MBox(MIcon.Critical, msg=msg, info=info, details=details,
+                          buttons=MButton.Close | MButton.Retry if can_retry else MButton.Close,
+                          default=MButton.Retry if can_retry else MButton.Close)
+        self.alert.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         answer = self.alert.exec()
         self.alert = None
-        return answer == MBox.Retry
+        return answer == MButton.Retry
 
     def status_message(self, message: str, timeout: int):
         self.bottom_toolbar.status_area.showMessage(message, timeout) if self.bottom_toolbar else None
@@ -4498,22 +4525,26 @@ class FasterFileDialog(QFileDialog):  # Takes 5 seconds versus 30+ seconds for Q
     @staticmethod
     def getOpenFileName(parent: QWidget | None = None, caption: str = '', directory: str = '', filter_str: str = '',
                         initial_filter: str = '',
-                        options: QFileDialog.Options | QFileDialog.Option = QFileDialog.ReadOnly,
-                        qdir_filter: int = QDir.AllEntries | QDir.AllDirs | QDir.Hidden | QDir.System) -> Tuple[str, str]:
+                        options: QFileDialog.Options | QFileDialog.Option = QFileDialog.Option.ReadOnly,
+                        qdir_filter: int = QDir.Filter.AllEntries | QDir.Filter.AllDirs | QDir.Filter.Hidden | QDir.Filter.System) -> Tuple[str, str]:
         original_handler = QtCore.qInstallMessageHandler(lambda mode, context, message: None)
         try:  # Get rid of another annoying message: 'qtimeline::start: already running'
             dialog = QFileDialog(parent=parent, caption=caption, directory=directory, filter=filter_str)
             dialog.setOptions(options)
-            dialog.setFileMode(QFileDialog.ExistingFile)
+            dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
             dialog.setFilter(qdir_filter)
             return (dialog.selectedFiles()[0], filter) if dialog.exec() else ('', '')  # match QFileDilog.getOpenFileName()
         finally:
             QtCore.qInstallMessageHandler(original_handler)
 
 
+MIcon = QMessageBox.Icon
+MButton = QMessageBox.StandardButton
+
 class MBox(QMessageBox):
+
     def __init__(self, icon: QIcon, msg: str | None = None, info: str | None = None, details: str | None = None,
-                 buttons: QMessageBox.StandardButtons = QMessageBox.NoButton,
+                 buttons: QMessageBox.StandardButton = MButton.NoButton,
                  default: QMessageBox.StandardButton | None = None) -> None:
         super().__init__(icon, APPNAME, '', buttons=buttons)
         if RESIZABLE_MESSAGEBOX_HACK:
@@ -4529,7 +4560,7 @@ class MBox(QMessageBox):
         # The "least evil" way to make MsgBox.resizable, by ArmanS
         result = super().event(event)
         if RESIZABLE_MESSAGEBOX_HACK:
-            if event.type() == QEvent.MouseMove or event == QEvent.MouseButtonPress:
+            if event.type() == QEvent.Type.MouseMove or event == QEvent.Type.MouseButtonPress:
                 self.setMaximumSize(native_pixels(1200), native_pixels(800))
                 if text_edit_field := self.findChild(QTextEdit):
                     text_edit_field.setMaximumHeight(native_pixels(600))
@@ -4569,20 +4600,20 @@ class PresetWidget(QWidget):
         self.preset_name_button.setAutoDefault(False)
         line_layout.addSpacing(20)
         for button in (
-                StdButton(icon=si(self, QStyle.SP_DriveFDIcon), tip=tr("Update this preset from the current VDU settings."),
+                StdButton(icon=si(self, StdPixmap.SP_DriveFDIcon), tip=tr("Update this preset from the current VDU settings."),
                           clicked=partial(save_action, from_widget=self), flat=True),
-                StdButton(icon=si(self, QStyle.SP_ArrowUp), tip=tr("Move up the menu order."),
+                StdButton(icon=si(self, StdPixmap.SP_ArrowUp), tip=tr("Move up the menu order."),
                           clicked=partial(up_action, preset=preset, target_widget=self), flat=True),
-                StdButton(icon=si(self, QStyle.SP_ArrowDown), tip=tr("Move down the menu order."),
+                StdButton(icon=si(self, StdPixmap.SP_ArrowDown), tip=tr("Move down the menu order."),
                           clicked=partial(down_action, preset=preset, target_widget=self), flat=True),
-                StdButton(icon=si(self, QStyle.SP_DialogDiscardButton), tip=tr('Delete this preset.'),
+                StdButton(icon=si(self, StdPixmap.SP_DialogDiscardButton), tip=tr('Delete this preset.'),
                           clicked=partial(delete_action, preset=preset, target_widget=self), flat=True)):
-            button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
+            button.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum))
             line_layout.addWidget(button)
 
         if not protect_nvram:
             preset_transition_button = PushButtonLeftJustified(flat=True)
-            preset_transition_button.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
+            preset_transition_button.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum))
             width = QFontMetrics(preset_transition_button.font()).horizontalAdvance(">____99")
             preset_transition_button.setMaximumWidth(width + 5)
             preset_transition_button.setText(
@@ -4630,7 +4661,7 @@ class PresetWidget(QWidget):
         self.timer_control_button.setToolTip(tip_text)
 
     def indicate_active(self, active: bool):
-        weight = QFont.Bold if active else QFont.Normal
+        weight = QFont.Weight.Bold if active else QFont.Weight.Normal
         font = self.preset_name_button.font()
         if font.weight() != weight:
             font.setWeight(weight)
@@ -4645,7 +4676,7 @@ class PresetActivationButton(StdButton):
 
     def event(self, event: QEvent) -> bool:
         # PalletChange happens after the new style sheet is in use.
-        if event.type() == QEvent.PaletteChange:
+        if event.type() == QEvent.Type.PaletteChange:
             self.setIcon(self.preset.create_icon())
         return super().event(event)
 
@@ -4657,7 +4688,7 @@ class PresetChooseIconButton(StdButton):
                          clicked=self.choose_preset_icon_action,  flat=True, auto_default=False,
                          tip=tr('Choose a preset icon.'))
         self.setIcon(si(self, PresetsDialog.NO_ICON_ICON_NUMBER))
-        self.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
+        self.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum))
         self.last_selected_icon_path: Path | None = None
         self.last_icon_dir = Path.home()
         for path in STANDARD_ICON_PATHS:
@@ -4703,7 +4734,7 @@ class PresetChooseIconButton(StdButton):
         self.update_icon()
 
     def event(self, event: QEvent) -> bool:
-        if event.type() == QEvent.PaletteChange:  # PalletChange happens after the new style sheet is in use.
+        if event.type() == QEvent.Type.PaletteChange:  # PalletChange happens after the new style sheet is in use.
             self.update_icon()
         return super().event(event)
 
@@ -4774,7 +4805,7 @@ class WeatherQuery:
 def weather_bad_location_dialog(weather) -> None:
     kilometres = weather.proximity_km
     use_km = QLocale.system().measurementSystem() == QLocale.MetricSystem
-    MBox(MBox.Warning, msg=tr("The site {} reports your location as {}, {}, {},{} "
+    MBox(MIcon.Warning, msg=tr("The site {} reports your location as {}, {}, {},{} "
                               "which is about {} {} from the latitude and longitude specified in Settings."
                               ).format(WEATHER_FORECAST_URL, weather.area_name, weather.country_name, weather.latitude, weather.longitude,
                                        round(kilometres if use_km else kilometres * 0.621371), 'km' if use_km else 'miles'),
@@ -4816,11 +4847,11 @@ class PresetChooseWeatherWidget(QWidget):
         self.chooser.setToolTip(self.label.toolTip())
         self.layout().addWidget(self.chooser)
         self.info_label = QLabel()
-        self.info_label.setAlignment(Qt.AlignTop)
+        self.info_label.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.populate()
         scroll_area = QScrollArea()
         scroll_area.setWidget(self.info_label)
-        scroll_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         scroll_area.setWidgetResizable(True)
         self.layout().addWidget(scroll_area)
 
@@ -4869,7 +4900,7 @@ class PresetChooseWeatherWidget(QWidget):
             weather = WeatherQuery(location)
             weather.run_query()
             if weather.proximity_ok:
-                MBox(MBox.Information,
+                MBox(MIcon.Information,
                      msg=tr("Weather for {} will be retrieved from {}").format(place_name, WEATHER_FORECAST_URL)).exec()
                 with open(vf_file_path, 'w', encoding="utf-8") as vf:
                     vf.write(place_name)
@@ -4877,7 +4908,7 @@ class PresetChooseWeatherWidget(QWidget):
                 weather_bad_location_dialog(weather)
         except ValueError as e:
             log_error(f"Failed to validate location: {e}", trace=True)
-            MBox(MBox.Critical, msg=tr("Failed to validate weather location: {}").format(e.args[0]), info=e.args[1]).exec()
+            MBox(MIcon.Critical, msg=tr("Failed to validate weather location: {}").format(e.args[0]), info=e.args[1]).exec()
 
     def populate(self) -> None:
         if self.chooser.count() == 0:
@@ -4914,7 +4945,7 @@ class PresetChooseTransitionWidget(QWidget):
         super().__init__()
         layout = QHBoxLayout()
         self.setLayout(layout)
-        layout.addWidget(QLabel(tr("Transition")), alignment=Qt.AlignLeft)
+        layout.addWidget(QLabel(tr("Transition")), alignment=Qt.AlignmentFlag.AlignLeft)
         self.transition_type_widget = StdButton(title=PresetTransitionFlag.NONE.description())
         self.button_menu = QMenu()
         self.transition_type = PresetTransitionFlag.NONE
@@ -4928,19 +4959,19 @@ class PresetChooseTransitionWidget(QWidget):
             self.button_menu.addAction(action)
 
         self.transition_type_widget.setMenu(self.button_menu)
-        layout.addWidget(self.transition_type_widget, alignment=Qt.AlignLeft)
+        layout.addWidget(self.transition_type_widget, alignment=Qt.AlignmentFlag.AlignLeft)
         layout.addStretch(20)
-        layout.addWidget(QLabel(tr("Transition step")), alignment=Qt.AlignRight)
+        layout.addWidget(QLabel(tr("Transition step")), alignment=Qt.AlignmentFlag.AlignRight)
         self.step_seconds_widget = QSpinBox()
         self.step_seconds_widget.setRange(0, 60)
-        layout.addWidget(self.step_seconds_widget, alignment=Qt.AlignRight)
-        layout.addWidget(QLabel(tr("sec.")), alignment=Qt.AlignRight)
+        layout.addWidget(self.step_seconds_widget, alignment=Qt.AlignmentFlag.AlignRight)
+        layout.addWidget(QLabel(tr("sec.")), alignment=Qt.AlignmentFlag.AlignRight)
 
     def update_value(self, checked: bool) -> None:
         if self.is_setting:
             return
         if checked:
-            MBox(MBox.Warning,
+            MBox(MIcon.Warning,
                  msg=tr('Transitions have been deprecated to minimize wear on VDU NVRAM.'),
                  info=tr('Transitions are slated for removal, please contact the developer if you wish to retain them.')).exec()
         for act in self.button_menu.actions():
@@ -5028,7 +5059,7 @@ class PresetChooseElevationChart(QLabel):
 
         painter.fillRect(0, 0, width, origin_iy, QColor(0x5b93c5))
         painter.fillRect(0, origin_iy, width, height, QColor(0x7d5233))
-        painter.setPen(QPen(Qt.white, std_line_width))  # Horizon
+        painter.setPen(QPen(Qt.GlobalColor.white, std_line_width))  # Horizon
         painter.drawLine(0, origin_iy, width, origin_iy)
 
         if self.location is not None:
@@ -5067,10 +5098,10 @@ class PresetChooseElevationChart(QLabel):
             painter.drawPoints(QPolygon(curve_points))
 
             # Draw various annotations such the horizon-line, noon-line, E & W, and the current degrees:
-            painter.setPen(QPen(Qt.white, std_line_width))
+            painter.setPen(QPen(Qt.GlobalColor.white, std_line_width))
             painter.drawLine(_reverse_x(0), origin_iy, _reverse_x(width), origin_iy)
             painter.drawLine(_reverse_x(solar_noon_x), origin_iy, _reverse_x(solar_noon_x), 0)
-            painter.setPen(QPen(Qt.white, std_line_width))
+            painter.setPen(QPen(Qt.GlobalColor.white, std_line_width))
             painter.setFont(QFont(QApplication.font().family(), width // 20, QFont.Weight.Bold))
             painter.drawText(QPoint(_reverse_x(70), origin_iy - 32), tr("E"))
             painter.drawText(QPoint(_reverse_x(width - 25), origin_iy - 32), tr("W"))
@@ -5097,23 +5128,23 @@ class PresetChooseElevationChart(QLabel):
             # Draw drag-dot
             painter.setFont(QFont(QApplication.font().family(), 8, QFont.Weight.Normal))
             if self.current_pos is not None or self.in_drag or radius >= self.radius_of_deletion:
-                painter.setPen(QPen(Qt.red, 6))
-                painter.setBrush(Qt.white)
+                painter.setPen(QPen(Qt.GlobalColor.red, 6))
+                painter.setBrush(Qt.GlobalColor.white)
                 ddot_radians = math.radians(angle_above_horz if ev_key else -19)
                 ddot_x = round(range_iy * math.cos(ddot_radians)) - 8
                 ddot_y = round(range_iy * math.sin(ddot_radians)) + 8
                 painter.drawEllipse(_reverse_x(solar_noon_x - ddot_x), origin_iy - ddot_y, 16, 16)
                 if not self.in_drag:
-                    painter.setPen(QPen(Qt.black, 1))
+                    painter.setPen(QPen(Qt.GlobalColor.black, 1))
                     painter.drawText(QPoint(_reverse_x(solar_noon_x - ddot_x) + 10, origin_iy - ddot_y - 5), tr("Drag to change."))
 
             # Draw origin-dot
             painter.setPen(QPen(QColor(0xff965b), 2))
             if self.current_pos is not None and not self.in_drag:
                 if radius < self.radius_of_deletion:
-                    painter.setPen(QPen(Qt.black, 1))
+                    painter.setPen(QPen(Qt.GlobalColor.black, 1))
                     painter.drawText(QPoint(_reverse_x(solar_noon_x + 8) + 10, origin_iy - 8 - 5), tr("Click to delete."))
-                    painter.setPen(QPen(Qt.red, 2))
+                    painter.setPen(QPen(Qt.GlobalColor.red, 2))
             painter.setBrush(painter.pen().color())
             painter.drawEllipse(_reverse_x(solar_noon_x + 8), origin_iy - 8, 16, 16)
 
@@ -5121,10 +5152,10 @@ class PresetChooseElevationChart(QLabel):
                 # Draw a line representing the slider degrees and Twilight indicator - may be higher than sun for today:
                 sky_line_y = origin_iy - round(math.sin(math.radians(ev_key.elevation)) * range_iy)
                 if sky_line_y >= solar_noon_y:
-                    sky_line_pen = QPen(Qt.white, 2)
+                    sky_line_pen = QPen(Qt.GlobalColor.white, 2)
                 else:
                     sky_line_pen = QPen(QColor(0xcccccc), 2)
-                    sky_line_pen.setStyle(Qt.DotLine)
+                    sky_line_pen.setStyle(Qt.PenStyle.DotLine)
                 painter.setPen(sky_line_pen)
                 painter.setBrush(painter.pen().color())
                 if ev_key.direction == EASTERN_SKY:
@@ -5155,13 +5186,12 @@ class PresetChooseElevationChart(QLabel):
         radius = round(math.sqrt(adjacent ** 2 + opposite ** 2))
         return angle, radius
 
-    def update_current_pos(self, global_pos: QPoint) -> QPoint | None:
-        local_pos = self.mapFromGlobal(global_pos)
+    def update_current_pos(self, local_pos: QPoint) -> QPoint | None:
         self.current_pos = local_pos if (0 < local_pos.x() < self.width() and 0 <= local_pos.y() < self.height()) else None
         return self.current_pos
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
-        if pos := self.update_current_pos(event.globalPos()):
+        if pos := self.update_current_pos(event.pos()):
             angle, radius = self.calc_angle_radius(pos)
             if radius <= self.radius_of_deletion:
                 self.set_elevation_key(None)
@@ -5171,12 +5201,12 @@ class PresetChooseElevationChart(QLabel):
         event.accept()
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
-        self.update_current_pos(event.globalPos())
+        self.update_current_pos(event.pos())
         self.in_drag = False
         event.accept()
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        pos = self.update_current_pos(event.globalPos())
+        pos = self.update_current_pos(event.pos())
         if pos is not None and 0 <= pos.x() < self.width() and 0 <= pos.y() < self.height():
             angle, radius = self.calc_angle_radius(pos)
             if self.in_drag:
@@ -5245,13 +5275,13 @@ class PresetChooseElevationWidget(QWidget):
 
         self.df_widget = PresetDaylightFactorWidget()
 
-        self.slider = QSlider(Qt.Horizontal)
+        self.slider = QSlider(Qt.Orientation.Horizontal)
         self.slider.setTracking(True)
         self.slider.setMinimum(-1)
         self.slider.setValue(-1)
         self.slider.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.slider.setTickInterval(5)
-        self.slider.setTickPosition(QSlider.TicksAbove)
+        self.slider.setTickPosition(QSlider.TickPosition.TicksAbove)
         self._slider_select_elevation_qtsignal.connect(self.set_elevation_key)
 
         bottom_layout = QHBoxLayout()
@@ -5362,7 +5392,7 @@ class PresetChooseElevationWidget(QWidget):
 
 class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rather complex - break into parts?
     """A dialog for creating/updating/removing presets."""
-    NO_ICON_ICON_NUMBER = QStyle.SP_ComputerIcon
+    NO_ICON_ICON_NUMBER = StdPixmap.SP_ComputerIcon
 
     @staticmethod
     def invoke(main_controller: VduAppController, main_config: VduControlsConfig) -> None:
@@ -5416,7 +5446,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.setLayout(layout)
 
         dialog_splitter = QSplitter()
-        dialog_splitter.setOrientation(Qt.Horizontal)
+        dialog_splitter.setOrientation(Qt.Orientation.Horizontal)
         dialog_splitter.setHandleWidth(10)
         layout.addWidget(dialog_splitter, stretch=1)
 
@@ -5426,7 +5456,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         preset_list_layout = QVBoxLayout()
         preset_list_panel.setLayout(preset_list_layout)
         preset_list_title = QLabel(tr("Presets"))
-        preset_list_title.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
+        preset_list_title.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed))
         preset_list_layout.addWidget(preset_list_title)
         self.preset_widgets_scroll_area = QScrollArea(parent=self)
         preset_widgets_content = QWidget()
@@ -5446,7 +5476,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.edit_panel = QWidget(parent=self)
         edit_panel_layout = QHBoxLayout()
         self.edit_panel.setLayout(edit_panel_layout)
-        self.edit_panel.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
+        self.edit_panel.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed))
 
         self.edit_choose_icon_button = PresetChooseIconButton()
         edit_panel_layout.addWidget(self.edit_choose_icon_button)
@@ -5455,7 +5485,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.preset_name_edit.setToolTip(tr('Enter a new preset name.'))
         self.preset_name_edit.setClearButtonEnabled(True)
         self.preset_name_edit.textChanged.connect(self.change_edit_group_title)
-        self.preset_name_edit.setValidator(QRegExpValidator(QRegExp("[A-Za-z0-9][A-Za-z0-9_ .-]{0,60}")))
+        self.preset_name_edit.setValidator(QRegularExpressionValidator(QRegularExpression("[A-Za-z0-9][A-Za-z0-9_ .-]{0,60}")))
 
         self.vip_menu = QMenu()
         self.vip_menu.triggered.connect(self.vip_menu_triggered)
@@ -5470,7 +5500,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.editor_groupbox.setMinimumSize(native_pixels(550), native_pixels(768))
         self.editor_layout = QVBoxLayout()
         self.editor_title = QLabel(tr("New Preset:"))
-        self.editor_title.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
+        self.editor_title.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed))
         self.editor_layout.addWidget(self.editor_title)
         self.editor_groupbox.setLayout(self.editor_layout)
 
@@ -5503,13 +5533,13 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
             else:
                 self.edit_preset(preset_widget.preset)
 
-        self.edit_clear_button = StdButton(icon=si(self, QStyle.SP_DialogCancelButton), title=tr('Clear'), clicked=self.reset_editor,
+        self.edit_clear_button = StdButton(icon=si(self, StdPixmap.SP_DialogCancelButton), title=tr('Clear'), clicked=self.reset_editor,
                                            tip=tr("Clear edits and enter a new preset using the defaults."))
-        self.edit_save_button = StdButton(icon=si(self, QStyle.SP_DialogSaveButton), title=tr('Save'), clicked=self.save_preset,
+        self.edit_save_button = StdButton(icon=si(self, StdPixmap.SP_DialogSaveButton), title=tr('Save'), clicked=self.save_preset,
                                           tip=tr("Save current VDU settings to Preset."))
-        self.edit_revert_button = StdButton(icon=si(self, QStyle.SP_DialogResetButton), title=tr('Revert'), clicked=_revert_callable,
+        self.edit_revert_button = StdButton(icon=si(self, StdPixmap.SP_DialogResetButton), title=tr('Revert'), clicked=_revert_callable,
                                             tip=tr("Abandon edits, revert VDU and Preset settings."))
-        self.close_button = StdButton(icon=si(self, QStyle.SP_DialogCloseButton), title=tr('Close'), clicked=self.close)
+        self.close_button = StdButton(icon=si(self, StdPixmap.SP_DialogCloseButton), title=tr('Close'), clicked=self.close)
         for button in (self.edit_clear_button, self.edit_save_button, self.edit_revert_button, self.close_button):
             self.status_bar.addPermanentWidget(button)
         layout.addWidget(self.status_bar)
@@ -5560,9 +5590,9 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
     def vip_menu_triggered(self, action: QAction):
         vdu_stable_id = action.data()
-        if MBox(MBox.Information, msg=tr('Create an initialization-preset for {}.').format(action.text()),
+        if MBox(MIcon.Information, msg=tr('Create an initialization-preset for {}.').format(action.text()),
                 info=tr('Initialization-presets are restored  at startup or when ever the VDU is subsequently detected.'),
-                buttons=MBox.Ok | MBox.Cancel).exec() == MBox.Cancel:
+                buttons=MButton.OK | MButton.Cancel).exec() == MButton.Cancel:
             return
         self.preset_name_edit.setText(vdu_stable_id)
         for (section, option), checkbox in self.content_controls_map.items():
@@ -5595,8 +5625,8 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
             vdu_name = self.main_controller.get_vdu_preferred_name(vdu_section_name)
             if count > 0:
                 line = QFrame()
-                line.setFrameShape(QFrame.HLine)
-                line.setFrameShadow(QFrame.Sunken)
+                line.setFrameShape(QFrame.Shape.HLine)
+                line.setFrameShadow(QFrame.Shadow.Sunken)
                 layout.addWidget(line)
             group_box = QGroupBox(vdu_name)
             group_box.setFlat(True)
@@ -5693,8 +5723,8 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.main_controller.restore_preset(preset, immediately=immediately)
 
     def delete_preset(self, preset: Preset, target_widget: QWidget) -> None:
-        if MBox(MBox.Question, msg=tr('Delete {}?').format(preset.name),
-                buttons=MBox.Ok | MBox.Cancel, default=MBox.Cancel).exec() == MBox.Cancel:
+        if MBox(MIcon.Question, msg=tr('Delete {}?').format(preset.name),
+                buttons=MButton.Ok | MButton.Cancel, default=MButton.Cancel).exec() == MButton.Cancel:
             return
         self.main_controller.delete_preset(preset)
         self.preset_widgets_layout.removeWidget(target_widget)
@@ -5739,7 +5769,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
             self.setDisabled(True)  # Stop any editing until after the preset is restored.
             self.main_controller.restore_preset(preset, finished_func=_begin_editing, immediately=True)
 
-    def save_preset(self, _: bool = False, from_widget: PresetWidget = None, quiet: bool = False) -> MBox.Ok | MBox.Cancel:
+    def save_preset(self, _: bool = False, from_widget: PresetWidget = None, quiet: bool = False) -> MButton.Ok | MButton.Cancel:
         preset: Preset | None = None
         widget_to_replace: PresetWidget | None = None
         if from_widget:  # A from_widget is requesting that the Preset's VDU current settings be updated.
@@ -5751,7 +5781,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
             else:
                 preset = Preset(preset_name)  # New Preset
         if preset is None or (quiet and not self.has_changes(preset)):  # Not found (weird), OR don't care if no changes made.
-            return MBox.Ok  # Nothing more to do, everything is OK
+            return MButton.OK  # Nothing more to do, everything is OK
 
         preset_path = ConfIni.get_path(proper_name('Preset', preset.name))
         if preset_path.exists():  # Existing Preset
@@ -5761,12 +5791,12 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
                 question = tr("Replace existing '{}' preset?").format(preset.name)
         else:  # New Preset
             question = tr("Save current edit?")
-        answer = MBox(MBox.Question, msg=question, buttons=MBox.Save | MBox.Discard | MBox.Cancel, default=MBox.Save).exec()
-        if answer == MBox.Discard:
+        answer = MBox(MIcon.Question, msg=question, buttons=MButton.Save | MButton.Discard | MButton.Cancel, default=MButton.Save).exec()
+        if answer == MButton.Discard:
             self.reset_editor()
-            return MBox.Ok
-        elif answer == MBox.Cancel:
-            return MBox.Cancel
+            return MButton.OK
+        elif answer == MButton.Cancel:
+            return MButton.Cancel
 
         self.populate_ini_from_gui(preset.preset_ini)  # Initialises the options from the GUI, but does not get the VDU values.
         self.main_controller.populate_ini_from_vdus(preset.preset_ini, update_only=True)  # populate from VDU control values.
@@ -5774,9 +5804,9 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         if duplicated_presets := [other_preset for other_name, other_preset in self.main_controller.find_presets_map().items()
                                   if other_name != preset.name
                                      and preset.preset_ini.diff(other_preset.preset_ini, vdu_settings_only=True) == {}]:
-            if MBox(MBox.Warning, msg=tr("Duplicates existing Preset {}, save anyway?").format(duplicated_presets[0].name),
-                    buttons=MBox.Save | MBox.Cancel, default=MBox.Cancel).exec() == MBox.Cancel:
-                return MBox.Cancel
+            if MBox(MIcon.Warning, msg=tr("Duplicates existing Preset {}, save anyway?").format(duplicated_presets[0].name),
+                    buttons=MButton.Save | MButton.Cancel, default=MButton.Cancel).exec() == MButton.Cancel:
+                return MButton.Cancel
 
         self.main_controller.save_preset(preset)
 
@@ -5795,7 +5825,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
         self.reset_editor()
         self.status_message(tr("Saved {}").format(preset.name), timeout=-1)
-        return MBox.Save
+        return MButton.Save
 
     def create_preset_widget(self, preset) -> PresetWidget:
         return PresetWidget(preset, restore_action=self.restore_preset, save_action=self.save_preset,
@@ -5805,13 +5835,13 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
     def event(self, event: QEvent) -> bool:
         # PalletChange happens after the new style sheet is in use.
-        if event.type() == QEvent.PaletteChange:
+        if event.type() == QEvent.Type.PaletteChange:
             self.repaint()
             self.vdu_init_button.refresh_icon()
         return super().event(event)
 
     def closeEvent(self, event) -> None:
-        if self.save_preset(quiet=True) == MBox.Cancel:
+        if self.save_preset(quiet=True) == MButton.Cancel:
             event.ignore()
         else:
             self.reset_editor()
@@ -5821,7 +5851,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 def exception_handler(e_type, e_value, e_traceback) -> None:
     """Overarching error handler in case something unexpected happens."""
     log_error("\n" + ''.join(traceback.format_exception(e_type, e_value, e_traceback)))
-    MBox(MBox.Critical, msg=tr('Error: {}').format(''.join(traceback.format_exception_only(e_type, e_value))),
+    MBox(MIcon.Critical, msg=tr('Error: {}').format(''.join(traceback.format_exception_only(e_type, e_value))),
          details=tr('Details: {}').format(''.join(traceback.format_exception(e_type, e_value, e_traceback)))).exec()
 
 
@@ -5832,7 +5862,7 @@ def create_pixmap_from_svg_bytes(svg_bytes: bytes) -> QPixmap:
 
 def create_image_from_svg_bytes(svg_bytes) -> QImage:
     renderer = QSvgRenderer(svg_bytes)
-    image = QImage(64, 64, QImage.Format_ARGB32)
+    image = QImage(64, 64, QImage.Format.Format_ARGB32)
     image.fill(0x0)
     painter = QPainter(image)
     renderer.render(painter)
@@ -5876,16 +5906,16 @@ def create_icon_from_path(path: Path, theme_type: ThemeType) -> QIcon:
             icon = QIcon(path.as_posix())
         return icon
     # Copes with the case where the path has been deleted.
-    return QApplication.style().standardIcon(QStyle.SP_MessageBoxQuestion)
+    return QApplication.style().standardIcon(StdPixmap.SP_MessageBoxQuestion)
 
 
 def create_icon_from_text(text: str, theme_type: ThemeType) -> QIcon:
     pixmap = QPixmap(32, 32)
-    pixmap.fill(Qt.transparent)
+    pixmap.fill(Qt.GlobalColor.transparent)
     painter = QPainter(pixmap)
     font = QApplication.font()
     font.setPixelSize(24)
-    font.setWeight(QFont.Medium)
+    font.setWeight(QFont.Weight.Medium)
     painter.setFont(font)
     painter.setOpacity(1.0)
     if theme_type == ThemeType.MONOCHROME_LIGHT:
@@ -5896,7 +5926,7 @@ def create_icon_from_text(text: str, theme_type: ThemeType) -> QIcon:
         painter.setPen(QColor(SVG_DARK_THEME_TEXT_COLOR.decode("utf-8")))
     else:  # default to a dark text color
         painter.setPen(QColor(SVG_LIGHT_THEME_TEXT_COLOR.decode("utf-8")))
-    painter.drawText(pixmap.rect(), Qt.AlignTop, text)
+    painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignTop, text)
     painter.end()
     return QIcon(pixmap)
 
@@ -5910,7 +5940,7 @@ def create_decorated_app_icon(base_icon: QIcon, overlay_icon: QIcon | None = Non
     if overlay_icon:
         overlay_pixmap = overlay_icon.pixmap(icon_size, QIcon.Mode.Normal, QIcon.State.On)
         painter.drawPixmap(16, 8, 32, 32, overlay_pixmap)
-    painter.setPen(QPen(Qt.black, 1, Qt.SolidLine))
+    painter.setPen(QPen(Qt.GlobalColor.black, 1, Qt.PenStyle.SolidLine))
     for i, led_color in enumerate((left_indicator, right_indicator)):
         if led_color:
             painter.setBrush(led_color)  # Each indicator resembles/simulates an LED embedded in the app icon.
@@ -6023,7 +6053,7 @@ class LuxProfileChart(QLabel):
         pixmap = QPixmap(self.pixmap_width, self.pixmap_height)
         painter = QPainter(pixmap)
         painter.fillRect(0, 0, self.pixmap_width, self.pixmap_height, QColor(0x5b93c5))
-        painter.setPen(QPen(Qt.white, std_line_width))
+        painter.setPen(QPen(Qt.GlobalColor.white, std_line_width))
         painter.drawText(self.pixmap_width // 3, 30, tr("Lux Brightness Response Profiles"))
 
         painter.drawLine(self.x_origin, self.y_origin, self.x_origin + self.plot_width + 25, self.y_origin)  # Draw x-axis
@@ -6052,11 +6082,11 @@ class LuxProfileChart(QLabel):
 
         min_v, max_v = self.range_restrictions.get(self.current_vdu_sid, (0, 100))  # Draw range restrictions (if not 0..100)
         if min_v > 0:
-            painter.setPen(QPen(Qt.red, std_line_width // 2, Qt.DashLine))
+            painter.setPen(QPen(Qt.GlobalColor.red, std_line_width // 2, Qt.PenStyle.DashLine))
             cutoff = self.y_origin - self.y_from_percent(min_v)
             painter.drawLine(self.x_origin, cutoff, self.x_origin + self.plot_width + 25, cutoff)
         if max_v < 100:
-            painter.setPen(QPen(Qt.red, std_line_width // 2, Qt.DashLine))
+            painter.setPen(QPen(Qt.GlobalColor.red, std_line_width // 2, Qt.PenStyle.DashLine))
             cutoff = self.y_origin - self.y_from_percent(max_v)
             painter.drawLine(self.x_origin, cutoff, self.x_origin + self.plot_width + 25, cutoff)
 
@@ -6083,7 +6113,7 @@ class LuxProfileChart(QLabel):
                         point_markers.append((point_data, x, y, lux, brightness, vdu_color_num))  # Save data for drawing markers
                     if last_x and last_y:  # draw histogram-step, or if interpolating, the area under the line
                         painter.setBrush(histogram_bar_color)
-                        painter.setPen(Qt.NoPen)
+                        painter.setPen(Qt.PenStyle.NoPen)
                         painter.drawPolygon(
                             QPolygon([QPoint(last_x, last_y), QPoint(x, y if interpolating else last_y),
                                       QPoint(x, self.y_origin), QPoint(last_x, self.y_origin), QPoint(last_x, last_y)]))
@@ -6101,8 +6131,8 @@ class LuxProfileChart(QLabel):
             painter.drawEllipse(x - marker_diameter // 2, y - marker_diameter // 2, marker_diameter, marker_diameter)
 
         for preset_point in self.preset_points:  # draw preset vertical lines and white triangle below axis
-            painter.setPen(QPen(Qt.white, std_line_width // 2, Qt.DashLine))
-            painter.setBrush(Qt.white)
+            painter.setPen(QPen(Qt.GlobalColor.white, std_line_width // 2, Qt.PenStyle.DashLine))
+            painter.setBrush(Qt.GlobalColor.white)
             x = self.x_origin + self.x_from_lux(preset_point.lux)
             painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height)
             painter.drawPolygon(QPolygon([QPoint(x + tx // 2, self.y_origin + 16 + ty // 2) for tx, ty in pyramid]))
@@ -6122,7 +6152,7 @@ class LuxProfileChart(QLabel):
                 vdu_color_num = self.vdu_chart_colors[vdu_sid]
                 vdu_line_color = QColor(vdu_color_num)
                 y = self.y_origin - self.y_from_percent(brightness)
-                painter.setPen(QPen(Qt.black, 1))  # QPen(vdu_line_color, std_line_width // 2, Qt.SolidLine))
+                painter.setPen(QPen(Qt.GlobalColor.black, 1))  # QPen(vdu_line_color, std_line_width // 2, Qt.PenStyle.SolidLine))
                 painter.setBrush(vdu_line_color)
                 painter.drawPolygon(
                     QPolygon([QPoint(x_current_lux - 2 + tx // 2, y + 0 + ty // 2) for tx, ty in current_brightness_pointer]))
@@ -6138,34 +6168,34 @@ class LuxProfileChart(QLabel):
                 x, y, lux, brightness, point_data = match[0] + self.x_origin, self.y_origin - match[1], match[2], match[3], match[4]
                 point_preset_name = point_data.preset_name if point_data.preset_name is not None else ''
                 if not point_preset_name:  # Existing normal point: cross-hairs, white for add, red for delete
-                    painter.setPen(QPen(Qt.red if match[0] is not None else Qt.white, 2))
+                    painter.setPen(QPen(Qt.GlobalColor.red if match[0] is not None else Qt.GlobalColor.white, 2))
                     if match[0]:  # deletable: add a red circle
-                        painter.setBrush(Qt.white)
+                        painter.setBrush(Qt.GlobalColor.white)
                         painter.drawEllipse(x - marker_diameter // 2, y - marker_diameter // 2, marker_diameter, marker_diameter)
                     painter.drawLine(self.x_origin, y, self.x_origin + self.plot_width + 5, y)
                     painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height - 5)
                 else:  # Existing Preset point: vertical line; plus removal hint, a red triangle below axis
-                    painter.setPen(QPen(Qt.red if mouse_y > self.y_origin else Qt.white, 2))
+                    painter.setPen(QPen(Qt.GlobalColor.red if mouse_y > self.y_origin else Qt.GlobalColor.white, 2))
                     painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height - 5)
-                    painter.setPen(QPen(Qt.red, 2))
-                    painter.setBrush(Qt.white)
+                    painter.setPen(QPen(Qt.GlobalColor.red, 2))
+                    painter.setBrush(Qt.GlobalColor.white)
                     painter.drawPolygon(QPolygon([QPoint(x + tx, self.y_origin + 18 + ty) for tx, ty in pyramid]))
                     if mouse_y > self.y_origin:  # Preset remove hint
-                        painter.setPen(QPen(Qt.black, 1))
+                        painter.setPen(QPen(Qt.GlobalColor.black, 1))
                         painter.drawText(x + 10, self.y_origin - 35, tr("Click remove preset at {} lux").format(lux))
             else:  # Potential new Point - show precise position for adding a new point
                 lux, brightness = self.lux_from_x(x - self.x_origin), self.percent_from_y(y - self.y_origin)
                 point_preset_name = ''
-                painter.setPen(QPen(Qt.white, 1))
+                painter.setPen(QPen(Qt.GlobalColor.white, 1))
                 painter.drawLine(self.x_origin, y, self.x_origin + self.plot_width + 5, y)
                 painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height - 5)
                 if mouse_y > self.y_origin:  # Below axis, show hint for adding a Preset point: draw a red triangle below axis
-                    painter.setPen(QPen(Qt.red, 2))
-                    painter.setBrush(Qt.white)
+                    painter.setPen(QPen(Qt.GlobalColor.red, 2))
+                    painter.setBrush(Qt.GlobalColor.white)
                     painter.drawPolygon(QPolygon([QPoint(x + tx, self.y_origin + 18 + ty) for tx, ty in pyramid]))
-                    painter.setPen(QPen(Qt.black, 1))
+                    painter.setPen(QPen(Qt.GlobalColor.black, 1))
                     painter.drawText(x + 10, self.y_origin - 35, tr("Click to add preset at {} lux").format(lux))
-            painter.setPen(QPen(Qt.black, 1))
+            painter.setPen(QPen(Qt.GlobalColor.black, 1))
             painter.drawText(x + 10, y - 10, f"{lux} lux, {brightness}% {point_preset_name}")  # Tooltip lux and percent
 
         painter.end()
@@ -6177,10 +6207,9 @@ class LuxProfileChart(QLabel):
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         changed = False
-        local_pos = self.mapFromGlobal(event.globalPos())
-        x = local_pos.x() - self.x_origin
-        y = self.y_origin - local_pos.y()
-        if event.button() == Qt.LeftButton:  # click along bottom (y=0) to attache presets
+        x = event.pos().x() - self.x_origin
+        y = self.y_origin - event.pos().y()
+        if event.button() == Qt.MouseButton.LeftButton:  # click along bottom (y=0) to attache presets
             changed = self.lux_point_edit(x, y) if y >= 0 else self.lux_preset_edit(x)
         if changed:
             self.show_changes()
@@ -6217,7 +6246,7 @@ class LuxProfileChart(QLabel):
         if len(presets):
             ask_preset = QInputDialog()
             ask_preset.setComboBoxItems(list(presets.keys()))
-            ask_preset.setOption(QInputDialog.UseListViewForComboBoxItems)
+            ask_preset.setOption(QInputDialog.InputDialogOption.UseListViewForComboBoxItems)
             if ask_preset.exec() == QDialog.Accepted:
                 preset_name = ask_preset.textValue()
                 if preset := self.main_controller.find_preset_by_name(preset_name):
@@ -6231,7 +6260,7 @@ class LuxProfileChart(QLabel):
                         profile.sort()
                     return True
         else:
-            MBox(MBox.Information, msg=tr("There are no Presets."), info=tr("Use the Presets Dialog to create some.")).exec()
+            MBox(MIcon.Information, msg=tr("There are no Presets."), info=tr("Use the Presets Dialog to create some.")).exec()
         return False
 
     def show_changes(self, profile_changes=True) -> None:
@@ -6330,7 +6359,7 @@ class LuxGaugeWidget(QWidget):
         self.updates_enabled = True
 
     def mousePressEvent(self, a0):
-        MBox(MBox.Information, msg=self.help_text).exec()
+        MBox(MIcon.Information, msg=self.help_text).exec()
 
     def append_new_value(self, lux: int) -> None:
         self.history = self.history[-self.max_history:]
@@ -6343,7 +6372,8 @@ class LuxGaugeWidget(QWidget):
     def update_plot(self):
         pixmap = QPixmap(self.plot_widget.width(), self.plot_widget.height())
         painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.HighQualityAntialiasing)
+        if qt_version_preference == '5':
+            painter.setRenderHint(QPainter.RenderHint.HighQualityAntialiasing)
         plot_height = self.plot_widget.height()
         # Create a plot of recent historical lux readings.
         lux_plot_width = self.plot_widget.height()  # Square with height
@@ -6358,7 +6388,7 @@ class LuxGaugeWidget(QWidget):
             else:
                 painter.drawLine(x, plot_height, x, self._y_from_lux(0, plot_height))
         if most_recent_lux_xy[0] is not None:
-            painter.setPen(QPen(Qt.red, 2))
+            painter.setPen(QPen(Qt.GlobalColor.red, 2))
             painter.drawLine(most_recent_lux_xy[0], plot_height, most_recent_lux_xy[0], most_recent_lux_xy[1])
         # Create plot of Eo (outside illumination) and Ei (inside illumination)
         margin = 4
@@ -6422,14 +6452,14 @@ class LuxGaugeWidget(QWidget):
                     painter.drawImage(QPoint(i - self.sun_image.width() // 2, sun_y - self.sun_image.height() // 2 - 1),
                                       self.sun_image)
         if most_recent_df_xy[0] is not None:
-            painter.setPen(QPen(Qt.red, 2))
+            painter.setPen(QPen(Qt.GlobalColor.red, 2))
             painter.drawLine(most_recent_df_xy[0], plot_height, most_recent_df_xy[0], most_recent_df_xy[1])
         # Draw dots at current points
         dot_size = 8
         half_dot_size = dot_size // 2
         for x, y in (most_recent_lux_xy, most_recent_df_xy):
             if x is not None and y is not None:
-                painter.setPen(QPen(Qt.red, half_dot_size))
+                painter.setPen(QPen(Qt.GlobalColor.red, half_dot_size))
                 painter.setBrush(self.white_line_color)
                 painter.drawEllipse(x - half_dot_size, y - half_dot_size, dot_size, dot_size)
         painter.end()  # End of plotting
@@ -6926,12 +6956,12 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             current_brightness = self.main_controller.get_value(vdu_sid, BRIGHTNESS_VCP_CODE)
             diff = proposed_brightness - current_brightness
             if self.interpolation_enabled and preset_name is None and abs(diff) < self.sensitivity_percent:
-                log_info(f"LuxAuto: {vdu_sid=} {current_brightness=} {proposed_brightness=} ignored, too small")
+                log_info(f"LuxAuto: {smoothed_lux=} {vdu_sid=} {current_brightness=} {proposed_brightness=} ignored, too small")
                 self.status_message(f"{SUN_SYMBOL} {proposed_brightness}% {ALMOST_EQUAL_SYMBOL} {current_brightness}% {vdu_sid}",
                                     timeout=5000)
                 return None
             if log_debug_enabled:
-                log_debug(f"LuxAuto: {vdu_sid=} {current_brightness=}% {proposed_brightness=}% {preset_name=}")
+                log_debug(f"LuxAuto: {smoothed_lux=} {vdu_sid=} {current_brightness=}% {proposed_brightness=}% {preset_name=}")
             return LuxToDo(vdu_sid, proposed_brightness, preset_name, current_brightness)
         except VduException as e:
             self.consecutive_error_count += 1
@@ -7083,7 +7113,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
 
         self.lux_gauge_widget = LuxGaugeWidget(self)
         self.lux_gauge_widget.append_new_value(0)
-        grid_layout.addWidget(self.lux_gauge_widget, 0, 0, 4, 2, alignment=Qt.AlignLeft | Qt.AlignTop)
+        grid_layout.addWidget(self.lux_gauge_widget, 0, 0, 4, 2, alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
 
         existing_device = self.lux_config.get_device_name()
         existing_device_type = self.lux_config.get('lux-meter', 'lux-device-type', fallback='')
@@ -7112,9 +7142,9 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         grid_layout.addWidget(self.interpolate_checkbox, 3, 2, 1, 3)
 
         self.profile_selector_widget = QListWidget(parent=self)
-        self.profile_selector_widget.setResizeMode(QListWidget.Adjust)
-        self.profile_selector_widget.setSizeAdjustPolicy(QListWidget.AdjustToContents)
-        self.profile_selector_widget.setFlow(QListWidget.LeftToRight)
+        self.profile_selector_widget.setResizeMode(QListWidget.ResizeMode.Adjust)
+        self.profile_selector_widget.setSizeAdjustPolicy(QListWidget.SizeAdjustPolicy.AdjustToContents)
+        self.profile_selector_widget.setFlow(QListWidget.Flow.LeftToRight)
         self.profile_selector_widget.setSpacing(0)
         self.profile_selector_widget.setMinimumHeight(native_font_height(scaled=1.4))
 
@@ -7132,11 +7162,11 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         main_layout.addWidget(self.profile_plot, stretch=1)
 
         self.status_bar = QStatusBar()
-        self.save_button = StdButton(icon=si(self, QStyle.SP_DriveFDIcon), title=tr("Save Profiles"), clicked=self.save_profiles,
+        self.save_button = StdButton(icon=si(self, StdPixmap.SP_DriveFDIcon), title=tr("Save Profiles"), clicked=self.save_profiles,
                                      tip=tr("Apply and save profile-chart changes."))
-        self.revert_button = StdButton(icon=si(self, QStyle.SP_DialogResetButton), title=tr("Revert Profiles"),
+        self.revert_button = StdButton(icon=si(self, StdPixmap.SP_DialogResetButton), title=tr("Revert Profiles"),
                                        clicked=self.reconfigure, tip=tr("Abandon profile-chart changes, revert to last saved."))
-        quit_button = StdButton(icon=si(self, QStyle.SP_DialogCloseButton), title=tr("Close"), clicked=self.close)
+        quit_button = StdButton(icon=si(self, StdPixmap.SP_DialogCloseButton), title=tr("Close"), clicked=self.close)
         for button in (self.save_button, self.revert_button, quit_button):
             self.status_bar.addPermanentWidget(button, 0)
 
@@ -7182,7 +7212,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.meter_device_selector.activated.connect(_choose_device)
 
         def _set_auto_monitoring(checked: int) -> None:
-            enable = checked == Qt.Checked
+            enable = checked == intV(Qt.CheckState.Checked)
             if enable != self.lux_config.is_auto_enabled():
                 self.lux_config.set('lux-meter', 'automatic-brightness', 'yes' if enable else 'no')
                 self.adjust_now_button.setVisible(enable)
@@ -7203,10 +7233,10 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.interval_selector.valueChanged.connect(_interval_selector_changed)
 
         def _set_interpolation(checked: int) -> None:
-            if checked == Qt.Checked:  # need to save setting if not already set
+            if checked == intV(Qt.CheckState.Checked):  # need to save setting if not already set
                 if not self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=False):  # altering value
                     self.lux_config.set('lux-meter', 'interpolate-brightness', 'yes')
-                    MBox(MBox.Warning, msg=tr('Interpolation may increase the number of writes to VDU NVRAM.'),
+                    MBox(MIcon.Warning, msg=tr('Interpolation may increase the number of writes to VDU NVRAM.'),
                          info=tr('When designing brightness response curves consider minimizing '
                                  'brightness changes to reduce wear on NVRAM.')).exec()
             elif self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True):
@@ -7221,7 +7251,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                 profile_name = list(self.lux_profiles_map.keys())[index]
                 self.profile_plot.set_current_profile(profile_name)
                 self.status_message(tr("Editing profile {}").format(profile_name))
-            data = self.profile_selector_widget.item(index).data(Qt.UserRole)
+            data = self.profile_selector_widget.item(index).data(Qt.ItemDataRole.UserRole)
             if self.lux_config.get('lux-ui', 'selected-profile', fallback=None) != data:
                 self.lux_config.set('lux-ui', 'selected-profile', data)
                 self.apply_settings(requires_metering_restart=False)
@@ -7242,6 +7272,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         lux_auto_controller = self.main_controller.get_lux_auto_controller()
         self.lux_config = lux_auto_controller.get_lux_config().duplicate(LuxConfig())  # type: ignore
         self.device_name = self.lux_config.get("lux-meter", "lux-device", fallback='')
+        log_debug("{self.lux_config.is_auto_enabled()=}") if log_debug_enabled else None
         self.enabled_checkbox.setChecked(self.lux_config.is_auto_enabled())
         self.interpolate_checkbox.setChecked(self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=False))
         self.has_profile_changes = False
@@ -7271,7 +7302,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                 self.preset_points.append(preset_point)
 
         self.interval_selector.setValue(self.lux_config.get_interval_minutes())
-        existing_id_list = [item.data(Qt.UserRole) for item in self.profile_selector_widget.findItems('*', Qt.MatchWildcard)]
+        existing_id_list = [item.data(Qt.ItemDataRole.UserRole) for item in self.profile_selector_widget.findItems('*', Qt.MatchFlag.MatchWildcard)]
         candidate_id = self.lux_config.get('lux-ui', 'selected-profile', fallback=None)
         if connected_id_list and (candidate_id is None or candidate_id not in connected_id_list):
             candidate_id = connected_id_list[0]
@@ -7286,7 +7317,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                     self.drawing_color_map[vdu_sid] = color
                     color_icon = create_icon_from_svg_bytes(SWATCH_ICON_SOURCE.replace(b"#ffffff", bytes(color.name(), 'utf-8')))
                     key_item = QListWidgetItem(color_icon, self.main_controller.get_vdu_preferred_name(vdu_sid))
-                    key_item.setData(Qt.UserRole, vdu_sid)
+                    key_item.setData(Qt.ItemDataRole.UserRole, vdu_sid)
                     self.profile_selector_widget.addItem(key_item)
                     if vdu_sid == candidate_id:
                         self.profile_selector_widget.setCurrentRow(index)
@@ -7310,11 +7341,11 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
     def validate_device(self, device, required_type: LuxDeviceType) -> bool:
         if required_type == LuxDeviceType.SEMI_AUTO:
             if self.main_controller.main_config.get_location() is None:
-                MBox(MBox.Critical, msg=tr("Cannot configure a solar lux calculator, no location is defined."),
+                MBox(MIcon.Critical, msg=tr("Cannot configure a solar lux calculator, no location is defined."),
                      info=tr("Please set a location in the main Settings-Dialog.")).exec()
                 self.main_controller.edit_config(tab_number=0)
                 return False
-            MBox(MBox.Information,
+            MBox(MIcon.Information,
                  msg=tr("Semi-automatic lux adjustment: quick start instructions.\n"                      
                         "________________________________________________________________________________________\n\n"
                         "Use the ambient-light-level slider to set the current light level.\n\n"
@@ -7340,10 +7371,10 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                 info = None
                 if path.is_char_device() and path.group() != "root":
                     info = tr("You might need to be a member of the {} group.").format(path.group())
-                MBox(MBox.Critical, msg=tr("No read access to {}").format(device), info=info).exec()
+                MBox(MIcon.Critical, msg=tr("No read access to {}").format(device), info=info).exec()
                 return False
         else:
-            MBox(MBox.Critical, msg=tr("Expecting {}, but {} was selected.").format(tr(required_type.description), device)).exec()
+            MBox(MIcon.Critical, msg=tr("Expecting {}, but {} was selected.").format(tr(required_type.description), device)).exec()
             return False
         return True
 
@@ -7381,11 +7412,11 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
 
     def closeEvent(self, event) -> None:
         if self.has_profile_changes:
-            answer = MBox(MBox.Critical, msg=tr("There are unsaved profile changes?"),
-                          buttons=MBox.Save | MBox.Discard | MBox.Cancel, default=MBox.Cancel).exec()
-            if answer == MBox.Save:
+            answer = MBox(MIcon.Critical, msg=tr("There are unsaved profile changes?"),
+                          buttons=MButton.Save | MButton.Discard | MButton.Cancel, default=MButton.Cancel).exec()
+            if answer == MButton.Save:
                 self.save_profiles()
-            elif answer == MBox.Cancel:
+            elif answer == MButton.Cancel:
                 event.ignore()
                 return
         self.lux_gauge_widget.enable_gauge(False)  # Stop updating the display
@@ -7469,7 +7500,7 @@ class LuxAutoController:
                 self.lux_auto_brightness_worker = LuxAutoWorker(self, single_shot)
                 self.lux_auto_brightness_worker.start()
                 try:
-                    self.lux_meter.new_lux_value_qtsignal.connect(self.update_manual_slider, type=Qt.UniqueConnection)
+                    self.lux_meter.new_lux_value_qtsignal.connect(self.update_manual_slider, type=Qt.ConnectionType.UniqueConnection)
                 except TypeError:
                     pass
 
@@ -7493,7 +7524,7 @@ class LuxAutoController:
             self.main_controller.update_window_status_indicators()  # Refresh indicators immediately
         except LuxDeviceException as lde:
             log_error(f"Error setting up lux meter {lde}", trace=True)
-            MBox(MBox.Critical, msg=tr("Error setting up lux meter: {}").format(self.lux_config.get_device_name()),
+            MBox(MIcon.Critical, msg=tr("Error setting up lux meter: {}").format(self.lux_config.get_device_name()),
                  info=str(lde)).exec()
         if self.lux_tool_button:
             self.lux_tool_button.refresh_icon(self.current_auto_svg())  # Refresh indicators immediately
@@ -7518,6 +7549,7 @@ class LuxAutoController:
 
     def set_auto(self, enable: bool):
         assert self.lux_config is not None
+        log_debug(f"LuxAutoController: set_auto {enable}")
         if enable:
             if self.lux_meter and self.lux_meter.has_semi_auto_capability and not self.main_controller.main_config.get_location():
                 message = tr("Auto disabled, no location defined.")
@@ -7672,7 +7704,7 @@ class LuxAmbientSlider(QWidget):
 
         top_layout = QVBoxLayout()
         self.setLayout(top_layout)
-        top_layout.addWidget(QLabel(tr("Ambient Light Level (lux)")), alignment=Qt.AlignBottom)
+        top_layout.addWidget(QLabel(tr("Ambient Light Level (lux)")), alignment=Qt.AlignmentFlag.AlignBottom)
 
         input_panel = QWidget()
         input_panel_layout = QHBoxLayout()
@@ -7690,17 +7722,17 @@ class LuxAmbientSlider(QWidget):
         self.slider.setSingleStep(1)
         self.slider.setPageStep(100)
         self.slider.setTickInterval(1000)
-        self.slider.setTickPosition(QSlider.TicksBelow)
-        self.slider.setOrientation(Qt.Horizontal)  # type: ignore
+        self.slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.slider.setOrientation(Qt.Orientation.Horizontal)  # type: ignore
         self.slider.setTracking(False)  # Don't rewrite the ddc value too often - not sure of the implications
-        lux_slider_panel_layout.addWidget(self.slider, 1, 0, 1, 15, alignment=Qt.AlignTop)
+        lux_slider_panel_layout.addWidget(self.slider, 1, 0, 1, 15, alignment=Qt.AlignmentFlag.AlignTop)
 
         # A hacky way to get custom labels without redefining paint
         for col_num, span, value in ((0, 3, 1), (3, 3, 10), (6, 3, 100), (9, 3, 1000), (12, 3, 10000), (14, 1, 100000)):
             log10_button = QLabel(f"{value:2d}")
             app_font = QApplication.font()
             log10_button.setFont(QFont(app_font.family(), round(app_font.pointSize() * .66), QFont.Weight.Normal))
-            lux_slider_panel_layout.addWidget(log10_button, 2, col_num, 1, span, alignment=Qt.AlignLeft | Qt.AlignTop)
+            lux_slider_panel_layout.addWidget(log10_button, 2, col_num, 1, span, alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
 
         input_panel_layout.addWidget(lux_slider_panel, stretch=100)
 
@@ -7712,7 +7744,7 @@ class LuxAmbientSlider(QWidget):
         self.lux_input_field.setValue(self.current_value)
         input_panel_layout.addWidget(self.lux_input_field)
 
-        top_layout.addWidget(input_panel, alignment=Qt.AlignTop)
+        top_layout.addWidget(input_panel, alignment=Qt.AlignmentFlag.AlignTop)
 
         def _lux_slider_change(new_value: int) -> None:
             real_value = round(10 ** (new_value / 1000))
@@ -7743,7 +7775,7 @@ class LuxAmbientSlider(QWidget):
         for zone in reversed(self.zones):
             log10_button = StdButton(icon=create_icon_from_svg_bytes(zone.icon_svg), icon_size=log10_icon_size,
                                      clicked=partial(self.lux_input_field.setValue, zone.icon_svg_lux), flat=True, tip=zone.name)
-            lux_slider_panel_layout.addWidget(log10_button, 0, col, 1, zone.column_span, alignment=Qt.AlignBottom | Qt.AlignHCenter)
+            lux_slider_panel_layout.addWidget(log10_button, 0, col, 1, zone.column_span, alignment=Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter)
             self.label_map[log10_button] = zone.icon_svg
             col += zone.column_span
 
@@ -7779,7 +7811,7 @@ class LuxAmbientSlider(QWidget):
                     self.blockSignals(False)
 
     def event(self, event: QEvent) -> bool:
-        if event.type() == QEvent.PaletteChange:  # PalletChange happens after the new style sheet is in use.
+        if event.type() == QEvent.Type.PaletteChange:  # PalletChange happens after the new style sheet is in use.
             if self.current_zone:
                 self.status_icon.setIcon(create_icon_from_svg_bytes(self.current_zone.icon_svg))
             for slider_button, svg_bytes in self.label_map.items():
@@ -7813,8 +7845,8 @@ class GreyScaleDialog(SubWinDialog):
             'Use the content-menu to create additional charts and\n'
             'drag them onto each display.\n\nThis chart is resizable. '))
         layout.addWidget(svg_widget)
-        close_button = StdButton(icon=si(self, QStyle.SP_DialogCloseButton), title=tr("Close"), clicked=self.hide)
-        layout.addWidget(close_button, 0, Qt.AlignRight)
+        close_button = StdButton(icon=si(self, StdPixmap.SP_DialogCloseButton), title=tr("Close"), clicked=self.hide)
+        layout.addWidget(close_button, 0, Qt.AlignmentFlag.AlignRight)
         self.show()
         self.raise_()
         self.activateWindow()
@@ -7852,7 +7884,7 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
 
     def refresh_content(self):
         self.setWindowTitle(tr('About'))
-        self.setTextFormat(Qt.AutoText)
+        self.setTextFormat(Qt.TextFormat.AutoText)
         self.setText(tr('About vdu_controls'))
         path = find_locale_specific_file("about_{}.txt")
         if path:
@@ -7864,13 +7896,13 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
             about_text = ABOUT_TEXT
         if self.main_controller and self.main_controller.ddcutil:
             counts_str = ','.join((str(v) for v in Ddcutil.vcp_write_counters.values())) if len(Ddcutil.vcp_write_counters) else '0'
-            about_text += ("<hr><p><small>desktop: {}; platform: {} ({});<br/>"
+            about_text += ("<hr><p><small>desktop: {}; platform: {} ({}, qt-{});<br/>"
                            "ddcutil-interface: {}; ddcutil: {} (writes: {});</small>".format(
                 os.environ.get('XDG_CURRENT_DESKTOP', default='unknown'),
-                os.environ.get('XDG_SESSION_TYPE', default='unknown'), QApplication.platformName(),
+                os.environ.get('XDG_SESSION_TYPE', default='unknown'), QApplication.platformName(), QtCore.qVersion(),
                 *self.main_controller.ddcutil.ddcutil_version_info(), counts_str))
         self.setInformativeText(about_text)
-        self.setIcon(MBox.Information)
+        self.setIcon(MIcon.Information)
 
 
 class HelpDialog(SubWinDialog, DialogSingletonMixin):
@@ -7888,8 +7920,8 @@ class HelpDialog(SubWinDialog, DialogSingletonMixin):
         markdown_view.setViewportMargins(native_pixels(80), native_pixels(80), native_pixels(50), native_pixels(30))
         markdown_view.setMarkdown(re.sub(r"^$([^ ])", r"<br/>\n\1", __doc__, flags=re.MULTILINE))  # hack Qt markdown
         layout.addWidget(markdown_view)
-        close_button = StdButton(icon=si(self, QStyle.SP_DialogCloseButton), title=tr("Close"), clicked=self.hide)
-        layout.addWidget(close_button, 0, Qt.AlignRight)
+        close_button = StdButton(icon=si(self, StdPixmap.SP_DialogCloseButton), title=tr("Close"), clicked=self.hide)
+        layout.addWidget(close_button, 0, Qt.AlignmentFlag.AlignRight)
         self.setLayout(layout)
         self.make_visible()
 
@@ -8501,7 +8533,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             if not preset.check_weather(self.weather_query):
                 return False
         except ValueError as e:
-            MBox(MBox.Warning, msg=tr("Ignoring weather requirements, unable to query local weather: {}").format(str(e.args[0])),
+            MBox(MIcon.Warning, msg=tr("Ignoring weather requirements, unable to query local weather: {}").format(str(e.args[0])),
                  info=e.args[1]).exec()
         return True
 
@@ -8637,7 +8669,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
     def restart_application(self, reason: str):
         # Force a restart of the application.  Some settings changes need this (for example, run in the system tray).
-        MBox(MBox.Warning, msg=reason, info=tr('When this message is dismissed, vdu_controls will restart.')).exec()
+        MBox(MIcon.Warning, msg=reason, info=tr('When this message is dismissed, vdu_controls will restart.')).exec()
         self.main_window.app_save_window_state()
         QCoreApplication.exit(EXIT_CODE_FOR_RESTART)
 
@@ -8646,11 +8678,11 @@ class VduAppWindow(QMainWindow):
     splash_message_qtsignal = pyqtSignal(str)
     _run_in_gui_thread_qtsignal = pyqtSignal(object)
 
-    def __init__(self, main_config: VduControlsConfig, app: QApplication, main_controller: VduAppController) -> None:
+    def __init__(self, main_config: VduControlsConfig, main_controller: VduAppController) -> None:
         super().__init__()
         global gui_thread
+        app = QApplication.instance()
         gui_thread = app.thread()
-        self.app = app
         self.main_controller: VduAppController = main_controller
         self.setObjectName('main_window')
         self.qt_geometry_key = self.objectName() + "_geometry"
@@ -8695,7 +8727,7 @@ class VduAppWindow(QMainWindow):
         splash_pixmap = get_splash_image()
         splash = QSplashScreen(
             splash_pixmap.scaledToWidth(native_font_height(scaled=26)).scaledToHeight(native_font_height(scaled=13)),
-            Qt.WindowStaysOnTopHint) if main_config.is_set(ConfOpt.SPLASH_SCREEN_ENABLED) else None
+            Qt.WindowType.WindowStaysOnTopHint) if main_config.is_set(ConfOpt.SPLASH_SCREEN_ENABLED) else None
         if splash is not None:
             splash.show()
             splash.raise_()  # Attempt to force it to the top with raise and activate
@@ -8707,8 +8739,8 @@ class VduAppWindow(QMainWindow):
         def f10_func():
             self.app_context_menu.exec(QCursor.pos())
 
-        f10_shortcut = QShortcut(QKeySequence(Qt.Key_F10), self)  # New Qt standard shortcut for context menu.
-        f10_shortcut.setContext(Qt.ApplicationShortcut)
+        f10_shortcut = QShortcut(QKeySequence(Qt.Key.Key_F10), self)  # New Qt standard shortcut for context menu.
+        f10_shortcut.setContext(Qt.ShortcutContext.ApplicationShortcut)
         f10_shortcut.activated.connect(f10_func)
 
         self.tray = None
@@ -8729,25 +8761,26 @@ class VduAppWindow(QMainWindow):
 
         self.app_name = APPNAME
         app.setApplicationDisplayName(self.app_name)
-        app.setAttribute(Qt.AA_UseHighDpiPixmaps)  # Make sure all icons use HiDPI - toolbars don't by default, so force it.
+        if qt_version_preference == '5':
+            app.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps)  # Make sure all icons use HiDPI - toolbars don't by default, so force it.
 
         if splash is not None:
-            splash.showMessage(tr('\n\nVDU Controls\nLooking for DDC monitors...\n'), Qt.AlignTop | Qt.AlignHCenter)
+            splash.showMessage(tr('\n\nVDU Controls\nLooking for DDC monitors...\n'), Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
 
         def _splash_message_action(message) -> None:
             if splash is not None:
                 log_info(f"splash_message: {repr(message)}")
-                splash.showMessage(f"\n\n{APPNAME} {VDU_CONTROLS_VERSION}\n{message}", Qt.AlignTop | Qt.AlignHCenter)
+                splash.showMessage(f"\n\n{APPNAME} {VDU_CONTROLS_VERSION}\n{message}", Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
 
         self.splash_message_qtsignal.connect(_splash_message_action)
 
-        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        self.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
 
         self.main_controller.configure_application(self)
 
         self.inactive_pause_millis = int(os.environ.get('VDU_CONTROLS_INACTIVE_PAUSE_MILLIS', default='1200'))
         self.active_event_count = 0
-        qApp.applicationStateChanged.connect(self.on_application_state_changed)
+        app.applicationStateChanged.connect(self.on_application_state_changed)
         self.installEventFilter(self)
 
         if self.tray is not None:
@@ -8764,15 +8797,15 @@ class VduAppWindow(QMainWindow):
 
         if main_config.file_path is None or main_config.ini_content.get_version() < VDU_CONTROLS_VERSION_TUPLE:  # New version...
             release_alert = MBox(
-                MBox.Information,
+                MIcon.Information,
                 msg=RELEASE_ANNOUNCEMENT.format(WELCOME=tr(RELEASE_WELCOME), NOTE=tr(RELEASE_NOTE), VERSION=VDU_CONTROLS_VERSION),
-                info=RELEASE_INFO, buttons=MBox.Close)
-            release_alert.setTextFormat(Qt.RichText)
+                info=RELEASE_INFO, buttons=MButton.Close)
+            release_alert.setTextFormat(Qt.TextFormat.RichText)
             release_alert.exec()
             main_config.write_file(ConfIni.get_path('vdu_controls'), overwrite=True)  # Stops release notes from being repeated.
 
     def is_inactive(self):
-        if qApp.applicationState() != Qt.ApplicationState.ApplicationInactive:
+        if QApplication.instance().applicationState() != Qt.ApplicationState.ApplicationInactive:
             return False
         for top_level_widget in QApplication.topLevelWidgets():  # Check if any dialogs are active
             if isinstance(top_level_widget, DialogSingletonMixin) or isinstance(top_level_widget, GreyScaleDialog):
@@ -8795,7 +8828,7 @@ class VduAppWindow(QMainWindow):
 
     def eventFilter(self, target: QObject, event: QEvent) -> bool:
         # log_info(f"eventFilter {event.__class__.__name__} {event.type()}")
-        if event.type() in (QEvent.Move, QEvent.Resize, QEvent.WindowActivate):  # Still active if being moved or resized
+        if event.type() in (QEvent.Type.Move, QEvent.Type.Resize, QEvent.Type.WindowActivate):  # Still active if being moved or resized
             self.active_event_count += 1
         return super().eventFilter(target, event)
 
@@ -8824,7 +8857,7 @@ class VduAppWindow(QMainWindow):
 
     def quit_app(self) -> None:
         self.app_save_window_state()
-        self.app.quit()
+        QApplication.instance().quit()
         sys.exit(0)  # Just in case self.app.quit() errors
 
     def initialise_app_icon(self, splash_pixmap: QPixmap | None = None):
@@ -8877,7 +8910,7 @@ class VduAppWindow(QMainWindow):
         self.scroll_area.setWidget(self.main_panel)
         self.setCentralWidget(self.scroll_area)
 
-        available_height = QDesktopWidget().availableGeometry().height() - 200  # Minus allowance for panel/tray
+        available_height = QApplication.primaryScreen().availableGeometry().height() - 200  # Minus allowance for panel/tray
         hint_height = self.main_panel.sizeHint().height()  # The hint is the actual required layout space
         hint_width = self.main_panel.sizeHint().width()
         log_debug(f"create_main_control_panel: {hint_height=} {available_height=} {self.minimumHeight()=}")
@@ -8939,7 +8972,7 @@ class VduAppWindow(QMainWindow):
 
         if self.windowTitle() != title:  # Don't change if not needed - prevent flickering.
             self.setWindowTitle(title)
-            self.app.setWindowIcon(create_decorated_app_icon(self.app_icon, tray_embedded_icon, led1_color, led2_color))
+            QApplication.instance().setWindowIcon(create_decorated_app_icon(self.app_icon, tray_embedded_icon, led1_color, led2_color))
         if self.tray:
             self.tray.setToolTip(title)
             self.tray.setIcon(create_decorated_app_icon(self.tray_icon, tray_embedded_icon, led1_color, led2_color))
@@ -8991,8 +9024,8 @@ class VduAppWindow(QMainWindow):
         # system tray is.  Under Linux Qt the position of the tray icon is reported as 0,0, so we can't use that.
         cursor_x, cursor_y = QCursor.pos().x(), QCursor.pos().y()
         app_width, app_height = self.geometry().width(), self.geometry().height()
-        desktop_width, desktop_height = (QApplication.desktop().availableGeometry().width(),
-                                         QApplication.desktop().availableGeometry().height())
+        desktop_width, desktop_height = (QApplication.primaryScreen().availableGeometry().width(),
+                                         QApplication.primaryScreen().availableGeometry().height())
         # The following calculations allow for the tray being on any edge of the desktop...
         margin = min(abs(desktop_height - cursor_y), abs(desktop_width - cursor_x), 100) + 25 if self.tray else 0
         x = cursor_x - app_width - margin if cursor_x > app_width else cursor_x + margin
@@ -9011,7 +9044,7 @@ class VduAppWindow(QMainWindow):
 
     def event(self, event: QEvent) -> bool:
         # PalletChange happens after the new style sheet is in use.
-        if event.type() == QEvent.PaletteChange:
+        if event.type() == QEvent.Type.PaletteChange:
             log_info("PaletteChange event: New style sheet in use, update icons")
             self.initialise_app_icon()
             self.update_status_indicators(palette_change=True)
@@ -9027,7 +9060,7 @@ class VduAppWindow(QMainWindow):
         else:
             problem_text = str(ddcutil_problem)
         log_error(f"Most recent error: {problem_text}".encode("unicode_escape").decode("utf-8"))
-        MBox(MBox.Critical, msg=tr('No controllable monitors found.'),
+        MBox(MIcon.Critical, msg=tr('No controllable monitors found.'),
              info=tr("Is ddcutil or ddcutil-service installed and working?") + "\n\n" +
                   tr("Most recent error: {}").format(problem_text) + "\n" + '_' * 80).exec()
 
@@ -9040,23 +9073,23 @@ class VduAppWindow(QMainWindow):
                   '\n 3: Apply standard brightness and contrast controls.'
                   '\n 4: Permanently discard this monitor from use with vdu_controls.'
                   '\n\nPossibly just a timing error, maybe a retry will work\n(see Settings: sleep multiplier)\n\n')
-        choice = MBox(MBox.Critical, msg=msg, info=info, buttons=MBox.Discard | MBox.Ignore | MBox.Apply | MBox.Retry).exec()
-        if choice == MBox.Discard:
-            MBox(MBox.Information, msg=tr('Discarding {} monitor.').format(model_name),
+        choice = MBox(MIcon.Critical, msg=msg, info=info, buttons=MButton.Discard | MButton.Ignore | MButton.Apply | MButton.Retry).exec()
+        if choice == MButton.Discard:
+            MBox(MIcon.Information, msg=tr('Discarding {} monitor.').format(model_name),
                  info=tr('Remove "{}" from {} capabilities override to reverse this decision.').format(IGNORE_VDU_MARKER_STR,
                                                                                                        model_name)).exec()
             return VduController.DISCARD_VDU
-        elif choice == MBox.Ignore:
-            MBox(MBox.Information, msg=tr('Ignoring {} monitor for now.').format(model_name),
+        elif choice == MButton.Ignore:
+            MBox(MIcon.Information, msg=tr('Ignoring {} monitor for now.').format(model_name),
                  info=tr('Will retry when vdu_controls is next started')).exec()
             return VduController.IGNORE_VDU
-        elif choice == MBox.Apply:
-            MBox(MBox.Information, msg=tr('Assuming {} has brightness and contrast controls.').format(model_name),
+        elif choice == MButton.Apply:
+            MBox(MIcon.Information, msg=tr('Assuming {} has brightness and contrast controls.').format(model_name),
                  info=tr('Wrote {} config files to {}.').format(model_name, CONFIG_DIR_PATH) +
                       tr('\nPlease check these files and edit or remove them if they '
                          'cause further issues.')).exec()
             return VduController.ASSUME_STANDARD_CONTROLS
-        elif choice == MBox.Retry:
+        elif choice == MButton.Retry:
             return VduController.NORMAL_VDU
         return VduController.IGNORE_VDU
 
@@ -9086,7 +9119,7 @@ class SignalWakeupHandler(QtNetwork.QAbstractSocket):
     received_unix_signal_qtsignal = pyqtSignal(int)
 
     def __init__(self, parent=None) -> None:
-        super().__init__(QtNetwork.QAbstractSocket.UdpSocket, parent)
+        super().__init__(QtNetwork.QAbstractSocket.SocketType.UdpSocket, parent)
         self.old_fd = None
         self.wsock, self.rsock = socket.socketpair(type=socket.SOCK_DGRAM)  # Create a socket pair
         self.setSocketDescriptor(self.rsock.fileno())  # Let Qt listen on the one end
@@ -9310,12 +9343,15 @@ def main() -> None:
     QGuiApplication.setDesktopFileName("vdu_controls")  # Wayland needs this set to find/use the app's desktop icon.
     # Call QApplication before parsing arguments, it will parse and remove Qt session restoration arguments.
     app = QApplication(sys.argv)
+    log_info(f"{app.applicationName()=} {QApplication.instance().applicationName()=}")
     global unix_signal_handler
     unix_signal_handler = SignalWakeupHandler(app)
 
     log_info(f"{APPNAME} {VDU_CONTROLS_VERSION} {sys.argv[0]}  ")
     log_info(f"python-locale: {locale.getlocale()} Qt-locale: {QLocale.system().name()}")
-    log_info(f"platform: {QGuiApplication.platformName()}")
+    log_info(f"desktop: {os.environ.get('XDG_CURRENT_DESKTOP', default='unknown')}; "
+             f"session-type: {os.environ.get('XDG_SESSION_TYPE', default='unknown')}; "
+             f"platform: {QApplication.platformName()}; Qt: {QtCore.qVersion()}")
     log_info(f"app-style: {app.style().objectName()} (detected a {'dark' if is_dark_theme() else 'light'} theme)")
 
     args = main_config.parse_global_args()
@@ -9344,23 +9380,23 @@ def main() -> None:
         initialise_locale_translations(app)
 
     main_controller = VduAppController(main_config)
-    VduAppWindow(main_config, app, main_controller)  # may need to assign this to a variable to prevent garbage collection?
+    VduAppWindow(main_config, main_controller)  # may need to assign this to a variable to prevent garbage collection?
 
     if args.about:
         AboutDialog.invoke(main_controller)
     if args.create_config_files:
         main_controller.create_config_files()
 
-    rc = app.exec_()
+    rc = app.exec()
     log_info(f"App exit {rc=} {'EXIT_CODE_FOR_RESTART' if rc == EXIT_CODE_FOR_RESTART else ''}")
     if rc == EXIT_CODE_FOR_RESTART:
         rc = 0
         log_info(f"Trying to restart - this only works if {app.arguments()[0]} is executable and on your PATH): ", )
         restart_status = QProcess.startDetached(app.arguments()[0], app.arguments()[1:])
         if not restart_status:
-            MBox(MBox.Critical, msg=tr("Restart of {} failed.  Please restart manually.").format(app.arguments()[0]),
+            MBox(MIcon.Critical, msg=tr("Restart of {} failed.  Please restart manually.").format(app.arguments()[0]),
                  info=tr("This is probably because {} is not executable or is not on your PATH.").format(app.arguments()[0]),
-                 buttons=MBox.Close).exec()
+                 buttons=MButton.Close).exec()
     sys.exit(rc)
 
 
