@@ -864,7 +864,7 @@ from threading import Lock
 from typing import List, Tuple, Mapping, Type, Dict, Callable, Any, NewType
 from urllib.error import URLError
 
-qt_version_preference=os.environ.get('VDU_CONTROLS_QT_VERSION', '6')  # Change to '5' to force the use of Qt5
+qt_version_preference = os.environ.get('VDU_CONTROLS_QT_VERSION', '6')  # Change to '5' to force the use of Qt5
 if qt_version_preference == '6':
     try:
         from PyQt6 import QtCore, QtNetwork
@@ -882,7 +882,8 @@ if qt_version_preference == '6':
             QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, \
             QSpacerItem, QListWidget, QListWidgetItem
         os.environ['QT_ENABLE_HIGHDPI_SCALING'] = '0'  # Only way to duplicate qt5 look without reworking all layouts
-    except (ImportError, ModuleNotFoundError) as e:
+    except (ImportError, ModuleNotFoundError) as no_qt6_exc:
+        print(f"Failed to import PyQt6: {repr(no_qt6_exc)}", file=sys.stderr)
         qt_version_preference = '5'
 if qt_version_preference == '5':
     from PyQt5 import QtCore, QtNetwork
@@ -902,7 +903,7 @@ if qt_version_preference == '5':
 StdPixmap = QStyle.StandardPixmap
 
 APPNAME = "VDU Controls"
-VDU_CONTROLS_VERSION = '2.4.0'
+VDU_CONTROLS_VERSION = '2.5.0'
 VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in VDU_CONTROLS_VERSION.split('.'))
 assert sys.version_info >= (3, 8), f'{APPNAME} utilises python version 3.8 or greater (your python is {sys.version}).'
 
@@ -950,7 +951,7 @@ Shortcut = namedtuple('Shortcut', ['letter', 'annotated_word'])
 gui_thread: QThread | None = None
 
 
-def intV(type_id: QMetaType|int) -> int:
+def intV(type_id: QMetaType.Type|int) -> int:
     return type_id.value if isinstance(type_id, Enum) else type_id  # awfulness of enums in pyqt6
 
 
@@ -1098,7 +1099,7 @@ RELEASE_ANNOUNCEMENT = """<h3>{WELCOME}</h3>{NOTE}<br/>
 <a href="https://github.com/digitaltrails/vdu_controls/releases/tag/v{VERSION}">
 https://github.com/digitaltrails/vdu_controls/releases/tag/v{VERSION}</a>
 <br/>___________________________________________________________________________"""
-RELEASE_INFO = QT_TR_NOOP('New Feature Release: semi-automatic brightness adjustment by geolocation.')
+RELEASE_INFO = QT_TR_NOOP('Portability Release: PyQt5 and PyQT6 compatibility.')
 
 CONFIG_DIR_PATH = Path.home().joinpath('.config', 'vdu_controls')
 CURRENT_PRESET_NAME_FILE = CONFIG_DIR_PATH.joinpath('current_preset.txt')
@@ -4378,7 +4379,7 @@ class BulkChangeWorker(WorkerThread):
     def __init__(self, name: str, main_controller: VduAppController,
                  progress_callable: Callable[[BulkChangeWorker], None],
                  finished_callable: Callable[[BulkChangeWorker], None],
-                 step_interval: float = 0.0, ignore_others: bool = True, context: object|None = None) -> None:
+                 step_interval: float = 0.0, ignore_others: bool = True, context: Any = None) -> None:
         super().__init__(task_body=self._perform_changes, task_finished=finished_callable)  # type: ignore
         log_debug(f"BulkChangeHandler: {name} init {ignore_others=}") if log_debug_enabled else None
         self.name = name
@@ -6351,7 +6352,7 @@ class LuxGaugeWidget(QWidget):
                             "\t     the set geolocation for the current day.\n"
                             "\t 2) Estimated inside illumination (Ei = DF * Eo).\n"
                             "________________________________________________________________________________\n"
-                            "Daylight Factor DF = ML/Eo\n" \
+                            "Daylight Factor DF = ML/Eo\n"
                             "Eo = unit_constants * sin(radians(solar_altitude)) * 10 ** (-0.1 * air_mass)\n"
                             "Estimates of Ei are used by the semi-automatic metering option.")
         self.setToolTip(self.help_text)
@@ -6833,7 +6834,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         finally:
             log_info(f"LuxAuto: exiting (stop_requested={self.stop_requested}) {thread_pid()=}")
 
-    def assemble_required_work(self, lux_auto_controller: LuxAutoController, metered_lux: int, requires_smoothing) -> List[LuxToDo]:
+    def assemble_required_work(self, lux_auto_controller: LuxAutoController, metered_lux: float, requires_smoothing) -> List[LuxToDo]:
         lux = self.smoother.smooth(metered_lux) if requires_smoothing else metered_lux
         summary_text = self.lux_summary(metered_lux, lux)
         self.status_message(f"{SUN_SYMBOL} {summary_text} {PROCESSING_LUX_SYMBOL}", timeout=3000)
@@ -9125,7 +9126,7 @@ class SignalWakeupHandler(QtNetwork.QAbstractSocket):
         self.setSocketDescriptor(self.rsock.fileno())  # Let Qt listen on the one end
         self.wsock.setblocking(False)  # And let Python write on the other end
         self.old_fd = signal.set_wakeup_fd(self.wsock.fileno())
-        # First Python code executed gets any exception from the signal handler, so add a dummy handler first
+        # First Python code executed gets any exception from the signal handler, so add a do-nothing handler first
         self.readyRead.connect(lambda: None)
         self.readyRead.connect(self._readSignal)  # Second handler does the real handling
 
