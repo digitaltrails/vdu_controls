@@ -850,7 +850,7 @@ import threading
 import time
 import traceback
 import urllib.request
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 from ast import literal_eval
 from collections import namedtuple
 from contextlib import contextmanager
@@ -864,7 +864,7 @@ from threading import Lock
 from typing import List, Tuple, Mapping, Type, Dict, Callable, Any, NewType
 from urllib.error import URLError
 
-qt_version_preference=os.environ.get('VDU_CONTROLS_QT_VERSION', '6')  # Change to '5' to force the use of Qt5
+qt_version_preference = os.environ.get('VDU_CONTROLS_QT_VERSION', '6')  # Change to '5' to force the use of Qt5
 if qt_version_preference == '6':
     try:
         from PyQt6 import QtCore, QtNetwork
@@ -882,7 +882,8 @@ if qt_version_preference == '6':
             QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, \
             QSpacerItem, QListWidget, QListWidgetItem
         os.environ['QT_ENABLE_HIGHDPI_SCALING'] = '0'  # Only way to duplicate qt5 look without reworking all layouts
-    except (ImportError, ModuleNotFoundError) as e:
+    except (ImportError, ModuleNotFoundError) as no_qt6_exc:
+        print(f"Failed to import PyQt6: {repr(no_qt6_exc)}", file=sys.stderr)
         qt_version_preference = '5'
 if qt_version_preference == '5':
     from PyQt5 import QtCore, QtNetwork
@@ -902,7 +903,7 @@ if qt_version_preference == '5':
 StdPixmap = QStyle.StandardPixmap
 
 APPNAME = "VDU Controls"
-VDU_CONTROLS_VERSION = '2.4.0'
+VDU_CONTROLS_VERSION = '2.5.0'
 VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in VDU_CONTROLS_VERSION.split('.'))
 assert sys.version_info >= (3, 8), f'{APPNAME} utilises python version 3.8 or greater (your python is {sys.version}).'
 
@@ -950,7 +951,7 @@ Shortcut = namedtuple('Shortcut', ['letter', 'annotated_word'])
 gui_thread: QThread | None = None
 
 
-def intV(type_id: QMetaType|int) -> int:
+def intV(type_id: QMetaType.Type|int) -> int:
     return type_id.value if isinstance(type_id, Enum) else type_id  # awfulness of enums in pyqt6
 
 
@@ -1098,7 +1099,7 @@ RELEASE_ANNOUNCEMENT = """<h3>{WELCOME}</h3>{NOTE}<br/>
 <a href="https://github.com/digitaltrails/vdu_controls/releases/tag/v{VERSION}">
 https://github.com/digitaltrails/vdu_controls/releases/tag/v{VERSION}</a>
 <br/>___________________________________________________________________________"""
-RELEASE_INFO = QT_TR_NOOP('New Feature Release: semi-automatic brightness adjustment by geolocation.')
+RELEASE_INFO = QT_TR_NOOP('Portability Release: PyQt5 and PyQT6 compatibility.')
 
 CONFIG_DIR_PATH = Path.home().joinpath('.config', 'vdu_controls')
 CURRENT_PRESET_NAME_FILE = CONFIG_DIR_PATH.joinpath('current_preset.txt')
@@ -3360,11 +3361,11 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
 class SettingsEditorLineBase(SettingsEditorFieldBase):
     def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
         super().__init__(section_editor, option, section, tooltip)
-        layout = QHBoxLayout()
-        layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        self.setLayout(layout)
+        self.layout = QHBoxLayout()
+        self.layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.setLayout(self.layout)
         self.text_label = QLabel(self.translate_option())
-        layout.addWidget(self.text_label)
+        self.layout.addWidget(self.text_label)
         self.text_input = QLineEdit()
         self.validator: QValidator | None = None
         self.valid_palette = self.text_input.palette()
@@ -3374,7 +3375,7 @@ class SettingsEditorLineBase(SettingsEditorFieldBase):
         self.text_input.inputRejected.connect(partial(self.set_error_indication, True))
         self.text_input.textEdited.connect(partial(self.set_error_indication, False))
         self.text_input.editingFinished.connect(self.editing_finished)
-        layout.addWidget(self.text_input)
+        self.layout.addWidget(self.text_input)
 
     def editing_finished(self) -> None:
         text = self.text_input.text()
@@ -3467,8 +3468,8 @@ class SettingsEditorLocationWidget(SettingsEditorLineBase):
 
         detect_location_button = StdButton(title=tr("Detect"), clicked=_detection_location,
                                            tip=tr("Detect location by querying this desktop's external IP address."))
-        self.layout().addWidget(detect_location_button)
-        self.layout().addStretch(1)
+        self.layout.addWidget(detect_location_button)
+        self.layout.addStretch(1)
 
     def retrieve_ipinfo(self) -> Mapping:
         #  https://stackoverflow.com/a/55432323/609575
@@ -3590,7 +3591,7 @@ class VduException(Exception):
         return f"VduException: {self.vdu_description} op={self.operation} attr={self.attr_id} {self.cause}"
 
 
-class VduControlBase(QWidget):
+class VduControlBase(ABC, QWidget):
     """Base GUI control for a DDC attribute."""
 
     _refresh_ui_view_in_gui_thread_qtsignal = pyqtSignal()
@@ -4378,7 +4379,7 @@ class BulkChangeWorker(WorkerThread):
     def __init__(self, name: str, main_controller: VduAppController,
                  progress_callable: Callable[[BulkChangeWorker], None],
                  finished_callable: Callable[[BulkChangeWorker], None],
-                 step_interval: float = 0.0, ignore_others: bool = True, context: object|None = None) -> None:
+                 step_interval: float = 0.0, ignore_others: bool = True, context: Any = None) -> None:
         super().__init__(task_body=self._perform_changes, task_finished=finished_callable)  # type: ignore
         log_debug(f"BulkChangeHandler: {name} init {ignore_others=}") if log_debug_enabled else None
         self.name = name
@@ -5591,7 +5592,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
     def vip_menu_triggered(self, action: QAction):
         vdu_stable_id = action.data()
         if MBox(MIcon.Information, msg=tr('Create an initialization-preset for {}.').format(action.text()),
-                info=tr('Initialization-presets are restored  at startup or when ever the VDU is subsequently detected.'),
+                info=tr('Initialization-presets are restored at startup or when ever the VDU is subsequently detected.'),
                 buttons=MBtn.Ok | MBtn.Cancel).exec() == MBtn.Cancel:
             return
         self.preset_name_edit.setText(vdu_stable_id)
@@ -6351,7 +6352,7 @@ class LuxGaugeWidget(QWidget):
                             "\t     the set geolocation for the current day.\n"
                             "\t 2) Estimated inside illumination (Ei = DF * Eo).\n"
                             "________________________________________________________________________________\n"
-                            "Daylight Factor DF = ML/Eo\n" \
+                            "Daylight Factor DF = ML/Eo\n"
                             "Eo = unit_constants * sin(radians(solar_altitude)) * 10 ** (-0.1 * air_mass)\n"
                             "Estimates of Ei are used by the semi-automatic metering option.")
         self.setToolTip(self.help_text)
@@ -6833,7 +6834,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         finally:
             log_info(f"LuxAuto: exiting (stop_requested={self.stop_requested}) {thread_pid()=}")
 
-    def assemble_required_work(self, lux_auto_controller: LuxAutoController, metered_lux: int, requires_smoothing) -> List[LuxToDo]:
+    def assemble_required_work(self, lux_auto_controller: LuxAutoController, metered_lux: float, requires_smoothing) -> List[LuxToDo]:
         lux = self.smoother.smooth(metered_lux) if requires_smoothing else metered_lux
         summary_text = self.lux_summary(metered_lux, lux)
         self.status_message(f"{SUN_SYMBOL} {summary_text} {PROCESSING_LUX_SYMBOL}", timeout=3000)
@@ -7771,7 +7772,7 @@ class LuxAmbientSlider(QWidget):
 
         col = 0
         log10_icon_size = QSize(native_font_height(scaled=1), native_font_height(scaled=1))
-        self.label_map: Dict[QLabel, bytes] = {}
+        self.label_map: Dict[StdButton, bytes] = {}
         for zone in reversed(self.zones):
             log10_button = StdButton(icon=create_icon_from_svg_bytes(zone.icon_svg), icon_size=log10_icon_size,
                                      clicked=partial(self.lux_input_field.setValue, zone.icon_svg_lux), flat=True, tip=zone.name)
@@ -7804,6 +7805,7 @@ class LuxAmbientSlider(QWidget):
                 if source == self.slider or source == self.lux_input_field or non_semi_auto_meter:
                     if location := self.controller.main_controller.main_config.get_location():
                         LuxMeterSemiAutoDevice.set_location(location)  # in case it's changed
+                        # TODO - if not in semi-auto, don't update this too often
                         LuxMeterSemiAutoDevice.update_df_from_lux_value(self.current_value, non_semi_auto_meter)
             finally:
                 self.in_flux = False
@@ -8169,8 +8171,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             if self.main_config.is_set(ConfOpt.WARNINGS_ENABLED):
                 self.main_window.show_no_controllers_error_dialog(ddcutil_problem)
         if self.main_config.is_set(ConfOpt.ORDER_BY_NAME):
-            self.vdu_controllers_map = {c.vdu_stable_id: c for c in
-                                        sorted(self.vdu_controllers_map.values(), key=VduController.get_vdu_preferred_name)}
+            self.vdu_controllers_map = {
+                c.vdu_stable_id: c for c in sorted(self.vdu_controllers_map.values(), key=VduController.get_vdu_preferred_name)}
 
     def settings_changed(self, changed_settings: List) -> None:
         if changed_settings is None:  # Special value - means settings have been reset/removed - needs restart.
@@ -9125,7 +9127,7 @@ class SignalWakeupHandler(QtNetwork.QAbstractSocket):
         self.setSocketDescriptor(self.rsock.fileno())  # Let Qt listen on the one end
         self.wsock.setblocking(False)  # And let Python write on the other end
         self.old_fd = signal.set_wakeup_fd(self.wsock.fileno())
-        # First Python code executed gets any exception from the signal handler, so add a dummy handler first
+        # First Python code executed gets any exception from the signal handler, so add a do-nothing handler first
         self.readyRead.connect(lambda: None)
         self.readyRead.connect(self._readSignal)  # Second handler does the real handling
 
