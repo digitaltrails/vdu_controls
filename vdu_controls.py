@@ -850,7 +850,6 @@ import threading
 import time
 import traceback
 import urllib.request
-from abc import abstractmethod, ABC
 from ast import literal_eval
 from collections import namedtuple
 from contextlib import contextmanager
@@ -3627,11 +3626,9 @@ class VduControlBase(QWidget):
             return  # Avoid repeating a setvcp by skipping the physical change
         self.controller.set_vcp_value_asynchronously(self.vcp_capability.vcp_code, new_value, VcpOrigin.NORMAL)
 
-    @abstractmethod
     def get_current_text_value(self) -> str | None:  # Return text in correct base: continuous->base10 non-continuous->base16
         assert False, "subclass failed to implement get_current_text_value"
 
-    @abstractmethod
     def refresh_ui_view_implementation(self):  # Subclasses to implement
         assert False, "subclass failed to implement refresh_ui_view_implementation"
 
