@@ -3553,7 +3553,7 @@ class SettingsEditorPathWidget(SettingsEditorLineBase):
             self.text_input.setText(new_path)
             self.editing_finished()
 
-        self.layout().addWidget(StdButton(si(self, StdPixmap.SP_DriveFDIcon), clicked =_choose_emulator))
+        self.layout.addWidget(StdButton(si(self, StdPixmap.SP_DriveFDIcon), clicked =_choose_emulator))
         self.validator = SettingsEditorPathValidator()
 
 
@@ -3591,7 +3591,7 @@ class VduException(Exception):
         return f"VduException: {self.vdu_description} op={self.operation} attr={self.attr_id} {self.cause}"
 
 
-class VduControlBase(ABC, QWidget):
+class VduControlBase(QWidget):
     """Base GUI control for a DDC attribute."""
 
     _refresh_ui_view_in_gui_thread_qtsignal = pyqtSignal()
