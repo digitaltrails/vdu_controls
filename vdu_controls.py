@@ -8368,25 +8368,25 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         log_debug(f"restore_preset: '{preset.name}' released application_lock") if log_debug_enabled else None
 
     def restore_vdu_initialization_presets(self):
-
-        def _restored_initialization_preset(worker: BulkChangeWorker) -> None:
-            if worker.vdu_exception is not None:
-                log_error(f"Error during restoration of '{worker.preset.name}'")
-                self.status_message(tr("Error during restoration preset {}").format(worker.preset.name), timeout=5)
-                return
-            log_info(f"Restored initialization-preset '{worker.context.name}'")
-            message = tr("Restored Preset\n{}").format(worker.context.name)
-            self.status_message(message, timeout=5)
-            self.main_window.splash_message_qtsignal.emit(message)
-            time.sleep(1.0)  # Pause to give the message time to display - TODO find non-delaying solution
-            self.main_window.update_status_indicators()  # Refresh to restore other non-init preset icons
-
         # Find presets that match the name of each VDU name+serial and restore them...
         for stable_id in self.vdu_controllers_map.keys():
             for preset in self.preset_controller.find_presets_map().values():
                 preset_proper_name = proper_name(preset.name)
                 if stable_id == preset_proper_name:
                     log_info(f"Found initialization-preset for {stable_id}")
+
+                    def _restored_initialization_preset(worker: BulkChangeWorker) -> None:
+                        if worker.vdu_exception is not None:
+                            log_error(f"Error during restoration of '{preset.name}'")
+                            self.status_message(tr("Error during restoration preset {}").format(preset.name), timeout=5)
+                            return
+                        log_info(f"Restored initialization-preset '{worker.context.name}'")
+                        message = tr("Restored Preset\n{}").format(worker.context.name)
+                        self.status_message(message, timeout=5)
+                        self.main_window.splash_message_qtsignal.emit(message)
+                        time.sleep(1.0)  # Pause to give the message time to display - TODO find non-delaying solution
+                        self.main_window.update_status_indicators()  # Refresh to restore other non-init preset icons
+
                     self.restore_preset(preset, finished_func=_restored_initialization_preset, initialization_preset=True)
 
     def schedule_create_timetable(self, start_of_day: datetime, location: GeoLocation) -> Dict[datetime, Preset]:
