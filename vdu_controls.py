@@ -6245,7 +6245,7 @@ class LuxProfileChart(QLabel):
             ask_preset = QInputDialog()
             ask_preset.setComboBoxItems(list(presets.keys()))
             ask_preset.setOption(QInputDialog.InputDialogOption.UseListViewForComboBoxItems)
-            if ask_preset.exec() == QDialog.Accepted:
+            if ask_preset.exec() == QInputDialog.DialogCode.Accepted:
                 preset_name = ask_preset.textValue()
                 if preset := self.main_controller.find_preset_by_name(preset_name):
                     point = LuxPoint(self.lux_from_x(x), -1, preset_name)
