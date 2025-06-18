@@ -5262,6 +5262,7 @@ class PresetChooseElevationWidget(QWidget):
         self.location: GeoLocation | None = main_config.get_location()
 
         layout = QVBoxLayout()
+        layout.setSizeConstraint(QVBoxLayout.SizeConstraint.SetMinimumSize)
         self.setLayout(layout)
         self.title_prefix = tr("Solar elevation trigger: ")
         self.title_label = QLabel(self.title_prefix)
