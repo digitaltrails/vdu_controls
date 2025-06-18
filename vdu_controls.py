@@ -5004,7 +5004,7 @@ class PresetChooseElevationChart(QLabel):
 
     def __init__(self) -> None:
         super().__init__()
-        self.setMinimumSize(native_pixels(200), native_pixels(150))
+        self.setMinimumSize(native_pixels(200), native_pixels(250))
         self.sun_image: QImage | None = None
         self.setMouseTracking(True)
         self.in_drag = False
@@ -5498,6 +5498,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.editor_groupbox.setFlat(True)
         self.editor_groupbox.setMinimumSize(native_pixels(550), native_pixels(768))
         self.editor_layout = QVBoxLayout()
+        self.editor_layout.setSizeConstraint(QVBoxLayout.SizeConstraint.SetMinimumSize)
         self.editor_title = QLabel(tr("New Preset:"))
         self.editor_title.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed))
         self.editor_layout.addWidget(self.editor_title)
