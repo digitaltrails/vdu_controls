@@ -5169,7 +5169,7 @@ class PresetChooseElevationChart(QLabel):
                 # Draw the sun
                 painter.setPen(QPen(QColor(0xff4a23), std_line_width))
                 if self.sun_image is None:
-                    self.sun_image = create_image_from_svg_bytes(BRIGHTNESS_SVG.replace(SVG_LIGHT_THEME_COLOR, b"#ffdd30"))
+                    self.sun_image = create_image_from_svg_bytes(SUN_SVG.replace(SVG_LIGHT_THEME_COLOR, b"#fecf70"))
                 painter.drawImage(QPoint(_reverse_x(sun_plot_x) - self.sun_image.width() // 2,
                                          sun_plot_y - self.sun_image.height() // 2), self.sun_image)
 
