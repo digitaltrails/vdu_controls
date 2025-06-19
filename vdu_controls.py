@@ -5042,28 +5042,39 @@ class PresetChooseElevationChart(QLabel):
             self.create_plot()
 
     def create_plot(self) -> None:
-        ev_key = self.elevation_key
-        width, height = self.width(), self.height()
-        origin_iy, range_iy = round(height / 2), round(self.height() / 2.5)
-        self.horizon_y = origin_iy
-        self.radius_of_deletion = round(width / 10)
-        std_line_width = 4
 
-        pixmap = QPixmap(width, height)
+        def phys(value: int) -> int:  # QPixmap is drawn using physical pixels - convert logical dimensions to physical
+            return value if dp_ratio == 1.0 else round(0.5 + value / dp_ratio)
+
+        dp_ratio = QApplication.primaryScreen().devicePixelRatio()
+        log_debug(f"devicePixelRatio {dp_ratio=}")
+
+        ev_key = self.elevation_key
+        logical_width, logical_height = self.width(), self.height()
+        origin_iy, range_iy = round(logical_height / 2), round(logical_height / 2.5)
+        self.horizon_y = origin_iy
+        self.radius_of_deletion = round(logical_width / 10)
+        line_width = phys(4)
+        thin_line_width = phys(2)
+
+        pixmap = QPixmap(round(logical_width * dp_ratio), round(logical_height * dp_ratio))
+
+        pixmap.setDevicePixelRatio(dp_ratio)
         painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing);
 
         def _reverse_x(x_val: int) -> int:  # makes thinking right-to-left a bit easier. MAYBE
-            return width - x_val
+            return logical_width - x_val
 
-        painter.fillRect(0, 0, width, origin_iy, QColor(0x5b93c5))
-        painter.fillRect(0, origin_iy, width, height, QColor(0x7d5233))
-        painter.setPen(QPen(Qt.GlobalColor.white, std_line_width))  # Horizon
-        painter.drawLine(0, origin_iy, width, origin_iy)
+        painter.fillRect(0, 0, logical_width, origin_iy, QColor(0x5b93c5))
+        painter.fillRect(0, origin_iy, logical_width, logical_height, QColor(0x7d5233))
+        painter.setPen(QPen(Qt.GlobalColor.white, line_width))  # Horizon
+        painter.drawLine(0, origin_iy, logical_width, origin_iy)
 
         if self.location is not None:
             # Perform computations for today's curve and maxima.
             today = zoned_now().replace(hour=0, minute=0)
-            sun_plot_x = sun_plot_y = sys.maxsize  # initialize to out of bounds value
+            sun_plot_x = sun_plot_y = sys.maxsize  # initialize to out-of-bounds value
             sun_plot_time: datetime | None = None
             max_sun_height = -90.0
             solar_noon_x, solar_noon_y = 0, 0  # Solar noon
@@ -5071,7 +5082,7 @@ class PresetChooseElevationChart(QLabel):
             curve_points = []
             while t.day == today.day:
                 second_of_day = (t - today).total_seconds()
-                x = round(width * second_of_day / (60.0 * 60.0 * 24.0))
+                x = round(logical_width * second_of_day / (60.0 * 60.0 * 24.0))
                 a, z = calc_solar_azimuth_zenith(t, self.location.latitude, self.location.longitude)
                 sun_height = math.sin(math.radians(90.0 - z)) * range_iy
                 y = origin_iy - round(sun_height)
@@ -5092,19 +5103,19 @@ class PresetChooseElevationChart(QLabel):
             self.noon_y = solar_noon_y
 
             # Draw an elevation curve for today from the accumulated plot points:
-            painter.setPen(QPen(QColor(0xff965b), std_line_width))
+            painter.setPen(QPen(QColor(0xff965b), line_width))
             painter.drawPoints(QPolygon(curve_points))
 
             # Draw various annotations such the horizon-line, noon-line, E & W, and the current degrees:
-            painter.setPen(QPen(Qt.GlobalColor.white, std_line_width))
-            painter.drawLine(_reverse_x(0), origin_iy, _reverse_x(width), origin_iy)
+            painter.setPen(QPen(Qt.GlobalColor.white, line_width))
+            painter.drawLine(_reverse_x(0), origin_iy, _reverse_x(logical_width), origin_iy)
             painter.drawLine(_reverse_x(solar_noon_x), origin_iy, _reverse_x(solar_noon_x), 0)
-            painter.setPen(QPen(Qt.GlobalColor.white, std_line_width))
-            painter.setFont(QFont(QApplication.font().family(), width // 20, QFont.Weight.Bold))
-            painter.drawText(QPoint(_reverse_x(70), origin_iy - 32), tr("E"))
-            painter.drawText(QPoint(_reverse_x(width - 25), origin_iy - 32), tr("W"))
+            painter.setPen(QPen(Qt.GlobalColor.white, line_width))
+            painter.setFont(QFont(QApplication.font().family(), 18, QFont.Weight.Bold))
+            painter.drawText(QPoint(_reverse_x(phys(70)), origin_iy - phys(32)), tr("E"))
+            painter.drawText(QPoint(_reverse_x(logical_width - phys(25)), origin_iy - phys(32)), tr("W"))
             time_text = sun_plot_time.strftime("%H:%M") if sun_plot_time else "____"
-            painter.drawText(_reverse_x(solar_noon_x + width // 4), origin_iy + int(height / 2.75),
+            painter.drawText(_reverse_x(solar_noon_x + phys(logical_width) // phys(4)), origin_iy + phys(70),
                              f"{ev_key.elevation if ev_key else 0:3d}{DEGREE_SYMBOL} {time_text}")
 
             # Draw pie/compass angle
@@ -5125,54 +5136,57 @@ class PresetChooseElevationChart(QLabel):
 
             # Draw drag-dot
             painter.setFont(QFont(QApplication.font().family(), 8, QFont.Weight.Normal))
+
             if self.current_pos is not None or self.in_drag or radius >= self.radius_of_deletion:
-                painter.setPen(QPen(Qt.GlobalColor.red, 6))
+                painter.setPen(QPen(Qt.GlobalColor.red, phys(6)))
                 painter.setBrush(Qt.GlobalColor.white)
                 ddot_radians = math.radians(angle_above_horz if ev_key else -19)
-                ddot_x = round(range_iy * math.cos(ddot_radians)) - 8
-                ddot_y = round(range_iy * math.sin(ddot_radians)) + 8
-                painter.drawEllipse(_reverse_x(solar_noon_x - ddot_x), origin_iy - ddot_y, 16, 16)
+                ddot_x = round(range_iy * math.cos(ddot_radians)) - phys(8)
+                ddot_y = round(range_iy * math.sin(ddot_radians)) + phys(8)
+                painter.drawEllipse(_reverse_x(solar_noon_x - ddot_x), origin_iy - ddot_y, phys(16), phys(16))
                 if not self.in_drag:
                     painter.setPen(QPen(Qt.GlobalColor.black, 1))
-                    painter.drawText(QPoint(_reverse_x(solar_noon_x - ddot_x) + 10, origin_iy - ddot_y - 5), tr("Drag to change."))
+                    painter.drawText(QPoint(_reverse_x(solar_noon_x - ddot_x) + phys(10), origin_iy - ddot_y - phys(5)),
+                                     tr("Drag to change."))
 
             # Draw origin-dot
-            painter.setPen(QPen(QColor(0xff965b), 2))
+            painter.setPen(QPen(QColor(0xff965b), thin_line_width))
             if self.current_pos is not None and not self.in_drag:
                 if radius < self.radius_of_deletion:
-                    painter.setPen(QPen(Qt.GlobalColor.black, 1))
-                    painter.drawText(QPoint(_reverse_x(solar_noon_x + 8) + 10, origin_iy - 8 - 5), tr("Click to delete."))
-                    painter.setPen(QPen(Qt.GlobalColor.red, 2))
+                    painter.setPen(QPen(Qt.GlobalColor.black, phys(1)))
+                    painter.drawText(QPoint(_reverse_x(solar_noon_x + phys(8)) + phys(10), origin_iy - phys(8) - phys(5)),
+                                     tr("Click to delete."))
+                    painter.setPen(QPen(Qt.GlobalColor.red, thin_line_width))
             painter.setBrush(painter.pen().color())
-            painter.drawEllipse(_reverse_x(solar_noon_x + 8), origin_iy - 8, 16, 16)
+            painter.drawEllipse(_reverse_x(solar_noon_x + phys(8)), origin_iy - phys(8), phys(16), phys(16))
 
             if ev_key:
-                # Draw a line representing the slider degrees and Twilight indicator - may be higher than sun for today:
+                # Draw a line representing the slider degrees and Twilight indicator - may be higher than the sun for today:
                 sky_line_y = origin_iy - round(math.sin(math.radians(ev_key.elevation)) * range_iy)
                 if sky_line_y >= solar_noon_y:
-                    sky_line_pen = QPen(Qt.GlobalColor.white, 2)
+                    sky_line_pen = QPen(Qt.GlobalColor.white, thin_line_width)
                 else:
-                    sky_line_pen = QPen(QColor(0xcccccc), 2)
+                    sky_line_pen = QPen(QColor(0xcccccc), thin_line_width)
                     sky_line_pen.setStyle(Qt.PenStyle.DotLine)
                 painter.setPen(sky_line_pen)
                 painter.setBrush(painter.pen().color())
-                if ev_key.direction == EASTERN_SKY:
+                if ev_key.direction == EASTERN_SKY:  # Triangle pointing up
                     painter.drawLine(_reverse_x(0), sky_line_y, _reverse_x(solar_noon_x), sky_line_y)
-                    painter.setPen(QPen(painter.pen().color(), 1))
-                    painter.drawPolygon(QPolygon([QPoint(_reverse_x(0) - 20 + tx, sky_line_y - 10 + ty)
-                                                  for tx, ty in [(-8, 0), (0, -16), (8, 0)]]))
-                else:
-                    painter.drawLine(_reverse_x(solar_noon_x), sky_line_y, _reverse_x(width), sky_line_y)
-                    painter.setPen(QPen(painter.pen().color(), 1))
-                    painter.drawPolygon(QPolygon([QPoint(_reverse_x(width - 18) + tx, sky_line_y + 10 + ty)
-                                                  for tx, ty in [(-8, 0), (0, 16), (8, 0)]]))
+                    painter.setPen(QPen(painter.pen().color(), phys(1)))
+                    painter.drawPolygon(QPolygon([QPoint(_reverse_x(0) - phys(20) + tx, sky_line_y - phys(10) + ty)
+                                                  for tx, ty in [(phys(-phys(8)), 0), (0, -phys(16)), ((phys(8)), 0)]]))
+                else:  # Triangle pointing down
+                    painter.drawLine(_reverse_x(solar_noon_x), sky_line_y, _reverse_x(logical_width), sky_line_y)
+                    painter.setPen(QPen(painter.pen().color(), phys(1)))
+                    painter.drawPolygon(QPolygon([QPoint(_reverse_x(logical_width - phys(18)) + tx, sky_line_y + phys(10) + ty)
+                                                  for tx, ty in [(phys(-phys(8)), 0), (0, (phys(16))), ((phys(8)), 0)]]))
                 # Draw the sun
-                painter.setPen(QPen(QColor(0xff4a23), std_line_width))
+                painter.setPen(QPen(QColor(0xff4a23), line_width))
                 if self.sun_image is None:
-                    self.sun_image = create_image_from_svg_bytes(SUN_SVG.replace(SVG_LIGHT_THEME_COLOR, b"#fecf70"))
+                    sun_image = create_image_from_svg_bytes(SUN_SVG.replace(SVG_LIGHT_THEME_COLOR, b"#fecf70"))
+                    self.sun_image = sun_image.scaled(phys(sun_image.width()), phys(sun_image.height()))
                 painter.drawImage(QPoint(_reverse_x(sun_plot_x) - self.sun_image.width() // 2,
                                          sun_plot_y - self.sun_image.height() // 2), self.sun_image)
-
         painter.end()
         self.setPixmap(pixmap)
 
@@ -5262,7 +5276,6 @@ class PresetChooseElevationWidget(QWidget):
         self.location: GeoLocation | None = main_config.get_location()
 
         layout = QVBoxLayout()
-        layout.setSizeConstraint(QVBoxLayout.SizeConstraint.SetMinimumSize)
         self.setLayout(layout)
         self.title_prefix = tr("Solar elevation trigger: ")
         self.title_label = QLabel(self.title_prefix)
