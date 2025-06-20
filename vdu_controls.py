@@ -5109,9 +5109,9 @@ class PresetChooseElevationChart(QLabel):
             painter.drawLine(_reverse_x(0), origin_iy, _reverse_x(logical_width), origin_iy)
             painter.drawLine(_reverse_x(solar_noon_x), origin_iy, _reverse_x(solar_noon_x), 0)
             painter.setPen(QPen(Qt.GlobalColor.white, line_width))
-            painter.setFont(QFont(QApplication.font().family(), 18, QFont.Weight.Bold))
-            painter.drawText(QPoint(_reverse_x(70), origin_iy - 32), tr("E"))
-            painter.drawText(QPoint(_reverse_x(logical_width - 25), origin_iy - 32), tr("W"))
+            painter.setFont(QFont(QApplication.font().family(), psz := 18, QFont.Weight.Bold))
+            painter.drawText(QPoint(_reverse_x((tm := 25) + psz), origin_iy - 32), tr("E"))
+            painter.drawText(QPoint(_reverse_x(logical_width - tm), origin_iy - 32), tr("W"))
             time_text = sun_plot_time.strftime("%H:%M") if sun_plot_time else "____"
             painter.drawText(_reverse_x(solar_noon_x + logical_width // 4), logical_height - _scaled(25),
                              f"{ev_key.elevation if ev_key else 0:3d}{DEGREE_SYMBOL} {time_text}")
