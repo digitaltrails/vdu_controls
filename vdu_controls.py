@@ -868,7 +868,7 @@ if qt_version_preference == '6':
     try:
         from PyQt6 import QtCore, QtNetwork
         from PyQt6.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QPoint, QObject, QEvent, \
-            QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir, QRegularExpression
+            QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir, QRegularExpression, QPointF
         from PyQt6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusArgument, QDBusVariant
         from PyQt6.QtGui import QAction, QShortcut, QPixmap, QIcon, QCursor, QImage, QPainter, QRegularExpressionValidator, \
             QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon, \
@@ -880,14 +880,14 @@ if qt_version_preference == '6':
             QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QMainWindow, QToolBar, QToolButton, QFileDialog, \
             QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, \
             QSpacerItem, QListWidget, QListWidgetItem
-        os.environ['QT_ENABLE_HIGHDPI_SCALING'] = '0'  # Only way to duplicate qt5 look without reworking all layouts
+        os.environ['QT_ENABLE_HIGHDPI_SCALING'] = os.environ.get('VDU_CONTROLS_HIGHDPI_SCALING', '1')  # Only way to duplicate qt5 look without reworking all layouts
     except (ImportError, ModuleNotFoundError) as no_qt6_exc:
         print(f"Failed to import PyQt6: {repr(no_qt6_exc)}", file=sys.stderr)
         qt_version_preference = '5'
 if qt_version_preference == '5':
     from PyQt5 import QtCore, QtNetwork
     from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QPoint, QObject, QEvent, \
-        QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir, QRegularExpression
+        QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir, QRegularExpression, QPointF
     from PyQt5.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusArgument, QDBusVariant
     from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QRegularExpressionValidator, \
         QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon, \
@@ -5042,26 +5042,24 @@ class PresetChooseElevationChart(QLabel):
             self.create_plot()
 
     def create_plot(self) -> None:
+        dp_ratio = self.devicePixelRatio()
+        scaled_ratio = 1.0 / dp_ratio
 
-        def phys(value: int) -> int:  # QPixmap is drawn using physical pixels - convert logical dimensions to physical
-            return value if dp_ratio == 1.0 else round(0.5 + value / dp_ratio)
-
-        dp_ratio = QApplication.primaryScreen().devicePixelRatio()
-        log_debug(f"devicePixelRatio {dp_ratio=}")
+        def _scaled(value: int) -> int:  # Some objects, such as QPen, seem to double-scale, undo/correct the scaling
+            return max(1, round(value * scaled_ratio))
 
         ev_key = self.elevation_key
         logical_width, logical_height = self.width(), self.height()
         origin_iy, range_iy = round(logical_height / 2), round(logical_height / 2.5)
         self.horizon_y = origin_iy
         self.radius_of_deletion = round(logical_width / 10)
-        line_width = phys(4)
-        thin_line_width = phys(2)
+        line_width = _scaled(4)
+        thin_line_width = _scaled(2)
 
         pixmap = QPixmap(round(logical_width * dp_ratio), round(logical_height * dp_ratio))
-
         pixmap.setDevicePixelRatio(dp_ratio)
         painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing);
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
         def _reverse_x(x_val: int) -> int:  # makes thinking right-to-left a bit easier. MAYBE
             return logical_width - x_val
@@ -5112,10 +5110,10 @@ class PresetChooseElevationChart(QLabel):
             painter.drawLine(_reverse_x(solar_noon_x), origin_iy, _reverse_x(solar_noon_x), 0)
             painter.setPen(QPen(Qt.GlobalColor.white, line_width))
             painter.setFont(QFont(QApplication.font().family(), 18, QFont.Weight.Bold))
-            painter.drawText(QPoint(_reverse_x(phys(70)), origin_iy - phys(32)), tr("E"))
-            painter.drawText(QPoint(_reverse_x(logical_width - phys(25)), origin_iy - phys(32)), tr("W"))
+            painter.drawText(QPoint(_reverse_x(70), origin_iy - 32), tr("E"))
+            painter.drawText(QPoint(_reverse_x(logical_width - 25), origin_iy - 32), tr("W"))
             time_text = sun_plot_time.strftime("%H:%M") if sun_plot_time else "____"
-            painter.drawText(_reverse_x(solar_noon_x + phys(logical_width) // phys(4)), origin_iy + phys(70),
+            painter.drawText(_reverse_x(solar_noon_x + logical_width // 4), logical_height - _scaled(25),
                              f"{ev_key.elevation if ev_key else 0:3d}{DEGREE_SYMBOL} {time_text}")
 
             # Draw pie/compass angle
@@ -5136,29 +5134,29 @@ class PresetChooseElevationChart(QLabel):
 
             # Draw drag-dot
             painter.setFont(QFont(QApplication.font().family(), 8, QFont.Weight.Normal))
-
             if self.current_pos is not None or self.in_drag or radius >= self.radius_of_deletion:
-                painter.setPen(QPen(Qt.GlobalColor.red, phys(6)))
+                painter.setPen(QPen(Qt.GlobalColor.red, _scaled(6)))
                 painter.setBrush(Qt.GlobalColor.white)
                 ddot_radians = math.radians(angle_above_horz if ev_key else -19)
-                ddot_x = round(range_iy * math.cos(ddot_radians)) - phys(8)
-                ddot_y = round(range_iy * math.sin(ddot_radians)) + phys(8)
-                painter.drawEllipse(_reverse_x(solar_noon_x - ddot_x), origin_iy - ddot_y, phys(16), phys(16))
+                ddot_radius = _scaled(8)
+                ddot_x = round(range_iy * math.cos(ddot_radians)) - ddot_radius
+                ddot_y = round(range_iy * math.sin(ddot_radians)) + ddot_radius
+                painter.drawEllipse(_reverse_x(solar_noon_x - ddot_x), origin_iy - ddot_y, ddot_radius * 2, ddot_radius * 2)
                 if not self.in_drag:
                     painter.setPen(QPen(Qt.GlobalColor.black, 1))
-                    painter.drawText(QPoint(_reverse_x(solar_noon_x - ddot_x) + phys(10), origin_iy - ddot_y - phys(5)),
-                                     tr("Drag to change."))
+                    painter.drawText(QPoint(_reverse_x(solar_noon_x - ddot_x) + 10, origin_iy - ddot_y - 5), tr("Drag to change."))
 
             # Draw origin-dot
             painter.setPen(QPen(QColor(0xff965b), thin_line_width))
             if self.current_pos is not None and not self.in_drag:
                 if radius < self.radius_of_deletion:
-                    painter.setPen(QPen(Qt.GlobalColor.black, phys(1)))
-                    painter.drawText(QPoint(_reverse_x(solar_noon_x + phys(8)) + phys(10), origin_iy - phys(8) - phys(5)),
+                    painter.setPen(QPen(Qt.GlobalColor.black, 1))
+                    painter.drawText(QPoint(_reverse_x(solar_noon_x + 8) + 10, origin_iy - 8 - 5),
                                      tr("Click to delete."))
                     painter.setPen(QPen(Qt.GlobalColor.red, thin_line_width))
+            odot_radius = _scaled(8)
             painter.setBrush(painter.pen().color())
-            painter.drawEllipse(_reverse_x(solar_noon_x + phys(8)), origin_iy - phys(8), phys(16), phys(16))
+            painter.drawEllipse(_reverse_x(solar_noon_x + odot_radius), origin_iy - odot_radius, odot_radius * 2, odot_radius * 2)
 
             if ev_key:
                 # Draw a line representing the slider degrees and Twilight indicator - may be higher than the sun for today:
@@ -5170,21 +5168,24 @@ class PresetChooseElevationChart(QLabel):
                     sky_line_pen.setStyle(Qt.PenStyle.DotLine)
                 painter.setPen(sky_line_pen)
                 painter.setBrush(painter.pen().color())
+
+                pyramid_base = _scaled(16)
                 if ev_key.direction == EASTERN_SKY:  # Triangle pointing up
+                    pyramid = [(-pyramid_base // 2, 0), (0, -pyramid_base), (pyramid_base // 2, 0)]
                     painter.drawLine(_reverse_x(0), sky_line_y, _reverse_x(solar_noon_x), sky_line_y)
-                    painter.setPen(QPen(painter.pen().color(), phys(1)))
-                    painter.drawPolygon(QPolygon([QPoint(_reverse_x(0) - phys(20) + tx, sky_line_y - phys(10) + ty)
-                                                  for tx, ty in [(phys(-phys(8)), 0), (0, -phys(16)), ((phys(8)), 0)]]))
+                    painter.setPen(QPen(painter.pen().color(), 1))
+                    painter.drawPolygon(QPolygon([QPoint(_reverse_x(0 + 20 + tx), sky_line_y - 10 + ty) for tx, ty in pyramid]))
                 else:  # Triangle pointing down
+                    inverted_pyramid = [(-pyramid_base // 2, 0), (0, pyramid_base), (pyramid_base // 2, 0)]
                     painter.drawLine(_reverse_x(solar_noon_x), sky_line_y, _reverse_x(logical_width), sky_line_y)
-                    painter.setPen(QPen(painter.pen().color(), phys(1)))
-                    painter.drawPolygon(QPolygon([QPoint(_reverse_x(logical_width - phys(18)) + tx, sky_line_y + phys(10) + ty)
-                                                  for tx, ty in [(phys(-phys(8)), 0), (0, (phys(16))), ((phys(8)), 0)]]))
+                    painter.setPen(QPen(painter.pen().color(), 1))
+                    painter.drawPolygon(QPolygon([QPoint(_reverse_x(logical_width - 18) + tx, sky_line_y + 10 + ty)
+                                                  for tx, ty in inverted_pyramid]))
                 # Draw the sun
                 painter.setPen(QPen(QColor(0xff4a23), line_width))
                 if self.sun_image is None:
                     sun_image = create_image_from_svg_bytes(SUN_SVG.replace(SVG_LIGHT_THEME_COLOR, b"#fecf70"))
-                    self.sun_image = sun_image.scaled(phys(sun_image.width()), phys(sun_image.height()))
+                    self.sun_image = sun_image.scaled(_scaled(sun_image.width()), _scaled(sun_image.height()))
                 painter.drawImage(QPoint(_reverse_x(sun_plot_x) - self.sun_image.width() // 2,
                                          sun_plot_y - self.sun_image.height() // 2), self.sun_image)
         painter.end()
@@ -6043,44 +6044,47 @@ class LuxProfileChart(QLabel):
         self.current_lux = 0
         self.snap_to_margin = lux_dialog.lux_config.getint('lux-ui', 'snap-to-margin-pixels', fallback=4)
         self.current_vdu_sid = VduStableId('') if len(self.profiles_map) == 0 else list(self.profiles_map.keys())[0]
-        self.pixmap_width = native_pixels(600)
-        self.pixmap_height = native_pixels(550)
-        self.plot_width, self.plot_height = self.pixmap_width - 200, self.pixmap_height - 150
-        self.x_origin, self.y_origin = 120, self.plot_height + 50
+        self.x_origin, self.y_origin = 0, 0
+        self.plot_width, self.plot_height = 0, 0
         self.setMouseTracking(True)  # Enable mouse move events so we can draw cross-hairs
-        self.setMinimumWidth(self.pixmap_width)
-        self.setMinimumHeight(self.pixmap_height)
+        self.setMinimumWidth(native_pixels(600))
+        self.setMinimumHeight(native_pixels(550))
 
     def resizeEvent(self, event: QResizeEvent) -> None:
-        super().resizeEvent(event)
-        self.plot_width, self.plot_height = event.size().width() - 200, event.size().height() - 150
-        self.x_origin, self.y_origin = 120, self.plot_height + 50
-        self.pixmap_width, self.pixmap_height = event.size().width(), event.size().height()
         self.create_plot()
 
     def create_plot(self) -> None:
-        std_line_width = 4
-        interpolating = self.lux_dialog.is_interpolating()
-        preset_color = 0xebfff9
-        pyramid = [(-8, 0), (0, -16), (8, 0)]
-        pixmap = QPixmap(self.pixmap_width, self.pixmap_height)
-        painter = QPainter(pixmap)
-        painter.fillRect(0, 0, self.pixmap_width, self.pixmap_height, QColor(0x5b93c5))
-        painter.setPen(QPen(Qt.GlobalColor.white, std_line_width))
-        painter.drawText(self.pixmap_width // 3, 30, tr("Lux Brightness Response Profiles"))
+        dp_ratio = self.devicePixelRatio()
+        scaled_ratio = 1.0 / dp_ratio
 
+        def _scaled(value: int) -> int:  # Some objects, such as QPen, seem to double-scale, undo/correct the scaling
+            return max(1, round(value * scaled_ratio))
+
+        pixmap = QPixmap(round(self.width() * dp_ratio), round(self.height() * dp_ratio))
+        pixmap.setDevicePixelRatio(dp_ratio)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        self.plot_width, self.plot_height = self.width() - 200, self.height() - 140
+        self.x_origin, self.y_origin = 120, self.plot_height + 50
+        std_line_width = _scaled(4)
+        interpolating = self.lux_dialog.is_interpolating()
+        painter.fillRect(0, 0, self.width(), self.height(), QColor(0x5b93c5))
+        painter.setPen(QPen(Qt.GlobalColor.white, std_line_width))
+        painter.drawText(self.width() // 3, 30, tr("Lux Brightness Response Profiles"))
+
+        tick_len = _scaled(5)
         painter.drawLine(self.x_origin, self.y_origin, self.x_origin + self.plot_width + 25, self.y_origin)  # Draw x-axis
         for lux in [0, 10, 100, 1_000, 10_000, 100_000]:  # Draw x-axis ticks
             x = self.x_from_lux(lux)
-            painter.drawLine(self.x_origin + x, self.y_origin + 5, self.x_origin + x, self.y_origin - 5)
+            painter.drawLine(self.x_origin + x, self.y_origin + tick_len, self.x_origin + x, self.y_origin - tick_len)
             painter.drawText(self.x_origin + x - 8 * len(str(lux)), self.y_origin + 40, str(lux))
         painter.drawText(self.x_origin + self.plot_width // 2 - len(str("Lux")), self.y_origin + 70, str("Lux"))
 
         painter.drawLine(self.x_origin, self.y_origin, self.x_origin, self.y_origin - self.plot_height)  # Draw y-axis
         for brightness in range(0, 101, 10):  # Draw y-axis ticks
             y = self.y_from_percent(brightness)
-            painter.drawLine(self.x_origin - 5, self.y_origin - y, self.x_origin + 5, self.y_origin - y)
-            # painter.drawText(self.x_origin - 20 - 16 * len(str(brightness)), self.y_origin - y + 5, str(brightness))
+            painter.drawLine(self.x_origin - tick_len, self.y_origin - y, self.x_origin + tick_len, self.y_origin - y)
             painter.drawText(self.x_origin - 50, self.y_origin - y + 5, str(brightness))
         painter.save()
         painter.translate(self.x_origin - 70, self.y_origin - self.plot_height // 2 + 6 * len(tr("Brightness %")))
@@ -6124,7 +6128,7 @@ class LuxProfileChart(QLabel):
                         painter.drawLine(last_x, last_y, x, y)
                     if self.current_vdu_sid == vdu_sid:  # Special handling for the current/selected VDU
                         point_markers.append((point_data, x, y, lux, brightness, vdu_color_num))  # Save data for drawing markers
-                    if last_x and last_y:  # draw histogram-step, or if interpolating, the area under the line
+                    if last_x and last_y:  # draw a histogram-step, or if interpolating, the area under the line
                         painter.setBrush(histogram_bar_color)
                         painter.setPen(Qt.PenStyle.NoPen)
                         painter.drawPolygon(
@@ -6134,38 +6138,43 @@ class LuxProfileChart(QLabel):
             if not interpolating and last_x and last_y:  # Show last step
                 painter.fillRect(last_x, last_y, 15, self.y_origin - last_y, histogram_bar_color)
 
-        for point_data, x, y, lux, brightness, vdu_color_num in point_markers:  # draw point markers on top of lines and histograms
+        for point_data, x, y, lux, brightness, vdu_color_num in point_markers:  # draw point-markers on top of lines and histograms
             if point_data.preset_name is None:  # Normal point
                 marker_diameter = std_line_width * 4
                 painter.setPen(QPen(QColor(vdu_color_num), std_line_width))
             else:  # Preset Point - fixed/non-deletable brightness level from Preset
                 marker_diameter = std_line_width * 2
-                painter.setPen(QPen(QColor(preset_color), std_line_width))
+                painter.setPen(QPen(QColor(0xebfff9), std_line_width))
             painter.drawEllipse(x - marker_diameter // 2, y - marker_diameter // 2, marker_diameter, marker_diameter)
 
-        for preset_point in self.preset_points:  # draw preset vertical lines and white triangle below axis
+        pyramid_base = _scaled(16)
+        pyramid = [(-pyramid_base // 2, 0), (0, -pyramid_base), (pyramid_base // 2, 0)]
+        for preset_point in self.preset_points:  # for each Preset: draw a vertical-line and white-triangle below axis
             painter.setPen(QPen(Qt.GlobalColor.white, std_line_width // 2, Qt.PenStyle.DashLine))
             painter.setBrush(Qt.GlobalColor.white)
             x = self.x_origin + self.x_from_lux(preset_point.lux)
             painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height)
-            painter.drawPolygon(QPolygon([QPoint(x + tx // 2, self.y_origin + 16 + ty // 2) for tx, ty in pyramid]))
+            painter.setPen(QPen(Qt.GlobalColor.transparent, 2))
+            painter.drawPolygon(QPolygon([QPoint(x + tx, self.y_origin + 18 + ty) for tx, ty in pyramid]))
 
         lux_color = QColor(0xfec053)
-        if self.current_lux is not None:  # Draw vertical line at current lux
+        if self.current_lux is not None:  # Draw a vertical-line at current lux
             painter.setPen(QPen(lux_color, 2))  # fbc21b 0xffdd30 #fec053
             x_current_lux = self.x_origin + self.x_from_lux(self.current_lux)
             painter.drawLine(x_current_lux, self.y_origin + 10, x_current_lux, self.y_origin - self.plot_height - 10)
             for brightness in range(10, 101, 10):  # Draw y-axis ticks on lux current lux
                 y = self.y_from_percent(brightness)
                 painter.drawLine(x_current_lux - 2, self.y_origin - y, x_current_lux + 2, self.y_origin - y)
-            current_brightness_pointer = [(0, 0), (-32, 16), (-32, -16)]  # Indicate current brightness at current lux
+            trangle_h = _scaled(32)
+            current_brightness_pointer = [(0, 0), (-trangle_h, trangle_h // 2), (-trangle_h, -trangle_h // 2)]
+            # Indicate current brightness at current lux
             for vdu_sid, brightness in self.lux_dialog.current_brightness_map.items():
                 if vdu_sid not in self.vdu_chart_colors:
                     continue  # must have been turned off
                 vdu_color_num = self.vdu_chart_colors[vdu_sid]
                 vdu_line_color = QColor(vdu_color_num)
                 y = self.y_origin - self.y_from_percent(brightness)
-                painter.setPen(QPen(Qt.GlobalColor.black, 1))  # QPen(vdu_line_color, std_line_width // 2, Qt.PenStyle.SolidLine))
+                painter.setPen(QPen(Qt.GlobalColor.black, 0.5))
                 painter.setBrush(vdu_line_color)
                 painter.drawPolygon(
                     QPolygon([QPoint(x_current_lux - 2 + tx // 2, y + 0 + ty // 2) for tx, ty in current_brightness_pointer]))
@@ -6193,7 +6202,7 @@ class LuxProfileChart(QLabel):
                     painter.setPen(QPen(Qt.GlobalColor.red, 2))
                     painter.setBrush(Qt.GlobalColor.white)
                     painter.drawPolygon(QPolygon([QPoint(x + tx, self.y_origin + 18 + ty) for tx, ty in pyramid]))
-                    if mouse_y > self.y_origin:  # Preset remove hint
+                    if mouse_y > self.y_origin:  # Remove-Preset hint
                         painter.setPen(QPen(Qt.GlobalColor.black, 1))
                         painter.drawText(x + 10, self.y_origin - 35, tr("Click remove preset at {} lux").format(lux))
             else:  # Potential new Point - show precise position for adding a new point
@@ -6202,7 +6211,7 @@ class LuxProfileChart(QLabel):
                 painter.setPen(QPen(Qt.GlobalColor.white, 1))
                 painter.drawLine(self.x_origin, y, self.x_origin + self.plot_width + 5, y)
                 painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height - 5)
-                if mouse_y > self.y_origin:  # Below axis, show hint for adding a Preset point: draw a red triangle below axis
+                if mouse_y > self.y_origin:  # Below axis, show a hint for adding a Preset point: draw a red triangle below axis
                     painter.setPen(QPen(Qt.GlobalColor.red, 2))
                     painter.setBrush(Qt.GlobalColor.white)
                     painter.drawPolygon(QPolygon([QPoint(x + tx, self.y_origin + 18 + ty) for tx, ty in pyramid]))
@@ -6354,8 +6363,8 @@ class LuxGaugeWidget(QWidget):
         self.current_lux_display.setFont(big_font)
         self.layout().addWidget(self.current_lux_display)
         self.plot_widget = QLabel()
-        self.plot_widget.setFixedWidth(340)
-        self.plot_widget.setFixedHeight(100)
+        self.plot_widget.setFixedWidth(round(340 / self.devicePixelRatio()))
+        self.plot_widget.setFixedHeight(round(100 / self.devicePixelRatio()))
         self.layout().addWidget(self.plot_widget)
         self.current_meter: LuxMeterDevice | None = None
         self.stats_label = QLabel()
@@ -6370,6 +6379,7 @@ class LuxGaugeWidget(QWidget):
         self.setToolTip(self.help_text)
         self.layout().addWidget(self.stats_label)
         self.updates_enabled = True
+        self.append_new_value(0)
 
     def mousePressEvent(self, a0):
         MBox(MIcon.Information, msg=self.help_text).exec()
@@ -6383,13 +6393,24 @@ class LuxGaugeWidget(QWidget):
             self.lux_changed_qtsignal.emit(lux)
 
     def update_plot(self):
-        pixmap = QPixmap(self.plot_widget.width(), self.plot_widget.height())
+        dp_ratio = self.devicePixelRatio()
+        scaled_ratio = 1.0 / dp_ratio
+
+        def _scaled(value: int) -> int:  # Some objects, such as QPen, seem to double-scale, undo/correct the scaling
+            return max(1, round(value * scaled_ratio))
+
+        pixmap = QPixmap(round(self.plot_widget.width() * dp_ratio) , round(self.plot_widget.height() * dp_ratio))
+        pixmap.setDevicePixelRatio(dp_ratio)
         painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         if qt_version_preference == '5':
             painter.setRenderHint(QPainter.RenderHint.HighQualityAntialiasing)
         plot_height = self.plot_widget.height()
         # Create a plot of recent historical lux readings.
         lux_plot_width = self.plot_widget.height()  # Square with height
+        line_width = _scaled(4)
+        thin_line_width = _scaled(2)
+
         painter.fillRect(0, 0, lux_plot_width, plot_height, self.common_background_color)
         painter.setPen(QPen(self.lux_bar_color, 1))
         most_recent_lux_xy = (None, None)  # draw pos of most recent
@@ -6404,7 +6425,7 @@ class LuxGaugeWidget(QWidget):
             painter.setPen(QPen(Qt.GlobalColor.red, 2))
             painter.drawLine(most_recent_lux_xy[0], plot_height, most_recent_lux_xy[0], most_recent_lux_xy[1])
         # Create plot of Eo (outside illumination) and Ei (inside illumination)
-        margin = 4
+        margin = line_width
         painter.setPen(QPen(self.white_line_color, margin))
         painter.drawLine(lux_plot_width + margin // 2, plot_height, lux_plot_width + margin // 2, 0)
         df_plot_width = self.plot_widget.width() - lux_plot_width - margin
@@ -6427,36 +6448,38 @@ class LuxGaugeWidget(QWidget):
         # Plot Eo and Ei
         eo_points = []
         ei_points = []
-        painter.setPen(QPen(self.white_transparent_color, 2))
+        painter.setPen(QPen(self.white_transparent_color, thin_line_width))
         t = df_plot_day + timedelta(minutes=0)
         df = LuxMeterSemiAutoDevice.get_daylight_factor()
         if location := LuxMeterSemiAutoDevice.get_location():
             for i in range(df_plot_left, df_plot_left + df_plot_width):
-                eo_y = self._y_from_lux(calc_solar_lux(t, location, 1.0), plot_height)
-                eo_points.append(QPoint(i, eo_y))
-                eo_x = self._y_from_lux(calc_solar_lux(t, location, df), plot_height)
-                ei_points.append(QPoint(i, eo_x))
+                eo_y = self._y_from_lux(calc_solar_lux(t, location, 1.0), plot_height * 10)  # scale * 10 for more accuracy
+                eo_points.append(QPointF(i, eo_y / 10.0))  # scale down to floating-point precision drawing co-ordinates
+                eo_x = self._y_from_lux(calc_solar_lux(t, location, df), plot_height * 10)
+                ei_points.append(QPointF(i, eo_x / 10.0))  # scale down to floating-point precision drawing co-ordinates
                 t += timedelta(minutes=minutes_per_point)
                 painter.drawLine(i, plot_height, i, eo_y)  # Fill under eo line
             # Actually plot the two datasets
-            painter.setPen(QPen(self.orange_line_color, 5))
+            painter.setPen(QPen(self.orange_line_color, thin_line_width * 3))
             painter.drawPolyline(eo_points)
-            painter.setPen(QPen(self.white_line_color, 5))
+            painter.setPen(QPen(self.white_line_color, thin_line_width * 3))
             painter.drawPolyline(ei_points)
         # Add text to the axis
-        painter.setPen(QPen(self.white_line_color, 2))
-        painter.setFont(QFont(QApplication.font().family(), font_height := plot_height // 20, QFont.Weight.Normal))
+        painter.setPen(QPen(self.white_line_color, thin_line_width))
+        painter.setFont(QFont(QApplication.font().family(), fz := 5, QFont.Weight.Normal))
         middle = df_plot_left - margin // 2
         for i in (10, 100, 1_000, 10_000, 100_000):
-            painter.drawLine(middle - 4, y := self._y_from_lux(i, plot_height), middle + 4, y)
-            painter.drawText(QPoint(middle + 6, y + font_height), str(i))
-        # draw hour ticks along bottom
+            painter.drawLine(middle - line_width, y := self._y_from_lux(i, plot_height), middle + line_width, y)
+            painter.drawText(QPointF(middle + _scaled(6), y + 4), str(i))
+        # Draw hour ticks along the bottom
+        tick_len = line_width * 2
+        noon_tick_len = line_width * 4
         for hx in range((hw := 60 // round(minutes_per_point)), hw * 25, hw):
-            painter.drawLine(x := df_plot_left + hx, plot_height, x, plot_height - (16 if hx == (12 * hw) else 8))
+            painter.drawLine(x := df_plot_left + hx, plot_height, x, plot_height - (noon_tick_len if hx == (12 * hw) else tick_len))
         # Draw the sun
         if most_recent_df_xy and most_recent_item and most_recent_df_xy[0]:
             if self.sun_image is None:
-                self.sun_image = create_image_from_svg_bytes(SUN_SVG.replace(SVG_LIGHT_THEME_COLOR, b"#feC053")).scaled(36, 36)
+                self.sun_image = create_image_from_svg_bytes(SUN_SVG.replace(SVG_LIGHT_THEME_COLOR, b"#feC053")).scaled(_scaled(36), _scaled(36))
             t = (most_recent_item.when - df_plot_day).total_seconds() // 60
             i = int(df_plot_left + t // minutes_per_point)
             if location:
@@ -6465,10 +6488,10 @@ class LuxGaugeWidget(QWidget):
                     painter.drawImage(QPoint(i - self.sun_image.width() // 2, sun_y - self.sun_image.height() // 2 - 1),
                                       self.sun_image)
         if most_recent_df_xy[0] is not None:
-            painter.setPen(QPen(Qt.GlobalColor.red, 2))
+            painter.setPen(QPen(Qt.GlobalColor.red, thin_line_width))
             painter.drawLine(most_recent_df_xy[0], plot_height, most_recent_df_xy[0], most_recent_df_xy[1])
         # Draw dots at current points
-        dot_size = 8
+        dot_size = line_width * 2
         half_dot_size = dot_size // 2
         for x, y in (most_recent_lux_xy, most_recent_df_xy):
             if x is not None and y is not None:
@@ -7117,18 +7140,13 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.device_name = ''
         self.lux_config = main_controller.get_lux_auto_controller().get_lux_config()
 
-        main_layout = QVBoxLayout()
-        self.setLayout(main_layout)
-
-        top_box = QWidget()
-        main_layout.addWidget(top_box)
-        grid_layout = QGridLayout()
-        top_box.setLayout(grid_layout)
+        self.setLayout(main_layout := QVBoxLayout())
+        main_layout.addWidget(top_box := QWidget())
+        top_box.setLayout(top_box_layout := QGridLayout())
 
         self.lux_gauge_widget = LuxGaugeWidget(self)
-        self.lux_gauge_widget.append_new_value(0)
-        grid_layout.addWidget(self.lux_gauge_widget, 0, 0, 4, 2, alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
 
+        top_box_layout.addWidget(self.lux_gauge_widget, 0, 0, 4, 2, alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
         existing_device = self.lux_config.get_device_name()
         existing_device_type = self.lux_config.get('lux-meter', 'lux-device-type', fallback='')
         self.meter_device_selector = QComboBox()
@@ -7139,21 +7157,22 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
             else:
                 self.meter_device_selector.addItem(tr(dev_type.description), dev_type)  # List device type only.
 
-        grid_layout.addWidget(self.meter_device_selector, 0, 2, 1, 3)
+        top_box_layout.addWidget(self.meter_device_selector, 0, 2, 1, 3)
 
         self.enabled_checkbox = QCheckBox(tr("Enable automatic brightness adjustment"))
-        grid_layout.addWidget(self.enabled_checkbox, 1, 2, 1, 3)
+        top_box_layout.addWidget(self.enabled_checkbox, 1, 2, 1, 3)
 
         self.interval_label = QLabel(tr("Adjustment interval minutes"))
-        grid_layout.addWidget(self.interval_label, 2, 2, 1, 2)
+        top_box_layout.addWidget(self.interval_label, 2, 2, 1, 2)
 
         self.interval_selector = QSpinBox()
         self.interval_selector.setMinimum(1)
         self.interval_selector.setMaximum(120)
-        grid_layout.addWidget(self.interval_selector, 2, 4, 1, 1)
+        top_box_layout.addWidget(self.interval_selector, 2, 4, 1, 1)
 
         self.interpolate_checkbox = QCheckBox(tr("Interpolate brightness values"))
-        grid_layout.addWidget(self.interpolate_checkbox, 3, 2, 1, 3)
+        top_box_layout.addWidget(self.interpolate_checkbox, 3, 2, 1, 3)
+        self.setMinimumSize(top_box.minimumSize())
 
         self.profile_selector_widget = QListWidget(parent=self)
         self.profile_selector_widget.setResizeMode(QListWidget.ResizeMode.Adjust)
