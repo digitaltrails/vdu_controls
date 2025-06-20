@@ -780,6 +780,14 @@ Environment
     VDU_CONTROLS_DBUS_TIMEOUT_MILLIS
         Dbus call wait timeout. Default is 10000, 10 seconds.
 
+    VDU_CONTROLS_QT_VERSION
+        Set to 6 to force the use of Qt6 libraries (default, if available) or 5 for Qt5.
+
+    VDU_CONTROLS_HIGHDPI_SCALING
+        Set to 0 (zero) to force Qt6 to behave and look like Qt5 or 1 for native Qt6.
+        This effects drawing operations and the look and feel of some Qt elements
+        (buttons more rounded, spacing is more generous, some icons are switched High DPI versions).
+
 Files
 =====
     $HOME/.config/vdu_controls/
