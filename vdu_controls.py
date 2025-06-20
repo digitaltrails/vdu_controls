@@ -781,12 +781,12 @@ Environment
         Dbus call wait timeout. Default is 10000, 10 seconds.
 
     VDU_CONTROLS_QT_VERSION
-        Set to 6 to force the use of Qt6 libraries (default, if available) or 5 for Qt5.
+        Set to 6 (default, if available) to force the use of Qt6 libraries or 5 for Qt5.
 
     VDU_CONTROLS_HIGHDPI_SCALING
-        Set to 0 (zero) to force Qt6 to behave and look like Qt5 or 1 for native Qt6.
-        This effects drawing operations and the look and feel of some Qt elements
-        (buttons more rounded, spacing is more generous, some icons are switched High DPI versions).
+        Set to 1 (default) for full Qt6 rendering or 0 (zero) to force Qt6 to render like Qt5.
+        This setting affects the look and feel of many Qt elements; widgets are more rounded,
+        more detailed, more generous spacing, and some icons are switched to High-DPI with color.
 
 Files
 =====
