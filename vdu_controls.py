@@ -6162,7 +6162,7 @@ class LuxProfileChart(QLabel):
             painter.setBrush(Qt.GlobalColor.white)
             x = self.x_origin + self.x_from_lux(preset_point.lux)
             painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height)
-            painter.setPen(QPen(Qt.GlobalColor.transparent, 2))
+            painter.setPen(Qt.PenStyle.NoPen)
             painter.drawPolygon(QPolygon([QPoint(x + tx, self.y_origin + 18 + ty) for tx, ty in pyramid]))
 
         lux_color = QColor(0xfec053)
