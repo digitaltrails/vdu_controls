@@ -906,7 +906,7 @@ if qt_version_selected != '6':  # Covers all other values.
 StdPixmap = QStyle.StandardPixmap
 
 APPNAME = "VDU Controls"
-VDU_CONTROLS_VERSION = '2.5.0'
+VDU_CONTROLS_VERSION = '2.4.1'
 VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in VDU_CONTROLS_VERSION.split('.'))
 assert sys.version_info >= (3, 8), f'{APPNAME} utilises python version 3.8 or greater (your python is {sys.version}).'
 
