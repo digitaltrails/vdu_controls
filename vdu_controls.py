@@ -6165,7 +6165,7 @@ class LuxProfileChart(QLabel):
             painter.setPen(Qt.PenStyle.NoPen)
             painter.drawPolygon(QPolygon([QPoint(x + tx, self.y_origin + 18 + ty) for tx, ty in pyramid]))
 
-        lux_color = QColor(0xfec053)
+        lux_color = QColor(0xfeC053) # 0xfec053)
         if self.current_lux is not None:  # Draw a vertical-line at current lux
             painter.setPen(QPen(lux_color, 2))  # fbc21b 0xffdd30 #fec053
             x_current_lux = self.x_origin + self.x_from_lux(self.current_lux)
