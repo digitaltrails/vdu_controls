@@ -16,6 +16,7 @@ Synopsis:
                      [--splash|--no-splash] [--system-tray|--no-system-tray]
                      [--hide-on-focus-out|--no-hide-on-focus-out]
                      [--smart-window|--no-smart-window] [-smart-uses-xcb|-smart-uses-xcb]
+                     [--qt6-high-dpi-scaling|--no-qt6-high-dpi-scaling]
                      [--monochrome-tray|--no-monochrome-tray] [--mono-light-tray|--no-mono-light-tray]
                      [--protect-nvram|--no-protect-nvram]
                      [--lux-options|--no-lux-options]
@@ -56,6 +57,8 @@ Arguments supplied on the command line override config file equivalent settings.
       --smart-uses-xcb|--no-smart-uses-xcb
                             if ``--smart-window`` is enabled, use XWayland (force xcb).
                             ``--smart-uses-xcb`` is the default.
+      --qt6-high-dpi-scaling|--no-qt6-high-dpi-scaling
+                            Qt6 default high-dpi scaling appearance or Qt5 non-scaled appearance
       --monochrome-tray|--no-monochrome-tray
                             monochrome dark-themed system-tray.
                             ``--no-monochrome-tray`` is the default.
@@ -783,11 +786,6 @@ Environment
     VDU_CONTROLS_QT_VERSION
         Set to 6 (default, if available) to force the use of Qt6 libraries or 5 for Qt5.
 
-    VDU_CONTROLS_HIGHDPI_SCALING
-        Set to 1 (default) for full Qt6 rendering or 0 (zero) to force Qt6 to render like Qt5.
-        This setting affects the look and feel of many Qt elements; widgets are more rounded,
-        more detailed, more generous spacing, and some icons are switched to High-DPI with color.
-
 Files
 =====
     $HOME/.config/vdu_controls/
@@ -871,8 +869,7 @@ from threading import Lock
 from typing import List, Tuple, Mapping, Type, Dict, Callable, Any, NewType
 from urllib.error import URLError
 
-qt_version_preference = os.environ.get('VDU_CONTROLS_QT_VERSION', '6')  # Change to '5' to force the use of Qt5
-if qt_version_preference == '6':
+if qt_version_selected := os.environ.get('VDU_CONTROLS_QT_VERSION', '6'):  # Change to '5' to force the use of Qt5
     try:
         from PyQt6 import QtCore, QtNetwork
         from PyQt6.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QPoint, QObject, QEvent, \
@@ -888,11 +885,10 @@ if qt_version_preference == '6':
             QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QMainWindow, QToolBar, QToolButton, QFileDialog, \
             QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, \
             QSpacerItem, QListWidget, QListWidgetItem
-        os.environ['QT_ENABLE_HIGHDPI_SCALING'] = os.environ.get('VDU_CONTROLS_HIGHDPI_SCALING', '1')  # Only way to duplicate qt5 look without reworking all layouts
     except (ImportError, ModuleNotFoundError) as no_qt6_exc:
-        print(f"Failed to import PyQt6: {repr(no_qt6_exc)}", file=sys.stderr)
-        qt_version_preference = '5'
-if qt_version_preference == '5':
+        print(f"Falling back to Qt5. Failed to import PyQt6: {repr(no_qt6_exc)}", file=sys.stderr)
+        qt_version_selected = None
+if qt_version_selected != '6':  # Covers all other values.
     from PyQt5 import QtCore, QtNetwork
     from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QPoint, QObject, QEvent, \
         QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir, QRegularExpression, QPointF
@@ -2470,6 +2466,8 @@ class ConfOpt(Enum):  # An Enum with tuples for values is used for convenience f
                         tip=QT_TR_NOOP('smart main window placement and geometry (X11 and XWayland)'), restart=True)
     SMART_USES_XCB = _def(cname=QT_TR_NOOP('smart-uses-xcb'), default="yes", restart=True,
                                 tip=QT_TR_NOOP('if smart-window is enabled, use Xwayland in Wayland'))
+    QT6_HIGH_DPI_SCALING = _def(cname=QT_TR_NOOP('qt6-high-dpi-scaling'), default="true",
+                                tip=QT_TR_NOOP('Qt6 high-DPI look and feel (default in Qt6)'), restart=True)
     MONOCHROME_TRAY_ENABLED = _def(cname=QT_TR_NOOP('monochrome-tray-enabled'), default="no", restart=False,
                                    tip=QT_TR_NOOP('monochrome dark themed system tray'))
     MONO_LIGHT_TRAY_ENABLED = _def(cname=QT_TR_NOOP('mono-light-tray-enabled'), default="no", restart=False,
@@ -6411,7 +6409,7 @@ class LuxGaugeWidget(QWidget):
         pixmap.setDevicePixelRatio(dp_ratio)
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        if qt_version_preference == '5':
+        if qt_version_selected == '5':
             painter.setRenderHint(QPainter.RenderHint.HighQualityAntialiasing)
         plot_height = self.plot_widget.height()
         # Create a plot of recent historical lux readings.
@@ -8803,7 +8801,7 @@ class VduAppWindow(QMainWindow):
 
         self.app_name = APPNAME
         app.setApplicationDisplayName(self.app_name)
-        if qt_version_preference == '5':
+        if qt_version_selected == '5':
             app.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps)  # Make sure all icons use HiDPI - toolbars don't by default, so force it.
 
         if splash is not None:
@@ -9381,6 +9379,10 @@ def main() -> None:
         if main_config.is_set(ConfOpt.SMART_WINDOW) and main_config.is_set(ConfOpt.SMART_USES_XCB):
             log_warning(f"{ConfOpt.SMART_WINDOW.conf_id}: Wayland disallows app window placement. Switching to XWayland.")
             os.environ['QT_QPA_PLATFORM'] = 'xcb'  # Force the use of XWayland
+
+    if  qt_version_selected == '6' and not main_config.is_set(ConfOpt.QT6_HIGH_DPI_SCALING):
+        os.environ['QT_ENABLE_HIGHDPI_SCALING'] = '0'  # Just for Qt6, in Qt5, setting it to 1 can cause double scaling.
+        log_info(f"Set Qt6 appearance to QT_ENABLE_HIGHDPI_SCALING=0")
 
     QGuiApplication.setDesktopFileName("vdu_controls")  # Wayland needs this set to find/use the app's desktop icon.
     # Call QApplication before parsing arguments, it will parse and remove Qt session restoration arguments.
