@@ -24,7 +24,7 @@ copyright = '2021, Michael Hamilton'
 author = 'Michael Hamilton'
 
 # The full version, including alpha/beta/rc tags
-release = '2.4.0'
+release = '2.4.1'
 
 
 # -- General configuration ---------------------------------------------------
