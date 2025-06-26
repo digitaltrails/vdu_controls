@@ -16,7 +16,7 @@ Synopsis:
                      [--splash|--no-splash] [--system-tray|--no-system-tray]
                      [--hide-on-focus-out|--no-hide-on-focus-out]
                      [--smart-window|--no-smart-window] [-smart-uses-xwayland|-smart-uses-xwayland]
-                     [--qt6-styling|--no-qt6-styling]
+                     [--qt6-behavior|--no-qt6-behavior]
                      [--monochrome-tray|--no-monochrome-tray] [--mono-light-tray|--no-mono-light-tray]
                      [--protect-nvram|--no-protect-nvram]
                      [--lux-options|--no-lux-options]
@@ -57,8 +57,8 @@ Arguments supplied on the command line override config file equivalent settings.
       --smart-uses-xxwayland|--no-smart-uses-xwayland
                             if ``--smart-window`` is enabled, use XWayland (force xcb).
                             ``--smart-uses-xwayland`` is the default.
-      --qt6-styling|--no-qt6-styling
-                            Qt6 default high-dpi scaling appearance or Qt5 non-scaled appearance
+      --qt6-behavior|--no-qt6-behavior
+                            Qt6 high-dpi scaling and appearance, or Qt5 appearance
       --monochrome-tray|--no-monochrome-tray
                             monochrome dark-themed system-tray.
                             ``--no-monochrome-tray`` is the default.
@@ -672,9 +672,9 @@ application switches its platform to X11 (xcb) so that it runs in XWayland.
 The UI attempts to step around minor differences between KDE, GNOME, and the rest,
 the UI on each may not be exactly the same.
 
-The styling of Qt6 differs from Qt5, its more chunky and rounded.  If you
-prefer the more compact Qt5 style, disable Qt6-styling in settings, this will
-switch Qt6 scaling and styling to macth Qt5.
+The scaling and appearance of Qt6 differs from Qt5, its more chunky and rounded.  If you
+prefer the more compact Qt5 style, disable qt6-behavoir in settings, this will
+switch Qt6 scaling and styling to match Qt5.
 
 
 Other concerns
@@ -2471,8 +2471,8 @@ class ConfOpt(Enum):  # An Enum with tuples for values is used for convenience f
                         tip=QT_TR_NOOP('smart main window placement and geometry (X11 and XWayland)'), restart=True)
     SMART_USES_XCB = _def(cname=QT_TR_NOOP('smart-uses-xwayland'), default="yes", restart=True,
                                 tip=QT_TR_NOOP('if smart-window is enabled, use Xwayland in Wayland'))
-    QT6_STYLING = _def(cname=QT_TR_NOOP('qt6-styling'), default="true",
-                       tip=QT_TR_NOOP('Qt6 high-DPI look and feel (default in Qt6)'), restart=True)
+    QT6_BEHAVIOR = _def(cname=QT_TR_NOOP('qt6-behavior'), default="true",
+                        tip=QT_TR_NOOP('Qt6 high-DPI look and feel (default in Qt6)'), restart=True)
     MONOCHROME_TRAY_ENABLED = _def(cname=QT_TR_NOOP('monochrome-tray-enabled'), default="no", restart=False,
                                    tip=QT_TR_NOOP('monochrome dark themed system tray'))
     MONO_LIGHT_TRAY_ENABLED = _def(cname=QT_TR_NOOP('mono-light-tray-enabled'), default="no", restart=False,
@@ -7950,12 +7950,13 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
         else:
             about_text = ABOUT_TEXT
         if self.main_controller and self.main_controller.ddcutil:
+            scaled = "qt5-behavior" if os.environ.get('QT_ENABLE_HIGHDPI_SCALING', '1') == '0' else "default"
             counts_str = ','.join((str(v) for v in Ddcutil.vcp_write_counters.values())) if len(Ddcutil.vcp_write_counters) else '0'
-            about_text += ("<hr><p><small>desktop: {}; platform: {} ({}, qt-{});<br/>"
-                           "ddcutil-interface: {}; ddcutil: {} (writes: {});</small>".format(
-                os.environ.get('XDG_CURRENT_DESKTOP', default='unknown'),
-                os.environ.get('XDG_SESSION_TYPE', default='unknown'), QApplication.platformName(), QtCore.qVersion(),
-                *self.main_controller.ddcutil.ddcutil_version_info(), counts_str))
+            about_text += (f"<hr><p><small>desktop: {os.environ.get('XDG_CURRENT_DESKTOP', default='unknown')}; "
+                           f"platform: {os.environ.get('XDG_SESSION_TYPE', default='unknown')} "
+                           f"({QApplication.platformName()}, qt-{QtCore.qVersion()} {scaled});<br/>"
+                           f"ddcutil-interface: {self.main_controller.ddcutil.ddcutil_version_info()[0]}; "
+                           f"ddcutil: {self.main_controller.ddcutil.ddcutil_version_info()[1]} (writes: {counts_str});</small>")
         self.setInformativeText(about_text)
         self.setIcon(MIcon.Information)
 
@@ -8898,6 +8899,7 @@ class VduAppWindow(QMainWindow):
     def show(self):
         if self.main_config.is_set(ConfOpt.SMART_WINDOW):
             if len(self.qt_settings.allKeys()) == 0:  # No previous state
+                self.adjustSize()
                 self.app_decide_window_position()  # decide initial position relative to cursor
                 self.app_save_window_state()
             else:
@@ -9070,6 +9072,8 @@ class VduAppWindow(QMainWindow):
         if self.main_config.is_set(ConfOpt.SMART_WINDOW, fallback=True):
             if geometry := self.qt_settings.value(self.qt_geometry_key, None):
                 self.restoreGeometry(geometry)
+            else:
+                self.adjustSize()
             if window_state := self.qt_settings.value(self.qt_state_key, None):
                 self.restoreState(window_state)
             log_debug(f"app_restore_window_state: {self.pos()=} {self.geometry()=}") if log_debug_enabled else None
@@ -9395,7 +9399,7 @@ def main() -> None:
             log_warning(f"{ConfOpt.SMART_WINDOW.conf_id}: Wayland disallows app window placement. Switching to XWayland.")
             os.environ['QT_QPA_PLATFORM'] = 'xcb'  # Force the use of XWayland
 
-    if  qt_version_selected == '6' and not main_config.is_set(ConfOpt.QT6_STYLING):
+    if  qt_version_selected == '6' and not main_config.is_set(ConfOpt.QT6_BEHAVIOR):
         os.environ['QT_ENABLE_HIGHDPI_SCALING'] = '0'  # Just for Qt6, in Qt5, setting it to 1 can cause double scaling.
         log_info(f"Set Qt6 appearance to QT_ENABLE_HIGHDPI_SCALING=0")
 
