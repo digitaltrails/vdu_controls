@@ -16,7 +16,7 @@ Synopsis:
                      [--splash|--no-splash] [--system-tray|--no-system-tray]
                      [--hide-on-focus-out|--no-hide-on-focus-out]
                      [--smart-window|--no-smart-window] [-smart-uses-xcb|-smart-uses-xcb]
-                     [--qt6-high-dpi-scaling|--no-qt6-high-dpi-scaling]
+                     [--qt6-styling|--no-qt6-styling]
                      [--monochrome-tray|--no-monochrome-tray] [--mono-light-tray|--no-mono-light-tray]
                      [--protect-nvram|--no-protect-nvram]
                      [--lux-options|--no-lux-options]
@@ -57,7 +57,7 @@ Arguments supplied on the command line override config file equivalent settings.
       --smart-uses-xcb|--no-smart-uses-xcb
                             if ``--smart-window`` is enabled, use XWayland (force xcb).
                             ``--smart-uses-xcb`` is the default.
-      --qt6-high-dpi-scaling|--no-qt6-high-dpi-scaling
+      --qt6-styling|--no-qt6-styling
                             Qt6 default high-dpi scaling appearance or Qt5 non-scaled appearance
       --monochrome-tray|--no-monochrome-tray
                             monochrome dark-themed system-tray.
@@ -671,6 +671,11 @@ application switches its platform to X11 (xcb) so that it runs in XWayland.
 
 The UI attempts to step around minor differences between KDE, GNOME, and the rest,
 the UI on each may not be exactly the same.
+
+The styling of Qt6 differs from Qt5, its more chunky and rounded.  If you
+prefer the more compact Qt5 style, disable Qt6-styling in settings, this will
+switch Qt6 scaling and styling to macth Qt5.
+
 
 Other concerns
 --------------
@@ -1305,10 +1310,10 @@ class ThemeType(Enum):  # Indicates how colors should be altered to fit a color 
     MONOCHROME_DARK = 4,   # Monochrome icon - for tray use - dark themed tray
 
 
-#: A high resolution image. We will fall back to an internal PNG if this file isn't found on the local system
+# A high resolution image. We will fall back to an internal PNG if this file isn't found on the local system
 DEFAULT_SPLASH_PNG = "/usr/share/icons/hicolor/256x256/apps/vdu_controls.png"
 
-#: Internal special exit code used to signal that the exit handler should restart the program.
+# Internal special exit code used to signal that the exit handler should restart the program.
 EXIT_CODE_FOR_RESTART = 1959
 
 # Number of times to retry getting/setting attributes - in case a monitor is slow after being powered up.
@@ -2466,8 +2471,8 @@ class ConfOpt(Enum):  # An Enum with tuples for values is used for convenience f
                         tip=QT_TR_NOOP('smart main window placement and geometry (X11 and XWayland)'), restart=True)
     SMART_USES_XCB = _def(cname=QT_TR_NOOP('smart-uses-xcb'), default="yes", restart=True,
                                 tip=QT_TR_NOOP('if smart-window is enabled, use Xwayland in Wayland'))
-    QT6_HIGH_DPI_SCALING = _def(cname=QT_TR_NOOP('qt6-high-dpi-scaling'), default="true",
-                                tip=QT_TR_NOOP('Qt6 high-DPI look and feel (default in Qt6)'), restart=True)
+    QT6_STYLING = _def(cname=QT_TR_NOOP('qt6-styling'), default="true",
+                       tip=QT_TR_NOOP('Qt6 high-DPI look and feel (default in Qt6)'), restart=True)
     MONOCHROME_TRAY_ENABLED = _def(cname=QT_TR_NOOP('monochrome-tray-enabled'), default="no", restart=False,
                                    tip=QT_TR_NOOP('monochrome dark themed system tray'))
     MONO_LIGHT_TRAY_ENABLED = _def(cname=QT_TR_NOOP('mono-light-tray-enabled'), default="no", restart=False,
@@ -4277,6 +4282,9 @@ class VduControlsMainPanel(QWidget):
                     self.layout().removeItem(item)
                     item.widget().deleteLater()
         controllers_layout = QVBoxLayout()
+        controllers_layout.setSpacing(0)
+        controllers_layout.contentsMargins().setTop(0)
+        controllers_layout.contentsMargins().setBottom(0)
         self.setLayout(controllers_layout)
 
         warnings_enabled = main_config.is_set(ConfOpt.WARNINGS_ENABLED)
@@ -7743,6 +7751,9 @@ class LuxAmbientSlider(QWidget):
 
         top_layout = QVBoxLayout()
         self.setLayout(top_layout)
+        top_layout.setSpacing(0)
+        top_layout.contentsMargins().setTop(0)
+        top_layout.contentsMargins().setBottom(0)
         top_layout.addWidget(QLabel(tr("Ambient Light Level (lux)")), alignment=Qt.AlignmentFlag.AlignBottom)
 
         input_panel = QWidget()
@@ -7752,6 +7763,8 @@ class LuxAmbientSlider(QWidget):
 
         lux_slider_panel = QWidget()
         lux_slider_panel_layout = QGridLayout()
+        lux_slider_panel_layout.contentsMargins().setTop(0)
+        lux_slider_panel_layout.contentsMargins().setBottom(0)
         lux_slider_panel.setLayout(lux_slider_panel_layout)
 
         self.slider = ClickableSlider()
@@ -9380,7 +9393,7 @@ def main() -> None:
             log_warning(f"{ConfOpt.SMART_WINDOW.conf_id}: Wayland disallows app window placement. Switching to XWayland.")
             os.environ['QT_QPA_PLATFORM'] = 'xcb'  # Force the use of XWayland
 
-    if  qt_version_selected == '6' and not main_config.is_set(ConfOpt.QT6_HIGH_DPI_SCALING):
+    if  qt_version_selected == '6' and not main_config.is_set(ConfOpt.QT6_STYLING):
         os.environ['QT_ENABLE_HIGHDPI_SCALING'] = '0'  # Just for Qt6, in Qt5, setting it to 1 can cause double scaling.
         log_info(f"Set Qt6 appearance to QT_ENABLE_HIGHDPI_SCALING=0")
 
