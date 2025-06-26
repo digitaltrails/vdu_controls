@@ -4825,6 +4825,29 @@ def weather_bad_location_dialog(weather) -> None:
 
 
 class PresetChooseWeatherWidget(QWidget):
+    default_weather_conditions = {
+        CONFIG_DIR_PATH.joinpath('good.weather'): "113 Sunny\n116 Partly Cloudy\n119 Cloudy\n",
+        CONFIG_DIR_PATH.joinpath('bad.weather'):
+            "143 Fog\n179 Light Sleet Showers\n182 Light Sleet\n185 Light Sleet\n200 Thundery Showers\n227 "
+            "Light Snow\n230 Heavy Snow\n248 Fog\n260 Fog\n266 Light Rain\n281 Light Sleet\n284 Light "
+            "Sleet\n293 Light Rain\n296 Light Rain\n299 Heavy Showers\n302 Heavy Rain\n305 Heavy Showers\n308 "
+            "Heavy Rain\n311 Light Sleet\n314 Light Sleet\n317 Light Sleet\n320 Light Snow\n323 Light Snow "
+            "Showers\n326 Light Snow Showers\n329 Heavy Snow\n332 Heavy Snow\n335 Heavy Snow Showers\n338 "
+            "Heavy Snow\n350 Light Sleet\n353 Light Showers\n356 Heavy Showers\n359 Heavy Rain\n362 Light "
+            "Sleet Showers\n365 Light Sleet Showers\n368 Light Snow Showers\n371 Heavy Snow Showers\n374 "
+            "Light Sleet Showers\n377 Light Sleet\n386 Thundery Showers\n389 Thundery Heavy Rain\n392 "
+            "Thundery Snow Showers\n395 HeavySnowShowers\n",
+        CONFIG_DIR_PATH.joinpath('all.weather'):
+            "113 Sunny\n116 Partly Cloudy\n119 Cloudy\n122 Very Cloudy\n143 Fog\n176 Light Showers\n179 Light "
+            "Sleet Showers\n182 Light Sleet\n185 Light Sleet\n200 Thundery Showers\n227 Light Snow\n230 Heavy "
+            "Snow\n248 Fog\n260 Fog\n263 Light Showers\n266 Light Rain\n281 Light Sleet\n284 Light Sleet\n293 "
+            "Light Rain\n296 Light Rain\n299 Heavy Showers\n302 Heavy Rain\n305 Heavy Showers\n308 Heavy "
+            "Rain\n311 Light Sleet\n314 Light Sleet\n317 Light Sleet\n320 Light Snow\n323 Light Snow "
+            "Showers\n326 Light Snow Showers\n329 Heavy Snow\n332 Heavy Snow\n335 Heavy Snow Showers\n338 "
+            "Heavy Snow\n350 Light Sleet\n353 Light Showers\n356 Heavy Showers\n359 Heavy Rain\n362 Light "
+            "Sleet Showers\n365 Light Sleet Showers\n368 Light Snow Showers\n371 Heavy Snow Showers\n374 "
+            "Light Sleet Showers\n377 Light Sleet\n386 Thundery Showers\n389 Thundery Heavy Rain\n392 "
+            "Thundery Snow Showers\n395 Heavy Snow Showers\n"}
 
     def __init__(self, location: GeoLocation | None, main_config: VduControlsConfig) -> None:
         super().__init__()
@@ -4868,34 +4891,11 @@ class PresetChooseWeatherWidget(QWidget):
         self.layout().addWidget(scroll_area)
 
     def init_weather(self) -> None:
-        if len(list(CONFIG_DIR_PATH.glob("*.weather"))) == 0:
-            log_info(f"Making good, bad and all weather in {CONFIG_DIR_PATH}")
-            with open(CONFIG_DIR_PATH.joinpath('good.weather'), 'w', encoding="utf-8") as weather_file:
-                weather_file.write("113 Sunny\n116 Partly Cloudy\n119 Cloudy\n")
-            with open(CONFIG_DIR_PATH.joinpath('bad.weather'), 'w', encoding="utf-8") as weather_file:
-                weather_file.write(
-                    "143 Fog\n179 Light Sleet Showers\n182 Light Sleet\n185 Light Sleet\n200 Thundery Showers\n227 "
-                    "Light Snow\n230 Heavy Snow\n248 Fog\n260 Fog\n266 Light Rain\n281 Light Sleet\n284 Light "
-                    "Sleet\n293 Light Rain\n296 Light Rain\n299 Heavy Showers\n302 Heavy Rain\n305 Heavy Showers\n308 "
-                    "Heavy Rain\n311 Light Sleet\n314 Light Sleet\n317 Light Sleet\n320 Light Snow\n323 Light Snow "
-                    "Showers\n326 Light Snow Showers\n329 Heavy Snow\n332 Heavy Snow\n335 Heavy Snow Showers\n338 "
-                    "Heavy Snow\n350 Light Sleet\n353 Light Showers\n356 Heavy Showers\n359 Heavy Rain\n362 Light "
-                    "Sleet Showers\n365 Light Sleet Showers\n368 Light Snow Showers\n371 Heavy Snow Showers\n374 "
-                    "Light Sleet Showers\n377 Light Sleet\n386 Thundery Showers\n389 Thundery Heavy Rain\n392 "
-                    "Thundery Snow Showers\n395 HeavySnowShowers\n"
-                )
-            with open(CONFIG_DIR_PATH.joinpath('all.weather'), 'w', encoding="utf-8") as weather_file:
-                weather_file.write(
-                    "113 Sunny\n116 Partly Cloudy\n119 Cloudy\n122 Very Cloudy\n143 Fog\n176 Light Showers\n179 Light "
-                    "Sleet Showers\n182 Light Sleet\n185 Light Sleet\n200 Thundery Showers\n227 Light Snow\n230 Heavy "
-                    "Snow\n248 Fog\n260 Fog\n263 Light Showers\n266 Light Rain\n281 Light Sleet\n284 Light Sleet\n293 "
-                    "Light Rain\n296 Light Rain\n299 Heavy Showers\n302 Heavy Rain\n305 Heavy Showers\n308 Heavy "
-                    "Rain\n311 Light Sleet\n314 Light Sleet\n317 Light Sleet\n320 Light Snow\n323 Light Snow "
-                    "Showers\n326 Light Snow Showers\n329 Heavy Snow\n332 Heavy Snow\n335 Heavy Snow Showers\n338 "
-                    "Heavy Snow\n350 Light Sleet\n353 Light Showers\n356 Heavy Showers\n359 Heavy Rain\n362 Light "
-                    "Sleet Showers\n365 Light Sleet Showers\n368 Light Snow Showers\n371 Heavy Snow Showers\n374 "
-                    "Light Sleet Showers\n377 Light Sleet\n386 Thundery Showers\n389 Thundery Heavy Rain\n392 "
-                    "Thundery Snow Showers\n395 Heavy Snow Showers\n")
+        for condition_path, condition_content in PresetChooseWeatherWidget.default_weather_conditions.items():
+            if not condition_path.exists():
+                with open(condition_path, 'w', encoding="utf-8") as weather_file:
+                    log_info(f"Creating {condition_path.as_posix()}")
+                    weather_file.write(condition_content)
 
     def verify_weather_location(self, location: GeoLocation) -> None:
         if not self.main_config.is_set(ConfOpt.WEATHER_ENABLED):
@@ -5713,6 +5713,8 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         preset_ini.set('preset', 'solar-elevation', format_solar_elevation_ini_text(self.editor_trigger_widget.elevation_key))
         if weather_filename := self.editor_trigger_widget.get_required_weather_filename():
             preset_ini.set('preset', 'solar-elevation-weather-restriction', weather_filename)
+        elif preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None):
+            preset_ini.remove_option('preset', 'solar-elevation-weather-restriction')  # Remove existing restriction from ini
         preset_ini.set('preset', 'transition-type', str(self.editor_transitions_widget.get_transition_type()))
         preset_ini.set('preset', 'transition-step-interval-seconds', str(self.editor_transitions_widget.get_step_seconds()))
         preset_ini.set('preset', 'daylight-factor', str(self.editor_trigger_widget.df_widget.df_input.text()))
