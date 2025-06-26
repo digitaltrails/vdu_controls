@@ -15,7 +15,7 @@ Synopsis:
                      [--enable-vcp-code vcp_code] [--schedule|--no-schedule]
                      [--splash|--no-splash] [--system-tray|--no-system-tray]
                      [--hide-on-focus-out|--no-hide-on-focus-out]
-                     [--smart-window|--no-smart-window] [-smart-uses-xcb|-smart-uses-xcb]
+                     [--smart-window|--no-smart-window] [-smart-uses-xwayland|-smart-uses-xwayland]
                      [--qt6-styling|--no-qt6-styling]
                      [--monochrome-tray|--no-monochrome-tray] [--mono-light-tray|--no-mono-light-tray]
                      [--protect-nvram|--no-protect-nvram]
@@ -54,9 +54,9 @@ Arguments supplied on the command line override config file equivalent settings.
       --smart-window|--no-smart-window
                             smart main window placement and geometry.
                             ``--smart-window`` is the default (may force UI to XWayland).
-      --smart-uses-xcb|--no-smart-uses-xcb
+      --smart-uses-xxwayland|--no-smart-uses-xwayland
                             if ``--smart-window`` is enabled, use XWayland (force xcb).
-                            ``--smart-uses-xcb`` is the default.
+                            ``--smart-uses-xwayland`` is the default.
       --qt6-styling|--no-qt6-styling
                             Qt6 default high-dpi scaling appearance or Qt5 non-scaled appearance
       --monochrome-tray|--no-monochrome-tray
@@ -2469,7 +2469,7 @@ class ConfOpt(Enum):  # An Enum with tuples for values is used for convenience f
                              tip=QT_TR_NOOP('minimize the main window automatically on focus out'))
     SMART_WINDOW = _def(cname=QT_TR_NOOP('smart-window'), default="yes",
                         tip=QT_TR_NOOP('smart main window placement and geometry (X11 and XWayland)'), restart=True)
-    SMART_USES_XCB = _def(cname=QT_TR_NOOP('smart-uses-xcb'), default="yes", restart=True,
+    SMART_USES_XCB = _def(cname=QT_TR_NOOP('smart-uses-xwayland'), default="yes", restart=True,
                                 tip=QT_TR_NOOP('if smart-window is enabled, use Xwayland in Wayland'))
     QT6_STYLING = _def(cname=QT_TR_NOOP('qt6-styling'), default="true",
                        tip=QT_TR_NOOP('Qt6 high-DPI look and feel (default in Qt6)'), restart=True)
@@ -5466,7 +5466,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.setWindowTitle(tr('Presets'))
         self.main_controller = main_controller
         self.main_config = main_config
-        self.content_controls_map: Dict[Tuple[str, str], QWidget] = {}
+        self.content_controls_map: Dict[Tuple[str, str], QCheckBox] = {}
         self.resize(native_pixels(1600), native_pixels(950))
         self.setMinimumSize(native_pixels(1350), native_pixels(600))
         layout = QVBoxLayout()
