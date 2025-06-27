@@ -8748,6 +8748,7 @@ class VduAppWindow(QMainWindow):
         gui_thread = app.thread()
         self.main_controller: VduAppController = main_controller
         self.setObjectName('main_window')
+        self.qt_version_key = self.objectName() + "_qt_version"
         self.qt_geometry_key = self.objectName() + "_geometry"
         self.qt_state_key = self.objectName() + "_window_state"
         self.qt_settings = QSettings('vdu_controls.qt.state', 'vdu_controls')
@@ -8905,12 +8906,10 @@ class VduAppWindow(QMainWindow):
 
     def show(self):
         if self.main_config.is_set(ConfOpt.SMART_WINDOW):
-            if len(self.qt_settings.allKeys()) == 0:  # No previous state
+            if not self.app_restore_window_state():  # No previous state or invalid
                 self.adjustSize()
                 self.app_decide_window_position()  # decide initial position relative to cursor
                 self.app_save_window_state()
-            else:
-                self.app_restore_window_state()  # restore previously saved position
         super().show()
 
     def hide(self):
@@ -9070,20 +9069,28 @@ class VduAppWindow(QMainWindow):
         self.app_save_window_state()
 
     def app_save_window_state(self) -> None:
-        if self.main_config.is_set(ConfOpt.SMART_WINDOW, fallback=True):
+        if self.main_config.is_set(ConfOpt.SMART_WINDOW, fallback=True) and self.isVisible():
             log_debug(f"app_save_window_state: {self.pos()=} {self.geometry()=}") if log_debug_enabled else None
+            self.qt_settings.setValue(self.qt_version_key, QtCore.qVersion())
             self.qt_settings.setValue(self.qt_geometry_key, self.saveGeometry())
             self.qt_settings.setValue(self.qt_state_key, self.saveState())
 
-    def app_restore_window_state(self) -> None:
-        if self.main_config.is_set(ConfOpt.SMART_WINDOW, fallback=True):
-            if geometry := self.qt_settings.value(self.qt_geometry_key, None):
-                self.restoreGeometry(geometry)
-            else:
-                self.adjustSize()
-            if window_state := self.qt_settings.value(self.qt_state_key, None):
-                self.restoreState(window_state)
-            log_debug(f"app_restore_window_state: {self.pos()=} {self.geometry()=}") if log_debug_enabled else None
+    def app_restore_window_state(self) -> bool:
+        log_debug(f"app_restore_window_state")
+        if not self.main_config.is_set(ConfOpt.SMART_WINDOW, fallback=True):
+            return False
+        if len(self.qt_settings.allKeys()) == 0:  # No previous state
+            return False
+        if (saved_ver := self.qt_settings.value(self.qt_version_key, '5')).split('.', 1)[0] != QtCore.qVersion().split('.', 1)[0]:
+            log_warning(f"app_restore_window_state: {saved_ver=} != {QtCore.qVersion()=} - major differs, cannot restore.")
+            return False  # Different Qt versions - cannot restore size, layout/size might be different.
+        if geometry := self.qt_settings.value(self.qt_geometry_key, None):
+            self.restoreGeometry(geometry)
+        if window_state := self.qt_settings.value(self.qt_state_key, None):
+            self.restoreState(window_state)
+        log_debug(f"app_restore_window_state: {self.pos()=} {self.geometry()=}") if log_debug_enabled else None
+        return True
+
 
     def app_decide_window_position(self):
         # Guess a window position near the tray. Use the mouse/cursor-pos as a guess to where the
