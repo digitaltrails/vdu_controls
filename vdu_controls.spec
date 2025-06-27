@@ -18,7 +18,7 @@
 
 
 Name:           vdu_controls
-Version:        2.4.0
+Version:        2.4.1
 Release:        0
 Summary:        Visual Display Unit virtual control panel
 License:        GPL-3.0-or-later
@@ -33,7 +33,11 @@ Requires:       ddcutil
 Requires:       noto-sans-math-fonts
 Requires:       noto-sans-symbols2-fonts
 Requires:       python3
+%if 0%{?sle_version} > 150000 && 0%{?is_opensuse}
 Requires:       python3-qt5
+%else
+Requires:       python3-qt6
+%endif
 Recommends:     ddcutil-service
 Recommends:     python3-pyserial
 %endif

@@ -359,6 +359,12 @@ Michael Hamilton
 Version History
 ---------------
 
+* 2.4.1
+  * Conversion to PyQt6 (while mainting PyQt5 compatability).
+  * PyQt6 is used by default, with a fallback to PyQt5 should it not be available.
+  * New option qt6-high-dpi-scaling, disable it to force Qt6 to revert to Qt5 scaling and styling.
+  * New environment variable VDU_CONTROLS_QT_VERSION, set it to 5 or 6 to force the use of PyQt5 or PyQt6.
+  * Minor changes to UI layouts to acommodate both Qt5 and Qt6.
 * 2.4.0
   * Added the ability to estimate the solar-illumination for a given geolocation and time. 
   * Added semi-automatic brighness adjustment proportional to geolocated solar-illumination.

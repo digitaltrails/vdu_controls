@@ -27,9 +27,9 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Jun 07, 2025" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Jun 27, 2025" "" "vdu_controls"
 .SH NAME
-vdu_controls \- vdu_controls 2.4.0
+vdu_controls \- vdu_controls 2.4.1
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
 .sp
 A control panel for DisplayPort, DVI, HDMI, or USB\-connected VDUs (\fIVisual Display Units\fP).
@@ -45,7 +45,7 @@ A control panel for DisplayPort, DVI, HDMI, or USB\-connected VDUs (\fIVisual Di
 [\-\-enable\-vcp\-code vcp_code] [\-\-schedule|\-\-no\-schedule]
 [\-\-splash|\-\-no\-splash] [\-\-system\-tray|\-\-no\-system\-tray]
 [\-\-hide\-on\-focus\-out|\-\-no\-hide\-on\-focus\-out]
-[\-\-smart\-window|\-\-no\-smart\-window] [\-smart\-uses\-xcb|\-smart\-uses\-xcb]
+[\-\-smart\-window|\-\-no\-smart\-window] [\-smart\-uses\-xwayland|\-smart\-uses\-xwayland]
 [\-\-monochrome\-tray|\-\-no\-monochrome\-tray] [\-\-mono\-light\-tray|\-\-no\-mono\-light\-tray]
 [\-\-protect\-nvram|\-\-no\-protect\-nvram]
 [\-\-lux\-options|\-\-no\-lux\-options]
@@ -102,9 +102,9 @@ minimize the main window automatically on focus out.
 smart main window placement and geometry.
 \fB\-\-smart\-window\fP is the default (may force UI to XWayland).
 .TP
-.B \-\-smart\-uses\-xcb|\-\-no\-smart\-uses\-xcb
+.B \-\-smart\-uses\-xxwayland|\-\-no\-smart\-uses\-xwayland
 if \fB\-\-smart\-window\fP is enabled, use XWayland (force xcb).
-\fB\-\-smart\-uses\-xcb\fP is the default.
+\fB\-\-smart\-uses\-xwayland\fP is the default.
 .TP
 .B \-\-monochrome\-tray|\-\-no\-monochrome\-tray
 monochrome dark\-themed system\-tray.
@@ -860,6 +860,9 @@ application switches its platform to X11 (xcb) so that it runs in XWayland.
 .sp
 The UI attempts to step around minor differences between KDE, GNOME, and the rest,
 the UI on each may not be exactly the same.
+.sp
+The scaling and appearance of Qt6 differs from Qt5, its more chunky and rounded.  If you
+have Qt5 installed and prefer it, you can set prefer\-qt5 in settings.
 .SS Other concerns
 .sp
 The power\-supplies in some older VDUs may buzz/squeel audibly when the brightness is
