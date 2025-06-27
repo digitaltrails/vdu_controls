@@ -670,7 +670,7 @@ The UI attempts to step around minor differences between KDE, GNOME, and the res
 the UI on each may not be exactly the same.
 
 The scaling and appearance of Qt6 differs from Qt5, its more chunky and rounded.  If you
-have Qt5 installed and prefer it, you can set prefer-qt5 in settings.
+have Qt5 installed and prefer it, you can uncheck prefer-qt6 in settings.
 
 
 Other concerns
@@ -909,12 +909,13 @@ for qt_version in (5, 6) if CONFIG_FILE_PREFER_QT5.exists() else (6, 5):
     except (ImportError, ModuleNotFoundError) as no_qt_exc:
         print(f"Failed to import PyQt6: {repr(no_qt_exc)}", file=sys.stderr)
 
-def flag_qt_version_preference(config: ConfIni):
-    if config.has_section(ConfOpt.PREFER_QT5.conf_section) and config.getboolean(ConfOpt.PREFER_QT5.conf_section,
-                                                                                 ConfOpt.PREFER_QT5.conf_name, fallback=False):
+def flag_qt_version_preference(config: ConfIni) -> None:  # use a flag file to work around the chicken-and-egg issue at startup.
+    if config.has_section(ConfOpt.PREFER_QT6.conf_section) and config.getboolean(ConfOpt.PREFER_QT6.conf_section,
+                                                                                 ConfOpt.PREFER_QT6.conf_name, fallback=True):
+        if CONFIG_FILE_PREFER_QT5.exists():
+            CONFIG_FILE_PREFER_QT5.unlink()
+    else:
         CONFIG_FILE_PREFER_QT5.touch()
-    elif CONFIG_FILE_PREFER_QT5.exists():
-        CONFIG_FILE_PREFER_QT5.unlink()
 
 StdPixmap = QStyle.StandardPixmap
 
@@ -2478,8 +2479,8 @@ class ConfOpt(Enum):  # An Enum with tuples for values is used for convenience f
                         tip=QT_TR_NOOP('smart main window placement and geometry (X11 and XWayland)'), restart=True)
     SMART_USES_XCB = _def(cname=QT_TR_NOOP('smart-uses-xwayland'), default="yes", restart=True,
                                 tip=QT_TR_NOOP('if smart-window is enabled, use Xwayland in Wayland'))
-    PREFER_QT5 = _def(cname=QT_TR_NOOP('prefer-qt5'), default="true", cmdline_arg='DISALLOWED',
-                        tip=QT_TR_NOOP('Qt6 high-DPI look and feel (default in Qt6)'), restart=True)
+    PREFER_QT6 = _def(cname=QT_TR_NOOP('prefer-qt6'), default="true", cmdline_arg='DISALLOWED',
+                        tip=QT_TR_NOOP('Prefer Qt6 over Qt5 (if both are installed)'), restart=True)
     MONOCHROME_TRAY_ENABLED = _def(cname=QT_TR_NOOP('monochrome-tray-enabled'), default="no", restart=False,
                                    tip=QT_TR_NOOP('monochrome dark themed system tray'))
     MONO_LIGHT_TRAY_ENABLED = _def(cname=QT_TR_NOOP('mono-light-tray-enabled'), default="no", restart=False,
