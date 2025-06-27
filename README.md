@@ -53,7 +53,7 @@ The application may optionally run in the **system tray** of KDE, Deepin,
 GNOME, COSMIC, and Xfce (and possibly others). It automatically adapts to the 
 different tray implementations.
 
-The UI automatically adjusts to **light and dark desktop-themes**.
+The UI automatically adjusts to **light and dark Qt desktop-themes**.
 Where a desktop supports Qt theming events, the UI dynamically adjusts 
 to light/dark theme changes.
 
@@ -190,7 +190,7 @@ All the following runtime dependencies are likely to be pre-packaged on any mode
   anyone requires support for versions of ddcutil prior to v1.2 please contact me directly.)
 * **i2c-dev**: the i2c-dev kernel module normally shipped with all Linux distributions and required by [ddcutil](https://www.ddcutil.com)
 * **python >=3.8**: ``vdu_controls`` is written in python and may depend on some features present only in 3.8 onward.
-* **python >=3.8 QtPy**: the python GUI library used by ``vdu_controls``.
+* **PyQt6** or **PyQt5**: the python GUI library used by ``vdu_controls``.
 
 It's best to confirm that ``ddcutil`` is functioning before using ``vdu_controls``:
 
