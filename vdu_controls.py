@@ -4612,6 +4612,8 @@ class PresetWidget(QWidget):
         self.preset = preset
         line_layout = QHBoxLayout()
         line_layout.setSpacing(0)
+        line_layout.contentsMargins().setTop(0)
+        line_layout.contentsMargins().setBottom(native_pixels(1))
         self.setLayout(line_layout)
 
         self.preset_name_button = PresetActivationButton(preset)
@@ -4619,7 +4621,8 @@ class PresetWidget(QWidget):
         self.preset_name_button.clicked.connect(partial(edit_action, preset=preset))
         self.preset_name_button.setToolTip(tr('Activate this Preset and edit its options.'))
         self.preset_name_button.setAutoDefault(False)
-        line_layout.addSpacing(20)
+        self.preset_name_button.setFixedSize(QSize(native_pixels(300), native_font_height(1.5)))
+        line_layout.addSpacing(native_pixels(20))
         for button in (
                 StdButton(icon=si(self, StdPixmap.SP_DriveFDIcon), tip=tr("Update this preset from the current VDU settings."),
                           clicked=partial(save_action, from_widget=self), flat=True),
@@ -5476,18 +5479,18 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.main_controller = main_controller
         self.main_config = main_config
         self.content_controls_map: Dict[Tuple[str, str], QCheckBox] = {}
-        self.resize(native_pixels(1600), native_pixels(950))
+        self.resize(native_pixels(1700), native_pixels(950))
         self.setMinimumSize(native_pixels(1350), native_pixels(600))
         layout = QVBoxLayout()
         self.setLayout(layout)
 
         dialog_splitter = QSplitter()
         dialog_splitter.setOrientation(Qt.Orientation.Horizontal)
-        dialog_splitter.setHandleWidth(10)
+        dialog_splitter.setHandleWidth(native_pixels(10))
         layout.addWidget(dialog_splitter, stretch=1)
 
         preset_list_panel = QGroupBox()
-        preset_list_panel.setMinimumWidth(native_pixels(750))
+        preset_list_panel.setMinimumWidth(native_pixels(550))
         preset_list_panel.setFlat(True)
         preset_list_layout = QVBoxLayout()
         preset_list_panel.setLayout(preset_list_layout)
@@ -5497,6 +5500,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.preset_widgets_scroll_area = QScrollArea(parent=self)
         preset_widgets_content = QWidget()
         self.preset_widgets_layout = QVBoxLayout()
+        self.preset_widgets_layout.setSpacing(0)
         preset_widgets_content.setLayout(self.preset_widgets_layout)
         self.preset_widgets_scroll_area.setWidget(preset_widgets_content)
         self.preset_widgets_scroll_area.setWidgetResizable(True)
@@ -5560,6 +5564,9 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.editor_layout.addWidget(self.editor_trigger_widget)
 
         dialog_splitter.addWidget(self.editor_groupbox)
+        dialog_splitter.setCollapsible(0, False);
+        dialog_splitter.setCollapsible(1, False);
+        dialog_splitter.setSizes([preset_list_panel.minimumSize().width(), self.editor_groupbox.minimumSize().width()])
 
         self.status_bar = QStatusBar()
 
