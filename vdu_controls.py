@@ -784,9 +784,6 @@ Environment
     VDU_CONTROLS_DBUS_TIMEOUT_MILLIS
         Dbus call wait timeout. Default is 10000, 10 seconds.
 
-    VDU_CONTROLS_QT_VERSION
-        Set to 6 (default, if available) to force the use of Qt6 libraries or 5 for Qt5.
-
 Files
 =====
     $HOME/.config/vdu_controls/
