@@ -16,7 +16,6 @@ Synopsis:
                      [--splash|--no-splash] [--system-tray|--no-system-tray]
                      [--hide-on-focus-out|--no-hide-on-focus-out]
                      [--smart-window|--no-smart-window] [-smart-uses-xwayland|-smart-uses-xwayland]
-                     [--qt6-behavior|--no-qt6-behavior]
                      [--monochrome-tray|--no-monochrome-tray] [--mono-light-tray|--no-mono-light-tray]
                      [--protect-nvram|--no-protect-nvram]
                      [--lux-options|--no-lux-options]
@@ -57,8 +56,6 @@ Arguments supplied on the command line override config file equivalent settings.
       --smart-uses-xxwayland|--no-smart-uses-xwayland
                             if ``--smart-window`` is enabled, use XWayland (force xcb).
                             ``--smart-uses-xwayland`` is the default.
-      --qt6-behavior|--no-qt6-behavior
-                            Qt6 high-dpi scaling and appearance, or Qt5 appearance
       --monochrome-tray|--no-monochrome-tray
                             monochrome dark-themed system-tray.
                             ``--no-monochrome-tray`` is the default.
@@ -673,8 +670,7 @@ The UI attempts to step around minor differences between KDE, GNOME, and the res
 the UI on each may not be exactly the same.
 
 The scaling and appearance of Qt6 differs from Qt5, its more chunky and rounded.  If you
-prefer the more compact Qt5 style, disable qt6-behavoir in settings, this will
-switch Qt6 scaling and styling to match Qt5.
+have Qt5 installed and prefer it, you can set prefer-qt5 in settings.
 
 
 Other concerns
@@ -874,39 +870,46 @@ from threading import Lock
 from typing import List, Tuple, Mapping, Type, Dict, Callable, Any, NewType
 from urllib.error import URLError
 
-if qt_version_selected := os.environ.get('VDU_CONTROLS_QT_VERSION', '6'):  # Change to '5' to force the use of Qt5
+CONFIG_DIR_PATH = Path.home().joinpath('.config', 'vdu_controls')
+CONFIG_FILE_PREFER_QT5 = CONFIG_DIR_PATH.joinpath('_prefer_qt5_')
+for qt_version in (5, 6) if CONFIG_FILE_PREFER_QT5.exists() else (6, 5):
+    print(f"trying Qt{qt_version}")
     try:
-        from PyQt6 import QtCore, QtNetwork
-        from PyQt6.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QPoint, QObject, QEvent, \
-            QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir, QRegularExpression, QPointF
-        from PyQt6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusArgument, QDBusVariant
-        from PyQt6.QtGui import QAction, QShortcut, QPixmap, QIcon, QCursor, QImage, QPainter, QRegularExpressionValidator, \
-            QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon, \
-            QDoubleValidator, QScreen
-        from PyQt6.QtSvg import QSvgRenderer
-        from PyQt6.QtSvgWidgets import QSvgWidget
-        from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
-            QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
-            QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QMainWindow, QToolBar, QToolButton, QFileDialog, \
-            QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, \
-            QSpacerItem, QListWidget, QListWidgetItem
-    except (ImportError, ModuleNotFoundError) as no_qt6_exc:
-        print(f"Falling back to Qt5. Failed to import PyQt6: {repr(no_qt6_exc)}", file=sys.stderr)
-        qt_version_selected = None
-if qt_version_selected != '6':  # Covers all other values.
-    from PyQt5 import QtCore, QtNetwork
-    from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QPoint, QObject, QEvent, \
-        QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir, QRegularExpression, QPointF
-    from PyQt5.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusArgument, QDBusVariant
-    from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QRegularExpressionValidator, \
-        QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon, \
-        QDoubleValidator
-    from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
-    from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
-        QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
-        QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
-        QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, QShortcut, \
-        QSpacerItem, QListWidget, QListWidgetItem
+        if qt_version == 6:
+            from PyQt6 import QtCore, QtNetwork
+            from PyQt6.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QPoint, QObject, QEvent, \
+                QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir, QRegularExpression, QPointF
+            from PyQt6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusArgument, QDBusVariant
+            from PyQt6.QtGui import QAction, QShortcut, QPixmap, QIcon, QCursor, QImage, QPainter, QRegularExpressionValidator, \
+                QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon, \
+                QDoubleValidator, QScreen
+            from PyQt6.QtSvg import QSvgRenderer
+            from PyQt6.QtSvgWidgets import QSvgWidget
+            from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
+                QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
+                QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QMainWindow, QToolBar, QToolButton, QFileDialog, \
+                QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, \
+                QSpacerItem, QListWidget, QListWidgetItem
+            QT5_USE_HIGH_DPI_PIXMAPS = None
+            QT5_QPAINT_HIGH_QUALITY_ANTIALIASING = None
+        elif qt_version == 5:  # Covers all other values.
+            from PyQt5 import QtCore, QtNetwork
+            from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QPoint, QObject, QEvent, \
+                QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir, QRegularExpression, QPointF
+            from PyQt5.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusArgument, QDBusVariant
+            from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QRegularExpressionValidator, \
+                QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon, \
+                QDoubleValidator
+            from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
+            from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
+                QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
+                QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
+                QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, QShortcut, \
+                QSpacerItem, QListWidget, QListWidgetItem
+            QT5_USE_HIGH_DPI_PIXMAPS = Qt.ApplicationAttribute.AA_UseHighDpiPixmaps
+            QT5_QPAINT_HIGH_QUALITY_ANTIALIASING = QPainter.RenderHint.HighQualityAntialiasing
+    except (ImportError, ModuleNotFoundError) as no_qt_exc:
+        print(f"Failed to import PyQt6: {repr(no_qt_exc)}", file=sys.stderr)
 
 StdPixmap = QStyle.StandardPixmap
 
@@ -1109,7 +1112,6 @@ https://github.com/digitaltrails/vdu_controls/releases/tag/v{VERSION}</a>
 <br/>___________________________________________________________________________"""
 RELEASE_INFO = QT_TR_NOOP('Portability Release: PyQt5 and PyQT6 compatibility.')
 
-CONFIG_DIR_PATH = Path.home().joinpath('.config', 'vdu_controls')
 CURRENT_PRESET_NAME_FILE = CONFIG_DIR_PATH.joinpath('current_preset.txt')
 CUSTOM_TRAY_ICON_FILE = CONFIG_DIR_PATH.joinpath('tray_icon.svg')
 LOCALE_TRANSLATIONS_PATHS = [
@@ -2471,7 +2473,7 @@ class ConfOpt(Enum):  # An Enum with tuples for values is used for convenience f
                         tip=QT_TR_NOOP('smart main window placement and geometry (X11 and XWayland)'), restart=True)
     SMART_USES_XCB = _def(cname=QT_TR_NOOP('smart-uses-xwayland'), default="yes", restart=True,
                                 tip=QT_TR_NOOP('if smart-window is enabled, use Xwayland in Wayland'))
-    QT6_BEHAVIOR = _def(cname=QT_TR_NOOP('qt6-behavior'), default="true",
+    PREFER_QT5 = _def(cname=QT_TR_NOOP('prefer-qt5'), default="true", cmdline_arg='DISALLOWED',
                         tip=QT_TR_NOOP('Qt6 high-DPI look and feel (default in Qt6)'), restart=True)
     MONOCHROME_TRAY_ENABLED = _def(cname=QT_TR_NOOP('monochrome-tray-enabled'), default="no", restart=False,
                                    tip=QT_TR_NOOP('monochrome dark themed system tray'))
@@ -6419,8 +6421,8 @@ class LuxGaugeWidget(QWidget):
         pixmap.setDevicePixelRatio(dp_ratio)
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        if qt_version_selected == '5':
-            painter.setRenderHint(QPainter.RenderHint.HighQualityAntialiasing)
+        if QT5_QPAINT_HIGH_QUALITY_ANTIALIASING:
+            painter.setRenderHint(QT5_QPAINT_HIGH_QUALITY_ANTIALIASING)
         plot_height = self.plot_widget.height()
         # Create a plot of recent historical lux readings.
         lux_plot_width = self.plot_widget.height()  # Square with height
@@ -7950,11 +7952,10 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
         else:
             about_text = ABOUT_TEXT
         if self.main_controller and self.main_controller.ddcutil:
-            scaled = "qt5-behavior" if os.environ.get('QT_ENABLE_HIGHDPI_SCALING', '1') == '0' else "default"
             counts_str = ','.join((str(v) for v in Ddcutil.vcp_write_counters.values())) if len(Ddcutil.vcp_write_counters) else '0'
             about_text += (f"<hr><p><small>desktop: {os.environ.get('XDG_CURRENT_DESKTOP', default='unknown')}; "
                            f"platform: {os.environ.get('XDG_SESSION_TYPE', default='unknown')} "
-                           f"({QApplication.platformName()}, qt-{QtCore.qVersion()} {scaled});<br/>"
+                           f"({QApplication.platformName()}, qt-{QtCore.qVersion()});<br/>"
                            f"ddcutil-interface: {self.main_controller.ddcutil.ddcutil_version_info()[0]}; "
                            f"ddcutil: {self.main_controller.ddcutil.ddcutil_version_info()[1]} (writes: {counts_str});</small>")
         self.setInformativeText(about_text)
@@ -8234,8 +8235,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             return
         for setting in ConfOpt:
             if setting.restart_required and (setting.conf_section, setting.conf_name) in changed_settings:
-                self.restart_application(tr("The change to the {} option requires "
-                                            "vdu_controls to restart.").format(tr(setting.conf_name)))
+                self.restart_application(
+                    tr("The change to the {} option requires vdu_controls to restart.").format(tr(setting.conf_name)))
                 return
         self.main_config.reload()
         global log_debug_enabled
@@ -8727,6 +8728,10 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         # Force a restart of the application.  Some settings changes need this (for example, run in the system tray).
         MBox(MIcon.Warning, msg=reason, info=tr('When this message is dismissed, vdu_controls will restart.')).exec()
         self.main_window.app_save_window_state()
+        if self.main_config.is_set(ConfOpt.PREFER_QT5):
+            CONFIG_FILE_PREFER_QT5.touch()
+        elif CONFIG_FILE_PREFER_QT5.exists():
+            CONFIG_FILE_PREFER_QT5.unlink()
         QCoreApplication.exit(EXIT_CODE_FOR_RESTART)
 
 
@@ -8817,8 +8822,8 @@ class VduAppWindow(QMainWindow):
 
         self.app_name = APPNAME
         app.setApplicationDisplayName(self.app_name)
-        if qt_version_selected == '5':
-            app.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps)  # Make sure all icons use HiDPI - toolbars don't by default, so force it.
+        if QT5_USE_HIGH_DPI_PIXMAPS:
+            app.setAttribute(QT5_USE_HIGH_DPI_PIXMAPS)  # Make sure all icons use HiDPI - toolbars don't by default, so force it.
 
         if splash is not None:
             splash.showMessage(tr('\n\nVDU Controls\nLooking for DDC monitors...\n'), Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
@@ -9398,10 +9403,6 @@ def main() -> None:
         if main_config.is_set(ConfOpt.SMART_WINDOW) and main_config.is_set(ConfOpt.SMART_USES_XCB):
             log_warning(f"{ConfOpt.SMART_WINDOW.conf_id}: Wayland disallows app window placement. Switching to XWayland.")
             os.environ['QT_QPA_PLATFORM'] = 'xcb'  # Force the use of XWayland
-
-    if  qt_version_selected == '6' and not main_config.is_set(ConfOpt.QT6_BEHAVIOR):
-        os.environ['QT_ENABLE_HIGHDPI_SCALING'] = '0'  # Just for Qt6, in Qt5, setting it to 1 can cause double scaling.
-        log_info(f"Set Qt6 appearance to QT_ENABLE_HIGHDPI_SCALING=0")
 
     QGuiApplication.setDesktopFileName("vdu_controls")  # Wayland needs this set to find/use the app's desktop icon.
     # Call QApplication before parsing arguments, it will parse and remove Qt session restoration arguments.
