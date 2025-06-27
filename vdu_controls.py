@@ -3136,7 +3136,7 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
         self.bottom_status_bar.showMessage(message, msecs)
 
     def sizeHint(self):
-        return QSize(native_pixels(1480), native_pixels(1000))
+        return QSize(native_pixels(1700), native_pixels(1000))
 
     def update_tab_ops(self, tab: SettingsEditorTab) -> None:
         self.tab_ops_label.setText(tr('{}: ').format(tab.preferred_name))
