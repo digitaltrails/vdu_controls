@@ -873,7 +873,7 @@ from urllib.error import URLError
 CONFIG_DIR_PATH = Path.home().joinpath('.config', 'vdu_controls')
 CONFIG_FILE_PREFER_QT5 = CONFIG_DIR_PATH.joinpath('_prefer_qt5_')
 for qt_version in (5, 6) if CONFIG_FILE_PREFER_QT5.exists() else (6, 5):
-    print(f"trying Qt{qt_version}")
+    print(f"Trying Qt{qt_version}")
     try:
         if qt_version == 6:
             from PyQt6 import QtCore, QtNetwork
@@ -891,7 +891,7 @@ for qt_version in (5, 6) if CONFIG_FILE_PREFER_QT5.exists() else (6, 5):
                 QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, \
                 QSpacerItem, QListWidget, QListWidgetItem
             QT5_USE_HIGH_DPI_PIXMAPS = None
-            QT5_QPAINT_HIGH_QUALITY_ANTIALIASING = None
+            QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING = None
         elif qt_version == 5:  # Covers all other values.
             from PyQt5 import QtCore, QtNetwork
             from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QPoint, QObject, QEvent, \
@@ -907,9 +907,17 @@ for qt_version in (5, 6) if CONFIG_FILE_PREFER_QT5.exists() else (6, 5):
                 QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, QShortcut, \
                 QSpacerItem, QListWidget, QListWidgetItem
             QT5_USE_HIGH_DPI_PIXMAPS = Qt.ApplicationAttribute.AA_UseHighDpiPixmaps
-            QT5_QPAINT_HIGH_QUALITY_ANTIALIASING = QPainter.RenderHint.HighQualityAntialiasing
+            QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING = QPainter.RenderHint.HighQualityAntialiasing
+        break
     except (ImportError, ModuleNotFoundError) as no_qt_exc:
         print(f"Failed to import PyQt6: {repr(no_qt_exc)}", file=sys.stderr)
+
+def flag_qt_version_preference(config: ConfIni):
+    if config.has_section(ConfOpt.PREFER_QT5.conf_section) and config.getboolean(ConfOpt.PREFER_QT5.conf_section,
+                                                                                 ConfOpt.PREFER_QT5.conf_name, fallback=False):
+        CONFIG_FILE_PREFER_QT5.touch()
+    elif CONFIG_FILE_PREFER_QT5.exists():
+        CONFIG_FILE_PREFER_QT5.unlink()
 
 StdPixmap = QStyle.StandardPixmap
 
@@ -3282,6 +3290,7 @@ class SettingsEditorTab(QWidget):
                     self.editor_dialog.status_message(message, 0)
                     QApplication.processEvents()
                     self.ini_editable.save(self.config_path)
+                    flag_qt_version_preference(self.ini_editable)
                     self.ini_before = self.ini_editable.duplicate()  # Saved ini becomes the new "before"
                     if what_changed is None:  # Not accumulating what has changed, implement change now.
                         self.change_callback(self.unsaved_changes_map)
@@ -6421,8 +6430,8 @@ class LuxGaugeWidget(QWidget):
         pixmap.setDevicePixelRatio(dp_ratio)
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        if QT5_QPAINT_HIGH_QUALITY_ANTIALIASING:
-            painter.setRenderHint(QT5_QPAINT_HIGH_QUALITY_ANTIALIASING)
+        if QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING:
+            painter.setRenderHint(QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING)
         plot_height = self.plot_widget.height()
         # Create a plot of recent historical lux readings.
         lux_plot_width = self.plot_widget.height()  # Square with height
@@ -8728,10 +8737,6 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         # Force a restart of the application.  Some settings changes need this (for example, run in the system tray).
         MBox(MIcon.Warning, msg=reason, info=tr('When this message is dismissed, vdu_controls will restart.')).exec()
         self.main_window.app_save_window_state()
-        if self.main_config.is_set(ConfOpt.PREFER_QT5):
-            CONFIG_FILE_PREFER_QT5.touch()
-        elif CONFIG_FILE_PREFER_QT5.exists():
-            CONFIG_FILE_PREFER_QT5.unlink()
         QCoreApplication.exit(EXIT_CODE_FOR_RESTART)
 
 
