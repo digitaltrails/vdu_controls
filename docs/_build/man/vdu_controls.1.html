@@ -45,8 +45,8 @@ equivalent settings.</p>
   --smart-window|--no-smart-window
                         smart main window placement and geometry.
                         ``--smart-window`` is the default (may force UI to XWayland).
-  --smart-uses-xxwayland|--no-smart-uses-xwayland
-                        if ``--smart-window`` is enabled, use XWayland (force xcb).
+  --smart-uses-xwayland|--no-smart-uses-xwayland
+                        if ``--smart-window`` is enabled, use XWayland (force X11 xcb).
                         ``--smart-uses-xwayland`` is the default.
   --monochrome-tray|--no-monochrome-tray
                         monochrome dark-themed system-tray.
@@ -683,12 +683,12 @@ provided in the <code>sample-scripts</code>.</p>
 <p>Wayland doesn’t allow an application to precisely position its
 windows. When the <code>smart-window</code> option is enabled and the
 desktop platform is Wayland, the application switches its platform to
-X11 (xcb) so that it runs in XWayland.</p>
+XWayland (X11 xcb).</p>
 <p>The UI attempts to step around minor differences between KDE, GNOME,
 and the rest, the UI on each may not be exactly the same.</p>
 <p>The scaling and appearance of Qt6 differs from Qt5, its more chunky
-and rounded. If you have Qt5 installed and prefer it, you can set
-prefer-qt5 in settings.</p>
+and rounded. If you have Qt5 installed and prefer it, you can uncheck
+prefer-qt6 in settings.</p>
 <h2 id="other-concerns">Other concerns</h2>
 <p>The power-supplies in some older VDUs may buzz/squeel audibly when
 the brightness is turned way down. This may not be a major issue

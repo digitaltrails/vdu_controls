@@ -53,8 +53,8 @@ Arguments supplied on the command line override config file equivalent settings.
       --smart-window|--no-smart-window
                             smart main window placement and geometry.
                             ``--smart-window`` is the default (may force UI to XWayland).
-      --smart-uses-xxwayland|--no-smart-uses-xwayland
-                            if ``--smart-window`` is enabled, use XWayland (force xcb).
+      --smart-uses-xwayland|--no-smart-uses-xwayland
+                            if ``--smart-window`` is enabled, use XWayland (force X11 xcb).
                             ``--smart-uses-xwayland`` is the default.
       --monochrome-tray|--no-monochrome-tray
                             monochrome dark-themed system-tray.
@@ -664,7 +664,7 @@ Cross-platform differences
 
 Wayland doesn't allow an application to precisely position its windows.  When the
 ``smart-window`` option is enabled and the desktop platform is Wayland, the
-application switches its platform to X11 (xcb) so that it runs in XWayland.
+application switches its platform to XWayland (X11 xcb).
 
 The UI attempts to step around minor differences between KDE, GNOME, and the rest,
 the UI on each may not be exactly the same.
@@ -919,6 +919,7 @@ def flag_qt_version_preference(config: ConfIni) -> None:  # use a flag file to w
 
 StdPixmap = QStyle.StandardPixmap
 
+
 APPNAME = "VDU Controls"
 VDU_CONTROLS_VERSION = '2.4.1'
 VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in VDU_CONTROLS_VERSION.split('.'))
@@ -965,9 +966,8 @@ SolarElevationData = namedtuple('SolarElevationData', ['azimuth', 'zenith', 'whe
 
 Shortcut = namedtuple('Shortcut', ['letter', 'annotated_word'])
 
+
 gui_thread: QThread | None = None
-
-
 def intV(type_id: QMetaType.Type|int) -> int:
     return type_id.value if isinstance(type_id, Enum) else type_id  # awfulness of enums in pyqt6
 
@@ -1355,6 +1355,23 @@ log_to_syslog = False
 log_debug_enabled = False  # Often used to guard needless computation: log_debug(needless) if log_debug_enabled else None
 
 VduStableId = NewType('VduStableId', str)
+
+original_qt_qpa_platform = None
+
+def force_xwayland():  # Force Qt to use XWayland, or reverse the previous force
+    global original_qt_qpa_platform
+    original_qt_qpa_platform = os.environ.get('QT_QPA_PLATFORM', '')  # save original value
+    log_info("Forcing Xwayland, setting environment variable QT_QPA_PLATFORM=xcb")
+    os.environ['QT_QPA_PLATFORM'] = 'xcb'
+
+
+def reverse_force_xwayland():
+    if original_qt_qpa_platform:
+        log_info(f"Restoring environment variable QT_QPA_PLATFORM={original_qt_qpa_platform}")
+        os.environ['QT_QPA_PLATFORM'] = original_qt_qpa_platform  # restore original value
+    elif original_qt_qpa_platform == '':
+        log_info(f"Clearing environment variable QT_QPA_PLATFORM")
+        os.environ.pop('QT_QPA_PLATFORM')  # did not previously have a value, remove it
 
 
 def is_dark_theme() -> bool:
@@ -2477,8 +2494,8 @@ class ConfOpt(Enum):  # An Enum with tuples for values is used for convenience f
                              tip=QT_TR_NOOP('minimize the main window automatically on focus out'))
     SMART_WINDOW = _def(cname=QT_TR_NOOP('smart-window'), default="yes",
                         tip=QT_TR_NOOP('smart main window placement and geometry (X11 and XWayland)'), restart=True)
-    SMART_USES_XCB = _def(cname=QT_TR_NOOP('smart-uses-xwayland'), default="yes", restart=True,
-                                tip=QT_TR_NOOP('if smart-window is enabled, use Xwayland in Wayland'))
+    SMART_USES_XWAYLAND = _def(cname=QT_TR_NOOP('smart-uses-xwayland'), default="yes", restart=True,
+                               tip=QT_TR_NOOP('if smart-window is enabled, use Xwayland in Wayland'))
     PREFER_QT6 = _def(cname=QT_TR_NOOP('prefer-qt6'), default="true", cmdline_arg='DISALLOWED',
                         tip=QT_TR_NOOP('Prefer Qt6 over Qt5 (if both are installed)'), restart=True)
     MONOCHROME_TRAY_ENABLED = _def(cname=QT_TR_NOOP('monochrome-tray-enabled'), default="no", restart=False,
@@ -9417,9 +9434,9 @@ def main() -> None:
         main_config.parse_file(default_config_path)
 
     if os.environ.get('XDG_SESSION_TYPE') != 'x11':  # If Wayland we can't do smart window placement - use XWayland
-        if main_config.is_set(ConfOpt.SMART_WINDOW) and main_config.is_set(ConfOpt.SMART_USES_XCB):
+        if main_config.is_set(ConfOpt.SMART_WINDOW) and main_config.is_set(ConfOpt.SMART_USES_XWAYLAND):
             log_warning(f"{ConfOpt.SMART_WINDOW.conf_id}: Wayland disallows app window placement. Switching to XWayland.")
-            os.environ['QT_QPA_PLATFORM'] = 'xcb'  # Force the use of XWayland
+            force_xwayland()
 
     QGuiApplication.setDesktopFileName("vdu_controls")  # Wayland needs this set to find/use the app's desktop icon.
     # Call QApplication before parsing arguments, it will parse and remove Qt session restoration arguments.
@@ -9471,6 +9488,7 @@ def main() -> None:
     rc = app.exec()
     log_info(f"App exit {rc=} {'EXIT_CODE_FOR_RESTART' if rc == EXIT_CODE_FOR_RESTART else ''}")
     if rc == EXIT_CODE_FOR_RESTART:
+        reverse_force_xwayland()
         rc = 0
         log_info(f"Trying to restart - this only works if {app.arguments()[0]} is executable and on your PATH): ", )
         restart_status = QProcess.startDetached(app.arguments()[0], app.arguments()[1:])
