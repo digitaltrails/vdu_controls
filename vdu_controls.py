@@ -1369,9 +1369,9 @@ def reverse_force_xwayland():
     if original_qt_qpa_platform:
         log_info(f"Restoring environment variable QT_QPA_PLATFORM={original_qt_qpa_platform}")
         os.environ['QT_QPA_PLATFORM'] = original_qt_qpa_platform  # restore original value
-    elif original_qt_qpa_platform == '':
-        log_info(f"Clearing environment variable QT_QPA_PLATFORM")
-        os.environ.pop('QT_QPA_PLATFORM')  # did not previously have a value, remove it
+    elif original_qt_qpa_platform == '':  # Will be '' if force_xwayland() has been called, otherwise it will be None
+        log_info(f"Removing environment variable QT_QPA_PLATFORM")
+        os.environ.pop('QT_QPA_PLATFORM')  # before the call to force_xwayland() it did not previously exist, remove it.
 
 
 def is_dark_theme() -> bool:
