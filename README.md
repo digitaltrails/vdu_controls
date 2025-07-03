@@ -360,7 +360,7 @@ Version History
 ---------------
 
 * 2.4.1
-  * Conversion to PyQt6 (while mainting PyQt5 compatability).
+  * Conversion to PyQt6 (while maintaining PyQt5 compatibility).
   * PyQt6 is used by default, with a fallback to PyQt5 should it not be available.
   * New option, prefer-qt6, disable this option to prefer PyQt5 over PyQt6.
   * Various changes to UI layouts to acommodate both Qt5 and Qt6 (including Qt6 High-DPI scaling).
@@ -370,6 +370,7 @@ Version History
   * Fixed weather selection, on selection, restore any missing weather definition files.
   * Fixed initialization-preset error handling (fix undefined variable).
   * Only persist lux_daylight_factor if in semi-auto mode (stop hardware light metering overwriting the user's choice).
+* 
 * 2.4.0
   * Added the ability to estimate the solar-illumination for a given geolocation and time. 
   * Added semi-automatic brighness adjustment proportional to geolocated solar-illumination.
