@@ -363,7 +363,7 @@ Version History
   * Conversion to PyQt6 (while maintaining PyQt5 compatibility).
   * PyQt6 is used by default, with a fallback to PyQt5 should it not be available.
   * New option, prefer-qt6, disable this option to prefer PyQt5 over PyQt6.
-  * Various changes to UI layouts to acommodate both Qt5 and Qt6 (including Qt6 High-DPI scaling).
+  * Various changes to UI layouts to accommodate both Qt5 and Qt6 (including Qt6 High-DPI scaling).
   * Various tweaks to the main window to make the spaciouse Qt6 styling more compact.
   * Renamed the smart-uses-xcb option to smart-uses-xwayland to better reflect what the option does.
   * Fixed smart-window preservation when the app was closed from the tray without ever showing the main window. 
