@@ -6791,12 +6791,12 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
         return LuxMeterSemiAutoDevice.daylight_factor
 
     @staticmethod
-    def update_df_from_lux_value(new_lux_value: float, non_semi_source: bool):
+    def update_df_from_lux_value(new_lux_value: float, semi_auto_source: bool):
         if location := LuxMeterSemiAutoDevice.location:
             solar_lux = calc_solar_lux(zoned_now(), location, 1.0)
-            if solar_lux > (4000 if non_semi_source else 0):  # only for reasonable daylight lux levels or if the user is driving.
+            if solar_lux > (0 if semi_auto_source else 4000):  # only for reasonable daylight lux levels or if the user is driving.
                 daylight_factor =  new_lux_value / solar_lux
-                LuxMeterSemiAutoDevice.set_daylight_factor(daylight_factor, internal=True, persist=not non_semi_source)
+                LuxMeterSemiAutoDevice.set_daylight_factor(daylight_factor, internal=True, persist=semi_auto_source)
 
     @staticmethod
     def set_daylight_factor(daylight_factor: float, internal: bool = False, persist: bool = False):
@@ -7887,12 +7887,11 @@ class LuxAmbientSlider(QWidget):
                 if source != self.lux_input_field:
                     self.lux_input_field.setValue(self.current_value)
                 # We can use values from non-semi-auto meters to calibrate the semi-auto-meter.
-                non_semi_auto_meter = self.controller.lux_meter and not self.controller.lux_meter.has_semi_auto_capability
-                if source == self.slider or source == self.lux_input_field or non_semi_auto_meter:
+                semi_auto_source = self.controller.lux_meter and self.controller.lux_meter.has_semi_auto_capability
+                if source == self.slider or source == self.lux_input_field or not semi_auto_source:
                     if location := self.controller.main_controller.main_config.get_location():
                         LuxMeterSemiAutoDevice.set_location(location)  # in case it's changed
-                        # TODO - if not in semi-auto, don't update this too often
-                        LuxMeterSemiAutoDevice.update_df_from_lux_value(self.current_value, non_semi_auto_meter)
+                        LuxMeterSemiAutoDevice.update_df_from_lux_value(self.current_value, semi_auto_source)
             finally:
                 self.in_flux = False
                 if source is None:
@@ -8344,7 +8343,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     if not external_event:
                         main_panel.show_vdu_exception(self.refresh_data_task.vdu_exception, can_retry=False)
                 if len(self.detected_vdu_list) == 0 or self.detected_vdu_list != self.previously_detected_vdu_list or (
-                        external_event and False):  # TODO what to do here, external events might require reconfiguration???
+                        external_event and False):
                     log_info(f"Reconfiguring: detected={self.detected_vdu_list} previously={self.previously_detected_vdu_list}")
                     self.configure_application(check_schedule=False)  # May cause a further refresh?
                     self.previously_detected_vdu_list = self.detected_vdu_list
