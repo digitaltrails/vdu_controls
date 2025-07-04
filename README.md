@@ -360,15 +360,15 @@ Version History
 ---------------
 
 * 2.4.1
-  * Conversion to PyQt6 (while maintaining PyQt5 compatibility).
+  * Support PyQt6 before PyQt5 goes out of support.
   * PyQt6 is used by default, with a fallback to PyQt5 should it not be available.
-  * New option, prefer-qt6, disable this option to prefer PyQt5 over PyQt6.
+  * Add the prefer-qt6 option to the Settings-Dialog, disable this option to force the use of PyQt5.
   * Various changes to UI layouts to accommodate both Qt5 and Qt6 (including Qt6 High-DPI scaling).
-  * Various tweaks to the main window to make the spaciouse Qt6 styling more compact.
-  * Renamed the smart-uses-xcb option to smart-uses-xwayland to better reflect what the option does.
+  * Minor alterations to the main-window layout to make the more spacious Qt6 styling more compact.
+  * Renamed the smart-uses-xcb option to smart-uses-xwayland.  This better reflects what the option does.
   * Fixed smart-window preservation when the app was closed from the tray without ever showing the main window. 
-  * Fixed weather selection, on selection, restore any missing weather definition files.
-  * Fixed initialization-preset error handling (fix undefined variable).
+  * Fixed weather selection: automatically restore any missing weather definition files.
+  * Fixed initialization-preset error handling: fix a reference to an undefined variable.
   * Only persist lux_daylight_factor if in semi-auto mode (stop hardware light metering overwriting the user's choice).
 * 
 * 2.4.0
