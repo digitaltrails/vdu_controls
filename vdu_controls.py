@@ -1357,7 +1357,7 @@ log_debug_enabled = False  # Often used to guard needless computation: log_debug
 
 VduStableId = NewType('VduStableId', str)
 
-original_qt_qpa_platform = None
+original_qt_qpa_platform: str | None = None
 
 def force_xwayland():  # Force Qt to use XWayland, or reverse the previous force
     global original_qt_qpa_platform
@@ -1506,24 +1506,25 @@ class Ddcutil:
     vcp_write_counters: Dict[str, int] = {}
 
     def __init__(self, common_args: List[str] | None = None, prefer_dbus_client: bool = True,
-                 connected_vdus_changed_callback: Callable = None) -> None:
+                 connected_vdus_changed_callback: Callable | None = None) -> None:
         super().__init__()
         self.common_args = common_args
         self.ddcutil_emulators_by_edid: Dict[str, DdcutilEmulatorImpl] = {}
-        self.ddcutil_impl = None  # The service-interface implementations are duck-typed.
+        self.ddcutil_impl: DdcutilDBusImpl | DdcutilExeImpl  # The service-interface implementations are duck-typed.
         if prefer_dbus_client:
             try:
                 self.ddcutil_impl = DdcutilDBusImpl(self.common_args, callback=connected_vdus_changed_callback)
             except DdcutilServiceNotFound:
                 log_warning("Failed to detect D-Bus ddcutil-service, falling back to the ddcutil command.")
+                prefer_dbus_client = False
 
-        if self.ddcutil_impl is None:  # dbus not preferred or dbus failed to initialise
+        if not prefer_dbus_client:  # dbus not preferred or dbus failed to initialize
             self.ddcutil_impl = DdcutilExeImpl(self.common_args)
 
         self.supported_codes: Dict[str, str] | None = None
         self.vcp_type_map: Dict[Tuple[str, str], str] = {}
         self.edid_txt_map: Dict[str, str] = {}
-        self.ddcutil_version = (0, 0, 0)  # Initial version for bootstrapping
+        self.ddcutil_version: Tuple[int, ...] = (0, 0, 0)  # Initial version for bootstrapping
         self.version_suffix = ''
         version_info = self.ddcutil_impl.get_ddcutil_version_string()
         if version_match := re.match(r'[a-z]* ?([0-9]+).([0-9]+).([0-9]+)-?([^\n]*)', version_info):
@@ -1731,20 +1732,22 @@ class DdcutilExeImpl:
     _SNC_PATTERN = re.compile(r'x([0-9a-f]+)')  # Match Simple Non-Continuous-Type getvcp result
     _CNC_PATTERN = re.compile(r'x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+)')  # Match Complex Non-Continuous-Type result
     _SPECIFIC_VCP_VALUE_PATTERN_CACHE: Dict[int, re.Pattern] = {}
+    DetectedAttributes = namedtuple("DetectedAttributes", ('display_number', 'usb_bus', 'usb_device',
+                                                           'manufacturer_id', 'model_name', 'serial_number',
+                                                           'product_code', 'edid_txt', 'binary_serial_number'))
 
-    def __init__(self, common_args: List[str]):
+    def __init__(self, common_args: List[str] | None):
         self.vdu_sleep_multiplier: Dict[str, float] = {}
         self.extra_args: Dict[str, List[str]] = {}
-        self.common_args = [arg for arg in os.getenv('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != ''] + common_args
+        self.common_args = [arg for arg in os.getenv('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != '']
+        if common_args:
+            self.common_args += common_args
         self.ddcutil_access_lock = Lock()
         self.vcp_type_map: Dict[int, str] = {}
-        self.ddcutil_version = (0, 0, 0)
+        self.ddcutil_version: tuple[int, ...] = (0, 0, 0)
         self.ddcutil_version_string = "0.0.0"
         self.version_suffix = ''
         self.ddcutil_exe = 'ddcutil'
-        self.DetectedAttributes = namedtuple("DetectedAttributes", ('display_number', 'usb_bus', 'usb_device',
-                                                                    'manufacturer_id', 'model_name', 'serial_number',
-                                                                    'product_code', 'edid_txt', 'binary_serial_number'))
         self.vdu_map_by_edid: Dict[str, Tuple] = {}
 
     def refresh_connection(self):
@@ -1764,7 +1767,7 @@ class DdcutilExeImpl:
     def _format_args_diagnostic(self, args: List[str]):
         return ' '.join([arg if len(arg) < 30 else arg[:30] + "..." for arg in args])
 
-    def __run__(self, *args, edid_txt: str = None) -> subprocess.CompletedProcess:
+    def __run__(self, *args, edid_txt: str | None = None) -> subprocess.CompletedProcess:
         if edid_txt:
             edid_args = ["--edid", edid_txt] if edid_txt else []
             multiplier = self.vdu_sleep_multiplier.get(edid_txt, None)
@@ -1824,7 +1827,7 @@ class DdcutilExeImpl:
         log_error(f"Failed to parse edid in {display_str=}")
         return None
 
-    def detect(self, flags: int) -> List[Tuple]:
+    def detect(self, flags: int) -> List[Tuple[Any, ...]]:
         args = ['detect', '--verbose', ]
         result_list = []
         result = self.__run__(*args)
@@ -1844,8 +1847,10 @@ class DdcutilExeImpl:
                 man_date = rubbish.sub('_', ds_parts.get('Manufacture year', ''))
                 i2c_bus_id = ds_parts.get('I2C bus', '').replace("/dev/", '').replace("-", "_")
                 edid_txt = self._parse_edid(display_str)
-                vdu_attributes = self.DetectedAttributes(vdu_number, '', '', manufacturer, model_name, serial_number, '', edid_txt,
-                                                         bin_serial_number)
+                if not edid_txt:
+                    raise DdcutilDisplayNotFound(f"Failed to parse edid from '{display_str}'")
+                vdu_attributes = DdcutilExeImpl.DetectedAttributes(vdu_number, '', '', manufacturer, model_name, serial_number, '',
+                                                                   edid_txt, bin_serial_number)
                 result_list.append(vdu_attributes)
                 self.vdu_map_by_edid[edid_txt] = vdu_attributes
         return result_list
@@ -1928,10 +1933,10 @@ class DdcutilEmulatorImpl(DdcutilExeImpl):
 
 class DdcutilDBusImpl(QObject):
     RETURN_RAW_VALUES = 2
-
     _metadata_cache: Dict[Tuple[str, int], Tuple[bool, bool]] = {}
     _current_connected_displays_changed_handler: Callable | None = None  # Only one instance and listener should exist at a time
     _current_service_initialization_handler: Callable | None = None  # Only one instance and listener should exist at a time
+    DetectedAttributes = namedtuple("DetectedAttributes", "uninitialized")  # will be redefined during initialization
 
     def __init__(self, common_args: List[str] | None = None, callback: Callable | None = None):
         super().__init__()
@@ -1952,14 +1957,14 @@ class DdcutilDBusImpl(QObject):
                     time.sleep(2)  # Should be enough time
                     log_info("Reconnecting after dbus service restart.")
                     self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service() # connect again
-                except [ValueError, DdcutilDisplayNotFound]:
+                except (ValueError, DdcutilDisplayNotFound):
                     log_warning(f"Failed to restart with common_args {self.common_args} on try {try_count}")
             # Retrieve the attributes returned by detect and also use the retrieval as a self check
             self_check_op = self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "AttributesReturnedByDetect")
             if self_check_op.errorName():
                 log_error(f'Sanity check try {try_count}: {self.dbus_interface_name} failed: {self_check_op.errorMessage()}')
             else:
-                self.DetectedAttributes = namedtuple("DetectedAttributes", self_check_op.arguments()[0])
+                DdcutilDBusImpl.DetectedAttributes = namedtuple("DetectedAttributes", self_check_op.arguments()[0])
                 self.vdu_map_by_edid: Dict[str, Tuple] = {}
                 break
             if try_count >= 4:  # Give up
@@ -1978,7 +1983,7 @@ class DdcutilDBusImpl(QObject):
     def set_vdu_specific_args(self, vdu_number: str, extra_args: List[str]):
         pass  # TODO not implemented
 
-    def _connect_to_service(self, disconnect=False) -> (object, object):
+    def _connect_to_service(self, disconnect=False) -> tuple[QDBusInterface, QDBusInterface] | tuple[None, None]:
         dbus_service_name = os.environ.get('DDCUTIL_SERVICE_NAME', default="com.ddcutil.DdcutilService")
         dbus_object_path = os.environ.get('DDCUTIL_SERVICE_OBJECT_PATH', default="/com/ddcutil/DdcutilObject")
         session_bus = QDBusConnection.connectToBus(QDBusConnection.BusType.SessionBus, "session")
@@ -1988,6 +1993,7 @@ class DdcutilDBusImpl(QObject):
         ddcutil_dbus_props = QDBusInterface(
             dbus_service_name, dbus_object_path, "org.freedesktop.DBus.Properties", connection=session_bus)
         session_bus.registerObject("/", self)
+        # Clear handlers belonging to old instance
         if DdcutilDBusImpl._current_connected_displays_changed_handler:  # clear previous handler that belonged to old instance.
             session_bus.disconnect(dbus_service_name, dbus_object_path, self.dbus_interface_name,
                                    "ConnectedDisplaysChanged", DdcutilDBusImpl._current_connected_displays_changed_handler)
@@ -1995,17 +2001,15 @@ class DdcutilDBusImpl(QObject):
         if DdcutilDBusImpl._current_service_initialization_handler:  # clear previous handler that belonged to old instance.
             session_bus.disconnect(dbus_service_name, dbus_object_path, self.dbus_interface_name,
                                    "ServiceInitialized", DdcutilDBusImpl._current_service_initialization_handler)
-            DdcutilDBusImpl._service_initialization_handler = None
+            DdcutilDBusImpl._current_service_initialization_handler = None
         if disconnect:
             return None, None
-        # Connect receiving slots
-        if self._service_initialization_handler:
-            session_bus.connect(dbus_service_name, dbus_object_path, self.dbus_interface_name,
-                                "ServiceInitialized", self._service_initialization_handler)
+        # Connect new handlers - bind receiving slots to our new handlers
         DdcutilDBusImpl._current_service_initialization_handler = self._service_initialization_handler
-        if self._connected_displays_changed_handler:
-            session_bus.connect(dbus_service_name, dbus_object_path, self.dbus_interface_name,
-                                "ConnectedDisplaysChanged", self._connected_displays_changed_handler)
+        session_bus.connect(dbus_service_name, dbus_object_path, self.dbus_interface_name,
+                            "ServiceInitialized", DdcutilDBusImpl._current_service_initialization_handler)
+        session_bus.connect(dbus_service_name, dbus_object_path, self.dbus_interface_name,
+                            "ConnectedDisplaysChanged", self._connected_displays_changed_handler)
         DdcutilDBusImpl._current_connected_displays_changed_handler = self._connected_displays_changed_handler
         ddcutil_dbus_iface.setTimeout(self.dbus_timeout_millis)
         # This is intended to provide the user with an easy way enable or disable events in the server.
@@ -2051,10 +2055,10 @@ class DdcutilDBusImpl(QObject):
             self._status_values = self._validate(self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "StatusValues"))[0]
         return self._status_values
 
-    def detect(self, flags: int) -> List[Tuple]:
+    def detect(self, flags: int) -> List[Tuple[Any, ...]]:
         with self.service_access_lock:
             result = self.ddcutil_proxy.call("Detect", QDBusArgument(flags, intV(QMetaType.Type.UInt)))
-            vdu_list = [self.DetectedAttributes(*vdu) for vdu in self._validate(result)[1]]
+            vdu_list: List[Tuple[Any, ...]] = [DdcutilDBusImpl.DetectedAttributes(*vdu) for vdu in self._validate(result)[1]]
             self.vdu_map_by_edid = {vdu.edid_txt: vdu for vdu in vdu_list}
             return vdu_list
 
@@ -2184,8 +2188,9 @@ class DialogSingletonMixin:
 
 class ClickableSlider(QSlider):  # loosely based on https://stackoverflow.com/a/29639127/609575
 
-    def mousePressEvent(self, event: QMouseEvent):  # On mouse click, set value to the value at the click position
-        self.setValue(QStyle.sliderValueFromPosition(self.minimum(), self.maximum(), event.pos().x(), self.width()))
+    def mousePressEvent(self, event: QMouseEvent | None):  # On mouse click, set value to the value at the click position
+        if event:
+            self.setValue(QStyle.sliderValueFromPosition(self.minimum(), self.maximum(), event.pos().x(), self.width()))
         super().mousePressEvent(event)
 
 
@@ -2210,7 +2215,7 @@ SNC = SIMPLE_NON_CONTINUOUS_TYPE
 CNC = COMPLEX_NON_CONTINUOUS_TYPE
 
 # Maps of controls supported by name on the command line and in config files.
-SUPPORTED_VCP_BY_CODE: Dict[str: VcpCapability] = {
+SUPPORTED_VCP_BY_CODE: Dict[str, VcpCapability] = {
     **{code: VcpCapability(code, name, retry_setvcp=False)
        for code, name in (Ddcutil().get_supported_vcp_codes_map().items() if SUPPORT_ALL_VCP else [])},
     **{
@@ -2323,7 +2328,7 @@ class SchedulerJob:  # designed to resemble a QTimer, which it was written to re
 # Worker that runs SchedulerJobs - hibernation-tolerant scheduling at specific YYYYMMDD HHMM.
 # (An implementation based on sched.scheduler might also work - but the following is definitely going to work cross platform)
 class ScheduleWorker(WorkerThread):
-    _instance: ScheduleWorker = None
+    _instance: ScheduleWorker | None = None
     _scheduler_lock = threading.RLock()
 
     @staticmethod
@@ -2642,7 +2647,7 @@ class VduControlsConfig:
                             f"{self.ini_content[option.conf_section][option.conf_name]} (in {self.file_path})")
                 self.ini_content[option.conf_section][option.conf_name] = str_value
 
-    def get_sleep_multiplier(self, fallback: float = None) -> float | None:
+    def get_sleep_multiplier(self, fallback: float | None = None) -> float | None:
         value = self.ini_content.getfloat(*ConfOpt.SLEEP_MULTIPLIER.conf_id, fallback=0.0)
         return fallback if math.isclose(value, 0.0) else value
 
@@ -3003,7 +3008,7 @@ class VduController(QObject):
 
     def get_range_restrictions(self, vcp_code, fallback: Tuple[int, int] | None = None) -> Tuple[int, int] | None:
         if vcp_code in self.capabilities_supported_by_this_vdu:
-            range_restriction = self.capabilities_supported_by_this_vdu[vcp_code].values
+            range_restriction = self.capabilities_supported_by_this_vdu[vcp_code].values  # will always be a list
             if len(range_restriction) != 0:
                 return int(range_restriction[1]), int(range_restriction[2])
         return fallback
@@ -4595,11 +4600,11 @@ class MBox(QMessageBox):
         self.setInformativeText(info) if info else None
         self.setDetailedText(details) if details else None
 
-    def event(self, event: QEvent):
+    def event(self, event: QEvent | None):
         # https://www.qtcentre.org/threads/24888-Resizing-a-MsgBox.p=251312#post251312
         # The "least evil" way to make MsgBox.resizable, by ArmanS
         result = super().event(event)
-        if RESIZABLE_MESSAGEBOX_HACK:
+        if RESIZABLE_MESSAGEBOX_HACK and event:
             if event.type() == QEvent.Type.MouseMove or event == QEvent.Type.MouseButtonPress:
                 self.setMaximumSize(native_pixels(1200), native_pixels(800))
                 if text_edit_field := self.findChild(QTextEdit):
@@ -4619,7 +4624,7 @@ class PushButtonLeftJustified(QPushButton):
         self.setText(text) if text is not None else None
         self.setFlat(flat)
 
-    def setText(self, text: str) -> None:
+    def setText(self, text: str | None) -> None:
         self.label.setText(text)
 
 
@@ -4776,8 +4781,8 @@ class PresetChooseIconButton(StdButton):
         self.preset = None
         self.update_icon()
 
-    def event(self, event: QEvent) -> bool:
-        if event.type() == QEvent.Type.PaletteChange:  # PalletChange happens after the new style sheet is in use.
+    def event(self, event: QEvent | None) -> bool:
+        if event and event.type() == QEvent.Type.PaletteChange:  # PalletChange happens after the new style sheet is in use.
             self.update_icon()
         return super().event(event)
 
@@ -6279,14 +6284,15 @@ class LuxProfileChart(QLabel):
         self.current_vdu_sid = name
         self.create_plot()
 
-    def mousePressEvent(self, event: QMouseEvent) -> None:
-        changed = False
-        x = event.pos().x() - self.x_origin
-        y = self.y_origin - event.pos().y()
-        if event.button() == Qt.MouseButton.LeftButton:  # click along bottom (y=0) to attache presets
-            changed = self.lux_point_edit(x, y) if y >= 0 else self.lux_preset_edit(x)
-        if changed:
-            self.show_changes()
+    def mousePressEvent(self, event: QMouseEvent | None) -> None:
+        if event:
+            changed = False
+            x = event.pos().x() - self.x_origin
+            y = self.y_origin - event.pos().y()
+            if event.button() == Qt.MouseButton.LeftButton:  # click along bottom (y=0) to attache presets
+                changed = self.lux_point_edit(x, y) if y >= 0 else self.lux_preset_edit(x)
+            if changed:
+                self.show_changes()
         event.accept()
 
     def lux_point_edit(self, x, y) -> bool:
@@ -6342,7 +6348,7 @@ class LuxProfileChart(QLabel):
         if profile_changes:
             self.chart_changed_callback()
 
-    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+    def mouseMoveEvent(self, event: QMouseEvent | None) -> None:
         self.create_plot()
 
     def find_close_to(self, x: int, y: int, vdu_sid: VduStableId) -> Tuple:
@@ -8917,9 +8923,9 @@ class VduAppWindow(QMainWindow):
 
                 QTimer.singleShot(self.inactive_pause_millis, _hide_func)  # wait N ms and see if any move/resize events occur.
 
-    def eventFilter(self, target: QObject, event: QEvent) -> bool:
+    def eventFilter(self, target: QObject, event: QEvent | None) -> bool:
         # log_info(f"eventFilter {event.__class__.__name__} {event.type()}")
-        if event.type() in (QEvent.Type.Move, QEvent.Type.Resize, QEvent.Type.WindowActivate):  # Still active if being moved or resized
+        if event and event.type() in (QEvent.Type.Move, QEvent.Type.Resize, QEvent.Type.WindowActivate):  # Still active if being moved or resized
             self.active_event_count += 1
         return super().eventFilter(target, event)
 
@@ -9142,9 +9148,9 @@ class VduAppWindow(QMainWindow):
                 self.main_panel.status_message(message, timeout)
                 QApplication.processEvents()  # Force the message out straight way.
 
-    def event(self, event: QEvent) -> bool:
+    def event(self, event: QEvent | None) -> bool:
         # PalletChange happens after the new style sheet is in use.
-        if event.type() == QEvent.Type.PaletteChange:
+        if event and event.type() == QEvent.Type.PaletteChange:
             log_info("PaletteChange event: New style sheet in use, update icons")
             self.initialise_app_icon()
             self.update_status_indicators(palette_change=True)
