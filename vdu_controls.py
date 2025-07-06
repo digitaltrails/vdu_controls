@@ -4845,7 +4845,7 @@ class WeatherQuery:
 
 def weather_bad_location_dialog(weather) -> None:
     kilometres = weather.proximity_km
-    use_km = QLocale.system().measurementSystem() == QLocale.MetricSystem
+    use_km = QLocale.system().measurementSystem() == QLocale.MeasurementSystem.MetricSystem
     MBox(MIcon.Warning, msg=tr("The site {} reports your location as {}, {}, {},{} "
                               "which is about {} {} from the latitude and longitude specified in Settings."
                               ).format(WEATHER_FORECAST_URL, weather.area_name, weather.country_name, weather.latitude, weather.longitude,
