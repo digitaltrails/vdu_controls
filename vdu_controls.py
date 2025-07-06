@@ -969,7 +969,7 @@ Shortcut = namedtuple('Shortcut', ['letter', 'annotated_word'])
 
 
 gui_thread: QThread | None = None
-def intV(type_id: QMetaType.Type|int) -> int:
+def intV(type_id: Enum|int) -> int:
     return type_id.value if isinstance(type_id, Enum) else type_id  # awfulness of enums in pyqt6
 
 
@@ -4565,8 +4565,8 @@ class FasterFileDialog(QFileDialog):  # Takes 5 seconds versus 30+ seconds for Q
     @staticmethod
     def getOpenFileName(parent: QWidget | None = None, caption: str = '', directory: str = '', filter_str: str = '',
                         initial_filter: str = '',
-                        options: QFileDialog.Options | QFileDialog.Option = QFileDialog.Option.ReadOnly,
-                        qdir_filter: int = QDir.Filter.AllEntries | QDir.Filter.AllDirs | QDir.Filter.Hidden | QDir.Filter.System) -> Tuple[str, str]:
+                        options: Any = QFileDialog.Option.ReadOnly,
+                        qdir_filter: Any = QDir.Filter.AllEntries | QDir.Filter.AllDirs | QDir.Filter.Hidden | QDir.Filter.System) -> Tuple[str, str]:
         original_handler = QtCore.qInstallMessageHandler(lambda mode, context, message: None)
         try:  # Get rid of another annoying message: 'qtimeline::start: already running'
             dialog = QFileDialog(parent=parent, caption=caption, directory=directory, filter=filter_str)
