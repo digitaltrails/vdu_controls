@@ -4795,7 +4795,7 @@ class WeatherQuery:
         self.maximum_distance_km = int(os.getenv("VDU_CONTROLS_WEATHER_KM", default='200'))
         local_local = locale.getlocale()
         lang = local_local[0][:2] if local_local is not None and local_local[0] is not None else 'C'
-        ascii_location = unicodedata.normalize('NFD', location.place_name).encode('ascii','ignore')
+        ascii_location = unicodedata.normalize('NFD', location.place_name).encode('ascii','ignore').decode("ascii")
         self.url = f"{WEATHER_FORECAST_URL}/{ascii_location}?" + urllib.parse.urlencode({'lang': lang, 'format': 'j1'})
         self.weather_data = None
         self.proximity_km = 0
