@@ -870,45 +870,45 @@ from urllib.error import URLError
 
 CONFIG_DIR_PATH = Path.home().joinpath('.config', 'vdu_controls')
 CONFIG_FILE_PREFER_QT5 = CONFIG_DIR_PATH.joinpath('_prefer_qt5_')
-for qt_version in (5, 6) if CONFIG_FILE_PREFER_QT5.exists() else (6, 5):
-    print(f"Trying Qt{qt_version}")
-    try:
-        if qt_version == 6:
-            from PyQt6 import QtCore, QtNetwork
-            from PyQt6.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QPoint, QObject, QEvent, \
-                QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir, QRegularExpression, QPointF
-            from PyQt6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusArgument, QDBusVariant
-            from PyQt6.QtGui import QAction, QShortcut, QPixmap, QIcon, QCursor, QImage, QPainter, QRegularExpressionValidator, \
-                QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon, \
-                QDoubleValidator, QScreen
-            from PyQt6.QtSvg import QSvgRenderer
-            from PyQt6.QtSvgWidgets import QSvgWidget
-            from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
-                QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
-                QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QMainWindow, QToolBar, QToolButton, QFileDialog, \
-                QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, \
-                QSpacerItem, QListWidget, QListWidgetItem
-            QT5_USE_HIGH_DPI_PIXMAPS = None
-            QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING = None
-        elif qt_version == 5:  # Covers all other values.
-            from PyQt5 import QtCore, QtNetwork
-            from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QPoint, QObject, QEvent, \
-                QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir, QRegularExpression, QPointF
-            from PyQt5.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusArgument, QDBusVariant
-            from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QRegularExpressionValidator, \
-                QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon, \
-                QDoubleValidator
-            from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
-            from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
-                QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
-                QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
-                QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, QShortcut, \
-                QSpacerItem, QListWidget, QListWidgetItem
-            QT5_USE_HIGH_DPI_PIXMAPS = Qt.ApplicationAttribute.AA_UseHighDpiPixmaps
-            QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING = QPainter.RenderHint.HighQualityAntialiasing
-        break
-    except (ImportError, ModuleNotFoundError) as no_qt_exc:
-        print(f"Failed to import PyQt6: {repr(no_qt_exc)}", file=sys.stderr)
+# for qt_version in (5, 6) if CONFIG_FILE_PREFER_QT5.exists() else (6, 5):
+#     print(f"Trying Qt{qt_version}")
+#     try:
+#         if qt_version == 6:
+#             from PyQt6 import QtCore, QtNetwork
+#             from PyQt6.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QPoint, QObject, QEvent, \
+#                 QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir, QRegularExpression, QPointF
+#             from PyQt6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusArgument, QDBusVariant
+#             from PyQt6.QtGui import QAction, QShortcut, QPixmap, QIcon, QCursor, QImage, QPainter, QRegularExpressionValidator, \
+#                 QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon, \
+#                 QDoubleValidator, QScreen
+#             from PyQt6.QtSvg import QSvgRenderer
+#             from PyQt6.QtSvgWidgets import QSvgWidget
+#             from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
+#                 QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
+#                 QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QMainWindow, QToolBar, QToolButton, QFileDialog, \
+#                 QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, \
+#                 QSpacerItem, QListWidget, QListWidgetItem
+#             QT5_USE_HIGH_DPI_PIXMAPS = None
+#             QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING = None
+#         elif qt_version == 5:  # Covers all other values.
+from PyQt5 import QtCore, QtNetwork
+from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QPoint, QObject, QEvent, \
+    QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir, QRegularExpression, QPointF
+from PyQt5.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusArgument, QDBusVariant
+from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QRegularExpressionValidator, \
+    QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon, \
+    QDoubleValidator
+from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
+    QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
+    QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
+    QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, QShortcut, \
+    QSpacerItem, QListWidget, QListWidgetItem
+QT5_USE_HIGH_DPI_PIXMAPS = Qt.ApplicationAttribute.AA_UseHighDpiPixmaps
+QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING = QPainter.RenderHint.HighQualityAntialiasing
+    #     break
+    # except (ImportError, ModuleNotFoundError) as no_qt_exc:
+    #     print(f"Failed to import PyQt6: {repr(no_qt_exc)}", file=sys.stderr)
 
 def flag_qt_version_preference(config: ConfIni) -> None:  # use a flag file to work around the chicken-and-egg issue at startup.
     if config.has_section(ConfOpt.PREFER_QT6.conf_section) and config.getboolean(ConfOpt.PREFER_QT6.conf_section,
@@ -1535,7 +1535,7 @@ class Ddcutil:
                  f"{self.version_suffix}(dynamic-sleep={self.ddcutil_version >= (2, 0, 0)}) "
                  f"- interface {self.ddcutil_impl.get_interface_version_string()}")
 
-    def ddcutil_version_info(self) -> (str, str):
+    def ddcutil_version_info(self) -> Tuple[str, str]:
         return self.ddcutil_impl.get_interface_version_string(), self.ddcutil_impl.get_ddcutil_version_string()
 
     def add_ddcutil_emulator(self, emulator_executable: str, common_args: List[str] | None = None):
@@ -1715,7 +1715,7 @@ class Ddcutil:
         for vcp_code, value in values_dict.items():
             if value is None:  # If all attempts failed, the values_dict will be missing one or more values.
                 raise ValueError(f"getvcp: display-{vdu_number} - failed to obtain value for vcp_code {vcp_code:02X}")
-        return list(values_dict.values())
+        return list(values_dict.values())  # if we reach here all values will be present (none are None).
 
 
 class DdcEventType(Enum):  # Has to correspond to what the service supports
@@ -1744,7 +1744,7 @@ class DdcutilExeImpl:
             self.common_args += common_args
         self.ddcutil_access_lock = Lock()
         self.vcp_type_map: Dict[int, str] = {}
-        self.ddcutil_version: tuple[int, ...] = (0, 0, 0)
+        self.ddcutil_version: Tuple[int, ...] = (0, 0, 0)
         self.ddcutil_version_string = "0.0.0"
         self.version_suffix = ''
         self.ddcutil_exe = 'ddcutil'
@@ -1829,7 +1829,7 @@ class DdcutilExeImpl:
 
     def detect(self, flags: int) -> List[Tuple[Any, ...]]:
         args = ['detect', '--verbose', ]
-        result_list = []
+        result_list: List[Tuple[Any, ...]] = []
         result = self.__run__(*args)
         # Going to get rid of anything that is not a-z A-Z 0-9 as potential rubbish
         rubbish = re.compile('[^a-zA-Z0-9]+')
@@ -1983,7 +1983,7 @@ class DdcutilDBusImpl(QObject):
     def set_vdu_specific_args(self, vdu_number: str, extra_args: List[str]):
         pass  # TODO not implemented
 
-    def _connect_to_service(self, disconnect=False) -> tuple[QDBusInterface, QDBusInterface] | tuple[None, None]:
+    def _connect_to_service(self, disconnect=False) -> Tuple[QDBusInterface, QDBusInterface] | Tuple[None, None]:
         dbus_service_name = os.environ.get('DDCUTIL_SERVICE_NAME', default="com.ddcutil.DdcutilService")
         dbus_object_path = os.environ.get('DDCUTIL_SERVICE_OBJECT_PATH', default="/com/ddcutil/DdcutilObject")
         session_bus = QDBusConnection.connectToBus(QDBusConnection.BusType.SessionBus, "session")
@@ -2489,7 +2489,7 @@ class ConfOpt(Enum):  # An Enum with tuples for values is used for convenience f
     @staticmethod  # Tricky way of creating a tuple with default values for some tuple members.
     def _def(cname: str, section: str = ConfSec.VDU_CONTROLS_GLOBALS, conf_type: str = ConfType.BOOL, default: str | None = None,
              global_allowed: bool = True, restart: bool = False, cmdline_arg: str = 'DEFAULT', tip: str = '',
-             related: str = '', requires: str = '') -> tuple[str, str, str, str, str | None, bool, str, str, str, bool]:
+             related: str = '', requires: str = '') -> Tuple[str, str, str, str, str | None, bool, str, str, str, bool]:
         return cname, section, cmdline_arg, conf_type, default, restart, tip, related, requires, global_allowed
 
     SPLASH_SCREEN_ENABLED = _def(cname=QT_TR_NOOP('splash-screen-enabled'), default='yes', cmdline_arg='splash',
@@ -3403,11 +3403,11 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
 class SettingsEditorLineBase(SettingsEditorFieldBase):
     def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
         super().__init__(section_editor, option, section, tooltip)
-        self.layout = QHBoxLayout()
-        self.layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        self.setLayout(self.layout)
+        self.editor_layout = QHBoxLayout()
+        self.editor_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.setLayout(self.editor_layout)
         self.text_label = QLabel(self.translate_option())
-        self.layout.addWidget(self.text_label)
+        self.editor_layout.addWidget(self.text_label)
         self.text_input = QLineEdit()
         self.validator: QValidator | None = None
         self.valid_palette = self.text_input.palette()
@@ -3417,7 +3417,7 @@ class SettingsEditorLineBase(SettingsEditorFieldBase):
         self.text_input.inputRejected.connect(partial(self.set_error_indication, True))
         self.text_input.textEdited.connect(partial(self.set_error_indication, False))
         self.text_input.editingFinished.connect(self.editing_finished)
-        self.layout.addWidget(self.text_input)
+        self.editor_layout.addWidget(self.text_input)
 
     def editing_finished(self) -> None:
         text = self.text_input.text()
@@ -3441,10 +3441,10 @@ class SettingsEditorLineBase(SettingsEditorFieldBase):
 class SettingsEditorFloatWidget(SettingsEditorFieldBase):
     def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
         super().__init__(section_editor, option, section, tooltip)
-        self.setLayout(QHBoxLayout())
-        self.layout().setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.setLayout(widget_layout := QHBoxLayout())
+        widget_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self.text_label = QLabel(self.translate_option())
-        self.layout().addWidget(self.text_label)
+        widget_layout.addWidget(self.text_label)
         self.spinbox = QDoubleSpinBox()
         self.spinbox.setRange(0.0, 4.0)  # TODO this should be looked up in the metadata
         self.spinbox.setSingleStep(0.1)
@@ -3453,7 +3453,7 @@ class SettingsEditorFloatWidget(SettingsEditorFieldBase):
         except ValueError:  # Just in case - rather not fall over
             value = 0.0
         self.spinbox.setValue(value)
-        self.layout().addWidget(self.spinbox)
+        widget_layout.addWidget(self.spinbox)
 
         def _spinbox_value_changed() -> None:
             section_editor.ini_editable[section][option] = locale.delocalize(f"{self.spinbox.value():.2f}")
@@ -3479,10 +3479,10 @@ class LatitudeLongitudeValidator(QRegularExpressionValidator):
         super().__init__(QRegularExpression(r"^([+-]*[0-9.,]+[,;][+-]*[0-9.,]+)([,;]\w+)?|$",
                                             QRegularExpression.PatternOption.UseUnicodePropertiesOption))
 
-    def validate(self, text: str, pos: int) -> Tuple[QValidator.State, str, int]:
+    def validate(self, text: str | None, pos: int) -> Tuple[QValidator.State, str, int]:
         result = super().validate(text, pos)
         if result[0] == QValidator.State.Acceptable:
-            if text != '':
+            if text:
                 try:
                     lat, lon = [float(i) for i in text.split(',')[:2]]
                     if -90.0 <= lat <= 90.0:
@@ -3511,8 +3511,8 @@ class SettingsEditorLocationWidget(SettingsEditorLineBase):
 
         detect_location_button = StdButton(title=tr("Detect"), clicked=_detection_location,
                                            tip=tr("Detect location by querying this desktop's external IP address."))
-        self.layout.addWidget(detect_location_button)
-        self.layout.addStretch(1)
+        self.editor_layout.addWidget(detect_location_button)
+        self.editor_layout.addStretch(1)
 
     def retrieve_ipinfo(self) -> Mapping:
         #  https://stackoverflow.com/a/55432323/609575
@@ -3596,7 +3596,7 @@ class SettingsEditorPathWidget(SettingsEditorLineBase):
             self.text_input.setText(new_path)
             self.editing_finished()
 
-        self.layout.addWidget(StdButton(si(self, StdPixmap.SP_DriveFDIcon), clicked =_choose_emulator))
+        self.editor_layout.addWidget(StdButton(si(self, StdPixmap.SP_DriveFDIcon), clicked =_choose_emulator))
         self.validator = SettingsEditorPathValidator()
 
 
@@ -3715,7 +3715,7 @@ class VduControlSlider(VduControlBase):
         self.slider = slider = ClickableSlider()
         slider.setMinimumWidth(native_pixels(200))
         self.range_restriction = vcp_capability.values
-        if len(self.range_restriction) != 0:
+        if self.range_restriction and len(self.range_restriction) >= 2:  # Would > 2 be an error - don't worry about it
             slider.setRange(int(self.range_restriction[1]), int(self.range_restriction[2]))
         slider.setSingleStep(1)
         slider.setPageStep(10)
@@ -3727,7 +3727,7 @@ class VduControlSlider(VduControlBase):
 
         self.spinbox = QSpinBox()
         self.spinbox.setLineEdit(LineEditAll())
-        if len(self.range_restriction) != 0:
+        if self.range_restriction and len(self.range_restriction) >= 2:  # >2 would be an error, but not serious
             int_min, int_max = int(self.range_restriction[1]), int(self.range_restriction[2])
             self.spinbox.setRange(int_min, int_max)
             self.slider.setRange(int_min, int_max)
@@ -3746,7 +3746,7 @@ class VduControlSlider(VduControlBase):
         slider.valueChanged.connect(_slider_changed)
 
     def update_from_vdu(self, vcp_value: VcpValue):
-        if len(self.range_restriction) == 0:
+        if not self.range_restriction:
             int_max = int(vcp_value.max)
             self.spinbox.setRange(0, int_max)
             self.slider.setRange(0, int_max)
@@ -3759,8 +3759,8 @@ class VduControlSlider(VduControlBase):
         if self.current_value is not None:  # Copy the internally cached current value onto the GUI view.
             self.slider.setValue(clamp(int(self.current_value), self.slider.minimum(), self.slider.maximum()))
 
-    def event(self, event: QEvent) -> bool:
-        if event.type() == QEvent.Type.PaletteChange:  # PalletChange happens after the new style sheet is in use.
+    def event(self, event: QEvent | None) -> bool:
+        if event and event.type() == QEvent.Type.PaletteChange:  # PalletChange happens after the new style sheet is in use.
             icon_source = SUPPORTED_VCP_BY_CODE[self.vcp_capability.vcp_code].icon_source
             if icon_source is not None:
                 assert self.svg_icon is not None  # Because it must have been loaded from source earlier
@@ -4085,7 +4085,7 @@ class ContextMenu(QMenu):
                  quit_action, hide_shortcuts: bool, parent: QWidget) -> None:
         super().__init__(parent=parent)
         self.app_controller = app_controller
-        self.reserved_shortcuts = []
+        self.reserved_shortcuts: List[str] = []
         self.hide_shortcuts = hide_shortcuts
         if main_window_action is not None:
             self._add_action(StdPixmap.SP_ComputerIcon, tr('&Control Panel'), main_window_action)
@@ -4108,6 +4108,7 @@ class ContextMenu(QMenu):
 
     def _add_action(self, qt_icon_number: QIcon, text: str, func: Callable, extra_shortcut: str | None = None) -> QAction:
         action = self.addAction(si(self, qt_icon_number), text, func)
+        assert action is not None
         amp_pos =  text.find('&')
         shortcut_letter = text[amp_pos + 1].upper() if (0 <= amp_pos < len(text) - 1) else None
         if shortcut_letter is not None:
@@ -4229,7 +4230,7 @@ class VduPanelBottomToolBar(QToolBar):
 
     def __init__(self, tool_buttons: List[ToolButton], app_context_menu: ContextMenu, parent: VduControlsMainPanel) -> None:
         super().__init__(parent=parent)
-        self.preset_edit_target = None
+        self.preset_edit_target: Preset | None = None
         self.tool_buttons = tool_buttons
         for button in self.tool_buttons:
             self.addWidget(button)
@@ -4250,9 +4251,9 @@ class VduPanelBottomToolBar(QToolBar):
         self.addWidget(self.menu_button)
         self.installEventFilter(self)
 
-    def eventFilter(self, target: QObject, event: QEvent) -> bool:
+    def eventFilter(self, target: QObject, event: QEvent | None) -> bool:
         # PalletChange happens after the new style sheet is in use.
-        if event.type() == QEvent.Type.PaletteChange:
+        if event and event.type() == QEvent.Type.PaletteChange:
             for button in self.tool_buttons:
                 button.refresh_icon()
             self.menu_button.refresh_icon()
@@ -4722,9 +4723,9 @@ class PresetActivationButton(StdButton):
                          title=preset.get_title_name(), tip=tr("Restore {} (immediately)").format(preset.get_title_name()))
         self.preset = preset
 
-    def event(self, event: QEvent) -> bool:
+    def event(self, event: QEvent | None) -> bool:
         # PalletChange happens after the new style sheet is in use.
-        if event.type() == QEvent.Type.PaletteChange:
+        if event and event.type() == QEvent.Type.PaletteChange:
             self.setIcon(self.preset.create_icon())
         return super().event(event)
 
@@ -5254,37 +5255,40 @@ class PresetChooseElevationChart(QLabel):
         self.current_pos = local_pos if (0 < local_pos.x() < self.width() and 0 <= local_pos.y() < self.height()) else None
         return self.current_pos
 
-    def mousePressEvent(self, event: QMouseEvent) -> None:
-        if pos := self.update_current_pos(event.pos()):
-            angle, radius = self.calc_angle_radius(pos)
-            if radius <= self.radius_of_deletion:
-                self.set_elevation_key(None)
-                self.selected_elevation_qtsignal.emit(None)
-            else:
-                self.in_drag = True
-        event.accept()
+    def mousePressEvent(self, event: QMouseEvent | None) -> None:
+        if event:
+            if pos := self.update_current_pos(event.pos()):
+                angle, radius = self.calc_angle_radius(pos)
+                if radius <= self.radius_of_deletion:
+                    self.set_elevation_key(None)
+                    self.selected_elevation_qtsignal.emit(None)
+                else:
+                    self.in_drag = True
+            event.accept()
 
-    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
-        self.update_current_pos(event.pos())
-        self.in_drag = False
-        event.accept()
+    def mouseReleaseEvent(self, event: QMouseEvent | None) -> None:
+        if event:
+            self.update_current_pos(event.pos())
+            self.in_drag = False
+            event.accept()
 
-    def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        pos = self.update_current_pos(event.pos())
-        if pos is not None and 0 <= pos.x() < self.width() and 0 <= pos.y() < self.height():
-            angle, radius = self.calc_angle_radius(pos)
-            if self.in_drag:
-                self.current_pos = pos
-                angle = -angle if pos.x() < self.noon_x else angle
-                key = SolarElevationKey(EASTERN_SKY if pos.x() >= self.noon_x else WESTERN_SKY, angle)
-                if key in self.elevation_steps:
-                    self.set_elevation_key(key)
-                    self.selected_elevation_qtsignal.emit(key)
-                    return
-        self.create_plot()
-        event.accept()
+    def mouseMoveEvent(self, event: QMouseEvent | None) -> None:
+        if event:
+            pos = self.update_current_pos(event.pos())
+            if pos is not None and 0 <= pos.x() < self.width() and 0 <= pos.y() < self.height():
+                angle, radius = self.calc_angle_radius(pos)
+                if self.in_drag:
+                    self.current_pos = pos
+                    angle = -angle if pos.x() < self.noon_x else angle
+                    key = SolarElevationKey(EASTERN_SKY if pos.x() >= self.noon_x else WESTERN_SKY, angle)
+                    if key in self.elevation_steps:
+                        self.set_elevation_key(key)
+                        self.selected_elevation_qtsignal.emit(key)
+                        return
+            self.create_plot()
+            event.accept()
 
-    def leaveEvent(self, event: QEvent) -> None:
+    def leaveEvent(self, event: QEvent | None) -> None:
         self.current_pos = None
         self.create_plot()
         super().leaveEvent(event)
@@ -5417,7 +5421,7 @@ class PresetChooseElevationWidget(QWidget):
             if snt.hour > (15 if snt.tzname() == 'CST' else 14) or snt.hour < 10:  # Solar midday seems too far from 12:00 midday.
                 log_warning(f"Location {location.longitude},{location.latitude} and timezone {snt.tzname()} seem mismatched.")
 
-    def resizeEvent(self, event: QResizeEvent) -> None:
+    def resizeEvent(self, event: QResizeEvent | None) -> None:
         super().resizeEvent(event)
         self.elevation_chart.set_elevation_key(self.elevation_key)
 
@@ -5904,9 +5908,9 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
                             up_action=self.up_action, down_action=self.down_action,
                             protect_nvram=self.main_config.is_set(ConfOpt.PROTECT_NVRAM_ENABLED))
 
-    def event(self, event: QEvent) -> bool:
+    def event(self, event: QEvent | None) -> bool:
         # PalletChange happens after the new style sheet is in use.
-        if event.type() == QEvent.Type.PaletteChange:
+        if event and event.type() == QEvent.Type.PaletteChange:
             self.repaint()
             self.vdu_init_button.refresh_icon()
         return super().event(event)
@@ -6107,7 +6111,7 @@ class LuxProfileChart(QLabel):
         self.setMinimumWidth(native_pixels(600))
         self.setMinimumHeight(native_pixels(550))
 
-    def resizeEvent(self, event: QResizeEvent) -> None:
+    def resizeEvent(self, event: QResizeEvent | None) -> None:
         self.create_plot()
 
     def create_plot(self) -> None:
@@ -7906,8 +7910,8 @@ class LuxAmbientSlider(QWidget):
                 if source is None:
                     self.blockSignals(False)
 
-    def event(self, event: QEvent) -> bool:
-        if event.type() == QEvent.Type.PaletteChange:  # PalletChange happens after the new style sheet is in use.
+    def event(self, event: QEvent | None) -> bool:
+        if event and event.type() == QEvent.Type.PaletteChange:  # PalletChange happens after the new style sheet is in use.
             if self.current_zone:
                 self.status_icon.setIcon(create_icon_from_svg_bytes(self.current_zone.icon_svg))
             for slider_button, svg_bytes in self.label_map.items():
