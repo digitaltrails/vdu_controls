@@ -4136,6 +4136,7 @@ class ContextMenu(QMenu):
         shortcut = self.allocate_preset_shortcut(preset.name)
         action_name = shortcut.annotated_word if shortcut else preset.name
         action = self.addAction(preset.create_icon(), action_name, _menu_restore_preset)  # Have to add it, then move/insert it.
+        assert action
         self.insertAction(self.presets_separator, action)  # Insert before the presets_separator
         action.setProperty(ContextMenu.BUSY_DISABLE_PROP, QVariant(True))
         action.setProperty(ContextMenu.PRESET_NAME_PROP, preset.name)
@@ -4242,6 +4243,7 @@ class VduPanelBottomToolBar(QToolBar):
         self.menu_button.setMenu(app_context_menu)
         self.menu_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         self.preset_action = self.addAction(QIcon(), "")
+        assert self.preset_action
         self.preset_action.setVisible(False)
 
         def edit_current_preset():
@@ -4251,7 +4253,7 @@ class VduPanelBottomToolBar(QToolBar):
         self.addWidget(self.menu_button)
         self.installEventFilter(self)
 
-    def eventFilter(self, target: QObject, event: QEvent | None) -> bool:
+    def eventFilter(self, target: QObject | None, event: QEvent | None) -> bool:
         # PalletChange happens after the new style sheet is in use.
         if event and event.type() == QEvent.Type.PaletteChange:
             for button in self.tool_buttons:
@@ -8785,6 +8787,7 @@ class VduAppWindow(QMainWindow):
         super().__init__()
         global gui_thread
         app = QApplication.instance()
+        assert app
         gui_thread = app.thread()
         self.main_controller: VduAppController = main_controller
         self.setObjectName('main_window')
@@ -8930,7 +8933,7 @@ class VduAppWindow(QMainWindow):
 
                 QTimer.singleShot(self.inactive_pause_millis, _hide_func)  # wait N ms and see if any move/resize events occur.
 
-    def eventFilter(self, target: QObject, event: QEvent | None) -> bool:
+    def eventFilter(self, target: QObject | None, event: QEvent | None) -> bool:
         # log_info(f"eventFilter {event.__class__.__name__} {event.type()}")
         if event and event.type() in (QEvent.Type.Move, QEvent.Type.Resize, QEvent.Type.WindowActivate):  # Still active if being moved or resized
             self.active_event_count += 1
