@@ -9016,7 +9016,7 @@ class VduAppWindow(QMainWindow):
         self.scroll_area.setWidget(self.main_panel)
         self.setCentralWidget(self.scroll_area)
 
-        available_height = QApplication.primaryScreen().availableGeometry().height() - 200  # Minus allowance for panel/tray
+        available_height = self.screen().availableGeometry().height() - 200  # Minus allowance for panel/tray
         hint_height = self.main_panel.sizeHint().height()  # The hint is the actual required layout space
         hint_width = self.main_panel.sizeHint().width()
         log_debug(f"create_main_control_panel: {hint_height=} {available_height=} {self.minimumHeight()=}")
@@ -9140,8 +9140,8 @@ class VduAppWindow(QMainWindow):
         # system tray is.  Under Linux Qt the position of the tray icon is reported as 0,0, so we can't use that.
         cursor_x, cursor_y = QCursor.pos().x(), QCursor.pos().y()
         app_width, app_height = self.geometry().width(), self.geometry().height()
-        desktop_width, desktop_height = (QApplication.primaryScreen().availableGeometry().width(),
-                                         QApplication.primaryScreen().availableGeometry().height())
+        desktop_width, desktop_height = (self.screen().availableGeometry().width(),
+                                         self.screen().availableGeometry().height())
         # The following calculations allow for the tray being on any edge of the desktop...
         margin = min(abs(desktop_height - cursor_y), abs(desktop_width - cursor_x), 100) + 25 if self.tray else 0
         x = cursor_x - app_width - margin if cursor_x > app_width else cursor_x + margin
