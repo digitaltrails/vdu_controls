@@ -870,45 +870,45 @@ from urllib.error import URLError
 
 CONFIG_DIR_PATH = Path.home().joinpath('.config', 'vdu_controls')
 CONFIG_FILE_PREFER_QT5 = CONFIG_DIR_PATH.joinpath('_prefer_qt5_')
-# for qt_version in (5, 6) if CONFIG_FILE_PREFER_QT5.exists() else (6, 5):
-#     print(f"Trying Qt{qt_version}")
-#     try:
-#         if qt_version == 6:
-#             from PyQt6 import QtCore, QtNetwork
-#             from PyQt6.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QPoint, QObject, QEvent, \
-#                 QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir, QRegularExpression, QPointF
-#             from PyQt6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusArgument, QDBusVariant
-#             from PyQt6.QtGui import QAction, QShortcut, QPixmap, QIcon, QCursor, QImage, QPainter, QRegularExpressionValidator, \
-#                 QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon, \
-#                 QDoubleValidator, QScreen
-#             from PyQt6.QtSvg import QSvgRenderer
-#             from PyQt6.QtSvgWidgets import QSvgWidget
-#             from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
-#                 QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
-#                 QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QMainWindow, QToolBar, QToolButton, QFileDialog, \
-#                 QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, \
-#                 QSpacerItem, QListWidget, QListWidgetItem
-#             QT5_USE_HIGH_DPI_PIXMAPS = None
-#             QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING = None
-#         elif qt_version == 5:  # Covers all other values.
-from PyQt5 import QtCore, QtNetwork
-from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QPoint, QObject, QEvent, \
-    QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir, QRegularExpression, QPointF
-from PyQt5.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusArgument, QDBusVariant
-from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QRegularExpressionValidator, \
-    QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon, \
-    QDoubleValidator
-from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
-    QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
-    QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
-    QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, QShortcut, \
-    QSpacerItem, QListWidget, QListWidgetItem
-QT5_USE_HIGH_DPI_PIXMAPS = Qt.ApplicationAttribute.AA_UseHighDpiPixmaps
-QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING = QPainter.RenderHint.HighQualityAntialiasing
-    #     break
-    # except (ImportError, ModuleNotFoundError) as no_qt_exc:
-    #     print(f"Failed to import PyQt6: {repr(no_qt_exc)}", file=sys.stderr)
+for qt_version in (5, 6) if CONFIG_FILE_PREFER_QT5.exists() else (6, 5):
+    print(f"Trying Qt{qt_version}")
+    try:
+        if qt_version == 6:
+            from PyQt6 import QtCore, QtNetwork
+            from PyQt6.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QPoint, QObject, QEvent, \
+                QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir, QRegularExpression, QPointF
+            from PyQt6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusArgument, QDBusVariant
+            from PyQt6.QtGui import QAction, QShortcut, QPixmap, QIcon, QCursor, QImage, QPainter, QRegularExpressionValidator, \
+                QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon, \
+                QDoubleValidator, QScreen
+            from PyQt6.QtSvg import QSvgRenderer
+            from PyQt6.QtSvgWidgets import QSvgWidget
+            from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
+                QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
+                QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QMainWindow, QToolBar, QToolButton, QFileDialog, \
+                QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, \
+                QSpacerItem, QListWidget, QListWidgetItem
+            QT5_USE_HIGH_DPI_PIXMAPS = None
+            QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING = None
+        elif qt_version == 5:  # Covers all other values.
+            from PyQt5 import QtCore, QtNetwork
+            from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QPoint, QObject, QEvent, \
+                QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir, QRegularExpression, QPointF
+            from PyQt5.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusArgument, QDBusVariant
+            from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QRegularExpressionValidator, \
+                QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon, \
+                QDoubleValidator
+            from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
+            from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
+                QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
+                QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
+                QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, QShortcut, \
+                QSpacerItem, QListWidget, QListWidgetItem
+            QT5_USE_HIGH_DPI_PIXMAPS = Qt.ApplicationAttribute.AA_UseHighDpiPixmaps
+            QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING = QPainter.RenderHint.HighQualityAntialiasing
+        break
+    except (ImportError, ModuleNotFoundError) as no_qt_exc:
+        print(f"Failed to import PyQt6: {repr(no_qt_exc)}", file=sys.stderr)
 
 def flag_qt_version_preference(config: ConfIni) -> None:  # use a flag file to work around the chicken-and-egg issue at startup.
     if config.has_section(ConfOpt.PREFER_QT6.conf_section) and config.getboolean(ConfOpt.PREFER_QT6.conf_section,
@@ -2869,7 +2869,7 @@ class VduController(QObject):
     vcp_value_changed_qtsignal = pyqtSignal(str, str, int, VcpOrigin, bool)
     _async_setvcp_exception_qtsignal = pyqtSignal(str, int, VcpOrigin, Exception)
 
-    _async_setvcp_task: VduControllerAsyncSetter = None
+    _async_setvcp_task: VduControllerAsyncSetter | None = None
 
     def __init__(self, vdu_number: str, vdu_model_name: str, serial_number: str, manufacturer: str,
                  default_config: VduControlsConfig, ddcutil: Ddcutil,
@@ -3104,15 +3104,15 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
     def __init__(self, default_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig], change_callback) -> None:
         super().__init__()
         self.setWindowTitle(tr('Settings'))
-        self.setLayout(QVBoxLayout())
+        self.setLayout(widget_layout := QVBoxLayout())
         self.tabs_widget = QTabWidget(self)
-        self.layout().addWidget(self.tabs_widget)
+        widget_layout.addWidget(self.tabs_widget)
         self.editor_tab_list: List[SettingsEditorTab] = []
         self.bottom_status_bar = QStatusBar()
         self.tab_ops = QFrame(self)  # Groups operations that target the current tab
-        self.tab_ops.setLayout(QHBoxLayout())
+        self.tab_ops.setLayout(tab_ops_layout := QHBoxLayout())
         self.tab_ops_label = QLabel('')
-        self.tab_ops.layout().addWidget(self.tab_ops_label)
+        tab_ops_layout.addWidget(self.tab_ops_label)
         self.change_callback = change_callback
 
         def _tab_restore_defaults() -> None:
@@ -3120,20 +3120,20 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
 
         self.tab_restore_defaults_button = StdButton(icon=si(self, StdPixmap.SP_DialogDiscardButton), title=(tr('Defaults')),
                                                      clicked=_tab_restore_defaults)
-        self.tab_ops.layout().addWidget(self.tab_restore_defaults_button)
+        tab_ops_layout.addWidget(self.tab_restore_defaults_button)
 
         def _tab_revert_current_tab() -> None:
             self.tabs_widget.currentWidget().revert_changes()
 
         self.tab_revert_button = StdButton(icon=si(self, StdPixmap.SP_DialogResetButton), title=(tr('Revert')),
                                            clicked=_tab_revert_current_tab)
-        self.tab_ops.layout().addWidget(self.tab_revert_button)
+        tab_ops_layout.addWidget(self.tab_revert_button)
 
         def _tab_save_current_tab() -> None:
             self.tabs_widget.currentWidget().save()
 
         self.tab_save_button = StdButton(icon=si(self, StdPixmap.SP_DriveFDIcon), title=(tr('Save')), clicked=_tab_save_current_tab)
-        self.tab_ops.layout().addWidget(self.tab_save_button)
+        tab_ops_layout.addWidget(self.tab_save_button)
 
         self.bottom_status_bar.addPermanentWidget(self.tab_ops, 0)
         self.bottom_status_bar.addPermanentWidget(QLabel('                    '))
@@ -3145,7 +3145,7 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
         quit_button = StdButton(icon=si(self, StdPixmap.SP_DialogCloseButton), title=(tr("Close")), clicked=self.close)
         self.bottom_status_bar.addPermanentWidget(quit_button, 0)
 
-        self.layout().addWidget(self.bottom_status_bar)
+        widget_layout.addWidget(self.bottom_status_bar)
 
         def _tab_changed(index: int) -> None:
             self.update_tab_ops(self.tabs_widget.widget(index))
@@ -3248,8 +3248,8 @@ class SettingsEditorTab(QWidget):
         scroll_area = QScrollArea(self)
         scroll_area.setWidgetResizable(True)
         scroll_area.setWidget(content)
-        self.setLayout(QVBoxLayout())
-        self.layout().addWidget(scroll_area)
+        self.setLayout(widget_layout := QVBoxLayout())
+        widget_layout.addWidget(scroll_area)
 
         self.change_callback = change_callback
         self.unsaved_changes_map: Dict[Tuple[str, str], str] = {}
@@ -3377,11 +3377,11 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
     def __init__(self, section_editor: SettingsEditorTab, option: str, section: str,
                  tooltip: str, related: str, requires: str) -> None:
         super().__init__(section_editor, option, section, tooltip)
-        self.setLayout(QHBoxLayout())
-        margins = self.layout().contentsMargins()
+        self.setLayout(widget_layout := QHBoxLayout())
+        margins = widget_layout.contentsMargins()
         margins.setTop(0)  # Squish up a bit, save space and stay closer to the parent label
         margins.setRight(0)
-        self.layout().setContentsMargins(margins)
+        widget_layout.setContentsMargins(margins)
         checkbox = QCheckBox(self.translate_option())
         checkbox.setChecked(section_editor.ini_editable.getboolean(section, option))
 
@@ -3393,7 +3393,7 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
                 MBox(MIcon.Information, msg=tr("You will also need to set\n{}").format(tr(requires)), buttons=MBtn.Ok).exec()
 
         checkbox.toggled.connect(_toggled)
-        self.layout().addWidget(checkbox)
+        widget_layout.addWidget(checkbox)
         self.checkbox = checkbox
 
     def reset(self) -> None:
@@ -4104,9 +4104,9 @@ class ContextMenu(QMenu):
         self._add_action(StdPixmap.SP_DialogHelpButton, tr('&Help'), help_action, QKeySequence.StandardKey.HelpContents)
         self._add_action(StdPixmap.SP_DialogCloseButton, tr('&Quit'), quit_action, QKeySequence.StandardKey.Quit)
         self.reserved_shortcuts_basic = self.reserved_shortcuts.copy()
-        self.auto_lux_icon = None
+        self.auto_lux_icon: QIcon | None = None
 
-    def _add_action(self, qt_icon_number: QIcon, text: str, func: Callable, extra_shortcut: str | None = None) -> QAction:
+    def _add_action(self, qt_icon_number: int, text: str, func: Callable, extra_shortcut: str | None = None) -> QAction:
         action = self.addAction(si(self, qt_icon_number), text, func)
         assert action is not None
         amp_pos =  text.find('&')
@@ -4274,6 +4274,7 @@ class VduPanelBottomToolBar(QToolBar):
         QApplication.processEvents()  # Force the flushed events to be processed now
 
     def show_active_preset(self, preset: Preset | None) -> None:
+        assert self.preset_action
         if preset is not None:
             self.preset_action.setToolTip(tr("{} preset").format(preset.get_title_name()))
             self.preset_action.setIcon(preset.create_icon())
@@ -4306,14 +4307,15 @@ class VduControlsMainPanel(QWidget):
                                   tool_buttons: List[ToolButton], extra_controls: List[QWidget],
                                   splash_message_qtsignal: pyqtSignal) -> None:
         self.main_controller = main_controller
-        if self.layout():  # Already laid out, must be responding to a configuration change requiring re-layout.
-            for i in range(0, self.layout().count()):  # Remove all existing widgets.
-                item = self.layout().itemAt(i)
+
+        if old_layout := cast(QVBoxLayout, self.layout()):  # Must be responding to a configuration change requiring re-layout.
+            for i in range(0, old_layout.count()):  # Remove all existing widgets.
+                item = old_layout.itemAt(i)
                 if isinstance(item, QWidget):
-                    self.layout().removeWidget(item)
+                    old_layout.removeWidget(item)
                     item.deleteLater()
                 elif isinstance(item, QWidgetItem):
-                    self.layout().removeItem(item)
+                    old_layout.removeItem(item)
                     item.widget().deleteLater()
         controllers_layout = QVBoxLayout()
         controllers_layout.setSpacing(0)
@@ -4589,7 +4591,7 @@ MBtn = QMessageBox.StandardButton
 
 class MBox(QMessageBox):
 
-    def __init__(self, icon: QIcon, msg: str | None = None, info: str | None = None, details: str | None = None,
+    def __init__(self, icon: QMessageBox.Icon, msg: str | None = None, info: str | None = None, details: str | None = None,
                  buttons: QMessageBox.StandardButton = MBtn.NoButton,
                  default: QMessageBox.StandardButton | None = None) -> None:
         super().__init__(icon, APPNAME, '', buttons=buttons)
@@ -4617,11 +4619,10 @@ class PushButtonLeftJustified(QPushButton):
     def __init__(self, text: str | None = None, parent: QWidget | None = None, flat: bool = False) -> None:
         super().__init__(parent=parent)
         self.label = QLabel()
-        layout = QVBoxLayout()
-        self.setLayout(layout)
-        self.layout().addWidget(self.label)
+        self.setLayout(widget_layout := QVBoxLayout())
+        widget_layout.addWidget(self.label)
         self.setContentsMargins(0, 0, 0, 0)  # Not sure if this helps
-        layout.setContentsMargins(0, 0, 0, 0)  # Seems to fix top/bottom clipping on openbox and xfce
+        widget_layout.setContentsMargins(0, 0, 0, 0)  # Seems to fix top/bottom clipping on openbox and xfce
         self.setText(text) if text is not None else None
         self.setFlat(flat)
 
@@ -4893,10 +4894,10 @@ class PresetChooseWeatherWidget(QWidget):
         self.init_weather()
         self.main_config = main_config
         self.required_weather_filepath: Path | None = None
-        self.setLayout(QVBoxLayout())
+        self.setLayout(widget_layout := QVBoxLayout())
         self.label = QLabel(tr("Additional weather requirements"))
         self.label.setToolTip(tr("Weather conditions will be retrieved from {}").format(WEATHER_FORECAST_URL))
-        self.layout().addWidget(self.label)
+        widget_layout.addWidget(self.label)
         self.chooser = QComboBox()
 
         def _select_action(index: int) -> None:
@@ -4918,7 +4919,7 @@ class PresetChooseWeatherWidget(QWidget):
 
         self.chooser.currentIndexChanged.connect(_select_action)
         self.chooser.setToolTip(self.label.toolTip())
-        self.layout().addWidget(self.chooser)
+        widget_layout.addWidget(self.chooser)
         self.info_label = QLabel()
         self.info_label.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.populate()
@@ -4926,7 +4927,7 @@ class PresetChooseWeatherWidget(QWidget):
         scroll_area.setWidget(self.info_label)
         scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         scroll_area.setWidgetResizable(True)
-        self.layout().addWidget(scroll_area)
+        widget_layout.addWidget(scroll_area)
 
     def init_weather(self) -> None:
         for condition_path, condition_content in PresetChooseWeatherWidget.default_weather_conditions.items():
@@ -5493,12 +5494,12 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         return False
 
     @staticmethod
-    def instance_indicate_active_preset(preset: Preset = None):
+    def instance_indicate_active_preset(preset: Preset | None = None):
         if presets_dialog := PresetsDialog.get_instance():
             presets_dialog.indicate_active_preset(preset)
 
     @staticmethod
-    def instance_edit_preset(preset: Preset = None):
+    def instance_edit_preset(preset: Preset | None = None):
         if presets_dialog := PresetsDialog.get_instance():
             presets_dialog.edit_preset(preset)
 
@@ -5593,8 +5594,8 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.editor_layout.addWidget(self.editor_trigger_widget)
 
         dialog_splitter.addWidget(self.editor_groupbox)
-        dialog_splitter.setCollapsible(0, False);
-        dialog_splitter.setCollapsible(1, False);
+        dialog_splitter.setCollapsible(0, False)
+        dialog_splitter.setCollapsible(1, False)
         dialog_splitter.setSizes([preset_list_panel.minimumSize().width(), self.editor_groupbox.minimumSize().width()])
 
         self.status_bar = QStatusBar()
@@ -5632,12 +5633,13 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
     def populate_presets_display_list(self) -> None:
         for i in range(self.preset_widgets_layout.count() - 1, -1, -1):  # Remove existing entries
-            w = self.preset_widgets_layout.itemAt(i).widget()
-            if isinstance(w, PresetWidget):
-                self.preset_widgets_layout.removeWidget(w)
-                w.deleteLater()
-            else:
-                self.preset_widgets_layout.removeItem(self.preset_widgets_layout.itemAt(i))
+            if item := self.preset_widgets_layout.itemAt(i):
+                w = item.widget()
+                if isinstance(w, PresetWidget):
+                    self.preset_widgets_layout.removeWidget(w)
+                    w.deleteLater()
+                else:
+                    self.preset_widgets_layout.removeItem(item)
         for preset_def in self.main_controller.preset_controller.find_presets_map().values():  # Populate new entries
             self.preset_widgets_layout.addWidget(self.create_preset_widget(preset_def))
         self.preset_widgets_layout.addStretch(1)
@@ -5678,13 +5680,14 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
                 return w
         return None
 
-    def indicate_active_preset(self, preset: Preset = None):
+    def indicate_active_preset(self, preset: Preset | None = None):
         self.preset_widgets_layout.findChildren(PresetWidget)
         for i in range(self.preset_widgets_layout.count()):
-            w = self.preset_widgets_layout.itemAt(i).widget()
-            if isinstance(w, PresetWidget):
-                w.update_timer_button()
-                w.indicate_active(preset is not None and w.name == preset.name)
+            if item := self.preset_widgets_layout.itemAt(i):
+                w = item.widget()
+                if isinstance(w, PresetWidget):
+                    w.update_timer_button()
+                    w.indicate_active(preset is not None and w.name == preset.name)
 
     def populate_editor_controls_widget(self):
         container = self.editor_controls_widget
@@ -5844,7 +5847,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
             self.setDisabled(True)  # Stop any editing until after the preset is restored.
             self.main_controller.restore_preset(preset, finished_func=_begin_editing, immediately=True)
 
-    def save_preset(self, _: bool = False, from_widget: PresetWidget = None, quiet: bool = False) -> MBtn.Ok | MBtn.Cancel:
+    def save_preset(self, _: bool = False, from_widget: PresetWidget | None = None, quiet: bool = False) -> MBtn.Ok | MBtn.Cancel:
         preset: Preset | None = None
         widget_to_replace: PresetWidget | None = None
         if from_widget:  # A from_widget is requesting that the Preset's VDU current settings be updated.
@@ -6418,16 +6421,16 @@ class LuxGaugeWidget(QWidget):
         self.white_transparent_color = QColor(w.red(), w.green(), w.blue(), 30)
         self.orange_line_color = QColor(0xff8500)
         self.common_background_color = QColor(0x5b93c5)
-        self.setLayout(QVBoxLayout())
+        self.setLayout(widget_layout := QVBoxLayout())
         self.current_lux_display = QLabel()
         big_font = self.current_lux_display.font()
         big_font.setPointSize(big_font.pointSize() + 8)
         self.current_lux_display.setFont(big_font)
-        self.layout().addWidget(self.current_lux_display)
+        widget_layout.addWidget(self.current_lux_display)
         self.plot_widget = QLabel()
         self.plot_widget.setFixedWidth(round(340 / self.devicePixelRatio()))
         self.plot_widget.setFixedHeight(round(100 / self.devicePixelRatio()))
-        self.layout().addWidget(self.plot_widget)
+        widget_layout.addWidget(self.plot_widget)
         self.current_meter: LuxMeterDevice | None = None
         self.stats_label = QLabel()
         self.help_text = tr("Left:\t Rolling display of metered lux (ML).\n"
@@ -6439,7 +6442,7 @@ class LuxGaugeWidget(QWidget):
                             "Eo = unit_constants * sin(radians(solar_altitude)) * 10 ** (-0.1 * air_mass)\n"
                             "Estimates of Ei are used by the semi-automatic metering option.")
         self.setToolTip(self.help_text)
-        self.layout().addWidget(self.stats_label)
+        widget_layout.addWidget(self.stats_label)
         self.updates_enabled = True
         self.append_new_value(0)
 
@@ -6569,14 +6572,14 @@ class LuxGaugeWidget(QWidget):
         else:
             self.stats_label.setText(tr("Eo=?   DF=?   (location not set)"))
 
-    def connect_meter(self, lux_meter: LuxMeterDevice | None) -> None:
+    def connect_meter(self, new_lux_meter: LuxMeterDevice | None) -> None:
         if self.current_meter:
             self.current_meter.new_lux_value_qtsignal.disconnect(self.append_new_value)
-        self.current_meter = lux_meter
+        self.current_meter = new_lux_meter
         if self.current_meter:
             self.current_meter.new_lux_value_qtsignal.connect(self.append_new_value)
-            if lux_meter.has_manual_capability:
-                if lux := lux_meter.get_value():
+            if new_lux_meter and new_lux_meter.has_manual_capability:
+                if lux := new_lux_meter.get_value():
                     self.append_new_value(round(lux))
             self.enable_gauge(True)
 
@@ -6933,7 +6936,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             log_info(f"LuxAuto: exiting (stop_requested={self.stop_requested}) {thread_pid()=}")
 
     def assemble_required_work(self, lux_auto_controller: LuxAutoController, metered_lux: float, requires_smoothing) -> List[LuxToDo]:
-        lux = self.smoother.smooth(metered_lux) if requires_smoothing else metered_lux
+        lux = self.smoother.smooth(metered_lux) if requires_smoothing else round(metered_lux)
         summary_text = self.lux_summary(metered_lux, lux)
         self.status_message(f"{SUN_SYMBOL} {summary_text} {PROCESSING_LUX_SYMBOL}", timeout=3000)
         to_do_list: List[LuxToDo] = []
