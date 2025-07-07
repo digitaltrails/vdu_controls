@@ -865,7 +865,7 @@ from functools import partial
 from importlib import import_module
 from pathlib import Path
 from threading import Lock
-from typing import List, Tuple, Mapping, Type, Dict, Callable, Any, NewType
+from typing import List, Tuple, Mapping, Type, Dict, Callable, Any, NewType, cast
 from urllib.error import URLError
 
 CONFIG_DIR_PATH = Path.home().joinpath('.config', 'vdu_controls')
