@@ -4639,7 +4639,7 @@ class PushButtonLeftJustified(QPushButton):
         self.label.setText(text)
 
 
-class PresetWidget(QWidget):
+class PresetItemWidget(QWidget):
     def __init__(self, preset: Preset, restore_action: Callable, save_action: Callable, delete_action: Callable,
                  edit_action: Callable, up_action: Callable, down_action: Callable, protect_nvram: bool):
         super().__init__()
@@ -5742,7 +5742,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         for i in range(self.preset_widgets_layout.count() - 1, -1, -1):  # Remove existing entries
             if item := self.preset_widgets_layout.itemAt(i):
                 w = item.widget()
-                if isinstance(w, PresetWidget):
+                if isinstance(w, PresetItemWidget):
                     self.preset_widgets_layout.removeWidget(w)
                     w.deleteLater()
                 else:
@@ -5780,19 +5780,19 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         for (section, option), checkbox in self.content_controls_map.items():
             checkbox.setChecked(section == vdu_stable_id)
 
-    def find_preset_widget(self, preset_name: str) -> PresetWidget | None:
+    def find_preset_widget(self, preset_name: str) -> PresetItemWidget | None:
         for i in range(self.preset_widgets_layout.count()):
             w = self.preset_widgets_layout.itemAt(i).widget()
-            if isinstance(w, PresetWidget) and w.name == preset_name:
+            if isinstance(w, PresetItemWidget) and w.name == preset_name:
                 return w
         return None
 
     def indicate_active_preset(self, preset: Preset | None = None):
-        self.preset_widgets_layout.findChildren(PresetWidget)
+        self.preset_widgets_layout.findChildren(PresetItemWidget)
         for i in range(self.preset_widgets_layout.count()):
             if item := self.preset_widgets_layout.itemAt(i):
                 w = item.widget()
-                if isinstance(w, PresetWidget):
+                if isinstance(w, PresetItemWidget):
                     w.update_timer_button()
                     w.indicate_active(preset is not None and w.name == preset.name)
 
@@ -5876,15 +5876,15 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         preset_ini.set('preset', 'transition-step-interval-seconds', str(self.editor_transitions_widget.get_step_seconds()))
         preset_ini.set('preset', 'daylight-factor', str(self.editor_at_elevation_widget.df_widget.df_input.text()))
 
-    def get_preset_widgets(self) -> List[PresetWidget]:
+    def get_preset_widgets(self) -> List[PresetItemWidget]:
         return [self.preset_widgets_layout.itemAt(i).widget()
                 for i in range(0, self.preset_widgets_layout.count() - 1)
-                if isinstance(self.preset_widgets_layout.itemAt(i).widget(), PresetWidget)]
+                if isinstance(self.preset_widgets_layout.itemAt(i).widget(), PresetItemWidget)]
 
     def get_preset_names_in_order(self) -> List[str]:
         return [w.name for w in self.get_preset_widgets()]
 
-    def add_preset_widget(self, preset_widget: PresetWidget) -> None:
+    def add_preset_widget(self, preset_widget: PresetItemWidget) -> None:
         # Insert before trailing stretch item
         self.preset_widgets_layout.insertWidget(self.preset_widgets_layout.count() - 1, preset_widget)
 
@@ -5957,9 +5957,9 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
             self.setDisabled(True)  # Stop any editing until after the preset is restored.
             self.main_controller.restore_preset(preset, finished_func=_begin_editing, immediately=True)
 
-    def save_preset(self, _: bool = False, from_widget: PresetWidget | None = None, quiet: bool = False) -> MBtn.Ok | MBtn.Cancel:
+    def save_preset(self, _: bool = False, from_widget: PresetItemWidget | None = None, quiet: bool = False) -> MBtn.Ok | MBtn.Cancel:
         preset: Preset | None = None
-        widget_to_replace: PresetWidget | None = None
+        widget_to_replace: PresetItemWidget | None = None
         if from_widget:  # A from_widget is requesting that the Preset's VDU current settings be updated.
             widget_to_replace = None  # Updating from widget, no change to icons or symbols, so no need to update the widget.
             preset = from_widget.preset  # Just update the widget's preset from the VDUs current settings
@@ -6015,11 +6015,11 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.status_message(tr("Saved {}").format(preset.name), timeout=-1)
         return MBtn.Save
 
-    def create_preset_widget(self, preset) -> PresetWidget:
-        return PresetWidget(preset, restore_action=self.restore_preset, save_action=self.save_preset,
-                            delete_action=self.delete_preset, edit_action=self.edit_preset,
-                            up_action=self.up_action, down_action=self.down_action,
-                            protect_nvram=self.main_config.is_set(ConfOpt.PROTECT_NVRAM_ENABLED))
+    def create_preset_widget(self, preset) -> PresetItemWidget:
+        return PresetItemWidget(preset, restore_action=self.restore_preset, save_action=self.save_preset,
+                                delete_action=self.delete_preset, edit_action=self.edit_preset,
+                                up_action=self.up_action, down_action=self.down_action,
+                                protect_nvram=self.main_config.is_set(ConfOpt.PROTECT_NVRAM_ENABLED))
 
     def event(self, event: QEvent | None) -> bool:
         # PalletChange happens after the new style sheet is in use.
