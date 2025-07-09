@@ -5336,35 +5336,46 @@ class PresetDaylightFactorWidget(QWidget):
 
 class PresetChooseScheduleWidget(QWidget):
 
-    def __init__(self):
+    def __init__(self, description: str):
         super().__init__()
-        self.all_widgets = []
+        self.description = description
+        self.all_schedule_chooser_widgets: List[PresetChooseScheduleWidget] = []
 
-    def set_possible_schedule_widgets(self, all_widgets: List[PresetChooseScheduleWidget]):
-        self.all_widgets = all_widgets
+    def set_schedule_widgets(self, all_widgets: List[PresetChooseScheduleWidget]):
+        self.all_schedule_chooser_widgets = all_widgets
 
-    def clear_others(self, _ = None):
-        for w in self.all_widgets:
-            if w != self:
-                w.clear()
+    def clear_others(self, _ = None) -> bool:
+        others = [w for w in self.all_schedule_chooser_widgets if w != self and w.is_set()]
+        if others and MBox(
+                MIcon.Question,
+                msg=tr('Preset already scheduled. Clear existing {}?').format(others[0].description),
+                info=tr('Duplicate the preset if you need to schedule it more than once.'),
+                buttons=MBtn.Ok | MBtn.Cancel).exec() == MBtn.Cancel:
+            return False
+        for w in others:
+            w.clear()
+        return True
 
-    def clear(self):
+    def is_set(self) -> bool:
+        return False
+
+    def clear(self) -> None:
         pass
 
 class PresetChooseScheduleByElevationWidget(PresetChooseScheduleWidget):
     _slider_select_elevation_qtsignal = pyqtSignal(object)
 
     def __init__(self, main_config: VduControlsConfig) -> None:
-        super().__init__()
+        super().__init__(description=tr("elevation-trigger"))
         self.elevation_key: SolarElevationKey | None = None
         self.location: GeoLocation | None = main_config.get_location()
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(layout)
-        self.title_prefix = tr("Solar elevation trigger: ")
+        self.title_prefix = tr("Trigger at solar elevation: ")
         self.title_label = QLabel(self.title_prefix)
-        self.title_label.setToolTip(tr("Trigger the Preset at a set solar elevation (time varies during the year)."))
+        self.title_label.setToolTip(tr("Trigger at a set solar elevation (sun angle at your geolocation and time)."))
         layout.addWidget(self.title_label)
         layout.addSpacing(8)
 
@@ -5399,7 +5410,10 @@ class PresetChooseScheduleByElevationWidget(PresetChooseScheduleWidget):
         self.setMinimumWidth(native_pixels(400))
         self.sun_image: QImage | None = None
 
-    def clear(self):
+    def is_set(self) -> bool:
+        return self.elevation_key is not None
+
+    def clear(self) -> None:
         self.set_elevation_key(None)
 
     def sliding(self) -> None:
@@ -5468,15 +5482,15 @@ class PresetChooseScheduleByElevationWidget(PresetChooseScheduleWidget):
 
     def set_elevation_key(self, elevation_key: SolarElevationKey | None) -> None:
         if elevation_key is not None:
-            self.clear_others()
-            if self.elevation_chart.has_elevation_key(elevation_key):
-                self.elevation_key = elevation_key
-                self.slider.setValue(self.elevation_chart.elevation_steps.index(self.elevation_key))
-                self.slider.setToolTip(f"{self.elevation_key.elevation}{DEGREE_SYMBOL}")
-                self.elevation_chart.set_elevation_key(self.elevation_key)
-                self.weather_widget.setEnabled(True)
-                self.show_elevation_description()
-                return
+            if self.clear_others():
+                if self.elevation_chart.has_elevation_key(elevation_key):
+                    self.elevation_key = elevation_key
+                    self.slider.setValue(self.elevation_chart.elevation_steps.index(self.elevation_key))
+                    self.slider.setToolTip(f"{self.elevation_key.elevation}{DEGREE_SYMBOL}")
+                    self.elevation_chart.set_elevation_key(self.elevation_key)
+                    self.weather_widget.setEnabled(True)
+                    self.show_elevation_description()
+                    return
         self.elevation_key = None
         self.slider.setValue(-1)
         self.elevation_chart.set_elevation_key(None)
@@ -5498,34 +5512,48 @@ class PresetChooseScheduleByTime(PresetChooseScheduleWidget):
         def validate(self, text, pos):
             if len(text) < 4:
                 return QValidator.State.Intermediate, text, pos
-            try:
-                datetime.strptime(text, '%H:%M')
-            except ValueError as ve:
-                return QValidator.State.Invalid, text, pos
-            return QValidator.State.Acceptable, text, pos
+            state = QValidator.State.Invalid
+            for acceptable_format in ['%H:%M', '%H%M']:
+                try:
+                    datetime.strptime(text, acceptable_format)
+                    state = QValidator.State.Acceptable
+                    break
+                except ValueError:
+                    pass
+            return state, text, pos
 
     def __init__(self):
-        super().__init__()
-        self.setToolTip(tr("Trigger the Preset at the same time each day."))
+        super().__init__(description=tr("time-trigger"))
+        self.setToolTip(tr("Trigger at the same time (hh:mm) each day."))
         self.setLayout(at_time_layout := QHBoxLayout())
-        at_time_layout.addWidget(QLabel(tr("Time trigger:")))
+        at_time_layout.addWidget(QLabel(tr("Trigger at time:")))
         self.editor_at_time_field = QLineEdit()
         self.editor_at_time_field.setValidator(PresetChooseScheduleByTime.TimeFieldValidator())
         at_time_layout.addWidget(self.editor_at_time_field)
-        self.editor_at_time_field.textChanged.connect(self.clear_others)
+
+        def clear_others_ask(_: str):
+            if not self.clear_others():
+                self.clear()
+
+        self.editor_at_time_field.textChanged.connect(clear_others_ask)
         at_time_layout.addStretch(1)
         at_time_layout.setContentsMargins(0, 0, 0, 0)
 
-    def clear(self):
+    def is_set(self) -> bool:
+        return len(self.text()) != 0
+
+    def clear(self) -> None:
         if self.text():
             self.setText('')
 
     def setText(self, text: str) -> None:
-        log_debug(f"xxxxxxxxxxxxx settext {text=}")
         self.editor_at_time_field.setText(text)
 
     def text(self) -> str:
-        return self.editor_at_time_field.text()
+        if text := self.editor_at_time_field.text():
+            if len(text) == 4:
+                text = f"{text[:2]}:{text[2:]}"
+        return text
 
 
 class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rather complex - break into parts?
@@ -5668,7 +5696,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
         possibles = [self.editor_at_time_widget, self.editor_at_elevation_widget]
         for schedule_choice_widget in possibles:
-            schedule_choice_widget.set_possible_schedule_widgets(possibles)
+            schedule_choice_widget.set_schedule_widgets(possibles)
 
         dialog_splitter.addWidget(self.editor_groupbox)
         dialog_splitter.setCollapsible(0, False)
