@@ -3968,6 +3968,11 @@ class Preset:
             return solar_elevation
         return None
 
+    def get_at_time(self) -> datetime | None:
+        if at_time_spec := self.preset_ini.get('preset', 'at-time', fallback=None):
+            return datetime.combine(datetime.today(), datetime.strptime(at_time_spec, "%H:%M").time()).astimezone()
+        return None
+
     def get_solar_elevation_abbreviation(self) -> str:
         if elevation := self.get_solar_elevation():
             result = format_solar_elevation_abbreviation(elevation)
@@ -3980,6 +3985,8 @@ class Preset:
                 result += ' ' + WEATHER_RESTRICTION_SYMBOL
             result += ' ' + self.schedule_status.symbol()
             return result
+        if at_time := self.get_at_time():
+            return f" {TIME_CLOCK_SYMBOL} {at_time.strftime('%H:%M')} " + self.schedule_status.symbol()
         return ''
 
     def get_solar_elevation_description(self, enabled: bool) -> str:
@@ -4689,7 +4696,7 @@ class PresetWidget(QWidget):
         self.timer_control_button = PushButtonLeftJustified(parent=self, flat=True)
         self.timer_control_button.setAutoDefault(False)
 
-        if preset.get_solar_elevation() is not None:
+        if preset.get_solar_elevation() is not None or preset.get_at_time() is not None:
             def _toggle_timer(_) -> None:
                 preset.toggle_timer()
                 self.update_timer_button()
@@ -4996,7 +5003,9 @@ class PresetChooseTransitionWidget(QWidget):
 
     def __init__(self) -> None:
         super().__init__()
+        self.setToolTip(tr("Choose whether this Preset should transition when activated a particular way."))
         layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(layout)
         layout.addWidget(QLabel(tr("Transition")), alignment=Qt.AlignmentFlag.AlignLeft)
         self.transition_type_widget = StdButton(title=PresetTransitionFlag.NONE.description())
@@ -5325,8 +5334,24 @@ class PresetDaylightFactorWidget(QWidget):
         self.df_label.setEnabled(enabled)
         self.df_input.setEnabled(enabled)
 
+class PresetChooseScheduleWidget(QWidget):
 
-class PresetChooseElevationWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.all_widgets = []
+
+    def set_possible_schedule_widgets(self, all_widgets: List[PresetChooseScheduleWidget]):
+        self.all_widgets = all_widgets
+
+    def clear_others(self, _ = None):
+        for w in self.all_widgets:
+            if w != self:
+                w.clear()
+
+    def clear(self):
+        pass
+
+class PresetChooseScheduleByElevationWidget(PresetChooseScheduleWidget):
     _slider_select_elevation_qtsignal = pyqtSignal(object)
 
     def __init__(self, main_config: VduControlsConfig) -> None:
@@ -5335,9 +5360,11 @@ class PresetChooseElevationWidget(QWidget):
         self.location: GeoLocation | None = main_config.get_location()
 
         layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(layout)
         self.title_prefix = tr("Solar elevation trigger: ")
         self.title_label = QLabel(self.title_prefix)
+        self.title_label.setToolTip(tr("Trigger the Preset at a set solar elevation (time varies during the year)."))
         layout.addWidget(self.title_label)
         layout.addSpacing(8)
 
@@ -5371,6 +5398,9 @@ class PresetChooseElevationWidget(QWidget):
 
         self.setMinimumWidth(native_pixels(400))
         self.sun_image: QImage | None = None
+
+    def clear(self):
+        self.set_elevation_key(None)
 
     def sliding(self) -> None:
         value = self.slider.value()
@@ -5438,6 +5468,7 @@ class PresetChooseElevationWidget(QWidget):
 
     def set_elevation_key(self, elevation_key: SolarElevationKey | None) -> None:
         if elevation_key is not None:
+            self.clear_others()
             if self.elevation_chart.has_elevation_key(elevation_key):
                 self.elevation_key = elevation_key
                 self.slider.setValue(self.elevation_chart.elevation_steps.index(self.elevation_key))
@@ -5459,6 +5490,42 @@ class PresetChooseElevationWidget(QWidget):
 
     def set_required_weather_filename(self, weather_filename: str | None) -> None:
         self.weather_widget.set_required_weather_filepath(weather_filename)
+
+class PresetChooseScheduleByTime(PresetChooseScheduleWidget):
+
+    class TimeFieldValidator(QValidator):
+
+        def validate(self, text, pos):
+            if len(text) < 4:
+                return QValidator.State.Intermediate, text, pos
+            try:
+                datetime.strptime(text, '%H:%M')
+            except ValueError as ve:
+                return QValidator.State.Invalid, text, pos
+            return QValidator.State.Acceptable, text, pos
+
+    def __init__(self):
+        super().__init__()
+        self.setToolTip(tr("Trigger the Preset at the same time each day."))
+        self.setLayout(at_time_layout := QHBoxLayout())
+        at_time_layout.addWidget(QLabel(tr("Time trigger:")))
+        self.editor_at_time_field = QLineEdit()
+        self.editor_at_time_field.setValidator(PresetChooseScheduleByTime.TimeFieldValidator())
+        at_time_layout.addWidget(self.editor_at_time_field)
+        self.editor_at_time_field.textChanged.connect(self.clear_others)
+        at_time_layout.addStretch(1)
+        at_time_layout.setContentsMargins(0, 0, 0, 0)
+
+    def clear(self):
+        if self.text():
+            self.setText('')
+
+    def setText(self, text: str) -> None:
+        log_debug(f"xxxxxxxxxxxxx settext {text=}")
+        self.editor_at_time_field.setText(text)
+
+    def text(self) -> str:
+        return self.editor_at_time_field.text()
 
 
 class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rather complex - break into parts?
@@ -5571,6 +5638,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.editor_groupbox.setFlat(True)
         self.editor_groupbox.setMinimumSize(native_pixels(550), native_pixels(768))
         self.editor_layout = QVBoxLayout()
+        self.editor_layout.setSpacing(native_pixels(20))
         self.editor_layout.setSizeConstraint(QVBoxLayout.SizeConstraint.SetMinimumSize)
         self.editor_title = QLabel(tr("New Preset:"))
         self.editor_title.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed))
@@ -5592,8 +5660,15 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         else:
             self.editor_layout.addWidget(self.editor_transitions_widget)
 
-        self.editor_trigger_widget = PresetChooseElevationWidget(self.main_config)
-        self.editor_layout.addWidget(self.editor_trigger_widget)
+        self.editor_at_time_widget = PresetChooseScheduleByTime()
+        self.editor_layout.addWidget(self.editor_at_time_widget)
+
+        self.editor_at_elevation_widget = PresetChooseScheduleByElevationWidget(self.main_config)
+        self.editor_layout.addWidget(self.editor_at_elevation_widget)
+
+        possibles = [self.editor_at_time_widget, self.editor_at_elevation_widget]
+        for schedule_choice_widget in possibles:
+            schedule_choice_widget.set_possible_schedule_widgets(possibles)
 
         dialog_splitter.addWidget(self.editor_groupbox)
         dialog_splitter.setCollapsible(0, False)
@@ -5622,10 +5697,12 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
         self.edit_choose_icon_button.set_preset(None)
         self.editor_controls_widget.setDisabled(True)
+        self.editor_at_time_widget.setDisabled(True)
         self.editor_transitions_widget.setDisabled(True)
-        self.editor_trigger_widget.setDisabled(True)
+        self.editor_at_elevation_widget.setDisabled(True)
         self.edit_save_button.setDisabled(True)
         self.edit_revert_button.setDisabled(True)
+
         self.indicate_active_preset(self.main_controller.which_preset_is_active())
         self.editor_controls_widget.adjustSize()
         self.make_visible()
@@ -5654,7 +5731,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.main_controller.populate_ini_from_vdus(self.base_ini)
         self.populate_editor_controls_widget()
         self.reset_editor()
-        self.editor_trigger_widget.configure_for_location(self.main_config.get_location())
+        self.editor_at_elevation_widget.configure_for_location(self.main_config.get_location())
 
     def reset_editor(self):
         self.preset_name_edit.setText('')
@@ -5729,15 +5806,16 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         for key, item in self.content_controls_map.items():
             item.setChecked(preset.preset_ini.has_option(key[0], key[1]))
         if preset.preset_ini.has_section('preset'):
-            self.editor_trigger_widget.set_elevation_from_text(
+            self.editor_at_time_widget.setText(preset.get_at_time().strftime("%H:%M") if preset.get_at_time() else '')
+            self.editor_at_elevation_widget.set_elevation_from_text(
                 preset.preset_ini.get('preset', 'solar-elevation', fallback=None))
-            self.editor_trigger_widget.set_required_weather_filename(
+            self.editor_at_elevation_widget.set_required_weather_filename(
                 preset.preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None))
             self.editor_transitions_widget.set_transition_type(preset.get_transition_type())
             self.editor_transitions_widget.set_step_seconds(preset.get_step_interval_seconds())
             df = preset.get_daylight_factor()
-            self.editor_trigger_widget.df_widget.setEnabled(df is not None)
-            self.editor_trigger_widget.df_widget.df_input.setText(f"{df:.4f}" if df is not None else '')
+            self.editor_at_elevation_widget.df_widget.setEnabled(df is not None)
+            self.editor_at_elevation_widget.df_widget.df_input.setText(f"{df:.4f}" if df is not None else '')
 
     def has_changes(self, preset: Preset) -> bool:
         preset_ini_copy = preset.preset_ini.duplicate()
@@ -5760,14 +5838,15 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
             preset_ini.add_section('preset')
         if self.edit_choose_icon_button.last_selected_icon_path:
             preset_ini.set("preset", "icon", self.edit_choose_icon_button.last_selected_icon_path.as_posix())
-        preset_ini.set('preset', 'solar-elevation', format_solar_elevation_ini_text(self.editor_trigger_widget.elevation_key))
-        if weather_filename := self.editor_trigger_widget.get_required_weather_filename():
+        preset_ini.set('preset', 'at-time', self.editor_at_time_widget.text())
+        preset_ini.set('preset', 'solar-elevation', format_solar_elevation_ini_text(self.editor_at_elevation_widget.elevation_key))
+        if weather_filename := self.editor_at_elevation_widget.get_required_weather_filename():
             preset_ini.set('preset', 'solar-elevation-weather-restriction', weather_filename)
         elif preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None):
             preset_ini.remove_option('preset', 'solar-elevation-weather-restriction')  # Remove existing restriction from ini
         preset_ini.set('preset', 'transition-type', str(self.editor_transitions_widget.get_transition_type()))
         preset_ini.set('preset', 'transition-step-interval-seconds', str(self.editor_transitions_widget.get_step_seconds()))
-        preset_ini.set('preset', 'daylight-factor', str(self.editor_trigger_widget.df_widget.df_input.text()))
+        preset_ini.set('preset', 'daylight-factor', str(self.editor_at_elevation_widget.df_widget.df_input.text()))
 
     def get_preset_widgets(self) -> List[PresetWidget]:
         return [self.preset_widgets_layout.itemAt(i).widget()
@@ -5830,7 +5909,8 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
             self.editor_controls_prompt.setText(tr("Controls to include in {}:").format(changed_text))
         self.editor_controls_widget.setDisabled(disable_controls)
         self.editor_transitions_widget.setDisabled(disable_controls)
-        self.editor_trigger_widget.setDisabled(disable_controls)
+        self.editor_at_time_widget.setDisabled(disable_controls)
+        self.editor_at_elevation_widget.setDisabled(disable_controls)
         self.controls_title_widget.setDisabled(disable_controls)
         self.editor_transitions_widget.setDisabled(disable_controls)
         self.edit_save_button.setDisabled(disable_controls)
@@ -8066,7 +8146,7 @@ class PresetTransitionFlag(IntFlag):
                      SIGNAL: SIGNAL_SYMBOL, ALWAYS: TRANSITION_ALWAYS_SYMBOL}
 
     descriptions = {
-        NONE: QT_TR_NOOP('Always immediately'), SCHEDULED: QT_TR_NOOP('Smoothly on solar'), MENU: QT_TR_NOOP('Smoothly on menu'),
+        NONE: QT_TR_NOOP('Always immediately'), SCHEDULED: QT_TR_NOOP('Smoothly on solar/time'), MENU: QT_TR_NOOP('Smoothly on menu'),
         SIGNAL: QT_TR_NOOP('Smoothy on signal'), ALWAYS: QT_TR_NOOP('Always smoothly')}
 
     def abbreviation(self, abbreviations=abbreviations) -> str:  # Even more hacky
@@ -8504,6 +8584,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 else:
                     log_debug(f"schedule_create_timetable: Skipped preset '{preset.name}' {elevation_key} degrees,"
                               " the sun does not reach that elevation today.")
+            if at_time := preset.get_at_time():
+                timetable_for_day[at_time] = preset
         return {when: preset for when, preset in sorted(list(timetable_for_day.items()))}
 
     def schedule_presets(self) -> None:
@@ -8575,7 +8657,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 preset.name, f"{activation_time:%H:%M}") + f" - {msg}")
 
         def _activation_finished(worker: BulkChangeWorker) -> None:
-            assert preset.elevation_time_today is not None
+            assert preset.elevation_time_today is not None or preset.get_at_time() is not None
             attempts = preset.scheduler_job.attempts
             if worker.vdu_exception is not None:
                 too_close = zoned_now() + timedelta(seconds=60)  # retry if more than a minute before any others
@@ -8604,7 +8686,10 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             return
         if activation_time is None:
             activation_time = zoned_now()
-        off_schedule = activation_time < preset.elevation_time_today  # Too early, must be an off-schedule catchup from yesterday
+        if preset.elevation_time_today:
+            off_schedule = activation_time < preset.elevation_time_today  # Too early, must be an off-schedule catchup from yesterday
+        else:
+            off_schedule = activation_time < preset.get_at_time()
         if preset.is_weather_dependent() and check_weather and self.main_config.is_set(ConfOpt.WEATHER_ENABLED):
             if not self.is_weather_satisfactory(preset):
                 if not off_schedule:
