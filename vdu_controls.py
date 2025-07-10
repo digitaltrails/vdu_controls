@@ -127,6 +127,8 @@ Should the ``ddcutil-service`` be unavailable, ``vdu_controls`` will fall back t
 
 The UI look-and-feel dynamically adjusts to dark and light themes. The application may
 optionally run in the system tray of KDE, Deepin, GNOME, and Xfce (and possibly others).
+For desktops that don't integrate with Qt/KDE themeing, the `qt5ct` and `qt6ct` utilities may
+be used to alter the overall Qt theme.
 
 The UI provides an optional ``ambient-light slider`` for simultaneously adjusting
 all VDUs according to custom per-VDU ambient lux/brightness profiles.  Options are included

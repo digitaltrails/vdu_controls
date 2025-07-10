@@ -27,7 +27,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Jun 28, 2025" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Jul 10, 2025" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 2.4.1
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -206,6 +206,8 @@ Should the \fBddcutil\-service\fP be unavailable, \fBvdu_controls\fP will fall b
 .sp
 The UI look\-and\-feel dynamically adjusts to dark and light themes. The application may
 optionally run in the system tray of KDE, Deepin, GNOME, and Xfce (and possibly others).
+For desktops that don\(aqt integrate with Qt/KDE themeing, the \fIqt5ct\fP and \fIqt6ct\fP utilities may
+be used to alter the overall Qt theme.
 .sp
 The UI provides an optional \fBambient\-light slider\fP for simultaneously adjusting
 all VDUs according to custom per\-VDU ambient lux/brightness profiles.  Options are included
@@ -492,6 +494,15 @@ At startup \fBvdu_controls\fP will restore the most recent preset that would hav
 this day (if any).  For example, say a user has \fBvdu_controls\fP set to run at login, and they\(aqve
 also set a preset to trigger at dawn, but they don\(aqt log in until just after dawn, the
 overdue dawn preset will be triggered at login.
+.SS Presets \- time\-of\-day triggers
+.sp
+A preset may be set to trigger at a fixed time each day.  This is an alternative to the
+elevation trigger.  It\(aqs not possible for a single preset to have both kinds of trigger.
+.sp
+As with the elevation trigger, the Preset Dialog may be used to temporarily
+override any trigger, in which case the trigger is suspended until the following day.
+Similarly, at startup, the most recent preset that would have been triggered for this
+day will be restored.
 .SS Presets \- Smooth Transitions
 .sp
 __To minimize writes to VDU NVRAM, smooth\-transitions have been deprecated and are disabled by
@@ -692,7 +703,10 @@ Adjustments are only made at intervals of one or more minutes (default is 10 min
 .IP \(bu 2
 The adjustment task passes lux values through a smoothing low\-pass filter.
 .IP \(bu 2
-A VDU brightness profile may optionally be set to stair\-step with no interpolation
+When a VDU brightness profile is set to interpolate, changes specified by the
+curve will only be applied when they cross a minimum threshold (default 10%).
+.IP \(bu 2
+A VDU brightness profile may be set to stair\-step with no interpolation
 of intermediate values.
 .UNINDENT
 .UNINDENT

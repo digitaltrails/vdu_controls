@@ -55,7 +55,8 @@ different tray implementations.
 
 The UI automatically adjusts to **light and dark Qt desktop-themes**.
 Where a desktop supports Qt theming events, the UI dynamically adjusts 
-to light/dark theme changes.
+to light/dark theme changes.  (For desktops that don't integrate with Qt/KDE themeing, 
+the `qt5ct` and `qt6ct` utilities may be used to alter the overall Qt theme.)
 
 From any application window, use **F1** to access **help**, and **F10** to access the context-menu.   The 
 **Context Menu** is also available via the right-mouse button in the main-window, the hamburger-menu item 
