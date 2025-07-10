@@ -531,7 +531,9 @@ changes passed to the VDU:
    brightness levels remain constant over set ranges of lux values (night, day, and so forth).
  - Adjustments are only made at intervals of one or more minutes (default is 10 minutes).
  - The adjustment task passes lux values through a smoothing low-pass filter.
- - A VDU brightness profile may optionally be set to stair-step with no interpolation
+ - When a VDU brightness profile is set to interpolate, changes specified by the
+   curve will only be applied when they cross a minimum threshold (default 10%).
+ - A VDU brightness profile may be set to stair-step with no interpolation
    of intermediate values.
 
 When ambient light conditions are fluctuating, for example, due to passing clouds, automatic adjust
@@ -3513,8 +3515,8 @@ class LatitudeLongitudeValidator(QRegularExpressionValidator):
 class SettingsEditorLocationWidget(SettingsEditorLineBase):
     def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
         super().__init__(section_editor, option, section, tooltip)
-        self.text_input.setFixedWidth(500)
-        self.text_input.setMaximumWidth(500)
+        self.text_input.setFixedWidth(native_pixels(500))
+        self.text_input.setMaximumWidth(native_pixels(500))
         self.text_input.setMaxLength(250)
         self.validator = LatitudeLongitudeValidator()
         self.text_input.setText(section_editor.ini_editable[section][option])
@@ -4651,7 +4653,7 @@ class PushButtonLeftJustified(QPushButton):
         self.label = QLabel()
         self.setLayout(widget_layout := QVBoxLayout())
         widget_layout.addWidget(self.label)
-        self.setContentsMargins(0, 0, 0, 0)  # Not sure if this helps
+        self.setContentsMargins(native_pixels(10), 0, 0, native_pixels(10))  # Not sure if this helps
         widget_layout.setContentsMargins(0, 0, 0, 0)  # Seems to fix top/bottom clipping on openbox and xfce
         self.setText(text) if text is not None else None
         self.setFlat(flat)
@@ -5626,7 +5628,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.main_controller = main_controller
         self.main_config = main_config
         self.content_controls_map: Dict[Tuple[str, str], QCheckBox] = {}
-        self.resize(native_pixels(1700), native_pixels(950))
+        self.resize(native_pixels(1800), native_pixels(1100))
         self.setMinimumSize(native_pixels(1350), native_pixels(600))
         layout = QVBoxLayout()
         self.setLayout(layout)
@@ -7466,9 +7468,11 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
             if checked == intV(Qt.CheckState.Checked):  # need to save setting if not already set
                 if not self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=False):  # altering value
                     self.lux_config.set('lux-meter', 'interpolate-brightness', 'yes')
-                    MBox(MIcon.Warning, msg=tr('Interpolation may increase the number of writes to VDU NVRAM.'),
-                         info=tr('When designing brightness response curves consider minimizing '
-                                 'brightness changes to reduce wear on NVRAM.')).exec()
+                    MBox(MIcon.Information, msg=tr('Interpolation may increase the number of writes to VDU NVRAM.'),
+                         info=tr('Changes specified by each brightness-response curve will only be applied when they '
+                                 'cross a minimum threshold (default {}%).\n\n'
+                                 'When designing brightness-response curves, consider minimizing '
+                                 'brightness changes to reduce wear on NVRAM.').format(10)).exec()
             elif self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True):
                 self.lux_config.set('lux-meter', 'interpolate-brightness', 'no')
             self.apply_settings()
@@ -9151,7 +9155,7 @@ class VduAppWindow(QMainWindow):
         self.scroll_area.setWidget(self.main_panel)
         self.setCentralWidget(self.scroll_area)
 
-        available_height = self.screen().availableGeometry().height() - 200  # Minus allowance for panel/tray
+        available_height = self.screen().availableGeometry().height() - native_pixels(200)  # Minus allowance for panel/tray
         hint_height = self.main_panel.sizeHint().height()  # The hint is the actual required layout space
         hint_width = self.main_panel.sizeHint().width()
         log_debug(f"create_main_control_panel: {hint_height=} {available_height=} {self.minimumHeight()=}")
@@ -9248,7 +9252,7 @@ class VduAppWindow(QMainWindow):
 
     def app_save_window_state(self) -> None:
         if self.main_config.is_set(ConfOpt.SMART_WINDOW, fallback=True) and self.isVisible():
-            log_debug(f"app_save_window_state: {self.pos()=} {self.geometry()=}") if log_debug_enabled else None
+            log_debug(f"app_save_window_state: {self.pos()=} {self.geometry()=} {QtCore.qVersion()}") if log_debug_enabled else None
             self.qt_settings.setValue(self.qt_version_key, QtCore.qVersion())
             self.qt_settings.setValue(self.qt_geometry_key, self.saveGeometry())
             self.qt_settings.setValue(self.qt_state_key, self.saveState())
@@ -9259,9 +9263,11 @@ class VduAppWindow(QMainWindow):
             return False
         if len(self.qt_settings.allKeys()) == 0:  # No previous state
             return False
-        if (saved_ver := self.qt_settings.value(self.qt_version_key, '5')).split('.', 1)[0] != QtCore.qVersion().split('.', 1)[0]:
-            log_warning(f"app_restore_window_state: {saved_ver=} != {QtCore.qVersion()=} - major differs, cannot restore.")
-            return False  # Different Qt versions - cannot restore size, layout/size might be different.
+        save_version_major = self.qt_settings.value(self.qt_version_key, '5').split('.', 1)[0]
+        qt_version_major = QtCore.qVersion().split('.', 1)[0]
+        if save_version_major != qt_version_major:
+            log_warning(f"app_restore_window_state: cannot restore: {save_version_major=} != {qt_version_major=}")
+            return False  # Different Qt versions - cannot restore size, layout/size/scaling might be different.
         if geometry := self.qt_settings.value(self.qt_geometry_key, None):
             self.restoreGeometry(geometry)
         if window_state := self.qt_settings.value(self.qt_state_key, None):
@@ -9278,7 +9284,7 @@ class VduAppWindow(QMainWindow):
         desktop_width, desktop_height = (self.screen().availableGeometry().width(),
                                          self.screen().availableGeometry().height())
         # The following calculations allow for the tray being on any edge of the desktop...
-        margin = min(abs(desktop_height - cursor_y), abs(desktop_width - cursor_x), 100) + 25 if self.tray else 0
+        margin = min(abs(desktop_height - cursor_y), abs(desktop_width - cursor_x), native_pixels(100)) + native_pixels(25) if self.tray else 0
         x = cursor_x - app_width - margin if cursor_x > app_width else cursor_x + margin
         y = cursor_y - app_height - margin if cursor_y > app_height else cursor_y + margin
         log_debug(f"decide_window_position: {x=} {y=} {app_width=} {app_height=} {cursor_x=} {cursor_y=} {margin=}")
