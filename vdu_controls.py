@@ -368,6 +368,17 @@ this day (if any).  For example, say a user has ``vdu_controls`` set to run at l
 also set a preset to trigger at dawn, but they don't log in until just after dawn, the
 overdue dawn preset will be triggered at login.
 
+Presets - time-of-day triggers
+------------------------------
+
+A preset may be set to trigger at a fixed time each day.  This is an alternative to the
+elevation trigger.  It's not possible for a single preset to have both kinds of trigger.
+
+As with the elevation trigger, the Preset Dialog may be used to temporarily
+override any trigger, in which case the trigger is suspended until the following day.
+Similarly, at startup, the most recent preset that would have been triggered for this
+day will be restored.
+
 Presets - Smooth Transitions
 ----------------------------
 
@@ -2359,6 +2370,11 @@ class ScheduleWorker(WorkerThread):
             if ScheduleWorker._instance:
                 ScheduleWorker._instance._remove_all(job_type)
 
+    @staticmethod
+    def is_running() -> bool:
+        with ScheduleWorker._scheduler_lock:
+            return ScheduleWorker._instance and ScheduleWorker._instance.isRunning()
+
     def __init__(self) -> None:
         super().__init__(self.task_body, None, True)
         self.pending_jobs_list: List[SchedulerJob] = []
@@ -3989,26 +4005,31 @@ class Preset:
             return f" {TIME_CLOCK_SYMBOL} {at_time.strftime('%H:%M')} " + self.schedule_status.symbol()
         return ''
 
-    def get_solar_elevation_description(self, enabled: bool) -> str:
-        result = ''
+    def get_schedule_description(self) -> str:
+        if not ScheduleWorker.is_running():
+            return tr("(Schedule is disabled in Settings)")
+        result = suffix = basic_desc = weather_suffix = ''
         if elevation := self.get_solar_elevation():
-            basic_desc = format_solar_elevation_description(elevation)
+            basic_desc = SUN_SYMBOL + " " + format_solar_elevation_description(elevation)
             weather_fn = self.get_weather_restriction_filename()
             weather_suffix = tr(" (subject to {} weather)").format(
                 Path(weather_fn).stem.replace('_', ' ')) if weather_fn is not None else ''
-            # This might not work too well in translation - rethink?
-            if self.elevation_time_today:
-                if self.scheduler_job and self.scheduler_job.remaining_time() > 0:
-                    template = tr("{} later today at {}") + weather_suffix
-                elif self.elevation_time_today < zoned_now():
-                    template = tr("{} earlier today at {}") + weather_suffix + f" ({tr(self.schedule_status.description())})"
-                else:
-                    template = tr("{} suspended for  {}")
-                result = template.format(basic_desc, f"{self.elevation_time_today.replace(second=0, microsecond=0):%H:%M}")
-            elif enabled:
-                result = basic_desc + ' ' + tr("the sun does not rise this high today")
+            if at_time := self.elevation_time_today:
+                suffix = ''
+            elif ScheduleWorker.is_running():
+                suffix = tr("the sun does not rise this high today")
+        elif at_time := self.get_at_time():
+            basic_desc = TIME_CLOCK_SYMBOL
+        # This might not work too well in translation - rethink?
+        if at_time:
+            if self.scheduler_job and self.scheduler_job.remaining_time() > 0:
+                template = tr("{} later today at {}") + weather_suffix
+            elif at_time < zoned_now():
+                template = tr("{} earlier today at {}") + weather_suffix + f" ({tr(self.schedule_status.description())})"
             else:
-                result = basic_desc + ' ' + tr("(schedule is disabled in Settings)")
+                template = tr("{} suspended for {}")
+            result = template.format(basic_desc, f"{at_time.replace(second=0, microsecond=0):%H:%M}")
+        result = result + ' ' + suffix
         return result
 
     def get_daylight_factor(self) -> float | None:
@@ -4707,15 +4728,15 @@ class PresetItemWidget(QWidget):
         self.update_timer_button()
 
     def update_timer_button(self):
-        enable = self.preset.schedule_status in (PresetScheduleStatus.SCHEDULED, PresetScheduleStatus.SUSPENDED)
-        self.timer_control_button.setEnabled(enable)
+        self.timer_control_button.setEnabled(
+            self.preset.schedule_status in (PresetScheduleStatus.SCHEDULED, PresetScheduleStatus.SUSPENDED))
         if self.preset.schedule_status == PresetScheduleStatus.SCHEDULED:
             action_desc = tr("Press to skip: ")
         elif self.preset.schedule_status == PresetScheduleStatus.SUSPENDED:
             action_desc = tr("Press to re-enable: ")
         else:
             action_desc = ''
-        tip_text = f"{action_desc}{SUN_SYMBOL} {self.preset.get_solar_elevation_description(enable)}"
+        tip_text = f"{action_desc} {self.preset.get_schedule_description()}"
         self.timer_control_button.setText(self.preset.get_solar_elevation_abbreviation())
         self.timer_control_button.setToolTip(tip_text)
 
@@ -5334,7 +5355,8 @@ class PresetDaylightFactorWidget(QWidget):
         self.df_label.setEnabled(enabled)
         self.df_input.setEnabled(enabled)
 
-class PresetChooseScheduleWidget(QWidget):
+
+class PresetChooseScheduleWidget(QWidget):  # Abstract
 
     def __init__(self, description: str):
         super().__init__()
@@ -5344,22 +5366,20 @@ class PresetChooseScheduleWidget(QWidget):
     def set_schedule_widgets(self, all_widgets: List[PresetChooseScheduleWidget]):
         self.all_schedule_chooser_widgets = all_widgets
 
-    def clear_others(self, _ = None) -> bool:
+    def clear_others(self, _ = None) -> bool:  # Only allow a Preset to be scheduled once.
         others = [w for w in self.all_schedule_chooser_widgets if w != self and w.is_set()]
-        if others and MBox(
-                MIcon.Question,
-                msg=tr('Preset already scheduled. Clear existing {}?').format(others[0].description),
-                info=tr('Duplicate the preset if you need to schedule it more than once.'),
-                buttons=MBtn.Ok | MBtn.Cancel).exec() == MBtn.Cancel:
+        if others and MBox(MIcon.Question, msg=tr('Preset already scheduled. Clear existing {}?').format(others[0].description),
+                           info=tr('Duplicate the preset if you need to schedule it more than once.'),
+                           buttons=MBtn.Ok | MBtn.Cancel).exec() == MBtn.Cancel:
             return False
-        for w in others:
-            w.clear()
+        for schedule_chooser in others:
+            schedule_chooser.clear()
         return True
 
-    def is_set(self) -> bool:
+    def is_set(self) -> bool:  # Abstract
         return False
 
-    def clear(self) -> None:
+    def clear(self) -> None:  # Abstract
         pass
 
 class PresetChooseScheduleByElevationWidget(PresetChooseScheduleWidget):
@@ -5572,7 +5592,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
                 presets_dialog.status_message(message, timeout=timeout)
             elif not presets_dialog.main_config.is_set(ConfOpt.SCHEDULE_ENABLED):
                 presets_dialog.status_message(
-                    WARNING_SYMBOL + ' ' + tr('Solar-trigger scheduling is disabled in the Setting-Dialog.'))
+                    WARNING_SYMBOL + ' ' + tr('Preset scheduling is disabled in the Setting-Dialog.'))
             elif not presets_dialog.main_config.is_set(ConfOpt.WEATHER_ENABLED):
                 presets_dialog.status_message(WARNING_SYMBOL + ' ' + tr('Weather lookup is disabled in the Setting-Dialog.'),
                                               timeout=60000)
@@ -5834,6 +5854,8 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         for key, item in self.content_controls_map.items():
             item.setChecked(preset.preset_ini.has_option(key[0], key[1]))
         if preset.preset_ini.has_section('preset'):
+            self.editor_at_elevation_widget.clear()  # Clear both fields to stop any cross-field validation triggers.
+            self.editor_at_time_widget.clear()
             self.editor_at_time_widget.setText(preset.get_at_time().strftime("%H:%M") if preset.get_at_time() else '')
             self.editor_at_elevation_widget.set_elevation_from_text(
                 preset.preset_ini.get('preset', 'solar-elevation', fallback=None))
