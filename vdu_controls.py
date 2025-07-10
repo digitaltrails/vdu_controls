@@ -982,6 +982,8 @@ Shortcut = namedtuple('Shortcut', ['letter', 'annotated_word'])
 
 
 gui_thread: QThread | None = None
+
+
 def intV(type_id: Enum|int) -> int:
     return type_id.value if isinstance(type_id, Enum) else type_id  # awfulness of enums in pyqt6
 
@@ -1861,7 +1863,7 @@ class DdcutilExeImpl:
                 i2c_bus_id = ds_parts.get('I2C bus', '').replace("/dev/", '').replace("-", "_")
                 edid_txt = self._parse_edid(display_str)
                 if not edid_txt:
-                    raise DdcutilDisplayNotFound(f"Failed to parse edid from '{display_str}'")
+                    log_warning(f"DdcutilExeImpl: failed to parse edid from '{display_str}'")
                 vdu_attributes = DdcutilExeImpl.DetectedAttributes(vdu_number, '', '', manufacturer, model_name, serial_number, '',
                                                                    edid_txt, bin_serial_number)
                 result_list.append(vdu_attributes)
