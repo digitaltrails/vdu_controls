@@ -3108,7 +3108,7 @@ class StdButton(QPushButton):  # Reduce some repetitiveness in the code
         self.setAutoDefault(auto_default)
 
 
-class SettingsEditor(SubWinDialog, DialogSingletonMixin):
+class SettingsDialog(SubWinDialog, DialogSingletonMixin):
     """
     Application Settings Editor, edits a default global settings file, and a settings file for each VDU.
     The files are in INI format.  Internally, the settings are VduControlsConfig wrappers around the standard class ConfigIni.
@@ -3116,12 +3116,12 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
 
     @staticmethod
     def invoke(default_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig], change_callback: Callable) -> None:
-        SettingsEditor.show_existing_dialog() if SettingsEditor.exists() else SettingsEditor(default_config,
+        SettingsDialog.show_existing_dialog() if SettingsDialog.exists() else SettingsDialog(default_config,
                                                                                              vdu_config_list, change_callback)
 
     @staticmethod
     def reconfigure_instance(vdu_config_list: List[VduControlsConfig]) -> None:
-        SettingsEditor.get_instance().reconfigure(vdu_config_list) if SettingsEditor.exists() else None
+        SettingsDialog.get_instance().reconfigure(vdu_config_list) if SettingsDialog.exists() else None
 
     def __init__(self, default_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig], change_callback) -> None:
         super().__init__()
@@ -3174,6 +3174,8 @@ class SettingsEditor(SubWinDialog, DialogSingletonMixin):
 
         self.tabs_widget.currentChanged.connect(_tab_changed)
 
+        self.resize(native_pixels(1700), native_pixels(1000))
+        self.setMinimumSize(native_pixels(1024), native_pixels(800))
         self.reconfigure([default_config, *vdu_config_list])
         self.make_visible()
         
@@ -3257,7 +3259,7 @@ class SettingsEditorTab(QWidget):
     """A tab corresponding to a settings file, generates UI widgets for each tab based on what's in the config. """
     save_all_clicked_qtsignal = pyqtSignal()
 
-    def __init__(self, editor_dialog: SettingsEditor, vdu_config: VduControlsConfig, change_callback: Callable,
+    def __init__(self, editor_dialog: SettingsDialog, vdu_config: VduControlsConfig, change_callback: Callable,
                  parent: QTabWidget) -> None:
         super().__init__(parent=parent)
         widget_map = {ConfType.BOOL: SettingsEditorBooleanWidget, ConfType.FLOAT: SettingsEditorFloatWidget,
@@ -3323,7 +3325,7 @@ class SettingsEditorTab(QWidget):
         if self.is_unsaved() or force:
             try:
                 self.setEnabled(False)  # Saving may take a while, give some feedback by disabling and enabling when done
-                answer = SettingsEditor.get_instance().cross_validate()
+                answer = SettingsDialog.get_instance().cross_validate()
                 if answer == MBtn.Ok:
                     msg = (tr('Update existing {}?') if self.config_path.exists() else tr("Create new {}?")).format(
                         self.config_path.as_posix())
@@ -8309,7 +8311,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 self.preset_controller.reinitialize()
                 self.main_window.initialise_app_icon()
                 self.main_window.create_main_control_panel()
-                SettingsEditor.reconfigure_instance(self.get_vdu_configs())
+                SettingsDialog.reconfigure_instance(self.get_vdu_configs())
                 self.restore_vdu_initialization_presets()
                 self.schedule_presets()
                 ScheduleWorker.check() if check_schedule else None
@@ -8433,8 +8435,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         self.configure_application()
 
     def edit_config(self, tab_number: int | None = None) -> None:
-        SettingsEditor.invoke(self.main_config, self.get_vdu_configs(), self.settings_changed)
-        SettingsEditor.get_instance().tabs_widget.setCurrentIndex(tab_number) if tab_number is not None else None
+        SettingsDialog.invoke(self.main_config, self.get_vdu_configs(), self.settings_changed)
+        SettingsDialog.get_instance().tabs_widget.setCurrentIndex(tab_number) if tab_number is not None else None
 
     def show_presets_dialog(self, preset: Preset | None = None) -> None:
         PresetsDialog.invoke(self, self.main_config)
