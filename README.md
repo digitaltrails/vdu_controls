@@ -370,7 +370,8 @@ Version History
   * Fixed weather selection: automatically restore any missing weather definition files.
   * Fixed initialization-preset error handling: fix a reference to an undefined variable.
   * Only persist lux_daylight_factor if in semi-auto mode (stop hardware light metering overwriting the user's choice).
-* 
+  * Allow Presets to be scheduled for a set time each day.
+
 * 2.4.0
   * Added the ability to estimate the solar-illumination for a given geolocation and time. 
   * Added semi-automatic brighness adjustment proportional to geolocated solar-illumination.
