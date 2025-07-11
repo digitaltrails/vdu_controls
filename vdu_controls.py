@@ -3104,7 +3104,7 @@ class StdButton(QPushButton):  # Reduce some repetitiveness in the code
         self.clicked.connect(clicked) if clicked else None
         self.setToolTip(tip) if tip else None
         self.setFlat(flat)
-        self.setContentsMargins(0,0,0,0) if not margins else None
+        self.setContentsMargins(0, 0, 0, 0) if not margins else None
         self.setAutoDefault(auto_default)
 
 
@@ -3402,10 +3402,8 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
                  tooltip: str, related: str, requires: str) -> None:
         super().__init__(section_editor, option, section, tooltip)
         self.setLayout(widget_layout := QHBoxLayout())
-        margins = widget_layout.contentsMargins()
-        margins.setTop(0)  # Squish up a bit, save space and stay closer to the parent label
-        margins.setRight(0)
-        widget_layout.setContentsMargins(margins)
+        # Squish up, save space, stay closer to parent label
+        widget_layout.setContentsMargins(widget_layout.contentsMargins().left(), 0, widget_layout.contentsMargins().right(), 0)
         checkbox = QCheckBox(self.translate_option())
         checkbox.setChecked(section_editor.ini_editable.getboolean(section, option))
 
@@ -4357,8 +4355,8 @@ class VduControlsMainPanel(QWidget):
                     item.widget().deleteLater()
         controllers_layout = QVBoxLayout()
         controllers_layout.setSpacing(0)
-        controllers_layout.contentsMargins().setTop(0)
-        controllers_layout.contentsMargins().setBottom(0)
+        cl_margins = controllers_layout.contentsMargins()
+        controllers_layout.setContentsMargins(cl_margins.left(), 0, cl_margins.right(), 0)
         self.setLayout(controllers_layout)
 
         warnings_enabled = main_config.is_set(ConfOpt.WARNINGS_ENABLED)
@@ -4657,9 +4655,9 @@ class PushButtonLeftJustified(QPushButton):
     def __init__(self, text: str | None = None, parent: QWidget | None = None, flat: bool = False) -> None:
         super().__init__(parent=parent)
         self.label = QLabel()
+        self.setContentsMargins(native_pixels(10), 0, native_pixels(10), 0)  # Not sure if this helps
         self.setLayout(widget_layout := QVBoxLayout())
         widget_layout.addWidget(self.label)
-        self.setContentsMargins(native_pixels(10), 0, 0, native_pixels(10))  # Not sure if this helps
         widget_layout.setContentsMargins(0, 0, 0, 0)  # Seems to fix top/bottom clipping on openbox and xfce
         self.setText(text) if text is not None else None
         self.setFlat(flat)
@@ -4676,8 +4674,8 @@ class PresetItemWidget(QWidget):
         self.preset = preset
         line_layout = QHBoxLayout()
         line_layout.setSpacing(0)
-        line_layout.contentsMargins().setTop(0)
-        line_layout.contentsMargins().setBottom(native_pixels(1))
+        ll_margins = line_layout.contentsMargins()
+        line_layout.setContentsMargins(ll_margins.left(), 0, ll_margins.right(), native_pixels(1))  # Why?
         self.setLayout(line_layout)
 
         self.preset_name_button = PresetActivationButton(preset)
@@ -7942,8 +7940,8 @@ class LuxAmbientSlider(QWidget):
         top_layout = QVBoxLayout()
         self.setLayout(top_layout)
         top_layout.setSpacing(0)
-        top_layout.contentsMargins().setTop(0)
-        top_layout.contentsMargins().setBottom(0)
+        tl_margins = top_layout.contentsMargins()
+        top_layout.setContentsMargins(tl_margins.left(), 0, tl_margins.right(), 0)
         top_layout.addWidget(QLabel(tr("Ambient Light Level (lux)")), alignment=Qt.AlignmentFlag.AlignBottom)
 
         input_panel = QWidget()
@@ -7953,8 +7951,6 @@ class LuxAmbientSlider(QWidget):
 
         lux_slider_panel = QWidget()
         lux_slider_panel_layout = QGridLayout()
-        lux_slider_panel_layout.contentsMargins().setTop(0)
-        lux_slider_panel_layout.contentsMargins().setBottom(0)
         lux_slider_panel.setLayout(lux_slider_panel_layout)
 
         self.slider = ClickableSlider()
