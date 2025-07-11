@@ -5111,7 +5111,8 @@ class PresetChooseElevationChart(QLabel):
         self.noon_x: int = 100
         self.noon_y: int = 25
         self.horizon_y: int = 75
-        self.radius_of_deletion = self.minimumWidth() // 8
+        self.rad_divisor = 6
+        self.radius_of_deletion = self.minimumWidth() // self.rad_divisor
         self.solar_max_t: datetime | None = None
 
     def has_elevation_key(self, key: SolarElevationKey) -> bool:
@@ -5143,7 +5144,7 @@ class PresetChooseElevationChart(QLabel):
         logical_width, logical_height = self.width(), self.height()
         origin_iy, range_iy = round(logical_height / 2), round(logical_height / 2.5)
         self.horizon_y = origin_iy
-        self.radius_of_deletion = round(logical_width / 8)
+        self.radius_of_deletion = round(logical_width / self.rad_divisor)
         line_width = _scaled(4)
         thin_line_width = _scaled(2)
 
