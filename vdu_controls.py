@@ -3174,7 +3174,7 @@ class SettingsDialog(SubWinDialog, DialogSingletonMixin):
 
         self.tabs_widget.currentChanged.connect(_tab_changed)
 
-        self.resize(native_pixels(1700), native_pixels(1000))
+        self.resize(native_pixels(1800), native_pixels(1000))
         self.setMinimumSize(native_pixels(1024), native_pixels(800))
         self.reconfigure([default_config, *vdu_config_list])
         self.make_visible()
@@ -4683,7 +4683,7 @@ class PresetItemWidget(QWidget):
         self.preset_name_button.clicked.connect(partial(edit_action, preset=preset))
         self.preset_name_button.setToolTip(tr('Activate this Preset and edit its options.'))
         self.preset_name_button.setAutoDefault(False)
-        self.preset_name_button.setFixedSize(QSize(native_pixels(300), native_font_height(1.5)))
+        self.preset_name_button.setFixedSize(QSize(native_pixels(300), native_font_height(scaled=1.5)))
         line_layout.addSpacing(native_pixels(20))
         for button in (
                 StdButton(icon=si(self, StdPixmap.SP_DriveFDIcon), tip=tr("Update this preset from the current VDU settings."),
@@ -5398,7 +5398,7 @@ class PresetChooseScheduleByElevationWidget(PresetChooseScheduleWidget):
         self.setLayout(main_layout := QVBoxLayout())
         self.title_prefix = tr("Trigger at solar elevation:")
         self.title_label = QLabel(self.title_prefix)
-        self.title_label.setFixedHeight(native_font_height(1.5))  # Stop ascenders/descenders in Unicode from altering layout.
+        self.title_label.setFixedHeight(native_font_height(scaled=1.5))  # Stop ascenders/descenders in Unicode from altering layout.
         self.title_label.setToolTip(tr("Trigger at a set solar elevation (sun angle at your geolocation and time)."))
         main_layout.addWidget(self.title_label)
 
