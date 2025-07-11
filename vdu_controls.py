@@ -5397,15 +5397,12 @@ class PresetChooseScheduleByElevationWidget(PresetChooseScheduleWidget):
         super().__init__(description=tr("elevation-trigger"))
         self.elevation_key: SolarElevationKey | None = None
         self.location: GeoLocation | None = main_config.get_location()
-
-        layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        self.setLayout(layout)
-        self.title_prefix = tr("Trigger at solar elevation: ")
+        self.setLayout(main_layout := QVBoxLayout())
+        self.title_prefix = tr("Trigger at solar elevation:")
         self.title_label = QLabel(self.title_prefix)
+        self.title_label.setFixedHeight(native_font_height(1.5))  # Stop ascenders/descenders in Unicode from altering layout.
         self.title_label.setToolTip(tr("Trigger at a set solar elevation (sun angle at your geolocation and time)."))
-        layout.addWidget(self.title_label)
-        layout.addSpacing(8)
+        main_layout.addWidget(self.title_label)
 
         self.elevation_chart = PresetChooseElevationChart()
         self.elevation_chart.selected_elevation_qtsignal.connect(self.set_elevation_key)
@@ -5422,7 +5419,7 @@ class PresetChooseScheduleByElevationWidget(PresetChooseScheduleWidget):
         self._slider_select_elevation_qtsignal.connect(self.set_elevation_key)
 
         bottom_layout = QHBoxLayout()
-        layout.addLayout(bottom_layout)
+        main_layout.addLayout(bottom_layout)
 
         chart_slider_layout = QVBoxLayout()
         chart_slider_layout.addWidget(self.elevation_chart, 1)
