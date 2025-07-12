@@ -3174,7 +3174,7 @@ class SettingsDialog(SubWinDialog, DialogSingletonMixin):
 
         self.tabs_widget.currentChanged.connect(_tab_changed)
 
-        self.resize(npx(1800), npx(1000))
+        self.resize(npx(1850), npx(1000))
         self.setMinimumSize(npx(1024), npx(800))
         self.reconfigure([default_config, *vdu_config_list])
         self.make_visible()
@@ -5632,7 +5632,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.main_controller = main_controller
         self.main_config = main_config
         self.content_controls_map: Dict[Tuple[str, str], QCheckBox] = {}
-        self.resize(npx(1800), npx(1100))
+        self.resize(npx(1800), npx(1200))
         self.setMinimumSize(npx(1350), npx(600))
         layout = QVBoxLayout()
         self.setLayout(layout)
