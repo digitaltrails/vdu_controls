@@ -5111,9 +5111,9 @@ class PresetElevationChartWidget(QLabel):
         self.noon_x: int = npx(100)
         self.noon_y: int = npx(25)
         self.horizon_y: int = npx(75)
-        self.rad_divisor = 6
-        self.radius_of_deletion = self.minimumWidth() // self.rad_divisor
+        self.radius_of_deletion = npx(50)
         self.solar_max_t: datetime | None = None
+        self.last_event_time = time.time()
 
     def has_elevation_key(self, key: SolarElevationKey) -> bool:
         return key in self.elevation_steps
@@ -5135,11 +5135,10 @@ class PresetElevationChartWidget(QLabel):
 
     def create_plot(self) -> None:
         ev_key = self.elevation_key
-
         logical_width, logical_height = self.width(), self.height()
         origin_iy, range_iy = round(logical_height / 2), round(logical_height / 2.5)
+        self.radius_of_deletion = round(range_iy * 0.8)
         self.horizon_y = origin_iy
-        self.radius_of_deletion = round(logical_width / self.rad_divisor)
         line_width = npx(4)
         thin_line_width = npx(2)
         dp_ratio = self.devicePixelRatio()
@@ -5208,19 +5207,19 @@ class PresetElevationChartWidget(QLabel):
                 angle_above_horz = ev_key.elevation if ev_key.direction == EASTERN_SKY else (180 - ev_key.elevation)  # anticlockwise from 0
             else:
                 angle_above_horz = 180 + 19
-            _, radius = self.calc_angle_radius(self.current_pos) if self.current_pos else (0, 21)
+            _, pos_as_radius = self.calc_angle_radius(self.current_pos) if self.current_pos else (0, 21)
+            pie_width = pie_height = range_iy * 2
+            span_angle = -(angle_above_horz + 19)  # From start angle spanning counterclockwise back toward the right to -19.
             painter.setPen(
-                QPen(QColor(0xffffff if self.current_pos is None or self.in_drag or radius > self.radius_of_deletion else 0xff0000),
+                QPen(QColor(0xffffff if self.current_pos is None or self.in_drag or pos_as_radius > self.radius_of_deletion else 0xff0000),
                      2))
             painter.setBrush(QColor(255, 255, 255, 64))
-            span_angle = -(angle_above_horz + 19)  # From start angle spanning counterclockwise back toward the right to -19.
-            pie_width = pie_height = range_iy * 2
             painter.drawPie(_reverse_x(solar_noon_x) - pie_width // 2, origin_iy - pie_height // 2, pie_width, pie_height,
                             angle_above_horz * 16, span_angle * 16)
 
             # Draw drag-dot
             painter.setFont(QFont(QApplication.font().family(), 8, QFont.Weight.Normal))
-            if self.current_pos is not None or self.in_drag or radius >= self.radius_of_deletion:
+            if self.current_pos is not None or self.in_drag or pos_as_radius >= self.radius_of_deletion:
                 painter.setPen(QPen(Qt.GlobalColor.red, npx(6)))
                 painter.setBrush(Qt.GlobalColor.white)
                 ddot_radians = math.radians(angle_above_horz if ev_key else -19)
@@ -5235,7 +5234,7 @@ class PresetElevationChartWidget(QLabel):
             # Draw origin-dot
             painter.setPen(QPen(QColor(0xff965b), thin_line_width))
             if self.current_pos is not None and not self.in_drag:
-                if radius < self.radius_of_deletion:
+                if pos_as_radius < self.radius_of_deletion:
                     painter.setPen(QPen(Qt.GlobalColor.black, npx(1)))
                     painter.drawText(QPoint(_reverse_x(solar_noon_x + 8) + npx(10), origin_iy - npx(8) - npx(5)),
                                      tr("Click to delete."))
@@ -5310,6 +5309,10 @@ class PresetElevationChartWidget(QLabel):
 
     def mouseMoveEvent(self, event: QMouseEvent | None) -> None:
         if event:
+            event.accept()
+            if (now := time.time()) - self.last_event_time < 0.1:  # Prevent event overload on Qt6 kwin-wayland
+                return
+            self.last_event_time = now
             pos = self.update_current_pos(event.pos())
             if pos is not None and 0 <= pos.x() < self.width() and 0 <= pos.y() < self.height():
                 angle, radius = self.calc_angle_radius(pos)
@@ -5321,8 +5324,8 @@ class PresetElevationChartWidget(QLabel):
                         self.set_elevation_key(key)
                         self.selected_elevation_qtsignal.emit(key)
                         return
-            self.create_plot()
-            event.accept()
+            self.create_plot()  # necessary to detect deletions
+
 
     def leaveEvent(self, event: QEvent | None) -> None:
         self.current_pos = None
@@ -5404,8 +5407,8 @@ class PresetScheduleAtElevationWidget(PresetScheduleAtWidgetBase):
 
         self.df_widget = PresetDaylightFactorWidget()
 
+        self.slider_last_event_time = time.time()
         self.slider = QSlider(Qt.Orientation.Horizontal)
-        self.slider.setTracking(True)
         self.slider.setMinimum(-1)
         self.slider.setValue(-1)
         self.slider.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
@@ -5437,6 +5440,9 @@ class PresetScheduleAtElevationWidget(PresetScheduleAtWidgetBase):
         self.set_elevation_key(None)
 
     def sliding(self) -> None:
+        if (now := time.time()) - self.slider_last_event_time < 0.1:  # Prevent event overload on Qt6 kwin-wayland
+            return
+        self.slider_last_event_time = now
         value = self.slider.value()
         if value == -1:
             self._slider_select_elevation_qtsignal.emit(None)
