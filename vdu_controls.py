@@ -5100,7 +5100,7 @@ class PresetElevationChartWidget(QLabel):
         self.setMouseTracking(True)
         self.in_drag = False
         self.current_pos: QPoint | None = None
-        self.elevation_time_map: Dict[SolarElevationKey, SolarElevationData] = {}
+        self.cache_solar_by_elevation: Dict[SolarElevationKey, SolarElevationData] = {}
         self.elevation_key: SolarElevationKey | None = None
         self.location: GeoLocation | None = None
         self.elevation_steps: List[SolarElevationKey] = []
@@ -5114,13 +5114,15 @@ class PresetElevationChartWidget(QLabel):
         self.radius_of_deletion = npx(50)
         self.solar_max_t: datetime | None = None
         self.last_event_time = time.time()
+        self.cache_key: Tuple[datetime, int, int, int] | None = None
+        self.cache_curve_points: List[QPoint] = []
 
     def has_elevation_key(self, key: SolarElevationKey) -> bool:
         return key in self.elevation_steps
 
     def get_elevation_data(self, elevation_key: SolarElevationKey) -> SolarElevationData | None:
-        assert self.elevation_time_map is not None
-        return self.elevation_time_map[elevation_key] if elevation_key in self.elevation_time_map else None
+        assert self.cache_solar_by_elevation is not None
+        return self.cache_solar_by_elevation[elevation_key] if elevation_key in self.cache_solar_by_elevation else None
 
     def set_elevation_key(self, elevation_key: SolarElevationKey | None) -> None:
         self.elevation_key = elevation_key
@@ -5129,9 +5131,12 @@ class PresetElevationChartWidget(QLabel):
     def configure_for_location(self, location: GeoLocation | None) -> None:
         self.location = location
         if location is not None:
-            self.elevation_time_map = create_elevation_map(zoned_now(), latitude=location.latitude, longitude=location.longitude)
+            self.cache_key = None
             self.elevation_key = None
             self.create_plot()
+
+    def _reverse_X(self, x_val: int) -> int:  # makes thinking right-to-left a bit easier. MAYBE
+        return self.width() - x_val
 
     def create_plot(self) -> None:
         ev_key = self.elevation_key
@@ -5155,36 +5160,22 @@ class PresetElevationChartWidget(QLabel):
         painter.setPen(QPen(Qt.GlobalColor.white, line_width))  # Horizon
         painter.drawLine(0, origin_iy, logical_width, origin_iy)
 
+        _reverse_x = self._reverse_X
+
         if self.location is not None:
-            # Perform computations for today's curve and maxima.
-            today = zoned_now().replace(hour=0, minute=0)
-            sun_plot_x = sun_plot_y = sys.maxsize  # initialize to out-of-bounds value
-            sun_plot_time: datetime | None = None
-            max_sun_height = npx(-90.0)
-            solar_noon_x, solar_noon_y = 0, 0  # Solar noon
-            t = today
-            curve_points = []
-            while t.day == today.day:
-                second_of_day = (t - today).total_seconds()
-                x = round(logical_width * second_of_day / (60.0 * 60.0 * 24.0))
-                a, z = calc_solar_azimuth_zenith(t, self.location.latitude, self.location.longitude)
-                sun_height = math.sin(math.radians(90.0 - z)) * range_iy
-                y = origin_iy - round(sun_height)
-                curve_points.append(QPoint(_reverse_x(x), y))  # Save the plot points to a list
-                if sun_height > max_sun_height:
-                    max_sun_height = sun_height
-                    solar_noon_x, solar_noon_y = x, y
-                    self.solar_max_t = t
-                if sun_plot_time is None and ev_key and round(90.0 - z) == ev_key.elevation:
-                    if (ev_key.direction == EASTERN_SKY and round(a) <= 180) or (
-                            ev_key.direction == WESTERN_SKY and round(a) >= 180):
-                        sun_plot_x, sun_plot_y = x, y
-                        sun_plot_time = t
-                t += timedelta(minutes=1)
-            if sun_plot_x == sys.maxsize:  # ev_key is for an elevation that does not occur today - draw sun at noon elev.
-                sun_plot_x, sun_plot_y = solar_noon_x, solar_noon_y
-            self.noon_x = _reverse_x(solar_noon_x)
-            self.noon_y = solar_noon_y
+            self.refresh_day_cache(logical_width, origin_iy, range_iy)
+            curve_points = self.cache_curve_points
+            solar_noon_x, solar_noon_y = self.noon_x, self.noon_y,
+            if ev_key and (solar_data := self.cache_solar_by_elevation.get(ev_key)):
+                seconds_since_midnight = (solar_data.when - solar_data.when.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
+                sun_plot_time = solar_data.when
+                sun_plot_x = round(logical_width * seconds_since_midnight / (60.0 * 60.0 * 24.0))
+                sun_height = math.sin(math.radians(90.0 - solar_data.zenith)) * range_iy
+                sun_plot_y = origin_iy - round(sun_height)
+            else:
+                sun_plot_time = None
+                sun_plot_x = self.noon_x
+                sun_plot_y = self.noon_y
 
             # Draw an elevation curve for today from the accumulated plot points:
             painter.setPen(QPen(QColor(0xff965b), line_width))
@@ -5278,9 +5269,40 @@ class PresetElevationChartWidget(QLabel):
         painter.end()
         self.setPixmap(pixmap)
 
+    def refresh_day_cache(self, logical_width: int, origin_iy: int, range_iy: int) -> None:
+        # Perform computations for today's curve and maxima.
+        _reverse_x = self._reverse_X
+        new_cache_key = ((zoned_now().replace(hour=0, minute=0, second=0, microsecond=0)), logical_width, origin_iy, range_iy)
+        if self.cache_key and new_cache_key == self.cache_key:
+            return
+        log_debug(f"PresetElevationChartWidget: change of key values {new_cache_key=}, recalculating")
+        self.cache_key = new_cache_key
+        max_sun_height = npx(-90.0)
+        solar_noon_x, solar_noon_y = 0, 0  # Solar noon
+        curve_points = []
+
+        def _create_curve(a, z, t):  # Gets called for every 1-minute point - to create a smooth curve.
+            nonlocal max_sun_height, solar_noon_x, solar_noon_y
+            second_of_day = (t - t.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
+            x = round(logical_width * second_of_day / (60.0 * 60.0 * 24.0))
+            sun_height = math.sin(math.radians(90.0 - z)) * range_iy
+            y = origin_iy - round(sun_height)
+            curve_points.append(QPoint(_reverse_x(x), y))  # Save the plot points to a list
+            if sun_height > max_sun_height:
+                max_sun_height = sun_height
+                solar_noon_x, solar_noon_y = x, y
+                self.solar_max_t = t
+
+        self.cache_solar_by_elevation = create_elevation_map(zoned_now(),
+                                                             latitude=self.location.latitude, longitude=self.location.longitude,
+                                                             callback=_create_curve)
+        self.noon_x = solar_noon_x
+        self.noon_y = solar_noon_y
+        self.cache_curve_points = curve_points
+
     def calc_angle_radius(self, pos: QPoint) -> Tuple[int, int]:
         x, y = pos.x(), pos.y()
-        adjacent = x - self.noon_x
+        adjacent = x - self._reverse_X(self.noon_x)
         opposite = self.horizon_y - y
         angle = 90 if adjacent == 0 else round(math.degrees(math.atan(opposite / adjacent)))
         radius = round(math.sqrt(adjacent ** 2 + opposite ** 2))
@@ -5318,12 +5340,13 @@ class PresetElevationChartWidget(QLabel):
                 angle, radius = self.calc_angle_radius(pos)
                 if self.in_drag:
                     self.current_pos = pos
-                    angle = -angle if pos.x() < self.noon_x else angle
-                    key = SolarElevationKey(EASTERN_SKY if pos.x() >= self.noon_x else WESTERN_SKY, angle)
-                    if key in self.elevation_steps:
-                        self.set_elevation_key(key)
-                        self.selected_elevation_qtsignal.emit(key)
-                        return
+                    angle = -angle if pos.x() < self._reverse_X(self.noon_x) else angle
+                    eastern = pos.x() >= self._reverse_X(self.noon_x)
+                    key = SolarElevationKey(EASTERN_SKY if eastern else WESTERN_SKY, angle)
+                    if not key in self.elevation_steps:
+                        key = self.elevation_steps[0 if eastern else -1]
+                    self.set_elevation_key(key)
+                    self.selected_elevation_qtsignal.emit(key)
             self.create_plot()  # necessary to detect deletions
 
 
@@ -9494,17 +9517,22 @@ def spherical_kilometers(lat1, lon1, lat2, lon2) -> float:
     return 12742 * math.asin(math.sqrt(a))
 
 
-def create_elevation_map(local_now: datetime, latitude: float, longitude: float) -> Dict[SolarElevationKey, SolarElevationData]:
+def create_elevation_map(local_now: datetime, latitude: float, longitude: float,
+                         callback: Callable[[float, float, datetime], None]
+                                   | None = None) -> Dict[SolarElevationKey, SolarElevationData]:
     # Create a minute-by-minute map of today's SolarElevations.
     # For a given dict[SolarElevation], record the first minute it occurs.
+    # Calls the callback for every 1 mimute point, not just each integer elevation.
     elevation_time_map = {}
-    local_when = local_now.replace(hour=0, minute=0)
+    local_when = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
     while local_when.day == local_now.day:
         a, z = calc_solar_azimuth_zenith(local_when, latitude, longitude)
         e = round(90.0 - z)
         key = SolarElevationKey(elevation=round(e), direction=(EASTERN_SKY if a < 180 else WESTERN_SKY))
         if key not in elevation_time_map:
             elevation_time_map[key] = SolarElevationData(azimuth=a, zenith=z, when=local_when)
+        if callback:
+            callback(a, z, local_when)
         local_when += timedelta(minutes=1)
     return elevation_time_map
 
