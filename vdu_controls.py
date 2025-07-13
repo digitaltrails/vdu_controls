@@ -4744,7 +4744,8 @@ class PresetItemWidget(QWidget):
             action_desc = ''
         tip_text = f"{action_desc} {self.preset.get_schedule_description()}"
         self.timer_control_button.setText(self.preset.get_solar_elevation_abbreviation())
-        self.timer_control_button.setToolTip(tip_text)
+        if tip_text.strip():
+            self.timer_control_button.setToolTip(tip_text)
 
     def indicate_active(self, active: bool):
         weight = QFont.Weight.Bold if active else QFont.Weight.Normal
@@ -5135,8 +5136,8 @@ class PresetElevationChartWidget(QLabel):
             self.elevation_key = None
             self.create_plot()
 
-    def _reverse_X(self, x_val: int) -> int:  # makes thinking right-to-left a bit easier. MAYBE
-        return self.width() - x_val
+    def _reverse_X(self, x: int) -> int:  # makes thinking right-to-left a bit easier. MAYBE
+        return self.width() - x
 
     def create_plot(self) -> None:
         ev_key = self.elevation_key
