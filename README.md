@@ -372,6 +372,8 @@ Version History
   * Fixed initialization-preset error handling: fix a reference to an undefined variable.
   * Only persist lux_daylight_factor if in semi-auto mode (stop hardware light metering overwriting the user's choice).
   * Allow Presets to be scheduled for a set time each day.
+  * The DBus-events default setting has been corrected to true/enabled.
+  * Dragging the Preset-Dialog elevation to below the horizon now works properly (previously it was jerky).
 
 * 2.4.0
   * Added the ability to estimate the solar-illumination for a given geolocation and time. 
