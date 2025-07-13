@@ -3174,7 +3174,7 @@ class SettingsDialog(SubWinDialog, DialogSingletonMixin):
 
         self.tabs_widget.currentChanged.connect(_tab_changed)
 
-        self.resize(npx(1850), npx(1000))
+        self.resize(npx(1900), npx(1000))
         self.setMinimumSize(npx(1024), npx(800))
         self.reconfigure([default_config, *vdu_config_list])
         self.make_visible()
