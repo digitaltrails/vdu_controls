@@ -2542,7 +2542,7 @@ class ConfOpt(Enum):  # An Enum with tuples for values is used for convenience f
     WEATHER_ENABLED = _def(cname=QT_TR_NOOP('weather-enabled'), default='yes', tip=QT_TR_NOOP('enable weather lookups'))
     DBUS_CLIENT_ENABLED = _def(cname=QT_TR_NOOP('dbus-client-enabled'), default="yes",
                                tip=QT_TR_NOOP('use the D-Bus ddcutil-server if available'))
-    DBUS_EVENTS_ENABLED = _def(cname=QT_TR_NOOP('dbus-events-enabled'), default="no",
+    DBUS_EVENTS_ENABLED = _def(cname=QT_TR_NOOP('dbus-events-enabled'), default="yes",
                                tip=QT_TR_NOOP('enable D-Bus ddcutil-server events'), requires='dbus-client-enabled')
     SYSLOG_ENABLED = _def(cname=QT_TR_NOOP('syslog-enabled'), default="no",
                           tip=QT_TR_NOOP('divert diagnostic output to the syslog'))
