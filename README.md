@@ -359,6 +359,8 @@ Michael Hamilton
 
 Version History
 ---------------
+* 2.4.2
+  * Restore the Lux-Dialog's display of the Daylight-Factor for non semi-automatice metering.
 
 * 2.4.1
   * Support PyQt6 before PyQt5 goes out of support.
