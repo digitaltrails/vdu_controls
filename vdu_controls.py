@@ -6908,6 +6908,8 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
     def __init__(self) -> None:
         super().__init__(requires_worker=False, manual=True, semi_auto=True)
         self.current_value: float = LuxMeterSemiAutoDevice.get_stored_value()
+        LuxMeterSemiAutoDevice.daylight_factor = None    # Force initilization from file
+        _ = LuxMeterSemiAutoDevice.get_daylight_factor()
 
     def get_value(self) -> float | None:
         if location := LuxMeterSemiAutoDevice.get_location():
@@ -6963,7 +6965,7 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
     def update_df_from_lux_value(new_lux_value: float, semi_auto_source: bool):
         if location := LuxMeterSemiAutoDevice.location:
             solar_lux = calc_solar_lux(zoned_now(), location, 1.0)
-            if solar_lux > (0 if semi_auto_source else 4000):  # only for reasonable daylight lux levels or if the user is driving.
+            if solar_lux > (0 if semi_auto_source else 1000):  # only for reasonable daylight lux levels or if the user is driving.
                 daylight_factor =  new_lux_value / solar_lux
                 LuxMeterSemiAutoDevice.set_daylight_factor(daylight_factor, internal=True, persist=semi_auto_source)
 
@@ -6975,8 +6977,8 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
                 if CONFIG_DIR_PATH.exists():
                     persisted_path = CONFIG_DIR_PATH.joinpath("lux_daylight_factor.txt")
                     log_debug(f"LuxSemiAuto: save {daylight_factor=} to {persisted_path.as_posix()}") if log_debug_enabled else None
-                LuxMeterSemiAutoDevice.daylight_factor = daylight_factor
                 persisted_path.write_text(f"{daylight_factor:.4f}")
+            LuxMeterSemiAutoDevice.daylight_factor = daylight_factor
             if not internal:
                 LuxDialog.reconfigure_instance()
 
@@ -8584,7 +8586,6 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                                     f"restore-preset: protect-nvram prevents '{preset.name}' from stepping, changes are immediate.")
                         else:
                             self.main_window.show_preset_status(tr("Already on Preset {} (no changes)").format(preset.name))
-
                         if df := preset.get_daylight_factor():
                             log_info(f"Daylight-Factor {df:.4f} read from Preset {preset.name}")
                             LuxMeterSemiAutoDevice.set_daylight_factor(df, persist=True)
