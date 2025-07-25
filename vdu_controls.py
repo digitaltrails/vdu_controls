@@ -7937,6 +7937,7 @@ class LuxZone:
 
 class LuxAmbientSlider(QWidget):
     new_lux_value_qtsignal = pyqtSignal(int)
+    status_icon_changed_qtsignal = pyqtSignal()
     status_icon_pressed_qtsignal = pyqtSignal()
 
     def __init__(self, controller: LuxAutoController) -> None:
@@ -7944,13 +7945,13 @@ class LuxAmbientSlider(QWidget):
         self.controller = controller
         self.in_flux = False
         self.zones = [  # Using col span as a hacky way to line up icons above the slider
-            LuxZone(tr("Sunlight"), LUX_SUNLIGHT_SVG, 20000, 100000, 45000, column_span=2),
-            LuxZone(tr("Daylight"), LUX_DAYLIGHT_SVG, 1000, 20000, 6000, column_span=2),
-            LuxZone(tr("Overcast"), LUX_OVERCAST_SVG, 400, 1000, 900, column_span=3),
+            LuxZone(tr("Sunlight"), LUX_SUNLIGHT_SVG, 20_000, 100_000, 45_000, column_span=2),
+            LuxZone(tr("Daylight"), LUX_DAYLIGHT_SVG, 5_000, 20_000, 6_000, column_span=2),
+            LuxZone(tr("Overcast"), LUX_OVERCAST_SVG, 400, 5_000, 900, column_span=3),
             LuxZone(tr("Twilight"), LUX_TWILIGHT_SVG, 100, 400, 130, column_span=2),
             LuxZone(tr("Subdued"), LUX_SUBDUED_SVG, 15, 100, 20, column_span=3),
             LuxZone(tr("Dark"), LUX_DARK_SVG, 0, 15, 2, column_span=4), ]
-        self.current_value = 10000
+        self.current_value = 10_000
 
         self.status_icon = StdButton(icon_size=QSize(native_font_height(scaled=1.8), native_font_height(scaled=1.8)), flat=True,
                                      clicked=self.status_icon_pressed_qtsignal)
@@ -8037,10 +8038,11 @@ class LuxAmbientSlider(QWidget):
             self.label_map[log10_button] = zone.icon_svg
             col += zone.column_span
 
-        self.set_current_value(round(LuxMeterSemiAutoDevice.get_stored_value()))  # don't trigger side-effects.
+        self.set_current_value(controller.lux_meter.get_value() if controller.lux_meter else 1000)  # don't trigger side-effects.
 
     def set_current_value(self, value: int, source: QWidget | None = None) -> None:
         # log_debug("set_current_value ", value, source, self.in_flux)
+        icon_changed = False
         if not self.in_flux and value != self.current_value:
             try:
                 if source is None:
@@ -8052,6 +8054,7 @@ class LuxAmbientSlider(QWidget):
                             self.current_zone = zone
                             self.status_icon.setIcon(create_icon_from_svg_bytes(zone.icon_svg))
                             self.status_icon.setToolTip(tr("Open/Close Light-Meter Dialog"))
+                            icon_changed = True
                 self.current_value = max(1, value)  # restrict to non-negative and something valid for log10
                 if source != self.slider:
                     self.slider.setValue(round(math.log10(self.current_value) * 1000))
@@ -8067,6 +8070,8 @@ class LuxAmbientSlider(QWidget):
                 self.in_flux = False
                 if source is None:
                     self.blockSignals(False)
+                if icon_changed:
+                    self.status_icon_changed_qtsignal.emit()
 
     def event(self, event: QEvent | None) -> bool:
         if event and event.type() == QEvent.Type.PaletteChange:  # PalletChange happens after the new style sheet is in use.
@@ -9161,6 +9166,8 @@ class VduAppWindow(QMainWindow):
                 tool_buttons.append(lux_check_button)
             if lux_manual_input := self.main_controller.lux_auto_controller.create_manual_input_control():
                 extra_controls.append(lux_manual_input)
+            if lux_ambient_slider := self.main_controller.lux_auto_controller.lux_slider:
+                lux_ambient_slider.status_icon_changed_qtsignal.connect(self.update_status_indicators)
         self.refresh_preset_menu()
         self.main_panel.initialise_control_panels(self.main_controller, self.app_context_menu, self.main_config,
                                                   tool_buttons, extra_controls, self.splash_message_qtsignal)
