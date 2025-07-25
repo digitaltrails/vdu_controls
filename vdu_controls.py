@@ -766,7 +766,7 @@ Environment
 ===========
 
     LC_ALL, LANG, LANGUAGE
-        These  variables specify the locale for language translations and units of distance.
+        These variables specify the locale for language translations and units of distance.
         LC_ALL is used by python, LANGUAGE is used by Qt. Normally, they should all have the same
         value, for example, ``Da_DK``. For these to have any effect on language, ``Settings``
         ``Translations Enabled`` must also be enabled.
