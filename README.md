@@ -360,7 +360,7 @@ Michael Hamilton
 Version History
 ---------------
 * 2.4.2
-  * Restore the Lux-Dialog's display of the Daylight-Factor for non semi-automatice metering.
+  * Fix the Lux-Dialog's display of the Daylight-Factor for non semi-automatic metering.
   * Make sure the tray-icon always shows the correct lux-level icon.
 
 * 2.4.1
