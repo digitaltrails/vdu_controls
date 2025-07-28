@@ -362,6 +362,7 @@ Version History
 * 2.4.2
   * Fix the Lux-Dialog's display of the Daylight-Factor for non semi-automatic metering.
   * Make sure the tray-icon always shows the correct lux-level icon.
+  * Correct the lux-zone boundaries on the ambient slider.
 
 * 2.4.1
   * Support PyQt6 before PyQt5 goes out of support.
