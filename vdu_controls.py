@@ -8038,7 +8038,7 @@ class LuxAmbientSlider(QWidget):
             self.label_map[log10_button] = zone.icon_svg
             col += zone.column_span
 
-        self.set_current_value(controller.lux_meter.get_value() if controller.lux_meter else 1000)  # don't trigger side-effects.
+        self.set_current_value(round(controller.lux_meter.get_value()) if controller.lux_meter else 1000)  # don't trigger side-effects.
 
     def set_current_value(self, value: int, source: QWidget | None = None) -> None:
         # log_debug("set_current_value ", value, source, self.in_flux)
