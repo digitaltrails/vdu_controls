@@ -9001,6 +9001,7 @@ class VduAppWindow(QMainWindow):
             splash.show()
             splash.raise_()  # Attempt to force it to the top with raise and activate
             splash.activateWindow()
+            QApplication.processEvents()
         self.app_icon: QIcon | None = None
         self.tray_icon: QIcon | None = None
         self.initialise_app_icon(splash_pixmap)
@@ -9033,15 +9034,14 @@ class VduAppWindow(QMainWindow):
         if QT5_USE_HIGH_DPI_PIXMAPS:
             app.setAttribute(QT5_USE_HIGH_DPI_PIXMAPS)  # Make sure all icons use HiDPI - toolbars don't by default, so force it.
 
-        if splash is not None:
-            splash.showMessage(tr('\n\nVDU Controls\nLooking for DDC monitors...\n'), Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
-
         def _splash_message_action(message) -> None:
             if splash is not None:
                 log_info(f"splash_message: {repr(message)}")
                 splash.showMessage(f"\n\n{APPNAME} {VDU_CONTROLS_VERSION}\n{message}", Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
+                QApplication.processEvents()
 
         self.splash_message_qtsignal.connect(_splash_message_action)
+        self.splash_message_qtsignal.emit(tr('Looking for DDC monitors...'))
 
         self.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
 
