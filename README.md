@@ -359,6 +359,10 @@ Michael Hamilton
 
 Version History
 ---------------
+* 2.4.3
+  * Fix a rare TypeError when light metering.
+  * Some code cleanups for the splash screen.
+
 * 2.4.2
   * Fix the Lux-Dialog's display of the Daylight-Factor for non semi-automatic metering.
   * Make sure the tray-icon always shows the correct lux-level icon.
