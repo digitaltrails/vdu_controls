@@ -36,10 +36,10 @@ based meter [can be built for around $10](https://github.com/digitaltrails/vdu_c
 In versions >= 2.4, the _ambient-light-level_ slider has been combined with an 
 estimate of local solar-illumination to achieve **semi-automatic brightness 
 control** throughout the day. Adjusting the slider sets the ratio between 
-indoor-illumination and outdoor solar-illumination. Should circumstances change, 
-adjusting the slider updates the ratio.  See the 
-[2.4 release notes](https://github.com/digitaltrails/vdu_controls/releases/tag/v2.4.0) 
-for a brief tutorial.
+indoor-illumination and outdoor solar-illumination. Once the ratio is set,
+it is used to automatically update brighness as the day proceeds. 
+Should the cloud-cover or weather change, adjusting the slider revises the ratio.  
+See the [2.4 release notes](https://github.com/digitaltrails/vdu_controls/releases/tag/v2.4.0) for a brief tutorial.
 (Solar-illumination is estimated for a  location by using the local date-time 
 to determine a sun-angle, and from
 that estimates for illumination, and air-mass.)
