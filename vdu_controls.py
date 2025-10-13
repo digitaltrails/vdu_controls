@@ -7399,6 +7399,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.profile_selector_widget.setSizeAdjustPolicy(QListWidget.SizeAdjustPolicy.AdjustToContents)
         self.profile_selector_widget.setFlow(QListWidget.Flow.LeftToRight)
         self.profile_selector_widget.setSpacing(0)
+        self.profile_selector_widget.setMinimumWidth(npx(940))
         self.profile_selector_widget.setMinimumHeight(native_font_height(scaled=1.4))
 
         main_layout.addWidget(self.profile_selector_widget, stretch=0)
