@@ -1166,7 +1166,7 @@ SVG_DARK_THEME_TEXT_COLOR = SVG_DARK_THEME_COLOR
 mono_light_tray = False
 MONOCHROME_APP_ICON = b"""
 <svg viewBox="0 0 22 22" version="1.1" id="svg1" xmlns="http://www.w3.org/2000/svg">
-  <defs id="defs3051"><style type="text/css" id="current-color-scheme">.ColorScheme-Text {color:#ffffff;}</style></defs>
+  <defs id="defs3051"><style type="text/css" id="current-color-scheme">.ColorScheme-Text {color:#232629;}</style></defs>
   <path style="fill:currentColor;fill-opacity:1;stroke:none" class="ColorScheme-Text"
      d="m 3.012318,1.987629 -0.086226,13.98553 h 1 l 5.0022397,0.02464 -1e-7,2 -2.0022396,-0.02464 v 1 h 8.0000002 v -1 
      l -2.00224,-0.01232 -0.01232,-2 5.01456,0.01232 h 1 L 18.957944,2.0296853 17.989795,2.0050493 4.0174203,1.9774244 
@@ -1424,14 +1424,6 @@ def is_dark_theme() -> bool:
 
 def polychrome_light_or_dark():
     return ThemeType.POLYCHROME_DARK if is_dark_theme() else ThemeType.POLYCHROME_LIGHT
-
-
-def get_tray_theme_type(main_config: VduControlsConfig):
-    if main_config.is_set(ConfOpt.MONO_LIGHT_TRAY_ENABLED):
-        return ThemeType.MONOCHROME_LIGHT
-    if main_config.is_set(ConfOpt.MONOCHROME_TRAY_ENABLED):
-        return ThemeType.MONOCHROME_DARK
-    return ThemeType.UNTHEMED  # Don't alter colors for overlay onto app icon in tray
 
 
 DEVELOPERS_NATIVE_FONT_HEIGHT = 32  # The font height in physical pixels being used on my development desktop.
@@ -2554,6 +2546,8 @@ class ConfOpt(Enum):  # An Enum with tuples for values is used for convenience f
                                    tip=QT_TR_NOOP('monochrome dark themed system tray'))
     MONO_LIGHT_TRAY_ENABLED = _def(cname=QT_TR_NOOP('mono-light-tray-enabled'), default="no", restart=False,
                                    tip=QT_TR_NOOP('monochrome light themed system tray'))
+    MONO_FOLLOW_THEME_ENABLED = _def(cname=QT_TR_NOOP('mono-follow-theme-enabled'), default="yes", restart=False,
+                                   tip=QT_TR_NOOP('monochrome tray dark/light-flip follows desktop-theme changes'))
     OLD_TOOLBAR_ENABLED = _def(cname=QT_TR_NOOP('old-toolbar-enabled'), default="no", restart=False,
                                  tip=QT_TR_NOOP('old-stle with the toolbar fixed at the bottom'))
     PROTECT_NVRAM_ENABLED = _def(cname=QT_TR_NOOP('protect-nvram'), default="yes", restart=True,
@@ -9031,6 +9025,8 @@ class VduAppWindow(QMainWindow):
         self.scroll_area: QScrollArea | None = None
         self.main_config = main_config
         self.hide_shortcuts = True
+        self.initial_theme_is_dark = is_dark_theme()
+        log_info(f"Started with dark theme: {self.initial_theme_is_dark}")
 
         def _run_in_gui(task: Callable):
             log_debug(f"Running task in gui thread {repr(task)}") if log_debug_enabled else None
@@ -9202,7 +9198,7 @@ class VduAppWindow(QMainWindow):
         global mono_light_tray
         self.app_icon = QIcon()
         self.app_icon.addPixmap(get_splash_image() if splash_pixmap is None else splash_pixmap)
-        tray_theme_type = get_tray_theme_type(self.main_config)
+        tray_theme_type = self.get_tray_theme_type()
         if CUSTOM_TRAY_ICON_FILE.exists() and os.access(CUSTOM_TRAY_ICON_FILE.as_posix(), os.R_OK):
             log_info(f"Loading custom app_icon: {CUSTOM_TRAY_ICON_FILE} {tray_theme_type=}")
             self.tray_icon = create_icon_from_path(CUSTOM_TRAY_ICON_FILE, tray_theme_type)
@@ -9280,6 +9276,19 @@ class VduAppWindow(QMainWindow):
         PresetsDialog.show_status_message(message=message, timeout=timeout)
         self.status_message(message, timeout=timeout, destination=MsgDestination.DEFAULT)
 
+    def get_tray_theme_type(self):
+        theme = ThemeType.UNTHEMED  # Don't alter colors for overlay onto app icon in tray if unthemed
+        if self.main_config.is_set(ConfOpt.MONOCHROME_TRAY_ENABLED):
+            theme = ThemeType.MONOCHROME_DARK
+        if self.main_config.is_set(ConfOpt.MONO_LIGHT_TRAY_ENABLED):
+            theme = ThemeType.MONOCHROME_LIGHT
+        if theme != ThemeType.UNTHEMED:
+            theme_has_flipped = self.initial_theme_is_dark != is_dark_theme()
+            if theme_has_flipped and self.main_config.is_set(ConfOpt.MONO_FOLLOW_THEME_ENABLED):
+                log_info(f"Option {ConfOpt.MONO_FOLLOW_THEME_ENABLED.conf_id} is set: Desktop theme flipped - flipping tray theme")
+                theme = ThemeType.MONOCHROME_LIGHT if theme == ThemeType.MONOCHROME_DARK else ThemeType.MONOCHROME_DARK
+        return theme
+
     def update_status_indicators(self, preset: Preset|None = None, palette_change: bool = False) -> None:
         assert is_running_in_gui_thread()  # Boilerplate in case this is called from the wrong thread.
         if self.main_panel is None:  # On deepin 23, events can trigger this method before initialization is complete
@@ -9297,7 +9306,7 @@ class VduAppWindow(QMainWindow):
             self.app_context_menu.indicate_preset_active(preset)
             PresetsDialog.instance_indicate_active_preset(preset)
             title = f"{preset.get_title_name()} {PRESET_APP_SEPARATOR_SYMBOL} {title}"
-            tray_embedded_icon = preset.create_icon(get_tray_theme_type(self.main_config))
+            tray_embedded_icon = preset.create_icon(self.get_tray_theme_type())
             led1_color = PRESET_TRANSITIONING_LED_COLOR if preset.in_transition_step > 0 else None   # TODO transitioning indicator
         if self.main_controller.lux_auto_controller is not None:
             if self.main_controller.lux_auto_controller.is_auto_enabled():
@@ -9307,7 +9316,7 @@ class VduAppWindow(QMainWindow):
             self.app_context_menu.update_lux_auto_icon(menu_lux_icon)  # Won't actually update if it hasn't changed
             if tray_embedded_icon is None and self.main_config.is_set(ConfOpt.LUX_TRAY_ICON):
                 if zone := self.main_controller.lux_auto_controller.get_lux_zone():
-                    tray_embedded_icon = create_icon_from_svg_bytes(zone.icon_svg, get_tray_theme_type(self.main_config))
+                    tray_embedded_icon = create_icon_from_svg_bytes(zone.icon_svg, self.get_tray_theme_type())
                     title = title + '\n' + tr("Lighting: {}").format(zone.name.lower())
 
         if self.windowTitle() != title:  # Don't change if not needed - prevent flickering.
