@@ -1268,6 +1268,21 @@ VDU_CONNECTED_ICON_SOURCE = b"""
 </svg>
 """
 
+AMBIENT_PANEL_ICON_SOURCE = b"""
+<svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
+    <g class="ColorScheme-Text" stroke="currentColor" stroke-linecap="round" stroke-width="2">
+        <path fill="none" d="M9 20 L1 20 1 5 20 5 20 7" />
+        <circle cx="17" cy="16" r="5" stroke="currentColor" fill="none" />
+        <path d="M11.5 22 L11.5 22" stroke="currentColor" fill="none" />
+        <path d="M9 16 L9 16" stroke="currentColor" fill="none" />
+        <path d="M11 10.5 L11 10.5" stroke="currentColor" fill="none" />
+        <path d="M16 8 L16 8" stroke="currentColor" fill="none" />
+        <path d="M22 9.5 L22 9.5" stroke="currentColor" fill="none" />
+    </g>
+</svg>
+"""
+
 # view-refresh icon from breeze5-icons: LGPL-3.0-only
 REFRESH_ICON_SOURCE = b"""
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24">
@@ -2530,6 +2545,8 @@ class ConfOpt(Enum):  # An Enum with tuples for values is used for convenience f
                                    tip=QT_TR_NOOP('monochrome dark themed system tray'))
     MONO_LIGHT_TRAY_ENABLED = _def(cname=QT_TR_NOOP('mono-light-tray-enabled'), default="no", restart=False,
                                    tip=QT_TR_NOOP('monochrome light themed system tray'))
+    OLD_TOOLBAR_ENABLED = _def(cname=QT_TR_NOOP('old-toolbar-enabled'), default="no", restart=False,
+                                 tip=QT_TR_NOOP('old-stle with the toolbar fixed at the bottom'))
     PROTECT_NVRAM_ENABLED = _def(cname=QT_TR_NOOP('protect-nvram'), default="yes", restart=True,
                                  tip=QT_TR_NOOP('alter options and defaults to minimize VDU NVRAM writes'))
     ORDER_BY_NAME = _def(cname=QT_TR_NOOP('order-by-name'), default="no",
@@ -3091,6 +3108,34 @@ class SubWinDialog(QDialog):  # Fix for gnome: QDialog must be a subwindow, othe
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent, Qt.WindowType.SubWindow if is_gnome_desktop() else Qt.WindowType.Window)
+
+
+
+class IconLabel(QWidget):
+
+    def __init__(self, icon_source: bytes, main_text: str, sub_text) -> None:
+        super().__init__()
+        layout = QHBoxLayout()
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.setLayout(layout)
+        self.svg_icon: QSvgWidget | None = None
+        self.icon_source = icon_source
+        svg_icon = QSvgWidget()
+        svg_icon.load(handle_theme(icon_source, polychrome_light_or_dark()))
+        svg_icon.setFixedSize(native_font_height(scaled=1.8), native_font_height(scaled=1.8))
+        self.svg_icon = svg_icon
+        layout.addWidget(svg_icon)
+        self.label = QLabel(f"<span style='font-weight:bold;'>{main_text}<br/>"
+                            f"<span style='font-size:{native_font_height(0.5)}px; font-weight:normal;'>{sub_text}</span>")
+        self.label.setTextFormat(Qt.TextFormat.RichText)
+        self.label.setWordWrap(True)
+        layout.addWidget(self.label)
+
+    def event(self, event: QEvent | None) -> bool:
+        if event and event.type() == QEvent.Type.PaletteChange:  # PalletChange happens after the new style sheet is in use.
+            self.svg_icon.load(handle_theme(self.icon_source, polychrome_light_or_dark()))
+        return super().event(event)
+
 
 
 class StdButton(QPushButton):  # Reduce some repetitiveness in the code
@@ -3855,7 +3900,9 @@ class VduControlPanel(QWidget):
     def __init__(self, controller: VduController, vdu_exception_handler: Callable) -> None:
         super().__init__()
         layout = QVBoxLayout()
-        self.label = QLabel(tr('Monitor {}: {}').format(controller.vdu_number, controller.get_vdu_preferred_name()))
+        create_icon_from_svg_bytes(VDU_CONNECTED_ICON_SOURCE)
+        self.label = IconLabel(VDU_CONNECTED_ICON_SOURCE,
+                               controller.get_vdu_preferred_name(), tr("Monitor {}".format(controller.vdu_number)))
         layout.addWidget(self.label)
         self.controller: VduController = controller
         self.vcp_controls: List[VduControlBase] = []
@@ -3880,6 +3927,12 @@ class VduControlPanel(QWidget):
             if control is not None:
                 layout.addWidget(control)
                 self.vcp_controls.append(control)
+
+        line = QFrame()
+        line.setFrameShape(QFrame.Shape.HLine)
+        line.setFrameShadow(QFrame.Shadow.Sunken)
+        line.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(line)
 
         if len(self.vcp_controls) != 0:
             self.setLayout(layout)
@@ -3919,8 +3972,9 @@ class VduControlPanel(QWidget):
 
     def update_stats(self):
         name, sid = self.controller.get_vdu_preferred_name(), self.controller.vdu_stable_id
-        self.label.setToolTip(tr("{}\nSet-VCP writes: {}").format(sid if id == name else f"{name}\n({sid})",
-                                                                  self.controller.get_write_count()))
+        self.label.setToolTip(tr("{}\nSet-VCP writes: {}\nMonitor {}").format(sid if id == name else f"{name}\n({sid})",
+                                                                              self.controller.get_write_count(),
+                                                                              self.controller.vdu_number))
 
 
 class Preset:
@@ -4261,7 +4315,7 @@ class ToolButton(QToolButton):
         self.setIcon(create_icon_from_svg_bytes(self.svg_source))  # this may alter the SVG for light/dark theme
 
 
-class VduPanelBottomToolBar(QToolBar):
+class VduPanelToolBar(QToolBar):
 
     def __init__(self, tool_buttons: List[ToolButton], app_context_menu: ContextMenu, parent: VduControlsMainPanel) -> None:
         super().__init__(parent=parent)
@@ -4331,7 +4385,7 @@ class VduControlsMainPanel(QWidget):
 
     def __init__(self) -> None:
         super().__init__()
-        self.bottom_toolbar: VduPanelBottomToolBar | None = None
+        self.main_toolbar: VduPanelToolBar | None = None
         self.refresh_data_task = None
         self.setObjectName("vdu_controls_main_panel")
         self.vdu_control_panels: Dict[str, VduControlPanel] = {}
@@ -4354,9 +4408,9 @@ class VduControlsMainPanel(QWidget):
                     old_layout.removeItem(item)
                     item.widget().deleteLater()
         controllers_layout = QVBoxLayout()
-        controllers_layout.setSpacing(0)
+        controllers_layout.setSpacing(npx(5))
         cl_margins = controllers_layout.contentsMargins()
-        controllers_layout.setContentsMargins(cl_margins.left(), 0, cl_margins.right(), 0)
+        controllers_layout.setContentsMargins(cl_margins.left(), npx(5), cl_margins.right(), npx(5))
         self.setLayout(controllers_layout)
 
         warnings_enabled = main_config.is_set(ConfOpt.WARNINGS_ENABLED)
@@ -4394,10 +4448,11 @@ class VduControlsMainPanel(QWidget):
             no_vdu_layout.addWidget(no_vdu_text)
             no_vdu_layout.addSpacing(32)
             controllers_layout.addWidget(no_vdu_widget)
-
-        self.bottom_toolbar = VduPanelBottomToolBar(tool_buttons=tool_buttons, app_context_menu=app_context_menu, parent=self)
-        controllers_layout.addWidget(self.bottom_toolbar, 0, Qt.AlignmentFlag.AlignBottom)
-
+        self.main_toolbar = VduPanelToolBar(tool_buttons=tool_buttons, app_context_menu=app_context_menu, parent=self)
+        if not main_controller.main_config.is_set(ConfOpt.OLD_TOOLBAR_ENABLED):
+            main_controller.main_window.addToolBar(self.main_toolbar)
+        else:
+            controllers_layout.addWidget(self.main_toolbar, 0, Qt.AlignmentFlag.AlignBottom)
         def _open_context_menu(position: QPoint) -> None:
             assert app_context_menu is not None
             app_context_menu.exec(self.mapToGlobal(position))
@@ -4406,8 +4461,8 @@ class VduControlsMainPanel(QWidget):
         self.customContextMenuRequested.connect(_open_context_menu)
 
     def indicate_busy(self, is_busy: bool = True, lock_controls: bool = True) -> None:
-        if self.bottom_toolbar is not None:
-            self.bottom_toolbar.indicate_busy(is_busy)
+        if self.main_toolbar is not None:
+            self.main_toolbar.indicate_busy(is_busy)
         if lock_controls:
             for control_panel in self.vdu_control_panels.values():
                 control_panel.setDisabled(is_busy)
@@ -4420,8 +4475,8 @@ class VduControlsMainPanel(QWidget):
         return True
 
     def show_active_preset(self, preset: Preset | None) -> None:
-        if self.bottom_toolbar:
-            self.bottom_toolbar.show_active_preset(preset)
+        if self.main_toolbar:
+            self.main_toolbar.show_active_preset(preset)
 
     def show_vdu_exception(self, exception: VduException, can_retry: bool = False) -> bool:
         log_error(f"{exception.vdu_description} {exception.operation} {exception.attr_id} {exception.cause}")
@@ -4445,7 +4500,7 @@ class VduControlsMainPanel(QWidget):
         return answer == MBtn.Retry
 
     def status_message(self, message: str, timeout: int):
-        self.bottom_toolbar.status_area.showMessage(message, timeout) if self.bottom_toolbar else None
+        self.main_toolbar.status_area.showMessage(message, timeout) if self.main_toolbar else None
 
 @dataclass
 class BulkChangeItem:
@@ -7964,7 +8019,12 @@ class LuxAmbientSlider(QWidget):
         top_layout.setSpacing(0)
         tl_margins = top_layout.contentsMargins()
         top_layout.setContentsMargins(tl_margins.left(), 0, tl_margins.right(), 0)
-        top_layout.addWidget(QLabel(tr("Ambient Light Level (lux)")), alignment=Qt.AlignmentFlag.AlignBottom)
+
+        label = IconLabel(AMBIENT_PANEL_ICON_SOURCE, tr("Ambient Light Level"), tr("lux"))
+        label.setToolTip(tr("Set the ambient light level to adjust all monitors."))
+        top_layout.addWidget(label,
+                             alignment=Qt.AlignmentFlag.AlignBottom)
+
 
         input_panel = QWidget()
         input_panel_layout = QHBoxLayout()
