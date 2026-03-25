@@ -359,6 +359,10 @@ Michael Hamilton
 
 Version History
 ---------------
+* 2.5.0
+  * Altered UI apperance post-Plasma6 - partly based on [a recent fork](https://github.com/ViktorSharga/vdu_controls_vibecodedUI)
+    The changes are fully functional, but still in progress. 
+
 * 2.4.3
   * Fix a rare TypeError when light metering.
   * Some code cleanups for the splash screen.
