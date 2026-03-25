@@ -1263,6 +1263,15 @@ VDU_CONNECTED_ICON_SOURCE = b"""
 <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
     <g class="ColorScheme-Text" stroke="currentColor" stroke-linecap="round"  stroke-width="2" transform="">
+        <path fill="None" d="M 20 18 L 1 18 1 5 20 5 20 18 M 6.5 21 L 15 21"/>
+    </g>
+</svg>
+"""
+
+VDU_POWER_ON_ICON_SOURCE = b"""
+<svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
+    <g class="ColorScheme-Text" stroke="currentColor" stroke-linecap="round"  stroke-width="2" transform="">
         <path fill="None" d="M14 12 A 5 5 0 1 0 20 12 M 17 11 L 17 16.5 M 9 20 L 1 20 1 5 20 5 20 8"/>
     </g>
 </svg>
@@ -5762,7 +5771,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.vip_menu = QMenu()
         self.vip_menu.triggered.connect(self.vip_menu_triggered)
         edit_panel_layout.addWidget(self.preset_name_edit)
-        self.vdu_init_button = ToolButton(VDU_CONNECTED_ICON_SOURCE, tr("Create VDU specific\nInitialization-Preset"), self)
+        self.vdu_init_button = ToolButton(VDU_POWER_ON_ICON_SOURCE, tr("Create VDU specific\nInitialization-Preset"), self)
         self.vdu_init_button.setMenu(self.vip_menu)
         self.vdu_init_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         edit_panel_layout.addWidget(self.vdu_init_button)

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright 2024 Michael Hamilton License Creative Commons - Attribution CC BY -->
+<svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
+    <g class="ColorScheme-Text" stroke="currentColor" stroke-linecap="round"  stroke-width="2" transform="">
+        <path fill="None" d="M 20 18 L 1 18 1 5 20 5 20 18 M 6.5 21 L 15 21"/>
+    </g>
+</svg>

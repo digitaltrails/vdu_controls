@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright 2024 Michael Hamilton License Creative Commons - Attribution CC BY -->
+<svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
+    <g class="ColorScheme-Text" stroke="currentColor" stroke-linecap="round" stroke-width="2">
+        <path fill="none" d="M9 20 L1 20 1 5 20 5 20 7" />
+        <circle cx="17" cy="16" r="5" stroke="currentColor" fill="none" />
+        <path d="M11.5 22 L11.5 22" stroke="currentColor" fill="none" />
+        <path d="M9 16 L9 16" stroke="currentColor" fill="none" />
+        <path d="M11 10.5 L11 10.5" stroke="currentColor" fill="none" />
+        <path d="M16 8 L16 8" stroke="currentColor" fill="none" />
+        <path d="M22 9.5 L22 9.5" stroke="currentColor" fill="none" />
+    </g>
+</svg>
