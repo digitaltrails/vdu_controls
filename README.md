@@ -364,7 +364,9 @@ Version History
     The changes are fully functional, but still in progress. 
   * Added option mono-follow-theme to flip dark/light on desktop dark/light theme change.
     Not all trays flip dark/light on theme changes, hence an electable option is required.
-  * The toolbar is now relocatable, double-vertical-line grab-handle, drag and drop.
+    Defaults to enabled.
+  * The toolbar is now relocatable and undockable.  It features a double-vertical-line 
+    grab-handle for drag and drop.
 
 * 2.4.3
   * Fix a rare TypeError when light metering.
