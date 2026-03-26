@@ -4348,10 +4348,13 @@ class VduPanelToolBar(QToolBar):
     def eventFilter(self, target: QObject | None, event: QEvent | None) -> bool:
         # PalletChange happens after the new style sheet is in use.
         if event and event.type() == QEvent.Type.PaletteChange:
-            for button in self.tool_buttons:
-                button.refresh_icon()
-            self.menu_button.refresh_icon()
+            self.refresh_buttons()
         return super().eventFilter(target, event)
+
+    def refresh_buttons(self):
+        for button in self.tool_buttons:
+            button.refresh_icon()
+        self.menu_button.refresh_icon()
 
     def indicate_busy(self, is_busy: bool = True) -> None:
         if is_busy and self.progress_bar is None:
@@ -9410,6 +9413,7 @@ class VduAppWindow(QMainWindow):
             log_info("PaletteChange event: New style sheet in use, update icons")
             self.initialise_app_icon()
             self.update_status_indicators(palette_change=True)
+            self.main_panel.main_toolbar.refresh_buttons()
         return super().event(event)
 
     def refresh_preset_menu(self, palette_change: bool = False, reorder: bool = False):
