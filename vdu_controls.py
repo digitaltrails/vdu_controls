@@ -938,7 +938,7 @@ StdPixmap = QStyle.StandardPixmap
 
 
 APPNAME = "VDU Controls"
-VDU_CONTROLS_VERSION = '2.4.3'
+VDU_CONTROLS_VERSION = '2.5.0'
 VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in VDU_CONTROLS_VERSION.split('.'))
 assert sys.version_info >= (3, 8), f'{APPNAME} utilises python version 3.8 or greater (your python is {sys.version}).'
 
@@ -4323,6 +4323,7 @@ class VduPanelToolBar(QToolBar):
 
     def __init__(self, tool_buttons: List[ToolButton], app_context_menu: ContextMenu, parent: VduControlsMainPanel) -> None:
         super().__init__(parent=parent)
+        self.setObjectName('VduPanelToolBar')
         self.preset_edit_target: Preset | None = None
         self.tool_buttons = tool_buttons
         for button in self.tool_buttons:
@@ -4343,13 +4344,6 @@ class VduPanelToolBar(QToolBar):
 
         self.preset_action.triggered.connect(edit_current_preset)
         self.addWidget(self.menu_button)
-        self.installEventFilter(self)
-
-    def eventFilter(self, target: QObject | None, event: QEvent | None) -> bool:
-        # PalletChange happens after the new style sheet is in use.
-        if event and event.type() == QEvent.Type.PaletteChange:
-            self.refresh_buttons()
-        return super().eventFilter(target, event)
 
     def refresh_buttons(self):
         for button in self.tool_buttons:
@@ -4457,7 +4451,13 @@ class VduControlsMainPanel(QWidget):
             controllers_layout.addWidget(no_vdu_widget)
         self.main_toolbar = VduPanelToolBar(tool_buttons=tool_buttons, app_context_menu=app_context_menu, parent=self)
         if not main_controller.main_config.is_set(ConfOpt.OLD_TOOLBAR_ENABLED):
-            main_controller.main_window.addToolBar(self.main_toolbar)
+            toolbar_area = Qt.ToolBarArea.TopToolBarArea
+            toolbars = main_controller.main_window.findChildren(QToolBar)
+            for toolbar in toolbars:
+                toolbar_area = main_controller.main_window.toolBarArea(toolbar)
+                main_controller.main_window.removeToolBar(toolbar)
+                toolbar.deleteLater()
+            main_controller.main_window.addToolBar(toolbar_area, self.main_toolbar)
         else:
             controllers_layout.addWidget(self.main_toolbar, 0, Qt.AlignmentFlag.AlignBottom)
         def _open_context_menu(position: QPoint) -> None:
@@ -9180,17 +9180,16 @@ class VduAppWindow(QMainWindow):
             self.activateWindow()
 
     def show(self):
-        if self.main_config.is_set(ConfOpt.SMART_WINDOW):
-            if not self.app_restore_window_state():  # No previous state or invalid
+        if not self.app_restore_window_state():  # No previous state or invalid
+            if self.main_config.is_set(ConfOpt.SMART_WINDOW):
                 self.adjustSize()
                 self.app_decide_window_position()  # decide initial position relative to cursor
                 self.app_save_window_state()
         super().show()
 
     def hide(self):
-        if self.main_config.is_set(ConfOpt.SMART_WINDOW):
-            if self.isVisible():  # Only save position if really on screen
-                self.app_save_window_state()
+        if self.isVisible():  # Only save position if really on screen
+            self.app_save_window_state()
         super().hide()
 
     def quit_app(self) -> None:
@@ -9249,7 +9248,6 @@ class VduAppWindow(QMainWindow):
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setWidget(self.main_panel)
         self.setCentralWidget(self.scroll_area)
-
         available_height = self.screen().availableGeometry().height() - npx(200)  # Minus allowance for panel/tray
         hint_height = self.main_panel.sizeHint().height()  # The hint is the actual required layout space
         hint_width = self.main_panel.sizeHint().width()
@@ -9257,13 +9255,14 @@ class VduAppWindow(QMainWindow):
         if hint_height > available_height:
             log_debug(f"Main panel too high, adding scroll-area {hint_height=} {available_height=}") if log_debug_enabled else None
             self.setMaximumHeight(available_height)
-            self.setMinimumWidth(hint_width + 20)  # Allow extra space for disappearing scrollbars
+            self.setMinimumWidth(hint_width + npx(20))  # Allow extra space for disappearing scrollbars
         else:  # Don't mess with the size unnecessarily - let the user determine it?
-            self.setMinimumHeight(hint_height + 20)
+            number_of_vdus = len(self.main_controller.get_vdu_stable_id_list())
+            self.setMinimumHeight(hint_height + npx(30) * (number_of_vdus + 1))
             if hint_height != self.height():
                 self.setMinimumWidth(self.width())
                 self.adjustSize()
-            self.setMinimumWidth(hint_width + 20)
+            self.setMinimumWidth(hint_width + npx(20))
 
         self.splash_message_qtsignal.emit(tr("Checking Presets"))
 
@@ -9359,29 +9358,28 @@ class VduAppWindow(QMainWindow):
         self.app_save_window_state()
 
     def app_save_window_state(self) -> None:
-        if self.main_config.is_set(ConfOpt.SMART_WINDOW, fallback=True) and self.isVisible():
-            log_debug(f"app_save_window_state: {self.pos()=} {self.geometry()=} {QtCore.qVersion()}") if log_debug_enabled else None
+        if self.isVisible():
             self.qt_settings.setValue(self.qt_version_key, QtCore.qVersion())
+            log_debug(f"app_save_window_state: {self.pos()=} {self.geometry()=} {QtCore.qVersion()}") if log_debug_enabled else None
             self.qt_settings.setValue(self.qt_geometry_key, self.saveGeometry())
             self.qt_settings.setValue(self.qt_state_key, self.saveState())
 
     def app_restore_window_state(self) -> bool:
         log_debug(f"app_restore_window_state")
-        if not self.main_config.is_set(ConfOpt.SMART_WINDOW, fallback=True):
-            return False
         if len(self.qt_settings.allKeys()) == 0:  # No previous state
             return False
         save_version_major = self.qt_settings.value(self.qt_version_key, '5').split('.', 1)[0]
         qt_version_major = QtCore.qVersion().split('.', 1)[0]
         if save_version_major != qt_version_major:
-            log_warning(f"app_restore_window_state: cannot restore: {save_version_major=} != {qt_version_major=}")
-            return False  # Different Qt versions - cannot restore size, layout/size/scaling might be different.
-        if geometry := self.qt_settings.value(self.qt_geometry_key, None):
-            self.restoreGeometry(geometry)
+            log_warning(f"app_restore_window_state: restore: {save_version_major=} != {qt_version_major=}, this may cause window geometry glitches")
+        if smart_window := self.main_config.is_set(ConfOpt.SMART_WINDOW, fallback=True):  # Restore pos and geometry
+            if geometry := self.qt_settings.value(self.qt_geometry_key, None):
+                self.restoreGeometry(geometry)
+                log_debug(f"app_restore_window_state: restoring {self.pos()=} {self.geometry()=}") if log_debug_enabled else None
         if window_state := self.qt_settings.value(self.qt_state_key, None):
-            self.restoreState(window_state)
-        log_debug(f"app_restore_window_state: {self.pos()=} {self.geometry()=}") if log_debug_enabled else None
-        return True
+            self.restoreState(window_state)  # Restore component positions, such as toolbar location
+            log_debug(f"app_restore_window_state: restoring internal layout state") if log_debug_enabled else None
+        return smart_window
 
 
     def app_decide_window_position(self):
