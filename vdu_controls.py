@@ -17,6 +17,7 @@ Synopsis:
                      [--hide-on-focus-out|--no-hide-on-focus-out]
                      [--smart-window|--no-smart-window] [-smart-uses-xwayland|-smart-uses-xwayland]
                      [--monochrome-tray|--no-monochrome-tray] [--mono-light-tray|--no-mono-light-tray]
+                     [--tray-follows-theme|--no-tray-follows-theme]
                      [--protect-nvram|--no-protect-nvram]
                      [--lux-options|--no-lux-options]
                      [--schedule|--no-schedule] [--weather|--no-weather]
@@ -2546,8 +2547,8 @@ class ConfOpt(Enum):  # An Enum with tuples for values is used for convenience f
                                    tip=QT_TR_NOOP('monochrome dark themed system tray'))
     MONO_LIGHT_TRAY_ENABLED = _def(cname=QT_TR_NOOP('mono-light-tray-enabled'), default="no", restart=False,
                                    tip=QT_TR_NOOP('monochrome light themed system tray'))
-    MONO_FOLLOW_THEME_ENABLED = _def(cname=QT_TR_NOOP('mono-follow-theme-enabled'), default="yes", restart=False,
-                                   tip=QT_TR_NOOP('monochrome tray dark/light-flip follows desktop-theme changes'))
+    TRAY_FOLLOWS_THEME_ENABLED = _def(cname=QT_TR_NOOP('tray-follows-theme-enabled'), default="yes", restart=False,
+                                      tip=QT_TR_NOOP('monochrome tray dark/light-flip follows desktop-theme changes'))
     OLD_TOOLBAR_ENABLED = _def(cname=QT_TR_NOOP('old-toolbar-enabled'), default="no", restart=False,
                                  tip=QT_TR_NOOP('old-stle with the toolbar fixed at the bottom'))
     PROTECT_NVRAM_ENABLED = _def(cname=QT_TR_NOOP('protect-nvram'), default="yes", restart=True,
@@ -9284,8 +9285,8 @@ class VduAppWindow(QMainWindow):
             theme = ThemeType.MONOCHROME_LIGHT
         if theme != ThemeType.UNTHEMED:
             theme_has_flipped = self.initial_theme_is_dark != is_dark_theme()
-            if theme_has_flipped and self.main_config.is_set(ConfOpt.MONO_FOLLOW_THEME_ENABLED):
-                log_info(f"Option {ConfOpt.MONO_FOLLOW_THEME_ENABLED.conf_id} is set: Desktop theme flipped - flipping tray theme")
+            if theme_has_flipped and self.main_config.is_set(ConfOpt.TRAY_FOLLOWS_THEME_ENABLED):
+                log_info(f"Option {ConfOpt.TRAY_FOLLOWS_THEME_ENABLED.conf_id} is set: Desktop theme flipped - flipping tray theme")
                 theme = ThemeType.MONOCHROME_LIGHT if theme == ThemeType.MONOCHROME_DARK else ThemeType.MONOCHROME_DARK
         return theme
 
