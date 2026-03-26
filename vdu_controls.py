@@ -2548,7 +2548,7 @@ class ConfOpt(Enum):  # An Enum with tuples for values is used for convenience f
     MONO_LIGHT_TRAY_ENABLED = _def(cname=QT_TR_NOOP('mono-light-tray-enabled'), default="no", restart=False,
                                    tip=QT_TR_NOOP('monochrome light themed system tray'))
     TRAY_FOLLOWS_THEME_ENABLED = _def(cname=QT_TR_NOOP('tray-follows-theme-enabled'), default="yes", restart=False,
-                                      tip=QT_TR_NOOP('monochrome tray dark/light-flip follows desktop-theme changes'))
+                                      tip=QT_TR_NOOP('tray dark/light theming follows desktop-theme changes'))
     OLD_TOOLBAR_ENABLED = _def(cname=QT_TR_NOOP('old-toolbar-enabled'), default="no", restart=False,
                                  tip=QT_TR_NOOP('old-stle with the toolbar fixed at the bottom'))
     PROTECT_NVRAM_ENABLED = _def(cname=QT_TR_NOOP('protect-nvram'), default="yes", restart=True,
