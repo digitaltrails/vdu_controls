@@ -6614,13 +6614,13 @@ class LuxProfileWidget(QLabel):
         return round(self.plot_height * percent / 100)
 
     def lux_from_x(self, x) -> int:
-        lux = 0 if x <= 0 else round(10.0 ** (math.log10(1) + (x / self.plot_width) * (math.log10(100_000) - math.log10(1))))
+        lux = 0 if x <= 0 else round(10.0 ** ((x / self.plot_width) * math.log10(100_000)))
         if lux > 100_000:
             return 100_000
         return lux
 
     def x_from_lux(self, lux: int) -> int:
-        return round((math.log10(lux) - math.log10(1)) / ((math.log10(100000) - math.log10(1)) / self.plot_width)) if lux > 0 else 0
+        return round(math.log10(lux) / (math.log10(100000) / self.plot_width)) if lux > 0 else 0
 
 @dataclass
 class LuxGaugeHistory:
