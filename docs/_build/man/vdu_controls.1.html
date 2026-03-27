@@ -12,6 +12,7 @@ a DDC control panel for monitors</h1>
                  [--hide-on-focus-out|--no-hide-on-focus-out]
                  [--smart-window|--no-smart-window] [-smart-uses-xwayland|-smart-uses-xwayland]
                  [--monochrome-tray|--no-monochrome-tray] [--mono-light-tray|--no-mono-light-tray]
+                 [--tray-follows-theme|--no-tray-follows-theme]
                  [--protect-nvram|--no-protect-nvram]
                  [--lux-options|--no-lux-options]
                  [--schedule|--no-schedule] [--weather|--no-weather]
@@ -767,7 +768,7 @@ VDUs without issuing any errors:</p>
 GPUs. Detailed ddcutil info at https://www.ddcutil.com/</p>
 <h1 id="environment">Environment</h1>
 <pre><code>LC_ALL, LANG, LANGUAGE
-    These  variables specify the locale for language translations and units of distance.
+    These variables specify the locale for language translations and units of distance.
     LC_ALL is used by python, LANGUAGE is used by Qt. Normally, they should all have the same
     value, for example, ``Da_DK``. For these to have any effect on language, ``Settings``
     ``Translations Enabled`` must also be enabled.

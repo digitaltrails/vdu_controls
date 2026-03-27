@@ -1,4 +1,5 @@
-.\" Man page generated from reStructuredText.
+.\" Man page generated from reStructuredText
+.\" by the Docutils 0.22.3 manpage writer.
 .
 .
 .nr rst2man-indent-level 0
@@ -27,9 +28,9 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Jul 10, 2025" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Mar 26, 2026" "" "vdu_controls"
 .SH NAME
-vdu_controls \- vdu_controls 2.4.1
+vdu_controls \- vdu_controls 2.5.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
 .sp
 A control panel for DisplayPort, DVI, HDMI, or USB\-connected VDUs (\fIVisual Display Units\fP).
@@ -47,6 +48,7 @@ A control panel for DisplayPort, DVI, HDMI, or USB\-connected VDUs (\fIVisual Di
 [\-\-hide\-on\-focus\-out|\-\-no\-hide\-on\-focus\-out]
 [\-\-smart\-window|\-\-no\-smart\-window] [\-smart\-uses\-xwayland|\-smart\-uses\-xwayland]
 [\-\-monochrome\-tray|\-\-no\-monochrome\-tray] [\-\-mono\-light\-tray|\-\-no\-mono\-light\-tray]
+[\-\-tray\-follows\-theme|\-\-no\-tray\-follows\-theme]
 [\-\-protect\-nvram|\-\-no\-protect\-nvram]
 [\-\-lux\-options|\-\-no\-lux\-options]
 [\-\-schedule|\-\-no\-schedule] [\-\-weather|\-\-no\-weather]
@@ -224,7 +226,7 @@ also available via the hamburger\-menu, and also via the right\-mouse button in 
 main\-window or the system\-tray icon.  The main\-menu has \fIALT\-key\fP shortcuts for all menu items
 (subject to sufficient letters being available to distinguish all user defined presets).
 .sp
-For further information, including screenshots, see \X'tty: link https://github.com/digitaltrails/vdu_controls'\fI\%https://github.com/digitaltrails/vdu_controls\fP\X'tty: link' .
+For further information, including screenshots, see \%<https://\:github\:.com/\:digitaltrails/\:vdu_controls> .
 .sp
 The long\-term effects of repeatably rewriting a VDUs setting are not well understood, but some
 concerns have been expressed. See \fBLIMITATIONS\fP for further details.
@@ -539,10 +541,10 @@ that manner, a transition can be abandoned by dragging a slider or choosing a di
 .SS Presets \- supplementary weather requirements
 .sp
 A solar elevation trigger can have a weather requirement which will be checked against the weather
-reported by \X'tty: link https://wttr.in'\fI\%https://wttr.in\fP\X'tty: link'\&.
+reported by \%<https://\:wttr\:.in>\&.
 .sp
 By default, there are three possible weather requirements: \fBgood\fP, \fBbad\fP, and \fBall weather\fP\&.
-Each  requirement is defined by a file containing a list of WWO (\X'tty: link https://www.worldweatheronline.com'\fI\%https://www.worldweatheronline.com\fP\X'tty: link')
+Each  requirement is defined by a file containing a list of WWO (\%<https://\:www\:.worldweatheronline\:.com>)
 weather codes, one per line.  The three default requirements are contained in the files
 \fB$HOME/.config/vdu_controls/{good,bad,all}.weather\fP\&.  Additional weather requirements can be
 created by using a text editor to create further files.  The \fBall.weather\fP file exists primarily
@@ -557,7 +559,7 @@ To ensure \fBwttr.in\fP supplies the weather for your location, please ensure th
 enhanced to fill out a place\-name for you.  Should \fBwttr.in\fP not recognize a place\-name, the
 place\-name can be manually edited to something more suitable. The nearest big city or an
 airport\-code will do, for example: LHR, LAX, JFK.  You can use a web browser to test a place\-name,
-for example: \X'tty: link https://wttr.in/JFK'\fI\%https://wttr.in/JFK\fP\X'tty: link'
+for example: \%<https://\:wttr\:.in/\:JFK>
 .sp
 When weather requirements are in use, \fBvdu_controls\fP will check that the coordinates in
 \fBSettings\fP \fBLocation\fP are a reasonable match for those returned from \fBwttr.in\fP, a warning will
@@ -662,7 +664,7 @@ Further information on various lux metering options, as well as instructions for
 programming an Arduino with a GY\-30/BH1750, can be found at:
 .INDENT 0.0
 .INDENT 3.5
-\X'tty: link https://github.com/digitaltrails/vdu_controls/blob/master/Lux-metering.md'\fI\%https://github.com/digitaltrails/vdu_controls/blob/master/Lux\-metering.md\fP\X'tty: link'
+\%<https://\:github\:.com/\:digitaltrails/\:vdu_controls/\:blob/\:master/\:Lux-metering\:.md>
 .UNINDENT
 .UNINDENT
 .sp
@@ -671,7 +673,7 @@ Example scripts for mapping a webcam\(aqs average\-brightness to approximate lux
 location:
 .INDENT 0.0
 .INDENT 3.5
-\X'tty: link https://github.com/digitaltrails/vdu_controls/tree/master/sample-scripts'\fI\%https://github.com/digitaltrails/vdu_controls/tree/master/sample\-scripts\fP\X'tty: link'\&.
+\%<https://\:github\:.com/\:digitaltrails/\:vdu_controls/\:tree/\:master/\:sample-scripts>\&.
 .UNINDENT
 .UNINDENT
 .sp
@@ -801,7 +803,7 @@ If you have the choice, a \fBDisplayPort\fP to \fBDisplayPort\fP connection may 
 Reducing the number of enabled controls can speed up initialization, decrease the refresh time, and
 reduce the time taken to restore presets.
 .sp
-There\(aqs plenty of useful info for getting the best out of \fBddcutil\fP at \X'tty: link https://www.ddcutil.com/'\fI\%https://www.ddcutil.com/\fP\X'tty: link'\&.
+There\(aqs plenty of useful info for getting the best out of \fBddcutil\fP at \%<https://\:www\:.ddcutil\:.com/>\&.
 .SH LIMITATIONS
 .sp
 Repeatably altering VDU settings might affect VDU lifespan, exhausting the NVRAM write
@@ -958,14 +960,14 @@ ddcutil detect
 .UNINDENT
 .sp
 Read ddcutil documentation concerning config of i2c_dev with nvidia GPUs. Detailed ddcutil info
-at \X'tty: link https://www.ddcutil.com/'\fI\%https://www.ddcutil.com/\fP\X'tty: link'
+at \%<https://\:www\:.ddcutil\:.com/>
 .SH ENVIRONMENT
 .INDENT 0.0
 .INDENT 3.5
 .INDENT 0.0
 .TP
 .B LC_ALL, LANG, LANGUAGE
-These  variables specify the locale for language translations and units of distance.
+These variables specify the locale for language translations and units of distance.
 LC_ALL is used by python, LANGUAGE is used by Qt. Normally, they should all have the same
 value, for example, \fBDa_DK\fP\&. For these to have any effect on language, \fBSettings\fP
 \fBTranslations Enabled\fP must also be enabled.
@@ -1026,7 +1028,7 @@ Location for system\-wide icons, sample\-scripts, and translations.
 .UNINDENT
 .SH REPORTING BUGS
 .sp
-\X'tty: link https://github.com/digitaltrails/vdu_controls/issues'\fI\%https://github.com/digitaltrails/vdu_controls/issues\fP\X'tty: link'
+\%<https://\:github\:.com/\:digitaltrails/\:vdu_controls/\:issues>
 .SH GNU LICENSE
 .sp
 This program is free software: you can redistribute it and/or modify it
@@ -1039,10 +1041,9 @@ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
 more details.
 .sp
 You should have received a copy of the GNU General Public License along
-with this program. If not, see \X'tty: link https://www.gnu.org/licenses/'\fI\%https://www.gnu.org/licenses/\fP\X'tty: link'\&.
-.SH AUTHOR
+with this program. If not, see \%<https://\:www\:.gnu\:.org/\:licenses/>\&.
+.SH Author
 Michael Hamilton
-.SH COPYRIGHT
+.SH Copyright
 2021, Michael Hamilton
-.\" Generated by docutils manpage writer.
-.
+.\" End of generated man page.
