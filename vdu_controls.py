@@ -9515,11 +9515,11 @@ class SignalWakeupHandler(QtNetwork.QAbstractSocket):
 # Coding style also altered for use with vdu_controls.
 def calc_solar_azimuth_zenith(localised_time: datetime, latitude: float, longitude: float) -> Tuple[float, float]:
     """Return azimuth degrees clockwise from true north and zenith in degrees from vertical direction."""
-
-    utc_date_time = localised_time if localised_time.tzinfo is None else localised_time.astimezone(timezone.utc)
+    assert localised_time.tzinfo is not None
+    utc_datetime = localised_time.astimezone(timezone.utc)
     # UTC from now on...
-    hours, minutes, seconds = utc_date_time.hour, utc_date_time.minute, utc_date_time.second
-    year, month, day = utc_date_time.year, utc_date_time.month, utc_date_time.day
+    hours, minutes, seconds = utc_datetime.hour, utc_datetime.minute, utc_datetime.second
+    year, month, day = utc_datetime.year, utc_datetime.month, utc_datetime.day
 
     earth_mean_radius = 6371.01
     astronomical_unit = 149597890
