@@ -4351,13 +4351,14 @@ class VduPanelToolBar(QToolBar):
         self.menu_button.refresh_icon()
 
     def indicate_busy(self, is_busy: bool = True) -> None:
-        if is_busy and self.progress_bar is None:
-            self.status_area.clearMessage()
-            self.progress_bar = QProgressBar(self)
-            self.progress_bar.setTextVisible(False)  # Disable text percentage label on the spinner progress-bar
-            self.progress_bar.setRange(0, 0)  # 0,0 causes the progress bar to pulsate left/right - used as a busy spinner.
-            self.status_area.addWidget(self.progress_bar, 1)
-            self.progress_bar.show()  # According to the Qt docs, this is necessary because removing it just hides it.
+        if is_busy:
+            if self.progress_bar is None:
+                self.status_area.clearMessage()
+                self.progress_bar = QProgressBar(self)
+                self.progress_bar.setTextVisible(False)  # Disable text percentage label on the spinner progress-bar
+                self.progress_bar.setRange(0, 0)  # 0,0 causes the progress bar to pulsate left/right - used as a busy spinner.
+                self.status_area.addWidget(self.progress_bar, 1)
+                self.progress_bar.show()  # According to the Qt docs, this is necessary because removing it just hides it.
         elif self.progress_bar is not None:
             self.status_area.removeWidget(self.progress_bar)
             self.progress_bar = None
