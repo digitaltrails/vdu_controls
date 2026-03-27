@@ -7292,7 +7292,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
     def interpolate_brightness(self, smoothed_lux: int, current_point: LuxPoint, next_point: LuxPoint) -> int:
 
         def _x_from_lux(lux: int) -> float:
-            return ((math.log10(lux) - math.log10(1)) / (math.log10(100000) - math.log10(1))) if lux > 0 else 0
+            return (math.log10(lux) / math.log10(100000)) if lux > 0 else 0
 
         interpolated_brightness = float(current_point.brightness)
         x_smoothed = _x_from_lux(smoothed_lux)
