@@ -349,6 +349,7 @@ Acknowledgements
 * Malcolm Lewis ([malcolmlewis](https://github.com/malcolmlewis)) for assistance with the OpenSUSE Open Build Service submissions.
 * Christopher Laws ([claws](https://github.com/claws)) for the [BH1750 library](https://github.com/claws/BH1750) 
   and [example build](https://github.com/claws/BH1750#example) (lux-metering).
+* Viktor Sharga ([ViktorSharga](https://github.com/ViktorSharga)) for assisting with UI enhancements.
 * Plus others who have supplied feedback and suggestions.
 * E. Elvegård and G. Sjöstedt, "The Calculation of Illumination from Sun and Sky," _Illuminating Engineering_, Apr. 1940.
   [Illuminating Engineering Society, 100 Significant Papers](https://www.ies.org/research/publications/100-significant-papers/)
@@ -362,8 +363,8 @@ Version History
 ---------------
 * 2.5.0
   * Altered UI apperance post-Plasma6 - partly based on [a recent fork](https://github.com/ViktorSharga/vdu_controls_vibecodedUI)
-    The changes are fully functional, but still in progress. 
-  * Added option mono-follow-theme to flip dark/light on desktop dark/light theme change.
+    by @ViktorSharga.
+  * Added option tray-follows-theme to flip dark/light on desktop dark/light theme change.
     Not all trays flip dark/light on theme changes, hence an electable option is required.
     Defaults to enabled.
   * The toolbar is now relocatable and undockable.  It features a double-vertical-line 
