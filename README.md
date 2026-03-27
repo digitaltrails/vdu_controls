@@ -368,7 +368,12 @@ Version History
     Not all trays flip dark/light on theme changes, hence an electable option is required.
     Defaults to enabled.
   * The toolbar is now relocatable and undockable.  It features a double-vertical-line 
-    grab-handle for drag and drop.
+    grab-handle for drag and drop.  The toolbar position persists across restarts.
+  * The toolbar position now defaults to "top" to follow Plasma6 conventions. Drag
+    it to the bottom to restore the old position.
+  * Corrected the horizontal tick marks on the Lux Metering Rolling-Display.
+  * Added 3,6,9,15,18,21 hour enlarged tick marks to the Lux Metering Rolling-Display.
+  * Internal code simplifications and cleanups.
 
 * 2.4.3
   * Fix a rare TypeError when light metering.
