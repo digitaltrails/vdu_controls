@@ -6806,8 +6806,9 @@ class LuxGaugeWidget(QWidget):
         self.updates_enabled = enable
 
     def _y_from_lux(self, lux: int, required_height: int) -> int:
-        return required_height - (
-            round((math.log10(lux) - math.log10(1)) / ((math.log10(200000) - math.log10(1)) / required_height)) if lux > 0 else 0)
+        if lux <= 0:
+            return required_height
+        return required_height - round(math.log10(lux) / math.log10(200000) * required_height)
 
 
 def lux_create_device(device_name: str) -> LuxMeterDevice:
