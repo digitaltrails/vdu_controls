@@ -3935,7 +3935,6 @@ class VduControlPanel(QWidget):
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
         line.setFrameShadow(QFrame.Shadow.Sunken)
-        line.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(line)
 
         if len(self.vcp_controls) != 0:
@@ -6753,9 +6752,10 @@ class LuxGaugeWidget(QWidget):
             painter.drawText(QPointF(middle + npx(6), y + 4), str(i))
         # Draw hour ticks along the bottom
         tick_len = line_width * 2
-        noon_tick_len = line_width * 4
-        for hx in range((hw := 60 // round(minutes_per_point)), hw * 25, hw):
-            painter.drawLine(x := df_plot_left + hx, plot_height, x, plot_height - (noon_tick_len if hx == (12 * hw) else tick_len))
+        points_per_hour = df_plot_width / 24
+        for hour in range(24):  # Tick length multiplier: 3 for 0/12, 2 for multiples of 3, else 1
+            x = round(df_plot_left + points_per_hour * hour)
+            painter.drawLine(x, plot_height, x, plot_height - tick_len * (3 if hour % 12 == 0 else (2 if hour % 3 == 0 else 1)))
         # Draw the sun
         if most_recent_df_xy and most_recent_item and most_recent_df_xy[0]:
             if self.sun_image is None:
@@ -9576,22 +9576,11 @@ def calc_solar_azimuth_zenith(localised_time: datetime, latitude: float, longitu
     return azimuth, zenith_angle
 
 
-def true_noon(longitude, when: datetime) -> datetime:
-    b = (360 / 365.25) * (when.timetuple().tm_yday - 81)  # Estimate the Equation of Time (in minutes)
-    eot = 9.87 * math.sin(math.radians(2 * b)) - 7.53 * math.cos(math.radians(b)) - 1.5 * math.sin(math.radians(b))
-    offset = 4 * longitude + eot   # Calculate the time offset from UTC (in minutes)
-    true_noon_utc_minutes = 12 * 60 - offset  # Calculate true noon in UTC (12:00 UTC +/- offset)
-    hours = int(true_noon_utc_minutes // 60)
-    minutes = int(true_noon_utc_minutes % 60)
-    when.replace(hour=hours, minute=minutes)
-    return when
-
-
 def calc_solar_lux(localised_time: datetime, location: GeoLocation, daylight_factor: float) -> int:
     # E. Elvegård and G. Sjöstedt, "The Calculation of Illumination from Sun and Sky," _Illuminating Engineering_, Apr. 1940.
     # [Illuminating Engineering Society, 100 Significant Papers](https://www.ies.org/research/publications/100-significant-papers/)
     latitude, longitude = location.latitude, location.longitude
-    azimuth, zenith = calc_solar_azimuth_zenith(true_noon(longitude, localised_time), latitude, longitude)
+    _, zenith = calc_solar_azimuth_zenith(localised_time, latitude, longitude)
     solar_altitude = 90 - zenith   # After sunset use
     if solar_altitude < 3:  # 3 degrees is a minimum, the functional limit for the algorithm
         return 0
