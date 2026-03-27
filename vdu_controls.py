@@ -9592,10 +9592,11 @@ def calc_solar_lux(localised_time: datetime, location: GeoLocation, daylight_fac
     return illumination
 
 
-# Spherical distance from https://stackoverflow.com/a/21623206/609575
+# Spherical distance from https://stackoverflow.com/a/21623206/609575 (great circle distance km)
 def spherical_kilometers(lat1, lon1, lat2, lon2) -> float:
     p = math.pi / 180
     a = 0.5 - math.cos((lat2 - lat1) * p) / 2 + math.cos(lat1 * p) * math.cos(lat2 * p) * (1 - math.cos((lon2 - lon1) * p)) / 2
+    a = min(1.0, max(0.0, a))  # Guard against floating‑point errors
     return 12742 * math.asin(math.sqrt(a))
 
 
