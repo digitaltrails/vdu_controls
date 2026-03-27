@@ -8047,7 +8047,7 @@ class LuxAmbientSlider(QWidget):
         self.slider = ClickableSlider()
         self.slider.setToolTip(tr("Ambient light level input (lux value)"))
         self.slider.setMinimumWidth(npx(200))
-        self.slider.setRange(int(math.log10(1) * 1000), int(math.log10(100000) * 1000))
+        self.slider.setRange(0, int(math.log10(100000) * 1000))
         self.slider.setSingleStep(1)
         self.slider.setPageStep(100)
         self.slider.setTickInterval(1000)
