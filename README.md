@@ -374,6 +374,7 @@ Version History
   * Corrected the horizontal tick marks on the Lux Metering Rolling-Display.
   * Added 3,6,9,15,18,21 hour enlarged tick marks to the Lux Metering Rolling-Display.
   * Internal code simplifications and cleanups.
+  * Replace unfashionable QProgressBar with custom circular busy-spinner.
 
 * 2.4.3
   * Fix a rare TypeError when light metering.

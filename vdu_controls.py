@@ -892,7 +892,8 @@ for qt_version in (5, 6) if CONFIG_FILE_PREFER_QT5.exists() else (6, 5):
         if qt_version == 6:
             from PyQt6 import QtCore, QtNetwork
             from PyQt6.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QPoint, QObject, QEvent, \
-                QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir, QRegularExpression, QPointF
+                QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir, \
+                QRegularExpression, QPointF, QRect
             from PyQt6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusArgument, QDBusVariant
             from PyQt6.QtGui import QAction, QShortcut, QPixmap, QIcon, QCursor, QImage, QPainter, QRegularExpressionValidator, \
                 QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon, \
@@ -900,7 +901,7 @@ for qt_version in (5, 6) if CONFIG_FILE_PREFER_QT5.exists() else (6, 5):
             from PyQt6.QtSvg import QSvgRenderer
             from PyQt6.QtSvgWidgets import QSvgWidget
             from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
-                QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
+                QSplashScreen, QPushButton, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
                 QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QMainWindow, QToolBar, QToolButton, QFileDialog, \
                 QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, \
                 QSpacerItem, QListWidget, QListWidgetItem
@@ -909,14 +910,15 @@ for qt_version in (5, 6) if CONFIG_FILE_PREFER_QT5.exists() else (6, 5):
         elif qt_version == 5:  # Covers all other values.
             from PyQt5 import QtCore, QtNetwork
             from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QPoint, QObject, QEvent, \
-                QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir, QRegularExpression, QPointF
+                QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir, \
+                QRegularExpression, QPointF, QRect
             from PyQt5.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusArgument, QDBusVariant
             from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QRegularExpressionValidator, \
                 QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon, \
                 QDoubleValidator
             from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
             from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
-                QSplashScreen, QPushButton, QProgressBar, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
+                QSplashScreen, QPushButton, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
                 QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
                 QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, QShortcut, \
                 QSpacerItem, QListWidget, QListWidgetItem
@@ -4304,18 +4306,53 @@ class ContextMenu(QMenu):
 
 
 class ToolButton(QToolButton):
-
-    def __init__(self, svg_source: bytes, tip: str | None = None, parent: QWidget | None = None) -> None:
+    def __init__(self, svg_source: bytes, tip: str | None = None, parent: QWidget | None = None):
         super().__init__(parent)
         if tip is not None:
             self.setToolTip(tip)
         self.svg_source = svg_source
+        self._original_icon = None
+        self._busy_timer = QTimer(self)
+        self._busy_timer.timeout.connect(self._update_busy_icon)
+        self._busy_angle = 0
+        self._busy_now = False
         self.refresh_icon()
 
-    def refresh_icon(self, svg_source: bytes | None = None) -> None:  # may refresh the theme (coloring light/dark) of the icon
-        if svg_source is not None:  # Either a new icon or if None just a light/dark theme refresh
+    def refresh_icon(self, svg_source: bytes | None = None):
+        if svg_source is not None:
             self.svg_source = svg_source
-        self.setIcon(create_icon_from_svg_bytes(self.svg_source))  # this may alter the SVG for light/dark theme
+        self._original_icon = create_icon_from_svg_bytes(self.svg_source)   # Store the original icon so we can restore it later
+        if not self._busy_now:
+            self.setIcon(self._original_icon)
+
+    def setBusy(self, busy: bool):    # Start or stop the busy spinner animation.
+        if busy == self._busy_now:
+            return
+        self._busy_now = busy
+        if busy:   # Start spinning
+            self._busy_angle = 0
+            self._busy_timer.start(30)      # ~33 fps
+        else:   # Stop spinning and restore original icon
+            self._busy_timer.stop()
+            self.setIcon(self._original_icon)
+
+    def _update_busy_icon(self):
+        size = self.iconSize()    # Use the button's icon size (or a default size if none)
+        if size.width() <= 0 or size.height() <= 0:
+            size = self.size()              # fallback to button size
+        pixmap = QPixmap(size)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        if QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING:
+            painter.setRenderHint(QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING)
+        pen_width = max(npx(2), size.width() // 10)   # Determine a good pen width relative to size
+        painter.setPen(QPen(self.palette().buttonText().color(), pen_width, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+        rect = QRect(0, 0, size.width(), size.height()).adjusted(margin := pen_width // npx(2) + npx(1), margin, -margin, -margin)
+        painter.drawArc(rect, self._busy_angle * 16, 270 * 16)     # Draw the rotating arc (270 degrees)
+        painter.end()
+        self.setIcon(QIcon(pixmap))
+        self._busy_angle = (self._busy_angle + 8) % 360   # Advance the angle for the next frame
 
 
 class VduPanelToolBar(QToolBar):
@@ -4328,7 +4365,6 @@ class VduPanelToolBar(QToolBar):
         for button in self.tool_buttons:
             self.addWidget(button)
         self.setIconSize(QSize(native_font_height(), native_font_height()))
-        self.progress_bar: QProgressBar | None = None
         self.status_area = QStatusBar()
         self.addWidget(self.status_area)
         self.menu_button = ToolButton(MENU_ICON_SOURCE, tr("Context and Preset Menu"), self)
@@ -4351,16 +4387,9 @@ class VduPanelToolBar(QToolBar):
 
     def indicate_busy(self, is_busy: bool = True) -> None:
         if is_busy:
-            if self.progress_bar is None:
-                self.status_area.clearMessage()
-                self.progress_bar = QProgressBar(self)
-                self.progress_bar.setTextVisible(False)  # Disable text percentage label on the spinner progress-bar
-                self.progress_bar.setRange(0, 0)  # 0,0 causes the progress bar to pulsate left/right - used as a busy spinner.
-                self.status_area.addWidget(self.progress_bar, 1)
-                self.progress_bar.show()  # According to the Qt docs, this is necessary because removing it just hides it.
-        elif self.progress_bar is not None:
-            self.status_area.removeWidget(self.progress_bar)
-            self.progress_bar = None
+            self.tool_buttons[0].setBusy(True)
+        else:
+            self.tool_buttons[0].setBusy(False)
         QApplication.sendPostedEvents(self, 0)  # Flush any change events before resetting the flag
         QApplication.processEvents()  # Force the flushed events to be processed now
 
