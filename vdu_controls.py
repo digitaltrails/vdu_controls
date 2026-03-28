@@ -9442,7 +9442,8 @@ class VduAppWindow(QMainWindow):
             log_info("PaletteChange event: New style sheet in use, update icons")
             self.initialise_app_icon()
             self.update_status_indicators(palette_change=True)
-            self.main_panel.main_toolbar.refresh_buttons()
+            if self.main_panel:
+                self.main_panel.main_toolbar.refresh_buttons()
         return super().event(event)
 
     def refresh_preset_menu(self, palette_change: bool = False, reorder: bool = False):
