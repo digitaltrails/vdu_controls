@@ -362,14 +362,13 @@ Michael Hamilton
 Version History
 ---------------
 * 2.5.0
-  * Altered UI apperance post-Plasma6 - partly based on [a recent fork](https://github.com/ViktorSharga/vdu_controls_vibecodedUI)
-    by @ViktorSharga.
+  * Altered UI appearance post-Plasma-6 - partly based on [a recent fork](https://github.com/ViktorSharga/vdu_controls_vibecodedUI) by @ViktorSharga.
   * Added option tray-follows-theme to flip dark/light on desktop dark/light theme change.
     Not all trays flip dark/light on theme changes, hence an electable option is required.
     Defaults to enabled.
   * The toolbar is now relocatable and undockable.  It features a double-vertical-line 
     grab-handle for drag and drop.  The toolbar position persists across restarts.
-  * The toolbar position now defaults to "top" to follow Plasma6 conventions. Drag
+  * The toolbar position now defaults to "top" to follow Plasma-6 conventions. Drag
     it to the bottom to restore the old position.
   * Corrected the horizontal tick marks on the Lux Metering Rolling-Display.
   * Added 3,6,9,15,18,21 hour enlarged tick marks to the Lux Metering Rolling-Display.
