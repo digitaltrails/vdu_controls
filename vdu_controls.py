@@ -1286,11 +1286,11 @@ AMBIENT_PANEL_ICON_SOURCE = b"""
     <g class="ColorScheme-Text" stroke="currentColor" stroke-linecap="round" stroke-width="2">
         <path fill="none" d="M9 20 L1 20 1 5 20 5 20 7" />
         <circle cx="17" cy="16" r="5" stroke="currentColor" fill="none" />
-        <path d="M11.5 22 L11.5 22" stroke="currentColor" fill="none" />
-        <path d="M9 16 L9 16" stroke="currentColor" fill="none" />
-        <path d="M11 10.5 L11 10.5" stroke="currentColor" fill="none" />
-        <path d="M16 8 L16 8" stroke="currentColor" fill="none" />
-        <path d="M22 9.5 L22 9.5" stroke="currentColor" fill="none" />
+        <rect x="11" y="21.5" width="1" height="1" rx="5" ry="5" stroke-width="1" fill="currentColor" />
+        <rect x="8.5" y="15.5" width="1" height="1" rx="5" ry="5" stroke-width="1" fill="currentColor" />
+        <rect x="10.5" y="10" width="1" height="1" rx="5" ry="5" stroke-width="1" fill="currentColor" />
+        <rect x="15.5" y="7.5" width="1" height="1" rx="5" ry="5" stroke-width="1" fill="currentColor" />
+        <rect x="21.5" y="9" width="1" height="1" rx="5" ry="5" stroke-width="1" fill="currentColor" />
     </g>
 </svg>
 """
@@ -7001,7 +7001,7 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
     def __init__(self) -> None:
         super().__init__(requires_worker=False, manual=True, semi_auto=True)
         self.current_value: float = LuxMeterSemiAutoDevice.get_stored_value()
-        LuxMeterSemiAutoDevice.daylight_factor = None    # Force initilization from file
+        LuxMeterSemiAutoDevice.daylight_factor = None    # Force initialization from file
         _ = LuxMeterSemiAutoDevice.get_daylight_factor()
 
     def get_value(self) -> float | None:
