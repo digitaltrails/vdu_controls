@@ -376,6 +376,8 @@ Version History
   * Corrected the horizontal tick marks on the Lux Metering Rolling-Display.
   * Added 3,6,9,15,18,21 hour enlarged tick marks to the Lux Metering Rolling-Display.
   * Replace QProgressBar with a more "modern" circular busy-spinner.
+  * The Control-Panel option is now included in the context-menu for all desktops
+    (it's only required by Gnome tray extensions, but it's easier to include it for all).
   * Internal code simplifications and cleanups.
   
 * 2.4.3
