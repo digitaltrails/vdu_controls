@@ -4356,11 +4356,11 @@ class ToolButton(QToolButton):
         self._busy_angle = (self._busy_angle + 8) % 360   # Advance the angle for the next frame
 
 
-class VduPanelToolBar(QToolBar):
+class VduMainToolBar(QToolBar):
 
     def __init__(self, tool_buttons: List[ToolButton], app_context_menu: ContextMenu, parent: VduControlsMainPanel) -> None:
         super().__init__(parent=parent)
-        self.setObjectName('VduPanelToolBar')
+        self.setObjectName('VduPanelToolBar')  # Internal name for persistance - do not change or persistance will be lost.
         self.preset_edit_target: Preset | None = None
         self.tool_buttons = tool_buttons
         for button in self.tool_buttons:
@@ -4416,7 +4416,7 @@ class VduControlsMainPanel(QWidget):
 
     def __init__(self) -> None:
         super().__init__()
-        self.main_toolbar: VduPanelToolBar | None = None
+        self.main_toolbar: VduMainToolBar | None = None
         self.refresh_data_task = None
         self.setObjectName("vdu_controls_main_panel")
         self.vdu_control_panels: Dict[str, VduControlPanel] = {}
@@ -4485,7 +4485,7 @@ class VduControlsMainPanel(QWidget):
             toolbar_area = main_controller.main_window.toolBarArea(old_toolbar)
             main_controller.main_window.removeToolBar(old_toolbar)
         print(f"{toolbar_area}")
-        self.main_toolbar = VduPanelToolBar(tool_buttons=tool_buttons, app_context_menu=app_context_menu, parent=self)
+        self.main_toolbar = VduMainToolBar(tool_buttons=tool_buttons, app_context_menu=app_context_menu, parent=self)
         self.main_toolbar.setAllowedAreas(Qt.ToolBarArea.TopToolBarArea | Qt.ToolBarArea.BottomToolBarArea)
         self.main_toolbar.setFloatable(False)
         main_controller.main_window.addToolBar(toolbar_area, self.main_toolbar)
