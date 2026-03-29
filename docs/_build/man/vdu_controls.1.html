@@ -140,6 +140,9 @@ via the hamburger-menu, and also via the right-mouse button in either
 the main-window or the system-tray icon. The main-menu has
 <code>ALT-key</code> shortcuts for all menu items (subject to sufficient
 letters being available to distinguish all user defined presets).</p>
+<p>The main-toolbar can be dragged and docked at either the bottom or
+the top of the main-window. The toolbar’s position persists across
+restarts.</p>
 <p>For further information, including screenshots, see
 https://github.com/digitaltrails/vdu_controls .</p>
 <p>The long-term effects of repeatably rewriting a VDUs setting are not
@@ -646,6 +649,8 @@ presets.</p>
 <p>There’s plenty of useful info for getting the best out of
 <code>ddcutil</code> at https://www.ddcutil.com/.</p>
 <h1 id="limitations">Limitations</h1>
+<h2 id="possible-impact-on-vdu-lifespan">Possible impact on VDU
+lifespan</h2>
 <p>Repeatably altering VDU settings might affect VDU lifespan,
 exhausting the NVRAM write cycles, stressing the VDU power-supply, or
 increasing panel burn-in.</p>
@@ -684,6 +689,36 @@ includes the number of VCP (NVRAM) writes.</li>
 dynamically.</li>
 </ul></li>
 </ul>
+<h2 id="cross-platform-differences">Cross-platform differences</h2>
+<p>The UI attempts to step around minor differences between KDE, GNOME,
+and the rest, the UI on each may not be exactly the same.</p>
+<p>Depending on which desktop or system-tray-extension you are using, a
+left-mouse-click on the app-icon in the system-tray may restore the
+application’s main-widow or it may bring up the the application’s
+context-menu. To support both kinds of desktop, the context-menu
+includes a a <em>Control Panel</em> menu option that toggles visibility
+of the main window.</p>
+<p>Wayland doesn’t allow an application to precisely position its
+windows. When the <code>smart-window</code> option is enabled and the
+desktop platform is Wayland, the application switches its platform to
+XWayland (X11 xcb).</p>
+<p>The scaling and appearance of Qt6 differs from Qt5, its more chunky
+and rounded. If you have Qt5 installed and prefer it, you can uncheck
+prefer-qt6 in settings.</p>
+<h2 id="desktop-theming">Desktop Theming</h2>
+<p>Achieving desktop neutrality comes at the price of the application
+not being fully aware or compliant with the theming conventions of any
+particular desktop.</p>
+<p>For some desktops, Qt can detect in-session theme changes, such as
+the change from a day-theme to a night-theme, and the application can
+respond appropriately. For desktops where theme changes aren’t detected,
+the application can only conform to the theme detected at startup.</p>
+<p>In some cases, the system-tray or dock theming may contrast with the
+theming applied to windows. There isn’t a straight forward Qt mechanism
+to discover whether a tray or dock is differently themed. As a result
+the application includes several manual settings that can alter the
+tray/dock icon theming between colored, monochrome-dark and
+monochrome-light.</p>
 <h2 id="laptops">Laptops</h2>
 <p>A laptop’s builtin-panel normally doesn’t implement DDC and cannot be
 controlled by <code>ddcutil</code> or <code>ddcutil-service</code>.
@@ -694,16 +729,6 @@ provide <code>vdu_controls</code> with a ddcutil-like script for getting
 and setting the panel brightness; then <code>vdu_controls</code> will
 treat the laptop panel just like any other VDU. A template script is
 provided in the <code>sample-scripts</code>.</p>
-<h2 id="cross-platform-differences">Cross-platform differences</h2>
-<p>Wayland doesn’t allow an application to precisely position its
-windows. When the <code>smart-window</code> option is enabled and the
-desktop platform is Wayland, the application switches its platform to
-XWayland (X11 xcb).</p>
-<p>The UI attempts to step around minor differences between KDE, GNOME,
-and the rest, the UI on each may not be exactly the same.</p>
-<p>The scaling and appearance of Qt6 differs from Qt5, its more chunky
-and rounded. If you have Qt5 installed and prefer it, you can uncheck
-prefer-qt6 in settings.</p>
 <h2 id="other-concerns">Other concerns</h2>
 <p>The power-supplies in some older VDUs may buzz/squeel audibly when
 the brightness is turned way down. This may not be a major issue

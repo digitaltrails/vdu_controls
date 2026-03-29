@@ -28,7 +28,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Mar 26, 2026" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Mar 29, 2026" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 2.5.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -225,6 +225,9 @@ From any UI window, \fIF1\fP accesses help, and \fIF10\fP accesses the main\-men
 also available via the hamburger\-menu, and also via the right\-mouse button in either the
 main\-window or the system\-tray icon.  The main\-menu has \fIALT\-key\fP shortcuts for all menu items
 (subject to sufficient letters being available to distinguish all user defined presets).
+.sp
+The main\-toolbar can be dragged and docked at either the bottom or the top of the main\-window.
+The toolbar\(aqs position persists across restarts.
 .sp
 For further information, including screenshots, see \%<https://\:github\:.com/\:digitaltrails/\:vdu_controls> .
 .sp
@@ -805,6 +808,7 @@ reduce the time taken to restore presets.
 .sp
 There\(aqs plenty of useful info for getting the best out of \fBddcutil\fP at \%<https://\:www\:.ddcutil\:.com/>\&.
 .SH LIMITATIONS
+.SS Possible impact on VDU lifespan
 .sp
 Repeatably altering VDU settings might affect VDU lifespan, exhausting the NVRAM write
 cycles, stressing the VDU power\-supply, or increasing panel burn\-in.
@@ -859,6 +863,42 @@ the number of VCP (NVRAM) writes.
 The bottom of the About\-dialog shows the same numbers. They update dynamically.
 .UNINDENT
 .UNINDENT
+.SS Cross\-platform differences
+.sp
+The UI attempts to step around minor differences between KDE, GNOME, and the rest,
+the UI on each may not be exactly the same.
+.sp
+Depending on which desktop or system\-tray\-extension you are using, a
+left\-mouse\-click on the app\-icon in the system\-tray may restore
+the application\(aqs main\-widow or it may bring up the the application\(aqs
+context\-menu.  To support both kinds of desktop, the context\-menu includes a
+a _Control 
+.nf
+Panel_
+.fi
+  menu option that toggles visibility of the main window.
+.sp
+Wayland doesn\(aqt allow an application to precisely position its windows.  When the
+\fBsmart\-window\fP option is enabled and the desktop platform is Wayland, the
+application switches its platform to XWayland (X11 xcb).
+.sp
+The scaling and appearance of Qt6 differs from Qt5, its more chunky and rounded.  If you
+have Qt5 installed and prefer it, you can uncheck prefer\-qt6 in settings.
+.SS Desktop Theming
+.sp
+Achieving desktop neutrality comes at the price of the application not being
+fully aware or compliant with the theming conventions of any particular desktop.
+.sp
+For some desktops, Qt can detect in\-session theme changes, such as the change from
+a day\-theme to a night\-theme, and the application can respond appropriately.  For
+desktops where theme changes aren\(aqt detected, the application can only conform
+to the theme detected at startup.
+.sp
+In some cases, the system\-tray or dock theming may contrast with the theming
+applied to windows.  There isn\(aqt a straight forward Qt mechanism to discover
+whether a tray or dock is differently themed. As a result the application includes
+several manual settings that can alter the tray/dock icon theming between
+colored, monochrome\-dark and monochrome\-light.
 .SS Laptops
 .sp
 A laptop\(aqs builtin\-panel normally doesn\(aqt implement DDC and cannot be controlled
@@ -868,17 +908,6 @@ where such adjustments can be scripted, you can use the \fB\-\-ddcutil\-emulator
 option and provide \fBvdu_controls\fP with a ddcutil\-like script for getting and
 setting the panel brightness; then \fBvdu_controls\fP will treat the laptop panel
 just like any other VDU.  A template script is provided in the \fBsample\-scripts\fP\&.
-.SS Cross\-platform differences
-.sp
-Wayland doesn\(aqt allow an application to precisely position its windows.  When the
-\fBsmart\-window\fP option is enabled and the desktop platform is Wayland, the
-application switches its platform to XWayland (X11 xcb).
-.sp
-The UI attempts to step around minor differences between KDE, GNOME, and the rest,
-the UI on each may not be exactly the same.
-.sp
-The scaling and appearance of Qt6 differs from Qt5, its more chunky and rounded.  If you
-have Qt5 installed and prefer it, you can uncheck prefer\-qt6 in settings.
 .SS Other concerns
 .sp
 The power\-supplies in some older VDUs may buzz/squeel audibly when the brightness is

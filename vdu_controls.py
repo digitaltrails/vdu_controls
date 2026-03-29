@@ -639,6 +639,9 @@ There's plenty of useful info for getting the best out of ``ddcutil`` at https:/
 Limitations
 ===========
 
+Possible impact on VDU lifespan
+-------------------------------
+
 Repeatably altering VDU settings might affect VDU lifespan, exhausting the NVRAM write
 cycles, stressing the VDU power-supply, or increasing panel burn-in.
 
@@ -667,6 +670,42 @@ to reduce the overall frequency of adjustments to acceptable levels.
     the number of VCP (NVRAM) writes.
   + The bottom of the About-dialog shows the same numbers. They update dynamically.
 
+Cross-platform differences
+--------------------------
+
+The UI attempts to step around minor differences between KDE, GNOME, and the rest,
+the UI on each may not be exactly the same.
+
+Depending on which desktop or system-tray-extension you are using, a
+left-mouse-click on the app-icon in the system-tray may restore
+the application's main-widow or it may bring up the the application's
+context-menu.  To support both kinds of desktop, the context-menu includes a
+a _Control Panel_  menu option that toggles visibility of the main window.
+
+Wayland doesn't allow an application to precisely position its windows.  When the
+``smart-window`` option is enabled and the desktop platform is Wayland, the
+application switches its platform to XWayland (X11 xcb).
+
+The scaling and appearance of Qt6 differs from Qt5, its more chunky and rounded.  If you
+have Qt5 installed and prefer it, you can uncheck prefer-qt6 in settings.
+
+Desktop Theming
+---------------
+
+Achieving desktop neutrality comes at the price of the application not being
+fully aware or compliant with the theming conventions of any particular desktop.
+
+For some desktops, Qt can detect in-session theme changes, such as the change from
+a day-theme to a night-theme, and the application can respond appropriately.  For
+desktops where theme changes aren't detected, the application can only conform
+to the theme detected at startup.
+
+In some cases, the system-tray or dock theming may contrast with the theming
+applied to windows.  There isn't a straight forward Qt mechanism to discover
+whether a tray or dock is differently themed. As a result the application includes
+several manual settings that can alter the tray/dock icon theming between
+colored, monochrome-dark and monochrome-light.
+
 Laptops
 -------
 
@@ -677,20 +716,6 @@ where such adjustments can be scripted, you can use the ``--ddcutil-emulator``
 option and provide ``vdu_controls`` with a ddcutil-like script for getting and
 setting the panel brightness; then ``vdu_controls`` will treat the laptop panel
 just like any other VDU.  A template script is provided in the ``sample-scripts``.
-
-Cross-platform differences
---------------------------
-
-Wayland doesn't allow an application to precisely position its windows.  When the
-``smart-window`` option is enabled and the desktop platform is Wayland, the
-application switches its platform to XWayland (X11 xcb).
-
-The UI attempts to step around minor differences between KDE, GNOME, and the rest,
-the UI on each may not be exactly the same.
-
-The scaling and appearance of Qt6 differs from Qt5, its more chunky and rounded.  If you
-have Qt5 installed and prefer it, you can uncheck prefer-qt6 in settings.
-
 
 Other concerns
 --------------
@@ -994,14 +1019,6 @@ gui_thread: QThread | None = None
 
 def intV(type_id: Enum|int) -> int:
     return type_id.value if isinstance(type_id, Enum) else type_id  # awfulness of enums in pyqt6
-
-
-def is_gnome_desktop() -> bool:
-    return os.environ.get('XDG_CURRENT_DESKTOP', default='unknown').lower() == 'gnome'
-
-
-def is_cosmic_desktop() -> bool:
-    return os.environ.get('XDG_CURRENT_DESKTOP', default='unknown').lower() == 'cosmic'
 
 
 def is_running_in_gui_thread() -> bool:
@@ -3114,7 +3131,7 @@ class VduController(QObject):
 class SubWinDialog(QDialog):  # Fix for gnome: QDialog must be a subwindow, otherwise it will always stay on top of other windows.
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__(parent, Qt.WindowType.SubWindow if is_gnome_desktop() else Qt.WindowType.Window)
+        super().__init__(parent, Qt.WindowType.SubWindow)
 
 
 
@@ -9070,10 +9087,6 @@ class VduAppWindow(QMainWindow):
 
         self._run_in_gui_thread_qtsignal.connect(_run_in_gui)
 
-        os_desktop = os.environ.get('XDG_CURRENT_DESKTOP', default='unknown').lower()
-        use_gnome_like_tray = main_config.is_set(ConfOpt.SYSTEM_TRAY_ENABLED) and (is_gnome_desktop() or is_cosmic_desktop())
-        log_info(f"{os_desktop=} {use_gnome_like_tray=}")  # Gnome tray doesn't provide a way to bring up the main app.
-
         global log_debug_enabled
         if log_debug_enabled:
             for screen in app.screens():
@@ -9081,7 +9094,7 @@ class VduAppWindow(QMainWindow):
 
         self.app_context_menu = ContextMenu(
             app_controller=main_controller,
-            main_window_action=partial(self.show_main_window, True) if use_gnome_like_tray else None,
+            main_window_action=partial(self.show_main_window, True),  # Gnome tray doesn't provide a way to bring up the main app.
             about_action=partial(AboutDialog.invoke, self.main_controller),
             help_action=HelpDialog.invoke,
             gray_scale_action=GreyScaleDialog,
