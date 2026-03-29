@@ -2549,10 +2549,8 @@ class ConfOpt(Enum):  # An Enum with tuples for values is used for convenience f
                                    tip=QT_TR_NOOP('monochrome dark themed system tray'))
     MONO_LIGHT_TRAY_ENABLED = _def(cname=QT_TR_NOOP('mono-light-tray-enabled'), default="no", restart=False,
                                    tip=QT_TR_NOOP('monochrome light themed system tray'))
-    TRAY_FOLLOWS_THEME_ENABLED = _def(cname=QT_TR_NOOP('tray-follows-theme-enabled'), default="yes", restart=False,
-                                      tip=QT_TR_NOOP('tray dark/light theming follows desktop-theme changes'))
-    OLD_TOOLBAR_ENABLED = _def(cname=QT_TR_NOOP('old-toolbar-enabled'), default="no", restart=False,
-                                 tip=QT_TR_NOOP('old-stle with the toolbar fixed at the bottom'))
+    TRAY_FOLLOWS_THEME = _def(cname=QT_TR_NOOP('tray-follows-theme'), default="yes", restart=False,
+                              tip=QT_TR_NOOP('tray dark/light theming follows desktop-theme changes'))
     PROTECT_NVRAM_ENABLED = _def(cname=QT_TR_NOOP('protect-nvram'), default="yes", restart=True,
                                  tip=QT_TR_NOOP('alter options and defaults to minimize VDU NVRAM writes'))
     ORDER_BY_NAME = _def(cname=QT_TR_NOOP('order-by-name'), default="no",
@@ -4478,17 +4476,17 @@ class VduControlsMainPanel(QWidget):
             no_vdu_layout.addWidget(no_vdu_text)
             no_vdu_layout.addSpacing(32)
             controllers_layout.addWidget(no_vdu_widget)
+
+        toolbar_area = Qt.ToolBarArea.TopToolBarArea
+        if old_toolbar := self.main_toolbar:
+            toolbar_area = main_controller.main_window.toolBarArea(old_toolbar)
+            main_controller.main_window.removeToolBar(old_toolbar)
+        print(f"{toolbar_area}")
         self.main_toolbar = VduPanelToolBar(tool_buttons=tool_buttons, app_context_menu=app_context_menu, parent=self)
-        if not main_controller.main_config.is_set(ConfOpt.OLD_TOOLBAR_ENABLED):
-            toolbar_area = Qt.ToolBarArea.TopToolBarArea
-            toolbars = main_controller.main_window.findChildren(QToolBar)
-            for toolbar in toolbars:
-                toolbar_area = main_controller.main_window.toolBarArea(toolbar)
-                main_controller.main_window.removeToolBar(toolbar)
-                toolbar.deleteLater()
-            main_controller.main_window.addToolBar(toolbar_area, self.main_toolbar)
-        else:
-            controllers_layout.addWidget(self.main_toolbar, 0, Qt.AlignmentFlag.AlignBottom)
+        self.main_toolbar.setAllowedAreas(Qt.ToolBarArea.TopToolBarArea | Qt.ToolBarArea.BottomToolBarArea)
+        self.main_toolbar.setFloatable(False)
+        main_controller.main_window.addToolBar(toolbar_area, self.main_toolbar)
+
         def _open_context_menu(position: QPoint) -> None:
             assert app_context_menu is not None
             app_context_menu.exec(self.mapToGlobal(position))
@@ -9310,7 +9308,7 @@ class VduAppWindow(QMainWindow):
         PresetsDialog.show_status_message(message=message, timeout=timeout)
         self.status_message(message, timeout=timeout, destination=MsgDestination.DEFAULT)
 
-    def get_tray_theme_type(self):
+    def get_tray_theme_type(self):   # Ugly because Qt has no way to access the tray theme
         theme = ThemeType.UNTHEMED  # Don't alter colors for overlay onto app icon in tray if unthemed
         if self.main_config.is_set(ConfOpt.MONOCHROME_TRAY_ENABLED):
             theme = ThemeType.MONOCHROME_DARK
@@ -9318,8 +9316,8 @@ class VduAppWindow(QMainWindow):
             theme = ThemeType.MONOCHROME_LIGHT
         if theme != ThemeType.UNTHEMED:
             theme_has_flipped = self.initial_theme_is_dark != is_dark_theme()
-            if theme_has_flipped and self.main_config.is_set(ConfOpt.TRAY_FOLLOWS_THEME_ENABLED):
-                log_info(f"Option {ConfOpt.TRAY_FOLLOWS_THEME_ENABLED.conf_id} is set: Desktop theme flipped - flipping tray theme")
+            if theme_has_flipped and self.main_config.is_set(ConfOpt.TRAY_FOLLOWS_THEME):
+                log_info(f"Option {ConfOpt.TRAY_FOLLOWS_THEME.conf_id} is set: Desktop theme flipped - flipping tray theme")
                 theme = ThemeType.MONOCHROME_LIGHT if theme == ThemeType.MONOCHROME_DARK else ThemeType.MONOCHROME_DARK
         return theme
 
