@@ -4360,7 +4360,7 @@ class VduMainToolBar(QToolBar):
 
     def __init__(self, tool_buttons: List[ToolButton], app_context_menu: ContextMenu, parent: VduControlsMainPanel) -> None:
         super().__init__(parent=parent)
-        self.setObjectName('VduPanelToolBar')  # Internal name for persistance - do not change or persistance will be lost.
+        self.setObjectName('VduPanelToolBar')  # Internal name for persistence - do not change or persistence will be lost.
         self.preset_edit_target: Preset | None = None
         self.tool_buttons = tool_buttons
         for button in self.tool_buttons:
