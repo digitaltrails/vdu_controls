@@ -146,6 +146,9 @@ also available via the hamburger-menu, and also via the right-mouse button in ei
 main-window or the system-tray icon.  The main-menu has `ALT-key` shortcuts for all menu items
 (subject to sufficient letters being available to distinguish all user defined presets).
 
+The main-toolbar can be dragged and docked at either the bottom or the top of the main-window.
+The toolbar's position persists across restarts.
+
 For further information, including screenshots, see https://github.com/digitaltrails/vdu_controls .
 
 The long-term effects of repeatably rewriting a VDUs setting are not well understood, but some
