@@ -4378,6 +4378,8 @@ class VduMainToolBar(QToolBar):
     def __init__(self, tool_buttons: List[ToolButton], app_context_menu: ContextMenu, parent: VduControlsMainPanel) -> None:
         super().__init__(parent=parent)
         self.setObjectName('VduPanelToolBar')  # Internal name for persistence - do not change or persistence will be lost.
+        self.setAllowedAreas(Qt.ToolBarArea.TopToolBarArea | Qt.ToolBarArea.BottomToolBarArea)
+        self.setFloatable(False)
         self.preset_edit_target: Preset | None = None
         self.tool_buttons = tool_buttons
         for button in self.tool_buttons:
@@ -4497,15 +4499,8 @@ class VduControlsMainPanel(QWidget):
             no_vdu_layout.addSpacing(32)
             controllers_layout.addWidget(no_vdu_widget)
 
-        toolbar_area = Qt.ToolBarArea.TopToolBarArea
-        if old_toolbar := self.main_toolbar:
-            toolbar_area = main_controller.main_window.toolBarArea(old_toolbar)
-            main_controller.main_window.removeToolBar(old_toolbar)
-        print(f"{toolbar_area}")
         self.main_toolbar = VduMainToolBar(tool_buttons=tool_buttons, app_context_menu=app_context_menu, parent=self)
-        self.main_toolbar.setAllowedAreas(Qt.ToolBarArea.TopToolBarArea | Qt.ToolBarArea.BottomToolBarArea)
-        self.main_toolbar.setFloatable(False)
-        main_controller.main_window.addToolBar(toolbar_area, self.main_toolbar)
+        main_controller.replace_toolbar(self.main_toolbar)
 
         def _open_context_menu(position: QPoint) -> None:
             assert app_context_menu is not None
@@ -9057,6 +9052,14 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         self.main_window.app_save_window_state()
         QCoreApplication.exit(EXIT_CODE_FOR_RESTART)
 
+    def replace_toolbar(self, main_toolbar):
+        target_window = self.main_window
+        toolbar_area = Qt.ToolBarArea.TopToolBarArea
+        for old_toolbar in target_window.findChildren(QToolBar):  # Make sure there is only one toolbar
+            toolbar_area = target_window.toolBarArea(old_toolbar)
+            target_window.removeToolBar(old_toolbar)
+        target_window.addToolBar(toolbar_area, main_toolbar)
+
 
 class VduAppWindow(QMainWindow):
     splash_message_qtsignal = pyqtSignal(str)
@@ -9649,7 +9652,7 @@ def create_elevation_map(local_now: datetime, latitude: float, longitude: float,
                                    | None = None) -> Dict[SolarElevationKey, SolarElevationData]:
     # Create a minute-by-minute map of today's SolarElevations.
     # For a given dict[SolarElevation], record the first minute it occurs.
-    # Calls the callback for every 1 mimute point, not just each integer elevation.
+    # Calls the callback for every 1 minute point, not just each integer elevation.
     elevation_time_map = {}
     local_when = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
     while local_when.day == local_now.day:
