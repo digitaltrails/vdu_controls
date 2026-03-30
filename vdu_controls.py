@@ -1196,6 +1196,22 @@ MONOCHROME_APP_ICON = b"""
      Z m 0.9927843,1.0339651 13.9651597,-0.01742 -0.01954,10.9465899 -14.0000001,0.02464 z" id="rect4211"/>
 </svg>"""
 
+
+FALLBACK_SPLASH_SVG = b"""
+<svg viewBox="0 0 24 24" width="256" height="256" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
+    <linearGradient id="screenGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#66c0f1" /> <!-- Start color (offset 0%) -->
+      <stop offset="100%" stop-color="#3f7eed" />  <!-- End color (offset 100%) -->
+    </linearGradient>
+    <g class="ColorScheme-Text" stroke="currentColor" stroke-linecap="round" stroke-width="1.2" transform="">
+        <rect x="2.5" y="3" width="19.25" height="15" fill="url(#screenGradient)" rx="1" ry="1"/>
+        <path fill="None" d="M 3 17.5 L 21.5 17.5 M 8.5 20.5 L 15.75 20.5"/>
+        <path stroke-width="2" stroke-linecap="square" fill="None" d="M 11 19 L 13 19"/>
+    </g>
+</svg>"""
+
+
 # modified brightness icon from breeze5-icons: LGPL-3.0-only
 BRIGHTNESS_SVG = b"""
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24">
@@ -1466,13 +1482,12 @@ def npx(developers_pixels: int):  # native pixels - real hardware pixels
 
 
 def get_splash_image() -> QPixmap:
-    """Get the splash pixmap from the installed png, failing that, the internal splash png."""
-    pixmap = QPixmap()
+    """Get the splash pixmap from the installed png, failing that, the internal splash svg."""
     if os.path.isfile(DEFAULT_SPLASH_PNG) and os.access(DEFAULT_SPLASH_PNG, os.R_OK):
+        pixmap = QPixmap()
         pixmap.load(DEFAULT_SPLASH_PNG)
-    else:
-        pixmap.loadFromData(base64.decodebytes(FALLBACK_SPLASH_PNG_BASE64), 'PNG')
-    return pixmap
+        return pixmap
+    return create_pixmap_from_svg_bytes(FALLBACK_SPLASH_SVG, 256, 256)
 
 
 def clamp(v: int, min_v: int, max_v: int) -> int:
@@ -6199,14 +6214,14 @@ def exception_handler(e_type, e_value, e_traceback) -> None:
          details=tr('Details: {}').format(''.join(traceback.format_exception(e_type, e_value, e_traceback)))).exec()
 
 
-def create_pixmap_from_svg_bytes(svg_bytes: bytes) -> QPixmap:
+def create_pixmap_from_svg_bytes(svg_bytes: bytes, width: int = 64, height: int = 64) -> QPixmap:
     """There is no QIcon option for loading SVG from a string, only from a SVG file, so roll our own."""
-    return QPixmap.fromImage(create_image_from_svg_bytes(svg_bytes))
+    return QPixmap.fromImage(create_image_from_svg_bytes(svg_bytes, width, height))
 
 
-def create_image_from_svg_bytes(svg_bytes) -> QImage:
+def create_image_from_svg_bytes(svg_bytes, width: int = 64, height: int = 64) -> QImage:
     renderer = QSvgRenderer(svg_bytes)
-    image = QImage(64, 64, QImage.Format.Format_ARGB32)
+    image = QImage(width, height, QImage.Format.Format_ARGB32)
     image.fill(0x0)
     painter = QPainter(image)
     renderer.render(painter)
@@ -9807,65 +9822,6 @@ def main() -> None:
                  info=tr("This is probably because {} is not executable or is not on your PATH.").format(app.arguments()[0]),
                  buttons=MBtn.Close).exec()
     sys.exit(rc)
-
-
-# A fallback in case the hard coded splash screen PNG doesn't exist (which probably means KDE is not installed).
-# Based on video-display.png from oxygen5-icon-theme-5: LGPL-3.0-only.
-# Convert vdu_controls.png -depth 8 -colors 24 smallest.png; exiftool -all= smallest.png; base64 -w 120 smallest.png
-FALLBACK_SPLASH_PNG_BASE64 = b"""
-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
-7ktNAAAAAElFTkSuQmCC
-"""
 
 if __name__ == '__main__':
     main()
