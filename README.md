@@ -365,7 +365,7 @@ Michael Hamilton
 Version History
 ---------------
 * 2.5.0
-  * Altered UI appearance post-Plasma-6 - partly based on [a recent fork](https://github.com/ViktorSharga/vdu_controls_vibecodedUI) by @ViktorSharga.
+  * Main-panel refreshed appearance - partly inspired by [a recent fork](https://github.com/ViktorSharga/vdu_controls_vibecodedUI) by @ViktorSharga.
   * Added option tray-follows-theme to flip dark/light on desktop dark/light theme change.
     Not all trays flip dark/light on theme changes, hence an electable option is required.
     Defaults to enabled.
@@ -376,8 +376,8 @@ Version History
   * Corrected the horizontal tick marks on the Lux Metering Rolling-Display.
   * Added 3,6,9,15,18,21 hour enlarged tick marks to the Lux Metering Rolling-Display.
   * Replace QProgressBar with a more "modern" circular busy-spinner.
-  * The Control-Panel option is now included in the context-menu for all desktops
-    (it's only required by Gnome tray extensions, but it's easier to include it for all).
+  * The Control-Panel option is now present in the context-menu on all desktops
+    whether required or not (it's required for xfce and tray-extensions in gnome).
   * Internal code simplifications and cleanups.
   
 * 2.4.3
