@@ -17,7 +17,9 @@ Synopsis:
                      [--hide-on-focus-out|--no-hide-on-focus-out]
                      [--smart-window|--no-smart-window] [-smart-uses-xwayland|-smart-uses-xwayland]
                      [--monochrome-tray|--no-monochrome-tray] [--mono-light-tray|--no-mono-light-tray]
-                     [--tray-follows-theme|--no-tray-follows-theme] [--separate-status-bar|--separate-status-bar]
+                     [--tray-follows-theme|--no-tray-follows-theme]
+                     [--toolbar-at-top|-no-toolbar-at-top]
+                     [--separate-status-bar|--separate-status-bar]
                      [--protect-nvram|--no-protect-nvram]
                      [--lux-options|--no-lux-options]
                      [--schedule|--no-schedule] [--weather|--no-weather]
@@ -66,6 +68,9 @@ Arguments supplied on the command line override config file equivalent settings.
       --tray-follows-theme|--no-tray-follows-theme
                             the tray-theme toggles between light/dark when the desktop-theme changes
                             ``--tray-follows-theme`` is the default.
+      --toolbar-at-top|--no-toolbar-at-top
+                            locate the toolbar at the top or bottom of the main window
+                            ``--no-toolbar-at-top`` is the default
       --separate-status-bar|--no-separate-status-bar
                             separate the status-bar from the toolbar
                             ``--no-separate-status-bar`` is the default
@@ -2593,6 +2598,8 @@ class ConfOpt(Enum):  # An Enum with tuples for values is used for convenience f
                                    tip=QT_TR_NOOP('monochrome light themed system tray'))
     TRAY_FOLLOWS_THEME = _def(cname=QT_TR_NOOP('tray-follows-theme'), default="yes", restart=False,
                               tip=QT_TR_NOOP('tray dark/light theming follows desktop-theme changes'))
+    TOOLBAR_AT_TOP = _def(cname=QT_TR_NOOP('toolbar-at-top'), default="no", restart=False,
+                              tip=QT_TR_NOOP('toolbar resides at top of main window'))
     SEPARATE_STATUS_BAR = _def(cname=QT_TR_NOOP('separate-status-bar'), default="no", restart=True,
                               tip=QT_TR_NOOP('seperate the status-bar from the tool-bar'))
     PROTECT_NVRAM_ENABLED = _def(cname=QT_TR_NOOP('protect-nvram'), default="yes", restart=True,
@@ -4397,29 +4404,13 @@ class ToolButton(QToolButton):
         self._busy_angle = (self._busy_angle + 8) % 360   # Advance the angle for the next frame
 
 
-class ToolBarStealthyHandleStyle(QProxyStyle):
-    # Custom style that draws the handle only when the mouse is over the handle area
-    def drawPrimitive(self, element: QStyle.PrimitiveElement, option: QStyleOption, painter: QPainter, widget=None):
-        if element == QStyle.PrimitiveElement.PE_IndicatorToolBarHandle:    # Only handle the toolbar handle primitive
-            if widget and widget.isMovable():
-                handle_rect = option.rect     # Get the handle rectangle
-                global_pos = QCursor.pos()    # Get mouse position in widget coordinates
-                local_pos = widget.mapFromGlobal(global_pos)
-                if handle_rect.contains(local_pos):   # Draw only if mouse is inside the handle area
-                    super().drawPrimitive(element, option, painter, widget)
-                return
-        # For all other primitives, draw normally
-        super().drawPrimitive(element, option, painter, widget)
-
-
 class VduMainToolBar(QToolBar):
 
     def __init__(self, tool_buttons: List[ToolButton], app_context_menu: ContextMenu, parent: VduControlsMainPanel) -> None:
         super().__init__(parent=parent)
         self.setObjectName('VduPanelToolBar')  # Internal name for persistence - do not change or persistence will be lost.
-        self.setAllowedAreas(Qt.ToolBarArea.TopToolBarArea | Qt.ToolBarArea.BottomToolBarArea)
-        self.setFloatable(False)
         self.preset_edit_target: Preset | None = None
+        self.setMovable(False)
         self.tool_buttons = tool_buttons
         for button in self.tool_buttons:
             self.addWidget(button)
@@ -4438,20 +4429,6 @@ class VduMainToolBar(QToolBar):
 
         self.preset_action.triggered.connect(edit_current_preset)
         self.addWidget(self.menu_button)
-        self.setStyle(ToolBarStealthyHandleStyle())
-        self.setMouseTracking(True)
-
-    def enterEvent(self, event):    # Trigger repaint when mouse enters the toolbar area.
-        super().enterEvent(event)
-        self.update()
-
-    def leaveEvent(self, event):    # Trigger repaint when mouse enters the toolbar area.
-        super().leaveEvent(event)
-        self.update()
-
-    def mouseMoveEvent(self, event: QMouseEvent):    # Trigger repaint when mouse enters the toolbar area.
-        super().mouseMoveEvent(event)
-        self.update()
 
     def refresh_buttons(self):
         for button in self.tool_buttons:
@@ -9111,10 +9088,10 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
     def replace_toolbar(self, main_toolbar):
         target_window = self.main_window
-        toolbar_area = Qt.ToolBarArea.BottomToolBarArea
         for old_toolbar in target_window.findChildren(QToolBar):  # Make sure there is only one toolbar
-            toolbar_area = target_window.toolBarArea(old_toolbar)
             target_window.removeToolBar(old_toolbar)
+        at_top = self.main_config.is_set(ConfOpt.TOOLBAR_AT_TOP)
+        toolbar_area = Qt.ToolBarArea.TopToolBarArea if at_top else Qt.ToolBarArea.BottomToolBarArea
         target_window.addToolBar(toolbar_area, main_toolbar)
 
 

@@ -369,9 +369,7 @@ Version History
   * Added option tray-follows-theme to flip dark/light on desktop dark/light theme change.
     Not all trays flip dark/light on theme changes, hence an electable option is required.
     Defaults to enabled.
-  * The toolbar is now relocatable to the top or bottom of the main-window.
-    It features a stealthy hover-activated grab-handle at left.  The toolbar position 
-    persists across restarts.
+  * The toolbar-at-top option sets top/bottom placement of the toolbar in the main-window.
   * The separate-status-bar option can be set to separate the status-bar from the toolbar.
   * Corrected the horizontal tick marks on the Lux Metering Rolling-Display.
   * Added 3,6,9,15,18,21 hour enlarged tick marks to the Lux Metering Rolling-Display.
