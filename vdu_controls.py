@@ -944,7 +944,7 @@ for qt_version in (5, 6) if CONFIG_FILE_PREFER_QT5.exists() else (6, 5):
                 QSplashScreen, QPushButton, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
                 QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QMainWindow, QToolBar, QToolButton, QFileDialog, \
                 QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, \
-                QSpacerItem, QListWidget, QListWidgetItem, QProxyStyle, QStyleOption
+                QSpacerItem, QListWidget, QListWidgetItem
             QT5_USE_HIGH_DPI_PIXMAPS = None
             QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING = None
         elif qt_version == 5:  # Covers all other values.
@@ -961,7 +961,7 @@ for qt_version in (5, 6) if CONFIG_FILE_PREFER_QT5.exists() else (6, 5):
                 QSplashScreen, QPushButton, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
                 QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
                 QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, QShortcut, \
-                QSpacerItem, QListWidget, QListWidgetItem, QProxyStyle, QStyleOption
+                QSpacerItem, QListWidget, QListWidgetItem
             QT5_USE_HIGH_DPI_PIXMAPS = Qt.ApplicationAttribute.AA_UseHighDpiPixmaps
             QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING = QPainter.RenderHint.HighQualityAntialiasing
         break
