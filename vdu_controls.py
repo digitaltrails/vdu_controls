@@ -9090,6 +9090,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         target_window = self.main_window
         for old_toolbar in target_window.findChildren(QToolBar):  # Make sure there is only one toolbar
             target_window.removeToolBar(old_toolbar)
+            old_toolbar.deleteLater()
         at_top = self.main_config.is_set(ConfOpt.TOOLBAR_AT_TOP)
         toolbar_area = Qt.ToolBarArea.TopToolBarArea if at_top else Qt.ToolBarArea.BottomToolBarArea
         target_window.addToolBar(toolbar_area, main_toolbar)
