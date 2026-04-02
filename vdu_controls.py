@@ -4587,7 +4587,7 @@ class VduControlsMainPanel(QWidget):
 
     def status_message(self, message: str, timeout: int):
         self.message_history.append(f"\n{datetime.now().strftime("%H:%M:%S")}{MESSAGE_SYMBOL} {message}")
-        self.message_history = self.message_history[-10:]
+        self.message_history = self.message_history[-9:]
         if self.main_controller.main_config.is_set(ConfOpt.SEPARATE_STATUS_BAR):
             self.main_controller.main_window.statusBar().showMessage(message, timeout)
             self.main_controller.main_window.statusBar().setToolTip("".join([tr('Message history:')] + self.message_history))
@@ -8800,7 +8800,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                             self.status_message(tr("Error during restoration preset {}").format(preset.name), timeout=5)
                             return
                         log_info(f"Restored initialization-preset '{worker.context.name}'")
-                        message = tr("Restored Preset\n{}").format(worker.context.name)
+                        message = tr("Restored I-Preset {}").format(worker.context.name)
                         self.status_message(message, timeout=5)
                         self.main_window.splash_message_qtsignal.emit(message)
                         time.sleep(1.0)  # Pause to give the message time to display - TODO find non-delaying solution

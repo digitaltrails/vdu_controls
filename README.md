@@ -371,6 +371,7 @@ Version History
     Defaults to enabled.
   * The toolbar-at-top option sets top/bottom placement of the toolbar in the main-window.
   * The separate-status-bar option can be set to separate the status-bar from the toolbar.
+  * The status-bar tooltip shows the last 10 messages.
   * Corrected the horizontal tick marks on the Lux Metering Rolling-Display.
   * Added 3,6,9,15,18,21 hour enlarged tick marks to the Lux Metering Rolling-Display.
   * Replaced QProgressBar with a more modern circular busy-spinner.
