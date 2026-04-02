@@ -28,7 +28,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Mar 29, 2026" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Apr 02, 2026" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 2.5.0
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -48,7 +48,7 @@ A control panel for DisplayPort, DVI, HDMI, or USB\-connected VDUs (\fIVisual Di
 [\-\-hide\-on\-focus\-out|\-\-no\-hide\-on\-focus\-out]
 [\-\-smart\-window|\-\-no\-smart\-window] [\-smart\-uses\-xwayland|\-smart\-uses\-xwayland]
 [\-\-monochrome\-tray|\-\-no\-monochrome\-tray] [\-\-mono\-light\-tray|\-\-no\-mono\-light\-tray]
-[\-\-tray\-follows\-theme|\-\-no\-tray\-follows\-theme]
+[\-\-tray\-follows\-theme|\-\-no\-tray\-follows\-theme] [\-\-separate\-status\-bar|\-\-separate\-status\-bar]
 [\-\-protect\-nvram|\-\-no\-protect\-nvram]
 [\-\-lux\-options|\-\-no\-lux\-options]
 [\-\-schedule|\-\-no\-schedule] [\-\-weather|\-\-no\-weather]
@@ -115,6 +115,14 @@ monochrome dark\-themed system\-tray.
 .B \-\-mono\-light\-tray|\-\-no\-mono\-light\-tray
 monochrome themed system\-tray.
 \fB\-\-no\-mono\-light\-tray\fP is the default.
+.TP
+.B \-\-tray\-follows\-theme|\-\-no\-tray\-follows\-theme
+the tray\-theme toggles between light/dark when the desktop\-theme changes
+\fB\-\-tray\-follows\-theme\fP is the default.
+.TP
+.B \-\-separate\-status\-bar|\-\-no\-separate\-status\-bar
+separate the status\-bar from the toolbar
+\fB\-\-no\-separate\-status\-bar\fP is the default
 .TP
 .B \-\-protect\-nvram|\-\-no\-protect\-nvram
 alter options and defaults to minimize VDU NVRAM writes.
@@ -226,7 +234,8 @@ also available via the hamburger\-menu, and also via the right\-mouse button in 
 main\-window or the system\-tray icon.  The main\-menu has \fIALT\-key\fP shortcuts for all menu items
 (subject to sufficient letters being available to distinguish all user defined presets).
 .sp
-The main\-toolbar can be dragged and docked at either the bottom or the top of the main\-window.
+The main\-toolbar includes a stealthy\-drag\-handle at extreme\-left.  The toolbar
+can be dragged and docked at either the top or bottom top of the main\-window.
 The toolbar\(aqs position persists across restarts.
 .sp
 For further information, including screenshots, see \%<https://\:github\:.com/\:digitaltrails/\:vdu_controls> .

@@ -12,7 +12,7 @@ a DDC control panel for monitors</h1>
                  [--hide-on-focus-out|--no-hide-on-focus-out]
                  [--smart-window|--no-smart-window] [-smart-uses-xwayland|-smart-uses-xwayland]
                  [--monochrome-tray|--no-monochrome-tray] [--mono-light-tray|--no-mono-light-tray]
-                 [--tray-follows-theme|--no-tray-follows-theme]
+                 [--tray-follows-theme|--no-tray-follows-theme] [--separate-status-bar|--separate-status-bar]
                  [--protect-nvram|--no-protect-nvram]
                  [--lux-options|--no-lux-options]
                  [--schedule|--no-schedule] [--weather|--no-weather]
@@ -55,6 +55,12 @@ equivalent settings.</p>
   --mono-light-tray|--no-mono-light-tray
                         monochrome themed system-tray.
                         ``--no-mono-light-tray`` is the default.
+  --tray-follows-theme|--no-tray-follows-theme
+                        the tray-theme toggles between light/dark when the desktop-theme changes
+                        ``--tray-follows-theme`` is the default.
+  --separate-status-bar|--no-separate-status-bar
+                        separate the status-bar from the toolbar
+                        ``--no-separate-status-bar`` is the default
   --protect-nvram|--no-protect-nvram
                         alter options and defaults to minimize VDU NVRAM writes.
   --order-by-name|--no-order-by-name
@@ -140,9 +146,9 @@ via the hamburger-menu, and also via the right-mouse button in either
 the main-window or the system-tray icon. The main-menu has
 <code>ALT-key</code> shortcuts for all menu items (subject to sufficient
 letters being available to distinguish all user defined presets).</p>
-<p>The main-toolbar can be dragged and docked at either the bottom or
-the top of the main-window. The toolbar’s position persists across
-restarts.</p>
+<p>The main-toolbar includes a stealthy-drag-handle at extreme-left. The
+toolbar can be dragged and docked at either the top or bottom top of the
+main-window. The toolbar’s position persists across restarts.</p>
 <p>For further information, including screenshots, see
 https://github.com/digitaltrails/vdu_controls .</p>
 <p>The long-term effects of repeatably rewriting a VDUs setting are not

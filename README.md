@@ -365,19 +365,20 @@ Michael Hamilton
 Version History
 ---------------
 * 2.5.0
-  * Main-panel refreshed appearance - partly inspired by [a recent fork](https://github.com/ViktorSharga/vdu_controls_vibecodedUI) by @ViktorSharga.
+  * Main-panel appearance-refresh. Inspired by [a recent fork](https://github.com/ViktorSharga/vdu_controls_vibecodedUI) by @ViktorSharga.
   * Added option tray-follows-theme to flip dark/light on desktop dark/light theme change.
     Not all trays flip dark/light on theme changes, hence an electable option is required.
     Defaults to enabled.
-  * The toolbar is now relocatable and undockable.  It features a double-vertical-line 
-    grab-handle for drag and drop.  The toolbar position persists across restarts.
-  * The toolbar position now defaults to "top" to follow Plasma-6 conventions. Drag
-    it to the bottom to restore the old position.
+  * The toolbar is now relocatable to the top or bottom of the main-window.
+    It features a stealthy hover-activated grab-handle at left.  The toolbar position 
+    persists across restarts.
+  * The separate-status-bar option can be set to separate the status-bar from the toolbar.
   * Corrected the horizontal tick marks on the Lux Metering Rolling-Display.
   * Added 3,6,9,15,18,21 hour enlarged tick marks to the Lux Metering Rolling-Display.
-  * Replace QProgressBar with a more "modern" circular busy-spinner.
-  * The Control-Panel option is now present in the context-menu on all desktops
-    whether required or not (it's required for xfce and tray-extensions in gnome).
+  * Replaced QProgressBar with a more modern circular busy-spinner.
+  * The Control-Panel context-menu option is now present on all desktops
+    whether its required or not (it's known to be required for xfce, and for the 
+    tray-extensions in gnome).
   * Internal code simplifications and cleanups.
   
 * 2.4.3
