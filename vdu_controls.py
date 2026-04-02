@@ -984,6 +984,8 @@ VDU_CONTROLS_VERSION = '2.5.0'
 VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in VDU_CONTROLS_VERSION.split('.'))
 assert sys.version_info >= (3, 8), f'{APPNAME} utilises python version 3.8 or greater (your python is {sys.version}).'
 
+TOOLTIP_DURATION_MSEC = 750
+
 WESTERN_SKY = 'western-sky'
 EASTERN_SKY = 'eastern-sky'
 
@@ -1012,13 +1014,14 @@ SIGNAL_SYMBOL = '\u26a1'  # HIGH VOLTAGE - lightning bolt
 ERROR_SYMBOL = '\u274e'  # NEGATIVE SQUARED CROSS MARK
 WARNING_SYMBOL = '\u26a0'  # WARNING SIGN
 ALMOST_EQUAL_SYMBOL = '\u2248'  # ALMOST EQUAL TO
-SMOOTHING_SYMBOL = '\u21dd'  # RIGHT POINTING SQUIGGLY ARROW
+SMOOTHING_SYMBOL = '\u219D'  # RIGHTWARDS WAVE ARROW
 STEPPING_SYMBOL = '\u279f'  # DASHED TRIANGLE-HEADED RIGHTWARDS ARROW
 RAISED_HAND_SYMBOL = '\u270b'  # RAISED HAND
 RIGHT_POINTER_WHITE = '\u25B9'  # WHITE RIGHT-POINTING SMALL TRIANGLE
 RIGHT_POINTER_BLACK = '\u25B8'  # BLACK RIGHT-POINTING SMALL TRIANGLE
 MENU_ACTIVE_PRESET_SYMBOL = '\u25c2'  # BLACK LEFT-POINTING SMALL TRIANGLE
-SET_VCP_SYMBOL = "\u25B7"  # WHITE RIGHT-POINTING TRIANGLE
+SET_VCP_SYMBOL = '\u25B7'  # WHITE RIGHT-POINTING TRIANGLE
+MESSAGE_SYMBOL = '\u23F5'   # MEDIA PLAY
 
 SolarElevationKey = namedtuple('SolarElevationKey', ['direction', 'elevation'])
 SolarElevationData = namedtuple('SolarElevationData', ['azimuth', 'zenith', 'when'])
@@ -3823,12 +3826,13 @@ class VduControlSlider(VduControlBase):
         layout = QHBoxLayout()
         self.setLayout(layout)
         self.svg_icon: QSvgWidget | None = None
+        self.setToolTip(tr(vcp_capability.name))
+        self.setToolTipDuration(TOOLTIP_DURATION_MSEC)
         if (vcp_capability.vcp_code in SUPPORTED_VCP_BY_CODE
                 and SUPPORTED_VCP_BY_CODE[vcp_capability.vcp_code].icon_source is not None):
             svg_icon = QSvgWidget()
             svg_icon.load(handle_theme(SUPPORTED_VCP_BY_CODE[vcp_capability.vcp_code].icon_source, polychrome_light_or_dark()))
             svg_icon.setFixedSize(native_font_height(scaled=1.8), native_font_height(scaled=1.8))
-            svg_icon.setToolTip(vcp_capability.translated_name())
             self.svg_icon = svg_icon
             layout.addWidget(svg_icon)
         else:
@@ -3900,6 +3904,8 @@ class VduControlComboBox(VduControlBase):
         layout.addWidget(QLabel(self.translate_label(vcp_capability.name)))
         self.combo_box = combo_box = QComboBox()
         layout.addWidget(combo_box)
+        self.setToolTip(tr(vcp_capability.name))
+        self.setToolTipDuration(TOOLTIP_DURATION_MSEC)
 
         self.keys = []
         for value, desc in self.vcp_capability.values:
@@ -4471,6 +4477,7 @@ class VduControlsMainPanel(QWidget):
         self.vdu_control_panels: Dict[str, VduControlPanel] = {}
         self.alert: QMessageBox | None = None
         self.main_controller: VduAppController | None = None
+        self.message_history = []
 
     def initialise_control_panels(self, main_controller: VduAppController,
                                   app_context_menu: ContextMenu, main_config: VduControlsConfig,
@@ -4579,10 +4586,14 @@ class VduControlsMainPanel(QWidget):
         return answer == MBtn.Retry
 
     def status_message(self, message: str, timeout: int):
+        self.message_history.append(f"\n{datetime.now().strftime("%H:%M:%S")}{MESSAGE_SYMBOL} {message}")
+        self.message_history = self.message_history[-10:]
         if self.main_controller.main_config.is_set(ConfOpt.SEPARATE_STATUS_BAR):
             self.main_controller.main_window.statusBar().showMessage(message, timeout)
-        else:
-            self.main_toolbar.status_area.showMessage(message, timeout) if self.main_toolbar else None
+            self.main_controller.main_window.statusBar().setToolTip("".join([tr('Message history:')] + self.message_history))
+        elif self.main_toolbar:
+            self.main_toolbar.status_area.showMessage(message, timeout)
+            self.main_toolbar.status_area.setToolTip("".join([tr('Message history:')] + self.message_history))
 
 
 @dataclass
@@ -7392,7 +7403,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
 
     def lux_summary(self, metered_lux: float, smoothed_lux: int) -> str:
         lux_int = round(metered_lux)  # 256 bit char in lux_summary_text can cause issues if stdout not utf8 (force utf8 for stdout)
-        return f"{lux_int}{SMOOTHING_SYMBOL}{smoothed_lux} lux" if lux_int != smoothed_lux else f"{lux_int} lux"
+        return f"{lux_int} {SMOOTHING_SYMBOL} {smoothed_lux} lux {tr('(smoothed)')}" if lux_int != smoothed_lux else f"{lux_int} lux"
 
     def stop(self) -> None:
         super().stop()
@@ -8122,6 +8133,7 @@ class LuxAmbientSlider(QWidget):
 
         self.slider = ClickableSlider()
         self.slider.setToolTip(tr("Ambient light level input (lux value)"))
+        self.slider.setToolTipDuration(TOOLTIP_DURATION_MSEC)
         self.slider.setMinimumWidth(npx(200))
         self.slider.setRange(0, int(math.log10(100000) * 1000))
         self.slider.setSingleStep(1)
@@ -8144,6 +8156,7 @@ class LuxAmbientSlider(QWidget):
         self.lux_input_field = QSpinBox()
         self.lux_input_field.setLineEdit(LineEditAll())
         self.lux_input_field.setToolTip(tr("Ambient light level input (lux value)"))
+        self.lux_input_field.setToolTipDuration(TOOLTIP_DURATION_MSEC)
         self.lux_input_field.setKeyboardTracking(False)
         self.lux_input_field.setRange(1, 100000)
         self.lux_input_field.setValue(self.current_value)
