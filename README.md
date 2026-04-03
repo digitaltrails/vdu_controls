@@ -73,6 +73,10 @@ available to support all user defined Presets).
 > 
 > Within the UI, **tool-tips** are often available when hovering over UI components.
 
+> [!NOTE]
+> Several language translations are provided, but with no apparent demand, they 
+> are currently unmaintained and will be updated on request.
+
 ![Default](screen-shots/Screenshot_Large-330.png)  ![Custom](screen-shots/Screenshot_Small-227.png) 
 ![Custom](screen-shots/Screenshot_tray-200.png) ![Custom](screen-shots/Screenshot_settings-300.png)
 ![Custom](screen-shots/presets.png) ![Custom](screen-shots/lux-profiles.png)
