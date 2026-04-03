@@ -365,19 +365,26 @@ Michael Hamilton
 Version History
 ---------------
 * 2.5.0
-  * Main-panel appearance-refresh. Inspired by [a recent fork](https://github.com/ViktorSharga/vdu_controls_vibecodedUI) by @ViktorSharga.
-  * Added option tray-follows-theme to flip dark/light on desktop dark/light theme change.
-    Not all trays flip dark/light on theme changes, hence an electable option is required.
-    Defaults to enabled.
-  * The toolbar-at-top option sets top/bottom placement of the toolbar in the main-window.
-  * The separate-status-bar option can be set to separate the status-bar from the toolbar.
-  * The status-bar tooltip shows the last 10 messages.
-  * Corrected the horizontal tick marks on the Lux Metering Rolling-Display.
-  * Added 3,6,9,15,18,21 hour enlarged tick marks to the Lux Metering Rolling-Display.
+  * Main-panel Plasma-6/Breeze-like appearance-refresh. Inspired by [a recent fork](https://github.com/ViktorSharga/vdu_controls_vibecodedUI) 
+    by @ViktorSharga.
+  * Added option "toolbar-at-top" to configure the top/bottom placement of the toolbar 
+    in the main-window. Top placement is more Plasma-6-like and may also be useful
+    when combined with top-located system-trays 
+  * Added option "separate-status-bar" to allow the main-window's status-bar to be 
+    separated from its toolbar.  This may be useful when combined with "toolbar-at-top".
   * Replaced QProgressBar with a more modern circular busy-spinner.
-  * The Control-Panel context-menu option is now present on all desktops
-    whether its required or not (it's known to be required for xfce, and for the 
-    tray-extensions in gnome).
+  * Added a tooltip to the status-bar that shows the last 10 status messages.
+  * The context-menu option to bring up the Control-Panel (main window) is now 
+    present on all desktops.  Previously it was a Gnome only feature, needed when using
+    tray-extensions, but it's also needed for xfce's tray and maybe others.
+  * The context-menu now includes a Control-Panel menu-item on all desktops - previously it 
+    was Gnome-only (for tray extensions), but Xfce's tray and others also need it.
+  * Light-Metering window - corrected the horizontal tick mark placement on the sun-plot.
+  * Light-Metering window - added enlarged tick-marks to the sun-plot at 3,6,9,15,18,21 hours.
+  * Added option "tray-follows-theme" (default enabled) to invert the tray icon’s light/dark state
+    when the desktop theme changes — set appropriately for trays that flip-with the desktop, 
+    flip-opposite to the desktop, or don’t change at all (there does not appear to be a 
+    universal means for detecting tray-themes, so this cannot be automated).
   * Internal code simplifications and cleanups.
   
 * 2.4.3
