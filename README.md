@@ -379,17 +379,14 @@ Version History
     separated from its toolbar.  This may be useful when combined with "toolbar-at-top".
   * Replaced QProgressBar with a more modern circular busy-spinner.
   * Added a tooltip to the status-bar that shows the last 10 status messages.
-  * The context-menu option to bring up the Control-Panel (main window) is now 
-    present on all desktops.  Previously it was a Gnome only feature, needed when using
-    tray-extensions, but it's also needed for xfce's tray and maybe others.
   * The context-menu now includes a Control-Panel menu-item on all desktops - previously it 
-    was Gnome-only (for tray extensions), but Xfce's tray and others also need it.
+    was Gnome-only (for tray extensions), but Xfce's tray also needs it.
   * Light-Metering window - corrected the horizontal tick mark placement on the sun-plot.
   * Light-Metering window - added enlarged tick-marks to the sun-plot at 3,6,9,15,18,21 hours.
   * Added option "tray-follows-theme" (default enabled) to invert the tray icon’s light/dark state
-    when the desktop theme changes — set appropriately for trays that flip-with the desktop, 
-    flip-opposite to the desktop, or don’t change at all (there does not appear to be a 
-    universal means for detecting tray-themes, so this cannot be automated).
+    when the desktop theme changes. It can be set for trays that flip-with the desktop or 
+    flip-opposite to the desktop, or unset for trays don’t change at all (there isn't a 
+    common way to detect tray-themes, so this cannot be automated).
   * Internal code simplifications and cleanups.
   
 * 2.4.3
