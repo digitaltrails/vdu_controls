@@ -370,7 +370,7 @@ Michael Hamilton
 Version History
 ---------------
 * 2.5.0
-  * Main-panel Plasma-6/Breeze-like appearance-refresh. Inspired by [a recent fork](https://github.com/ViktorSharga/vdu_controls_vibecodedUI) 
+  * Visual refresh of the Main-panel. Inspired by [a recent fork](https://github.com/ViktorSharga/vdu_controls_vibecodedUI) 
     by @ViktorSharga.
   * Added option "toolbar-at-top" to configure the top/bottom placement of the toolbar 
     in the main-window. Top placement is more Plasma-6-like and may also be useful
