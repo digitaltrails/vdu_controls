@@ -9,19 +9,15 @@
 # This template needs editing to create an implementation specific to
 # actual hardware, such as Intel or AMD driven laptop-panels.
 #
-# The bash getvcp and setvcp functions need completing with what ever
-# command line code is appropriate for getting and setting the brightness
-# on the targeted laptop.  The capabilities function can optionally be
-# edited to reduce/increase the capabilities offered to vdu_controls.
+# The script is currently coded to use the widely available brightnessctl
+# utility which can get and set laptop panel brightness.
 #
 # The script needs to be executable, and can be tested on the command
 # line as follows:
 #
 #   chmod u+x laptop-ddcutil-emulator.bash
-#   ./laptop-ddcutil-emulator.bash getvcp 10 12
+#   ./laptop-ddcutil-emulator.bash getvcp 10
 #   ./laptop-ddcutil-emulator.bash setvcp 10 75
-#   ./laptop-ddcutil-emulator.bash setvcp 12 60
-#   ./laptop-ddcutil-emulator.bash setvcp 12 x3C
 #   ./laptop-ddcutil-emulator.bash detect
 #   ./laptop-ddcutil-emulator.bash capabilities
 #
@@ -44,23 +40,17 @@
 # See https://wiki.archlinux.org/title/Backlight
 function getvcp() {
     # get the brightness and/or contrast.
-    shift
     for vcp_code in "$@"
     do
         if [[ "$vcp_code" =~ ^[0-9a-zA-Z][0-9a-zA-Z]$ ]]
         then
             if [ "$vcp_code" == "10" ]
             then
-                # TODO Add code to get brightness
-                brightness=90
-                max_brightness=100
-                echo "VCP 10 C $brightness $max_brightness"
-            elif  [ "$vcp_code" == "12" ]
-            then
-                # TODO Add code to get contrast - optional, only if using?
-                contrast=80
-                max_contrast=100
-                echo "VCP 12 C $contrast $max_contrast"
+                brightness=$(brightnessctl get)
+                max_brightness=$(brightnessctl max)
+                # For maximum compatibility with vdu_controls, represent brightness as a percentage
+                percent=$[100*brightness/max_brightness]
+                echo "VCP 10 C $percent 100"
             else
                 echo "WARN: getvcp vcp-code $vcp_code is unsupported" 1>&2
                 exit 1
@@ -79,12 +69,7 @@ setvcp() {
     fi
     if [ "$vcp_code" == "10" ]
     then
-        # TODO Add code to set brightness
-        echo "do what ever changes brightness to $vcp_value" 2>&1
-    elif [ "$vcp_code" == "12" ]
-    then
-        # TODO Add code to set contrast - optional, only if using
-        echo "do what ever changes contrast to $vcp_value" 2>&1
+        brightnessctl set "$vcp_value%"
     else
         echo "ERROR: setvcp $vcp_code is unsupported" 1>&2
         exit 1
@@ -106,7 +91,6 @@ Commands:
    Op Code: F3 (Capabilities Request)
 VCP Features:
    Feature: 10 (Brightness)
-   Feature: 12 (Contrast)
    Feature: FF (Dummy to finish)
 EOF
     exit 0
