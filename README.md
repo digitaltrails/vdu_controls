@@ -369,6 +369,8 @@ Michael Hamilton
 
 Version History
 ---------------
+* 2.6.0
+  * Added laptop panel support via the brightnessctl command.
 * 2.5.0
   * Visual refresh of the Main-panel. Inspired by [a recent fork](https://github.com/ViktorSharga/vdu_controls_vibecodedUI) 
     by @ViktorSharga.
