@@ -884,7 +884,6 @@ with this program. If not, see https://www.gnu.org/licenses/.
 from __future__ import annotations
 
 import argparse
-import base64
 import configparser
 import glob
 import inspect
@@ -1625,13 +1624,11 @@ class Ddcutil:
     def ddcutil_version_info(self) -> Tuple[str, str]:
         return self.ddcutil_impl.get_interface_version_string(), self.ddcutil_impl.get_ddcutil_version_string()
 
-    def add_ddcutil_emulator(self, emulator_executable: str, common_args: List[str] | None = None):
-        log_info(f"add_ddcutil_emulator: {emulator_executable} {common_args}")
+    def add_ddcutil_emulator(self, emulator: [DdcutilPanelImpl | DdcutilEmulatorImpl], common_args: List[str] | None = None):
         try:
-            custom_imp = DdcutilEmulatorImpl(emulator_executable, common_args)
-            for attr in custom_imp.detect(1):
+            for attr in emulator.detect(1):
                 log_info(f"add_ddcutil_emulator: VDU edid={attr.edid_txt}")
-                self.ddcutil_emulators_by_edid[attr.edid_txt] = custom_imp
+                self.ddcutil_emulators_by_edid[attr.edid_txt] = emulator
         except Exception as e:
             log_error(f"add_ddcutil_emulator exception: {e}")
 
@@ -1671,8 +1668,9 @@ class Ddcutil:
         """Return a list of (vdu_number, desc) tuples."""
         result_list = []
         vdu_list = self.ddcutil_impl.detect(0)
-        for emulator_impl in self.ddcutil_emulators_by_edid.values():
-            vdu_list += emulator_impl.detect(1)
+        log_info(f"dectecting using {len(self.ddcutil_emulators_by_edid)} emulators")
+        for emulator_impl in set(self.ddcutil_emulators_by_edid.values()):  # Use set() to only use each emulator once.
+            vdu_list += emulator_impl.detect(0)
         # Going to get rid of anything that is not a-z A-Z 0-9 as potential rubbish
         rubbish = re.compile('[^a-zA-Z0-9]+')
         # This isn't efficient, it doesn't need to be, so I'm keeping re-defs close to where they are used.
@@ -1694,8 +1692,8 @@ class Ddcutil:
                 if candidate.strip() != '':
                     possibly_unique = (model_name, candidate)
                     if possibly_unique in key_prospects:  # Not unique - it has already been encountered.
-                        log_info(f"Ignoring non-unique key {possibly_unique[0]}_{possibly_unique[1]}"
-                                 f" - it matches displays {vdu_number} and {key_prospects[possibly_unique][0]}")
+                        log_info(f"Ignoring non-unique key {possibly_unique=}"
+                                 f" - it matches display {vdu_number=} allready in {possibly_unique}")
                         del key_prospects[possibly_unique]
                     else:
                         key_prospects[possibly_unique] = vdu_number, manufacturer
@@ -2017,6 +2015,115 @@ class DdcutilEmulatorImpl(DdcutilExeImpl):
         super().__init__(common_args)
         self.ddcutil_exe = ddcutil_exe
 
+class DdcutilPanelImpl:    # Laptop/builtin panel
+
+    def __init__(self):
+        self.brightness_vcp_code_int = int(BRIGHTNESS_VCP_CODE, 16)
+        self.ddcutil_access_lock = Lock()
+        self.brightnessctl_exe = 'brightnessctl'
+        self.max_brightness: Dict[str, int] = {}
+
+    def refresh_connection(self):
+        pass
+
+    def set_sleep_multiplier(self, edid_txt: str, sleep_multiplier: float):
+        pass
+
+    def set_vdu_specific_args(self, edid_txt: str, extra_args: List[str]):
+        pass
+
+    def _get_max_brightness(self, edid_txt: str) -> int:
+        if not edid_txt in self.max_brightness:
+            self.max_brightness[edid_txt] = int(self.__run__("max").stdout)
+        return self.max_brightness[edid_txt]
+
+    def __run__(self, *args) -> subprocess.CompletedProcess:
+        log_id = self.brightnessctl_exe
+        process_args = [self.brightnessctl_exe] + list(args)
+        try:
+            with self.ddcutil_access_lock:
+                now = time.time()
+                result = subprocess.run(process_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+                elapsed = time.time() - now
+                log_debug(f"subprocess result: success {log_id} [{result.args}] "
+                          f"rc={result.returncode} elapsed={elapsed:.2f} "
+                          f"stdout={result.stdout.decode('utf-8', errors='surrogateescape')}") if log_debug_enabled else None
+        except subprocess.SubprocessError as spe:
+            error_text = spe.stderr.decode('utf-8', errors='surrogateescape')
+            log_debug("subprocess result: error ", log_id, process_args,
+                      f"stderr='{error_text}', exception={str(spe)}", trace=True) if log_debug_enabled else None
+            raise
+        return result
+
+    def vcp_info(self) -> str:
+        return ''
+
+    def get_ddcutil_version_string(self) -> str:
+        return '2.2.5'
+
+    def get_interface_version_string(self) -> str:
+        return f"Command Line - {self.brightnessctl_exe}"
+
+    def detect(self, _: int) -> List[Tuple[Any, ...]]:
+        results = []
+        cmd_result = self.__run__('-m', 'i')
+        for number, line in enumerate(cmd_result.stdout.splitlines()):
+            parts = str(line, 'utf-8').split(',')
+            if len(parts) > 1 and (parts[1] == 'backlight' or parts[1] == 'leds'):
+                display_number = -number
+                usb_bus, usb_device = '', ''
+                manufacturer_id, model_name, product_code = 'Unknown', 'Panel', 'Unknown'
+                edid_txt = parts[0]
+                binary_sn = f"BSN#{edid_txt}".encode('utf-8')
+                serial_number = f"SN#{edid_txt}"
+                log_info(f"Detected panel {model_name=} {edid_txt=} detected")
+                vdu_attributes = DdcutilExeImpl.DetectedAttributes(
+                    display_number, usb_bus, usb_device,
+                    manufacturer_id, model_name, serial_number, product_code, edid_txt, binary_sn)
+                results.append(vdu_attributes)
+        return results
+
+    def get_capabilities(self, _: str) -> Tuple[
+            str, int, int, Dict[bytes, str], Dict[bytes, Tuple[bytes, str, Dict[bytes, str]]], str]:
+        capability_text = ('Model: AB_12345\n'
+                           'MCCS version: 2.2\n'
+                           'Commands:\n'
+                           '   Op Code: 01 (VCP Request)\n'
+                           '   Op Code: 02 (VCP Response)\n'
+                           '   Op Code: 03 (VCP Set)\n'
+                           '   Op Code: 07 (Timing Request)\n'
+                           '   Op Code: 0C (Save Settings)\n'
+                           '   Op Code: F3 (Capabilities Request)\n'
+                           'VCP Features:\n'
+                           '   Feature: 10 (Brightness)\n'
+                           '   Feature: FF (Dummy to finish)\n')
+        return '', 0, 0, {}, {}, capability_text
+
+    def get_type(self, _: str, vcp_code_int: int) -> Tuple[bool, bool] | None:  # edid_txt isn't currently used/supported
+        assert vcp_code_int == self.brightness_vcp_code_int   # nothing else supported
+        return False, True
+
+    def set_vcp(self, edid_txt: str, vcp_code_int: int, new_value_int: int) -> None:
+        assert vcp_code_int == self.brightness_vcp_code_int   # nothing else supported
+        new_value = f"{new_value_int * self._get_max_brightness(edid_txt) // 100}"
+        log_info(f"laptop set {new_value}")
+        self.__run__('set', '-d', edid_txt, new_value)
+
+    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[Tuple[int, int, int, str]]:
+        assert vcp_code_int_list[0] == self.brightness_vcp_code_int and len(vcp_code_int_list) == 1
+        for attempt_count in range(DDCUTIL_RETRIES):
+            try:
+                brightness = int(self.__run__('get', '-d', edid_txt).stdout)
+                max_brightness = self._get_max_brightness(edid_txt)
+                percent = (100 * brightness) // max_brightness
+                log_info(f"Panel {brightness=} {max_brightness=} {percent=}")
+                return [(self.brightness_vcp_code_int, percent, 100, CONTINUOUS_TYPE)]
+            except (subprocess.SubprocessError, ValueError, DdcutilDisplayNotFound):
+                if attempt_count + 1 == DDCUTIL_RETRIES:  # Don't log here, it creates too much noise in the logs
+                    raise  # Too many failures, pass the buck upstairs
+            time.sleep(attempt_count * 0.25)
+        raise ValueError(f"Exceeded {DDCUTIL_RETRIES} attempts to get vcp values.")
+
 
 class DdcutilDBusImpl(QObject):
     RETURN_RAW_VALUES = 2
@@ -2295,8 +2402,8 @@ class LineEditAll(QLineEdit):  # On mouse click, select the entire text - Make i
 # implementations.  Plus, the user might not be able to reset to factory for some of them?
 SUPPORT_ALL_VCP = False
 
-BRIGHTNESS_VCP_CODE = BRIT = '10'
-CONTRAST_VCP_CODE = CONT = '12'
+BRIGHTNESS_VCP_CODE = BRIT = '10'  # This is HEX
+CONTRAST_VCP_CODE = CONT = '12'    # Also HEX
 CON = CONTINUOUS_TYPE  # Shorter abbreviation
 SNC = SIMPLE_NON_CONTINUOUS_TYPE
 CNC = COMPLEX_NON_CONTINUOUS_TYPE
@@ -2620,6 +2727,8 @@ class ConfOpt(Enum):  # An Enum with tuples for values is used for convenience f
                                tip=QT_TR_NOOP('use the D-Bus ddcutil-server if available'))
     DBUS_EVENTS_ENABLED = _def(cname=QT_TR_NOOP('dbus-events-enabled'), default="yes",
                                tip=QT_TR_NOOP('enable D-Bus ddcutil-server events'), requires='dbus-client-enabled')
+    LAPTOP_PANEL_ENABLED = _def(cname=QT_TR_NOOP('laptop-panel-enabled'), default="no",
+                                tip=QT_TR_NOOP('use brightnessctl utility for laptop panel control'))
     SYSLOG_ENABLED = _def(cname=QT_TR_NOOP('syslog-enabled'), default="no",
                           tip=QT_TR_NOOP('divert diagnostic output to the syslog'))
     DEBUG_ENABLED = _def(cname=QT_TR_NOOP('debug-enabled'), default="no", tip=QT_TR_NOOP('output extra debug information'))
@@ -8535,7 +8644,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                                    connected_vdus_changed_callback=change_handler)
             if emulator := self.main_config.ini_content.get(ConfOpt.DDCUTIL_EMULATOR.conf_section,
                                                             ConfOpt.DDCUTIL_EMULATOR.conf_name, fallback=None):
-                self.ddcutil.add_ddcutil_emulator(emulator, common_args=self.main_config.get_ddcutil_extra_args())
+                common_args = self.main_config.get_ddcutil_extra_args()
+                log_info(f"add_ddcutil_emulator: {emulator} {common_args}")
+                self.ddcutil.add_ddcutil_emulator(DdcutilEmulatorImpl(emulator, common_args))
         except (subprocess.SubprocessError, ValueError, re.error, OSError, DdcutilServiceNotFound) as e:
             self.main_window.show_no_controllers_error_dialog(e)
 
@@ -8567,6 +8678,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         assert is_running_in_gui_thread()
         if self.ddcutil is None:
             return
+        if emulator := self.main_window.check_for_laptop_panel():
+            self.ddcutil.add_ddcutil_emulator(emulator)
         detected_vdu_list, ddcutil_problem = self.detect_vdus()
         self.vdu_controllers_map = {}
         main_panel_error_handler = self.main_window.get_main_panel().show_vdu_exception
@@ -9555,6 +9668,29 @@ class VduAppWindow(QMainWindow):
         elif choice == MBtn.Retry:
             return VduController.NORMAL_VDU
         return VduController.IGNORE_VDU
+
+    def check_for_laptop_panel(self) -> [DdcutilPanelImpl | None]:
+        first_time = True or not self.main_config.ini_content.has_option(*ConfOpt.LAPTOP_PANEL_ENABLED.conf_id)
+        log_info(f"{first_time=}")
+        if not first_time and not self.main_config.is_set(ConfOpt.LAPTOP_PANEL_ENABLED):
+            return None
+        emulator = DdcutilPanelImpl()
+        detections = emulator.detect(0)
+        log_info(f"DdcutilLaptopPanelImpl: detections {detections} {first_time=}")
+        if not detections:
+            return None
+        if first_time:   # First time ever
+            msg = tr('Detected a Laptop-Panel: type={} id={}').format(detections[0].model_name, detections[0].serial_number)
+            info = tr('Should vdu_controls use the brightnessctl command to manage it?')
+            choice = MBox(MIcon.Question, msg=msg, info=info, buttons=MBtn.Yes | MBtn.No).exec()
+            if choice == MBtn.Yes:
+                MBox(MIcon.Information, msg=tr('Managing laptop-panel'),
+                     info=tr('Setting {}.').format(ConfOpt.LAPTOP_PANEL_ENABLED.conf_name)).exec()
+            else:
+                emulator = None
+            self.main_config.ini_content.set(*ConfOpt.LAPTOP_PANEL_ENABLED.conf_id, 'yes')
+            self.main_config.write_file(ConfIni.get_path('vdu_controls'), overwrite=True)
+        return emulator
 
     def run_in_gui_thread(self, task: Callable):
         self._run_in_gui_thread_qtsignal.emit(task)
