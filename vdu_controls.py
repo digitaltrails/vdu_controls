@@ -8231,18 +8231,18 @@ class LuxAmbientSlider(QWidget):
 
         label = IconLabel(AMBIENT_PANEL_ICON_SOURCE, tr("Ambient Light Level"), tr("lux"))
         label.setToolTip(tr("Set the ambient light level to adjust all monitors."))
-        top_layout.addWidget(label,
-                             alignment=Qt.AlignmentFlag.AlignBottom)
-
+        top_layout.addWidget(label, stretch=0, alignment=Qt.AlignmentFlag.AlignTop)
 
         input_panel = QWidget()
         input_panel_layout = QHBoxLayout()
+        input_panel_layout.setContentsMargins(0,0,0,0)
         input_panel.setLayout(input_panel_layout)
         input_panel_layout.addWidget(self.status_icon)
 
         lux_slider_panel = QWidget()
         lux_slider_panel_layout = QGridLayout()
         lux_slider_panel.setLayout(lux_slider_panel_layout)
+        lux_slider_panel_layout.setContentsMargins(0,0,0,lux_slider_panel_layout.contentsMargins().bottom())
 
         self.slider = ClickableSlider()
         self.slider.setToolTip(tr("Ambient light level input (lux value)"))
@@ -8275,7 +8275,8 @@ class LuxAmbientSlider(QWidget):
         self.lux_input_field.setValue(self.current_value)
         input_panel_layout.addWidget(self.lux_input_field)
 
-        top_layout.addWidget(input_panel, alignment=Qt.AlignmentFlag.AlignTop)
+        top_layout.addWidget(input_panel, stretch=0, alignment=Qt.AlignmentFlag.AlignTop)
+        top_layout.addStretch(0)
 
         def _lux_slider_change(new_value: int) -> None:
             actual_value = round(10 ** (new_value / 1000))
