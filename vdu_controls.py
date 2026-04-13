@@ -20,6 +20,7 @@ Synopsis:
                      [--tray-follows-theme|--no-tray-follows-theme]
                      [--toolbar-at-top|-no-toolbar-at-top]
                      [--separate-status-bar|--separate-status-bar]
+                     [--laptop-panels|--no-laptop-panels]
                      [--protect-nvram|--no-protect-nvram]
                      [--lux-options|--no-lux-options]
                      [--schedule|--no-schedule] [--weather|--no-weather]
@@ -74,6 +75,9 @@ Arguments supplied on the command line override config file equivalent settings.
       --separate-status-bar|--no-separate-status-bar
                             separate the status-bar from the toolbar
                             ``--no-separate-status-bar`` is the default
+      --laptop-panels|--no-laptop-panels
+                            allow laptop panels to be controled
+                            ``--laptop-panels`` is the default
       --protect-nvram|--no-protect-nvram
                             alter options and defaults to minimize VDU NVRAM writes.
       --order-by-name|--no-order-by-name
@@ -721,13 +725,10 @@ colored, monochrome-dark and monochrome-light.
 Laptops
 -------
 
-A laptop's builtin-panel normally doesn't implement DDC and cannot be controlled
-by ``ddcutil`` or ``ddcutil-service``.  Laptop panel brightness is controlled
-by a variety of methods that vary by vendor and hardware.  If you have a laptop
-where such adjustments can be scripted, you can use the ``--ddcutil-emulator``
-option and provide ``vdu_controls`` with a ddcutil-like script for getting and
-setting the panel brightness; then ``vdu_controls`` will treat the laptop panel
-just like any other VDU.  A template script is provided in the ``sample-scripts``.
+Starting with version 2.6, laptop panels are supported for brightness-only control.
+Because laptops do not implement DDC for built-in panels, ``vdu_controls`` emulates
+DDC/ddcutil using the widely available command-line tool ``brightnessctl``
+(https://github.com/Hummer12007/brightnessctl).
 
 Other concerns
 --------------
@@ -792,6 +793,7 @@ Software::
         zypper install python3 python3-qt5 noto-sans-math-fonts noto-sans-symbols2-fonts
         zypper install ddcutil
         zypper install libddcutil ddcutil-service  # optional, but recommended if available
+        zypper install brightnessctl  # optional, but needed for controlling laptop-panels
 
 If you wish to use a serial-port lux metering device, the ``pyserial`` module is a runtime requirement.
 
@@ -1624,7 +1626,7 @@ class Ddcutil:
     def ddcutil_version_info(self) -> Tuple[str, str]:
         return self.ddcutil_impl.get_interface_version_string(), self.ddcutil_impl.get_ddcutil_version_string()
 
-    def add_ddcutil_emulator(self, emulator: [DdcutilPanelImpl | DdcutilEmulatorImpl], common_args: List[str] | None = None):
+    def add_ddcutil_emulator(self, emulator: DdcutilPanelImpl | DdcutilEmulatorImpl, common_args: List[str] | None = None):
         try:
             for attr in emulator.detect(1):
                 log_info(f"add_ddcutil_emulator: VDU edid={attr.edid_txt}")

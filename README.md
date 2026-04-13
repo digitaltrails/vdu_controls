@@ -9,6 +9,9 @@ A control panel for external monitors (*Visual Display Units*).
 > *scheduled-presets* and *ambient-light-control*.  The relevant KDE 6 options can 
 > be found under ***System Settings -> System -> Energy Saving***.
 
+> [!TIP]
+> Laptop-Panels are supported in version 2.6 (the current master/development branch).
+
 Description
 -----------
 
@@ -16,8 +19,8 @@ Description
 
 ``vdu_controls`` is a virtual control panel for external Visual Display Units 
 (VDUs, monitors, displays). It supports displays connected via DisplayPort, 
-DVI, HDMI, or USB - but not built-in laptop panels (though laptop integration
-is possible via plugin scripting; see below).
+DVI, HDMI, USB, and built-in laptop-panels (laptop-panel integration
+is provided by ``brightnessctrl`` for brightness only).
 
 A subset of controls is shown by default - these include brightness, 
 contrast, and audio controls - with additional options available in the 
@@ -109,8 +112,7 @@ Both the command and the library  provide a robust interface that supports
 many different OEM DDC implementations and GPU drivers. 
 
 `Vdu_controls` supports a _virtual-DDC plugin_ for interfacing to non DDC 
-displays, such as laptops. No complete plugins are currently available (a 
-sample incomplete template bash script is included).
+displays. A sample script wrapper is included.
 
 Does adjusting a VDU affect its lifespan or health?
 ---------------------------------------------------
@@ -358,9 +360,10 @@ Acknowledgements
 * Christopher Laws ([claws](https://github.com/claws)) for the [BH1750 library](https://github.com/claws/BH1750) 
   and [example build](https://github.com/claws/BH1750#example) (lux-metering).
 * Viktor Sharga ([ViktorSharga](https://github.com/ViktorSharga)) for assisting with UI enhancements.
-* Plus others who have supplied feedback and suggestions.
+* Mykyta Holuakha ([Hummer12007](https://github.com/Hummer12007)) for [brightnessctl](https://github.com/Hummer12007/brightnessctl)
 * E. Elvegård and G. Sjöstedt, "The Calculation of Illumination from Sun and Sky," _Illuminating Engineering_, Apr. 1940.
   [Illuminating Engineering Society, 100 Significant Papers](https://www.ies.org/research/publications/100-significant-papers/)
+* Plus others who have supplied feedback and suggestions.
 
 Author
 ------
@@ -370,7 +373,8 @@ Michael Hamilton
 Version History
 ---------------
 * 2.6.0
-  * Added laptop panel support via the brightnessctl command.
+  * Added laptop panel support, see Setting option "laptop-panel-enabled".
+    Requires the commonly available "brightnessctr" command to be installed.
 * 2.5.0
   * Visual refresh of the Main-panel. Inspired by [a recent fork](https://github.com/ViktorSharga/vdu_controls_vibecodedUI) 
     by @ViktorSharga.
