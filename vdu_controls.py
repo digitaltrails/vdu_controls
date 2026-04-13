@@ -1171,8 +1171,8 @@ RELEASE_ANNOUNCEMENT = """<h3>{WELCOME}</h3>{NOTE}<br/>
 <a href="https://github.com/digitaltrails/vdu_controls/releases/tag/v{VERSION}">
 https://github.com/digitaltrails/vdu_controls/releases/tag/v{VERSION}</a>
 <br/>___________________________________________________________________________"""
-RELEASE_INFO = QT_TR_NOOP('<b>Modernity</b>: Appearance Refresh. <span style="font-size: 50px;">&#x1F389;</span>"'
-                          '<br/>Relocatable toolbar and status-bar - see Settings.')
+RELEASE_INFO = QT_TR_NOOP('<b>Road Warrior</b>: Support Laptop Panels - see Settings.'
+                          '<br/>(Laptop panel support requires the brightnessctl command.)')
 
 CURRENT_PRESET_NAME_FILE = CONFIG_DIR_PATH.joinpath('current_preset.txt')
 CUSTOM_TRAY_ICON_FILE = CONFIG_DIR_PATH.joinpath('tray_icon.svg')
@@ -2022,6 +2022,8 @@ class DdcutilPanelImpl:    # Laptop/builtin panel
         self.ddcutil_access_lock = Lock()
         self.brightnessctl_exe = 'brightnessctl'
         self.max_brightness: Dict[str, int] = {}
+        version_check = self.__run__('-V').stdout.decode('utf-8')
+        log_info(f"{self.brightnessctl_exe} version {version_check}")
 
     def refresh_connection(self):
         pass
@@ -2069,7 +2071,7 @@ class DdcutilPanelImpl:    # Laptop/builtin panel
         cmd_result = self.__run__('-m', 'i')
         for number, line in enumerate(cmd_result.stdout.splitlines()):
             parts = str(line, 'utf-8').split(',')
-            if len(parts) > 1 and (parts[1] == 'backlight' or parts[1] == 'leds'):
+            if len(parts) > 1 and (parts[1] == 'backlight'): # or parts[1] == 'leds'):
                 display_number = -number
                 usb_bus, usb_device = '', ''
                 manufacturer_id, model_name, product_code = 'Unknown', 'Panel', 'Unknown'
@@ -2727,7 +2729,7 @@ class ConfOpt(Enum):  # An Enum with tuples for values is used for convenience f
                                tip=QT_TR_NOOP('use the D-Bus ddcutil-server if available'))
     DBUS_EVENTS_ENABLED = _def(cname=QT_TR_NOOP('dbus-events-enabled'), default="yes",
                                tip=QT_TR_NOOP('enable D-Bus ddcutil-server events'), requires='dbus-client-enabled')
-    LAPTOP_PANEL_ENABLED = _def(cname=QT_TR_NOOP('laptop-panel-enabled'), default="no",
+    LAPTOP_PANEL_ENABLED = _def(cname=QT_TR_NOOP('laptop-panel-enabled'), default="yes",
                                 tip=QT_TR_NOOP('use brightnessctl utility for laptop panel control'))
     SYSLOG_ENABLED = _def(cname=QT_TR_NOOP('syslog-enabled'), default="no",
                           tip=QT_TR_NOOP('divert diagnostic output to the syslog'))
@@ -8678,8 +8680,12 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         assert is_running_in_gui_thread()
         if self.ddcutil is None:
             return
-        if emulator := self.main_window.check_for_laptop_panel():
-            self.ddcutil.add_ddcutil_emulator(emulator)
+        if self.main_config.is_set(ConfOpt.LAPTOP_PANEL_ENABLED):
+            try:
+                self.ddcutil.add_ddcutil_emulator(DdcutilPanelImpl())
+            except Exception as e:
+                MBox(MIcon.Critical, msg=tr('Laptop Support: brightessctrl command failed'),
+                     info='Check that brightessctrl is installed and is working.', details=str(e)).exec()
         detected_vdu_list, ddcutil_problem = self.detect_vdus()
         self.vdu_controllers_map = {}
         main_panel_error_handler = self.main_window.get_main_panel().show_vdu_exception
@@ -9668,29 +9674,6 @@ class VduAppWindow(QMainWindow):
         elif choice == MBtn.Retry:
             return VduController.NORMAL_VDU
         return VduController.IGNORE_VDU
-
-    def check_for_laptop_panel(self) -> [DdcutilPanelImpl | None]:
-        first_time = True or not self.main_config.ini_content.has_option(*ConfOpt.LAPTOP_PANEL_ENABLED.conf_id)
-        log_info(f"{first_time=}")
-        if not first_time and not self.main_config.is_set(ConfOpt.LAPTOP_PANEL_ENABLED):
-            return None
-        emulator = DdcutilPanelImpl()
-        detections = emulator.detect(0)
-        log_info(f"DdcutilLaptopPanelImpl: detections {detections} {first_time=}")
-        if not detections:
-            return None
-        if first_time:   # First time ever
-            msg = tr('Detected a Laptop-Panel: type={} id={}').format(detections[0].model_name, detections[0].serial_number)
-            info = tr('Should vdu_controls use the brightnessctl command to manage it?')
-            choice = MBox(MIcon.Question, msg=msg, info=info, buttons=MBtn.Yes | MBtn.No).exec()
-            if choice == MBtn.Yes:
-                MBox(MIcon.Information, msg=tr('Managing laptop-panel'),
-                     info=tr('Setting {}.').format(ConfOpt.LAPTOP_PANEL_ENABLED.conf_name)).exec()
-            else:
-                emulator = None
-            self.main_config.ini_content.set(*ConfOpt.LAPTOP_PANEL_ENABLED.conf_id, 'yes')
-            self.main_config.write_file(ConfIni.get_path('vdu_controls'), overwrite=True)
-        return emulator
 
     def run_in_gui_thread(self, task: Callable):
         self._run_in_gui_thread_qtsignal.emit(task)
