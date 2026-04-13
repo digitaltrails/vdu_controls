@@ -40,6 +40,7 @@ Requires:       python3-qt6
 %endif
 Recommends:     ddcutil-service
 Recommends:     python3-pyserial
+Recommends:     brightnessctl
 %endif
 %if 0%{?fedora_version}
 %define ext_man *
