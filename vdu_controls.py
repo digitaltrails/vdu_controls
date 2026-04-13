@@ -3789,23 +3789,39 @@ class SettingsEditorLongTextWidget(SettingsEditorFieldBase):
         text_label = QLabel(self.translate_option())
         layout.addWidget(text_label)
         text_editor = QPlainTextEdit(section_editor.ini_editable[section][option])
+        text_editor.setMinimumHeight(native_font_height(100))
+        text_editor.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         def _text_changed() -> None:
             section_editor.ini_editable[section][option] = text_editor.toPlainText().strip()
 
         text_editor.textChanged.connect(_text_changed)
-        layout.addWidget(text_editor)
+        layout.addWidget(text_editor, stretch=1)
         self.text_editor = text_editor
 
     def reset(self) -> None:
         self.text_editor.setPlainText(self.section_editor.ini_before[self.section][self.option])
 
 
-class SettingsEditorTextWidget(SettingsEditorLongTextWidget):
+class SettingsEditorTextWidget(SettingsEditorFieldBase):
 
     def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
         super().__init__(section_editor, option, section, tooltip)
-        self.setMaximumHeight(native_font_height(scaled=3))
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+        text_label = QLabel(self.translate_option())
+        layout.addWidget(text_label)
+        text_editor = QLineEdit(section_editor.ini_editable[section][option])
+
+        def _text_changed() -> None:
+            section_editor.ini_editable[section][option] = text_editor.text().strip()
+
+        text_editor.textChanged.connect(_text_changed)
+        layout.addWidget(text_editor)
+        self.text_editor = text_editor
+
+    def reset(self) -> None:
+        self.text_editor.setText(self.section_editor.ini_before[self.section][self.option])
 
 
 class SettingsEditorPathValidator(QValidator):
