@@ -15,6 +15,7 @@ a DDC control panel for monitors</h1>
                  [--tray-follows-theme|--no-tray-follows-theme]
                  [--toolbar-at-top|-no-toolbar-at-top]
                  [--separate-status-bar|--separate-status-bar]
+                 [--laptop-panels|--no-laptop-panels]
                  [--protect-nvram|--no-protect-nvram]
                  [--lux-options|--no-lux-options]
                  [--schedule|--no-schedule] [--weather|--no-weather]
@@ -66,6 +67,9 @@ equivalent settings.</p>
   --separate-status-bar|--no-separate-status-bar
                         separate the status-bar from the toolbar
                         ``--no-separate-status-bar`` is the default
+  --laptop-panels|--no-laptop-panels
+                        allow laptop panels to be controled
+                        ``--laptop-panels`` is the default
   --protect-nvram|--no-protect-nvram
                         alter options and defaults to minimize VDU NVRAM writes.
   --order-by-name|--no-order-by-name
@@ -731,15 +735,11 @@ the application includes several manual settings that can alter the
 tray/dock icon theming between colored, monochrome-dark and
 monochrome-light.</p>
 <h2 id="laptops">Laptops</h2>
-<p>A laptop’s builtin-panel normally doesn’t implement DDC and cannot be
-controlled by <code>ddcutil</code> or <code>ddcutil-service</code>.
-Laptop panel brightness is controlled by a variety of methods that vary
-by vendor and hardware. If you have a laptop where such adjustments can
-be scripted, you can use the <code>--ddcutil-emulator</code> option and
-provide <code>vdu_controls</code> with a ddcutil-like script for getting
-and setting the panel brightness; then <code>vdu_controls</code> will
-treat the laptop panel just like any other VDU. A template script is
-provided in the <code>sample-scripts</code>.</p>
+<p>Starting with version 2.6, laptop panels are supported for
+brightness-only control. Because laptops do not implement DDC for
+built-in panels, <code>vdu_controls</code> emulates DDC/ddcutil using
+the widely available command-line tool <code>brightnessctl</code>
+(https://github.com/Hummer12007/brightnessctl).</p>
 <h2 id="other-concerns">Other concerns</h2>
 <p>The power-supplies in some older VDUs may buzz/squeel audibly when
 the brightness is turned way down. This may not be a major issue
@@ -794,7 +794,8 @@ disambiguate the noun/verb duality of “display” and “monitor”</p>
 <p>Software::</p>
 <pre><code>    zypper install python3 python3-qt5 noto-sans-math-fonts noto-sans-symbols2-fonts
     zypper install ddcutil
-    zypper install libddcutil ddcutil-service  # optional, but recommended if available</code></pre>
+    zypper install libddcutil ddcutil-service  # optional, but recommended if available
+    zypper install brightnessctl  # optional, but needed for controlling laptop-panels</code></pre>
 <p>If you wish to use a serial-port lux metering device, the
 <code>pyserial</code> module is a runtime requirement.</p>
 <p>Get ddcutil working first. Check that the detect command detects your
