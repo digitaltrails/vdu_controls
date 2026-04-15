@@ -1167,6 +1167,7 @@ At your request, weather for your location may be retrieved from <a href="{WEATH
 </quote>
 """
 
+VDU_CONTROLS_DEVELOPER = os.getenv('VDU_CONTROLS_DEVELOPER', default="no") == 'yes'
 RELEASE_WELCOME = QT_TR_NOOP("Welcome to vdu_controls {}").format(VDU_CONTROLS_VERSION)
 RELEASE_NOTE = QT_TR_NOOP("Please read the online release notes:")
 RELEASE_ANNOUNCEMENT = """<h3>{WELCOME}</h3>{NOTE}<br/>
@@ -1179,7 +1180,7 @@ RELEASE_INFO = QT_TR_NOOP('<b>Road Warrior</b>: Support Laptop Panels - see Sett
 CURRENT_PRESET_NAME_FILE = CONFIG_DIR_PATH.joinpath('current_preset.txt')
 CUSTOM_TRAY_ICON_FILE = CONFIG_DIR_PATH.joinpath('tray_icon.svg')
 LOCALE_TRANSLATIONS_PATHS = [
-    Path.cwd().joinpath('translations')] if os.getenv('VDU_CONTROLS_DEVELOPER', default="no") == 'yes' else [] + [
+    Path.cwd().joinpath('translations')] if VDU_CONTROLS_DEVELOPER else [] + [
     Path(CONFIG_DIR_PATH).joinpath('translations'), Path("/usr/share/vdu_controls/translations"), ]
 STANDARD_ICON_PATHS = (Path("/usr/share/vdu_controls/icons"), Path("/usr/share/icons/breeze/actions/24"), Path("/usr/share/icons"),)
 
@@ -1318,8 +1319,18 @@ MENU_ICON_SOURCE = b"""
 VDU_CONNECTED_ICON_SOURCE = b"""
 <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
-    <g class="ColorScheme-Text" stroke="currentColor" stroke-linecap="round"  stroke-width="2" transform="">
+    <g class="ColorScheme-Text" stroke="currentColor" stroke-linejoin="round" stroke-linecap="round"  
+       stroke-width="2" transform="">
         <path fill="None" d="M 20 18 L 1 18 1 5 20 5 20 18 M 6.5 21 L 15 21"/>
+    </g>
+</svg>
+"""
+
+PANEL_CONNECTED_ICON_SOURCE = b"""
+<svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
+    <g class="ColorScheme-Text" stroke="currentColor" stroke-linejoin="round" stroke-linecap="round"  stroke-width="2" transform="">
+        <path fill="None" d="M 20 18 L 1 18 1 5 20 5 20 18 M 1 21 L 20 21"/>
     </g>
 </svg>
 """
@@ -2021,6 +2032,7 @@ class DdcutilEmulatorImpl(DdcutilExeImpl):
 class DdcutilPanelImpl:    # Laptop/builtin panel
 
     def __init__(self, _: List[str] | None = None, callback: Callable | None = None):
+        self.include_leds = VDU_CONTROLS_DEVELOPER   # Test using desktop controllable LEDs
         self.brightness_vcp_code_int = int(BRIGHTNESS_VCP_CODE, 16)
         self.ddcutil_access_lock = Lock()
         self.brightnessctl_exe = 'brightnessctl'
@@ -2100,10 +2112,10 @@ class DdcutilPanelImpl:    # Laptop/builtin panel
     def detect(self, _: int) -> List[Tuple[Any, ...]]:
         results = []
         cmd_result = self.__run__('-m', 'i')
-        for number, line in enumerate(cmd_result.stdout.splitlines()):
+        for item_number, line in enumerate(cmd_result.stdout.splitlines(), start=1):
             parts = str(line, 'utf-8').split(',')
-            if len(parts) > 1 and (parts[1] == 'backlight'): # or parts[1] == 'leds'):
-                display_number = -number
+            if len(parts) > 1 and (parts[1] == 'backlight') or (self.include_leds and parts[1] == 'leds'):
+                display_number = -item_number
                 usb_bus, usb_device = '', ''
                 manufacturer_id, model_name, product_code = 'Unknown', 'Panel', 'Unknown'
                 edid_txt = parts[0]
@@ -4120,9 +4132,14 @@ class VduControlPanel(QWidget):
     def __init__(self, controller: VduController, vdu_exception_handler: Callable) -> None:
         super().__init__()
         layout = QVBoxLayout()
-        create_icon_from_svg_bytes(VDU_CONNECTED_ICON_SOURCE)
-        self.label = IconLabel(VDU_CONNECTED_ICON_SOURCE,
-                               controller.get_vdu_preferred_name(), tr("Monitor {}".format(controller.vdu_number)))
+        if int(controller.vdu_number) < 1:
+            self.label = IconLabel(PANEL_CONNECTED_ICON_SOURCE,
+                                   controller.get_vdu_preferred_name(),
+                                   tr("Panel {}".format(-int(controller.vdu_number))))
+        else:
+            self.label = IconLabel(VDU_CONNECTED_ICON_SOURCE,
+                                   controller.get_vdu_preferred_name(),
+                                   tr("Monitor {}".format(controller.vdu_number)))
         layout.addWidget(self.label)
         self.controller: VduController = controller
         self.vcp_controls: List[VduControlBase] = []
