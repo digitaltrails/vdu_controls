@@ -1338,7 +1338,7 @@ PANEL_CONNECTED_ICON_SOURCE = b"""
 VDU_POWER_ON_ICON_SOURCE = b"""
 <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
-    <g class="ColorScheme-Text" stroke="currentColor" stroke-linecap="round"  stroke-width="2" transform="">
+    <g class="ColorScheme-Text" stroke="currentColor" stroke-linejoin="round" stroke-linecap="round" stroke-width="2" transform="">
         <path fill="None" d="M14 12 A 5 5 0 1 0 20 12 M 17 11 L 17 16.5 M 9 20 L 1 20 1 5 20 5 20 8"/>
     </g>
 </svg>
@@ -1347,7 +1347,7 @@ VDU_POWER_ON_ICON_SOURCE = b"""
 AMBIENT_PANEL_ICON_SOURCE = b"""
 <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg">
   <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
-    <g class="ColorScheme-Text" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+    <g class="ColorScheme-Text" stroke="currentColor"  stroke-linejoin="round" stroke-linecap="round"stroke-width="2">
         <path fill="none" d="M9 20 L1 20 1 5 20 5 20 7" />
         <circle cx="17" cy="16" r="5" stroke="currentColor" fill="none" />
         <rect x="11" y="21.5" width="1" height="1" rx="5" ry="5" stroke-width="1" fill="currentColor" />
