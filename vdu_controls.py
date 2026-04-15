@@ -2039,6 +2039,7 @@ class DdcutilPanelImpl:    # Laptop/builtin panel
         self.max_brightness: Dict[str, int] = {}
         version_check = self.__run__('-V').stdout.decode('utf-8')
         log_info(f"{self.brightnessctl_exe} version {version_check}")
+        self.set_vcp_time: datetime = datetime.now() - timedelta(seconds=60)  # Last time set_vcp was called
         self.callback = callback
         if self.callback:    # --- udev setup ---
             import pyudev  # Don't make non-laptop users import this.
@@ -2058,8 +2059,9 @@ class DdcutilPanelImpl:    # Laptop/builtin panel
                 self.debounce_timer.start(50)  # Debounce: restart timer
 
             def _invoke_callback():
-                for edid_txt in self.max_brightness.keys():
-                    self.callback(edid_txt, DdcEventType.LAPTOP_BRIGHTNESS_CHANGE.value, 0)
+                if datetime.now() - self.set_vcp_time > timedelta(seconds=1):
+                    for edid_txt in self.max_brightness.keys():
+                        self.callback(edid_txt, DdcEventType.LAPTOP_BRIGHTNESS_CHANGE.value, 0)
 
             fd = self.monitor.fileno()    # Get the file descriptor and create a QSocketNotifier
             self.notifier = QSocketNotifier(fd, QSocketNotifier.Type.Read, None)
@@ -2150,9 +2152,12 @@ class DdcutilPanelImpl:    # Laptop/builtin panel
 
     def set_vcp(self, edid_txt: str, vcp_code_int: int, new_value_int: int) -> None:
         assert vcp_code_int == self.brightness_vcp_code_int   # nothing else supported
-        new_value = f"{new_value_int * self._get_max_brightness(edid_txt) // 100}"
-        log_info(f"laptop set {new_value}")
-        self.__run__('set', '-d', edid_txt, new_value)
+        try:
+            new_value = f"{new_value_int * self._get_max_brightness(edid_txt) // 100}"
+            log_info(f"laptop set {new_value}")
+            self.__run__('set', '-d', edid_txt, new_value)
+        finally:
+            self.set_vcp_time = datetime.now()
 
     def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[Tuple[int, int, int, str]]:
         assert vcp_code_int_list[0] == self.brightness_vcp_code_int and len(vcp_code_int_list) == 1
@@ -8692,6 +8697,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         if self.main_config.is_set(ConfOpt.DBUS_CLIENT_ENABLED) and self.main_config.is_set(ConfOpt.DBUS_EVENTS_ENABLED):
 
             def _vdu_connectivity_changed_callback(edid_encoded: str, event_type: int, flags: int):
+                values_only = False
                 if not DdcEventType.UNKNOWN.value <= event_type <= DdcEventType.DISPLAY_DISCONNECTED.value:
                     log_warning(f"Connected VDUs event - unknown {event_type=} treating as DPMS_UNKNOWN.")
                     event_type = DdcEventType.UNKNOWN.value
@@ -8700,9 +8706,10 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     return  # Don't do anything, the VDUs are just asleep.
                 elif event_type == DdcEventType.LAPTOP_BRIGHTNESS_CHANGE.value:
                     log_info(f"Laptop event {edid_encoded:.30}...")
-                    self.lux_auto_controller.set_auto(False)
+                    values_only = True
+                    # self.lux_auto_controller.set_auto(False) - we don't do this for any other manual change - so do nothing?
                     # could do something specific here - but the following refresh will cover it.
-                self.start_refresh(external_event=True)
+                self.start_refresh(external_event=True, values_only=values_only)
 
             change_handler = _vdu_connectivity_changed_callback
             log_debug("Enabled callback for VDU-connectivity-change D-Bus signals")
@@ -8830,7 +8837,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         if self.lux_auto_controller and self.lux_auto_controller.is_auto_enabled():
             self.lux_auto_controller.adjust_brightness_now()
 
-    def start_refresh(self, external_event: bool = False) -> None:
+    def start_refresh(self, external_event: bool = False, values_only: bool = False) -> None:
 
         def _update_from_vdu(worker: WorkerThread) -> None:
             if self.ddcutil is not None:
@@ -8838,10 +8845,13 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     if acquired_lock:  # If acquired_lock is not None, then we have successfully acquired the lock.
                         log_debug(f"_update_from_vdu: holding application_lock") if log_debug_enabled else None
                         try:
-                            log_info(f"Refresh commences: {external_event=}") if log_debug_enabled else None
-                            self.ddcutil.refresh_connection()
-                            self.detected_vdu_list = self.ddcutil.detect_vdus()
-                            self.restore_vdu_initialization_presets()
+                            log_info(f"Refresh commences: {external_event=} {values_only=}") if log_debug_enabled else None
+                            if values_only:
+                                self.detected_vdu_list = self.ddcutil.detect_vdus()  # TODO Not sure why this is necessary.
+                            else:
+                                self.ddcutil.refresh_connection()
+                                self.detected_vdu_list = self.ddcutil.detect_vdus()
+                                self.restore_vdu_initialization_presets()
                             for control_panel in self.main_window.get_main_panel().vdu_control_panels.values():
                                 if control_panel.controller.get_full_id() in self.detected_vdu_list:
                                     control_panel.refresh_from_vdu()
@@ -8861,23 +8871,24 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 return  # in this case, this means the worker never started anything
             try:  # No need for locking in here - running in the GUI thread effectively single threads the operation.
                 assert self.refresh_data_task is not None and is_running_in_gui_thread()
-                log_debug(f"Refresh - update UI view {external_event=}") if log_debug_enabled else None
+                log_debug(f"Refresh - update UI view {external_event=} {values_only=}") if log_debug_enabled else None
                 main_panel = self.main_window.get_main_panel()
                 if self.refresh_data_task.vdu_exception is not None:
                     log_debug(f"Refresh - update UI view - exception {self.refresh_data_task.vdu_exception} {external_event=}")
                     if not external_event:
                         main_panel.show_vdu_exception(self.refresh_data_task.vdu_exception, can_retry=False)
-                if len(self.detected_vdu_list) == 0 or self.detected_vdu_list != self.previously_detected_vdu_list or (
-                        external_event and False):
-                    log_info(f"Reconfiguring: detected={self.detected_vdu_list} previously={self.previously_detected_vdu_list}")
-                    self.configure_application(check_schedule=False)  # May cause a further refresh?
-                    self.previously_detected_vdu_list = self.detected_vdu_list
-                ScheduleWorker.check()  # immediately active the currently applicable preset
-                if self.lux_auto_controller:
-                    if LuxDialog.exists():
-                        LuxDialog.get_instance().reconfigure()  # Incase the number of connected monitors has changed.
-                    if self.lux_auto_controller.is_auto_enabled():
-                        self.lux_auto_controller.adjust_brightness_now()
+                if not values_only:
+                    if len(self.detected_vdu_list) == 0 or self.detected_vdu_list != self.previously_detected_vdu_list or (
+                            external_event and False):
+                        log_info(f"Reconfiguring: detected={self.detected_vdu_list} previously={self.previously_detected_vdu_list}")
+                        self.configure_application(check_schedule=False)  # May cause a further refresh?
+                        self.previously_detected_vdu_list = self.detected_vdu_list
+                    ScheduleWorker.check()  # immediately active the currently applicable preset
+                    if self.lux_auto_controller:
+                        if LuxDialog.exists():
+                            LuxDialog.get_instance().reconfigure()  # Incase the number of connected monitors has changed.
+                        if self.lux_auto_controller.is_auto_enabled():
+                            self.lux_auto_controller.adjust_brightness_now()
             finally:
                 self.main_window.indicate_busy(False)
 
