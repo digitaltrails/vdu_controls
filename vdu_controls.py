@@ -934,7 +934,7 @@ for qt_version in (5, 6) if CONFIG_FILE_PREFER_QT5.exists() else (6, 5):
             from PyQt6 import QtCore, QtNetwork
             from PyQt6.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QPoint, QObject, QEvent, \
                 QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir, \
-                QRegularExpression, QPointF, QRect
+                QRegularExpression, QPointF, QRect, QSocketNotifier
             from PyQt6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusArgument, QDBusVariant
             from PyQt6.QtGui import QAction, QShortcut, QPixmap, QIcon, QCursor, QImage, QPainter, QRegularExpressionValidator, \
                 QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon, \
@@ -952,7 +952,7 @@ for qt_version in (5, 6) if CONFIG_FILE_PREFER_QT5.exists() else (6, 5):
             from PyQt5 import QtCore, QtNetwork
             from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QPoint, QObject, QEvent, \
                 QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir, \
-                QRegularExpression, QPointF, QRect
+                QRegularExpression, QPointF, QRect, QSocketNotifier
             from PyQt5.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusArgument, QDBusVariant
             from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QRegularExpressionValidator, \
                 QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon, \
@@ -1626,7 +1626,7 @@ class Ddcutil:
     def ddcutil_version_info(self) -> Tuple[str, str]:
         return self.ddcutil_impl.get_interface_version_string(), self.ddcutil_impl.get_ddcutil_version_string()
 
-    def add_ddcutil_emulator(self, emulator: DdcutilPanelImpl | DdcutilEmulatorImpl, common_args: List[str] | None = None):
+    def add_ddcutil_emulator(self, emulator: DdcutilPanelImpl | DdcutilEmulatorImpl):
         try:
             for attr in emulator.detect(1):
                 log_info(f"add_ddcutil_emulator: VDU edid={attr.edid_txt}")
@@ -1806,7 +1806,8 @@ class Ddcutil:
 
 
 class DdcEventType(Enum):  # Has to correspond to what the service supports
-    UNKNOWN = -1
+    UNKNOWN = -2
+    LAPTOP_BRIGHTNESS_CHANGE = -1
     DPMS_AWAKE = 0
     DPMS_ASLEEP = 1
     DISPLAY_CONNECTED = 2
@@ -2019,13 +2020,41 @@ class DdcutilEmulatorImpl(DdcutilExeImpl):
 
 class DdcutilPanelImpl:    # Laptop/builtin panel
 
-    def __init__(self):
+    def __init__(self, _: List[str] | None = None, callback: Callable | None = None):
         self.brightness_vcp_code_int = int(BRIGHTNESS_VCP_CODE, 16)
         self.ddcutil_access_lock = Lock()
         self.brightnessctl_exe = 'brightnessctl'
         self.max_brightness: Dict[str, int] = {}
         version_check = self.__run__('-V').stdout.decode('utf-8')
         log_info(f"{self.brightnessctl_exe} version {version_check}")
+        self.callback = callback
+        if self.callback:    # --- udev setup ---
+            import pyudev  # Don't make non-laptop users import this.
+            self.context = pyudev.Context()
+            self.monitor = pyudev.Monitor.from_netlink(self.context)
+            self.monitor.filter_by(subsystem='backlight')
+            self.monitor.start()   # Start receiving events
+
+            def _on_udev_event(event):
+                while True:
+                    try:
+                        dev = self.monitor.poll(0.1)
+                        if dev is None:
+                            break
+                    except (BlockingIOError, pyudev.DeviceNotFoundError):
+                        break
+                self.debounce_timer.start(50)  # Debounce: restart timer
+
+            def _invoke_callback():
+                for edid_txt in self.max_brightness.keys():
+                    self.callback(edid_txt, DdcEventType.LAPTOP_BRIGHTNESS_CHANGE.value, 0)
+
+            fd = self.monitor.fileno()    # Get the file descriptor and create a QSocketNotifier
+            self.notifier = QSocketNotifier(fd, QSocketNotifier.Type.Read, None)
+            self.notifier.activated.connect(_on_udev_event)
+            self.debounce_timer = QTimer()
+            self.debounce_timer.setSingleShot(True)
+            self.debounce_timer.timeout.connect(_invoke_callback)
 
     def refresh_connection(self):
         pass
@@ -8649,9 +8678,13 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 if not DdcEventType.UNKNOWN.value <= event_type <= DdcEventType.DISPLAY_DISCONNECTED.value:
                     log_warning(f"Connected VDUs event - unknown {event_type=} treating as DPMS_UNKNOWN.")
                     event_type = DdcEventType.UNKNOWN.value
-                log_info(f"Connected VDUs event {DdcEventType(event_type)} {flags=} {edid_encoded:.30}...")
                 if event_type == DdcEventType.DPMS_ASLEEP.value:
+                    log_info(f"Connected VDUs event {DdcEventType(event_type)} {flags=} {edid_encoded:.30}...")
                     return  # Don't do anything, the VDUs are just asleep.
+                elif event_type == DdcEventType.LAPTOP_BRIGHTNESS_CHANGE.value:
+                    log_info(f"Laptop event {edid_encoded:.30}...")
+                    self.lux_auto_controller.set_auto(False)
+                    # could do something specific here - but the following refresh will cover it.
                 self.start_refresh(external_event=True)
 
             change_handler = _vdu_connectivity_changed_callback
@@ -8663,6 +8696,12 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             self.ddcutil = Ddcutil(common_args=self.main_config.get_ddcutil_extra_args(),
                                    prefer_dbus_client=self.main_config.is_set(ConfOpt.DBUS_CLIENT_ENABLED),
                                    connected_vdus_changed_callback=change_handler)
+            if self.main_config.is_set(ConfOpt.LAPTOP_PANEL_ENABLED):
+                try:
+                    self.ddcutil.add_ddcutil_emulator(DdcutilPanelImpl(callback=change_handler))
+                except Exception as e:
+                    MBox(MIcon.Critical, msg=tr('Laptop Support: brightessctrl command failed'),
+                         info='Check that brightessctrl is installed and is working.', details=str(e)).exec()
             if emulator := self.main_config.ini_content.get(ConfOpt.DDCUTIL_EMULATOR.conf_section,
                                                             ConfOpt.DDCUTIL_EMULATOR.conf_name, fallback=None):
                 common_args = self.main_config.get_ddcutil_extra_args()
@@ -8699,12 +8738,6 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         assert is_running_in_gui_thread()
         if self.ddcutil is None:
             return
-        if self.main_config.is_set(ConfOpt.LAPTOP_PANEL_ENABLED):
-            try:
-                self.ddcutil.add_ddcutil_emulator(DdcutilPanelImpl())
-            except Exception as e:
-                MBox(MIcon.Critical, msg=tr('Laptop Support: brightessctrl command failed'),
-                     info='Check that brightessctrl is installed and is working.', details=str(e)).exec()
         detected_vdu_list, ddcutil_problem = self.detect_vdus()
         self.vdu_controllers_map = {}
         main_panel_error_handler = self.main_window.get_main_panel().show_vdu_exception

@@ -11,6 +11,9 @@ A control panel for external monitors (*Visual Display Units*).
 
 > [!TIP]
 > Laptop-Panels are supported in version 2.6 (the current master/development branch).
+> Laptop support includes reacting to brightness-function-keys or inactivity-dimming.
+> When if laptop support is enabled, the python3-pyudev library will be imported 
+> to monitor udev for brightness events.
 
 Description
 -----------
@@ -375,7 +378,9 @@ Version History
 * 2.6.0
   * Added laptop panel support, see Setting option "laptop-panel-enabled".
     Requires the commonly available "brightnessctr" command to be installed.
+    Udev is used to detect inactivity-dimming and brightness-function-keys events.
   * Fixed Settings text-input line-height on small screens.
+  * Slightly reduced the Ambient-Slider spacing/layout to match the monitor-panel layouts.
 * 2.5.0
   * Visual refresh of the Main-panel. Inspired by [a recent fork](https://github.com/ViktorSharga/vdu_controls_vibecodedUI) 
     by @ViktorSharga.

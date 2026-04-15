@@ -50,6 +50,7 @@ Requires:       google-noto-sans-symbols2-fonts
 Requires:       python3
 Requires:       python3-qt5
 Suggests:       python3-pyserial
+Suggests:       python3-pyudev
 %endif
 
 %description
