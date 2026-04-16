@@ -4696,9 +4696,9 @@ class VduControlsMainPanel(QWidget):
                                                                                    controller.get_vdu_preferred_name()),
                      info=tr('The monitor will be omitted from the control panel.')).exec()
 
-        controllers_layout.addStretch(0)
         for control in extra_controls:
-            controllers_layout.addWidget(control, 0, Qt.AlignmentFlag.AlignBottom)
+             controllers_layout.addWidget(control, 0, Qt.AlignmentFlag.AlignTop)
+        controllers_layout.addStretch(0)
 
         if len(self.vdu_control_panels) == 0:
             no_vdu_widget = QWidget()
@@ -9319,6 +9319,8 @@ class VduAppWindow(QMainWindow):
         global gui_thread
         app = QApplication.instance()
         assert app
+        if os.getenv('VDU_CONTROLS_DEBUG_LAYOUT', default='no') == 'yes':
+            app.setStyleSheet("QWidget { border: 1px solid red; margin: 1px; padding: 1px; }")
         gui_thread = app.thread()
         self.main_controller: VduAppController = main_controller
         self.setObjectName('main_window')
