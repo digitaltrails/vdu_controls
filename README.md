@@ -12,8 +12,8 @@ A control panel for external monitors (*Visual Display Units*).
 > [!TIP]
 > Laptop-Panels are supported in version 2.6 (the current master/development branch).
 > Laptop support includes reacting to brightness-function-keys or inactivity-dimming.
-> When if laptop support is enabled, the python3-pyudev library will be imported 
-> to monitor udev for brightness events.
+> When laptop support is enabled, the python3-pyudev library will be imported 
+> to monitor udev for _brightness_ events.
 
 Description
 -----------
