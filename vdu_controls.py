@@ -3338,20 +3338,24 @@ class SubWinDialog(QDialog):  # Fix for gnome: QDialog must be a subwindow, othe
         super().__init__(parent, Qt.WindowType.SubWindow if is_subwin_desktop() else Qt.WindowType.Window)
 
 
-class RightPad(QWidget):
-    def __init__(self, left_widget: QWidget) -> None:
+class StdButton(QPushButton):  # Reduce some repetitiveness in the code
+
+    def __init__(self, icon: QIcon | None = None, title: str = '', clicked: Callable | None = None, auto_default=True,
+                 tip: str | None = None, flat: bool = False, margins: bool = True, icon_size: QSize | None = None):
         super().__init__()
-        layout = QHBoxLayout()
-        layout.addWidget(left_widget)
-        layout.addStretch()
-        layout.setContentsMargins(0,0,0,0)
-        self.setLayout(layout)
+        self.setIcon(icon) if icon else None
+        self.setIconSize(icon_size) if icon_size else None
+        self.setText(title) if title else None
+        self.clicked.connect(clicked) if clicked else None
+        self.setToolTip(tip) if tip else None
+        self.setFlat(flat)
+        self.setContentsMargins(0, 0, 0, 0) if not margins else None
+        self.setAutoDefault(auto_default)
 
 
-class IconLabel(QWidget):
-
-    def __init__(self, icon_source: bytes, main_text: str, sub_text: str, left_click_action: Callable | None = None) -> None:
-        super().__init__()
+class TitleButton(StdButton):
+    def __init__(self, icon_source: bytes, main_text: str, sub_text: str, left_click_action: Callable | None = None):
+        super().__init__(flat=True, clicked=left_click_action)
         layout = QHBoxLayout()
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.setLayout(layout)
@@ -3369,36 +3373,12 @@ class IconLabel(QWidget):
         self.left_click_action = left_click_action
         self.default_cursor = self.cursor()
         layout.addWidget(self.label)
-
-    def mousePressEvent(self, event: QMouseEvent):
-        self.left_click_action() if self.left_click_action else None
+        self.adjustSize()
 
     def event(self, event: QEvent | None) -> bool:
         if event and event.type() == QEvent.Type.PaletteChange:  # PalletChange happens after the new style sheet is in use.
             self.svg_icon.load(handle_theme(self.icon_source, polychrome_light_or_dark()))
         return super().event(event)
-
-    def enterEvent(self, event):
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
-        super().enterEvent(event)
-
-    def leaveEvent(self, event):
-        self.setCursor(self.default_cursor)
-        super().leaveEvent(event)
-
-class StdButton(QPushButton):  # Reduce some repetitiveness in the code
-
-    def __init__(self, icon: QIcon | None = None, title: str = '', clicked: Callable | None = None, auto_default=True,
-                 tip: str | None = None, flat: bool = False, margins: bool = True, icon_size: QSize | None = None):
-        super().__init__()
-        self.setIcon(icon) if icon else None
-        self.setIconSize(icon_size) if icon_size else None
-        self.setText(title) if title else None
-        self.clicked.connect(clicked) if clicked else None
-        self.setToolTip(tip) if tip else None
-        self.setFlat(flat)
-        self.setContentsMargins(0, 0, 0, 0) if not margins else None
-        self.setAutoDefault(auto_default)
 
 
 class SettingsDialog(SubWinDialog, DialogSingletonMixin):
@@ -4176,17 +4156,20 @@ class VduControlPanel(QWidget):
         super().__init__()
         self.controller: VduController = controller
         layout = QVBoxLayout()
+        default_left = self.style().pixelMetric(QStyle.PixelMetric.PM_LayoutLeftMargin)
+        default_right = self.style().pixelMetric(QStyle.PixelMetric.PM_LayoutRightMargin)
+        layout.setContentsMargins(default_left, 0, default_right, 0)
         if int(controller.vdu_number) < 1:
-            self.label = IconLabel(PANEL_CONNECTED_ICON_SOURCE,
-                                   controller.get_vdu_preferred_name(),
-                                   tr("Panel {}".format(-int(controller.vdu_number))),
-                                   left_click_action=controller.edit_config)
+            self.title_button = TitleButton(PANEL_CONNECTED_ICON_SOURCE,
+                                            controller.get_vdu_preferred_name(),
+                                            tr("Panel {}".format(-int(controller.vdu_number))),
+                                            left_click_action=controller.edit_config)
         else:
-            self.label = IconLabel(VDU_CONNECTED_ICON_SOURCE,
-                                   controller.get_vdu_preferred_name(),
-                                   tr("Monitor {}".format(controller.vdu_number)),
-                                   left_click_action=controller.edit_config)
-        layout.addWidget(RightPad(self.label))
+            self.title_button = TitleButton(VDU_CONNECTED_ICON_SOURCE,
+                                            controller.get_vdu_preferred_name(),
+                                            tr("Monitor {}".format(controller.vdu_number)),
+                                            left_click_action=controller.edit_config)
+        layout.addWidget(self.title_button)
 
         self.vcp_controls: List[VduControlBase] = []
         self.vdu_exception_handler = vdu_exception_handler
@@ -4261,7 +4244,7 @@ class VduControlPanel(QWidget):
         else:
             disp_numumber_txt = tr("Panel {}").format(-disp_number)
         click_txt = tr("(Click for Settings)")
-        self.label.setToolTip(f"{title_txt}\n{writes_txt}\n{disp_numumber_txt}\n{click_txt}")
+        self.title_button.setToolTip(f"{title_txt}\n{writes_txt}\n{disp_numumber_txt}\n{click_txt}")
 
 
 class Preset:
@@ -8113,8 +8096,8 @@ class LuxAutoController:
                     LuxDialog.get_instance().close()
                 else:
                     LuxDialog.invoke(self.main_controller)
-
-            self.lux_slider.status_icon_pressed_qtsignal.connect(_toggle_lux_dialog)
+            self.lux_slider.title_button_pressed_qtsignal.connect(_toggle_lux_dialog)
+            self.lux_slider.status_icon_pressed_qtsignal.connect(self.adjust_brightness_now)
         return self.lux_slider
 
     def get_lux_zone(self) -> LuxZone | None:
@@ -8319,6 +8302,7 @@ class LuxAmbientSlider(QWidget):
     new_lux_value_qtsignal = pyqtSignal(int)
     status_icon_changed_qtsignal = pyqtSignal()
     status_icon_pressed_qtsignal = pyqtSignal()
+    title_button_pressed_qtsignal = pyqtSignal()
 
     def __init__(self, controller: LuxAutoController) -> None:
         super().__init__()
@@ -8341,15 +8325,10 @@ class LuxAmbientSlider(QWidget):
         top_layout = QVBoxLayout()
         self.setLayout(top_layout)
         top_layout.setSpacing(0)
-        tl_margins = top_layout.contentsMargins()
-        top_layout.setContentsMargins(tl_margins.left(), 0, tl_margins.right(), 0)
 
-        def label_clicked():
-            self.status_icon_pressed_qtsignal.emit()
-
-        label = IconLabel(AMBIENT_PANEL_ICON_SOURCE, tr("Ambient Light Level"), tr("lux"), left_click_action=label_clicked)
+        label = TitleButton(AMBIENT_PANEL_ICON_SOURCE, tr("Ambient Light Level"), tr("lux"), left_click_action=self.title_button_pressed_qtsignal)
         label.setToolTip(tr("Ambient light level control for adjusting all monitors.\n(Click for Light-Meter Dialog)"))
-        top_layout.addWidget(RightPad(label), stretch=0, alignment=Qt.AlignmentFlag.AlignTop)
+        top_layout.addWidget(label, stretch=0, alignment=Qt.AlignmentFlag.AlignTop)
 
         input_panel = QWidget()
         input_panel_layout = QHBoxLayout()
@@ -8444,7 +8423,7 @@ class LuxAmbientSlider(QWidget):
                         if self.current_zone != zone:
                             self.current_zone = zone
                             self.status_icon.setIcon(create_icon_from_svg_bytes(zone.icon_svg))
-                            self.status_icon.setToolTip(tr("Open/Close Light-Meter Dialog"))
+                            self.status_icon.setToolTip(tr("Perform ambient lightng check now"))
                             icon_changed = True
                 self.current_value = max(1, value)  # restrict to non-negative and something valid for log10
                 if source != self.slider:
