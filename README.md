@@ -378,7 +378,8 @@ Version History
 * 2.6.0
   * Added laptop panel support, see Setting option "laptop-panel-enabled".
     Requires the commonly available "brightnessctr" command to be installed.
-  * Udev is used to detect laptop brightness-function-keys events and inactivity-dimming.
+  * Udev is used to detect laptop brightness events, such as up/down function-keys and inactivity-dimming.
+  * Made the control-panel's icons/titles shortcuts to the relevant Settings tabs.  
   * Fixed Settings text-input line-height on small screens.
   * Slightly reduced the Ambient-Slider spacing/layout to match the monitor-panel layouts.
 * 2.5.0

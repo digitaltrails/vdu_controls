@@ -1037,6 +1037,10 @@ def intV(type_id: Enum|int) -> int:
     return type_id.value if isinstance(type_id, Enum) else type_id  # awfulness of enums in pyqt6
 
 
+def is_subwin_desktop() -> bool:
+    return os.environ.get('XDG_CURRENT_DESKTOP', default='unknown').lower() in ['gnome', 'cosmic']
+
+
 def is_running_in_gui_thread() -> bool:
     return QThread.currentThread() == gui_thread
 
@@ -3129,7 +3133,7 @@ class VduController(QObject):
     _async_setvcp_task: VduControllerAsyncSetter | None = None
 
     def __init__(self, vdu_number: str, vdu_model_name: str, serial_number: str, manufacturer: str,
-                 default_config: VduControlsConfig, ddcutil: Ddcutil,
+                 default_config: VduControlsConfig, ddcutil: Ddcutil, edit_config: Callable,
                  vdu_exception_handler: Callable, remedy: int = 0) -> None:
         super().__init__()
         self.no_longer_in_use = False
@@ -3142,6 +3146,7 @@ class VduController(QObject):
         self.serial_number = serial_number
         self.manufacturer = manufacturer
         self.ddcutil = ddcutil
+        self.edit_config_callable = edit_config
         self.vdu_exception_handler = vdu_exception_handler
 
         def _handle_async_setvcp_exception(vcp_code: str, value: int, origin: VcpOrigin, e: VduException):
@@ -3199,6 +3204,9 @@ class VduController(QObject):
         self.config.restrict_to_actual_capabilities(self.capabilities_supported_by_this_vdu)
         if remedy == VduController.DISCARD_VDU:
             self.write_template_config_files()  # Persist the discard
+
+    def edit_config(self):
+        self.edit_config_callable(self.config.config_name)
 
     def write_template_config_files(self) -> None:
         """Write template config files to $HOME/.config/vdu_controls/"""
@@ -3325,13 +3333,24 @@ class VduController(QObject):
 class SubWinDialog(QDialog):  # Fix for gnome: QDialog must be a subwindow, otherwise it will always stay on top of other windows.
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__(parent, Qt.WindowType.SubWindow)
+        # On gnome this allows the subwindow to surface properly, on others it may anoyingly keep
+        # the window on top - which is not always desirable.
+        super().__init__(parent, Qt.WindowType.SubWindow if is_subwin_desktop() else Qt.WindowType.Window)
 
+
+class RightPad(QWidget):
+    def __init__(self, left_widget: QWidget) -> None:
+        super().__init__()
+        layout = QHBoxLayout()
+        layout.addWidget(left_widget)
+        layout.addStretch()
+        layout.setContentsMargins(0,0,0,0)
+        self.setLayout(layout)
 
 
 class IconLabel(QWidget):
 
-    def __init__(self, icon_source: bytes, main_text: str, sub_text) -> None:
+    def __init__(self, icon_source: bytes, main_text: str, sub_text: str, left_click_action: Callable | None = None) -> None:
         super().__init__()
         layout = QHBoxLayout()
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -3347,14 +3366,25 @@ class IconLabel(QWidget):
                             f"<span style='font-size:{native_font_height(0.5)}px; font-weight:normal;'>{sub_text}</span>")
         self.label.setTextFormat(Qt.TextFormat.RichText)
         self.label.setWordWrap(True)
+        self.left_click_action = left_click_action
+        self.default_cursor = self.cursor()
         layout.addWidget(self.label)
+
+    def mousePressEvent(self, event: QMouseEvent):
+        self.left_click_action() if self.left_click_action else None
 
     def event(self, event: QEvent | None) -> bool:
         if event and event.type() == QEvent.Type.PaletteChange:  # PalletChange happens after the new style sheet is in use.
             self.svg_icon.load(handle_theme(self.icon_source, polychrome_light_or_dark()))
         return super().event(event)
 
+    def enterEvent(self, event):
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        super().enterEvent(event)
 
+    def leaveEvent(self, event):
+        self.setCursor(self.default_cursor)
+        super().leaveEvent(event)
 
 class StdButton(QPushButton):  # Reduce some repetitiveness in the code
 
@@ -3385,6 +3415,14 @@ class SettingsDialog(SubWinDialog, DialogSingletonMixin):
     @staticmethod
     def reconfigure_instance(vdu_config_list: List[VduControlsConfig]) -> None:
         SettingsDialog.get_instance().reconfigure(vdu_config_list) if SettingsDialog.exists() else None
+
+    @staticmethod
+    def edit_config(config_name: str) -> None:
+        if instance := SettingsDialog.get_instance():
+            for tab_number, tab in enumerate(instance.editor_tab_list):
+                if tab.config_path == ConfIni.get_path(config_name):
+                    instance.tabs_widget.setCurrentIndex(tab_number)
+                    instance.make_visible()
 
     def __init__(self, default_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig], change_callback) -> None:
         super().__init__()
@@ -3441,7 +3479,7 @@ class SettingsDialog(SubWinDialog, DialogSingletonMixin):
         self.setMinimumSize(npx(1024), npx(800))
         self.reconfigure([default_config, *vdu_config_list])
         self.make_visible()
-        
+
     def status_message(self, message: str, msecs: int = 0):  # Display a message on the visible tab.
         self.bottom_status_bar.showMessage(message, msecs)
 
@@ -4136,17 +4174,20 @@ class VduControlPanel(QWidget):
 
     def __init__(self, controller: VduController, vdu_exception_handler: Callable) -> None:
         super().__init__()
+        self.controller: VduController = controller
         layout = QVBoxLayout()
         if int(controller.vdu_number) < 1:
             self.label = IconLabel(PANEL_CONNECTED_ICON_SOURCE,
                                    controller.get_vdu_preferred_name(),
-                                   tr("Panel {}".format(-int(controller.vdu_number))))
+                                   tr("Panel {}".format(-int(controller.vdu_number))),
+                                   left_click_action=controller.edit_config)
         else:
             self.label = IconLabel(VDU_CONNECTED_ICON_SOURCE,
                                    controller.get_vdu_preferred_name(),
-                                   tr("Monitor {}".format(controller.vdu_number)))
-        layout.addWidget(self.label)
-        self.controller: VduController = controller
+                                   tr("Monitor {}".format(controller.vdu_number)),
+                                   left_click_action=controller.edit_config)
+        layout.addWidget(RightPad(self.label))
+
         self.vcp_controls: List[VduControlBase] = []
         self.vdu_exception_handler = vdu_exception_handler
 
@@ -4213,9 +4254,14 @@ class VduControlPanel(QWidget):
 
     def update_stats(self):
         name, sid = self.controller.get_vdu_preferred_name(), self.controller.vdu_stable_id
-        self.label.setToolTip(tr("{}\nSet-VCP writes: {}\nMonitor {}").format(sid if id == name else f"{name}\n({sid})",
-                                                                              self.controller.get_write_count(),
-                                                                              self.controller.vdu_number))
+        title_txt =  sid if id == name else f"{name}\n({sid})"
+        writes_txt = tr("Set-VCP writes: {}").format(self.controller.get_write_count())
+        if (disp_number := int(self.controller.vdu_number)) >= 0:
+            disp_numumber_txt = tr("Monitor {}").format(disp_number)
+        else:
+            disp_numumber_txt = tr("Panel {}").format(-disp_number)
+        click_txt = tr("(Click for Settings)")
+        self.label.setToolTip(f"{title_txt}\n{writes_txt}\n{disp_numumber_txt}\n{click_txt}")
 
 
 class Preset:
@@ -7932,7 +7978,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
             if self.main_controller.main_config.get_location() is None:
                 MBox(MIcon.Critical, msg=tr("Cannot configure a solar lux calculator, no location is defined."),
                      info=tr("Please set a location in the main Settings-Dialog.")).exec()
-                self.main_controller.edit_config(tab_number=0)
+                self.main_controller.edit_config(self.main_controller.main_config.config_name)
                 return False
             MBox(MIcon.Information,
                  msg=tr("Semi-automatic lux adjustment: quick start instructions.\n"                      
@@ -8298,9 +8344,12 @@ class LuxAmbientSlider(QWidget):
         tl_margins = top_layout.contentsMargins()
         top_layout.setContentsMargins(tl_margins.left(), 0, tl_margins.right(), 0)
 
-        label = IconLabel(AMBIENT_PANEL_ICON_SOURCE, tr("Ambient Light Level"), tr("lux"))
-        label.setToolTip(tr("Set the ambient light level to adjust all monitors."))
-        top_layout.addWidget(label, stretch=0, alignment=Qt.AlignmentFlag.AlignTop)
+        def label_clicked():
+            self.status_icon_pressed_qtsignal.emit()
+
+        label = IconLabel(AMBIENT_PANEL_ICON_SOURCE, tr("Ambient Light Level"), tr("lux"), left_click_action=label_clicked)
+        label.setToolTip(tr("Ambient light level control for adjusting all monitors.\n(Click for Light-Meter Dialog)"))
+        top_layout.addWidget(RightPad(label), stretch=0, alignment=Qt.AlignmentFlag.AlignTop)
 
         input_panel = QWidget()
         input_panel_layout = QHBoxLayout()
@@ -8770,7 +8819,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             while True:
                 try:
                     controller = VduController(vdu_number, model_name, vdu_serial, manufacturer, self.main_config,
-                                               self.ddcutil, main_panel_error_handler, VduController.NORMAL_VDU)
+                                               self.ddcutil, self.edit_config, main_panel_error_handler, VduController.NORMAL_VDU)
                 except (subprocess.SubprocessError, ValueError, re.error, OSError, DdcutilDisplayNotFound) as e:
                     log_error(f"Problem creating controller for {vdu_number=} {model_name=} {vdu_serial=} exception={e}",
                               trace=True)
@@ -8779,7 +8828,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                         time.sleep(1.0)  # Slow things down in case something is wrong with the GUI or VDU interactions.
                         continue  # Loop and retry as a normal VDU
                     controller = VduController(vdu_number, model_name, vdu_serial, manufacturer, self.main_config,
-                                               self.ddcutil, main_panel_error_handler, remedy)
+                                               self.ddcutil, self.edit_config, main_panel_error_handler, remedy)
                     controller.write_template_config_files()
                 break  # Normally expect to just pass through the loop once
             if controller is not None:
@@ -8808,9 +8857,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         log_info("Reconfiguring due to settings change.")
         self.configure_application()
 
-    def edit_config(self, tab_number: int | None = None) -> None:
+    def edit_config(self, config_name: str | None = None) -> None:
         SettingsDialog.invoke(self.main_config, self.get_vdu_configs(), self.settings_changed)
-        SettingsDialog.get_instance().tabs_widget.setCurrentIndex(tab_number) if tab_number is not None else None
+        SettingsDialog.edit_config(config_name if config_name else self.main_config.config_name)
 
     def show_presets_dialog(self, preset: Preset | None = None) -> None:
         PresetsDialog.invoke(self, self.main_config)
