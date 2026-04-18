@@ -3388,8 +3388,8 @@ class TitleButton(StdButton):
     def __init__(self, icon_source: bytes, main_text: str, sub_text: str, clicked: Callable | None = None, parent: QWidget | None = None) -> None:
         super().__init__(icon=None, title=None, clicked=clicked, flat=True, parent=parent)
         layout = QHBoxLayout()
-        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.setLayout(layout)
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.svg_icon = ThemedSvgWidget(icon_source, native_font_height(scaled=1.8), native_font_height(scaled=1.8), parent=self)
         layout.addWidget(self.svg_icon)
         self.label = QLabel(f"<span style='font-weight:bold;'>{main_text}<br/>"
@@ -3397,8 +3397,11 @@ class TitleButton(StdButton):
         self.label.setTextFormat(Qt.TextFormat.RichText)
         self.label.setWordWrap(True)
         self.label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)  # Prevent label from swollowing clicks
-        self.default_cursor = self.cursor()
+        self.label.adjustSize()   # Adjust down to actual text height before accessing its height
         layout.addWidget(self.label)
+        self.setMinimumHeight(max(self.svg_icon.height(), self.label.height()) +    # Avoids size issues if embedded in a layout
+                              self.style().pixelMetric(QStyle.PixelMetric.PM_LayoutTopMargin) +
+                              self.style().pixelMetric(QStyle.PixelMetric.PM_LayoutBottomMargin))
 
 
 class SettingsDialog(SubWinDialog, DialogSingletonMixin):
@@ -4180,7 +4183,7 @@ class VduControlPanel(QWidget):
                                             controller.get_vdu_preferred_name(),
                                             tr("Monitor {}".format(controller.vdu_number)),
                                             clicked=controller.edit_config)
-        layout.addWidget(self.title_button, stretch=0, alignment=Qt.AlignmentFlag.AlignTop)  # other params fix Qt5 theme changes
+        layout.addWidget(self.title_button, alignment=Qt.AlignmentFlag.AlignTop)  # other params fix Qt5 theme changes
 
         self.vcp_controls: List[VduControlBase] = []
         self.vdu_exception_handler = vdu_exception_handler
