@@ -9398,6 +9398,9 @@ class VduAppWindow(QMainWindow):
             quit_action=self.quit_app,
             hide_shortcuts=self.hide_shortcuts, parent=self)
 
+        self.app_context_menu.setTitle("VDU Controls ")  # Populate titlebar-menu (if it's enabled for Plasma Titlebars).
+        self.menuBar().addMenu(self.app_context_menu)    # TODO - make a proper menu - this will be a submenu.
+
         splash_pixmap = get_splash_image()
         splash = QSplashScreen(
             splash_pixmap.scaledToWidth(native_font_height(scaled=26)).scaledToHeight(native_font_height(scaled=13)),
