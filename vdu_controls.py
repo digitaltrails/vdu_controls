@@ -3344,23 +3344,23 @@ class ThemedSvgWidget(QSvgWidget):
         super().__init__(parent=parent)
         self.icon_source = icon_source
         self.setFixedSize(width, height)
-        self.set_icon_source(self.icon_source)
+        self.load_from_icon_source(self.icon_source)
 
-    def set_icon_source(self, icon_source: bytes):
+    def load_from_icon_source(self, icon_source: bytes):
         self.icon_source = icon_source
         self.load(handle_theme(self.icon_source, polychrome_light_or_dark()))
 
     def event(self, event: QEvent | None) -> bool:
         if event and event.type() == QEvent.Type.PaletteChange:  # PalletChange happens after the new style sheet is in use.
-            self.load(handle_theme(self.icon_source, polychrome_light_or_dark()))
+            self.load_from_icon_source(self.icon_source)
         return super().event(event)
 
 
 class StdButton(QPushButton):  # Reduce some repetitiveness in the code
 
     def __init__(self, icon: QIcon | None = None, title: str = '', clicked: Callable | None = None, auto_default=True,
-                 tip: str | None = None, flat: bool = False, margins: bool = True, icon_size: QSize | None = None):
-        super().__init__()
+                 tip: str | None = None, flat: bool = False, margins: bool = True, icon_size: QSize | None = None, parent: QWidget | None = None) -> None:
+        super().__init__(parent=parent)
         self.setIcon(icon) if icon else None
         self.setIconSize(icon_size) if icon_size else None
         self.setText(title) if title else None
@@ -3371,22 +3371,34 @@ class StdButton(QPushButton):  # Reduce some repetitiveness in the code
         self.setAutoDefault(auto_default)
 
 
+class ThemedSvgButton(StdButton):
+
+    def __init__(self, icon_source: bytes, title: str = '', clicked: Callable | None = None, auto_default=True,
+                 tip: str | None = None, flat: bool = False, margins: bool = True, icon_size: QSize | None = None, parent: QWidget | None = None) -> None:
+        super().__init__(icon := create_icon_from_svg_bytes(icon_source), title, clicked, auto_default, tip, flat, margins, icon_size, parent)
+        self.icon_source = icon_source
+
+    def event(self, event: QEvent | None) -> bool:
+        if event and event.type() == QEvent.Type.PaletteChange:  # PalletChange happens after the new style sheet is in use.
+            self.setIcon(create_icon_from_svg_bytes(self.icon_source))
+        return super().event(event)
+
+
 class TitleButton(StdButton):
-    def __init__(self, icon_source: bytes, main_text: str, sub_text: str, left_click_action: Callable | None = None):
-        super().__init__(flat=True, clicked=left_click_action)
+    def __init__(self, icon_source: bytes, main_text: str, sub_text: str, clicked: Callable | None = None, parent: QWidget | None = None) -> None:
+        super().__init__(icon=None, title=None, clicked=clicked, flat=True, parent=parent)
         layout = QHBoxLayout()
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.setLayout(layout)
-        self.svg_icon = ThemedSvgWidget(icon_source, native_font_height(scaled=1.8), native_font_height(scaled=1.8))
+        self.svg_icon = ThemedSvgWidget(icon_source, native_font_height(scaled=1.8), native_font_height(scaled=1.8), parent=self)
         layout.addWidget(self.svg_icon)
         self.label = QLabel(f"<span style='font-weight:bold;'>{main_text}<br/>"
                             f"<span style='font-size:{native_font_height(0.5)}px; font-weight:normal;'>{sub_text}</span>")
         self.label.setTextFormat(Qt.TextFormat.RichText)
         self.label.setWordWrap(True)
-        self.left_click_action = left_click_action
+        self.label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)  # Prevent label from swollowing clicks
         self.default_cursor = self.cursor()
         layout.addWidget(self.label)
-        self.adjustSize()
 
 
 class SettingsDialog(SubWinDialog, DialogSingletonMixin):
@@ -4162,13 +4174,13 @@ class VduControlPanel(QWidget):
             self.title_button = TitleButton(PANEL_CONNECTED_ICON_SOURCE,
                                             controller.get_vdu_preferred_name(),
                                             tr("Panel {}".format(-int(controller.vdu_number))),
-                                            left_click_action=controller.edit_config)
+                                            clicked=controller.edit_config)
         else:
             self.title_button = TitleButton(VDU_CONNECTED_ICON_SOURCE,
                                             controller.get_vdu_preferred_name(),
                                             tr("Monitor {}".format(controller.vdu_number)),
-                                            left_click_action=controller.edit_config)
-        layout.addWidget(self.title_button)
+                                            clicked=controller.edit_config)
+        layout.addWidget(self.title_button, stretch=0, alignment=Qt.AlignmentFlag.AlignTop)  # other params fix Qt5 theme changes
 
         self.vcp_controls: List[VduControlBase] = []
         self.vdu_exception_handler = vdu_exception_handler
@@ -8315,7 +8327,7 @@ class LuxAmbientSlider(QWidget):
             LuxZone(tr("Subdued"), LUX_SUBDUED_SVG, 15, 100, 20, column_span=3),
             LuxZone(tr("Dark"), LUX_DARK_SVG, 0, 15, 2, column_span=4), ]
         self.current_value = 10_000
-        self.status_icon = ThemedSvgWidget(self.zones[0].icon_svg, native_font_height(scaled=2.5), native_font_height(scaled=2.5))
+        self.status_icon = ThemedSvgWidget(self.zones[0].icon_svg, native_font_height(scaled=2.0), native_font_height(scaled=2.0), self)
         self.current_name: str | None = None
         self.current_zone: LuxZone | None = None
 
@@ -8324,19 +8336,23 @@ class LuxAmbientSlider(QWidget):
         top_layout.setSpacing(0)
 
         label = TitleButton(AMBIENT_PANEL_ICON_SOURCE, tr("Ambient Light Level"), tr("lux"),
-                            left_click_action=self.title_button_pressed_qtsignal)
+                            clicked=self.title_button_pressed_qtsignal)
         label.setToolTip(tr("Ambient light level control for adjusting all monitors.\n(Click for Light-Meter Dialog)"))
         top_layout.addWidget(label, stretch=0, alignment=Qt.AlignmentFlag.AlignTop)
 
         input_panel = QWidget()
         input_panel_layout = QHBoxLayout()
+        default_left = self.style().pixelMetric(QStyle.PixelMetric.PM_LayoutLeftMargin)
+        default_right = self.style().pixelMetric(QStyle.PixelMetric.PM_LayoutRightMargin)
+        input_panel_layout.setContentsMargins(default_left, 0, default_right, 0)
         input_panel.setLayout(input_panel_layout)
         input_panel_layout.addWidget(self.status_icon)
 
         lux_slider_panel = QWidget()
         lux_slider_panel_layout = QGridLayout()
         lux_slider_panel.setLayout(lux_slider_panel_layout)
-        lux_slider_panel_layout.setContentsMargins(0,0,0,lux_slider_panel_layout.contentsMargins().bottom())
+        lux_slider_panel_layout.setSpacing(0)
+        lux_slider_panel_layout.setContentsMargins(default_left, 0, default_right, lux_slider_panel_layout.contentsMargins().bottom())
 
         self.slider = ClickableSlider()
         self.slider.setToolTip(tr("Ambient light level input (lux value)"))
@@ -8399,8 +8415,8 @@ class LuxAmbientSlider(QWidget):
         log10_icon_size = QSize(native_font_height(scaled=1), native_font_height(scaled=1))
         self.label_map: Dict[StdButton, bytes] = {}
         for zone in reversed(self.zones):
-            log10_button = StdButton(icon=create_icon_from_svg_bytes(zone.icon_svg), icon_size=log10_icon_size,
-                                     clicked=partial(self.lux_input_field.setValue, zone.icon_svg_lux), flat=True, tip=zone.name)
+            log10_button = ThemedSvgButton(zone.icon_svg, icon_size=log10_icon_size,
+                                           clicked=partial(self.lux_input_field.setValue, zone.icon_svg_lux), flat=True, tip=zone.name)
             lux_slider_panel_layout.addWidget(log10_button, 0, col, 1, zone.column_span, alignment=Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter)
             self.label_map[log10_button] = zone.icon_svg
             col += zone.column_span
@@ -8419,7 +8435,7 @@ class LuxAmbientSlider(QWidget):
                     if zone.min_lux < value <= zone.max_lux:
                         if self.current_zone != zone:
                             self.current_zone = zone
-                            self.status_icon.set_icon_source(zone.icon_svg)
+                            self.status_icon.load_from_icon_source(zone.icon_svg)
                             self.status_icon.setToolTip(zone.name)
                             icon_changed = True
                 self.current_value = max(1, value)  # restrict to non-negative and something valid for log10
@@ -8439,13 +8455,6 @@ class LuxAmbientSlider(QWidget):
                     self.blockSignals(False)
                 if icon_changed:
                     self.status_icon_changed_qtsignal.emit()
-
-    def event(self, event: QEvent | None) -> bool:
-        # TODO - Make StdButton like TitledButton
-        if event and event.type() == QEvent.Type.PaletteChange:  # PalletChange happens after the new style sheet is in use.
-            for slider_button, svg_bytes in self.label_map.items():
-                slider_button.setIcon(create_icon_from_svg_bytes(svg_bytes))
-        return super().event(event)
 
 
 class GreyScaleDialog(SubWinDialog):
