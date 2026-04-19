@@ -4751,7 +4751,7 @@ class VduControlsMainPanel(QWidget):
                      info=tr('The monitor will be omitted from the control panel.')).exec()
 
         for control in extra_controls:
-             controllers_layout.addWidget(control, 0, Qt.AlignmentFlag.AlignTop)
+             controllers_layout.addWidget(control)
         controllers_layout.addStretch(0)
 
         if len(self.vdu_control_panels) == 0:
