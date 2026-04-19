@@ -934,25 +934,25 @@ for qt_version in (5, 6) if CONFIG_FILE_PREFER_QT5.exists() else (6, 5):
             from PyQt6 import QtCore, QtNetwork
             from PyQt6.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QPoint, QObject, QEvent, \
                 QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir, \
-                QRegularExpression, QPointF, QRect, QSocketNotifier
+                QRegularExpression, QPointF, QRect, QSocketNotifier, QMargins
             from PyQt6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusArgument, QDBusVariant
             from PyQt6.QtGui import QAction, QShortcut, QPixmap, QIcon, QCursor, QImage, QPainter, QRegularExpressionValidator, \
                 QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon, \
-                QDoubleValidator, QScreen
+                QDoubleValidator
             from PyQt6.QtSvg import QSvgRenderer
             from PyQt6.QtSvgWidgets import QSvgWidget
             from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
                 QSplashScreen, QPushButton, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
                 QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QMainWindow, QToolBar, QToolButton, QFileDialog, \
                 QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, \
-                QSpacerItem, QListWidget, QListWidgetItem
+                QSpacerItem, QListWidget, QListWidgetItem, QLayout
             QT5_USE_HIGH_DPI_PIXMAPS = None
             QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING = None
         elif qt_version == 5:  # Covers all other values.
             from PyQt5 import QtCore, QtNetwork
             from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QPoint, QObject, QEvent, \
                 QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir, \
-                QRegularExpression, QPointF, QRect, QSocketNotifier
+                QRegularExpression, QPointF, QRect, QSocketNotifier, QMargins
             from PyQt5.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusArgument, QDBusVariant
             from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QRegularExpressionValidator, \
                 QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon, \
@@ -962,7 +962,7 @@ for qt_version in (5, 6) if CONFIG_FILE_PREFER_QT5.exists() else (6, 5):
                 QSplashScreen, QPushButton, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
                 QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
                 QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, QShortcut, \
-                QSpacerItem, QListWidget, QListWidgetItem
+                QSpacerItem, QListWidget, QListWidgetItem, QLayout
             QT5_USE_HIGH_DPI_PIXMAPS = Qt.ApplicationAttribute.AA_UseHighDpiPixmaps
             QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING = QPainter.RenderHint.HighQualityAntialiasing
         break
@@ -1520,6 +1520,21 @@ def get_splash_image() -> QPixmap:
         pixmap.load(DEFAULT_SPLASH_PNG)
         return pixmap
     return create_pixmap_from_svg_bytes(FALLBACK_SPLASH_SVG, 256, 256)
+
+
+def alter_margins(target: QWidget | QLayout,
+                  left: int | None = None, top: int | None = None, right: int | None = None, bottom: int | None = None,
+                  default: QStyle | None = None) -> None:
+    current = target.contentsMargins()
+    if left is None:
+        left = default.pixelMetric(QStyle.PixelMetric.PM_LayoutLeftMargin) if default else current.left()
+    if top is None:
+        top = default.pixelMetric(QStyle.PixelMetric.PM_LayoutTopMargin) if default else current.top()
+    if right is None:
+        right = default.pixelMetric(QStyle.PixelMetric.PM_LayoutRightMargin) if default else current.right()
+    if bottom is None:
+        bottom = default.pixelMetric(QStyle.PixelMetric.PM_LayoutBottomMargin) if default else current.bottom()
+    target.setContentsMargins(QMargins(left, top, right, bottom))
 
 
 def clamp(v: int, min_v: int, max_v: int) -> int:
@@ -3706,8 +3721,7 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
                  tooltip: str, related: str, requires: str) -> None:
         super().__init__(section_editor, option, section, tooltip)
         self.setLayout(widget_layout := QHBoxLayout())
-        # Squish up, save space, stay closer to parent label
-        widget_layout.setContentsMargins(widget_layout.contentsMargins().left(), 0, widget_layout.contentsMargins().right(), 0)
+        alter_margins(widget_layout, top=0, bottom=0)  # Squish up, save space, stay closer to parent label
         checkbox = QCheckBox(self.translate_option())
         checkbox.setChecked(section_editor.ini_editable.getboolean(section, option))
 
@@ -4170,9 +4184,7 @@ class VduControlPanel(QWidget):
         super().__init__()
         self.controller: VduController = controller
         layout = QVBoxLayout()
-        default_left = self.style().pixelMetric(QStyle.PixelMetric.PM_LayoutLeftMargin)
-        default_right = self.style().pixelMetric(QStyle.PixelMetric.PM_LayoutRightMargin)
-        layout.setContentsMargins(default_left, 0, default_right, 0)
+        alter_margins(layout, top=0, bottom=0, default=self.style())
         if int(controller.vdu_number) < 1:
             self.title_button = TitleButton(PANEL_CONNECTED_ICON_SOURCE,
                                             controller.get_vdu_preferred_name(),
@@ -4720,8 +4732,7 @@ class VduControlsMainPanel(QWidget):
                     item.widget().deleteLater()
         controllers_layout = QVBoxLayout()
         controllers_layout.setSpacing(npx(5))
-        cl_margins = controllers_layout.contentsMargins()
-        controllers_layout.setContentsMargins(cl_margins.left(), npx(5), cl_margins.right(), npx(5))
+        alter_margins(controllers_layout, top=npx(5), bottom=npx(5))
         self.setLayout(controllers_layout)
 
         warnings_enabled = main_config.is_set(ConfOpt.WARNINGS_ENABLED)
@@ -4811,7 +4822,7 @@ class VduControlsMainPanel(QWidget):
 
     def status_message(self, message: str, timeout: int):
         if message.strip():   # Only non-empty messages, ignore blank messages, they're just clearing the status bar.
-            self.message_history.append(f"\n{datetime.now().strftime("%H:%M:%S")}{MESSAGE_SYMBOL} {message}")
+            self.message_history.append(f"\n{datetime.now().strftime('%H:%M:%S')}{MESSAGE_SYMBOL} {message}")
             self.message_history = self.message_history[-9:]
         if self.main_controller.main_config.is_set(ConfOpt.SEPARATE_STATUS_BAR):
             self.main_controller.main_window.statusBar().showMessage(message, timeout)
@@ -5048,8 +5059,7 @@ class PresetItemWidget(QWidget):
         self.preset = preset
         line_layout = QHBoxLayout()
         line_layout.setSpacing(0)
-        ll_margins = line_layout.contentsMargins()
-        line_layout.setContentsMargins(ll_margins.left(), 0, ll_margins.right(), npx(1))  # Why?
+        alter_margins(line_layout, top=0, bottom=npx(1))  # Why?
         self.setLayout(line_layout)
 
         self.preset_name_button = PresetActivationButton(preset)
@@ -8337,6 +8347,7 @@ class LuxAmbientSlider(QWidget):
         top_layout = QVBoxLayout()
         self.setLayout(top_layout)
         top_layout.setSpacing(0)
+        alter_margins(top_layout, top=0, bottom=0, default=self.style())
 
         label = TitleButton(AMBIENT_PANEL_ICON_SOURCE, tr("Ambient Light Level"), tr("lux"),
                             clicked=self.title_button_pressed_qtsignal)
@@ -8345,17 +8356,16 @@ class LuxAmbientSlider(QWidget):
 
         input_panel = QWidget()
         input_panel_layout = QHBoxLayout()
-        default_left = self.style().pixelMetric(QStyle.PixelMetric.PM_LayoutLeftMargin)
-        default_right = self.style().pixelMetric(QStyle.PixelMetric.PM_LayoutRightMargin)
-        input_panel_layout.setContentsMargins(default_left, 0, default_right, 0)
+        alter_margins(input_panel_layout, top=0, bottom=0, default=self.style())
         input_panel.setLayout(input_panel_layout)
         input_panel_layout.addWidget(self.status_icon)
 
-        lux_slider_panel = QWidget()
-        lux_slider_panel_layout = QGridLayout()
-        lux_slider_panel.setLayout(lux_slider_panel_layout)
-        lux_slider_panel_layout.setSpacing(0)
-        lux_slider_panel_layout.setContentsMargins(default_left, 0, default_right, lux_slider_panel_layout.contentsMargins().bottom())
+        slider_panel = QWidget()
+        slider_panel_layout = QGridLayout()
+        slider_panel.setLayout(slider_panel_layout)
+        slider_panel_layout.setSpacing(0)
+        # Move the slider up a little to line up with left and right elements
+        alter_margins(slider_panel_layout, top=0, bottom=slider_panel_layout.contentsMargins().bottom(), default=self.style())
 
         self.slider = ClickableSlider()
         self.slider.setToolTip(tr("Ambient light level input (lux value)"))
@@ -8368,16 +8378,16 @@ class LuxAmbientSlider(QWidget):
         self.slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         self.slider.setOrientation(Qt.Orientation.Horizontal)  # type: ignore
         self.slider.setTracking(False)  # Don't rewrite the ddc value too often - not sure of the implications
-        lux_slider_panel_layout.addWidget(self.slider, 1, 0, 1, 15, alignment=Qt.AlignmentFlag.AlignTop)
+        slider_panel_layout.addWidget(self.slider, 1, 0, 1, 15, alignment=Qt.AlignmentFlag.AlignTop)
 
         # A hacky way to get custom labels without redefining paint
         for col_num, span, value in ((0, 3, 1), (3, 3, 10), (6, 3, 100), (9, 3, 1000), (12, 3, 10000), (14, 1, 100000)):
-            log10_button = QLabel(f"{value:2d}")
+            log10_label = QLabel(f"{value:2d}")
             app_font = QApplication.font()
-            log10_button.setFont(QFont(app_font.family(), round(app_font.pointSize() * .66), QFont.Weight.Normal))
-            lux_slider_panel_layout.addWidget(log10_button, 2, col_num, 1, span, alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+            log10_label.setFont(QFont(app_font.family(), round(app_font.pointSize() * .66), QFont.Weight.Normal))
+            slider_panel_layout.addWidget(log10_label, 2, col_num, 1, span, alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
 
-        input_panel_layout.addWidget(lux_slider_panel, stretch=100)
+        input_panel_layout.addWidget(slider_panel, stretch=100)
 
         self.lux_input_field = QSpinBox()
         self.lux_input_field.setLineEdit(LineEditAll())
@@ -8418,10 +8428,10 @@ class LuxAmbientSlider(QWidget):
         log10_icon_size = QSize(native_font_height(scaled=1), native_font_height(scaled=1))
         self.label_map: Dict[StdButton, bytes] = {}
         for zone in reversed(self.zones):
-            log10_button = ThemedSvgButton(zone.icon_svg, icon_size=log10_icon_size,
-                                           clicked=partial(self.lux_input_field.setValue, zone.icon_svg_lux), flat=True, tip=zone.name)
-            lux_slider_panel_layout.addWidget(log10_button, 0, col, 1, zone.column_span, alignment=Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter)
-            self.label_map[log10_button] = zone.icon_svg
+            zone_button = ThemedSvgButton(zone.icon_svg, icon_size=log10_icon_size,
+                                          clicked=partial(self.lux_input_field.setValue, zone.icon_svg_lux), flat=True, tip=zone.name)
+            slider_panel_layout.addWidget(zone_button, 0, col, 1, zone.column_span, alignment=Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter)
+            self.label_map[zone_button] = zone.icon_svg
             col += zone.column_span
 
         self.set_current_value(round(controller.lux_meter.get_value()) if controller.lux_meter else 1000)  # don't trigger side-effects.
