@@ -1181,8 +1181,9 @@ RELEASE_ANNOUNCEMENT = """<h3>{WELCOME}</h3>{NOTE}<br/>
 <a href="https://github.com/digitaltrails/vdu_controls/releases/tag/v{VERSION}">
 https://github.com/digitaltrails/vdu_controls/releases/tag/v{VERSION}</a>
 <br/>___________________________________________________________________________"""
-RELEASE_INFO = QT_TR_NOOP('<b>Road Warrior</b>: Support Laptop Panels - see Settings.'
-                          '<br/>(Laptop panel support requires the brightnessctl command.)')
+RELEASE_INFO = QT_TR_NOOP('<b>Road Warrior: Support for Laptop-Panels</b><br/>'
+                          '<br/>Laptop-panel support is optional - see Settings - '
+                          ' and requires the brightnessctl command and python3-udev library.')
 
 CURRENT_PRESET_NAME_FILE = CONFIG_DIR_PATH.joinpath('current_preset.txt')
 CUSTOM_TRAY_ICON_FILE = CONFIG_DIR_PATH.joinpath('tray_icon.svg')
