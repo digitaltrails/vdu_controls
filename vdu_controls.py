@@ -2141,7 +2141,7 @@ class DdcutilPanelImpl:    # Laptop/builtin panel
                 manufacturer_id, model_name, product_code = 'Unknown', 'Panel', 'Unknown'
                 edid_txt = parts[0]
                 binary_sn = f"BSN#{edid_txt}".encode('utf-8')
-                serial_number = f"SN#{edid_txt}"
+                serial_number = re.sub(r'[^A-Za-z0-9]', '_', parts[0]).title()
                 log_info(f"Detected panel {model_name=} {edid_txt=} detected")
                 vdu_attributes = DdcutilExeImpl.DetectedAttributes(
                     display_number, usb_bus, usb_device,
