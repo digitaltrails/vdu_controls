@@ -376,12 +376,13 @@ Michael Hamilton
 Version History
 ---------------
 * 2.6.0
-  * Added laptop panel support, see Setting option "laptop-panel-enabled".
+  * Added laptop-panel support, see Setting option "laptop-panel-enabled".
     Requires the commonly available "brightnessctr" command to be installed.
   * Udev is used to detect laptop brightness events, such as up/down function-keys and inactivity-dimming.
-  * Made the control-panel's icons/titles shortcuts to the relevant Settings tabs.  
+  * The control-panel's icons/titles are now shortcuts to the relevant Settings tabs.  
   * Fixed Settings text-input line-height on small screens.
-  * Slightly reduced the Ambient-Slider spacing/layout to match the monitor-panel layouts.
+  * Cosmetic fixes to icons and spacing in the main panel layout.
+  
 * 2.5.0
   * Visual refresh of the Main-panel. Inspired by [a recent fork](https://github.com/ViktorSharga/vdu_controls_vibecodedUI) 
     by @ViktorSharga.
