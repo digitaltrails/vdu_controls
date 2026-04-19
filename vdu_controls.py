@@ -76,8 +76,8 @@ Arguments supplied on the command line override config file equivalent settings.
                             separate the status-bar from the toolbar
                             ``--no-separate-status-bar`` is the default
       --laptop-panels|--no-laptop-panels
-                            allow laptop panels to be controled
-                            ``--laptop-panels`` is the default
+                            allow laptop panels to be controlled
+                            ``--no-laptop-panels`` is the default
       --protect-nvram|--no-protect-nvram
                             alter options and defaults to minimize VDU NVRAM writes.
       --order-by-name|--no-order-by-name
@@ -111,7 +111,7 @@ Arguments supplied on the command line override config file equivalent settings.
                             local latitude and longitude for triggering presets
                             by solar elevation.
       --ddcutil-emulator emulator-path
-                            additional command-line ddcutil emulator for a laptop panel
+                            additional command-line ddcutil emulator for a special cases.
       --sleep-multiplier    set the default ddcutil sleep multiplier.
                             protocol reliability multiplier for ddcutil (typically
                             0.1 .. 2.0, default is 1.0)
@@ -285,6 +285,16 @@ Can be annotated with::
 
 With this annotation, when ever *Picture Mode* is altered, vdu_controls will
 reload all configuration files and refresh all control values from the VDUs.
+
+Laptop-Panel brightness control
+-------------------------------
+
+Starting with version 2.6, laptop panels are supported for brightness-only control.
+When laptop support is enabled, the widely available command line utility ``brightnessctl``
+is used to emulate DDC control of brightness (https://github.com/Hummer12007/brightnessctl).
+Additionally, ``vdu_controls`` will react to laptop brightness-function-keys or
+inactivity-dimming by using the ``python3-pyudev`` library to monitor udev
+for _brightness_ events.
 
 DBUS ddcutil-service
 --------------------
@@ -722,14 +732,6 @@ whether a tray or dock is differently themed. As a result the application includ
 several manual settings that can alter the tray/dock icon theming between
 colored, monochrome-dark and monochrome-light.
 
-Laptops
--------
-
-Starting with version 2.6, laptop panels are supported for brightness-only control.
-Because laptops do not implement DDC for built-in panels, ``vdu_controls`` emulates
-DDC/ddcutil using the widely available command-line tool ``brightnessctl``
-(https://github.com/Hummer12007/brightnessctl).
-
 Other concerns
 --------------
 
@@ -793,7 +795,8 @@ Software::
         zypper install python3 python3-qt5 noto-sans-math-fonts noto-sans-symbols2-fonts
         zypper install ddcutil
         zypper install libddcutil ddcutil-service  # optional, but recommended if available
-        zypper install brightnessctl  # optional, but needed for controlling laptop-panels
+        zypper install brightnessctl  # optional, needed for controlling laptop-panels
+        zypper install python3-udev   # optional, needed for detecting brighntess changes on laptop-panels
 
 If you wish to use a serial-port lux metering device, the ``pyserial`` module is a runtime requirement.
 

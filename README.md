@@ -10,10 +10,7 @@ A control panel for external monitors (*Visual Display Units*).
 > be found under ***System Settings -> System -> Energy Saving***.
 
 > [!TIP]
-> Laptop-Panels are supported in version 2.6 (the current master/development branch).
-> Laptop support includes reacting to brightness-function-keys or inactivity-dimming.
-> When laptop support is enabled, the python3-pyudev library will be imported 
-> to monitor udev for _brightness_ events.
+> Laptop-Panels are supported in version 2.6 (see below).
 
 Description
 -----------
@@ -87,6 +84,15 @@ available to support all user defined Presets).
 > [!NOTE]
 > Several language translations are provided, but with no apparent demand, they 
 > are currently unmaintained and will be updated on request.
+
+#### Laptop-Panel brightness controls
+
+Starting with version 2.6, laptop panels are supported for brightness-only control.
+is enabled, the widely available command line utility [brightnessctl](https://github.com/Hummer12007/brightnessctl)
+is used to emulate DDC control of brightness.  
+Additionally, ``vdu_controls`` will react to laptop brightness-function-keys or 
+inactivity-dimming by using the ``python3-pyudev`` library to monitor udev 
+for _brightness_ events.
 
 #### Technical background
 
