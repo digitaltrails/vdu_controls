@@ -386,7 +386,7 @@ Version History
     Requires the commonly available "brightnessctr" command to be installed.
   * Udev is used to detect laptop brightness events, such as up/down function-keys and inactivity-dimming.
   * The control-panel's icons/titles are now shortcuts to the relevant Settings tabs.  
-  * Fixed Settings text-input line-height on small screens.
+  * Fixed _Settings_ text-input line-height on small screens.
   * Cosmetic fixes to icons and spacing in the main panel layout.
   
 * 2.5.0
