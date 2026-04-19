@@ -40,6 +40,7 @@ Requires:       python3-qt6
 %endif
 Recommends:     ddcutil-service
 Recommends:     python3-pyserial
+Recommends:     python3-pyudev
 Recommends:     brightnessctl
 %endif
 %if 0%{?fedora_version}
@@ -51,6 +52,7 @@ Requires:       python3
 Requires:       python3-qt5
 Suggests:       python3-pyserial
 Suggests:       python3-pyudev
+Suggests:       brightnessctl
 %endif
 
 %description
