@@ -1,1196 +1,87 @@
 #!/usr/bin/python3
-"""
-vdu_controls - a DDC control panel for monitors
-===============================================
-
-A control panel for DisplayPort, DVI, HDMI, or USB-connected VDUs (*Visual Display Units*).
-
-Synopsis:
-=========
-
-        vdu_controls
-                     [--help|-h] [--about] [--detailed-help]
-                     [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
-                     [--hide {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
-                     [--enable-vcp-code vcp_code] [--schedule|--no-schedule]
-                     [--splash|--no-splash] [--system-tray|--no-system-tray]
-                     [--hide-on-focus-out|--no-hide-on-focus-out]
-                     [--smart-window|--no-smart-window] [-smart-uses-xwayland|-smart-uses-xwayland]
-                     [--monochrome-tray|--no-monochrome-tray] [--mono-light-tray|--no-mono-light-tray]
-                     [--tray-follows-theme|--no-tray-follows-theme]
-                     [--toolbar-at-top|-no-toolbar-at-top]
-                     [--separate-status-bar|--separate-status-bar]
-                     [--laptop-panels|--no-laptop-panels]
-                     [--protect-nvram|--no-protect-nvram]
-                     [--lux-options|--no-lux-options]
-                     [--schedule|--no-schedule] [--weather|--no-weather]
-                     [--dbus-client|--no-dbus-client] [--dbus-events|--no-dbus-events]
-                     [--syslog|--no-syslog] [--debug|--no-debug] [--warnings|--no-warnings]
-                     [--translations|--no-translations]
-                     [--location latitude,longitude] [--ddcutil-emulator emulator-path]
-                     [--sleep-multiplier multiplier] [--ddcutil-extra-args 'extra args']
-                     [--create-config-files] [--install] [--uninstall]
-
-Optional arguments:
--------------------
-
-Arguments supplied on the command line override config file equivalent settings.
-
-      -h, --help            show this help message and exit
-      --detailed-help       full help in Markdown format
-      --about               info about vdu_controls
-      --show control_name
-                            show specified control only, may be specified multiple times
-      --hide control_name
-                            hide/disable a control, may be specified multiple times
-      --enable-vcp-code vcp_code
-                            enable a control for a vcp-code unavailable via hide/show,
-                            may be specified multiple times
-      --splash|--no-splash
-                            show the splash screen.  ``--splash`` is the default.
-      --system-tray|--no-system-tray
-                            start up as an entry in the system tray.
-                            ``--no-system-tray`` is the default.
-      --hide-on-focus-out|--no-hide-on-focus-out
-                            minimize the main window automatically on focus out.
-                            ``--no-hide-on-focus-out`` is the default.
-      --smart-window|--no-smart-window
-                            smart main window placement and geometry.
-                            ``--smart-window`` is the default (may force UI to XWayland).
-      --smart-uses-xwayland|--no-smart-uses-xwayland
-                            if ``--smart-window`` is enabled, use XWayland (force X11 xcb).
-                            ``--smart-uses-xwayland`` is the default.
-      --monochrome-tray|--no-monochrome-tray
-                            monochrome dark-themed system-tray.
-                            ``--no-monochrome-tray`` is the default.
-      --mono-light-tray|--no-mono-light-tray
-                            monochrome themed system-tray.
-                            ``--no-mono-light-tray`` is the default.
-      --tray-follows-theme|--no-tray-follows-theme
-                            the tray-theme toggles between light/dark when the desktop-theme changes
-                            ``--tray-follows-theme`` is the default.
-      --toolbar-at-top|--no-toolbar-at-top
-                            locate the toolbar at the top or bottom of the main window
-                            ``--no-toolbar-at-top`` is the default
-      --separate-status-bar|--no-separate-status-bar
-                            separate the status-bar from the toolbar
-                            ``--no-separate-status-bar`` is the default
-      --laptop-panels|--no-laptop-panels
-                            allow laptop panels to be controlled
-                            ``--no-laptop-panels`` is the default
-      --protect-nvram|--no-protect-nvram
-                            alter options and defaults to minimize VDU NVRAM writes.
-      --order-by-name|--no-order-by-name
-                            order tabs, lists, and dropdowns by VDU name.
-      --lux-options|--no-lux-options
-                            enable/disable ambient light metering options.
-                            ``--lux-options`` is the default.
-      --schedule|--no-schedule
-                            enable/disable preset scheduling. ``--schedule`` is the default.
-      --weather|--no-weather
-                            enable/disable weather lookups. ``--weather`` is the default.
-      --dbus-client|--no-dbus-client
-                            use the D-Bus ddcutil-service instead of the ddcutil command.
-                            ``--dbus-client`` is the default
-      --dbus-events|--no-dbus-events
-                            enable D-Bus ddcutil-service client events
-                            ``--dbus-events`` is the default
-      --syslog|-no-syslog
-                            divert diagnostic output to the syslog (journald).
-                            ``--no-syslog`` is the default.
-      --debug|--no-debug
-                            enable/disable additional debug information.
-                            ``--no-debug`` is the default.
-      --warnings--no-warnings
-                            popup a warning when a VDU lacks an enabled control.
-                            ``--no-warnings`` is the default.
-      --translations|--no-translations
-                            enable/disable language translations.
-                            ``--no-translations`` is the default.
-      --location latitude,longitude
-                            local latitude and longitude for triggering presets
-                            by solar elevation.
-      --ddcutil-emulator emulator-path
-                            additional command-line ddcutil emulator for a special cases.
-      --sleep-multiplier    set the default ddcutil sleep multiplier.
-                            protocol reliability multiplier for ddcutil (typically
-                            0.1 .. 2.0, default is 1.0)
-      --ddcutil-extra-args  extra arguments to pass to ddcutil (enclosed in single quotes).
-
-      --create-config-files
-                            if they do not exist, create template config INI files
-                            in $HOME/.config/vdu_controls/
-      --install             installs the vdu_controls in the current user's path and
-                            desktop application menu.
-      --uninstall           uninstalls the vdu_controls application menu file and
-                            script for the current user.
-
-Description
-===========
-
-``vdu_controls`` is a control-panel for DisplayPort, DVI, HDMI, or USB connected VDUs.  Out of the
-box, ``vdu_controls`` offers a subset of controls including brightness, contrast and audio
-controls.  Additional controls can be enabled via the ``Settings`` dialog.
-
-``vdu_controls`` interacts with VDUs by using ``ddcutil`` to issue standard VESA
-*Virtual Control Panel* (*VCP*) commands via the VESA *Display Data Channel* (*DDC*).
-``Ddcutil`` provides a robust interface that is tolerant of the vagaries of the many OEM DDC
-implementations.
-
-From ``vdu_controls 2.0`` onward, ``vdu_controls`` defaults to using the ``D-Bus ddcutil-service``.
-Should the ``ddcutil-service`` be unavailable, ``vdu_controls`` will fall back to running the
-``ddcutil`` command to perform each request.
-
-The UI look-and-feel dynamically adjusts to dark and light themes. The application may
-optionally run in the system tray of KDE, Deepin, GNOME, and Xfce (and possibly others).
-For desktops that don't integrate with Qt/KDE themeing, the `qt5ct` and `qt6ct` utilities may
-be used to alter the overall Qt theme.
-
-The UI provides an optional ``ambient-light slider`` for simultaneously adjusting
-all VDUs according to custom per-VDU ambient lux/brightness profiles.  Options are included
-for semi-automatic adjustment proportional to daylight at a given geographic location, or
-fully automatic adjustment by accessing hardware light-meters, webcams, or other devices.
-
-Named ``Preset`` configurations can be saved and recalled. For example, presets may be created
-for night, day, photography, movies, and so forth.   Presets can be triggered by specific ambient
-light levels, scheduled according to local solar elevation, vetoed by local weather conditions,
-or activated by UNIX signals.
-
-From any UI window, `F1` accesses help, and `F10` accesses the main-menu.   The main-menu is
-also available via the hamburger-menu, and also via the right-mouse button in either the
-main-window or the system-tray icon.  The main-menu has `ALT-key` shortcuts for all menu items
-(subject to sufficient letters being available to distinguish all user defined presets).
-
-The main-toolbar includes a stealthy-drag-handle at extreme-left.  The toolbar
-can be dragged and docked at either the top or bottom top of the main-window.
-The toolbar's position persists across restarts.
-
-For further information, including screenshots, see https://github.com/digitaltrails/vdu_controls .
-
-The long-term effects of repeatably rewriting a VDUs setting are not well understood, but some
-concerns have been expressed. See **LIMITATIONS** for further details.
-
-Configuration
-=============
-
-Configuration changes can be made via the ``Settings`` dialog or by editing the config-files.
-
-Settings Menu and Config files
-------------------------------
-
-The ``Settings`` dialog features a tab for editing common/default settings as well as
-tabs specific to each VDU.  The config files are named according to the following scheme:
-
- - Application wide default config: ``$HOME/.config/vdu_controls/vdu_controls.conf``
- - VDU model and serial number config: ``$HOME/.config/vdu_controls/<model>_<serial|display_num>.conf``
- - VDU model-only config: ``$HOME/.config/vdu_controls/<model>.conf`` (deprecated, no longer created).
-
-The VDU-specific config files can be used to:
-
- - Correct manufacturer built-in metadata.
- - Customize which controls are to be provided for each VDU.
- - Define a user-friendly label for each VDU.
- - Set optimal ``ddcutil`` DDC parameters for each VDU.
-
-The config files are in INI-format divided into a number of sections as outlined below::
-
-    [vdu-controls-globals]
-    # The vdu-controls-globals section is only required in $HOME/.config/vdu_controls/vdu_controls.conf
-    system-tray-enabled = yes|no
-    splash-screen-enabled = yes|no
-    translations-enabled = yes|no
-    weather-enabled = yes|no
-    schedule-enabled = yes|no
-    lux-options-enabled = yes|no
-    warnings-enabled = yes|no
-    debug-enabled = yes|no
-    syslog-enabled = yes|no
-
-    [vdu-controls-widgets]
-    # Yes/no for each of the control options that vdu_controls normally provides by default.
-    brightness = yes|no
-    contrast = yes|no
-    audio-volume = yes|no
-    audio-mute = yes|no
-    audio-treble = yes|no
-    audio-bass = yes|no
-    audio-mic-volume = yes|no
-    input-source = yes|no
-    power-mode = yes|no
-    osd-language = yes|no
-
-    # Enable ddcutil supported codes not enabled in vdu_controls by default, CSV list of two-digit hex values.
-    enable-vcp-codes = NN, NN, NN
-
-    # User friendly VDU name
-    vdu_name = My Main Monitor (on the right)
-
-    [ddcutil-parameters]
-    # Useful values appear to be >=0.1
-    sleep-multiplier = 0.5
-
-    [ddcutil-capabilities]
-    # The (possibly edited) output from "ddcutil --display N capabilities" with leading spaces retained.
-    capabilities-override =
-
-Config files can only be used to enable and alter definitions of VCP codes supported by ``ddcutil``.
-Unsupported manufacturer-specific features should only be enabled with caution; some
-may have irreversible consequences, including bricking the hardware.
-
-As well as using the ``Settings``, config files may also be created by the command line option::
-
-    vdu_controls --create-config-files
-
-which will create initial templates based on the currently connected VDUs.
-
-The config files are completely optional, they need not be used if the default options are found to be
-adequate.
-
-Adding value restrictions to a VDU's capabilities override
-----------------------------------------------------------
-
-In some cases, a VDU's DDC reported minimums and maximums may be incorrect or overstated.  Within
-vdu_controls this can be corrected by overriding the DDC reported range. For example, perhaps a VDU
-reports it supports a brightness range of 0 to 100, but in fact only practically supports 20 to 90.
-This can be corrected by bringing up the VDU's settings tab and editing the text in
-the **capabilities override**:
-
- 1. Open the *Settings* tab for the VDU, navigate to the "capabilities override* field
- 2. locate the feature, in this example, the brightness,
- 3. add a **Values:** **min..max** specification to the line following the feature definition,
- 4. save the changes.
-
-For the brightness example, the completed edit would look like::
-
-    Feature: 10 (Brightness)
-        Values: 20..80
-
-The vdu_controls slider for that value will now be restricted to the specified range.
-
-Adding a refresh/reload requirement to a VDU's capabilities override
---------------------------------------------------------------------
-
-Altering the values of some VCP codes may result in a cascade of changes to other
-codes.  For example, changing a VCP value for *Picture Mode* might result in changes
-to several VCP-code features, including brightness, contrast, and others. Exactly
-which codes have these kinds of side effects isn't indicated in the metadata
-obtained from each VDU, however, vdu_controls supports adding *refresh* annotations
-to the feature-names within the **capabilities override**.  For example::
-
-    Feature: 15 (Picture Mode)
-
-Can be annotated with::
-
-    Feature: 15 (Picture Mode *refresh*)
-
-With this annotation, when ever *Picture Mode* is altered, vdu_controls will
-reload all configuration files and refresh all control values from the VDUs.
-
-Laptop-Panel brightness control
--------------------------------
-
-Starting with version 2.6, laptop panels are supported for brightness-only control.
-When laptop support is enabled, the widely available command line utility ``brightnessctl``
-is used to emulate DDC control of brightness (https://github.com/Hummer12007/brightnessctl).
-Additionally, ``vdu_controls`` will react to laptop brightness-function-keys or
-inactivity-dimming by using the ``python3-pyudev`` library to monitor udev
-for _brightness_ events.
-
-DBUS ddcutil-service
---------------------
-
-When available, ``vdu_controls`` defaults to interacting with VDUs via the DBUS ``ddcutil-service``
-service rather than the ``ddcutil`` command. The service should be both faster and more
-reliable (especially when multiple VDUs need to be controlled). Whether to use the service
-can be controlled by the ``DBUS client`` checkbox in the settings dialog.
-
-When using the service, you may optionally enable service detection of DPMS events and
-VDU connectivity events (hot-plugging cables or power-cycling VDUs).  Whether to enable events
-is controlled by the ``DBUS events`` checkbox in the settings dialog.  The reliability
-and timeliness of events may vary depending on the GPU model, GPU driver, VDU model,
-and VDU connector-cable (DP, HDMI, ...).  In some cases, the service polling for DPMS or
-connection status may wake some VDU models.  Both ``ddcutil-service`` or ``libddcutil`` offer
-options for finer control over which events are detected and how.
-
-Presets
--------
-
-A named _Preset_ can be used to save the current VDU settings for later recall. Any number of
-presets can be created for different lighting conditions or different applications, for example,
-*Night*, *Day*, *Overcast*, *Sunny*, *Photography*, and *Video*. Each preset can be assigned a
-name and icon.
-
-The ``Presets`` item in ``main-menu`` will bring up a ``Presets`` dialog for managing and
-applying presets.  The ``main-menu`` also includes an item for each existing preset.
-
-Any small SVG or PNG can be assigned as a preset's icon.  Monochrome SVG icons that conform to the
-Plasma color conventions will be automatically inverted if the desktop them is changed from dark to
-light. If a preset lacks an icon, an icon will be created from the initials of the first and last
-words of its name. A starter set of icons is included in ``/usr/share/vdu_controls/icons/``.
-
-Any time the current VDUs settings match those of a preset, the preset's name and icon will
-automatically show in the window-title, tray tooltip, tray icon.
-
-Presets may be set to transition immediately (the default); gradually on schedule (solar elevation);
-or gradually always (when triggered by schedule, main-menu, or UNIX signal).  The speed of
-transition is determined by how quickly each VDU can respond to adjustment.  During a transition,
-the transition will be abandoned if the controls involved in the transition are altered by any other
-activity.
-
-Each preset is stored in config directory as: ``$HOME/.config/vdu_controls/Preset_<preset_name>.conf``
-
-Preset files are saved in INI-file format for ease of editing.  Each preset file contains a
-section for each connected VDU, for example::
-
-    [preset]
-    icon = /usr/share/icons/breeze/status/16/cloudstatus.svg
-    solar-elevation = eastern-sky 40
-    transition-type = scheduled
-    transition-step-interval-seconds = 5
-
-    [HP_ZR24w_CNT008]
-    brightness = 50
-    osd-language = 02
-
-    [LG_HDR_4K_89765]
-    brightness = 13
-    audio-speaker-volume = 16
-
-When creating a preset file, you may select which controls to save for each VDU.  For example,
-you might create a preset that includes the brightness, but not the contrast or audio-volume.
-Keeping the included controls to a minimum speeds up the transition and reduces the chances of the
-VDU failing to keep up with the associated stream of DDC commands.
-
-While using the GUI to create or edit a preset, activation of scheduled presets and adjustments due
-to light-metering are blocked until editing is complete.
-
-Presets - VDU initialization-presets
-------------------------------------
-
-For a VDU named `abc` with a serial number `xyz`, if a preset named `abx xyz` exists, that
-preset will be restored at startup or when ever the VDU is subsequently detected.
-
-This feature is designed to restore settings that cannot be saved in the VDU’s NVRAM
-or for VDUs where the NVRAM capacity has been exhausted or is faulty.
-
-Presets - solar elevation triggers
-----------------------------------
-
-A preset may be set to automatically trigger when the sun rises to a specified elevation. The idea
-is to allow a preset to trigger relative to dawn or dusk, or when the sun rises above some
-surrounding terrain (the time of which will vary as the seasons change).
-
-If a preset has an elevation, the preset will be triggered each day at a time calculated according
-to the latitude and longitude specified by in the ``vdu-controls-globals`` ``location`` option.
-By choosing an appropriate ``solar-elevation`` a preset may be confined to specific times of the
-year.  For example, a preset with a positive solar elevation will not trigger at mid-winter in the
-Arctic circle (because the sun never gets that high).  Any preset may be manually invoked
-regardless of its specified solar elevations.
-
-To assign a trigger, use the Preset Dialog to set a preset's ``solar-elevation``.  A solar elevation
-may range from -19 degrees in the eastern sky (morning/ascending) to -19 degrees in the western sky
-(afternoon/descending), with a maximum nearing 90 degrees at midday.
-
-On any given day, the Preset Dialog may be used to temporarily override any trigger, in which case
-the trigger is suspended until the following day.  For example, a user might choose to disable
-a trigger intended for the brightest part of the day if the day is particularly dull.
-
-At startup ``vdu_controls`` will restore the most recent preset that would have been triggered for
-this day (if any).  For example, say a user has ``vdu_controls`` set to run at login, and they've
-also set a preset to trigger at dawn, but they don't log in until just after dawn, the
-overdue dawn preset will be triggered at login.
-
-Presets - time-of-day triggers
-------------------------------
-
-A preset may be set to trigger at a fixed time each day.  This is an alternative to the
-elevation trigger.  It's not possible for a single preset to have both kinds of trigger.
-
-As with the elevation trigger, the Preset Dialog may be used to temporarily
-override any trigger, in which case the trigger is suspended until the following day.
-Similarly, at startup, the most recent preset that would have been triggered for this
-day will be restored.
-
-Presets - Smooth Transitions
-----------------------------
-
-__To minimize writes to VDU NVRAM, smooth-transitions have been deprecated and are disabled by
-default. To re-enable smooth transitions, uncheck the ``protect-nvram`` option in _Settings_.__
-
-A preset may be set to ``Smoothly Transition``, in which case changes to controls continuous-value
-slider controls such as brightness and contrast will be stepped by one until the final values are
-reached.  Any non-continuous values will be set after all continuous values have reached their
-final values, for example, if input-source is included in a preset, it will be restored at the end.
-
-The Preset Dialog includes a combo-box for defining when to apply transitions to a preset:
-
- - ``None`` - change immediately;
- - ``On schedule`` - slowly change according to a solar elevation trigger;
- - ``On signal`` - slowly change on the appropriate UNIX signal;
- - ``On menu`` - slowly change when selected in the main-menu;
-
-Normally a transition single-steps the controls as quickly as possible.  In practice, this means each
-step takes one or more seconds and increases linearly depending on the number of VDUs and number of
-controls being altered.  The Presets Dialog includes a ``Transition Step seconds`` control that can
-be used to increase the step interval and extend a transition over a longer period of time.
-
-If any transitioning controls change independently of the transition, the transition will cease.  In
-that manner, a transition can be abandoned by dragging a slider or choosing a different preset.
-
-Presets - supplementary weather requirements
---------------------------------------------
-
-A solar elevation trigger can have a weather requirement which will be checked against the weather
-reported by https://wttr.in.
-
-By default, there are three possible weather requirements: ``good``, ``bad``, and ``all weather``.
-Each  requirement is defined by a file containing a list of WWO (https://www.worldweatheronline.com)
-weather codes, one per line.  The three default requirements are contained in the files
-``$HOME/.config/vdu_controls/{good,bad,all}.weather``.  Additional weather requirements can be
-created by using a text editor to create further files.  The ``all.weather`` file exists primarily
-as a convenient resource that lists all possible codes.
-
-Because reported current weather conditions may be inaccurate or out of date, it's best to use
-weather requirements as a coarse measure. Going beyond good and bad may not be very practical.
-What's possible might depend on your local weather conditions.
-
-To ensure ``wttr.in`` supplies the weather for your location, please ensure that ``Settings``
-``Location`` includes a place-name suffix.  The ``Settings`` ``Location`` ``Detect`` button has been
-enhanced to fill out a place-name for you.  Should ``wttr.in`` not recognize a place-name, the
-place-name can be manually edited to something more suitable. The nearest big city or an
-airport-code will do, for example: LHR, LAX, JFK.  You can use a web browser to test a place-name,
-for example: https://wttr.in/JFK
-
-When weather requirements are in use, ``vdu_controls`` will check that the coordinates in
-``Settings`` ``Location`` are a reasonable match for those returned from ``wttr.in``, a warning will
-be issued if they are more than 200 km (124 miles) apart.
-
-If the place-name is left blank, the ``wttr.in`` server will try to guess your location from your
-external IP address.  The guess may not be accurate and may vary over time.
-
-Presets - remote control
-------------------------
-
-UNIX/Linux signals may be used to cause ``vdu_controls`` to restore a preset or to initiate a
-refresh of the application from the connected monitors.  Signals in the range 40 to 55 correspond to
-first to last presets (if any are defined).  Additionally, SIGHUP can be used to initiate "Refresh
-settings from monitors".  For example:
-
-    Identify the running vdu_controls (assuming it is installed as /usr/bin/vdu_controls)::
-
-        ps axwww | grep '[/]usr/bin/vdu_controls'
-
-    Combine this with kill to trigger a preset change::
-
-        kill -40 $(ps axwww | grep '[/]usr/bin/vdu_controls' | awk '{print $1}')
-        kill -41 $(ps axwww | grep '[/]usr/bin/vdu_controls' | awk '{print $1}')
-
-    If some other activity has changed a VDU's settings, trigger vdu_controls to update its UI::
-
-        kill -HUP $(ps axwww | grep '[/]usr/bin/vdu_controls' | awk '{print $1}')
-
-Any other signals will be handled normally (in many cases they will result in process termination).
-
-Ambient Light Levels and Light/Lux Metering
--------------------------------------------
-
-The default UI includes an ``ambient-light slider`` which will simultaneously adjust all VDUs
-according to custom VDU profiles.  As well as manual adjustment, the
-slider-value can adjust semi-automatically based on geolocation and local-datetime, or
-fully-automatically by hardware light-metering.
-
-The ``Light-Metering`` dialog provides options for setting up light-metering, adjustment
-intervals, and per-VDU lux/brightness profiles.  The metering dialog additionally provides a
-rolling display of current metered light level and VDU brightness levels.
-
-``Semi-automatic ambient-light level adjustment`` periodically adjusts the light-level in
-proportion to the estimated sunlight for your geolocation. Set the
-current light level by adjusting the ambient-light-level slider.  Starting from your chosen level,
-the application will adjust the light-level following a trajectory based on the estimated sunlight.
-If conditions change, adjust the slider to alter the trajectory.  The trajectory is plotted in
-the Light-Metering dialog, along with the estimate of outdoor lux (Eo) and the Daylight-Factor
-(DF) - the ratio of indoor to outdoor lux.
-
-``Fully-automatic ambient-light level adjustment`` requires setting up a hardware lux metering device.
-A metering device may be a serial-device, a UNIX FIFO (named-pipe), or an executable (script or
-program):
-
- - A serial-device must periodically supply one floating-point lux-value
-   terminated by a carriage-return newline.
- - A FIFO must periodically supply one floating-point lux-value terminated by a newline.
- - An executable must supply one floating-point lux-value reading terminated by a newline each time
-   it is run.
-
-Possible hardware devices include:
-
- - An Arduino with a GY-30/BH1750 lux meter writing to a usb serial-port.
- - A webcam periodically sampled to produce approximate lux values.  Values
-   might be estimated by analyzing image content or image settings that
-   contribute to exposure, such as ISO values, apertures, and shutter speed.
-
-Further information on various lux metering options, as well as instructions for constructing and
-programming an Arduino with a GY-30/BH1750, can be found at:
-
-    https://github.com/digitaltrails/vdu_controls/blob/master/Lux-metering.md
-
-Example scripts for mapping a webcam's average-brightness to approximate lux values are included in
-``/usr/share/vdu_controls/sample-scripts/``, or they can also be downloaded from the following
-location:
-
-    https://github.com/digitaltrails/vdu_controls/tree/master/sample-scripts.
-
-The examples include ``vlux_meter.py``, a beta-release Qt-GUI python-script that meters from a
-webcam and writes to a FIFO (`$HOME/.cache/vlux_fifo`). Controls are included for mapping
-image-brightness to lux mappings, and for defining a crop from which to sample brightness values.
-The script optionally runs in the system-tray.
-
-The examples may require customizing for your own webcam and lighting conditions.
-
-If ambient light level controls are not required, the Settings Dialog includes an option to
-disable and hide them.
-
-Lux Metering and brightness transitions
----------------------------------------
-
-Due to VDU hardware and DDC protocol limitations, gradual transitions from one brightness level to
-another are likely to be noticeable and potentially annoying.  As well as being annoying,
-excessive stepping may eat into VDU NVRAM lifespan.
-
-The auto-brightness adjustment feature includes several measures to reduce the number of
-changes passed to the VDU:
-
- - Lux/Brightness Profiles may be altered for local conditions so that
-   brightness levels remain constant over set ranges of lux values (night, day, and so forth).
- - Adjustments are only made at intervals of one or more minutes (default is 10 minutes).
- - The adjustment task passes lux values through a smoothing low-pass filter.
- - When a VDU brightness profile is set to interpolate, changes specified by the
-   curve will only be applied when they cross a minimum threshold (default 10%).
- - A VDU brightness profile may be set to stair-step with no interpolation
-   of intermediate values.
-
-When ambient light conditions are fluctuating, for example, due to passing clouds, automatic adjust
-can be manually suspended.  The main-panel, main-menu, and light-metering dialog each contain controls for
-toggling Auto/Manual.  Additionally, moving the manual lux-slider turns off automatic adjustment.
-
-The Light-metering dialog includes an option to enable auto-brightness interpolation. This option
-will enable the calculation of values between steps in the profiles. To avoid small
-fluctuating changes, interpolation won't result in brightness changes less than 10%.  During
-interpolation, if a lux value is found to be close to any attached-preset, the preset
-values will be preferred over interpolated ones.
-
-Light/Lux Metering and Presets
--------------------------------
-
-The Light-Metering Dialog includes the ability to set a Preset to trigger at a lux value.  This feature
-is accessed by hovering under the bottom axis of the Lux Profile Chart.
-
-When a preset is attached to a lux value, the preset's brightness values become fixed points on the
-Lux Profile Chart.  When the specified metered lux value is achieved, the stepping process will
-restore the preset's brightness values and then trigger the full restoration of the preset.  This
-ordering of events reduces the likelihood of metered-stepping and preset-restoration from clashing.
-
-A preset that does not include a VDU's brightness may be attached to a lux point to restore one or
-more non-brightness controls.  For example, on reaching a particular lux level, an attached preset
-might restore a contrast setting.
-
-If a preset is attached to a lux value and then detached, the preset's profile points will be
-converted to normal (editable) profile points. Attach/detach is a quick way to copy VDU brightness
-values from presets if you don't want to permanently attach them.
-
-If you use light-metered auto-brightness and preset-scheduling together, their combined effects
-may conflict. For example, a scheduled preset may set a reduced brightness, but soon after,
-light-metering might increase it.  If you wish to use the two together, design your lux/brightness
-profile steps to match the brightness levels of specific presets - for example, a full-sun preset
-and the matching step in a lux/brightness Profile might both be assigned the same brightness level.
-
-Lux Metering Internal Parameters
---------------------------------
-
-The following internal constants can be altered by manually editing
-`~/.config/vdu_controls/AutoLux.conf`.  They guide the various metering and auto-adjustment
-heuristics::
-
-      [lux-meter]
-      # How many times per minute to sample from the Lux meter (for auto-adjustment)
-      samples-per-minute=3
-      # How many samples to include in the smoothing process
-      smoother-n=5
-      # How heavily should past values smooth the present value (smaller = more smoothing)
-      # See: https://en.wikipedia.org/wiki/Low-pass_filter#Simple_infinite_impulse_response_filter
-      smoother-alpha=0.5
-      # If an interpolated value yields a change in brightness, how big should the change
-      # be to trigger an actual VDU change in brightness? Also determines how close
-      # an interpolated value needs to be to an attached preset's brightness in order
-      # to prefer triggering the preset over applying the interpolated value.
-      interpolation-sensitivity-percent=10
-      # Jump brightness in one step up to this maximum, after which transition in steps.
-      max-brightness-jump=100
-
-
-Improving Response Time: Dynamic Optimization and Sleep Multipliers
--------------------------------------------------------------------
-
-If you are using ``ddcutil`` version 2.0 or greater, ``vdu_controls`` will default to using the
-``ddcutil`` *dynamic sleep optimizer*.  The optimizer automatically tunes and caches VDU specific
-timings when ever ``ddcutil`` is run.  Any reliability-issues or errors may be automatically
-resolved as the optimizer refines its cached timings.  Should problems persist, the
-optimizer can be disabled by adding `--disable-dynamic-sleep` to the **ddcutil extra arguments** in
-the **Settings Dialog** (either globally on the **vdu_controls tab** or selectively under each VDU's
-tab).  If dynamic sleep is disabled, multipliers can then be manually assigned. The optimizer's
-heuristics continue to be refined, it may be that some issues may be resolved by moving to a more
-recent version of ``libddcutil/ddcutil``.
-
-For versions of ``ddcutil`` prior to 2.0, you can manually set the ``vdu_control``
-``sleep-multiplier`` passed to ``ddcutil``.  A sleep multiplier less than one will speed up the i2c
-protocol interactions at the risk of increased protocol errors. The default sleep multiplier of 1.0
-has to be quite conservative, many VDUs can cope with smaller multipliers. A bit of experimentation
-with multiplier values may greatly speed up responsiveness. In a multi-VDU setup, individual sleep
-multipliers can be configured.
-
-Improving Response Time and Reliability: Connections and Controls
------------------------------------------------------------------
-
-``DDC/I2C`` is not a totally reliable form of communication. VDUs may vary in their responsiveness
-and compliance.  GPUs, GPU drivers, and types of connection may affect the reliability. Both ddcutil
-and vdu_controls attempt to manage the reliability by using repetition and by adjusting timings.
-
-If you have the choice, a ``DisplayPort`` to ``DisplayPort`` connection may be more reliable than
-``DVI`` or ``HDMI``.
-
-Reducing the number of enabled controls can speed up initialization, decrease the refresh time, and
-reduce the time taken to restore presets.
-
-There's plenty of useful info for getting the best out of ``ddcutil`` at https://www.ddcutil.com/.
-
-Limitations
-===========
-
-Possible impact on VDU lifespan
--------------------------------
-
-Repeatably altering VDU settings might affect VDU lifespan, exhausting the NVRAM write
-cycles, stressing the VDU power-supply, or increasing panel burn-in.
-
-That said, ``vdu_controls`` does include a number of features that can be used
-to reduce the overall frequency of adjustments to acceptable levels.
-
-+ Inbuilt mitigations:
-  + Slider and spin-box controls only update the VDU when adjustments become slow or stop (when
-    no change occurs in 0.5 seconds).
-  + Preset restoration only updates the VDU values that differ from its current values.
-  + Transitioning smoothly has been disabled by default and deprecated for version 2.1.0 onward.
-  + Automatic ambient brightness adjustment only triggers a change when the proposed brightness
-    differs from the current brightness by at least 10%.
-
-+ Electable mitigations:
-  + Choose to restore pre-prepared 'presets' instead of dragging sliders.
-  + Refrain from adding transitions to `presets`.
-  + If using the ambient-light brightness response curves, tune the settings and
-    curves to minimize frequent small changes.
-  + If using a light-meter, disengage metered automatic adjustment when faced with
-    rapidly fluctuating levels of ambient brightness.
-  + Consider adjusting the ambient lighting instead of the VDU.
-
-+ Monitoring to assist with making adjustments:
-  + Hovering over a VDU name in the main window reveals a popup that includes
-    the number of VCP (NVRAM) writes.
-  + The bottom of the About-dialog shows the same numbers. They update dynamically.
-
-Cross-platform differences
---------------------------
-
-The UI attempts to step around minor differences between KDE, GNOME, and the rest,
-the UI on each may not be exactly the same.
-
-Depending on which desktop or system-tray-extension you are using, a
-left-mouse-click on the app-icon in the system-tray may restore
-the application's main-widow or it may bring up the the application's
-context-menu.  To support both kinds of desktop, the context-menu includes a
-a _Control Panel_  menu option that toggles visibility of the main window.
-
-Wayland doesn't allow an application to precisely position its windows.  When the
-``smart-window`` option is enabled and the desktop platform is Wayland, the
-application switches its platform to XWayland (X11 xcb).
-
-The scaling and appearance of Qt6 differs from Qt5, its more chunky and rounded.  If you
-have Qt5 installed and prefer it, you can uncheck prefer-qt6 in settings.
-
-Desktop Theming
----------------
-
-Achieving desktop neutrality comes at the price of the application not being
-fully aware or compliant with the theming conventions of any particular desktop.
-
-For some desktops, Qt can detect in-session theme changes, such as the change from
-a day-theme to a night-theme, and the application can respond appropriately.  For
-desktops where theme changes aren't detected, the application can only conform
-to the theme detected at startup.
-
-In some cases, the system-tray or dock theming may contrast with the theming
-applied to windows.  There isn't a straight forward Qt mechanism to discover
-whether a tray or dock is differently themed. As a result the application includes
-several manual settings that can alter the tray/dock icon theming between
-colored, monochrome-dark and monochrome-light.
-
-Other concerns
---------------
-
-The power-supplies in some older VDUs may buzz/squeel audibly when the brightness is
-turned way down. This may not be a major issue because, in normal surroundings,
-older VDUs are often not usable below about 85-90% brightness.
-
-Going beyond the standard DDC features by attempting to experiment with hidden
-or undocumented features or values has the potential to make irreversible changes.
-
-Some controls change the number of connected devices (for example, some VDUs support a power-off
-command). If such controls are used, ``vdu_controls`` will detect the change and will reconfigure
-the controls for the new situation (for example, DDC VDU 2 may now be DDC VDU 1).  If you change
-settings independently of ``vdu_controls``, for example, by using a VDU's physical controls, the
-``vdu_controls`` UI includes a refresh button to force it to assess the new configuration.
-
-Some VDU settings may disable or enable other settings in the VDU. For example, setting a VDU to a
-specific picture-profile might result in the contrast-control being disabled, but ``vdu_controls``
-will not be aware of the restriction resulting in its contrast-control erring or appearing to do
-nothing.
-
-If your VDUs support *picture-modes*, altering any controls in vdu_controls will most likely
-result in the picture-mode being customized.  For example, say you have selected the
-VDU's *Vivid* picture-mode, if you use vdu_controls to change the brightness, it's likely
-that this will now become the brightness for *Vivid* until the VDU is reset to its defaults.
-To avoid confusion, it may be advisable to stick to one picture-mode for use with vdu_controls,
-preserving the others unaltered.
-
-
-Examples
-========
-
-    vdu_controls
-        All default controls.
-
-    vdu_controls --show brightness --show contrast
-        Specified controls only:
-
-    vdu_controls --hide contrast --hide audio-volume
-        All default controls except for those to be hidden.
-
-    vdu_controls --system-tray --no-splash --show brightness --show audio-volume
-        Start as a system tray entry without showing the splash-screen.
-
-    vdu_controls --create-config-files --system-tray --no-splash --show brightness --show audio-volume
-        Create template config files in $HOME/.config/vdu_controls/ that include the other settings.
-
-    vdu_controls --enable-vcp-code 63 --enable-vcp-code 93 --warnings --debug
-        All default controls, plus controls for VCP_CODE 63 and 93, show any warnings, output debugging info.
-
-This script often refers to displays and monitors as VDUs in order to disambiguate the noun/verb
-duality of "display" and "monitor"
-
-Prerequisites
-=============
-
-Described for OpenSUSE, similar for other distros:
-
-Software::
-
-        zypper install python3 python3-qt5 noto-sans-math-fonts noto-sans-symbols2-fonts
-        zypper install ddcutil
-        zypper install libddcutil ddcutil-service  # optional, but recommended if available
-        zypper install brightnessctl  # optional, needed for controlling laptop-panels
-        zypper install python3-udev   # optional, needed for detecting brighntess changes on laptop-panels
-
-If you wish to use a serial-port lux metering device, the ``pyserial`` module is a runtime requirement.
-
-Get ddcutil working first. Check that the detect command detects your VDUs without issuing any
-errors:
-
-        ddcutil detect
-
-Read ddcutil documentation concerning config of i2c_dev with nvidia GPUs. Detailed ddcutil info
-at https://www.ddcutil.com/
-
-Environment
-===========
-
-    LC_ALL, LANG, LANGUAGE
-        These variables specify the locale for language translations and units of distance.
-        LC_ALL is used by python, LANGUAGE is used by Qt. Normally, they should all have the same
-        value, for example, ``Da_DK``. For these to have any effect on language, ``Settings``
-        ``Translations Enabled`` must also be enabled.
-
-    VDU_CONTROLS_UI_IDLE_SECS
-        The length of pause in slider or spin-box control motion that triggers commit of
-        the controls value to the VDU.  This prevents altering a slider from constantly updating
-        a VDU, which might shorten its NVRAM lifespan. The default is 0.5 seconds.
-
-    VDU_CONTROLS_IPINFO_URL
-        Overrides the default ip-address to location service URL (``https://ipinfo.io/json``).
-
-    VDU_CONTROLS_WTTR_URL
-         Overrides the default weather service URL (``https://wttr.in``).
-
-    VDU_CONTROLS_WEATHER_KM
-        Overrides the default maximum permissible spherical distance (in kilometres)
-        between the ``Settings`` ``Location`` and ``wttr.in`` reported location (``200 km``, 124 miles).
-
-    VDU_CONTROLS_DDCUTIL_ARGS
-        Add to the list of arguments passed to each exec of ddcutil.
-
-    VDU_CONTROLS_DDCUTIL_RETRIES
-        Set the number of times to repeat a ddcutil getvcp or setvcp before returning an error.
-
-    VDU_CONTROLS_DEVELOPER
-        Changes some search paths to be more convenient in a development
-        scenario. (``no`` or yes)
-
-    VDU_CONTROLS_DBUS_TIMEOUT_MILLIS
-        Dbus call wait timeout. Default is 10000, 10 seconds.
-
-Files
-=====
-    $HOME/.config/vdu_controls/
-        Location for config files, Presets, and other persistent data.
-
-    $HOME/.config/vdu_controls/tray_icon.svg
-        If present, this file is the preferred source for the system-tray icon. It can be used if the normal
-        icon conflicts with the desktop theme. If the ``Settings`` ``monochrome-tray``
-        and ``mono-light-tray`` are enabled, they are applied to the file when it is read.
-
-    $HOME/.config/vdu_controls/translations/
-        Location for user supplied translations.
-
-    $HOME/.config/vdu_controls.qt.state/
-        Location for Qt/desktop state such as the past window sizes and locations.
-
-    /usr/share/vdu_controls
-        Location for system-wide icons, sample-scripts, and translations.
-
-Reporting Bugs
-==============
-https://github.com/digitaltrails/vdu_controls/issues
-
-GNU License
-===========
-
-This program is free software: you can redistribute it and/or modify it
-under the terms of the GNU General Public License as published by the
-Free Software Foundation, version 3.
-
-This program is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
-more details.
-
-You should have received a copy of the GNU General Public License along
-with this program. If not, see https://www.gnu.org/licenses/.
-"""
-
-# vdu_controls Copyright (C) 2021 Michael Hamilton
-
+# SPDX-FileCopyrightText: 2021-2026 Michael Hamilton
+# SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
-import argparse
-import configparser
+import sys
 import glob
-import inspect
-import io
 import json
 import locale
 import math
-import os
 import pathlib
 import queue
 import random
-import re
 import select
 import signal
 import socket
 import stat
 import subprocess
-import sys
-import syslog
 import termios
 import textwrap
 import threading
 import time
-import traceback
 import unicodedata
 import urllib.request
 from ast import literal_eval
 from collections import namedtuple
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from enum import Enum, IntFlag
 from functools import partial
 from importlib import import_module
-from pathlib import Path
-from threading import Lock
-from typing import List, Tuple, Mapping, Type, Dict, Callable, Any, NewType, cast
+from typing import List, Tuple, Dict, Callable, Any, NewType, cast
 from urllib.error import URLError
 
-CONFIG_DIR_PATH = Path.home().joinpath('.config', 'vdu_controls')
-CONFIG_FILE_PREFER_QT5 = CONFIG_DIR_PATH.joinpath('_prefer_qt5_')
-for qt_version in (5, 6) if CONFIG_FILE_PREFER_QT5.exists() else (6, 5):
-    print(f"Trying Qt{qt_version}")
-    try:
-        if qt_version == 6:
-            from PyQt6 import QtCore, QtNetwork
-            from PyQt6.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QPoint, QObject, QEvent, \
-                QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir, \
-                QRegularExpression, QPointF, QRect, QSocketNotifier, QMargins
-            from PyQt6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusArgument, QDBusVariant
-            from PyQt6.QtGui import QAction, QShortcut, QPixmap, QIcon, QCursor, QImage, QPainter, QRegularExpressionValidator, \
-                QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon, \
-                QDoubleValidator
-            from PyQt6.QtSvg import QSvgRenderer
-            from PyQt6.QtSvgWidgets import QSvgWidget
-            from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
-                QSplashScreen, QPushButton, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
-                QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QMainWindow, QToolBar, QToolButton, QFileDialog, \
-                QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, \
-                QSpacerItem, QListWidget, QListWidgetItem, QLayout
-            QT5_USE_HIGH_DPI_PIXMAPS = None
-            QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING = None
-        elif qt_version == 5:  # Covers all other values.
-            from PyQt5 import QtCore, QtNetwork
-            from PyQt5.QtCore import Qt, QCoreApplication, QThread, pyqtSignal, QProcess, QPoint, QObject, QEvent, \
-                QSettings, QSize, QTimer, QTranslator, QLocale, QT_TR_NOOP, QVariant, pyqtSlot, QMetaType, QDir, \
-                QRegularExpression, QPointF, QRect, QSocketNotifier, QMargins
-            from PyQt5.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusArgument, QDBusVariant
-            from PyQt5.QtGui import QPixmap, QIcon, QCursor, QImage, QPainter, QRegularExpressionValidator, \
-                QPalette, QGuiApplication, QColor, QValidator, QPen, QFont, QFontMetrics, QMouseEvent, QResizeEvent, QKeySequence, QPolygon, \
-                QDoubleValidator
-            from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
-            from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QLabel, \
-                QSplashScreen, QPushButton, QComboBox, QSystemTrayIcon, QMenu, QStyle, QTextEdit, QDialog, QTabWidget, \
-                QCheckBox, QPlainTextEdit, QGridLayout, QSizePolicy, QAction, QMainWindow, QToolBar, QToolButton, QFileDialog, \
-                QWidgetItem, QScrollArea, QGroupBox, QFrame, QSplitter, QSpinBox, QDoubleSpinBox, QInputDialog, QStatusBar, QShortcut, \
-                QSpacerItem, QListWidget, QListWidgetItem, QLayout
-            QT5_USE_HIGH_DPI_PIXMAPS = Qt.ApplicationAttribute.AA_UseHighDpiPixmaps
-            QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING = QPainter.RenderHint.HighQualityAntialiasing
-        break
-    except (ImportError, ModuleNotFoundError) as no_qt_exc:
-        print(f"Failed to import PyQt6: {repr(no_qt_exc)}", file=sys.stderr)
-
-def flag_qt_version_preference(config: ConfIni) -> None:  # use a flag file to work around the chicken-and-egg issue at startup.
-    if config.has_section(ConfOpt.PREFER_QT6.conf_section) and config.getboolean(ConfOpt.PREFER_QT6.conf_section,
-                                                                                 ConfOpt.PREFER_QT6.conf_name, fallback=True):
-        if CONFIG_FILE_PREFER_QT5.exists():
-            CONFIG_FILE_PREFER_QT5.unlink()
-    else:
-        CONFIG_FILE_PREFER_QT5.touch()
-
-StdPixmap = QStyle.StandardPixmap
+from vdu_controls.installer import install_as_desktop_application
+from vdu_controls.preset import Preset, PresetScheduleStatus, PresetTransitionFlag
+from vdu_controls.settings_editor import SettingsDialog
+from vdu_controls.config_ini import ConfIni, ConfOpt, VduControlsConfig, SUPPORTED_VCP_BY_CODE, VcpCapability, GeoLocation
+from vdu_controls.ddcutil_emulator import DdcutilEmulatorImpl
+from vdu_controls.ddcutil_laptop_panel import DdcutilPanelImpl
+from vdu_controls.misc import intV, zoned_now, proper_name
+from vdu_controls.release import release_notes
+from vdu_controls.solar_calc import calc_solar_lux, spherical_kilometers, create_elevation_map, SolarElevationKey, \
+    SolarElevationData, format_solar_elevation_abbreviation, parse_solar_elevation_ini_text, format_solar_elevation_ini_text
+from vdu_controls.svg import *
+from vdu_controls.weather import WeatherQuery
+from vdu_controls.work_scheduler import WorkerThread, ScheduleWorker, thread_pid, SchedulerJob, SchedulerJobType, WorkException
 
 
-APPNAME = "VDU Controls"
-VDU_CONTROLS_VERSION = '2.6.0'
-VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in VDU_CONTROLS_VERSION.split('.'))
-assert sys.version_info >= (3, 8), f'{APPNAME} utilises python version 3.8 or greater (your python is {sys.version}).'
+from vdu_controls.constants import *
+from vdu_controls.ddcutil import Ddcutil, VduStableId
+from vdu_controls.ddcutil_abstract import VcpOrigin, VcpValue, DdcutilDisplayNotFound, CONTINUOUS_TYPE, \
+    COMPLEX_NON_CONTINUOUS_TYPE, BRIGHTNESS_VCP_CODE, CONTRAST_VCP_CODE, SIMPLE_NON_CONTINUOUS_TYPE, DdcEventType, \
+    DdcutilServiceNotFound
+from vdu_controls.dialog_singleton import DialogSingletonMixin
+from vdu_controls.help import HelpDialog
+from vdu_controls.icon_utils import ThemeType, polychrome_light_or_dark, SVG_LIGHT_THEME_COLOR
+from vdu_controls.icon_utils import create_pixmap_from_svg_bytes, create_image_from_svg_bytes, \
+    create_icon_from_svg_bytes, create_icon_from_path, create_decorated_app_icon, StdPixmap, \
+    is_dark_theme, si
+from vdu_controls.internationalization import tr, initialise_locale_translations, find_locale_specific_file, translate_option
+from vdu_controls.logging import *
+from vdu_controls.qt_imports import *
+from vdu_controls.scaling import native_font_height, npx
+from vdu_controls.widgets import StdButton, SubWinDialog, ThemedSvgWidget, TitleButton, ThemedSvgButton, MIcon, MBox, MBtn, \
+    FasterFileDialog, PushButtonLeftJustified, ClickableSlider, LineEditAll, alter_margins
+from vdu_controls.unicode import *
 
-TOOLTIP_DURATION_MSEC = 750
-
-WESTERN_SKY = 'western-sky'
-EASTERN_SKY = 'eastern-sky'
-
-IP_ADDRESS_INFO_URL = os.getenv('VDU_CONTROLS_IPINFO_URL', default='https://ipinfo.io/json')
-WEATHER_FORECAST_URL = os.getenv('VDU_CONTROLS_WTTR_URL', default='https://wttr.in')
-TESTING_TIME_ZONE = os.getenv('VDU_CONTROLS_TEST_TIME_ZONE')  # for example, 'Europe/Berlin' 'Asia/Shanghai'
-TESTING_TIME_DELTA = None  # timedelta(hours=-6.2)
-
-TIME_CLOCK_SYMBOL = '\u25F4'  # WHITE CIRCLE WITH UPPER-LEFT QUADRANT
-WEATHER_RESTRICTION_SYMBOL = '\u2614'  # UMBRELLA WITH RAINDROPS
-TOO_HIGH_SYMBOL = '\u29BB'  # CIRCLE WITH SUPERIMPOSED X
-DEGREE_SYMBOL = '\u00B0'  # DEGREE SIGN
-SUN_SYMBOL = '\u2600'  # BLACK SUN WITH RAYS
-WEST_ELEVATION_SYMBOL = '\u29A9'  # MEASURED ANGLE WITH OPEN ARM ENDING IN ARROW POINTING UP AND RIGHT
-EAST_ELEVATION_SYMBOL = '\u29A8'  # MEASURED ANGLE WITH OPEN ARM ENDING IN ARROW POINTING UP AND LEFT
-TIMER_RUNNING_SYMBOL = '\u23F3'  # HOURGLASS WITH FLOWING SAND
-WEATHER_CANCELLATION_SYMBOL = '\u2744'  # SNOWFLAKE
-SKIPPED_SYMBOL = '\u2718'  # HEAVY BALLOT X
-SUCCESS_SYMBOL = '\u2714'  # CHECKMARK
-PRESET_APP_SEPARATOR_SYMBOL = '\u2014'  # EM DASH
-MENU_SYMBOL = '\u2630'  # TRIGRAM FOR HEAVEN - hamburger menu
-TRANSITION_SYMBOL = '\u25b9'  # WHITE RIGHT POINTING SMALL TRIANGLE
-TRANSITION_ALWAYS_SYMBOL = '\u25b8\u2732'  # BLACK RIGHT POINTING SMALL TRIANGLE + OPEN CENTER ASTERIX
-PROCESSING_LUX_SYMBOL = '\u25b9' * 3  # WHITE RIGHT POINTING SMALL TRIANGLE * 3
-SIGNAL_SYMBOL = '\u26a1'  # HIGH VOLTAGE - lightning bolt
-ERROR_SYMBOL = '\u274e'  # NEGATIVE SQUARED CROSS MARK
-WARNING_SYMBOL = '\u26a0'  # WARNING SIGN
-ALMOST_EQUAL_SYMBOL = '\u2248'  # ALMOST EQUAL TO
-SMOOTHING_SYMBOL = '\u219D'  # RIGHTWARDS WAVE ARROW
-STEPPING_SYMBOL = '\u279f'  # DASHED TRIANGLE-HEADED RIGHTWARDS ARROW
-RAISED_HAND_SYMBOL = '\u270b'  # RAISED HAND
-RIGHT_POINTER_WHITE = '\u25B9'  # WHITE RIGHT-POINTING SMALL TRIANGLE
-RIGHT_POINTER_BLACK = '\u25B8'  # BLACK RIGHT-POINTING SMALL TRIANGLE
-MENU_ACTIVE_PRESET_SYMBOL = '\u25c2'  # BLACK LEFT-POINTING SMALL TRIANGLE
-SET_VCP_SYMBOL = '\u25B7'  # WHITE RIGHT-POINTING TRIANGLE
-MESSAGE_SYMBOL = '\u23F5'   # MEDIA PLAY
-
-SolarElevationKey = namedtuple('SolarElevationKey', ['direction', 'elevation'])
-SolarElevationData = namedtuple('SolarElevationData', ['azimuth', 'zenith', 'when'])
 
 Shortcut = namedtuple('Shortcut', ['letter', 'annotated_word'])
-
 
 gui_thread: QThread | None = None
 
 
-def intV(type_id: Enum|int) -> int:
-    return type_id.value if isinstance(type_id, Enum) else type_id  # awfulness of enums in pyqt6
-
-
-def is_subwin_desktop() -> bool:
-    return os.environ.get('XDG_CURRENT_DESKTOP', default='unknown').lower() in ['gnome', 'cosmic']
 
 
 def is_running_in_gui_thread() -> bool:
     return QThread.currentThread() == gui_thread
 
 
-def zoned_now(rounded_to_minute: bool = False) -> datetime:
-    now = datetime.now().astimezone()
-    if TESTING_TIME_ZONE:  # This is a testing-only path that requires python > 3.8
-        from zoneinfo import ZoneInfo
-        now = datetime.now(ZoneInfo(TESTING_TIME_ZONE))  # for testing scheduling
-    result = (now + timedelta(seconds=30)).replace(second=0, microsecond=0) if rounded_to_minute else now
-    if TESTING_TIME_DELTA:
-        result += TESTING_TIME_DELTA
-    return result
 
 
-def format_solar_elevation_abbreviation(elevation: SolarElevationKey) -> str:
-    direction_char = EAST_ELEVATION_SYMBOL if elevation.direction == EASTERN_SKY else WEST_ELEVATION_SYMBOL
-    return f"{SUN_SYMBOL} {direction_char} {elevation.elevation}{DEGREE_SYMBOL}"
 
-
-def format_solar_elevation_description(elevation: SolarElevationKey) -> str:
-    # Note - repeating the constants here to force them to be included by pylupdate5 internationalisation
-    direction_text = tr('eastern-sky') if elevation.direction == EASTERN_SKY else tr('western-sky')
-    return f"{direction_text} {elevation.elevation}{DEGREE_SYMBOL}"
-
-
-def format_solar_elevation_ini_text(elevation: SolarElevationKey | None) -> str:
-    return f"{elevation.direction} {elevation.elevation}" if elevation is not None else ''
-
-
-def parse_solar_elevation_ini_text(ini_text: str) -> SolarElevationKey:
-    parts = ini_text.strip().split()
-    if len(parts) != 2:
-        raise ValueError(f"Invalid SolarElevation: '{ini_text}'")
-    if parts[0] not in [EASTERN_SKY, WESTERN_SKY]:
-        raise ValueError(f"Invalid value for  SolarElevation direction: '{parts[0]}'")
-    solar_elevation = SolarElevationKey(parts[0], int(parts[1]))
-    return solar_elevation
-
-
-def proper_name(*args) -> str:
-    return re.sub(r'[^A-Za-z0-9._-]', '_', '_'.join([arg.strip() for arg in args]))
-
-
-def tr(source_text: str, disambiguation: str | None = None) -> str:
-    """
-    This function is named tr() so that it matches what pylupdate5 is looking for.
-    If this method is ever renamed to something other than tr(), then you must
-    pass -ts-function=new_name to pylupdate5.
-
-    For future internationalization:
-    1) Generate template file from this code, for example, for French:
-       ALWAYS BACKUP THE CURRENT .ts FILE BEFORE RUNNING AN UPDATE - it can go wrong!
-           pylupdate5 vdu_controls.py -ts translations/fr_FR.ts
-       where translations is a subdirectory of your current working directory.
-    2) Edit that using a text editor or the linguist-qt5 utility.
-       If using an editor, remove the 'type="unfinished"' as you complete each entry.
-    3) Convert the .ts to a binary .qm file
-           lrelease-qt5 translations/fr_FR.ts
-           mkdir -p $HOME/.config/vdu_controls/translations/
-           translations/fr_FR.qm $HOME/.config/vdu_controls/translations/
-    4) Test using by setting LC_ALL for python and LANGUAGE for Qt
-           LC_ALL=fr_FR LANGUAGE=fr_FR python3 vdu_controls.py
-       At startup the app will log several messages as it searches for translation files.
-    5) Completed .qm files can reside in $HOME/.config/vdu_controls/translations/
-       or  /user/share/vdu_controls/translations/
-    """
-    # If the source .ts file is newer, we load messages from the XML into ts_translations
-    # and use the most recent translations. Using the .ts files in production may be a good
-    # way to allow the users to help themselves.
-    if ts_translations:
-        if source_text in ts_translations:
-            return ts_translations[source_text]
-    # the context @default is what is generated by pylupdate5 by default
-    return QCoreApplication.translate('@default', source_text, disambiguation=disambiguation)
-
-
-def translate_option(option_text) -> str:
-    # We can't be sure of the case in capability descriptions retrieved from the monitors.
-    # If there is no direct translation, we try a canonical version of the name (all lowercase with '-' replaced with ' ').
-    if (translation := tr(option_text)) != option_text:  # Probably a command line option
-        return translation
-    canonical = option_text.lower().replace('-', ' ')
-    return tr(canonical)
-
-
-ABOUT_TEXT = f"""
-
-<b>vdu_controls version {VDU_CONTROLS_VERSION}</b>
-<p>
-A virtual control panel for external Visual Display Units.
-<p>
-Visit <a href="https://github.com/digitaltrails/vdu_controls">https://github.com/digitaltrails/vdu_controls</a> for
-more details.
-<p>
-Release notes: <a href="https://github.com/digitaltrails/vdu_controls/releases/tag/v{VDU_CONTROLS_VERSION}">
-v{VDU_CONTROLS_VERSION}.</a>
-<p>
-<hr>
-<small>
-<b>vdu_controls Copyright (C) 2021 Michael Hamilton</b>
-<br><br>
-This program is free software: you can redistribute it and/or modify it
-under the terms of the GNU General Public License as published by the
-Free Software Foundation, version 3.
-<br><br>
-
-<bold>
-This program is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
-more details.
-</bold>
-<br><br>
-You should have received a copy of the GNU General Public License along
-with this program. If not, see <a href="https://www.gnu.org/licenses/">https://www.gnu.org/licenses/</a>.
-</small>
-<hr>
-<p><p>
-<quote>
-<small>
-Vdu_controls relies on <a href="https://www.ddcutil.com/">ddcutil</a>, a robust interface to DDC capable VDUs.
-<br>
-At your request, your geographic location may be retrieved from <a href="{IP_ADDRESS_INFO_URL}">{IP_ADDRESS_INFO_URL}</a>.
-<br>
-At your request, weather for your location may be retrieved from <a href="{WEATHER_FORECAST_URL}">{WEATHER_FORECAST_URL}</a>.
-</small>
-</quote>
-"""
-
-VDU_CONTROLS_DEVELOPER = os.getenv('VDU_CONTROLS_DEVELOPER', default="no") == 'yes'
-RELEASE_WELCOME = QT_TR_NOOP("Welcome to vdu_controls {}").format(VDU_CONTROLS_VERSION)
-RELEASE_NOTE = QT_TR_NOOP("Please read the online release notes:")
-RELEASE_ANNOUNCEMENT = """<h3>{WELCOME}</h3>{NOTE}<br/>
-<a href="https://github.com/digitaltrails/vdu_controls/releases/tag/v{VERSION}">
-https://github.com/digitaltrails/vdu_controls/releases/tag/v{VERSION}</a>
-<br/>___________________________________________________________________________"""
-RELEASE_INFO = QT_TR_NOOP('<b>Road Warrior: Support for Laptop-Panels</b><br/>'
-                          '<br/>Laptop-panel support is optional - see Settings - '
-                          ' and requires the brightnessctl command and python3-udev library.')
-
-CURRENT_PRESET_NAME_FILE = CONFIG_DIR_PATH.joinpath('current_preset.txt')
-CUSTOM_TRAY_ICON_FILE = CONFIG_DIR_PATH.joinpath('tray_icon.svg')
-LOCALE_TRANSLATIONS_PATHS = [
-    Path.cwd().joinpath('translations')] if VDU_CONTROLS_DEVELOPER else [] + [
-    Path(CONFIG_DIR_PATH).joinpath('translations'), Path("/usr/share/vdu_controls/translations"), ]
-STANDARD_ICON_PATHS = (Path("/usr/share/vdu_controls/icons"), Path("/usr/share/icons/breeze/actions/24"), Path("/usr/share/icons"),)
 
 
 class MsgDestination(Enum):
@@ -1207,233 +98,6 @@ unix_signal_handler: SignalWakeupHandler | None = None
 # On Plasma Wayland, the system tray may not be immediately available at login - so keep trying for...
 SYSTEM_TRAY_WAIT_SECONDS = 20
 
-SVG_LIGHT_THEME_COLOR = b"#232629"
-SVG_LIGHT_THEME_TEXT_COLOR = b"#000000"
-SVG_DARK_THEME_COLOR = b"#f3f3f3"
-SVG_DARK_THEME_TEXT_COLOR = SVG_DARK_THEME_COLOR
-
-mono_light_tray = False
-MONOCHROME_APP_ICON = b"""
-<svg viewBox="0 0 22 22" version="1.1" id="svg1" xmlns="http://www.w3.org/2000/svg">
-  <defs id="defs3051"><style type="text/css" id="current-color-scheme">.ColorScheme-Text {color:#232629;}</style></defs>
-  <path style="fill:currentColor;fill-opacity:1;stroke:none" class="ColorScheme-Text"
-     d="m 3.012318,1.987629 -0.086226,13.98553 h 1 l 5.0022397,0.02464 -1e-7,2 -2.0022396,-0.02464 v 1 h 8.0000002 v -1 
-     l -2.00224,-0.01232 -0.01232,-2 5.01456,0.01232 h 1 L 18.957944,2.0296853 17.989795,2.0050493 4.0174203,1.9774244 
-     Z m 0.9927843,1.0339651 13.9651597,-0.01742 -0.01954,10.9465899 -14.0000001,0.02464 z" id="rect4211"/>
-</svg>"""
-
-
-FALLBACK_SPLASH_SVG = b"""
-<svg viewBox="0 0 24 24" width="256" height="256" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
-    <linearGradient id="screenGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#66c0f1" /> <!-- Start color (offset 0%) -->
-      <stop offset="100%" stop-color="#3f7eed" />  <!-- End color (offset 100%) -->
-    </linearGradient>
-    <g class="ColorScheme-Text" stroke="currentColor" stroke-linecap="round" stroke-width="1.2" transform="">
-        <rect x="2.5" y="3" width="19.25" height="15" fill="url(#screenGradient)" rx="1" ry="1"/>
-        <path fill="None" d="M 3 17.5 L 21.5 17.5 M 8.5 20.5 L 15.75 20.5"/>
-        <path stroke-width="2" stroke-linecap="square" fill="None" d="M 11 19 L 13 19"/>
-    </g>
-</svg>"""
-
-
-# modified brightness icon from breeze5-icons: LGPL-3.0-only
-BRIGHTNESS_SVG = b"""
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24">
-  <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
-  <g transform="translate(1,1)">
-    <g shape-rendering="auto"  class="ColorScheme-Text" fill="currentColor">
-      <path d="m11 7c-2.2032167 0-4 1.7967833-4 4 0 2.203217 1.7967833 4 4 4 2.203217 0 4-1.796783 4-4 0-2.2032167
-       -1.796783-4-4-4zm0 1c1.662777 0 3 1.3372234 3 3 0 1.662777-1.337223 3-3 3-1.6627766 0-3-1.337223-3-3 
-       0-1.6627766 1.3372234-3 3-3z"/>  <path d="m10.5 3v3h1v-3h-1z"/> <path d="m10.5 16v3h1v-3h-1z"/> 
-      <path d="m3 10.5v1h3v-1h-3z"/> <path d="m16 10.5v1h3v-1h-3z"/>
-      <path d="m14.707031 14-0.707031 0.707031 2.121094 2.121094 0.707031-0.707031-2.121094-2.121094z"/>
-      <path d="M 5.7070312 5 L 5 5.7070312 L 7.1210938 7.828125 L 7.828125 7.1210938 L 5.7070312 5 z "/>
-      <path d="M 7.1210938 14 L 5 16.121094 L 5.7070312 16.828125 L 7.828125 14.707031 L 7.1210938 14 z "/>
-      <path d="M 16.121094 5 L 14 7.1210938 L 14.707031 7.828125 L 16.828125 5.7070312 L 16.121094 5 z "/>
-      <g>
-        <path d="m11.000001 7.7500005v6.4999985h2.166665l1.083333-2.166666v-2.1666663l-1.083333-2.1666662z"/>
-        <path d="m10.984375 7.734375v0.015625 6.515625h2.191406l1.089844-2.177734v-2.1757816l-1.089844-2.1777344h
-         -2.191406zm0.03125 0.03125h2.140625l1.078125 2.1542969v2.1601561l-1.078125 2.154297h-2.140625v-6.46875z"/>
-      </g>
-    </g>
-  </g>
-</svg>
-"""
-
-SUN_SVG = re.sub(b'm0 1c1.662777 0 3 1.3372234[^"]+"', b'"', BRIGHTNESS_SVG)
-
-# modified contrast icon from breeze5-icons: LGPL-3.0-only
-CONTRAST_SVG = b"""
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24">
-  <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
-  <g transform="translate(1,1)">
-    <path transform="translate(-1,-1)" class="ColorScheme-Text" style="fill:currentColor;fill-opacity:1;stroke:none" 
-      d="m 12,7 c -2.761424,0 -5,2.2386 -5,5 0,2.7614 2.238576,5 5,5 2.761424,0 5,-2.2386 5,-5 0,-2.7614 
-      -2.238576,-5 -5,-5 z m 0,1 v 8 C 9.790861,16 8,14.2091 8,12 8,9.7909 9.790861,8 12,8"  id="path79" />
-  </g>
-</svg>
-"""
-
-AUTO_LUX_ON_SVG = BRIGHTNESS_SVG.replace(b'viewBox="0 0 24 24"', b'viewBox="3 3 18 18"').replace(b'#232629', b'#ff8500')
-AUTO_LUX_OFF_SVG = BRIGHTNESS_SVG.replace(b'viewBox="0 0 24 24"', b'viewBox="3 3 18 18"').replace(b'#232629', b'#84888c')
-AUTO_LUX_LED_COLOR = QColor(0xff8500)
-PRESET_TRANSITIONING_LED_COLOR = QColor(0x55ff00)
-
-# adjust rgb icon from breeze5-icons: LGPL-3.0-only
-COLOR_TEMPERATURE_SVG = b"""
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-  <defs> <clipPath> <path d="m7 1023.36h1v1h-1z" style="fill:#f2f2f2"/> </clipPath> </defs>
-  <g transform="translate(1,1)">
-    <path d="m11.5 9c-1.213861 0-2.219022.855928-2.449219 2h-6.05078v1h6.05078c.230197 1.144072 1.235358 2 2.449219 2 1.213861 0
-     2.219022-.855928 2.449219-2h5.05078v-1h-5.05078c-.230197-1.144072-1.235358-2-2.449219-2" style="fill:#2ecc71"/>
-    <path d="m5.5 14c-1.385 0-2.5 1.115-2.5 2.5 0 1.385 1.115 2.5 2.5 2.5 1.21386 0 2.219022-.855928
-     2.449219-2h11.05078v-1h-11.05078c-.230196-1.144072-1.235358-2-2.449219-2m0 1c.831 0 1.5.669 1.5 1.5 0 .831-.669
-      1.5-1.5 1.5-.831 0-1.5-.669-1.5-1.5 0-.831.669-1.5 1.5-1.5" style="fill:#1d99f3"/>
-    <path d="m14.5 3c-1.21386 0-2.219022.855928-2.449219 2h-9.05078v1h9.05078c.230197 1.144072 1.235359 2 2.449219 2 1.21386 0
-     2.219022-.855928 2.449219-2h2.050781v-1h-2.050781c-.230197-1.144072-1.235359-2-2.449219-2m0 1c.831 0 1.5.669 1.5 1.5 0
-      .831-.669 1.5-1.5 1.5-.831 0-1.5-.669-1.5-1.5 0-.831.669-1.5 1.5-1.5" style="fill:#da4453"/>
-  </g>
-</svg>
-"""
-
-# audio-volume-high icon from breeze5-icons: LGPL-3.0-only
-VOLUME_SVG = b"""
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-7 -7 40 40" width="24" height="24">
-  <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
-  <g transform="translate(1,1)">
-    <g class="ColorScheme-Text" fill="currentColor">
-      <path d="m14.324219 7.28125-.539063.8613281a4 4 0 0 1 1.214844 2.8574219 4 4 0 0 1 -1.210938 
-       2.861328l.539063.863281a5 5 0 0 0 1.671875-3.724609 5 5 0 0 0 -1.675781-3.71875z"/>
-      <path d="m13.865234 3.5371094-.24414.9765625a7 7 0 0 1 4.378906 6.4863281 7 7 0 0 1 -4.380859 
-       6.478516l.24414.974609a8 8 0 0 0 5.136719-7.453125 8 8 0 0 0 -5.134766-7.4628906z"/>
-      <path d="m3 8h2v6h-2z" fill-rule="evenodd"/>
-      <path d="m6 14 5 5h1v-16h-1l-5 5z"/>
-    </g>
-  </g>
-</svg>
-"""
-
-# application-menu icon from breeze5-icons: LGPL-3.0-only
-MENU_ICON_SOURCE = b"""
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-  <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
-  <g transform="translate(1,1)"> <path style="fill:currentColor;fill-opacity:1;stroke:none" d="m3 5v2h16v-2h-16m0
-   5v2h16v-2h-16m0 5v2h16v-2h-16" class="ColorScheme-Text"/> </g>
-</svg>
-"""
-
-VDU_CONNECTED_ICON_SOURCE = b"""
-<svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
-    <g class="ColorScheme-Text" stroke="currentColor" stroke-linejoin="round" stroke-linecap="round"  
-       stroke-width="2" transform="">
-        <path fill="None" d="M 20 18 L 1 18 1 5 20 5 20 18 M 6.5 21 L 15 21"/>
-    </g>
-</svg>
-"""
-
-PANEL_CONNECTED_ICON_SOURCE = b"""
-<svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
-    <g class="ColorScheme-Text" stroke="currentColor" stroke-linejoin="round" stroke-linecap="round"  stroke-width="2" transform="">
-        <path fill="None" d="M 20 18 L 1 18 1 5 20 5 20 18 M 1 21 L 20 21"/>
-    </g>
-</svg>
-"""
-
-VDU_POWER_ON_ICON_SOURCE = b"""
-<svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
-    <g class="ColorScheme-Text" stroke="currentColor" stroke-linejoin="round" stroke-linecap="round" stroke-width="2" transform="">
-        <path fill="None" d="M14 12 A 5 5 0 1 0 20 12 M 17 11 L 17 16.5 M 9 20 L 1 20 1 5 20 5 20 8"/>
-    </g>
-</svg>
-"""
-
-AMBIENT_PANEL_ICON_SOURCE = b"""
-<svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
-    <g class="ColorScheme-Text" stroke="currentColor"  stroke-linejoin="round" stroke-linecap="round" stroke-width="2">
-        <path fill="none" d="M9 20 L1 20 1 5 20 5 20 7" />
-        <circle cx="17" cy="16" r="5" stroke="currentColor" fill="none" />
-        <rect x="11" y="21.5" width="1" height="1" rx="5" ry="5" stroke-width="1" fill="currentColor" />
-        <rect x="8.5" y="15.5" width="1" height="1" rx="5" ry="5" stroke-width="1" fill="currentColor" />
-        <rect x="10.5" y="10" width="1" height="1" rx="5" ry="5" stroke-width="1" fill="currentColor" />
-        <rect x="15.5" y="7.5" width="1" height="1" rx="5" ry="5" stroke-width="1" fill="currentColor" />
-        <rect x="21.5" y="9" width="1" height="1" rx="5" ry="5" stroke-width="1" fill="currentColor" />
-    </g>
-</svg>
-"""
-
-# view-refresh icon from breeze5-icons: LGPL-3.0-only
-REFRESH_ICON_SOURCE = b"""
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24">
-  <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
-  <g transform="translate(1,1)">
-    <path class="ColorScheme-Text" fill="currentColor" d="m 19,11 c 0,1.441714 -0.382922,2.789289 -1.044922,3.955078 
-     l -0.738281, -0.738281 c 0,0 0.002,-0.0019 0.002,-0.0019 l -2.777344,-2.779297 0.707032,-0.707031 2.480468,2.482422 
-     C 17.861583, 12.515315 18,11.776088 18,11 18,7.12203 14.878,4 11,4 9.8375,4 8.746103,4.285828 7.783203,4.783203 
-     L 7.044922,4.044922 C 8.210722,3.382871 9.5583,3 11,3 c 4.432,0 8,3.568034 8,8 z m -4.044922,6.955078 
-     C 13.789278,18.617129 12.4417,19 11,19 6.568,19 3,15.431966 3,11 3,9.558286 3.382922,8.210711 4.044922,7.044922 
-     l 0.683594,0.683594 0.002,-0.002 2.828125,2.828126 L 6.851609,11.261673 4.373094,8.783157 
-     C 4.139126,9.480503 4,10.221736 4,11 c 0,3.87797 3.122,7 7,7 1.1625,0 2.253897,-0.285829 3.216797,-0.783203 z"/>
-  </g>
-</svg>
-"""
-
-LIGHTING_CHECK_SVG = b"""
-<svg version="1.1" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
-    <defs> <style id="current-color-scheme" type="text/css">.ColorScheme-Text { color:#232629; }
-      .ColorScheme-LED { color:#ff8500; }</style> </defs>
-    <path style="fill:currentColor;fill-opacity:1;stroke:none" class="ColorScheme-Text" d="M 5,3 V 4 H 7 V 5.0507812
-     C 4.7620407,5.3045267 3,7.1975144 3,9.5 3,11.813856 4.7794406,13.714649 7.0332031,13.953125 6.6992186,13.613635 
-     6.43803,13.209557 6.265625,12.765625 4.9435886,12.265608 4,10.997158 4,9.5 4,7.5670034 5.5670034,6 7.5,6 
-     c 1.4804972,0 2.738502,0.9218541 3.25,2.2207031 0.447476,0.1661231 0.856244,0.4220185 1.201172,0.7519531 
-     -0.10518,-0.8491863 -0.442085,-1.62392 -0.957031,-2.2597656 l 0.754297,-0.7542968 
-     0.398046,0.3949218 0.707032,-0.7070312 -1.5,-1.5 L 10.646484,4.8535156 11.042969,5.25 10.291016,6.0019531 
-     C 9.6449906,5.4911251 8.858964,5.1481728 8,5.0507812 V 4 h 2 V 3 Z"/>
-    <path style="fill:currentColor;fill-opacity:1;stroke:none" class="ColorScheme-LED" d="m12 11.5a2.5 2.5 0
-     0 1-2.5 2.5 2.5 2.5 0 0 1-2.5-2.5 2.5 2.5 0 0 1 2.5-2.5 2.5 2.5 0 0 1 2.5 2.5z"/>
-</svg>
-"""
-LIGHTING_CHECK_OFF_SVG = LIGHTING_CHECK_SVG.replace(b'#ff8500', b'#84888c')
-
-TRANSITION_ICON_SOURCE = b"""
-<svg  xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24"></svg>
-"""
-
-SWATCH_ICON_SOURCE = b"""
-<svg  xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24">
-  <rect width="20" height="20" rx="4" x="2" y="3" stroke="black" stroke-width="1" fill="#ffffff" />
-</svg>
-"""
-
-# Creates an SVG of grey rectangles typical of the sort used for VDU calibration.
-GREY_SCALE_SVG = f'''
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1"  width="256" height="152" viewBox="0 0 256 152">
-    <rect width="256" height="152" x="0" y="0" style="fill:rgb(128,128,128);stroke-width:0;" />
-    {"".join(
-    [f'<rect width="16" height="32" x="{x}" y="38" style="fill:rgb({v},{v},{v});stroke-width:0;" />'
-     for x, v in list(zip([x + 48 for x in range(0, 160, 16)], [v for v in range(0, 120, 12)]))]
-)}
-    {"".join(
-    [f'<rect width="16" height="32" x="{x}" y="80" style="fill:rgb({v},{v},{v});stroke-width:0;" />'
-     for x, v in list(zip([x + 48 for x in range(0, 160, 16)], [v for v in range(147, 256, 12)]))]
-)}
-</svg>
-'''.encode()
-
-
-class ThemeType(Enum):  # Indicates how colors should be altered to fit a color theme.
-    UNTHEMED = 5,          # Unthemed - for colored app icon - overlay should be unthemed.
-    UNDECIDED = 0,         # Theme to be decided - normal icon - will force a dark/light theme lookup
-    POLYCHROME_LIGHT = 1,  # Normal icon - after decision
-    POLYCHROME_DARK = 2,   # Normal icon
-    MONOCHROME_LIGHT = 3,  # Monochrome icon - for tray use - light themed tray
-    MONOCHROME_DARK = 4,   # Monochrome icon - for tray use - dark themed tray
-
 
 # A high resolution image. We will fall back to an internal PNG if this file isn't found on the local system
 DEFAULT_SPLASH_PNG = "/usr/share/icons/hicolor/256x256/apps/vdu_controls.png"
@@ -1441,11 +105,6 @@ DEFAULT_SPLASH_PNG = "/usr/share/icons/hicolor/256x256/apps/vdu_controls.png"
 # Internal special exit code used to signal that the exit handler should restart the program.
 EXIT_CODE_FOR_RESTART = 1959
 
-# Number of times to retry getting/setting attributes - in case a monitor is slow after being powered up.
-DDCUTIL_RETRIES = int(os.getenv("VDU_CONTROLS_DDCUTIL_RETRIES", default='4'))
-
-# Use a slight hack to make MsgBox.resizable.
-RESIZABLE_MESSAGEBOX_HACK = True
 
 IGNORE_VDU_MARKER_STR = 'Ignore VDU'
 
@@ -1462,18 +121,12 @@ ASSUMED_CONTROLS_CONFIG_TEXT = ('\n'
                                 '	   Feature: 12 (Contrast)\n'
                                 '	   Feature: 60 (Input Source)')
 
-#: Could be a str enumeration of VCP types
-CONTINUOUS_TYPE = 'C'
-SIMPLE_NON_CONTINUOUS_TYPE = 'SNC'
-COMPLEX_NON_CONTINUOUS_TYPE = 'CNC'
 
-LOG_SYSLOG_CAT = {syslog.LOG_INFO: "INFO:", syslog.LOG_ERR: "ERROR:", syslog.LOG_WARNING: "WARNING:", syslog.LOG_DEBUG: "DEBUG:"}
-log_to_syslog = False
-log_debug_enabled = False  # Often used to guard needless computation: log_debug(needless) if log_debug_enabled else None
 
-VduStableId = NewType('VduStableId', str)
+
 
 original_qt_qpa_platform: str | None = None
+
 
 def force_xwayland():  # Force Qt to use XWayland, or reverse the previous force
     global original_qt_qpa_platform
@@ -1491,32 +144,6 @@ def reverse_force_xwayland():
         os.environ.pop('QT_QPA_PLATFORM')  # before the call to force_xwayland() it did not previously exist, remove it.
 
 
-def is_dark_theme() -> bool:
-    palette = QPalette()
-    text_color, window_color = palette.color(QPalette.ColorRole.WindowText), palette.color(QPalette.ColorRole.Window)
-    return text_color.lightness() > window_color.lightness()
-
-
-def polychrome_light_or_dark():
-    return ThemeType.POLYCHROME_DARK if is_dark_theme() else ThemeType.POLYCHROME_LIGHT
-
-
-DEVELOPERS_NATIVE_FONT_HEIGHT = 32  # The font height in physical pixels being used on my development desktop.
-native_font_height_pixels: int | None = None  # A metric for use in sizing components relative to DEVELOPERS_NATIVE_FONT_HEIGHT.
-
-
-def native_font_height(scaled: int | float = 1):  # In real hardware pixels
-    global native_font_height_pixels
-    if native_font_height_pixels is None:
-        native_font_height_pixels = QFontMetrics(QLabel("ABC").font()).height()
-        log_info(f"{native_font_height_pixels=}")
-    return round(native_font_height_pixels * scaled)
-
-
-def npx(developers_pixels: int):  # native pixels - real hardware pixels
-    return round((native_font_height() * developers_pixels) / DEVELOPERS_NATIVE_FONT_HEIGHT)
-
-
 def get_splash_image() -> QPixmap:
     """Get the splash pixmap from the installed png, failing that, the internal splash svg."""
     if os.path.isfile(DEFAULT_SPLASH_PNG) and os.access(DEFAULT_SPLASH_PNG, os.R_OK):
@@ -1526,1564 +153,13 @@ def get_splash_image() -> QPixmap:
     return create_pixmap_from_svg_bytes(FALLBACK_SPLASH_SVG, 256, 256)
 
 
-def alter_margins(target: QWidget | QLayout,
-                  left: int | None = None, top: int | None = None, right: int | None = None, bottom: int | None = None,
-                  default: QStyle | None = None) -> None:
-    current = target.contentsMargins()
-    if left is None:
-        left = default.pixelMetric(QStyle.PixelMetric.PM_LayoutLeftMargin) if default else current.left()
-    if top is None:
-        top = default.pixelMetric(QStyle.PixelMetric.PM_LayoutTopMargin) if default else current.top()
-    if right is None:
-        right = default.pixelMetric(QStyle.PixelMetric.PM_LayoutRightMargin) if default else current.right()
-    if bottom is None:
-        bottom = default.pixelMetric(QStyle.PixelMetric.PM_LayoutBottomMargin) if default else current.bottom()
-    target.setContentsMargins(QMargins(left, top, right, bottom))
 
 
 def clamp(v: int, min_v: int, max_v: int) -> int:
     return max(min(max_v, v), min_v)
 
 
-def log_wrapper(severity, *args, trace=False) -> None:
-    with io.StringIO() as output:
-        print(*args, file=output, end='')
-        message = output.getvalue()
-        prefix = LOG_SYSLOG_CAT[severity]
-        if log_to_syslog:
-            syslog_message = prefix + " " + message if severity == syslog.LOG_DEBUG else message
-            syslog.syslog(severity, syslog_message)
-        else:
-            print(datetime.now().strftime("%H:%M:%S"), prefix, message)
-    if log_debug_enabled and trace:
-        log_debug("TRACEBACK:", ''.join(traceback.format_stack()))
 
-
-def log_debug(*args, trace=False) -> None:
-    log_wrapper(syslog.LOG_DEBUG, *args, trace=trace) if log_debug_enabled else None
-
-
-def log_info(*args, trace=False) -> None:
-    log_wrapper(syslog.LOG_INFO, *args, trace=trace)
-
-
-def log_warning(*args, trace=False) -> None:
-    log_wrapper(syslog.LOG_WARNING, *args, trace=trace)
-
-
-def log_error(*args, trace=False) -> None:
-    log_wrapper(syslog.LOG_ERR, *args, trace=trace)
-
-
-def thread_pid():
-    return threading.get_native_id()  # More unique than get_ident (internal IDs get recycled immediately) - see with htop -H.
-
-
-@dataclass
-class VcpCapability:
-    """Representation of a VCP (Virtual Control Panel) capability for a VDU."""
-    vcp_code: str
-    name: str
-    vcp_type: str | None = None
-    values: List | None = None
-    causes_config_change: bool = False
-    icon_source: bytes | None = None
-    enabled: bool = False
-    can_transition: bool = False
-    retry_setvcp: bool = True
-
-    def __post_init__(self):
-        self.retry_setvcp = self.retry_setvcp and not self.causes_config_change  # Safe to repeat set on error
-        # For non-continuous types of VCP (VCP types SNC or CNC). Also for special cases, such as restricted brightness ranges.
-        self.values = [] if self.values is None else self.values
-
-    def property_name(self) -> str:
-        return re.sub('[^A-Za-z0-9_-]', '-', self.name).lower()
-
-    def translated_name(self):  # deal with ddcutil returning mixed caps without losing the caps if possible
-        tr_key = self.name.lower()
-        tr_result = tr(tr_key)  # translations are keyed on lowercase
-        return tr_result if tr_key != tr_result else self.name  # Use original name if not translated
-
-
-class DdcutilServiceNotFound(Exception):
-    pass
-
-
-class DdcutilDisplayNotFound(Exception):
-    pass
-
-
-class VcpOrigin(Enum):  # Cause of a VCP value change
-    NORMAL = 0  # Change generated internally within vdu_controls.
-    TRANSIENT = 1  # Intermediate VDU VCP change as a result of vdu_controls transitioning to a new value
-    EXTERNAL = 2  # Detected a change of value that must have been done externally to this vdu_controls run.
-
-
-VcpValue = namedtuple('VcpValue', ['current', 'max', 'vcp_type'])  # A getvcp command returns these three things
-
-
-class Ddcutil:
-    """Interface to the abstracted ddcutil service"""
-    vcp_write_counters: Dict[str, int] = {}
-
-    def __init__(self, common_args: List[str] | None = None, prefer_dbus_client: bool = True,
-                 connected_vdus_changed_callback: Callable | None = None) -> None:
-        super().__init__()
-        self.common_args = common_args
-        self.ddcutil_emulators_by_edid: Dict[str, DdcutilEmulatorImpl] = {}
-        self.ddcutil_impl: DdcutilDBusImpl | DdcutilExeImpl  # The service-interface implementations are duck-typed.
-        if prefer_dbus_client:
-            try:
-                self.ddcutil_impl = DdcutilDBusImpl(self.common_args, callback=connected_vdus_changed_callback)
-            except DdcutilServiceNotFound:
-                log_warning("Failed to detect D-Bus ddcutil-service, falling back to the ddcutil command.")
-                prefer_dbus_client = False
-
-        if not prefer_dbus_client:  # dbus not preferred or dbus failed to initialize
-            self.ddcutil_impl = DdcutilExeImpl(self.common_args)
-
-        self.supported_codes: Dict[str, str] | None = None
-        self.vcp_type_map: Dict[Tuple[str, str], str] = {}
-        self.edid_txt_map: Dict[str, str] = {}
-        self.ddcutil_version: Tuple[int, ...] = (0, 0, 0)  # Initial version for bootstrapping
-        self.version_suffix = ''
-        version_info = self.ddcutil_impl.get_ddcutil_version_string()
-        if version_match := re.match(r'[a-z]* ?([0-9]+).([0-9]+).([0-9]+)-?([^\n]*)', version_info):
-            self.ddcutil_version = tuple(int(i) for i in version_match.groups()[0:3])
-            self.version_suffix = version_match.groups()[3]
-        # self.version = (1, 2, 2)  # for testing for 1.2.2 compatibility
-        log_info(f"ddcutil version {self.ddcutil_version} "
-                 f"{self.version_suffix}(dynamic-sleep={self.ddcutil_version >= (2, 0, 0)}) "
-                 f"- interface {self.ddcutil_impl.get_interface_version_string()}")
-
-    def ddcutil_version_info(self) -> Tuple[str, str]:
-        return self.ddcutil_impl.get_interface_version_string(), self.ddcutil_impl.get_ddcutil_version_string()
-
-    def add_ddcutil_emulator(self, emulator: DdcutilPanelImpl | DdcutilEmulatorImpl):
-        try:
-            for attr in emulator.detect(1):
-                log_info(f"add_ddcutil_emulator: VDU edid={attr.edid_txt}")
-                self.ddcutil_emulators_by_edid[attr.edid_txt] = emulator
-        except Exception as e:
-            log_error(f"add_ddcutil_emulator exception: {e}")
-
-    def _impl(self, edid: str):
-        if emulator_impl := self.ddcutil_emulators_by_edid.get(edid):  # edid is for a virtual implementation
-            return emulator_impl  # A virtual ddcutil implementation - probably a laptop panel
-        return self.ddcutil_impl  # Use real implementation
-
-    def refresh_connection(self):
-        self.ddcutil_impl.refresh_connection()
-        for emulator_impl in self.ddcutil_emulators_by_edid.values():
-            emulator_impl.refresh_connection()
-
-    def set_sleep_multiplier(self, vdu_number: str, sleep_multiplier: float | None):
-        try:
-            edid = self.get_edid_txt(vdu_number)
-            self._impl(edid).set_sleep_multiplier(edid, sleep_multiplier)
-        except ValueError as e:
-            if str(e).find('com.ddcutil.DdcutilService.Error.MultiplierLocked') > 0:
-                log_warning(f"Ignoring: {e}")
-            else:
-                raise
-
-    def set_vdu_specific_args(self, vdu_number: str, extra_args: List[str]):
-        edid = self.get_edid_txt(vdu_number)
-        self._impl(edid).set_vdu_specific_args(edid, extra_args)
-
-    def get_edid_txt(self, vdu_number: str) -> str:
-        return self.edid_txt_map.get(vdu_number, vdu_number)  # no edid probably means a simulated VDU
-
-    def get_write_count(self, vdu_number: str) -> int:
-        if edid_txt := self.get_edid_txt(vdu_number):
-            return Ddcutil.vcp_write_counters.get(edid_txt, 0)
-        return 0
-
-    def detect_vdus(self) -> List[Tuple[str, str, str, str]]:
-        """Return a list of (vdu_number, desc) tuples."""
-        result_list = []
-        vdu_list = self.ddcutil_impl.detect(0)
-        log_info(f"dectecting using {len(self.ddcutil_emulators_by_edid)} emulators")
-        for emulator_impl in set(self.ddcutil_emulators_by_edid.values()):  # Use set() to only use each emulator once.
-            vdu_list += emulator_impl.detect(0)
-        # Going to get rid of anything that is not a-z A-Z 0-9 as potential rubbish
-        rubbish = re.compile('[^a-zA-Z0-9]+')
-        # This isn't efficient, it doesn't need to be, so I'm keeping re-defs close to where they are used.
-        key_prospects: Dict[Tuple[str, str], Tuple[str, str]] = {}
-        for vdu in vdu_list:
-            vdu_number = str(vdu.display_number)
-            log_debug(f"checking possible IDs for display {vdu_number}") if log_debug_enabled else None
-            model_name = rubbish.sub('_', vdu.model_name)
-            manufacturer = rubbish.sub('_', vdu.manufacturer_id)
-            serial_number = rubbish.sub('_', vdu.serial_number)
-            bin_serial_number = str(vdu.binary_serial_number)
-            man_date = ''  # TODO rubbish.sub('_', ds_parts.get('Manufacture year', ''))
-            i2c_bus_id = ''  # TODO ds_parts.get('I2C bus', '').replace("/dev/", '').replace("-", "_")
-            edid = vdu.edid_txt
-            # check for duplicate edid, any duplicate will use the display Num
-            if edid is not None and edid not in self.edid_txt_map.values():
-                self.edid_txt_map[vdu_number] = edid
-            for candidate in serial_number, bin_serial_number, man_date, i2c_bus_id, f"DisplayNum{vdu_number}":
-                if candidate.strip() != '':
-                    possibly_unique = (model_name, candidate)
-                    if possibly_unique in key_prospects:  # Not unique - it has already been encountered.
-                        log_info(f"Ignoring non-unique key {possibly_unique=}"
-                                 f" - it matches display {vdu_number=} allready in {possibly_unique}")
-                        del key_prospects[possibly_unique]
-                    else:
-                        key_prospects[possibly_unique] = vdu_number, manufacturer
-        # Try and pin down a unique id that won't change even if other monitors are turned off. Ideally, this should
-        # yield the same result for the same monitor - DisplayNum is the worst for that, so it's the fallback.
-        key_already_assigned = {}
-        for model_and_main_id, vdu_number_and_manufacturer in key_prospects.items():
-            vdu_number, manufacturer = vdu_number_and_manufacturer
-            if vdu_number not in key_already_assigned:
-                model_name, main_id = model_and_main_id
-                log_debug(
-                    f"Unique key for {vdu_number=} {manufacturer=} is ({model_name=} {main_id=})") if log_debug_enabled else None
-                result_list.append((vdu_number, manufacturer, model_name, main_id))
-                key_already_assigned[vdu_number] = 1
-        # result_list.append(("3", "maker_y", "model_z", "1234")) # For testing bad VDUs:
-        return result_list
-
-    def query_capabilities(self, vdu_number: str) -> str:
-        edid_txt = self.get_edid_txt(vdu_number)
-        model, mccs_major, mccs_minor, _, features, full_text = self._impl(edid_txt).get_capabilities(edid_txt)
-        if full_text:  # The service supplies pre-assembled capabilities text.
-            return full_text
-        capability_text = f"Model: {model}\nMCCS version: {mccs_major}.{mccs_minor}\nVCP Features:\n"
-        for feature_id, feature in features.items():
-            feature_code = f"{int.from_bytes(feature_id, 'big'):02X}"
-            feature_name = feature[0]
-            feature_values = feature[2]
-            capability_text += f"   Feature: {feature_code} ({feature_name})\n"
-            if len(feature_values) != 0:
-                if all(value == '' for value in feature_values.values()):
-                    capability_text += "      Values:"
-                    for value_id in feature_values.keys():
-                        capability_text += f" {int.from_bytes(value_id, 'big'):02X}"
-                    capability_text += " (interpretation unavailable)\n"
-                else:
-                    capability_text += "      Values:\n"
-                    for value_id, value_name in feature_values.items():
-                        value_code = f"{int.from_bytes(value_id, 'big'):02X}"
-                        capability_text += f"         {value_code}: {value_name}\n"
-        return capability_text
-
-    def get_type(self, vdu_number: str, vcp_code: str) -> str | None:  # may not be needed with a dbus implementation
-        edid_txt = self.get_edid_txt(vdu_number)
-        vcp_type_key = (edid_txt, vcp_code)
-        if type_str := self.vcp_type_map.get(vcp_type_key):
-            return type_str
-        is_complex, is_continuous = self._impl(edid_txt).get_type(edid_txt, int(vcp_code, 16))
-        type_str = CONTINUOUS_TYPE if is_continuous else (COMPLEX_NON_CONTINUOUS_TYPE if is_complex else SIMPLE_NON_CONTINUOUS_TYPE)
-        self.vcp_type_map[vcp_type_key] = type_str
-        return type_str
-
-    def set_vcp(self, vdu_number: str, vcp_code: str, new_value: int, retry_on_error: bool = False) -> None:
-        """Send a new value to a specific VDU and vcp_code."""
-        edid_txt = self.get_edid_txt(vdu_number)
-        impl = self._impl(edid_txt)
-        for attempt_count in range(DDCUTIL_RETRIES):
-            try:
-                impl.set_vcp(edid_txt, int(vcp_code, 16), new_value)
-                Ddcutil.vcp_write_counters[edid_txt] = Ddcutil.vcp_write_counters.get(edid_txt, 0) + 1
-                log_debug(f"set_vcp: {vdu_number=} {vcp_code=} {new_value=}")
-                return
-            except (subprocess.SubprocessError, DdcutilDisplayNotFound, ValueError) as e:
-                if not retry_on_error or attempt_count + 1 == DDCUTIL_RETRIES:
-                    raise e
-            time.sleep(attempt_count * 0.25)
-
-    def vcp_info(self) -> str:
-        """Returns info about all codes known to ddcutil, whether supported or not."""
-        return DdcutilExeImpl([]).vcp_info()
-
-    def get_supported_vcp_codes_map(self) -> Dict[str, str]:
-        """Returns a map of descriptions keyed by vcp_code, the codes that ddcutil appears to support."""
-        if self.supported_codes is not None:
-            return self.supported_codes
-        self.supported_codes = {}
-        info = self.vcp_info()
-        code_definitions = info.split("\nVCP code ")
-        for code_def in code_definitions[1:]:
-            lines = code_def.split('\n')
-            vcp_code, vcp_name = lines[0].split(': ', 1)
-            ddcutil_feature_subsets = None
-            for line in lines[2:]:
-                line = line.strip()
-                if line.startswith('ddcutil feature subsets:'):
-                    ddcutil_feature_subsets = line.split(": ", 1)
-            if ddcutil_feature_subsets is not None:
-                if vcp_code not in self.supported_codes:
-                    self.supported_codes[vcp_code] = vcp_name
-        return self.supported_codes
-
-    def get_vcp_values(self, vdu_number: str, vcp_code_list: List[str]) -> List[VcpValue]:
-        values_dict: Dict[str, VcpValue | None] = {vcp_code: None for vcp_code in vcp_code_list}
-        edid_txt = self.get_edid_txt(vdu_number)
-        impl = self._impl(edid_txt)
-        # Try a few times in case there is a glitch due to a monitor being turned-off/on or slow to respond
-        for attempt_count in range(DDCUTIL_RETRIES):
-            values_list = impl.get_vcp_values(edid_txt, [int(vcp, 16) for vcp in vcp_code_list])
-            for vcp, value, maxv, _ in values_list:
-                vcp_code = f'{vcp:02X}'
-                vcp_type = self.get_type(vdu_number, vcp_code)
-                values_dict[vcp_code] = VcpValue(value, maxv, vcp_type)
-            if None not in values_dict.values():
-                break  # Got all values - OK to stop, otherwise try again
-        for vcp_code, value in values_dict.items():
-            if value is None:  # If all attempts failed, the values_dict will be missing one or more values.
-                raise ValueError(f"getvcp: display-{vdu_number} - failed to obtain value for vcp_code {vcp_code:02X}")
-        return list(values_dict.values())  # if we reach here all values will be present (none are None).
-
-
-class DdcEventType(Enum):  # Has to correspond to what the service supports
-    UNKNOWN = -2
-    LAPTOP_BRIGHTNESS_CHANGE = -1
-    DPMS_AWAKE = 0
-    DPMS_ASLEEP = 1
-    DISPLAY_CONNECTED = 2
-    DISPLAY_DISCONNECTED = 3
-
-
-class DdcutilExeImpl:
-    _VCP_CODE_REGEXP = re.compile(r"^VCP ([0-9A-F]{2}) ")  # VCP 2-digit-hex
-    _C_PATTERN = re.compile(r'([0-9]+) ([0-9]+)')  # Match Continuous-Type getvcp result
-    _SNC_PATTERN = re.compile(r'x([0-9a-f]+)')  # Match Simple Non-Continuous-Type getvcp result
-    _CNC_PATTERN = re.compile(r'x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+)')  # Match Complex Non-Continuous-Type result
-    _SPECIFIC_VCP_VALUE_PATTERN_CACHE: Dict[int, re.Pattern] = {}
-    DetectedAttributes = namedtuple("DetectedAttributes", ('display_number', 'usb_bus', 'usb_device',
-                                                           'manufacturer_id', 'model_name', 'serial_number',
-                                                           'product_code', 'edid_txt', 'binary_serial_number'))
-
-    def __init__(self, common_args: List[str] | None):
-        self.vdu_sleep_multiplier: Dict[str, float] = {}
-        self.extra_args: Dict[str, List[str]] = {}
-        self.common_args = [arg for arg in os.getenv('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != '']
-        if common_args:
-            self.common_args += common_args
-        self.ddcutil_access_lock = Lock()
-        self.vcp_type_map: Dict[int, str] = {}
-        self.ddcutil_version: Tuple[int, ...] = (0, 0, 0)
-        self.ddcutil_version_string = "0.0.0"
-        self.version_suffix = ''
-        self.ddcutil_exe = 'ddcutil'
-        self.vdu_map_by_edid: Dict[str, Tuple] = {}
-
-    def refresh_connection(self):
-        pass
-
-    def set_sleep_multiplier(self, edid_txt: str, sleep_multiplier: float):
-        self.vdu_sleep_multiplier[edid_txt] = sleep_multiplier
-
-    def set_vdu_specific_args(self, edid_txt: str, extra_args: List[str]):
-        self.extra_args[edid_txt] = extra_args
-
-    def _get_vdu_human_name(self, edid_txt: str):
-        if vdu := self.vdu_map_by_edid.get(edid_txt):
-            return f"display-{vdu.display_number} {vdu.model_name}"
-        return f"Unknown-display {edid_txt:.30}..."
-
-    def _format_args_diagnostic(self, args: List[str]):
-        return ' '.join([arg if len(arg) < 30 else arg[:30] + "..." for arg in args])
-
-    def __run__(self, *args, edid_txt: str | None = None) -> subprocess.CompletedProcess:
-        if edid_txt:
-            edid_args = ["--edid", edid_txt] if edid_txt else []
-            multiplier = self.vdu_sleep_multiplier.get(edid_txt, None)
-            multiplier_args = ["--sleep-multiplier", f"{multiplier:4.2f}"] if multiplier else []
-        else:
-            edid_args = []
-            multiplier_args = []
-        extra_args = self.extra_args.get(edid_txt, []) if edid_txt else []
-        log_id = self._get_vdu_human_name(edid_txt) if (edid_txt and log_debug_enabled) else ''
-        syslog_args = []
-        if self.ddcutil_version[0] >= 2:
-            if log_to_syslog and '--syslog' not in args:
-                syslog_args = ['--syslog', 'DEBUG' if log_debug_enabled else 'ERROR']
-        process_args = [self.ddcutil_exe] + self.common_args + multiplier_args + syslog_args + extra_args + list(args) + edid_args
-        try:
-            with self.ddcutil_access_lock:
-                now = time.time()
-                result = subprocess.run(process_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-                elapsed = time.time() - now
-                # Shorten EDID to 30 characters when logging it (it will be the only long argument)
-                log_debug(f"subprocess result: success {log_id} [{self._format_args_diagnostic(result.args)}] "
-                          # f"{process_args=} "
-                          f"rc={result.returncode} elapsed={elapsed:.2f} "
-                          f"stdout={result.stdout.decode('utf-8', errors='surrogateescape')}") if log_debug_enabled else None
-        except subprocess.SubprocessError as spe:
-            error_text = spe.stderr.decode('utf-8', errors='surrogateescape')
-            if error_text.lower().find("display not found") >= 0:  # raise DdcutilDisplayNotFound and stay quiet
-                log_debug("subprocess result: display-not-found ", log_id, self._format_args_diagnostic(process_args),
-                          f"stderr='{error_text}', exception={str(spe)}", trace=True) if log_debug_enabled else None
-                raise DdcutilDisplayNotFound(' '.join(args)) from spe
-            log_debug("subprocess result: error ", log_id, self._format_args_diagnostic(process_args),
-                      f"stderr='{error_text}', exception={str(spe)}", trace=True) if log_debug_enabled else None
-            raise
-        return result
-
-    def vcp_info(self) -> str:
-        """Returns info about all codes known to ddcutil, whether supported or not."""
-        return self.__run__('--verbose', 'vcpinfo').stdout.decode('utf-8', errors='surrogateescape')
-
-    def get_ddcutil_version_string(self) -> str:
-        version_info = self.__run__('--version').stdout.decode('utf-8', errors='surrogateescape')
-        if version_match := re.match(r'[a-z]+ ([0-9]+).([0-9]+).([0-9]+)-?([^\n]*)', version_info):
-            self.ddcutil_version = tuple(int(i) for i in version_match.groups()[0:3])
-            self.version_suffix = version_match.groups()[3]
-            self.ddcutil_version_string = \
-                f"{self.ddcutil_version[0]}.{self.ddcutil_version[1]}.{self.ddcutil_version[2]} {self.version_suffix}"
-        return self.ddcutil_version_string
-
-    def get_interface_version_string(self) -> str:
-        return "Command Line - ddcutil"
-
-    def _parse_edid(self, display_str: str) -> str | None:
-        if edid_match := re.search(r'EDID hex dump:\n[^\n]+(\n([ \t]*[+]0).+)+', display_str):
-            edid = "".join(re.findall('((?: [0-9a-f][0-9a-f]){16})', edid_match.group(0))).replace(' ', '')
-            log_debug(f"{edid=}") if log_debug_enabled else None
-            return edid
-        log_error(f"Failed to parse edid in {display_str=}")
-        return None
-
-    def detect(self, flags: int) -> List[Tuple[Any, ...]]:
-        args = ['detect', '--verbose', ]
-        result_list: List[Tuple[Any, ...]] = []
-        result = self.__run__(*args)
-        # Going to get rid of anything that is not a-z A-Z 0-9 as potential rubbish
-        rubbish = re.compile('[^a-zA-Z0-9]+')
-        # This isn't efficient, it doesn't need to be, so I'm keeping re-defs close to where they are used.
-        for display_str in re.split("\n\n", result.stdout.decode('utf-8', errors='surrogateescape')):
-            if display_match := re.search(r'Display ([0-9]+)', display_str):
-                vdu_number = display_match.group(1)
-                log_debug(f"checking possible IDs for display {vdu_number}") if log_debug_enabled else None
-                ds_parts = {fm.group(1).strip(): fm.group(2).strip()
-                            for fm in re.finditer(r'[ \t]*([^:\n]+):[ \t]+([^\n]*)', display_str)}  # Create dict {name:value} pairs
-                model_name = rubbish.sub('_', ds_parts.get('Model', 'unknown_model'))
-                manufacturer = rubbish.sub('_', ds_parts.get('Mfg id', 'unknown_mfg'))
-                serial_number = rubbish.sub('_', ds_parts.get('Serial number', ''))
-                bin_serial_number = rubbish.sub('_', ds_parts.get('Binary serial number', '').split('(')[0].strip())
-                man_date = rubbish.sub('_', ds_parts.get('Manufacture year', ''))
-                i2c_bus_id = ds_parts.get('I2C bus', '').replace("/dev/", '').replace("-", "_")
-                edid_txt = self._parse_edid(display_str)
-                if not edid_txt:
-                    log_warning(f"DdcutilExeImpl: failed to parse edid from '{display_str}'")
-                vdu_attributes = DdcutilExeImpl.DetectedAttributes(vdu_number, '', '', manufacturer, model_name, serial_number, '',
-                                                                   edid_txt, bin_serial_number)
-                result_list.append(vdu_attributes)
-                self.vdu_map_by_edid[edid_txt] = vdu_attributes
-        return result_list
-
-    def get_capabilities(self, edid_txt: str) -> Tuple[
-            str, int, int, Dict[bytes, str], Dict[bytes, Tuple[bytes, str, Dict[bytes, str]]], str]:
-        result = self.__run__('capabilities', edid_txt=edid_txt)
-        capability_text = result.stdout.decode('utf-8', errors='surrogateescape')
-        return '', 0, 0, {}, {}, capability_text
-
-    def get_type(self, edid_txt: str, vcp_code_int: int) -> Tuple[bool, bool] | None:  # edid_txt isn't currently used/supported
-        type_code = self.vcp_type_map.get(vcp_code_int)
-        if type_code is None:
-            return False, False
-        is_complex = type_code == COMPLEX_NON_CONTINUOUS_TYPE
-        is_continuous = type_code == CONTINUOUS_TYPE
-        return is_complex, is_continuous
-
-    def set_vcp(self, edid_txt: str, vcp_code_int: int, new_value_int: int) -> None:
-        vcp_code = f"{vcp_code_int:02X}"
-        new_value = f"x{new_value_int:X}"
-        self.__run__('setvcp', vcp_code, new_value, edid_txt=edid_txt)
-
-    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[Tuple[int, int, int, str]]:
-        if self.ddcutil_version > (1, 3, 0):
-            return self._get_vcp_values_implementation(edid_txt, vcp_code_int_list)
-        else:
-            return [self._get_vcp_values_implementation(edid_txt, [cd])[0] for cd in vcp_code_int_list]
-
-    def _get_vcp_values_implementation(self, edid_txt: str, vcp_code_list: List[int]) -> List[Tuple[int, int, int, str]]:
-        # Try a few times in case there is a glitch due to a monitor being turned-off/on or slow to respond
-        args = ['--brief', 'getvcp'] + [f"{c:02X}" for c in vcp_code_list]
-        results_dict: Dict[int, VcpValue | None] = {vcp_code: None for vcp_code in vcp_code_list}  # Force vcp_code_list ordering
-        for attempt_count in range(DDCUTIL_RETRIES):
-            try:
-                from_ddcutil = self.__run__(*args, edid_txt=edid_txt)
-                for line in from_ddcutil.stdout.split(b"\n"):
-                    line_utf8 = line.decode('utf-8', errors='surrogateescape') + '\n'
-                    if vcp_code_match := DdcutilExeImpl._VCP_CODE_REGEXP.match(line_utf8):
-                        vcp_code = int(vcp_code_match.group(1), 16)
-                        results_dict[vcp_code] = self.__parse_vcp_value(vcp_code, line_utf8)
-                for vcp_code, vcp_value in results_dict.items():
-                    if vcp_value is None:
-                        raise ValueError(f"getvcp: {self._get_vdu_human_name(edid_txt)}"
-                                         f" - failed to obtain value for vcp_code {vcp_code:02X}")
-                return [(vcp_code, v.current, v.max, v.vcp_type) for vcp_code, v in results_dict.items()]
-            except (subprocess.SubprocessError, ValueError, DdcutilDisplayNotFound):
-                if attempt_count + 1 == DDCUTIL_RETRIES:  # Don't log here, it creates too much noise in the logs
-                    raise  # Too many failures, pass the buck upstairs
-            time.sleep(attempt_count * 0.25)
-        raise ValueError(f"Exceeded {DDCUTIL_RETRIES} attempts to get vcp values.")
-
-    def __parse_vcp_value(self, vcp_code: int, result: str) -> VcpValue | None:
-        if not (specific_vcp_value_pattern := DdcutilExeImpl._SPECIFIC_VCP_VALUE_PATTERN_CACHE.get(vcp_code, None)):
-            specific_vcp_value_pattern = re.compile(r'VCP ' + f"{vcp_code:02X}" + r' ([A-Z]+) (.+)\n')
-            DdcutilExeImpl._SPECIFIC_VCP_VALUE_PATTERN_CACHE[vcp_code] = specific_vcp_value_pattern
-        if value_match := specific_vcp_value_pattern.match(result):
-            type_indicator = value_match.group(1)
-            self.vcp_type_map[vcp_code] = type_indicator
-            if type_indicator == CONTINUOUS_TYPE:
-                if c_match := DdcutilExeImpl._C_PATTERN.match(value_match.group(2)):
-                    return VcpValue(int(c_match.group(1)), int(c_match.group(2)), CONTINUOUS_TYPE)
-            elif type_indicator == SIMPLE_NON_CONTINUOUS_TYPE:
-                if snc_match := DdcutilExeImpl._SNC_PATTERN.match(value_match.group(2)):
-                    return VcpValue(int(snc_match.group(1), 16), 0, SIMPLE_NON_CONTINUOUS_TYPE)
-            elif type_indicator == COMPLEX_NON_CONTINUOUS_TYPE:
-                if cnc_match := DdcutilExeImpl._CNC_PATTERN.match(value_match.group(2)):
-                    return VcpValue(int(cnc_match.group(3), 16) << 8 | int(cnc_match.group(4), 16), 0, COMPLEX_NON_CONTINUOUS_TYPE)
-            else:
-                raise TypeError(f'Unsupported VCP type {type_indicator} vcp_code {vcp_code}')
-        raise ValueError(f"VDU vcp_code {vcp_code} failed to parse vcp value '{result}'")
-
-
-class DdcutilEmulatorImpl(DdcutilExeImpl):
-
-    def __init__(self, ddcutil_exe: str, common_args: List[str] | None = None):
-        super().__init__(common_args)
-        self.ddcutil_exe = ddcutil_exe
-
-class DdcutilPanelImpl:    # Laptop/builtin panel
-
-    def __init__(self, _: List[str] | None = None, callback: Callable | None = None):
-        self.include_leds = VDU_CONTROLS_DEVELOPER   # Test using desktop controllable LEDs
-        self.brightness_vcp_code_int = int(BRIGHTNESS_VCP_CODE, 16)
-        self.ddcutil_access_lock = Lock()
-        self.brightnessctl_exe = 'brightnessctl'
-        self.max_brightness: Dict[str, int] = {}
-        version_check = self.__run__('-V').stdout.decode('utf-8')
-        log_info(f"{self.brightnessctl_exe} version {version_check}")
-        self.set_vcp_time: datetime = datetime.now() - timedelta(seconds=60)  # Last time set_vcp was called
-        self.callback = callback
-        if self.callback:    # --- udev setup ---
-            import pyudev  # Don't make non-laptop users import this.
-            self.context = pyudev.Context()
-            self.monitor = pyudev.Monitor.from_netlink(self.context)
-            self.monitor.filter_by(subsystem='backlight')
-            self.monitor.start()   # Start receiving events
-
-            def _on_udev_event(event):
-                while True:
-                    try:
-                        dev = self.monitor.poll(0.1)
-                        if dev is None:
-                            break
-                    except (BlockingIOError, pyudev.DeviceNotFoundError):
-                        break
-                self.debounce_timer.start(50)  # Debounce: restart timer
-
-            def _invoke_callback():
-                if datetime.now() - self.set_vcp_time > timedelta(seconds=1):
-                    for edid_txt in self.max_brightness.keys():
-                        self.callback(edid_txt, DdcEventType.LAPTOP_BRIGHTNESS_CHANGE.value, 0)
-
-            fd = self.monitor.fileno()    # Get the file descriptor and create a QSocketNotifier
-            self.notifier = QSocketNotifier(fd, QSocketNotifier.Type.Read, None)
-            self.notifier.activated.connect(_on_udev_event)
-            self.debounce_timer = QTimer()
-            self.debounce_timer.setSingleShot(True)
-            self.debounce_timer.timeout.connect(_invoke_callback)
-
-    def refresh_connection(self):
-        pass
-
-    def set_sleep_multiplier(self, edid_txt: str, sleep_multiplier: float):
-        pass
-
-    def set_vdu_specific_args(self, edid_txt: str, extra_args: List[str]):
-        pass
-
-    def _get_max_brightness(self, edid_txt: str) -> int:
-        if not edid_txt in self.max_brightness:
-            self.max_brightness[edid_txt] = int(self.__run__("max").stdout)
-        return self.max_brightness[edid_txt]
-
-    def __run__(self, *args) -> subprocess.CompletedProcess:
-        log_id = self.brightnessctl_exe
-        process_args = [self.brightnessctl_exe] + list(args)
-        try:
-            with self.ddcutil_access_lock:
-                now = time.time()
-                result = subprocess.run(process_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-                elapsed = time.time() - now
-                log_debug(f"subprocess result: success {log_id} [{result.args}] "
-                          f"rc={result.returncode} elapsed={elapsed:.2f} "
-                          f"stdout={result.stdout.decode('utf-8', errors='surrogateescape')}") if log_debug_enabled else None
-        except subprocess.SubprocessError as spe:
-            error_text = spe.stderr.decode('utf-8', errors='surrogateescape')
-            log_debug("subprocess result: error ", log_id, process_args,
-                      f"stderr='{error_text}', exception={str(spe)}", trace=True) if log_debug_enabled else None
-            raise
-        return result
-
-    def vcp_info(self) -> str:
-        return ''
-
-    def get_ddcutil_version_string(self) -> str:
-        return '2.2.5'
-
-    def get_interface_version_string(self) -> str:
-        return f"Command Line - {self.brightnessctl_exe}"
-
-    def detect(self, _: int) -> List[Tuple[Any, ...]]:
-        results = []
-        cmd_result = self.__run__('-m', 'i')
-        for item_number, line in enumerate(cmd_result.stdout.splitlines(), start=1):
-            parts = str(line, 'utf-8').split(',')
-            if len(parts) > 1 and (parts[1] == 'backlight') or (self.include_leds and parts[1] == 'leds'):
-                display_number = -item_number
-                usb_bus, usb_device = '', ''
-                manufacturer_id, model_name, product_code = 'Unknown', 'Panel', 'Unknown'
-                edid_txt = parts[0]
-                binary_sn = f"BSN#{edid_txt}".encode('utf-8')
-                serial_number = re.sub(r'[^A-Za-z0-9]', '_', parts[0]).title()
-                log_info(f"Detected panel {model_name=} {edid_txt=} detected")
-                vdu_attributes = DdcutilExeImpl.DetectedAttributes(
-                    display_number, usb_bus, usb_device,
-                    manufacturer_id, model_name, serial_number, product_code, edid_txt, binary_sn)
-                results.append(vdu_attributes)
-        return results
-
-    def get_capabilities(self, _: str) -> Tuple[
-            str, int, int, Dict[bytes, str], Dict[bytes, Tuple[bytes, str, Dict[bytes, str]]], str]:
-        capability_text = ('Model: AB_12345\n'
-                           'MCCS version: 2.2\n'
-                           'Commands:\n'
-                           '   Op Code: 01 (VCP Request)\n'
-                           '   Op Code: 02 (VCP Response)\n'
-                           '   Op Code: 03 (VCP Set)\n'
-                           '   Op Code: 07 (Timing Request)\n'
-                           '   Op Code: 0C (Save Settings)\n'
-                           '   Op Code: F3 (Capabilities Request)\n'
-                           'VCP Features:\n'
-                           '   Feature: 10 (Brightness)\n'
-                           '   Feature: FF (Dummy to finish)\n')
-        return '', 0, 0, {}, {}, capability_text
-
-    def get_type(self, _: str, vcp_code_int: int) -> Tuple[bool, bool] | None:  # edid_txt isn't currently used/supported
-        assert vcp_code_int == self.brightness_vcp_code_int   # nothing else supported
-        return False, True
-
-    def set_vcp(self, edid_txt: str, vcp_code_int: int, new_value_int: int) -> None:
-        assert vcp_code_int == self.brightness_vcp_code_int   # nothing else supported
-        try:
-            new_value = f"{new_value_int * self._get_max_brightness(edid_txt) // 100}"
-            log_info(f"laptop set {new_value}")
-            self.__run__('set', '-d', edid_txt, new_value)
-        finally:
-            self.set_vcp_time = datetime.now()
-
-    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[Tuple[int, int, int, str]]:
-        assert vcp_code_int_list[0] == self.brightness_vcp_code_int and len(vcp_code_int_list) == 1
-        for attempt_count in range(DDCUTIL_RETRIES):
-            try:
-                brightness = int(self.__run__('get', '-d', edid_txt).stdout)
-                max_brightness = self._get_max_brightness(edid_txt)
-                percent = (100 * brightness) // max_brightness
-                log_info(f"Panel {brightness=} {max_brightness=} {percent=}")
-                return [(self.brightness_vcp_code_int, percent, 100, CONTINUOUS_TYPE)]
-            except (subprocess.SubprocessError, ValueError, DdcutilDisplayNotFound):
-                if attempt_count + 1 == DDCUTIL_RETRIES:  # Don't log here, it creates too much noise in the logs
-                    raise  # Too many failures, pass the buck upstairs
-            time.sleep(attempt_count * 0.25)
-        raise ValueError(f"Exceeded {DDCUTIL_RETRIES} attempts to get vcp values.")
-
-
-class DdcutilDBusImpl(QObject):
-    RETURN_RAW_VALUES = 2
-    _metadata_cache: Dict[Tuple[str, int], Tuple[bool, bool]] = {}
-    _current_connected_displays_changed_handler: Callable | None = None  # Only one instance and listener should exist at a time
-    _current_service_initialization_handler: Callable | None = None  # Only one instance and listener should exist at a time
-    DetectedAttributes = namedtuple("DetectedAttributes", "uninitialized")  # will be redefined during initialization
-
-    def __init__(self, common_args: List[str] | None = None, callback: Callable | None = None):
-        super().__init__()
-        self.dbus_interface_name = os.environ.get('DDCUTIL_SERVICE_INTERFACE_NAME', default="com.ddcutil.DdcutilInterface")
-        env_args = [arg for arg in os.getenv('VDU_CONTROLS_DDCUTIL_ARGS', default='').split() if arg != '']
-        self.common_args = env_args + common_args if common_args else []
-        self.service_access_lock = Lock()
-        self.listener_callback: Callable | None = callback
-        self.dbus_timeout_millis = int(os.getenv("VDU_CONTROLS_DBUS_TIMEOUT_MILLIS", default='10000'))
-        self._status_values: Dict[int, str] = {}
-        for try_count in range(1, 5):  # Approximating an infinite loop
-            self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service()
-            if len(self.common_args) != 0:  # have to restart with the common_args, wait and connect again
-                try:
-                    log_info(f"Restarting dbus service with common args {self.common_args}")
-                    self._validate(self.ddcutil_proxy.call("Restart", " ".join(self.common_args),
-                                                           QDBusArgument(0, intV(QMetaType.Type.UInt)), QDBusArgument(0, intV(QMetaType.Type.UInt))))
-                    time.sleep(2)  # Should be enough time
-                    log_info("Reconnecting after dbus service restart.")
-                    self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service() # connect again
-                except (ValueError, DdcutilDisplayNotFound):
-                    log_warning(f"Failed to restart with common_args {self.common_args} on try {try_count}")
-            # Retrieve the attributes returned by detect and also use the retrieval as a self check
-            self_check_op = self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "AttributesReturnedByDetect")
-            if self_check_op.errorName():
-                log_error(f'Sanity check try {try_count}: {self.dbus_interface_name} failed: {self_check_op.errorMessage()}')
-            else:
-                DdcutilDBusImpl.DetectedAttributes = namedtuple("DetectedAttributes", self_check_op.arguments()[0])
-                self.vdu_map_by_edid: Dict[str, Tuple] = {}
-                break
-            if try_count >= 4:  # Give up
-                self._connect_to_service(disconnect=True)  # disconnect handler references to facilitate garbage collection
-                raise DdcutilServiceNotFound(
-                    f"Error contacting D-Bus service {self.dbus_interface_name} {self_check_op.errorMessage()}")
-            log_info("looping")
-            time.sleep(2)  # Try again
-
-    def set_sleep_multiplier(self, edid_txt: str, sleep_multiplier: float):
-        with self.service_access_lock:
-            self._validate(self.ddcutil_proxy.call("SetSleepMultiplier", -1, edid_txt,
-                                                   QDBusArgument(sleep_multiplier, intV(QMetaType.Type.Double)),
-                                                   QDBusArgument(0, intV(QMetaType.Type.UInt))))
-
-    def set_vdu_specific_args(self, vdu_number: str, extra_args: List[str]):
-        pass  # TODO not implemented
-
-    def _connect_to_service(self, disconnect=False) -> Tuple[QDBusInterface, QDBusInterface] | Tuple[None, None]:
-        dbus_service_name = os.environ.get('DDCUTIL_SERVICE_NAME', default="com.ddcutil.DdcutilService")
-        dbus_object_path = os.environ.get('DDCUTIL_SERVICE_OBJECT_PATH', default="/com/ddcutil/DdcutilObject")
-        session_bus = QDBusConnection.connectToBus(QDBusConnection.BusType.SessionBus, "session")
-        ddcutil_dbus_iface = QDBusInterface(
-            dbus_service_name, dbus_object_path, self.dbus_interface_name, connection=session_bus)
-        # Properties are available via a separate interface with "Get" and "Set" methods
-        ddcutil_dbus_props = QDBusInterface(
-            dbus_service_name, dbus_object_path, "org.freedesktop.DBus.Properties", connection=session_bus)
-        session_bus.registerObject("/", self)
-        # Clear handlers belonging to old instance
-        if DdcutilDBusImpl._current_connected_displays_changed_handler:  # clear previous handler that belonged to old instance.
-            session_bus.disconnect(dbus_service_name, dbus_object_path, self.dbus_interface_name,
-                                   "ConnectedDisplaysChanged", DdcutilDBusImpl._current_connected_displays_changed_handler)
-        DdcutilDBusImpl._current_connected_displays_changed_handler = None
-        if DdcutilDBusImpl._current_service_initialization_handler:  # clear previous handler that belonged to old instance.
-            session_bus.disconnect(dbus_service_name, dbus_object_path, self.dbus_interface_name,
-                                   "ServiceInitialized", DdcutilDBusImpl._current_service_initialization_handler)
-            DdcutilDBusImpl._current_service_initialization_handler = None
-        if disconnect:
-            return None, None
-        # Connect new handlers - bind receiving slots to our new handlers
-        DdcutilDBusImpl._current_service_initialization_handler = self._service_initialization_handler
-        session_bus.connect(dbus_service_name, dbus_object_path, self.dbus_interface_name,
-                            "ServiceInitialized", DdcutilDBusImpl._current_service_initialization_handler)
-        session_bus.connect(dbus_service_name, dbus_object_path, self.dbus_interface_name,
-                            "ConnectedDisplaysChanged", self._connected_displays_changed_handler)
-        DdcutilDBusImpl._current_connected_displays_changed_handler = self._connected_displays_changed_handler
-        ddcutil_dbus_iface.setTimeout(self.dbus_timeout_millis)
-        # This is intended to provide the user with an easy way enable or disable events in the server.
-        log_info(f"Remotely configuring ddcutil-service ServiceEmitSignals={self.listener_callback is not None}")
-        ddcutil_dbus_props.call("Set",
-                                "com.ddcutil.DdcutilInterface",
-                                "ServiceEmitSignals",
-                                QDBusVariant(QDBusArgument(self.listener_callback is not None, intV(QMetaType.Type.Bool))))
-        return ddcutil_dbus_iface, ddcutil_dbus_props
-
-    def refresh_connection(self):
-        self_check_op = self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "ServiceInterfaceVersion")
-        if self_check_op.errorName():  # Only reconnect if something appears to be wrong
-            log_error(f'refresh_connection: check of {self.dbus_interface_name} failed: {self_check_op.errorMessage()}')
-            self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service()
-
-    @pyqtSlot(QDBusMessage)
-    def _service_initialization_handler(self, message: QDBusMessage):
-        log_info(f"Received service_initialized D-Bus signal {message.arguments()=} {id(self)=}")  # check old instances... id()
-        with self.service_access_lock:
-            if self.listener_callback:  # In case the service has restarted
-                self.ddcutil_props_proxy.call("Set",
-                                              "com.ddcutil.DdcutilInterface",
-                                              "ServiceEmitSignals",
-                                              QDBusVariant(QDBusArgument(True, intV(QMetaType.Type.Bool))))
-                self.listener_callback('', -1, 0)
-
-    @pyqtSlot(QDBusMessage)
-    def _connected_displays_changed_handler(self, message: QDBusMessage):
-        log_info(f"Received display_change D-Bus signal {message.arguments()=} {id(self)=}")  # check old instances id()
-        if self.listener_callback:
-            self.listener_callback(*message.arguments())
-
-    def get_ddcutil_version_string(self) -> str:
-        return self._validate(self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "DdcutilVersion"))[0]
-
-    def get_interface_version_string(self) -> str:
-        return self._validate(self.ddcutil_props_proxy.call(
-            "Get", self.dbus_interface_name, "ServiceInterfaceVersion"))[0] + " (D-Bus ddcutil-service - libddcutil)"
-
-    def _get_status_values(self) -> Dict[int, str]:
-        if len(self._status_values) == 0:
-            self._status_values = self._validate(self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "StatusValues"))[0]
-        return self._status_values
-
-    def detect(self, flags: int) -> List[Tuple[Any, ...]]:
-        with self.service_access_lock:
-            result = self.ddcutil_proxy.call("Detect", QDBusArgument(flags, intV(QMetaType.Type.UInt)))
-            vdu_list: List[Tuple[Any, ...]] = [DdcutilDBusImpl.DetectedAttributes(*vdu) for vdu in self._validate(result)[1]]
-            self.vdu_map_by_edid = {vdu.edid_txt: vdu for vdu in vdu_list}
-            return vdu_list
-
-    def get_capabilities(self, edid_txt: str) -> Tuple[
-            str, int, int, Dict[bytes, str], Dict[bytes, Tuple[str, str, Dict[bytes, str]]], str]:
-        with self.service_access_lock:
-            model, mccs_major, mccs_minor, commands, capabilities = \
-                self._validate(self.ddcutil_proxy.call(
-                    "GetCapabilitiesMetadata", -1, edid_txt, QDBusArgument(0, intV(QMetaType.Type.UInt))))
-            return model, int.from_bytes(mccs_major, 'big'), int.from_bytes(mccs_minor, 'big'), commands, capabilities, ''
-
-    def get_type(self, edid_txt: str, vcp_code_int: int) -> Tuple[bool, bool]:
-        key = (edid_txt, vcp_code_int)
-        if key in DdcutilDBusImpl._metadata_cache:
-            return DdcutilDBusImpl._metadata_cache[key]
-        with self.service_access_lock:
-            _, _, _, _, _, is_complex, is_continuous = self._validate(self.ddcutil_proxy.call(
-                "GetVcpMetadata", -1, edid_txt, QDBusArgument(vcp_code_int, intV(QMetaType.Type.UChar)), QDBusArgument(0, intV(QMetaType.Type.UInt))))
-            DdcutilDBusImpl._metadata_cache[key] = (is_complex, is_continuous)
-            return is_complex, is_continuous
-
-    def set_vcp(self, edid_txt: str, vcp_code_int: int, new_value_int: int) -> None:
-        with self.service_access_lock:
-            self._validate(self.ddcutil_proxy.call("SetVcp", -1, edid_txt,
-                                                   QDBusArgument(vcp_code_int, intV(QMetaType.Type.UChar)),
-                                                   QDBusArgument(new_value_int, intV(QMetaType.Type.UShort)),
-                                                   QDBusArgument(0, intV(QMetaType.Type.UInt))))
-
-    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[Tuple[int, int, int, str]]:
-        vcp_code_array = QDBusArgument()
-        vcp_code_array.beginArray(intV(QMetaType.Type.UChar))
-        for vcp_code_int in vcp_code_int_list:
-            vcp_code_array.add(QDBusArgument(vcp_code_int, intV(QMetaType.Type.UChar)))
-        vcp_code_array.endArray()
-        with self.service_access_lock:
-            raw = self._validate(self.ddcutil_proxy.call(
-                "GetMultipleVcp", -1, edid_txt, vcp_code_array, QDBusArgument(DdcutilDBusImpl.RETURN_RAW_VALUES,
-                                                                              intV(QMetaType.Type.UInt))))[0]
-            return [(int.from_bytes(vcp, 'big'), value, maximum, text_val) for vcp, value, maximum, text_val in raw]
-
-    def _validate(self, result: QDBusMessage) -> List:
-        if result.errorName():
-            raise ValueError(f"D-Bus error {result.errorName()}: {result.errorMessage()}")
-        result_arg_list = result.arguments()
-        if len(result_arg_list) >= 2:  # Normal retrieval calls return at least three items
-            status, message = result.arguments()[-2:]  # last two are always DDC status and message
-            if status != 0:
-                formatted_message = f"D-Bus  {status=}: {message}"
-                log_debug(formatted_message) if log_debug_enabled else None
-                if self._get_status_values().get(status, "DDCRC_INVALID_DISPLAY") == "DDCRC_INVALID_DISPLAY":
-                    raise DdcutilDisplayNotFound(formatted_message)
-                raise ValueError(formatted_message)
-            return result_arg_list[:-2]  # results with status and message stripped out.
-        return result_arg_list  # Must be something like a property retrieval, just return as is
-
-
-def si(widget: QWidget, icon_number: QStyle.StandardPixmap) -> QIcon:  # Qt bundled standard icons (which are themed)
-    return widget.style().standardIcon(icon_number)
-
-
-@dataclass
-class GeoLocation:
-    latitude: float
-    longitude: float
-    place_name: str | None
-
-    def __eq__(self, other) -> bool:
-        if other is None:
-            return False
-        if not isinstance(other, GeoLocation):
-            return NotImplemented  # don't attempt to compare against unrelated types
-        return self.latitude == other.latitude and self.longitude == other.longitude and \
-            self.place_name == other.place_name
-
-
-class DialogSingletonMixin:
-    """
-    A mixin that can augment a QDialog or QMessageBox with code to enforce a singleton UI.
-    For example, it is used so that only one settings editor can be active at a time.
-    """
-    _dialogs_map: Dict[str, DialogSingletonMixin] = {}
-
-    def __init__(self) -> None:
-        """Registers the concrete class as a singleton, so it can be reused later."""
-        super().__init__()
-        class_name = self.__class__.__name__
-        if class_name in DialogSingletonMixin._dialogs_map:
-            raise TypeError(f"ERROR: More than one instance of {class_name} cannot exist.")
-        log_debug(f'SingletonDialog created for {class_name}') if log_debug_enabled else None
-        DialogSingletonMixin._dialogs_map[class_name] = self
-
-    def closeEvent(self, event) -> None:
-        """Subclasses that implement their own closeEvent must call this closeEvent to deregister the singleton"""
-        class_name = self.__class__.__name__
-        log_debug(f"SingletonDialog remove {class_name} "
-                  f"registered={class_name in DialogSingletonMixin._dialogs_map}") if log_debug_enabled else None
-        if class_name in DialogSingletonMixin._dialogs_map:
-            del DialogSingletonMixin._dialogs_map[class_name]
-        event.accept()
-
-    def make_visible(self) -> None:
-        """ If the dialog exists(), call this to make it visible by raising it.
-        Internal, used by the class method show_existing_dialog()"""
-        self.show()  # type: ignore
-        self.raise_()  # type: ignore
-        self.activateWindow()  # type: ignore
-
-    @classmethod
-    def show_existing_dialog(cls: Type) -> None:
-        """If the dialog exists(), call this to make it visible by raising it."""
-        class_name = cls.__name__
-        log_debug(f'SingletonDialog show existing {class_name}') if log_debug_enabled else None
-        DialogSingletonMixin._dialogs_map[class_name].make_visible()
-
-    @classmethod
-    def exists(cls: Type) -> bool:
-        """Returns true if the dialog has already been created."""
-        class_name = cls.__name__
-        log_debug(f"SingletonDialog exists {class_name} "
-                  f"{class_name in DialogSingletonMixin._dialogs_map}") if log_debug_enabled else None
-        return class_name in DialogSingletonMixin._dialogs_map
-
-    @classmethod
-    def get_instance(cls: Type) -> DialogSingletonMixin | None:
-        return DialogSingletonMixin._dialogs_map.get(cls.__name__)
-
-
-class ClickableSlider(QSlider):  # loosely based on https://stackoverflow.com/a/29639127/609575
-
-    def mousePressEvent(self, event: QMouseEvent | None):  # On mouse click, set value to the value at the click position
-        if event:
-            self.setValue(QStyle.sliderValueFromPosition(self.minimum(), self.maximum(), event.pos().x(), self.width()))
-        super().mousePressEvent(event)
-
-
-class LineEditAll(QLineEdit):  # On mouse click, select the entire text - Make it easier to over-type
-    def __init__(self, *args):
-        super().__init__(*args)
-
-    def mousePressEvent(self, event):
-        super().mousePressEvent(event)
-        self.selectAll()
-
-
-# Enabling this would enable anything supported by ddcutil - but that isn't safe for the hardware
-# given the undocumented settings that appear to be available and the sometimes dodgy VDU-vendor DDC
-# implementations.  Plus, the user might not be able to reset to factory for some of them?
-SUPPORT_ALL_VCP = False
-
-BRIGHTNESS_VCP_CODE = BRIT = '10'  # This is HEX
-CONTRAST_VCP_CODE = CONT = '12'    # Also HEX
-CON = CONTINUOUS_TYPE  # Shorter abbreviation
-SNC = SIMPLE_NON_CONTINUOUS_TYPE
-CNC = COMPLEX_NON_CONTINUOUS_TYPE
-
-# Maps of controls supported by name on the command line and in config files.
-SUPPORTED_VCP_BY_CODE: Dict[str, VcpCapability] = {
-    **{code: VcpCapability(code, name, retry_setvcp=False)
-       for code, name in (Ddcutil().get_supported_vcp_codes_map().items() if SUPPORT_ALL_VCP else [])},
-    **{
-        BRIT: VcpCapability(BRIT, QT_TR_NOOP('brightness'), CON, icon_source=BRIGHTNESS_SVG, enabled=True, can_transition=True),
-        CONT: VcpCapability(CONT, QT_TR_NOOP('contrast'), CON, icon_source=CONTRAST_SVG, enabled=True, can_transition=True),
-        '62': VcpCapability('62', QT_TR_NOOP('audio volume'), CON, icon_source=VOLUME_SVG, can_transition=True),
-        '8D': VcpCapability('8D', QT_TR_NOOP('audio mute'), SNC, icon_source=VOLUME_SVG),
-        '8F': VcpCapability('8F', QT_TR_NOOP('audio treble'), CON, icon_source=VOLUME_SVG, can_transition=True),
-        '91': VcpCapability('91', QT_TR_NOOP('audio bass'), CON, icon_source=VOLUME_SVG, can_transition=True),
-        '64': VcpCapability('91', QT_TR_NOOP('audio mic volume'), CON, icon_source=VOLUME_SVG, can_transition=True),
-        '60': VcpCapability('60', QT_TR_NOOP('input source'), SNC, causes_config_change=True),
-        'D6': VcpCapability('D6', QT_TR_NOOP('power mode'), SNC, causes_config_change=True),
-        'CC': VcpCapability('CC', QT_TR_NOOP('OSD language'), SNC),
-        '14': VcpCapability('14', QT_TR_NOOP('color preset'), SNC),
-        '0C': VcpCapability('0C', QT_TR_NOOP('color temperature'), CON, icon_source=COLOR_TEMPERATURE_SVG, enabled=True),
-    }}
-
-SUPPORTED_VCP_BY_PROPERTY_NAME = {c.property_name(): c for c in SUPPORTED_VCP_BY_CODE.values()}
-
-
-class WorkerThread(QThread):
-    finished_work_qtsignal = pyqtSignal(object)
-
-    def __init__(self, task_body: Callable[[WorkerThread], None], task_finished: Callable[[WorkerThread], None] | None = None,
-                 loop: bool = False) -> None:
-        super().__init__()
-        # init should always be initiated from the GUI thread to grant the worker's __init__ easy access to the GUI thread.
-        log_debug(f"WorkerThread: init {self.__class__.__name__} from {thread_pid()=}") if log_debug_enabled else None
-        self.stop_requested = False
-        self.task_body = task_body
-        self.task_finished = task_finished
-        self.loop = loop
-        if self.task_finished is not None:
-            self.finished_work_qtsignal.connect(self.task_finished)
-        self.vdu_exception: VduException | None = None
-
-    def run(self) -> None:  # called by QThread start(), or call it directly to run synchronously in an existing thread.
-        # Long-running task, runs in a separate thread
-        class_name = self.__class__.__name__
-        try:
-            log_debug(f"WorkerThread: {class_name=} running in {thread_pid()=} {self.task_body}") if log_debug_enabled else None
-            while not self.stop_requested:
-                self.task_body(self)  # Pass self so body can access context
-                if not self.loop:
-                    break
-        except VduException as e:
-            self.vdu_exception = e
-        log_debug(f"WorkerThread: {class_name=} finished {thread_pid()=}") if log_debug_enabled else None
-        self.finished_work_qtsignal.emit(self)  # Pass self so body can access context
-
-    def stop(self) -> None:
-        log_debug(f"WorkerThread: stop requested {thread_pid()=} {self.task_body}") if log_debug_enabled else None
-        self.stop_requested = True
-        while self.isRunning():
-            time.sleep(0.1)
-
-    def doze(self, seconds: float, sleep_unit: float = 0.5):
-        while seconds >= sleep_unit and not self.stop_requested:
-            time.sleep(sleep_unit)
-            seconds -= sleep_unit
-        if not self.stop_requested:
-            if seconds > 0.1:
-                time.sleep(seconds)
-
-
-class SchedulerJobType(Enum):
-    RESTORE_PRESET = 1
-    SCHEDULE_PRESETS = 2
-
-
-# QTimer replacement - hibernation-tolerant scheduling at specific YYYYMMDD HHMM.
-# After hibernation, overdue events will trigger immediately.
-class SchedulerJob:  # designed to resemble a QTimer, which it was written to replace
-
-    def __init__(self, when: datetime, job_type: SchedulerJobType, run_callable: Callable, skip_callabled: Callable | None = None):
-        assert when.tzinfo is not None
-        self.when = when.replace(second=0, microsecond=0)
-        self.run_callable = run_callable
-        self.skip_callable = skip_callabled
-        self.job_type = job_type
-        self.has_run = False
-        self.attempts = 0
-        ScheduleWorker.get_instance().add(self)
-
-    def remaining_time(self):
-        return (self.when - zoned_now()).seconds if ScheduleWorker.get_instance().is_supervising(self) else -1
-
-    def run_job(self):
-        try:
-            self.attempts += 1
-            self.run_callable()
-        finally:
-            self.has_run = True
-
-    def dequeue(self):
-        ScheduleWorker.get_instance().remove(self)
-
-    def requeue(self):
-        assert not ScheduleWorker.get_instance().is_supervising(self)
-        self.has_run = False
-        ScheduleWorker.get_instance().add(self)
-
-    def __lt__(self, other: SchedulerJob):
-        return self.when < other.when
-
-    def __str__(self):
-        return f"[{self.job_type=} {self.when=:%Y-%m-%d %H:%M:%S} {self.attempts=} {self.has_run=}]"
-
-
-# Worker that runs SchedulerJobs - hibernation-tolerant scheduling at specific YYYYMMDD HHMM.
-# (An implementation based on sched.scheduler might also work - but the following is definitely going to work cross platform)
-class ScheduleWorker(WorkerThread):
-    _instance: ScheduleWorker | None = None
-    _scheduler_lock = threading.RLock()
-
-    @staticmethod
-    def get_instance():
-        with ScheduleWorker._scheduler_lock:
-            if ScheduleWorker._instance is None or ScheduleWorker._instance.isFinished():
-                ScheduleWorker._instance = ScheduleWorker()
-                ScheduleWorker._instance.start()
-            return ScheduleWorker._instance
-
-    @staticmethod
-    def shutdown():
-        with ScheduleWorker._scheduler_lock:
-            if ScheduleWorker._instance is not None and ScheduleWorker._instance.isRunning():
-                ScheduleWorker._instance._remove_all()
-                ScheduleWorker._instance.stop()
-
-    @staticmethod
-    def check():
-        with ScheduleWorker._scheduler_lock:
-            if ScheduleWorker._instance and ScheduleWorker._instance.isRunning():
-                log_info(f"Scheduler: off-schedule check requested (queue len={len(ScheduleWorker._instance.pending_jobs_list)})")
-                ScheduleWorker._instance._cycle()
-
-    @staticmethod
-    def dequeue_all(job_type: SchedulerJobType | None = None):
-        with ScheduleWorker._scheduler_lock:
-            if ScheduleWorker._instance:
-                ScheduleWorker._instance._remove_all(job_type)
-
-    @staticmethod
-    def is_running() -> bool:
-        with ScheduleWorker._scheduler_lock:
-            return ScheduleWorker._instance and ScheduleWorker._instance.isRunning()
-
-    def __init__(self) -> None:
-        super().__init__(self.task_body, None, True)
-        self.pending_jobs_list: List[SchedulerJob] = []
-
-    def task_body(self, _: WorkerThread):
-        self._cycle()
-        now = datetime.now()  # want just over the next minute boundary e.g. 13:45:05
-        sleep_seconds = ((now + timedelta(seconds=60 + 30)).replace(second=5, microsecond=0) - now).seconds
-        self.doze(sleep_seconds)  # Have to wake every minute in case PC-sleep or hibernate has occurred.
-
-    def _cycle(self):
-        with ScheduleWorker._scheduler_lock:
-            local_now = zoned_now()
-            run_now: Dict[SchedulerJobType, SchedulerJob] = {}
-            for job in self.pending_jobs_list:
-                if job.when <= local_now:  # Eligible to run now
-                    self.pending_jobs_list.remove(job)
-                    if not job.has_run:  # Only the most recent of each type should run
-                        if existing_job := run_now.get(job.job_type, None):
-                            if job.when > existing_job.when:
-                                existing_job.skip_callable()
-                                run_now[job.job_type] = job
-                            else:
-                                job.skip_callable()
-                        else:
-                            run_now[job.job_type] = job
-            for job in run_now.values():
-                log_debug(f"Scheduler: Starting {job=!s} queued={len(self.pending_jobs_list)}") if log_debug_enabled else None
-                job.run_job()
-
-    def add(self, job: SchedulerJob) -> SchedulerJob:
-        with ScheduleWorker._scheduler_lock:
-            assert job not in self.pending_jobs_list
-            self.pending_jobs_list.append(job)
-            log_debug(f"Scheduler: added {job=!s} queued={len(self.pending_jobs_list)}") if log_debug_enabled else None
-            return job
-
-    def remove(self, job: SchedulerJob):
-        with ScheduleWorker._scheduler_lock:
-            if job in self.pending_jobs_list:
-                self.pending_jobs_list.remove(job)
-                log_debug(f"Scheduler: removed {job=!s} queued={len(self.pending_jobs_list)}") if log_debug_enabled else None
-
-    def _remove_all(self, job_type: SchedulerJobType | None = None):
-        with ScheduleWorker._scheduler_lock:
-            for job in [j for j in self.pending_jobs_list if job_type is None or j.job_type == job_type]:
-                self.remove(job)
-            log_debug(f"Scheduler: remove type {job_type!s} ({len(self.pending_jobs_list)} remain)") if log_debug_enabled else None
-
-    def is_supervising(self, job: SchedulerJob):
-        return job in self.pending_jobs_list
-
-
-class ConfIni(configparser.ConfigParser):
-    """ConfigParser is a little messy, and its class name is a bit misleading, wrap it and bend it to our needs."""
-
-    def __init__(self) -> None:
-        super().__init__(interpolation=None)
-        if not self.has_section(ConfSec.METADATA_SECTION):
-            self.add_section(ConfSec.METADATA_SECTION)
-
-    def data_sections(self) -> List:  # Section other than metadata and DEFAULT - real data.
-        return [s for s in self.sections() if s != configparser.DEFAULTSECT and s != ConfSec.METADATA_SECTION]
-
-    def get_version(self) -> Tuple:
-        if version := self.get(*ConfOpt.METADATA_VERSION_OPTION.conf_id, fallback=None):
-            try:
-                return tuple(int(i) for i in version.split('.'))
-            except ValueError:
-                log_error(f"Illegal version number {version} should be i.j.k where i, j and k are integers.", trace=True)
-        return 1, 6, 0
-
-    def save(self, config_path) -> None:
-        if not config_path.parent.is_dir():
-            os.makedirs(config_path.parent)
-        with open(config_path, 'w', encoding="utf-8") as config_file:
-            self[ConfOpt.METADATA_VERSION_OPTION.conf_section][ConfOpt.METADATA_VERSION_OPTION.conf_name] = VDU_CONTROLS_VERSION
-            self[ConfOpt.METADATA_TIMESTAMP_OPTION.conf_section][ConfOpt.METADATA_TIMESTAMP_OPTION.conf_name] = str(zoned_now())
-            self.write(config_file)
-        log_info(f"Wrote config to {config_path.as_posix()}")
-
-    def duplicate(self, new_ini=None) -> ConfIni:
-        if new_ini is None:
-            new_ini = ConfIni()
-        for section in self.sections():
-            if section != configparser.DEFAULTSECT and section != ConfSec.METADATA_SECTION:
-                new_ini.add_section(section)
-            for option in self[section]:
-                new_ini[section][option] = self[section][option]
-        return new_ini
-
-    def diff(self, other: ConfIni, vdu_settings_only: bool = False) -> Dict[Tuple[str, str], str]:
-        values = []
-        for subject in (self, other):
-            sections = set(subject.sections()) - {configparser.DEFAULTSECT, ConfSec.METADATA_SECTION}
-            if vdu_settings_only:
-                sections -= {'preset'}
-            values.append([(section, option, value) for section in sections for option, value in subject[section].items()])
-        differences = list(set(values[0]) ^ set(values[1]))
-        return {(section, option): value for section, option, value in differences}
-
-    @staticmethod
-    def get_path(config_name: str) -> Path:
-        return CONFIG_DIR_PATH.joinpath(config_name + '.conf')
-
-
-class ConfType:  # Supported types constants (in Python 3.11 this could be a StrEnum)
-    BOOL = 'bool'
-    FLOAT = 'float'
-    CSV = 'csv'
-    LONG_TEXT = 'long_text'
-    TEXT = 'text'
-    LOCATION = 'location'
-    PATH = 'path'
-
-
-class ConfSec:  # Data section constants (in Python 3.11 this could be a StrEnum)
-    METADATA_SECTION = QT_TR_NOOP("metadata")  # INI version tracking section
-    VDU_CONTROLS_GLOBALS = QT_TR_NOOP('vdu-controls-globals')
-    VDU_CONTROLS_WIDGETS = QT_TR_NOOP('vdu-controls-widgets')
-    DDCUTIL_PARAMETERS = QT_TR_NOOP('ddcutil-parameters')
-    DDCUTIL_CAPABILITIES = QT_TR_NOOP('ddcutil-capabilities')
-    UNKNOWN_SECTION = QT_TR_NOOP('unknown')
-
-
-class ConfOpt(Enum):  # An Enum with tuples for values is used for convenience for scope/iteration
-
-    @staticmethod  # Tricky way of creating a tuple with default values for some tuple members.
-    def _def(cname: str, section: str = ConfSec.VDU_CONTROLS_GLOBALS, conf_type: str = ConfType.BOOL, default: str | None = None,
-             global_allowed: bool = True, restart: bool = False, cmdline_arg: str = 'DEFAULT', tip: str = '',
-             related: str = '', requires: str = '') -> Tuple[str, str, str, str, str | None, bool, str, str, str, bool]:
-        return cname, section, cmdline_arg, conf_type, default, restart, tip, related, requires, global_allowed
-
-    SPLASH_SCREEN_ENABLED = _def(cname=QT_TR_NOOP('splash-screen-enabled'), default='yes', cmdline_arg='splash',
-                                 tip=QT_TR_NOOP('enable the startup splash screen'))
-    SYSTEM_TRAY_ENABLED = _def(cname=QT_TR_NOOP('system-tray-enabled'), default="no", restart=True,
-                               tip=QT_TR_NOOP('start up in the system tray'), related='hide-on-focus-out')
-    HIDE_ON_FOCUS_OUT = _def(cname=QT_TR_NOOP('hide-on-focus-out'), default="no", restart=False,
-                             tip=QT_TR_NOOP('minimize the main window automatically on focus out'))
-    SMART_WINDOW = _def(cname=QT_TR_NOOP('smart-window'), default="yes",
-                        tip=QT_TR_NOOP('smart main window placement and geometry (X11 and XWayland)'), restart=True)
-    SMART_USES_XWAYLAND = _def(cname=QT_TR_NOOP('smart-uses-xwayland'), default="yes", restart=True,
-                               tip=QT_TR_NOOP('if smart-window is enabled, use Xwayland in Wayland'))
-    PREFER_QT6 = _def(cname=QT_TR_NOOP('prefer-qt6'), default="true", cmdline_arg='DISALLOWED',
-                        tip=QT_TR_NOOP('Prefer Qt6 over Qt5 (if both are installed)'), restart=True)
-    MONOCHROME_TRAY_ENABLED = _def(cname=QT_TR_NOOP('monochrome-tray-enabled'), default="no", restart=False,
-                                   tip=QT_TR_NOOP('monochrome dark themed system tray'))
-    MONO_LIGHT_TRAY_ENABLED = _def(cname=QT_TR_NOOP('mono-light-tray-enabled'), default="no", restart=False,
-                                   tip=QT_TR_NOOP('monochrome light themed system tray'))
-    TRAY_FOLLOWS_THEME = _def(cname=QT_TR_NOOP('tray-follows-theme'), default="yes", restart=False,
-                              tip=QT_TR_NOOP('tray dark/light theming follows desktop-theme changes'))
-    TOOLBAR_AT_TOP = _def(cname=QT_TR_NOOP('toolbar-at-top'), default="no", restart=False,
-                              tip=QT_TR_NOOP('toolbar resides at top of main window'))
-    SEPARATE_STATUS_BAR = _def(cname=QT_TR_NOOP('separate-status-bar'), default="no", restart=True,
-                              tip=QT_TR_NOOP('seperate the status-bar from the tool-bar'))
-    PROTECT_NVRAM_ENABLED = _def(cname=QT_TR_NOOP('protect-nvram'), default="yes", restart=True,
-                                 tip=QT_TR_NOOP('alter options and defaults to minimize VDU NVRAM writes'))
-    ORDER_BY_NAME = _def(cname=QT_TR_NOOP('order-by-name'), default="no",
-                         tip=QT_TR_NOOP('order lists and tabs by vdu-name'))
-    LUX_OPTIONS_ENABLED = _def(cname=QT_TR_NOOP('lux-options-enabled'), default="yes", restart=True,
-                               tip=QT_TR_NOOP('enable light metering options'))
-    LUX_TRAY_ICON = _def(cname=QT_TR_NOOP('lux-tray-icon'), default="yes", restart=False,
-                         tip=QT_TR_NOOP('enable lux light-level system-tray icon'))
-    SCHEDULE_ENABLED = _def(cname=QT_TR_NOOP('schedule-enabled'), default='yes', tip=QT_TR_NOOP('enable preset schedule'))
-    WEATHER_ENABLED = _def(cname=QT_TR_NOOP('weather-enabled'), default='yes', tip=QT_TR_NOOP('enable weather lookups'))
-    DBUS_CLIENT_ENABLED = _def(cname=QT_TR_NOOP('dbus-client-enabled'), default="yes",
-                               tip=QT_TR_NOOP('use the D-Bus ddcutil-server if available'))
-    DBUS_EVENTS_ENABLED = _def(cname=QT_TR_NOOP('dbus-events-enabled'), default="yes",
-                               tip=QT_TR_NOOP('enable D-Bus ddcutil-server events'), requires='dbus-client-enabled')
-    LAPTOP_PANEL_ENABLED = _def(cname=QT_TR_NOOP('laptop-panel-enabled'), default="no",
-                                tip=QT_TR_NOOP('use brightnessctl utility for laptop panel control'))
-    SYSLOG_ENABLED = _def(cname=QT_TR_NOOP('syslog-enabled'), default="no",
-                          tip=QT_TR_NOOP('divert diagnostic output to the syslog'))
-    DEBUG_ENABLED = _def(cname=QT_TR_NOOP('debug-enabled'), default="no", tip=QT_TR_NOOP('output extra debug information'))
-    WARNINGS_ENABLED = _def(cname=QT_TR_NOOP('warnings-enabled'), default="no",
-                            tip=QT_TR_NOOP('popup warnings if a VDU lacks an enabled control'))
-    TRANSLATIONS_ENABLED = _def(cname=QT_TR_NOOP('translations-enabled'), default="no", restart=True,
-                                tip=QT_TR_NOOP('enable language translations, currently not updated (no known users)'))
-    LOCATION = _def(cname=QT_TR_NOOP('location'), conf_type=ConfType.LOCATION, tip=QT_TR_NOOP('latitude,longitude'))
-    DDCUTIL_EMULATOR = _def(cname=QT_TR_NOOP('ddcutil-emulator'), conf_type=ConfType.PATH,
-                            tip=QT_TR_NOOP('additional command-line ddcutil emulator for a laptop panel'))
-    SLEEP_MULTIPLIER = _def(cname=QT_TR_NOOP('sleep-multiplier'), section=ConfSec.DDCUTIL_PARAMETERS, conf_type=ConfType.FLOAT,
-                            tip=QT_TR_NOOP('ddcutil --sleep-multiplier (0.1 .. 2.0, default none)'))
-    DDCUTIL_EXTRA_ARGS = _def(cname=QT_TR_NOOP('ddcutil-extra-args'), section=ConfSec.DDCUTIL_PARAMETERS, conf_type=ConfType.TEXT,
-                              tip=QT_TR_NOOP('ddcutil extra arguments (default none)'))
-    VDU_NAME = _def(cname=QT_TR_NOOP('vdu-name'), section=ConfSec.VDU_CONTROLS_WIDGETS, conf_type=ConfType.TEXT,
-                    global_allowed=False, cmdline_arg='DISALLOWED', tip=QT_TR_NOOP('Name to display for this VDU'))
-    ENABLE_VCP_CODES = _def(cname=QT_TR_NOOP('enable-vcp-codes'), section=ConfSec.VDU_CONTROLS_WIDGETS, conf_type=ConfType.CSV,
-                            cmdline_arg='DISALLOWED', tip=QT_TR_NOOP('CSV list of VCP Hex-code capabilities to enable'))
-    CAPABILITIES_OVERRIDE = _def(cname=QT_TR_NOOP('capabilities-override'), section=ConfSec.DDCUTIL_CAPABILITIES,
-                                 conf_type=ConfType.LONG_TEXT, cmdline_arg='DISALLOWED')
-    METADATA_VERSION_OPTION = _def(cname=QT_TR_NOOP('version'), section=ConfSec.METADATA_SECTION,
-                                 conf_type=ConfType.BOOL, cmdline_arg='DISALLOWED')
-    METADATA_TIMESTAMP_OPTION = _def(cname=QT_TR_NOOP('timestamp'), section=ConfSec.METADATA_SECTION,
-                                 conf_type=ConfType.BOOL, cmdline_arg='DISALLOWED')
-    UNKNOWN = _def(cname="UNKNOWN", section=ConfSec.UNKNOWN_SECTION, conf_type=ConfType.BOOL, cmdline_arg='DISALLOWED', tip='')
-
-    def __init__(self, conf_name: str, section: str, cmdline_arg: str, conf_type: str, default: str | None,
-                 restart_required: bool, help_text: str, related: str, requires: str, global_allowed):
-        self.conf_name = conf_name
-        self.conf_section = section
-        self.conf_type = conf_type
-        self.conf_id = self.conf_section, self.conf_name
-        self.restart_required = restart_required
-        self.help = help_text
-        self.cmdline_arg = self.conf_name.replace("-enabled", "") if cmdline_arg == 'DEFAULT' else cmdline_arg
-        self.cmdline_var = None if self.cmdline_arg == "DISALLOWED" else self.conf_name.replace('-enabled', '').replace('-', '_')
-        self.default_value = default
-        self.related = related
-        self.requires = requires
-        self.global_allowed = global_allowed
-
-    def add_cmdline_arg(self, parser: argparse.ArgumentParser) -> None:
-        if self.cmdline_arg != "DISALLOWED":
-            if self.conf_type == ConfType.BOOL:  # Store strings for bools, allows us to differentiate yes/no and not supplied.
-                parser.add_argument(f"--{self.cmdline_arg}", dest=self.cmdline_var, action='store_const', const='yes',
-                                    help=self.help + ' ' + (tr('(default)') if self.default_value == 'yes' else ''))
-                parser.add_argument(f"--no-{self.cmdline_arg}", dest=self.cmdline_var, action='store_const', const='no',
-                                    help=tr('(default)') if self.default_value == 'no' else '')
-            elif self.conf_type == ConfType.FLOAT:
-                parser.add_argument(f"--{self.cmdline_arg}", type=float, default=self.default_value, help=self.help)
-            else:
-                parser.add_argument(f"--{self.cmdline_arg}", type=str, default=self.default_value, help=self.help)
-
-
-class VduControlsConfig:
-    """
-    A vdu_controls config that can be read or written from INI style files by the standard configparser package.
-    Includes a method that can fold in values from command line arguments parsed by the standard argparse package.
-    """
-
-    def __init__(self, config_name: str, default_enabled_vcp_codes: List | None = None, main_config: bool = False) -> None:
-        self.config_name = config_name
-        self.ini_content = ConfIni()
-
-        if main_config:
-            self.ini_content[ConfSec.VDU_CONTROLS_GLOBALS] = {}
-            for option in ConfOpt:  # Add in options for all supported controls
-                if option.conf_section == ConfSec.VDU_CONTROLS_GLOBALS:
-                    default_str = str(option.default_value) if option.default_value is not None else ''
-                    self.ini_content.set(*option.conf_id, default_str)
-
-        self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS] = {}
-        self.ini_content[ConfSec.DDCUTIL_PARAMETERS] = {}
-        self.ini_content[ConfSec.DDCUTIL_CAPABILITIES] = {}
-
-        for item in SUPPORTED_VCP_BY_CODE.values():
-            self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS][item.property_name()] = 'yes' if item.enabled else 'no'
-
-        self.ini_content.set(*ConfOpt.ENABLE_VCP_CODES.conf_id, '')
-        if not main_config:
-            self.ini_content.set(*ConfOpt.VDU_NAME.conf_id, '')
-        self.ini_content.set(*ConfOpt.SLEEP_MULTIPLIER.conf_id, str('0.0'))
-        self.ini_content.set(*ConfOpt.DDCUTIL_EXTRA_ARGS.conf_id, '')
-        self.ini_content.set(*ConfOpt.CAPABILITIES_OVERRIDE.conf_id, '')
-
-        if default_enabled_vcp_codes is not None:
-            for code in default_enabled_vcp_codes:
-                if code in SUPPORTED_VCP_BY_CODE:
-                    self.enable_supported_vcp_code(code)
-                else:
-                    self.enable_unsupported_vcp_code(code)
-        self.file_path: Path | None = None
-
-    def get_conf_option(self, section_name: str, option_name: str) -> ConfOpt:
-        for option in ConfOpt:  # Inefficient, but a small number of iterations
-            if option.conf_section == section_name and option.conf_name == option_name:
-                return option
-        return ConfOpt.UNKNOWN
-
-    def restrict_to_actual_capabilities(self, supported_by_this_vdu: Dict[str, VcpCapability]) -> None:
-        for option_name in self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS]:
-            if self.get_conf_option(ConfSec.VDU_CONTROLS_WIDGETS, option_name).conf_type == ConfType.BOOL:
-                if option_name in SUPPORTED_VCP_BY_PROPERTY_NAME and \
-                        SUPPORTED_VCP_BY_PROPERTY_NAME[option_name].vcp_code not in supported_by_this_vdu:
-                    del self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS][option_name]
-                    log_debug(f"Removed {self.config_name} {option_name} - not supported by VDU") if log_debug_enabled else None
-                elif option_name.startswith('unsupported-') and option_name[len('unsupported-'):] not in supported_by_this_vdu:
-                    del self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS][option_name]
-                    log_debug(f"Removed {self.config_name} {option_name} - not supported by VDU") if log_debug_enabled else None
-
-    def get_vdu_preferred_name(self):
-        custom_name = self.ini_content.get(*ConfOpt.VDU_NAME.conf_id, fallback=None)
-        return custom_name if custom_name is not None and custom_name.strip() != '' else self.config_name
-
-    def is_set(self, option: ConfOpt, fallback=False) -> bool:
-        return self.ini_content.getboolean(option.conf_section, option.conf_name, fallback=fallback)
-
-    def set_option_from_args(self, option: ConfOpt, arg_values: Dict[str, Any]):
-        if option.cmdline_var is not None and option.cmdline_var in arg_values and arg_values[option.cmdline_var] is not None:
-            str_value = str(arg_values[option.cmdline_var])
-            if str_value != self.ini_content[option.conf_section][option.conf_name]:
-                log_warning(f"command-line {option.cmdline_arg}={str_value} overrides {option.conf_section}.{option.conf_name}="
-                            f"{self.ini_content[option.conf_section][option.conf_name]} (in {self.file_path})")
-                self.ini_content[option.conf_section][option.conf_name] = str_value
-
-    def get_sleep_multiplier(self, fallback: float | None = None) -> float | None:
-        value = self.ini_content.getfloat(*ConfOpt.SLEEP_MULTIPLIER.conf_id, fallback=0.0)
-        return fallback if math.isclose(value, 0.0) else value
-
-    def get_ddcutil_extra_args(self, fallback: List[str] | None = None) -> List[str]:
-        fallback = [] if fallback is None else fallback
-        value = self.ini_content.get(*ConfOpt.DDCUTIL_EXTRA_ARGS.conf_id, fallback=None)
-        return fallback if value is None or value.strip() == '' else value.split()
-
-    def get_capabilities_alt_text(self) -> str:
-        return self.ini_content.get(*ConfOpt.CAPABILITIES_OVERRIDE.conf_id)
-
-    def set_capabilities_alt_text(self, alt_text: str) -> None:
-        self.ini_content.set(*ConfOpt.CAPABILITIES_OVERRIDE.conf_id, alt_text)
-
-    def enable_supported_vcp_code(self, vcp_code: str) -> None:
-        self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS][SUPPORTED_VCP_BY_CODE[vcp_code].property_name()] = 'yes'
-
-    def enable_unsupported_vcp_code(self, vcp_code: str) -> None:
-        self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS][f'unsupported-{vcp_code}'] = 'yes'
-
-    def disable_supported_vcp_code(self, vcp_code: str) -> None:
-        self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS][SUPPORTED_VCP_BY_CODE[vcp_code].property_name()] = 'no'
-
-    def get_all_enabled_vcp_codes(self) -> List[str]:  # Not very efficient
-        enabled_vcp_codes = []
-        for control_name, control_def in SUPPORTED_VCP_BY_PROPERTY_NAME.items():
-            if self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS].getboolean(control_name, fallback=False):
-                enabled_vcp_codes.append(control_def.vcp_code)
-        enable_codes_str = self.ini_content.get(*ConfOpt.ENABLE_VCP_CODES.conf_id, fallback='')
-        for vcp_code in enable_codes_str.split(","):
-            if code := vcp_code.strip().upper():
-                if code not in enabled_vcp_codes:
-                    enabled_vcp_codes.append(code)
-                else:
-                    log_warning(f"supported enabled vcp_code {code} is redundantly listed "
-                                f"in enabled_vcp_codes ({enable_codes_str})")
-        return enabled_vcp_codes
-
-    def get_location(self) -> GeoLocation | None:
-        try:
-            spec = self.ini_content.get(*ConfOpt.LOCATION.conf_id, fallback=None)
-            if spec is None or spec.strip() == '':
-                return None
-            parts = spec.split(',')
-            return GeoLocation(float(parts[0]), float(parts[1]), None if len(parts) < 3 else parts[2])
-        except ValueError as ve:
-            log_error("Problem with geolocation:", ve)
-            return None
-
-    def parse_file(self, config_path: Path) -> None:
-        """Parse config values from file"""
-        self.file_path = config_path
-        basename = os.path.basename(config_path)
-        config_text = Path(config_path).read_text()
-        log_info("Using config file '" + config_path.as_posix() + "'")
-        if re.search(r'(\[ddcutil-capabilities])|(\[ddcutil-parameters])|(\[vdu-controls-\w])', config_text) is None:
-            log_info(f"Old style config file {basename} overrides ddcutils capabilities")
-            self.ini_content.set(*ConfOpt.CAPABILITIES_OVERRIDE.conf_id, config_text)
-            return
-        self.ini_content.read_string(config_text)
-        # Manually extract the text preserving meaningful indentation
-        preserve_indents_match = re.search(
-            r'\[ddcutil-capabilities](?:.|\n)*\ncapabilities-override[ \t]*[:=]((.*)(\n[ \t].+)*)', config_text)
-        alt_text = preserve_indents_match.group(1) if preserve_indents_match is not None else ''
-        # Remove excess indentation while preserving the minimum existing indentation.
-        alt_text = inspect.cleandoc(alt_text)
-        self.ini_content.set(*ConfOpt.CAPABILITIES_OVERRIDE.conf_id, alt_text)
-
-    def reload(self) -> None:
-        log_info(f"Reloading config: {self.file_path}")
-        if self.file_path:
-            for section in list(self.ini_content.data_sections()):
-                self.ini_content.remove_section(section)
-            self.parse_file(self.file_path)
-
-    def debug_dump(self) -> None:
-        origin = 'configuration' if self.file_path is None else os.path.basename(self.file_path)
-        for section in self.ini_content.sections():
-            for option in self.ini_content[section]:
-                log_debug(f"config: {origin} [{section}] {option} = {self.ini_content[section][option]}")
-
-    def write_file(self, config_path: Path, overwrite: bool = False) -> None:
-        """Write the config to a file.  Used for creating initial template config files."""
-        self.file_path = config_path
-        if config_path.exists():
-            if not config_path.is_file() or not overwrite:
-                log_error(f"{config_path.as_posix()} exists, remove the file if you really want to replace it.")
-                return
-        log_info(f"Creating new config file {config_path.as_posix()}")
-        self.ini_content.save(config_path)
-
-    def parse_global_args(self, args=None) -> argparse.Namespace:
-        """Parse command line arguments and integrate the results into this config"""
-        if args is None:
-            args = sys.argv[1:]
-        parser = argparse.ArgumentParser(
-            description=textwrap.dedent(f"""
-            {APPNAME}
-              Uses ddcutil to issue Display Data Channel (DDC) Virtual Control Panel (VCP) commands.
-              Controls DVI/DP/HDMI/USB connected monitors (but not builtin laptop displays)."""),
-            formatter_class=argparse.RawTextHelpFormatter)
-        parser.epilog = textwrap.dedent("""
-            As well as command line arguments, individual VDU controls and optimisations may be
-            specified in monitor specific configuration files, see --detailed-help for details.
-
-            See the --detailed-help for important licencing information.
-            """)
-        parser.add_argument('--detailed-help', default=False, action='store_true', help='Detailed help (in markdown format).')
-        parser.add_argument('--about', default=False, action='store_true', help='info about vdu_controls')
-        parser.add_argument('--show', default=[], action='append',
-                            choices=[vcp.property_name() for vcp in SUPPORTED_VCP_BY_CODE.values()],
-                            help='show specified control only (--show may be specified multiple times)')
-        parser.add_argument('--hide', default=[], action='append',
-                            choices=[vcp.property_name() for vcp in SUPPORTED_VCP_BY_CODE.values()],
-                            help='hide/disable a control (--hide may be specified multiple times)')
-        parser.add_argument('--enable-vcp-code', type=str, action='append',
-                            help='enable controls for an unsupported vcp-code hex value (maybe specified multiple times)')
-        for option in ConfOpt:
-            if option.cmdline_arg is not None:
-                option.add_cmdline_arg(parser)
-        parser.add_argument('--create-config-files', action='store_true',
-                            help="create template config files, one global file and one for each detected VDU.")
-        parser.add_argument('--install', action='store_true',
-                            help="installs the vdu_controls in the current user's path and desktop application menu.")
-        parser.add_argument('--uninstall', action='store_true',
-                            help='uninstalls the vdu_controls application menu file and script for the current user.')
-        parsed_args = parser.parse_args(args=args)
-        if parsed_args.install:
-            install_as_desktop_application()
-            sys.exit()
-        if parsed_args.uninstall:
-            install_as_desktop_application(uninstall=True)
-            sys.exit()
-        if parsed_args.detailed_help:
-            print(__doc__)
-            sys.exit()
-
-        arg_values = vars(parsed_args)
-        for option in ConfOpt:
-            if option.cmdline_arg is not None:
-                self.set_option_from_args(option, arg_values)
-        if len(parsed_args.show) != 0:
-            for control_def in SUPPORTED_VCP_BY_CODE.values():
-                if control_def.property_name() in parsed_args.show:
-                    self.enable_supported_vcp_code(control_def.vcp_code)
-                else:
-                    self.disable_supported_vcp_code(control_def.vcp_code)
-        if len(parsed_args.hide) != 0:
-            for control_def in SUPPORTED_VCP_BY_CODE.values():
-                if control_def.property_name() in parsed_args.hide:
-                    self.disable_supported_vcp_code(control_def.vcp_code)
-        if parsed_args.enable_vcp_code is not None:
-            for code in parsed_args.enable_vcp_code:
-                self.enable_unsupported_vcp_code(code)
-
-        return parsed_args
 
 
 class VduControllerAsyncSetter(WorkerThread):  # Used to decouple the set-vcp from the GUI
@@ -3349,636 +425,7 @@ class VduController(QObject):
                 **{k: v for k, v in feature_map.items() if k not in (BRIGHTNESS_VCP_CODE, CONTRAST_VCP_CODE)}}
 
 
-class SubWinDialog(QDialog):  # Fix for gnome: QDialog must be a subwindow, otherwise it will always stay on top of other windows.
-
-    def __init__(self, parent: QWidget | None = None) -> None:
-        # On gnome this allows the subwindow to surface properly, on others it may anoyingly keep
-        # the window on top - which is not always desirable.
-        super().__init__(parent, Qt.WindowType.SubWindow if is_subwin_desktop() else Qt.WindowType.Window)
-
-
-class ThemedSvgWidget(QSvgWidget):
-
-    def __init__(self, icon_source: bytes, width: int, height: int, parent: QWidget | None = None) -> None:
-        super().__init__(parent=parent)
-        self.icon_source = icon_source
-        self.setFixedSize(width, height)
-        self.load_from_icon_source(self.icon_source)
-
-    def load_from_icon_source(self, icon_source: bytes):
-        self.icon_source = icon_source
-        self.load(handle_theme(self.icon_source, polychrome_light_or_dark()))
-
-    def event(self, event: QEvent | None) -> bool:
-        if event and event.type() == QEvent.Type.PaletteChange:  # PalletChange happens after the new style sheet is in use.
-            self.load_from_icon_source(self.icon_source)
-        return super().event(event)
-
-
-class StdButton(QPushButton):  # Reduce some repetitiveness in the code
-
-    def __init__(self, icon: QIcon | None = None, title: str = '', clicked: Callable | None = None, auto_default=True,
-                 tip: str | None = None, flat: bool = False, margins: bool = True, icon_size: QSize | None = None, parent: QWidget | None = None) -> None:
-        super().__init__(parent=parent)
-        self.setIcon(icon) if icon else None
-        self.setIconSize(icon_size) if icon_size else None
-        self.setText(title) if title else None
-        self.clicked.connect(clicked) if clicked else None
-        self.setToolTip(tip) if tip else None
-        self.setFlat(flat)
-        self.setContentsMargins(0, 0, 0, 0) if not margins else None
-        self.setAutoDefault(auto_default)
-
-
-class ThemedSvgButton(StdButton):
-
-    def __init__(self, icon_source: bytes, title: str = '', clicked: Callable | None = None, auto_default=True,
-                 tip: str | None = None, flat: bool = False, margins: bool = True, icon_size: QSize | None = None, parent: QWidget | None = None) -> None:
-        super().__init__(icon := create_icon_from_svg_bytes(icon_source), title, clicked, auto_default, tip, flat, margins, icon_size, parent)
-        self.icon_source = icon_source
-
-    def event(self, event: QEvent | None) -> bool:
-        if event and event.type() == QEvent.Type.PaletteChange:  # PalletChange happens after the new style sheet is in use.
-            self.setIcon(create_icon_from_svg_bytes(self.icon_source))
-        return super().event(event)
-
-
-class TitleButton(StdButton):
-    def __init__(self, icon_source: bytes, main_text: str, sub_text: str, clicked: Callable | None = None, parent: QWidget | None = None) -> None:
-        super().__init__(icon=None, title=None, clicked=clicked, flat=True, parent=parent)
-        layout = QHBoxLayout()
-        self.setLayout(layout)
-        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self.svg_icon = ThemedSvgWidget(icon_source, native_font_height(scaled=1.8), native_font_height(scaled=1.8), parent=self)
-        layout.addWidget(self.svg_icon)
-        self.label = QLabel(f"<span style='font-weight:bold;'>{main_text}<br/>"
-                            f"<span style='font-size:{native_font_height(0.5)}px; font-weight:normal;'>{sub_text}</span>")
-        self.label.setTextFormat(Qt.TextFormat.RichText)
-        self.label.setWordWrap(True)
-        self.label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)  # Prevent label from swollowing clicks
-        self.label.adjustSize()   # Adjust down to actual text height before accessing its height
-        layout.addWidget(self.label)
-        self.setMinimumHeight(max(self.svg_icon.height(), self.label.height()) +    # Avoids size issues if embedded in a layout
-                              self.style().pixelMetric(QStyle.PixelMetric.PM_LayoutTopMargin) +
-                              self.style().pixelMetric(QStyle.PixelMetric.PM_LayoutBottomMargin))
-
-
-class SettingsDialog(SubWinDialog, DialogSingletonMixin):
-    """
-    Application Settings Editor, edits a default global settings file, and a settings file for each VDU.
-    The files are in INI format.  Internally, the settings are VduControlsConfig wrappers around the standard class ConfigIni.
-    """
-
-    @staticmethod
-    def invoke(default_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig], change_callback: Callable) -> None:
-        SettingsDialog.show_existing_dialog() if SettingsDialog.exists() else SettingsDialog(default_config,
-                                                                                             vdu_config_list, change_callback)
-
-    @staticmethod
-    def reconfigure_instance(vdu_config_list: List[VduControlsConfig]) -> None:
-        SettingsDialog.get_instance().reconfigure(vdu_config_list) if SettingsDialog.exists() else None
-
-    @staticmethod
-    def edit_config(config_name: str) -> None:
-        if instance := SettingsDialog.get_instance():
-            for tab_number, tab in enumerate(instance.editor_tab_list):
-                if tab.config_path == ConfIni.get_path(config_name):
-                    instance.tabs_widget.setCurrentIndex(tab_number)
-                    instance.make_visible()
-
-    def __init__(self, default_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig], change_callback) -> None:
-        super().__init__()
-        self.setWindowTitle(tr('Settings'))
-        self.setLayout(widget_layout := QVBoxLayout())
-        self.tabs_widget = QTabWidget(self)
-        widget_layout.addWidget(self.tabs_widget)
-        self.editor_tab_list: List[SettingsEditorTab] = []
-        self.bottom_status_bar = QStatusBar()
-        self.tab_ops = QFrame(self)  # Groups operations that target the current tab
-        self.tab_ops.setLayout(tab_ops_layout := QHBoxLayout())
-        self.tab_ops_label = QLabel('')
-        tab_ops_layout.addWidget(self.tab_ops_label)
-        self.change_callback = change_callback
-
-        def _tab_restore_defaults() -> None:
-            self.tabs_widget.currentWidget().restore_application_defaults()
-
-        self.tab_restore_defaults_button = StdButton(icon=si(self, StdPixmap.SP_DialogDiscardButton), title=(tr('Defaults')),
-                                                     clicked=_tab_restore_defaults)
-        tab_ops_layout.addWidget(self.tab_restore_defaults_button)
-
-        def _tab_revert_current_tab() -> None:
-            self.tabs_widget.currentWidget().revert_changes()
-
-        self.tab_revert_button = StdButton(icon=si(self, StdPixmap.SP_DialogResetButton), title=(tr('Revert')),
-                                           clicked=_tab_revert_current_tab)
-        tab_ops_layout.addWidget(self.tab_revert_button)
-
-        def _tab_save_current_tab() -> None:
-            self.tabs_widget.currentWidget().save()
-
-        self.tab_save_button = StdButton(icon=si(self, StdPixmap.SP_DriveFDIcon), title=(tr('Save')), clicked=_tab_save_current_tab)
-        tab_ops_layout.addWidget(self.tab_save_button)
-
-        self.bottom_status_bar.addPermanentWidget(self.tab_ops, 0)
-        self.bottom_status_bar.addPermanentWidget(QLabel('                    '))
-
-        save_all_button = StdButton(icon=si(self, StdPixmap.SP_DriveFDIcon), title=(tr("Save All")),
-                                    clicked=(partial(self.save_all, True)))
-        self.bottom_status_bar.addPermanentWidget(save_all_button, 0)
-
-        quit_button = StdButton(icon=si(self, StdPixmap.SP_DialogCloseButton), title=(tr("Close")), clicked=self.close)
-        self.bottom_status_bar.addPermanentWidget(quit_button, 0)
-
-        widget_layout.addWidget(self.bottom_status_bar)
-
-        def _tab_changed(index: int) -> None:
-            self.update_tab_ops(self.tabs_widget.widget(index))
-
-        self.tabs_widget.currentChanged.connect(_tab_changed)
-
-        self.resize(npx(1900), npx(1000))
-        self.setMinimumSize(npx(1024), npx(800))
-        self.reconfigure([default_config, *vdu_config_list])
-        self.make_visible()
-
-    def status_message(self, message: str, msecs: int = 0):  # Display a message on the visible tab.
-        self.bottom_status_bar.showMessage(message, msecs)
-
-    def sizeHint(self):
-        return QSize(npx(1700), npx(1000))
-
-    def update_tab_ops(self, tab: SettingsEditorTab) -> None:
-        self.tab_ops_label.setText(tr('{}: ').format(tab.preferred_name))
-        self.tab_ops.setToolTip(tr('{}: {}').format(tab.preferred_name, tab.config_path.as_posix()))
-        self.tab_save_button.setToolTip(tr('Save {} to \n{}').format(tab.preferred_name, tab.config_path.as_posix()))
-        self.tab_revert_button.setToolTip(tr('Revert {} from \n{}').format(tab.preferred_name, tab.config_path.as_posix()))
-        self.tab_restore_defaults_button.setToolTip(
-            tr('Remove {}\nand restore {} to application defaults').format(tab.config_path.as_posix(), tab.preferred_name))
-
-    def reconfigure(self, config_list: List[VduControlsConfig]) -> None:
-        for config in config_list:
-            vdu_label = config.get_vdu_preferred_name()
-            conf_key = ConfIni.get_path(config.config_name)
-            if tabs_found := [tab for tab in self.editor_tab_list if tab.config_path == conf_key]:
-                assert len(tabs_found) == 1
-                tab = tabs_found[0]
-            else:
-                tab = SettingsEditorTab(self, config, self.change_callback, parent=self.tabs_widget)
-                tab.save_all_clicked_qtsignal.connect(self.save_all)  # type: ignore
-                self.tabs_widget.addTab(tab, vdu_label)
-                self.editor_tab_list.append(tab)
-            tab.set_preferred_name(vdu_label)
-            self.tabs_widget.setTabText(self.tabs_widget.indexOf(tab), vdu_label)
-            if tab == self.tabs_widget.currentWidget():
-                self.update_tab_ops(tab)
-            if config.file_path:
-                self.tabs_widget.setTabToolTip(self.tabs_widget.indexOf(tab), config.file_path.as_posix())
-
-    def cross_validate(self) -> int:
-        labels_in_use = {'vdu_controls': 'vdu_controls globals'}
-        for tab in self.editor_tab_list:
-            if vdu_label := tab.ini_editable.get(*ConfOpt.VDU_NAME.conf_id, fallback=None):
-                if existing_use := labels_in_use.get(vdu_label, None):
-                    return MBox(MIcon.Critical, msg=tr("Cannot save <tt>{}</tt>").format(tab.config_path.name),
-                                info=tr("Duplicate VDU label: <i>{}</i><hr/>Alter the label for {} or {} and try again.").format(
-                                    vdu_label, tab.config_path.stem, existing_use),
-                                buttons=MBtn.Close | MBtn.Discard, default=MBtn.Close).exec()
-                else:
-                    labels_in_use[vdu_label] = tab.config_path.stem
-        return MBtn.Ok
-
-    def save_all(self, warn_if_nothing_to_save: bool = True) -> int:
-        what_changed: Dict[str, str] = {}
-        try:
-            nothing_to_save = True
-            self.setEnabled(False)
-            save_order = self.editor_tab_list[1:] + [self.editor_tab_list[0]]  # Main config last, it may cause a restart of the app
-            for editor in save_order:
-                if editor.is_unsaved():
-                    nothing_to_save = False
-                    if editor.save(what_changed=what_changed, warn_if_no_changes=False) == MBtn.Cancel:
-                        return MBtn.Cancel
-            if warn_if_nothing_to_save and nothing_to_save:
-                if MBox(MIcon.Critical, msg=tr("Nothing needs saving. Do you wish to save anyway?"),
-                        buttons=MBtn.Yes | MBtn.No, default=MBtn.No).exec() == MBtn.Yes:
-                    for editor in save_order:
-                        if editor.save(force=True, what_changed=what_changed, warn_if_no_changes=False) == MBtn.Cancel:
-                            return MBtn.Cancel
-        finally:
-            self.setEnabled(True)
-            if len(what_changed) > 0:
-                self.change_callback(what_changed)
-        return MBtn.Ok
-
-    def closeEvent(self, event) -> None:
-        if self.save_all(warn_if_nothing_to_save=False) == MBtn.Cancel:
-            event.ignore()
-        else:
-            super().closeEvent(event)
-
-
-class SettingsEditorTab(QWidget):
-    """A tab corresponding to a settings file, generates UI widgets for each tab based on what's in the config. """
-    save_all_clicked_qtsignal = pyqtSignal()
-
-    def __init__(self, editor_dialog: SettingsDialog, vdu_config: VduControlsConfig, change_callback: Callable,
-                 parent: QTabWidget) -> None:
-        super().__init__(parent=parent)
-        widget_map = {ConfType.BOOL: SettingsEditorBooleanWidget, ConfType.FLOAT: SettingsEditorFloatWidget,
-                      ConfType.LONG_TEXT: SettingsEditorLongTextWidget, ConfType.TEXT: SettingsEditorTextWidget,
-                      ConfType.CSV: SettingsEditorCsvWidget, ConfType.LOCATION: SettingsEditorLocationWidget,
-                      ConfType.PATH: SettingsEditorPathWidget, }
-        content = QWidget()
-        content_layout = QVBoxLayout()
-        content.setLayout(content_layout)
-        scroll_area = QScrollArea(self)
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setWidget(content)
-        self.setLayout(widget_layout := QVBoxLayout())
-        widget_layout.addWidget(scroll_area)
-
-        self.change_callback = change_callback
-        self.unsaved_changes_map: Dict[Tuple[str, str], str] = {}
-        self.config_path = ConfIni.get_path(vdu_config.config_name)
-        self.ini_before = vdu_config.ini_content
-        self.ini_editable = self.ini_before.duplicate()
-        self.field_list: List[SettingsEditorFieldBase] = []
-        self.editor_dialog = editor_dialog
-        self.preferred_name = vdu_config.get_vdu_preferred_name()
-
-        def _field(widget: SettingsEditorFieldBase) -> QWidget:
-            self.field_list.append(widget)
-            return widget
-
-        for section_name in self.ini_editable.data_sections():
-            title = tr(section_name).replace('-', ' ')
-            content_layout.addWidget(QLabel(f"<b>{title}</b>"))
-            bool_count = 0
-            booleans_grid: QGridLayout | None = None  # Only create when bool_count > 0
-            grid_columns = 5  # booleans are counted and laid out according to grid_columns.
-            for option_name in self.ini_editable[section_name]:
-                try:
-                    option_def = vdu_config.get_conf_option(section_name, option_name)
-                    # If it's unknown, it's probably a boolean switch for a VCP code
-                    if section_name != ConfSec.VDU_CONTROLS_GLOBALS or option_def != ConfOpt.UNKNOWN:
-                        if option_def.conf_type == ConfType.BOOL:
-                            if bool_count == 0:  # Need to create a grid now
-                                booleans_grid = QGridLayout()
-                                booleans_grid.setVerticalSpacing(0)
-                                booleans_panel = QWidget()
-                                booleans_panel.setLayout(booleans_grid)
-                                content_layout.addWidget(booleans_panel)
-                            booleans_grid.addWidget(
-                                _field(
-                                    SettingsEditorBooleanWidget(self, option_name, section_name,
-                                                                option_def.help, option_def.related, option_def.requires)),
-                                bool_count // grid_columns, bool_count % grid_columns)
-                            bool_count += 1
-                        else:
-                            content_layout.addWidget(_field(widget_map[option_def.conf_type](self, option_name, section_name, option_def.help)))
-                except ValueError:  # Probably an old no-longer-valid option, or a typo.
-                    log_warning(f"Ignoring invalid option name {option_name} in {section_name}")
-
-    def set_preferred_name(self, label_str):
-        self.preferred_name = label_str
-
-    def save(self, force: bool = False, what_changed: Dict[str, str] | None = None, warn_if_no_changes: bool = True) -> int:
-        # what_changed is an output parameter, if passed, it will be updated with what has changed.
-        if self.is_unsaved() or force:
-            try:
-                self.setEnabled(False)  # Saving may take a while, give some feedback by disabling and enabling when done
-                answer = SettingsDialog.get_instance().cross_validate()
-                if answer == MBtn.Ok:
-                    msg = (tr('Update existing {}?') if self.config_path.exists() else tr("Create new {}?")).format(
-                        self.config_path.as_posix())
-                    answer = MBox(MIcon.Question, msg=msg, buttons=MBtn.Save | MBtn.Cancel | MBtn.Discard, default=MBtn.Save).exec()
-                if answer == MBtn.Save:
-                    message = tr("Saving {} ...").format(self.config_path.name)
-                    self.editor_dialog.status_message(message, 0)
-                    QApplication.processEvents()
-                    self.ini_editable.save(self.config_path)
-                    flag_qt_version_preference(self.ini_editable)
-                    self.ini_before = self.ini_editable.duplicate()  # Saved ini becomes the new "before"
-                    if what_changed is None:  # Not accumulating what has changed, implement change now.
-                        self.change_callback(self.unsaved_changes_map)
-                    else:  # Accumulating what has changed, just add to the dictionary.
-                        what_changed.update(self.unsaved_changes_map)
-                    self.unsaved_changes_map = {}
-                    message1 = tr("Saved {}").format(self.config_path.name)
-                    self.editor_dialog.status_message(message1, 3000)
-                elif answer == MBtn.Discard:
-                    self.revert_changes()
-                return answer
-            finally:
-                self.setEnabled(True)
-        elif warn_if_no_changes:
-            MBox(MIcon.Critical, msg=tr('No unsaved changes for {}.').format(self.config_path.name), buttons=MBtn.Ok).exec()
-        return MBtn.Cancel
-
-    def reset(self) -> None:
-        for field in self.field_list:
-            field.reset()
-
-    def revert_changes(self) -> None:
-        if self.is_unsaved():
-            self.editor_dialog.status_message(tr("Discarded changes to {}").format(self.config_path.name), 3000)
-            self.ini_editable = self.ini_before.duplicate()  # Revert
-        else:
-            self.editor_dialog.status_message(tr("Nothing to discard").format(self.config_path.name), 3000)
-        self.reset()
-
-    def restore_application_defaults(self):
-        if MBox(MIcon.Critical,
-                msg=tr("Are you sure you want to restore {} to application defaults?").format(self.preferred_name),
-                info=tr("The file {} will be renamed to {}.old").format(self.config_path.name, self.config_path.stem),
-                buttons=MBtn.Yes | MBtn.No, default=MBtn.No).exec() == MBtn.No:
-            return
-        if self.config_path.exists():
-            self.config_path.rename(Path(self.config_path.parent, self.config_path.stem + 'old'))
-        self.change_callback(None)
-
-    def is_unsaved(self) -> bool:
-        if self.config_path.exists():
-            self.unsaved_changes_map = self.ini_editable.diff(self.ini_before)
-            return len(self.unsaved_changes_map) > 0
-        self.unsaved_changes_map = {}
-        return True
-
-
-class SettingsEditorFieldBase(QWidget):
-    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
-        super().__init__()
-        self.section_editor = section_editor
-        self.section = section
-        self.option = option
-        self.tip_text = tooltip
-        self.has_error = False
-        self.setToolTip(tr(tooltip)) if tooltip != '' else None
-
-    def translate_option(self) -> str:
-        return translate_option(self.option)
-
-
-class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
-    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str,
-                 tooltip: str, related: str, requires: str) -> None:
-        super().__init__(section_editor, option, section, tooltip)
-        self.setLayout(widget_layout := QHBoxLayout())
-        alter_margins(widget_layout, top=0, bottom=0)  # Squish up, save space, stay closer to parent label
-        checkbox = QCheckBox(self.translate_option())
-        checkbox.setChecked(section_editor.ini_editable.getboolean(section, option))
-
-        def _toggled(is_checked: bool) -> None:
-            section_editor.ini_editable[section][option] = 'yes' if is_checked else 'no'
-            if related:
-                MBox(MIcon.Information, msg=tr("You may also wish to set\n{}").format(tr(related)), buttons=MBtn.Ok).exec()
-            if is_checked and requires:
-                MBox(MIcon.Information, msg=tr("You will also need to set\n{}").format(tr(requires)), buttons=MBtn.Ok).exec()
-
-        checkbox.toggled.connect(_toggled)
-        widget_layout.addWidget(checkbox)
-        self.checkbox = checkbox
-
-    def reset(self) -> None:
-        self.checkbox.setChecked(self.section_editor.ini_before.getboolean(self.section, self.option))
-
-
-class SettingsEditorLineBase(SettingsEditorFieldBase):
-    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
-        super().__init__(section_editor, option, section, tooltip)
-        self.editor_layout = QHBoxLayout()
-        self.editor_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        self.setLayout(self.editor_layout)
-        self.text_label = QLabel(self.translate_option())
-        self.editor_layout.addWidget(self.text_label)
-        self.text_input = QLineEdit()
-        self.validator: QValidator | None = None
-        self.valid_palette = self.text_input.palette()
-        self.error_palette = self.text_input.palette()
-        self.error_palette.setColor(QPalette.ColorRole.Text, Qt.GlobalColor.red)
-        self.error_palette.setColor(QPalette.ColorRole.Window, Qt.GlobalColor.red)
-        self.text_input.inputRejected.connect(partial(self.set_error_indication, True))
-        self.text_input.textEdited.connect(partial(self.set_error_indication, False))
-        self.text_input.editingFinished.connect(self.editing_finished)
-        self.editor_layout.addWidget(self.text_input)
-
-    def editing_finished(self) -> None:
-        text = self.text_input.text()
-        if self.validator is not None:
-            self.has_error = self.validator.validate(text, 0)[0] != QValidator.State.Acceptable
-            self.set_error_indication(self.has_error)
-        if not self.has_error:
-            internal_value = str(text)  # Why did I do this - is text not really a string?
-            if not self.has_error:
-                self.section_editor.ini_editable[self.section][self.option] = internal_value
-
-    def set_error_indication(self, has_error: bool) -> None:
-        self.has_error = has_error
-        self.text_input.setPalette(self.error_palette if has_error else self.valid_palette)
-
-    def reset(self) -> None:
-        self.text_input.setText(self.section_editor.ini_before[self.section][self.option])
-        self.editing_finished()
-
-
-class SettingsEditorFloatWidget(SettingsEditorFieldBase):
-    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
-        super().__init__(section_editor, option, section, tooltip)
-        self.setLayout(widget_layout := QHBoxLayout())
-        widget_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        self.text_label = QLabel(self.translate_option())
-        widget_layout.addWidget(self.text_label)
-        self.spinbox = QDoubleSpinBox()
-        self.spinbox.setRange(0.0, 4.0)  # TODO this should be looked up in the metadata
-        self.spinbox.setSingleStep(0.1)
-        try:
-            value = float(section_editor.ini_editable[section][option])
-        except ValueError:  # Just in case - rather not fall over
-            value = 0.0
-        self.spinbox.setValue(value)
-        widget_layout.addWidget(self.spinbox)
-
-        def _spinbox_value_changed() -> None:
-            section_editor.ini_editable[section][option] = locale.delocalize(f"{self.spinbox.value():.2f}")
-
-        self.spinbox.valueChanged.connect(_spinbox_value_changed)
-
-    def reset(self) -> None:
-        self.spinbox.setValue(float(self.section_editor.ini_before.get(self.section, self.option)))
-
-
-class SettingsEditorCsvWidget(SettingsEditorLineBase):
-    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
-        super().__init__(section_editor, option, section, tooltip)
-        # TODO - should probably also allow spaces as well as commas, but the regexp is getting a bit tricky?
-        # Validator matches CSV of two digit hex or the empty string.
-        self.validator = QRegularExpressionValidator(QRegularExpression(r"^([0-9a-fA-F]{2}([ \t]*,[ \t]*[0-9a-fA-F]{2})*)|$"))
-        self.text_input.setText(section_editor.ini_editable[section][option])
-
-
-class LatitudeLongitudeValidator(QRegularExpressionValidator):
-
-    def __init__(self) -> None:
-        super().__init__(QRegularExpression(r"^([+-]*[0-9.,]+[,;][+-]*[0-9.,]+)([,;]\w+)?|$",
-                                            QRegularExpression.PatternOption.UseUnicodePropertiesOption))
-
-    def validate(self, text: str | None, pos: int) -> Tuple[QValidator.State, str, int]:
-        result = super().validate(text, pos)
-        if result[0] == QValidator.State.Acceptable:
-            if text:
-                try:
-                    lat, lon = [float(i) for i in text.split(',')[:2]]
-                    if -90.0 <= lat <= 90.0:
-                        if -180.0 <= lon <= 180.0:
-                            return QValidator.State.Acceptable, text, pos
-                    return QValidator.State.Invalid, text, pos
-                except ValueError:
-                    return QValidator.State.Intermediate, text, pos
-        return result
-
-
-class SettingsEditorLocationWidget(SettingsEditorLineBase):
-    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
-        super().__init__(section_editor, option, section, tooltip)
-        self.text_input.setFixedWidth(npx(500))
-        self.text_input.setMaximumWidth(npx(500))
-        self.text_input.setMaxLength(250)
-        self.validator = LatitudeLongitudeValidator()
-        self.text_input.setText(section_editor.ini_editable[section][option])
-        self.text_input.setToolTip(tr("Latitude,Longitude for solar elevation calculations."))
-
-        def _detection_location() -> None:
-            if data_csv := self.location_dialog():
-                self.text_input.setText(data_csv)
-                self.editing_finished()
-
-        detect_location_button = StdButton(title=tr("Detect"), clicked=_detection_location,
-                                           tip=tr("Detect location by querying this desktop's external IP address."))
-        self.editor_layout.addWidget(detect_location_button)
-        self.editor_layout.addStretch(1)
-
-    def retrieve_ipinfo(self) -> Mapping:
-        #  https://stackoverflow.com/a/55432323/609575
-        from urllib.request import urlopen
-        from json import load
-        with urlopen(IP_ADDRESS_INFO_URL) as res:
-            return load(res)
-
-    def location_dialog(self) -> str | None:
-        if MBox(MIcon.Question, msg=tr('Query {} to obtain information based on your IP-address?').format(IP_ADDRESS_INFO_URL),
-                buttons=MBtn.Yes | MBtn.No).exec() == MBtn.Yes:
-            try:
-                ipinfo = self.retrieve_ipinfo()
-                msg = f"{tr('Use the following info?')}\n" f"{ipinfo['loc']}\n" + \
-                      ','.join([ipinfo[key] for key in ('city', 'region', 'country') if key in ipinfo])
-                details = f"Queried {IP_ADDRESS_INFO_URL}\n" + \
-                          '\n'.join([f"{name}: {value}" for name, value in ipinfo.items()])
-                if MBox(MIcon.Information, msg=msg, details=details, buttons=MBtn.Yes | MBtn.No).exec() == MBtn.Yes:
-                    data = ipinfo['loc']
-                    for key in ('city', 'region', 'country'): # Get location name for weather lookups.
-                        if key in ipinfo:
-                            data = data + ',' + ipinfo[key]
-                            break
-                    return data
-            except (URLError, KeyError) as e:
-                MBox(MIcon.Critical, msg=tr("Failed to obtain info from {}: {}").format(IP_ADDRESS_INFO_URL, e)).exec()
-        return ''
-
-
-class SettingsEditorLongTextWidget(SettingsEditorFieldBase):
-    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
-        super().__init__(section_editor, option, section, tooltip)
-        layout = QVBoxLayout()
-        self.setLayout(layout)
-        text_label = QLabel(self.translate_option())
-        layout.addWidget(text_label)
-        text_editor = QPlainTextEdit(section_editor.ini_editable[section][option])
-        text_editor.setMinimumHeight(native_font_height(100))
-        text_editor.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-
-        def _text_changed() -> None:
-            section_editor.ini_editable[section][option] = text_editor.toPlainText().strip()
-
-        text_editor.textChanged.connect(_text_changed)
-        layout.addWidget(text_editor, stretch=1)
-        self.text_editor = text_editor
-
-    def reset(self) -> None:
-        self.text_editor.setPlainText(self.section_editor.ini_before[self.section][self.option])
-
-
-class SettingsEditorTextWidget(SettingsEditorFieldBase):
-
-    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
-        super().__init__(section_editor, option, section, tooltip)
-        layout = QVBoxLayout()
-        self.setLayout(layout)
-        text_label = QLabel(self.translate_option())
-        layout.addWidget(text_label)
-        text_editor = QLineEdit(section_editor.ini_editable[section][option])
-
-        def _text_changed() -> None:
-            section_editor.ini_editable[section][option] = text_editor.text().strip()
-
-        text_editor.textChanged.connect(_text_changed)
-        layout.addWidget(text_editor)
-        self.text_editor = text_editor
-
-    def reset(self) -> None:
-        self.text_editor.setText(self.section_editor.ini_before[self.section][self.option])
-
-
-class SettingsEditorPathValidator(QValidator):
-
-    def validate(self, text, pos):
-        if text.strip():
-            if not Path(text).exists() or not Path(text).is_file():
-                MBox(MIcon.Critical, msg=tr("The selected file does not exist or is not an ordinary file.")).exec()
-                return QValidator.State.Invalid, text, pos
-            elif not os.access(text, os.X_OK):
-                MBox(MIcon.Critical, msg=tr("The selected file lacks execute permission.")).exec()
-                return QValidator.State.Invalid, text, pos
-        return QValidator.State.Acceptable, text, pos
-
-
-class SettingsEditorPathWidget(SettingsEditorLineBase):
-
-    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
-        super().__init__(section_editor, option, section, tooltip)
-        self.text_input.setText(section_editor.ini_editable[section][option])
-
-        def _choose_emulator(index: int) -> None:
-            current_path = self.text_input.text()
-            new_path = FasterFileDialog.getOpenFileName(
-                self, tr("Select: {}").format(tr(self.text_label.text())), current_path,
-                qdir_filter=QDir.Filter.Files | QDir.Filter.Readable | QDir.Filter.Executable)[0]
-            self.text_input.setText(new_path)
-            self.editing_finished()
-
-        self.editor_layout.addWidget(StdButton(si(self, StdPixmap.SP_DriveFDIcon), clicked =_choose_emulator))
-        self.validator = SettingsEditorPathValidator()
-
-
-    def editing_finished(self) -> None:
-        super().editing_finished()
-        if not self.has_error and self.text_input.text().strip() != '':
-            if self.section_editor.ini_editable[self.section][self.option] != self.section_editor.ini_before[self.section][
-                self.option]:
-                mb = MBox(MIcon.Information,
-                          msg="If you've developed a <i>ddcutil-emulator</i> for integrating a non-DDC laptop-panels, "
-                              "please consider contributing it to the <b>vdu_controls</b> project."
-                              "<br/>_______________________________________________________________________________________</br>",
-                          info="Submit feedback and contributions to<br/> "
-                               "<a href='https://github.com/digitaltrails/vdu_controls/issues/44'>"
-                               "https://github.com/digitaltrails/vdu_controls/issues/44</a><br/>"
-                               "or by email to <a href='mailto:michael@actrix.gen.nz?subject=ddcutil-emulator'>"
-                               "michael@actrix.gen.nz</a>.", buttons=MBtn.Close)
-                mb.setTextFormat(Qt.TextFormat.AutoText)
-                mb.exec()
-
-
-class VduException(Exception):
+class VduException(WorkException):
 
     def __init__(self, vdu_description=None, vcp_code=None, exception=None, operation=None) -> None:
         super().__init__()
@@ -4267,7 +714,7 @@ class VduControlPanel(QWidget):
 
     def update_stats(self):
         name, sid = self.controller.get_vdu_preferred_name(), self.controller.vdu_stable_id
-        title_txt =  sid if id == name else f"{name}\n({sid})"
+        title_txt = sid if id == name else f"{name}\n({sid})"
         writes_txt = tr("Set-VCP writes: {}").format(self.controller.get_write_count())
         if (disp_number := int(self.controller.vdu_number)) >= 0:
             disp_numumber_txt = tr("Monitor {}").format(disp_number)
@@ -4275,191 +722,6 @@ class VduControlPanel(QWidget):
             disp_numumber_txt = tr("Panel {}").format(-disp_number)
         click_txt = tr("(Click for Settings)")
         self.title_button.setToolTip(f"{title_txt}\n{writes_txt}\n{disp_numumber_txt}\n{click_txt}")
-
-
-class Preset:
-    """A config/ini file of user-created settings presets - such as Sunny, Cloudy, Night, etc."""
-
-    def __init__(self, name) -> None:
-        self.name = name
-        self.path = ConfIni.get_path(proper_name('Preset', name))
-        self.preset_ini = ConfIni()
-        self.scheduler_job: SchedulerJob | None = None
-        self.schedule_status = PresetScheduleStatus.UNSCHEDULED
-        self.elevation_time_today: datetime | None = None
-        self.in_transition_step = 0
-
-    def get_title_name(self) -> str:
-        return self.name
-
-    def get_icon_path(self) -> Path | None:
-        if self.preset_ini.has_section("preset"):
-            path_text = self.preset_ini.get("preset", "icon", fallback=None)
-            return Path(path_text) if path_text else None
-        return None
-
-    def create_icon(self, theme_type: ThemeType = ThemeType.UNDECIDED) -> QIcon:
-        icon_path = self.get_icon_path()
-        if theme_type == ThemeType.UNDECIDED:
-            theme_type = polychrome_light_or_dark()
-        if icon_path and icon_path.exists():
-            return create_icon_from_path(icon_path, theme_type)
-        else:
-            # Only room for two letters at most - use first and last if more than one word.
-            full_acronym = [word[0] for word in re.split(r"[ _-]", self.name) if word != '']
-            abbreviation = full_acronym[0] if len(full_acronym) == 1 else full_acronym[0] + full_acronym[-1]
-            return create_icon_from_text(abbreviation, theme_type)
-
-    def load(self) -> ConfIni:
-        if self.path.exists():
-            log_debug(f"Reading preset file '{self.path.as_posix()}'") if log_debug_enabled else None
-            preset_text = Path(self.path).read_text()
-            preset_ini = ConfIni()
-            preset_ini.read_string(preset_text)
-        else:
-            preset_ini = ConfIni()
-        self.preset_ini = preset_ini
-        return self.preset_ini
-
-    def save(self) -> None:
-        self.preset_ini.save(self.path)
-
-    def delete(self) -> None:
-        log_info(f"Deleting preset file '{self.path.as_posix()}'")
-        self.remove_elevation_trigger()
-        if self.path.exists():
-            os.remove(self.path.as_posix())
-
-    def get_brightness(self, vdu_stable_id: VduStableId) -> int:
-        if vdu_stable_id in self.preset_ini:
-            return self.preset_ini.getint(vdu_stable_id, 'brightness', fallback=-1)
-        return -1
-
-    def get_vdu_sids(self):
-        return [section_name for section_name in self.preset_ini.data_sections() if section_name != 'preset']
-
-    def get_solar_elevation(self) -> SolarElevationKey | None:
-        if elevation_spec := self.preset_ini.get('preset', 'solar-elevation', fallback=None):
-            solar_elevation = parse_solar_elevation_ini_text(elevation_spec)
-            return solar_elevation
-        return None
-
-    def get_at_time(self) -> datetime | None:
-        if at_time_spec := self.preset_ini.get('preset', 'at-time', fallback=None):
-            return datetime.combine(datetime.today(), datetime.strptime(at_time_spec, "%H:%M").time()).astimezone()
-        return None
-
-    def get_solar_elevation_abbreviation(self) -> str:
-        if elevation := self.get_solar_elevation():
-            result = format_solar_elevation_abbreviation(elevation)
-            if self.elevation_time_today:
-                result += f" {TIME_CLOCK_SYMBOL} {self.elevation_time_today.strftime('%H:%M')}"
-            else:
-                # Not possible today - sun doesn't get that high
-                result += ' ' + TOO_HIGH_SYMBOL
-            if self.get_weather_restriction_filename() is not None:
-                result += ' ' + WEATHER_RESTRICTION_SYMBOL
-            result += ' ' + self.schedule_status.symbol()
-            return result
-        if at_time := self.get_at_time():
-            return f" {TIME_CLOCK_SYMBOL} {at_time.strftime('%H:%M')} " + self.schedule_status.symbol()
-        return ''
-
-    def get_schedule_description(self) -> str:
-        if not ScheduleWorker.is_running():
-            return tr("(Schedule is disabled in Settings)")
-        result = suffix = basic_desc = weather_suffix = ''
-        if elevation := self.get_solar_elevation():
-            basic_desc = SUN_SYMBOL + " " + format_solar_elevation_description(elevation)
-            weather_fn = self.get_weather_restriction_filename()
-            weather_suffix = tr(" (subject to {} weather)").format(
-                Path(weather_fn).stem.replace('_', ' ')) if weather_fn is not None else ''
-            if at_time := self.elevation_time_today:
-                suffix = ''
-            elif ScheduleWorker.is_running():
-                suffix = tr("the sun does not rise this high today")
-        elif at_time := self.get_at_time():
-            basic_desc = TIME_CLOCK_SYMBOL
-        # This might not work too well in translation - rethink?
-        if at_time:
-            if self.scheduler_job and self.scheduler_job.remaining_time() > 0:
-                template = tr("{} later today at {}") + weather_suffix
-            elif at_time < zoned_now():
-                template = tr("{} earlier today at {}") + weather_suffix + f" ({tr(self.schedule_status.description())})"
-            else:
-                template = tr("{} suspended for {}")
-            result = template.format(basic_desc, f"{at_time.replace(second=0, microsecond=0):%H:%M}")
-        result = result + ' ' + suffix
-        return result
-
-    def get_daylight_factor(self) -> float | None:
-        if self.preset_ini.get('preset', 'daylight-factor', fallback=None):
-            return self.preset_ini.getfloat('preset', 'daylight-factor', fallback=None)
-        return None
-
-    def get_transition_type(self) -> PresetTransitionFlag:
-        return parse_transition_type(self.preset_ini.get('preset', 'transition-type', fallback="NONE"))
-
-    def get_step_interval_seconds(self) -> int:
-        return self.preset_ini.getint('preset', 'transition-step-interval-seconds', fallback=0)
-
-    def schedule(self, when_today: datetime, run_action: Callable, skip_action: Callable | None = None, overdue: bool = False):
-        self.scheduler_job = SchedulerJob(when_today, SchedulerJobType.RESTORE_PRESET, partial(run_action, self),
-                                          partial(skip_action, self) if skip_action else None)
-        if not overdue:
-            self.elevation_time_today = when_today
-            self.schedule_status = PresetScheduleStatus.SCHEDULED
-        log_info(f"Scheduled preset '{self.name}' for {when_today} in "
-                 f"{round(self.scheduler_job.remaining_time() / 60)} minutes {self.get_solar_elevation()} {overdue=}")
-
-    def remove_elevation_trigger(self, quietly: bool = False) -> None:
-        if self.scheduler_job:
-            log_info(f"Preset timer and schedule status cleared for '{self.name}'") if not quietly else None
-            self.scheduler_job.dequeue()
-            self.scheduler_job = None
-        if self.elevation_time_today is not None:
-            self.elevation_time_today = None
-        self.schedule_status = PresetScheduleStatus.UNSCHEDULED
-
-    def toggle_timer(self) -> None:
-        if self.elevation_time_today and self.elevation_time_today > zoned_now():
-            if self.scheduler_job is not None:
-                if self.scheduler_job.remaining_time() > 0:
-                    log_info(f"Preset scheduled timer cleared for '{self.name}'")
-                    self.scheduler_job.dequeue()
-                    self.schedule_status = PresetScheduleStatus.SUSPENDED
-                else:
-                    log_info(f"Preset scheduled timer restored for '{self.name}'")
-                    self.scheduler_job.requeue()
-                    self.schedule_status = PresetScheduleStatus.SCHEDULED
-
-    def is_weather_dependent(self) -> bool:
-        return self.get_weather_restriction_filename() is not None
-
-    def check_weather(self, weather: WeatherQuery) -> bool:
-        weather_restriction_filename = self.get_weather_restriction_filename()
-        if weather.weather_code is None or weather_restriction_filename is None:
-            return True
-        path = Path(weather_restriction_filename)
-        if not path.exists():
-            log_error(f"Preset '{self.name}' missing weather requirements file: {weather_restriction_filename}")
-            return True
-        with open(path, encoding="utf-8") as weather_file:
-            code_list = weather_file.readlines()
-            for code_line in code_list:
-                parts = code_line.split()
-                if parts and weather.weather_code.strip() == parts[0]:
-                    log_info(f"Preset '{self.name}' met {path.name} requirements. Current weather is: "
-                             f"{weather.area_name} {weather.weather_code} {weather.weather_desc}")
-                    return True
-        log_info(f"Preset '{self.name}' failed {path.name} requirements. Current weather is: "
-                 f"{weather.area_name} {weather.weather_code} {weather.weather_desc}")
-        return False
-
-    def get_weather_restriction_filename(self) -> str | None:
-        weather_restriction_filename = \
-            self.preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None)
-        return weather_restriction_filename
 
 
 class ContextMenu(QMenu):
@@ -4497,7 +759,7 @@ class ContextMenu(QMenu):
     def _add_action(self, qt_icon_number: int, text: str, func: Callable, extra_shortcut: str | None = None) -> QAction:
         action = self.addAction(si(self, qt_icon_number), text, func)
         assert action is not None
-        amp_pos =  text.find('&')
+        amp_pos = text.find('&')
         shortcut_letter = text[amp_pos + 1].upper() if (0 <= amp_pos < len(text) - 1) else None
         if shortcut_letter is not None:
             log_debug(f"Reserve shortcut '{shortcut_letter}'") if log_debug_enabled else None
@@ -4616,38 +878,38 @@ class ToolButton(QToolButton):
     def refresh_icon(self, svg_source: bytes | None = None):
         if svg_source is not None:
             self.svg_source = svg_source
-        self._original_icon = create_icon_from_svg_bytes(self.svg_source)   # Store the original icon so we can restore it later
+        self._original_icon = create_icon_from_svg_bytes(self.svg_source)  # Store the original icon so we can restore it later
         if not self._busy_now:
             self.setIcon(self._original_icon)
 
-    def setBusy(self, busy: bool):    # Start or stop the busy spinner animation.
+    def setBusy(self, busy: bool):  # Start or stop the busy spinner animation.
         if busy == self._busy_now:
             return
         self._busy_now = busy
-        if busy:   # Start spinning
+        if busy:  # Start spinning
             self._busy_angle = 0
-            self._busy_timer.start(30)      # ~33 fps
-        else:   # Stop spinning and restore original icon
+            self._busy_timer.start(30)  # ~33 fps
+        else:  # Stop spinning and restore original icon
             self._busy_timer.stop()
             self.setIcon(self._original_icon)
 
     def _update_busy_icon(self):
-        size = self.iconSize()    # Use the button's icon size (or a default size if none)
+        size = self.iconSize()  # Use the button's icon size (or a default size if none)
         if size.width() <= 0 or size.height() <= 0:
-            size = self.size()              # fallback to button size
+            size = self.size()  # fallback to button size
         pixmap = QPixmap(size)
         pixmap.fill(Qt.GlobalColor.transparent)
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         if QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING:
             painter.setRenderHint(QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING)
-        pen_width = max(npx(2), size.width() // 10)   # Determine a good pen width relative to size
+        pen_width = max(npx(2), size.width() // 10)  # Determine a good pen width relative to size
         painter.setPen(QPen(self.palette().buttonText().color(), pen_width, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
         rect = QRect(0, 0, size.width(), size.height()).adjusted(margin := pen_width // npx(2) + npx(1), margin, -margin, -margin)
-        painter.drawArc(rect, self._busy_angle * 16, 270 * 16)     # Draw the rotating arc (270 degrees)
+        painter.drawArc(rect, self._busy_angle * 16, 270 * 16)  # Draw the rotating arc (270 degrees)
         painter.end()
         self.setIcon(QIcon(pixmap))
-        self._busy_angle = (self._busy_angle + 8) % 360   # Advance the angle for the next frame
+        self._busy_angle = (self._busy_angle + 8) % 360  # Advance the angle for the next frame
 
 
 class VduMainToolBar(QToolBar):
@@ -4755,7 +1017,7 @@ class VduControlsMainPanel(QWidget):
                      info=tr('The monitor will be omitted from the control panel.')).exec()
 
         for control in extra_controls:
-             controllers_layout.addWidget(control)
+            controllers_layout.addWidget(control)
         controllers_layout.addStretch(0)
 
         if len(self.vdu_control_panels) == 0:
@@ -4825,7 +1087,7 @@ class VduControlsMainPanel(QWidget):
         return answer == MBtn.Retry
 
     def status_message(self, message: str, timeout: int):
-        if message.strip():   # Only non-empty messages, ignore blank messages, they're just clearing the status bar.
+        if message.strip():  # Only non-empty messages, ignore blank messages, they're just clearing the status bar.
             self.message_history.append(f"\n{datetime.now().strftime('%H:%M:%S')}{MESSAGE_SYMBOL} {message}")
             self.message_history = self.message_history[-9:]
         if self.main_controller.main_config.is_set(ConfOpt.SEPARATE_STATUS_BAR):
@@ -4844,6 +1106,7 @@ class BulkChangeItem:
     starting_value: int | None = None
     current_value: int | None = None
     transition: bool = False
+
 
 class BulkChangeWorker(WorkerThread):
     progress_qtsignal = pyqtSignal(object)
@@ -4883,7 +1146,7 @@ class BulkChangeWorker(WorkerThread):
                 self._do_normal_changes()
                 self.completed = len([item for item in self.to_do_list if item.current_value != item.final_value]) == 0
         finally:
-            (_ :=self).total_elapsed_seconds = (self.start_time - zoned_now()).total_seconds()
+            (_ := self).total_elapsed_seconds = (self.start_time - zoned_now()).total_seconds()
             if log_debug_enabled:
                 log_debug(f"BulkChangeWorker: {_.name} {_.completed=} {_.change_count=} {_.total_elapsed_seconds=:.3f}")
 
@@ -4904,7 +1167,7 @@ class BulkChangeWorker(WorkerThread):
                 if self.stop_requested:
                     break
                 diff = item.final_value - item.current_value
-                step_size = max(5, abs(diff) // 2) # TODO find a good heuristic
+                step_size = max(5, abs(diff) // 2)  # TODO find a good heuristic
                 step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
                 new_value = item.current_value + step
                 origin = VcpOrigin.TRANSIENT if new_value != item.final_value else VcpOrigin.NORMAL
@@ -4916,11 +1179,11 @@ class BulkChangeWorker(WorkerThread):
             self.doze(self.step_interval)
             self._refresh_current_values_from_vdu()
             if self.stop_requested:
-                    break
+                break
 
     def _refresh_current_values_from_vdu(self):
         log_debug(f"BulkChangeWorker {self.name} having to get current_values from VDU") if log_debug_enabled else None
-        items_by_vdu: Dict[VduStableId, Dict[str: BulkChangeItem]] = {}
+        items_by_vdu: Dict[VduStableId, Dict[str, BulkChangeItem]] = {}
         for item in self.to_do_list:
             if item.vdu_sid not in items_by_vdu:
                 items_by_vdu[item.vdu_sid] = {}
@@ -4990,69 +1253,6 @@ class PresetController:
         if preset_number < len(presets):
             return list(presets.values())[preset_number]
         return None
-
-
-class FasterFileDialog(QFileDialog):  # Takes 5 seconds versus 30+ seconds for QFileDilog.getOpenFileName() on KDE.
-    os.putenv('QT_LOGGING_RULES', 'kf.kio.widgets.kdirmodel.warning=false')  # annoying KDE message
-
-    @staticmethod
-    def getOpenFileName(parent: QWidget | None = None, caption: str = '', directory: str = '', filter_str: str = '',
-                        initial_filter: str = '',
-                        options: Any = QFileDialog.Option.ReadOnly,
-                        qdir_filter: Any = QDir.Filter.AllEntries | QDir.Filter.AllDirs | QDir.Filter.Hidden | QDir.Filter.System) -> Tuple[str, str]:
-        original_handler = QtCore.qInstallMessageHandler(lambda mode, context, message: None)
-        try:  # Get rid of another annoying message: 'qtimeline::start: already running'
-            dialog = QFileDialog(parent=parent, caption=caption, directory=directory, filter=filter_str)
-            dialog.setOptions(options)
-            dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
-            dialog.setFilter(qdir_filter)
-            return (dialog.selectedFiles()[0], filter) if dialog.exec() else ('', '')  # match QFileDilog.getOpenFileName()
-        finally:
-            QtCore.qInstallMessageHandler(original_handler)
-
-
-MIcon = QMessageBox.Icon
-MBtn = QMessageBox.StandardButton
-
-class MBox(QMessageBox):
-
-    def __init__(self, icon: QMessageBox.Icon, msg: str | None = None, info: str | None = None, details: str | None = None,
-                 buttons: QMessageBox.StandardButton = MBtn.NoButton,
-                 default: QMessageBox.StandardButton | None = None) -> None:
-        super().__init__(icon, APPNAME, '', buttons=buttons)
-        if RESIZABLE_MESSAGEBOX_HACK:
-            self.setMouseTracking(True)
-            self.setSizeGripEnabled(True)
-        self.setDefaultButton(default) if default else None
-        self.setText(msg) if msg else None
-        self.setInformativeText(info) if info else None
-        self.setDetailedText(details) if details else None
-
-    def event(self, event: QEvent | None):
-        # https://www.qtcentre.org/threads/24888-Resizing-a-MsgBox.p=251312#post251312
-        # The "least evil" way to make MsgBox.resizable, by ArmanS
-        result = super().event(event)
-        if RESIZABLE_MESSAGEBOX_HACK and event:
-            if event.type() == QEvent.Type.MouseMove or event == QEvent.Type.MouseButtonPress:
-                self.setMaximumSize(npx(1200), npx(800))
-                if text_edit_field := self.findChild(QTextEdit):
-                    text_edit_field.setMaximumHeight(npx(600))
-        return result
-
-
-class PushButtonLeftJustified(QPushButton):
-    def __init__(self, text: str | None = None, parent: QWidget | None = None, flat: bool = False) -> None:
-        super().__init__(parent=parent)
-        self.label = QLabel()
-        self.setContentsMargins(npx(10), 0, npx(10), 0)  # Not sure if this helps
-        self.setLayout(widget_layout := QVBoxLayout())
-        widget_layout.addWidget(self.label)
-        widget_layout.setContentsMargins(0, 0, 0, 0)  # Seems to fix top/bottom clipping on openbox and xfce
-        self.setText(text) if text is not None else None
-        self.setFlat(flat)
-
-    def setText(self, text: str | None) -> None:
-        self.label.setText(text)
 
 
 class PresetItemWidget(QWidget):
@@ -5160,7 +1360,7 @@ class PresetIconPickerButton(StdButton):
 
     def __init__(self) -> None:
         super().__init__(icon_size=QSize(native_font_height(), native_font_height()),
-                         clicked=self.choose_preset_icon_action,  flat=True, auto_default=False,
+                         clicked=self.choose_preset_icon_action, flat=True, auto_default=False,
                          tip=tr('Choose a preset icon.'))
         self.setIcon(si(self, PresetsDialog.NO_ICON_ICON_NUMBER))
         self.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum))
@@ -5214,77 +1414,16 @@ class PresetIconPickerButton(StdButton):
         return super().event(event)
 
 
-class WeatherQuery:
-
-    def __init__(self, location: GeoLocation) -> None:
-        self.location = location
-        self.maximum_distance_km = int(os.getenv("VDU_CONTROLS_WEATHER_KM", default='200'))
-        local_local = locale.getlocale()
-        lang = local_local[0][:2] if local_local is not None and local_local[0] is not None else 'C'
-        ascii_location = unicodedata.normalize('NFD', location.place_name).encode('ascii','ignore').decode("ascii")
-        self.url = f"{WEATHER_FORECAST_URL}/{ascii_location}?" + urllib.parse.urlencode({'lang': lang, 'format': 'j1'})
-        self.weather_data = None
-        self.proximity_km = 0
-        self.proximity_ok = True
-        self.longitude = self.latitude = self.country_name = self.area_name = None
-        self.cloud_cover = self.visibility = self.weather_desc = self.weather_code = None
-        self.when: datetime | None = None
-
-    def run_query(self) -> None:
-        location_name = self.location.place_name
-        local_local = locale.getlocale()
-        lang = local_local[0][:2] if local_local is not None and local_local[0] is not None else 'C'
-        if location_name is None or location_name.strip() == '':
-            location_name = ''
-        self.when = zoned_now()
-        try:
-            log_info(f"QueryWeather: {self.url}")
-            with urllib.request.urlopen(self.url, timeout=15) as request:
-                json_content = request.read()
-                self.weather_data = json.loads(json_content)
-                if self.weather_data is not None:
-                    current_conditions = self.weather_data['current_condition'][0]
-                    self.weather_code = current_conditions['weatherCode']
-                    lang_key = f"lang_{lang}"
-                    if lang_key in current_conditions:
-                        self.weather_desc = current_conditions[lang_key][0]['value']
-                    else:
-                        self.weather_desc = current_conditions['weatherDesc'][0]['value']
-                    self.visibility = current_conditions['visibility']
-                    self.cloud_cover = current_conditions['cloudcover']
-                    nearest_area = self.weather_data['nearest_area'][0]
-                    self.area_name = nearest_area['areaName'][0]['value']
-                    self.country_name = nearest_area['country'][0]['value']
-                    self.latitude = nearest_area['latitude']
-                    self.longitude = nearest_area['longitude']
-                    self.proximity_km = round(spherical_kilometers(float(self.latitude), float(self.longitude),
-                                                                   self.location.latitude, self.location.longitude))
-                    self.proximity_ok = self.proximity_km <= self.maximum_distance_km
-                    log_info(f"QueryWeather result: {self}")
-                    return
-        except urllib.error.HTTPError as e:
-            if e.code == 404:
-                raise ValueError(tr("Unknown location {}").format(location_name), tr("Please check Location in Settings")) from e
-            raise ValueError(tr("Failed to get weather from {}").format(self.url), str(e)) from e
-        except Exception as ue:
-            # Can't afford to fall over because of a problem with a remote site
-            raise ValueError(tr("Failed to get weather from {}").format(self.url), str(ue)) from ue
-        raise ValueError(tr("Failed to get weather from {}").format(self.url))
-
-    def __str__(self) -> str:
-        if self.weather_data is None:
-            return ""
-        return f"{self.area_name}, {self.country_name}, {self.weather_desc} ({self.weather_code})," \
-               f"cloud_cover {self.cloud_cover}, visibility {self.visibility}, location={self.latitude},{self.longitude}"
 
 
 def weather_bad_location_dialog(weather) -> None:
     kilometres = weather.proximity_km
     use_km = QLocale.system().measurementSystem() == QLocale.MeasurementSystem.MetricSystem
     MBox(MIcon.Warning, msg=tr("The site {} reports your location as {}, {}, {},{} "
-                              "which is about {} {} from the latitude and longitude specified in Settings."
-                              ).format(WEATHER_FORECAST_URL, weather.area_name, weather.country_name, weather.latitude, weather.longitude,
-                                       round(kilometres if use_km else kilometres * 0.621371), 'km' if use_km else 'miles'),
+                               "which is about {} {} from the latitude and longitude specified in Settings."
+                               ).format(WEATHER_FORECAST_URL, weather.area_name, weather.country_name, weather.latitude,
+                                        weather.longitude,
+                                        round(kilometres if use_km else kilometres * 0.621371), 'km' if use_km else 'miles'),
          info=tr("Please check the location specified in Settings."), details=f"{weather}").exec()
 
 
@@ -5556,7 +1695,8 @@ class PresetElevationChartWidget(QLabel):
             curve_points = self.cache_curve_points
             solar_noon_x, solar_noon_y = self.noon_x, self.noon_y,
             if ev_key and (solar_data := self.cache_solar_by_elevation.get(ev_key)):
-                seconds_since_midnight = (solar_data.when - solar_data.when.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
+                seconds_since_midnight = (
+                            solar_data.when - solar_data.when.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
                 sun_plot_time = solar_data.when
                 sun_plot_x = round(logical_width * seconds_since_midnight / (60.0 * 60.0 * 24.0))
                 sun_height = math.sin(math.radians(90.0 - solar_data.zenith)) * range_iy
@@ -5584,14 +1724,16 @@ class PresetElevationChartWidget(QLabel):
 
             # Draw pie/compass angle
             if ev_key:
-                angle_above_horz = ev_key.elevation if ev_key.direction == EASTERN_SKY else (180 - ev_key.elevation)  # anticlockwise from 0
+                angle_above_horz = ev_key.elevation if ev_key.direction == EASTERN_SKY else (
+                            180 - ev_key.elevation)  # anticlockwise from 0
             else:
                 angle_above_horz = 180 + 19
             _, pos_as_radius = self.calc_angle_radius(self.current_pos) if self.current_pos else (0, 21)
             pie_width = pie_height = range_iy * 2
             span_angle = -(angle_above_horz + 19)  # From start angle spanning counterclockwise back toward the right to -19.
             painter.setPen(
-                QPen(QColor(0xffffff if self.current_pos is None or self.in_drag or pos_as_radius > self.radius_of_deletion else 0xff0000),
+                QPen(QColor(
+                    0xffffff if self.current_pos is None or self.in_drag or pos_as_radius > self.radius_of_deletion else 0xff0000),
                      2))
             painter.setBrush(QColor(255, 255, 255, 64))
             painter.drawPie(_reverse_x(solar_noon_x) - pie_width // 2, origin_iy - pie_height // 2, pie_width, pie_height,
@@ -5609,7 +1751,8 @@ class PresetElevationChartWidget(QLabel):
                 painter.drawEllipse(_reverse_x(solar_noon_x - ddot_x), origin_iy - ddot_y, ddot_radius * 2, ddot_radius * 2)
                 if not self.in_drag:
                     painter.setPen(QPen(Qt.GlobalColor.black, 1))
-                    painter.drawText(QPoint(_reverse_x(solar_noon_x - ddot_x) + npx(10), origin_iy - ddot_y - npx(5)), tr("Drag to change."))
+                    painter.drawText(QPoint(_reverse_x(solar_noon_x - ddot_x) + npx(10), origin_iy - ddot_y - npx(5)),
+                                     tr("Drag to change."))
 
             # Draw origin-dot
             painter.setPen(QPen(QColor(0xff965b), thin_line_width))
@@ -5738,11 +1881,11 @@ class PresetElevationChartWidget(QLabel):
                     self.selected_elevation_qtsignal.emit(key)
             self.create_plot()  # necessary to detect deletions
 
-
     def leaveEvent(self, event: QEvent | None) -> None:
         self.current_pos = None
         self.create_plot()
         super().leaveEvent(event)
+
 
 class PresetDaylightFactorWidget(QWidget):
 
@@ -5784,7 +1927,7 @@ class PresetScheduleAtWidgetBase(QWidget):  # Abstract
     def set_schedule_widgets(self, all_widgets: List[PresetScheduleAtWidgetBase]):
         self.all_schedule_chooser_widgets = all_widgets
 
-    def clear_others(self, _ = None) -> bool:  # Only allow a Preset to be scheduled once.
+    def clear_others(self, _=None) -> bool:  # Only allow a Preset to be scheduled once.
         others = [w for w in self.all_schedule_chooser_widgets if w != self and w.is_set()]
         if others and MBox(MIcon.Question, msg=tr('Preset already scheduled. Clear existing {}?').format(others[0].description),
                            info=tr('Duplicate the preset if you need to schedule it more than once.'),
@@ -5800,6 +1943,7 @@ class PresetScheduleAtWidgetBase(QWidget):  # Abstract
     def clear(self) -> None:  # Abstract
         pass
 
+
 class PresetScheduleAtElevationWidget(PresetScheduleAtWidgetBase):
     _slider_select_elevation_qtsignal = pyqtSignal(object)
 
@@ -5810,7 +1954,8 @@ class PresetScheduleAtElevationWidget(PresetScheduleAtWidgetBase):
         self.setLayout(main_layout := QVBoxLayout())
         self.title_prefix = tr("Trigger at solar elevation:")
         self.title_label = QLabel(self.title_prefix)
-        self.title_label.setFixedHeight(native_font_height(scaled=1.5))  # Stop ascenders/descenders in Unicode from altering layout.
+        self.title_label.setFixedHeight(
+            native_font_height(scaled=1.5))  # Stop ascenders/descenders in Unicode from altering layout.
         self.title_label.setToolTip(tr("Trigger at a set solar elevation (sun angle at your geolocation and time)."))
         main_layout.addWidget(self.title_label)
 
@@ -5943,8 +2088,8 @@ class PresetScheduleAtElevationWidget(PresetScheduleAtWidgetBase):
     def set_required_weather_filename(self, weather_filename: str | None) -> None:
         self.weather_widget.set_required_weather_filepath(weather_filename)
 
-class PresetScheduleAtTimeWidget(PresetScheduleAtWidgetBase):
 
+class PresetScheduleAtTimeWidget(PresetScheduleAtWidgetBase):
     class TimeFieldValidator(QValidator):
 
         def validate(self, text, pos):
@@ -6150,11 +2295,13 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
             else:
                 self.edit_preset(preset_widget.preset)
 
-        self.edit_clear_button = StdButton(icon=si(self, StdPixmap.SP_DialogCancelButton), title=tr('Clear'), clicked=self.reset_editor,
+        self.edit_clear_button = StdButton(icon=si(self, StdPixmap.SP_DialogCancelButton), title=tr('Clear'),
+                                           clicked=self.reset_editor,
                                            tip=tr("Clear edits and enter a new preset using the defaults."))
         self.edit_save_button = StdButton(icon=si(self, StdPixmap.SP_DialogSaveButton), title=tr('Save'), clicked=self.save_preset,
                                           tip=tr("Save current VDU settings to Preset."))
-        self.edit_revert_button = StdButton(icon=si(self, StdPixmap.SP_DialogResetButton), title=tr('Revert'), clicked=_revert_callable,
+        self.edit_revert_button = StdButton(icon=si(self, StdPixmap.SP_DialogResetButton), title=tr('Revert'),
+                                            clicked=_revert_callable,
                                             tip=tr("Abandon edits, revert VDU and Preset settings."))
         self.close_button = StdButton(icon=si(self, StdPixmap.SP_DialogCloseButton), title=tr('Close'), clicked=self.close)
         for button in (self.edit_clear_button, self.edit_save_button, self.edit_revert_button, self.close_button):
@@ -6397,13 +2544,15 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
             self.setDisabled(True)  # Stop any editing until after the preset is restored.
             self.main_controller.restore_preset(preset, finished_func=_begin_editing, immediately=True)
 
-    def save_preset(self, _: bool = False, from_widget: PresetItemWidget | None = None, quiet: bool = False) -> MBtn.Ok | MBtn.Cancel:
+    def save_preset(self, _: bool = False, from_widget: PresetItemWidget | None = None,
+                    quiet: bool = False) -> MBtn.Ok | MBtn.Cancel:
         preset: Preset | None = None
         widget_to_replace: PresetItemWidget | None = None
         if from_widget:  # A from_widget is requesting that the Preset's VDU current settings be updated.
             widget_to_replace = None  # Updating from widget, no change to icons or symbols, so no need to update the widget.
             preset = from_widget.preset  # Just update the widget's preset from the VDUs current settings
-        elif preset_name := self.preset_name_edit.text().strip().replace('_', ' '):  # Saving from the save button, this may be new Preset or update.
+        elif preset_name := self.preset_name_edit.text().strip().replace('_',
+                                                                         ' '):  # Saving from the save button, this may be new Preset or update.
             if widget_to_replace := self.find_preset_widget(preset_name):  # Already exists, update preset, replace widget
                 preset = widget_to_replace.preset  # Use the widget's existing Preset.
             else:
@@ -6483,165 +2632,6 @@ def exception_handler(e_type, e_value, e_traceback) -> None:
          details=tr('Details: {}').format(''.join(traceback.format_exception(e_type, e_value, e_traceback)))).exec()
 
 
-def create_pixmap_from_svg_bytes(svg_bytes: bytes, width: int = 64, height: int = 64) -> QPixmap:
-    """There is no QIcon option for loading SVG from a string, only from a SVG file, so roll our own."""
-    return QPixmap.fromImage(create_image_from_svg_bytes(svg_bytes, width, height))
-
-
-def create_image_from_svg_bytes(svg_bytes, width: int = 64, height: int = 64) -> QImage:
-    renderer = QSvgRenderer(svg_bytes)
-    image = QImage(width, height, QImage.Format.Format_ARGB32)
-    image.fill(0x0)
-    painter = QPainter(image)
-    renderer.render(painter)
-    painter.end()
-    return image
-
-
-svg_icon_cache: Dict[bytes, QIcon] = {}
-
-def create_icon_from_svg_bytes(svg_bytes: bytes, theme_type: ThemeType = ThemeType.UNDECIDED) -> QIcon:
-    """There is no QIcon option for loading SVG from a string, only from a SVG file, so roll our own."""
-    if theme_type == ThemeType.UNDECIDED:
-        theme_type = polychrome_light_or_dark()
-    svg_bytes = handle_theme(svg_bytes, theme_type)
-    if icon := svg_icon_cache.get(svg_bytes):
-        return icon
-    icon = QIcon(create_pixmap_from_svg_bytes(svg_bytes))
-    svg_icon_cache[svg_bytes] = icon
-    return icon
-
-
-def handle_theme(svg_bytes: bytes, theme_type: ThemeType):
-    assert theme_type != ThemeType.UNDECIDED
-    if theme_type == ThemeType.MONOCHROME_LIGHT:
-        return svg_bytes.replace(SVG_LIGHT_THEME_COLOR, b"#000000").replace(b"#ffffff", b"#000000")
-    elif theme_type == ThemeType.MONOCHROME_DARK:
-        return svg_bytes.replace(SVG_LIGHT_THEME_COLOR, b"#ffffff").replace(b"#000000", b"#ffffff")
-    elif theme_type == ThemeType.POLYCHROME_LIGHT:
-        return svg_bytes
-    elif theme_type == ThemeType.POLYCHROME_DARK:
-        return svg_bytes.replace(SVG_LIGHT_THEME_COLOR, SVG_DARK_THEME_COLOR)
-    return svg_bytes
-
-def create_icon_from_path(path: Path, theme_type: ThemeType) -> QIcon:
-    if path.exists():
-        if path.suffix == '.svg':
-            with open(path, 'rb') as icon_file:
-                icon_bytes = icon_file.read()
-                icon = create_icon_from_svg_bytes(icon_bytes, theme_type)
-        else:  # Hope the file contains something QIcon can cope with:
-            icon = QIcon(path.as_posix())
-        return icon
-    # Copes with the case where the path has been deleted.
-    return QApplication.style().standardIcon(StdPixmap.SP_MessageBoxQuestion)
-
-
-def create_icon_from_text(text: str, theme_type: ThemeType) -> QIcon:
-    pixmap = QPixmap(32, 32)
-    pixmap.fill(Qt.GlobalColor.transparent)
-    painter = QPainter(pixmap)
-    font = QApplication.font()
-    font.setPixelSize(24)
-    font.setWeight(QFont.Weight.Medium)
-    painter.setFont(font)
-    painter.setOpacity(1.0)
-    if theme_type == ThemeType.MONOCHROME_LIGHT:
-        painter.setPen(QColor("#000000"))
-    elif theme_type == ThemeType.MONOCHROME_DARK:
-        painter.setPen(QColor("#ffffff"))
-    elif theme_type == ThemeType.POLYCHROME_DARK:
-        painter.setPen(QColor(SVG_DARK_THEME_TEXT_COLOR.decode("utf-8")))
-    else:  # default to a dark text color
-        painter.setPen(QColor(SVG_LIGHT_THEME_TEXT_COLOR.decode("utf-8")))
-    painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignTop, text)
-    painter.end()
-    return QIcon(pixmap)
-
-
-def create_decorated_app_icon(base_icon: QIcon, overlay_icon: QIcon | None = None,
-                              left_indicator: QColor | None = None, right_indicator: QColor | None = None) -> QIcon:
-    # Non-destructively overlay overlay_icon and indicators within a copy of base_icon.
-    icon_size = QSize(64, 64)  # Everything is hard coded based on 64x64
-    combined_pixmap = QPixmap(base_icon.pixmap(icon_size, QIcon.Mode.Normal, QIcon.State.On))
-    painter = QPainter(combined_pixmap)
-    if overlay_icon:
-        overlay_pixmap = overlay_icon.pixmap(icon_size, QIcon.Mode.Normal, QIcon.State.On)
-        painter.drawPixmap(16, 8, 32, 32, overlay_pixmap)
-    painter.setPen(QPen(Qt.GlobalColor.black, 1, Qt.PenStyle.SolidLine))
-    for i, led_color in enumerate((left_indicator, right_indicator)):
-        if led_color:
-            painter.setBrush(led_color)  # Each indicator resembles/simulates an LED embedded in the app icon.
-            painter.drawEllipse(8 if i == 0 else 44, 32, 16, 16)
-    painter.end()
-    return QIcon(combined_pixmap)
-
-
-def install_as_desktop_application(uninstall: bool = False) -> None:
-    """Self install this script in the current Linux user's bin directory and desktop applications->settings menu."""
-    desktop_dir = Path.home().joinpath('.local', 'share', 'applications')
-    icon_dir = Path.home().joinpath('.local', 'share', 'icons')
-
-    if not desktop_dir.exists():
-        log_error(f"No desktop directory is present:{desktop_dir.as_posix()}"
-                  " Cannot proceed - is this a non-standard desktop?")
-        return
-
-    bin_dir = Path.home().joinpath('bin')
-    if not bin_dir.is_dir():
-        log_warning(f"creating:{bin_dir.as_posix()}")
-        os.mkdir(bin_dir)
-
-    if not icon_dir.is_dir():
-        log_warning("creating:{icon_dir.as_posix()}")
-        os.mkdir(icon_dir)
-
-    installed_script_path = bin_dir.joinpath("vdu_controls")
-    desktop_definition_path = desktop_dir.joinpath("vdu_controls.desktop")
-    icon_path = icon_dir.joinpath("vdu_controls.png")
-
-    if uninstall:
-        os.remove(installed_script_path)
-        log_info(f"Removed {installed_script_path.as_posix()}")
-        os.remove(desktop_definition_path)
-        log_info(f"Removed {desktop_definition_path.as_posix()}")
-        os.remove(icon_path)
-        log_info(f"Removed {icon_path.as_posix()}")
-        return
-
-    if installed_script_path.exists():
-        log_warning(f"reinstalling {installed_script_path.as_posix()}, assuming an upgrade is required.")
-
-    source = open(__file__).read()
-    source = source.replace("#!/usr/bin/python3", '#!' + sys.executable)
-    log_info(f"Creating {installed_script_path.as_posix()}")
-    open(installed_script_path, 'w').write(source)
-    log_info(f"chmod u+rwx {installed_script_path.as_posix()}")
-    os.chmod(installed_script_path, stat.S_IRWXU)
-
-    if desktop_definition_path.exists():
-        log_warning(f"Skipping installation of {desktop_definition_path.as_posix()}, it is already present.")
-    else:
-        log_info(f"Creating {desktop_definition_path.as_posix()}")
-        desktop_definition = textwrap.dedent(f"""
-            [Desktop Entry]
-            Type=Application
-            Exec={installed_script_path.as_posix()}
-            Name={APPNAME}
-            GenericName=DDC control panel for monitors
-            Comment=Virtual Control Panel for externally connected VDUs
-            Icon={icon_path.as_posix()}
-            Categories=Qt;Settings;
-            """)
-        open(desktop_definition_path, 'w').write(desktop_definition)
-
-    if icon_path.exists():
-        log_warning(f"skipping installation of {icon_path.as_posix()}, it is already present.")
-    else:
-        log_info(f"Creating {icon_path.as_posix()}")
-        get_splash_image().save(icon_path.as_posix())
-
-    log_info(f"Installation complete. Your desktop->applications->settings should now contain {APPNAME}")
 
 
 class LuxProfileWidget(QLabel):
@@ -6766,7 +2756,7 @@ class LuxProfileWidget(QLabel):
             painter.setPen(Qt.PenStyle.NoPen)
             painter.drawPolygon(QPolygon([QPoint(x + tx, self.y_origin + npx(18) + ty) for tx, ty in pyramid]))
 
-        lux_color = QColor(0xfeC053) # 0xfec053)
+        lux_color = QColor(0xfeC053)  # 0xfec053)
         if self.current_lux is not None:  # Draw a vertical-line at current lux
             painter.setPen(QPen(lux_color, npx(2)))  # fbc21b 0xffdd30 #fec053
             x_current_lux = self.x_origin + self.x_from_lux(self.current_lux)
@@ -6948,10 +2938,12 @@ class LuxProfileWidget(QLabel):
     def x_from_lux(self, lux: int) -> int:
         return round(math.log10(lux) / (math.log10(100000) / self.plot_width)) if lux > 0 else 0
 
+
 @dataclass
 class LuxGaugeHistory:
     lux: int
     when: datetime
+
 
 class LuxGaugeWidget(QWidget):
     lux_changed_qtsignal = pyqtSignal(int)
@@ -7004,7 +2996,7 @@ class LuxGaugeWidget(QWidget):
 
     def update_plot(self):
         dp_ratio = self.devicePixelRatio()
-        pixmap = QPixmap(round(self.plot_widget.width() * dp_ratio) , round(self.plot_widget.height() * dp_ratio))
+        pixmap = QPixmap(round(self.plot_widget.width() * dp_ratio), round(self.plot_widget.height() * dp_ratio))
         pixmap.setDevicePixelRatio(dp_ratio)
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -7036,11 +3028,11 @@ class LuxGaugeWidget(QWidget):
         df_plot_width = self.plot_widget.width() - lux_plot_width - margin
         minutes_per_point = (24 * 60) / df_plot_width
         df_plot_day = zoned_now().replace(hour=0, minute=0, second=0, microsecond=0)
-        df_plot_left = lux_plot_width + margin #plot_width - df_plot_width - 30
+        df_plot_left = lux_plot_width + margin  #plot_width - df_plot_width - 30
         painter.fillRect(df_plot_left, 0, df_plot_left + df_plot_width, plot_height, self.common_background_color)
         # Plot the DF, Eo, Ei history as a block
         painter.setPen(QPen(self.lux_bar_color, 1))
-        most_recent_df_xy = (None, None) # Indicate the last history position with a red dot
+        most_recent_df_xy = (None, None)  # Indicate the last history position with a red dot
         most_recent_item = None
         for item in self.history:  # Block fill for history
             if item and item.when > df_plot_day:
@@ -7161,7 +3153,7 @@ class LuxMeterDevice(QObject):
         log_debug(f"LuxMeterDevice init {manual=} {semi_auto=}") if log_debug_enabled else None
         self.current_value: float | None = None
         self.requires_worker = requires_worker
-        self.has_manual_capability = manual # Can be both manual and semi-automatic
+        self.has_manual_capability = manual  # Can be both manual and semi-automatic
         self.has_semi_auto_capability = semi_auto
         self.has_auto_capability = not self.has_manual_capability or self.has_semi_auto_capability
         if self.requires_worker:  # use a thread to prevent any blocking due to slow updating
@@ -7298,7 +3290,7 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
     def __init__(self) -> None:
         super().__init__(requires_worker=False, manual=True, semi_auto=True)
         self.current_value: float = LuxMeterSemiAutoDevice.get_stored_value()
-        LuxMeterSemiAutoDevice.daylight_factor = None    # Force initialization from file
+        LuxMeterSemiAutoDevice.daylight_factor = None  # Force initialization from file
         _ = LuxMeterSemiAutoDevice.get_daylight_factor()
 
     def get_value(self) -> float | None:
@@ -7356,7 +3348,7 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
         if location := LuxMeterSemiAutoDevice.location:
             solar_lux = calc_solar_lux(zoned_now(), location, 1.0)
             if solar_lux > (0 if semi_auto_source else 1000):  # only for reasonable daylight lux levels or if the user is driving.
-                daylight_factor =  new_lux_value / solar_lux
+                daylight_factor = new_lux_value / solar_lux
                 LuxMeterSemiAutoDevice.set_daylight_factor(daylight_factor, internal=True, persist=semi_auto_source)
 
     @staticmethod
@@ -7415,6 +3407,7 @@ class LuxToDo:
     brightness: int
     preset_name: str | None
     current_brightness: int | None = None
+
 
 class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
 
@@ -7480,7 +3473,8 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         finally:
             log_info(f"LuxAuto: exiting (stop_requested={self.stop_requested}) {thread_pid()=}")
 
-    def assemble_required_work(self, lux_auto_controller: LuxAutoController, metered_lux: float, requires_smoothing) -> List[LuxToDo]:
+    def assemble_required_work(self, lux_auto_controller: LuxAutoController, metered_lux: float, requires_smoothing) -> List[
+        LuxToDo]:
         lux = self.smoother.smooth(metered_lux) if requires_smoothing else round(metered_lux)
         summary_text = self.lux_summary(metered_lux, lux)
         self.status_message(f"{SUN_SYMBOL} {summary_text} {PROCESSING_LUX_SYMBOL}", timeout=3000)
@@ -7496,25 +3490,25 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         return to_do_list
 
     def assess_presets_collectively(self, to_do_list: List[LuxToDo]) -> None:
-         if to_do_list:  # See if all items are in agreement on whether a preset should be used
-             for preset_name in [x.preset_name for x in to_do_list]:
-                 if preset := self.main_controller.find_preset_by_name(preset_name):
-                     sids_present = set(self.main_controller.get_vdu_stable_id_list())
-                     sids_present_and_in_preset = sids_present.intersection(set(preset.get_vdu_sids()))
-                     items_with_this_preset = [x for x in to_do_list if x.preset_name == preset_name]
-                     sids_of_items_with_this_preset = set([x.vdu_sid for x in items_with_this_preset])
-                     log_debug(f"LuxAuto: {sids_present_and_in_preset=} {sids_of_items_with_this_preset=}")
-                     if sids_present_and_in_preset == sids_of_items_with_this_preset:
-                         log_debug(f"LuxAuto: applying Preset {preset_name}")
-                         for item in items_with_this_preset:
-                             if (preset_brightness := preset.get_brightness(item.vdu_sid)) > 0:
-                                 item.brightness = preset_brightness
-                     else:
-                         log_debug(f"LuxAuto: ignoring Preset {preset_name} doesn't match for all VDUs present.")
-                         for item in items_with_this_preset:
-                             item.preset_name = None
-                 else:
-                     log_debug(f"LuxAuto: ignoring Preset {preset_name} no longer exists.")
+        if to_do_list:  # See if all items are in agreement on whether a preset should be used
+            for preset_name in [x.preset_name for x in to_do_list]:
+                if preset := self.main_controller.find_preset_by_name(preset_name):
+                    sids_present = set(self.main_controller.get_vdu_stable_id_list())
+                    sids_present_and_in_preset = sids_present.intersection(set(preset.get_vdu_sids()))
+                    items_with_this_preset = [x for x in to_do_list if x.preset_name == preset_name]
+                    sids_of_items_with_this_preset = set([x.vdu_sid for x in items_with_this_preset])
+                    log_debug(f"LuxAuto: {sids_present_and_in_preset=} {sids_of_items_with_this_preset=}")
+                    if sids_present_and_in_preset == sids_of_items_with_this_preset:
+                        log_debug(f"LuxAuto: applying Preset {preset_name}")
+                        for item in items_with_this_preset:
+                            if (preset_brightness := preset.get_brightness(item.vdu_sid)) > 0:
+                                item.brightness = preset_brightness
+                    else:
+                        log_debug(f"LuxAuto: ignoring Preset {preset_name} doesn't match for all VDUs present.")
+                        for item in items_with_this_preset:
+                            item.preset_name = None
+                else:
+                    log_debug(f"LuxAuto: ignoring Preset {preset_name} no longer exists.")
 
     def do_work(self, to_do_list: List[LuxToDo]):
         to_do_preset_names = []
@@ -7555,8 +3549,8 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
 
     def _adjust_for_lux_finished(self, _: WorkerThread) -> None:
         log_debug("LuxAuto: worker finished") if log_debug_enabled else None
-        if self.vdu_exception:
-            log_error(f"LuxAuto: exited with exception={self.vdu_exception}")
+        if self.work_exception:
+            log_error(f"LuxAuto: exited with exception={self.work_exception}")
 
     def idle_sampling(self, lux_meter: LuxMeterDevice, busy_main_controller: str | None):
         seconds = 2 if self.consecutive_error_count == 1 else self.sleep_seconds
@@ -7756,7 +3750,8 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
 
         self.lux_gauge_widget = LuxGaugeWidget(self)
 
-        top_box_layout.addWidget(self.lux_gauge_widget, 0, 0, 4, 2, alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+        top_box_layout.addWidget(self.lux_gauge_widget, 0, 0, 4, 2,
+                                 alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
         existing_device = self.lux_config.get_device_name()
         existing_device_type = self.lux_config.get('lux-meter', 'lux-device-type', fallback='')
         self.meter_device_selector = QComboBox()
@@ -7850,7 +3845,8 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                     self.lux_config.save(self.path)
                     self.apply_settings()
                     if (device := self.main_controller.get_lux_auto_controller().lux_meter) and device.has_auto_capability:
-                        self.main_controller.get_lux_auto_controller().set_auto(True) # Enable auto if the meter is full auto or semi-auto
+                        self.main_controller.get_lux_auto_controller().set_auto(
+                            True)  # Enable auto if the meter is full auto or semi-auto
                     self.status_message(tr("Meter changed to {}.").format(new_dev_path))
 
         self.meter_device_selector.activated.connect(_choose_device)
@@ -7948,12 +3944,13 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                 self.preset_points.append(preset_point)
 
         self.interval_selector.setValue(self.lux_config.get_interval_minutes())
-        existing_id_list = [item.data(Qt.ItemDataRole.UserRole) for item in self.profile_selector_widget.findItems('*', Qt.MatchFlag.MatchWildcard)]
+        existing_id_list = [item.data(Qt.ItemDataRole.UserRole) for item in
+                            self.profile_selector_widget.findItems('*', Qt.MatchFlag.MatchWildcard)]
         candidate_id = self.lux_config.get('lux-ui', 'selected-profile', fallback=None)
         if connected_id_list and (candidate_id is None or candidate_id not in connected_id_list):
             candidate_id = connected_id_list[0]
         try:
-            self.profile_selector_widget.blockSignals(True) # Stop initialization from causing signal until all data is aligned.
+            self.profile_selector_widget.blockSignals(True)  # Stop initialization from causing signal until all data is aligned.
             if connected_id_list != existing_id_list:  # List of connected VDUs has changed
                 self.profile_selector_widget.clear()
                 random.seed(int(self.lux_config.get("lux-ui", "vdu_color_seed", fallback='0x543fff'), 16))
@@ -7992,7 +3989,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                 self.main_controller.edit_config(self.main_controller.main_config.config_name)
                 return False
             MBox(MIcon.Information,
-                 msg=tr("Semi-automatic lux adjustment: quick start instructions.\n"                      
+                 msg=tr("Semi-automatic lux adjustment: quick start instructions.\n"
                         "________________________________________________________________________________________\n\n"
                         "Use the ambient-light-level slider to set the current light level.\n\n"
                         "Starting from your chosen level, the application will adjust the light level\n"
@@ -8124,6 +4121,7 @@ class LuxAutoController:
                     LuxDialog.get_instance().close()
                 else:
                     LuxDialog.invoke(self.main_controller)
+
             self.lux_slider.title_button_pressed_qtsignal.connect(_toggle_lux_dialog)
             self.lux_slider.status_icon_pressed_qtsignal.connect(self.adjust_brightness_now)
         return self.lux_slider
@@ -8146,7 +4144,8 @@ class LuxAutoController:
                 self.lux_auto_brightness_worker = LuxAutoWorker(self, single_shot)
                 self.lux_auto_brightness_worker.start()
                 try:
-                    self.lux_meter.new_lux_value_qtsignal.connect(self.update_manual_slider, type=Qt.ConnectionType.UniqueConnection)
+                    self.lux_meter.new_lux_value_qtsignal.connect(self.update_manual_slider,
+                                                                  type=Qt.ConnectionType.UniqueConnection)
                 except TypeError:
                     pass
 
@@ -8227,11 +4226,11 @@ class LuxAutoController:
         if self.lux_config.has_option('lux-profile', vdu_stable_id):  # initialize removing duplicate points
             lux_points = list(set([LuxPoint(v[0], v[1]) for v in literal_eval(self.lux_config.get('lux-profile', vdu_stable_id))]))
         else:  # Create a default profile:
-                min_v, max_v = (0, 100) if brightness_range is None else brightness_range
-                defaults = [(0, 0.6), (100, 0.8), (1_000, 0.9), (10_000, 0.9), (100_000, 0.9)]
-                lux_points = [LuxPoint(lux, min_v + round(r * (max_v - min_v))) for lux, r in defaults]
+            min_v, max_v = (0, 100) if brightness_range is None else brightness_range
+            defaults = [(0, 0.6), (100, 0.8), (1_000, 0.9), (10_000, 0.9), (100_000, 0.9)]
+            lux_points = [LuxPoint(lux, min_v + round(r * (max_v - min_v))) for lux, r in defaults]
         if self.lux_config.has_option('lux-presets', 'lux-preset-points'):  # Merge in preset points
-            merge_map = {point.lux: point for point in  lux_points}
+            merge_map = {point.lux: point for point in lux_points}
             for preset_point in self.lux_config.get_preset_points():
                 # Look up the Preset's brightness for this VDU - get value from the actual Preset.
                 if preset := self.main_controller.find_preset_by_name(preset_point.preset_name):  # Drop any that no longer exist
@@ -8344,7 +4343,8 @@ class LuxAmbientSlider(QWidget):
             LuxZone(tr("Subdued"), LUX_SUBDUED_SVG, 15, 100, 20, column_span=3),
             LuxZone(tr("Dark"), LUX_DARK_SVG, 0, 15, 2, column_span=4), ]
         self.current_value = 10_000
-        self.status_icon = ThemedSvgWidget(self.zones[0].icon_svg, native_font_height(scaled=2.0), native_font_height(scaled=2.0), self)
+        self.status_icon = ThemedSvgWidget(self.zones[0].icon_svg, native_font_height(scaled=2.0), native_font_height(scaled=2.0),
+                                           self)
         self.current_name: str | None = None
         self.current_zone: LuxZone | None = None
 
@@ -8389,7 +4389,8 @@ class LuxAmbientSlider(QWidget):
             log10_label = QLabel(f"{value:2d}")
             app_font = QApplication.font()
             log10_label.setFont(QFont(app_font.family(), round(app_font.pointSize() * .66), QFont.Weight.Normal))
-            slider_panel_layout.addWidget(log10_label, 2, col_num, 1, span, alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+            slider_panel_layout.addWidget(log10_label, 2, col_num, 1, span,
+                                          alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
 
         input_panel_layout.addWidget(slider_panel, stretch=100)
 
@@ -8433,12 +4434,15 @@ class LuxAmbientSlider(QWidget):
         self.label_map: Dict[StdButton, bytes] = {}
         for zone in reversed(self.zones):
             zone_button = ThemedSvgButton(zone.icon_svg, icon_size=log10_icon_size,
-                                          clicked=partial(self.lux_input_field.setValue, zone.icon_svg_lux), flat=True, tip=zone.name)
-            slider_panel_layout.addWidget(zone_button, 0, col, 1, zone.column_span, alignment=Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter)
+                                          clicked=partial(self.lux_input_field.setValue, zone.icon_svg_lux), flat=True,
+                                          tip=zone.name)
+            slider_panel_layout.addWidget(zone_button, 0, col, 1, zone.column_span,
+                                          alignment=Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter)
             self.label_map[zone_button] = zone.icon_svg
             col += zone.column_span
 
-        self.set_current_value(round(controller.lux_meter.get_value()) if controller.lux_meter else 1000)  # don't trigger side-effects.
+        self.set_current_value(
+            round(controller.lux_meter.get_value()) if controller.lux_meter else 1000)  # don't trigger side-effects.
 
     def set_current_value(self, value: int, source: QWidget | None = None) -> None:
         # log_debug("set_current_value ", value, source, self.in_flux)
@@ -8560,95 +4564,6 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
         self.setIcon(MIcon.Information)
 
 
-class HelpDialog(SubWinDialog, DialogSingletonMixin):
-
-    @staticmethod
-    def invoke() -> None:
-        HelpDialog.show_existing_dialog() if HelpDialog.exists() else HelpDialog()
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.setWindowTitle(tr('Help'))
-        layout = QVBoxLayout()
-        markdown_view = QTextEdit()
-        markdown_view.setReadOnly(True)
-        markdown_view.setViewportMargins(npx(80), npx(80), npx(50), npx(30))
-        markdown_view.setMarkdown(re.sub(r"^$([^ ])", r"<br/>\n\1", __doc__, flags=re.MULTILINE))  # hack Qt markdown
-        layout.addWidget(markdown_view)
-        close_button = StdButton(icon=si(self, StdPixmap.SP_DialogCloseButton), title=tr("Close"), clicked=self.hide)
-        layout.addWidget(close_button, 0, Qt.AlignmentFlag.AlignRight)
-        self.setLayout(layout)
-        self.make_visible()
-
-    def sizeHint(self) -> QSize:
-        return QSize(npx(1600), npx(1000))
-
-
-class PresetScheduleStatus(Enum):
-    UNSCHEDULED = 0, ' ', QT_TR_NOOP('unscheduled')
-    # This hourglass character is too tall - it causes a jump when rendered - but nothing else is quite as appropriate.
-    SCHEDULED = 1, TIMER_RUNNING_SYMBOL, QT_TR_NOOP('scheduled')
-    SUSPENDED = 2, ' ', QT_TR_NOOP('suspended')
-    SUCCEEDED = 3, SUCCESS_SYMBOL, QT_TR_NOOP('succeeded')
-    SKIPPED_SUPERSEDED = 4, SKIPPED_SYMBOL, QT_TR_NOOP('skipped, superseded')
-    WEATHER_CANCELLATION = 5, WEATHER_CANCELLATION_SYMBOL, QT_TR_NOOP('weather cancellation')
-
-    def symbol(self) -> str:
-        return self.value[1]
-
-    def description(self) -> str:
-        return self.value[2]
-
-    def __str__(self) -> str:
-        return str(self.value[0])
-
-
-class PresetTransitionFlag(IntFlag):
-    _ignore_ = ['abbreviations', 'descriptions']  # Seems very hacky
-
-    NONE = 0
-    SCHEDULED = 1
-    MENU = 2
-    SIGNAL = 4
-    ALWAYS = 7
-
-    abbreviations = {NONE: '', SCHEDULED: TIME_CLOCK_SYMBOL, MENU: MENU_SYMBOL,
-                     SIGNAL: SIGNAL_SYMBOL, ALWAYS: TRANSITION_ALWAYS_SYMBOL}
-
-    descriptions = {
-        NONE: QT_TR_NOOP('Always immediately'), SCHEDULED: QT_TR_NOOP('Smoothly on solar/time'), MENU: QT_TR_NOOP('Smoothly on menu'),
-        SIGNAL: QT_TR_NOOP('Smoothy on signal'), ALWAYS: QT_TR_NOOP('Always smoothly')}
-
-    def abbreviation(self, abbreviations=abbreviations) -> str:  # Even more hacky
-        if self.value in (PresetTransitionFlag.NONE, PresetTransitionFlag.ALWAYS):
-            return abbreviations[self]
-        return TRANSITION_SYMBOL + ''.join([abbreviations[component] for component in self.component_values()])
-
-    def description(self, descriptions=descriptions) -> str:  # Yuck
-        if self.value in (PresetTransitionFlag.NONE, PresetTransitionFlag.ALWAYS):
-            return tr(descriptions[self])
-        return ', '.join([tr(descriptions[component]) for component in self.component_values()])
-
-    def component_values(self) -> list[PresetTransitionFlag]:
-        # similar to Python 3.11 enum.show_flag_values(self) - list of power of two components for self
-        return [option for option in PresetTransitionFlag if (option & (option - 1) == 0) and option != 0 and option in self]
-
-    def __str__(self) -> str:
-        assert self.name is not None  # TODO this failed once - get to repeat
-        if self.value == PresetTransitionFlag.NONE:
-            return self.name.lower()
-        return ','.join([component.name.lower() for component in self.component_values()])  # type: ignore
-
-
-def parse_transition_type(string_value: str) -> PresetTransitionFlag:
-    transition_type = PresetTransitionFlag.NONE
-    string_value = string_value.replace('schedule_or_signal', 'scheduled,signal')  # Backward compatible for unreleased 1.9.2
-    for component_value in string_value.split(','):
-        for option in PresetTransitionFlag:
-            assert option.name is not None
-            if component_value.lower() == option.name.lower():
-                transition_type |= option
-    return transition_type
 
 
 @contextmanager  # https://stackoverflow.com/questions/31501487/non-blocking-lock-with-with-statement
@@ -8906,9 +4821,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                                 if control_panel.controller.get_full_id() in self.detected_vdu_list:
                                     control_panel.refresh_from_vdu()
                         except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
-                            if self.refresh_data_task.vdu_exception is None:
-                                self.refresh_data_task.vdu_exception = VduException(vdu_description="unknown", operation="unknown",
-                                                                                    exception=e)
+                            if self.refresh_data_task.work_exception is None:
+                                self.refresh_data_task.work_exception = VduException(vdu_description="unknown", operation="unknown",
+                                                                                     exception=e)
                     else:
                         log_info(f"Application is already busy, can't do a refresh ({external_event=})")
                         worker.stop()  # Stop the thread - which also indicates we did not acquire the lock.
@@ -8923,10 +4838,10 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 assert self.refresh_data_task is not None and is_running_in_gui_thread()
                 log_debug(f"Refresh - update UI view {external_event=} {values_only=}") if log_debug_enabled else None
                 main_panel = self.main_window.get_main_panel()
-                if self.refresh_data_task.vdu_exception is not None:
-                    log_debug(f"Refresh - update UI view - exception {self.refresh_data_task.vdu_exception} {external_event=}")
+                if self.refresh_data_task.work_exception is not None:
+                    log_debug(f"Refresh - update UI view - exception {self.refresh_data_task.work_exception} {external_event=}")
                     if not external_event:
-                        main_panel.show_vdu_exception(self.refresh_data_task.vdu_exception, can_retry=False)
+                        main_panel.show_vdu_exception(self.refresh_data_task.work_exception, can_retry=False)
                 if not values_only:
                     if len(self.detected_vdu_list) == 0 or self.detected_vdu_list != self.previously_detected_vdu_list or (
                             external_event and False):
@@ -8979,8 +4894,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
             def _restore_finished_callback(worker_thread: BulkChangeWorker) -> None:
                 # self.transitioning_dummy_preset = None
-                if worker_thread.vdu_exception is not None and not background_activity:  # if it's a GUI request, ask about retry
-                    if self.main_window.get_main_panel().show_vdu_exception(worker_thread.vdu_exception, can_retry=True):
+                if worker_thread.work_exception is not None and not background_activity:  # if it's a GUI request, ask about retry
+                    if self.main_window.get_main_panel().show_vdu_exception(worker_thread.work_exception, can_retry=True):
                         self.restore_preset(preset, finished_func=finished_func, immediately=immediately)  # Try again, new thread
                         return  # Don't do anything more, the new thread will take over from here
                 preset.in_transition_step = 0
@@ -9017,8 +4932,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             self.main_window.indicate_busy(True, lock_controls=immediately)
             preset.load()
             bulk_changer = BulkChangeWorker('RestorePreset', self, _update_progress, _restore_finished_callback,
-                                      step_interval=0.0 if immediately else 5.0,
-                                      ignore_others=initialization_preset, context=preset)
+                                            step_interval=0.0 if immediately else 5.0,
+                                            ignore_others=initialization_preset, context=preset)
             for vdu_stable_id in self.get_vdu_stable_id_list():
                 if vdu_stable_id in preset.preset_ini:
                     for vcp_capability in self.get_enabled_capabilities(vdu_stable_id):
@@ -9029,7 +4944,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                             else:
                                 final_value = int(preset.preset_ini[vdu_stable_id][property_name], 16)
                             bulk_changer.add_item(BulkChangeItem(vdu_stable_id, vcp_capability.vcp_code, final_value,
-                                                           transition=vcp_capability.can_transition))
+                                                                 transition=vcp_capability.can_transition))
             self.preset_transition_workers.append(bulk_changer)
             log_debug(f"restore_preset: '{preset.name}' handover to WorkerThread") if log_debug_enabled else None
             bulk_changer.start()
@@ -9046,7 +4961,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     log_info(f"Found initialization-preset for {stable_id}")
 
                     def _restored_initialization_preset(worker: BulkChangeWorker) -> None:
-                        if worker.vdu_exception is not None:
+                        if worker.work_exception is not None:
                             log_error(f"Error during restoration of '{preset.name}'")
                             self.status_message(tr("Error during restoration preset {}").format(preset.name), timeout=5)
                             return
@@ -9146,7 +5061,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         def _activation_finished(worker: BulkChangeWorker) -> None:
             assert preset.elevation_time_today is not None or preset.get_at_time() is not None
             attempts = preset.scheduler_job.attempts
-            if worker.vdu_exception is not None:
+            if worker.work_exception is not None:
                 too_close = zoned_now() + timedelta(seconds=60)  # retry if more than a minute before any others
                 for other in self.preset_controller.find_presets_map().values():  # Skip retry if another is due soon
                     if (other.name != preset.name
@@ -9460,7 +5375,8 @@ class VduAppWindow(QMainWindow):
         def _splash_message_action(message) -> None:
             if splash is not None:
                 log_info(f"splash_message: {repr(message)}")
-                splash.showMessage(f"\n\n{APPNAME} {VDU_CONTROLS_VERSION}\n{message}", Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
+                splash.showMessage(f"\n\n{APPNAME} {VDU_CONTROLS_VERSION}\n{message}",
+                                   Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
                 QApplication.processEvents()
 
         self.splash_message_qtsignal.connect(_splash_message_action)
@@ -9488,13 +5404,9 @@ class VduAppWindow(QMainWindow):
             splash = None
 
         if main_config.file_path is None or main_config.ini_content.get_version() < VDU_CONTROLS_VERSION_TUPLE:  # New version...
-            release_alert = MBox(
-                MIcon.Information,
-                msg=RELEASE_ANNOUNCEMENT.format(WELCOME=tr(RELEASE_WELCOME), NOTE=tr(RELEASE_NOTE), VERSION=VDU_CONTROLS_VERSION),
-                info=RELEASE_INFO, buttons=MBtn.Close)
-            release_alert.setTextFormat(Qt.TextFormat.RichText)
-            release_alert.exec()
+            release_notes()
             main_config.write_file(ConfIni.get_path('vdu_controls'), overwrite=True)  # Stops release notes from being repeated.
+
 
     def is_inactive(self):
         if QApplication.instance().applicationState() != Qt.ApplicationState.ApplicationInactive:
@@ -9520,7 +5432,8 @@ class VduAppWindow(QMainWindow):
 
     def eventFilter(self, target: QObject | None, event: QEvent | None) -> bool:
         # log_info(f"eventFilter {event.__class__.__name__} {event.type()}")
-        if event and event.type() in (QEvent.Type.Move, QEvent.Type.Resize, QEvent.Type.WindowActivate):  # Still active if being moved or resized
+        if event and event.type() in (QEvent.Type.Move, QEvent.Type.Resize,
+                                      QEvent.Type.WindowActivate):  # Still active if being moved or resized
             self.active_event_count += 1
         return super().eventFilter(target, event)
 
@@ -9632,7 +5545,7 @@ class VduAppWindow(QMainWindow):
         PresetsDialog.show_status_message(message=message, timeout=timeout)
         self.status_message(message, timeout=timeout, destination=MsgDestination.DEFAULT)
 
-    def get_tray_theme_type(self):   # Ugly because Qt has no way to access the tray theme
+    def get_tray_theme_type(self):  # Ugly because Qt has no way to access the tray theme
         theme = ThemeType.UNTHEMED  # Don't alter colors for overlay onto app icon in tray if unthemed
         if self.main_config.is_set(ConfOpt.MONOCHROME_TRAY_ENABLED):
             theme = ThemeType.MONOCHROME_DARK
@@ -9645,7 +5558,7 @@ class VduAppWindow(QMainWindow):
                 theme = ThemeType.MONOCHROME_LIGHT if theme == ThemeType.MONOCHROME_DARK else ThemeType.MONOCHROME_DARK
         return theme
 
-    def update_status_indicators(self, preset: Preset|None = None, palette_change: bool = False) -> None:
+    def update_status_indicators(self, preset: Preset | None = None, palette_change: bool = False) -> None:
         assert is_running_in_gui_thread()  # Boilerplate in case this is called from the wrong thread.
         if self.main_panel is None:  # On deepin 23, events can trigger this method before initialization is complete
             return
@@ -9663,12 +5576,13 @@ class VduAppWindow(QMainWindow):
             PresetsDialog.instance_indicate_active_preset(preset)
             title = f"{preset.get_title_name()} {PRESET_APP_SEPARATOR_SYMBOL} {title}"
             tray_embedded_icon = preset.create_icon(self.get_tray_theme_type())
-            led1_color = PRESET_TRANSITIONING_LED_COLOR if preset.in_transition_step > 0 else None   # TODO transitioning indicator
+            led1_color = PRESET_TRANSITIONING_LED_COLOR if preset.in_transition_step > 0 else None  # TODO transitioning indicator
         if self.main_controller.lux_auto_controller is not None:
             if self.main_controller.lux_auto_controller.is_auto_enabled():
                 title = f"{tr('Auto')}/{title}"
                 led2_color = AUTO_LUX_LED_COLOR
-            menu_lux_icon = create_icon_from_svg_bytes(self.main_controller.lux_auto_controller.current_auto_svg())  # NB cache involved
+            menu_lux_icon = create_icon_from_svg_bytes(
+                self.main_controller.lux_auto_controller.current_auto_svg())  # NB cache involved
             self.app_context_menu.update_lux_auto_icon(menu_lux_icon)  # Won't actually update if it hasn't changed
             if tray_embedded_icon is None and self.main_config.is_set(ConfOpt.LUX_TRAY_ICON):
                 if zone := self.main_controller.lux_auto_controller.get_lux_zone():
@@ -9677,7 +5591,8 @@ class VduAppWindow(QMainWindow):
 
         if self.windowTitle() != title:  # Don't change if not needed - prevent flickering.
             self.setWindowTitle(title)
-            QApplication.instance().setWindowIcon(create_decorated_app_icon(self.app_icon, tray_embedded_icon, led1_color, led2_color))
+            QApplication.instance().setWindowIcon(
+                create_decorated_app_icon(self.app_icon, tray_embedded_icon, led1_color, led2_color))
         if self.tray:
             self.tray.setToolTip(title)
             self.tray.setIcon(create_decorated_app_icon(self.tray_icon, tray_embedded_icon, led1_color, led2_color))
@@ -9724,7 +5639,8 @@ class VduAppWindow(QMainWindow):
         save_version_major = self.qt_settings.value(self.qt_version_key, '5').split('.', 1)[0]
         qt_version_major = QtCore.qVersion().split('.', 1)[0]
         if save_version_major != qt_version_major:
-            log_warning(f"app_restore_window_state: restore: {save_version_major=} != {qt_version_major=}, this may cause window geometry glitches")
+            log_warning(
+                f"app_restore_window_state: restore: {save_version_major=} != {qt_version_major=}, this may cause window geometry glitches")
         if smart_window := self.main_config.is_set(ConfOpt.SMART_WINDOW, fallback=True):  # Restore pos and geometry
             if geometry := self.qt_settings.value(self.qt_geometry_key, None):
                 self.restoreGeometry(geometry)
@@ -9733,7 +5649,6 @@ class VduAppWindow(QMainWindow):
             self.restoreState(window_state)  # Restore component positions, such as toolbar location
             log_debug(f"app_restore_window_state: restoring internal layout state") if log_debug_enabled else None
         return smart_window
-
 
     def app_decide_window_position(self):
         # Guess a window position near the tray. Use the mouse/cursor-pos as a guess to where the
@@ -9860,162 +5775,6 @@ class SignalWakeupHandler(QtNetwork.QAbstractSocket):
         self.received_unix_signal_qtsignal.emit(signal_number)  # Emit a Qt signal for convenience
 
 
-# FUNCTION TO COMPUTE SOLAR AZIMUTH AND ZENITH ANGLE
-# Extracted from a larger gist by Antti Lipponen: https://gist.github.com/anttilipp/1c482c8cc529918b7b973339f8c28895
-# which was translated to Python from http://www.psa.es/sdg/sunpos.htm
-# Converted to only use the python math library (instead of numpy) by me for vdu_controls.
-# Coding style also altered for use with vdu_controls.
-def calc_solar_azimuth_zenith(localised_time: datetime, latitude: float, longitude: float) -> Tuple[float, float]:
-    """Return azimuth degrees clockwise from true north and zenith in degrees from vertical direction."""
-    assert localised_time.tzinfo is not None
-    utc_datetime = localised_time.astimezone(timezone.utc)
-    # UTC from now on...
-    hours, minutes, seconds = utc_datetime.hour, utc_datetime.minute, utc_datetime.second
-    year, month, day = utc_datetime.year, utc_datetime.month, utc_datetime.day
-
-    earth_mean_radius = 6371.01
-    astronomical_unit = 149597890
-
-    # Calculate the difference in days between the current Julian Day and JD 2451545.0, which is noon 1 January 2000 Universal Time
-
-    # Calculate the time of the day in UT decimal hours
-    decimal_hours = hours + (minutes + seconds / 60.) / 60.
-    # Calculate current Julian Day
-    aux1 = int((month - 14.) / 12.)
-    aux2 = int((1461. * (year + 4800. + aux1)) / 4.) + int((367. * (month - 2. - 12. * aux1)) / 12.) - int(
-        (3. * int((year + 4900. + aux1) / 100.)) / 4.) + day - 32075.
-    julian_date = aux2 - 0.5 + decimal_hours / 24.
-    # Calculate the difference between current Julian Day and JD 2451545.0
-    elapsed_julian_days = julian_date - 2451545.0
-
-    # Calculate ecliptic coordinates (ecliptic longitude and obliquity of the ecliptic in radians but
-    # without limiting the angle to be less than 2*Pi (i.e., the result may be greater than 2*Pi)
-    omega = 2.1429 - 0.0010394594 * elapsed_julian_days
-    mean_longitude = 4.8950630 + 0.017202791698 * elapsed_julian_days  # Radians
-    mean_anomaly = 6.2400600 + 0.0172019699 * elapsed_julian_days
-    ecliptic_longitude = mean_longitude + 0.03341607 * math.sin(mean_anomaly) + 0.00034894 * math.sin(
-        2. * mean_anomaly) - 0.0001134 - 0.0000203 * math.sin(omega)
-    ecliptic_obliquity = 0.4090928 - 6.2140e-9 * elapsed_julian_days + 0.0000396 * math.cos(omega)
-
-    # Calculate celestial coordinates (right ascension and declination) in radians but without limiting
-    # the angle to be less than 2*Pi (i.e., the result may be greater than 2*Pi)
-    sin_ecliptic_longitude = math.sin(ecliptic_longitude)
-    dy = math.cos(ecliptic_obliquity) * sin_ecliptic_longitude
-    dx = math.cos(ecliptic_longitude)
-    right_ascension = math.atan2(dy, dx)
-    if right_ascension < 0.0:
-        right_ascension = right_ascension + 2.0 * math.pi
-    declination = math.asin(math.sin(ecliptic_obliquity) * sin_ecliptic_longitude)
-
-    # Calculate local coordinates ( azimuth and zenith angle ) in degrees
-    greenwich_mean_sidereal_time = 6.6974243242 + 0.0657098283 * elapsed_julian_days + decimal_hours
-    local_mean_sidereal_time = (greenwich_mean_sidereal_time * 15. + longitude) * (math.pi / 180.)
-    hour_angle = local_mean_sidereal_time - right_ascension
-    latitude_in_radians = latitude * (math.pi / 180.)
-    cos_latitude = math.cos(latitude_in_radians)
-    sin_latitude = math.sin(latitude_in_radians)
-    cos_hour_angle = math.cos(hour_angle)
-    zenith_angle = math.acos(cos_latitude * cos_hour_angle * math.cos(declination) + math.sin(declination) * sin_latitude)
-    dy = -math.sin(hour_angle)
-    dx = math.tan(declination) * cos_latitude - sin_latitude * cos_hour_angle
-    azimuth = math.atan2(dy, dx)
-    if azimuth < 0.0:
-        azimuth += 2 * math.pi
-    azimuth = azimuth / (math.pi / 180.)
-    # Parallax Correction
-    parallax = (earth_mean_radius / astronomical_unit) * math.sin(zenith_angle)
-    zenith_angle = (zenith_angle + parallax) / (math.pi / 180.)
-    # Return azimuth as a clockwise angle from true north
-    return azimuth, zenith_angle
-
-
-def calc_solar_lux(localised_time: datetime, location: GeoLocation, daylight_factor: float) -> int:
-    # E. Elvegård and G. Sjöstedt, "The Calculation of Illumination from Sun and Sky," _Illuminating Engineering_, Apr. 1940.
-    # [Illuminating Engineering Society, 100 Significant Papers](https://www.ies.org/research/publications/100-significant-papers/)
-    latitude, longitude = location.latitude, location.longitude
-    _, zenith = calc_solar_azimuth_zenith(localised_time, latitude, longitude)
-    solar_altitude = 90 - zenith   # After sunset use
-    if solar_altitude < 3:  # 3 degrees is a minimum, the functional limit for the algorithm
-        return 0
-    al_e8_illumination_unit = 77000  # E8 in Lux
-    air_mass = 1.0 / math.cos(math.radians(zenith)) # approximation:  https://en.wikipedia.org/wiki/Air_mass_(solar_energy)
-    solar_lux = 1.6 * al_e8_illumination_unit * math.sin(math.radians(solar_altitude)) * 10 ** (-0.1 * air_mass)
-    illumination = int(daylight_factor * solar_lux)
-    return illumination
-
-
-# Spherical distance from https://stackoverflow.com/a/21623206/609575 (great circle distance km)
-def spherical_kilometers(lat1, lon1, lat2, lon2) -> float:
-    p = math.pi / 180
-    a = 0.5 - math.cos((lat2 - lat1) * p) / 2 + math.cos(lat1 * p) * math.cos(lat2 * p) * (1 - math.cos((lon2 - lon1) * p)) / 2
-    a = min(1.0, max(0.0, a))  # Guard against floating‑point errors
-    return 12742 * math.asin(math.sqrt(a))
-
-
-def create_elevation_map(local_now: datetime, latitude: float, longitude: float,
-                         callback: Callable[[float, float, datetime], None]
-                                   | None = None) -> Dict[SolarElevationKey, SolarElevationData]:
-    # Create a minute-by-minute map of today's SolarElevations.
-    # For a given dict[SolarElevation], record the first minute it occurs.
-    # Calls the callback for every 1 minute point, not just each integer elevation.
-    elevation_time_map = {}
-    local_when = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
-    while local_when.day == local_now.day:
-        a, z = calc_solar_azimuth_zenith(local_when, latitude, longitude)
-        e = round(90.0 - z)
-        key = SolarElevationKey(elevation=round(e), direction=(EASTERN_SKY if a < 180 else WESTERN_SKY))
-        if key not in elevation_time_map:
-            elevation_time_map[key] = SolarElevationData(azimuth=a, zenith=z, when=local_when)
-        if callback:
-            callback(a, z, local_when)
-        local_when += timedelta(minutes=1)
-    return elevation_time_map
-
-
-def find_locale_specific_file(filename_template: str) -> Path | None:
-    locale_name = QLocale.system().name()
-    filename = filename_template.format(locale_name)
-    for path in LOCALE_TRANSLATIONS_PATHS:
-        full_path = path.joinpath(filename)
-        log_debug(f"Checking for {locale_name} translation: {full_path}") if log_debug_enabled else None
-        if full_path.exists():
-            log_info(f"Found {locale_name} translation: {full_path}")
-            return full_path
-    return None
-
-
-translator: QTranslator | None = None
-ts_translations: Dict[str, str] = {}
-
-
-def initialise_locale_translations(app: QApplication) -> None:
-    # Has to be put somewhere it won't be garbage collected when this function goes out of scope.
-    global translator
-    translator = QTranslator()
-    locale_name = QLocale.system().name()
-    ts_path = find_locale_specific_file("{}.ts")
-    qm_path = find_locale_specific_file("{}.qm")
-
-    # If there is a .ts XML file in the path newer than the associated .qm binary file, load the messages
-    # from the XML into a map and use them directly.  This is useful while developing and possibly useful
-    # for users that want to do their own localization.
-    if ts_path is not None and (qm_path is None or os.path.getmtime(ts_path) > os.path.getmtime(qm_path)):
-        log_info(tr("Using newer .ts file {} translations from {}").format(locale_name, ts_path.as_posix()))
-        import xml.etree.ElementTree as XmlElementTree
-        global ts_translations
-        if context := XmlElementTree.parse(ts_path).find('context'):
-            for message in context.findall('message'):
-                translation = message.find('translation')
-                source = message.find('source')
-                if translation is not None and source is not None and translation.text is not None and source.text is not None:
-                    ts_translations[source.text] = translation.text
-        log_info(tr("Loaded {} translations from {}").format(locale_name, ts_path.as_posix()))
-        return
-    if qm_path is not None:
-        log_info(tr("Loading {} translations from {}").format(locale_name, qm_path.as_posix()))
-        if translator.load(qm_path.name, qm_path.parent.as_posix()):
-            app.installTranslator(translator)
-            log_info(tr("Using {} translations from {}").format(locale_name, qm_path.as_posix()))
 
 
 def main() -> None:
@@ -10112,6 +5871,7 @@ def main() -> None:
                  info=tr("This is probably because {} is not executable or is not on your PATH.").format(app.arguments()[0]),
                  buttons=MBtn.Close).exec()
     sys.exit(rc)
+
 
 if __name__ == '__main__':
     main()
