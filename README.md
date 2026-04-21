@@ -9,6 +9,7 @@ A control panel for external monitors (*Visual Display Units*).
 > and possible abandonment.
 > 
 > The various build systems and packaging are yet to be updated.
+> See utils/make-zipapp-pyz for a script that builds an executable zip
 
 > [!WARNING]
 > **KDE 6** introduced energy saving brighness dimming after 5 minutes of idle
