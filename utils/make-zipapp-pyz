@@ -1,0 +1,1 @@
+python3 -m zipapp vdu_controls -o ../vdu_controls.pyz -m vdu_controls_main:main -p /usr/bin/env python3
