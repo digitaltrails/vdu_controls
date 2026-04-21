@@ -1,0 +1,9 @@
+<!-- SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls> -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- # application-menu icon from breeze5-icons: LGPL-3.0-only -->
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
+  <g transform="translate(1,1)"> <path style="fill:currentColor;fill-opacity:1;stroke:none" d="m3 5v2h16v-2h-16m0
+   5v2h16v-2h-16m0 5v2h16v-2h-16" class="ColorScheme-Text"/> </g>
+</svg>
