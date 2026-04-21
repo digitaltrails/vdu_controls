@@ -3,9 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
-import sys
 import glob
-import json
 import locale
 import math
 import pathlib
@@ -14,59 +12,51 @@ import random
 import select
 import signal
 import socket
-import stat
 import subprocess
 import termios
-import textwrap
 import threading
 import time
-import unicodedata
-import urllib.request
 from ast import literal_eval
 from collections import namedtuple
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import timedelta
-from enum import Enum, IntFlag
+from enum import Enum
 from functools import partial
 from importlib import import_module
-from typing import List, Tuple, Dict, Callable, Any, NewType, cast
-from urllib.error import URLError
+from typing import List, Tuple, Dict, Callable, Any, cast
 
-from vdu_controls.installer import install_as_desktop_application
-from vdu_controls.preset import Preset, PresetScheduleStatus, PresetTransitionFlag
-from vdu_controls.settings_editor import SettingsDialog
 from vdu_controls.config_ini import ConfIni, ConfOpt, VduControlsConfig, SUPPORTED_VCP_BY_CODE, VcpCapability, GeoLocation
-from vdu_controls.ddcutil_emulator import DdcutilEmulatorImpl
-from vdu_controls.ddcutil_laptop_panel import DdcutilPanelImpl
-from vdu_controls.misc import intV, zoned_now, proper_name
-from vdu_controls.release import release_notes
-from vdu_controls.solar_calc import calc_solar_lux, spherical_kilometers, create_elevation_map, SolarElevationKey, \
-    SolarElevationData, format_solar_elevation_abbreviation, parse_solar_elevation_ini_text, format_solar_elevation_ini_text
-from vdu_controls.svg import *
-from vdu_controls.weather import WeatherQuery
-from vdu_controls.work_scheduler import WorkerThread, ScheduleWorker, thread_pid, SchedulerJob, SchedulerJobType, WorkException
-
-
 from vdu_controls.constants import *
 from vdu_controls.ddcutil import Ddcutil, VduStableId
 from vdu_controls.ddcutil_abstract import VcpOrigin, VcpValue, DdcutilDisplayNotFound, CONTINUOUS_TYPE, \
     COMPLEX_NON_CONTINUOUS_TYPE, BRIGHTNESS_VCP_CODE, CONTRAST_VCP_CODE, SIMPLE_NON_CONTINUOUS_TYPE, DdcEventType, \
     DdcutilServiceNotFound
+from vdu_controls.ddcutil_emulator import DdcutilEmulatorImpl
+from vdu_controls.ddcutil_laptop_panel import DdcutilPanelImpl
 from vdu_controls.dialog_singleton import DialogSingletonMixin
 from vdu_controls.help import HelpDialog
 from vdu_controls.icon_utils import ThemeType, polychrome_light_or_dark, SVG_LIGHT_THEME_COLOR
 from vdu_controls.icon_utils import create_pixmap_from_svg_bytes, create_image_from_svg_bytes, \
     create_icon_from_svg_bytes, create_icon_from_path, create_decorated_app_icon, StdPixmap, \
     is_dark_theme, si
+from vdu_controls.installer import install_as_desktop_application
 from vdu_controls.internationalization import tr, initialise_locale_translations, find_locale_specific_file, translate_option
 from vdu_controls.logging import *
+from vdu_controls.misc import intV, zoned_now, proper_name
+from vdu_controls.preset import Preset, PresetScheduleStatus, PresetTransitionFlag
 from vdu_controls.qt_imports import *
+from vdu_controls.release import release_notes
 from vdu_controls.scaling import native_font_height, npx
+from vdu_controls.settings_editor import SettingsDialog
+from vdu_controls.solar_calc import calc_solar_lux, create_elevation_map, SolarElevationKey, \
+    SolarElevationData, format_solar_elevation_abbreviation, parse_solar_elevation_ini_text, format_solar_elevation_ini_text
+from vdu_controls.svg import *
+from vdu_controls.unicode import *
+from vdu_controls.weather import WeatherQuery
 from vdu_controls.widgets import StdButton, SubWinDialog, ThemedSvgWidget, TitleButton, ThemedSvgButton, MIcon, MBox, MBtn, \
     FasterFileDialog, PushButtonLeftJustified, ClickableSlider, LineEditAll, alter_margins
-from vdu_controls.unicode import *
-
+from vdu_controls.work_scheduler import WorkerThread, ScheduleWorker, thread_pid, SchedulerJob, SchedulerJobType, WorkException
 
 Shortcut = namedtuple('Shortcut', ['letter', 'annotated_word'])
 
@@ -77,11 +67,6 @@ gui_thread: QThread | None = None
 
 def is_running_in_gui_thread() -> bool:
     return QThread.currentThread() == gui_thread
-
-
-
-
-
 
 
 class MsgDestination(Enum):
