@@ -25,6 +25,7 @@ from enum import Enum
 from functools import partial
 from importlib import import_module
 from typing import List, Tuple, Dict, Callable, Any, cast
+from importlib.resources import files as resources_files
 
 from vdu_controls.config_ini import ConfIni, ConfOpt, VduControlsConfig, SUPPORTED_VCP_BY_CODE, VcpCapability, GeoLocation
 from vdu_controls.constants import *
@@ -130,12 +131,10 @@ def reverse_force_xwayland():
 
 def get_splash_image() -> QPixmap:
     """Get the splash pixmap from the installed png, failing that, the internal splash svg."""
-    if os.path.isfile(DEFAULT_SPLASH_PNG) and os.access(DEFAULT_SPLASH_PNG, os.R_OK):
-        pixmap = QPixmap()
-        pixmap.load(DEFAULT_SPLASH_PNG)
-        return pixmap
-    return create_pixmap_from_svg_bytes(FALLBACK_SPLASH_SOURCE, 256, 256)
-
+    svg_file = resources_files('vdu_controls') / 'resources' / 'images' / 'vdu_controls.png'
+    pixmap = QPixmap()
+    pixmap.loadFromData(svg_file.read_bytes(), 'PNG')
+    return pixmap
 
 
 
