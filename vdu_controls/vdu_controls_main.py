@@ -4614,8 +4614,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     self.lux_auto_controller.stop_worker()
                     self.lux_auto_controller.lux_slider = None
                 self.stop_any_transitioning_presets()
-                global log_to_syslog
-                log_to_syslog = self.main_config.is_set(ConfOpt.SYSLOG_ENABLED)
+                log_set_syslog(self.main_config.is_set(ConfOpt.SYSLOG_ENABLED))
                 self.create_ddcutil()
                 self.preset_controller.reinitialize()
                 self.main_window.initialise_app_icon()
@@ -4750,10 +4749,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     tr("The change to the {} option requires vdu_controls to restart.").format(tr(setting.conf_name)))
                 return
         self.main_config.reload()
-        global log_debug_enabled
-        global log_to_syslog
-        log_to_syslog = self.main_config.is_set(ConfOpt.SYSLOG_ENABLED)
-        log_debug_enabled = self.main_config.is_set(ConfOpt.DEBUG_ENABLED)
+        log_set_syslog(self.main_config.is_set(ConfOpt.SYSLOG_ENABLED))
+        log_set_debug(self.main_config.is_set(ConfOpt.DEBUG_ENABLED))
         log_info("Reconfiguring due to settings change.")
         self.configure_application()
 
@@ -5290,7 +5287,6 @@ class VduAppWindow(QMainWindow):
 
         self._run_in_gui_thread_qtsignal.connect(_run_in_gui)
 
-        global log_debug_enabled
         if log_debug_enabled:
             for screen in app.screens():
                 log_info("Screen", screen.name())
@@ -5811,11 +5807,9 @@ def main() -> None:
     log_info(f"app-style: {app.style().objectName()} (detected a {'dark' if is_dark_theme() else 'light'} theme)")
 
     args = main_config.parse_global_args()
-    global log_debug_enabled
-    global log_to_syslog
     log_info(f"Logging to {'syslog' if main_config.is_set(ConfOpt.SYSLOG_ENABLED) else 'stdout'}")
-    log_to_syslog = main_config.is_set(ConfOpt.SYSLOG_ENABLED)
-    log_debug_enabled = main_config.is_set(ConfOpt.DEBUG_ENABLED)
+    log_set_syslog(main_config.is_set(ConfOpt.SYSLOG_ENABLED))
+    log_set_debug(main_config.is_set(ConfOpt.DEBUG_ENABLED))
     if args.syslog:
         log_to_syslog = True
     if args.debug:

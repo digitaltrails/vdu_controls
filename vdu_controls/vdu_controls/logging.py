@@ -10,13 +10,13 @@ log_to_syslog = False
 log_debug_enabled = False  # Often used to guard needless computation: log_debug(needless) if log_debug_enabled else None
 
 
-def logging_set_syslog(enable: bool) -> None:
+def log_set_syslog(enable: bool) -> None:
     global log_to_syslog
     log_info("logging: logging to syslog is enabled")
     log_to_syslog = enable
 
 
-def logging_set_debug(enable: bool) -> None:
+def log_set_debug(enable: bool) -> None:
     global log_debug_enabled
     log_warning("logging: debug is enabled")
     log_debug_enabled = enable
