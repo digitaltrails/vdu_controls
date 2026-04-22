@@ -21,7 +21,6 @@ from collections import namedtuple
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import timedelta
-from enum import Enum
 from functools import partial
 from importlib import import_module
 from typing import List, Tuple, Dict, Callable, Any, cast
@@ -69,43 +68,9 @@ def is_running_in_gui_thread() -> bool:
     return QThread.currentThread() == gui_thread
 
 
-class MsgDestination(Enum):
-    DEFAULT = 0
-    COUNTDOWN = 1
-
-
 # Use Linux/UNIX signals to trigger preset changes - 16 presets should be enough for anyone.
-PRESET_SIGNAL_MIN = 40
-PRESET_SIGNAL_MAX = 55
 
 unix_signal_handler: SignalWakeupHandler | None = None
-
-# On Plasma Wayland, the system tray may not be immediately available at login - so keep trying for...
-SYSTEM_TRAY_WAIT_SECONDS = 20
-
-
-# A high resolution image. We will fall back to an internal PNG if this file isn't found on the local system
-DEFAULT_SPLASH_PNG = "/usr/share/icons/hicolor/256x256/apps/vdu_controls.png"
-
-# Internal special exit code used to signal that the exit handler should restart the program.
-EXIT_CODE_FOR_RESTART = 1959
-
-
-IGNORE_VDU_MARKER_STR = 'Ignore VDU'
-
-ASSUMED_CONTROLS_CONFIG_VCP_CODES = ['10', '12']
-ASSUMED_CONTROLS_CONFIG_TEXT = ('\n'
-                                'capabilities-override = Model: unknown\n'
-                                '	MCCS version: 2.2\n'
-                                '	Commands:\n'
-                                '       Command: 01 (VCP Request)\n'
-                                '       Command: 02 (VCP Response)\n'
-                                '       Command: 03 (VCP Set)\n'
-                                '	VCP Features:\n'
-                                '	   Feature: 10 (Brightness)\n'
-                                '	   Feature: 12 (Contrast)\n'
-                                '	   Feature: 60 (Input Source)')
-
 
 
 
