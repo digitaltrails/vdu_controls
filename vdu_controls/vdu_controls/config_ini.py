@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import List, Tuple, Dict, Any
 
 from vdu_controls.constants import CONFIG_DIR_PATH, VDU_CONTROLS_VERSION, APPNAME
-from vdu_controls.ddcutil import Ddcutil
+from vdu_controls.ddcutil_aggregator import DdcutilAggregator
 from vdu_controls.ddcutil_abstract import CON, BRIT, CONT, SNC
 from vdu_controls.internationalization import tr
 from vdu_controls.logging import *
@@ -230,7 +230,7 @@ SUPPORT_ALL_VCP = False
 # Maps of controls supported by name on the command line and in config files.
 SUPPORTED_VCP_BY_CODE: Dict[str, VcpCapability] = {
     **{code: VcpCapability(code, name, retry_setvcp=False)
-       for code, name in (Ddcutil().get_supported_vcp_codes_map().items() if SUPPORT_ALL_VCP else [])},
+       for code, name in (DdcutilAggregator().get_supported_vcp_codes_map().items() if SUPPORT_ALL_VCP else [])},
     **{
         BRIT: VcpCapability(BRIT, QT_TR_NOOP('brightness'), CON, icon_source=BRIGHTNESS_SVG, enabled=True, can_transition=True),
         CONT: VcpCapability(CONT, QT_TR_NOOP('contrast'), CON, icon_source=CONTRAST_SVG, enabled=True, can_transition=True),

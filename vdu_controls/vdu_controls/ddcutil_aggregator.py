@@ -17,8 +17,12 @@ from vdu_controls.logging import *
 VduStableId = NewType('VduStableId', str)
 
 
-class Ddcutil:
-    """Interface to the abstracted ddcutil service"""
+class DdcutilAggregator:
+    """
+    Routes operations to relevant DccutilInterface instances and aggregates the results.
+    For example, a "detect" might be routed to all instances, such as DdcutilDbusImpl and
+    DdcutilPanelImpl, with the results aggregated together.
+    """
     vcp_write_counters: Dict[str, int] = {}
 
     def __init__(self, common_args: List[str] | None = None, prefer_dbus_client: bool = True,
@@ -91,7 +95,7 @@ class Ddcutil:
 
     def get_write_count(self, vdu_number: str) -> int:
         if edid_txt := self.get_edid_txt(vdu_number):
-            return Ddcutil.vcp_write_counters.get(edid_txt, 0)
+            return DdcutilAggregator.vcp_write_counters.get(edid_txt, 0)
         return 0
 
     def detect_vdus(self) -> List[Tuple[str, str, str, str]]:
@@ -182,7 +186,7 @@ class Ddcutil:
         for attempt_count in range(DDCUTIL_RETRIES):
             try:
                 impl.set_vcp(edid_txt, int(vcp_code, 16), new_value)
-                Ddcutil.vcp_write_counters[edid_txt] = Ddcutil.vcp_write_counters.get(edid_txt, 0) + 1
+                DdcutilAggregator.vcp_write_counters[edid_txt] = DdcutilAggregator.vcp_write_counters.get(edid_txt, 0) + 1
                 log_debug(f"set_vcp: {vdu_number=} {vcp_code=} {new_value=}")
                 return
             except (subprocess.SubprocessError, DdcutilDisplayNotFound, ValueError) as e:

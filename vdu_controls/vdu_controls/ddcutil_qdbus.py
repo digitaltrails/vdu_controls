@@ -8,15 +8,19 @@ from typing import Dict, Tuple, Callable, List, Any
 
 from vdu_controls.qt_imports import QObject
 
-from vdu_controls.ddcutil_abstract import DdcutilServiceNotFound, DdcutilDisplayNotFound, DdcutilBase
+from vdu_controls.ddcutil_abstract import DdcutilServiceNotFound, DdcutilDisplayNotFound, DdcutilInterface
 from vdu_controls.logging import *
 from vdu_controls.misc import intV
 from vdu_controls.qt_imports import (QDBusArgument, QDBusInterface, QMetaType, QDBusConnection,
                                      QDBusVariant, QDBusMessage, pyqtSlot)
 
 
-class DdcutilDBusImpl(QObject):
-
+class DdcutilDBusImpl(QObject, DdcutilInterface):
+    """
+    Uses the DBus ddcutil-service as a fast interface to libddcutil.
+    Fast: service calls have a low overheads because the backing service
+    does the expensive initialization once at startup.
+    """
     RETURN_RAW_VALUES = 2
     _metadata_cache: Dict[Tuple[str, int], Tuple[bool, bool]] = {}
     _current_connected_displays_changed_handler: Callable | None = None  # Only one instance and listener should exist at a time

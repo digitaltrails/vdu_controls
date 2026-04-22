@@ -27,7 +27,7 @@ from typing import List, Tuple, Dict, Callable, Any, cast
 
 from vdu_controls.config_ini import ConfIni, ConfOpt, VduControlsConfig, SUPPORTED_VCP_BY_CODE, VcpCapability, GeoLocation
 from vdu_controls.constants import *
-from vdu_controls.ddcutil import Ddcutil, VduStableId
+from vdu_controls.ddcutil_aggregator import DdcutilAggregator, VduStableId
 from vdu_controls.ddcutil_abstract import VcpOrigin, VcpValue, DdcutilDisplayNotFound, CONTINUOUS_TYPE, \
     COMPLEX_NON_CONTINUOUS_TYPE, BRIGHTNESS_VCP_CODE, CONTRAST_VCP_CODE, SIMPLE_NON_CONTINUOUS_TYPE, DdcEventType, \
     DdcutilServiceNotFound
@@ -160,7 +160,7 @@ class VduController(QObject):
     _async_setvcp_task: VduControllerAsyncSetter | None = None
 
     def __init__(self, vdu_number: str, vdu_model_name: str, serial_number: str, manufacturer: str,
-                 default_config: VduControlsConfig, ddcutil: Ddcutil, edit_config: Callable,
+                 default_config: VduControlsConfig, ddcutil: DdcutilAggregator, edit_config: Callable,
                  vdu_exception_handler: Callable, remedy: int = 0) -> None:
         super().__init__()
         self.no_longer_in_use = False
@@ -4399,7 +4399,7 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
         else:
             about_text = ABOUT_TEXT
         if self.main_controller and self.main_controller.ddcutil:
-            counts_str = ','.join((str(v) for v in Ddcutil.vcp_write_counters.values())) if len(Ddcutil.vcp_write_counters) else '0'
+            counts_str = ','.join((str(v) for v in DdcutilAggregator.vcp_write_counters.values())) if len(DdcutilAggregator.vcp_write_counters) else '0'
             about_text += (f"<hr><p><small>desktop: {os.environ.get('XDG_CURRENT_DESKTOP', default='unknown')}; "
                            f"platform: {os.environ.get('XDG_SESSION_TYPE', default='unknown')} "
                            f"({QApplication.platformName()}, qt-{QtCore.qVersion()});<br/>"
@@ -4428,7 +4428,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         self.find_vdu_config_files()
         self.application_lock = threading.RLock()  # thread level, thread-safe, access lock
         self.main_config = main_config
-        self.ddcutil: Ddcutil | None = None
+        self.ddcutil: DdcutilAggregator | None = None
         self.main_window: VduAppWindow | None = None
         self.vdu_controllers_map: Dict[VduStableId, VduController] = {}
         self.preset_controller = PresetController()
@@ -4526,9 +4526,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             change_handler = None  # This will force disabling the eventing/polling inside the server, not just the client.
 
         try:
-            self.ddcutil = Ddcutil(common_args=self.main_config.get_ddcutil_extra_args(),
-                                   prefer_dbus_client=self.main_config.is_set(ConfOpt.DBUS_CLIENT_ENABLED),
-                                   connected_vdus_changed_callback=change_handler)
+            self.ddcutil = DdcutilAggregator(common_args=self.main_config.get_ddcutil_extra_args(),
+                                             prefer_dbus_client=self.main_config.is_set(ConfOpt.DBUS_CLIENT_ENABLED),
+                                             connected_vdus_changed_callback=change_handler)
             if self.main_config.is_set(ConfOpt.LAPTOP_PANEL_ENABLED):
                 try:
                     self.ddcutil.add_ddcutil_emulator(DdcutilPanelImpl(callback=change_handler))

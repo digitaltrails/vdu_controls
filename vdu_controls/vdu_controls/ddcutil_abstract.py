@@ -48,8 +48,11 @@ class DdcutilDisplayNotFound(Exception):
 
 # Cannot make this ABC - will conflict with QObject in the dbus implementation
 # Plain interface class
-class DdcutilBase:
-    
+class DdcutilInterface:
+    """
+    Defines the interface for Ddcutil-like implementations.  Implementors
+    may use real ddcutil implementations or emulate a ddcutil-like interface.
+    """
     def refresh_connection(self):
         raise NotImplementedError
 
