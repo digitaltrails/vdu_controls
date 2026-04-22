@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2021-2026 Michael Hamilton
+# SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls>
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
@@ -16,12 +16,11 @@ from vdu_controls.qt_imports import QVBoxLayout, QTabWidget, QStatusBar, QFrame,
 
 from vdu_controls.config_ini import VduControlsConfig, ConfIni, ConfOpt, ConfType, ConfSec
 from vdu_controls.constants import IP_ADDRESS_INFO_URL, CONFIG_FILE_PREFER_QT5
-from vdu_controls.dialog_singleton import DialogSingletonMixin
 from vdu_controls.icon_utils import si, StdPixmap
 from vdu_controls.internationalization import tr, translate_option
 from vdu_controls.logging import log_warning
 from vdu_controls.scaling import npx, native_font_height
-from vdu_controls.widgets import SubWinDialog, StdButton, MBox, MIcon, MBtn, FasterFileDialog, alter_margins
+from vdu_controls.widgets import SubWinDialog, StdButton, MBox, MIcon, MBtn, FasterFileDialog, alter_margins, DialogSingletonMixin
 
 
 def flag_qt_version_preference(config: ConfIni) -> None:  # use a flag file to work around the chicken-and-egg issue at startup.

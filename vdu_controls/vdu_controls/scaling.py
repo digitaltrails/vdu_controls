@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2021-2026 Michael Hamilton
+# SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls>
 # SPDX-License-Identifier: GPL-3.0-or-later
 from vdu_controls.qt_imports import QFontMetrics, QLabel
 from vdu_controls.logging import log_info

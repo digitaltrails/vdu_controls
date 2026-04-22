@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# SPDX-FileCopyrightText: 2021-2026 Michael Hamilton
+# SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls>
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
@@ -34,7 +34,6 @@ from vdu_controls.ddcutil_abstract import VcpOrigin, VcpValue, DdcutilDisplayNot
     DdcutilServiceNotFound
 from vdu_controls.ddcutil_emulator import DdcutilEmulatorImpl
 from vdu_controls.ddcutil_laptop_panel import DdcutilPanelImpl
-from vdu_controls.dialog_singleton import DialogSingletonMixin
 from vdu_controls.help import HelpDialog
 from vdu_controls.icon_utils import ThemeType, polychrome_light_or_dark, SVG_LIGHT_THEME_COLOR
 from vdu_controls.icon_utils import create_pixmap_from_svg_bytes, create_image_from_svg_bytes, \
@@ -55,7 +54,7 @@ from vdu_controls.svg import *
 from vdu_controls.unicode import *
 from vdu_controls.weather import WeatherQuery
 from vdu_controls.widgets import StdButton, SubWinDialog, ThemedSvgWidget, TitleButton, ThemedSvgButton, MIcon, MBox, MBtn, \
-    FasterFileDialog, PushButtonLeftJustified, ClickableSlider, LineEditAll, alter_margins
+    FasterFileDialog, PushButtonLeftJustified, ClickableSlider, LineEditAll, alter_margins, DialogSingletonMixin
 from vdu_controls.work_scheduler import WorkerThread, ScheduleWorker, thread_pid, SchedulerJob, SchedulerJobType, WorkException
 
 Shortcut = namedtuple('Shortcut', ['letter', 'annotated_word'])
@@ -135,7 +134,7 @@ def get_splash_image() -> QPixmap:
         pixmap = QPixmap()
         pixmap.load(DEFAULT_SPLASH_PNG)
         return pixmap
-    return create_pixmap_from_svg_bytes(FALLBACK_SPLASH_SVG, 256, 256)
+    return create_pixmap_from_svg_bytes(FALLBACK_SPLASH_SOURCE, 256, 256)
 
 
 
@@ -5458,7 +5457,7 @@ class VduAppWindow(QMainWindow):
             self.tray_icon = create_icon_from_path(CUSTOM_TRAY_ICON_FILE, tray_theme_type)
         elif tray_theme_type in (ThemeType.MONOCHROME_LIGHT, ThemeType.MONOCHROME_DARK):  # Special tray monochrome version
             log_info(f"Using monochrome app_icon: {tray_theme_type=}")
-            self.tray_icon = create_icon_from_svg_bytes(MONOCHROME_APP_ICON, tray_theme_type)
+            self.tray_icon = create_icon_from_svg_bytes(MONOCHROME_APP_ICON_SOURCE, tray_theme_type)
         else:  # non-themed color icon based on the splash screen image
             self.tray_icon = self.app_icon
 

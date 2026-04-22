@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2021-2026 Michael Hamilton
+# SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls>
 # SPDX-License-Identifier: GPL-3.0-or-later
 """
 vdu_controls - a DDC control panel for monitors
@@ -886,12 +886,12 @@ with this program. If not, see https://www.gnu.org/licenses/.
 """
 import re
 
-from vdu_controls.dialog_singleton import DialogSingletonMixin
 from vdu_controls.icon_utils import StdPixmap, si
 from vdu_controls.internationalization import tr
 from vdu_controls.qt_imports import QVBoxLayout, QSize, QTextEdit, Qt
 from vdu_controls.scaling import npx
-from vdu_controls.widgets import SubWinDialog, StdButton
+from vdu_controls.widgets import SubWinDialog, StdButton, DialogSingletonMixin
+
 
 class HelpDialog(SubWinDialog, DialogSingletonMixin):
 
