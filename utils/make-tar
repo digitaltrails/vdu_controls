@@ -1,5 +1,6 @@
 #!/bin/bash
-
+# SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls>
+# SPDX-License-Identifier: GPL-3.0-or-later
 if [ $# -ne 2 ]
 then
     echo "ERROR: please supply version parameter, e.g. 1.5.1 [git|local]"

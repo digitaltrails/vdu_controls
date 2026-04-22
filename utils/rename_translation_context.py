@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 import sys
-
+# SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls>
+# SPDX-License-Identifier: GPL-3.0-or-later
 """
 Change context name: python3 set_context_translations from_name to_name filename.ts
 """
