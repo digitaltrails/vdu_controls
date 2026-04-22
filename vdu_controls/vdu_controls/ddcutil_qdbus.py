@@ -6,13 +6,17 @@ from datetime import time
 from threading import Lock
 from typing import Dict, Tuple, Callable, List, Any
 
-from vdu_controls.ddcutil_abstract import DdcutilServiceNotFound, DdcutilDisplayNotFound
+from vdu_controls.qt_imports import QObject
+
+from vdu_controls.ddcutil_abstract import DdcutilServiceNotFound, DdcutilDisplayNotFound, DdcutilBase
 from vdu_controls.logging import *
 from vdu_controls.misc import intV
-from vdu_controls.qt_imports import (QObject, QDBusArgument, QDBusInterface, QMetaType, QDBusConnection,
+from vdu_controls.qt_imports import (QDBusArgument, QDBusInterface, QMetaType, QDBusConnection,
                                      QDBusVariant, QDBusMessage, pyqtSlot)
 
+
 class DdcutilDBusImpl(QObject):
+
     RETURN_RAW_VALUES = 2
     _metadata_cache: Dict[Tuple[str, int], Tuple[bool, bool]] = {}
     _current_connected_displays_changed_handler: Callable | None = None  # Only one instance and listener should exist at a time
@@ -181,6 +185,9 @@ class DdcutilDBusImpl(QObject):
                 "GetMultipleVcp", -1, edid_txt, vcp_code_array, QDBusArgument(DdcutilDBusImpl.RETURN_RAW_VALUES,
                                                                               intV(QMetaType.Type.UInt))))[0]
             return [(int.from_bytes(vcp, 'big'), value, maximum, text_val) for vcp, value, maximum, text_val in raw]
+
+    def vcp_info(self):
+        pass
 
     def _validate(self, result: QDBusMessage) -> List:
         if result.errorName():

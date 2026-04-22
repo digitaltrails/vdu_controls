@@ -10,12 +10,11 @@ from threading import Lock
 from typing import Dict, List, Tuple, Any
 
 from vdu_controls.ddcutil_abstract import DDCUTIL_RETRIES, VcpValue, CONTINUOUS_TYPE, SIMPLE_NON_CONTINUOUS_TYPE, \
-    COMPLEX_NON_CONTINUOUS_TYPE, DdcutilDisplayNotFound
+    COMPLEX_NON_CONTINUOUS_TYPE, DdcutilDisplayNotFound, DdcutilBase
 from vdu_controls.logging import *
 
 
-
-class DdcutilExeImpl:
+class DdcutilExeImpl(DdcutilBase):
     _VCP_CODE_REGEXP = re.compile(r"^VCP ([0-9A-F]{2}) ")  # VCP 2-digit-hex
     _C_PATTERN = re.compile(r'([0-9]+) ([0-9]+)')  # Match Continuous-Type getvcp result
     _SNC_PATTERN = re.compile(r'x([0-9a-f]+)')  # Match Simple Non-Continuous-Type getvcp result

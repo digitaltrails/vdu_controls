@@ -9,14 +9,14 @@ from threading import Lock
 from typing import List, Callable, Dict, Any, Tuple
 
 from vdu_controls.constants import VDU_CONTROLS_DEVELOPER
-from vdu_controls.ddcutil_abstract import BRIGHTNESS_VCP_CODE
+from vdu_controls.ddcutil_abstract import BRIGHTNESS_VCP_CODE, DdcutilBase
 from vdu_controls.ddcutil_abstract import DDCUTIL_RETRIES, CONTINUOUS_TYPE, DdcEventType, DdcutilDisplayNotFound
 from vdu_controls.ddcutil_exe import DdcutilExeImpl
 from vdu_controls.logging import *
 from vdu_controls.qt_imports import QTimer, QSocketNotifier
 
 
-class DdcutilPanelImpl:  # Laptop/builtin panel
+class DdcutilPanelImpl(DdcutilBase):  # Laptop/builtin panel
 
     def __init__(self, _: List[str] | None = None, callback: Callable | None = None):
         self.include_leds = VDU_CONTROLS_DEVELOPER  # Test using desktop controllable LEDs
