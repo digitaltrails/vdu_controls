@@ -25,7 +25,6 @@ from enum import Enum
 from functools import partial
 from importlib import import_module
 from typing import List, Tuple, Dict, Callable, Any, cast
-from importlib.resources import files as resources_files
 
 from vdu_controls.config_ini import ConfIni, ConfOpt, VduControlsConfig, SUPPORTED_VCP_BY_CODE, VcpCapability, GeoLocation
 from vdu_controls.constants import *
@@ -35,15 +34,16 @@ from vdu_controls.ddcutil_abstract import VcpOrigin, VcpValue, DdcutilDisplayNot
     DdcutilServiceNotFound
 from vdu_controls.ddcutil_emulator import DdcutilEmulatorImpl
 from vdu_controls.ddcutil_laptop_panel import DdcutilPanelImpl
+from vdu_controls.greyscale import GreyScaleDialog
 from vdu_controls.help import HelpDialog
-from vdu_controls.icon_utils import ThemeType, polychrome_light_or_dark, SVG_LIGHT_THEME_COLOR
-from vdu_controls.icon_utils import create_pixmap_from_svg_bytes, create_image_from_svg_bytes, \
+from vdu_controls.icon_utils import ThemeType, polychrome_light_or_dark, SVG_LIGHT_THEME_COLOR, get_splash_image
+from vdu_controls.icon_utils import create_image_from_svg_bytes, \
     create_icon_from_svg_bytes, create_icon_from_path, create_decorated_app_icon, StdPixmap, \
     is_dark_theme, si
 from vdu_controls.installer import install_as_desktop_application
 from vdu_controls.internationalization import tr, initialise_locale_translations, find_locale_specific_file, translate_option
 from vdu_controls.logging import *
-from vdu_controls.misc import intV, zoned_now, proper_name
+from vdu_controls.misc import intV, zoned_now, proper_name, clamp
 from vdu_controls.preset import Preset, PresetScheduleStatus, PresetTransitionFlag
 from vdu_controls.qt_imports import *
 from vdu_controls.release import release_notes
@@ -55,7 +55,7 @@ from vdu_controls.svg import *
 from vdu_controls.unicode import *
 from vdu_controls.weather import WeatherQuery
 from vdu_controls.widgets import StdButton, SubWinDialog, ThemedSvgWidget, TitleButton, ThemedSvgButton, MIcon, MBox, MBtn, \
-    FasterFileDialog, PushButtonLeftJustified, ClickableSlider, LineEditAll, alter_margins, DialogSingletonMixin
+    FasterFileDialog, PushButtonLeftJustified, ClickableSlider, LineEditAll, alter_margins, DialogSingletonMixin, ToolButton
 from vdu_controls.work_scheduler import WorkerThread, ScheduleWorker, thread_pid, SchedulerJob, SchedulerJobType, WorkException
 
 Shortcut = namedtuple('Shortcut', ['letter', 'annotated_word'])
@@ -127,22 +127,6 @@ def reverse_force_xwayland():
     elif original_qt_qpa_platform == '':  # Will be '' if force_xwayland() has been called, otherwise it will be None
         log_info(f"Removing environment variable QT_QPA_PLATFORM")
         os.environ.pop('QT_QPA_PLATFORM')  # before the call to force_xwayland() it did not previously exist, remove it.
-
-
-def get_splash_image() -> QPixmap:
-    """Get the splash pixmap from the installed png, failing that, the internal splash svg."""
-    svg_file = resources_files('vdu_controls') / 'resources' / 'images' / 'vdu_controls.png'
-    pixmap = QPixmap()
-    pixmap.loadFromData(svg_file.read_bytes(), 'PNG')
-    return pixmap
-
-
-
-def clamp(v: int, min_v: int, max_v: int) -> int:
-    return max(min(max_v, v), min_v)
-
-
-
 
 
 class VduControllerAsyncSetter(WorkerThread):  # Used to decouple the set-vcp from the GUI
@@ -843,56 +827,6 @@ class ContextMenu(QMenu):
     def shortcut_list(self, primary: str | QKeySequence, extra: str | QKeySequence | None = None) -> List[str | QKeySequence]:
         shortcuts = [primary] + ([extra] if extra else [])
         return ([''] + shortcuts) if self.hide_shortcuts else shortcuts  # Empty string causes shortcuts to be hidden.
-
-
-class ToolButton(QToolButton):
-    def __init__(self, svg_source: bytes, tip: str | None = None, parent: QWidget | None = None):
-        super().__init__(parent)
-        if tip is not None:
-            self.setToolTip(tip)
-        self.svg_source = svg_source
-        self._original_icon = None
-        self._busy_timer = QTimer(self)
-        self._busy_timer.timeout.connect(self._update_busy_icon)
-        self._busy_angle = 0
-        self._busy_now = False
-        self.refresh_icon()
-
-    def refresh_icon(self, svg_source: bytes | None = None):
-        if svg_source is not None:
-            self.svg_source = svg_source
-        self._original_icon = create_icon_from_svg_bytes(self.svg_source)  # Store the original icon so we can restore it later
-        if not self._busy_now:
-            self.setIcon(self._original_icon)
-
-    def setBusy(self, busy: bool):  # Start or stop the busy spinner animation.
-        if busy == self._busy_now:
-            return
-        self._busy_now = busy
-        if busy:  # Start spinning
-            self._busy_angle = 0
-            self._busy_timer.start(30)  # ~33 fps
-        else:  # Stop spinning and restore original icon
-            self._busy_timer.stop()
-            self.setIcon(self._original_icon)
-
-    def _update_busy_icon(self):
-        size = self.iconSize()  # Use the button's icon size (or a default size if none)
-        if size.width() <= 0 or size.height() <= 0:
-            size = self.size()  # fallback to button size
-        pixmap = QPixmap(size)
-        pixmap.fill(Qt.GlobalColor.transparent)
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        if QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING:
-            painter.setRenderHint(QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING)
-        pen_width = max(npx(2), size.width() // 10)  # Determine a good pen width relative to size
-        painter.setPen(QPen(self.palette().buttonText().color(), pen_width, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
-        rect = QRect(0, 0, size.width(), size.height()).adjusted(margin := pen_width // npx(2) + npx(1), margin, -margin, -margin)
-        painter.drawArc(rect, self._busy_angle * 16, 270 * 16)  # Draw the rotating arc (270 degrees)
-        painter.end()
-        self.setIcon(QIcon(pixmap))
-        self._busy_angle = (self._busy_angle + 8) % 360  # Advance the angle for the next frame
 
 
 class VduMainToolBar(QToolBar):
@@ -4459,43 +4393,6 @@ class LuxAmbientSlider(QWidget):
                     self.blockSignals(False)
                 if icon_changed:
                     self.status_icon_changed_qtsignal.emit()
-
-
-class GreyScaleDialog(SubWinDialog):
-    """Creates a dialog with a grey scale VDU calibration image.  Non-model. Have as many as you like - one per VDU."""
-
-    # This stops garbage-collection of independent instances of this dialog until the user closes them.
-    # If we don't do this, the dialog will disappear before it becomes visible. We could also pass a parent
-    # which would achieve the same thing, but would alter where the dialog appears.
-    _active_list: List[QDialog] = []
-
-    def __init__(self) -> None:
-        super().__init__()
-        GreyScaleDialog._active_list.append(self)
-        layout = QVBoxLayout()
-        self.setLayout(layout)
-        self.setWindowTitle(tr('Grey Scale Reference'))
-        self.setModal(False)
-        svg_widget = QSvgWidget()
-        svg_widget.renderer().load(GREY_SCALE_SVG)
-        svg_widget.setMinimumSize(npx(600), npx(400))
-        svg_widget.setToolTip(tr(
-            'Grey Scale Reference for VDU adjustment.\n\n'
-            'Set contrast toward the maximum (for HDR monitors\n'
-            'try something lower such as 70%) and adjust brightness\n'
-            'until as many rectangles as possible can be perceived.\n\n'
-            'Use the content-menu to create additional charts and\n'
-            'drag them onto each display.\n\nThis chart is resizable. '))
-        layout.addWidget(svg_widget)
-        close_button = StdButton(icon=si(self, StdPixmap.SP_DialogCloseButton), title=tr("Close"), clicked=self.hide)
-        layout.addWidget(close_button, 0, Qt.AlignmentFlag.AlignRight)
-        self.show()
-        self.raise_()
-        self.activateWindow()
-
-    def closeEvent(self, event) -> None:
-        GreyScaleDialog._active_list.remove(self)
-        event.accept()
 
 
 class AboutDialog(QMessageBox, DialogSingletonMixin):

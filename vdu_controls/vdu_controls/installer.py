@@ -8,7 +8,7 @@ from pathlib import Path
 
 from vdu_controls.constants import APPNAME
 from vdu_controls.logging import *
-from vdu_controls_main import get_splash_image
+from vdu_controls.icon_utils import get_splash_image
 
 
 def install_as_desktop_application(uninstall: bool = False) -> None:

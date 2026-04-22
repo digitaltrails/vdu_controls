@@ -1,5 +1,7 @@
 # SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls>
 # SPDX-License-Identifier: GPL-3.0-or-later
+from __future__ import annotations
+
 import re
 from datetime import datetime, timedelta
 from enum import Enum
@@ -22,3 +24,7 @@ def zoned_now(rounded_to_minute: bool = False) -> datetime:
 
 def proper_name(*args) -> str:
     return re.sub(r'[^A-Za-z0-9._-]', '_', '_'.join([arg.strip() for arg in args]))
+
+
+def clamp(v: int, min_v: int, max_v: int) -> int:
+    return max(min(max_v, v), min_v)

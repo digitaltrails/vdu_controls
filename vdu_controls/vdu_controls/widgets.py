@@ -1,12 +1,19 @@
 # SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls>
 # SPDX-License-Identifier: GPL-3.0-or-later
+from __future__ import annotations
+
 import os
 from typing import Callable, Any, Tuple, Dict, Type
+
+from PyQt5.QtCore import QTimer, Qt, QRect
+from PyQt5.QtGui import QPixmap, QPainter, QPen, QIcon
+from PyQt5.QtWidgets import QToolButton, QWidget
 
 from vdu_controls.logging import *
 from vdu_controls.constants import RESIZABLE_MESSAGEBOX_HACK, APPNAME
 from vdu_controls.icon_utils import polychrome_light_or_dark, handle_theme, create_icon_from_svg_bytes
 from vdu_controls.qt_imports import *
+from vdu_controls.qt_imports import QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING
 from vdu_controls.scaling import native_font_height, npx
 
 def alter_margins(target: QWidget | QLayout,
@@ -238,3 +245,53 @@ class DialogSingletonMixin:
     @classmethod
     def get_instance(cls: Type) -> 'DialogSingletonMixin | None':
         return DialogSingletonMixin._dialogs_map.get(cls.__name__)
+
+
+class ToolButton(QToolButton):
+    def __init__(self, svg_source: bytes, tip: str | None = None, parent: QWidget | None = None):
+        super().__init__(parent)
+        if tip is not None:
+            self.setToolTip(tip)
+        self.svg_source = svg_source
+        self._original_icon = None
+        self._busy_timer = QTimer(self)
+        self._busy_timer.timeout.connect(self._update_busy_icon)
+        self._busy_angle = 0
+        self._busy_now = False
+        self.refresh_icon()
+
+    def refresh_icon(self, svg_source: bytes | None = None):
+        if svg_source is not None:
+            self.svg_source = svg_source
+        self._original_icon = create_icon_from_svg_bytes(self.svg_source)  # Store the original icon so we can restore it later
+        if not self._busy_now:
+            self.setIcon(self._original_icon)
+
+    def setBusy(self, busy: bool):  # Start or stop the busy spinner animation.
+        if busy == self._busy_now:
+            return
+        self._busy_now = busy
+        if busy:  # Start spinning
+            self._busy_angle = 0
+            self._busy_timer.start(30)  # ~33 fps
+        else:  # Stop spinning and restore original icon
+            self._busy_timer.stop()
+            self.setIcon(self._original_icon)
+
+    def _update_busy_icon(self):
+        size = self.iconSize()  # Use the button's icon size (or a default size if none)
+        if size.width() <= 0 or size.height() <= 0:
+            size = self.size()  # fallback to button size
+        pixmap = QPixmap(size)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        if QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING:
+            painter.setRenderHint(QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING)
+        pen_width = max(npx(2), size.width() // 10)  # Determine a good pen width relative to size
+        painter.setPen(QPen(self.palette().buttonText().color(), pen_width, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+        rect = QRect(0, 0, size.width(), size.height()).adjusted(margin := pen_width // npx(2) + npx(1), margin, -margin, -margin)
+        painter.drawArc(rect, self._busy_angle * 16, 270 * 16)  # Draw the rotating arc (270 degrees)
+        painter.end()
+        self.setIcon(QIcon(pixmap))
+        self._busy_angle = (self._busy_angle + 8) % 360  # Advance the angle for the next frame

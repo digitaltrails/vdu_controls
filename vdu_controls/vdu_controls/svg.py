@@ -53,17 +53,4 @@ TRANSITION_ICON_SOURCE = load_svg_source('transition_icon.svg')
 
 SWATCH_ICON_SOURCE = load_svg_source('swatch_icon.svg')
 
-# Creates an SVG of grey rectangles typical of the sort used for VDU calibration.
-GREY_SCALE_SVG = f'''
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1"  width="256" height="152" viewBox="0 0 256 152">
-    <rect width="256" height="152" x="0" y="0" style="fill:rgb(128,128,128);stroke-width:0;" />
-    {"".join(
-    [f'<rect width="16" height="32" x="{x}" y="38" style="fill:rgb({v},{v},{v});stroke-width:0;" />'
-     for x, v in list(zip([x + 48 for x in range(0, 160, 16)], [v for v in range(0, 120, 12)]))]
-)}
-    {"".join(
-    [f'<rect width="16" height="32" x="{x}" y="80" style="fill:rgb({v},{v},{v});stroke-width:0;" />'
-     for x, v in list(zip([x + 48 for x in range(0, 160, 16)], [v for v in range(147, 256, 12)]))]
-)}
-</svg>
-'''.encode()
+

@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from enum import Enum
+from importlib.resources import files as resources_files
 from pathlib import Path
 from typing import Dict
 
 from vdu_controls.qt_imports import *
-
 
 mono_light_tray = False
 
@@ -135,3 +135,11 @@ def is_dark_theme() -> bool:
 
 def polychrome_light_or_dark():
     return ThemeType.POLYCHROME_DARK if is_dark_theme() else ThemeType.POLYCHROME_LIGHT
+
+
+def get_splash_image() -> QPixmap:
+    """Get the splash pixmap from the installed png, failing that, the internal splash svg."""
+    svg_file = resources_files('vdu_controls') / 'resources' / 'images' / 'vdu_controls.png'
+    pixmap = QPixmap()
+    pixmap.loadFromData(svg_file.read_bytes(), 'PNG')
+    return pixmap
