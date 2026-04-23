@@ -30,7 +30,8 @@ from vdu_controls.icon_utils import create_icon_from_svg_bytes, create_icon_from
 from vdu_controls.installer import install_as_desktop_application
 from vdu_controls.internationalization import tr, initialise_locale_translations, find_locale_specific_file
 from vdu_controls.logging import *
-from vdu_controls.lux_module import LuxDialog, LuxAutoController
+from vdu_controls.lux_auto import LuxAutoController
+from vdu_controls.lux_dialog import LuxDialog
 from vdu_controls.lux_meters import LuxMeterSemiAutoDevice
 from vdu_controls.misc import zoned_now, proper_name
 from vdu_controls.preset import Preset, PresetScheduleStatus, PresetTransitionFlag
