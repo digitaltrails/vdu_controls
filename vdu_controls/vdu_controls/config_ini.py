@@ -20,7 +20,7 @@ from vdu_controls.ddcutil_abstract import CON, BRIT, CONT, SNC
 from vdu_controls.ddcutil_aggregator import DdcutilAggregator
 from vdu_controls.installer import install_as_desktop_application
 from vdu_controls.internationalization import tr
-from vdu_controls.logging import *
+import vdu_controls.logging as log
 from vdu_controls.misc import zoned_now
 from vdu_controls.qt_imports import QT_TR_NOOP
 from vdu_controls.svg import BRIGHTNESS_SVG, CONTRAST_SVG, VOLUME_SVG, COLOR_TEMPERATURE_SVG
@@ -41,7 +41,7 @@ class ConfIni(configparser.ConfigParser):
             try:
                 return tuple(int(i) for i in version.split('.'))
             except ValueError:
-                log_error(f"Illegal version number {version} should be i.j.k where i, j and k are integers.", trace=True)
+                log.error(f"Illegal version number {version} should be i.j.k where i, j and k are integers.", trace=True)
         return 1, 6, 0
 
     def save(self, config_path) -> None:
@@ -51,7 +51,7 @@ class ConfIni(configparser.ConfigParser):
             self[ConfOpt.METADATA_VERSION_OPTION.conf_section][ConfOpt.METADATA_VERSION_OPTION.conf_name] = VDU_CONTROLS_VERSION
             self[ConfOpt.METADATA_TIMESTAMP_OPTION.conf_section][ConfOpt.METADATA_TIMESTAMP_OPTION.conf_name] = str(zoned_now())
             self.write(config_file)
-        log_info(f"Wrote config to {config_path.as_posix()}")
+        log.info(f"Wrote config to {config_path.as_posix()}")
 
     def duplicate(self, new_ini=None) -> ConfIni:
         if new_ini is None:
@@ -317,10 +317,10 @@ class VduControlsConfig:
                 if option_name in SUPPORTED_VCP_BY_PROPERTY_NAME and \
                         SUPPORTED_VCP_BY_PROPERTY_NAME[option_name].vcp_code not in supported_by_this_vdu:
                     del self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS][option_name]
-                    log_debug(f"Removed {self.config_name} {option_name} - not supported by VDU") if log_debug_enabled else None
+                    log.debug(f"Removed {self.config_name} {option_name} - not supported by VDU") if log.debug_enabled else None
                 elif option_name.startswith('unsupported-') and option_name[len('unsupported-'):] not in supported_by_this_vdu:
                     del self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS][option_name]
-                    log_debug(f"Removed {self.config_name} {option_name} - not supported by VDU") if log_debug_enabled else None
+                    log.debug(f"Removed {self.config_name} {option_name} - not supported by VDU") if log.debug_enabled else None
 
     def get_vdu_preferred_name(self):
         custom_name = self.ini_content.get(*ConfOpt.VDU_NAME.conf_id, fallback=None)
@@ -333,7 +333,7 @@ class VduControlsConfig:
         if option.cmdline_var is not None and option.cmdline_var in arg_values and arg_values[option.cmdline_var] is not None:
             str_value = str(arg_values[option.cmdline_var])
             if str_value != self.ini_content[option.conf_section][option.conf_name]:
-                log_warning(f"command-line {option.cmdline_arg}={str_value} overrides {option.conf_section}.{option.conf_name}="
+                log.warning(f"command-line {option.cmdline_arg}={str_value} overrides {option.conf_section}.{option.conf_name}="
                             f"{self.ini_content[option.conf_section][option.conf_name]} (in {self.file_path})")
                 self.ini_content[option.conf_section][option.conf_name] = str_value
 
@@ -372,7 +372,7 @@ class VduControlsConfig:
                 if code not in enabled_vcp_codes:
                     enabled_vcp_codes.append(code)
                 else:
-                    log_warning(f"supported enabled vcp_code {code} is redundantly listed "
+                    log.warning(f"supported enabled vcp_code {code} is redundantly listed "
                                 f"in enabled_vcp_codes ({enable_codes_str})")
         return enabled_vcp_codes
 
@@ -384,7 +384,7 @@ class VduControlsConfig:
             parts = spec.split(',')
             return GeoLocation(float(parts[0]), float(parts[1]), None if len(parts) < 3 else parts[2])
         except ValueError as ve:
-            log_error("Problem with geolocation:", ve)
+            log.error("Problem with geolocation:", ve)
             return None
 
     def parse_file(self, config_path: Path) -> None:
@@ -392,9 +392,9 @@ class VduControlsConfig:
         self.file_path = config_path
         basename = os.path.basename(config_path)
         config_text = Path(config_path).read_text()
-        log_info("Using config file '" + config_path.as_posix() + "'")
+        log.info("Using config file '" + config_path.as_posix() + "'")
         if re.search(r'(\[ddcutil-capabilities])|(\[ddcutil-parameters])|(\[vdu-controls-\w])', config_text) is None:
-            log_info(f"Old style config file {basename} overrides ddcutils capabilities")
+            log.info(f"Old style config file {basename} overrides ddcutils capabilities")
             self.ini_content.set(*ConfOpt.CAPABILITIES_OVERRIDE.conf_id, config_text)
             return
         self.ini_content.read_string(config_text)
@@ -407,7 +407,7 @@ class VduControlsConfig:
         self.ini_content.set(*ConfOpt.CAPABILITIES_OVERRIDE.conf_id, alt_text)
 
     def reload(self) -> None:
-        log_info(f"Reloading config: {self.file_path}")
+        log.info(f"Reloading config: {self.file_path}")
         if self.file_path:
             for section in list(self.ini_content.data_sections()):
                 self.ini_content.remove_section(section)
@@ -417,16 +417,16 @@ class VduControlsConfig:
         origin = 'configuration' if self.file_path is None else os.path.basename(self.file_path)
         for section in self.ini_content.sections():
             for option in self.ini_content[section]:
-                log_debug(f"config: {origin} [{section}] {option} = {self.ini_content[section][option]}")
+                log.debug(f"config: {origin} [{section}] {option} = {self.ini_content[section][option]}")
 
     def write_file(self, config_path: Path, overwrite: bool = False) -> None:
         """Write the config to a file.  Used for creating initial template config files."""
         self.file_path = config_path
         if config_path.exists():
             if not config_path.is_file() or not overwrite:
-                log_error(f"{config_path.as_posix()} exists, remove the file if you really want to replace it.")
+                log.error(f"{config_path.as_posix()} exists, remove the file if you really want to replace it.")
                 return
-        log_info(f"Creating new config file {config_path.as_posix()}")
+        log.info(f"Creating new config file {config_path.as_posix()}")
         self.ini_content.save(config_path)
 
     def parse_global_args(self, args=None) -> argparse.Namespace:

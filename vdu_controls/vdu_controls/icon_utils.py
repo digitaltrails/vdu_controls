@@ -7,7 +7,8 @@ from importlib.resources import files as resources_files
 from pathlib import Path
 from typing import Dict
 
-from vdu_controls.qt_imports import *
+from vdu_controls.qt_imports import (QStyle, QWidget, QImage, QIcon, QPixmap, Qt, QSvgRenderer, QFont, QColor, QPainter,
+                                     QPen, QApplication, QSize, QPalette)
 
 mono_light_tray = False
 

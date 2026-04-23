@@ -20,7 +20,7 @@ from vdu_controls.constants import STANDARD_ICON_PATHS, CONFIG_DIR_PATH, WEATHER
 from vdu_controls.icon_utils import si, StdPixmap, create_icon_from_path, polychrome_light_or_dark, create_image_from_svg_bytes, \
     SVG_LIGHT_THEME_COLOR
 from vdu_controls.internationalization import tr, translate_option
-from vdu_controls.logging import log_info, log_error, log_debug, log_warning, log_debug_enabled
+import vdu_controls.logging as log
 from vdu_controls.misc import zoned_now, proper_name
 from vdu_controls.preset import Preset, PresetTransitionFlag, PresetScheduleStatus
 from vdu_controls.scaling import npx, native_font_height
@@ -265,7 +265,7 @@ class PresetWeatherWidget(QWidget):
         for condition_path, condition_content in PresetWeatherWidget.default_weather_conditions.items():
             if not condition_path.exists():
                 with open(condition_path, 'w', encoding="utf-8") as weather_file:
-                    log_info(f"Creating {condition_path.as_posix()}")
+                    log.info(f"Creating {condition_path.as_posix()}")
                     weather_file.write(condition_content)
 
     def verify_weather_location(self, location: GeoLocation) -> None:
@@ -279,7 +279,7 @@ class PresetWeatherWidget(QWidget):
                 if vf.read() == place_name:
                     return
         try:
-            log_info(f"Verifying weather location by querying {WEATHER_FORECAST_URL}.")
+            log.info(f"Verifying weather location by querying {WEATHER_FORECAST_URL}.")
             weather = weather_util.WeatherQuery(location)
             weather.run_query()
             if weather.proximity_ok:
@@ -290,7 +290,7 @@ class PresetWeatherWidget(QWidget):
             else:
                 weather_util.weather_bad_location_dialog(weather)
         except ValueError as e:
-            log_error(f"Failed to validate location: {e}", trace=True)
+            log.error(f"Failed to validate location: {e}", trace=True)
             MBox(MIcon.Critical, msg=tr("Failed to validate weather location: {}").format(e.args[0]), info=e.args[1]).exec()
 
     def populate(self) -> None:
@@ -575,7 +575,7 @@ class PresetElevationChartWidget(QLabel):
         new_cache_key = ((zoned_now().replace(hour=0, minute=0, second=0, microsecond=0)), logical_width, origin_iy, range_iy)
         if self.cache_key and new_cache_key == self.cache_key:
             return
-        log_debug(f"PresetElevationChartWidget: change of key values {new_cache_key=}, recalculating")
+        log.debug(f"PresetElevationChartWidget: change of key values {new_cache_key=}, recalculating")
         self.cache_key = new_cache_key
         max_sun_height = npx(-90.0)
         solar_noon_x, solar_noon_y = 0, 0  # Solar noon
@@ -818,7 +818,7 @@ class PresetScheduleAtElevationWidget(PresetScheduleAtWidgetBase):
         if self.elevation_chart.solar_max_t is not None:
             snt = self.elevation_chart.solar_max_t
             if snt.hour > (15 if snt.tzname() == 'CST' else 14) or snt.hour < 10:  # Solar midday seems too far from 12:00 midday.
-                log_warning(f"Location {location.longitude},{location.latitude} and timezone {snt.tzname()} seem mismatched.")
+                log.warning(f"Location {location.longitude},{location.latitude} and timezone {snt.tzname()} seem mismatched.")
 
     def resizeEvent(self, event: QResizeEvent | None) -> None:
         super().resizeEvent(event)
@@ -1205,7 +1205,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         preset_ini_copy = preset.preset_ini.duplicate()
         self.populate_ini_from_gui(preset_ini_copy)  # get ini options from GUI checkbox and field values
         self.main_controller.populate_ini_from_vdus(preset_ini_copy, update_only=True)  # get current VDU values for ini options
-        log_debug(f"has_changes {preset.preset_ini.diff(preset_ini_copy)=}") if log_debug_enabled else None
+        log.debug(f"has_changes {preset.preset_ini.diff(preset_ini_copy)=}") if log.debug_enabled else None
         return len(preset.preset_ini.diff(preset_ini_copy)) > 0
 
     def populate_ini_from_gui(self, preset_ini: ConfIni) -> None:  # initialise ini options based on GUI checkbox and field values

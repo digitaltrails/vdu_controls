@@ -2,12 +2,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Dict
 
 from vdu_controls.constants import LOCALE_TRANSLATIONS_PATHS
 from vdu_controls.qt_imports import *
-from vdu_controls.logging import log_debug, log_info, log_debug_enabled
+import vdu_controls.logging as log
 
 
 def find_locale_specific_file(filename_template: str) -> Path | None:
@@ -15,9 +16,9 @@ def find_locale_specific_file(filename_template: str) -> Path | None:
     filename = filename_template.format(locale_name)
     for path in LOCALE_TRANSLATIONS_PATHS:
         full_path = path.joinpath(filename)
-        log_debug(f"Checking for {locale_name} translation: {full_path}") if log_debug_enabled else None
+        log.debug(f"Checking for {locale_name} translation: {full_path}") if log.debug_enabled else None
         if full_path.exists():
-            log_info(f"Found {locale_name} translation: {full_path}")
+            log.info(f"Found {locale_name} translation: {full_path}")
             return full_path
     return None
 
@@ -38,7 +39,7 @@ def initialise_locale_translations(app: QApplication) -> None:
     # from the XML into a map and use them directly.  This is useful while developing and possibly useful
     # for users that want to do their own localization.
     if ts_path is not None and (qm_path is None or os.path.getmtime(ts_path) > os.path.getmtime(qm_path)):
-        log_info(tr("Using newer .ts file {} translations from {}").format(locale_name, ts_path.as_posix()))
+        log.info(tr("Using newer .ts file {} translations from {}").format(locale_name, ts_path.as_posix()))
         import xml.etree.ElementTree as XmlElementTree
         global ts_translations
         if context := XmlElementTree.parse(ts_path).find('context'):
@@ -47,13 +48,13 @@ def initialise_locale_translations(app: QApplication) -> None:
                 source = message.find('source')
                 if translation is not None and source is not None and translation.text is not None and source.text is not None:
                     ts_translations[source.text] = translation.text
-        log_info(tr("Loaded {} translations from {}").format(locale_name, ts_path.as_posix()))
+        log.info(tr("Loaded {} translations from {}").format(locale_name, ts_path.as_posix()))
         return
     if qm_path is not None:
-        log_info(tr("Loading {} translations from {}").format(locale_name, qm_path.as_posix()))
+        log.info(tr("Loading {} translations from {}").format(locale_name, qm_path.as_posix()))
         if translator.load(qm_path.name, qm_path.parent.as_posix()):
             app.installTranslator(translator)
-            log_info(tr("Using {} translations from {}").format(locale_name, qm_path.as_posix()))
+            log.info(tr("Using {} translations from {}").format(locale_name, qm_path.as_posix()))
 
 
 def tr(source_text: str, disambiguation: str | None = None) -> str:

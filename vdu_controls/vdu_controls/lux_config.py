@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Dict, List
 
 from vdu_controls.config_ini import ConfIni
-from vdu_controls.logging import log_info
+import vdu_controls.logging as log
 
 @dataclass
 class LuxPoint:
@@ -55,7 +55,7 @@ class LuxConfig(ConfIni):
         self.cached_profiles_map.clear()
         if self.path.exists():
             if Path.stat(self.path).st_mtime > self.last_modified_time or force:
-                log_info(f"Reading autolux file '{self.path.as_posix()}'")
+                log.info(f"Reading autolux file '{self.path.as_posix()}'")
                 text = Path(self.path).read_text()
                 self.read_string(text)
                 self.last_modified_time = Path.stat(self.path).st_mtime

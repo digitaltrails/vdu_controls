@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Callable, Any, List, Dict
+from typing import Callable, Any, List, Dict, TYPE_CHECKING
 
 from vdu_controls.qt_imports import pyqtSignal
 
@@ -13,10 +13,12 @@ from vdu_controls.config_ini import ConfOpt
 from vdu_controls.ddcutil_abstract import VcpOrigin
 
 from vdu_controls.ddcutil_aggregator import VduStableId
-from vdu_controls.logging import log_debug, log_debug_enabled, log_warning
+import vdu_controls.logging as log
 from vdu_controls.misc import zoned_now
 from vdu_controls.work_scheduler import WorkerThread
 
+if TYPE_CHECKING:
+    from vdu_controls.vdu_controls_application import VduAppController
 
 @dataclass
 class BulkChangeItem:
@@ -36,7 +38,7 @@ class BulkChangeWorker(WorkerThread):
                  finished_callable: Callable[[BulkChangeWorker], None],
                  step_interval: float = 0.0, ignore_others: bool = True, context: Any = None) -> None:
         super().__init__(task_body=self._perform_changes, task_finished=finished_callable)  # type: ignore
-        log_debug(f"BulkChangeHandler: {name} init {ignore_others=}") if log_debug_enabled else None
+        log.debug(f"BulkChangeHandler: {name} init {ignore_others=}") if log.debug_enabled else None
         self.name = name
         self.ignore_others = ignore_others
         self.context = context
@@ -67,8 +69,8 @@ class BulkChangeWorker(WorkerThread):
                 self.completed = len([item for item in self.to_do_list if item.current_value != item.final_value]) == 0
         finally:
             (_ := self).total_elapsed_seconds = (self.start_time - zoned_now()).total_seconds()
-            if log_debug_enabled:
-                log_debug(f"BulkChangeWorker: {_.name} {_.completed=} {_.change_count=} {_.total_elapsed_seconds=:.3f}")
+            if log.debug_enabled:
+                log.debug(f"BulkChangeWorker: {_.name} {_.completed=} {_.change_count=} {_.total_elapsed_seconds=:.3f}")
 
     def _do_normal_changes(self):
         for item in [item for item in self.to_do_list if not item.transition and item.current_value != item.final_value]:
@@ -102,7 +104,7 @@ class BulkChangeWorker(WorkerThread):
                 break
 
     def _refresh_current_values_from_vdu(self):
-        log_debug(f"BulkChangeWorker {self.name} having to get current_values from VDU") if log_debug_enabled else None
+        log.debug(f"BulkChangeWorker {self.name} having to get current_values from VDU") if log.debug_enabled else None
         items_by_vdu: Dict[VduStableId, Dict[str, BulkChangeItem]] = {}
         for item in self.to_do_list:
             if item.vdu_sid not in items_by_vdu:
@@ -114,7 +116,7 @@ class BulkChangeWorker(WorkerThread):
                 vdu_current_value = vcp_value.current
                 item = vdu_items_by_code[vcp_code]
                 if item.current_value is not None and item.current_value != vdu_current_value and not self.ignore_others:
-                    log_warning(f"Interrupted bulk change {id=} "
+                    log.warning(f"Interrupted bulk change {id=} "
                                 f"something else changed the VDU: {vdu_current_value=} != {item.current_value=}")
                     self.stop_requested = True
                     break

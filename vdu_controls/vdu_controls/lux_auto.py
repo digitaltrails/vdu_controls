@@ -16,7 +16,7 @@ from vdu_controls.ddcutil_abstract import BRIGHTNESS_VCP_CODE
 
 from vdu_controls.ddcutil_aggregator import VduStableId
 from vdu_controls.internationalization import tr
-from vdu_controls.logging import log_debug, log_debug_enabled, log_info, log_error
+import vdu_controls.logging as log
 from vdu_controls.lux_ambient_slider import LuxZone, LuxAmbientSlider
 from vdu_controls.lux_config import LuxConfig, LuxPoint
 from vdu_controls.lux_dialog import LuxDialog
@@ -83,14 +83,14 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         self.main_controller = auto_controller.main_controller
         self.adjust_now_requested = False
         lux_config = auto_controller.get_lux_config()
-        log_info(f"LuxAuto: lux-meter.interval-minutes={lux_config.get_interval_minutes()} {single_shot=}")
+        log.info(f"LuxAuto: lux-meter.interval-minutes={lux_config.get_interval_minutes()} {single_shot=}")
         self.sleep_seconds = lux_config.get_interval_minutes() * 60
         self.consecutive_error_count = 0
 
         def _get_prop(prop: str, fallback: bool | int | float | str) -> bool | int | float:
             op = {bool: lux_config.getboolean, int: lux_config.getint, float: lux_config.getfloat}[type(fallback)]
             value = op('lux-meter', prop, fallback=fallback)
-            log_info(f"LuxAuto: lux-meter.{prop}={value}")
+            log.info(f"LuxAuto: lux-meter.{prop}={value}")
             return value
 
         samples_per_minute = _get_prop('samples-per-minute', fallback=3)
@@ -111,7 +111,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             lux_auto_controller = self.main_controller.get_lux_auto_controller()
             # Give any previous thread a chance to exit, plus let the GUI and presets settle down
             self.doze(2) if not self.single_shot else None
-            log_info(f"LuxAuto: monitoring commences {thread_pid()=}")
+            log.info(f"LuxAuto: monitoring commences {thread_pid()=}")
             assert lux_auto_controller is not None
             while not self.stop_requested:
                 error_count = self.consecutive_error_count
@@ -128,14 +128,14 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                     if self.single_shot:
                         break
                 else:  # In-app config change - things are in a state of flux
-                    log_error("Exiting, no lux meter available.")
+                    log.error("Exiting, no lux meter available.")
                     break
                 if error_count == self.consecutive_error_count:  # no change - must be OK now
-                    log_debug("LuxAuto: clearing consecutive_error_count") if log_debug_enabled else None
+                    log.debug("LuxAuto: clearing consecutive_error_count") if log.debug_enabled else None
                     self.consecutive_error_count = 0
                 self.idle_sampling(lux_meter, busy_main_controller)  # Sleep and sample for rest of cycle
         finally:
-            log_info(f"LuxAuto: exiting (stop_requested={self.stop_requested}) {thread_pid()=}")
+            log.info(f"LuxAuto: exiting (stop_requested={self.stop_requested}) {thread_pid()=}")
 
     def assemble_required_work(self, lux_auto_controller: LuxAutoController, metered_lux: float, requires_smoothing) -> List[
         LuxToDo]:
@@ -161,18 +161,18 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                     sids_present_and_in_preset = sids_present.intersection(set(preset.get_vdu_sids()))
                     items_with_this_preset = [x for x in to_do_list if x.preset_name == preset_name]
                     sids_of_items_with_this_preset = set([x.vdu_sid for x in items_with_this_preset])
-                    log_debug(f"LuxAuto: {sids_present_and_in_preset=} {sids_of_items_with_this_preset=}")
+                    log.debug(f"LuxAuto: {sids_present_and_in_preset=} {sids_of_items_with_this_preset=}")
                     if sids_present_and_in_preset == sids_of_items_with_this_preset:
-                        log_debug(f"LuxAuto: applying Preset {preset_name}")
+                        log.debug(f"LuxAuto: applying Preset {preset_name}")
                         for item in items_with_this_preset:
                             if (preset_brightness := preset.get_brightness(item.vdu_sid)) > 0:
                                 item.brightness = preset_brightness
                     else:
-                        log_debug(f"LuxAuto: ignoring Preset {preset_name} doesn't match for all VDUs present.")
+                        log.debug(f"LuxAuto: ignoring Preset {preset_name} doesn't match for all VDUs present.")
                         for item in items_with_this_preset:
                             item.preset_name = None
                 else:
-                    log_debug(f"LuxAuto: ignoring Preset {preset_name} no longer exists.")
+                    log.debug(f"LuxAuto: ignoring Preset {preset_name} no longer exists.")
 
     def do_work(self, to_do_list: List[LuxToDo]):
         to_do_preset_names = []
@@ -199,26 +199,26 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                 for preset_name in to_do_preset_names:  # if a point had a Preset attached, activate it now
                     # Restoring the Preset's non-brightness settings. Invoke now, so it will happen in this thread's sleep period.
                     if preset := self.main_controller.find_preset_by_name(preset_name):  # Check that it still exists
-                        log_debug(f"LuxAuto: restoring Preset {preset.name=}") if log_debug_enabled else None
+                        log.debug(f"LuxAuto: restoring Preset {preset.name=}") if log.debug_enabled else None
                         self.main_controller.restore_preset(
                             preset, immediately=PresetTransitionFlag.SCHEDULED not in preset.get_transition_type(),
                             background_activity=True)
                     else:
-                        log_debug("LuxAuto: Preset {preset.name} no longer exists - ignoring") if log_debug_enabled else None
+                        log.debug("LuxAuto: Preset {preset.name} no longer exists - ignoring") if log.debug_enabled else None
                         self.main_controller.update_window_status_indicators()
         else:
-            log_debug("LuxAuto: bulk worker failed to complete.") if log_debug_enabled else None
+            log.debug("LuxAuto: bulk worker failed to complete.") if log.debug_enabled else None
             self.status_message(f"{SUN_SYMBOL} {ERROR_SYMBOL} {RAISED_HAND_SYMBOL}")
             self.consecutive_error_count += 1
 
     def _adjust_for_lux_finished(self, _: WorkerThread) -> None:
-        log_debug("LuxAuto: worker finished") if log_debug_enabled else None
+        log.debug("LuxAuto: worker finished") if log.debug_enabled else None
         if self.work_exception:
-            log_error(f"LuxAuto: exited with exception={self.work_exception}")
+            log.error(f"LuxAuto: exited with exception={self.work_exception}")
 
     def idle_sampling(self, lux_meter: LuxMeterDevice, busy_main_controller: str | None):
         seconds = 2 if self.consecutive_error_count == 1 else self.sleep_seconds
-        log_debug(f"LuxAuto: sleeping {seconds=}") if log_debug_enabled else None
+        log.debug(f"LuxAuto: sleeping {seconds=}") if log.debug_enabled else None
         if busy_main_controller:
             self.status_message(
                 tr("Task waiting for {} to finish.").format(busy_main_controller), timeout=0, destination=MsgDestination.DEFAULT)
@@ -261,16 +261,16 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
             current_brightness = self.main_controller.get_value(vdu_sid, BRIGHTNESS_VCP_CODE)
             diff = proposed_brightness - current_brightness
             if self.interpolation_enabled and preset_name is None and abs(diff) < self.sensitivity_percent:
-                log_info(f"LuxAuto: {smoothed_lux=} {vdu_sid=} {current_brightness=} {proposed_brightness=} ignored, too small")
+                log.info(f"LuxAuto: {smoothed_lux=} {vdu_sid=} {current_brightness=} {proposed_brightness=} ignored, too small")
                 self.status_message(f"{SUN_SYMBOL} {proposed_brightness}% {ALMOST_EQUAL_SYMBOL} {current_brightness}% {vdu_sid}",
                                     timeout=5000)
                 return None
-            if log_debug_enabled:
-                log_debug(f"LuxAuto: {smoothed_lux=} {vdu_sid=} {current_brightness=}% {proposed_brightness=}% {preset_name=}")
+            if log.debug_enabled:
+                log.debug(f"LuxAuto: {smoothed_lux=} {vdu_sid=} {current_brightness=}% {proposed_brightness=}% {preset_name=}")
             return LuxToDo(vdu_sid, proposed_brightness, preset_name, current_brightness)
         except VduException as e:
             self.consecutive_error_count += 1
-            log_debug(f"LuxAuto: {self.consecutive_error_count=} error getting brightness: {e}") if log_debug_enabled else None
+            log.debug(f"LuxAuto: {self.consecutive_error_count=} error getting brightness: {e}") if log.debug_enabled else None
         return None
 
     def interpolate_brightness(self, smoothed_lux: int, current_point: LuxPoint, next_point: LuxPoint) -> int:
@@ -294,7 +294,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                           (abs(proposed_brightness - next_point.brightness), next_point)], key=lambda x: x[0])
         for diff, item in ordered:
             if diff < self.sensitivity_percent and (pick := item.preset_name):
-                log_debug(f"LuxAuto: assess_preset_proximity {pick=}") if log_debug_enabled else None
+                log.debug(f"LuxAuto: assess_preset_proximity {pick=}") if log.debug_enabled else None
                 return pick
         return None
 
@@ -306,7 +306,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         super().stop()
         assert gui_misc.is_running_in_gui_thread()
         self._lux_dialog_message_qtsignal.disconnect()
-        log_info("LuxAuto: stopped on request")
+        log.info("LuxAuto: stopped on request")
 
 
 class LuxAutoController:
@@ -392,14 +392,14 @@ class LuxAutoController:
             LuxMeterSemiAutoDevice.set_location(self.main_controller.main_config.get_location())
             self.lux_meter = lux_create_device(device_name)
             if self.lux_config.is_auto_enabled():
-                log_info("Lux auto-brightness settings refresh - restart monitoring.")
+                log.info("Lux auto-brightness settings refresh - restart monitoring.")
                 self.start_worker(single_shot=False)
             else:
-                log_info("Lux auto-brightness settings refresh - monitoring is off.")
+                log.info("Lux auto-brightness settings refresh - monitoring is off.")
                 self.stop_worker()
             self.main_controller.update_window_status_indicators()  # Refresh indicators immediately
         except LuxDeviceException as lde:
-            log_error(f"Error setting up lux meter {lde}", trace=True)
+            log.error(f"Error setting up lux meter {lde}", trace=True)
             MBox(MIcon.Critical, msg=tr("Error setting up lux meter: {}").format(self.lux_config.get_device_name()),
                  info=str(lde)).exec()
         if self.lux_tool_button:
@@ -425,7 +425,7 @@ class LuxAutoController:
 
     def set_auto(self, enable: bool):
         assert self.lux_config is not None
-        log_debug(f"LuxAutoController: set_auto {enable}")
+        log.debug(f"LuxAutoController: set_auto {enable}")
         if enable:
             if self.lux_meter and self.lux_meter.has_semi_auto_capability and not self.main_controller.main_config.get_location():
                 message = tr("Auto disabled, no location defined.")
@@ -440,7 +440,7 @@ class LuxAutoController:
             self.lux_config.set('lux-meter', 'automatic-brightness', 'no')
         self.lux_config.save(ConfIni.get_path('AutoLux'))
         self.main_controller.status_message(message, timeout=5000)
-        LuxDialog.lux_dialog_message(message, timeout=5000)
+        LuxDialog.lux_dialog.message(message, timeout=5000)
         self.initialize_from_config()
         LuxDialog.reconfigure_instance()
 
@@ -449,7 +449,7 @@ class LuxAutoController:
             if self.lux_auto_brightness_worker is not None:
                 self.lux_auto_brightness_worker.adjust_now_requested = True
             else:
-                log_error("adjust_brightness_now: No worker - unexpected - error?")
+                log.error("adjust_brightness_now: No worker - unexpected - error?")
         else:
             self.start_worker(single_shot=True)
 
@@ -474,7 +474,7 @@ class LuxAutoController:
                     point.brightness = preset.get_brightness(vdu_stable_id)
             lux_points = list(merge_map.values())
             lux_points.sort()
-        log_debug(f"LuxAuto: get_lux_profile({vdu_stable_id=}) => {lux_points=}") if log_debug_enabled else None
+        log.debug(f"LuxAuto: get_lux_profile({vdu_stable_id=}) => {lux_points=}") if log.debug_enabled else None
         return lux_points
 
 

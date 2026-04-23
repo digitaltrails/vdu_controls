@@ -13,7 +13,7 @@ from vdu_controls.ddcutil_emulator import DdcutilEmulatorImpl
 from vdu_controls.ddcutil_exe import DdcutilExeImpl
 from vdu_controls.ddcutil_laptop_panel import DdcutilPanelImpl
 from vdu_controls.ddcutil_qdbus import DdcutilDBusImpl
-from vdu_controls.logging import *
+import vdu_controls.logging as log
 
 
 VduStableId = NewType('VduStableId', str)
@@ -37,7 +37,7 @@ class DdcutilAggregator:
             try:
                 self.ddcutil_impl = DdcutilDBusImpl(self.common_args, callback=connected_vdus_changed_callback)
             except DdcutilServiceNotFound:
-                log_warning("Failed to detect D-Bus ddcutil-service, falling back to the ddcutil command.")
+                log.warning("Failed to detect D-Bus ddcutil-service, falling back to the ddcutil command.")
                 prefer_dbus_client = False
 
         if not prefer_dbus_client:  # dbus not preferred or dbus failed to initialize
@@ -53,7 +53,7 @@ class DdcutilAggregator:
             self.ddcutil_version = tuple(int(i) for i in version_match.groups()[0:3])
             self.version_suffix = version_match.groups()[3]
         # self.version = (1, 2, 2)  # for testing for 1.2.2 compatibility
-        log_info(f"ddcutil version {self.ddcutil_version} "
+        log.info(f"ddcutil version {self.ddcutil_version} "
                  f"{self.version_suffix}(dynamic-sleep={self.ddcutil_version >= (2, 0, 0)}) "
                  f"- interface {self.ddcutil_impl.get_interface_version_string()}")
 
@@ -63,10 +63,10 @@ class DdcutilAggregator:
     def add_ddcutil_emulator(self, emulator: DdcutilPanelImpl | DdcutilEmulatorImpl):
         try:
             for attr in emulator.detect(1):
-                log_info(f"add_ddcutil_emulator: VDU edid={attr.edid_txt}")
+                log.info(f"add_ddcutil_emulator: VDU edid={attr.edid_txt}")
                 self.ddcutil_emulators_by_edid[attr.edid_txt] = emulator
         except Exception as e:
-            log_error(f"add_ddcutil_emulator exception: {e}")
+            log.error(f"add_ddcutil_emulator exception: {e}")
 
     def _impl(self, edid: str):
         if emulator_impl := self.ddcutil_emulators_by_edid.get(edid):  # edid is for a virtual implementation
@@ -84,7 +84,7 @@ class DdcutilAggregator:
             self._impl(edid).set_sleep_multiplier(edid, sleep_multiplier)
         except ValueError as e:
             if str(e).find('com.ddcutil.DdcutilService.Error.MultiplierLocked') > 0:
-                log_warning(f"Ignoring: {e}")
+                log.warning(f"Ignoring: {e}")
             else:
                 raise
 
@@ -104,7 +104,7 @@ class DdcutilAggregator:
         """Return a list of (vdu_number, desc) tuples."""
         result_list = []
         vdu_list = self.ddcutil_impl.detect(0)
-        log_info(f"dectecting using {len(self.ddcutil_emulators_by_edid)} emulators")
+        log.info(f"dectecting using {len(self.ddcutil_emulators_by_edid)} emulators")
         for emulator_impl in set(self.ddcutil_emulators_by_edid.values()):  # Use set() to only use each emulator once.
             vdu_list += emulator_impl.detect(0)
         # Going to get rid of anything that is not a-z A-Z 0-9 as potential rubbish
@@ -113,7 +113,7 @@ class DdcutilAggregator:
         key_prospects: Dict[Tuple[str, str], Tuple[str, str]] = {}
         for vdu in vdu_list:
             vdu_number = str(vdu.display_number)
-            log_debug(f"checking possible IDs for display {vdu_number}") if log_debug_enabled else None
+            log.debug(f"checking possible IDs for display {vdu_number}") if log.debug_enabled else None
             model_name = rubbish.sub('_', vdu.model_name)
             manufacturer = rubbish.sub('_', vdu.manufacturer_id)
             serial_number = rubbish.sub('_', vdu.serial_number)
@@ -128,7 +128,7 @@ class DdcutilAggregator:
                 if candidate.strip() != '':
                     possibly_unique = (model_name, candidate)
                     if possibly_unique in key_prospects:  # Not unique - it has already been encountered.
-                        log_info(f"Ignoring non-unique key {possibly_unique=}"
+                        log.info(f"Ignoring non-unique key {possibly_unique=}"
                                  f" - it matches display {vdu_number=} allready in {possibly_unique}")
                         del key_prospects[possibly_unique]
                     else:
@@ -140,8 +140,8 @@ class DdcutilAggregator:
             vdu_number, manufacturer = vdu_number_and_manufacturer
             if vdu_number not in key_already_assigned:
                 model_name, main_id = model_and_main_id
-                log_debug(
-                    f"Unique key for {vdu_number=} {manufacturer=} is ({model_name=} {main_id=})") if log_debug_enabled else None
+                log.debug(
+                    f"Unique key for {vdu_number=} {manufacturer=} is ({model_name=} {main_id=})") if log.debug_enabled else None
                 result_list.append((vdu_number, manufacturer, model_name, main_id))
                 key_already_assigned[vdu_number] = 1
         # result_list.append(("3", "maker_y", "model_z", "1234")) # For testing bad VDUs:
@@ -189,7 +189,7 @@ class DdcutilAggregator:
             try:
                 impl.set_vcp(edid_txt, int(vcp_code, 16), new_value)
                 DdcutilAggregator.vcp_write_counters[edid_txt] = DdcutilAggregator.vcp_write_counters.get(edid_txt, 0) + 1
-                log_debug(f"set_vcp: {vdu_number=} {vcp_code=} {new_value=}")
+                log.debug(f"set_vcp: {vdu_number=} {vcp_code=} {new_value=}")
                 return
             except (subprocess.SubprocessError, DdcutilDisplayNotFound, ValueError) as e:
                 if not retry_on_error or attempt_count + 1 == DDCUTIL_RETRIES:

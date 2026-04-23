@@ -10,7 +10,7 @@ from vdu_controls.qt_imports import Qt, QtCore, QApplication, QMessageBox
 from vdu_controls.constants import VDU_CONTROLS_VERSION, IP_ADDRESS_INFO_URL, WEATHER_FORECAST_URL, ABOUT_TEXT
 from vdu_controls.ddcutil_aggregator import DdcutilAggregator
 from vdu_controls.internationalization import tr, find_locale_specific_file
-from vdu_controls.logging import log_debug, log_debug_enabled
+import vdu_controls.logging as log
 
 from vdu_controls.widgets import DialogSingletonMixin, MIcon
 
@@ -32,7 +32,7 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
         if AboutDialog.exists() and AboutDialog.get_instance().isVisible():
             AboutDialog.get_instance().refresh_content()
         else:
-            log_debug("About dialog - no refresh - not visible") if log_debug_enabled else None
+            log.debug("About dialog - no refresh - not visible") if log.debug_enabled else None
 
     def __init__(self, main_controller: VduAppController) -> None:
         super().__init__()

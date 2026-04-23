@@ -12,7 +12,7 @@ from typing import Dict, List, Tuple, Any
 
 from vdu_controls.ddcutil_abstract import DDCUTIL_RETRIES, VcpValue, CONTINUOUS_TYPE, SIMPLE_NON_CONTINUOUS_TYPE, \
     COMPLEX_NON_CONTINUOUS_TYPE, DdcutilDisplayNotFound, DdcutilInterface
-from vdu_controls.logging import *
+import vdu_controls.logging as log
 
 
 class DdcutilExeImpl(DdcutilInterface):
@@ -69,11 +69,11 @@ class DdcutilExeImpl(DdcutilInterface):
             edid_args = []
             multiplier_args = []
         extra_args = self.extra_args.get(edid_txt, []) if edid_txt else []
-        log_id = self._get_vdu_human_name(edid_txt) if (edid_txt and log_debug_enabled) else ''
+        log_id = self._get_vdu_human_name(edid_txt) if (edid_txt and log.debug_enabled) else ''
         syslog_args = []
         if self.ddcutil_version[0] >= 2:
             if log_to_syslog and '--syslog' not in args:
-                syslog_args = ['--syslog', 'DEBUG' if log_debug_enabled else 'ERROR']
+                syslog_args = ['--syslog', 'DEBUG' if log.debug_enabled else 'ERROR']
         process_args = [self.ddcutil_exe] + self.common_args + multiplier_args + syslog_args + extra_args + list(args) + edid_args
         try:
             with self.ddcutil_access_lock:
@@ -81,18 +81,18 @@ class DdcutilExeImpl(DdcutilInterface):
                 result = subprocess.run(process_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
                 elapsed = time.time() - now
                 # Shorten EDID to 30 characters when logging it (it will be the only long argument)
-                log_debug(f"subprocess result: success {log_id} [{self._format_args_diagnostic(result.args)}] "
+                log.debug(f"subprocess result: success {log_id} [{self._format_args_diagnostic(result.args)}] "
                           # f"{process_args=} "
                           f"rc={result.returncode} elapsed={elapsed:.2f} "
-                          f"stdout={result.stdout.decode('utf-8', errors='surrogateescape')}") if log_debug_enabled else None
+                          f"stdout={result.stdout.decode('utf-8', errors='surrogateescape')}") if log.debug_enabled else None
         except subprocess.SubprocessError as spe:
             error_text = spe.stderr.decode('utf-8', errors='surrogateescape')
             if error_text.lower().find("display not found") >= 0:  # raise DdcutilDisplayNotFound and stay quiet
-                log_debug("subprocess result: display-not-found ", log_id, self._format_args_diagnostic(process_args),
-                          f"stderr='{error_text}', exception={str(spe)}", trace=True) if log_debug_enabled else None
+                log.debug("subprocess result: display-not-found ", log_id, self._format_args_diagnostic(process_args),
+                          f"stderr='{error_text}', exception={str(spe)}", trace=True) if log.debug_enabled else None
                 raise DdcutilDisplayNotFound(' '.join(args)) from spe
-            log_debug("subprocess result: error ", log_id, self._format_args_diagnostic(process_args),
-                      f"stderr='{error_text}', exception={str(spe)}", trace=True) if log_debug_enabled else None
+            log.debug("subprocess result: error ", log_id, self._format_args_diagnostic(process_args),
+                      f"stderr='{error_text}', exception={str(spe)}", trace=True) if log.debug_enabled else None
             raise
         return result
 
@@ -115,9 +115,9 @@ class DdcutilExeImpl(DdcutilInterface):
     def _parse_edid(self, display_str: str) -> str | None:
         if edid_match := re.search(r'EDID hex dump:\n[^\n]+(\n([ \t]*[+]0).+)+', display_str):
             edid = "".join(re.findall('((?: [0-9a-f][0-9a-f]){16})', edid_match.group(0))).replace(' ', '')
-            log_debug(f"{edid=}") if log_debug_enabled else None
+            log.debug(f"{edid=}") if log.debug_enabled else None
             return edid
-        log_error(f"Failed to parse edid in {display_str=}")
+        log.error(f"Failed to parse edid in {display_str=}")
         return None
 
     def detect(self, flags: int) -> List[Tuple[Any, ...]]:
@@ -130,7 +130,7 @@ class DdcutilExeImpl(DdcutilInterface):
         for display_str in re.split("\n\n", result.stdout.decode('utf-8', errors='surrogateescape')):
             if display_match := re.search(r'Display ([0-9]+)', display_str):
                 vdu_number = display_match.group(1)
-                log_debug(f"checking possible IDs for display {vdu_number}") if log_debug_enabled else None
+                log.debug(f"checking possible IDs for display {vdu_number}") if log.debug_enabled else None
                 ds_parts = {fm.group(1).strip(): fm.group(2).strip()
                             for fm in re.finditer(r'[ \t]*([^:\n]+):[ \t]+([^\n]*)', display_str)}  # Create dict {name:value} pairs
                 model_name = rubbish.sub('_', ds_parts.get('Model', 'unknown_model'))
@@ -141,7 +141,7 @@ class DdcutilExeImpl(DdcutilInterface):
                 i2c_bus_id = ds_parts.get('I2C bus', '').replace("/dev/", '').replace("-", "_")
                 edid_txt = self._parse_edid(display_str)
                 if not edid_txt:
-                    log_warning(f"DdcutilExeImpl: failed to parse edid from '{display_str}'")
+                    log.warning(f"DdcutilExeImpl: failed to parse edid from '{display_str}'")
                 vdu_attributes = DdcutilExeImpl.DetectedAttributes(vdu_number, '', '', manufacturer, model_name, serial_number, '',
                                                                    edid_txt, bin_serial_number)
                 result_list.append(vdu_attributes)

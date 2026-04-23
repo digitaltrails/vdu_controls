@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import re
+from datetime import datetime
 from enum import Enum, IntFlag
 from functools import partial
 from pathlib import Path
@@ -17,7 +18,7 @@ from vdu_controls.config_ini import ConfIni
 from vdu_controls.ddcutil_aggregator import VduStableId
 from vdu_controls.icon_utils import ThemeType, polychrome_light_or_dark, create_icon_from_path, create_icon_from_text
 from vdu_controls.internationalization import tr
-from vdu_controls.logging import *
+import vdu_controls.logging as log
 from vdu_controls.misc import zoned_now, proper_name
 from vdu_controls.solar_calc import SolarElevationKey, format_solar_elevation_abbreviation, format_solar_elevation_description, \
     parse_solar_elevation_ini_text
@@ -109,7 +110,7 @@ class Preset:
 
     def load(self) -> ConfIni:
         if self.path.exists():
-            log_debug(f"Reading preset file '{self.path.as_posix()}'") if log_debug_enabled else None
+            log.debug(f"Reading preset file '{self.path.as_posix()}'") if log.debug_enabled else None
             preset_text = Path(self.path).read_text()
             preset_ini = ConfIni()
             preset_ini.read_string(preset_text)
@@ -122,7 +123,7 @@ class Preset:
         self.preset_ini.save(self.path)
 
     def delete(self) -> None:
-        log_info(f"Deleting preset file '{self.path.as_posix()}'")
+        log.info(f"Deleting preset file '{self.path.as_posix()}'")
         self.remove_elevation_trigger()
         if self.path.exists():
             os.remove(self.path.as_posix())
@@ -206,12 +207,12 @@ class Preset:
         if not overdue:
             self.elevation_time_today = when_today
             self.schedule_status = PresetScheduleStatus.SCHEDULED
-        log_info(f"Scheduled preset '{self.name}' for {when_today} in "
+        log.info(f"Scheduled preset '{self.name}' for {when_today} in "
                  f"{round(self.scheduler_job.remaining_time() / 60)} minutes {self.get_solar_elevation()} {overdue=}")
 
     def remove_elevation_trigger(self, quietly: bool = False) -> None:
         if self.scheduler_job:
-            log_info(f"Preset timer and schedule status cleared for '{self.name}'") if not quietly else None
+            log.info(f"Preset timer and schedule status cleared for '{self.name}'") if not quietly else None
             self.scheduler_job.dequeue()
             self.scheduler_job = None
         if self.elevation_time_today is not None:
@@ -222,11 +223,11 @@ class Preset:
         if self.elevation_time_today and self.elevation_time_today > zoned_now():
             if self.scheduler_job is not None:
                 if self.scheduler_job.remaining_time() > 0:
-                    log_info(f"Preset scheduled timer cleared for '{self.name}'")
+                    log.info(f"Preset scheduled timer cleared for '{self.name}'")
                     self.scheduler_job.dequeue()
                     self.schedule_status = PresetScheduleStatus.SUSPENDED
                 else:
-                    log_info(f"Preset scheduled timer restored for '{self.name}'")
+                    log.info(f"Preset scheduled timer restored for '{self.name}'")
                     self.scheduler_job.requeue()
                     self.schedule_status = PresetScheduleStatus.SCHEDULED
 
@@ -239,17 +240,17 @@ class Preset:
             return True
         path = Path(weather_restriction_filename)
         if not path.exists():
-            log_error(f"Preset '{self.name}' missing weather requirements file: {weather_restriction_filename}")
+            log.error(f"Preset '{self.name}' missing weather requirements file: {weather_restriction_filename}")
             return True
         with open(path, encoding="utf-8") as weather_file:
             code_list = weather_file.readlines()
             for code_line in code_list:
                 parts = code_line.split()
                 if parts and weather.weather_code.strip() == parts[0]:
-                    log_info(f"Preset '{self.name}' met {path.name} requirements. Current weather is: "
+                    log.info(f"Preset '{self.name}' met {path.name} requirements. Current weather is: "
                              f"{weather.area_name} {weather.weather_code} {weather.weather_desc}")
                     return True
-        log_info(f"Preset '{self.name}' failed {path.name} requirements. Current weather is: "
+        log.info(f"Preset '{self.name}' failed {path.name} requirements. Current weather is: "
                  f"{weather.area_name} {weather.weather_code} {weather.weather_desc}")
         return False
 

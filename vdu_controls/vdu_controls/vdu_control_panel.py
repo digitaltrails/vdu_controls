@@ -12,7 +12,7 @@ from vdu_controls.constants import TOOLTIP_DURATION_MSEC
 from vdu_controls.ddcutil_abstract import CONTINUOUS_TYPE, SIMPLE_NON_CONTINUOUS_TYPE, COMPLEX_NON_CONTINUOUS_TYPE, VcpValue, \
     VcpOrigin
 from vdu_controls.internationalization import tr
-from vdu_controls.logging import log_info
+import vdu_controls.logging as log
 from vdu_controls.misc import proper_name, clamp
 from vdu_controls.preset import Preset
 from vdu_controls.scaling import native_font_height, npx
@@ -149,9 +149,9 @@ class VduControlBase(QWidget):
         self.refresh_ui_view()
 
     def ui_change_vdu_attribute(self, new_value: int) -> None:  # Used by UI controls to change values
-        log_info("ui_change_vdu_attribute") if self.debug else None
+        log.info("ui_change_vdu_attribute") if self.debug else None
         if self.refresh_ui_only:  # Called from a GUI control when it was already responding to a vdu attribute change.
-            log_info(f"Skip change {self.refresh_ui_only=}") if self.debug else None
+            log.info(f"Skip change {self.refresh_ui_only=}") if self.debug else None
             return  # Avoid repeating a setvcp by skipping the physical change
         self.controller.set_vcp_value_asynchronously(self.vcp_capability.vcp_code, new_value, VcpOrigin.NORMAL)
 

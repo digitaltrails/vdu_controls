@@ -11,7 +11,7 @@ from typing import Dict, Tuple, Callable, List, Any
 from vdu_controls.qt_imports import QObject
 
 from vdu_controls.ddcutil_abstract import DdcutilServiceNotFound, DdcutilDisplayNotFound, DdcutilInterface
-from vdu_controls.logging import *
+import vdu_controls.logging as log
 from vdu_controls.misc import intV
 from vdu_controls.qt_imports import (QDBusArgument, QDBusInterface, QMetaType, QDBusConnection,
                                      QDBusVariant, QDBusMessage, pyqtSlot)
@@ -42,19 +42,19 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
             self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service()
             if len(self.common_args) != 0:  # have to restart with the common_args, wait and connect again
                 try:
-                    log_info(f"Restarting dbus service with common args {self.common_args}")
+                    log.info(f"Restarting dbus service with common args {self.common_args}")
                     self._validate(self.ddcutil_proxy.call("Restart", " ".join(self.common_args),
                                                            QDBusArgument(0, intV(QMetaType.Type.UInt)),
                                                            QDBusArgument(0, intV(QMetaType.Type.UInt))))
                     time.sleep(2)  # Should be enough time
-                    log_info("Reconnecting after dbus service restart.")
+                    log.info("Reconnecting after dbus service restart.")
                     self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service()  # connect again
                 except (ValueError, DdcutilDisplayNotFound):
-                    log_warning(f"Failed to restart with common_args {self.common_args} on try {try_count}")
+                    log.warning(f"Failed to restart with common_args {self.common_args} on try {try_count}")
             # Retrieve the attributes returned by detect and also use the retrieval as a self check
             self_check_op = self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "AttributesReturnedByDetect")
             if self_check_op.errorName():
-                log_error(f'Sanity check try {try_count}: {self.dbus_interface_name} failed: {self_check_op.errorMessage()}')
+                log.error(f'Sanity check try {try_count}: {self.dbus_interface_name} failed: {self_check_op.errorMessage()}')
             else:
                 DdcutilDBusImpl.DetectedAttributes = namedtuple("DetectedAttributes", self_check_op.arguments()[0])
                 self.vdu_map_by_edid: Dict[str, Tuple] = {}
@@ -63,7 +63,7 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
                 self._connect_to_service(disconnect=True)  # disconnect handler references to facilitate garbage collection
                 raise DdcutilServiceNotFound(
                     f"Error contacting D-Bus service {self.dbus_interface_name} {self_check_op.errorMessage()}")
-            log_info("looping")
+            log.info("looping")
             time.sleep(2)  # Try again
 
     def set_sleep_multiplier(self, edid_txt: str, sleep_multiplier: float):
@@ -105,7 +105,7 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
         DdcutilDBusImpl._current_connected_displays_changed_handler = self._connected_displays_changed_handler
         ddcutil_dbus_iface.setTimeout(self.dbus_timeout_millis)
         # This is intended to provide the user with an easy way enable or disable events in the server.
-        log_info(f"Remotely configuring ddcutil-service ServiceEmitSignals={self.listener_callback is not None}")
+        log.info(f"Remotely configuring ddcutil-service ServiceEmitSignals={self.listener_callback is not None}")
         ddcutil_dbus_props.call("Set",
                                 "com.ddcutil.DdcutilInterface",
                                 "ServiceEmitSignals",
@@ -115,12 +115,12 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
     def refresh_connection(self):
         self_check_op = self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "ServiceInterfaceVersion")
         if self_check_op.errorName():  # Only reconnect if something appears to be wrong
-            log_error(f'refresh_connection: check of {self.dbus_interface_name} failed: {self_check_op.errorMessage()}')
+            log.error(f'refresh_connection: check of {self.dbus_interface_name} failed: {self_check_op.errorMessage()}')
             self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service()
 
     @pyqtSlot(QDBusMessage)
     def _service_initialization_handler(self, message: QDBusMessage):
-        log_info(f"Received service_initialized D-Bus signal {message.arguments()=} {id(self)=}")  # check old instances... id()
+        log.info(f"Received service_initialized D-Bus signal {message.arguments()=} {id(self)=}")  # check old instances... id()
         with self.service_access_lock:
             if self.listener_callback:  # In case the service has restarted
                 self.ddcutil_props_proxy.call("Set",
@@ -131,7 +131,7 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
 
     @pyqtSlot(QDBusMessage)
     def _connected_displays_changed_handler(self, message: QDBusMessage):
-        log_info(f"Received display_change D-Bus signal {message.arguments()=} {id(self)=}")  # check old instances id()
+        log.info(f"Received display_change D-Bus signal {message.arguments()=} {id(self)=}")  # check old instances id()
         if self.listener_callback:
             self.listener_callback(*message.arguments())
 
@@ -203,7 +203,7 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
             status, message = result.arguments()[-2:]  # last two are always DDC status and message
             if status != 0:
                 formatted_message = f"D-Bus  {status=}: {message}"
-                log_debug(formatted_message) if log_debug_enabled else None
+                log.debug(formatted_message) if log.debug_enabled else None
                 if self._get_status_values().get(status, "DDCRC_INVALID_DISPLAY") == "DDCRC_INVALID_DISPLAY":
                     raise DdcutilDisplayNotFound(formatted_message)
                 raise ValueError(formatted_message)

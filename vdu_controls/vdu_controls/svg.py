@@ -5,12 +5,12 @@ from __future__ import annotations
 import re
 from importlib.resources import files as resources_files
 
-from vdu_controls.logging import log_debug
+import vdu_controls.logging as log
 from vdu_controls.qt_imports import QColor
 
 
 def load_svg_source(source_filename: str):
-    log_debug(f'Loading SVG source from {source_filename}')
+    log.debug(f'Loading SVG source from {source_filename}')
     svg_file = resources_files('vdu_controls') / 'resources' / 'svg' / source_filename
     return svg_file.read_bytes()
 

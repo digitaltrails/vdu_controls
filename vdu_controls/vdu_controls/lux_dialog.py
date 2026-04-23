@@ -26,7 +26,7 @@ from vdu_controls.ddcutil_abstract import BRIGHTNESS_VCP_CODE
 from vdu_controls.ddcutil_aggregator import VduStableId
 from vdu_controls.icon_utils import si, StdPixmap, create_icon_from_svg_bytes, create_image_from_svg_bytes, SVG_LIGHT_THEME_COLOR
 from vdu_controls.internationalization import tr
-from vdu_controls.logging import log_debug, log_debug_enabled, log_warning
+import vdu_controls.logging as log
 from vdu_controls.lux_meters import LuxMeterSemiAutoDevice, LuxMeterDevice
 from vdu_controls.lux_config import LuxConfig, LuxPoint
 from vdu_controls.misc import intV, zoned_now, clamp
@@ -256,7 +256,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         lux_auto_controller = self.main_controller.get_lux_auto_controller()
         self.lux_config = lux_auto_controller.get_lux_config().duplicate(LuxConfig())  # type: ignore
         self.device_name = self.lux_config.get("lux-meter", "lux-device", fallback='')
-        log_debug("{self.lux_config.is_auto_enabled()=}") if log_debug_enabled else None
+        log.debug("{self.lux_config.is_auto_enabled()=}") if log.debug_enabled else None
         self.enabled_checkbox.setChecked(self.lux_config.is_auto_enabled())
         self.interpolate_checkbox.setChecked(self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=False))
         self.has_profile_changes = False
@@ -276,7 +276,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                     self.current_brightness_map[vdu_sid] = self.main_controller.get_value(vdu_sid, BRIGHTNESS_VCP_CODE)
                 except VduException as ve:
                     self.current_brightness_map[vdu_sid] = 0
-                    log_warning("VDU may not be available:", str(ve), trace=True)
+                    log.warning("VDU may not be available:", str(ve), trace=True)
             # All VDUs have a profile, even if they have no brightness control - because a preset may be attached to a lux value.
             self.lux_profiles_map[vdu_sid] = lux_auto_controller.get_lux_profile(vdu_sid, value_range)
             connected_id_list.append(vdu_sid)

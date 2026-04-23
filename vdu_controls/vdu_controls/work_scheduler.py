@@ -3,11 +3,11 @@
 from __future__ import annotations
 import threading
 import time
-from datetime import timedelta
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import Callable, List, Dict
 
-from vdu_controls.logging import *
+import vdu_controls.logging as log
 from vdu_controls.misc import zoned_now
 
 from vdu_controls.qt_imports import QThread, pyqtSignal
@@ -27,7 +27,7 @@ class WorkerThread(QThread):
                  loop: bool = False) -> None:
         super().__init__()
         # init should always be initiated from the GUI thread to grant the worker's __init__ easy access to the GUI thread.
-        log_debug(f"WorkerThread: init {self.__class__.__name__} from {thread_pid()=}") if log_debug_enabled else None
+        log.debug(f"WorkerThread: init {self.__class__.__name__} from {thread_pid()=}") if log.debug_enabled else None
         self.stop_requested = False
         self.task_body = task_body
         self.task_finished = task_finished
@@ -40,18 +40,18 @@ class WorkerThread(QThread):
         # Long-running task, runs in a separate thread
         class_name = self.__class__.__name__
         try:
-            log_debug(f"WorkerThread: {class_name=} running in {thread_pid()=} {self.task_body}") if log_debug_enabled else None
+            log.debug(f"WorkerThread: {class_name=} running in {thread_pid()=} {self.task_body}") if log.debug_enabled else None
             while not self.stop_requested:
                 self.task_body(self)  # Pass self so body can access context
                 if not self.loop:
                     break
         except WorkException as e:
             self.work_exception = e
-        log_debug(f"WorkerThread: {class_name=} finished {thread_pid()=}") if log_debug_enabled else None
+        log.debug(f"WorkerThread: {class_name=} finished {thread_pid()=}") if log.debug_enabled else None
         self.finished_work_qtsignal.emit(self)  # Pass self so body can access context
 
     def stop(self) -> None:
-        log_debug(f"WorkerThread: stop requested {thread_pid()=} {self.task_body}") if log_debug_enabled else None
+        log.debug(f"WorkerThread: stop requested {thread_pid()=} {self.task_body}") if log.debug_enabled else None
         self.stop_requested = True
         while self.isRunning():
             time.sleep(0.1)
@@ -134,7 +134,7 @@ class ScheduleWorker(WorkerThread):
     def check():
         with ScheduleWorker._scheduler_lock:
             if ScheduleWorker._instance and ScheduleWorker._instance.isRunning():
-                log_info(f"Scheduler: off-schedule check requested (queue len={len(ScheduleWorker._instance.pending_jobs_list)})")
+                log.info(f"Scheduler: off-schedule check requested (queue len={len(ScheduleWorker._instance.pending_jobs_list)})")
                 ScheduleWorker._instance._cycle()
 
     @staticmethod
@@ -175,27 +175,27 @@ class ScheduleWorker(WorkerThread):
                         else:
                             run_now[job.job_type] = job
             for job in run_now.values():
-                log_debug(f"Scheduler: Starting {job=!s} queued={len(self.pending_jobs_list)}") if log_debug_enabled else None
+                log.debug(f"Scheduler: Starting {job=!s} queued={len(self.pending_jobs_list)}") if log.debug_enabled else None
                 job.run_job()
 
     def add(self, job: SchedulerJob) -> SchedulerJob:
         with ScheduleWorker._scheduler_lock:
             assert job not in self.pending_jobs_list
             self.pending_jobs_list.append(job)
-            log_debug(f"Scheduler: added {job=!s} queued={len(self.pending_jobs_list)}") if log_debug_enabled else None
+            log.debug(f"Scheduler: added {job=!s} queued={len(self.pending_jobs_list)}") if log.debug_enabled else None
             return job
 
     def remove(self, job: SchedulerJob):
         with ScheduleWorker._scheduler_lock:
             if job in self.pending_jobs_list:
                 self.pending_jobs_list.remove(job)
-                log_debug(f"Scheduler: removed {job=!s} queued={len(self.pending_jobs_list)}") if log_debug_enabled else None
+                log.debug(f"Scheduler: removed {job=!s} queued={len(self.pending_jobs_list)}") if log.debug_enabled else None
 
     def _remove_all(self, job_type: SchedulerJobType | None = None):
         with ScheduleWorker._scheduler_lock:
             for job in [j for j in self.pending_jobs_list if job_type is None or j.job_type == job_type]:
                 self.remove(job)
-            log_debug(f"Scheduler: remove type {job_type!s} ({len(self.pending_jobs_list)} remain)") if log_debug_enabled else None
+            log.debug(f"Scheduler: remove type {job_type!s} ({len(self.pending_jobs_list)} remain)") if log.debug_enabled else None
 
     def is_supervising(self, job: SchedulerJob):
         return job in self.pending_jobs_list

@@ -18,7 +18,7 @@ from vdu_controls.config_ini import GeoLocation
 from vdu_controls.constants import CONFIG_DIR_PATH
 
 from vdu_controls.internationalization import tr
-from vdu_controls.logging import log_debug, log_debug_enabled, log_info, log_warning, log_error
+import vdu_controls.logging as log
 from vdu_controls.misc import zoned_now
 from vdu_controls.solar_calc import calc_solar_lux
 from vdu_controls.work_scheduler import WorkerThread
@@ -29,14 +29,14 @@ class LuxMeterDevice(QObject):
 
     def __init__(self, requires_worker: bool = True, manual: bool = False, semi_auto: bool = False) -> None:
         super().__init__()
-        log_debug(f"LuxMeterDevice init {manual=} {semi_auto=}") if log_debug_enabled else None
+        log.debug(f"LuxMeterDevice init {manual=} {semi_auto=}") if log.debug_enabled else None
         self.current_value: float | None = None
         self.requires_worker = requires_worker
         self.has_manual_capability = manual  # Can be both manual and semi-automatic
         self.has_semi_auto_capability = semi_auto
         self.has_auto_capability = not self.has_manual_capability or self.has_semi_auto_capability
         if self.requires_worker:  # use a thread to prevent any blocking due to slow updating
-            log_info(f"LuxMeterDevice: starting worker for {self.__class__}")
+            log.info(f"LuxMeterDevice: starting worker for {self.__class__}")
             self.worker = WorkerThread(task_body=self.update_from_worker_thread, task_finished=self.cleanup, loop=True)
 
     def get_value(self) -> float | None:  # an un-smoothed raw value - TODO should smoothing be moved here?
@@ -91,7 +91,7 @@ class LuxMeterFifoDevice(LuxMeterDevice):
     def update_from_worker_thread(self, _: WorkerThread) -> None:
         try:
             if self.fifo is None:
-                log_info(f"Initialising fifo {self.device_name} - waiting on fifo data.")
+                log.info(f"Initialising fifo {self.device_name} - waiting on fifo data.")
                 self.fifo = os.open(self.device_name, os.O_RDONLY | os.O_NONBLOCK)
             while not self.worker.stop_requested and len(select.select([self.fifo], [], [], 1.0)[0]) == 1:
                 byte = os.read(self.fifo, 1)
@@ -106,11 +106,11 @@ class LuxMeterFifoDevice(LuxMeterDevice):
         except (OSError, ValueError) as se:
             self.cleanup()
             self.buffer = b''
-            log_warning(f"Reopen and retry {self.device_name=} {self.buffer=}", se, trace=True)
+            log.warning(f"Reopen and retry {self.device_name=} {self.buffer=}", se, trace=True)
 
     def cleanup(self, worker: WorkerThread | None = None):
         if self.fifo is not None:
-            log_info("closing fifo")
+            log.info("closing fifo")
             os.close(self.fifo)
             self.fifo = None
 
@@ -127,7 +127,7 @@ class LuxMeterExecutableDevice(LuxMeterDevice):
             result = subprocess.run([self.runnable], stdout=subprocess.PIPE, check=True)
             self.set_current_value(float(result.stdout))
         except (OSError, ValueError, subprocess.CalledProcessError) as se:
-            log_warning(f"Error running {self.runnable}, will retry in {self.sleep_time} seconds", se, trace=True)
+            log.warning(f"Error running {self.runnable}, will retry in {self.sleep_time} seconds", se, trace=True)
         self.worker.doze(self.sleep_time)  # Don't re-run too fast
 
 
@@ -148,7 +148,7 @@ class LuxMeterSerialDevice(LuxMeterDevice):
         problem = None
         try:
             if self.serial_device is None:
-                log_info(f"LuxMeterSerialDevice: Initialising character device {self.device_name}")
+                log.info(f"LuxMeterSerialDevice: Initialising character device {self.device_name}")
                 self.serial_device = self.serial_module.Serial(self.device_name)
             if self.serial_device is not None:
                 self.serial_device.reset_input_buffer()
@@ -163,7 +163,7 @@ class LuxMeterSerialDevice(LuxMeterDevice):
         except (self.serial_module.SerialException, termios.error, FileNotFoundError, ValueError) as se:
             problem = se
         if problem:
-            log_warning(f"Retry read of {self.device_name}, will reopen feed in {self.backoff_secs} seconds. Cause:", problem,
+            log.warning(f"Retry read of {self.device_name}, will reopen feed in {self.backoff_secs} seconds. Cause:", problem,
                         trace=True)
             self.cleanup()
             self.worker.doze(self.backoff_secs)
@@ -171,7 +171,7 @@ class LuxMeterSerialDevice(LuxMeterDevice):
 
     def cleanup(self, worker: WorkerThread | None = None):
         if self.serial_device is not None:
-            log_debug("closing serial device") if log_debug_enabled else None
+            log.debug("closing serial device") if log.debug_enabled else None
             self.serial_device.close()
             self.serial_device = None
 
@@ -212,7 +212,7 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
             try:
                 return float(persisted_path.read_text())
             except ValueError:
-                log_error(f"LuxSemiAuto: failed to parse stored lux value, removing {persisted_path.as_posix()}")
+                log.error(f"LuxSemiAuto: failed to parse stored lux value, removing {persisted_path.as_posix()}")
                 persisted_path.unlink()
         return 1000.0
 
@@ -230,11 +230,11 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
                 try:
                     daylight_factor = float(persisted_path.read_text())
                 except ValueError:
-                    log_error(f"LuxSemiAuto: failed to parse daylight_factor, removing {persisted_path.as_posix()}")
+                    log.error(f"LuxSemiAuto: failed to parse daylight_factor, removing {persisted_path.as_posix()}")
                     persisted_path.unlink()
             else:
-                log_error(f"LuxSemiAuto: {persisted_path.as_posix()} does not exist")
-            log_debug(f'LuxSemiAuto: {daylight_factor=} ({persisted_path.as_posix()})') if log_debug_enabled else None
+                log.error(f"LuxSemiAuto: {persisted_path.as_posix()} does not exist")
+            log.debug(f'LuxSemiAuto: {daylight_factor=} ({persisted_path.as_posix()})') if log.debug_enabled else None
             LuxMeterSemiAutoDevice.daylight_factor = daylight_factor
         return LuxMeterSemiAutoDevice.daylight_factor
 
@@ -253,7 +253,7 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
             if persist:
                 if CONFIG_DIR_PATH.exists():
                     persisted_path = CONFIG_DIR_PATH.joinpath("lux_daylight_factor.txt")
-                    log_debug(f"LuxSemiAuto: save {daylight_factor=} to {persisted_path.as_posix()}") if log_debug_enabled else None
+                    log.debug(f"LuxSemiAuto: save {daylight_factor=} to {persisted_path.as_posix()}") if log.debug_enabled else None
                 persisted_path.write_text(f"{daylight_factor:.4f}")
             LuxMeterSemiAutoDevice.daylight_factor = daylight_factor
 

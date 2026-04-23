@@ -15,7 +15,7 @@ from vdu_controls.qt_imports import QLocale
 from vdu_controls.config_ini import GeoLocation
 from vdu_controls.constants import WEATHER_FORECAST_URL
 from vdu_controls.internationalization import tr
-from vdu_controls.logging import log_info
+import vdu_controls.logging as log
 from vdu_controls.misc import zoned_now
 from vdu_controls.solar_calc import spherical_kilometers
 from vdu_controls.widgets import MBox, MIcon
@@ -45,7 +45,7 @@ class WeatherQuery:
             location_name = ''
         self.when = zoned_now()
         try:
-            log_info(f"QueryWeather: {self.url}")
+            log.info(f"QueryWeather: {self.url}")
             with urllib.request.urlopen(self.url, timeout=15) as request:
                 json_content = request.read()
                 self.weather_data = json.loads(json_content)
@@ -67,7 +67,7 @@ class WeatherQuery:
                     self.proximity_km = round(spherical_kilometers(float(self.latitude), float(self.longitude),
                                                                    self.location.latitude, self.location.longitude))
                     self.proximity_ok = self.proximity_km <= self.maximum_distance_km
-                    log_info(f"QueryWeather result: {self}")
+                    log.info(f"QueryWeather result: {self}")
                     return
         except urllib.error.HTTPError as e:
             if e.code == 404:

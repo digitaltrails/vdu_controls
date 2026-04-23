@@ -14,7 +14,7 @@ from vdu_controls.constants import VDU_CONTROLS_DEVELOPER
 from vdu_controls.ddcutil_abstract import BRIGHTNESS_VCP_CODE, DdcutilInterface
 from vdu_controls.ddcutil_abstract import DDCUTIL_RETRIES, CONTINUOUS_TYPE, DdcEventType, DdcutilDisplayNotFound
 from vdu_controls.ddcutil_exe import DdcutilExeImpl
-from vdu_controls.logging import *
+import vdu_controls.logging as log
 from vdu_controls.qt_imports import QTimer, QSocketNotifier
 
 
@@ -31,7 +31,7 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
         self.brightnessctl_exe = 'brightnessctl'
         self.max_brightness: Dict[str, int] = {}
         version_check = self.__run__('-V').stdout.decode('utf-8')
-        log_info(f"{self.brightnessctl_exe} version {version_check}")
+        log.info(f"{self.brightnessctl_exe} version {version_check}")
         self.set_vcp_time: datetime = datetime.now() - timedelta(seconds=60)  # Last time set_vcp was called
         self.callback = callback
         if self.callback:  # --- udev setup ---
@@ -85,13 +85,13 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
                 now = time.time()
                 result = subprocess.run(process_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
                 elapsed = time.time() - now
-                log_debug(f"subprocess result: success {log_id} [{result.args}] "
+                log.debug(f"subprocess result: success {log_id} [{result.args}] "
                           f"rc={result.returncode} elapsed={elapsed:.2f} "
-                          f"stdout={result.stdout.decode('utf-8', errors='surrogateescape')}") if log_debug_enabled else None
+                          f"stdout={result.stdout.decode('utf-8', errors='surrogateescape')}") if log.debug_enabled else None
         except subprocess.SubprocessError as spe:
             error_text = spe.stderr.decode('utf-8', errors='surrogateescape')
-            log_debug("subprocess result: error ", log_id, process_args,
-                      f"stderr='{error_text}', exception={str(spe)}", trace=True) if log_debug_enabled else None
+            log.debug("subprocess result: error ", log_id, process_args,
+                      f"stderr='{error_text}', exception={str(spe)}", trace=True) if log.debug_enabled else None
             raise
         return result
 
@@ -116,7 +116,7 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
                 edid_txt = parts[0]
                 binary_sn = f"BSN#{edid_txt}".encode('utf-8')
                 serial_number = re.sub(r'[^A-Za-z0-9]', '_', parts[0]).title()
-                log_info(f"Detected panel {model_name=} {edid_txt=} detected")
+                log.info(f"Detected panel {model_name=} {edid_txt=} detected")
                 vdu_attributes = DdcutilExeImpl.DetectedAttributes(
                     display_number, usb_bus, usb_device,
                     manufacturer_id, model_name, serial_number, product_code, edid_txt, binary_sn)
@@ -147,7 +147,7 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
         assert vcp_code_int == self.brightness_vcp_code_int  # nothing else supported
         try:
             new_value = f"{new_value_int * self._get_max_brightness(edid_txt) // 100}"
-            log_info(f"laptop set {new_value}")
+            log.info(f"laptop set {new_value}")
             self.__run__('set', '-d', edid_txt, new_value)
         finally:
             self.set_vcp_time = datetime.now()
@@ -159,7 +159,7 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
                 brightness = int(self.__run__('get', '-d', edid_txt).stdout)
                 max_brightness = self._get_max_brightness(edid_txt)
                 percent = (100 * brightness) // max_brightness
-                log_info(f"Panel {brightness=} {max_brightness=} {percent=}")
+                log.info(f"Panel {brightness=} {max_brightness=} {percent=}")
                 return [(self.brightness_vcp_code_int, percent, 100, CONTINUOUS_TYPE)]
             except (subprocess.SubprocessError, ValueError, DdcutilDisplayNotFound):
                 if attempt_count + 1 == DDCUTIL_RETRIES:  # Don't log here, it creates too much noise in the logs

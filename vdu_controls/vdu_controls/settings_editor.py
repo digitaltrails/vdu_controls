@@ -18,7 +18,7 @@ from vdu_controls.config_ini import VduControlsConfig, ConfIni, ConfOpt, ConfTyp
 from vdu_controls.constants import IP_ADDRESS_INFO_URL, CONFIG_FILE_PREFER_QT5
 from vdu_controls.icon_utils import si, StdPixmap
 from vdu_controls.internationalization import tr, translate_option
-from vdu_controls.logging import log_warning
+import vdu_controls.logging as log
 from vdu_controls.scaling import npx, native_font_height
 from vdu_controls.widgets import SubWinDialog, StdButton, MBox, MIcon, MBtn, FasterFileDialog, alter_margins, DialogSingletonMixin
 
@@ -248,7 +248,7 @@ class SettingsEditorTab(QWidget):
                             content_layout.addWidget(
                                 _field(widget_map[option_def.conf_type](self, option_name, section_name, option_def.help)))
                 except ValueError:  # Probably an old no-longer-valid option, or a typo.
-                    log_warning(f"Ignoring invalid option name {option_name} in {section_name}")
+                    log.warning(f"Ignoring invalid option name {option_name} in {section_name}")
 
     def set_preferred_name(self, label_str):
         self.preferred_name = label_str

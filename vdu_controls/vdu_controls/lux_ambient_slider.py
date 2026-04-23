@@ -154,7 +154,7 @@ class LuxAmbientSlider(QWidget):
             round(controller.lux_meter.get_value()) if controller.lux_meter else 1000)  # don't trigger side-effects.
 
     def set_current_value(self, value: int, source: QWidget | None = None) -> None:
-        # log_debug("set_current_value ", value, source, self.in_flux)
+        # log.debug("set_current_value ", value, source, self.in_flux)
         icon_changed = False
         if not self.in_flux and value != self.current_value:
             try:
