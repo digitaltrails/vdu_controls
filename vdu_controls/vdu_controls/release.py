@@ -1,5 +1,7 @@
 # SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls>
 # SPDX-License-Identifier: GPL-3.0-or-later
+from __future__ import annotations
+
 from vdu_controls.constants import VDU_CONTROLS_VERSION
 from vdu_controls.internationalization import tr
 from vdu_controls.qt_imports import QT_TR_NOOP, Qt

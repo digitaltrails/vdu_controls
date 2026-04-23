@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: 2021 Michael Hamilton
- # SPDX-License-Identifier: GPL-3.0-or-later
-# vdu_controls Copyright (C) 2021 Michael Hamilton
+# SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls>
+# SPDX-License-Identifier: GPL-3.0-or-later
+from __future__ import annotations
+
 import os
 import re
 import subprocess
