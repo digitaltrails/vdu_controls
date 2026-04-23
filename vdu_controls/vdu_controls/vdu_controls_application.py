@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 # SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls>
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
@@ -31,7 +30,8 @@ from vdu_controls.icon_utils import create_icon_from_svg_bytes, create_icon_from
 from vdu_controls.installer import install_as_desktop_application
 from vdu_controls.internationalization import tr, initialise_locale_translations, find_locale_specific_file
 from vdu_controls.logging import *
-from vdu_controls.lux_module import LuxMeterSemiAutoDevice, LuxDialog, LuxAutoController
+from vdu_controls.lux_module import LuxDialog, LuxAutoController
+from vdu_controls.lux_meters import LuxMeterSemiAutoDevice
 from vdu_controls.misc import zoned_now, proper_name
 from vdu_controls.preset import Preset, PresetScheduleStatus, PresetTransitionFlag
 from vdu_controls.preset_controller import PresetController
@@ -817,6 +817,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                         if df := preset.get_daylight_factor():
                             log_info(f"Daylight-Factor {df:.4f} read from Preset {preset.name}")
                             LuxMeterSemiAutoDevice.set_daylight_factor(df, persist=True)
+                            LuxDialog.reconfigure_instance()
                     else:  # Interrupted or exception:
                         self.main_window.update_status_indicators()
                         self.main_window.show_preset_status(tr("Interrupted restoration of {}").format(preset.name))

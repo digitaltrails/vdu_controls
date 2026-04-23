@@ -1,5 +1,6 @@
 # SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls>
 # SPDX-License-Identifier: GPL-3.0-or-later
+from __future__ import annotations
 import threading
 import time
 from datetime import timedelta
@@ -22,7 +23,7 @@ class WorkException(Exception):
 class WorkerThread(QThread):
     finished_work_qtsignal = pyqtSignal(object)
 
-    def __init__(self, task_body: Callable[['WorkerThread'], None], task_finished: Callable[['WorkerThread'], None] | None = None,
+    def __init__(self, task_body: Callable[[WorkerThread], None], task_finished: Callable[[WorkerThread], None] | None = None,
                  loop: bool = False) -> None:
         super().__init__()
         # init should always be initiated from the GUI thread to grant the worker's __init__ easy access to the GUI thread.
@@ -101,7 +102,7 @@ class SchedulerJob:  # designed to resemble a QTimer, which it was written to re
         self.has_run = False
         ScheduleWorker.get_instance().add(self)
 
-    def __lt__(self, other: 'SchedulerJob'):
+    def __lt__(self, other: SchedulerJob):
         return self.when < other.when
 
     def __str__(self):

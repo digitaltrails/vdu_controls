@@ -1,12 +1,13 @@
+# SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls>
+# SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
 import math
 import time
 from datetime import datetime
-
 from functools import partial
 from pathlib import Path
-from typing import Callable, Dict, List, Tuple
+from typing import Callable, Dict, List, Tuple, TYPE_CHECKING
 
 from PyQt5.QtCore import QSize, QEvent, Qt, pyqtSignal, QPoint, QRegularExpression
 from PyQt5.QtGui import QFontMetrics, QFont, QImage, QPixmap, QPainter, QColor, QPen, QPolygon, QMouseEvent, QDoubleValidator, \
@@ -33,6 +34,8 @@ from vdu_controls.weather import WeatherQuery
 from vdu_controls.widgets import alter_margins, StdButton, PushButtonLeftJustified, FasterFileDialog, MBox, MIcon, MBtn, \
     SubWinDialog, DialogSingletonMixin, ToolButton
 
+if TYPE_CHECKING:
+    from vdu_controls.vdu_controls_application import VduAppController
 
 class PresetItemWidget(QWidget):
     def __init__(self, preset: Preset, restore_action: Callable, save_action: Callable, delete_action: Callable,
@@ -218,11 +221,11 @@ class PresetWeatherWidget(QWidget):
             "Light Sleet Showers\n377 Light Sleet\n386 Thundery Showers\n389 Thundery Heavy Rain\n392 "
             "Thundery Snow Showers\n395 Heavy Snow Showers\n"}
 
-    def __init__(self, location: GeoLocation | None, main_config: VduControlsConfig) -> None:
+    def __init__(self, main_config: VduControlsConfig) -> None:
         super().__init__()
-        self.location = location
         self.init_weather()
         self.main_config = main_config
+        self.location = main_config.get_location()
         self.required_weather_filepath: Path | None = None
         self.setLayout(widget_layout := QVBoxLayout())
         self.label = QLabel(tr("Additional weather requirements"))
@@ -655,9 +658,8 @@ class PresetElevationChartWidget(QLabel):
 
 class PresetDaylightFactorWidget(QWidget):
 
-    def __init__(self, parent: PresetsDialog):
-        super().__init__(parent=parent)
-        self.parent = parent
+    def __init__(self):
+        super().__init__()
         self.setLayout(QHBoxLayout())
         self.df_checkbox = QCheckBox()
         self.df_label = QLabel(tr("Daylight-Factor"))
@@ -670,7 +672,8 @@ class PresetDaylightFactorWidget(QWidget):
         def df_init(state):
             if state == Qt.CheckState.Checked:
                 if self.df_input.text() == '':
-                    self.df_input.setText(f"{self.parent.main_controller.get_daylight_factor():.4f}")
+                    from lux_meters import LuxMeterSemiAutoDevice
+                    self.df_input.setText(f"{LuxMeterSemiAutoDevice.get_daylight_factor():.4f}")
             else:
                 self.df_input.setText('')
 
@@ -717,7 +720,7 @@ class PresetScheduleAtElevationWidget(PresetScheduleAtWidgetBase):
     def __init__(self, main_config: VduControlsConfig) -> None:
         super().__init__(description=tr("elevation-trigger"))
         self.elevation_key: SolarElevationKey | None = None
-        self.location: GeoLocation | None = main_config.get_location()
+        self.location = main_config.get_location()
         self.setLayout(main_layout := QVBoxLayout())
         self.title_prefix = tr("Trigger at solar elevation:")
         self.title_label = QLabel(self.title_prefix)
@@ -729,7 +732,7 @@ class PresetScheduleAtElevationWidget(PresetScheduleAtWidgetBase):
         self.elevation_chart = PresetElevationChartWidget()
         self.elevation_chart.selected_elevation_qtsignal.connect(self.set_elevation_key)
 
-        self.df_widget = PresetDaylightFactorWidget(parent=self)
+        self.df_widget = PresetDaylightFactorWidget()
 
         self.slider_last_event_time = time.time()
         self.slider = QSlider(Qt.Orientation.Horizontal)
@@ -749,7 +752,7 @@ class PresetScheduleAtElevationWidget(PresetScheduleAtWidgetBase):
         chart_and_slider_layout.addWidget(self.df_widget, 0)
         bottom_layout.addLayout(chart_and_slider_layout, 1)
 
-        self.weather_widget = PresetWeatherWidget(self.location, main_config)
+        self.weather_widget = PresetWeatherWidget(main_config)
         bottom_layout.addWidget(self.weather_widget, 0)
         self.configure_for_location(self.location)
         self.slider.valueChanged.connect(self.sliding)
@@ -1041,7 +1044,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.editor_at_time_widget = PresetScheduleAtTimeWidget()
         self.editor_layout.addWidget(self.editor_at_time_widget)
 
-        self.editor_at_elevation_widget = PresetScheduleAtElevationWidget(self.main_config)
+        self.editor_at_elevation_widget = PresetScheduleAtElevationWidget(main_config)
         self.editor_layout.addWidget(self.editor_at_elevation_widget)
 
         possibles = [self.editor_at_time_widget, self.editor_at_elevation_widget]

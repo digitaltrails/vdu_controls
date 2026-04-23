@@ -1,5 +1,7 @@
 # SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls>
 # SPDX-License-Identifier: GPL-3.0-or-later
+from __future__ import annotations
+
 import argparse
 import configparser
 import inspect
@@ -14,8 +16,8 @@ from pathlib import Path
 from typing import List, Tuple, Dict, Any
 
 from vdu_controls.constants import CONFIG_DIR_PATH, VDU_CONTROLS_VERSION, APPNAME
-from vdu_controls.ddcutil_aggregator import DdcutilAggregator
 from vdu_controls.ddcutil_abstract import CON, BRIT, CONT, SNC
+from vdu_controls.ddcutil_aggregator import DdcutilAggregator
 from vdu_controls.internationalization import tr
 from vdu_controls.logging import *
 from vdu_controls.misc import zoned_now
@@ -51,7 +53,7 @@ class ConfIni(configparser.ConfigParser):
             self.write(config_file)
         log_info(f"Wrote config to {config_path.as_posix()}")
 
-    def duplicate(self, new_ini=None) -> 'ConfIni':
+    def duplicate(self, new_ini=None) -> ConfIni:
         if new_ini is None:
             new_ini = ConfIni()
         for section in self.sections():
@@ -61,7 +63,7 @@ class ConfIni(configparser.ConfigParser):
                 new_ini[section][option] = self[section][option]
         return new_ini
 
-    def diff(self, other: 'ConfIni', vdu_settings_only: bool = False) -> Dict[Tuple[str, str], str]:
+    def diff(self, other: ConfIni, vdu_settings_only: bool = False) -> Dict[Tuple[str, str], str]:
         values = []
         for subject in (self, other):
             sections = set(subject.sections()) - {configparser.DEFAULTSECT, ConfSec.METADATA_SECTION}
