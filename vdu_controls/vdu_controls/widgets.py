@@ -5,15 +5,15 @@ from __future__ import annotations
 import os
 from typing import Callable, Any, Tuple, Dict, Type
 
-from vdu_controls.qt_imports import QTimer, Qt, QRect
-from vdu_controls.qt_imports import QPixmap, QPainter, QPen, QIcon
-from vdu_controls.qt_imports import QToolButton, QWidget
+from vdu_controls.qt_imports import (QTimer, Qt, QRect, QPixmap, QPainter, QPen, QIcon, QToolButton, QWidget, QEvent,
+                                     QSize, QLayout, QLabel, QStyle, QDir, QMessageBox, QFileDialog, QVBoxLayout, QDialog,
+                                     QSlider, QLineEdit, QMouseEvent, QMargins, QSvgWidget, QPushButton, QHBoxLayout,
+                                     QtCore, QTextEdit, QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING)
 
 import vdu_controls.logging as log
 from vdu_controls.constants import RESIZABLE_MESSAGEBOX_HACK, APPNAME
 from vdu_controls.icon_utils import polychrome_light_or_dark, handle_theme, create_icon_from_svg_bytes
-from vdu_controls.qt_imports import *
-from vdu_controls.qt_imports import QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING
+
 from vdu_controls.scaling import native_font_height, npx
 
 def alter_margins(target: QWidget | QLayout,

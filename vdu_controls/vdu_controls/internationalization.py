@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Dict
 
 from vdu_controls.constants import LOCALE_TRANSLATIONS_PATHS
-from vdu_controls.qt_imports import *
+from vdu_controls.qt_imports import QLocale, QTranslator, QApplication, QCoreApplication
 import vdu_controls.logging as log
 
 
