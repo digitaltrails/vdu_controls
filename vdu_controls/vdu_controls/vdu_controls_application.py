@@ -54,10 +54,9 @@ from vdu_controls.widgets import MIcon, MBox, MBtn, \
     alter_margins, DialogSingletonMixin, ToolButton
 from vdu_controls.work_scheduler import WorkerThread, ScheduleWorker, thread_pid, SchedulerJob, SchedulerJobType
 
+from vdu_controls.qt_imports import *
+
 Shortcut = namedtuple('Shortcut', ['letter', 'annotated_word'])
-
-gui_thread: QThread | None = None
-
 
 # Use Linux/UNIX signals to trigger preset changes - 16 presets should be enough for anyone.
 
@@ -1181,12 +1180,11 @@ class VduAppWindow(QMainWindow):
 
     def __init__(self, main_config: VduControlsConfig, main_controller: VduAppController) -> None:
         super().__init__()
-        global gui_thread
         app = QApplication.instance()
         assert app
         if os.getenv('VDU_CONTROLS_DEBUG_LAYOUT', default='no') == 'yes':
             app.setStyleSheet("QWidget { border: 1px solid red; margin: 1px; padding: 1px; }")
-        set_gui_thread(app.thread())
+        #set_gui_thread(app.thread())
         self.main_controller: VduAppController = main_controller
         self.setObjectName('main_window')
         self.qt_version_key = self.objectName() + "_qt_version"
@@ -1714,6 +1712,9 @@ def main() -> None:
     QGuiApplication.setDesktopFileName("vdu_controls")  # Wayland needs this set to find/use the app's desktop icon.
     # Call QApplication before parsing arguments, it will parse and remove Qt session restoration arguments.
     app = QApplication(sys.argv)
+    assert app is not None
+    set_gui_thread(app.thread())
+    assert is_running_in_gui_thread()
     log_info(f"{app.applicationName()=} {QApplication.instance().applicationName()=}")
     global unix_signal_handler
     unix_signal_handler = SignalWakeupHandler(app)
@@ -1749,6 +1750,7 @@ def main() -> None:
         initialise_locale_translations(app)
 
     main_controller = VduAppController(main_config)
+    assert is_running_in_gui_thread()
     VduAppWindow(main_config, main_controller)  # may need to assign this to a variable to prevent garbage collection?
 
     if args.about:

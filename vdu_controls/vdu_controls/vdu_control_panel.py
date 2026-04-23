@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Callable, List
 
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QFrame, QApplication, QHBoxLayout, QLabel, QSlider, QSpinBox, QComboBox
+from vdu_controls.qt_imports import Qt, pyqtSignal
+from vdu_controls.qt_imports import QWidget, QVBoxLayout, QFrame, QApplication, QHBoxLayout, QLabel, QSlider, QSpinBox, QComboBox
 
 from vdu_controls.config_ini import VcpCapability, SUPPORTED_VCP_BY_CODE
 from vdu_controls.constants import TOOLTIP_DURATION_MSEC

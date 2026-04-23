@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import List, TYPE_CHECKING
 
-from PyQt5.QtCore import Qt, pyqtSignal
+from vdu_controls.qt_imports import Qt, pyqtSignal
 
 from vdu_controls.config_ini import ConfIni
 from vdu_controls.constants import MsgDestination

@@ -12,7 +12,7 @@ import time
 from importlib import import_module
 from typing import Tuple
 
-from PyQt5.QtCore import QObject, pyqtSignal
+from vdu_controls.qt_imports import QObject, pyqtSignal
 
 from vdu_controls.config_ini import GeoLocation
 from vdu_controls.constants import CONFIG_DIR_PATH
@@ -22,22 +22,6 @@ from vdu_controls.logging import log_debug, log_debug_enabled, log_info, log_war
 from vdu_controls.misc import zoned_now
 from vdu_controls.solar_calc import calc_solar_lux
 from vdu_controls.work_scheduler import WorkerThread
-
-
-def lux_create_device(device_name: str) -> LuxMeterDevice:
-    if device_name == LuxMeterSemiAutoDevice.device_name:
-        return LuxMeterSemiAutoDevice()
-    if not pathlib.Path(device_name).exists():
-        raise LuxDeviceException(tr("Failed to set up {} - path does not exist.").format(device_name))
-    if not os.access(device_name, os.R_OK):
-        raise LuxDeviceException(tr("Failed to set up {} - no read access to device.").format({device_name}))
-    if pathlib.Path(device_name).is_char_device():
-        return LuxMeterSerialDevice(device_name)
-    elif pathlib.Path(device_name).is_fifo():
-        return LuxMeterFifoDevice(device_name)
-    elif pathlib.Path(device_name).exists() and os.access(device_name, os.X_OK):
-        return LuxMeterExecutableDevice(device_name)
-    raise LuxDeviceException(tr("Failed to set up {} - not a recognized kind of device or not executable.").format(device_name))
 
 
 class LuxMeterDevice(QObject):
@@ -78,6 +62,22 @@ class LuxMeterDevice(QObject):
 
     def get_status(self) -> Tuple[bool, str]:  # True if OK, plus any message
         return True, ''
+
+
+def lux_create_device(device_name: str) -> LuxMeterDevice:
+    if device_name == LuxMeterSemiAutoDevice.device_name:
+        return LuxMeterSemiAutoDevice()
+    if not pathlib.Path(device_name).exists():
+        raise LuxDeviceException(tr("Failed to set up {} - path does not exist.").format(device_name))
+    if not os.access(device_name, os.R_OK):
+        raise LuxDeviceException(tr("Failed to set up {} - no read access to device.").format({device_name}))
+    if pathlib.Path(device_name).is_char_device():
+        return LuxMeterSerialDevice(device_name)
+    elif pathlib.Path(device_name).is_fifo():
+        return LuxMeterFifoDevice(device_name)
+    elif pathlib.Path(device_name).exists() and os.access(device_name, os.X_OK):
+        return LuxMeterExecutableDevice(device_name)
+    raise LuxDeviceException(tr("Failed to set up {} - not a recognized kind of device or not executable.").format(device_name))
 
 
 class LuxMeterFifoDevice(LuxMeterDevice):

@@ -18,12 +18,12 @@ from typing import List, Tuple, Dict, Any
 from vdu_controls.constants import CONFIG_DIR_PATH, VDU_CONTROLS_VERSION, APPNAME
 from vdu_controls.ddcutil_abstract import CON, BRIT, CONT, SNC
 from vdu_controls.ddcutil_aggregator import DdcutilAggregator
+from vdu_controls.installer import install_as_desktop_application
 from vdu_controls.internationalization import tr
 from vdu_controls.logging import *
 from vdu_controls.misc import zoned_now
 from vdu_controls.qt_imports import QT_TR_NOOP
 from vdu_controls.svg import BRIGHTNESS_SVG, CONTRAST_SVG, VOLUME_SVG, COLOR_TEMPERATURE_SVG
-
 
 class ConfIni(configparser.ConfigParser):
     """ConfigParser is a little messy, and its class name is a bit misleading, wrap it and bend it to our needs."""

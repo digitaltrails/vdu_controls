@@ -15,9 +15,9 @@ from functools import partial
 from pathlib import Path
 from typing import Dict, List, Tuple, TYPE_CHECKING
 
-from PyQt5.QtCore import QT_TR_NOOP, Qt, QTimer, pyqtSignal, QPointF, QPoint
-from PyQt5.QtGui import QColor, QPixmap, QPainter, QPen, QFont, QResizeEvent, QPolygon, QMouseEvent
-from PyQt5.QtWidgets import QVBoxLayout, QWidget, QGridLayout, QComboBox, QCheckBox, QLabel, QSpinBox, QListWidget, QStatusBar, \
+from vdu_controls.qt_imports import QT_TR_NOOP, Qt, QTimer, pyqtSignal, QPointF, QPoint
+from vdu_controls.qt_imports import QColor, QPixmap, QPainter, QPen, QFont, QResizeEvent, QPolygon, QMouseEvent
+from vdu_controls.qt_imports import QVBoxLayout, QWidget, QGridLayout, QComboBox, QCheckBox, QLabel, QSpinBox, QListWidget, QStatusBar, \
     QHBoxLayout, QListWidgetItem, QApplication, QInputDialog
 
 from vdu_controls.config_ini import ConfIni

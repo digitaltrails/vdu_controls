@@ -8,7 +8,7 @@ import re
 import subprocess
 from typing import Callable, Dict, Tuple, List
 
-from PyQt5.QtCore import QObject, pyqtSignal
+from vdu_controls.qt_imports import QObject, pyqtSignal
 
 from vdu_controls.config_ini import VduControlsConfig, ConfIni, ConfOpt, SUPPORTED_VCP_BY_CODE, VcpCapability
 from vdu_controls.constants import IGNORE_VDU_MARKER_STR, ASSUMED_CONTROLS_CONFIG_VCP_CODES, ASSUMED_CONTROLS_CONFIG_TEXT

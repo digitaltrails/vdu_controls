@@ -5,9 +5,9 @@ from __future__ import annotations
 import os
 from typing import Callable, Any, Tuple, Dict, Type
 
-from PyQt5.QtCore import QTimer, Qt, QRect
-from PyQt5.QtGui import QPixmap, QPainter, QPen, QIcon
-from PyQt5.QtWidgets import QToolButton, QWidget
+from vdu_controls.qt_imports import QTimer, Qt, QRect
+from vdu_controls.qt_imports import QPixmap, QPainter, QPen, QIcon
+from vdu_controls.qt_imports import QToolButton, QWidget
 
 from vdu_controls.logging import *
 from vdu_controls.constants import RESIZABLE_MESSAGEBOX_HACK, APPNAME

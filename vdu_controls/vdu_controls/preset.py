@@ -9,8 +9,8 @@ from functools import partial
 from pathlib import Path
 from typing import Callable
 
-from PyQt5.QtCore import QT_TR_NOOP
-from PyQt5.QtGui import QIcon
+from vdu_controls.qt_imports import QT_TR_NOOP
+from vdu_controls.qt_imports import QIcon
 
 from vdu_controls.weather import WeatherQuery
 from vdu_controls.config_ini import ConfIni

@@ -10,6 +10,24 @@ from typing import Dict, List
 from vdu_controls.config_ini import ConfIni
 from vdu_controls.logging import log_info
 
+@dataclass
+class LuxPoint:
+    lux: int
+    brightness: int
+    preset_name: str | None = None
+
+    def __lt__(self, other) -> bool:  # Brightness doesn't matter for comparion purposes.
+        return self.lux < other.lux
+
+    def __eq__(self, other) -> bool:  # Brightness doesn't matter for comparion purposes.
+        return self.lux == other.lux and self.preset_name == other.preset_name
+
+    def __hash__(self):  # Brightness doesn't matter for comparion purposes.
+        return hash((self.lux, self.preset_name))
+
+    def __str__(self):
+        return f"({self.lux} lux, {self.brightness}%, preset={self.preset_name})"
+
 
 class LuxConfig(ConfIni):
 
@@ -45,22 +63,3 @@ class LuxConfig(ConfIni):
             if not self.has_section(section_name):
                 self.add_section(section_name)
         return self
-
-
-@dataclass
-class LuxPoint:
-    lux: int
-    brightness: int
-    preset_name: str | None = None
-
-    def __lt__(self, other) -> bool:  # Brightness doesn't matter for comparion purposes.
-        return self.lux < other.lux
-
-    def __eq__(self, other) -> bool:  # Brightness doesn't matter for comparion purposes.
-        return self.lux == other.lux and self.preset_name == other.preset_name
-
-    def __hash__(self):  # Brightness doesn't matter for comparion purposes.
-        return hash((self.lux, self.preset_name))
-
-    def __str__(self):
-        return f"({self.lux} lux, {self.brightness}%, preset={self.preset_name})"

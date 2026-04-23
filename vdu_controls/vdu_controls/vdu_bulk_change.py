@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Callable, Any, List, Dict
 
-from PyQt5.QtCore import pyqtSignal
+from vdu_controls.qt_imports import pyqtSignal
 
 from vdu_controls.config_ini import ConfOpt
 from vdu_controls.ddcutil_abstract import VcpOrigin

@@ -9,10 +9,10 @@ from functools import partial
 from pathlib import Path
 from typing import Callable, Dict, List, Tuple, TYPE_CHECKING
 
-from PyQt5.QtCore import QSize, QEvent, Qt, pyqtSignal, QPoint, QRegularExpression
-from PyQt5.QtGui import QFontMetrics, QFont, QImage, QPixmap, QPainter, QColor, QPen, QPolygon, QMouseEvent, QDoubleValidator, \
+from vdu_controls.qt_imports import QSize, QEvent, Qt, pyqtSignal, QPoint, QRegularExpression
+from vdu_controls.qt_imports import QFontMetrics, QFont, QImage, QPixmap, QPainter, QColor, QPen, QPolygon, QMouseEvent, QDoubleValidator, \
     QResizeEvent, QValidator, QRegularExpressionValidator
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QSizePolicy, QApplication, QVBoxLayout, QLabel, QComboBox, QScrollArea, QMenu, \
+from vdu_controls.qt_imports import QWidget, QHBoxLayout, QSizePolicy, QApplication, QVBoxLayout, QLabel, QComboBox, QScrollArea, QMenu, \
     QAction, QSpinBox, QCheckBox, QLineEdit, QSlider, QSplitter, QGroupBox, QToolButton, QSpacerItem, QStatusBar, QFrame
 
 from vdu_controls.config_ini import GeoLocation, VduControlsConfig, ConfOpt, ConfIni

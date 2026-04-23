@@ -7,9 +7,9 @@ from dataclasses import dataclass
 from functools import partial
 from typing import Dict, TYPE_CHECKING
 
-from PyQt5.QtCore import pyqtSignal, Qt, QSize
-from PyQt5.QtGui import QFont
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QSlider, QLabel, QApplication, QSpinBox
+from vdu_controls.qt_imports import pyqtSignal, Qt, QSize
+from vdu_controls.qt_imports import QFont
+from vdu_controls.qt_imports import QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QSlider, QLabel, QApplication, QSpinBox
 
 from vdu_controls.constants import TOOLTIP_DURATION_MSEC
 from vdu_controls.internationalization import tr

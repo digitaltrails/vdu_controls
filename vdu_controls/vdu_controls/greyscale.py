@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import List
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtSvg import QSvgWidget
-from PyQt5.QtWidgets import QDialog, QVBoxLayout
+from vdu_controls.qt_imports import Qt
+from vdu_controls.qt_imports import QSvgWidget
+from vdu_controls.qt_imports import QDialog, QVBoxLayout
 
 from vdu_controls.icon_utils import si, StdPixmap
 from vdu_controls.internationalization import tr
