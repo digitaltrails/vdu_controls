@@ -29,7 +29,7 @@ from vdu_controls.unicode import TIMER_RUNNING_SYMBOL, SUN_SYMBOL, PROCESSING_LU
 from vdu_controls.vdu_bulk_change import BulkChangeWorker, BulkChangeItem
 
 from vdu_controls.vdu_exceptions import VduException
-from vdu_controls.vdu_misc import is_running_in_gui_thread
+import vdu_controls.gui_misc as gui_misc
 from vdu_controls.widgets import MBox, MIcon, ToolButton
 from vdu_controls.work_scheduler import WorkerThread, thread_pid
 
@@ -304,7 +304,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
 
     def stop(self) -> None:
         super().stop()
-        assert is_running_in_gui_thread()
+        assert gui_misc.is_running_in_gui_thread()
         self._lux_dialog_message_qtsignal.disconnect()
         log_info("LuxAuto: stopped on request")
 
@@ -381,7 +381,7 @@ class LuxAutoController:
                     pass
 
     def initialize_from_config(self) -> None:
-        assert is_running_in_gui_thread()
+        assert gui_misc.is_running_in_gui_thread()
         self.lux_config.load()
         try:
             if self.lux_meter is not None:

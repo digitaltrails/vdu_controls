@@ -19,7 +19,7 @@ from vdu_controls.scaling import native_font_height, npx
 from vdu_controls.svg import PANEL_CONNECTED_ICON_SOURCE, VDU_CONNECTED_ICON_SOURCE
 from vdu_controls.vdu_controller import VduController
 from vdu_controls.vdu_exceptions import VduException
-from vdu_controls.vdu_misc import is_running_in_gui_thread
+import vdu_controls.gui_misc as gui_misc
 from vdu_controls.widgets import alter_margins, TitleButton, MBox, MIcon, ThemedSvgWidget, ClickableSlider, LineEditAll
 
 
@@ -162,7 +162,7 @@ class VduControlBase(QWidget):
         assert False, "subclass failed to implement refresh_ui_view_implementation"
 
     def refresh_ui_view(self) -> None:
-        if not is_running_in_gui_thread():
+        if not gui_misc.is_running_in_gui_thread():
             self._refresh_ui_view_in_gui_thread_qtsignal.emit()
         else:
             self._refresh_ui_view_task()

@@ -29,8 +29,7 @@ from vdu_controls.solar_calc import SolarElevationKey, SolarElevationData, creat
 from vdu_controls.svg import SUN_SVG, VDU_POWER_ON_ICON_SOURCE
 from vdu_controls.unicode import TIME_CLOCK_SYMBOL, DEGREE_SYMBOL, WARNING_SYMBOL
 from vdu_controls.vdu_bulk_change import BulkChangeWorker
-from vdu_controls.vdu_misc import weather_bad_location_dialog
-from vdu_controls.weather import WeatherQuery
+import vdu_controls.weather_util as weather_util
 from vdu_controls.widgets import alter_margins, StdButton, PushButtonLeftJustified, FasterFileDialog, MBox, MIcon, MBtn, \
     SubWinDialog, DialogSingletonMixin, ToolButton
 
@@ -281,7 +280,7 @@ class PresetWeatherWidget(QWidget):
                     return
         try:
             log_info(f"Verifying weather location by querying {WEATHER_FORECAST_URL}.")
-            weather = WeatherQuery(location)
+            weather = weather_util.WeatherQuery(location)
             weather.run_query()
             if weather.proximity_ok:
                 MBox(MIcon.Information,
@@ -289,7 +288,7 @@ class PresetWeatherWidget(QWidget):
                 with open(vf_file_path, 'w', encoding="utf-8") as vf:
                     vf.write(place_name)
             else:
-                weather_bad_location_dialog(weather)
+                weather_util.weather_bad_location_dialog(weather)
         except ValueError as e:
             log_error(f"Failed to validate location: {e}", trace=True)
             MBox(MIcon.Critical, msg=tr("Failed to validate weather location: {}").format(e.args[0]), info=e.args[1]).exec()

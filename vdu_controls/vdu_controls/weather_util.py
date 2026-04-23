@@ -6,8 +6,11 @@ import json
 import locale
 import os
 import unicodedata
-import urllib
+import urllib.request
+import urllib.parse
 from datetime import datetime
+
+from vdu_controls.qt_imports import QLocale
 
 from vdu_controls.config_ini import GeoLocation
 from vdu_controls.constants import WEATHER_FORECAST_URL
@@ -15,6 +18,7 @@ from vdu_controls.internationalization import tr
 from vdu_controls.logging import log_info
 from vdu_controls.misc import zoned_now
 from vdu_controls.solar_calc import spherical_kilometers
+from vdu_controls.widgets import MBox, MIcon
 
 
 class WeatherQuery:
@@ -79,3 +83,14 @@ class WeatherQuery:
             return ""
         return f"{self.area_name}, {self.country_name}, {self.weather_desc} ({self.weather_code})," \
                f"cloud_cover {self.cloud_cover}, visibility {self.visibility}, location={self.latitude},{self.longitude}"
+
+
+def weather_bad_location_dialog(weather: WeatherQuery) -> None:
+    kilometres = weather.proximity_km
+    use_km = QLocale.system().measurementSystem() == QLocale.MeasurementSystem.MetricSystem
+    MBox(MIcon.Warning, msg=tr("The site {} reports your location as {}, {}, {},{} "
+                               "which is about {} {} from the latitude and longitude specified in Settings."
+                               ).format(WEATHER_FORECAST_URL, weather.area_name, weather.country_name, weather.latitude,
+                                        weather.longitude,
+                                        round(kilometres if use_km else kilometres * 0.621371), 'km' if use_km else 'miles'),
+         info=tr("Please check the location specified in Settings."), details=f"{weather}").exec()

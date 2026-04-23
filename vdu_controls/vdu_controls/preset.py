@@ -12,7 +12,7 @@ from typing import Callable
 from vdu_controls.qt_imports import QT_TR_NOOP
 from vdu_controls.qt_imports import QIcon
 
-from vdu_controls.weather import WeatherQuery
+from vdu_controls.weather_util import WeatherQuery
 from vdu_controls.config_ini import ConfIni
 from vdu_controls.ddcutil_aggregator import VduStableId
 from vdu_controls.icon_utils import ThemeType, polychrome_light_or_dark, create_icon_from_path, create_icon_from_text

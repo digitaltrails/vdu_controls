@@ -14,6 +14,8 @@ from datetime import timedelta
 from functools import partial
 from typing import List, Tuple, Dict, Callable, cast
 
+from vdu_controls import weather_util as weather_utils
+from vdu_controls.about_dialog import AboutDialog
 from vdu_controls.config_ini import ConfIni, ConfOpt, VduControlsConfig, VcpCapability, GeoLocation
 from vdu_controls.constants import *
 from vdu_controls.ddcutil_aggregator import DdcutilAggregator, VduStableId
@@ -48,13 +50,11 @@ from vdu_controls.vdu_bulk_change import BulkChangeWorker, BulkChangeItem
 from vdu_controls.vdu_control_panel import VduControlPanel
 from vdu_controls.vdu_controller import VduController
 from vdu_controls.vdu_exceptions import VduException
-from vdu_controls.vdu_misc import set_gui_thread, is_running_in_gui_thread, weather_bad_location_dialog
-from vdu_controls.weather import WeatherQuery
+import vdu_controls.gui_misc as gui_misc
+import vdu_controls.weather_util as weather_util
 from vdu_controls.widgets import MIcon, MBox, MBtn, \
     alter_margins, DialogSingletonMixin, ToolButton
 from vdu_controls.work_scheduler import WorkerThread, ScheduleWorker, thread_pid, SchedulerJob, SchedulerJobType
-
-from vdu_controls.qt_imports import *
 
 Shortcut = namedtuple('Shortcut', ['letter', 'annotated_word'])
 
@@ -416,57 +416,6 @@ def exception_handler(e_type, e_value, e_traceback) -> None:
          details=tr('Details: {}').format(''.join(traceback.format_exception(e_type, e_value, e_traceback)))).exec()
 
 
-class AboutDialog(QMessageBox, DialogSingletonMixin):
-
-    @staticmethod
-    def invoke(main_controller: VduAppController) -> None:
-        if AboutDialog.exists():
-            AboutDialog.get_instance().refresh_content()
-            AboutDialog.show_existing_dialog()
-        else:
-            AboutDialog(main_controller)
-
-    @staticmethod
-    def refresh():
-        if AboutDialog.exists() and AboutDialog.get_instance().isVisible():
-            AboutDialog.get_instance().refresh_content()
-        else:
-            log_debug("About dialog - no refresh - not visible") if log_debug_enabled else None
-
-    def __init__(self, main_controller: VduAppController) -> None:
-        super().__init__()
-        self.main_controller = main_controller
-        self.refresh_content()
-        self.setModal(False)
-        self.show()
-        self.raise_()
-        self.activateWindow()
-
-    def refresh_content(self):
-        self.setWindowTitle(tr('About'))
-        self.setTextFormat(Qt.TextFormat.AutoText)
-        self.setText(tr('About vdu_controls'))
-        path = find_locale_specific_file("about_{}.txt")
-        if path:
-            with open(path, encoding='utf-8') as about_for_locale:
-                about_text = about_for_locale.read().format(
-                    VDU_CONTROLS_VERSION=VDU_CONTROLS_VERSION, IP_ADDRESS_INFO_URL=IP_ADDRESS_INFO_URL,
-                    WEATHER_FORECAST_URL=WEATHER_FORECAST_URL)
-        else:
-            about_text = ABOUT_TEXT
-        if self.main_controller and self.main_controller.ddcutil:
-            counts_str = ','.join((str(v) for v in DdcutilAggregator.vcp_write_counters.values())) if len(DdcutilAggregator.vcp_write_counters) else '0'
-            about_text += (f"<hr><p><small>desktop: {os.environ.get('XDG_CURRENT_DESKTOP', default='unknown')}; "
-                           f"platform: {os.environ.get('XDG_SESSION_TYPE', default='unknown')} "
-                           f"({QApplication.platformName()}, qt-{QtCore.qVersion()});<br/>"
-                           f"ddcutil-interface: {self.main_controller.ddcutil.ddcutil_version_info()[0]}; "
-                           f"ddcutil: {self.main_controller.ddcutil.ddcutil_version_info()[1]} (writes: {counts_str});</small>")
-        self.setInformativeText(about_text)
-        self.setIcon(MIcon.Information)
-
-
-
-
 @contextmanager  # https://stackoverflow.com/questions/31501487/non-blocking-lock-with-with-statement
 def non_blocking_lock(lock: threading.RLock) -> threading.RLock:  # Provide a way to use a with-statement with non-blocking locks
     acquire_succeeded = lock.acquire(False)  # acquire_succeeded will be False if the lock is already locked.
@@ -491,7 +440,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         self.detected_vdu_list: List[Tuple[str, str, str, str]] = []
         self.previously_detected_vdu_list: List[Tuple[str, str, str, str]] = []
         self.refresh_data_task: WorkerThread | None = None
-        self.weather_query: WeatherQuery | None = None
+        self.weather_query: weather_util.WeatherQuery | None = None
         self.preset_transition_workers: List[BulkChangeWorker] = []  # Not sure if this actually needs to be a list.
         self.lux_auto_controller: LuxAutoController | None = LuxAutoController(self) if self.main_config.is_set(
             ConfOpt.LUX_OPTIONS_ENABLED) else None
@@ -624,7 +573,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         return self.detected_vdu_list, ddcutil_problem
 
     def initialize_vdu_controllers(self) -> None:
-        assert is_running_in_gui_thread()
+        assert gui_misc.is_running_in_gui_thread()
         if self.ddcutil is None:
             return
         detected_vdu_list, ddcutil_problem = self.detect_vdus()
@@ -733,7 +682,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             if worker.stop_requested:
                 return  # in this case, this means the worker never started anything
             try:  # No need for locking in here - running in the GUI thread effectively single threads the operation.
-                assert self.refresh_data_task is not None and is_running_in_gui_thread()
+                assert self.refresh_data_task is not None and gui_misc.is_running_in_gui_thread()
                 log_debug(f"Refresh - update UI view {external_event=} {values_only=}") if log_debug_enabled else None
                 main_panel = self.main_window.get_main_panel()
                 if self.refresh_data_task.work_exception is not None:
@@ -755,7 +704,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             finally:
                 self.main_window.indicate_busy(False)
 
-        if not is_running_in_gui_thread():  # TODO this appears to never be true - remove???
+        if not gui_misc.is_running_in_gui_thread():  # TODO this appears to never be true - remove???
             log_debug(f"Re-invoke start_refresh() in GUI thread {external_event=}") if log_debug_enabled else None
             self.main_window.run_in_gui_thread(partial(self.start_refresh, external_event))
             return
@@ -773,7 +722,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         elif self.main_config.is_set(ConfOpt.PROTECT_NVRAM_ENABLED):
             immediately = True
         # Starts the restore, but it will complete in the worker thread
-        if not is_running_in_gui_thread():  # Transfer this request into the GUI thread
+        if not gui_misc.is_running_in_gui_thread():  # Transfer this request into the GUI thread
             log_debug(f"restore_preset: '{preset.name}' transferring task to GUI thread") if log_debug_enabled else None
             self.main_window.run_in_gui_thread(partial(self.restore_preset, preset, finished_func,
                                                        immediately, background_activity, initialization_preset))
@@ -890,7 +839,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         return {when: preset for when, preset in sorted(list(timetable_for_day.items()))}
 
     def schedule_presets(self) -> None:
-        assert is_running_in_gui_thread()
+        assert gui_misc.is_running_in_gui_thread()
         location = self.main_config.get_location()
         if location and self.main_config.is_set(ConfOpt.SCHEDULE_ENABLED):
             log_debug("schedule_presets: try to obtain application_lock") if log_debug_enabled else None
@@ -951,7 +900,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
     def activate_scheduled_preset(self, preset: Preset, check_weather: bool = True, immediately: bool = False,
                                   activation_time: datetime | None = None) -> None:
-        assert is_running_in_gui_thread()
+        assert gui_misc.is_running_in_gui_thread()
 
         def _activation_feedback(msg: str):
             self.main_window.show_preset_status(f"{TIME_CLOCK_SYMBOL} " + tr("Preset {} activating at {}").format(
@@ -1007,7 +956,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                             background_activity=True)
 
     def skip_scheduled_preset(self, preset: Preset):
-        assert is_running_in_gui_thread()
+        assert gui_misc.is_running_in_gui_thread()
         preset.schedule_status = PresetScheduleStatus.SKIPPED_SUPERSEDED
         self.main_window.update_status_indicators(preset)
 
@@ -1015,12 +964,12 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         try:
             if not use_cache or self.weather_query is None:
                 if location := self.main_config.get_location():
-                    self.weather_query = WeatherQuery(location)
+                    self.weather_query = weather_utils.WeatherQuery(location)
                     self.weather_query.run_query()
                     if not self.weather_query.proximity_ok:
                         log_error(f"Preset '{preset.name}' weather location is {self.weather_query.proximity_km} km from "
                                   f"Settings Location, check settings.")
-                        weather_bad_location_dialog(self.weather_query)
+                        weather_util.weather_bad_location_dialog(self.weather_query)
             if not preset.check_weather(self.weather_query):
                 return False
         except ValueError as e:
@@ -1133,7 +1082,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         return False
 
     def update_window_status_indicators(self, preset: Preset | None = None):
-        if not is_running_in_gui_thread():
+        if not gui_misc.is_running_in_gui_thread():
             self.main_window.run_in_gui_thread(partial(self.main_window.update_status_indicators, preset))
 
     def get_vdu_preferred_name(self, vdu_stable_id: VduStableId):
@@ -1456,7 +1405,7 @@ class VduAppWindow(QMainWindow):
         return theme
 
     def update_status_indicators(self, preset: Preset | None = None, palette_change: bool = False) -> None:
-        assert is_running_in_gui_thread()  # Boilerplate in case this is called from the wrong thread.
+        assert gui_misc.is_running_in_gui_thread()  # Boilerplate in case this is called from the wrong thread.
         if self.main_panel is None:  # On deepin 23, events can trigger this method before initialization is complete
             return
         title = self.app_name
@@ -1516,7 +1465,7 @@ class VduAppWindow(QMainWindow):
                 LuxDialog.lux_dialog_show_brightness(vdu_stable_id, value)
 
     def refresh_tray_menu(self) -> None:
-        assert is_running_in_gui_thread()
+        assert gui_misc.is_running_in_gui_thread()
         self.app_context_menu.update()
 
     def closeEvent(self, event) -> None:
@@ -1563,7 +1512,7 @@ class VduAppWindow(QMainWindow):
 
     def status_message(self, message: str, timeout: int, destination: MsgDestination):
         assert (self.main_panel is not None)
-        if not is_running_in_gui_thread():
+        if not gui_misc.is_running_in_gui_thread():
             self.run_in_gui_thread(partial(self.status_message, message, timeout, destination))
         else:
             if destination == MsgDestination.DEFAULT:
@@ -1713,8 +1662,8 @@ def main() -> None:
     # Call QApplication before parsing arguments, it will parse and remove Qt session restoration arguments.
     app = QApplication(sys.argv)
     assert app is not None
-    set_gui_thread(app.thread())
-    assert is_running_in_gui_thread()
+    gui_misc.set_gui_thread(app.thread())
+    assert gui_misc.is_running_in_gui_thread()
     log_info(f"{app.applicationName()=} {QApplication.instance().applicationName()=}")
     global unix_signal_handler
     unix_signal_handler = SignalWakeupHandler(app)
@@ -1750,7 +1699,7 @@ def main() -> None:
         initialise_locale_translations(app)
 
     main_controller = VduAppController(main_config)
-    assert is_running_in_gui_thread()
+    assert gui_misc.is_running_in_gui_thread()
     VduAppWindow(main_config, main_controller)  # may need to assign this to a variable to prevent garbage collection?
 
     if args.about:
