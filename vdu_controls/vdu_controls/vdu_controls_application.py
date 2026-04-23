@@ -55,6 +55,7 @@ from vdu_controls.vdu_bulk_change import BulkChangeWorker, BulkChangeItem
 from vdu_controls.vdu_control_panel import VduControlPanel
 from vdu_controls.vdu_controller import VduController
 from vdu_controls.vdu_exceptions import VduException
+from vdu_controls.vdu_misc import set_gui_thread, is_running_in_gui_thread
 from vdu_controls.weather import WeatherQuery
 from vdu_controls.widgets import StdButton, SubWinDialog, ThemedSvgWidget, TitleButton, ThemedSvgButton, MIcon, MBox, MBtn, \
     FasterFileDialog, ClickableSlider, LineEditAll, alter_margins, DialogSingletonMixin, ToolButton
@@ -63,12 +64,6 @@ from vdu_controls.work_scheduler import WorkerThread, ScheduleWorker, thread_pid
 Shortcut = namedtuple('Shortcut', ['letter', 'annotated_word'])
 
 gui_thread: QThread | None = None
-
-
-
-
-def is_running_in_gui_thread() -> bool:
-    return QThread.currentThread() == gui_thread
 
 
 # Use Linux/UNIX signals to trigger preset changes - 16 presets should be enough for anyone.
@@ -2975,7 +2970,7 @@ class VduAppWindow(QMainWindow):
         assert app
         if os.getenv('VDU_CONTROLS_DEBUG_LAYOUT', default='no') == 'yes':
             app.setStyleSheet("QWidget { border: 1px solid red; margin: 1px; padding: 1px; }")
-        gui_thread = app.thread()
+        set_gui_thread(app.thread())
         self.main_controller: VduAppController = main_controller
         self.setObjectName('main_window')
         self.qt_version_key = self.objectName() + "_qt_version"
