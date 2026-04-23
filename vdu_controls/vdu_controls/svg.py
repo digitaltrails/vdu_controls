@@ -53,4 +53,14 @@ TRANSITION_ICON_SOURCE = load_svg_source('transition_icon.svg')
 
 SWATCH_ICON_SOURCE = load_svg_source('swatch_icon.svg')
 
+LUX_SUNLIGHT_SVG = load_svg_source('lux_sunlight.svg')
 
+LUX_DAYLIGHT_SVG = load_svg_source('lux_daylight.svg')
+
+LUX_OVERCAST_SVG = load_svg_source('lux_overcast.svg')
+
+LUX_TWILIGHT_SVG = load_svg_source('lux_twilight.svg')
+
+LUX_SUBDUED_SVG = load_svg_source('lux_subdued.svg')
+
+LUX_DARK_SVG = load_svg_source('lux_dark.svg')
