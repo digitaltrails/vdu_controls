@@ -15,7 +15,7 @@ from datetime import timedelta, datetime
 from functools import partial
 from typing import List, Tuple, Dict, Callable, cast
 
-from vdu_controls import weather_util as weather_utils
+from vdu_controls import weather_util as weather_utils, app_locale as app_locale
 from vdu_controls.about_dialog import AboutDialog
 from vdu_controls.config_ini import ConfIni, ConfOpt, VduControlsConfig, VcpCapability, GeoLocation
 from vdu_controls.constants import *
@@ -32,7 +32,7 @@ from vdu_controls.icon_utils import ThemeType, get_splash_image
 from vdu_controls.icon_utils import create_icon_from_svg_bytes, create_icon_from_path, create_decorated_app_icon, StdPixmap, \
     is_dark_theme
 from vdu_controls.installer import install_as_desktop_application
-from vdu_controls.locale import tr, initialise_locale_translations
+from vdu_controls.app_locale import tr, initialise_locale_translations
 import vdu_controls.logging as log
 from vdu_controls.lux_auto import LuxAutoController
 from vdu_controls.lux_dialog import LuxDialog

@@ -11,7 +11,7 @@ from vdu_controls.qt_imports import QVariant, Qt, QKeySequence, QIcon, QMenu, QW
 
 from vdu_controls import logging as log
 from vdu_controls.icon_utils import StdPixmap, si
-from vdu_controls.locale import tr
+from vdu_controls.app_locale import tr
 from vdu_controls.preset import Preset
 from vdu_controls.unicode import MENU_ACTIVE_PRESET_SYMBOL
 

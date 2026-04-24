@@ -15,6 +15,8 @@ from enum import Enum
 from pathlib import Path
 from typing import List, Tuple, Dict, Any
 
+import vdu_controls.logging as log
+from vdu_controls.app_locale import tr
 from vdu_controls.constants import CONFIG_DIR_PATH, VDU_CONTROLS_VERSION, APPNAME
 from vdu_controls.ddcutil_abstract import CON, BRIT, CONT, SNC
 from vdu_controls.ddcutil_aggregator import DdcutilAggregator

@@ -886,15 +886,12 @@ with this program. If not, see https://www.gnu.org/licenses/.
 """
 import re
 
-from importlib.resources import files as resources_files
-
-import vdu_controls.logging as log
 from vdu_controls.icon_utils import StdPixmap, si
-from vdu_controls.locale import tr
+from vdu_controls.app_locale import tr
 from vdu_controls.qt_imports import QVBoxLayout, QSize, QTextEdit, Qt
 from vdu_controls.scaling import npx
 from vdu_controls.widgets import SubWinDialog, StdButton, DialogSingletonMixin
-import vdu_controls.locale as locale
+import vdu_controls.app_locale as locale
 
 class HelpDialog(SubWinDialog, DialogSingletonMixin):
 

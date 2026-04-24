@@ -12,7 +12,7 @@ from vdu_controls.qt_imports import QFont
 from vdu_controls.qt_imports import QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QSlider, QLabel, QApplication, QSpinBox
 
 from vdu_controls.constants import TOOLTIP_DURATION_MSEC
-from vdu_controls.locale import tr
+from vdu_controls.app_locale import tr
 from vdu_controls.lux_meters import LuxMeterSemiAutoDevice
 
 from vdu_controls.scaling import native_font_height, npx

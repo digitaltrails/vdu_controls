@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from vdu_controls.constants import VDU_CONTROLS_VERSION
-from vdu_controls.locale import tr
+from vdu_controls.app_locale import tr
 from vdu_controls.qt_imports import QT_TR_NOOP, Qt
 from vdu_controls.widgets import MBox, MIcon, MBtn
 

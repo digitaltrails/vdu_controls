@@ -14,7 +14,7 @@ from vdu_controls.qt_imports import QLocale
 
 from vdu_controls.config_ini import GeoLocation
 from vdu_controls.constants import WEATHER_FORECAST_URL
-from vdu_controls.locale import tr
+from vdu_controls.app_locale import tr
 import vdu_controls.logging as log
 from vdu_controls.misc import zoned_now
 from vdu_controls.solar_calc import spherical_kilometers

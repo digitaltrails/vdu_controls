@@ -19,7 +19,7 @@ from vdu_controls.config_ini import GeoLocation, VduControlsConfig, ConfOpt, Con
 from vdu_controls.constants import STANDARD_ICON_PATHS, CONFIG_DIR_PATH, WEATHER_FORECAST_URL, EASTERN_SKY, WESTERN_SKY
 from vdu_controls.icon_utils import si, StdPixmap, create_icon_from_path, polychrome_light_or_dark, create_image_from_svg_bytes, \
     SVG_LIGHT_THEME_COLOR
-from vdu_controls.locale import tr, translate_option
+from vdu_controls.app_locale import tr, translate_option
 import vdu_controls.logging as log
 from vdu_controls.misc import zoned_now, proper_name
 from vdu_controls.preset import Preset, PresetTransitionFlag, PresetScheduleStatus

@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 from typing import Dict
+from importlib.resources import files as resources_files
 
 from vdu_controls.constants import LOCALE_TRANSLATIONS_PATHS
 from vdu_controls.qt_imports import QLocale, QTranslator, QApplication, QCoreApplication
@@ -103,3 +104,13 @@ def translate_option(option_text) -> str:
     canonical = option_text.lower().replace('-', ' ')
     return tr(canonical)
 
+
+def load_help_text() -> str:
+    help_file = resources_files('vdu_controls') / 'resources' / 'docs' / 'help.md'
+    localized_help_file = apply_locale(help_file)
+    log.info(f"Checking for {localized_help_file}")
+    if localized_help_file.exists():
+        help_file = localized_help_file
+    log.info(f"Reading help from {help_file}")
+    help_text = help_file.read_text()
+    return help_text
