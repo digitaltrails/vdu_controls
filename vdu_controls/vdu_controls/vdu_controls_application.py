@@ -1542,7 +1542,7 @@ def main() -> None:
     log.set_syslog(main_config.is_set(ConfOpt.SYSLOG_ENABLED))
     log.set_debug(main_config.is_set(ConfOpt.DEBUG_ENABLED))
     if args.syslog:
-        log_to_syslog = True
+        log.set_syslog(True)
     if args.debug:
         main_config.debug_dump()
     if args.create_config_files:
@@ -1554,7 +1554,7 @@ def main() -> None:
         install_as_desktop_application(uninstall=True)
         sys.exit()
     if args.detailed_help:
-        print(__doc__)
+        print(app_locale.load_help_text())
         sys.exit()
 
     if main_config.is_set(ConfOpt.TRANSLATIONS_ENABLED):
