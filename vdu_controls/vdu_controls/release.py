@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from vdu_controls.constants import VDU_CONTROLS_VERSION
-from vdu_controls.internationalization import tr
+from vdu_controls.locale import tr
 from vdu_controls.qt_imports import QT_TR_NOOP, Qt
 from vdu_controls.widgets import MBox, MIcon, MBtn
 
@@ -17,7 +17,7 @@ RELEASE_INFO = QT_TR_NOOP('<b>Road Warrior: Support for Laptop-Panels</b><br/>'
                           '<br/>Laptop-panel support is optional - see Settings - '
                           ' and requires the brightnessctl command and python3-udev library.')
 
-def release_notes(self):
+def release_notes():
     release_alert = MBox(
         MIcon.Information,
         msg=RELEASE_ANNOUNCEMENT.format(WELCOME=tr(RELEASE_WELCOME), NOTE=tr(RELEASE_NOTE), VERSION=VDU_CONTROLS_VERSION),

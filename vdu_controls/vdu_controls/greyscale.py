@@ -9,7 +9,7 @@ from vdu_controls.qt_imports import QSvgWidget
 from vdu_controls.qt_imports import QDialog, QVBoxLayout
 
 from vdu_controls.icon_utils import si, StdPixmap
-from vdu_controls.internationalization import tr
+from vdu_controls.locale import tr
 from vdu_controls.scaling import npx
 from vdu_controls.widgets import SubWinDialog, StdButton
 

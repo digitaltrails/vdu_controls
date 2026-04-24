@@ -9,7 +9,7 @@ from typing import Tuple, Callable, Dict
 
 from vdu_controls.config_ini import GeoLocation
 from vdu_controls.constants import EASTERN_SKY, WESTERN_SKY
-from vdu_controls.internationalization import tr
+from vdu_controls.locale import tr
 from vdu_controls.unicode import EAST_ELEVATION_SYMBOL, WEST_ELEVATION_SYMBOL, SUN_SYMBOL, DEGREE_SYMBOL
 
 SolarElevationKey = namedtuple('SolarElevationKey', ['direction', 'elevation'])

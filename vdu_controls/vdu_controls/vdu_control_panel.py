@@ -11,7 +11,7 @@ from vdu_controls.config_ini import VcpCapability, SUPPORTED_VCP_BY_CODE
 from vdu_controls.constants import TOOLTIP_DURATION_MSEC
 from vdu_controls.ddcutil_abstract import CONTINUOUS_TYPE, SIMPLE_NON_CONTINUOUS_TYPE, COMPLEX_NON_CONTINUOUS_TYPE, VcpValue, \
     VcpOrigin
-from vdu_controls.internationalization import tr
+from vdu_controls.locale import tr
 import vdu_controls.logging as log
 from vdu_controls.misc import proper_name, clamp
 from vdu_controls.preset import Preset

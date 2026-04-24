@@ -19,7 +19,7 @@ from vdu_controls.constants import CONFIG_DIR_PATH, VDU_CONTROLS_VERSION, APPNAM
 from vdu_controls.ddcutil_abstract import CON, BRIT, CONT, SNC
 from vdu_controls.ddcutil_aggregator import DdcutilAggregator
 from vdu_controls.installer import install_as_desktop_application
-from vdu_controls.internationalization import tr
+from vdu_controls.locale import tr
 import vdu_controls.logging as log
 from vdu_controls.misc import zoned_now
 from vdu_controls.qt_imports import QT_TR_NOOP

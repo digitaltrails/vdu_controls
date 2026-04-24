@@ -17,7 +17,7 @@ from vdu_controls.qt_imports import QObject, pyqtSignal
 from vdu_controls.config_ini import GeoLocation
 from vdu_controls.constants import CONFIG_DIR_PATH
 
-from vdu_controls.internationalization import tr
+from vdu_controls.locale import tr
 import vdu_controls.logging as log
 from vdu_controls.misc import zoned_now
 from vdu_controls.solar_calc import calc_solar_lux

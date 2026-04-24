@@ -32,7 +32,7 @@ from vdu_controls.icon_utils import ThemeType, get_splash_image
 from vdu_controls.icon_utils import create_icon_from_svg_bytes, create_icon_from_path, create_decorated_app_icon, StdPixmap, \
     is_dark_theme
 from vdu_controls.installer import install_as_desktop_application
-from vdu_controls.internationalization import tr, initialise_locale_translations
+from vdu_controls.locale import tr, initialise_locale_translations
 import vdu_controls.logging as log
 from vdu_controls.lux_auto import LuxAutoController
 from vdu_controls.lux_dialog import LuxDialog

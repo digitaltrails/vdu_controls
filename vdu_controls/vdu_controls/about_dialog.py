@@ -9,7 +9,7 @@ from vdu_controls.qt_imports import Qt, QtCore, QApplication, QMessageBox
 
 from vdu_controls.constants import VDU_CONTROLS_VERSION, IP_ADDRESS_INFO_URL, WEATHER_FORECAST_URL, ABOUT_TEXT
 from vdu_controls.ddcutil_aggregator import DdcutilAggregator
-from vdu_controls.internationalization import tr, find_locale_specific_file
+from vdu_controls.locale import tr, find_locale_specific_file
 import vdu_controls.logging as log
 
 from vdu_controls.widgets import DialogSingletonMixin, MIcon

@@ -25,7 +25,7 @@ from vdu_controls.constants import MsgDestination
 from vdu_controls.ddcutil_abstract import BRIGHTNESS_VCP_CODE
 from vdu_controls.ddcutil_aggregator import VduStableId
 from vdu_controls.icon_utils import si, StdPixmap, create_icon_from_svg_bytes, create_image_from_svg_bytes, SVG_LIGHT_THEME_COLOR
-from vdu_controls.internationalization import tr
+from vdu_controls.locale import tr
 import vdu_controls.logging as log
 from vdu_controls.lux_meters import LuxMeterSemiAutoDevice, LuxMeterDevice
 from vdu_controls.lux_config import LuxConfig, LuxPoint

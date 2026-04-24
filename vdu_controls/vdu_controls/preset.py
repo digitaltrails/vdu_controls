@@ -17,7 +17,7 @@ from vdu_controls.weather_util import WeatherQuery
 from vdu_controls.config_ini import ConfIni
 from vdu_controls.ddcutil_aggregator import VduStableId
 from vdu_controls.icon_utils import ThemeType, polychrome_light_or_dark, create_icon_from_path, create_icon_from_text
-from vdu_controls.internationalization import tr
+from vdu_controls.locale import tr
 import vdu_controls.logging as log
 from vdu_controls.misc import zoned_now, proper_name
 from vdu_controls.solar_calc import SolarElevationKey, format_solar_elevation_abbreviation, format_solar_elevation_description, \

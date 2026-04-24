@@ -17,7 +17,7 @@ from vdu_controls.qt_imports import QVBoxLayout, QTabWidget, QStatusBar, QFrame,
 from vdu_controls.config_ini import VduControlsConfig, ConfIni, ConfOpt, ConfType, ConfSec
 from vdu_controls.constants import IP_ADDRESS_INFO_URL, CONFIG_FILE_PREFER_QT5
 from vdu_controls.icon_utils import si, StdPixmap
-from vdu_controls.internationalization import tr, translate_option
+from vdu_controls.locale import tr, translate_option
 import vdu_controls.logging as log
 from vdu_controls.scaling import npx, native_font_height
 from vdu_controls.widgets import SubWinDialog, StdButton, MBox, MIcon, MBtn, FasterFileDialog, alter_margins, DialogSingletonMixin

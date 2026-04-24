@@ -11,6 +11,11 @@ from vdu_controls.qt_imports import QLocale, QTranslator, QApplication, QCoreApp
 import vdu_controls.logging as log
 
 
+def apply_locale(path: Path) -> Path:
+    localized_path = path.parent / f"{path.stem}_{QLocale.system().name()}.{path.suffix}"
+    return localized_path
+
+
 def find_locale_specific_file(filename_template: str) -> Path | None:
     locale_name = QLocale.system().name()
     filename = filename_template.format(locale_name)
