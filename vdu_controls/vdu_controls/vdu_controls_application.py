@@ -27,7 +27,7 @@ from vdu_controls.ddcutil_abstract import VcpOrigin, VcpValue, DdcutilDisplayNot
 from vdu_controls.ddcutil_emulator import DdcutilEmulatorImpl
 from vdu_controls.ddcutil_laptop_panel import DdcutilPanelImpl
 from vdu_controls.greyscale import GreyScaleDialog
-from vdu_controls.help import HelpDialog
+from vdu_controls.help_dialog import HelpDialog
 from vdu_controls.icon_utils import ThemeType, get_splash_image
 from vdu_controls.icon_utils import create_icon_from_svg_bytes, create_icon_from_path, create_decorated_app_icon, StdPixmap, \
     is_dark_theme

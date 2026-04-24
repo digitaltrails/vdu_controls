@@ -8,7 +8,7 @@ from enum import Enum
 from pathlib import Path
 
 APPNAME = "VDU Controls"
-VDU_CONTROLS_VERSION = '2.6.0'
+VDU_CONTROLS_VERSION = '2.6.5'
 VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in VDU_CONTROLS_VERSION.split('.'))
 assert sys.version_info >= (3, 8), f'{APPNAME} utilizes python version 3.8 or greater (your python is {sys.version}).'
 
