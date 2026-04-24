@@ -440,7 +440,7 @@ class LuxAutoController:
             self.lux_config.set('lux-meter', 'automatic-brightness', 'no')
         self.lux_config.save(ConfIni.get_path('AutoLux'))
         self.main_controller.status_message(message, timeout=5000)
-        LuxDialog.lux_dialog.message(message, timeout=5000)
+        LuxDialog.lux_dialog_message(message, timeout=5000)
         self.initialize_from_config()
         LuxDialog.reconfigure_instance()
 
