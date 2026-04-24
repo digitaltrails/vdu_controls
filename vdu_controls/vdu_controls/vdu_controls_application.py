@@ -10,7 +10,6 @@ import subprocess
 import threading
 import time
 import traceback
-from collections import namedtuple
 from contextlib import contextmanager
 from datetime import timedelta, datetime
 from functools import partial
@@ -20,6 +19,7 @@ from vdu_controls import weather_util as weather_utils
 from vdu_controls.about_dialog import AboutDialog
 from vdu_controls.config_ini import ConfIni, ConfOpt, VduControlsConfig, VcpCapability, GeoLocation
 from vdu_controls.constants import *
+from vdu_controls.context_menu import ContextMenu, FixedItemKey
 from vdu_controls.ddcutil_aggregator import DdcutilAggregator, VduStableId
 from vdu_controls.ddcutil_abstract import VcpOrigin, VcpValue, DdcutilDisplayNotFound, CONTINUOUS_TYPE, \
     BRIGHTNESS_VCP_CODE, DdcEventType, \
@@ -30,9 +30,9 @@ from vdu_controls.greyscale import GreyScaleDialog
 from vdu_controls.help import HelpDialog
 from vdu_controls.icon_utils import ThemeType, get_splash_image
 from vdu_controls.icon_utils import create_icon_from_svg_bytes, create_icon_from_path, create_decorated_app_icon, StdPixmap, \
-    is_dark_theme, si
+    is_dark_theme
 from vdu_controls.installer import install_as_desktop_application
-from vdu_controls.internationalization import tr, initialise_locale_translations, find_locale_specific_file
+from vdu_controls.internationalization import tr, initialise_locale_translations
 import vdu_controls.logging as log
 from vdu_controls.lux_auto import LuxAutoController
 from vdu_controls.lux_dialog import LuxDialog
@@ -58,13 +58,9 @@ from vdu_controls.widgets import MIcon, MBox, MBtn, \
     alter_margins, DialogSingletonMixin, ToolButton
 from vdu_controls.work_scheduler import WorkerThread, ScheduleWorker, thread_pid, SchedulerJob, SchedulerJobType
 
-Shortcut = namedtuple('Shortcut', ['letter', 'annotated_word'])
-
 # Use Linux/UNIX signals to trigger preset changes - 16 presets should be enough for anyone.
 
 unix_signal_handler: SignalWakeupHandler | None = None
-
-
 
 
 original_qt_qpa_platform: str | None = None
@@ -84,144 +80,6 @@ def reverse_force_xwayland():
     elif original_qt_qpa_platform == '':  # Will be '' if force_xwayland() has been called, otherwise it will be None
         log.info(f"Removing environment variable QT_QPA_PLATFORM")
         os.environ.pop('QT_QPA_PLATFORM')  # before the call to force_xwayland() it did not previously exist, remove it.
-
-
-class ContextMenu(QMenu):
-    PRESET_NAME_PROP = 'preset_name'
-    PRESET_SHORTCUT_PROP = 'preset_shortcut'
-    BUSY_DISABLE_PROP = 'busy_disable'
-    ALT = 'Alt+{}'
-
-    def __init__(self, app_controller: VduAppController, main_window_action, about_action, help_action, gray_scale_action,
-                 lux_auto_action, lux_check_action, lux_meter_action, settings_action, presets_dialog_action, refresh_action,
-                 quit_action, hide_shortcuts: bool, parent: QWidget) -> None:
-        super().__init__(parent=parent)
-        self.app_controller = app_controller
-        self.reserved_shortcuts: List[str] = []
-        self.hide_shortcuts = hide_shortcuts
-        if main_window_action is not None:
-            self._add_action(StdPixmap.SP_ComputerIcon, tr('&Control Panel'), main_window_action)
-            self.addSeparator()
-        self._add_action(StdPixmap.SP_ComputerIcon, tr('&Presets'), presets_dialog_action)
-        self.presets_separator = self.addSeparator()  # Important for finding where to add a preset
-        self._add_action(StdPixmap.SP_ComputerIcon, tr('&Grey Scale'), gray_scale_action)
-        if lux_meter_action is not None:
-            self.lux_auto_action = self._add_action(StdPixmap.SP_ComputerIcon, tr('&Auto/Manual'), lux_auto_action)
-            self.lux_check_action = self._add_action(StdPixmap.SP_MediaSeekForward, tr('Lighting &Check'), lux_check_action)
-            self._add_action(StdPixmap.SP_ComputerIcon, tr('&Light-Metering'), lux_meter_action)
-        self._add_action(StdPixmap.SP_ComputerIcon, tr('&Settings'), settings_action, 'Ctrl+Shift+,')
-        self._add_action(StdPixmap.SP_BrowserReload, tr('&Refresh'), refresh_action, QKeySequence.StandardKey.Refresh).setProperty(
-            ContextMenu.BUSY_DISABLE_PROP, QVariant(True))
-        self._add_action(StdPixmap.SP_MessageBoxInformation, tr('Abou&t'), about_action)
-        self._add_action(StdPixmap.SP_DialogHelpButton, tr('&Help'), help_action, QKeySequence.StandardKey.HelpContents)
-        self._add_action(StdPixmap.SP_DialogCloseButton, tr('&Quit'), quit_action, QKeySequence.StandardKey.Quit)
-        self.reserved_shortcuts_basic = self.reserved_shortcuts.copy()
-        self.auto_lux_icon: QIcon | None = None
-
-    def _add_action(self, qt_icon_number: int, text: str, func: Callable, extra_shortcut: str | None = None) -> QAction:
-        action = self.addAction(si(self, qt_icon_number), text, func)
-        assert action is not None
-        amp_pos = text.find('&')
-        shortcut_letter = text[amp_pos + 1].upper() if (0 <= amp_pos < len(text) - 1) else None
-        if shortcut_letter is not None:
-            log.debug(f"Reserve shortcut '{shortcut_letter}'") if log.debug_enabled else None
-            if shortcut_letter in self.reserved_shortcuts:
-                log.error(f"{shortcut_letter=} already in in {self.reserved_shortcuts=}")
-            else:
-                self.reserved_shortcuts.append(shortcut_letter)
-                action.setShortcuts(self.shortcut_list(ContextMenu.ALT.format(shortcut_letter.upper()), extra_shortcut))
-                action.setShortcutContext(Qt.ShortcutContext.ApplicationShortcut)
-        return action
-
-    def get_preset_menu_action(self, name: str) -> QAction | None:
-        for action in self.actions():
-            if action.property(ContextMenu.PRESET_NAME_PROP) == name:
-                return action
-        return None
-
-    def insert_preset_menu_action(self, preset: Preset, issue_update: bool = True) -> None:
-
-        def _menu_restore_preset() -> None:
-            self.app_controller.restore_named_preset(self.sender().property(ContextMenu.PRESET_NAME_PROP))
-
-        assert preset.name
-        shortcut = self.allocate_preset_shortcut(preset.name)
-        action_name = shortcut.annotated_word if shortcut else preset.name
-        action = self.addAction(preset.create_icon(), action_name, _menu_restore_preset)  # Have to add it, then move/insert it.
-        assert action
-        self.insertAction(self.presets_separator, action)  # Insert before the presets_separator
-        action.setProperty(ContextMenu.BUSY_DISABLE_PROP, QVariant(True))
-        action.setProperty(ContextMenu.PRESET_NAME_PROP, preset.name)
-        if shortcut:
-            action.setProperty(ContextMenu.PRESET_SHORTCUT_PROP, shortcut)
-            action.setShortcuts(self.shortcut_list(ContextMenu.ALT.format(shortcut.letter.upper())))
-            action.setShortcutContext(Qt.ShortcutContext.ApplicationShortcut)
-        else:
-            log.warning(f"Failed to allocate shortcut for {preset.name} reserved shortcuts={self.reserved_shortcuts}")
-        self.update() if issue_update else None
-
-    def remove_preset_menu_action(self, name: str) -> None:
-        if menu_action := self.get_preset_menu_action(name):
-            shortcut = menu_action.property(ContextMenu.PRESET_SHORTCUT_PROP)
-            if shortcut and shortcut in self.reserved_shortcuts:
-                self.reserved_shortcuts.remove(shortcut.letter)
-            self.removeAction(menu_action)
-            self.update()
-
-    def refresh_preset_menu(self, palette_change: bool = False, reorder: bool = False) -> None:
-        changed = 0
-        if reorder:  # Remove them all to get them reinserted, icons updated, names updated, etc.
-            self.reserved_shortcuts = self.reserved_shortcuts_basic.copy()  # Reset shortcuts
-            for action in self.actions():
-                self.removeAction(action) if action.property(ContextMenu.PRESET_NAME_PROP) is not None else None
-        for name, preset in self.app_controller.preset_controller.find_presets_map().items():
-            menu_action = self.get_preset_menu_action(name)
-            if menu_action is None or not menu_action.property(ContextMenu.PRESET_NAME_PROP):
-                self.insert_preset_menu_action(preset, False)
-                changed += 1
-            elif palette_change:  # Must redraw icons in case desktop theme changed between light/dark.
-                menu_action.setIcon(preset.create_icon())
-                changed += 1
-        self.update() if changed else None
-
-    def indicate_preset_active(self, preset: Preset | None) -> None:
-        changed = 0
-        for action in self.actions():
-            if action_preset_name := action.property(ContextMenu.PRESET_NAME_PROP):  # Mark active preset or un-mark previous active
-                shortcut = action.property(ContextMenu.PRESET_SHORTCUT_PROP)
-                suffix = (' ' + MENU_ACTIVE_PRESET_SYMBOL) if preset is not None and preset.name == action_preset_name else ''
-                new_text = (shortcut.annotated_word if shortcut else action_preset_name) + suffix
-                if new_text != action.text():
-                    action.setText(new_text)
-                    changed += 1
-        self.update() if changed else None
-
-    def indicate_busy(self, is_busy: bool = True) -> None:
-        changed = 0
-        for action in self.actions():
-            if action.property(ContextMenu.BUSY_DISABLE_PROP):
-                if (is_busy and action.isEnabled()) or (not is_busy and not action.isEnabled()):
-                    action.setDisabled(is_busy)
-                    changed += 1
-        self.update() if changed else None
-
-    def update_lux_auto_icon(self, icon: QIcon) -> None:
-        if self.auto_lux_icon != icon:
-            self.auto_lux_icon = icon
-            self.lux_auto_action.setIcon(icon)
-            self.update()
-
-    def allocate_preset_shortcut(self, word: str) -> Shortcut | None:
-        for letter in list(word):
-            upper_letter = letter.upper()
-            if upper_letter not in self.reserved_shortcuts:
-                self.reserved_shortcuts.append(upper_letter)
-                return Shortcut(letter=upper_letter, annotated_word=word[:word.index(letter)] + '&' + word[word.index(letter):])
-        return None
-
-    def shortcut_list(self, primary: str | QKeySequence, extra: str | QKeySequence | None = None) -> List[str | QKeySequence]:
-        shortcuts = [primary] + ([extra] if extra else [])
-        return ([''] + shortcuts) if self.hide_shortcuts else shortcuts  # Empty string causes shortcuts to be hidden.
 
 
 class VduMainToolBar(QToolBar):
@@ -1159,21 +1017,23 @@ class VduAppWindow(QMainWindow):
             for screen in app.screens():
                 log.info("Screen", screen.name())
 
-        self.app_context_menu = ContextMenu(
-            app_controller=main_controller,
-            main_window_action=partial(self.show_main_window, True),  # Gnome tray doesn't provide a way to bring up the main app.
-            about_action=partial(AboutDialog.invoke, self.main_controller),
-            help_action=HelpDialog.invoke,
-            gray_scale_action=GreyScaleDialog,
-            lux_auto_action=self.main_controller.lux_auto_action if main_config.is_set(ConfOpt.LUX_OPTIONS_ENABLED) else None,
-            lux_check_action=self.main_controller.lux_check_action if main_config.is_set(ConfOpt.LUX_OPTIONS_ENABLED) else None,
-            lux_meter_action=partial(LuxDialog.invoke, self.main_controller) if main_config.is_set(
+        menu_callables = {
+            FixedItemKey.CONTROL_PANEL: partial(self.show_main_window, True),
+            FixedItemKey.PRESETS: self.main_controller.show_presets_dialog,  # Gnome tray doesn't provide a way to bring up the main app.
+            FixedItemKey.GREY_SCALE: GreyScaleDialog,
+            FixedItemKey.SETTINGS_DIALOG: self.main_controller.edit_config,
+            FixedItemKey.LUX_AUTO_MANUAL: self.main_controller.lux_auto_action if main_config.is_set(ConfOpt.LUX_OPTIONS_ENABLED) else None,
+            FixedItemKey.LIGHTING_CHECK_NOW: self.main_controller.lux_check_action if main_config.is_set(ConfOpt.LUX_OPTIONS_ENABLED) else None,
+            FixedItemKey.LIGHT_METERING_DIALOG: partial(LuxDialog.invoke, self.main_controller) if main_config.is_set(
                 ConfOpt.LUX_OPTIONS_ENABLED) else None,
-            settings_action=self.main_controller.edit_config,
-            presets_dialog_action=self.main_controller.show_presets_dialog,
-            refresh_action=self.main_controller.start_refresh,
-            quit_action=self.quit_app,
-            hide_shortcuts=self.hide_shortcuts, parent=self)
+            FixedItemKey.REFRESH: self.main_controller.start_refresh,
+            FixedItemKey.ABOUT_DIALOG: partial(AboutDialog.invoke, self.main_controller),
+            FixedItemKey.HELP: HelpDialog.invoke,
+            FixedItemKey.QUIT: self.quit_app,
+        }
+
+        self.app_context_menu = ContextMenu(app_controller=main_controller, fixed_item_callables=menu_callables,
+                                            hide_shortcuts=self.hide_shortcuts, parent=self)
 
         # Don't do this - it creates a titlebar inside the application
         #self.app_context_menu.setTitle("VDU Controls ")  # Populate titlebar-menu (if it's enabled for Plasma Titlebars).
