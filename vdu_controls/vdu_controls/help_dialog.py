@@ -886,12 +886,15 @@ with this program. If not, see https://www.gnu.org/licenses/.
 """
 import re
 
+from importlib.resources import files as resources_files
+
+import vdu_controls.logging as log
 from vdu_controls.icon_utils import StdPixmap, si
-from vdu_controls.internationalization import tr
+from vdu_controls.locale import tr
 from vdu_controls.qt_imports import QVBoxLayout, QSize, QTextEdit, Qt
 from vdu_controls.scaling import npx
 from vdu_controls.widgets import SubWinDialog, StdButton, DialogSingletonMixin
-
+import vdu_controls.locale as locale
 
 class HelpDialog(SubWinDialog, DialogSingletonMixin):
 
@@ -901,17 +904,32 @@ class HelpDialog(SubWinDialog, DialogSingletonMixin):
 
     def __init__(self) -> None:
         super().__init__()
+
+        qt_markdown = self.load_help_text()
+
         self.setWindowTitle(tr('Help'))
         layout = QVBoxLayout()
         markdown_view = QTextEdit()
         markdown_view.setReadOnly(True)
         markdown_view.setViewportMargins(npx(80), npx(80), npx(50), npx(30))
-        markdown_view.setMarkdown(re.sub(r"^$([^ ])", r"<br/>\n\1", __doc__, flags=re.MULTILINE))  # hack Qt markdown
+        markdown_view.setMarkdown(qt_markdown)
         layout.addWidget(markdown_view)
         close_button = StdButton(icon=si(self, StdPixmap.SP_DialogCloseButton), title=tr("Close"), clicked=self.hide)
         layout.addWidget(close_button, 0, Qt.AlignmentFlag.AlignRight)
         self.setLayout(layout)
         self.make_visible()
+
+    def load_help_text(self) -> str:
+        help_file = resources_files('vdu_controls') / 'resources' / 'docs' / 'help.md'
+        localized_help_file = locale.apply_locale(help_file)
+        log.info(f"Checking for {localized_help_file}")
+        if localized_help_file.exists():
+            help_file = localized_help_file
+        log.info(f"Reading help from {help_file}")
+        help_text = help_file.read_text()
+        # Hack normal markdown to something Qt can use:
+        qt_markdown = re.sub(r"\n\n", r"\n<br/>\n\n", help_text, flags=re.MULTILINE)
+        return qt_markdown
 
     def sizeHint(self) -> QSize:
         return QSize(npx(1600), npx(1000))
