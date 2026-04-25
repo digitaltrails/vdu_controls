@@ -30,8 +30,9 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
         self.ddcutil_access_lock = Lock()
         self.brightnessctl_exe = 'brightnessctl'
         self.max_brightness: Dict[str, int] = {}
-        version_check = self.__run__('-V').stdout.decode('utf-8')
-        log.info(f"{self.brightnessctl_exe} version {version_check}")
+        if log.debug_enabled:
+            version_check = self.__run__('-V').stdout.decode('utf-8')
+            log.debug(f"{self.brightnessctl_exe} version {version_check}")
         self.set_vcp_time: datetime = datetime.now() - timedelta(seconds=60)  # Last time set_vcp was called
         self.callback = callback
         if self.callback:  # --- udev setup ---
