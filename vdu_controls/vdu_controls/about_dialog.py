@@ -6,7 +6,7 @@ import os
 from typing import TYPE_CHECKING
 
 from vdu_controls import app_locale, icon_utils, scaling
-from vdu_controls.qt_imports import Qt, QMessageBox, QLocale
+from vdu_controls.qt_imports import Qt, QMessageBox, QLocale, QtCore, QGuiApplication
 
 from vdu_controls.constants import VDU_CONTROLS_VERSION, IP_ADDRESS_INFO_URL, WEATHER_FORECAST_URL
 from vdu_controls.ddcutil_aggregator import DdcutilAggregator
@@ -65,8 +65,8 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
             vdu_controls_version = VDU_CONTROLS_VERSION,
             current_desktop = os.environ.get('XDG_CURRENT_DESKTOP', default='unknown'),
             xdg_session_type = os.environ.get('XDG_SESSION_TYPE', default='unknown'),
-            qapplication_platform = os.environ.get('QAPPLICATION_PLATFORM', default='unknown'),
-            qt_qversion = os.environ.get('QT_QVERSION', default='unknown'),
+            qapplication_platform = QGuiApplication.platformName(),
+            qt_qversion = QtCore.QT_VERSION_STR,
             ddcutil_version_info_0 = ddcutil_version_info_0,
             ddcutil_version_info_1 = ddcutil_version_info_1,
             write_counts = counts_str,
