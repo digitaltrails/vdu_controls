@@ -886,12 +886,13 @@ with this program. If not, see https://www.gnu.org/licenses/.
 """
 import re
 
+from vdu_controls import constants
 from vdu_controls.icon_utils import StdPixmap, si
 from vdu_controls.app_locale import tr
 from vdu_controls.qt_imports import QVBoxLayout, QSize, QTextEdit, Qt
 from vdu_controls.scaling import npx
 from vdu_controls.widgets import SubWinDialog, StdButton, DialogSingletonMixin
-import vdu_controls.app_locale as locale
+import vdu_controls.app_locale as app_locale
 
 class HelpDialog(SubWinDialog, DialogSingletonMixin):
 
@@ -917,7 +918,7 @@ class HelpDialog(SubWinDialog, DialogSingletonMixin):
         self.make_visible()
 
     def load_help_text(self) -> str:
-        help_text = locale.load_help_text()
+        help_text = app_locale.load_resource_text(constants.HELP_FILENAME)
         # Hack normal markdown to something Qt can use:
         qt_markdown = re.sub(r"\n\n", r"\n<br/>\n\n", help_text, flags=re.MULTILINE)
         return qt_markdown

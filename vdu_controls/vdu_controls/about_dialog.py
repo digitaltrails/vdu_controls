@@ -5,11 +5,12 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING
 
-from vdu_controls.qt_imports import Qt, QtCore, QApplication, QMessageBox
+from vdu_controls import app_locale, icon_utils, scaling
+from vdu_controls.qt_imports import Qt, QMessageBox, QLocale
 
-from vdu_controls.constants import VDU_CONTROLS_VERSION, IP_ADDRESS_INFO_URL, WEATHER_FORECAST_URL, ABOUT_TEXT
+from vdu_controls.constants import VDU_CONTROLS_VERSION, IP_ADDRESS_INFO_URL, WEATHER_FORECAST_URL
 from vdu_controls.ddcutil_aggregator import DdcutilAggregator
-from vdu_controls.app_locale import tr, find_locale_specific_file
+from vdu_controls.app_locale import tr
 import vdu_controls.logging as log
 
 from vdu_controls.widgets import DialogSingletonMixin, MIcon
@@ -44,23 +45,34 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
         self.activateWindow()
 
     def refresh_content(self):
+
         self.setWindowTitle(tr('About'))
         self.setTextFormat(Qt.TextFormat.AutoText)
         self.setText(tr('About vdu_controls'))
-        path = find_locale_specific_file("about_{}.txt")
-        if path:
-            with open(path, encoding='utf-8') as about_for_locale:
-                about_text = about_for_locale.read().format(
-                    VDU_CONTROLS_VERSION=VDU_CONTROLS_VERSION, IP_ADDRESS_INFO_URL=IP_ADDRESS_INFO_URL,
-                    WEATHER_FORECAST_URL=WEATHER_FORECAST_URL)
-        else:
-            about_text = ABOUT_TEXT
+
+        ddcutil_version_info_0 = "unknown"
+        ddcutil_version_info_1 = "unknown"
+        counts_str = "None"
         if self.main_controller and self.main_controller.ddcutil:
-            counts_str = ','.join((str(v) for v in DdcutilAggregator.vcp_write_counters.values())) if len(DdcutilAggregator.vcp_write_counters) else '0'
-            about_text += (f"<hr><p><small>desktop: {os.environ.get('XDG_CURRENT_DESKTOP', default='unknown')}; "
-                           f"platform: {os.environ.get('XDG_SESSION_TYPE', default='unknown')} "
-                           f"({QApplication.platformName()}, qt-{QtCore.qVersion()});<br/>"
-                           f"ddcutil-interface: {self.main_controller.ddcutil.ddcutil_version_info()[0]}; "
-                           f"ddcutil: {self.main_controller.ddcutil.ddcutil_version_info()[1]} (writes: {counts_str});</small>")
-        self.setInformativeText(about_text)
-        self.setIcon(MIcon.Information)
+            counts_str = ','.join((str(v) for v in DdcutilAggregator.vcp_write_counters.values())) if len(DdcutilAggregator.vcp_write_counters) else counts_str
+            ddcutil_version_info_0 = self.main_controller.ddcutil.ddcutil_version_info()[0]
+            ddcutil_version_info_1 = self.main_controller.ddcutil.ddcutil_version_info()[1]
+        log.info(f"Refreshing About Dialog {counts_str=}")
+        # Has to be HTML, getting Qt Markdown to behave was too painful
+        about_text = app_locale.load_resource_text("about.html")
+
+        self.setInformativeText(about_text.format(
+            vdu_controls_version = VDU_CONTROLS_VERSION,
+            current_desktop = os.environ.get('XDG_CURRENT_DESKTOP', default='unknown'),
+            xdg_session_type = os.environ.get('XDG_SESSION_TYPE', default='unknown'),
+            qapplication_platform = os.environ.get('QAPPLICATION_PLATFORM', default='unknown'),
+            qt_qversion = os.environ.get('QT_QVERSION', default='unknown'),
+            ddcutil_version_info_0 = ddcutil_version_info_0,
+            ddcutil_version_info_1 = ddcutil_version_info_1,
+            write_counts = counts_str,
+            qlocale = QLocale.system().name(),
+            ip_address_info_url = IP_ADDRESS_INFO_URL,
+            weather_forecast_url = WEATHER_FORECAST_URL,
+            translating=("translating" if True else "not translating")))
+
+        self.setIconPixmap(icon_utils.get_splash_pixmap().scaledToHeight(scaling.npx(250)))

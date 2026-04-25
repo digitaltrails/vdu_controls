@@ -126,9 +126,10 @@ Arguments supplied on the command line override config file equivalent settings.
 Description
 ===========
 
-``vdu_controls`` is a control-panel for DisplayPort, DVI, HDMI, or USB connected VDUs.  Out of the
-box, ``vdu_controls`` offers a subset of controls including brightness, contrast and audio
-controls.  Additional controls can be enabled via the ``Settings`` dialog.
+``vdu_controls`` control panel for external Visual Display Units (VDUs, monitors, displays). 
+It supports displays connected via DisplayPort, DVI, HDMI, USB, and built-in laptop-panels.
+Out of the box, ``vdu_controls`` offers a subset of controls including brightness, contrast 
+and audio controls.  Additional controls can be enabled via the ``Settings`` dialog.
 
 ``vdu_controls`` interacts with VDUs by using ``ddcutil`` to issue standard VESA
 *Virtual Control Panel* (*VCP*) commands via the VESA *Display Data Channel* (*DDC*).

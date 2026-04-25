@@ -10,7 +10,7 @@ from pathlib import Path
 
 from vdu_controls.constants import APPNAME
 import vdu_controls.logging as log
-from vdu_controls.icon_utils import get_splash_image
+from vdu_controls.icon_utils import get_splash_pixmap
 
 
 def install_as_desktop_application(uninstall: bool = False) -> None:
@@ -75,6 +75,6 @@ def install_as_desktop_application(uninstall: bool = False) -> None:
         log.warning(f"skipping installation of {icon_path.as_posix()}, it is already present.")
     else:
         log.info(f"Creating {icon_path.as_posix()}")
-        get_splash_image().save(icon_path.as_posix())
+        get_splash_pixmap().save(icon_path.as_posix())
 
     log.info(f"Installation complete. Your desktop->applications->settings should now contain {APPNAME}")

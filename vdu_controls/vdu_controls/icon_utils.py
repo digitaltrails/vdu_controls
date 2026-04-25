@@ -138,7 +138,7 @@ def polychrome_light_or_dark():
     return ThemeType.POLYCHROME_DARK if is_dark_theme() else ThemeType.POLYCHROME_LIGHT
 
 
-def get_splash_image() -> QPixmap:
+def get_splash_pixmap() -> QPixmap:
     """Get the splash pixmap from the installed png, failing that, the internal splash svg."""
     svg_file = resources_files('vdu_controls') / 'resources' / 'images' / 'vdu_controls.png'
     pixmap = QPixmap()

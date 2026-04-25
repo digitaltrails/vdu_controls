@@ -105,12 +105,13 @@ def translate_option(option_text) -> str:
     return tr(canonical)
 
 
-def load_help_text() -> str:
-    help_file = resources_files('vdu_controls') / 'resources' / 'docs' / 'help.md'
-    localized_help_file = apply_locale(help_file)
+def load_resource_text(filename: str) -> str:
+    file_path = resources_files('vdu_controls') / 'resources' / 'docs' / filename
+    localized_help_file = apply_locale(file_path)
     log.info(f"Checking for {localized_help_file}")
     if localized_help_file.exists():
-        help_file = localized_help_file
-    log.info(f"Reading help from {help_file}")
-    help_text = help_file.read_text()
-    return help_text
+        file_path = localized_help_file
+    log.info(f"Reading text from {file_path}")
+    text = file_path.read_text()
+    return text
+
