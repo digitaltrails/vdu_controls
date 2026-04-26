@@ -221,34 +221,58 @@ class SettingsEditorTab(QWidget):
             return widget
 
         for section_name in self.ini_editable.data_sections():
+
+            ordered_by_group = {}
+            for num, option_name in enumerate(self.ini_editable[section_name]):
+                try:
+                    # If it's unknown, it's probably a boolean switch for a VCP code
+                    option_def = vdu_config.get_conf_option(section_name, option_name)
+                    ordered_by_group[(option_def.group.value, num)] = (option_name, option_def)
+                except ValueError:  # Probably an old no-longer-valid option, or a typo.
+                    log.warning(f"Ignoring invalid option name {option_name} in {section_name}")
+            ordered_by_group = dict(sorted(ordered_by_group.items()))
+
             title = tr(section_name).replace('-', ' ')
             content_layout.addWidget(QLabel(f"<b>{title}</b>"))
-            bool_count = 0
             booleans_grid: QGridLayout | None = None  # Only create when bool_count > 0
             grid_columns = 5  # booleans are counted and laid out according to grid_columns.
-            for option_name in self.ini_editable[section_name]:
-                try:
-                    option_def = vdu_config.get_conf_option(section_name, option_name)
-                    # If it's unknown, it's probably a boolean switch for a VCP code
-                    if section_name != ConfSec.VDU_CONTROLS_GLOBALS or option_def != ConfOpt.UNKNOWN:
+
+            previous_group = None
+            row_index = col_index = 0
+            for option_name, option_def in ordered_by_group.values():
+                # TODO figure out exactly what this test is about and add a comment.
+                if section_name != ConfSec.VDU_CONTROLS_GLOBALS or option_def != ConfOpt.UNKNOWN:
+                    try:
                         if option_def.conf_type == ConfType.BOOL:
-                            if bool_count == 0:  # Need to create a grid now
+                            if row_index == 0 and col_index == 0:  # Need to create a grid now
                                 booleans_grid = QGridLayout()
                                 booleans_grid.setVerticalSpacing(0)
                                 booleans_panel = QWidget()
                                 booleans_panel.setLayout(booleans_grid)
                                 content_layout.addWidget(booleans_panel)
+                            if option_def.group and option_def.group != previous_group:
+                                if row_index > 0:
+                                    row_index += 1
+                                    booleans_grid.setRowMinimumHeight(row_index, npx(20))
+                                    row_index += 1
+                                booleans_grid.addWidget(QLabel(str(option_def.group.title)), row_index, 0)
+                                row_index += 1
+                                col_index = 0
+                                previous_group = option_def.group
                             booleans_grid.addWidget(
                                 _field(
                                     SettingsEditorBooleanWidget(self, option_name, section_name,
                                                                 option_def.help, option_def.related, option_def.requires)),
-                                bool_count // grid_columns, bool_count % grid_columns)
-                            bool_count += 1
+                                row_index, col_index)
+                            col_index += 1
+                            if col_index == grid_columns:
+                                col_index = 0
+                                row_index += 1
                         else:
                             content_layout.addWidget(
                                 _field(widget_map[option_def.conf_type](self, option_name, section_name, option_def.help)))
-                except ValueError:  # Probably an old no-longer-valid option, or a typo.
-                    log.warning(f"Ignoring invalid option name {option_name} in {section_name}")
+                    except ValueError:  # Probably an old no-longer-valid option, or a typo.
+                        log.warning(f"Ignoring invalid option name {option_name} in {section_name}")
 
     def set_preferred_name(self, label_str):
         self.preferred_name = label_str
@@ -371,7 +395,7 @@ class SettingsEditorLineBase(SettingsEditorFieldBase):
         self.text_input.inputRejected.connect(partial(self.set_error_indication, True))
         self.text_input.textEdited.connect(partial(self.set_error_indication, False))
         self.text_input.editingFinished.connect(self.editing_finished)
-        self.editor_layout.addWidget(self.text_input)
+        self.editor_layout.addWidget(self.text_input, stretch=4)
 
     def editing_finished(self) -> None:
         text = self.text_input.text()
@@ -567,6 +591,7 @@ class SettingsEditorPathWidget(SettingsEditorLineBase):
             self.editing_finished()
 
         self.editor_layout.addWidget(StdButton(si(self, StdPixmap.SP_DriveFDIcon), clicked=_choose_emulator))
+        self.editor_layout.addStretch(1)
         self.validator = SettingsEditorPathValidator()
 
     def editing_finished(self) -> None:

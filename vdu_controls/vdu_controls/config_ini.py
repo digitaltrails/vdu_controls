@@ -96,59 +96,102 @@ class ConfSec:  # Data section constants (in Python 3.11 this could be a StrEnum
     DDCUTIL_CAPABILITIES = QT_TR_NOOP('ddcutil-capabilities')
     UNKNOWN_SECTION = QT_TR_NOOP('unknown')
 
+class ConfGroup(Enum):
+    WINDOWING =   (1, QT_TR_NOOP('Windowing'))
+    FEATURES =    (3, QT_TR_NOOP('Features'))
+    SYSTEM_TRAY = (2, QT_TR_NOOP('System Tray'))
+    DDC =         (4, QT_TR_NOOP('DDC'))
+    LOGGING =     (5, QT_TR_NOOP('Logging'))
+    NONE =        (6, '')
+
+    @property
+    def intval(self) -> int:
+        return self.value[0]
+
+    @property
+    def title(self) -> str:
+        return self.value[1]
 
 class ConfOpt(Enum):  # An Enum with tuples for values is used for convenience for scope/iteration
 
     @staticmethod  # Tricky way of creating a tuple with default values for some tuple members.
     def _def(cname: str, section: str = ConfSec.VDU_CONTROLS_GLOBALS, conf_type: str = ConfType.BOOL, default: str | None = None,
              global_allowed: bool = True, restart: bool = False, cmdline_arg: str = 'DEFAULT', tip: str = '',
-             related: str = '', requires: str = '') -> Tuple[str, str, str, str, str | None, bool, str, str, str, bool]:
-        return cname, section, cmdline_arg, conf_type, default, restart, tip, related, requires, global_allowed
+             group: ConfGroup = ConfGroup.NONE,
+             related: str = '', requires: str = '') -> Tuple[str, str, str, str, str | None, bool, str, str, str, str, bool]:
+        return cname, section, cmdline_arg, conf_type, default, restart, tip, group, related, requires, global_allowed
 
     SPLASH_SCREEN_ENABLED = _def(cname=QT_TR_NOOP('splash-screen-enabled'), default='yes', cmdline_arg='splash',
+                                 group=ConfGroup.FEATURES,
                                  tip=QT_TR_NOOP('enable the startup splash screen'))
     SYSTEM_TRAY_ENABLED = _def(cname=QT_TR_NOOP('system-tray-enabled'), default="no", restart=True,
+                               group=ConfGroup.SYSTEM_TRAY,
                                tip=QT_TR_NOOP('start up in the system tray'), related='hide-on-focus-out')
     HIDE_ON_FOCUS_OUT = _def(cname=QT_TR_NOOP('hide-on-focus-out'), default="no", restart=False,
+                             group=ConfGroup.WINDOWING,
                              tip=QT_TR_NOOP('minimize the main window automatically on focus out'))
     SMART_WINDOW = _def(cname=QT_TR_NOOP('smart-window'), default="yes",
+                        group=ConfGroup.WINDOWING,
                         tip=QT_TR_NOOP('smart main window placement and geometry (X11 and XWayland)'), restart=True)
     SMART_USES_XWAYLAND = _def(cname=QT_TR_NOOP('smart-uses-xwayland'), default="yes", restart=True,
+                               group=ConfGroup.WINDOWING,
                                tip=QT_TR_NOOP('if smart-window is enabled, use Xwayland in Wayland'))
     PREFER_QT6 = _def(cname=QT_TR_NOOP('prefer-qt6'), default="true", cmdline_arg='DISALLOWED',
+                      group=ConfGroup.WINDOWING,
                       tip=QT_TR_NOOP('Prefer Qt6 over Qt5 (if both are installed)'), restart=True)
     MONOCHROME_TRAY_ENABLED = _def(cname=QT_TR_NOOP('monochrome-tray-enabled'), default="no", restart=False,
+                                   group=ConfGroup.SYSTEM_TRAY,
                                    tip=QT_TR_NOOP('monochrome dark themed system tray'))
     MONO_LIGHT_TRAY_ENABLED = _def(cname=QT_TR_NOOP('mono-light-tray-enabled'), default="no", restart=False,
+                                   group=ConfGroup.SYSTEM_TRAY,
                                    tip=QT_TR_NOOP('monochrome light themed system tray'))
     TRAY_FOLLOWS_THEME = _def(cname=QT_TR_NOOP('tray-follows-theme'), default="yes", restart=False,
+                              group=ConfGroup.SYSTEM_TRAY,
                               tip=QT_TR_NOOP('tray dark/light theming follows desktop-theme changes'))
     TOOLBAR_AT_TOP = _def(cname=QT_TR_NOOP('toolbar-at-top'), default="no", restart=False,
+                          group=ConfGroup.WINDOWING,
                           tip=QT_TR_NOOP('toolbar resides at top of main window'))
     SEPARATE_STATUS_BAR = _def(cname=QT_TR_NOOP('separate-status-bar'), default="no", restart=True,
+                               group=ConfGroup.WINDOWING,
                                tip=QT_TR_NOOP('seperate the status-bar from the tool-bar'))
     PROTECT_NVRAM_ENABLED = _def(cname=QT_TR_NOOP('protect-nvram'), default="yes", restart=True,
+                                 group=ConfGroup.DDC,
                                  tip=QT_TR_NOOP('alter options and defaults to minimize VDU NVRAM writes'))
     ORDER_BY_NAME = _def(cname=QT_TR_NOOP('order-by-name'), default="no",
+                         group=ConfGroup.WINDOWING,
                          tip=QT_TR_NOOP('order lists and tabs by vdu-name'))
     LUX_OPTIONS_ENABLED = _def(cname=QT_TR_NOOP('lux-options-enabled'), default="yes", restart=True,
+                               group=ConfGroup.FEATURES,
                                tip=QT_TR_NOOP('enable light metering options'))
     LUX_TRAY_ICON = _def(cname=QT_TR_NOOP('lux-tray-icon'), default="yes", restart=False,
+                         group=ConfGroup.SYSTEM_TRAY,
                          tip=QT_TR_NOOP('enable lux light-level system-tray icon'))
-    SCHEDULE_ENABLED = _def(cname=QT_TR_NOOP('schedule-enabled'), default='yes', tip=QT_TR_NOOP('enable preset schedule'))
-    WEATHER_ENABLED = _def(cname=QT_TR_NOOP('weather-enabled'), default='yes', tip=QT_TR_NOOP('enable weather lookups'))
+    SCHEDULE_ENABLED = _def(cname=QT_TR_NOOP('schedule-enabled'), default='yes',
+                            group=ConfGroup.FEATURES,
+                            tip=QT_TR_NOOP('enable preset schedule'))
+    WEATHER_ENABLED = _def(cname=QT_TR_NOOP('weather-enabled'), default='yes',
+                           group=ConfGroup.FEATURES,
+                           tip=QT_TR_NOOP('enable weather lookups'))
     DBUS_CLIENT_ENABLED = _def(cname=QT_TR_NOOP('dbus-client-enabled'), default="yes",
+                               group=ConfGroup.DDC,
                                tip=QT_TR_NOOP('use the D-Bus ddcutil-server if available'))
     DBUS_EVENTS_ENABLED = _def(cname=QT_TR_NOOP('dbus-events-enabled'), default="yes",
+                               group=ConfGroup.DDC,
                                tip=QT_TR_NOOP('enable D-Bus ddcutil-server events'), requires='dbus-client-enabled')
     LAPTOP_PANEL_ENABLED = _def(cname=QT_TR_NOOP('laptop-panel-enabled'), default="no",
+                                group=ConfGroup.DDC,
                                 tip=QT_TR_NOOP('use brightnessctl utility for laptop panel control'))
     SYSLOG_ENABLED = _def(cname=QT_TR_NOOP('syslog-enabled'), default="no",
+                          group=ConfGroup.FEATURES,
                           tip=QT_TR_NOOP('divert diagnostic output to the syslog'))
-    DEBUG_ENABLED = _def(cname=QT_TR_NOOP('debug-enabled'), default="no", tip=QT_TR_NOOP('output extra debug information'))
+    DEBUG_ENABLED = _def(cname=QT_TR_NOOP('debug-enabled'), default="no",
+                         group=ConfGroup.FEATURES,
+                         tip=QT_TR_NOOP('output extra debug information'))
     WARNINGS_ENABLED = _def(cname=QT_TR_NOOP('warnings-enabled'), default="no",
+                            group=ConfGroup.DDC,
                             tip=QT_TR_NOOP('popup warnings if a VDU lacks an enabled control'))
     TRANSLATIONS_ENABLED = _def(cname=QT_TR_NOOP('translations-enabled'), default="no", restart=True,
+                                group=ConfGroup.FEATURES,
                                 tip=QT_TR_NOOP('enable language translations, currently not updated (no known users)'))
     LOCATION = _def(cname=QT_TR_NOOP('location'), conf_type=ConfType.LOCATION, tip=QT_TR_NOOP('latitude,longitude'))
     DDCUTIL_EMULATOR = _def(cname=QT_TR_NOOP('ddcutil-emulator'), conf_type=ConfType.PATH,
@@ -170,7 +213,7 @@ class ConfOpt(Enum):  # An Enum with tuples for values is used for convenience f
     UNKNOWN = _def(cname="UNKNOWN", section=ConfSec.UNKNOWN_SECTION, conf_type=ConfType.BOOL, cmdline_arg='DISALLOWED', tip='')
 
     def __init__(self, conf_name: str, section: str, cmdline_arg: str, conf_type: str, default: str | None,
-                 restart_required: bool, help_text: str, related: str, requires: str, global_allowed):
+                 restart_required: bool, help_text: str, group: ConfGroup, related: str, requires: str, global_allowed):
         self.conf_name = conf_name
         self.conf_section = section
         self.conf_type = conf_type
@@ -183,6 +226,7 @@ class ConfOpt(Enum):  # An Enum with tuples for values is used for convenience f
         self.related = related
         self.requires = requires
         self.global_allowed = global_allowed
+        self.group = group
 
     def add_cmdline_arg(self, parser: argparse.ArgumentParser) -> None:
         if self.cmdline_arg != "DISALLOWED":
