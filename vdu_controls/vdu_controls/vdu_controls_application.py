@@ -102,6 +102,9 @@ class VduMainToolBar(QToolBar):
         assert self.preset_action
         self.preset_action.setVisible(False)
 
+        self.toggleViewAction().setEnabled(False)  # Stop users from accidentally hiding the toolbar
+        self.toggleViewAction().setVisible(False)
+
         def edit_current_preset():
             parent.main_controller.show_presets_dialog(self.preset_edit_target)
 
