@@ -1,5 +1,5 @@
 <!-- SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls> -->
-<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- SPDX-License-Identifier: LGPL-3.0 -->
 <svg viewBox="0 0 24 24" width="256" height="256" fill="none" xmlns="http://www.w3.org/2000/svg">
     <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
     <linearGradient id="screenGradient" x1="0%" y1="0%" x2="100%" y2="100%">
