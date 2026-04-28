@@ -413,6 +413,15 @@ Michael Hamilton
 
 Version History
 ---------------
+* 2.6.5
+  * The mains Settings options are now grouped functionally under sub-headinsg.
+  * The source code has been split into modules.
+  * The executable is now a python zipapp containing the module hierarchy, 
+    It may load faster because,  as well as source code, it contains a cache
+    of zippapp "compiled" python bytecode.
+  * The source of SVG icons is now help in separate files, which potentially
+    makes the icons more easily reusable by other projects.
+
 * 2.6.0
   * Added laptop-panel support, see Setting option "laptop-panel-enabled".
     Requires the commonly available "brightnessctr" command to be installed.
