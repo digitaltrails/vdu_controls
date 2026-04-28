@@ -16,22 +16,22 @@ from vdu_controls.icon_utils import get_splash_pixmap
 
 def install_as_desktop_application(uninstall: bool = False) -> None:
     """Self install this script in the current Linux user's bin directory and desktop applications->settings menu."""
-    desktop_dir = Path.home().joinpath('.local', 'share', 'applications')
-    icon_dir = Path.home().joinpath('.local', 'share', 'vdu_controls', 'icons')
-    bin_dir = Path.home().joinpath('.local', 'bin')
+    desktop_dir = Path.home() / '.local' / 'share' / 'applications'
+    icon_dir = Path.home() / '.local' / 'share' / 'vdu_controls'
+    bin_dir = Path.home() / '.local' / 'bin'
 
     if not desktop_dir.exists():
         log.error(f"No desktop directory is present:{desktop_dir.as_posix()}"
                   " Cannot proceed - is this a non-standard desktop?")
         return
 
-    if not bin_dir.is_dir():
+    if not bin_dir.exists():
         log.warning(f"creating:{bin_dir.as_posix()}")
-        os.mkdir(bin_dir)
+        bin_dir.mkdir(parents=True, exist_ok=True)
 
-    if not icon_dir.is_dir():
+    if not icon_dir.exists():
         log.warning("creating:{icon_dir.as_posix()}")
-        os.mkdir(icon_dir)
+        icon_dir.mkdir(parents=True, exist_ok=True)
 
     installed_script_path = bin_dir.joinpath("vdu_controls")
     desktop_definition_path = desktop_dir.joinpath("vdu_controls.desktop")
@@ -49,8 +49,8 @@ def install_as_desktop_application(uninstall: bool = False) -> None:
     if installed_script_path.exists():
         log.warning(f"reinstalling {installed_script_path.as_posix()}, assuming an upgrade is required.")
 
-    log.info(f"Copying {__file__} to  {installed_script_path.as_posix()}")
-    shutil.copy2(__file__, installed_script_path)
+    log.info(f"Copying {sys.argv[0]} to  {installed_script_path.as_posix()}")
+    shutil.copy2(sys.argv[0], installed_script_path)
     log.info(f"chmod u+rwx {installed_script_path.as_posix()}")
     os.chmod(installed_script_path, stat.S_IRWXU)
 
@@ -75,7 +75,5 @@ def install_as_desktop_application(uninstall: bool = False) -> None:
     else:
         log.info(f"Creating {app_icon_path.as_posix()}")
         get_splash_pixmap().save(app_icon_path.as_posix())
-
-
 
     log.info(f"Installation complete. Your desktop->applications->settings should now contain {APPNAME}")
