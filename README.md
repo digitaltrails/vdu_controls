@@ -196,10 +196,43 @@ older VDUs are often not usable below 85-90% brightness.
 Getting Started
 ---------------
 
-To get started with ``vdu_controls``, you only need to download the ``vdu_controls.py`` python script and
-check that the dependencies described below are in place.  Alternatively, should you wish to install ``vdu_controls`` 
-for all users, RPMs are available for **OpenSUSE**, **Fedora**, and there is an  **archlinux** AUR package
-which also works in **Manjaro**.  See the *Install* section below. 
+Packages are available for **OpenSUSE**, **Fedora**, and there is an  **archlinux** AUR 
+package for arch-based systems:
+
+ * OpenSUSE RPMs available at: [https://software.opensuse.org/package/vdu_controls](https://software.opensuse.org/package/vdu_controls),
+ * Unoffical Fedora RPMs available at: [build.opensuse.org](https://build.opensuse.org/projects/home:mchnz/packages/vdu_controls/repositories/Fedora_37/binaries)
+ * archlinux AUR package at: [https://aur.archlinux.org/packages/vdu_controls](https://aur.archlinux.org/packages/vdu_controls)
+
+If vdu_controls isn't already available for your distribution, you can
+download the latest vdu_controls.pyz from the release page.  The pyz file 
+is a runnable zip. 
+
+The script can be run without installation by using a python interpreter, for example:
+   ```
+   % python3 vdu_controls.pyz
+   ```
+Or you can simply make the script executable and run it directly:
+   ```
+   % chmod u+x vdu_controls.pyz
+   % ./vdu_controls.pyz
+   ```
+If you're running it directly, you can also rename  `vdu_controls.pyz` to
+simply  `vdu_controls` and then install it whereever you install your 
+local binaries.
+
+Although it's easily runnable, you'll still need to ensure you have the 
+required dependencies available - see below.  
+
+> [!Tip]
+> The zip contains the source archive along with a cache of pre-compiled files.
+> Should you wish to make any tweaks directly to the unzipped code, you can
+> do so and then rezip a new executable:
+> 
+>    ```
+>    python3 -m zipapp vdu_controls --output my_vdu_controls.pyz \
+>       --main vdu_controls_main:main \
+>       --python "/usr/bin/env python3"
+>    ```
 
 > [!Note]
 > Development is **trunk-based**.  It is my intention that the trunk 
@@ -207,7 +240,7 @@ which also works in **Manjaro**.  See the *Install* section below.
 > as a daily-driver.  If you want the latest features, download from master. 
 > That being said, a download of trunk may sometimes be less stable than downloading 
 > one of the formal [releases](https://github.com/digitaltrails/vdu_controls/releases) 
-> or installing one of the packages that are available in various distros.
+> or installing one of the distro packages.
 
 Dependencies
 ------------
@@ -217,9 +250,21 @@ All the following runtime dependencies are likely to be pre-packaged on any mode
 
 * **ddcutil >= 1.2, >= 1.4 recommended**: the command line utility that interfaces to VDUs via DDC over i2c-dev or USB. (If 
   anyone requires support for versions of ddcutil prior to v1.2 please contact me directly.)
-* **i2c-dev**: the i2c-dev kernel module normally shipped with all Linux distributions and required by [ddcutil](https://www.ddcutil.com)
 * **python >=3.8**: ``vdu_controls`` is written in python and may depend on some features present only in 3.8 onward.
 * **PyQt6** or **PyQt5**: the python GUI library used by ``vdu_controls``.
+
+Also optionally:
+
+* **ddcutil-service** provides a faster response from ddcutil and forwards display hotplug events.
+
+* **pyserial** required to use a serial-port light-metering device (only loaded if needed).
+
+And optionally for supporting laptop-panels (these are only imported if settings require them):
+
+* **brightnessctl** for retrieving and setting laptop-panel brightness.
+* **python3-pyudev** for monitoring for changes due to auto-dimming and brightness-up/down-keys.
+
+
 
 It's best to confirm that ``ddcutil`` is functioning before using ``vdu_controls``:
 
@@ -230,32 +275,40 @@ It's best to confirm that ``ddcutil`` is functioning before using ``vdu_controls
 * Fo some VDUs, DDC/CI over Display-Port to Display-Port connections may work when others 
   connections don't (mainly with some Nvidia GPUs).
 
-> [!NOTE]
+> [!TIP]
 > As of ddcutil 1.4, installing a pre-packaged ddcutil will most likely set the correct udev rules to 
 > grant users access to the required devices.  If you are using an earlier ddcutil, it may be necessary to follow 
 > all the steps detailed in the links above.  
 
+> [!NOTE]
+> I don't bundle any dependencies. It's safer and more secure to rely on 
+> distro-vetted dependencies.  They will be better audited and better 
+> matched to you distro than anything I could provide.
+
+
 Installing
 ----------
 
-As previously stated, the ``vdu_vontrols.py`` script is only file required beyond the prerequisites. There
-are also **OpenSUSE** RPMs available at: [https://software.opensuse.org/package/vdu_controls](https://software.opensuse.org/package/vdu_controls),
-some unoffical **Fedora** RPMs available at: [build.opensuse.org](https://build.opensuse.org/projects/home:mchnz/packages/vdu_controls/repositories/Fedora_37/binaries)
-and an **archlinux** (**manjaro** compatible) **AUR** package at: [https://aur.archlinux.org/packages/vdu_controls](https://aur.archlinux.org/packages/vdu_controls)
+The script can self-install itself as desktop application in the current user's `$HOME\.local`
+hierarchy, this will add it to the normal desktop application menu: 
 
-That makes three options for "installation": 
-
-1. The script can be run without installation by using a python interpreter, for example:
-   ```
-   % python3 vdu_controls.py
-   ```
-2. The script can be self installed as desktop application in the current user's desktop menu 
    as *Applications->Settings->VDU Controls* by running:
    ```
-    % python3 vdu_controls.py --install
+    % python3 vdu_controls.pyz --install
    ```
-      Depending on which desktop you're running menu changes may require logout before they become visible.
-3. A system-wide installation using a distribution's packaging system which will install all of:
+
+That will install:
+
+   ```
+   $HOME/.local/bin/vdu_controls
+   $HOME/.local/share/applications/vdu_controls.desktop
+   $HOME/.local/share/vdu_controls/icons/app/vdu_controls.png
+   ```
+
+Depending on which desktop you're running, menu changes may require logout before they become visible.
+
+For system-wide installation it's probably best to use a distribution package, which 
+is likely to install some or all of the following, typically to these locations:
 
    ```
    /usr/bin/vdu_controls
@@ -266,29 +319,6 @@ That makes three options for "installation":
    /usr/share/vdu_controls/translations/*
    /usr/share/man/man1/vdu_controls.1.gz
    ```
-
-> [!NOTE]
-> The first two options above, only install ``vdu-controls`` for the current user.  The script and desktop-file 
-> installed for a single user could be modified and copied into /usr or /usr/local hierarchies. 
-> If using the first two options, you might want to follow up by manually downloading
-> some of the other items such as the [starter set of icons](icons) for use when creating Presets.
-
-Executing the program
----------------------
-
-* If installed from rpm, **VDU Controls** should be in everyone's application menu under **Settings**. 
-  The ``vdu_controls`` command will also be in everyone's ``PATH`` and will be able to be run from the command
-  line, for example:
-     ```
-     % vdu_controls --show brightness --show contrast --show audio-volume
-     ```
-* If installed by the current user via the ``--install`` option, **VDU Controls** should be in
-  the current user's application menu under **Settings**. The ``vdu_controls`` command will be in ``$HOME/bin``.
-  If ``$HOME/bin`` is on the user's ``PATH``, ``vdu_controls`` will be also able to be run from the command
-  line in the same manner as above.
-* If the script has not been installed, it can still be run on the command line via the python interpreter, 
-  for example:\
-  ``% python3 vdu_controls.py --no-splash --system-tray --show brightness --show contrast``
 
 Help
 ----

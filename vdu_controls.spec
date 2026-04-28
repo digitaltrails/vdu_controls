@@ -78,7 +78,7 @@ install -d -m 0755 %{buildroot}%{_bindir} \
                    %{buildroot}%{_datadir}/icons/hicolor/256x256/apps
 install -m 0755 %{name}.pyz  %{buildroot}/%{_bindir}/%{name}
 install -m 0644 %{name}.desktop %{buildroot}%{_datadir}/applications/%{name}.desktop
-install -m 0644 %{name}/%{name}/resources/images/%{name}.png \
+install -m 0644 %{name}/%{name}/resources/icons/app/%{name}.png \
                     %{buildroot}%{_datadir}/icons/hicolor/256x256/apps/%{name}.png
 install -m 0644 icons/* %{buildroot}%{_datadir}/%{name}/icons/
 install -m 0644 translations/*.ts %{buildroot}%{_datadir}/%{name}/translations/

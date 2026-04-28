@@ -118,8 +118,8 @@ Arguments supplied on the command line override config file equivalent settings.
       --create-config-files
                             if they do not exist, create template config INI files
                             in $HOME/.config/vdu_controls/
-      --install             installs the vdu_controls in the current user's path and
-                            desktop application menu.
+      --install             installs the vdu_controls binary and desktop file 
+                            into $HOME/.local/
       --uninstall           uninstalls the vdu_controls application menu file and
                             script for the current user.
 
@@ -787,20 +787,24 @@ duality of "display" and "monitor"
 Prerequisites
 =============
 
-Described for OpenSUSE, similar for other distros:
+Packaged versions of ``vdu_control`` are likely to include all of the following
+automatically.
 
-Software::
+ * `python3`, `python3-qt6` or `python-qt5`, `noto-sans-math-fonts`, `noto-sans-symbols2-fonts`.
+ * `ddcutil`, the command line DDC interface. 
+ * `libddcutil` and `ddcutil-service`, obtional, but recommended for increased reliability.
+   more features, and increased speed.
 
-        zypper install python3 python3-qt5 noto-sans-math-fonts noto-sans-symbols2-fonts
-        zypper install ddcutil
-        zypper install libddcutil ddcutil-service  # optional, but recommended if available
-        zypper install brightnessctl  # optional, needed for controlling laptop-panels
-        zypper install python3-udev   # optional, needed for detecting brighntess changes on laptop-panels
+The following need not be present to run ``vdu_controls``, library imports
+are only attempted when settings require them:
 
-If you wish to use a serial-port lux metering device, the ``pyserial`` module is a runtime requirement.
+ * `brightnessctl`,  optional, needed for controlling laptop-panels.
+ * `python3-pyudev`, optional, needed for detecting brighntess changes on laptop-panels.
+ * `pyserial`, optional, required to use a serial-port light-metering device (only
+   loaded if needed).
 
-Get ddcutil working first. Check that the detect command detects your VDUs without issuing any
-errors:
+It's often best to start simple and get ddcutil working first. Check that the 
+detect command detects your VDUs without issuing any errors:
 
         ddcutil detect
 

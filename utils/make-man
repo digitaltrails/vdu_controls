@@ -2,6 +2,6 @@
 # SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls>
 # SPDX-License-Identifier: GPL-3.0-or-later
 # hacky - pandoc is better at html
-python3 vdu_controls.py --detailed-help | egrep -v '^..:..:.. INFO: ' | pandoc --from markdown --to html > docs/_build/man/vdu_controls.1.html
+pandoc --from markdown --to html vdu_controls/vdu_controls/resources/docs/help.md > docs/_build/man/vdu_controls.1.html
 cd docs
 make man
