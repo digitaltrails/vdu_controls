@@ -411,8 +411,8 @@ Version History
   * The executable is now a python zipapp containing the module hierarchy, 
     It may load faster because,  as well as source code, it contains a cache
     of zippapp "compiled" python bytecode.
-  * The source of SVG icons is now help in separate files, which potentially
-    makes the icons more easily reusable by other projects.
+  * Each icon is now held in a separate SVG source file.  This 
+    makes the icons more easily editable and reusable.
 
 * 2.6.0
   * Added laptop-panel support, see Setting option "laptop-panel-enabled".
