@@ -406,13 +406,13 @@ Michael Hamilton
 Version History
 ---------------
 * 2.6.5
-  * The mains Settings options are now grouped functionally under sub-headinsg.
-  * The source code has been split into modules.
+  * The mains Settings options are now grouped functionally under sub-headings.
+  * The toolbar can no longer accidentablly be hidden by a right mouse action.
+  * The source code has been split into 40+ files/modules.
   * The executable is now a python zipapp containing the module hierarchy, 
-    It may load faster because,  as well as source code, it contains a cache
-    of zippapp "compiled" python bytecode.
   * Each icon is now held in a separate SVG source file.  This 
     makes the icons more easily editable and reusable.
+
 
 * 2.6.0
   * Added laptop-panel support, see Setting option "laptop-panel-enabled".
