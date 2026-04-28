@@ -253,18 +253,16 @@ All the following runtime dependencies are likely to be pre-packaged on any mode
 * **python >=3.8**: ``vdu_controls`` is written in python and may depend on some features present only in 3.8 onward.
 * **PyQt6** or **PyQt5**: the python GUI library used by ``vdu_controls``.
 
-Also optionally:
+Optionally:
 
 * **ddcutil-service** provides a faster response from ddcutil and forwards display hotplug events.
 
 * **pyserial** required to use a serial-port light-metering device (only loaded if needed).
 
-And optionally for supporting laptop-panels (these are only imported if settings require them):
+Also optionally for supporting laptop-panels (these are only imported if settings require them):
 
 * **brightnessctl** for retrieving and setting laptop-panel brightness.
 * **python3-pyudev** for monitoring for changes due to auto-dimming and brightness-up/down-keys.
-
-
 
 It's best to confirm that ``ddcutil`` is functioning before using ``vdu_controls``:
 
@@ -279,12 +277,6 @@ It's best to confirm that ``ddcutil`` is functioning before using ``vdu_controls
 > As of ddcutil 1.4, installing a pre-packaged ddcutil will most likely set the correct udev rules to 
 > grant users access to the required devices.  If you are using an earlier ddcutil, it may be necessary to follow 
 > all the steps detailed in the links above.  
-
-> [!NOTE]
-> I don't bundle any dependencies. It's safer and more secure to rely on 
-> distro-vetted dependencies.  They will be better audited and better 
-> matched to you distro than anything I could provide.
-
 
 Installing
 ----------
@@ -358,18 +350,20 @@ Development
 I've set up the ``vdu_controls`` source as a typical Python development, but there is only one real source
 file, ``vdu_controls.py``, so the file hierarchy is rather over the top.  A standard python distributable 
 can be built by issuing the following commands at the top of the project hierarchy:
+
+A standard python setup.cfg is included, howver I don't normally use build or pip.
+I typically just assemble the source into a zipapp by running zipapp at the 
+top of the project hierarchy, for example:
+
 ```
-% python3 -m pip install build
-% python3 -m build
-...
-% ls -1 dist/
-total 268
-vdu_controls_digitaltrails-1.0.0-py3-none-any.whl
-vdu_controls-digitaltrails-1.0.0.tar.gz
+# Make a zipapp:
+python3 -m zipapp vdu_controls --output vdu_controls.pyz --main vdu_controls_main:main --python "/usr/bin/env python3"
+# Run the result:
+python3 vdu_controls.pyz
 ```
 
-The source includes configuration files for the 
-[Sphinx Python Documentation Generator](https://www.sphinx-doc.org/en/master/index.html). 
+Configuration files for the 
+[Sphinx Python Documentation Generator](https://www.sphinx-doc.org/en/master/index.html) are included. 
 The following commands will extract documentation from ``vdu_controls.py``:
 ```
 % cd docs
