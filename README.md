@@ -188,10 +188,56 @@ older VDUs are often not usable below 85-90% brightness.
 Getting Started
 ---------------
 
-To get started with ``vdu_controls``, you only need to download the ``vdu_controls.py`` python script and
-check that the dependencies described below are in place.  Alternatively, should you wish to install ``vdu_controls`` 
-for all users, RPMs are available for **OpenSUSE**, **Fedora**, and there is an  **archlinux** AUR package
-which also works in **Manjaro**.  See the *Install* section below. 
+Packages are available for **OpenSUSE**, **Fedora**, and there is an  **archlinux** AUR 
+package for arch-based systems:
+
+ * OpenSUSE RPMs available at: [https://software.opensuse.org/package/vdu_controls](https://software.opensuse.org/package/vdu_controls),
+ * Unoffical Fedora RPMs available at: [build.opensuse.org](https://build.opensuse.org/projects/home:mchnz/packages/vdu_controls/repositories/Fedora_37/binaries)
+ * archlinux AUR package at: [https://aur.archlinux.org/packages/vdu_controls](https://aur.archlinux.org/packages/vdu_controls)
+
+> [!WARNING]
+> These instructions are for versions >= 2.6.5.  For earlier versions,
+> follow the instructions in the README.md included in the release tar or zip.
+
+If vdu_controls isn't already available for your distribution, you can
+download or git-clone the latest from github.  The source can be used 
+to install the application into `$HOME/.local/` as runnable python-zipapp:
+
+   ``` 
+   % wget -O vdu_controls.zip https://github.com/digitaltrails/vdu_controls/archive/refs/heads/master.zip
+   % unzip vdu_controls.zip
+   % python3 vdu_controls-master/vdu_controls/vdu_controls_main.py --install
+   
+   ...
+   9:19:56 INFO: Creating zipapp /home/foo/.local/bin/vdu_controls
+   09:19:56 INFO: chmod u+rwx /home/foo/.local/bin/vdu_controls
+   09:19:56 INFO: Creating /home/foo/.local/share/applications/vdu_controls.desktop
+   09:19:56 INFO: Creating /home/foo/.local/share/vdu_controls/vdu_controls.png
+   09:19:56 INFO: Installation complete. Your desktop->applications->settings should now contain VDU Controls
+   ```
+If you prefer to use a release version, you can download
+the vdu_controls.pyz (or tar or zip) from one of the github release pages.
+The release page pyz file is directly runnable:
+
+   ```
+   % python3 vdu_controls.pyz              # run the actual GUI
+   % python3 vdu_controls.pyz --install    # install into $HOME/.local
+   ```
+
+Although it's easily runnable, you'll still need to ensure you have the 
+required dependencies available - see below.  
+
+> [!Tip]
+> The zip contains the source archive (along with a cache of pre-compiled files).
+> Should you wish to make any tweaks directly to the unzipped code, you can
+> do so and then rezip a new executable:
+> 
+>    ```
+>    cd my_vdu_controls_dir/
+>    python3 -m zipapp vdu_controls --output my_vdu_controls.pyz \
+>       --main vdu_controls_main:main \
+>       --python "/usr/bin/env python3"
+>    ```
 
 > [!Note]
 > Development is **trunk-based**.  It is my intention that the trunk 
@@ -199,7 +245,8 @@ which also works in **Manjaro**.  See the *Install* section below.
 > as a daily-driver.  If you want the latest features, download from master. 
 > That being said, a download of trunk may sometimes be less stable than downloading 
 > one of the formal [releases](https://github.com/digitaltrails/vdu_controls/releases) 
-> or installing one of the packages that are available in various distros.
+> or installing one of the distro packages.
+
 
 Dependencies
 ------------
@@ -209,9 +256,19 @@ All the following runtime dependencies are likely to be pre-packaged on any mode
 
 * **ddcutil >= 1.2, >= 1.4 recommended**: the command line utility that interfaces to VDUs via DDC over i2c-dev or USB. (If 
   anyone requires support for versions of ddcutil prior to v1.2 please contact me directly.)
-* **i2c-dev**: the i2c-dev kernel module normally shipped with all Linux distributions and required by [ddcutil](https://www.ddcutil.com)
 * **python >=3.8**: ``vdu_controls`` is written in python and may depend on some features present only in 3.8 onward.
 * **PyQt6** or **PyQt5**: the python GUI library used by ``vdu_controls``.
+
+Optionally:
+
+* **ddcutil-service** provides a faster response from ddcutil and forwards display hotplug events.
+
+* **pyserial** required to use a serial-port light-metering device (only loaded if needed).
+
+Also optionally, for supporting laptop-panels (only used/loaded if laptop-panels are enabled in Settings):
+
+* **brightnessctl** for retrieving and setting laptop-panel brightness.
+* **python3-pyudev** for monitoring for changes due to auto-dimming and brightness-up/down-keys.
 
 It's best to confirm that ``ddcutil`` is functioning before using ``vdu_controls``:
 
@@ -222,7 +279,7 @@ It's best to confirm that ``ddcutil`` is functioning before using ``vdu_controls
 * Fo some VDUs, DDC/CI over Display-Port to Display-Port connections may work when others 
   connections don't (mainly with some Nvidia GPUs).
 
-> [!NOTE]
+> [!TIP]
 > As of ddcutil 1.4, installing a pre-packaged ddcutil will most likely set the correct udev rules to 
 > grant users access to the required devices.  If you are using an earlier ddcutil, it may be necessary to follow 
 > all the steps detailed in the links above.  
@@ -230,24 +287,26 @@ It's best to confirm that ``ddcutil`` is functioning before using ``vdu_controls
 Installing
 ----------
 
-As previously stated, the ``vdu_vontrols.py`` script is only file required beyond the prerequisites. There
-are also **OpenSUSE** RPMs available at: [https://software.opensuse.org/package/vdu_controls](https://software.opensuse.org/package/vdu_controls),
-some unoffical **Fedora** RPMs available at: [build.opensuse.org](https://build.opensuse.org/projects/home:mchnz/packages/vdu_controls/repositories/Fedora_37/binaries)
-and an **archlinux** (**manjaro** compatible) **AUR** package at: [https://aur.archlinux.org/packages/vdu_controls](https://aur.archlinux.org/packages/vdu_controls)
+The script can self-install itself as desktop application in the current user's `$HOME\.local`
+hierarchy, this will add it to the normal desktop application menu: 
 
-That makes three options for "installation": 
-
-1. The script can be run without installation by using a python interpreter, for example:
-   ```
-   % python3 vdu_controls.py
-   ```
-2. The script can be self installed as desktop application in the current user's desktop menu 
    as *Applications->Settings->VDU Controls* by running:
    ```
-    % python3 vdu_controls.py --install
+    % python3 vdu_controls.pyz --install
    ```
-      Depending on which desktop you're running menu changes may require logout before they become visible.
-3. A system-wide installation using a distribution's packaging system which will install all of:
+
+That will install:
+
+   ```
+   $HOME/.local/bin/vdu_controls
+   $HOME/.local/share/applications/vdu_controls.desktop
+   $HOME/.local/share/vdu_controls/icons/app/vdu_controls.png
+   ```
+
+Depending on which desktop you're running, menu changes may require logout before they become visible.
+
+For system-wide installation it's probably best to use a distribution package, which 
+is likely to install some or all of the following, typically to these locations:
 
    ```
    /usr/bin/vdu_controls
@@ -258,29 +317,6 @@ That makes three options for "installation":
    /usr/share/vdu_controls/translations/*
    /usr/share/man/man1/vdu_controls.1.gz
    ```
-
-> [!NOTE]
-> The first two options above, only install ``vdu-controls`` for the current user.  The script and desktop-file 
-> installed for a single user could be modified and copied into /usr or /usr/local hierarchies. 
-> If using the first two options, you might want to follow up by manually downloading
-> some of the other items such as the [starter set of icons](icons) for use when creating Presets.
-
-Executing the program
----------------------
-
-* If installed from rpm, **VDU Controls** should be in everyone's application menu under **Settings**. 
-  The ``vdu_controls`` command will also be in everyone's ``PATH`` and will be able to be run from the command
-  line, for example:
-     ```
-     % vdu_controls --show brightness --show contrast --show audio-volume
-     ```
-* If installed by the current user via the ``--install`` option, **VDU Controls** should be in
-  the current user's application menu under **Settings**. The ``vdu_controls`` command will be in ``$HOME/bin``.
-  If ``$HOME/bin`` is on the user's ``PATH``, ``vdu_controls`` will be also able to be run from the command
-  line in the same manner as above.
-* If the script has not been installed, it can still be run on the command line via the python interpreter, 
-  for example:\
-  ``% python3 vdu_controls.py --no-splash --system-tray --show brightness --show contrast``
 
 Help
 ----
@@ -320,18 +356,20 @@ Development
 I've set up the ``vdu_controls`` source as a typical Python development, but there is only one real source
 file, ``vdu_controls.py``, so the file hierarchy is rather over the top.  A standard python distributable 
 can be built by issuing the following commands at the top of the project hierarchy:
+
+A standard python setup.cfg is included, howver I don't normally use build or pip.
+I typically just assemble the source into a zipapp by running zipapp at the 
+top of the project hierarchy, for example:
+
 ```
-% python3 -m pip install build
-% python3 -m build
-...
-% ls -1 dist/
-total 268
-vdu_controls_digitaltrails-1.0.0-py3-none-any.whl
-vdu_controls-digitaltrails-1.0.0.tar.gz
+# Make a zipapp:
+python3 -m zipapp vdu_controls --output vdu_controls.pyz --main vdu_controls_main:main --python "/usr/bin/env python3"
+# Run the result:
+python3 vdu_controls.pyz
 ```
 
-The source includes configuration files for the 
-[Sphinx Python Documentation Generator](https://www.sphinx-doc.org/en/master/index.html). 
+Configuration files for the 
+[Sphinx Python Documentation Generator](https://www.sphinx-doc.org/en/master/index.html) are included. 
 The following commands will extract documentation from ``vdu_controls.py``:
 ```
 % cd docs
@@ -381,6 +419,14 @@ Michael Hamilton
 
 Version History
 ---------------
+* 2.6.5
+  * The source code has been split into 40+ files/modules.
+  * The executable is now a python zipapp containing the module hierarchy.
+  * The mains Settings options are now grouped functionally under sub-headings.
+  * The toolbar can no longer accidentally be hidden by a right mouse action.
+  * Each icon is now held in a separate SVG source file.  This 
+    makes the icons more easily editable and reusable.
+
 * 2.6.0
   * Added laptop-panel support, see Setting option "laptop-panel-enabled".
     Requires the commonly available "brightnessctr" command to be installed.

@@ -1,4 +1,6 @@
 #!/usr/bin/python3
+# SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls>
+# SPDX-License-Identifier: GPL-3.0-or-later
 """
 vlux_meter.py - webcam approximate lux meter
 ============================================
@@ -63,7 +65,7 @@ You should have received a copy of the GNU General Public License along
 with this program. If not, see https://www.gnu.org/licenses/.
 """
 # Copyright (C) 2023 Michael Hamilton
-from __future__ import annotations
+### from __future__ import annotations
 
 import argparse
 import configparser
@@ -85,11 +87,11 @@ from typing import List, Tuple, Mapping, Callable, Dict, Type
 
 import cv2  # type: ignore
 from PyQt5 import QtNetwork, QtCore
-from PyQt5.QtCore import QSettings, pyqtSignal, QThread, QCoreApplication, QTranslator, QLocale, QPoint, QSize, QEvent, Qt, QObject
-from PyQt5.QtGui import QGuiApplication, QPixmap, QIcon, QCursor, QImage, QPainter, QPalette, QResizeEvent, QMouseEvent, QPen, \
+from vdu_controls.qt_importsQtCore import QSettings, pyqtSignal, QThread, QCoreApplication, QTranslator, QLocale, QPoint, QSize, QEvent, Qt, QObject
+from vdu_controls.qt_importsQtGui import QGuiApplication, QPixmap, QIcon, QCursor, QImage, QPainter, QPalette, QResizeEvent, QMouseEvent, QPen, \
     QColor, QIntValidator
-from PyQt5.QtSvg import QSvgRenderer
-from PyQt5.QtWidgets import QApplication, QMainWindow, QSystemTrayIcon, QMenu, QStyle, QWidget, QLabel, QVBoxLayout, QToolButton, \
+from vdu_controls.qt_imports import QSvgRenderer
+from vdu_controls.qt_imports import QApplication, QMainWindow, QSystemTrayIcon, QMenu, QStyle, QWidget, QLabel, QVBoxLayout, QToolButton, \
     QStatusBar, QHBoxLayout, QSlider, QGridLayout, QLineEdit, QSpinBox, QPushButton, QFileDialog, QCheckBox, QComboBox, QTextEdit, \
     QDialog, QMessageBox
 

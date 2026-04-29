@@ -1,0 +1,242 @@
+# SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls>
+# SPDX-License-Identifier: GPL-3.0-or-later
+from __future__ import annotations
+
+import re
+import subprocess
+from datetime import time
+from typing import List, Dict, Callable, Tuple, NewType
+
+from vdu_controls.ddcutil_abstract import DDCUTIL_RETRIES, VcpValue, CONTINUOUS_TYPE, SIMPLE_NON_CONTINUOUS_TYPE, \
+    COMPLEX_NON_CONTINUOUS_TYPE, DdcutilServiceNotFound, DdcutilDisplayNotFound
+from vdu_controls.ddcutil_emulator import DdcutilEmulatorImpl
+from vdu_controls.ddcutil_exe import DdcutilExeImpl
+from vdu_controls.ddcutil_laptop_panel import DdcutilPanelImpl
+from vdu_controls.ddcutil_qdbus import DdcutilDBusImpl
+import vdu_controls.logging as log
+
+
+VduStableId = NewType('VduStableId', str)
+
+
+class DdcutilAggregator:
+    """
+    Routes operations to relevant DccutilInterface instances and aggregates the results.
+    For example, a "detect" might be routed to all instances, such as DdcutilDbusImpl and
+    DdcutilPanelImpl, with the results aggregated together.
+    """
+    vcp_write_counters: Dict[str, int] = {}
+
+    def __init__(self, common_args: List[str] | None = None, prefer_dbus_client: bool = True,
+                 connected_vdus_changed_callback: Callable | None = None) -> None:
+        super().__init__()
+        self.common_args = common_args
+        self.ddcutil_emulators_by_edid: Dict[str, DdcutilEmulatorImpl] = {}
+        self.ddcutil_impl: DdcutilDBusImpl | DdcutilExeImpl  # The service-interface implementations are duck-typed.
+        if prefer_dbus_client:
+            try:
+                self.ddcutil_impl = DdcutilDBusImpl(self.common_args, callback=connected_vdus_changed_callback)
+            except DdcutilServiceNotFound:
+                log.warning("Failed to detect D-Bus ddcutil-service, falling back to the ddcutil command.")
+                prefer_dbus_client = False
+
+        if not prefer_dbus_client:  # dbus not preferred or dbus failed to initialize
+            self.ddcutil_impl = DdcutilExeImpl(self.common_args)
+
+        self.supported_codes: Dict[str, str] | None = None
+        self.vcp_type_map: Dict[Tuple[str, str], str] = {}
+        self.edid_txt_map: Dict[str, str] = {}
+        self.ddcutil_version: Tuple[int, ...] = (0, 0, 0)  # Initial version for bootstrapping
+        self.version_suffix = ''
+        version_info = self.ddcutil_impl.get_ddcutil_version_string()
+        if version_match := re.match(r'[a-z]* ?([0-9]+).([0-9]+).([0-9]+)-?([^\n]*)', version_info):
+            self.ddcutil_version = tuple(int(i) for i in version_match.groups()[0:3])
+            self.version_suffix = version_match.groups()[3]
+        # self.version = (1, 2, 2)  # for testing for 1.2.2 compatibility
+        log.info(f"ddcutil version {self.ddcutil_version} "
+                 f"{self.version_suffix}(dynamic-sleep={self.ddcutil_version >= (2, 0, 0)}) "
+                 f"- interface {self.ddcutil_impl.get_interface_version_string()}")
+
+    def ddcutil_version_info(self) -> Tuple[str, str]:
+        return self.ddcutil_impl.get_interface_version_string(), self.ddcutil_impl.get_ddcutil_version_string()
+
+    def add_ddcutil_emulator(self, emulator: DdcutilPanelImpl | DdcutilEmulatorImpl):
+        try:
+            for attr in emulator.detect(1):
+                log.info(f"add_ddcutil_emulator: VDU edid={attr.edid_txt}")
+                self.ddcutil_emulators_by_edid[attr.edid_txt] = emulator
+        except Exception as e:
+            log.error(f"add_ddcutil_emulator exception: {e}")
+
+    def _impl(self, edid: str):
+        if emulator_impl := self.ddcutil_emulators_by_edid.get(edid):  # edid is for a virtual implementation
+            return emulator_impl  # A virtual ddcutil implementation - probably a laptop panel
+        return self.ddcutil_impl  # Use real implementation
+
+    def refresh_connection(self):
+        self.ddcutil_impl.refresh_connection()
+        for emulator_impl in self.ddcutil_emulators_by_edid.values():
+            emulator_impl.refresh_connection()
+
+    def set_sleep_multiplier(self, vdu_number: str, sleep_multiplier: float | None):
+        try:
+            edid = self.get_edid_txt(vdu_number)
+            self._impl(edid).set_sleep_multiplier(edid, sleep_multiplier)
+        except ValueError as e:
+            if str(e).find('com.ddcutil.DdcutilService.Error.MultiplierLocked') > 0:
+                log.warning(f"Ignoring: {e}")
+            else:
+                raise
+
+    def set_vdu_specific_args(self, vdu_number: str, extra_args: List[str]):
+        edid = self.get_edid_txt(vdu_number)
+        self._impl(edid).set_vdu_specific_args(edid, extra_args)
+
+    def get_edid_txt(self, vdu_number: str) -> str:
+        return self.edid_txt_map.get(vdu_number, vdu_number)  # no edid probably means a simulated VDU
+
+    def get_write_count(self, vdu_number: str) -> int:
+        if edid_txt := self.get_edid_txt(vdu_number):
+            return DdcutilAggregator.vcp_write_counters.get(edid_txt, 0)
+        return 0
+
+    def detect_vdus(self) -> List[Tuple[str, str, str, str]]:
+        """Return a list of (vdu_number, desc) tuples."""
+        result_list = []
+        vdu_list = self.ddcutil_impl.detect(0)
+        log.info(f"dectecting using {len(self.ddcutil_emulators_by_edid)} emulators")
+        for emulator_impl in set(self.ddcutil_emulators_by_edid.values()):  # Use set() to only use each emulator once.
+            vdu_list += emulator_impl.detect(0)
+        # Going to get rid of anything that is not a-z A-Z 0-9 as potential rubbish
+        rubbish = re.compile('[^a-zA-Z0-9]+')
+        # This isn't efficient, it doesn't need to be, so I'm keeping re-defs close to where they are used.
+        key_prospects: Dict[Tuple[str, str], Tuple[str, str]] = {}
+        for vdu in vdu_list:
+            vdu_number = str(vdu.display_number)
+            log.debug(f"checking possible IDs for display {vdu_number}") if log.debug_enabled else None
+            model_name = rubbish.sub('_', vdu.model_name)
+            manufacturer = rubbish.sub('_', vdu.manufacturer_id)
+            serial_number = rubbish.sub('_', vdu.serial_number)
+            bin_serial_number = str(vdu.binary_serial_number)
+            man_date = ''  # TODO rubbish.sub('_', ds_parts.get('Manufacture year', ''))
+            i2c_bus_id = ''  # TODO ds_parts.get('I2C bus', '').replace("/dev/", '').replace("-", "_")
+            edid = vdu.edid_txt
+            # check for duplicate edid, any duplicate will use the display Num
+            if edid is not None and edid not in self.edid_txt_map.values():
+                self.edid_txt_map[vdu_number] = edid
+            for candidate in serial_number, bin_serial_number, man_date, i2c_bus_id, f"DisplayNum{vdu_number}":
+                if candidate.strip() != '':
+                    possibly_unique = (model_name, candidate)
+                    if possibly_unique in key_prospects:  # Not unique - it has already been encountered.
+                        log.info(f"Ignoring non-unique key {possibly_unique=}"
+                                 f" - it matches display {vdu_number=} allready in {possibly_unique}")
+                        del key_prospects[possibly_unique]
+                    else:
+                        key_prospects[possibly_unique] = vdu_number, manufacturer
+        # Try and pin down a unique id that won't change even if other monitors are turned off. Ideally, this should
+        # yield the same result for the same monitor - DisplayNum is the worst for that, so it's the fallback.
+        key_already_assigned = {}
+        for model_and_main_id, vdu_number_and_manufacturer in key_prospects.items():
+            vdu_number, manufacturer = vdu_number_and_manufacturer
+            if vdu_number not in key_already_assigned:
+                model_name, main_id = model_and_main_id
+                log.debug(
+                    f"Unique key for {vdu_number=} {manufacturer=} is ({model_name=} {main_id=})") if log.debug_enabled else None
+                result_list.append((vdu_number, manufacturer, model_name, main_id))
+                key_already_assigned[vdu_number] = 1
+        # result_list.append(("3", "maker_y", "model_z", "1234")) # For testing bad VDUs:
+        return result_list
+
+    def query_capabilities(self, vdu_number: str) -> str:
+        edid_txt = self.get_edid_txt(vdu_number)
+        model, mccs_major, mccs_minor, _, features, full_text = self._impl(edid_txt).get_capabilities(edid_txt)
+        if full_text:  # The service supplies pre-assembled capabilities text.
+            return full_text
+        capability_text = f"Model: {model}\nMCCS version: {mccs_major}.{mccs_minor}\nVCP Features:\n"
+        for feature_id, feature in features.items():
+            feature_code = f"{int.from_bytes(feature_id, 'big'):02X}"
+            feature_name = feature[0]
+            feature_values = feature[2]
+            capability_text += f"   Feature: {feature_code} ({feature_name})\n"
+            if len(feature_values) != 0:
+                if all(value == '' for value in feature_values.values()):
+                    capability_text += "      Values:"
+                    for value_id in feature_values.keys():
+                        capability_text += f" {int.from_bytes(value_id, 'big'):02X}"
+                    capability_text += " (interpretation unavailable)\n"
+                else:
+                    capability_text += "      Values:\n"
+                    for value_id, value_name in feature_values.items():
+                        value_code = f"{int.from_bytes(value_id, 'big'):02X}"
+                        capability_text += f"         {value_code}: {value_name}\n"
+        return capability_text
+
+    def get_type(self, vdu_number: str, vcp_code: str) -> str | None:  # may not be needed with a dbus implementation
+        edid_txt = self.get_edid_txt(vdu_number)
+        vcp_type_key = (edid_txt, vcp_code)
+        if type_str := self.vcp_type_map.get(vcp_type_key):
+            return type_str
+        is_complex, is_continuous = self._impl(edid_txt).get_type(edid_txt, int(vcp_code, 16))
+        type_str = CONTINUOUS_TYPE if is_continuous else (COMPLEX_NON_CONTINUOUS_TYPE if is_complex else SIMPLE_NON_CONTINUOUS_TYPE)
+        self.vcp_type_map[vcp_type_key] = type_str
+        return type_str
+
+    def set_vcp(self, vdu_number: str, vcp_code: str, new_value: int, retry_on_error: bool = False) -> None:
+        """Send a new value to a specific VDU and vcp_code."""
+        edid_txt = self.get_edid_txt(vdu_number)
+        impl = self._impl(edid_txt)
+        for attempt_count in range(DDCUTIL_RETRIES):
+            try:
+                impl.set_vcp(edid_txt, int(vcp_code, 16), new_value)
+                DdcutilAggregator.vcp_write_counters[edid_txt] = DdcutilAggregator.vcp_write_counters.get(edid_txt, 0) + 1
+                log.debug(f"set_vcp: {vdu_number=} {vcp_code=} {new_value=}")
+                return
+            except (subprocess.SubprocessError, DdcutilDisplayNotFound, ValueError) as e:
+                if not retry_on_error or attempt_count + 1 == DDCUTIL_RETRIES:
+                    raise e
+            time.sleep(attempt_count * 0.25)
+
+    def vcp_info(self) -> str:
+        """Returns info about all codes known to ddcutil, whether supported or not."""
+        return DdcutilExeImpl([]).vcp_info()
+
+    def get_supported_vcp_codes_map(self) -> Dict[str, str]:
+        """Returns a map of descriptions keyed by vcp_code, the codes that ddcutil appears to support."""
+        if self.supported_codes is not None:
+            return self.supported_codes
+        self.supported_codes = {}
+        info = self.vcp_info()
+        code_definitions = info.split("\nVCP code ")
+        for code_def in code_definitions[1:]:
+            lines = code_def.split('\n')
+            vcp_code, vcp_name = lines[0].split(': ', 1)
+            ddcutil_feature_subsets = None
+            for line in lines[2:]:
+                line = line.strip()
+                if line.startswith('ddcutil feature subsets:'):
+                    ddcutil_feature_subsets = line.split(": ", 1)
+            if ddcutil_feature_subsets is not None:
+                if vcp_code not in self.supported_codes:
+                    self.supported_codes[vcp_code] = vcp_name
+        return self.supported_codes
+
+    def get_vcp_values(self, vdu_number: str, vcp_code_list: List[str]) -> List[VcpValue]:
+        values_dict: Dict[str, VcpValue | None] = {vcp_code: None for vcp_code in vcp_code_list}
+        edid_txt = self.get_edid_txt(vdu_number)
+        impl = self._impl(edid_txt)
+        # Try a few times in case there is a glitch due to a monitor being turned-off/on or slow to respond
+        for attempt_count in range(DDCUTIL_RETRIES):
+            values_list = impl.get_vcp_values(edid_txt, [int(vcp, 16) for vcp in vcp_code_list])
+            for vcp, value, maxv, _ in values_list:
+                vcp_code = f'{vcp:02X}'
+                vcp_type = self.get_type(vdu_number, vcp_code)
+                values_dict[vcp_code] = VcpValue(value, maxv, vcp_type)
+            if None not in values_dict.values():
+                break  # Got all values - OK to stop, otherwise try again
+        for vcp_code, value in values_dict.items():
+            if value is None:  # If all attempts failed, the values_dict will be missing one or more values.
+                raise ValueError(f"getvcp: display-{vdu_number} - failed to obtain value for vcp_code {vcp_code:02X}")
+        return list(values_dict.values())  # if we reach here all values will be present (none are None).
+
+
+

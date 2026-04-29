@@ -1,0 +1,9 @@
+<!-- SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls> -->
+<!-- SPDX-License-Identifier: LGPL-3.0 -->
+<svg viewBox="0 0 22 22" version="1.1" id="svg1" xmlns="http://www.w3.org/2000/svg">
+  <defs id="defs3051"><style type="text/css" id="current-color-scheme">.ColorScheme-Text {color:#232629;}</style></defs>
+  <path style="fill:currentColor;fill-opacity:1;stroke:none" class="ColorScheme-Text"
+     d="m 3.012318,1.987629 -0.086226,13.98553 h 1 l 5.0022397,0.02464 -1e-7,2 -2.0022396,-0.02464 v 1 h 8.0000002 v -1
+     l -2.00224,-0.01232 -0.01232,-2 5.01456,0.01232 h 1 L 18.957944,2.0296853 17.989795,2.0050493 4.0174203,1.9774244
+     Z m 0.9927843,1.0339651 13.9651597,-0.01742 -0.01954,10.9465899 -14.0000001,0.02464 z" id="rect4211"/>
+</svg>

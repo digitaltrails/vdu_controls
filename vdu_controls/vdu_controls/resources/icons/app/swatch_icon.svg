@@ -1,0 +1,7 @@
+<!-- SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls> -->
+<!-- SPDX-License-Identifier: LGPL-3.0 -->
+<!--  -->
+
+<svg  xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 24 24" width="24" height="24">
+  <rect width="20" height="20" rx="4" x="2" y="3" stroke="black" stroke-width="1" fill="#ffffff" />
+</svg>
