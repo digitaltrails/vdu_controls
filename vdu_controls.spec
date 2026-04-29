@@ -27,6 +27,7 @@ URL:            https://github.com/digitaltrails/vdu_controls
 Source0:        https://github.com/digitaltrails/vdu_controls/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 BuildRequires:  coreutils
 BuildRequires:  hicolor-icon-theme
+BuildRequires:  python3
 BuildArch:      noarch
 %if 0%{?suse_version}
 Requires:       ddcutil
