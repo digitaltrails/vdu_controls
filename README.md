@@ -195,22 +195,34 @@ package for arch-based systems:
  * Unoffical Fedora RPMs available at: [build.opensuse.org](https://build.opensuse.org/projects/home:mchnz/packages/vdu_controls/repositories/Fedora_37/binaries)
  * archlinux AUR package at: [https://aur.archlinux.org/packages/vdu_controls](https://aur.archlinux.org/packages/vdu_controls)
 
-If vdu_controls isn't already available for your distribution, you can
-download the latest vdu_controls.pyz from the release page.  The pyz file 
-is a runnable zip. 
+> [!WARNING]
+> These instructions are for versions >= 2.6.5.  For earlier versions,
+> follow the instructions in the README.md included in the release tar or zip.
 
-The script can be run without installation by using a python interpreter, for example:
+If vdu_controls isn't already available for your distribution, you can
+download the latest from github.  The download can be used to install itself
+in `$HOME/.local/` as runnable python-zipapp:
+
+   ``` 
+   % wget -O vdu_controls.zip https://github.com/digitaltrails/vdu_controls/archive/refs/heads/master.zip
+   % unzip vdu_controls.zip
+   % python3 vdu_controls-master/vdu_controls/vdu_controls_main.py --install
+   
+   ...
+   9:19:56 INFO: Creating zipapp /home/foo/.local/bin/vdu_controls
+   09:19:56 INFO: chmod u+rwx /home/foo/.local/bin/vdu_controls
+   09:19:56 INFO: Creating /home/foo/.local/share/applications/vdu_controls.desktop
+   09:19:56 INFO: Creating /home/foo/.local/share/vdu_controls/vdu_controls.png
+   09:19:56 INFO: Installation complete. Your desktop->applications->settings should now contain VDU Controls
    ```
-   % python3 vdu_controls.pyz
+If you prefer to use a release version, you can download
+the vdu_controls.pyz (or tar or zip) from one of the github release pages.
+The release page pyz file is directly runnable:
+
    ```
-Or you can simply make the script executable and run it directly:
+   % python3 vdu_controls.pyz              # run the actual GUI
+   % python3 vdu_controls.pyz --install    # install into $HOME/.local
    ```
-   % chmod u+x vdu_controls.pyz
-   % ./vdu_controls.pyz
-   ```
-If you're running it directly, you can also rename  `vdu_controls.pyz` to
-simply  `vdu_controls` and then install it whereever you install your 
-local binaries.
 
 Although it's easily runnable, you'll still need to ensure you have the 
 required dependencies available - see below.  
@@ -233,6 +245,7 @@ required dependencies available - see below.
 > That being said, a download of trunk may sometimes be less stable than downloading 
 > one of the formal [releases](https://github.com/digitaltrails/vdu_controls/releases) 
 > or installing one of the distro packages.
+
 
 Dependencies
 ------------
@@ -406,13 +419,12 @@ Michael Hamilton
 Version History
 ---------------
 * 2.6.5
-  * The mains Settings options are now grouped functionally under sub-headings.
-  * The toolbar can no longer accidentablly be hidden by a right mouse action.
   * The source code has been split into 40+ files/modules.
-  * The executable is now a python zipapp containing the module hierarchy, 
+  * The executable is now a python zipapp containing the module hierarchy.
+  * The mains Settings options are now grouped functionally under sub-headings.
+  * The toolbar can no longer accidentally be hidden by a right mouse action.
   * Each icon is now held in a separate SVG source file.  This 
     makes the icons more easily editable and reusable.
-
 
 * 2.6.0
   * Added laptop-panel support, see Setting option "laptop-panel-enabled".

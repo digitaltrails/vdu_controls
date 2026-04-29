@@ -49,8 +49,15 @@ def install_as_desktop_application(uninstall: bool = False) -> None:
     if installed_script_path.exists():
         log.warning(f"reinstalling {installed_script_path.as_posix()}, assuming an upgrade is required.")
 
-    log.info(f"Copying {sys.argv[0]} to  {installed_script_path.as_posix()}")
-    shutil.copy2(sys.argv[0], installed_script_path)
+    origin_script_path = Path(sys.argv[0])
+    if origin_script_path.name == "vdu_controls_main.py":
+        import zipapp
+        log.info(f"Creating zipapp {installed_script_path.as_posix()}")
+        zipapp.create_archive(origin_script_path.parent, target=installed_script_path,
+                              main='vdu_controls_main:main', interpreter=sys.executable)
+    else:
+        log.info(f"Copying {sys.argv[0]} to  {installed_script_path.as_posix()}")
+        shutil.copy2(sys.argv[0], installed_script_path)
     log.info(f"chmod u+rwx {installed_script_path.as_posix()}")
     os.chmod(installed_script_path, stat.S_IRWXU)
 
