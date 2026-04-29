@@ -228,11 +228,12 @@ Although it's easily runnable, you'll still need to ensure you have the
 required dependencies available - see below.  
 
 > [!Tip]
-> The zip contains the source archive along with a cache of pre-compiled files.
+> The zip contains the source archive (along with a cache of pre-compiled files).
 > Should you wish to make any tweaks directly to the unzipped code, you can
 > do so and then rezip a new executable:
 > 
 >    ```
+>    cd my_vdu_controls_dir/
 >    python3 -m zipapp vdu_controls --output my_vdu_controls.pyz \
 >       --main vdu_controls_main:main \
 >       --python "/usr/bin/env python3"
