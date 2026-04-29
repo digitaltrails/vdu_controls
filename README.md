@@ -200,8 +200,8 @@ package for arch-based systems:
 > follow the instructions in the README.md included in the release tar or zip.
 
 If vdu_controls isn't already available for your distribution, you can
-download the latest from github.  The download can be used to install itself
-in `$HOME/.local/` as runnable python-zipapp:
+download or git-clone the latest from github.  The source can be used 
+to install the application into `$HOME/.local/` as runnable python-zipapp:
 
    ``` 
    % wget -O vdu_controls.zip https://github.com/digitaltrails/vdu_controls/archive/refs/heads/master.zip
@@ -265,7 +265,7 @@ Optionally:
 
 * **pyserial** required to use a serial-port light-metering device (only loaded if needed).
 
-Also optionally for supporting laptop-panels (these are only imported if settings require them):
+Also optionally, for supporting laptop-panels (only used/loaded if laptop-panels are enabled in Settings):
 
 * **brightnessctl** for retrieving and setting laptop-panel brightness.
 * **python3-pyudev** for monitoring for changes due to auto-dimming and brightness-up/down-keys.
