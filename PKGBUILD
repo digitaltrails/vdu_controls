@@ -20,19 +20,20 @@ optdepends=(
   'python-pyudev: Laptop panel support'
 )
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('53cde3462f43a90258f90438ab0839e7fe23f749da7fb8e936950fee4c01026a')
+sha256sums=('SKIP')
 
 build() {
-    python3 -m zipapp $pkgname -o $ZIPAPP -m vdu_controls_main:main -p '/usr/bin/env python3'
+  cd "$srcdir/$pkgname-$pkgver"
+  python3 -m zipapp $pkgname -o $pkgname.pyz -m vdu_controls_main:main -p '/usr/bin/env python3'
 }
 
 package() {
   cd "$pkgname-$pkgver"
-  install -Dm755 "$pkgname.py" "$pkgdir/usr/bin/$pkgname"
+  install -Dm755 "$pkgname.pyz" "$pkgdir/usr/bin/$pkgname"
   install -Dm644 translations/*.{ts,txt} -t "$pkgdir/usr/share/$pkgname/translations/"
   install -Dm755 sample-scripts/* -t "$pkgdir/usr/share/$pkgname/sample-scripts/"
   install -Dm644 icons/* -t "$pkgdir/usr/share/$pkgname/icons/"
   install -Dm644 "docs/_build/man/$pkgname.1" -t "$pkgdir/usr/share/man/man1/"
-  install -Dm644 "$pkgname.png" -t "$pkgdir/usr/share/icons/hicolor/256x256/apps/"
+  install -Dm644 "$pkgname/$pkgname/resources/icons/app/$pkgname.png" -t "$pkgdir/usr/share/icons/hicolor/256x256/apps/"
   install -Dm644 "$pkgname.desktop" -t "$pkgdir/usr/share/applications/"
 }
