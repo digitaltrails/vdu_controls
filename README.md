@@ -382,7 +382,7 @@ imports, for example:
    ```
 
 
-A standard python setup.cfg is included, howver I don't normally use build or pip.
+A standard python setup.cfg is included, however I don't normally use build or pip.
 I typically just assemble the source into a zipapp by running zipapp at the 
 top of the project hierarchy, for example:
 
