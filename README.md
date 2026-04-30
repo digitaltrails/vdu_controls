@@ -373,7 +373,7 @@ vdu_controls
 ```
 The top `vdu_controls` folder contains an entry point main for the
 application, `vdu_controls_main.py`, and a second `vdu_controls` sub-folder.
-The sub-folder serves to provide a unique prefix for the applications own 
+The sub-folder serves to provide a unique prefix for the application's own 
 imports, for example: 
 
    ```
