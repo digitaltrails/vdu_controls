@@ -353,9 +353,34 @@ it on the [issues page](https://github.com/digitaltrails/vdu_controls/issues).
 Development
 -----------
 
-I've set up the ``vdu_controls`` source as a typical Python development, but there is only one real source
-file, ``vdu_controls.py``, so the file hierarchy is rather over the top.  A standard python distributable 
-can be built by issuing the following commands at the top of the project hierarchy:
+I've set up the ``vdu_controls`` source as a typical Python development.  The source
+for the application proper is located in the `vdu_controls` folder in the root of the
+source tree, illustrated here:
+
+```
+vdu_controls
+├── vdu_controls
+│   ├── *.py
+│   ├── resources
+│   │   ├── docs
+│   │   │   ├── about.html
+│   │   │   ├── help_en_GB.md
+│   │   │   └── help.md
+│   │   ├── icons
+│   │   │   └── app
+│   │   │       ├── *.{svg,png}
+└── vdu_controls_main.py
+```
+The top `vdu_controls` folder contains an entry point main for the
+application, `vdu_controls_main.py`, and a second `vdu_controls` sub-folder.
+The sub-folder serves to provide a unique prefix for the applications own 
+imports, for example: 
+
+   ```
+   import vdu_controls.help_dialog
+   from vdu_controls.ddcutil_qdbus.py import DdcutilDBusImpl
+   ```
+
 
 A standard python setup.cfg is included, howver I don't normally use build or pip.
 I typically just assemble the source into a zipapp by running zipapp at the 
