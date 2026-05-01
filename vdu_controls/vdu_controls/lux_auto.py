@@ -88,8 +88,8 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         self.consecutive_error_count = 0
 
         def _get_prop(prop: str, fallback: bool | int | float | str) -> bool | int | float:
-            op = {bool: lux_config.getboolean, int: lux_config.getint, float: lux_config.getfloat}[type(fallback)]
-            value = op('lux-meter', prop, fallback=fallback)
+            getters_by_type = {bool: lux_config.getboolean, int: lux_config.getint, float: lux_config.getfloat}
+            value = getters_by_type[type(fallback)]('lux-meter', prop, fallback=fallback)
             log.info(f"LuxAuto: lux-meter.{prop}={value}")
             return value
 

@@ -72,7 +72,7 @@ class DdcutilExeImpl(DdcutilInterface):
         log_id = self._get_vdu_human_name(edid_txt) if (edid_txt and log.debug_enabled) else ''
         syslog_args = []
         if self.ddcutil_version[0] >= 2:
-            if log_to_syslog and '--syslog' not in args:
+            if log.to_syslog and '--syslog' not in args:
                 syslog_args = ['--syslog', 'DEBUG' if log.debug_enabled else 'ERROR']
         process_args = [self.ddcutil_exe] + self.common_args + multiplier_args + syslog_args + extra_args + list(args) + edid_args
         try:
@@ -112,13 +112,13 @@ class DdcutilExeImpl(DdcutilInterface):
     def get_interface_version_string(self) -> str:
         return "Command Line - ddcutil"
 
-    def _parse_edid(self, display_str: str) -> str | None:
+    def _parse_edid(self, display_str: str) -> str:
         if edid_match := re.search(r'EDID hex dump:\n[^\n]+(\n([ \t]*[+]0).+)+', display_str):
             edid = "".join(re.findall('((?: [0-9a-f][0-9a-f]){16})', edid_match.group(0))).replace(' ', '')
             log.debug(f"{edid=}") if log.debug_enabled else None
             return edid
         log.error(f"Failed to parse edid in {display_str=}")
-        return None
+        return ''
 
     def detect(self, flags: int) -> List[Tuple[Any, ...]]:
         args = ['detect', '--verbose', ]
@@ -189,6 +189,7 @@ class DdcutilExeImpl(DdcutilInterface):
                     if vcp_value is None:
                         raise ValueError(f"getvcp: {self._get_vdu_human_name(edid_txt)}"
                                          f" - failed to obtain value for vcp_code {vcp_code:02X}")
+                # If we reach here, all values v will be non-null
                 return [(vcp_code, v.current, v.max, v.vcp_type) for vcp_code, v in results_dict.items()]
             except (subprocess.SubprocessError, ValueError, DdcutilDisplayNotFound):
                 if attempt_count + 1 == DDCUTIL_RETRIES:  # Don't log here, it creates too much noise in the logs
@@ -196,7 +197,7 @@ class DdcutilExeImpl(DdcutilInterface):
             time.sleep(attempt_count * 0.25)
         raise ValueError(f"Exceeded {DDCUTIL_RETRIES} attempts to get vcp values.")
 
-    def __parse_vcp_value(self, vcp_code: int, result: str) -> VcpValue | None:
+    def __parse_vcp_value(self, vcp_code: int, result: str) -> VcpValue:
         if not (specific_vcp_value_pattern := DdcutilExeImpl._SPECIFIC_VCP_VALUE_PATTERN_CACHE.get(vcp_code, None)):
             specific_vcp_value_pattern = re.compile(r'VCP ' + f"{vcp_code:02X}" + r' ([A-Z]+) (.+)\n')
             DdcutilExeImpl._SPECIFIC_VCP_VALUE_PATTERN_CACHE[vcp_code] = specific_vcp_value_pattern

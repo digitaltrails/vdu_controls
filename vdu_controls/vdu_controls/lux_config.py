@@ -16,13 +16,13 @@ class LuxPoint:
     brightness: int
     preset_name: str | None = None
 
-    def __lt__(self, other) -> bool:  # Brightness doesn't matter for comparion purposes.
+    def __lt__(self, other) -> bool:  # Brightness doesn't matter for comparison purposes.
         return self.lux < other.lux
 
-    def __eq__(self, other) -> bool:  # Brightness doesn't matter for comparion purposes.
+    def __eq__(self, other) -> bool:  # Brightness doesn't matter for comparison purposes.
         return self.lux == other.lux and self.preset_name == other.preset_name
 
-    def __hash__(self):  # Brightness doesn't matter for comparion purposes.
+    def __hash__(self):  # Brightness doesn't matter for comparison purposes.
         return hash((self.lux, self.preset_name))
 
     def __str__(self):

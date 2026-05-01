@@ -1175,7 +1175,6 @@ class VduAppWindow(QMainWindow):
         sys.exit(0)  # Just in case self.app.quit() errors
 
     def initialise_app_icon(self, splash_pixmap: QPixmap | None = None):
-        global mono_light_tray
         self.app_icon = QIcon()
         self.app_icon.addPixmap(get_splash_pixmap() if splash_pixmap is None else splash_pixmap)
         tray_theme_type = self.get_tray_theme_type()
@@ -1401,12 +1400,15 @@ class VduAppWindow(QMainWindow):
     def refresh_preset_menu(self, palette_change: bool = False, reorder: bool = False):
         self.app_context_menu.refresh_preset_menu(palette_change=palette_change, reorder=reorder)
 
-    def show_no_controllers_error_dialog(self, ddcutil_problem: Exception):
+    def show_no_controllers_error_dialog(self, ddcutil_problem: Exception | None):
         log.error("No controllable monitors found.")
-        if isinstance(ddcutil_problem, subprocess.SubprocessError):
+        if ddcutil_problem is None:
+            problem_text = "No exceptions, but no monitors anyway."
+        elif isinstance(ddcutil_problem, subprocess.SubprocessError):
             problem_text = ddcutil_problem.stderr.decode('utf-8', errors='surrogateescape') + '\n' + str(ddcutil_problem)
         else:
             problem_text = str(ddcutil_problem)
+
         log.error(f"Most recent error: {problem_text}".encode("unicode_escape").decode("utf-8"))
         MBox(MIcon.Critical, msg=tr('No controllable monitors found.'),
              info=tr("Is ddcutil or ddcutil-service installed and working?") + "\n\n" +

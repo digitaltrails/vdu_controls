@@ -13,7 +13,7 @@ from vdu_controls.ddcutil_aggregator import DdcutilAggregator
 from vdu_controls.app_locale import tr
 import vdu_controls.logging as log
 
-from vdu_controls.widgets import DialogSingletonMixin, MIcon
+from vdu_controls.widgets import DialogSingletonMixin
 
 if TYPE_CHECKING:
     from vdu_controls.vdu_controls_application import VduAppController
@@ -30,8 +30,9 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
 
     @staticmethod
     def refresh():
-        if AboutDialog.exists() and AboutDialog.get_instance().isVisible():
-            AboutDialog.get_instance().refresh_content()
+        if AboutDialog.exists():
+            if (about_instance := AboutDialog.get_instance()).isVisible():
+                about_instance.refresh_content()
         else:
             log.debug("About dialog - no refresh - not visible") if log.debug_enabled else None
 

@@ -41,7 +41,7 @@ class PresetTransitionFlag(IntFlag):
     descriptions = {
         NONE: QT_TR_NOOP('Always immediately'), SCHEDULED: QT_TR_NOOP('Smoothly on solar/time'),
         MENU: QT_TR_NOOP('Smoothly on menu'),
-        SIGNAL: QT_TR_NOOP('Smoothy on signal'), ALWAYS: QT_TR_NOOP('Always smoothly')}
+        SIGNAL: QT_TR_NOOP('Smoothly on signal'), ALWAYS: QT_TR_NOOP('Always smoothly')}
 
     def abbreviation(self, abbreviations=abbreviations) -> str:  # Even more hacky
         if self.value in (PresetTransitionFlag.NONE, PresetTransitionFlag.ALWAYS):

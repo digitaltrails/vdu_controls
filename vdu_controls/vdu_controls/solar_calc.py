@@ -134,7 +134,7 @@ def format_solar_elevation_abbreviation(elevation: SolarElevationKey) -> str:
 
 
 def format_solar_elevation_description(elevation: SolarElevationKey) -> str:
-    # Note - repeating the constants here to force them to be included by pylupdate5 internationalisation
+    # Note - repeating the constants here to force them to be included by pylupdate5 internationalization
     direction_text = tr('eastern-sky') if elevation.direction == EASTERN_SKY else tr('western-sky')
     return f"{direction_text} {elevation.elevation}{DEGREE_SYMBOL}"
 

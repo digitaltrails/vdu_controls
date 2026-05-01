@@ -83,7 +83,7 @@ class ThemedSvgButton(StdButton):
 class TitleButton(StdButton):
     def __init__(self, icon_source: bytes, main_text: str, sub_text: str, clicked: Callable | None = None,
                  parent: QWidget | None = None) -> None:
-        super().__init__(icon=None, title=None, clicked=clicked, flat=True, parent=parent)
+        super().__init__(icon=None, title='', clicked=clicked, flat=True, parent=parent)
         layout = QHBoxLayout()
         self.setLayout(layout)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -93,7 +93,7 @@ class TitleButton(StdButton):
                             f"<span style='font-size:{native_font_height(0.5)}px; font-weight:normal;'>{sub_text}</span>")
         self.label.setTextFormat(Qt.TextFormat.RichText)
         self.label.setWordWrap(True)
-        self.label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)  # Prevent label from swollowing clicks
+        self.label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)  # Prevent label from swallowing clicks
         self.label.adjustSize()  # Adjust down to actual text height before accessing its height
         layout.addWidget(self.label)
         self.setMinimumHeight(max(self.svg_icon.height(), self.label.height()) +  # Avoids size issues if embedded in a layout
@@ -173,7 +173,7 @@ def is_subwin_desktop() -> bool:
 class SubWinDialog(QDialog):  # Fix for gnome: QDialog must be a subwindow, otherwise it will always stay on top of other windows.
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        # On gnome this allows the subwindow to surface properly, on others it may anoyingly keep
+        # On gnome this allows the subwindow to surface properly, on others it may annoyingly keep
         # the window on top - which is not always desirable.
         super().__init__(parent, Qt.WindowType.SubWindow if is_subwin_desktop() else Qt.WindowType.Window)
 
@@ -200,7 +200,7 @@ class DialogSingletonMixin:
     A mixin that can augment a QDialog or QMessageBox with code to enforce a singleton UI.
     For example, it is used so that only one settings editor can be active at a time.
     """
-    _dialogs_map: Dict[str, 'DialogSingletonMixin'] = {}
+    _dialogs_map: Dict[str, DialogSingletonMixin] = {}
 
     def __init__(self) -> None:
         """Registers the concrete class as a singleton, so it can be reused later."""
@@ -243,7 +243,7 @@ class DialogSingletonMixin:
         return class_name in DialogSingletonMixin._dialogs_map
 
     @classmethod
-    def get_instance(cls: Type) -> 'DialogSingletonMixin | None':
+    def get_instance(cls: Type) -> DialogSingletonMixin | None:
         return DialogSingletonMixin._dialogs_map.get(cls.__name__)
 
 

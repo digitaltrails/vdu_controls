@@ -148,7 +148,7 @@ class LuxMeterSerialDevice(LuxMeterDevice):
         problem = None
         try:
             if self.serial_device is None:
-                log.info(f"LuxMeterSerialDevice: Initialising character device {self.device_name}")
+                log.info(f"LuxMeterSerialDevice: Initializing character device {self.device_name}")
                 self.serial_device = self.serial_module.Serial(self.device_name)
             if self.serial_device is not None:
                 self.serial_device.reset_input_buffer()
@@ -254,7 +254,7 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
                 if CONFIG_DIR_PATH.exists():
                     persisted_path = CONFIG_DIR_PATH.joinpath("lux_daylight_factor.txt")
                     log.debug(f"LuxSemiAuto: save {daylight_factor=} to {persisted_path.as_posix()}") if log.debug_enabled else None
-                persisted_path.write_text(f"{daylight_factor:.4f}")
+                    persisted_path.write_text(f"{daylight_factor:.4f}")
             LuxMeterSemiAutoDevice.daylight_factor = daylight_factor
 
     @staticmethod

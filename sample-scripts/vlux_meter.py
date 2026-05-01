@@ -87,12 +87,12 @@ from typing import List, Tuple, Mapping, Callable, Dict, Type
 
 import cv2  # type: ignore
 from PyQt5 import QtNetwork, QtCore
-from vdu_controls.qt_importsQtCore import QSettings, pyqtSignal, QThread, QCoreApplication, QTranslator, QLocale, QPoint, QSize, QEvent, Qt, QObject
-from vdu_controls.qt_importsQtGui import QGuiApplication, QPixmap, QIcon, QCursor, QImage, QPainter, QPalette, QResizeEvent, QMouseEvent, QPen, \
-    QColor, QIntValidator
-from vdu_controls.qt_imports import QSvgRenderer
-from vdu_controls.qt_imports import QApplication, QMainWindow, QSystemTrayIcon, QMenu, QStyle, QWidget, QLabel, QVBoxLayout, QToolButton, \
-    QStatusBar, QHBoxLayout, QSlider, QGridLayout, QLineEdit, QSpinBox, QPushButton, QFileDialog, QCheckBox, QComboBox, QTextEdit, \
+from PyQt5.QtCore import QSettings, pyqtSignal, QThread, QCoreApplication, QTranslator, QLocale, QPoint, QSize, QEvent, Qt, QObject
+from PyQt5.QtGui import QGuiApplication, QPixmap, QIcon, QCursor, QImage, QPainter, QPalette, QResizeEvent, QMouseEvent, QPen, \
+    QColor
+from PyQt5.QtSvg import QSvgRenderer
+from PyQt5.QtWidgets import QApplication, QMainWindow, QSystemTrayIcon, QMenu, QStyle, QWidget, QLabel, QVBoxLayout, QToolButton, \
+    QStatusBar, QSlider, QGridLayout, QSpinBox, QPushButton, QFileDialog, QComboBox, QTextEdit, \
     QDialog, QMessageBox
 
 APPNAME = "Vlux Meter"
@@ -224,6 +224,8 @@ DEFAULT_SETTINGS = {
     },
 }
 
+gui_thread = None
+
 CONFIG_DIR_PATH = Path.home().joinpath('.config', 'vlux_meter')
 CONFIG_PATH = CONFIG_DIR_PATH.joinpath('vlux_meter.conf')
 
@@ -333,7 +335,7 @@ def create_themed_pixmap_from_svg_bytes(svg_bytes: bytes) -> QPixmap:
     return QPixmap.fromImage(image)
 
 
-def create_themed_image_from_svg_bytes(svg_bytes) -> QImage:
+def create_themed_image_from_svg_bytes(svg_bytes: bytes) -> QImage:
     renderer = QSvgRenderer(handle_theme(svg_bytes))
     image = QImage(64, 64, QImage.Format_ARGB32)
     image.fill(0x0)
@@ -474,7 +476,7 @@ class ConfigIni(configparser.ConfigParser):
         return 1, 0, 0
 
     def get_brightness_map(self):
-        brightness_map: Mapping[int: Tuple[int, str]] = {}
+        brightness_map: Mapping[int, Tuple[str, int]] = {}
         for name, brightness_lux in self["brightness_to_lux"].items():
             brightness, lux = brightness_lux.split(' ')
             brightness_map[int(brightness)] = name, int(lux)
@@ -530,7 +532,7 @@ class ToolButton(QToolButton):
 
     def refresh_icon(self, svg_source: bytes | None = None) -> None:  # may refresh the theme (coloring light/dark) of the icon
         if svg_source is not None:
-            self.svg_source = svg_source
+            self.svg_source = svg_source   # Change to new icon
         self.setIcon(create_themed_icon_from_svg_bytes(self.svg_source))  # this may alter the SVG for light/dark theme
 
 
@@ -548,7 +550,7 @@ class StatusBar(QStatusBar):
 
 
 class CameraDisplay(QLabel):
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__("", parent=parent)
         self.painter = None
         self.current_image: QImage | None = None
@@ -887,9 +889,9 @@ class VluxMeterWindow(QMainWindow):
 
     def __init__(self, config: ConfigIni, app: QApplication, meter_thread: 'CameraMeterThread') -> None:
         super().__init__()
+        self.app = app
         global gui_thread
         gui_thread = app.thread()
-        self.app = app
         self.app_icon = create_themed_icon_from_svg_bytes(VLUX_METER_ICON_SVG)
         splash_pixmap = get_splash_image()
         self.lux_dispatcher = None if config.getboolean("global", "fifo_disabled", fallback=False) else LuxFifoDispatcher()

@@ -10,8 +10,6 @@ from typing import Dict
 from vdu_controls.qt_imports import (QStyle, QWidget, QImage, QIcon, QPixmap, Qt, QSvgRenderer, QFont, QColor, QPainter,
                                      QPen, QApplication, QSize, QPalette)
 
-mono_light_tray = False
-
 SVG_LIGHT_THEME_COLOR = b"#232629"
 SVG_LIGHT_THEME_TEXT_COLOR = b"#000000"
 SVG_DARK_THEME_COLOR = b"#f3f3f3"

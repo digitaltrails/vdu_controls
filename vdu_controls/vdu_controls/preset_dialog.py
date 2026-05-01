@@ -448,9 +448,6 @@ class PresetElevationChartWidget(QLabel):
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        def _reverse_x(x_val: int) -> int:  # makes thinking right-to-left a bit easier. MAYBE
-            return logical_width - x_val
-
         painter.fillRect(0, 0, logical_width, origin_iy, QColor(0x5b93c5))
         painter.fillRect(0, origin_iy, logical_width, logical_height, QColor(0x7d5233))
         painter.setPen(QPen(Qt.GlobalColor.white, line_width))  # Horizon
@@ -1314,7 +1311,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
             self.main_controller.restore_preset(preset, finished_func=_begin_editing, immediately=True)
 
     def save_preset(self, _: bool = False, from_widget: PresetItemWidget | None = None,
-                    quiet: bool = False) -> MBtn.Ok | MBtn.Cancel:
+                    quiet: bool = False) -> MBtn:
         preset: Preset | None = None
         widget_to_replace: PresetItemWidget | None = None
         if from_widget:  # A from_widget is requesting that the Preset's VDU current settings be updated.

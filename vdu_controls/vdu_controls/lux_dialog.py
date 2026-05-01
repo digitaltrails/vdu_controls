@@ -174,7 +174,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                     self, tr("Select: {}").format(tr(new_dev_type.description)), default_file)[0]
             if not self.validate_device(new_dev_path, required_type=new_dev_type):
                 new_dev_path = ''
-            if new_dev_path == '':  # Mothing selected, set back to what was in config
+            if new_dev_path == '':  # Nothing selected, set back to what was in config
                 for dev_num in range(self.meter_device_selector.count()):
                     config_device_type = self.lux_config.get('lux-meter', 'lux-device-type', fallback='')
                     if self.meter_device_selector.itemData(dev_num).name == config_device_type:
@@ -540,7 +540,7 @@ class LuxGaugeWidget(QWidget):
             painter.drawPolyline(ei_points)
         # Add text to the axis
         painter.setPen(QPen(self.white_line_color, thin_line_width))
-        painter.setFont(QFont(QApplication.font().family(), fz := 5, QFont.Weight.Normal))
+        painter.setFont(QFont(QApplication.font().family(), 5, QFont.Weight.Normal))
         middle = df_plot_left - margin // 2
         for i in (10, 100, 1_000, 10_000, 100_000):
             painter.drawLine(middle - line_width, y := self._y_from_lux(i, plot_height), middle + line_width, y)
@@ -803,7 +803,7 @@ class LuxProfileWidget(QLabel):
             changed = False
             x = event.pos().x() - self.x_origin
             y = self.y_origin - event.pos().y()
-            if event.button() == Qt.MouseButton.LeftButton:  # click along bottom (y=0) to attache presets
+            if event.button() == Qt.MouseButton.LeftButton:  # click along bottom (y=0) to attach presets
                 changed = self.lux_point_edit(x, y) if y >= 0 else self.lux_preset_edit(x)
             if changed:
                 self.show_changes()

@@ -118,7 +118,7 @@ class ConfOpt(Enum):  # An Enum with tuples for values is used for convenience f
     def _def(cname: str, section: str = ConfSec.VDU_CONTROLS_GLOBALS, conf_type: str = ConfType.BOOL, default: str | None = None,
              global_allowed: bool = True, restart: bool = False, cmdline_arg: str = 'DEFAULT', tip: str = '',
              group: ConfGroup = ConfGroup.NONE,
-             related: str = '', requires: str = '') -> Tuple[str, str, str, str, str | None, bool, str, str, str, str, bool]:
+             related: str = '', requires: str = '') -> Tuple[str, str, str, str, str | None, bool, str, ConfGroup, str, str, bool]:
         return cname, section, cmdline_arg, conf_type, default, restart, tip, group, related, requires, global_allowed
 
     SPLASH_SCREEN_ENABLED = _def(cname=QT_TR_NOOP('splash-screen-enabled'), default='yes', cmdline_arg='splash',
@@ -484,7 +484,7 @@ class VduControlsConfig:
               Controls DVI/DP/HDMI/USB connected monitors (but not builtin laptop displays)."""),
             formatter_class=argparse.RawTextHelpFormatter)
         parser.epilog = textwrap.dedent("""
-            As well as command line arguments, individual VDU controls and optimisations may be
+            As well as command line arguments, individual VDU controls and optimizations may be
             specified in monitor specific configuration files, see --detailed-help for details.
 
             See the --detailed-help for important licencing information.

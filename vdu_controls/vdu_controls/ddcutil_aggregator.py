@@ -8,7 +8,7 @@ from datetime import time
 from typing import List, Dict, Callable, Tuple, NewType
 
 from vdu_controls.ddcutil_abstract import DDCUTIL_RETRIES, VcpValue, CONTINUOUS_TYPE, SIMPLE_NON_CONTINUOUS_TYPE, \
-    COMPLEX_NON_CONTINUOUS_TYPE, DdcutilServiceNotFound, DdcutilDisplayNotFound
+    COMPLEX_NON_CONTINUOUS_TYPE, DdcutilServiceNotFound, DdcutilDisplayNotFound, DdcutilInterface
 from vdu_controls.ddcutil_emulator import DdcutilEmulatorImpl
 from vdu_controls.ddcutil_exe import DdcutilExeImpl
 from vdu_controls.ddcutil_laptop_panel import DdcutilPanelImpl
@@ -31,7 +31,7 @@ class DdcutilAggregator:
                  connected_vdus_changed_callback: Callable | None = None) -> None:
         super().__init__()
         self.common_args = common_args
-        self.ddcutil_emulators_by_edid: Dict[str, DdcutilEmulatorImpl] = {}
+        self.ddcutil_emulators_by_edid: Dict[str, DdcutilInterface] = {}
         self.ddcutil_impl: DdcutilDBusImpl | DdcutilExeImpl  # The service-interface implementations are duck-typed.
         if prefer_dbus_client:
             try:
@@ -43,7 +43,7 @@ class DdcutilAggregator:
         if not prefer_dbus_client:  # dbus not preferred or dbus failed to initialize
             self.ddcutil_impl = DdcutilExeImpl(self.common_args)
 
-        self.supported_codes: Dict[str, str] | None = None
+        self.supported_codes: Dict[str, str] = {}
         self.vcp_type_map: Dict[Tuple[str, str], str] = {}
         self.edid_txt_map: Dict[str, str] = {}
         self.ddcutil_version: Tuple[int, ...] = (0, 0, 0)  # Initial version for bootstrapping
@@ -202,22 +202,20 @@ class DdcutilAggregator:
 
     def get_supported_vcp_codes_map(self) -> Dict[str, str]:
         """Returns a map of descriptions keyed by vcp_code, the codes that ddcutil appears to support."""
-        if self.supported_codes is not None:
-            return self.supported_codes
-        self.supported_codes = {}
-        info = self.vcp_info()
-        code_definitions = info.split("\nVCP code ")
-        for code_def in code_definitions[1:]:
-            lines = code_def.split('\n')
-            vcp_code, vcp_name = lines[0].split(': ', 1)
-            ddcutil_feature_subsets = None
-            for line in lines[2:]:
-                line = line.strip()
-                if line.startswith('ddcutil feature subsets:'):
-                    ddcutil_feature_subsets = line.split(": ", 1)
-            if ddcutil_feature_subsets is not None:
-                if vcp_code not in self.supported_codes:
-                    self.supported_codes[vcp_code] = vcp_name
+        if len(self.supported_codes) == 0:  # Initialize on demand
+            info = self.vcp_info()
+            code_definitions = info.split("\nVCP code ")
+            for code_def in code_definitions[1:]:
+                lines = code_def.split('\n')
+                vcp_code, vcp_name = lines[0].split(': ', 1)
+                ddcutil_feature_subsets = None
+                for line in lines[2:]:
+                    line = line.strip()
+                    if line.startswith('ddcutil feature subsets:'):
+                        ddcutil_feature_subsets = line.split(": ", 1)
+                if ddcutil_feature_subsets is not None:
+                    if vcp_code not in self.supported_codes:
+                        self.supported_codes[vcp_code] = vcp_name
         return self.supported_codes
 
     def get_vcp_values(self, vdu_number: str, vcp_code_list: List[str]) -> List[VcpValue]:

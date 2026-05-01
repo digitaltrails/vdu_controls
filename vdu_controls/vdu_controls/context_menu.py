@@ -44,7 +44,7 @@ class FixedItemData:
     title: str
     extra_shortcut: str | None = None
     add_separator: bool = False
-    property: Tuple[str, str] | None = None
+    property: Tuple[str, QVariant] | None = None
     separator: QAction | None = None
     action: QAction | None = None
 
