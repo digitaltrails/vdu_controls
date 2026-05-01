@@ -1344,22 +1344,26 @@ class VduAppWindow(QMainWindow):
             self.qt_settings.setValue(self.qt_state_key, self.saveState())
 
     def app_restore_window_state(self) -> bool:
-        log.debug(f"app_restore_window_state")
-        if len(self.qt_settings.allKeys()) == 0:  # No previous state
-            return False
-        save_version_major = self.qt_settings.value(self.qt_version_key, '5').split('.', 1)[0]
-        qt_version_major = QtCore.qVersion().split('.', 1)[0]
-        if save_version_major != qt_version_major:
-            log.warning(
-                f"app_restore_window_state: restore: {save_version_major=} != {qt_version_major=}, this may cause window geometry glitches")
-        if smart_window := self.main_config.is_set(ConfOpt.SMART_WINDOW, fallback=True):  # Restore pos and geometry
-            if geometry := self.qt_settings.value(self.qt_geometry_key, None):
-                self.restoreGeometry(geometry)
-                log.debug(f"app_restore_window_state: restoring {self.pos()=} {self.geometry()=}") if log.debug_enabled else None
-        if window_state := self.qt_settings.value(self.qt_state_key, None):
-            self.restoreState(window_state)  # Restore component positions, such as toolbar location
-            log.debug(f"app_restore_window_state: restoring internal layout state") if log.debug_enabled else None
-        return smart_window
+        try:
+            log.debug(f"app_restore_window_state")
+            if len(self.qt_settings.allKeys()) == 0:  # No previous state
+                return False
+            save_version_major = self.qt_settings.value(self.qt_version_key, '5').split('.', 1)[0]
+            qt_version_major = QtCore.qVersion().split('.', 1)[0]
+            if save_version_major != qt_version_major:
+                log.warning(
+                    f"app_restore_window_state: restore: {save_version_major=} != {qt_version_major=}, this may cause window geometry glitches")
+            if smart_window := self.main_config.is_set(ConfOpt.SMART_WINDOW, fallback=True):  # Restore pos and geometry
+                if geometry := self.qt_settings.value(self.qt_geometry_key, None):
+                    self.restoreGeometry(geometry)
+                    log.debug(f"app_restore_window_state: restoring {self.pos()=} {self.geometry()=}") if log.debug_enabled else None
+            if window_state := self.qt_settings.value(self.qt_state_key, None):
+                self.restoreState(window_state)  # Restore component positions, such as toolbar location
+                log.debug(f"app_restore_window_state: restoring internal layout state") if log.debug_enabled else None
+            return smart_window
+        finally:
+            if self.main_panel and self.main_panel.main_toolbar:
+                self.main_panel.main_toolbar.setVisible(True)   # just in case it was hidden accidentally
 
     def app_decide_window_position(self):
         # Guess a window position near the tray. Use the mouse/cursor-pos as a guess to where the
