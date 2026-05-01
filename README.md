@@ -447,8 +447,8 @@ Version History
 * 2.6.5
   * The source code has been split into 40+ files/modules.
   * The executable is now a python zipapp containing the module hierarchy.
-  * The mains Settings options are now grouped functionally under sub-headings.
-  * The toolbar can no longer accidentally be hidden by a right mouse action.
+  * The Settings global-options are now grouped under sub-headings.
+  * Disable the right-mouse action that could hide the toolbar irretrievably.
   * Each icon is now held in a separate SVG source file.  This 
     makes the icons more easily editable and reusable.
 
