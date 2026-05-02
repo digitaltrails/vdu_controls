@@ -8,13 +8,18 @@ from typing import Dict
 from importlib.resources import files as resources_files
 
 from vdu_controls.constants import LOCALE_TRANSLATIONS_PATHS
-from vdu_controls.qt_imports import QLocale, QTranslator, QApplication, QCoreApplication
+from vdu_controls.qt_imports import QLocale, QTranslator, QApplication, QCoreApplication, Qt
 import vdu_controls.logging as log
 
 
 def apply_locale(path: Path) -> Path:
     localized_path = path.parent / f"{path.stem}_{QLocale.system().name()}.{path.suffix}"
     return localized_path
+
+def is_right_to_left_locale() -> bool:
+    right_to_left_langauges = [ 'ar_' ]
+    locale_name = QLocale.system().name()
+    return locale_name[:3] in right_to_left_langauges
 
 
 def find_locale_specific_file(filename_template: str) -> Path | None:
@@ -34,6 +39,7 @@ ts_translations: Dict[str, str] = {}
 
 
 def initialise_locale_translations(app: QApplication) -> None:
+
     # Has to be put somewhere it won't be garbage collected when this function goes out of scope.
     global translator
     translator = QTranslator()
@@ -48,13 +54,16 @@ def initialise_locale_translations(app: QApplication) -> None:
         log.info(tr("Using newer .ts file {} translations from {}").format(locale_name, ts_path.as_posix()))
         import xml.etree.ElementTree as XmlElementTree
         global ts_translations
-        if context := XmlElementTree.parse(ts_path).find('context'):
+        for context in XmlElementTree.parse(ts_path).findall('context'):
             for message in context.findall('message'):
                 translation = message.find('translation')
                 source = message.find('source')
                 if translation is not None and source is not None and translation.text is not None and source.text is not None:
                     ts_translations[source.text] = translation.text
         log.info(tr("Loaded {} translations from {}").format(locale_name, ts_path.as_posix()))
+        if is_right_to_left_locale():
+            log.info("Right-to-left language: set layout direction to right-to-left.")
+            app.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         return
     if qm_path is not None:
         log.info(tr("Loading {} translations from {}").format(locale_name, qm_path.as_posix()))
