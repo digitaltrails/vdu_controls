@@ -83,13 +83,14 @@ available to support all user defined Presets).
 
 > [!NOTE]
 > If _Settings_ _translations enabled_ is set, several locales are recognised:
-> ar_SA (Arabic), da_DK (Danish), de_DE (German), and fr_FR zh_CN (French).
+> ar_SA (Arabic), da_DK (Danish), de_DE (German), fr_FR zh_CN (French),
+> and mi_NZ (Māori).
 > Where a supported locale is right-to-left oriented, layouts will be 
-> reconfigured appropriately. The actual translations are unverified and 
-> should be regarded as testing-only examples that may be incorrect.  
+> reconfigured appropriately. The supplied translations are unverified and 
+> should be regarded as testing-only samples that may be incorrect.  
 > 
-> Qt recongnises the normal locale related environment variables which
-> they can be overriden for testing or amusement, for example:
+> The standard linux desktop locale environment-variables
+> can be overriden for testing or amusement, for example:
 > ```
 > % LC_ALL=ar_SA LANGUAGE=ar_SA vdu_controls
 > % LC_ALL=zh_CN LANGUAGE=zh_CN vdu_controls

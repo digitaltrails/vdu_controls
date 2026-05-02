@@ -106,11 +106,12 @@ ln -s -f %{_datadir}/icons %{_datadir}/%{name}/icons/system-icons
 %{_datadir}/icons/hicolor/256x256/apps/%{name}.png
 %{_mandir}/man1/%{name}.1%{?ext_man}
 %{_datadir}/%{name}/icons/*
-%{_datadir}/%{name}/translations/da_DK.ts
-%{_datadir}/%{name}/translations/fr_FR.ts
-%{_datadir}/%{name}/translations/de_DE.ts
-%{_datadir}/%{name}/translations/zh_CN.ts
 %{_datadir}/%{name}/translations/ar_SA.ts
+%{_datadir}/%{name}/translations/da_DK.ts
+%{_datadir}/%{name}/translations/de_DE.ts
+%{_datadir}/%{name}/translations/fr_FR.ts
+%{_datadir}/%{name}/translations/mi_NZ.ts
+%{_datadir}/%{name}/translations/zh_CN.ts
 %{_datadir}/%{name}/translations/about_da_DK.txt
 %{_datadir}/%{name}/translations/about_fr_FR.txt
 %{_datadir}/%{name}/translations/about_de_DE.txt
