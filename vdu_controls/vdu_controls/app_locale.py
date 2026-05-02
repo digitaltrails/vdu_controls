@@ -45,7 +45,7 @@ def initialise_locale_translations(app: QApplication) -> None:
     translator = QTranslator()
     locale_name = QLocale.system().name()
     ts_path = find_locale_specific_file("{}.ts")
-    qm_path = find_locale_specific_file("{}.qm")
+    qm_path = None # find_locale_specific_file("{}.qm")  # don't use qm files for now.
 
     # If there is a .ts XML file in the path newer than the associated .qm binary file, load the messages
     # from the XML into a map and use them directly.  This is useful while developing and possibly useful

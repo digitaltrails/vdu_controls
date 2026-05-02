@@ -109,11 +109,11 @@ ln -s -f %{_datadir}/icons %{_datadir}/%{name}/icons/system-icons
 %{_datadir}/%{name}/translations/da_DK.ts
 %{_datadir}/%{name}/translations/fr_FR.ts
 %{_datadir}/%{name}/translations/de_DE.ts
-%{_datadir}/%{name}/translations/cs_CZ.ts
+%{_datadir}/%{name}/translations/zh_CN.ts
+%{_datadir}/%{name}/translations/ar_SA.ts
 %{_datadir}/%{name}/translations/about_da_DK.txt
 %{_datadir}/%{name}/translations/about_fr_FR.txt
 %{_datadir}/%{name}/translations/about_de_DE.txt
-%{_datadir}/%{name}/translations/about_cs_CZ.txt
 %{_datadir}/%{name}/sample-scripts/lux-from-webcam.bash
 %{_datadir}/%{name}/sample-scripts/lux-from-webcam.py
 %{_datadir}/%{name}/sample-scripts/vlux_meter.py

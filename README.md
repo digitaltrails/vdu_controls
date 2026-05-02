@@ -82,8 +82,19 @@ available to support all user defined Presets).
 ![Custom](screen-shots/presets.png) ![Custom](screen-shots/lux-profiles.png)
 
 > [!NOTE]
-> Several language translations are provided, but with no apparent demand, they 
-> are currently unmaintained and will be updated on request.
+> If _Settings_ _translations enabled_ is set, several locales are recognised:
+> ar_SA (Arabic), da_DK (Danish), de_DE (German), and fr_FR zh_CN (French).
+> Where a supported locale is right-to-left oriented, layouts will be 
+> reconfigured appropriately. The actual translations are unverified and 
+> should be regarded as testing-only examples that may be incorrect.  
+> 
+> Qt recongnises the normal locale related environment variables which
+> they can be overriden for testing or amusement, for example:
+> ```
+> % LC_ALL=ar_SA LANGUAGE=ar_SA vdu_controls
+> % LC_ALL=zh_CN LANGUAGE=zh_CN vdu_controls
+> ```
+
 
 #### Laptop-Panel brightness controls
 
@@ -451,6 +462,9 @@ Version History
   * Disabled the right-mouse action that could hide the toolbar irretrievably.
   * Each icon is now held in a separate SVG source file.  This 
     makes the icons more easily editable and reusable.
+  * Language translations have been updated. zh_CN and ar_SA have been
+    added.  All translations were generated for code testing purposes,
+    the actual translations are untested and may be wildy inaccurate.
 
 * 2.6.0
   * Added laptop-panel support, see Setting option "laptop-panel-enabled".
