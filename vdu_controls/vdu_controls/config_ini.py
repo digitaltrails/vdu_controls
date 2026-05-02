@@ -16,12 +16,13 @@ from pathlib import Path
 from typing import List, Tuple, Dict, Any
 
 import vdu_controls.logging as log
+from vdu_controls import app_locale
 from vdu_controls.app_locale import tr
 from vdu_controls.constants import CONFIG_DIR_PATH, VDU_CONTROLS_VERSION, APPNAME
 from vdu_controls.ddcutil_abstract import CON, BRIT, CONT, SNC
 from vdu_controls.ddcutil_aggregator import DdcutilAggregator
 from vdu_controls.misc import zoned_now
-from vdu_controls.qt_imports import QT_TR_NOOP
+from vdu_controls.qt_imports import QT_TR_NOOP, QCoreApplication
 from vdu_controls.svg import BRIGHTNESS_SVG, CONTRAST_SVG, VOLUME_SVG, COLOR_TEMPERATURE_SVG
 
 
@@ -110,7 +111,7 @@ class ConfGroup(Enum):
 
     @property
     def title(self) -> str:
-        return self.value[1]
+        return app_locale.translate_option(self.value[1])
 
 class ConfOpt(Enum):  # An Enum with tuples for values is used for convenience for scope/iteration
 
