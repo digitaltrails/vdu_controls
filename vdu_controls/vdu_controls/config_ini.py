@@ -118,9 +118,9 @@ class ConfGroup(Enum):
 class ConfOpt(Enum):  # An Enum with tuples for values is used for convenience for scope/iteration
 
     @staticmethod  # Tricky way of creating a tuple with default values for some tuple members.
-    def _def(cname: str, section: str = ConfSec.VDU_CONTROLS_GLOBALS, conf_type: str = ConfType.BOOL, default: str | None = None,
-             global_allowed: bool = True, restart: bool = False, cmdline_arg: str = 'DEFAULT', tip: str = '',
-             group: ConfGroup = ConfGroup.NONE,
+    def _def(cname: str, section: str = ConfSec.VDU_CONTROLS_GLOBALS, conf_type: str = ConfType.BOOL,
+             default: str | None = None, global_allowed: bool = True, restart: bool = False,
+             cmdline_arg: str = 'DEFAULT', tip: str = '', group: ConfGroup = ConfGroup.NONE,
              related: str = '', requires: str = '') -> Tuple[str, str, str, str, str | None, bool, str, ConfGroup, str, str, bool]:
         return cname, section, cmdline_arg, conf_type, default, restart, tip, group, related, requires, global_allowed
 

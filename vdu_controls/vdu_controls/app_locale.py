@@ -56,17 +56,20 @@ from vdu_controls.qt_imports import QLocale, QTranslator, QApplication, QCoreApp
 import vdu_controls.logging as log
 
 
-def apply_locale(path: Path) -> Path:
-    localized_path = path.parent / f"{path.stem}_{QLocale.system().name()}.{path.suffix}"
-    return localized_path
-
-
 def find_locale_specific_file(filename_template: str) -> Path | None:
+    """
+    First look for a locale specific filename-??_??.suffix version in
+
+      0. If env VDU_CONTROLS_DEVELOPER=yes first look in ./translations
+      1. $HOME/.local/share/vdu_controls/translations
+      2. /usr/share/vdu_controls/translations
+    """
     locale_name = QLocale.system().name()
     filename = filename_template.format(locale_name)
+    log.info(f"Looking for {locale_name} translation {filename}")
     for path in LOCALE_TRANSLATIONS_PATHS:
         full_path = path.joinpath(filename)
-        log.debug(f"Checking for {locale_name} translation: {full_path}") if log.debug_enabled else None
+        log.debug(f"Check {locale_name} translation: {full_path}") if log.debug_enabled else None
         if full_path.exists():
             log.info(f"Found {locale_name} translation: {full_path}")
             return full_path
@@ -148,12 +151,19 @@ def translate_option(option_text: str, context="ConfOpt") -> str:
 
 
 def load_resource_text(filename: str) -> str:
+    """
+    First look for a locale specific filename-??_??.suffix using
+    find_locale_specific_file("filename.suffix") if that fails
+    look internally in vdu_controls/resources/docs/
+    """
+    # Check outside the application for something locale specific
+    as_path = Path(filename)
+    if translated_override := find_locale_specific_file(f"{as_path.stem}-{{}}{as_path.suffix}"):
+        log.info(f"Loading {filename} translation from {translated_override.as_posix()}")
+        return translated_override.read_text()
+
+    # Check inside the application resources/docs/
     file_path = resources_files('vdu_controls') / 'resources' / 'docs' / filename
-    localized_help_file = apply_locale(file_path)
-    log.info(f"Checking for {localized_help_file}")
-    if localized_help_file.exists():
-        file_path = localized_help_file
     log.info(f"Reading text from {file_path}")
-    text = file_path.read_text()
-    return text
+    return file_path.read_text()
 

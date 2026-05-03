@@ -61,8 +61,9 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
         log.info(f"Refreshing About Dialog {counts_str=}")
         # Has to be HTML, getting Qt Markdown to behave was too painful
         about_text = app_locale.load_resource_text("about.html")
-
+        about_license = app_locale.load_resource_text("about_license.html")  # Always in English
         self.setInformativeText(about_text.format(
+            about_license = about_license,
             vdu_controls_version = VDU_CONTROLS_VERSION,
             current_desktop = os.environ.get('XDG_CURRENT_DESKTOP', default='unknown'),
             xdg_session_type = os.environ.get('XDG_SESSION_TYPE', default='unknown'),
