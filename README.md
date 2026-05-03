@@ -84,13 +84,14 @@ available to support all user defined Presets).
 > [!NOTE]
 > If _Settings_ _translations enabled_ is set, several locales are recognised:
 > ar_SA (Arabic), da_DK (Danish), de_DE (German), fr_FR zh_CN (French),
-> and mi_NZ (Māori).
+> and mi_NZ (Māori).  __The supplied translations are unverified and 
+> should be regarded as testing-only samples that may be incorrect.__
+> 
 > Where a supported locale is right-to-left oriented, layouts will be 
-> reconfigured appropriately. The supplied translations are unverified and 
-> should be regarded as testing-only samples that may be incorrect.  
+> reconfigured appropriately. 
 > 
 > The standard linux desktop locale environment-variables
-> can be overriden for testing or amusement, for example:
+> can be overriden for testing each locale, for example:
 > ```
 > % LC_ALL=ar_SA LANGUAGE=ar_SA vdu_controls
 > % LC_ALL=zh_CN LANGUAGE=zh_CN vdu_controls
