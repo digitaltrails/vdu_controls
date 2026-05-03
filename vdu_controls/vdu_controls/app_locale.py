@@ -2,6 +2,50 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
+"""
+This module defines our own tr() that matches what pylupdate5/6 is looking for.
+If this method is ever renamed to something other than tr(), then you must
+pass -ts-function=new_name to pylupdate5/6.
+
+The Qt pylupdate5/6 utility extracts messages and context from Python source 
+and creates or updates an XML .ts file containing all the tr and QT_TR_NOOP 
+wrapped messages.  Read up on it for further info.  
+
+Normal message are surrounded by tr("my message") where the context is
+the name of the calling class (found by inspection).  For example, if
+a class Foo calls tr("something"), tr will use Qt-inspect to find out
+it's being called from an instance of Foo, the context will be "Foo".
+Where the context cannot be found by inspection tr("my message", "MyContext") 
+can be used to explicitly set the context.
+
+Usage:
+1) Generate template file from this code, for example, for French:
+   ALWAYS BACKUP THE CURRENT .ts FILE BEFORE RUNNING AN UPDATE - it can go wrong!
+       pylupdate5/6 vdu_controls.py -ts translations/fr_FR.ts
+   where translations is a subdirectory of your current working directory.
+2) Edit that using a text editor, an AI translator, or the linguist-qt5 utility.
+   If using an editor, remove the 'type="unfinished"' as you complete each entry.
+3) This tr() function can work directly from a .ts file.  The ts file
+   should reside in $HOME/.config/vdu_controls/translations/ or
+   /usr/share/vdu_controls/translations/.  The file should be named
+   to match the local setting, for example fr_FR.ts, zh_CN.ts.
+4) This is not necessary, but you can optionally us Qt5/Qt6 lrelease to
+   convert the .ts to a binary .qm file.  For example lrelease zh_CN.ts
+   will create zh_CH.qm. If a qm file and ts file are residient, the
+   qm will be preferred.
+4) Test using by setting LC_ALL for python and LANGUAGE for Qt
+       LC_ALL=fr_FR LANGUAGE=fr_FR python3 vdu_controls/vdu_controls_main.py
+   At startup the app will log several messages as it searches for translation files.
+
+Completed .qm files can reside in $HOME/.config/vdu_controls/translations/
+or  /user/share/vdu_controls/translations/
+
+If the environment variable VDU_CONTROLS_DEVELOPER is set then a translations
+folder in the current working directory will also be searched.  This makes
+it possible to test development tweaks to translations without having to copy
+them anywhere.
+"""
+import inspect
 import os
 from pathlib import Path
 from typing import Dict
@@ -45,7 +89,7 @@ def initialise_locale_translations(app: QApplication) -> None:
     translator = QTranslator()
     locale_name = QLocale.system().name()
     ts_path = find_locale_specific_file("{}.ts")
-    qm_path = None # find_locale_specific_file("{}.qm")  # don't use qm files for now.
+    qm_path = find_locale_specific_file("{}.qm")  # don't use qm files for now.
 
     # If there is a .ts XML file in the path newer than the associated .qm binary file, load the messages
     # from the XML into a map and use them directly.  This is useful while developing and possibly useful
@@ -55,60 +99,54 @@ def initialise_locale_translations(app: QApplication) -> None:
         import xml.etree.ElementTree as XmlElementTree
         global ts_translations
         for context in XmlElementTree.parse(ts_path).findall('context'):
+            context_name = context.findall('name')[0].text
+            log.info(f"context: {context_name}")
             for message in context.findall('message'):
                 translation = message.find('translation')
                 source = message.find('source')
                 if translation is not None and source is not None and translation.text is not None and source.text is not None:
-                    ts_translations[source.text] = translation.text
+                    ts_translations[(context_name, source.text)] = translation.text
         log.info(tr("Loaded {} translations from {}").format(locale_name, ts_path.as_posix()))
         if is_right_to_left_locale():
             log.info("Right-to-left language: set layout direction to right-to-left.")
             app.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         return
     if qm_path is not None:
-        log.info(tr("Loading {} translations from {}").format(locale_name, qm_path.as_posix()))
+        log.info(tr("Loading {} translation from {}").format(locale_name, qm_path.as_posix()))
         if translator.load(qm_path.name, qm_path.parent.as_posix()):
             app.installTranslator(translator)
             log.info(tr("Using {} translations from {}").format(locale_name, qm_path.as_posix()))
 
 # TODO figure out contexts
-def tr(source_text: str, disambiguation: str | None = None) -> str:
+def tr(source_text: str, context: str | None = None) -> str:
     """
-    This function is named tr() so that it matches what pylupdate5 is looking for.
-    If this method is ever renamed to something other than tr(), then you must
-    pass -ts-function=new_name to pylupdate5.
+    Match source_text (the original message) in respect to context.
+    Context is the calling class name or "@default" otherwise.
+    So if a class called Foo calls tr(), then "Foo" will be the
+    context.
+    """
+    if context is None:
+        # Try to find 'self' in the caller's local variables
+        caller_frame = inspect.stack()[1].frame
+        if 'self' in caller_frame.f_locals:
+            context = caller_frame.f_locals['self'].__class__.__name__
+        else:
+            context = "@default" # "Global"  # Fallback if called from a plain function
 
-    For future internationalization:
-    1) Generate template file from this code, for example, for French:
-       ALWAYS BACKUP THE CURRENT .ts FILE BEFORE RUNNING AN UPDATE - it can go wrong!
-           pylupdate5 vdu_controls.py -ts translations/fr_FR.ts
-       where translations is a subdirectory of your current working directory.
-    2) Edit that using a text editor or the linguist-qt5 utility.
-       If using an editor, remove the 'type="unfinished"' as you complete each entry.
-    3) Convert the .ts to a binary .qm file
-           lrelease-qt5 translations/fr_FR.ts
-           mkdir -p $HOME/.config/vdu_controls/translations/
-           translations/fr_FR.qm $HOME/.config/vdu_controls/translations/
-    4) Test using by setting LC_ALL for python and LANGUAGE for Qt
-           LC_ALL=fr_FR LANGUAGE=fr_FR python3 vdu_controls.py
-       At startup the app will log several messages as it searches for translation files.
-    5) Completed .qm files can reside in $HOME/.config/vdu_controls/translations/
-       or  /user/share/vdu_controls/translations/
-    """
     # If the source .ts file is newer, we load messages from the XML into ts_translations
     # and use the most recent translations. Using the .ts files in production may be a good
     # way to allow the users to help themselves.
     if ts_translations:
-        if source_text in ts_translations:
-            return ts_translations[source_text]
+        if translated := ts_translations.get((context, source_text), None):
+            return translated
     # the context @default is what is generated by pylupdate5 by default
-    return QCoreApplication.translate('@default', source_text, disambiguation=disambiguation)
+    return QCoreApplication.translate(context, source_text)
 
 
-def translate_option(option_text) -> str:
+def translate_option(option_text: str, context="ConfOpt") -> str:
     # We can't be sure of the case in capability descriptions retrieved from the monitors.
     # If there is no direct translation, we try a canonical version of the name (all lowercase with '-' replaced with ' ').
-    if (translation := tr(option_text)) != option_text:  # Probably a command line option
+    if (translation := tr(option_text, context=context)) != option_text:  # Probably a command line option
         return translation
     canonical = option_text.lower().replace('-', ' ')
     return tr(canonical)

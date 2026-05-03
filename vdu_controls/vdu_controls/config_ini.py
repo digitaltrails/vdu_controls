@@ -97,6 +97,8 @@ class ConfSec:  # Data section constants (in Python 3.11 this could be a StrEnum
     DDCUTIL_CAPABILITIES = QT_TR_NOOP('ddcutil-capabilities')
     UNKNOWN_SECTION = QT_TR_NOOP('unknown')
 
+    # TODO translate ConSec
+
 class ConfGroup(Enum):
     WINDOWING =   (1, QT_TR_NOOP('Windowing'))
     FEATURES =    (3, QT_TR_NOOP('Features'))
@@ -111,7 +113,7 @@ class ConfGroup(Enum):
 
     @property
     def title(self) -> str:
-        return app_locale.translate_option(self.value[1])
+        return app_locale.translate_option(self.value[1], context="ConfGroup")
 
 class ConfOpt(Enum):  # An Enum with tuples for values is used for convenience for scope/iteration
 
