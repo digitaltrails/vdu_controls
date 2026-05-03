@@ -1568,6 +1568,8 @@ def main() -> None:
 
     if main_config.is_set(ConfOpt.TRANSLATIONS_ENABLED):
         initialise_locale_translations(app)
+    else:
+        log.info(f"Language translations disabled by setting: {ConfOpt.TRANSLATIONS_ENABLED.conf_id}")
 
     main_controller = VduAppController(main_config)
     assert gui_misc.is_running_in_gui_thread()
