@@ -60,11 +60,6 @@ def apply_locale(path: Path) -> Path:
     localized_path = path.parent / f"{path.stem}_{QLocale.system().name()}.{path.suffix}"
     return localized_path
 
-def is_right_to_left_locale() -> bool:
-    right_to_left_langauges = [ 'ar_' ]
-    locale_name = QLocale.system().name()
-    return locale_name[:3] in right_to_left_langauges
-
 
 def find_locale_specific_file(filename_template: str) -> Path | None:
     locale_name = QLocale.system().name()
@@ -107,8 +102,8 @@ def initialise_locale_translations(app: QApplication) -> None:
                 if translation is not None and source is not None and translation.text is not None and source.text is not None:
                     ts_translations[(context_name, source.text)] = translation.text
         log.info(tr("Loaded {} translations from {}").format(locale_name, ts_path.as_posix()))
-        if is_right_to_left_locale():
-            log.info("Right-to-left language: set layout direction to right-to-left.")
+        if QLocale.system().textDirection() == Qt.LayoutDirection.RightToLeft:
+            log.info(f"Locale {QLocale.system().name()} language is right-to-left - setting layout direction to right-to-left.")
             app.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         return
     if qm_path is not None:
