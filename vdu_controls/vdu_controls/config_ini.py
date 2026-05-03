@@ -103,7 +103,7 @@ class ConfGroup(Enum):
     WINDOWING =   (1, QT_TR_NOOP('Windowing'))
     FEATURES =    (3, QT_TR_NOOP('Features'))
     SYSTEM_TRAY = (2, QT_TR_NOOP('System Tray'))
-    DDC =         (4, QT_TR_NOOP('DDC'))
+    DDC =         (4, QT_TR_NOOP('DDC options'))
     LOGGING =     (5, QT_TR_NOOP('Logging'))
     NONE =        (6, '')
 
