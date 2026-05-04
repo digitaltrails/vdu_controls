@@ -45,9 +45,9 @@ vdu_controls-$version/vdu_controls/
 vdu_controls-$version/translations/ar_SA.ts
 vdu_controls-$version/translations/fr_FR.ts
 vdu_controls-$version/translations/zh_CN.ts
-vdu_controls-$version/translations/about-ar_SA.txt
-vdu_controls-$version/translations/about-fr_FR.txt
-vdu_controls-$version/translations/about-zh_CN.txt
+vdu_controls-$version/translations/about-ar_SA.html
+vdu_controls-$version/translations/about-fr_FR.html
+vdu_controls-$version/translations/about-zh_CN.html
 vdu_controls-$version/sample-scripts/lux-from-webcam.bash
 vdu_controls-$version/sample-scripts/lux-from-webcam.py
 vdu_controls-$version/sample-scripts/vlux_meter.py

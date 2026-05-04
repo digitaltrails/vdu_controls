@@ -107,14 +107,11 @@ ln -s -f %{_datadir}/icons %{_datadir}/%{name}/icons/system-icons
 %{_mandir}/man1/%{name}.1%{?ext_man}
 %{_datadir}/%{name}/icons/*
 %{_datadir}/%{name}/translations/ar_SA.ts
-%{_datadir}/%{name}/translations/da_DK.ts
-%{_datadir}/%{name}/translations/de_DE.ts
 %{_datadir}/%{name}/translations/fr_FR.ts
-%{_datadir}/%{name}/translations/mi_NZ.ts
 %{_datadir}/%{name}/translations/zh_CN.ts
-%{_datadir}/%{name}/translations/about-ar_SQ.txt
+%{_datadir}/%{name}/translations/about-ar_SA.html
 %{_datadir}/%{name}/translations/about-fr_FR.html
-%{_datadir}/%{name}/translations/about-zh_CN.txt
+%{_datadir}/%{name}/translations/about-zh_CN.html
 %{_datadir}/%{name}/sample-scripts/lux-from-webcam.bash
 %{_datadir}/%{name}/sample-scripts/lux-from-webcam.py
 %{_datadir}/%{name}/sample-scripts/vlux_meter.py
