@@ -731,6 +731,34 @@ whether a tray or dock is differently themed. As a result the application includ
 several manual settings that can alter the tray/dock icon theming between
 colored, monochrome-dark and monochrome-light.
 
+Localization
+------------
+
+If _Settings_ _translations enabled_ is set, the application will 
+load a translation matching your system's locale if available. 
+
+__The supplied translations are 
+unverified and should be regarded as samples that may be incorrect.__
+
+Where a supported locale is right-to-left oriented, layouts will be 
+reconfigured appropriately. 
+
+Locale is determined by the Linux and Qt environment variables,
+`LC_ALL` and `LANGUAGE`, which should prefereably be in agreement.
+These two enviroment variables can be manually set to force
+a locale, for example:
+
+The following locations are searched for localized translations:
+
+  1. `$HOME/.local/share/vdu_controls/translations/`
+  2. `/usr/share/vdu_controls/translations/`
+  3. `zipapp-root/vdu_controls/resources/translations/`
+
+To date, there hasn't been any espression of interest in the localization
+features. The provided translations are all testing samples which may not
+be supported over the long term. 
+
+
 Other concerns
 --------------
 

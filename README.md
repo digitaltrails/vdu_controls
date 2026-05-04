@@ -81,23 +81,6 @@ available to support all user defined Presets).
 ![Custom](screen-shots/Screenshot_tray-200.png) ![Custom](screen-shots/Screenshot_settings-300.png)
 ![Custom](screen-shots/presets.png) ![Custom](screen-shots/lux-profiles.png)
 
-> [!NOTE]
-> If _Settings_ _translations enabled_ is set, several locales are recognised:
-> ar_SA (Arabic), da_DK (Danish), de_DE (German), fr_FR zh_CN (French),
-> and mi_NZ (Māori).  __The supplied translations are unverified and 
-> should be regarded as testing-only samples that may be incorrect.__
-> 
-> Where a supported locale is right-to-left oriented, layouts will be 
-> reconfigured appropriately. 
-> 
-> The standard linux desktop locale environment-variables
-> can be overriden for testing each locale, for example:
-> ```
-> % LC_ALL=ar_SA LANGUAGE=ar_SA vdu_controls
-> % LC_ALL=zh_CN LANGUAGE=zh_CN vdu_controls
-> ```
-
-
 #### Laptop-Panel brightness controls
 
 Starting with version 2.6, laptop panels are supported for brightness-only control.
@@ -358,6 +341,41 @@ in a number of ways:
 See the context-menu or the  [man page](https://htmlpreview.github.io/?https://raw.githubusercontent.com/digitaltrails/vdu_controls/master/docs/_build/man/vdu_controls.1.html)
  for details.
 
+Localization
+------------
+
+If _Settings_ _translations enabled_ is set, the application will 
+load a translation matching your system's locale if available. 
+
+__The supplied translations are 
+unverified and should be regarded as samples that may be incorrect.__
+
+Where a supported locale is right-to-left oriented, layouts will be 
+reconfigured appropriately. 
+
+Locale is determined by the Linux and Qt environment variables,
+`LC_ALL` and `LANGUAGE`, which should prefereably be in agreement.
+These two enviroment variables can be manually set to force
+a locale, for example:
+
+```
+% LC_ALL=ar_SA LANGUAGE=ar_SA vdu_controls
+% LC_ALL=zh_CN LANGUAGE=zh_CN vdu_controls
+```
+
+See the [translations folder](https://github.com/digitaltrails/vdu_controls/tree/master/translations) 
+to see what is currently available.
+
+The following locations are searched for localized translations:
+
+  1. `$HOME/.local/share/vdu_controls/translations/`
+  2. `/usr/share/vdu_controls/translations/`
+  3. `zipapp-root/vdu_controls/resources/translations/`
+
+To date, there hasn't been any espression of interest in the localization
+features. The provided translations are all testing samples which may not
+be supported over the long term. 
+
 Bugs and Suggestions
 --------------------
 If you encounter a bug or issue, or wish to make a suggestion, you're most welcome to raise 
@@ -464,9 +482,8 @@ Version History
   * Disabled the right-mouse action that could hide the toolbar irretrievably.
   * Each icon is now held in a separate SVG source file.  This 
     makes the icons more easily editable and reusable.
-  * Language translations have been updated. zh_CN and ar_SA have been
-    added.  All translations were generated for code testing purposes,
-    the actual translations are untested and may be wildy inaccurate.
+  * The included set of language translation examples has been reduced. All of 
+    the translations  been generated for code testing purposes and may not be accurate.
 
 * 2.6.0
   * Added laptop-panel support, see Setting option "laptop-panel-enabled".
