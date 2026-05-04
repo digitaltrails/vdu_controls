@@ -6,14 +6,15 @@ import os
 import sys
 from enum import Enum
 from pathlib import Path
+from importlib.resources import files as resources_files
 
 APPNAME = "VDU Controls"
 VDU_CONTROLS_VERSION = '2.6.5'
 VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in VDU_CONTROLS_VERSION.split('.'))
 assert sys.version_info >= (3, 8), f'{APPNAME} utilizes python version 3.8 or greater (your python is {sys.version}).'
 
-CONFIG_DIR_PATH = Path.home().joinpath('.config', 'vdu_controls')
-CONFIG_FILE_PREFER_QT5 = CONFIG_DIR_PATH.joinpath('_prefer_qt5_')
+CONFIG_DIR_PATH = Path.home() / '.config/vdu_controls'
+CONFIG_FILE_PREFER_QT5 = CONFIG_DIR_PATH / '_prefer_qt5_'
 
 TOOLTIP_DURATION_MSEC = 750
 
@@ -29,11 +30,10 @@ HELP_FILENAME = "help.md"
 
 VDU_CONTROLS_DEVELOPER = os.getenv('VDU_CONTROLS_DEVELOPER', default="no") == 'yes'
 
-CURRENT_PRESET_NAME_FILE = CONFIG_DIR_PATH.joinpath('current_preset.txt')
-CUSTOM_TRAY_ICON_FILE = CONFIG_DIR_PATH.joinpath('tray_icon.svg')
-LOCALE_TRANSLATIONS_PATHS = [
-    Path.cwd().joinpath('translations')] if VDU_CONTROLS_DEVELOPER else [] + [
-    Path(CONFIG_DIR_PATH).joinpath('translations'), Path("/usr/share/vdu_controls/translations"), ]
+CURRENT_PRESET_NAME_FILE = CONFIG_DIR_PATH / 'current_preset.txt'
+CUSTOM_TRAY_ICON_FILE = CONFIG_DIR_PATH / 'tray_icon.svg'
+
+
 STANDARD_ICON_PATHS = (Path("/usr/share/vdu_controls/icons"), Path("/usr/share/icons/breeze/actions/24"), Path("/usr/share/icons"),)
 
 # Use a slight hack to make MsgBox.resizable.

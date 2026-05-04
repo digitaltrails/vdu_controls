@@ -60,8 +60,8 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
             ddcutil_version_info_1 = self.main_controller.ddcutil.ddcutil_version_info()[1]
         log.info(f"Refreshing About Dialog {counts_str=}")
         # Has to be HTML, getting Qt Markdown to behave was too painful
-        about_text = app_locale.load_resource_text("about.html")
-        about_license = app_locale.load_resource_text("about_license.html")  # Always in English
+        about_text = app_locale.load_docs_text("about.html")
+        about_license = app_locale.load_docs_text("about_license.html")  # Always in English
         self.setInformativeText(about_text.format(
             about_license = about_license,
             vdu_controls_version = VDU_CONTROLS_VERSION,

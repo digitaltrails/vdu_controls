@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
+
 """
 This module defines our own tr() that matches what pylupdate5/6 is looking for.
 If this method is ever renamed to something other than tr(), then you must
@@ -51,29 +52,64 @@ from pathlib import Path
 from typing import Dict
 from importlib.resources import files as resources_files
 
-from vdu_controls.constants import LOCALE_TRANSLATIONS_PATHS
+from vdu_controls.constants import VDU_CONTROLS_DEVELOPER
 from vdu_controls.qt_imports import QLocale, QTranslator, QApplication, QCoreApplication, Qt
 import vdu_controls.logging as log
 
+# Places in the filesystem:
+DEVELOPER_TRANSLATIONS_PATH = Path.cwd() / 'translations'  # Developers current working folder - top of project
+HOME_LOCAL_SHARE = Path.home() / ".local/share/vdu_controls"
+USR_LOCAL_SHARE = Path('/usr/share/vdu_controls')
+
+# Places in the filesystem or zipapp zip file.
+APP_INTERNAL_RESOURCE_ROOT = resources_files() / 'resources'
+APP_INTERNAL_DOCS_FOLDER = APP_INTERNAL_RESOURCE_ROOT / 'docs'
+
+LOCALE_TRANSLATIONS_PATHS = ([ DEVELOPER_TRANSLATIONS_PATH ] if VDU_CONTROLS_DEVELOPER else []) + [
+    HOME_LOCAL_SHARE / 'translations',
+    USR_LOCAL_SHARE / 'translations',
+    APP_INTERNAL_RESOURCE_ROOT / 'translations',
+]
 
 def find_locale_specific_file(filename_template: str) -> Path | None:
     """
     First look for a locale specific filename-??_??.suffix version in
-
       0. If env VDU_CONTROLS_DEVELOPER=yes first look in ./translations
       1. $HOME/.local/share/vdu_controls/translations
       2. /usr/share/vdu_controls/translations
+      3. app-internal-resources/resources/translations
     """
     locale_name = QLocale.system().name()
     filename = filename_template.format(locale_name)
-    log.info(f"Looking for {locale_name} translation {filename}")
+    log.info(f"Looking for translation file {filename}")
     for path in LOCALE_TRANSLATIONS_PATHS:
         full_path = path.joinpath(filename)
-        log.debug(f"Check {locale_name} translation: {full_path}") if log.debug_enabled else None
+        log.info(f"Checking for translation: {full_path}")
         if full_path.exists():
-            log.info(f"Found {locale_name} translation: {full_path}")
+            log.info(f"Found translation: {full_path}")
             return full_path
     return None
+
+
+def load_docs_text(filename: str) -> str:
+    """
+    First look for a locale specific filename-??_??.suffix using
+    find_locale_specific_file("filename.suffix") if that fails
+    look internally in vdu_controls/resources/docs/
+    """
+    # Check outside the application for something locale specific
+    as_path = Path(filename)
+    if translated_override := find_locale_specific_file(f"{as_path.stem}-{{}}{as_path.suffix}"):
+        log.info(f"Loading translated resource {filename} from {translated_override.as_posix()}")
+        return translated_override.read_text()
+
+    # Check inside the application resources/docs/
+    file_path = APP_INTERNAL_DOCS_FOLDER / filename
+    if True or file_path.exists():
+        log.info(f"Loading original resource from {file_path}")
+        return file_path.read_text()
+    log.error(f"Could not find resource {filename} or a translation of it anywhere")
+    return ''
 
 
 translator: QTranslator | None = None
@@ -148,22 +184,4 @@ def translate_option(option_text: str, context="ConfOpt") -> str:
         return translation
     canonical = option_text.lower().replace('-', ' ')
     return tr(canonical)
-
-
-def load_resource_text(filename: str) -> str:
-    """
-    First look for a locale specific filename-??_??.suffix using
-    find_locale_specific_file("filename.suffix") if that fails
-    look internally in vdu_controls/resources/docs/
-    """
-    # Check outside the application for something locale specific
-    as_path = Path(filename)
-    if translated_override := find_locale_specific_file(f"{as_path.stem}-{{}}{as_path.suffix}"):
-        log.info(f"Loading {filename} translation from {translated_override.as_posix()}")
-        return translated_override.read_text()
-
-    # Check inside the application resources/docs/
-    file_path = resources_files('vdu_controls') / 'resources' / 'docs' / filename
-    log.info(f"Reading text from {file_path}")
-    return file_path.read_text()
 

@@ -1563,7 +1563,7 @@ def main() -> None:
         install_as_desktop_application(uninstall=True)
         sys.exit()
     if args.detailed_help:
-        print(app_locale.load_resource_text(HELP_FILENAME))
+        print(app_locale.load_docs_text(HELP_FILENAME))
         sys.exit()
 
     if main_config.is_set(ConfOpt.TRANSLATIONS_ENABLED):

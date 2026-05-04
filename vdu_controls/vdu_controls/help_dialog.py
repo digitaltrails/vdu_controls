@@ -918,7 +918,7 @@ class HelpDialog(SubWinDialog, DialogSingletonMixin):
         self.make_visible()
 
     def load_help_text(self) -> str:
-        help_text = app_locale.load_resource_text(constants.HELP_FILENAME)
+        help_text = app_locale.load_docs_text(constants.HELP_FILENAME)
         # Hack normal markdown to something Qt can use:
         qt_markdown = re.sub(r"\n\n", r"\n<br/>\n\n", help_text, flags=re.MULTILINE)
         return qt_markdown
