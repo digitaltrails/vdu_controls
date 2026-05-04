@@ -2,7 +2,7 @@
 a DDC control panel for monitors</h1>
 <p>A control panel for DisplayPort, DVI, HDMI, or USB-connected VDUs
 (<em>Visual Display Units</em>).</p>
-<h1 id="synopsis">Synopsis:</h1>
+<h1 id="synopsis">Synopsis :</h1>
 <pre><code>    vdu_controls
                  [--help|-h] [--about] [--detailed-help]
                  [--show {brightness,contrast,audio-volume,input-source,power-mode,osd-language}]
@@ -112,16 +112,17 @@ equivalent settings.</p>
   --create-config-files
                         if they do not exist, create template config INI files
                         in $HOME/.config/vdu_controls/
-  --install             installs the vdu_controls in the current user&#39;s path and
-                        desktop application menu.
+  --install             installs the vdu_controls binary and desktop file 
+                        into $HOME/.local/
   --uninstall           uninstalls the vdu_controls application menu file and
                         script for the current user.</code></pre>
 <h1 id="description">Description</h1>
-<p><code>vdu_controls</code> is a control-panel for DisplayPort, DVI,
-HDMI, or USB connected VDUs. Out of the box, <code>vdu_controls</code>
-offers a subset of controls including brightness, contrast and audio
-controls. Additional controls can be enabled via the
-<code>Settings</code> dialog.</p>
+<p><code>vdu_controls</code> control panel for external Visual Display
+Units (VDUs, monitors, displays). It supports displays connected via
+DisplayPort, DVI, HDMI, USB, and built-in laptop-panels. Out of the box,
+<code>vdu_controls</code> offers a subset of controls including
+brightness, contrast and audio controls. Additional controls can be
+enabled via the <code>Settings</code> dialog.</p>
 <p><code>vdu_controls</code> interacts with VDUs by using
 <code>ddcutil</code> to issue standard VESA <em>Virtual Control
 Panel</em> (<em>VCP</em>) commands via the VESA <em>Display Data
@@ -744,6 +745,27 @@ to discover whether a tray or dock is differently themed. As a result
 the application includes several manual settings that can alter the
 tray/dock icon theming between colored, monochrome-dark and
 monochrome-light.</p>
+<h2 id="localization">Localization</h2>
+<p>If <em>Settings</em> <em>translations enabled</em> is set, the
+application will load a translation matching your system’s locale if
+available.</p>
+<p><strong>The supplied translations are unverified and should be
+regarded as samples that may be incorrect.</strong></p>
+<p>Where a supported locale is right-to-left oriented, layouts will be
+reconfigured appropriately.</p>
+<p>Locale is determined by the Linux and Qt environment variables,
+<code>LC_ALL</code> and <code>LANGUAGE</code>, which should prefereably
+be in agreement. These two enviroment variables can be manually set to
+force a locale, for example:</p>
+<p>The following locations are searched for localized translations:</p>
+<ol type="1">
+<li><code>$HOME/.local/share/vdu_controls/translations/</code></li>
+<li><code>/usr/share/vdu_controls/translations/</code></li>
+<li><code>zipapp-root/vdu_controls/resources/translations/</code></li>
+</ol>
+<p>To date, there hasn’t been any espression of interest in the
+localization features. The provided translations are all testing samples
+which may not be supported over the long term.</p>
 <h2 id="other-concerns">Other concerns</h2>
 <p>The power-supplies in some older VDUs may buzz/squeel audibly when
 the brightness is turned way down. This may not be a major issue
@@ -794,17 +816,30 @@ vdu_controls --enable-vcp-code 63 --enable-vcp-code 93 --warnings --debug
 <p>This script often refers to displays and monitors as VDUs in order to
 disambiguate the noun/verb duality of “display” and “monitor”</p>
 <h1 id="prerequisites">Prerequisites</h1>
-<p>Described for OpenSUSE, similar for other distros:</p>
-<p>Software::</p>
-<pre><code>    zypper install python3 python3-qt5 noto-sans-math-fonts noto-sans-symbols2-fonts
-    zypper install ddcutil
-    zypper install libddcutil ddcutil-service  # optional, but recommended if available
-    zypper install brightnessctl  # optional, needed for controlling laptop-panels
-    zypper install python3-udev   # optional, needed for detecting brighntess changes on laptop-panels</code></pre>
-<p>If you wish to use a serial-port lux metering device, the
-<code>pyserial</code> module is a runtime requirement.</p>
-<p>Get ddcutil working first. Check that the detect command detects your
-VDUs without issuing any errors:</p>
+<p>Packaged versions of <code>vdu_control</code> are likely to include
+all of the following automatically.</p>
+<ul>
+<li><code>python3</code>, <code>python3-qt6</code> or
+<code>python-qt5</code>, <code>noto-sans-math-fonts</code>,
+<code>noto-sans-symbols2-fonts</code>.</li>
+<li><code>ddcutil</code>, the command line DDC interface.</li>
+<li><code>libddcutil</code> and <code>ddcutil-service</code>, obtional,
+but recommended for increased reliability. more features, and increased
+speed.</li>
+</ul>
+<p>The following need not be present to run <code>vdu_controls</code>,
+library imports are only attempted when settings require them:</p>
+<ul>
+<li><code>brightnessctl</code>, optional, needed for controlling
+laptop-panels.</li>
+<li><code>python3-pyudev</code>, optional, needed for detecting
+brighntess changes on laptop-panels.</li>
+<li><code>pyserial</code>, optional, required to use a serial-port
+light-metering device (only loaded if needed).</li>
+</ul>
+<p>It’s often best to start simple and get ddcutil working first. Check
+that the detect command detects your VDUs without issuing any
+errors:</p>
 <pre><code>    ddcutil detect</code></pre>
 <p>Read ddcutil documentation concerning config of i2c_dev with nvidia
 GPUs. Detailed ddcutil info at https://www.ddcutil.com/</p>

@@ -15,12 +15,12 @@
 # sys.path.insert(0, os.path.abspath('.'))
 import os
 import sys
-sys.path.insert(0, os.path.abspath('/home/michael/Projects/vdu_controls'))
+sys.path.insert(0, os.path.abspath('/home/michael/Projects/vdu_controls/docs'))
 
 # -- Project information -----------------------------------------------------
 
 project = 'vdu_controls'
-copyright = '2021, Michael Hamilton'
+copyright = 'Copyright 2021-2026 Contributors to vdu_controls'
 author = 'Michael Hamilton'
 
 # The full version, including alpha/beta/rc tags

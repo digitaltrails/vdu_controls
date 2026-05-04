@@ -3,5 +3,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # hacky - pandoc is better at html
 pandoc --from markdown --to html vdu_controls/vdu_controls/resources/docs/help.md > docs/_build/man/vdu_controls.1.html
+
 cd docs
+# Prefer sphinx handling of embedded python documentation over straight handling of .md.
+# Create a dummy .py file for sphinx to process.
+echo "'''" > _help_content.py
+cat ../vdu_controls/vdu_controls/resources/docs/help.md >> _help_content.py
+echo "'''" >> _help_content.py
 make man

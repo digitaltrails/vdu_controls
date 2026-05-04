@@ -28,13 +28,13 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Apr 19, 2026" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "May 04, 2026" "" "vdu_controls"
 .SH NAME
-vdu_controls \- vdu_controls 2.6.0
+vdu_controls \- vdu_controls 2.6.5
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
 .sp
 A control panel for DisplayPort, DVI, HDMI, or USB\-connected VDUs (\fIVisual Display Units\fP).
-.SH SYNOPSIS:
+.SH SYNOPSIS :
 .INDENT 0.0
 .INDENT 3.5
 .INDENT 0.0
@@ -201,8 +201,8 @@ if they do not exist, create template config INI files
 in $HOME/.config/vdu_controls/
 .TP
 .B  \-\-install
-installs the vdu_controls in the current user\(aqs path and
-desktop application menu.
+installs the vdu_controls binary and desktop file 
+into $HOME/.local/
 .TP
 .B  \-\-uninstall
 uninstalls the vdu_controls application menu file and
@@ -212,9 +212,10 @@ script for the current user.
 .UNINDENT
 .SH DESCRIPTION
 .sp
-\fBvdu_controls\fP is a control\-panel for DisplayPort, DVI, HDMI, or USB connected VDUs.  Out of the
-box, \fBvdu_controls\fP offers a subset of controls including brightness, contrast and audio
-controls.  Additional controls can be enabled via the \fBSettings\fP dialog.
+\fBvdu_controls\fP control panel for external Visual Display Units (VDUs, monitors, displays). 
+It supports displays connected via DisplayPort, DVI, HDMI, USB, and built\-in laptop\-panels.
+Out of the box, \fBvdu_controls\fP offers a subset of controls including brightness, contrast 
+and audio controls.  Additional controls can be enabled via the \fBSettings\fP dialog.
 .sp
 \fBvdu_controls\fP interacts with VDUs by using \fBddcutil\fP to issue standard VESA
 \fIVirtual Control Panel\fP (\fIVCP\fP) commands via the VESA \fIDisplay Data Channel\fP (\fIDDC\fP).
@@ -927,6 +928,43 @@ applied to windows.  There isn\(aqt a straight forward Qt mechanism to discover
 whether a tray or dock is differently themed. As a result the application includes
 several manual settings that can alter the tray/dock icon theming between
 colored, monochrome\-dark and monochrome\-light.
+.SS Localization
+.sp
+If _Settings_ _translations 
+.nf
+enabled_
+.fi
+ is set, the application will 
+load a translation matching your system\(aqs locale if available.
+.sp
+__The supplied translations are 
+unverified and should be regarded as samples that may be incorrect.__
+.sp
+Where a supported locale is right\-to\-left oriented, layouts will be 
+reconfigured appropriately.
+.sp
+Locale is determined by the Linux and Qt environment variables,
+\fILC_ALL\fP and \fILANGUAGE\fP, which should prefereably be in agreement.
+These two enviroment variables can be manually set to force
+a locale, for example:
+.sp
+The following locations are searched for localized translations:
+.INDENT 0.0
+.INDENT 3.5
+.INDENT 0.0
+.IP 1. 3
+\fI$HOME/.local/share/vdu_controls/translations/\fP
+.IP 2. 3
+\fI/usr/share/vdu_controls/translations/\fP
+.IP 3. 3
+\fIzipapp\-root/vdu_controls/resources/translations/\fP
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.sp
+To date, there hasn\(aqt been any espression of interest in the localization
+features. The provided translations are all testing samples which may not
+be supported over the long term.
 .SS Other concerns
 .sp
 The power\-supplies in some older VDUs may buzz/squeel audibly when the brightness is
@@ -983,26 +1021,40 @@ This script often refers to displays and monitors as VDUs in order to disambigua
 duality of \(dqdisplay\(dq and \(dqmonitor\(dq
 .SH PREREQUISITES
 .sp
-Described for OpenSUSE, similar for other distros:
-.sp
-Software:
+Packaged versions of \fBvdu_control\fP are likely to include all of the following
+automatically.
 .INDENT 0.0
 .INDENT 3.5
-.sp
-.EX
-zypper install python3 python3\-qt5 noto\-sans\-math\-fonts noto\-sans\-symbols2\-fonts
-zypper install ddcutil
-zypper install libddcutil ddcutil\-service  # optional, but recommended if available
-zypper install brightnessctl  # optional, needed for controlling laptop\-panels
-zypper install python3\-udev   # optional, needed for detecting brighntess changes on laptop\-panels
-.EE
+.INDENT 0.0
+.IP \(bu 2
+\fIpython3\fP, \fIpython3\-qt6\fP or \fIpython\-qt5\fP, \fInoto\-sans\-math\-fonts\fP, \fInoto\-sans\-symbols2\-fonts\fP\&.
+.IP \(bu 2
+\fIddcutil\fP, the command line DDC interface.
+.IP \(bu 2
+\fIlibddcutil\fP and \fIddcutil\-service\fP, obtional, but recommended for increased reliability.
+more features, and increased speed.
 .UNINDENT
 .UNINDENT
+.UNINDENT
 .sp
-If you wish to use a serial\-port lux metering device, the \fBpyserial\fP module is a runtime requirement.
+The following need not be present to run \fBvdu_controls\fP, library imports
+are only attempted when settings require them:
+.INDENT 0.0
+.INDENT 3.5
+.INDENT 0.0
+.IP \(bu 2
+\fIbrightnessctl\fP,  optional, needed for controlling laptop\-panels.
+.IP \(bu 2
+\fIpython3\-pyudev\fP, optional, needed for detecting brighntess changes on laptop\-panels.
+.IP \(bu 2
+\fIpyserial\fP, optional, required to use a serial\-port light\-metering device (only
+loaded if needed).
+.UNINDENT
+.UNINDENT
+.UNINDENT
 .sp
-Get ddcutil working first. Check that the detect command detects your VDUs without issuing any
-errors:
+It\(aqs often best to start simple and get ddcutil working first. Check that the 
+detect command detects your VDUs without issuing any errors:
 .INDENT 0.0
 .INDENT 3.5
 ddcutil detect
@@ -1095,5 +1147,5 @@ with this program. If not, see \%<https://\:www\:.gnu\:.org/\:licenses/>\&.
 .SH Author
 Michael Hamilton
 .SH Copyright
-2021, Michael Hamilton
+Copyright 2021-2026 Contributors to vdu_controls
 .\" End of generated man page.

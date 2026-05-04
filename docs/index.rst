@@ -10,7 +10,7 @@ Welcome to vdu_control's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-.. automodule:: vdu_controls
+.. automodule:: _help_content
 
 
 Indices and tables
