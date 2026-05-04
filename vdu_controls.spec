@@ -83,7 +83,7 @@ install -m 0644 %{name}/%{name}/resources/icons/app/%{name}.png \
                     %{buildroot}%{_datadir}/icons/hicolor/256x256/apps/%{name}.png
 install -m 0644 icons/* %{buildroot}%{_datadir}/%{name}/icons/
 install -m 0644 translations/*.ts %{buildroot}%{_datadir}/%{name}/translations/
-install -m 0644 translations/about_*.txt %{buildroot}%{_datadir}/%{name}/translations/
+install -m 0644 translations/about-*.html %{buildroot}%{_datadir}/%{name}/translations/
 install -m 0755 sample-scripts/* %{buildroot}%{_datadir}/%{name}/sample-scripts/
 install -m 0644 docs/_build/man/%{name}.1 %{buildroot}%{_mandir}/man1/
 
@@ -112,9 +112,9 @@ ln -s -f %{_datadir}/icons %{_datadir}/%{name}/icons/system-icons
 %{_datadir}/%{name}/translations/fr_FR.ts
 %{_datadir}/%{name}/translations/mi_NZ.ts
 %{_datadir}/%{name}/translations/zh_CN.ts
-%{_datadir}/%{name}/translations/about_da_DK.txt
-%{_datadir}/%{name}/translations/about_fr_FR.txt
-%{_datadir}/%{name}/translations/about_de_DE.txt
+%{_datadir}/%{name}/translations/about-ar_SQ.txt
+%{_datadir}/%{name}/translations/about-fr_FR.html
+%{_datadir}/%{name}/translations/about-zh_CN.txt
 %{_datadir}/%{name}/sample-scripts/lux-from-webcam.bash
 %{_datadir}/%{name}/sample-scripts/lux-from-webcam.py
 %{_datadir}/%{name}/sample-scripts/vlux_meter.py
