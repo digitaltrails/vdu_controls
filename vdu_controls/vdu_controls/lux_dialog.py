@@ -538,6 +538,10 @@ class LuxGaugeWidget(QWidget):
             painter.drawPolyline(eo_points)
             painter.setPen(QPen(self.white_line_color, thin_line_width * 3))
             painter.drawPolyline(ei_points)
+        else:  # Give them a hint that they have not set location in settings.
+            painter.setFont(QFont(QApplication.font().family(), 5, QFont.Weight.Bold))
+            painter.setPen(QPen(self.white_line_color, thin_line_width))
+            painter.drawText(QPointF(df_plot_left + df_plot_width/3, plot_height/4), tr('Location Unknown'))
         # Add text to the axis
         painter.setPen(QPen(self.white_line_color, thin_line_width))
         painter.setFont(QFont(QApplication.font().family(), 5, QFont.Weight.Normal))
