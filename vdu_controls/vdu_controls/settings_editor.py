@@ -341,17 +341,17 @@ class SettingsEditorTab(QWidget):
 
 
 class SettingsEditorFieldBase(QWidget):
-    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
+    def __init__(self, section_editor: SettingsEditorTab, option_name: str, section: str, tooltip: str) -> None:
         super().__init__()
         self.section_editor = section_editor
         self.section = section
-        self.option = option
+        self.option_name = option_name
         self.tip_text = tooltip
         self.has_error = False
         self.setToolTip(tr(tooltip)) if tooltip != '' else None
 
     def translate_option(self) -> str:
-        return translate_option(self.option)
+        return translate_option(self.option_name)
 
 
 class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
@@ -360,7 +360,9 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
         super().__init__(section_editor, option, section, tooltip)
         self.setLayout(widget_layout := QHBoxLayout())
         alter_margins(widget_layout, top=0, bottom=0)  # Squish up, save space, stay closer to parent label
-        checkbox = QCheckBox(self.translate_option())
+        # TODO: fix this enabled-hack properly one day
+        # Hack: if the text contains ' enabled' - edit it out, localized translations lose out on this (for now),
+        checkbox = QCheckBox(self.translate_option().replace(' enabled', ''))
         checkbox.setChecked(section_editor.ini_editable.getboolean(section, option))
 
         def _toggled(is_checked: bool) -> None:
@@ -375,7 +377,7 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
         self.checkbox = checkbox
 
     def reset(self) -> None:
-        self.checkbox.setChecked(self.section_editor.ini_before.getboolean(self.section, self.option))
+        self.checkbox.setChecked(self.section_editor.ini_before.getboolean(self.section, self.option_name))
 
 
 class SettingsEditorLineBase(SettingsEditorFieldBase):
@@ -405,14 +407,14 @@ class SettingsEditorLineBase(SettingsEditorFieldBase):
         if not self.has_error:
             internal_value = str(text)  # Why did I do this - is text not really a string?
             if not self.has_error:
-                self.section_editor.ini_editable[self.section][self.option] = internal_value
+                self.section_editor.ini_editable[self.section][self.option_name] = internal_value
 
     def set_error_indication(self, has_error: bool) -> None:
         self.has_error = has_error
         self.text_input.setPalette(self.error_palette if has_error else self.valid_palette)
 
     def reset(self) -> None:
-        self.text_input.setText(self.section_editor.ini_before[self.section][self.option])
+        self.text_input.setText(self.section_editor.ini_before[self.section][self.option_name])
         self.editing_finished()
 
 
@@ -439,7 +441,7 @@ class SettingsEditorFloatWidget(SettingsEditorFieldBase):
         self.spinbox.valueChanged.connect(_spinbox_value_changed)
 
     def reset(self) -> None:
-        self.spinbox.setValue(float(self.section_editor.ini_before.get(self.section, self.option)))
+        self.spinbox.setValue(float(self.section_editor.ini_before.get(self.section, self.option_name)))
 
 
 class SettingsEditorCsvWidget(SettingsEditorLineBase):
@@ -539,7 +541,7 @@ class SettingsEditorLongTextWidget(SettingsEditorFieldBase):
         self.text_editor = text_editor
 
     def reset(self) -> None:
-        self.text_editor.setPlainText(self.section_editor.ini_before[self.section][self.option])
+        self.text_editor.setPlainText(self.section_editor.ini_before[self.section][self.option_name])
 
 
 class SettingsEditorTextWidget(SettingsEditorFieldBase):
@@ -560,7 +562,7 @@ class SettingsEditorTextWidget(SettingsEditorFieldBase):
         self.text_editor = text_editor
 
     def reset(self) -> None:
-        self.text_editor.setText(self.section_editor.ini_before[self.section][self.option])
+        self.text_editor.setText(self.section_editor.ini_before[self.section][self.option_name])
 
 
 class SettingsEditorPathValidator(QValidator):
@@ -597,8 +599,8 @@ class SettingsEditorPathWidget(SettingsEditorLineBase):
     def editing_finished(self) -> None:
         super().editing_finished()
         if not self.has_error and self.text_input.text().strip() != '':
-            if self.section_editor.ini_editable[self.section][self.option] != self.section_editor.ini_before[self.section][
-                self.option]:
+            if self.section_editor.ini_editable[self.section][self.option_name] != self.section_editor.ini_before[self.section][
+                self.option_name]:
                 mb = MBox(MIcon.Information,
                           msg="If you've developed a <i>ddcutil-emulator</i> for integrating a non-DDC laptop-panels, "
                               "please consider contributing it to the <b>vdu_controls</b> project."
