@@ -106,7 +106,7 @@ class SettingsDialog(SubWinDialog, DialogSingletonMixin):
 
         self.tabs_widget.currentChanged.connect(_tab_changed)
 
-        self.resize(npx(1900), npx(1000))
+        self.resize(npx(1600), npx(1000))
         self.setMinimumSize(npx(1024), npx(800))
         self.reconfigure([default_config, *vdu_config_list])
         self.make_visible()
@@ -220,20 +220,20 @@ class SettingsEditorTab(QWidget):
             self.field_list.append(widget)
             return widget
 
-        for section_name in self.ini_editable.data_sections():
+        for section_def in self.ini_editable.data_sections():
 
             ordered_by_group: dict[tuple[str, int], tuple[str, ConfOpt]] = {}
-            for num, option_name in enumerate(self.ini_editable[section_name]):
+            for num, option_name in enumerate(self.ini_editable[section_def]):
                 try:
-                    option_def = vdu_config.get_conf_option(section_name, option_name)
+                    option_def = vdu_config.get_conf_option(section_def, option_name)
                     if option_def == ConfOpt.UNKNOWN:  # If it's unknown, it's a boolean switch for a VCP code
                         # Make up a temporary ConfOptDef (which is not an enum value of ConfOpt(Enum))
-                        option_def = ConfOptDef(option_name, section_name, ConfType.BOOL, ui_label=option_name.replace('-',' '))
+                        option_def = ConfOptDef(option_name, section_def, ConfType.BOOL, ui_label=option_name.replace('-',' '))
                     ordered_by_group[(option_def.group.value, num)] = (option_name, option_def)
                 except ValueError:  # Probably an old no-longer-valid option, or a typo.
-                    log.warning(f"Ignoring invalid option name {option_name} in {section_name}")
+                    log.warning(f"Ignoring invalid option name {option_name} in {section_def}")
             ordered_by_group = dict(sorted(ordered_by_group.items()))
-            section_title = ConfSec.title(section_name)
+            section_title = section_def.localized_name
             content_layout.addWidget(QLabel(f"<b>{section_title}</b>"))
             booleans_grid: QGridLayout | None = None  # Only create when bool_count > 0
             grid_columns = 5  # booleans are counted and laid out according to grid_columns.
@@ -253,7 +253,7 @@ class SettingsEditorTab(QWidget):
                                 row_index += 1
                                 booleans_grid.setRowMinimumHeight(row_index, npx(20))
                                 row_index += 1
-                            booleans_grid.addWidget(QLabel(option_def.group.title), row_index, 0)
+                            booleans_grid.addWidget(QLabel(option_def.group.localized_name), row_index, 0)
                             row_index += 1
                             col_index = 0
                             previous_group = option_def.group
@@ -266,7 +266,7 @@ class SettingsEditorTab(QWidget):
                     else:
                         content_layout.addWidget(_field(widget_map[option_def.conf_type](self, option_def)))
                 except ValueError:  # Probably an old no-longer-valid option, or a typo.
-                    log.warning(f"Ignoring invalid option name {option_name} in {section_name}")
+                    log.warning(f"Ignoring invalid option name {option_name} in {section_def}")
 
     def set_preferred_name(self, label_str):
         self.preferred_name = label_str
@@ -341,9 +341,9 @@ class SettingsEditorFieldBase(QWidget):
         self.conf_section = option_def.conf_section
         self.conf_name = option_def.conf_name
         self.has_error = False
-        self.ui_label_text = ConfOpt.translate(option_def.ui_label)
+        self.ui_label_text = option_def.localized_name
         if option_def.help:
-            self.setToolTip(ConfOpt.translate(option_def.help))
+            self.setToolTip(option_def.localized_help)
 
 
 class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
@@ -351,8 +351,6 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
         super().__init__(section_editor, option_def)
         self.setLayout(widget_layout := QHBoxLayout())
         alter_margins(widget_layout, top=0, bottom=0)  # Squish up, save space, stay closer to parent label
-        # TODO: fix this enabled-hack properly one day
-        # Hack: if the text contains ' enabled' - edit it out, localized translations lose out on this (for now),
         checkbox = QCheckBox(self.ui_label_text)
         checkbox.setChecked(section_editor.ini_editable.getboolean(self.conf_section, self.conf_name))
 

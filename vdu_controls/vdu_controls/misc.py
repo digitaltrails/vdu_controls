@@ -3,14 +3,35 @@
 from __future__ import annotations
 
 import re
+import sys
 from datetime import datetime, timedelta
 from enum import Enum
 
 from vdu_controls.constants import TESTING_TIME_ZONE, TESTING_TIME_DELTA
 
+# --- 1. Conditional base StrEnum (works on 3.8+ and uses built-in when available) ---
+
+if sys.version_info >= (3, 11):
+    from enum import StrEnum as LocalStrEnum
+else:
+    # Custom fallback for Python 3.8 - 3.10
+    class LocalStrEnum(str, Enum):
+        
+        def __str__(self) -> str:
+            return self.value
+
+        @classmethod
+        def __contains__(cls, item):
+            return item in cls._value2member_map_
+
+        @classmethod
+        def _missing_(cls, value):
+            raise ValueError(f"{value!r} is not a valid {cls.__name__}")
+
 
 def intV(type_id: Enum | int) -> int:
     return type_id.value if isinstance(type_id, Enum) else type_id  # awfulness of enums in pyqt6
+
 
 def zoned_now(rounded_to_minute: bool = False) -> datetime:
     now = datetime.now().astimezone()
@@ -21,6 +42,7 @@ def zoned_now(rounded_to_minute: bool = False) -> datetime:
     if TESTING_TIME_DELTA:
         result += TESTING_TIME_DELTA
     return result
+
 
 def proper_name(*args) -> str:
     return re.sub(r'[^A-Za-z0-9._-]', '_', '_'.join([arg.strip() for arg in args]))

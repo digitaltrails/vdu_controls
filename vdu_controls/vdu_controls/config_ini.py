@@ -20,7 +20,7 @@ from vdu_controls.app_locale import tr
 from vdu_controls.constants import CONFIG_DIR_PATH, VDU_CONTROLS_VERSION, APPNAME
 from vdu_controls.ddcutil_abstract import CON, BRIT, CONT, SNC
 from vdu_controls.ddcutil_aggregator import DdcutilAggregator
-from vdu_controls.misc import zoned_now
+from vdu_controls.misc import zoned_now, LocalStrEnum
 from vdu_controls.qt_imports import QT_TR_NOOP
 from vdu_controls.svg import BRIGHTNESS_SVG, CONTRAST_SVG, VOLUME_SVG, COLOR_TEMPERATURE_SVG
 
@@ -33,8 +33,8 @@ class ConfIni(configparser.ConfigParser):
         if not self.has_section(ConfSec.METADATA_SECTION):
             self.add_section(ConfSec.METADATA_SECTION)
 
-    def data_sections(self) -> List:  # Section other than metadata and DEFAULT - real data.
-        return [s for s in self.sections() if s != configparser.DEFAULTSECT and s != ConfSec.METADATA_SECTION]
+    def data_sections(self) -> List[ConfSec]:  # Section other than metadata and DEFAULT - real data.
+        return [ConfSec(s) for s in self.sections() if s != configparser.DEFAULTSECT and s != ConfSec.METADATA_SECTION]
 
     def get_version(self) -> Tuple:
         if version := self.get(*ConfOpt.METADATA_VERSION_OPTION.conf_id, fallback=None):
@@ -78,7 +78,34 @@ class ConfIni(configparser.ConfigParser):
         return CONFIG_DIR_PATH.joinpath(config_name + '.conf')
 
 
-class ConfType:  # Supported types constants (in Python 3.11 this could be a StrEnum)
+class TitledStrEnum(LocalStrEnum):
+    """
+    String enum where each member stores a raw title that gets translated
+    using tr(). The context is the enum class name.
+    Define members as: NAME = ("value", "raw title")
+    """
+
+    # Note: __contains__ and _missing_ are inherited from BaseStrEnum.
+    # They will work correctly because members are still strings.
+
+    def __new__(cls, value: str, raw_title: str) -> 'TitledStrEnum':
+        # Because we subclass BaseStrEnum, we must properly create the string and enum parts.
+        # The easiest way: call str.__new__ then set _value_ and _raw_title_.
+        obj = str.__new__(cls, value)
+        obj._value_ = value
+        obj._raw_title_ = raw_title
+        return obj
+
+    @property
+    def localized_name(self) -> str:
+        """Translated name using the enum class name as context."""
+        return tr(self._raw_title_, self.__class__.__name__)
+
+    def __str__(self) -> str:
+        return self.value
+
+
+class ConfType(LocalStrEnum):
     BOOL = 'bool'
     FLOAT = 'float'
     CSV = 'csv'
@@ -88,26 +115,13 @@ class ConfType:  # Supported types constants (in Python 3.11 this could be a Str
     PATH = 'path'
 
 
-class ConfSec:  # Data section constants (in Python 3.11 this could be a StrEnum)
-    METADATA_SECTION = 'metadata'  # INI version tracking section
-    VDU_CONTROLS_GLOBALS = 'vdu-controls-globals'
-    VDU_CONTROLS_WIDGETS = 'vdu-controls-widgets'
-    DDCUTIL_PARAMETERS = 'ddcutil-parameters'
-    DDCUTIL_CAPABILITIES = 'ddcutil-capabilities'
-    UNKNOWN_SECTION = 'unknown'
-
-    titles = {
-        METADATA_SECTION: QT_TR_NOOP('metadata'),
-        VDU_CONTROLS_GLOBALS: QT_TR_NOOP('vdu controls globals'),
-        VDU_CONTROLS_WIDGETS: QT_TR_NOOP('vdu controls widgets'),
-        DDCUTIL_PARAMETERS: QT_TR_NOOP('ddcutil parameters'),
-        DDCUTIL_CAPABILITIES: QT_TR_NOOP('ddcutil capabilities'),
-        UNKNOWN_SECTION: QT_TR_NOOP('unknown'),
-    }
-
-    @staticmethod
-    def title(section_name: str) -> str:
-        return tr(ConfSec.titles[section_name], ConfSec.__name__)
+class ConfSec(TitledStrEnum):
+    METADATA_SECTION        = ("metadata", QT_TR_NOOP("metadata"))
+    VDU_CONTROLS_GLOBALS    = ("vdu-controls-globals", QT_TR_NOOP("vdu controls globals"))
+    VDU_CONTROLS_WIDGETS    = ("vdu-controls-widgets", QT_TR_NOOP("vdu controls widgets"))
+    DDCUTIL_PARAMETERS      = ("ddcutil-parameters", QT_TR_NOOP("ddcutil parameters"))
+    DDCUTIL_CAPABILITIES    = ("ddcutil-capabilities", QT_TR_NOOP("ddcutil capabilities"))
+    UNKNOWN_SECTION         = ("unknown", QT_TR_NOOP("unknown"))
 
 
 class ConfGroup(Enum):
@@ -123,7 +137,7 @@ class ConfGroup(Enum):
         return self.value[0]
 
     @property
-    def title(self) -> str:
+    def localized_name(self) -> str:
         return tr(self.value[1], ConfGroup.__name__)
 
 
@@ -149,6 +163,14 @@ class ConfOptDef:
     @property
     def cmdline_var(self) -> str:
         return None if self.cmdline_arg == "DISALLOWED" else self.conf_name.replace('-enabled', '').replace('-', '_')
+
+    @property
+    def localized_name(self) -> str:
+        return tr(self.ui_label, ConfOpt.__name__)
+
+    @property
+    def localized_help(self) -> str:
+        return tr(self.help, ConfOpt.__name__)
 
     def __post_init__(self):
         # hack to fit in with old convention - bypass frozen during initialization.
@@ -381,6 +403,7 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
                 parser.add_argument(f"--{self.cmdline_arg}", type=float, default=self.default_value, help=self.help)
             else:
                 parser.add_argument(f"--{self.cmdline_arg}", type=str, default=self.default_value, help=self.help)
+
 
     @staticmethod
     def translate(string: str) -> str:
