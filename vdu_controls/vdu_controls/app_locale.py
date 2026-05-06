@@ -151,7 +151,7 @@ def initialise_locale_translations(app: QApplication) -> None:
             app.installTranslator(translator)
             log.info(tr("Using {} translations from {}").format(locale_name, qm_path.as_posix()))
 
-# TODO figure out contexts
+
 def tr(source_text: str, context: str | None = None) -> str:
     """
     Match source_text (the original message) in respect to context.

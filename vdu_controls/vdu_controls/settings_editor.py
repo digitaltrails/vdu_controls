@@ -17,7 +17,7 @@ from vdu_controls.qt_imports import QVBoxLayout, QTabWidget, QStatusBar, QFrame,
 from vdu_controls.config_ini import VduControlsConfig, ConfIni, ConfOpt, ConfType, ConfSec, ConfOptDef
 from vdu_controls.constants import IP_ADDRESS_INFO_URL, CONFIG_FILE_PREFER_QT5
 from vdu_controls.icon_utils import si, StdPixmap
-from vdu_controls.app_locale import tr, translate_option
+from vdu_controls.app_locale import tr
 import vdu_controls.logging as log
 from vdu_controls.scaling import npx, native_font_height
 from vdu_controls.widgets import SubWinDialog, StdButton, MBox, MIcon, MBtn, FasterFileDialog, alter_margins, DialogSingletonMixin
@@ -227,51 +227,46 @@ class SettingsEditorTab(QWidget):
                 try:
                     option_def = vdu_config.get_conf_option(section_name, option_name)
                     if option_def == ConfOpt.UNKNOWN:  # If it's unknown, it's a boolean switch for a VCP code
-                        # Make up a ConfOptDef (which is not an enum value of ConfOpt(Enum))
+                        # Make up a temporary ConfOptDef (which is not an enum value of ConfOpt(Enum))
                         option_def = ConfOptDef(option_name, section_name, ConfType.BOOL, ui_label=option_name.replace('-',' '))
                     ordered_by_group[(option_def.group.value, num)] = (option_name, option_def)
                 except ValueError:  # Probably an old no-longer-valid option, or a typo.
                     log.warning(f"Ignoring invalid option name {option_name} in {section_name}")
             ordered_by_group = dict(sorted(ordered_by_group.items()))
-            # TODO fix this wonky translation with substitution
-            title = ConfOpt.translate(section_name).replace('-', ' ')
-            content_layout.addWidget(QLabel(f"<b>{title}</b>"))
+            section_title = ConfSec.title(section_name)
+            content_layout.addWidget(QLabel(f"<b>{section_title}</b>"))
             booleans_grid: QGridLayout | None = None  # Only create when bool_count > 0
             grid_columns = 5  # booleans are counted and laid out according to grid_columns.
             previous_group = None
             row_index = col_index = 0
             for option_name, option_def in ordered_by_group.values():
-                # TODO figure out exactly what this test is about and add a comment.
-                if section_name != ConfSec.VDU_CONTROLS_GLOBALS or option_def != ConfOpt.UNKNOWN:
-                    try:
-                        if option_def.conf_type == ConfType.BOOL:
-                            if row_index == 0 and col_index == 0:  # Need to create a grid now
-                                booleans_grid = QGridLayout()
-                                booleans_grid.setVerticalSpacing(0)
-                                booleans_panel = QWidget()
-                                booleans_panel.setLayout(booleans_grid)
-                                content_layout.addWidget(booleans_panel)
-                            if option_def.group and option_def.group != previous_group:
-                                if row_index > 0:
-                                    row_index += 1
-                                    booleans_grid.setRowMinimumHeight(row_index, npx(20))
-                                    row_index += 1
-                                booleans_grid.addWidget(QLabel(option_def.group.title), row_index, 0)
+                try:
+                    if option_def.conf_type == ConfType.BOOL:
+                        if row_index == 0 and col_index == 0:  # Need to create a grid now
+                            booleans_grid = QGridLayout()
+                            booleans_grid.setVerticalSpacing(0)
+                            booleans_panel = QWidget()
+                            booleans_panel.setLayout(booleans_grid)
+                            content_layout.addWidget(booleans_panel)
+                        if option_def.group and option_def.group != previous_group:
+                            if row_index > 0:
                                 row_index += 1
-                                col_index = 0
-                                previous_group = option_def.group
-                            # TODO pass option_def/conf_def directly so ui_label is available,
-                            booleans_grid.addWidget(
-                                _field(SettingsEditorBooleanWidget(self, option_def)), row_index, col_index)
-                            col_index += 1
-                            if col_index == grid_columns:
-                                col_index = 0
+                                booleans_grid.setRowMinimumHeight(row_index, npx(20))
                                 row_index += 1
-                        else:  # TODO pass option_def/conf_def directly so ui_label is available,
-                            content_layout.addWidget(
-                                _field(widget_map[option_def.conf_type](self, option_def)))
-                    except ValueError:  # Probably an old no-longer-valid option, or a typo.
-                        log.warning(f"Ignoring invalid option name {option_name} in {section_name}")
+                            booleans_grid.addWidget(QLabel(option_def.group.title), row_index, 0)
+                            row_index += 1
+                            col_index = 0
+                            previous_group = option_def.group
+                        booleans_grid.addWidget(
+                            _field(SettingsEditorBooleanWidget(self, option_def)), row_index, col_index)
+                        col_index += 1
+                        if col_index == grid_columns:
+                            col_index = 0
+                            row_index += 1
+                    else:
+                        content_layout.addWidget(_field(widget_map[option_def.conf_type](self, option_def)))
+                except ValueError:  # Probably an old no-longer-valid option, or a typo.
+                    log.warning(f"Ignoring invalid option name {option_name} in {section_name}")
 
     def set_preferred_name(self, label_str):
         self.preferred_name = label_str
@@ -346,10 +341,9 @@ class SettingsEditorFieldBase(QWidget):
         self.conf_section = option_def.conf_section
         self.conf_name = option_def.conf_name
         self.has_error = False
-        self.setToolTip(ConfOpt.translate(option_def.help)) if option_def.help != '' else None
-
-    def translate_option(self) -> str:
-        return translate_option(self.conf_name)
+        self.ui_label_text = ConfOpt.translate(option_def.ui_label)
+        if option_def.help:
+            self.setToolTip(ConfOpt.translate(option_def.help))
 
 
 class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
@@ -359,7 +353,7 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
         alter_margins(widget_layout, top=0, bottom=0)  # Squish up, save space, stay closer to parent label
         # TODO: fix this enabled-hack properly one day
         # Hack: if the text contains ' enabled' - edit it out, localized translations lose out on this (for now),
-        checkbox = QCheckBox(ConfOpt.translate(option_def.ui_label))
+        checkbox = QCheckBox(self.ui_label_text)
         checkbox.setChecked(section_editor.ini_editable.getboolean(self.conf_section, self.conf_name))
 
         def _toggled(is_checked: bool) -> None:
@@ -383,7 +377,7 @@ class SettingsEditorLineBase(SettingsEditorFieldBase):
         self.editor_layout = QHBoxLayout()
         self.editor_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self.setLayout(self.editor_layout)
-        self.text_label = QLabel(option_def.translate(option_def.ui_label))
+        self.text_label = QLabel(self.ui_label_text)
         self.editor_layout.addWidget(self.text_label)
         self.text_input = QLineEdit()
         self.validator: QValidator | None = None
@@ -420,7 +414,7 @@ class SettingsEditorFloatWidget(SettingsEditorFieldBase):
         super().__init__(section_editor, option_def)
         self.setLayout(widget_layout := QHBoxLayout())
         widget_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        self.text_label = QLabel(option_def.translate(option_def.ui_label))
+        self.text_label = QLabel(self.ui_label_text)
         widget_layout.addWidget(self.text_label)
         self.spinbox = QDoubleSpinBox()
         self.spinbox.setRange(0.0, 4.0)  # TODO this should be looked up in the metadata
@@ -524,7 +518,7 @@ class SettingsEditorLongTextWidget(SettingsEditorFieldBase):
         super().__init__(section_editor, option_def)
         layout = QVBoxLayout()
         self.setLayout(layout)
-        text_label = QLabel(ConfOpt.translate(option_def.ui_label))
+        text_label = QLabel(self.ui_label_text)
         layout.addWidget(text_label)
         text_editor = QPlainTextEdit(section_editor.ini_editable[self.conf_section][self.conf_name])
         text_editor.setMinimumHeight(native_font_height(100))
@@ -547,7 +541,7 @@ class SettingsEditorTextWidget(SettingsEditorFieldBase):
         super().__init__(section_editor, option_def)
         layout = QVBoxLayout()
         self.setLayout(layout)
-        text_label = QLabel(ConfOpt.translate(option_def.ui_label))
+        text_label = QLabel(self.ui_label_text)
         layout.addWidget(text_label)
         text_editor = QLineEdit(section_editor.ini_editable[self.conf_section][self.conf_name])
 

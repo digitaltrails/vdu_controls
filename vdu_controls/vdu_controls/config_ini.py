@@ -16,13 +16,12 @@ from pathlib import Path
 from typing import List, Tuple, Dict, Any
 
 import vdu_controls.logging as log
-from vdu_controls import app_locale
 from vdu_controls.app_locale import tr
 from vdu_controls.constants import CONFIG_DIR_PATH, VDU_CONTROLS_VERSION, APPNAME
 from vdu_controls.ddcutil_abstract import CON, BRIT, CONT, SNC
 from vdu_controls.ddcutil_aggregator import DdcutilAggregator
 from vdu_controls.misc import zoned_now
-from vdu_controls.qt_imports import QT_TR_NOOP, QCoreApplication
+from vdu_controls.qt_imports import QT_TR_NOOP
 from vdu_controls.svg import BRIGHTNESS_SVG, CONTRAST_SVG, VOLUME_SVG, COLOR_TEMPERATURE_SVG
 
 
@@ -90,14 +89,26 @@ class ConfType:  # Supported types constants (in Python 3.11 this could be a Str
 
 
 class ConfSec:  # Data section constants (in Python 3.11 this could be a StrEnum)
-    METADATA_SECTION = QT_TR_NOOP("metadata")  # INI version tracking section
-    VDU_CONTROLS_GLOBALS = QT_TR_NOOP('vdu-controls-globals')
-    VDU_CONTROLS_WIDGETS = QT_TR_NOOP('vdu-controls-widgets')
-    DDCUTIL_PARAMETERS = QT_TR_NOOP('ddcutil-parameters')
-    DDCUTIL_CAPABILITIES = QT_TR_NOOP('ddcutil-capabilities')
-    UNKNOWN_SECTION = QT_TR_NOOP('unknown')
+    METADATA_SECTION = 'metadata'  # INI version tracking section
+    VDU_CONTROLS_GLOBALS = 'vdu-controls-globals'
+    VDU_CONTROLS_WIDGETS = 'vdu-controls-widgets'
+    DDCUTIL_PARAMETERS = 'ddcutil-parameters'
+    DDCUTIL_CAPABILITIES = 'ddcutil-capabilities'
+    UNKNOWN_SECTION = 'unknown'
 
-    # TODO translate ConSec
+    titles = {
+        METADATA_SECTION: QT_TR_NOOP('metadata'),
+        VDU_CONTROLS_GLOBALS: QT_TR_NOOP('vdu controls globals'),
+        VDU_CONTROLS_WIDGETS: QT_TR_NOOP('vdu controls widgets'),
+        DDCUTIL_PARAMETERS: QT_TR_NOOP('ddcutil parameters'),
+        DDCUTIL_CAPABILITIES: QT_TR_NOOP('ddcutil capabilities'),
+        UNKNOWN_SECTION: QT_TR_NOOP('unknown'),
+    }
+
+    @staticmethod
+    def title(section_name: str) -> str:
+        return tr(ConfSec.titles[section_name], ConfSec.__name__)
+
 
 class ConfGroup(Enum):
     WINDOWING =   (1, QT_TR_NOOP('Windowing'))
@@ -113,7 +124,7 @@ class ConfGroup(Enum):
 
     @property
     def title(self) -> str:
-        return app_locale.translate_option(self.value[1], context="ConfGroup")
+        return tr(self.value[1], ConfGroup.__name__)
 
 
 @dataclass(frozen=True)
@@ -373,7 +384,7 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
 
     @staticmethod
     def translate(string: str) -> str:
-        return tr(string, "ConfOpt")
+        return tr(string, ConfOpt.__name__)
 
 @dataclass
 class VcpCapability:
