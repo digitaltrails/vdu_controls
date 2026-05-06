@@ -123,7 +123,7 @@ class ConfOptDef:
     conf_type: str = ConfType.BOOL
     default_value: str | None = None
     global_allowed: bool = True
-    restart: bool = False
+    restart_required: bool = False
     cmdline_arg: str = 'DEFAULT'
     ui_label: str | None = None
     help: str = ''
@@ -149,164 +149,195 @@ class ConfOptDef:
 
 class ConfOpt(Enum):  # An Enum with frozen data items for values is used for convenience for scope/iteration
 
-
     SPLASH_SCREEN_ENABLED = ConfOptDef(
-        conf_name=QT_TR_NOOP('splash-screen-enabled'), default_value='yes', cmdline_arg='splash',
+        conf_name='splash-screen-enabled', default_value='yes', cmdline_arg='splash',
+        ui_label=QT_TR_NOOP('splash screen'),
         group=ConfGroup.FEATURES,
         help=QT_TR_NOOP('enable the startup splash screen'))
 
     SYSTEM_TRAY_ENABLED = ConfOptDef(
-        conf_name=QT_TR_NOOP('system-tray-enabled'), default_value="no", restart=True,
+        conf_name='system-tray-enabled', default_value="no", restart_required=True,
+        ui_label=QT_TR_NOOP('system tray'),
         group=ConfGroup.SYSTEM_TRAY,
         help=QT_TR_NOOP('start up in the system tray'), related='hide-on-focus-out')
 
     HIDE_ON_FOCUS_OUT = ConfOptDef(
-        conf_name=QT_TR_NOOP('hide-on-focus-out'), default_value="no", restart=False,
+        conf_name='hide-on-focus-out', default_value="no", restart_required=False,
+        ui_label=QT_TR_NOOP('hide on focus out'),
         group=ConfGroup.WINDOWING,
         help=QT_TR_NOOP('minimize the main window automatically on focus out'))
 
     SMART_WINDOW = ConfOptDef(
-        conf_name=QT_TR_NOOP('smart-window'), default_value="yes",
+        conf_name='smart-window', default_value="yes",
+        ui_label=QT_TR_NOOP('smart window'),
         group=ConfGroup.WINDOWING,
-        help=QT_TR_NOOP('smart main window placement and geometry (X11 and XWayland)'), restart=True)
+        help=QT_TR_NOOP('smart main window placement and geometry (X11 and XWayland)'), restart_required=True)
 
     SMART_USES_XWAYLAND = ConfOptDef(
-        conf_name=QT_TR_NOOP('smart-uses-xwayland'), default_value="yes", restart=True,
+        conf_name='smart-uses-xwayland', default_value="yes", restart_required=True,
+        ui_label=QT_TR_NOOP('smart uses xwayland'),
         group=ConfGroup.WINDOWING,
         help=QT_TR_NOOP('if smart-window is enabled, use Xwayland in Wayland'))
 
     PREFER_QT6 = ConfOptDef(
-        conf_name=QT_TR_NOOP('prefer-qt6'), default_value="true", cmdline_arg='DISALLOWED',
+        conf_name='prefer-qt6', default_value="true", cmdline_arg='DISALLOWED',
+        ui_label=QT_TR_NOOP('prefer-qt6'),
         group=ConfGroup.WINDOWING,
-        help=QT_TR_NOOP('Prefer Qt6 over Qt5 (if both are installed)'), restart=True)
+        help=QT_TR_NOOP('Prefer Qt6 over Qt5 (if both are installed)'), restart_required=True)
 
     MONOCHROME_TRAY_ENABLED = ConfOptDef(
-        conf_name=QT_TR_NOOP('monochrome-tray-enabled'), default_value="no", restart=False,
+        conf_name='monochrome-tray-enabled', default_value="no", restart_required=False,
+        ui_label=QT_TR_NOOP('monochrome tray'),
         group=ConfGroup.SYSTEM_TRAY,
         help=QT_TR_NOOP('monochrome dark themed system tray'))
 
     MONO_LIGHT_TRAY_ENABLED = ConfOptDef(
-        conf_name=QT_TR_NOOP('mono-light-tray-enabled'), default_value="no", restart=False,
+        conf_name='mono-light-tray-enabled', default_value="no", restart_required=False,
+        ui_label=QT_TR_NOOP('mono light tray'),
         group=ConfGroup.SYSTEM_TRAY,
         help=QT_TR_NOOP('monochrome light themed system tray'))
 
     TRAY_FOLLOWS_THEME = ConfOptDef(
-        conf_name=QT_TR_NOOP('tray-follows-theme'), default_value="yes", restart=False,
+        conf_name='tray-follows-theme', default_value="yes", restart_required=False,
+        ui_label=QT_TR_NOOP('tray follows theme'),
         group=ConfGroup.SYSTEM_TRAY,
         help=QT_TR_NOOP('tray dark/light theming follows desktop-theme changes'))
 
     TOOLBAR_AT_TOP = ConfOptDef(
-        conf_name=QT_TR_NOOP('toolbar-at-top'), default_value="no", restart=False,
+        conf_name='toolbar-at-top', default_value="no", restart_required=False,
+        ui_label=QT_TR_NOOP('toolbar at top'),
         group=ConfGroup.WINDOWING,
         help=QT_TR_NOOP('toolbar resides at top of main window'))
 
     SEPARATE_STATUS_BAR = ConfOptDef(
-        conf_name=QT_TR_NOOP('separate-status-bar'), default_value="no", restart=True,
+        conf_name='separate-status-bar', default_value="no", restart_required=True,
+        ui_label=QT_TR_NOOP('separate status bar'),
         group=ConfGroup.WINDOWING,
         help=QT_TR_NOOP('seperate the status-bar from the tool-bar'))
 
     PROTECT_NVRAM_ENABLED = ConfOptDef(
-        conf_name=QT_TR_NOOP('protect-nvram'), default_value="yes", restart=True,
+        conf_name='protect-nvram', default_value="yes", restart_required=True,
+        ui_label=QT_TR_NOOP('protect nvram'),
         group=ConfGroup.DDC,
         help=QT_TR_NOOP('alter options and defaults to minimize VDU NVRAM writes'))
 
     ORDER_BY_NAME = ConfOptDef(
-        conf_name=QT_TR_NOOP('order-by-name'), default_value="no",
+        conf_name='order-by-name', default_value="no",
+        ui_label=QT_TR_NOOP('order by name'),
         group=ConfGroup.WINDOWING,
         help=QT_TR_NOOP('order lists and tabs by vdu-name'))
 
     LUX_OPTIONS_ENABLED = ConfOptDef(
-        conf_name=QT_TR_NOOP('lux-options-enabled'), default_value="yes", restart=True,
+        conf_name='lux-options-enabled', default_value="yes", restart_required=True,
+        ui_label=QT_TR_NOOP('lux options'),
         group=ConfGroup.FEATURES,
         help=QT_TR_NOOP('enable light metering options'))
 
     LUX_TRAY_ICON = ConfOptDef(
-        conf_name=QT_TR_NOOP('lux-tray-icon'), default_value="yes", restart=False,
+        conf_name='lux-tray-icon', default_value="yes", restart_required=False,
+        ui_label=QT_TR_NOOP('lux tray icon'),
         group=ConfGroup.SYSTEM_TRAY,
         help=QT_TR_NOOP('enable lux light-level system-tray icon'))
 
     SCHEDULE_ENABLED = ConfOptDef(
-        conf_name=QT_TR_NOOP('schedule-enabled'), default_value='yes',
+        conf_name='schedule-enabled', default_value='yes',
+        ui_label=QT_TR_NOOP('schedule'),
         group=ConfGroup.FEATURES,
         help=QT_TR_NOOP('enable preset schedule'))
 
     WEATHER_ENABLED = ConfOptDef(
-        conf_name=QT_TR_NOOP('weather-enabled'), default_value='yes',
+        conf_name='weather-enabled', default_value='yes',
+        ui_label=QT_TR_NOOP('weather'),
         group=ConfGroup.FEATURES,
         help=QT_TR_NOOP('enable weather lookups'))
 
     DBUS_CLIENT_ENABLED = ConfOptDef(
-        conf_name=QT_TR_NOOP('dbus-client-enabled'), default_value="yes",
+        conf_name='dbus-client-enabled', default_value="yes",
+        ui_label=QT_TR_NOOP('dbus client'),
         group=ConfGroup.DDC,
         help=QT_TR_NOOP('use the D-Bus ddcutil-server if available'))
 
     DBUS_EVENTS_ENABLED = ConfOptDef(
-        conf_name=QT_TR_NOOP('dbus-events-enabled'), default_value="yes",
+        conf_name='dbus-events-enabled', default_value="yes",
+        ui_label=QT_TR_NOOP('dbus events'),
         group=ConfGroup.DDC,
         help=QT_TR_NOOP('enable D-Bus ddcutil-server events'), requires='dbus-client-enabled')
 
     LAPTOP_PANEL_ENABLED = ConfOptDef(
-        conf_name=QT_TR_NOOP('laptop-panel-enabled'), default_value="no",
+        conf_name='laptop-panel-enabled', default_value="no",
+        ui_label=QT_TR_NOOP('laptop panel'),
         group=ConfGroup.DDC,
         help=QT_TR_NOOP('use brightnessctl utility for laptop panel control'))
 
     SYSLOG_ENABLED = ConfOptDef(
-        conf_name=QT_TR_NOOP('syslog-enabled'), default_value="no",
+        conf_name='syslog-enabled', default_value="no",
+        ui_label=QT_TR_NOOP('syslog'),
         group=ConfGroup.FEATURES,
         help=QT_TR_NOOP('divert diagnostic output to the syslog'))
 
     DEBUG_ENABLED = ConfOptDef(
-        conf_name=QT_TR_NOOP('debug-enabled'), default_value="no",
+        conf_name='debug-enabled', default_value="no",
+        ui_label=QT_TR_NOOP('debug'),
         group=ConfGroup.FEATURES,
         help=QT_TR_NOOP('output extra debug information'))
 
     WARNINGS_ENABLED = ConfOptDef(
-        conf_name=QT_TR_NOOP('warnings-enabled'), default_value="no",
+        conf_name='warnings-enabled', default_value="no",
+        ui_label=QT_TR_NOOP('warnings'),
         group=ConfGroup.DDC,
         help=QT_TR_NOOP('popup warnings if a VDU lacks an enabled control'))
 
     TRANSLATIONS_ENABLED = ConfOptDef(
-        conf_name=QT_TR_NOOP('translations-enabled'), default_value="no", restart=True,
+        conf_name='translations-enabled', default_value="no", restart_required=True,
+        ui_label=QT_TR_NOOP('translations'),
         group=ConfGroup.FEATURES,
         help=QT_TR_NOOP('enable language translations, currently not updated (no known users)'))
 
     LOCATION = ConfOptDef(
-        conf_name=QT_TR_NOOP('location'), conf_type=ConfType.LOCATION, help=QT_TR_NOOP('latitude,longitude'))
+        conf_name='location', conf_type=ConfType.LOCATION,
+        ui_label=QT_TR_NOOP('location'),
+        help=QT_TR_NOOP('latitude,longitude'))
 
     DDCUTIL_EMULATOR = ConfOptDef(
-        conf_name=QT_TR_NOOP('ddcutil-emulator'), conf_type=ConfType.PATH,
+        conf_name='ddcutil-emulator', conf_type=ConfType.PATH,
+        ui_label=QT_TR_NOOP('ddcutil emulator'),
         help=QT_TR_NOOP('additional command-line ddcutil emulator for a laptop panel'))
 
     SLEEP_MULTIPLIER = ConfOptDef(
-        conf_name=QT_TR_NOOP('sleep-multiplier'), conf_section=ConfSec.DDCUTIL_PARAMETERS,
+        conf_name='sleep-multiplier', conf_section=ConfSec.DDCUTIL_PARAMETERS,
+        ui_label=QT_TR_NOOP('sleep multiplier'),
         conf_type=ConfType.FLOAT,
         help=QT_TR_NOOP('ddcutil --sleep-multiplier (0.1 .. 2.0, default none)'))
 
     DDCUTIL_EXTRA_ARGS = ConfOptDef(
-        conf_name=QT_TR_NOOP('ddcutil-extra-args'), conf_section=ConfSec.DDCUTIL_PARAMETERS,
+        conf_name='ddcutil-extra-args', conf_section=ConfSec.DDCUTIL_PARAMETERS,
+        ui_label=QT_TR_NOOP('ddcutil extra args'),
         conf_type=ConfType.TEXT,
         help=QT_TR_NOOP('ddcutil extra arguments (default none)'))
 
     VDU_NAME = ConfOptDef(
-        conf_name=QT_TR_NOOP('vdu-name'), conf_section=ConfSec.VDU_CONTROLS_WIDGETS,
+        conf_name='vdu-name', conf_section=ConfSec.VDU_CONTROLS_WIDGETS,
+        ui_label=QT_TR_NOOP('vdu name'),
         conf_type=ConfType.TEXT,
         global_allowed=False, cmdline_arg='DISALLOWED', help=QT_TR_NOOP('Name to display for this VDU'))
 
     ENABLE_VCP_CODES = ConfOptDef(
-        conf_name=QT_TR_NOOP('enable-vcp-codes'), conf_section=ConfSec.VDU_CONTROLS_WIDGETS,
+        conf_name='enable-vcp-codes', conf_section=ConfSec.VDU_CONTROLS_WIDGETS,
+        ui_label=QT_TR_NOOP('enable vcp codes'),
         conf_type=ConfType.CSV,
         cmdline_arg='DISALLOWED', help=QT_TR_NOOP('CSV list of VCP Hex-code capabilities to enable'))
 
     CAPABILITIES_OVERRIDE = ConfOptDef(
-        conf_name=QT_TR_NOOP('capabilities-override'), conf_section=ConfSec.DDCUTIL_CAPABILITIES,
+        conf_name='capabilities-override', conf_section=ConfSec.DDCUTIL_CAPABILITIES,
+        ui_label=QT_TR_NOOP('capabilities override'),
         conf_type=ConfType.LONG_TEXT, cmdline_arg='DISALLOWED')
 
     METADATA_VERSION_OPTION = ConfOptDef(
-        conf_name=QT_TR_NOOP('version'), conf_section=ConfSec.METADATA_SECTION,
+        conf_name='version', conf_section=ConfSec.METADATA_SECTION,
         conf_type=ConfType.BOOL, cmdline_arg='DISALLOWED')
 
     METADATA_TIMESTAMP_OPTION = ConfOptDef(
-        conf_name=QT_TR_NOOP('timestamp'), conf_section=ConfSec.METADATA_SECTION,
+        conf_name='timestamp', conf_section=ConfSec.METADATA_SECTION,
         conf_type=ConfType.BOOL, cmdline_arg='DISALLOWED')
 
     UNKNOWN = ConfOptDef(
@@ -340,6 +371,9 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
             else:
                 parser.add_argument(f"--{self.cmdline_arg}", type=str, default=self.default_value, help=self.help)
 
+    @staticmethod
+    def translate(string: str) -> str:
+        return tr(string, "ConfOpt")
 
 @dataclass
 class VcpCapability:
@@ -424,6 +458,7 @@ class VduControlsConfig:
         if main_config:
             self.ini_content[ConfSec.VDU_CONTROLS_GLOBALS] = {}
             for option in ConfOpt:  # Add in options for all supported controls
+                print(option)
                 if option.conf_section == ConfSec.VDU_CONTROLS_GLOBALS:
                     default_str = str(option.default_value) if option.default_value is not None else ''
                     self.ini_content.set(*option.conf_id, default_str)

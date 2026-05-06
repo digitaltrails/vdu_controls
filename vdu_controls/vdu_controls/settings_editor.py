@@ -14,7 +14,7 @@ from vdu_controls.qt_imports import QValidator, QPalette, QRegularExpressionVali
 from vdu_controls.qt_imports import QVBoxLayout, QTabWidget, QStatusBar, QFrame, QHBoxLayout, QLabel, QWidget, QScrollArea, QGridLayout, \
     QApplication, QCheckBox, QLineEdit, QDoubleSpinBox, QPlainTextEdit, QSizePolicy
 
-from vdu_controls.config_ini import VduControlsConfig, ConfIni, ConfOpt, ConfType, ConfSec
+from vdu_controls.config_ini import VduControlsConfig, ConfIni, ConfOpt, ConfType, ConfSec, ConfOptDef
 from vdu_controls.constants import IP_ADDRESS_INFO_URL, CONFIG_FILE_PREFER_QT5
 from vdu_controls.icon_utils import si, StdPixmap
 from vdu_controls.app_locale import tr, translate_option
@@ -222,21 +222,22 @@ class SettingsEditorTab(QWidget):
 
         for section_name in self.ini_editable.data_sections():
 
-            ordered_by_group = {}
+            ordered_by_group: dict[tuple[str, int], tuple[str, ConfOpt]] = {}
             for num, option_name in enumerate(self.ini_editable[section_name]):
                 try:
-                    # If it's unknown, it's probably a boolean switch for a VCP code
                     option_def = vdu_config.get_conf_option(section_name, option_name)
+                    if option_def == ConfOpt.UNKNOWN:  # If it's unknown, it's a boolean switch for a VCP code
+                        # Make up a ConfOptDef (which is not an enum value of ConfOpt(Enum))
+                        option_def = ConfOptDef(option_name, section_name, ConfType.BOOL, ui_label=option_name.replace('-',' '))
                     ordered_by_group[(option_def.group.value, num)] = (option_name, option_def)
                 except ValueError:  # Probably an old no-longer-valid option, or a typo.
                     log.warning(f"Ignoring invalid option name {option_name} in {section_name}")
             ordered_by_group = dict(sorted(ordered_by_group.items()))
-
-            title = tr(section_name).replace('-', ' ')
+            # TODO fix this wonky translation with substitution
+            title = ConfOpt.translate(section_name).replace('-', ' ')
             content_layout.addWidget(QLabel(f"<b>{title}</b>"))
             booleans_grid: QGridLayout | None = None  # Only create when bool_count > 0
             grid_columns = 5  # booleans are counted and laid out according to grid_columns.
-
             previous_group = None
             row_index = col_index = 0
             for option_name, option_def in ordered_by_group.values():
@@ -255,22 +256,20 @@ class SettingsEditorTab(QWidget):
                                     row_index += 1
                                     booleans_grid.setRowMinimumHeight(row_index, npx(20))
                                     row_index += 1
-                                booleans_grid.addWidget(QLabel(str(option_def.group.title)), row_index, 0)
+                                booleans_grid.addWidget(QLabel(option_def.group.title), row_index, 0)
                                 row_index += 1
                                 col_index = 0
                                 previous_group = option_def.group
+                            # TODO pass option_def/conf_def directly so ui_label is available,
                             booleans_grid.addWidget(
-                                _field(
-                                    SettingsEditorBooleanWidget(self, option_name, section_name,
-                                                                option_def.help, option_def.related, option_def.requires)),
-                                row_index, col_index)
+                                _field(SettingsEditorBooleanWidget(self, option_def)), row_index, col_index)
                             col_index += 1
                             if col_index == grid_columns:
                                 col_index = 0
                                 row_index += 1
-                        else:
+                        else:  # TODO pass option_def/conf_def directly so ui_label is available,
                             content_layout.addWidget(
-                                _field(widget_map[option_def.conf_type](self, option_name, section_name, option_def.help)))
+                                _field(widget_map[option_def.conf_type](self, option_def)))
                     except ValueError:  # Probably an old no-longer-valid option, or a typo.
                         log.warning(f"Ignoring invalid option name {option_name} in {section_name}")
 
@@ -341,52 +340,50 @@ class SettingsEditorTab(QWidget):
 
 
 class SettingsEditorFieldBase(QWidget):
-    def __init__(self, section_editor: SettingsEditorTab, option_name: str, section: str, tooltip: str) -> None:
+    def __init__(self, section_editor: SettingsEditorTab, option_def: ConfOpt) -> None:
         super().__init__()
         self.section_editor = section_editor
-        self.section = section
-        self.option_name = option_name
-        self.tip_text = tooltip
+        self.conf_section = option_def.conf_section
+        self.conf_name = option_def.conf_name
         self.has_error = False
-        self.setToolTip(tr(tooltip)) if tooltip != '' else None
+        self.setToolTip(ConfOpt.translate(option_def.help)) if option_def.help != '' else None
 
     def translate_option(self) -> str:
-        return translate_option(self.option_name)
+        return translate_option(self.conf_name)
 
 
 class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
-    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str,
-                 tooltip: str, related: str, requires: str) -> None:
-        super().__init__(section_editor, option, section, tooltip)
+    def __init__(self, section_editor: SettingsEditorTab, option_def: ConfOpt) -> None:
+        super().__init__(section_editor, option_def)
         self.setLayout(widget_layout := QHBoxLayout())
         alter_margins(widget_layout, top=0, bottom=0)  # Squish up, save space, stay closer to parent label
         # TODO: fix this enabled-hack properly one day
         # Hack: if the text contains ' enabled' - edit it out, localized translations lose out on this (for now),
-        checkbox = QCheckBox(self.translate_option().replace(' enabled', ''))
-        checkbox.setChecked(section_editor.ini_editable.getboolean(section, option))
+        checkbox = QCheckBox(ConfOpt.translate(option_def.ui_label))
+        checkbox.setChecked(section_editor.ini_editable.getboolean(self.conf_section, self.conf_name))
 
         def _toggled(is_checked: bool) -> None:
-            section_editor.ini_editable[section][option] = 'yes' if is_checked else 'no'
-            if related:
-                MBox(MIcon.Information, msg=tr("You may also wish to set\n{}").format(tr(related)), buttons=MBtn.Ok).exec()
-            if is_checked and requires:
-                MBox(MIcon.Information, msg=tr("You will also need to set\n{}").format(tr(requires)), buttons=MBtn.Ok).exec()
+            section_editor.ini_editable[self.conf_section][self.conf_name] = 'yes' if is_checked else 'no'
+            if option_def.related:
+                MBox(MIcon.Information, msg=tr("You may also wish to set\n{}").format(tr(option_def.related)), buttons=MBtn.Ok).exec()
+            if is_checked and option_def.requires:
+                MBox(MIcon.Information, msg=tr("You will also need to set\n{}").format(tr(option_def.requires)), buttons=MBtn.Ok).exec()
 
         checkbox.toggled.connect(_toggled)
         widget_layout.addWidget(checkbox)
         self.checkbox = checkbox
 
     def reset(self) -> None:
-        self.checkbox.setChecked(self.section_editor.ini_before.getboolean(self.section, self.option_name))
+        self.checkbox.setChecked(self.section_editor.ini_before.getboolean(self.conf_section, self.conf_name))
 
 
 class SettingsEditorLineBase(SettingsEditorFieldBase):
-    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
-        super().__init__(section_editor, option, section, tooltip)
+    def __init__(self, section_editor: SettingsEditorTab, option_def: ConfOpt) -> None:
+        super().__init__(section_editor, option_def)
         self.editor_layout = QHBoxLayout()
         self.editor_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self.setLayout(self.editor_layout)
-        self.text_label = QLabel(self.translate_option())
+        self.text_label = QLabel(option_def.translate(option_def.ui_label))
         self.editor_layout.addWidget(self.text_label)
         self.text_input = QLineEdit()
         self.validator: QValidator | None = None
@@ -407,50 +404,50 @@ class SettingsEditorLineBase(SettingsEditorFieldBase):
         if not self.has_error:
             internal_value = str(text)  # Why did I do this - is text not really a string?
             if not self.has_error:
-                self.section_editor.ini_editable[self.section][self.option_name] = internal_value
+                self.section_editor.ini_editable[self.conf_section][self.conf_name] = internal_value
 
     def set_error_indication(self, has_error: bool) -> None:
         self.has_error = has_error
         self.text_input.setPalette(self.error_palette if has_error else self.valid_palette)
 
     def reset(self) -> None:
-        self.text_input.setText(self.section_editor.ini_before[self.section][self.option_name])
+        self.text_input.setText(self.section_editor.ini_before[self.conf_section][self.conf_name])
         self.editing_finished()
 
 
 class SettingsEditorFloatWidget(SettingsEditorFieldBase):
-    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
-        super().__init__(section_editor, option, section, tooltip)
+    def __init__(self, section_editor: SettingsEditorTab, option_def) -> None:
+        super().__init__(section_editor, option_def)
         self.setLayout(widget_layout := QHBoxLayout())
         widget_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        self.text_label = QLabel(self.translate_option())
+        self.text_label = QLabel(option_def.translate(option_def.ui_label))
         widget_layout.addWidget(self.text_label)
         self.spinbox = QDoubleSpinBox()
         self.spinbox.setRange(0.0, 4.0)  # TODO this should be looked up in the metadata
         self.spinbox.setSingleStep(0.1)
         try:
-            value = float(section_editor.ini_editable[section][option])
+            value = float(section_editor.ini_editable[self.conf_section][self.conf_name])
         except ValueError:  # Just in case - rather not fall over
             value = 0.0
         self.spinbox.setValue(value)
         widget_layout.addWidget(self.spinbox)
 
         def _spinbox_value_changed() -> None:
-            section_editor.ini_editable[section][option] = locale.delocalize(f"{self.spinbox.value():.2f}")
+            section_editor.ini_editable[self.conf_section][self.conf_name] = locale.delocalize(f"{self.spinbox.value():.2f}")
 
         self.spinbox.valueChanged.connect(_spinbox_value_changed)
 
     def reset(self) -> None:
-        self.spinbox.setValue(float(self.section_editor.ini_before.get(self.section, self.option_name)))
+        self.spinbox.setValue(float(self.section_editor.ini_before.get(self.conf_section, self.conf_name)))
 
 
 class SettingsEditorCsvWidget(SettingsEditorLineBase):
-    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
-        super().__init__(section_editor, option, section, tooltip)
+    def __init__(self, section_editor: SettingsEditorTab, option_def: ConfOpt) -> None:
+        super().__init__(section_editor, option_def)
         # TODO - should probably also allow spaces as well as commas, but the regexp is getting a bit tricky?
         # Validator matches CSV of two digit hex or the empty string.
         self.validator = QRegularExpressionValidator(QRegularExpression(r"^([0-9a-fA-F]{2}([ \t]*,[ \t]*[0-9a-fA-F]{2})*)|$"))
-        self.text_input.setText(section_editor.ini_editable[section][option])
+        self.text_input.setText(section_editor.ini_editable[self.conf_section][self.conf_name])
 
 
 class LatitudeLongitudeValidator(QRegularExpressionValidator):
@@ -475,13 +472,13 @@ class LatitudeLongitudeValidator(QRegularExpressionValidator):
 
 
 class SettingsEditorLocationWidget(SettingsEditorLineBase):
-    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
-        super().__init__(section_editor, option, section, tooltip)
+    def __init__(self, section_editor: SettingsEditorTab, option_def: ConfOpt) -> None:
+        super().__init__(section_editor, option_def)
         self.text_input.setFixedWidth(npx(500))
         self.text_input.setMaximumWidth(npx(500))
         self.text_input.setMaxLength(250)
         self.validator = LatitudeLongitudeValidator()
-        self.text_input.setText(section_editor.ini_editable[section][option])
+        self.text_input.setText(section_editor.ini_editable[self.conf_section][self.conf_name])
         self.text_input.setToolTip(tr("Latitude,Longitude for solar elevation calculations."))
 
         def _detection_location() -> None:
@@ -523,46 +520,46 @@ class SettingsEditorLocationWidget(SettingsEditorLineBase):
 
 
 class SettingsEditorLongTextWidget(SettingsEditorFieldBase):
-    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
-        super().__init__(section_editor, option, section, tooltip)
+    def __init__(self, section_editor: SettingsEditorTab, option_def: ConfOpt) -> None:
+        super().__init__(section_editor, option_def)
         layout = QVBoxLayout()
         self.setLayout(layout)
-        text_label = QLabel(self.translate_option())
+        text_label = QLabel(ConfOpt.translate(option_def.ui_label))
         layout.addWidget(text_label)
-        text_editor = QPlainTextEdit(section_editor.ini_editable[section][option])
+        text_editor = QPlainTextEdit(section_editor.ini_editable[self.conf_section][self.conf_name])
         text_editor.setMinimumHeight(native_font_height(100))
         text_editor.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         def _text_changed() -> None:
-            section_editor.ini_editable[section][option] = text_editor.toPlainText().strip()
+            section_editor.ini_editable[self.conf_section][self.conf_name] = text_editor.toPlainText().strip()
 
         text_editor.textChanged.connect(_text_changed)
         layout.addWidget(text_editor, stretch=1)
         self.text_editor = text_editor
 
     def reset(self) -> None:
-        self.text_editor.setPlainText(self.section_editor.ini_before[self.section][self.option_name])
+        self.text_editor.setPlainText(self.section_editor.ini_before[self.conf_section][self.conf_name])
 
 
 class SettingsEditorTextWidget(SettingsEditorFieldBase):
 
-    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
-        super().__init__(section_editor, option, section, tooltip)
+    def __init__(self, section_editor: SettingsEditorTab, option_def: ConfOpt) -> None:
+        super().__init__(section_editor, option_def)
         layout = QVBoxLayout()
         self.setLayout(layout)
-        text_label = QLabel(self.translate_option())
+        text_label = QLabel(ConfOpt.translate(option_def.ui_label))
         layout.addWidget(text_label)
-        text_editor = QLineEdit(section_editor.ini_editable[section][option])
+        text_editor = QLineEdit(section_editor.ini_editable[self.conf_section][self.conf_name])
 
         def _text_changed() -> None:
-            section_editor.ini_editable[section][option] = text_editor.text().strip()
+            section_editor.ini_editable[self.conf_section][self.conf_name] = text_editor.text().strip()
 
         text_editor.textChanged.connect(_text_changed)
         layout.addWidget(text_editor)
         self.text_editor = text_editor
 
     def reset(self) -> None:
-        self.text_editor.setText(self.section_editor.ini_before[self.section][self.option_name])
+        self.text_editor.setText(self.section_editor.ini_before[self.conf_section][self.conf_name])
 
 
 class SettingsEditorPathValidator(QValidator):
@@ -580,9 +577,9 @@ class SettingsEditorPathValidator(QValidator):
 
 class SettingsEditorPathWidget(SettingsEditorLineBase):
 
-    def __init__(self, section_editor: SettingsEditorTab, option: str, section: str, tooltip: str) -> None:
-        super().__init__(section_editor, option, section, tooltip)
-        self.text_input.setText(section_editor.ini_editable[section][option])
+    def __init__(self, section_editor: SettingsEditorTab, option_def: ConfOpt) -> None:
+        super().__init__(section_editor, option_def)
+        self.text_input.setText(section_editor.ini_editable[self.conf_section][self.conf_name])
 
         def _choose_emulator(index: int) -> None:
             current_path = self.text_input.text()
@@ -599,8 +596,8 @@ class SettingsEditorPathWidget(SettingsEditorLineBase):
     def editing_finished(self) -> None:
         super().editing_finished()
         if not self.has_error and self.text_input.text().strip() != '':
-            if self.section_editor.ini_editable[self.section][self.option_name] != self.section_editor.ini_before[self.section][
-                self.option_name]:
+            if self.section_editor.ini_editable[self.conf_section][self.conf_name] != self.section_editor.ini_before[self.conf_section][
+                self.conf_name]:
                 mb = MBox(MIcon.Information,
                           msg="If you've developed a <i>ddcutil-emulator</i> for integrating a non-DDC laptop-panels, "
                               "please consider contributing it to the <b>vdu_controls</b> project."
