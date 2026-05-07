@@ -33,8 +33,8 @@ class ConfIni(configparser.ConfigParser):
         if not self.has_section(ConfSec.METADATA_SECTION):
             self.add_section(ConfSec.METADATA_SECTION)
 
-    def data_sections(self) -> List[ConfSec]:  # Section other than metadata and DEFAULT - real data.
-        return [ConfSec(s) for s in self.sections() if s != configparser.DEFAULTSECT and s != ConfSec.METADATA_SECTION]
+    def data_sections(self) -> List[str]:  # Section other than metadata and DEFAULT - real data.
+        return [s for s in self.sections() if s != configparser.DEFAULTSECT and s != ConfSec.METADATA_SECTION]
 
     def get_version(self) -> Tuple:
         if version := self.get(*ConfOpt.METADATA_VERSION_OPTION.conf_id, fallback=None):
@@ -80,7 +80,7 @@ class ConfIni(configparser.ConfigParser):
 
 class TitledStrEnum(LocalStrEnum):
     """
-    String enum where each member stores a raw title that gets translated
+    String enum where each member stores a human presentable title that gets translated
     using tr(). The context is the enum class name.
     Define members as: NAME = ("value", "raw title")
     """
@@ -88,7 +88,7 @@ class TitledStrEnum(LocalStrEnum):
     # Note: __contains__ and _missing_ are inherited from BaseStrEnum.
     # They will work correctly because members are still strings.
 
-    def __new__(cls, value: str, raw_title: str) -> 'TitledStrEnum':
+    def __new__(cls, value: str, raw_title: str) -> TitledStrEnum:
         # Because we subclass BaseStrEnum, we must properly create the string and enum parts.
         # The easiest way: call str.__new__ then set _value_ and _raw_title_.
         obj = str.__new__(cls, value)
@@ -116,6 +116,11 @@ class ConfType(LocalStrEnum):
 
 
 class ConfSec(TitledStrEnum):
+    '''
+    These are the valid fixed-names.  The fixed names are used in metadata headings
+    and vdu_controls.ini.  Preset .ini files may also have dynamically named
+    'device-name' sections which are also valid, but not enumerated here.
+    '''
     METADATA_SECTION        = ("metadata", QT_TR_NOOP("metadata"))
     VDU_CONTROLS_GLOBALS    = ("vdu-controls-globals", QT_TR_NOOP("vdu controls globals"))
     VDU_CONTROLS_WIDGETS    = ("vdu-controls-widgets", QT_TR_NOOP("vdu controls widgets"))

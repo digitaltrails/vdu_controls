@@ -220,7 +220,7 @@ class SettingsEditorTab(QWidget):
             self.field_list.append(widget)
             return widget
 
-        for section_def in self.ini_editable.data_sections():
+        for section_def in [ConfSec(section_name) for section_name in self.ini_editable.data_sections()]:
 
             ordered_by_sub_group: dict[tuple[str, int], tuple[str, ConfOpt]] = {}
             for num, option_name in enumerate(self.ini_editable[section_def]):
