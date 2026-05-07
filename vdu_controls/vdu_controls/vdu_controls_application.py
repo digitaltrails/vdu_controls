@@ -185,7 +185,7 @@ class VduControlsMainPanel(QWidget):
                 controllers_layout.addWidget(vdu_control_panel)
             elif warnings_enabled:
                 MBox(MIcon.Warning,
-                     msg=tr('Monitor {} {} lacks any accessible controls.').format(controller.vdu_number,
+                     msg=tr('Monitor {0} {1} lacks any accessible controls.').format(controller.vdu_number,
                                                                                    controller.get_vdu_preferred_name()),
                      info=tr('The monitor will be omitted from the control panel.')).exec()
 
@@ -597,7 +597,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             def _update_progress(worker_thread: BulkChangeWorker) -> None:
                 preset.in_transition_step += 1
                 self.main_window.show_preset_status(
-                    tr("Transitioning to preset {} (elapsed time {} seconds)...").format(
+                    tr("Transitioning to preset {0} (elapsed time {1} seconds)...").format(
                         preset.name, f"{worker_thread.total_elapsed_seconds:.2f}"))
                 #self.transitioning_dummy_preset.update_progress() if self.transitioning_dummy_preset else None
                 self.main_window.update_status_indicators(preset)
@@ -618,7 +618,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                             cps_file.write(preset.name)
                         self.main_window.update_status_indicators(preset)
                         if worker_thread.change_count != 0:
-                            self.main_window.show_preset_status(tr("Restored {} (elapsed time {} seconds)").format(
+                            self.main_window.show_preset_status(tr("Restored {0} (elapsed time {1} seconds)").format(
                                 preset.name, f"{worker_thread.total_elapsed_seconds:.2f}"))
                             if (self.main_config.is_set(ConfOpt.PROTECT_NVRAM_ENABLED)
                                     and preset.get_transition_type() != PresetTransitionFlag.NONE):
@@ -766,7 +766,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         assert gui_misc.is_running_in_gui_thread()
 
         def _activation_feedback(msg: str):
-            self.main_window.show_preset_status(f"{TIME_CLOCK_SYMBOL} " + tr("Preset {} activating at {}").format(
+            self.main_window.show_preset_status(f"{TIME_CLOCK_SYMBOL} " + tr("Preset {0} activating at {1}").format(
                 preset.name, f"{activation_time:%H:%M}") + f" - {msg}")
 
         def _activation_finished(worker: BulkChangeWorker) -> None:
@@ -807,7 +807,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             if not self.is_weather_satisfactory(preset):
                 if not off_schedule:
                     preset.schedule_status = PresetScheduleStatus.WEATHER_CANCELLATION
-                message = tr("Preset {} activation was cancelled due to weather at {}").format(
+                message = tr("Preset {0} activation was cancelled due to weather at {1}").format(
                     preset.name, activation_time.isoformat(' ', 'seconds'))
                 self.main_window.show_preset_status(message)
                 return
@@ -1415,7 +1415,7 @@ class VduAppWindow(QMainWindow):
                   tr("Most recent error: {}").format(problem_text) + "\n" + '_' * 80).exec()
 
     def ask_for_vdu_controller_remedy(self, vdu_number: str, model_name: str, vdu_serial: str):
-        msg = tr('Failed to obtain capabilities for monitor {} {} {}.').format(vdu_number, model_name, vdu_serial)
+        msg = tr('Failed to obtain capabilities for monitor {0} {1} {2}.').format(vdu_number, model_name, vdu_serial)
         info = tr('Cannot automatically configure this monitor.'
                   '\n You can choose to:'
                   '\n 1: Retry obtaining the capabilities.'
@@ -1426,7 +1426,7 @@ class VduAppWindow(QMainWindow):
         choice = MBox(MIcon.Critical, msg=msg, info=info, buttons=MBtn.Discard | MBtn.Ignore | MBtn.Apply | MBtn.Retry).exec()
         if choice == MBtn.Discard:
             MBox(MIcon.Information, msg=tr('Discarding {} monitor.').format(model_name),
-                 info=tr('Remove "{}" from {} capabilities override to reverse this decision.').format(IGNORE_VDU_MARKER_STR,
+                 info=tr('Remove "{0}" from {1} capabilities override to reverse this decision.').format(IGNORE_VDU_MARKER_STR,
                                                                                                        model_name)).exec()
             return VduController.DISCARD_VDU
         elif choice == MBtn.Ignore:
@@ -1435,7 +1435,7 @@ class VduAppWindow(QMainWindow):
             return VduController.IGNORE_VDU
         elif choice == MBtn.Apply:
             MBox(MIcon.Information, msg=tr('Assuming {} has brightness and contrast controls.').format(model_name),
-                 info=tr('Wrote {} config files to {}.').format(model_name, CONFIG_DIR_PATH) +
+                 info=tr('Wrote {0} config files to {1}.').format(model_name, CONFIG_DIR_PATH) +
                       tr('\nPlease check these files and edit or remove them if they '
                          'cause further issues.')).exec()
             return VduController.ASSUME_STANDARD_CONTROLS

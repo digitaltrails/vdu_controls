@@ -129,7 +129,7 @@ def initialise_locale_translations(app: QApplication) -> None:
     # from the XML into a map and use them directly.  This is useful while developing and possibly useful
     # for users that want to do their own localization.
     if ts_path is not None and (qm_path is None or os.path.getmtime(ts_path) > os.path.getmtime(qm_path)):
-        log.info(tr("Using newer .ts file {} translations from {}").format(locale_name, ts_path.as_posix()))
+        log.info(tr("Using newer .ts file {0} translations from {1}").format(locale_name, ts_path.as_posix()))
         import xml.etree.ElementTree as XmlElementTree
         global ts_translations
         for context in XmlElementTree.parse(ts_path).findall('context'):
@@ -140,16 +140,16 @@ def initialise_locale_translations(app: QApplication) -> None:
                 source = message.find('source')
                 if translation is not None and source is not None and translation.text is not None and source.text is not None:
                     ts_translations[(context_name, source.text)] = translation.text
-        log.info(tr("Loaded {} translations from {}").format(locale_name, ts_path.as_posix()))
+        log.info(tr("Loaded {0} translations from {1}").format(locale_name, ts_path.as_posix()))
         if QLocale.system().textDirection() == Qt.LayoutDirection.RightToLeft:
             log.info(f"Locale {QLocale.system().name()} language is right-to-left - setting layout direction to right-to-left.")
             app.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         return
     if qm_path is not None:
-        log.info(tr("Loading {} translation from {}").format(locale_name, qm_path.as_posix()))
+        log.info(tr("Loading {0} translation from {1}").format(locale_name, qm_path.as_posix()))
         if translator.load(qm_path.name, qm_path.parent.as_posix()):
             app.installTranslator(translator)
-            log.info(tr("Using {} translations from {}").format(locale_name, qm_path.as_posix()))
+            log.info(tr("Using {0} translations from {1}").format(locale_name, qm_path.as_posix()))
 
 
 def tr(source_text: str, context: str | None = None) -> str:

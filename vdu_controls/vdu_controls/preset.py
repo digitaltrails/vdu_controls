@@ -181,11 +181,11 @@ class Preset:
         # This might not work too well in translation - rethink?
         if at_time:
             if self.scheduler_job and self.scheduler_job.remaining_time() > 0:
-                template = tr("{} later today at {}") + weather_suffix
+                template = tr("{0} later today at {1}") + weather_suffix
             elif at_time < zoned_now():
-                template = tr("{} earlier today at {}") + weather_suffix + f" ({tr(self.schedule_status.description())})"
+                template = tr("{0} earlier today at {1}") + weather_suffix + f" ({tr(self.schedule_status.description())})"
             else:
-                template = tr("{} suspended for {}")
+                template = tr("{0} suspended for {1}")
             result = template.format(basic_desc, f"{at_time.replace(second=0, microsecond=0):%H:%M}")
         result = result + ' ' + suffix
         return result

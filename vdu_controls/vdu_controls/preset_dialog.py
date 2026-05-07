@@ -75,10 +75,10 @@ class PresetItemWidget(QWidget):
                 f"{preset.get_transition_type().abbreviation()}"
                 f"{str(preset.get_step_interval_seconds()) if preset.get_step_interval_seconds() > 0 else ''}")
             if preset.get_step_interval_seconds() > 0:
-                preset_transition_button.setToolTip(tr("Transition to {}, each step is {} seconds. {}").format(
+                preset_transition_button.setToolTip(tr("Transition to {0}, each step is {1} seconds. {2}").format(
                     preset.get_title_name(), preset.get_step_interval_seconds(), preset.get_transition_type().description()))
             else:
-                preset_transition_button.setToolTip(tr("Transition to {}. {}").format(
+                preset_transition_button.setToolTip(tr("Transition to {0}. {1}").format(
                     preset.get_title_name(), preset.get_transition_type().description()))
             preset_transition_button.clicked.connect(partial(restore_action, preset=preset,
                                                              immediately=preset.get_transition_type() == PresetTransitionFlag.NONE))
@@ -284,7 +284,7 @@ class PresetWeatherWidget(QWidget):
             weather.run_query()
             if weather.proximity_ok:
                 MBox(MIcon.Information,
-                     msg=tr("Weather for {} will be retrieved from {}").format(place_name, WEATHER_FORECAST_URL)).exec()
+                     msg=tr("Weather for {0} will be retrieved from {1}").format(place_name, WEATHER_FORECAST_URL)).exec()
                 with open(vf_file_path, 'w', encoding="utf-8") as vf:
                     vf.write(place_name)
             else:
@@ -795,7 +795,7 @@ class PresetScheduleAtElevationWidget(PresetScheduleAtWidgetBase):
         if elevation_data is not None and self.location:
             if lux := calc_solar_lux(elevation_data.when, self.location, 1.0):
                 when_text += tr(" {:,} lux").format(lux)
-        desc_text = "{} {} ({}, {})".format(
+        desc_text = tr("{0} {1} ({2}, {3})").format(
             self.title_prefix, format_solar_elevation_abbreviation(self.elevation_key), tr(self.elevation_key.direction), when_text)
         if desc_text != self.title_label.text():
             self.title_label.setText(desc_text)

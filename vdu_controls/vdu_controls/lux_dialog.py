@@ -359,7 +359,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                 MBox(MIcon.Critical, msg=tr("No read access to {}").format(device), info=info).exec()
                 return False
         else:
-            MBox(MIcon.Critical, msg=tr("Expecting {}, but {} was selected.").format(tr(required_type.description), device)).exec()
+            MBox(MIcon.Critical, msg=tr("Expecting {0}, but {1} was selected.").format(tr(required_type.description), device)).exec()
             return False
         return True
 

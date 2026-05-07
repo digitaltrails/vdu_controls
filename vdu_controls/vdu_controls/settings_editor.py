@@ -119,11 +119,11 @@ class SettingsDialog(SubWinDialog, DialogSingletonMixin):
 
     def update_tab_ops(self, tab: SettingsEditorTab) -> None:
         self.tab_ops_label.setText(tr('{}: ').format(tab.preferred_name))
-        self.tab_ops.setToolTip(tr('{}: {}').format(tab.preferred_name, tab.config_path.as_posix()))
-        self.tab_save_button.setToolTip(tr('Save {} to \n{}').format(tab.preferred_name, tab.config_path.as_posix()))
-        self.tab_revert_button.setToolTip(tr('Revert {} from \n{}').format(tab.preferred_name, tab.config_path.as_posix()))
+        self.tab_ops.setToolTip(tr('{0}: {1}').format(tab.preferred_name, tab.config_path.as_posix()))
+        self.tab_save_button.setToolTip(tr('Save {0} to \n{1}').format(tab.preferred_name, tab.config_path.as_posix()))
+        self.tab_revert_button.setToolTip(tr('Revert {0} from \n{1}').format(tab.preferred_name, tab.config_path.as_posix()))
         self.tab_restore_defaults_button.setToolTip(
-            tr('Remove {}\nand restore {} to application defaults').format(tab.config_path.as_posix(), tab.preferred_name))
+            tr('Remove {0}\nand restore {1} to application defaults').format(tab.config_path.as_posix(), tab.preferred_name))
 
     def reconfigure(self, config_list: List[VduControlsConfig]) -> None:
         for config in config_list:
@@ -150,7 +150,7 @@ class SettingsDialog(SubWinDialog, DialogSingletonMixin):
             if vdu_label := tab.ini_editable.get(*ConfOpt.VDU_NAME.conf_id, fallback=None):
                 if existing_use := labels_in_use.get(vdu_label, None):
                     return MBox(MIcon.Critical, msg=tr("Cannot save <tt>{}</tt>").format(tab.config_path.name),
-                                info=tr("Duplicate VDU label: <i>{}</i><hr/>Alter the label for {} or {} and try again.").format(
+                                info=tr("Duplicate VDU label: <i>{}</i><hr/>Alter the label for {0} or {1} and try again.").format(
                                     vdu_label, tab.config_path.stem, existing_use),
                                 buttons=MBtn.Close | MBtn.Discard, default=MBtn.Close).exec()
                 else:
@@ -319,7 +319,7 @@ class SettingsEditorTab(QWidget):
     def restore_application_defaults(self):
         if MBox(MIcon.Critical,
                 msg=tr("Are you sure you want to restore {} to application defaults?").format(self.preferred_name),
-                info=tr("The file {} will be renamed to {}.old").format(self.config_path.name, self.config_path.stem),
+                info=tr("The file {0} will be renamed to {1}.old").format(self.config_path.name, self.config_path.stem),
                 buttons=MBtn.Yes | MBtn.No, default=MBtn.No).exec() == MBtn.No:
             return
         if self.config_path.exists():
@@ -507,7 +507,7 @@ class SettingsEditorLocationWidget(SettingsEditorLineBase):
                             break
                     return data
             except (URLError, KeyError) as e:
-                MBox(MIcon.Critical, msg=tr("Failed to obtain info from {}: {}").format(IP_ADDRESS_INFO_URL, e)).exec()
+                MBox(MIcon.Critical, msg=tr("Failed to obtain info from {0}: {1}").format(IP_ADDRESS_INFO_URL, e)).exec()
         return ''
 
 
