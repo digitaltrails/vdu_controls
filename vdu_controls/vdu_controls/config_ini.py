@@ -405,10 +405,6 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
                 parser.add_argument(f"--{self.cmdline_arg}", type=str, default=self.default_value, help=self.help)
 
 
-    @staticmethod
-    def translate(string: str) -> str:
-        return tr(string, ConfOpt.__name__)
-
 @dataclass
 class VcpCapability:
     """Representation of a VCP (Virtual Control Panel) capability for a VDU."""
