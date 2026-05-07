@@ -222,24 +222,24 @@ class SettingsEditorTab(QWidget):
 
         for section_def in self.ini_editable.data_sections():
 
-            ordered_by_group: dict[tuple[str, int], tuple[str, ConfOpt]] = {}
+            ordered_by_sub_group: dict[tuple[str, int], tuple[str, ConfOpt]] = {}
             for num, option_name in enumerate(self.ini_editable[section_def]):
                 try:
                     option_def = vdu_config.get_conf_option(section_def, option_name)
                     if option_def == ConfOpt.UNKNOWN:  # If it's unknown, it's a boolean switch for a VCP code
                         # Make up a temporary ConfOptDef (which is not an enum value of ConfOpt(Enum))
                         option_def = ConfOptDef(option_name, section_def, ConfType.BOOL, ui_label=option_name.replace('-',' '))
-                    ordered_by_group[(option_def.group.value, num)] = (option_name, option_def)
+                    ordered_by_sub_group[(option_def.sub_group.value, num)] = (option_name, option_def)
                 except ValueError:  # Probably an old no-longer-valid option, or a typo.
                     log.warning(f"Ignoring invalid option name {option_name} in {section_def}")
-            ordered_by_group = dict(sorted(ordered_by_group.items()))
+            ordered_by_sub_group = dict(sorted(ordered_by_sub_group.items()))
             section_title = section_def.localized_name
             content_layout.addWidget(QLabel(f"<b>{section_title}</b>"))
             booleans_grid: QGridLayout | None = None  # Only create when bool_count > 0
             grid_columns = 5  # booleans are counted and laid out according to grid_columns.
             previous_group = None
             row_index = col_index = 0
-            for option_name, option_def in ordered_by_group.values():
+            for option_name, option_def in ordered_by_sub_group.values():
                 try:
                     if option_def.conf_type == ConfType.BOOL:
                         if row_index == 0 and col_index == 0:  # Need to create a grid now
