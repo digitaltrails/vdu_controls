@@ -6,7 +6,7 @@ import os
 import re
 import subprocess
 from collections import namedtuple
-from datetime import time
+import time
 from threading import Lock
 from typing import Dict, List, Tuple, Any
 
