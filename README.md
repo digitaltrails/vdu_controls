@@ -482,8 +482,9 @@ Version History
   * Disabled the right-mouse action that could hide the toolbar irretrievably.
   * Each icon is now held in a separate SVG source file.  This 
     makes the icons more easily editable and reusable.
-  * The included set of language translation examples has been reduced. All of 
-    the translations  been generated for code testing purposes and may not be accurate.
+  * The included set of language-translations has been expanded. All of 
+    the translations have been created for testing purposes and may not 
+    be accurate.
 
 * 2.6.0
   * Added laptop-panel support, see Setting option "laptop-panel-enabled".
