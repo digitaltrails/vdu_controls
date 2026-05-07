@@ -237,7 +237,7 @@ class SettingsEditorTab(QWidget):
             content_layout.addWidget(QLabel(f"<b>{section_title}</b>"))
             booleans_grid: QGridLayout | None = None  # Only create when bool_count > 0
             grid_columns = 5  # booleans are counted and laid out according to grid_columns.
-            previous_group = None
+            previous_sub_group = None
             row_index = col_index = 0
             for option_name, option_def in ordered_by_sub_group.values():
                 try:
@@ -248,15 +248,15 @@ class SettingsEditorTab(QWidget):
                             booleans_panel = QWidget()
                             booleans_panel.setLayout(booleans_grid)
                             content_layout.addWidget(booleans_panel)
-                        if option_def.group and option_def.group != previous_group:
+                        if option_def.sub_group and option_def.sub_group != previous_sub_group:
                             if row_index > 0:
                                 row_index += 1
                                 booleans_grid.setRowMinimumHeight(row_index, npx(20))
                                 row_index += 1
-                            booleans_grid.addWidget(QLabel(option_def.group.localized_name), row_index, 0)
+                            booleans_grid.addWidget(QLabel(option_def.sub_group.localized_name), row_index, 0)
                             row_index += 1
                             col_index = 0
-                            previous_group = option_def.group
+                            previous_sub_group = option_def.sub_group
                         booleans_grid.addWidget(
                             _field(SettingsEditorBooleanWidget(self, option_def)), row_index, col_index)
                         col_index += 1
