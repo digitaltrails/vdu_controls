@@ -13,6 +13,11 @@ VDU_CONTROLS_VERSION = '2.6.5'
 VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in VDU_CONTROLS_VERSION.split('.'))
 assert sys.version_info >= (3, 8), f'{APPNAME} utilizes python version 3.8 or greater (your python is {sys.version}).'
 
+VDU_CONTROLS_WEBSITE_URL = 'https://github.com/digitaltrails/vdu_controls'
+DDCUTIL_WEBSITE_URL = 'https://www.ddcutil.com/'
+DDCUTIL_SERVICE_WEBSITE_URL = 'https://github.com/digitaltrails/ddcutil-service'
+BRIGHTNESSCTL_WEBSITE_URL = 'https://github.com/Hummer12007/brightnessctl'
+
 CONFIG_DIR_PATH = Path.home() / '.config/vdu_controls'
 CONFIG_FILE_PREFER_QT5 = CONFIG_DIR_PATH / '_prefer_qt5_'
 
