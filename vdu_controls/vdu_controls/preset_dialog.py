@@ -15,13 +15,14 @@ from vdu_controls.qt_imports import QFontMetrics, QFont, QImage, QPixmap, QPaint
 from vdu_controls.qt_imports import QWidget, QHBoxLayout, QSizePolicy, QApplication, QVBoxLayout, QLabel, QComboBox, QScrollArea, QMenu, \
     QAction, QSpinBox, QCheckBox, QLineEdit, QSlider, QSplitter, QGroupBox, QToolButton, QSpacerItem, QStatusBar, QFrame
 
-from vdu_controls.config_ini import GeoLocation, VduControlsConfig, ConfOpt, ConfIni
+from vdu_controls.vdu_controls_config import VduControlsConfig, ConfOpt
+from vdu_controls.config_ini import ConfIni
 from vdu_controls.constants import STANDARD_ICON_PATHS, CONFIG_DIR_PATH, WEATHER_FORECAST_URL, EASTERN_SKY, WESTERN_SKY
 from vdu_controls.icon_utils import si, StdPixmap, create_icon_from_path, polychrome_light_or_dark, create_image_from_svg_bytes, \
     SVG_LIGHT_THEME_COLOR
 from vdu_controls.app_locale import tr, translate_option
 import vdu_controls.logging as log
-from vdu_controls.misc import zoned_now, proper_name
+from vdu_controls.misc import zoned_now, proper_name, GeoLocation
 from vdu_controls.preset import Preset, PresetTransitionFlag, PresetScheduleStatus
 from vdu_controls.scaling import npx, native_font_height
 from vdu_controls.solar_calc import SolarElevationKey, SolarElevationData, create_elevation_map, calc_solar_lux, \

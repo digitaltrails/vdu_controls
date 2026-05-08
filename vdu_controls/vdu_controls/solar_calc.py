@@ -7,7 +7,7 @@ from collections import namedtuple
 from datetime import datetime, timezone, timedelta
 from typing import Tuple, Callable, Dict
 
-from vdu_controls.config_ini import GeoLocation
+from vdu_controls.misc import GeoLocation
 from vdu_controls.constants import EASTERN_SKY, WESTERN_SKY
 from vdu_controls.app_locale import tr
 from vdu_controls.unicode import EAST_ELEVATION_SYMBOL, WEST_ELEVATION_SYMBOL, SUN_SYMBOL, DEGREE_SYMBOL

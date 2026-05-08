@@ -15,9 +15,10 @@ from datetime import timedelta, datetime
 from functools import partial
 from typing import List, Tuple, Dict, Callable, cast
 
-from vdu_controls import weather_util as weather_utils, app_locale as app_locale
+from vdu_controls import weather_util as weather_utils, app_locale as app_locale, vdu_exceptions
 from vdu_controls.about_dialog import AboutDialog
-from vdu_controls.config_ini import ConfIni, ConfOpt, VduControlsConfig, VcpCapability, GeoLocation
+from vdu_controls.vdu_controls_config import ConfOpt, VduControlsConfig, VcpCapability
+from vdu_controls.config_ini import ConfIni
 from vdu_controls.constants import *
 from vdu_controls.context_menu import ContextMenu, FixedItemKey
 from vdu_controls.ddcutil_aggregator import DdcutilAggregator, VduStableId
@@ -37,7 +38,7 @@ import vdu_controls.logging as log
 from vdu_controls.lux_auto import LuxAutoController
 from vdu_controls.lux_dialog import LuxDialog
 from vdu_controls.lux_meters import LuxMeterSemiAutoDevice
-from vdu_controls.misc import zoned_now, proper_name
+from vdu_controls.misc import zoned_now, proper_name, GeoLocation
 from vdu_controls.preset import Preset, PresetScheduleStatus, PresetTransitionFlag
 from vdu_controls.preset_controller import PresetController
 from vdu_controls.preset_dialog import PresetsDialog
@@ -238,17 +239,22 @@ class VduControlsMainPanel(QWidget):
         if self.main_toolbar:
             self.main_toolbar.show_active_preset(preset)
 
-    def show_vdu_exception(self, exception: VduException, can_retry: bool = False) -> bool:
-        log.error(f"{exception.vdu_description} {exception.operation} {exception.attr_id} {exception.cause}")
-        msg = tr("Set value: Failed to communicate with display {}").format(exception.vdu_description)
-        if exception.is_display_not_found_error():
-            info = tr('Monitor appears to be switched off or disconnected.')
+    def show_vdu_exception(self, exception: Exception, can_retry: bool = False) -> bool:
+        if isinstance(exception, VduException):
+            log.error(f"{exception.vdu_description} {exception.operation} {exception.attr_id} {exception.cause}")
+            msg = tr("Set value: Failed to communicate with display {}").format(exception.vdu_description)
+            if exception.is_display_not_found_error():
+                info = tr('Monitor appears to be switched off or disconnected.')
+            else:
+                info = tr('Is the monitor switched off?') + '<br>' + tr('Is the sleep-multiplier setting too low?')
+            if isinstance(exception.cause, subprocess.SubprocessError):
+                details = exception.cause.stderr.decode('utf-8', errors='surrogateescape') + '\n' + str(exception.cause)
+            else:
+                details = str(exception.cause)
         else:
-            info = tr('Is the monitor switched off?') + '<br>' + tr('Is the sleep-multiplier setting too low?')
-        if isinstance(exception.cause, subprocess.SubprocessError):
-            details = exception.cause.stderr.decode('utf-8', errors='surrogateescape') + '\n' + str(exception.cause)
-        else:
-            details = str(exception.cause)
+            msg = str(exception)
+            info = repr(exception)
+            details = ''
         if self.alert is not None:  # Dismiss any existing alert
             self.alert.done(MBtn.Close)
         self.alert = MBox(MIcon.Critical, msg=msg, info=info, details=details,

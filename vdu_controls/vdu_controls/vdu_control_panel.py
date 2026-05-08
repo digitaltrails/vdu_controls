@@ -7,7 +7,7 @@ from typing import Callable, List
 from vdu_controls.qt_imports import Qt, pyqtSignal
 from vdu_controls.qt_imports import QWidget, QVBoxLayout, QFrame, QApplication, QHBoxLayout, QLabel, QSlider, QSpinBox, QComboBox
 
-from vdu_controls.config_ini import VcpCapability, SUPPORTED_VCP_BY_CODE
+from vdu_controls.vdu_controls_config import VcpCapability, SUPPORTED_VCP_BY_CODE
 from vdu_controls.constants import TOOLTIP_DURATION_MSEC
 from vdu_controls.ddcutil_abstract import CONTINUOUS_TYPE, SIMPLE_NON_CONTINUOUS_TYPE, COMPLEX_NON_CONTINUOUS_TYPE, VcpValue, \
     VcpOrigin

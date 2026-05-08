@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import sys
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
 
@@ -50,3 +51,18 @@ def proper_name(*args) -> str:
 
 def clamp(v: int, min_v: int, max_v: int) -> int:
     return max(min(max_v, v), min_v)
+
+
+@dataclass
+class GeoLocation:
+    latitude: float
+    longitude: float
+    place_name: str | None
+
+    def __eq__(self, other) -> bool:
+        if other is None:
+            return False
+        if not isinstance(other, GeoLocation):
+            return NotImplemented  # don't attempt to compare against unrelated types
+        return self.latitude == other.latitude and self.longitude == other.longitude and \
+            self.place_name == other.place_name

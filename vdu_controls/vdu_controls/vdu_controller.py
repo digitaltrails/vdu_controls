@@ -10,7 +10,8 @@ from typing import Callable, Dict, Tuple, List
 
 from vdu_controls.qt_imports import QObject, pyqtSignal
 
-from vdu_controls.config_ini import VduControlsConfig, ConfIni, ConfOpt, SUPPORTED_VCP_BY_CODE, VcpCapability
+from vdu_controls.vdu_controls_config import VduControlsConfig, ConfOpt, SUPPORTED_VCP_BY_CODE, VcpCapability
+from vdu_controls.config_ini import ConfIni
 from vdu_controls.constants import IGNORE_VDU_MARKER_STR, ASSUMED_CONTROLS_CONFIG_VCP_CODES, ASSUMED_CONTROLS_CONFIG_TEXT
 
 from vdu_controls.ddcutil_abstract import VcpOrigin, VcpValue, DdcutilDisplayNotFound, CONTINUOUS_TYPE, COMPLEX_NON_CONTINUOUS_TYPE, \

@@ -9,7 +9,7 @@ from typing import Callable, Any, List, Dict, TYPE_CHECKING
 
 from vdu_controls.qt_imports import pyqtSignal
 
-from vdu_controls.config_ini import ConfOpt
+from vdu_controls.vdu_controls_config import ConfOpt
 from vdu_controls.ddcutil_abstract import VcpOrigin
 
 from vdu_controls.ddcutil_aggregator import VduStableId

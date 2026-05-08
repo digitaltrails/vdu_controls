@@ -14,7 +14,8 @@ from vdu_controls.qt_imports import QValidator, QPalette, QRegularExpressionVali
 from vdu_controls.qt_imports import QVBoxLayout, QTabWidget, QStatusBar, QFrame, QHBoxLayout, QLabel, QWidget, QScrollArea, QGridLayout, \
     QApplication, QCheckBox, QLineEdit, QDoubleSpinBox, QPlainTextEdit, QSizePolicy
 
-from vdu_controls.config_ini import VduControlsConfig, ConfIni, ConfOpt, ConfType, ConfSec, ConfOptDef
+from vdu_controls.vdu_controls_config import VduControlsConfig, ConfOpt, ConfType, ConfSec, ConfOptDef
+from vdu_controls.config_ini import ConfIni
 from vdu_controls.constants import IP_ADDRESS_INFO_URL, CONFIG_FILE_PREFER_QT5
 from vdu_controls.icon_utils import si, StdPixmap
 from vdu_controls.app_locale import tr
