@@ -49,7 +49,7 @@ them anywhere.
 import inspect
 import os
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List
 from importlib.resources import files as resources_files
 
 from vdu_controls.constants import VDU_CONTROLS_DEVELOPER
@@ -71,7 +71,23 @@ LOCALE_TRANSLATIONS_PATHS = ([ DEVELOPER_TRANSLATIONS_PATH ] if VDU_CONTROLS_DEV
     APP_INTERNAL_RESOURCE_ROOT / 'translations',
 ]
 
-def find_locale_specific_file(filename_template: str) -> Path | None:
+
+def available_translations() -> List[str]:
+    filename_stem_pattern = "??_??"  # two letters, underscore, two letters
+    extensions = ["ts", "qm"]
+    language_codes = set()
+
+    for directory_path in LOCALE_TRANSLATIONS_PATHS:
+        dir_path = Path(directory_path)  # ensure it's a Path
+        for ext in extensions:
+            # Glob pattern: e.g., "??_??.ts"
+            for file_path in dir_path.glob(f"{filename_stem_pattern}.{ext}"):
+                language_codes.add(file_path.stem)  # stem is e.g., "fr_FR"
+
+    return sorted(language_codes)  # sorted for consistent order
+
+
+def find_locale_specific_file(filename: str) -> Path | None:
     """
     First look for a locale specific filename-??_??.suffix version in
       0. If env VDU_CONTROLS_DEVELOPER=yes first look in ./translations
@@ -79,8 +95,6 @@ def find_locale_specific_file(filename_template: str) -> Path | None:
       2. /usr/share/vdu_controls/translations
       3. app-internal-resources/resources/translations
     """
-    locale_name = QLocale.system().name()
-    filename = filename_template.format(locale_name)
     log.info(f"Looking for translation file {filename}")
     for path in LOCALE_TRANSLATIONS_PATHS:
         full_path = path.joinpath(filename)
@@ -114,6 +128,16 @@ def load_docs_text(filename: str) -> str:
 
 translator: QTranslator | None = None
 ts_translations: Dict[str, str] = {}
+translating_locale = ''
+
+
+def get_locale_name():
+    return QLocale.system().name()
+
+
+def get_translating_locale():
+    global translating_locale
+    return translating_locale
 
 
 def initialise_locale_translations(app: QApplication) -> None:
@@ -121,9 +145,14 @@ def initialise_locale_translations(app: QApplication) -> None:
     # Has to be put somewhere it won't be garbage collected when this function goes out of scope.
     global translator
     translator = QTranslator()
-    locale_name = QLocale.system().name()
-    ts_path = find_locale_specific_file("{}.ts")
-    qm_path = find_locale_specific_file("{}.qm")  # don't use qm files for now.
+    global ts_translations
+    ts_translations = {}
+    global translating_locale
+    translating_locale = ''
+
+    locale_name = get_locale_name()
+    ts_path = find_locale_specific_file(f"{locale_name}.ts")
+    qm_path = find_locale_specific_file(f"{locale_name}.qm")  # don't use qm files for now.
 
     # If there is a .ts XML file in the path newer than the associated .qm binary file, load the messages
     # from the XML into a map and use them directly.  This is useful while developing and possibly useful
@@ -131,7 +160,6 @@ def initialise_locale_translations(app: QApplication) -> None:
     if ts_path is not None and (qm_path is None or os.path.getmtime(ts_path) > os.path.getmtime(qm_path)):
         log.info(tr("Using newer .ts file {0} translations from {1}").format(locale_name, ts_path.as_posix()))
         import xml.etree.ElementTree as XmlElementTree
-        global ts_translations
         for context in XmlElementTree.parse(ts_path).findall('context'):
             context_name = context.findall('name')[0].text
             log.info(f"context: {context_name}")
@@ -141,16 +169,16 @@ def initialise_locale_translations(app: QApplication) -> None:
                 if translation is not None and source is not None and translation.text is not None and source.text is not None:
                     ts_translations[(context_name, source.text)] = translation.text
         log.info(tr("Loaded {0} translations from {1}").format(locale_name, ts_path.as_posix()))
-        if QLocale.system().textDirection() == Qt.LayoutDirection.RightToLeft:
-            log.info(f"Locale {QLocale.system().name()} language is right-to-left - setting layout direction to right-to-left.")
-            app.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        return
-    if qm_path is not None:
+        translating_locale = locale_name
+    elif qm_path is not None:
         log.info(tr("Loading {0} translation from {1}").format(locale_name, qm_path.as_posix()))
         if translator.load(qm_path.name, qm_path.parent.as_posix()):
             app.installTranslator(translator)
             log.info(tr("Using {0} translations from {1}").format(locale_name, qm_path.as_posix()))
-
+            translating_locale = locale_name
+    if translating_locale and QLocale.system().textDirection() == Qt.LayoutDirection.RightToLeft:
+        log.info(f"Locale {locale_name} language is right-to-left - setting layout direction to right-to-left.")
+        app.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
 
 def tr(source_text: str, context: str | None = None) -> str:
     """

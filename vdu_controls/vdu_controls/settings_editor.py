@@ -360,6 +360,8 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
                 MBox(MIcon.Information, msg=tr("You may also wish to set\n{}").format(tr(option_def.related)), buttons=MBtn.Ok).exec()
             if is_checked and option_def.requires:
                 MBox(MIcon.Information, msg=tr("You will also need to set\n{}").format(tr(option_def.requires)), buttons=MBtn.Ok).exec()
+            if is_checked and option_def.warning:
+                MBox(MIcon.Warning, msg=option_def.warning, buttons=MBtn.Ok).exec()
 
         checkbox.toggled.connect(_toggled)
         widget_layout.addWidget(checkbox)

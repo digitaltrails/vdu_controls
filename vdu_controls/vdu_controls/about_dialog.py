@@ -6,12 +6,12 @@ import os
 from typing import TYPE_CHECKING
 
 import vdu_controls.logging as log
-from vdu_controls import icon_utils, scaling
+from vdu_controls import icon_utils, scaling, app_locale
 from vdu_controls.app_locale import tr
 from vdu_controls.constants import VDU_CONTROLS_VERSION, IP_ADDRESS_INFO_URL, WEATHER_FORECAST_URL, APPNAME, DDCUTIL_WEBSITE_URL, \
     DDCUTIL_SERVICE_WEBSITE_URL, BRIGHTNESSCTL_WEBSITE_URL, VDU_CONTROLS_WEBSITE_URL
 from vdu_controls.ddcutil_aggregator import DdcutilAggregator
-from vdu_controls.qt_imports import Qt, QMessageBox, QLocale, QtCore, QGuiApplication
+from vdu_controls.qt_imports import Qt, QMessageBox, QtCore, QGuiApplication
 from vdu_controls.widgets import DialogSingletonMixin
 
 if TYPE_CHECKING:
@@ -119,10 +119,15 @@ class _AboutTemplateData:
     @property
     def tech_info(self):
         return f'''
-            desktop: {VDU_CONTROLS_VERSION}; locale: {QLocale.system().name()} ({"translating" if True else "not translating"}); 
-            platform: {os.environ.get('XDG_CURRENT_DESKTOP', default='unknown')} (qt-{QtCore.QT_VERSION_STR}/{QGuiApplication.platformName()})
-            ddcutil-interface: {self.ddcutil_version_info_0}; ddcutil: {self.ddcutil_version_info_1}
-            writes: {self.counts_str}
+            desktop: {VDU_CONTROLS_VERSION}; 
+            platform: {os.environ.get('XDG_CURRENT_DESKTOP', default='unknown')} 
+            (qt-{QtCore.QT_VERSION_STR}/{QGuiApplication.platformName()})
+            ddcutil-interface: {self.ddcutil_version_info_0}; 
+            ddcutil: {self.ddcutil_version_info_1};
+            NVRAM writes: {self.counts_str};  
+            locale: {app_locale.get_locale_name()} 
+            ({"translating" if app_locale.get_translating_locale() == app_locale.get_locale_name() else "not translating"}); 
+            installed translations: {', '.join(app_locale.available_translations())}
             '''
 
 class AboutDialog(QMessageBox, DialogSingletonMixin):
