@@ -6,7 +6,6 @@ import os
 import sys
 from enum import Enum
 from pathlib import Path
-from importlib.resources import files as resources_files
 
 APPNAME = "VDU Controls"
 VDU_CONTROLS_VERSION = '2.6.5'

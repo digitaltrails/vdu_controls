@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
-
 """
 This module defines our own tr() that matches what pylupdate5/6 is looking for.
 If this method is ever renamed to something other than tr(), then you must
@@ -46,6 +45,7 @@ folder in the current working directory will also be searched.  This makes
 it possible to test development tweaks to translations without having to copy
 them anywhere.
 """
+
 import inspect
 import os
 from pathlib import Path
