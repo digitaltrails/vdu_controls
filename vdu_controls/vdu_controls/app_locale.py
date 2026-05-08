@@ -73,18 +73,16 @@ LOCALE_TRANSLATIONS_PATHS = ([ DEVELOPER_TRANSLATIONS_PATH ] if VDU_CONTROLS_DEV
 
 
 def available_translations() -> List[str]:
-    return ['fr_fR',]
     filename_stem_pattern = "??_??"  # two letters, underscore, two letters
     extensions = ["ts", "qm"]
     language_codes = set()
-
-    for directory_path in LOCALE_TRANSLATIONS_PATHS:
-        dir_path = Path(directory_path)  # ensure it's a Path
+    for dir_path in LOCALE_TRANSLATIONS_PATHS:
+        log.info(f"Looking for translation files in {dir_path}")
         for ext in extensions:
             # Glob pattern: e.g., "??_??.ts"
             for file_path in dir_path.glob(f"{filename_stem_pattern}.{ext}"):
+                log.info(f"Found translation file: {file_path}")
                 language_codes.add(file_path.stem)  # stem is e.g., "fr_FR"
-
     return sorted(language_codes)  # sorted for consistent order
 
 
