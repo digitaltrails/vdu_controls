@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import os
+import time
 from collections import namedtuple
-from datetime import time
 from threading import Lock
 from typing import Dict, Tuple, Callable, List, Any
 
@@ -53,17 +53,15 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
                     log.warning(f"Failed to restart with common_args {self.common_args} on try {try_count}")
             # Retrieve the attributes returned by detect and also use the retrieval as a self check
             self_check_op = self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "AttributesReturnedByDetect")
-            if self_check_op.errorName():
-                log.error(f'Sanity check try {try_count}: {self.dbus_interface_name} failed: {self_check_op.errorMessage()}')
-            else:
+            if not self_check_op.errorName():
                 DdcutilDBusImpl.DetectedAttributes = namedtuple("DetectedAttributes", self_check_op.arguments()[0])
                 self.vdu_map_by_edid: Dict[str, Tuple] = {}
-                break
+                break  # Stop looping
+            log.error(f'Sanity check try {try_count}: {self.dbus_interface_name} failed: {self_check_op.errorMessage()}')
             if try_count >= 4:  # Give up
                 self._connect_to_service(disconnect=True)  # disconnect handler references to facilitate garbage collection
                 raise DdcutilServiceNotFound(
                     f"Error contacting D-Bus service {self.dbus_interface_name} {self_check_op.errorMessage()}")
-            log.info("looping")
             time.sleep(2)  # Try again
 
     def set_sleep_multiplier(self, edid_txt: str, sleep_multiplier: float):
