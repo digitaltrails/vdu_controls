@@ -427,7 +427,6 @@ class VduControlsConfig:
         if main_config:
             self.ini_content[ConfSec.VDU_CONTROLS_GLOBALS] = {}
             for option in ConfOpt:  # Add in options for all supported controls
-                print(option)
                 if option.conf_section == ConfSec.VDU_CONTROLS_GLOBALS:
                     default_str = str(option.default_value) if option.default_value is not None else ''
                     self.ini_content.set(*option.conf_id, default_str)
