@@ -72,7 +72,13 @@ LOCALE_TRANSLATIONS_PATHS = ([ DEVELOPER_TRANSLATIONS_PATH ] if VDU_CONTROLS_DEV
 ]
 
 
+cached_language_codes: List[str] = []
+
+
 def available_translations() -> List[str]:
+    global cached_language_codes
+    if cached_language_codes:
+        return cached_language_codes
     filename_stem_pattern = "??_??"  # two letters, underscore, two letters
     extensions = ["ts", "qm"]
     language_codes = set()
@@ -83,7 +89,8 @@ def available_translations() -> List[str]:
             for file_path in dir_path.glob(f"{filename_stem_pattern}.{ext}"):
                 log.info(f"Found translation file: {file_path}")
                 language_codes.add(file_path.stem)  # stem is e.g., "fr_FR"
-    return sorted(language_codes)  # sorted for consistent order
+    cached_language_codes = sorted(language_codes)
+    return cached_language_codes  # sorted for consistent order
 
 
 def find_locale_specific_file(filename: str) -> Path | None:
