@@ -1,360 +1,380 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <!DOCTYPE TS>
 <TS version="2.1">
 <context>
     <name>AboutDialog</name>
     <message>
-        <location filename="../vdu_controls/vdu_controls/about_dialog.py" line="157" />
+        <location filename="../vdu_controls/vdu_controls/about_dialog.py" line="162" />
         <source>About</source>
         <translation>Mō</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/about_dialog.py" line="159" />
+        <location filename="../vdu_controls/vdu_controls/about_dialog.py" line="164" />
         <source>About vdu_controls</source>
         <translation>Mō vdu_controls</translation>
     </message>
 </context><context>
     <name>ConfOpt</name>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="192" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="198" />
         <source>splash screen</source>
         <translation>mata pakaru</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="194" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="200" />
         <source>enable the startup splash screen</source>
         <translation>whakahohe i te whakaata tīmata</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="198" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="204" />
         <source>system tray</source>
         <translation>paepae pūnaha</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="200" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="206" />
         <source>start up in the system tray</source>
         <translation>tīmata ki roto i te pātene pūnaha</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="204" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="210" />
         <source>hide on focus out</source>
         <translation>huna ki te arotahi ki waho</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="206" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="212" />
         <source>minimize the main window automatically on focus out</source>
         <translation>whakaiti aunoa i te matapihi matua ina ngaro te arotahi</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="210" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="216" />
         <source>smart window</source>
         <translation>matapihi atamai</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="212" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="218" />
         <source>smart main window placement and geometry (X11 and XWayland)</source>
         <translation>whakanoho matapihi matahi atamai me te āhuahanga (X11 me XWayland)</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="216" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="222" />
         <source>smart uses xwayland</source>
         <translation>whakamahi atamai xwayland</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="218" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="224" />
         <source>if smart-window is enabled, use Xwayland in Wayland</source>
         <translation>ki te whakahohe te matapihi atamai, whakamahia Xwayland i Wayland</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="222" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="228" />
         <source>prefer-qt6</source>
         <translation>hiahia-qt6</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="224" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="230" />
         <source>Prefer Qt6 over Qt5 (if both are installed)</source>
         <translation>Kōwhiria Qt6 i te Qt5 (mehemea kua tāhua ngā mea e rua)</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="228" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="234" />
         <source>monochrome tray</source>
         <translation>paepae monohiko</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="230" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="236" />
         <source>monochrome dark themed system tray</source>
         <translation>pātene pūnaha kawekawe pouri kotae-rua</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="234" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="240" />
         <source>mono light tray</source>
         <translation>paepae marama mono</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="236" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="242" />
         <source>monochrome light themed system tray</source>
         <translation>pātene pūnaha kawekawe mā kotae-rua</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="240" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="246" />
         <source>tray follows theme</source>
         <translation>ka whai i te kaupapa</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="242" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="248" />
         <source>tray dark/light theming follows desktop-theme changes</source>
         <translation>kawekawe pouri/mā o te pātene e whai ana i ngā huringa kawekawe papamahi</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="246" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="252" />
         <source>toolbar at top</source>
         <translation>paeutauta kei runga</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="248" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="254" />
         <source>toolbar resides at top of main window</source>
         <translation>kei runga te paetapa o te matapihi matua</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="252" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="258" />
         <source>separate status bar</source>
         <translation>pae tūnga motuhake</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="254" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="260" />
         <source>seperate the status-bar from the tool-bar</source>
         <translation>wehea te pae tūnga me te pae utauta</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="258" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="264" />
         <source>protect nvram</source>
         <translation>tiaki nvram</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="260" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="266" />
         <source>alter options and defaults to minimize VDU NVRAM writes</source>
         <translation>whakarerekē i ngōwhiringa me ngā taunoa kia iti ngā tuhituhi ki te NVRAM o te VDU</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="264" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="270" />
         <source>order by name</source>
         <translation>ota ma te ingoa</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="266" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="272" />
         <source>order lists and tabs by vdu-name</source>
         <translation>raupapa ngā rārangi me ngā ripa mā te ingoa VDU</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="270" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="276" />
         <source>lux options</source>
         <translation>kōwhiringa lux</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="272" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="278" />
         <source>enable light metering options</source>
         <translation>whakahohe i ngā ngōwhiringa inenga rama</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="276" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="282" />
         <source>lux tray icon</source>
         <translation>tohu paepae lux</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="278" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="284" />
         <source>enable lux light-level system-tray icon</source>
         <translation>whakahohe i te kata pātene pūnaha taumata rama lux</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="282" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="288" />
         <source>schedule</source>
         <translation>hōtaka</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="284" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="290" />
         <source>enable preset schedule</source>
         <translation>whakahohe i te wātaka tautapa</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="288" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="294" />
         <source>weather</source>
         <translation>huarere</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="290" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="296" />
         <source>enable weather lookups</source>
         <translation>whakahohe i te rapu huarere</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="294" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="300" />
         <source>dbus client</source>
         <translation>kiritaki dbus</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="296" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="302" />
         <source>use the D-Bus ddcutil-server if available</source>
         <translation>whakamahia te tūmau ddcutil D-Bus mēnā e wātea ana</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="300" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="306" />
         <source>dbus events</source>
         <translation>nga huihuinga dbus</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="302" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="308" />
         <source>enable D-Bus ddcutil-server events</source>
         <translation>whakahohe i ngā kaupapa tūmau ddcutil D-Bus</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="306" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="312" />
         <source>laptop panel</source>
         <translation>panui pona</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="308" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="314" />
         <source>use brightnessctl utility for laptop panel control</source>
         <translation>whakamahia te taputapu brightnessctl hei whakahaere i te papa rorohiko kawe</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="312" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="318" />
         <source>syslog</source>
         <translation>syslog</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="314" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="320" />
         <source>divert diagnostic output to the syslog</source>
         <translation>whakawhiti atu ngā putanga tātari ki te syslog</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="318" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="324" />
         <source>debug</source>
         <translation>patuiro</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="320" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="326" />
         <source>output extra debug information</source>
         <translation>whakaputa kōrero patuiro tāpiri</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="324" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="330" />
         <source>warnings</source>
         <translation>whakatūpato</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="326" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="332" />
         <source>popup warnings if a VDU lacks an enabled control</source>
         <translation>whakaatu whakatūpato pākiri-ake mēnā kāore i te VDU tētahi mana whakahaere kua whakahohe</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="330" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="336" />
         <source>translations</source>
         <translation>whakamaoritanga</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="332" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="338" />
         <source>enable language translations, currently not updated (no known users)</source>
         <translation>whakahohe i ngā whakamāoritanga reo, kāore anō kia whakahoutia i tēnei wā (kāore he kaiwhakamahi mōhiotia)</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="336" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="340" />
+        <source>Your locale {} will be translated.</source>
+        <translation>Ka whakamaoritia to rohe {}.</translation>
+    </message>
+    <message>
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="342" />
+        <source>Your locale {} lacks a translation.</source>
+        <translation>Karekau he whakamaoritanga o to rohe {}.</translation>
+    </message>
+    <message>
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="343" />
+        <source>Installed translations: {}.</source>
+        <translation>Whakamaoritanga kua whakauruhia: {}.</translation>
+    </message>
+    <message>
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="344" />
+        <source>These translations have not been validated by any native speakers.</source>
+        <translation>Ko enei whakamaoritanga kaore ano kia whakamanahia e nga kaikorero Maori.</translation>
+    </message>
+    <message>
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="348" />
         <source>location</source>
         <translation>wāhi</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="337" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="349" />
         <source>latitude,longitude</source>
         <translation>ahoro,aronga</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="341" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="353" />
         <source>ddcutil emulator</source>
         <translation>ddcutil emulator</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="342" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="354" />
         <source>additional command-line ddcutil emulator for a laptop panel</source>
         <translation>whaihanga ddcutil rārangi-whakahau tāpiri mō te papa rorohiko kawe</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="346" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="358" />
         <source>sleep multiplier</source>
         <translation>whakarea moe</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="348" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="360" />
         <source>ddcutil --sleep-multiplier (0.1 .. 2.0, default none)</source>
         <translation>ddcutil --whakarea-moe (0.1 .. 2.0, taunoa kāore)</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="352" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="364" />
         <source>ddcutil extra args</source>
         <translation>ddcutil atu args</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="354" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="366" />
         <source>ddcutil extra arguments (default none)</source>
         <translation>tāuhe ddcutil tāpiri (taunoa kāore)</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="358" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="370" />
         <source>vdu name</source>
         <translation>ingoa vdu</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="360" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="372" />
         <source>Name to display for this VDU</source>
         <translation>Ingoa hei whakaatu mō tēnei VDU</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="364" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="376" />
         <source>enable vcp codes</source>
         <translation>whakahohea nga waehere vcp</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="366" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="378" />
         <source>CSV list of VCP Hex-code capabilities to enable</source>
         <translation>Rārangi CSV o ngā pūmanawa waehere-ā-ngoru VCP hei whakahohe</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="370" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="382" />
         <source>capabilities override</source>
         <translation>karekau i nga kaha</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="406" />
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="404" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="418" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="416" />
         <source>(default)</source>
         <translation>(taunoa)</translation>
     </message>
 </context><context>
     <name>ConfSec</name>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="124" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="125" />
         <source>metadata</source>
         <translation>raraungameta</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="125" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="126" />
         <source>vdu controls globals</source>
         <translation>Ko te vdu te whakahaere i te ao</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="126" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="127" />
         <source>vdu controls widgets</source>
         <translation>Ka whakahaerehia e vdu nga widget</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="127" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="128" />
         <source>ddcutil parameters</source>
         <translation>ddcutil tawhā</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="128" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="129" />
         <source>ddcutil capabilities</source>
         <translation>ddcutil kaha</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="129" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="130" />
         <source>unknown</source>
         <translation>tē mōhiotia</translation>
     </message>
@@ -1429,51 +1449,51 @@ ka whakahokia {1} ki nga taunoa tono</translation>
 </context><context>
     <name>SettingsEditorLocationWidget</name>
     <message>
-        <location filename="../vdu_controls/vdu_controls/settings_editor.py" line="474" />
+        <location filename="../vdu_controls/vdu_controls/settings_editor.py" line="476" />
         <source>Latitude,Longitude for solar elevation calculations.</source>
         <translation>Ahorō,Aronga mō ngā tatauranga teitei rā.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/settings_editor.py" line="481" />
+        <location filename="../vdu_controls/vdu_controls/settings_editor.py" line="483" />
         <source>Detect</source>
         <translation>Rapu</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/settings_editor.py" line="482" />
+        <location filename="../vdu_controls/vdu_controls/settings_editor.py" line="484" />
         <source>Detect location by querying this desktop's external IP address.</source>
         <translation>Rapu i te wāhi mā te ui i te wāhitau IP waho o tēnei papamahi.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/settings_editor.py" line="494" />
+        <location filename="../vdu_controls/vdu_controls/settings_editor.py" line="496" />
         <source>Query {} to obtain information based on your IP-address?</source>
         <translation>Ui ki {} kia whiwhi kōrero e hāngai ana ki tō wāhitau IP?</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/settings_editor.py" line="498" />
+        <location filename="../vdu_controls/vdu_controls/settings_editor.py" line="500" />
         <source>Use the following info?</source>
         <translation>Whakamahia ngā kōrero e whai ake nei?</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/settings_editor.py" line="510" />
+        <location filename="../vdu_controls/vdu_controls/settings_editor.py" line="512" />
         <source>Failed to obtain info from {0}: {1}</source>
         <translation>I rahua te tiki korero mai i {0}: {1}</translation>
     </message>
 </context><context>
     <name>SettingsEditorPathValidator</name>
     <message>
-        <location filename="../vdu_controls/vdu_controls/settings_editor.py" line="562" />
+        <location filename="../vdu_controls/vdu_controls/settings_editor.py" line="564" />
         <source>The selected file does not exist or is not an ordinary file.</source>
         <translation>Kāore te kōnae kua kōwhiria i te noho, ehara rānei i te kōnae noa.</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/settings_editor.py" line="565" />
+        <location filename="../vdu_controls/vdu_controls/settings_editor.py" line="567" />
         <source>The selected file lacks execute permission.</source>
         <translation>Kāore te kōnae kua kōwhiria i te whakaaetanga whakahaere.</translation>
     </message>
 </context><context>
     <name>SettingsEditorPathWidget</name>
     <message>
-        <location filename="../vdu_controls/vdu_controls/settings_editor.py" line="579" />
+        <location filename="../vdu_controls/vdu_controls/settings_editor.py" line="581" />
         <source>Select: {}</source>
         <translation>Kōwhiri: {}</translation>
     </message>
@@ -1527,27 +1547,27 @@ ka whakahokia {1} ki nga taunoa tono</translation>
 </context><context>
     <name>SubGroup</name>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="133" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="134" />
         <source>Windowing</source>
         <translation>Matapihi Matapihi</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="134" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="135" />
         <source>Features</source>
         <translation>Ngā āhuatanga</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="135" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="136" />
         <source>System Tray</source>
         <translation>Paepae Pūnaha</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="136" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="137" />
         <source>DDC options</source>
         <translation>Kōwhiringa DDC</translation>
     </message>
     <message>
-        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="137" />
+        <location filename="../vdu_controls/vdu_controls/config_ini.py" line="138" />
         <source>Logging</source>
         <translation>Te takiuru</translation>
     </message>
