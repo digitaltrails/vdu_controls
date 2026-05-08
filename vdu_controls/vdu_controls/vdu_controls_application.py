@@ -8,7 +8,7 @@ import signal
 import socket
 import subprocess
 import threading
-import time
+import time as sys_time
 import traceback
 from contextlib import contextmanager
 from datetime import timedelta, datetime
@@ -434,7 +434,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     break
                 elif prev_num > 0:
                     log.info(f"Number of detected monitors changed from {prev_num} to {len(self.detected_vdu_list)} (loop={i})")
-                time.sleep(1.5)
+                sys_time.sleep(1.5)
         except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
             log.error(e)
             ddcutil_problem = e
@@ -459,7 +459,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                               trace=True)
                     remedy = self.main_window.ask_for_vdu_controller_remedy(vdu_number, model_name, vdu_serial)
                     if remedy == VduController.NORMAL_VDU:
-                        time.sleep(1.0)  # Slow things down in case something is wrong with the GUI or VDU interactions.
+                        sys_time.sleep(1.0)  # Slow things down in case something is wrong with the GUI or VDU interactions.
                         continue  # Loop and retry as a normal VDU
                     controller = VduController(vdu_number, model_name, vdu_serial, manufacturer, self.main_config,
                                                self.ddcutil, self.edit_config, main_panel_error_handler, remedy)
@@ -579,7 +579,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             return
         self.refresh_data_task = WorkerThread(task_body=_update_from_vdu, task_finished=_update_ui_view)
         self.refresh_data_task.start()
-        time.sleep(0.1)  # Sleep a bit to see if we acquire the application lock
+        sys_time.sleep(0.1)  # Sleep a bit to see if we acquire the application lock
         if not self.refresh_data_task.stop_requested:  # if the thread has already stopped, it never acquired the application_lock
             self.main_window.indicate_busy(True)  # Refresh has probably commenced, give the user some feedback
 
@@ -686,7 +686,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                         message = tr("Restored I-Preset {}").format(worker.context.name)
                         self.status_message(message, timeout=5)
                         self.main_window.splash_message_qtsignal.emit(message)
-                        time.sleep(1.0)  # Pause to give the message time to display - TODO find non-delaying solution
+                        sys_time.sleep(1.0)  # Pause to give the message time to display - TODO find non-delaying solution
                         self.main_window.update_status_indicators()  # Refresh to restore other non-init preset icons
 
                     self.restore_preset(preset, finished_func=_restored_initialization_preset, initialization_preset=True)
@@ -1075,7 +1075,7 @@ class VduAppWindow(QMainWindow):
                 for _ in range(0, SYSTEM_TRAY_WAIT_SECONDS):
                     if QSystemTrayIcon.isSystemTrayAvailable():
                         break
-                    time.sleep(0.25)  # TODO - at least use a constant
+                    sys_time.sleep(0.25)  # TODO - at least use a constant
             if QSystemTrayIcon.isSystemTrayAvailable():
                 log.info("Using system tray.")
                 app.setQuitOnLastWindowClosed(False)  # This next call appears to be automatic on KDE, but not on gnome.

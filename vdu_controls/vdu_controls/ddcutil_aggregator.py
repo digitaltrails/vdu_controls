@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 import subprocess
-import time
+import time as sys_time
 from typing import List, Dict, Callable, Tuple, NewType
 
 from vdu_controls.ddcutil_abstract import DDCUTIL_RETRIES, VcpValue, CONTINUOUS_TYPE, SIMPLE_NON_CONTINUOUS_TYPE, \
@@ -194,7 +194,7 @@ class DdcutilAggregator:
             except (subprocess.SubprocessError, DdcutilDisplayNotFound, ValueError) as e:
                 if not retry_on_error or attempt_count + 1 == DDCUTIL_RETRIES:
                     raise e
-            time.sleep(attempt_count * 0.25)
+            sys_time.sleep(attempt_count * 0.25)
 
     def vcp_info(self) -> str:
         """Returns info about all codes known to ddcutil, whether supported or not."""

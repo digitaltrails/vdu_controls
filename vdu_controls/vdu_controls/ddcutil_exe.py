@@ -6,7 +6,7 @@ import os
 import re
 import subprocess
 from collections import namedtuple
-import time
+import time as sys_time
 from threading import Lock
 from typing import Dict, List, Tuple, Any
 
@@ -77,9 +77,9 @@ class DdcutilExeImpl(DdcutilInterface):
         process_args = [self.ddcutil_exe] + self.common_args + multiplier_args + syslog_args + extra_args + list(args) + edid_args
         try:
             with self.ddcutil_access_lock:
-                now = time.time()
+                now = sys_time.time()
                 result = subprocess.run(process_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-                elapsed = time.time() - now
+                elapsed = sys_time.time() - now
                 # Shorten EDID to 30 characters when logging it (it will be the only long argument)
                 log.debug(f"subprocess result: success {log_id} [{self._format_args_diagnostic(result.args)}] "
                           # f"{process_args=} "
@@ -194,7 +194,7 @@ class DdcutilExeImpl(DdcutilInterface):
             except (subprocess.SubprocessError, ValueError, DdcutilDisplayNotFound):
                 if attempt_count + 1 == DDCUTIL_RETRIES:  # Don't log here, it creates too much noise in the logs
                     raise  # Too many failures, pass the buck upstairs
-            time.sleep(attempt_count * 0.25)
+            sys_time.sleep(attempt_count * 0.25)
         raise ValueError(f"Exceeded {DDCUTIL_RETRIES} attempts to get vcp values.")
 
     def __parse_vcp_value(self, vcp_code: int, result: str) -> VcpValue:

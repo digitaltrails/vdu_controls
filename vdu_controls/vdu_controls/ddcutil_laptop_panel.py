@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 import subprocess
-import time
+import time as sys_time
 from datetime import datetime, timedelta
 
 from threading import Lock
@@ -83,9 +83,9 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
         process_args = [self.brightnessctl_exe] + list(args)
         try:
             with self.ddcutil_access_lock:
-                now = time.time()
+                now = sys_time.time()
                 result = subprocess.run(process_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-                elapsed = time.time() - now
+                elapsed = sys_time.time() - now
                 log.debug(f"subprocess result: success {log_id} [{result.args}] "
                           f"rc={result.returncode} elapsed={elapsed:.2f} "
                           f"stdout={result.stdout.decode('utf-8', errors='surrogateescape')}") if log.debug_enabled else None
@@ -165,5 +165,5 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
             except (subprocess.SubprocessError, ValueError, DdcutilDisplayNotFound):
                 if attempt_count + 1 == DDCUTIL_RETRIES:  # Don't log here, it creates too much noise in the logs
                     raise  # Too many failures, pass the buck upstairs
-            time.sleep(attempt_count * 0.25)
+            sys_time.sleep(attempt_count * 0.25)
         raise ValueError(f"Exceeded {DDCUTIL_RETRIES} attempts to get vcp values.")

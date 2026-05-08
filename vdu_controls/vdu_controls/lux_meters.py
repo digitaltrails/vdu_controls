@@ -8,7 +8,7 @@ import re
 import select
 import subprocess
 import termios
-import time
+import time as sys_time
 from importlib import import_module
 from typing import Tuple
 
@@ -42,7 +42,7 @@ class LuxMeterDevice(QObject):
         if self.current_value is None and self.requires_worker:
             self.worker.start() if not self.worker.isRunning() else None
             while self.current_value is None and not self.worker.stop_requested:  # have to block on the first time through.
-                time.sleep(0.1)
+                sys_time.sleep(0.1)
         return self.current_value
 
     def update_from_worker_thread(self, _: WorkerThread) -> None:  # Only for meters that have background workers.

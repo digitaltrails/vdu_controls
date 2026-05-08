@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-import time
+import time as sys_time
 from collections import namedtuple
 from threading import Lock
 from typing import Dict, Tuple, Callable, List, Any
@@ -46,7 +46,7 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
                     self._validate(self.ddcutil_proxy.call("Restart", " ".join(self.common_args),
                                                            QDBusArgument(0, intV(QMetaType.Type.UInt)),
                                                            QDBusArgument(0, intV(QMetaType.Type.UInt))))
-                    time.sleep(2)  # Should be enough time
+                    sys_time.sleep(2)  # Should be enough time
                     log.info("Reconnecting after dbus service restart.")
                     self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service()  # connect again
                 except (ValueError, DdcutilDisplayNotFound):
@@ -62,7 +62,7 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
                 self._connect_to_service(disconnect=True)  # disconnect handler references to facilitate garbage collection
                 raise DdcutilServiceNotFound(
                     f"Error contacting D-Bus service {self.dbus_interface_name} {self_check_op.errorMessage()}")
-            time.sleep(2)  # Try again
+            sys_time.sleep(2)  # Try again
 
     def set_sleep_multiplier(self, edid_txt: str, sleep_multiplier: float):
         with self.service_access_lock:

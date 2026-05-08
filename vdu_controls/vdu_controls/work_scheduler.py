@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 import threading
-import time
+import time as sys_time
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Callable, List, Dict
@@ -54,15 +54,15 @@ class WorkerThread(QThread):
         log.debug(f"WorkerThread: stop requested {thread_pid()=} {self.task_body}") if log.debug_enabled else None
         self.stop_requested = True
         while self.isRunning():
-            time.sleep(0.1)
+            sys_time.sleep(0.1)
 
     def doze(self, seconds: float, sleep_unit: float = 0.5):
         while seconds >= sleep_unit and not self.stop_requested:
-            time.sleep(sleep_unit)
+            sys_time.sleep(sleep_unit)
             seconds -= sleep_unit
         if not self.stop_requested:
             if seconds > 0.1:
-                time.sleep(seconds)
+                sys_time.sleep(seconds)
 
 
 class SchedulerJobType(Enum):

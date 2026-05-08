@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-import time
+import time as sys_time
 from datetime import datetime
 from functools import partial
 from pathlib import Path
@@ -410,7 +410,7 @@ class PresetElevationChartWidget(QLabel):
         self.horizon_y: int = npx(75)
         self.radius_of_deletion = npx(50)
         self.solar_max_t: datetime | None = None
-        self.last_event_time = time.time()
+        self.last_event_time = sys_time.time()
         self.cache_key: Tuple[datetime, int, int, int] | None = None
         self.cache_curve_points: List[QPoint] = []
 
@@ -630,7 +630,7 @@ class PresetElevationChartWidget(QLabel):
     def mouseMoveEvent(self, event: QMouseEvent | None) -> None:
         if event:
             event.accept()
-            if (now := time.time()) - self.last_event_time < 0.1:  # Prevent event overload on Qt6 kwin-wayland
+            if (now := sys_time.time()) - self.last_event_time < 0.1:  # Prevent event overload on Qt6 kwin-wayland
                 return
             self.last_event_time = now
             pos = self.update_current_pos(event.pos())
@@ -731,7 +731,7 @@ class PresetScheduleAtElevationWidget(PresetScheduleAtWidgetBase):
 
         self.df_widget = PresetDaylightFactorWidget()
 
-        self.slider_last_event_time = time.time()
+        self.slider_last_event_time = sys_time.time()
         self.slider = QSlider(Qt.Orientation.Horizontal)
         self.slider.setMinimum(-1)
         self.slider.setValue(-1)
@@ -764,7 +764,7 @@ class PresetScheduleAtElevationWidget(PresetScheduleAtWidgetBase):
         self.set_elevation_key(None)
 
     def sliding(self) -> None:
-        if (now := time.time()) - self.slider_last_event_time < 0.1:  # Prevent event overload on Qt6 kwin-wayland
+        if (now := sys_time.time()) - self.slider_last_event_time < 0.1:  # Prevent event overload on Qt6 kwin-wayland
             return
         self.slider_last_event_time = now
         value = self.slider.value()
