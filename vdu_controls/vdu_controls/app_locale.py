@@ -73,6 +73,7 @@ LOCALE_TRANSLATIONS_PATHS = ([ DEVELOPER_TRANSLATIONS_PATH ] if VDU_CONTROLS_DEV
 
 
 def available_translations() -> List[str]:
+    return ['fr_fR',]
     filename_stem_pattern = "??_??"  # two letters, underscore, two letters
     extensions = ["ts", "qm"]
     language_codes = set()
