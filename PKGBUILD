@@ -30,7 +30,7 @@ build() {
 package() {
   cd "$pkgname-$pkgver"
   install -Dm755 "$pkgname.pyz" "$pkgdir/usr/bin/$pkgname"
-  install -Dm644 translations/*.{ts,txt} -t "$pkgdir/usr/share/$pkgname/translations/"
+  install -Dm644 translations/*.ts -t "$pkgdir/usr/share/$pkgname/translations/"
   install -Dm755 sample-scripts/* -t "$pkgdir/usr/share/$pkgname/sample-scripts/"
   install -Dm644 icons/* -t "$pkgdir/usr/share/$pkgname/icons/"
   install -Dm644 "docs/_build/man/$pkgname.1" -t "$pkgdir/usr/share/man/man1/"
