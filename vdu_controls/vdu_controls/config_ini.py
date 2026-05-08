@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import List, Tuple, Dict, Any
 
 import vdu_controls.logging as log
+from vdu_controls import app_locale
 from vdu_controls.app_locale import tr
 from vdu_controls.constants import CONFIG_DIR_PATH, VDU_CONTROLS_VERSION, APPNAME
 from vdu_controls.ddcutil_abstract import CON, BRIT, CONT, SNC
@@ -160,6 +161,7 @@ class ConfOptDef:
     sub_group: SubGroup = SubGroup.NONE
     related: str = ''
     requires: str = ''
+    warning: str = ''
 
     @property
     def conf_id(self) -> str:
@@ -176,6 +178,10 @@ class ConfOptDef:
     @property
     def localized_help(self) -> str:
         return tr(self.help, ConfOpt.__name__)
+
+    @property
+    def localized_warning(self) -> str:
+        return tr(self.warning, ConfOpt.__name__)
 
     def __post_init__(self):
         # hack to fit in with old convention - bypass frozen during initialization.
@@ -329,7 +335,13 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         conf_name='translations-enabled', default_value="no", restart_required=True,
         ui_label=QT_TR_NOOP('translations'),
         sub_group=SubGroup.FEATURES,
-        help=QT_TR_NOOP('enable language translations, currently not updated (no known users)'))
+        help=QT_TR_NOOP('enable language translations, currently not updated (no known users)'),
+        warning=('{}\n\n{}\n\n{}'.format(
+            QT_TR_NOOP('Your locale {} will be translated.').format(app_locale.get_locale_name())
+            if  app_locale.get_locale_name() in app_locale.available_translations() else
+            QT_TR_NOOP('Your locale {} lacks a translation.').format(app_locale.get_locale_name()),
+            QT_TR_NOOP('Installed translations: {}.').format(', '.join(app_locale.available_translations())),
+            QT_TR_NOOP('These translations have not been validated by any native speakers.'))))
 
     LOCATION = ConfOptDef(
         conf_name='location', conf_type=ConfType.LOCATION,
