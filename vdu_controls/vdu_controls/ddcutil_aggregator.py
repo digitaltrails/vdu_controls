@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 import subprocess
-from datetime import time
+import time
 from typing import List, Dict, Callable, Tuple, NewType
 
 from vdu_controls.ddcutil_abstract import DDCUTIL_RETRIES, VcpValue, CONTINUOUS_TYPE, SIMPLE_NON_CONTINUOUS_TYPE, \
