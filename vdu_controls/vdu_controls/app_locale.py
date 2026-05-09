@@ -68,7 +68,6 @@ APP_INTERNAL_DOCS_FOLDER = APP_INTERNAL_RESOURCE_ROOT / 'docs'
 LOCALE_TRANSLATIONS_PATHS = ([ DEVELOPER_TRANSLATIONS_PATH ] if VDU_CONTROLS_DEVELOPER else []) + [
     HOME_LOCAL_SHARE / 'translations',
     USR_LOCAL_SHARE / 'translations',
-    APP_INTERNAL_RESOURCE_ROOT / 'translations',
 ]
 
 
@@ -99,7 +98,6 @@ def find_locale_specific_file(filename: str) -> Path | None:
       0. If env VDU_CONTROLS_DEVELOPER=yes first look in ./translations
       1. $HOME/.local/share/vdu_controls/translations
       2. /usr/share/vdu_controls/translations
-      3. app-internal-resources/resources/translations
     """
     log.info(f"Looking for translation file {filename}")
     for path in LOCALE_TRANSLATIONS_PATHS:
@@ -108,6 +106,7 @@ def find_locale_specific_file(filename: str) -> Path | None:
         if full_path.exists():
             log.info(f"Found translation: {full_path}")
             return full_path
+    log.info(f"Failed to find: {filename}")
     return None
 
 
@@ -168,7 +167,7 @@ def initialise_locale_translations(app: QApplication) -> None:
         import xml.etree.ElementTree as XmlElementTree
         for context in XmlElementTree.parse(ts_path).findall('context'):
             context_name = context.findall('name')[0].text
-            log.info(f"context: {context_name}")
+            log.debug(f"context: {context_name}")
             for message in context.findall('message'):
                 translation = message.find('translation')
                 source = message.find('source')
@@ -185,6 +184,9 @@ def initialise_locale_translations(app: QApplication) -> None:
     if translating_locale and QLocale.system().textDirection() == Qt.LayoutDirection.RightToLeft:
         log.info(f"Locale {locale_name} language is right-to-left - setting layout direction to right-to-left.")
         app.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+    if not translating_locale:
+        log.warning(f"Cannot translate locale {locale_name}, could not find any translations.")
+
 
 def tr(source_text: str, context: str | None = None) -> str:
     """
