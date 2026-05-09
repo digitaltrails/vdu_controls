@@ -29,7 +29,10 @@ GREY_SCALE_SVG = f'''
 '''.encode()
 
 class GreyScaleDialog(SubWinDialog):
-    """Creates a dialog with a grey scale VDU calibration image.  Non-model. Have as many as you like - one per VDU."""
+    """
+    Creates a dialog with a grey scale VDU calibration image.
+    Non-model. Have as many as you like - one per VDU.
+    """
 
     # This stops garbage-collection of independent instances of this dialog until the user closes them.
     # If we don't do this, the dialog will disappear before it becomes visible. We could also pass a parent

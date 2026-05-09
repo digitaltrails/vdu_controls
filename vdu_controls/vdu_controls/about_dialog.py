@@ -124,10 +124,10 @@ class _AboutTemplateData:
             (qt-{QtCore.QT_VERSION_STR}/{QGuiApplication.platformName()})
             ddcutil-interface: {self.ddcutil_version_info_0}; 
             ddcutil: {self.ddcutil_version_info_1};
-            NVRAM writes: {self.counts_str};  
             locale: {app_locale.get_locale_name()} 
             ({"translating" if app_locale.get_translating_locale() == app_locale.get_locale_name() else "not translating"}); 
-            installed translations: {', '.join(app_locale.available_translations())}
+            installed translations: {', '.join(app_locale.available_translations())};
+            NVRAM writes: {self.counts_str}; 
             '''
 
 class AboutDialog(QMessageBox, DialogSingletonMixin):

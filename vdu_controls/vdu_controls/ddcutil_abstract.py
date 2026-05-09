@@ -24,8 +24,6 @@ BRIGHTNESS_VCP_CODE = BRIT = '10'  # This is HEX
 CONTRAST_VCP_CODE = CONT = '12'  # Also HEX
 
 
-
-
 class DdcEventType(Enum):  # Has to correspond to what the service supports
     UNKNOWN = -2
     LAPTOP_BRIGHTNESS_CHANGE = -1

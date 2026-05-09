@@ -67,7 +67,12 @@ unix_signal_handler: SignalWakeupHandler | None = None
 original_qt_qpa_platform: str | None = None
 
 
-def force_xwayland():  # Force Qt to use XWayland, or reverse the previous force
+def force_xwayland():
+    """
+    Set the QT_QPA_PLATFORM environment variable to force Qt to use XWayland.
+    Caches the previous value of the environment variable so it can be restored later.
+    """
+    # Force Qt to use XWayland, or reverse the previous force
     global original_qt_qpa_platform
     original_qt_qpa_platform = os.environ.get('QT_QPA_PLATFORM', '')  # save original value
     log.info("Forcing Xwayland, setting environment variable QT_QPA_PLATFORM=xcb")
@@ -75,6 +80,10 @@ def force_xwayland():  # Force Qt to use XWayland, or reverse the previous force
 
 
 def reverse_force_xwayland():
+    """
+    Restore or unset QT_QPA_PLATFORM environment variable to match the situation
+    before calling force_xwayland().
+    """
     if original_qt_qpa_platform:
         log.info(f"Restoring environment variable QT_QPA_PLATFORM={original_qt_qpa_platform}")
         os.environ['QT_QPA_PLATFORM'] = original_qt_qpa_platform  # restore original value

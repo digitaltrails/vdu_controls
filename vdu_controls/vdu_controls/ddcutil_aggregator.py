@@ -19,7 +19,7 @@ import vdu_controls.logging as log
 VduStableId = NewType('VduStableId', str)
 
 
-class DdcutilAggregator:
+class DdcutilAggregator(DdcutilInterface):
     """
     Routes operations to relevant DccutilInterface instances and aggregates the results.
     For example, a "detect" might be routed to all instances, such as DdcutilDbusImpl and

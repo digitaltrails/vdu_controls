@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
-import dataclasses
 from collections import namedtuple
+from dataclasses import dataclass
 from enum import IntEnum, auto
 from typing import List, Callable, TYPE_CHECKING, Tuple, Dict
 
@@ -37,7 +37,7 @@ class FixedItemKey(IntEnum):
     HELP = auto()
     QUIT = auto()
 
-@dataclasses.dataclass
+@dataclass
 class FixedItemData:
     pixmap_number: int
     title: str

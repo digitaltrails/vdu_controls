@@ -70,10 +70,11 @@ class SchedulerJobType(Enum):
     SCHEDULE_PRESETS = 2
 
 
-# QTimer replacement - hibernation-tolerant scheduling at specific YYYYMMDD HHMM.
-# After hibernation, overdue events will trigger immediately.
 class SchedulerJob:  # designed to resemble a QTimer, which it was written to replace
-
+    """
+    QTimer replacement - hibernation-tolerant scheduling at specific YYYYMMDD HHMM.
+    After hibernation, overdue events will trigger immediately.
+    """
     def __init__(self, when: datetime, job_type: SchedulerJobType, run_callable: Callable, skip_callabled: Callable | None = None):
         assert when.tzinfo is not None
         self.when = when.replace(second=0, microsecond=0)
@@ -109,9 +110,13 @@ class SchedulerJob:  # designed to resemble a QTimer, which it was written to re
         return f"[{self.job_type=} {self.when=:%Y-%m-%d %H:%M:%S} {self.attempts=} {self.has_run=}]"
 
 
-# Worker that runs SchedulerJobs - hibernation-tolerant scheduling at specific YYYYMMDD HHMM.
-# (An implementation based on sched.scheduler might also work - but the following is definitely going to work cross platform)
 class ScheduleWorker(WorkerThread):
+    """
+    Worker that runs SchedulerJobs - hibernation-tolerant scheduling at
+    specific YYYYMMDD HHMM.
+    (An implementation based on sched.scheduler might also work - but the
+    following is definitely going to work cross-platform)
+    """
     _instance: 'ScheduleWorker | None' = None
     _scheduler_lock = threading.RLock()
 

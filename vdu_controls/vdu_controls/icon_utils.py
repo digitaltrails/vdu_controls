@@ -51,7 +51,10 @@ svg_icon_cache: Dict[bytes, QIcon] = {}
 
 
 def create_icon_from_svg_bytes(svg_bytes: bytes, theme_type: ThemeType = ThemeType.UNDECIDED) -> QIcon:
-    """There is no QIcon option for loading SVG from a string, only from a SVG file, so roll our own."""
+    """
+    There is no QIcon option for loading SVG from a string,
+    only from a SVG file, so roll our own.
+    """
     if theme_type == ThemeType.UNDECIDED:
         theme_type = polychrome_light_or_dark()
     svg_bytes = handle_theme(svg_bytes, theme_type)
@@ -112,7 +115,9 @@ def create_icon_from_text(text: str, theme_type: ThemeType) -> QIcon:
 
 def create_decorated_app_icon(base_icon: QIcon, overlay_icon: QIcon | None = None,
                               left_indicator: QColor | None = None, right_indicator: QColor | None = None) -> QIcon:
-    # Non-destructively overlay overlay_icon and indicators within a copy of base_icon.
+    """
+    Non-destructively overlay overlay_icon and indicators within a copy of base_icon.
+    """
     icon_size = QSize(64, 64)  # Everything is hard coded based on 64x64
     combined_pixmap = QPixmap(base_icon.pixmap(icon_size, QIcon.Mode.Normal, QIcon.State.On))
     painter = QPainter(combined_pixmap)
@@ -137,7 +142,9 @@ def polychrome_light_or_dark():
 
 
 def get_splash_pixmap() -> QPixmap:
-    """Get the splash pixmap from the installed png, failing that, the internal splash svg."""
+    """
+    Get the splash pixmap from the installed png, failing that, the internal splash svg.
+    """
     svg_file = resources_files('vdu_controls') / 'resources' / 'icons' / 'app' / 'vdu_controls.png'
     pixmap = QPixmap()
     pixmap.loadFromData(svg_file.read_bytes(), 'PNG')

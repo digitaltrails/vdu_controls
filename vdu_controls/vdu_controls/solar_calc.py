@@ -22,7 +22,10 @@ SolarElevationData = namedtuple('SolarElevationData', ['azimuth', 'zenith', 'whe
 # Converted to only use the python math library (instead of numpy) by me for vdu_controls.
 # Coding style also altered for use with vdu_controls.
 def calc_solar_azimuth_zenith(localised_time: datetime, latitude: float, longitude: float) -> Tuple[float, float]:
-    """Return azimuth degrees clockwise from true north and zenith in degrees from vertical direction."""
+    """
+    Return azimuth degrees clockwise from true north and zenith in degrees from
+    vertical direction.
+    """
     assert localised_time.tzinfo is not None
     utc_datetime = localised_time.astimezone(timezone.utc)
     # UTC from now on...
@@ -86,8 +89,10 @@ def calc_solar_azimuth_zenith(localised_time: datetime, latitude: float, longitu
 
 
 def calc_solar_lux(localised_time: datetime, location: GeoLocation, daylight_factor: float) -> int:
-    # E. Elvegård and G. Sjöstedt, "The Calculation of Illumination from Sun and Sky," _Illuminating Engineering_, Apr. 1940.
-    # [Illuminating Engineering Society, 100 Significant Papers](https://www.ies.org/research/publications/100-significant-papers/)
+    """
+    E. Elvegård and G. Sjöstedt, "The Calculation of Illumination from Sun and Sky," _Illuminating Engineering_, Apr. 1940.
+    [Illuminating Engineering Society, 100 Significant Papers](https://www.ies.org/research/publications/100-significant-papers/)
+    """
     latitude, longitude = location.latitude, location.longitude
     _, zenith = calc_solar_azimuth_zenith(localised_time, latitude, longitude)
     solar_altitude = 90 - zenith  # After sunset use
@@ -100,8 +105,10 @@ def calc_solar_lux(localised_time: datetime, location: GeoLocation, daylight_fac
     return illumination
 
 
-# Spherical distance from https://stackoverflow.com/a/21623206/609575 (great circle distance km)
 def spherical_kilometers(lat1, lon1, lat2, lon2) -> float:
+    """
+    Spherical distance from https://stackoverflow.com/a/21623206/609575 (great circle distance km)
+    """
     p = math.pi / 180
     a = 0.5 - math.cos((lat2 - lat1) * p) / 2 + math.cos(lat1 * p) * math.cos(lat2 * p) * (1 - math.cos((lon2 - lon1) * p)) / 2
     a = min(1.0, max(0.0, a))  # Guard against floating‑point errors
@@ -111,9 +118,11 @@ def spherical_kilometers(lat1, lon1, lat2, lon2) -> float:
 def create_elevation_map(local_now: datetime, latitude: float, longitude: float,
                          callback: Callable[[float, float, datetime], None]
                                    | None = None) -> Dict[SolarElevationKey, SolarElevationData]:
-    # Create a minute-by-minute map of today's SolarElevations.
-    # For a given dict[SolarElevation], record the first minute it occurs.
-    # Calls the callback for every 1 minute point, not just each integer elevation.
+    """
+    Create a minute-by-minute map of today's SolarElevations.
+    For a given dict[SolarElevation], record the first minute it occurs.
+    Calls the callback for every 1 minute point, not just each integer elevation.
+    """
     elevation_time_map = {}
     local_when = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
     while local_when.day == local_now.day:

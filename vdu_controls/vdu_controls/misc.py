@@ -10,7 +10,7 @@ from enum import Enum
 
 from vdu_controls.constants import TESTING_TIME_ZONE, TESTING_TIME_DELTA
 
-# --- 1. Conditional base StrEnum (works on 3.8+ and uses built-in when available) ---
+# Conditional base StrEnum (works on 3.8+ and uses built-in when available) ---
 
 if sys.version_info >= (3, 11):
     from enum import StrEnum as LocalStrEnum

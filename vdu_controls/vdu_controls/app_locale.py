@@ -117,9 +117,10 @@ def load_docs_text(filename: str) -> str:
     """
     # Check outside the application for something locale specific
     as_path = Path(filename)
-    if translated_override := find_locale_specific_file(f"{as_path.stem}-{{}}{as_path.suffix}"):
-        log.info(f"Loading translated resource {filename} from {translated_override.as_posix()}")
-        return translated_override.read_text()
+    if locale_name := get_translating_locale():
+        if translated_override := find_locale_specific_file(f"{as_path.stem}-{locale_name}{as_path.suffix}"):
+            log.info(f"Loading translated resource {filename} from {translated_override.as_posix()}")
+            return translated_override.read_text()
 
     # Check inside the application resources/docs/
     file_path = APP_INTERNAL_DOCS_FOLDER / filename

@@ -125,7 +125,7 @@ class VduControlBase(QWidget):
     _refresh_ui_view_in_gui_thread_qtsignal = pyqtSignal()
 
     def __init__(self, controller: VduController, vcp_capability: VcpCapability) -> None:
-        """Construct the slider control and initialize its values from the VDU."""
+        """Construct the control and initialize its values from the VDU."""
         super().__init__()
         self.controller = controller
         self.vcp_capability = vcp_capability

@@ -15,7 +15,10 @@ from vdu_controls.icon_utils import get_splash_pixmap
 
 
 def install_as_desktop_application(uninstall: bool = False) -> None:
-    """Self install this script in the current Linux user's bin directory and desktop applications->settings menu."""
+    """
+    Self install this script in the current Linux user's bin directory
+    and desktop applications->settings menu.
+    """
     desktop_dir = Path.home() / '.local' / 'share' / 'applications'
     icon_dir = Path.home() / '.local' / 'share' / 'vdu_controls'
     bin_dir = Path.home() / '.local' / 'bin'

@@ -64,11 +64,11 @@ class TitledStrEnum(LocalStrEnum):
 
 
 class ConfSec(TitledStrEnum):
-    '''
+    """
     These are the valid fixed-names.  The fixed names are used in metadata headings
     and vdu_controls.ini.  Preset .ini files may also have dynamically named
     'device-name' sections which are also valid, but not enumerated here.
-    '''
+    """
     VDU_CONTROLS_GLOBALS    = ("vdu-controls-globals", QT_TR_NOOP("vdu controls globals"))
     VDU_CONTROLS_WIDGETS    = ("vdu-controls-widgets", QT_TR_NOOP("vdu controls widgets"))
     DDCUTIL_PARAMETERS      = ("ddcutil-parameters", QT_TR_NOOP("ddcutil parameters"))
