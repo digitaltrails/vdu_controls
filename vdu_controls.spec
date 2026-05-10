@@ -18,7 +18,7 @@
 
 
 Name:           vdu_controls
-Version:        2.6.5
+Version:        2.6.5~rc.1
 Release:        0
 Summary:        Visual Display Unit virtual control panel
 License:        GPL-3.0-or-later
@@ -103,7 +103,7 @@ ln -s -f %{_datadir}/icons %{_datadir}/%{name}/icons/system-icons
 %{_bindir}/%{name}
 %{_datadir}/applications/%{name}.desktop
 %{_datadir}/icons/hicolor/256x256/apps/%{name}.png
-%{_mandir}/man1/%{name}.1%{?ext_man}
+%{_mandir}/man1/%{name}.1*
 %{_datadir}/%{name}/icons/*
 %{_datadir}/%{name}/translations/ar_SA.ts
 %{_datadir}/%{name}/translations/da_DK.ts

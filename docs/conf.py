@@ -24,7 +24,7 @@ copyright = 'Copyright 2021-2026 Contributors to vdu_controls'
 author = 'Michael Hamilton'
 
 # The full version, including alpha/beta/rc tags
-release = '2.6.5'
+release = '2.6.5rc1'
 
 
 # -- General configuration ---------------------------------------------------

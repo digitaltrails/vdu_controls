@@ -33,7 +33,7 @@ class ConfIni(configparser.ConfigParser):
     def data_sections(self) -> List[str]:  # Section other than metadata and DEFAULT - real data.
         return [s for s in self.sections() if s != configparser.DEFAULTSECT and s != ConfIni.METADATA_SECTION]
 
-    def get_version(self) -> Tuple:
+    def get_version(self) -> Tuple[int, int, int]:
         if version := self.get(ConfIni.METADATA_SECTION, ConfIni.METADATA_VERSION_OPTION, fallback=None):
             try:
                 return tuple(int(i) for i in version.split('.'))

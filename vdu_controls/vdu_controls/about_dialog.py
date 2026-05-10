@@ -119,9 +119,8 @@ class _AboutTemplateData:
     @property
     def tech_info(self):
         return f'''
-            desktop: {VDU_CONTROLS_VERSION}; 
-            platform: {os.environ.get('XDG_CURRENT_DESKTOP', default='unknown')} 
-            (qt-{QtCore.QT_VERSION_STR}/{QGuiApplication.platformName()})
+            desktop: {os.environ.get('XDG_CURRENT_DESKTOP', default='unknown')};
+            platform: qt-{QtCore.QT_VERSION_STR}/{QGuiApplication.platformName()};
             ddcutil-interface: {self.ddcutil_version_info_0}; 
             ddcutil: {self.ddcutil_version_info_1};
             locale: {app_locale.get_locale_name()} 

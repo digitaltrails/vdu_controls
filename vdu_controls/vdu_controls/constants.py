@@ -3,13 +3,24 @@
 from __future__ import annotations
 
 import os
+import re
 import sys
 from enum import Enum
 from pathlib import Path
 
 APPNAME = "VDU Controls"
-VDU_CONTROLS_VERSION = '2.6.5'
-VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in VDU_CONTROLS_VERSION.split('.'))
+
+# Version Numbering Example when going beyond 2.10.15 to include beta or rc:
+# - Semantic Versioning: 2.10.15-rc.1
+# - Internal in here: 2.10.15-rc.1
+# - Git Tag: 2.10.15-rc.1
+# - python setup.cfg: 2.10.15rc1
+# - Sphinx conf.py: 2.10.15rc1
+# - RPM/DEB Packaging: 2.10.15~rc.1
+VDU_CONTROLS_VERSION = '2.6.5-rc.1'
+VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in re.split(r'[.-]', VDU_CONTROLS_VERSION)[:3])
+VDU_CONTROLS_VERSION_SUFFIX = VDU_CONTROLS_VERSION.split('-') + [ '' ][1]
+
 assert sys.version_info >= (3, 8), f'{APPNAME} utilizes python version 3.8 or greater (your python is {sys.version}).'
 
 VDU_CONTROLS_WEBSITE_URL = 'https://github.com/digitaltrails/vdu_controls'
