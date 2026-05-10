@@ -16,10 +16,11 @@ APPNAME = "VDU Controls"
 # - Git Tag: 2.10.15-rc.1
 # - python setup.cfg: 2.10.15rc1
 # - Sphinx conf.py: 2.10.15rc1
-# - RPM/DEB Packaging: 2.10.15~rc.1
+# - RPM/DEB packaging: 2.10.15~rc.1
+# - Arch packaging: 2.10.15_rc.1
 VDU_CONTROLS_VERSION = '2.6.5-rc.1'
 VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in re.split(r'[.-]', VDU_CONTROLS_VERSION)[:3])
-VDU_CONTROLS_VERSION_SUFFIX = VDU_CONTROLS_VERSION.split('-') + [ '' ][1]
+VDU_CONTROLS_PRE_RELEASE = (VDU_CONTROLS_VERSION.split('-') + [ '' ])[1]
 
 assert sys.version_info >= (3, 8), f'{APPNAME} utilizes python version 3.8 or greater (your python is {sys.version}).'
 
