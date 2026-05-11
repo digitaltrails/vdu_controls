@@ -16,6 +16,8 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('/home/michael/Projects/vdu_controls/docs'))
+sys.path.insert(0, os.path.abspath('/home/michael/Projects/vdu_controls/vdu_controls'))
+from vdu_controls.constants import VDU_CONTROLS_BASE_VERSION, VDU_CONTROLS_PRE_RELEASE
 
 # -- Project information -----------------------------------------------------
 
@@ -23,8 +25,8 @@ project = 'vdu_controls'
 copyright = 'Copyright 2021-2026 Contributors to vdu_controls'
 author = 'Michael Hamilton'
 
-# The full version, including alpha/beta/rc tags
-release = '2.6.5rc1'
+# The full version, including alpha/beta/rc tags - format is 2.10.15rc1
+release = VDU_CONTROLS_BASE_VERSION + VDU_CONTROLS_PRE_RELEASE.replace('.','')
 
 
 # -- General configuration ---------------------------------------------------
