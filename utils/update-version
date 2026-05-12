@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls>
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 master_version_number=$(python3 -c 'from vdu_controls.vdu_controls.constants import VDU_CONTROLS_VERSION;print(VDU_CONTROLS_VERSION)')
 

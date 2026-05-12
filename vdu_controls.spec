@@ -2,7 +2,7 @@
 # spec file for package vdu_controls
 #
 # Copyright (c) 2023 SUSE LLC
-# Copyright (c) 2021-2023 Michael Hamilton <michael@actrix.gen.nz>
+# Copyright (c) 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls>
 #
 # All modifications and additions to the file contributed by third parties
 # remain the property of their copyright owners, unless otherwise agreed
@@ -117,14 +117,4 @@ ln -s -f %{_datadir}/icons %{_datadir}/%{name}/icons/system-icons
 %{_datadir}/%{name}/sample-scripts/laptop-ddcutil-emulator.bash
 %ghost %{_datadir}/%{name}/icons/system-icons
 
-# Build service notes:
-# 0) Build service page: https://build.opensuse.org/package/show/utilities/vdu_controls
-# 1) branch the package (link on left margin of page)
-# 2) upload/alter package files in branch (should be the github versions)
-#    check that changelog lines are less than 67 characters.
-# 3) wait for builds to complete
-# 4) when OK/finished/happy, submit
-# 5) check assigned tasks: self approve submission and opt to remove branch
-# 6) check build service page (above) has updated
-# 7) wait for propagation to experimental package https://software.opensuse.org/package/vdu_controls
 %changelog
