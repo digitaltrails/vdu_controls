@@ -9,6 +9,9 @@ vdu_controls - a DDC control panel for monitors
 
 A control panel for external monitors (*Visual Display Units*).
 
+> __[Pre-release 2.6.5-rc.2 is available](https://github.com/digitaltrails/vdu_controls/releases/tag/2.6.5-rc.2).__
+> 
+
 > [!WARNING]
 > **KDE 6** introduced energy saving brighness dimming after 5 minutes of idle
 > time.  This may interfere with changes made via **vdu_controls**, including
@@ -484,7 +487,7 @@ Version History
 * 2.6.5
   * The source code has been split into 40+ files/modules.
   * The executable is now a python zipapp containing the module hierarchy.
-  * The Settings global-options are now grouped under sub-headings.
+  * The Settings global-options are now grouped under subheadings.
   * Disabled the right-mouse action that could hide the toolbar irretrievably.
   * Each icon is now held in a separate SVG source file.  This 
     makes the icons more easily editable and reusable.
