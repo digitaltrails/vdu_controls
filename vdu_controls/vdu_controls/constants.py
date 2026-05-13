@@ -24,7 +24,7 @@ APPNAME = "VDU Controls"
 # own their own conventions - while testing packaging it may be easier to
 # just use a non-release normal minor number, but keep the .rc-1 internally,
 # that way the wider packaging don't need any testing-only ugly config hacks.
-VDU_CONTROLS_VERSION = '2.6.5-rc.2'
+VDU_CONTROLS_VERSION = '2.6.5-rc.3'
 VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in re.split(r'[.-]', VDU_CONTROLS_VERSION)[:3])
 VDU_CONTROLS_BASE_VERSION = VDU_CONTROLS_VERSION.split('-')[0]
 VDU_CONTROLS_PRE_RELEASE = (VDU_CONTROLS_VERSION.split('-') + [ '' ])[1]
