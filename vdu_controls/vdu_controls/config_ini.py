@@ -36,7 +36,6 @@ class ConfIni(configparser.ConfigParser):
     def get_version(self) -> Tuple[int, int, int]:
         if version := self.get(ConfIni.METADATA_SECTION, ConfIni.METADATA_VERSION_OPTION, fallback=None):
             try:
-                print(f"checking version {version}")
                 return tuple(int(i) for i in version.split('-')[0].split('.'))
             except ValueError:
                 log.error(f"Illegal version number {version} should be i.j.k where i, j and k are integers.", trace=True)
