@@ -107,6 +107,7 @@ class ConfOptDef:
     related: str = ''
     requires: str = ''
     warning: str = ''
+    off_warning: str = ''
 
     @property
     def conf_id(self) -> str:
@@ -127,6 +128,10 @@ class ConfOptDef:
     @property
     def localized_warning(self) -> str:
         return tr(self.warning, ConfOpt.__name__)
+
+    @property
+    def localized_off_warning(self) -> str:
+        return tr(self.off_warning, ConfOpt.__name__)
 
     def __post_init__(self):
         # hack to fit in with old convention - bypass frozen during initialization.
@@ -208,7 +213,7 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         conf_name='protect-nvram', default_value="yes", restart_required=True,
         ui_label=QT_TR_NOOP('protect NVRAM'),
         sub_group=SubGroup.DDC,
-        warning=QT_TR_NOOP("NVRAM protection reduces wear to your monitor's NVRAM by minimizing writes."),
+        off_warning=QT_TR_NOOP("NVRAM protection reduces wear to your monitor's NVRAM by minimizing writes."),
         help=QT_TR_NOOP('Alter options and defaults to minimize VDU NVRAM writes.\n\n'
                         "This setting mainly effects whether transitions are\n"
                         "gradual, using several writes, or instant, with as\n"
