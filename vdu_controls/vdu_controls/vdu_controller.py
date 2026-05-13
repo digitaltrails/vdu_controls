@@ -272,6 +272,16 @@ class VduController(QObject):
                         vcp_type = SUPPORTED_VCP_BY_CODE[vcp_code].vcp_type
                 elif values[0] == VduController._LIMITED_RANGE_KEY:  # Special internal hacked config spec to specify range
                     vcp_type = CONTINUOUS_TYPE
+                elif (vcp_code in SUPPORTED_VCP_BY_CODE
+                      and SUPPORTED_VCP_BY_CODE[vcp_code].vcp_type == CONTINUOUS_TYPE):
+                    # Standard MCCS-Continuous VCP (e.g. brightness 10, contrast 12) appearing with a
+                    # spurious Values: block.  Some VDUs (observed on Philips Evnia firmware) repeat a
+                    # Feature: 10/12 line inside a manufacturer-specific section with discrete values,
+                    # which the parser would otherwise mis-classify as non-continuous and overwrite the
+                    # earlier correct definition.  Trust the MCCS-standard type and discard the values.
+                    log.warning(f"Ignoring spurious Values: for known-continuous VCP code {vcp_code}: {values}")
+                    vcp_type = CONTINUOUS_TYPE
+                    values = []
                 else:  # two-byte or one-byte continuous type - cannot always trust the VDU metadata on this.
                     try:  # See whether the max is really contained within one byte:
                         max_value = max([int(v, 16) for v, _ in values])
@@ -281,6 +291,16 @@ class VduController(QObject):
 
                 capability = VcpCapability(vcp_code, vcp_name, vcp_type=vcp_type, values=values, icon_source=None,
                                            can_transition=vcp_type == CONTINUOUS_TYPE, causes_config_change=requires_refresh)
-                feature_map[vcp_code] = capability
+                if vcp_code in feature_map:
+                    # The VDU's capability string declared the same Feature: code more than once.
+                    # Keep the first occurrence (which the parser already processed) and log the duplicate
+                    # for diagnostics.  Avoids manufacturer-specific section bleed-through silently
+                    # overwriting standard VCP-code definitions.  Use warning for codes vdu_controls
+                    # exposes as a control (user-visible impact), info otherwise (firmware metadata noise).
+                    log_fn = log.warning if vcp_code in SUPPORTED_VCP_BY_CODE else log.info
+                    log_fn(f"Duplicate Feature: {vcp_code} in capability string; keeping first occurrence "
+                           f"(ignored second: vcp_type={vcp_type}, values={values})")
+                else:
+                    feature_map[vcp_code] = capability
         return {**{k: feature_map[k] for k in (BRIGHTNESS_VCP_CODE, CONTRAST_VCP_CODE) if k in feature_map},  # Put B&C first
                 **{k: v for k, v in feature_map.items() if k not in (BRIGHTNESS_VCP_CODE, CONTRAST_VCP_CODE)}}
