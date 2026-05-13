@@ -1,0 +1,219 @@
+Model: 27M2N5500Q
+MCCS version: 2.2
+Commands:
+   Op Code: 01 (VCP Request)
+   Op Code: 02 (VCP Response)
+   Op Code: 03 (VCP Set)
+   Op Code: 07 (Timing Request)
+   Op Code: 0C (Save Settings)
+   Op Code: E3 (Capabilities Reply)
+   Op Code: F3 (Capabilities Request)
+VCP Features:
+   Feature: 02 (New control value)
+   Feature: 04 (Restore factory defaults)
+   Feature: 05 (Restore factory brightness/contrast defaults)
+   Feature: 08 (Restore color defaults)
+   Feature: 0B (Color temperature increment)
+   Feature: 0C (Color temperature request)
+   Feature: 10 (Brightness)
+   Feature: 12 (Contrast)
+   Feature: 14 (Select color preset)
+      Values:
+         02: Display Native
+         04: 5000 K
+         05: 6500 K
+         06: 7500 K
+         07: 8200 K
+         08: 9300 K
+         0a: 11500 K
+         0b: User 1
+         0d: User 3
+   Feature: 16 (Video gain: Red)
+   Feature: 18 (Video gain: Green)
+   Feature: 1A (Video gain: Blue)
+   Feature: 52 (Active control)
+   Feature: 54 (Performance Preservation)
+      Values: 00 01 (interpretation unavailable)
+   Feature: 60 (Input Source)
+      Values:
+         11: HDMI-1
+         12: HDMI-2
+         0f: DisplayPort-1
+   Feature: 62 (Audio speaker volume)
+   Feature: 6C (Video black level: Red)
+   Feature: 6E (Video black level: Green)
+   Feature: 70 (Video black level: Blue)
+   Feature: 72 (Gamma)
+      Invalid gamma descriptor: 50 64 78 8c a0
+   Feature: 86 (Display Scaling)
+      Values:
+         01: No scaling
+         0a: Non-linear expansion
+         11: Unrecognized value
+         12: Unrecognized value
+         13: Unrecognized value
+         14: Unrecognized value
+         15: Unrecognized value
+         16: Unrecognized value
+         17: Unrecognized value
+         18: Unrecognized value
+         19: Unrecognized value
+         1a: Unrecognized value
+         1b: Unrecognized value
+         23: Unrecognized value
+   Feature: 87 (Sharpness)
+   Feature: 8D (Audio mute/Screen blank)
+      Values: 01 02 (interpretation unavailable)
+   Feature: AC (Horizontal frequency)
+   Feature: AE (Vertical frequency)
+   Feature: B2 (Flat panel sub-pixel layout)
+   Feature: B6 (Display technology type)
+   Feature: C0 (Display usage time)
+   Feature: C6 (Application enable key)
+   Feature: C8 (Display controller type)
+   Feature: CA (OSD/Button Control)
+      Values:
+         01: OSD disabled, button events enabled
+         02: OSD enabled, button events enabled
+   Feature: CC (OSD Language)
+      Values:
+         01: Chinese (traditional, Hantai)
+         02: English
+         03: French
+         04: German
+         05: Italian
+         06: Japanese
+         07: Korean
+         08: Portuguese (Portugal)
+         09: Russian
+         0a: Spanish
+         0b: Swedish
+         0c: Turkish
+         0d: Chinese (simplified / Kantai)
+         0e: Portuguese (Brazil)
+         12: Czech
+         14: Dutch
+         16: Finnish
+         17: Greek
+         1a: Hungarian
+         1e: Polish
+         24: Ukranian
+   Feature: D6 (Power mode)
+      Values:
+         01: DPM: On,  DPMS: Off
+         04: DPM: Off, DPMS: Off
+         05: Write only value to turn off display
+   Feature: DA (Scan mode)
+      Values:
+         00: Normal operation
+         02: Overscan
+   Feature: DC (Display Mode)
+      Values:
+         00: Standard/Default mode
+         01: Productivity
+         03: Movie
+         04: User defined
+         05: Games
+         06: Sports
+         07: Professional (all signal processing disabled)
+         08: Standard/Default mode with intermediate power consumption
+         0b: Unrecognized value
+         0e: Unrecognized value
+         1f: Unrecognized value
+         20: Unrecognized value
+         21: Unrecognized value
+         22: Unrecognized value
+         23: Unrecognized value
+         24: Unrecognized value
+         30: Unrecognized value
+         e2: Unrecognized value
+   Feature: DF (VCP Version)
+   Feature: E9 (Manufacturer specific feature)
+      Values: 00 02 (interpretation unavailable)
+   Feature: EB (Manufacturer specific feature)
+      Values: 00 01 02 03 (interpretation unavailable)
+   Feature: E2 (Manufacturer specific feature)
+   Feature: A0 (6 axis hue control: Magenta)
+   Feature: 02 (New control value)
+   Feature: E2 (Manufacturer specific feature)
+   Feature: A0 (6 axis hue control: Magenta)
+   Feature: 03 (Soft controls)
+      Values:
+         00: No button active
+         01: Button 1 active
+   Feature: E2 (Manufacturer specific feature)
+   Feature: A0 (6 axis hue control: Magenta)
+   Feature: 04 (Restore factory defaults)
+      Values: 00 01 02 (interpretation unavailable)
+   Feature: E2 (Manufacturer specific feature)
+   Feature: A0 (6 axis hue control: Magenta)
+   Feature: 07 (Unrecognized feature)
+      Values: 00 01 (interpretation unavailable)
+   Feature: E2 (Manufacturer specific feature)
+   Feature: A0 (6 axis hue control: Magenta)
+   Feature: 08 (Restore color defaults)
+      Values: 00 01 (interpretation unavailable)
+   Feature: E2 (Manufacturer specific feature)
+   Feature: A0 (6 axis hue control: Magenta)
+   Feature: 09 (Unrecognized feature)
+      Values: 01 02 03 04 05 06 07 (interpretation unavailable)
+   Feature: E2 (Manufacturer specific feature)
+   Feature: A0 (6 axis hue control: Magenta)
+   Feature: 0A (Restore factory TV defaults)
+   Feature: E2 (Manufacturer specific feature)
+   Feature: A0 (6 axis hue control: Magenta)
+   Feature: 0B (Color temperature increment)
+   Feature: E2 (Manufacturer specific feature)
+   Feature: A0 (6 axis hue control: Magenta)
+   Feature: 0C (Color temperature request)
+   Feature: E2 (Manufacturer specific feature)
+   Feature: A0 (6 axis hue control: Magenta)
+   Feature: 0D (Unrecognized feature)
+   Feature: E2 (Manufacturer specific feature)
+   Feature: A0 (6 axis hue control: Magenta)
+   Feature: 0E (Clock)
+   Feature: E2 (Manufacturer specific feature)
+   Feature: A0 (6 axis hue control: Magenta)
+   Feature: 0F (Unrecognized feature)
+   Feature: E2 (Manufacturer specific feature)
+   Feature: A0 (6 axis hue control: Magenta)
+   Feature: 10 (Brightness)
+      Values: 00 01 02 03 04 (interpretation unavailable)
+   Feature: E2 (Manufacturer specific feature)
+   Feature: A0 (6 axis hue control: Magenta)
+   Feature: 11 (Flesh tone enhancement)
+      Values: 00 01 02 03 04 (interpretation unavailable)
+   Feature: E2 (Manufacturer specific feature)
+   Feature: A0 (6 axis hue control: Magenta)
+   Feature: 20 (Horizontal Position (Phase))
+      Values: 00 02 (interpretation unavailable)
+   Feature: E2 (Manufacturer specific feature)
+   Feature: A0 (6 axis hue control: Magenta)
+   Feature: 24 (Horizontal Pincushion)
+      Values: 00 01 02 03 04 (interpretation unavailable)
+   Feature: E2 (Manufacturer specific feature)
+   Feature: A0 (6 axis hue control: Magenta)
+   Feature: 3D (Unrecognized feature)
+   Feature: E2 (Manufacturer specific feature)
+   Feature: A0 (6 axis hue control: Magenta)
+   Feature: 3E (Clock phase)
+   Feature: E2 (Manufacturer specific feature)
+   Feature: A0 (6 axis hue control: Magenta)
+   Feature: 40 (Horizontal Parallelogram)
+      Values: 00 01 (interpretation unavailable)
+   Feature: E2 (Manufacturer specific feature)
+   Feature: A0 (6 axis hue control: Magenta)
+   Feature: 42 (Horizontal Keystone)
+      Values: 30 31 32 33 34 35 36 37 38 39 3A 3B 3C 3D 3E 3F (interpretation unavailable)
+   Feature: E2 (Manufacturer specific feature)
+   Feature: A0 (6 axis hue control: Magenta)
+   Feature: 44 (Rotation)
+      Values: 00 01 02 03 (interpretation unavailable)
+   Feature: ED (Manufacturer specific feature)
+      Values: 00 01 (interpretation unavailable)
+   Feature: F0 (Manufacturer specific feature)
+      Values: 00 01 (interpretation unavailable)
+   Feature: F2 (Manufacturer specific feature)
+      Values: 00 01 02 03 04 (interpretation unavailable)
+   Feature: FD (Manufacturer specific feature)
+   Feature: FF (Manufacturer specific feature)

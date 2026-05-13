@@ -1,0 +1,10 @@
+Display 1
+   I2C bus:  /dev/i2c-0
+   EDID synopsis:
+      Mfg id:               PHL
+      Model:                27M2N5500Q
+      Product code:         50058
+      Serial number:        EXAMPLE_SERIAL
+      Binary serial number: 8691 (0x000021f3)
+      Manufacture year:     2025,  Week: 19
+   VCP version:         2.2
