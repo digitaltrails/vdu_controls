@@ -109,7 +109,7 @@ Arguments supplied on the command line override config file equivalent settings.
                             local latitude and longitude for triggering presets
                             by solar elevation.
       --ddcutil-emulator emulator-path
-                            additional command-line ddcutil emulator for a special cases.
+                            additional command-line ddcutil-emulator for special cases.
       --sleep-multiplier    set the default ddcutil sleep multiplier.
                             protocol reliability multiplier for ddcutil (typically
                             0.1 .. 2.0, default is 1.0)
@@ -285,16 +285,6 @@ Can be annotated with::
 With this annotation, when ever *Picture Mode* is altered, vdu_controls will
 reload all configuration files and refresh all control values from the VDUs.
 
-Laptop-Panel brightness control
--------------------------------
-
-Starting with version 2.6, laptop panels are supported for brightness-only control.
-When laptop support is enabled, the widely available command line utility ``brightnessctl``
-is used to emulate DDC control of brightness (https://github.com/Hummer12007/brightnessctl).
-Additionally, ``vdu_controls`` will react to laptop brightness-function-keys or
-inactivity-dimming by using the ``python3-pyudev`` library to monitor udev
-for _brightness_ events.
-
 DBUS ddcutil-service
 --------------------
 
@@ -310,6 +300,27 @@ and timeliness of events may vary depending on the GPU model, GPU driver, VDU mo
 and VDU connector-cable (DP, HDMI, ...).  In some cases, the service polling for DPMS or
 connection status may wake some VDU models.  Both ``ddcutil-service`` or ``libddcutil`` offer
 options for finer control over which events are detected and how.
+
+Laptop-Panel brightness control
+-------------------------------
+
+Starting with version 2.6, laptop panels are supported for brightness-only control.
+When laptop support is enabled, the widely available command line utility ``brightnessctl``
+is used to emulate DDC control of brightness (https://github.com/Hummer12007/brightnessctl).
+Additionally, ``vdu_controls`` will react to laptop brightness-function-keys or
+inactivity-dimming by using the ``python3-pyudev`` library to monitor udev
+for _brightness_ events.
+
+DDC emulation for special cases
+-------------------------------
+
+The `ddcutil-emulator` option is provided for handling special cases.  When set,
+it will be run in addition to the normal DDC sources.  It can be used to add 
+brightness controls and other controls for non-DDC devices.  For example, you
+might add a brightness control for a keyboard-backlight, or for
+case-LED's.  To use it you would have to create a script that emulates the 
+basic `ddcutil` command set (see included sample script).
+
 
 Presets
 -------

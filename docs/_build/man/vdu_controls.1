@@ -28,7 +28,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "May 12, 2026" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "May 13, 2026" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 2.6.5rc2
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -186,7 +186,7 @@ by solar elevation.
 .INDENT 0.0
 .TP
 .BI \-\-ddcutil\-emulator \ emulator\-path
-additional command\-line ddcutil emulator for a special cases.
+additional command\-line ddcutil\-emulator for special cases.
 .TP
 .B  \-\-sleep\-multiplier
 set the default ddcutil sleep multiplier.
@@ -418,14 +418,6 @@ Feature: 15 (Picture Mode *refresh*)
 .sp
 With this annotation, when ever \fIPicture Mode\fP is altered, vdu_controls will
 reload all configuration files and refresh all control values from the VDUs.
-.SS Laptop\-Panel brightness control
-.sp
-Starting with version 2.6, laptop panels are supported for brightness\-only control.
-When laptop support is enabled, the widely available command line utility \fBbrightnessctl\fP
-is used to emulate DDC control of brightness (\%<https://\:github\:.com/\:Hummer12007/\:brightnessctl>).
-Additionally, \fBvdu_controls\fP will react to laptop brightness\-function\-keys or
-inactivity\-dimming by using the \fBpython3\-pyudev\fP library to monitor udev
-for _brightness_ events.
 .SS DBUS ddcutil\-service
 .sp
 When available, \fBvdu_controls\fP defaults to interacting with VDUs via the DBUS \fBddcutil\-service\fP
@@ -440,6 +432,22 @@ and timeliness of events may vary depending on the GPU model, GPU driver, VDU mo
 and VDU connector\-cable (DP, HDMI, ...).  In some cases, the service polling for DPMS or
 connection status may wake some VDU models.  Both \fBddcutil\-service\fP or \fBlibddcutil\fP offer
 options for finer control over which events are detected and how.
+.SS Laptop\-Panel brightness control
+.sp
+Starting with version 2.6, laptop panels are supported for brightness\-only control.
+When laptop support is enabled, the widely available command line utility \fBbrightnessctl\fP
+is used to emulate DDC control of brightness (\%<https://\:github\:.com/\:Hummer12007/\:brightnessctl>).
+Additionally, \fBvdu_controls\fP will react to laptop brightness\-function\-keys or
+inactivity\-dimming by using the \fBpython3\-pyudev\fP library to monitor udev
+for _brightness_ events.
+.SS DDC emulation for special cases
+.sp
+The \fIddcutil\-emulator\fP option is provided for handling special cases.  When set,
+it will be run in addition to the normal DDC sources.  It can be used to add 
+brightness controls and other controls for non\-DDC devices.  For example, you
+might add a brightness control for a keyboard\-backlight, or for
+case\-LED\(aqs.  To use it you would have to create a script that emulates the 
+basic \fIddcutil\fP command set (see included sample script).
 .SS Presets
 .sp
 A named _Preset_ can be used to save the current VDU settings for later recall. Any number of

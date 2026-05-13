@@ -474,7 +474,6 @@ class SettingsEditorLocationWidget(SettingsEditorLineBase):
         self.text_input.setMaxLength(250)
         self.validator = LatitudeLongitudeValidator()
         self.text_input.setText(section_editor.ini_editable[self.conf_section][self.conf_name])
-        self.text_input.setToolTip(tr("Latitude,Longitude for solar elevation calculations."))
 
         def _detection_location() -> None:
             if data_csv := self.location_dialog():
