@@ -11,19 +11,24 @@ from pathlib import Path
 APPNAME = "VDU Controls"
 
 # Version Numbering Example when going beyond 2.10.15 to include beta or rc:
-# - Semantic Versioning: 2.10.15-rc.1
-# - Internal in here: 2.10.15-rc.1
+# Problem: there are issues with the generated artifact filenames
+# like v2.10.15-rc.1.tgz.  The use of such a filename requires hacks in
+# distro-packaging and python-packaging which are each expecting
+# names based own their own conventions, they all agree on 2.10.15, but
+# after that they're not the same:
+#
+# - Semantic Versioning internal in this source: 2.10.15-rc.1
 # - Git Tag: 2.10.15-rc.1
 # - python setup.cfg: 2.10.15rc1
 # - Sphinx conf.py: 2.10.15rc1
 # - RPM/DEB packaging: 2.10.15~rc.1
 # - Arch packaging: 2.10.15_rc.1
-# Problem: there
-# are issues with the generated artifact names like v2.10.15-rc.1.tgz which
-# require hacks in PKGBUILD and RPM specs which are expecting names based
-# own their own conventions - while testing packaging it may be easier to
-# just use a non-release normal minor number, but keep the .rc-1 internally,
-# that way the wider packaging don't need any testing-only ugly config hacks.
+#
+# While testing packaging it is easier to just use a non-release normal minor
+# number, such as 2.10.15, dropping .rc-1 (but keeping it internally and in
+# the version reported in the About Dialog).  In this way, wider packaging
+# doesn't require hacks to copy with rc/beta suffixes which we are
+# never going to appear in delivered distro releases.
 VDU_CONTROLS_VERSION = '2.6.5-rc.3'
 VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in re.split(r'[.-]', VDU_CONTROLS_VERSION)[:3])
 VDU_CONTROLS_BASE_VERSION = VDU_CONTROLS_VERSION.split('-')[0]
