@@ -78,7 +78,7 @@ class VduController(QObject):
     IGNORE_VDU = 1
     ASSUME_STANDARD_CONTROLS = 2
     DISCARD_VDU = 3
-    _RANGE_PATTERN = re.compile(r'Values:\s+([0-9]+)..([0-9]+)')
+    _RANGE_PATTERN = re.compile(r'Values:\s+([0-9]+)[.][.]([0-9]+)')
     _FEATURE_PATTERN = re.compile(r'([0-9A-F]{2})\s+[(]([^)]+)[)]\s(.*)', re.DOTALL | re.MULTILINE)
     _LIMITED_RANGE_KEY = "%%RANGE%%"  # A key internal to vdu_controls for storing Range n..m values.
     _FORCE_REFRESH_NAME_SUFFIX = "*refresh*"
