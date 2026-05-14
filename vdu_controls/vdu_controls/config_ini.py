@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import List, Tuple, Dict
 
 from vdu_controls import logging as log
-from vdu_controls.constants import VDU_CONTROLS_VERSION, CONFIG_DIR_PATH
+from vdu_controls.constants import VDU_CONTROLS_VERSION, CONFIG_DIR_PATH, VDU_CONTROLS_BASE_VERSION
 from vdu_controls.misc import zoned_now
 
 
@@ -45,7 +45,7 @@ class ConfIni(configparser.ConfigParser):
         if not config_path.parent.is_dir():
             os.makedirs(config_path.parent)
         with open(config_path, 'w', encoding="utf-8") as config_file:
-            self[ConfIni.METADATA_SECTION][ConfIni.METADATA_VERSION_OPTION] = VDU_CONTROLS_VERSION
+            self[ConfIni.METADATA_SECTION][ConfIni.METADATA_VERSION_OPTION] = VDU_CONTROLS_BASE_VERSION
             self[ConfIni.METADATA_SECTION][ConfIni.METADATA_TIMESTAMP_OPTION] = str(zoned_now())
             self.write(config_file)
         log.info(f"Wrote config to {config_path.as_posix()}")
