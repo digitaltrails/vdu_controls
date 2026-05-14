@@ -40,21 +40,23 @@ class SettingsDialog(SubWinDialog, DialogSingletonMixin):
     """
 
     @staticmethod
-    def invoke(default_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig], change_callback: Callable) -> None:
+    def show_dialog(default_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig], change_callback: Callable) -> None:
         SettingsDialog.show_existing_dialog() if SettingsDialog.exists() else SettingsDialog(default_config,
                                                                                              vdu_config_list, change_callback)
 
     @staticmethod
     def reconfigure_instance(vdu_config_list: List[VduControlsConfig]) -> None:
-        SettingsDialog.get_instance().reconfigure(vdu_config_list) if SettingsDialog.exists() else None
+        if SettingsDialog.exists():
+            SettingsDialog.get_instance().reconfigure(vdu_config_list)
 
     @staticmethod
     def edit_config(config_name: str) -> None:
-        if instance := SettingsDialog.get_instance():
-            for tab_number, tab in enumerate(instance.editor_tab_list):
+        if SettingsDialog.exists():
+            editor = SettingsDialog.get_instance()
+            for tab_number, tab in enumerate(editor.editor_tab_list):
                 if tab.config_path == ConfIni.get_path(config_name):
-                    instance.tabs_widget.setCurrentIndex(tab_number)
-                    instance.make_visible()
+                    editor.tabs_widget.setCurrentIndex(tab_number)
+                    editor.make_visible()
 
     def __init__(self, default_config: VduControlsConfig, vdu_config_list: List[VduControlsConfig], change_callback) -> None:
         super().__init__()
@@ -277,6 +279,7 @@ class SettingsEditorTab(QWidget):
         if self.is_unsaved() or force:
             try:
                 self.setEnabled(False)  # Saving may take a while, give some feedback by disabling and enabling when done
+                log.debug(f"{SettingsDialog.exists()=}")
                 answer = SettingsDialog.get_instance().cross_validate()
                 if answer == MBtn.Ok:
                     msg = (tr('Update existing {}?') if self.config_path.exists() else tr("Create new {}?")).format(

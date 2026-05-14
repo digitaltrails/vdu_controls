@@ -52,22 +52,23 @@ class LuxDeviceType(namedtuple('LuxDevice', 'name description'), Enum):
 class LuxDialog(SubWinDialog, DialogSingletonMixin):
 
     @staticmethod
-    def invoke(main_controller: VduAppController) -> None:
+    def show_dialog(main_controller: VduAppController) -> None:
         LuxDialog.show_existing_dialog() if LuxDialog.exists() else LuxDialog(main_controller)
 
     @staticmethod
     def reconfigure_instance():
-        if lux_dialog := LuxDialog.get_instance():  # type: ignore
-            lux_dialog.reconfigure()
+        if LuxDialog.exists():
+            LuxDialog.get_instance().reconfigure()
 
     @staticmethod
     def lux_dialog_message(message: str, timeout: int, destination: MsgDestination = MsgDestination.DEFAULT) -> None:
-        if lux_dialog := LuxDialog.get_instance():  # type: ignore
-            lux_dialog.status_message(message, timeout, destination)
+        if LuxDialog.exists():
+            LuxDialog.get_instance().status_message(message, timeout, destination)
 
     @staticmethod
     def lux_dialog_show_brightness(vdu_stable_id: VduStableId, brightness: int) -> None:
-        if lux_dialog := LuxDialog.get_instance():  # type: ignore
+        if LuxDialog.exists():
+            lux_dialog = LuxDialog.get_instance()
             lux_dialog.current_brightness_map[vdu_stable_id] = brightness
             lux_dialog.profile_plot.show_changes(profile_changes=False)
 

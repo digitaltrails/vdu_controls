@@ -499,13 +499,12 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         self.configure_application()
 
     def edit_config(self, config_name: str | None = None) -> None:
-        SettingsDialog.invoke(self.main_config, self.get_vdu_configs(), self.settings_changed)
+        SettingsDialog.show_dialog(self.main_config, self.get_vdu_configs(), self.settings_changed)
         SettingsDialog.edit_config(config_name if config_name else self.main_config.config_name)
 
     def show_presets_dialog(self, preset: Preset | None = None) -> None:
-        PresetsDialog.invoke(self, self.main_config)
-        if preset:
-            PresetsDialog.instance_edit_preset(preset)
+        PresetsDialog.show_dialog(self, self.main_config)
+        PresetsDialog.get_instance().edit_preset(preset)
 
     def get_vdu_configs(self) -> List[VduControlsConfig]:
         return [vdu.config for vdu in self.vdu_controllers_map.values() if vdu.config is not None]
@@ -1042,11 +1041,11 @@ class VduAppWindow(QMainWindow):
             FixedItemKey.SETTINGS_DIALOG: self.main_controller.edit_config,
             FixedItemKey.LUX_AUTO_MANUAL: self.main_controller.lux_auto_action if main_config.is_set(ConfOpt.LUX_OPTIONS_ENABLED) else None,
             FixedItemKey.LIGHTING_CHECK_NOW: self.main_controller.lux_check_action if main_config.is_set(ConfOpt.LUX_OPTIONS_ENABLED) else None,
-            FixedItemKey.LIGHT_METERING_DIALOG: partial(LuxDialog.invoke, self.main_controller) if main_config.is_set(
+            FixedItemKey.LIGHT_METERING_DIALOG: partial(LuxDialog.show_dialog, self.main_controller) if main_config.is_set(
                 ConfOpt.LUX_OPTIONS_ENABLED) else None,
             FixedItemKey.REFRESH: self.main_controller.start_refresh,
-            FixedItemKey.ABOUT_DIALOG: partial(AboutDialog.invoke, self.main_controller),
-            FixedItemKey.HELP: HelpDialog.invoke,
+            FixedItemKey.ABOUT_DIALOG: partial(AboutDialog.show_dialog, self.main_controller),
+            FixedItemKey.HELP: HelpDialog.show_dialog,
             FixedItemKey.QUIT: self.quit_app,
         }
 
@@ -1591,7 +1590,7 @@ def main() -> None:
     VduAppWindow(main_config, main_controller)  # may need to assign this to a variable to prevent garbage collection?
 
     if args.about:
-        AboutDialog.invoke(main_controller)
+        AboutDialog.show_dialog(main_controller)
     if args.create_config_files:
         main_controller.create_config_files()
 

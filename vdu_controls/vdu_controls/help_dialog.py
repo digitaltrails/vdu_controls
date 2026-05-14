@@ -15,7 +15,7 @@ import vdu_controls.app_locale as app_locale
 class HelpDialog(SubWinDialog, DialogSingletonMixin):
 
     @staticmethod
-    def invoke() -> None:
+    def show_dialog() -> None:
         HelpDialog.show_existing_dialog() if HelpDialog.exists() else HelpDialog()
 
     def __init__(self) -> None:

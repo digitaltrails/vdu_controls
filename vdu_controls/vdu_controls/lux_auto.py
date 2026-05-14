@@ -351,7 +351,7 @@ class LuxAutoController:
                 if LuxDialog.exists() and LuxDialog.get_instance().isVisible():
                     LuxDialog.get_instance().close()
                 else:
-                    LuxDialog.invoke(self.main_controller)
+                    LuxDialog.show_dialog(self.main_controller)
 
             self.lux_slider.title_button_pressed_qtsignal.connect(_toggle_lux_dialog)
             self.lux_slider.status_icon_pressed_qtsignal.connect(self.adjust_brightness_now)

@@ -132,7 +132,7 @@ class _AboutTemplateData:
 class AboutDialog(QMessageBox, DialogSingletonMixin):
 
     @staticmethod
-    def invoke(main_controller: VduAppController) -> None:
+    def show_dialog(main_controller: VduAppController) -> None:
         if AboutDialog.exists():
             AboutDialog.get_instance().refresh_content()
             AboutDialog.show_existing_dialog()
@@ -142,7 +142,8 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
     @staticmethod
     def refresh():
         if AboutDialog.exists():
-            if (about_instance := AboutDialog.get_instance()).isVisible():
+            about_instance = AboutDialog.get_instance()
+            if about_instance.isVisible():
                 about_instance.refresh_content()
         else:
             log.debug("About dialog - no refresh - not visible") if log.debug_enabled else None

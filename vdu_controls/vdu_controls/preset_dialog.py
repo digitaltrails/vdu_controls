@@ -7,7 +7,7 @@ import time as sys_time
 from datetime import datetime
 from functools import partial
 from pathlib import Path
-from typing import Callable, Dict, List, Tuple, TYPE_CHECKING
+from typing import Callable, Dict, List, Tuple, TYPE_CHECKING, cast
 
 from vdu_controls.qt_imports import QSize, QEvent, Qt, pyqtSignal, QPoint, QRegularExpression
 from vdu_controls.qt_imports import QFontMetrics, QFont, QImage, QPixmap, QPainter, QColor, QPen, QPolygon, QMouseEvent, QDoubleValidator, \
@@ -163,19 +163,21 @@ class PresetIconPickerButton(StdButton):
         self.update_icon()
 
     def choose_preset_icon_action(self) -> None:
-        try:
-            PresetsDialog.get_instance().setDisabled(True)
-            PresetsDialog.get_instance().status_message(TIME_CLOCK_SYMBOL + ' ' + tr("Select an icon..."))
-            QApplication.processEvents()
-            icon_file = FasterFileDialog.getOpenFileName(self, tr('Icon SVG or PNG file'), self.last_icon_dir.as_posix(),
-                                                         'SVG or PNG (*.svg *.png)')
-            self.last_selected_icon_path = Path(icon_file[0]) if icon_file[0] != '' else None
-            if self.last_selected_icon_path:
-                self.last_icon_dir = self.last_selected_icon_path.parent
-            self.update_icon()
-        finally:
-            PresetsDialog.get_instance().status_message('')
-            PresetsDialog.get_instance().setDisabled(False)
+        if PresetsDialog.exists():
+            preset_dialog = PresetsDialog.get_instance()
+            try:
+                preset_dialog.setDisabled(True)
+                preset_dialog.status_message(TIME_CLOCK_SYMBOL + ' ' + tr("Select an icon..."))
+                QApplication.processEvents()
+                icon_file = FasterFileDialog.getOpenFileName(self, tr('Icon SVG or PNG file'), self.last_icon_dir.as_posix(),
+                                                             'SVG or PNG (*.svg *.png)')
+                self.last_selected_icon_path = Path(icon_file[0]) if icon_file[0] != '' else None
+                if self.last_selected_icon_path:
+                    self.last_icon_dir = self.last_selected_icon_path.parent
+                self.update_icon()
+            finally:
+                preset_dialog.status_message('')
+                preset_dialog.setDisabled(False)
 
     def update_icon(self) -> None:
         if self.last_selected_icon_path:
@@ -911,13 +913,14 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
     NO_ICON_ICON_NUMBER = StdPixmap.SP_ComputerIcon
 
     @staticmethod
-    def invoke(main_controller: VduAppController, main_config: VduControlsConfig) -> None:
+    def show_dialog(main_controller: VduAppController, main_config: VduControlsConfig) -> None:
         PresetsDialog.show_existing_dialog() if PresetsDialog.exists() else PresetsDialog(main_controller, main_config)
         PresetsDialog.show_status_message('')
 
     @staticmethod
     def show_status_message(message: str = '', timeout: int = 0) -> None:
-        if presets_dialog := PresetsDialog.get_instance():  # type: ignore
+        if PresetsDialog.exists():
+            presets_dialog = PresetsDialog.get_instance()
             if message != '':
                 presets_dialog.status_message(message, timeout=timeout)
             elif not presets_dialog.main_config.is_set(ConfOpt.SCHEDULE_ENABLED):
@@ -931,24 +934,17 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
     @staticmethod
     def reconfigure_instance() -> None:
-        if presets_dialog := PresetsDialog.get_instance():  # type: ignore
-            presets_dialog.reconfigure()
+        if PresetsDialog.exists():
+            PresetsDialog.get_instance().reconfigure()
 
     @staticmethod
     def is_instance_editing() -> bool:
-        if presets_dialog := PresetsDialog.get_instance():
-            return presets_dialog.preset_name_edit.text() != ''
-        return False
+        return PresetsDialog.exists() and PresetsDialog.get_instance().preset_name_edit.text() != ''
 
     @staticmethod
     def instance_indicate_active_preset(preset: Preset | None = None):
-        if presets_dialog := PresetsDialog.get_instance():
-            presets_dialog.indicate_active_preset(preset)
-
-    @staticmethod
-    def instance_edit_preset(preset: Preset | None = None):
-        if presets_dialog := PresetsDialog.get_instance():
-            presets_dialog.edit_preset(preset)
+        if PresetsDialog.exists():
+            PresetsDialog.get_instance().indicate_active_preset(preset)
 
     def __init__(self, main_controller: VduAppController, main_config: VduControlsConfig) -> None:
         super().__init__()

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from typing import Callable, Any, Tuple, Dict, Type
+from typing import Callable, Any, Tuple, Dict, Type, TypeVar
 
 from vdu_controls.qt_imports import (QTimer, Qt, QRect, QPixmap, QPainter, QPen, QIcon, QToolButton, QWidget, QEvent,
                                      QSize, QLayout, QLabel, QStyle, QDir, QMessageBox, QFileDialog, QVBoxLayout, QDialog,
@@ -195,29 +195,34 @@ class LineEditAll(QLineEdit):  # On mouse click, select the entire text - Make i
         self.selectAll()
 
 
+DialogSingletonMixinType = TypeVar('DialogSingletonMixinType', bound='DialogSingletonMixin')
+
+
 class DialogSingletonMixin:
     """
     A mixin that can augment a QDialog or QMessageBox with code to enforce a singleton UI.
     For example, it is used so that only one settings editor can be active at a time.
     """
-    _dialogs_map: Dict[str, DialogSingletonMixin] = {}
+    _dialogs_map: Dict[Type, object] = {}
 
     def __init__(self) -> None:
         """Registers the concrete class as a singleton, so it can be reused later."""
         super().__init__()
-        class_name = self.__class__.__name__
-        if class_name in DialogSingletonMixin._dialogs_map:
+        cls = self.__class__
+        class_name = cls.__name__
+        if cls in DialogSingletonMixin._dialogs_map:
             raise TypeError(f"ERROR: More than one instance of {class_name} cannot exist.")
         log.debug(f'SingletonDialog created for {class_name}') if log.debug_enabled else None
-        DialogSingletonMixin._dialogs_map[class_name] = self
+        DialogSingletonMixin._dialogs_map[cls] = self
 
     def closeEvent(self, event) -> None:
         """Subclasses that implement their own closeEvent must call this closeEvent to deregister the singleton"""
+        cls = self.__class__
         class_name = self.__class__.__name__
         log.debug(f"SingletonDialog remove {class_name} "
                   f"registered={class_name in DialogSingletonMixin._dialogs_map}") if log.debug_enabled else None
-        if class_name in DialogSingletonMixin._dialogs_map:
-            del DialogSingletonMixin._dialogs_map[class_name]
+        if cls in DialogSingletonMixin._dialogs_map:
+            del DialogSingletonMixin._dialogs_map[cls]
         event.accept()
 
     def make_visible(self) -> None:
@@ -228,23 +233,24 @@ class DialogSingletonMixin:
         self.activateWindow()  # type: ignore
 
     @classmethod
-    def show_existing_dialog(cls: Type) -> None:
+    def show_existing_dialog(cls: Type[DialogSingletonMixinType]) -> None:
         """If the dialog.exists(), call this to make it visible by raising it."""
         class_name = cls.__name__
         log.debug(f'SingletonDialog show existing {class_name}') if log.debug_enabled else None
-        DialogSingletonMixin._dialogs_map[class_name].make_visible()
+        DialogSingletonMixin._dialogs_map[cls].make_visible()
 
     @classmethod
-    def exists(cls: Type) -> bool:
+    def exists(cls: Type[DialogSingletonMixinType]) -> bool:
         """Returns true if the dialog has already been created."""
-        class_name = cls.__name__
-        log.debug(f"SingletonDialog exists {class_name} "
-                  f"{class_name in DialogSingletonMixin._dialogs_map}") if log.debug_enabled else None
-        return class_name in DialogSingletonMixin._dialogs_map
+        # class_name = cls.__name__
+        # log.debug(f"SingletonDialog exists {class_name} "
+        #           f"{cls in DialogSingletonMixin._dialogs_map}") if log.debug_enabled else None
+        return cls in DialogSingletonMixin._dialogs_map
 
     @classmethod
-    def get_instance(cls: Type) -> DialogSingletonMixin | None:
-        return DialogSingletonMixin._dialogs_map.get(cls.__name__)
+    def get_instance(cls: Type[DialogSingletonMixinType]) -> DialogSingletonMixinType:
+        assert cls.exists()
+        return DialogSingletonMixin._dialogs_map[cls]
 
 
 class ToolButton(QToolButton):

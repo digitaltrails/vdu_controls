@@ -48,7 +48,7 @@ from __future__ import annotations
 import inspect
 import os
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Tuple
 from importlib.resources import files as resources_files
 
 from vdu_controls.constants import VDU_CONTROLS_DEVELOPER
@@ -132,7 +132,7 @@ def load_docs_text(filename: str) -> str:
 
 
 translator: QTranslator | None = None
-ts_translations: Dict[str, str] = {}
+ts_translations: Dict[Tuple[str, str], str] = {}
 translating_locale = ''
 
 
