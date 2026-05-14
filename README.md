@@ -486,10 +486,19 @@ Michael Hamilton
 Version History
 ---------------
 * 2.6.5
-  * The source code has been split into 40+ files/modules.
-  * The executable is now a python zipapp containing the module hierarchy.
   * The Settings global-options are now grouped under subheadings.
-  * Disabled the right-mouse action that could hide the toolbar irretrievably.
+  * The right-mouse action that could hide the toolbar irretrievably has been
+    disabled.
+  * When parsing monitor metadata, if the same VCP-feature-code is 
+    defined mutiple times, the first definition is kept and any following 
+    definitions are logged (rather than silently overwriting the first). 
+    This allows some monitors with incorrect metadata to work out-of-the-box.
+  * When parsing monitor metadata, well known "Continuous" VCP-feature 
+    definitions, such as brightness, will always be regarded as "Continuous"
+    and any attached 'Value:' metadata that implies otherwise will be ignored. 
+    This allows some monitors with incorrect metadata to work out-of-the-box.
+  * The executable is now a python zipapp containing the module hierarchy.
+  * The source code has been split into 40+ files/modules.
   * Each icon is now held in a separate SVG source file.  This 
     makes the icons more easily editable and reusable.
   * The included set of language-translations has been expanded. All of 
