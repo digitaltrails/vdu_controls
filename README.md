@@ -495,7 +495,8 @@ Version History
     This allows some monitors with incorrect metadata to work out-of-the-box.
   * When parsing monitor metadata, well known "Continuous" VCP-feature 
     definitions, such as brightness, will always be regarded as "Continuous"
-    and any attached 'Value:' metadata that implies otherwise will be ignored. 
+    and any attached 'Value:' metadata that implies otherwise will be ignored
+    (with a warning logged). 
     This allows some monitors with incorrect metadata to work out-of-the-box.
   * The executable is now a python zipapp containing the module hierarchy.
   * The source code has been split into 40+ files/modules.
