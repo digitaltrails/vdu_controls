@@ -11,7 +11,7 @@ from vdu_controls import logging as log
 from vdu_controls.app_locale import tr
 from vdu_controls.icon_utils import StdPixmap, si
 from vdu_controls.preset import Preset
-from vdu_controls.qt_imports import QVariant, Qt, QKeySequence, QIcon, QMenu, QWidget, QAction
+from vdu_controls.qt_imports import QVariant, Qt, QKeySequence, QIcon, QMenu, QWidget, QAction, QStyle
 from vdu_controls.unicode import MENU_ACTIVE_PRESET_SYMBOL
 
 if TYPE_CHECKING:
@@ -39,9 +39,9 @@ class FixedItemKey(IntEnum):
 
 @dataclass
 class FixedItemData:
-    pixmap_number: int
+    std_pixmap: QStyle.StandardPixmap
     title: str
-    extra_shortcut: str | None = None
+    extra_shortcut: QKeySequence.StandardKey | str | None = None
     add_separator: bool = False
     property: Tuple[str, QVariant] | None = None
     separator: QAction | None = None
@@ -49,7 +49,8 @@ class FixedItemData:
 
 class ContextMenu(QMenu):
 
-    def __init__(self, app_controller: VduAppController, fixed_item_callables: Dict[FixedItemKey, Callable],
+    def __init__(self, app_controller: VduAppController,
+                 fixed_item_callables: Dict[FixedItemKey, Callable],
                  hide_shortcuts: bool, parent: QWidget) -> None:
         super().__init__(parent=parent)
 
@@ -74,7 +75,8 @@ class ContextMenu(QMenu):
 
         for key, item in self.fixed_item_map.items():
             if fixed_item_callables[key] is not None:
-                item.action = self._add_action(item.pixmap_number, item.title, fixed_item_callables[key], extra_shortcut=item.extra_shortcut)
+                item.action = self._add_action(item.std_pixmap, item.title, fixed_item_callables[key],
+                                               extra_shortcut=item.extra_shortcut)
                 if item.add_separator:
                     item.separator = self.addSeparator()
                 if item.property:
@@ -83,8 +85,9 @@ class ContextMenu(QMenu):
         self.reserved_shortcuts_basic = self.reserved_shortcuts.copy()
         self.auto_lux_icon: QIcon | None = None
 
-    def _add_action(self, qt_icon_number: int, text: str, func: Callable, extra_shortcut: str | None = None) -> QAction:
-        action = self.addAction(si(self, qt_icon_number), text, func)
+    def _add_action(self, std_pixmap: QStyle.StandardPixmap, text: str, func: Callable,
+                    extra_shortcut: QKeySequence.StandardKey | str | None = None) -> QAction:
+        action = self.addAction(si(self, std_pixmap), text, func)
         assert action is not None
         amp_pos = text.find('&')
         shortcut_letter = text[amp_pos + 1].upper() if (0 <= amp_pos < len(text) - 1) else None
@@ -184,6 +187,8 @@ class ContextMenu(QMenu):
                 return Shortcut(letter=upper_letter, annotated_word=word[:word.index(letter)] + '&' + word[word.index(letter):])
         return None
 
-    def shortcut_list(self, primary: str | QKeySequence, extra: str | QKeySequence | None = None) -> List[str | QKeySequence]:
+    def shortcut_list(self,
+                      primary: str | QKeySequence.StandardKey,
+                      extra: str | QKeySequence.StandardKey | None = None) -> List[str | QKeySequence.StandardKey]:
         shortcuts = [primary] + ([extra] if extra else [])
         return ([''] + shortcuts) if self.hide_shortcuts else shortcuts  # Empty string causes shortcuts to be hidden.
