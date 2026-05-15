@@ -261,8 +261,12 @@ All the following runtime dependencies are likely to be pre-packaged on any mode
 
 * **ddcutil >= 1.2, >= 1.4 recommended**: the command line utility that interfaces to VDUs via DDC over i2c-dev or USB. (If 
   anyone requires support for versions of ddcutil prior to v1.2 please contact me directly.)
-* **python >=3.8**: ``vdu_controls`` is written in python and may depend on some features present only in 3.8 onward.
+* **python >=3.10**: ``vdu_controls`` is written in python and may depend on some features present only in 3.8 onward.
 * **PyQt6** or **PyQt5**: the python GUI library used by ``vdu_controls``.
+
+> [!TIP]
+> vdu_controls 2.6.5 and greater requires at least python 3.10, earlier versions
+> should be able to run on Python 3.8.
 
 Optionally:
 
