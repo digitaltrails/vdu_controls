@@ -28,8 +28,8 @@ class ThemeType(Enum):  # Indicates how colors should be altered to fit a color 
 StdPixmap = QStyle.StandardPixmap
 
 
-def si(widget: QWidget, icon_number: QStyle.StandardPixmap) -> QIcon:  # Qt bundled standard icons (which are themed)
-    return widget.style().standardIcon(icon_number)
+def si(widget: QWidget, std_pixmap: QStyle.StandardPixmap) -> QIcon:  # Qt bundled standard icons (which are themed)
+    return widget.style().standardIcon(std_pixmap)
 
 
 def create_pixmap_from_svg_bytes(svg_bytes: bytes, width: int = 64, height: int = 64) -> QPixmap:
