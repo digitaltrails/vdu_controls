@@ -3,6 +3,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 for ts_file in translations/??_??.ts
 do
-   pylupdate6 $(find vdu_controls -name '*.py') --no-obsolete -ts $ts_file
+   pylupdate6 $(find src -name '*.py') --no-obsolete -ts $ts_file
    python3 ./utils/translate_ts.py $ts_file
 done

@@ -7,4 +7,4 @@ echo "INFO: creating executable-zip file: `pwd`/$ZIPAPP"
 echo "INFO: executable-zip interpreter set to: $PYTHON_INTERPRETER"
 echo "INFO: or run the zip with a specific interpreter: python3 `pwd`/$ZIPAPP"
 set -x
-python3 -m zipapp vdu_controls -o $ZIPAPP -m vdu_controls_main:main -p "$PYTHON_INTERPRETER"
+python3 -m zipapp src -o $ZIPAPP -m vdu_controls_main:main -p "$PYTHON_INTERPRETER"

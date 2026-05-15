@@ -41,10 +41,11 @@ vdu_controls-$version/screen-shots/Screenshot_tray-200.png
 vdu_controls-$version/screen-shots/Screenshot_tray.png
 vdu_controls-$version/screen-shots/kickoff.png
 vdu_controls-$version/setup.cfg
-vdu_controls-$version/vdu_controls/
+vdu_controls-$version/src/
 vdu_controls-$version/translations/ar_SA.ts
 vdu_controls-$version/translations/da_DK.ts
 vdu_controls-$version/translations/de_DE.ts
+vdu_controls-$version/translations/es_ES.ts
 vdu_controls-$version/translations/fr_FR.ts
 vdu_controls-$version/translations/mi_NZ.ts
 vdu_controls-$version/translations/zh_CN.ts

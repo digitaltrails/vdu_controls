@@ -398,11 +398,11 @@ Development
 -----------
 
 I've set up the ``vdu_controls`` source as a typical Python development.  The source
-for the application proper is located in the `vdu_controls` folder in the root of the
+for the application proper is located in the `src` folder in the root of the
 source tree, illustrated here:
 
 ```
-vdu_controls
+src
 ├── vdu_controls
 │   ├── *.py
 │   ├── resources
@@ -415,8 +415,8 @@ vdu_controls
 │   │   │       ├── *.{svg,png}
 └── vdu_controls_main.py
 ```
-The top `vdu_controls` folder contains an entry point main for the
-application, `vdu_controls_main.py`, and a second `vdu_controls` sub-folder.
+The top `src` folder contains an entry point main for the
+application, `vdu_controls_main.py`, and a `vdu_controls` sub-folder.
 The sub-folder serves to provide a unique prefix for the application's own 
 imports, for example: 
 

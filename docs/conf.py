@@ -16,7 +16,7 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('/home/michael/Projects/vdu_controls/docs'))
-sys.path.insert(0, os.path.abspath('/home/michael/Projects/vdu_controls/vdu_controls'))
+sys.path.insert(0, os.path.abspath('/home/michael/Projects/vdu_controls/src'))
 from vdu_controls.constants import VDU_CONTROLS_BASE_VERSION, VDU_CONTROLS_PRE_RELEASE
 
 # -- Project information -----------------------------------------------------
