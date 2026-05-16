@@ -29,11 +29,13 @@ StdPixmap = QStyle.StandardPixmap
 
 
 def si(widget: QWidget, std_pixmap: QStyle.StandardPixmap) -> QIcon:  # Qt bundled standard icons (which are themed)
-    return widget.style().standardIcon(std_pixmap)
+    widget_style = widget.style()
+    assert widget_style is not None
+    return widget_style.standardIcon(std_pixmap)
 
 
 def create_pixmap_from_svg_bytes(svg_bytes: bytes, width: int = 64, height: int = 64) -> QPixmap:
-    """There is no QIcon option for loading SVG from a string, only from a SVG file, so roll our own."""
+    """There is no QIcon option for loading SVG from a string, only from an SVG file, so roll our own."""
     return QPixmap.fromImage(create_image_from_svg_bytes(svg_bytes, width, height))
 
 
@@ -53,7 +55,7 @@ svg_icon_cache: Dict[bytes, QIcon] = {}
 def create_icon_from_svg_bytes(svg_bytes: bytes, theme_type: ThemeType = ThemeType.UNDECIDED) -> QIcon:
     """
     There is no QIcon option for loading SVG from a string,
-    only from a SVG file, so roll our own.
+    only from an SVG file, so roll our own.
     """
     if theme_type == ThemeType.UNDECIDED:
         theme_type = polychrome_light_or_dark()
@@ -88,7 +90,9 @@ def create_icon_from_path(path: Path, theme_type: ThemeType) -> QIcon:
             icon = QIcon(path.as_posix())
         return icon
     # Copes with the case where the path has been deleted.
-    return QApplication.style().standardIcon(StdPixmap.SP_MessageBoxQuestion)
+    app_style = QApplication.style()
+    assert app_style is not None
+    return app_style.standardIcon(StdPixmap.SP_MessageBoxQuestion)
 
 
 def create_icon_from_text(text: str, theme_type: ThemeType) -> QIcon:
@@ -143,7 +147,7 @@ def polychrome_light_or_dark():
 
 def get_splash_pixmap() -> QPixmap:
     """
-    Get the splash pixmap from the installed png, failing that, the internal splash svg.
+    Get the splash Pixmap from the installed png, failing that, the internal splash svg.
     """
     svg_file = resources_files('vdu_controls') / 'resources' / 'icons' / 'app' / 'vdu_controls.png'
     pixmap = QPixmap()
