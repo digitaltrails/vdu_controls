@@ -282,8 +282,10 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         x_smoothed = _x_from_lux(smoothed_lux)
         x_current_point = _x_from_lux(current_point.lux)
         x_next_point = _x_from_lux(next_point.lux)
-        interpolated_brightness += (next_point.brightness - current_point.brightness) * (
-                x_smoothed - x_current_point) / (x_next_point - x_current_point)
+        x_diff = x_next_point - x_current_point
+        if not math.isclose(x_diff, 0.0):
+            interpolated_brightness += (next_point.brightness - current_point.brightness) * (
+                    x_smoothed - x_current_point) / x_diff
         return round(interpolated_brightness)
 
     def assess_preset_proximity(self, proposed_brightness: float,
