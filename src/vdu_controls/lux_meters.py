@@ -202,7 +202,7 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
         pass
 
     def get_status(self) -> Tuple[bool, str]:
-        return (False, tr('No location defined.')) if self.location is None else super().get_status()
+        return (True, tr('No location defined.')) if self.location is None else super().get_status()
 
     @staticmethod
     def get_stored_value() -> float:
