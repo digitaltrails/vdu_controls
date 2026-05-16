@@ -115,7 +115,7 @@ class VduController(QObject):
             VduController._async_setvcp_task.start()
 
         self.vdu_model_id = proper_name(vdu_model_name.strip())
-        self.capabilities_text: str | None = None
+        self.capabilities_text: str = ''
         self.config = None
         self.values_cache: Dict[int, int] = {}
         self.ignore_vdu = remedy == VduController.IGNORE_VDU
@@ -162,6 +162,7 @@ class VduController(QObject):
             self.write_template_config_files()  # Persist the discard
 
     def edit_config(self):
+        assert self.config is not None
         self.edit_config_callable(self.config.config_name)
 
     def write_template_config_files(self) -> None:
@@ -174,10 +175,12 @@ class VduController(QObject):
         self.config = config
 
     def get_vdu_preferred_name(self, upper: bool = False) -> str:
+        assert self.config is not None
         return self.config.get_vdu_preferred_name().upper() if upper else self.config.get_vdu_preferred_name()
 
     def get_full_id(self) -> Tuple[str, str, str, str]:
         """Return a tuple that defines this VDU: (vdu_number, manufacturer, model, serial-number)."""
+        assert self.config is not None
         return self.vdu_number, self.manufacturer, self.model_name, self.serial_number
 
     def get_vcp_values(self, vcp_codes: List[int]) -> List[VcpValue]:
@@ -226,11 +229,13 @@ class VduController(QObject):
 
     def set_vcp_value_asynchronously(self, vcp_code: int, value: int, origin: VcpOrigin = VcpOrigin.NORMAL) -> None:
         # Queue the change for the queue processing thread - avoids blocking the GUI.
+        assert VduController._async_setvcp_task is not None
         VduController._async_setvcp_task.queue_setvcp(self, vcp_code, value, origin)
 
     def get_range_restrictions(self, vcp_code: int, fallback: Tuple[int, int] | None = None) -> Tuple[int, int] | None:
         if vcp_code in self.capabilities_supported_by_this_vdu:
-            range_restriction = self.capabilities_supported_by_this_vdu[vcp_code].values  # will always be a list
+            range_restriction = self.capabilities_supported_by_this_vdu[vcp_code].values
+            assert isinstance(range_restriction, List)   # will always be a list
             if len(range_restriction) != 0:
                 return int(range_restriction[1]), int(range_restriction[2])
         return fallback
@@ -238,13 +243,13 @@ class VduController(QObject):
     def get_write_count(self):
         return self.ddcutil.get_write_count(self.vdu_number) if self.ddcutil else 0
 
-    def _parse_capabilities(self, capabilities_text=None) -> Dict[int, VcpCapability]:
+    def _parse_capabilities(self, capabilities_text: str) -> Dict[int, VcpCapability]:
         """Return a map of vpc capabilities keyed by vcp code."""
 
         if capabilities_text == "Ignore VDU":
             return {}
 
-        def _parse_values(values_str: str) -> List[str]:
+        def _parse_values(values_str: str) -> List:
             values_list = []
             if stripped := values_str.strip():
                 lines_list = stripped.split('\n')
