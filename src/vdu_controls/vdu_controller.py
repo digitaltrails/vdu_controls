@@ -40,7 +40,7 @@ class VduControllerAsyncSetter(WorkerThread):  # Used to decouple the set-vcp fr
                 controller, vcp_code, value, origin = self._async_setvcp_queue.get_nowait()
                 key = (controller, vcp_code)
                 if log.debug_enabled:
-                    log.debug(f"UI discard earlier op on {controller.vdu_number=} {vcp_code=}") if key in latest_pending else None
+                    log.debug(f"UI discard earlier op on {controller.vdu_number=} {vcp_code=:#02x}") if key in latest_pending else None
                 latest_pending[key] = (value, origin)  # keep the latest for each controller+vcp_code.
                 self._async_setvcp_queue.task_done()
             except queue.Empty:
@@ -50,14 +50,14 @@ class VduControllerAsyncSetter(WorkerThread):  # Used to decouple the set-vcp fr
         if latest_pending:  # nothing more has arrived, if any setvcp requests are pending, set for real now
             for (controller, vcp_code), (value, origin) in latest_pending.items():
                 if controller.values_cache.get(vcp_code, None) != value:
-                    log.debug(f"UI set {controller.vdu_number=} {vcp_code=} {value=} {origin}") if log.debug_enabled else None
+                    log.debug(f"UI set {controller.vdu_number=} {vcp_code=:#02x} {value=} {origin}") if log.debug_enabled else None
                     controller.set_vcp_value(vcp_code, value, origin, asynchronous_caller=True)
                 else:
-                    log.debug(f"UI nochange {controller.vdu_number=} {vcp_code=} {value=} {origin}") if log.debug_enabled else None
+                    log.debug(f"UI nochange {controller.vdu_number=} {vcp_code=:#02x} {value=} {origin}") if log.debug_enabled else None
         else:
             self.doze(self._idle_seconds)
 
-    def queue_setvcp(self, controller: VduController, vcp_code: str, value: int, origin: VcpOrigin):
+    def queue_setvcp(self, controller: VduController, vcp_code: int, value: int, origin: VcpOrigin):
         self._async_setvcp_queue.put((controller, vcp_code, value, origin))
 
 
@@ -83,8 +83,8 @@ class VduController(QObject):
     _LIMITED_RANGE_KEY = "%%RANGE%%"  # A key internal to vdu_controls for storing Range n..m values.
     _FORCE_REFRESH_NAME_SUFFIX = "*refresh*"
 
-    vcp_value_changed_qtsignal = pyqtSignal(str, str, int, VcpOrigin, bool)
-    _async_setvcp_exception_qtsignal = pyqtSignal(str, int, VcpOrigin, Exception)
+    vcp_value_changed_qtsignal = pyqtSignal(str, int, int, VcpOrigin, bool)
+    _async_setvcp_exception_qtsignal = pyqtSignal(int, int, VcpOrigin, Exception)
 
     _async_setvcp_task: VduControllerAsyncSetter | None = None
 
@@ -105,7 +105,7 @@ class VduController(QObject):
         self.edit_config_callable = edit_config
         self.vdu_exception_handler = vdu_exception_handler
 
-        def _handle_async_setvcp_exception(vcp_code: str, value: int, origin: VcpOrigin, e: VduException):
+        def _handle_async_setvcp_exception(vcp_code: int, value: int, origin: VcpOrigin, e: VduException):
             if self.vdu_exception_handler(e, True):
                 self.set_vcp_value_asynchronously(vcp_code, value, origin)
 
@@ -117,7 +117,7 @@ class VduController(QObject):
         self.vdu_model_id = proper_name(vdu_model_name.strip())
         self.capabilities_text: str | None = None
         self.config = None
-        self.values_cache: Dict[str, int] = {}
+        self.values_cache: Dict[int, int] = {}
         self.ignore_vdu = remedy == VduController.IGNORE_VDU
         default_sleep_multiplier: float | None = default_config.get_sleep_multiplier(fallback=None)
         enabled_vcp_codes = default_config.get_all_enabled_vcp_codes()
@@ -180,13 +180,13 @@ class VduController(QObject):
         """Return a tuple that defines this VDU: (vdu_number, manufacturer, model, serial-number)."""
         return self.vdu_number, self.manufacturer, self.model_name, self.serial_number
 
-    def get_vcp_values(self, vcp_codes_hex: List[str]) -> List[VcpValue]:
+    def get_vcp_values(self, vcp_codes: List[int]) -> List[VcpValue]:
         try:
-            if len(vcp_codes_hex) == 0:
+            if len(vcp_codes) == 0:
                 return []
             # raise subprocess.SubprocessError("get_attributes")  # for testing
-            values = self.ddcutil.get_vcp_values(self.vdu_number, [int(code_hex, 16) for code_hex in vcp_codes_hex])
-            for vcp_code, vcp_value in zip(vcp_codes_hex, values):
+            values = self.ddcutil.get_vcp_values(self.vdu_number, vcp_codes)
+            for vcp_code, vcp_value in zip(vcp_codes, values):
                 value = vcp_value.current
                 cached_value = self.values_cache.get(vcp_code, None)
                 if value != cached_value:
@@ -194,26 +194,27 @@ class VduController(QObject):
                     if cached_value is not None:  # Not just initialization, but an actual change...
                         if log.debug_enabled:
                             log.debug(
-                                f"get_vcp signals vcp_value_changed: {self.vdu_stable_id} {vcp_code=} {value} {VcpOrigin.EXTERNAL}")
+                                f"get_vcp signals vcp_value_changed: {self.vdu_stable_id} {vcp_code=:02x} {value} {VcpOrigin.EXTERNAL}")
                         self.vcp_value_changed_qtsignal.emit(self.vdu_stable_id, vcp_code, value, VcpOrigin.EXTERNAL,
                                                              self.capabilities_supported_by_this_vdu[vcp_code].causes_config_change)
             return values
         except (subprocess.SubprocessError, ValueError, TimeoutError, DdcutilDisplayNotFound) as e:
-            raise VduException(vdu_description=self.get_vdu_preferred_name(), vcp_code=",".join(vcp_codes_hex), exception=e,
-                               operation="get_vcp_values") from e
+            codes_csv = ", ".join([f"{vcp_code:02x}" for vcp_code in vcp_codes])
+            raise VduException(vdu_description=self.get_vdu_preferred_name(), vcp_code=codes_csv,
+                               exception=e, operation="get_vcp_values") from e
 
-    def set_vcp_value(self, vcp_code: str, value: int, origin: VcpOrigin = VcpOrigin.NORMAL,
+    def set_vcp_value(self, vcp_code: int, value: int, origin: VcpOrigin = VcpOrigin.NORMAL,
                       asynchronous_caller: bool = False) -> None:
         if self.no_longer_in_use:
-            log.info(f"Expired controller discards set_vcp_value({vcp_code=}, {value=}, {origin=}) {asynchronous_caller=}")
+            log.info(f"Expired controller discards set_vcp_value({vcp_code=:#02x}, {value=}, {origin=}) {asynchronous_caller=}")
             return
         try:
             # raise subprocess.SubprocessError("set_attribute")  # for testing
             retry_on_error = vcp_code in SUPPORTED_VCP_BY_CODE and SUPPORTED_VCP_BY_CODE[vcp_code].retry_setvcp
-            self.ddcutil.set_vcp(self.vdu_number, int(vcp_code, 16), value, retry_on_error=retry_on_error)
+            self.ddcutil.set_vcp(self.vdu_number, vcp_code, value, retry_on_error=retry_on_error)
             self.values_cache[vcp_code] = value
             if log.debug_enabled:
-                log.debug(f"set_vcp signals vcp_value_changed: {self.vdu_stable_id} {vcp_code=} {value} {origin}")
+                log.debug(f"set_vcp signals vcp_value_changed: {self.vdu_stable_id} {vcp_code=:#02x} {value} {origin}")
             self.vcp_value_changed_qtsignal.emit(self.vdu_stable_id, vcp_code, value, origin,
                                                  self.capabilities_supported_by_this_vdu[vcp_code].causes_config_change)
         except (subprocess.SubprocessError, ValueError, TimeoutError, DdcutilDisplayNotFound) as e:
@@ -223,11 +224,11 @@ class VduController(QObject):
                 raise vdu_exception from e
             self._async_setvcp_exception_qtsignal.emit(vcp_code, value, origin, vdu_exception)
 
-    def set_vcp_value_asynchronously(self, vcp_code: str, value: int, origin: VcpOrigin = VcpOrigin.NORMAL) -> None:
+    def set_vcp_value_asynchronously(self, vcp_code: int, value: int, origin: VcpOrigin = VcpOrigin.NORMAL) -> None:
         # Queue the change for the queue processing thread - avoids blocking the GUI.
         VduController._async_setvcp_task.queue_setvcp(self, vcp_code, value, origin)
 
-    def get_range_restrictions(self, vcp_code, fallback: Tuple[int, int] | None = None) -> Tuple[int, int] | None:
+    def get_range_restrictions(self, vcp_code: int, fallback: Tuple[int, int] | None = None) -> Tuple[int, int] | None:
         if vcp_code in self.capabilities_supported_by_this_vdu:
             range_restriction = self.capabilities_supported_by_this_vdu[vcp_code].values  # will always be a list
             if len(range_restriction) != 0:
@@ -260,7 +261,7 @@ class VduController(QObject):
         feature_map = {}
         for feature_text in capabilities_text.split(' Feature: '):
             if feature_match := VduController._FEATURE_PATTERN.match(feature_text):
-                vcp_code = feature_match.group(1)
+                vcp_code = int(feature_match.group(1), 16)
                 vcp_name = feature_match.group(2)
                 if requires_refresh := vcp_name.lower().endswith(VduController._FORCE_REFRESH_NAME_SUFFIX):
                     vcp_name = vcp_name.replace(VduController._FORCE_REFRESH_NAME_SUFFIX, "")
@@ -279,7 +280,7 @@ class VduController(QObject):
                     # Feature: 10/12 line inside a manufacturer-specific section with discrete values,
                     # which the parser would otherwise mis-classify as non-continuous and overwrite the
                     # earlier correct definition.  Trust the MCCS-standard type and discard the values.
-                    log.warning(f"Ignoring spurious Values: for known-continuous VCP code {vcp_code}: {values}")
+                    log.warning(f"Ignoring spurious Values: for known-continuous VCP-Code {vcp_code:#02x}: {values}")
                     vcp_type = CONTINUOUS_TYPE
                     values = []
                 else:  # two-byte or one-byte continuous type - cannot always trust the VDU metadata on this.
@@ -298,7 +299,7 @@ class VduController(QObject):
                     # overwriting standard VCP-code definitions.  Use warning for codes vdu_controls
                     # exposes as a control (user-visible impact), info otherwise (firmware metadata noise).
                     log_fn = log.warning if vcp_code in SUPPORTED_VCP_BY_CODE else log.info
-                    log_fn(f"Duplicate Feature: {vcp_code} in capability string; keeping first occurrence "
+                    log_fn(f"Duplicate Feature: {vcp_code=:#02x} in capability string; keeping first occurrence "
                            f"(ignored second: vcp_type={vcp_type}, values={values})")
                 else:
                     feature_map[vcp_code] = capability

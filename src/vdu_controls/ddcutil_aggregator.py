@@ -8,7 +8,7 @@ import time as sys_time
 from typing import List, Dict, Callable, Tuple, NewType
 
 from vdu_controls.ddcutil_abstract import DDCUTIL_RETRIES, VcpValue, CONTINUOUS_TYPE, SIMPLE_NON_CONTINUOUS_TYPE, \
-    COMPLEX_NON_CONTINUOUS_TYPE, DdcutilServiceNotFound, DdcutilDisplayNotFound, DdcutilInterface
+    COMPLEX_NON_CONTINUOUS_TYPE, DdcutilServiceNotFound, DdcutilDisplayNotFound, DdcutilInterface, VcpTypeInfo
 from vdu_controls.ddcutil_emulator import DdcutilEmulatorImpl
 from vdu_controls.ddcutil_exe import DdcutilExeImpl
 from vdu_controls.ddcutil_laptop_panel import DdcutilPanelImpl
@@ -44,7 +44,7 @@ class DdcutilAggregator(DdcutilInterface):
             self.ddcutil_impl = DdcutilExeImpl(self.common_args)
 
         self.supported_codes: Dict[str, str] = {}
-        self.vcp_type_map: Dict[Tuple[str, str], str] = {}
+        self.vcp_type_map: Dict[Tuple[str, int], VcpTypeInfo] = {}
         self.edid_txt_map: Dict[str, str] = {}
         self.ddcutil_version: Tuple[int, ...] = (0, 0, 0)  # Initial version for bootstrapping
         self.version_suffix = ''
@@ -174,16 +174,15 @@ class DdcutilAggregator(DdcutilInterface):
                         capability_text += f"         {value_code}: {value_name}\n"
         return capability_text
 
-    def get_type(self, vdu_number: str, vcp_code: int) -> str | None:  # may not be needed with a dbus implementation
+    def get_type(self, vdu_number: str, vcp_code: int) -> VcpTypeInfo:  # may not be needed with a dbus implementation
         # TODO I don't think anything uses this - maybe it should be removed.
         edid_txt = self.get_edid_txt(vdu_number)
         vcp_type_key = (edid_txt, vcp_code)
-        if type_str := self.vcp_type_map.get(vcp_type_key):
-            return type_str
-        is_complex, is_continuous = self._impl(edid_txt).get_type(edid_txt, vcp_code)
-        type_str = CONTINUOUS_TYPE if is_continuous else (COMPLEX_NON_CONTINUOUS_TYPE if is_complex else SIMPLE_NON_CONTINUOUS_TYPE)
-        self.vcp_type_map[vcp_type_key] = type_str
-        return type_str
+        if info := self.vcp_type_map.get(vcp_type_key):
+            return info
+        info = self._impl(edid_txt).get_type(edid_txt, vcp_code)
+        self.vcp_type_map[vcp_type_key] = info
+        return info
 
     def set_vcp(self, vdu_number: str, vcp_code: int, new_value: int, retry_on_error: bool = False) -> None:
         """Send a new value to a specific VDU and vcp_code."""
@@ -193,7 +192,7 @@ class DdcutilAggregator(DdcutilInterface):
             try:
                 impl.set_vcp(edid_txt, vcp_code, new_value)
                 DdcutilAggregator.vcp_write_counters[edid_txt] = DdcutilAggregator.vcp_write_counters.get(edid_txt, 0) + 1
-                log.debug(f"set_vcp: {vdu_number=} {vcp_code=:#x} {new_value=}")
+                log.debug(f"set_vcp: {vdu_number=} {vcp_code=:#02x} {new_value=}")
                 return
             except (subprocess.SubprocessError, DdcutilDisplayNotFound, ValueError) as e:
                 if not retry_on_error or attempt_count + 1 == DDCUTIL_RETRIES:
@@ -231,16 +230,13 @@ class DdcutilAggregator(DdcutilInterface):
             values_list = impl.get_vcp_values(edid_txt, vcp_code_int_list)
             for vcp_value in values_list:
                 values_dict[vcp_value.vcp_code] = vcp_value
-            # for vcp, value, maxv, _ in values_list:
-            #     vcp_code = f'{vcp:02X}'
-            #     vcp_type = self.get_type(vdu_number, vcp_code)
-            #     values_dict[vcp_code] = VcpValue(vcp_code, value, maxv, vcp_type)
             if None not in values_dict.values():
                 break  # Got all values - OK to stop, otherwise try again
+        results = []
         for vcp_code, value in values_dict.items():
             if value is None:  # If all attempts failed, the values_dict will be missing one or more values.
-                raise ValueError(f"getvcp: display-{vdu_number} - failed to obtain value for vcp_code {vcp_code:02X}")
-        results = list(values_dict.values())  # if we reach here all values will be present (none are None).
+                raise ValueError(f"getvcp: display-{vdu_number} - failed to obtain value for {vcp_code=:#02x}")
+            results.append(value)  # if we reach here all values will be present (none are None).
         log.info(f"{results=}")
         return results
 

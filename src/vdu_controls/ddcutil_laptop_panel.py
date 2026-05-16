@@ -11,7 +11,8 @@ from threading import Lock
 from typing import List, Callable, Dict, Any, Tuple
 
 from vdu_controls.constants import VDU_CONTROLS_DEVELOPER
-from vdu_controls.ddcutil_abstract import BRIGHTNESS_VCP_CODE, DdcutilInterface, DdcDetectedAttributes, VcpValue, DdcCapabilities
+from vdu_controls.ddcutil_abstract import BRIGHTNESS_VCP_CODE, DdcutilInterface, DdcDetectedAttributes, VcpValue, DdcCapabilities, \
+    VcpTypeInfo
 from vdu_controls.ddcutil_abstract import DDCUTIL_RETRIES, CONTINUOUS_TYPE, DdcEventType, DdcutilDisplayNotFound
 from vdu_controls.ddcutil_exe import DdcutilExeImpl
 import vdu_controls.logging as log
@@ -26,7 +27,7 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
     """
     def __init__(self, _: List[str] | None = None, callback: Callable | None = None):
         self.include_leds = VDU_CONTROLS_DEVELOPER  # Test using desktop controllable LEDs
-        self.brightness_vcp_code_int = int(BRIGHTNESS_VCP_CODE, 16)
+        self.brightness_vcp_code_int = BRIGHTNESS_VCP_CODE
         self.ddcutil_access_lock = Lock()
         self.brightnessctl_exe = 'brightnessctl'
         self.max_brightness: Dict[str, int] = {}
@@ -53,9 +54,10 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
                 self.debounce_timer.start(50)  # Debounce: restart timer
 
             def _invoke_callback():
-                if datetime.now() - self.set_vcp_time > timedelta(seconds=1):
-                    for edid_txt in self.max_brightness.keys():
-                        self.callback(edid_txt, DdcEventType.LAPTOP_BRIGHTNESS_CHANGE.value, 0)
+                if self.callback is not None:
+                    if datetime.now() - self.set_vcp_time > timedelta(seconds=1):
+                        for edid_txt in self.max_brightness.keys():
+                            self.callback(edid_txt, DdcEventType.LAPTOP_BRIGHTNESS_CHANGE.value, 0)
 
             fd = self.monitor.fileno()  # Get the file descriptor and create a QSocketNotifier
             self.notifier = QSocketNotifier(fd, QSocketNotifier.Type.Read, None)
@@ -89,7 +91,7 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
                 log.debug(f"subprocess result: success {log_id} [{result.args}] "
                           f"rc={result.returncode} elapsed={elapsed:.2f} "
                           f"stdout={result.stdout.decode('utf-8', errors='surrogateescape')}") if log.debug_enabled else None
-        except subprocess.SubprocessError as spe:
+        except subprocess.CalledProcessError as spe:
             error_text = spe.stderr.decode('utf-8', errors='surrogateescape')
             log.debug("subprocess result: error ", log_id, process_args,
                       f"stderr='{error_text}', exception={str(spe)}", trace=True) if log.debug_enabled else None
@@ -111,16 +113,16 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
         for item_number, line in enumerate(cmd_result.stdout.splitlines(), start=1):
             parts = str(line, 'utf-8').split(',')
             if len(parts) > 1 and (parts[1] == 'backlight') or (self.include_leds and parts[1] == 'leds'):
-                display_number = -item_number
+                display_number = str(-item_number)
                 usb_bus, usb_device = '', ''
                 manufacturer_id, model_name, product_code = 'Unknown', 'Panel', 'Unknown'
                 edid_txt = parts[0]
-                binary_sn = f"BSN#{edid_txt}".encode('utf-8')
+                binary_sn_str = f"BSN#{edid_txt}"
                 serial_number = re.sub(r'[^A-Za-z0-9]', '_', parts[0]).title()
                 log.info(f"Detected panel {model_name=} {edid_txt=} detected")
                 vdu_attributes = DdcDetectedAttributes(
                     display_number, usb_bus, usb_device,
-                    manufacturer_id, model_name, serial_number, product_code, edid_txt, binary_sn)
+                    manufacturer_id, model_name, serial_number, product_code, edid_txt, binary_sn_str)
                 results.append(vdu_attributes)
         return results
 
@@ -140,9 +142,9 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
         return DdcCapabilities('', 0, 0, {}, {}, capability_text)
         #return '', 0, 0, {}, {}, capability_text
 
-    def get_type(self, _: str, vcp_code_int: int) -> Tuple[bool, bool] | None:  # edid_txt isn't currently used/supported
+    def get_type(self, _: str, vcp_code_int: int) -> VcpTypeInfo:  # edid_txt isn't currently used/supported
         assert vcp_code_int == self.brightness_vcp_code_int  # nothing else supported
-        return False, True
+        return VcpTypeInfo(False, True)
 
     def set_vcp(self, edid_txt: str, vcp_code_int: int, new_value_int: int) -> None:
         assert vcp_code_int == self.brightness_vcp_code_int  # nothing else supported

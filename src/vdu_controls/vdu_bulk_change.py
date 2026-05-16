@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 @dataclass
 class BulkChangeItem:
     vdu_sid: VduStableId
-    vcp_code: str
+    vcp_code: int
     final_value: int
     starting_value: int | None = None
     current_value: int | None = None

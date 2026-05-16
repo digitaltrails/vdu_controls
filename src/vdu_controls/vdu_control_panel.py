@@ -80,7 +80,7 @@ class VduControlPanel(QWidget):
         except VduException as e:
             self.vdu_exception_handler(e)
 
-    def get_control(self, vcp_code: str) -> VduControlBase | None:
+    def get_control(self, vcp_code: int) -> VduControlBase | None:
         return next((c for c in self.vcp_controls if c.vcp_capability.vcp_code == vcp_code), None)
 
     def refresh_from_vdu(self) -> None:

@@ -375,7 +375,7 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
 @dataclass
 class VcpCapability:
     """Representation of a VCP (Virtual Control Panel) capability for a VDU."""
-    vcp_code: str
+    vcp_code: int
     name: str
     vcp_type: str | None = None
     values: List | None = None
@@ -406,22 +406,22 @@ SUPPORT_ALL_VCP = False
 
 
 # Maps of controls supported by name on the command line and in config files.
-SUPPORTED_VCP_BY_CODE: Dict[str, VcpCapability] = {
+SUPPORTED_VCP_BY_CODE: Dict[int, VcpCapability] = {
     **{code: VcpCapability(code, name, retry_setvcp=False)
        for code, name in (DdcutilAggregator().get_supported_vcp_codes_map().items() if SUPPORT_ALL_VCP else [])},
     **{
         BRIT: VcpCapability(BRIT, QT_TR_NOOP('brightness'), CON, icon_source=BRIGHTNESS_SVG, enabled=True, can_transition=True),
         CONT: VcpCapability(CONT, QT_TR_NOOP('contrast'), CON, icon_source=CONTRAST_SVG, enabled=True, can_transition=True),
-        '62': VcpCapability('62', QT_TR_NOOP('audio volume'), CON, icon_source=VOLUME_SVG, can_transition=True),
-        '8D': VcpCapability('8D', QT_TR_NOOP('audio mute'), SNC, icon_source=VOLUME_SVG),
-        '8F': VcpCapability('8F', QT_TR_NOOP('audio treble'), CON, icon_source=VOLUME_SVG, can_transition=True),
-        '91': VcpCapability('91', QT_TR_NOOP('audio bass'), CON, icon_source=VOLUME_SVG, can_transition=True),
-        '64': VcpCapability('91', QT_TR_NOOP('audio mic volume'), CON, icon_source=VOLUME_SVG, can_transition=True),
-        '60': VcpCapability('60', QT_TR_NOOP('input source'), SNC, causes_config_change=True),
-        'D6': VcpCapability('D6', QT_TR_NOOP('power mode'), SNC, causes_config_change=True),
-        'CC': VcpCapability('CC', QT_TR_NOOP('OSD language'), SNC),
-        '14': VcpCapability('14', QT_TR_NOOP('color preset'), SNC),
-        '0C': VcpCapability('0C', QT_TR_NOOP('color temperature'), CON, icon_source=COLOR_TEMPERATURE_SVG, enabled=True),
+        0x62: VcpCapability(0x62, QT_TR_NOOP('audio volume'), CON, icon_source=VOLUME_SVG, can_transition=True),
+        0x8D: VcpCapability(0x8D, QT_TR_NOOP('audio mute'), SNC, icon_source=VOLUME_SVG),
+        0x8F: VcpCapability(0x8F, QT_TR_NOOP('audio treble'), CON, icon_source=VOLUME_SVG, can_transition=True),
+        0x91: VcpCapability(0x91, QT_TR_NOOP('audio bass'), CON, icon_source=VOLUME_SVG, can_transition=True),
+        0x64: VcpCapability(0x91, QT_TR_NOOP('audio mic volume'), CON, icon_source=VOLUME_SVG, can_transition=True),
+        0x60: VcpCapability(0x60, QT_TR_NOOP('input source'), SNC, causes_config_change=True),
+        0xD6: VcpCapability(0xD6, QT_TR_NOOP('power mode'), SNC, causes_config_change=True),
+        0xCC: VcpCapability(0xCC, QT_TR_NOOP('OSD language'), SNC),
+        0x14: VcpCapability(0x14, QT_TR_NOOP('color preset'), SNC),
+        0x0C: VcpCapability(0x0C, QT_TR_NOOP('color temperature'), CON, icon_source=COLOR_TEMPERATURE_SVG, enabled=True),
     }}
 
 SUPPORTED_VCP_BY_PROPERTY_NAME = {c.property_name(): c for c in SUPPORTED_VCP_BY_CODE.values()}
@@ -433,7 +433,7 @@ class VduControlsConfig:
     Includes a method that can fold in values from command line arguments parsed by the standard argparse package.
     """
 
-    def __init__(self, config_name: str, default_enabled_vcp_codes: List | None = None, main_config: bool = False) -> None:
+    def __init__(self, config_name: str, default_enabled_vcp_codes: List[int] | None = None, main_config: bool = False) -> None:
         self.config_name = config_name
         self.ini_content = ConfIni()
 
@@ -513,13 +513,13 @@ class VduControlsConfig:
     def set_capabilities_alt_text(self, alt_text: str) -> None:
         self.ini_content.set(*ConfOpt.CAPABILITIES_OVERRIDE.conf_id, alt_text)
 
-    def enable_supported_vcp_code(self, vcp_code: str) -> None:
+    def enable_supported_vcp_code(self, vcp_code: int) -> None:
         self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS][SUPPORTED_VCP_BY_CODE[vcp_code].property_name()] = 'yes'
 
-    def enable_unsupported_vcp_code(self, vcp_code: str) -> None:
-        self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS][f'unsupported-{vcp_code}'] = 'yes'
+    def enable_unsupported_vcp_code(self, vcp_code: int) -> None:
+        self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS][f'unsupported-{vcp_code}'] = 'yes'  # TODO this seems incorrect?
 
-    def disable_supported_vcp_code(self, vcp_code: str) -> None:
+    def disable_supported_vcp_code(self, vcp_code: int) -> None:
         self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS][SUPPORTED_VCP_BY_CODE[vcp_code].property_name()] = 'no'
 
     def get_all_enabled_vcp_codes(self) -> List[str]:  # Not very efficient

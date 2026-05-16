@@ -11,7 +11,7 @@ from typing import Dict, Tuple, Callable, List, Any
 from vdu_controls.qt_imports import QObject
 
 from vdu_controls.ddcutil_abstract import DdcutilServiceNotFound, DdcutilDisplayNotFound, DdcutilInterface, DdcDetectedAttributes, \
-    VcpValue, DdcCapabilities
+    VcpValue, DdcCapabilities, VcpTypeInfo
 import vdu_controls.logging as log
 from vdu_controls.misc import intV
 from vdu_controls.qt_imports import (QDBusArgument, QDBusInterface, QMetaType, QDBusConnection,
@@ -25,7 +25,7 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
     does the expensive initialization once at startup.
     """
     RETURN_RAW_VALUES = 2
-    _metadata_cache: Dict[Tuple[str, int], Tuple[bool, bool]] = {}
+    _metadata_cache: Dict[Tuple[str, int], VcpTypeInfo] = {}
     _current_connected_displays_changed_handler: Callable | None = None  # Only one instance and listener should exist at a time
     _current_service_initialization_handler: Callable | None = None  # Only one instance and listener should exist at a time
 
@@ -38,6 +38,8 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
         self.listener_callback: Callable | None = callback
         self.dbus_timeout_millis = int(os.getenv("VDU_CONTROLS_DBUS_TIMEOUT_MILLIS", default='10000'))
         self._status_values: Dict[int, str] = {}
+        self.dbus_service_name = os.environ.get('DDCUTIL_SERVICE_NAME', default="com.ddcutil.DdcutilService")
+        self.dbus_object_path = os.environ.get('DDCUTIL_SERVICE_OBJECT_PATH', default="/com/ddcutil/DdcutilObject")
         for try_count in range(1, 5):  # Approximating an infinite loop
             self.ddcutil_proxy, self.ddcutil_props_proxy = self._connect_to_service()
             if len(self.common_args) != 0:  # have to restart with the common_args, wait and connect again
@@ -54,12 +56,12 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
             # Retrieve the attributes returned by detect and also use the retrieval as a self check
             self_check_op = self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "AttributesReturnedByDetect")
             if not self_check_op.errorName():
+                # TODO DdcutilDBusImpl.DetectedAttributes seems unused
                 DdcutilDBusImpl.DetectedAttributes = namedtuple("DetectedAttributes", self_check_op.arguments()[0])
-                self.vdu_map_by_edid: Dict[str, Tuple] = {}
                 break  # Stop looping
             log.error(f'Sanity check try {try_count}: {self.dbus_interface_name} failed: {self_check_op.errorMessage()}')
             if try_count >= 4:  # Give up
-                self._connect_to_service(disconnect=True)  # disconnect handler references to facilitate garbage collection
+                self._connection_reset()  # disconnect handler references to facilitate garbage collection
                 raise DdcutilServiceNotFound(
                     f"Error contacting D-Bus service {self.dbus_interface_name} {self_check_op.errorMessage()}")
             sys_time.sleep(2)  # Try again
@@ -73,32 +75,32 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
     def set_vdu_specific_args(self, vdu_number: str, extra_args: List[str]):
         pass  # TODO not implemented
 
-    def _connect_to_service(self, disconnect=False) -> Tuple[QDBusInterface, QDBusInterface] | Tuple[None, None]:
-        dbus_service_name = os.environ.get('DDCUTIL_SERVICE_NAME', default="com.ddcutil.DdcutilService")
-        dbus_object_path = os.environ.get('DDCUTIL_SERVICE_OBJECT_PATH', default="/com/ddcutil/DdcutilObject")
+    def _connection_reset(self) -> Tuple[QDBusConnection, QDBusInterface, QDBusInterface]:
         session_bus = QDBusConnection.connectToBus(QDBusConnection.BusType.SessionBus, "session")
         ddcutil_dbus_iface = QDBusInterface(
-            dbus_service_name, dbus_object_path, self.dbus_interface_name, connection=session_bus)
+            self.dbus_service_name, self.dbus_object_path, self.dbus_interface_name, connection=session_bus)
         # Properties are available via a separate interface with "Get" and "Set" methods
         ddcutil_dbus_props = QDBusInterface(
-            dbus_service_name, dbus_object_path, "org.freedesktop.DBus.Properties", connection=session_bus)
+            self.dbus_service_name, self.dbus_object_path, "org.freedesktop.DBus.Properties", connection=session_bus)
         session_bus.registerObject("/", self)
         # Clear handlers belonging to old instance
         if DdcutilDBusImpl._current_connected_displays_changed_handler:  # clear previous handler that belonged to old instance.
-            session_bus.disconnect(dbus_service_name, dbus_object_path, self.dbus_interface_name,
+            session_bus.disconnect(self.dbus_service_name, self.dbus_object_path, self.dbus_interface_name,
                                    "ConnectedDisplaysChanged", DdcutilDBusImpl._current_connected_displays_changed_handler)
         DdcutilDBusImpl._current_connected_displays_changed_handler = None
         if DdcutilDBusImpl._current_service_initialization_handler:  # clear previous handler that belonged to old instance.
-            session_bus.disconnect(dbus_service_name, dbus_object_path, self.dbus_interface_name,
+            session_bus.disconnect(self.dbus_service_name, self.dbus_object_path, self.dbus_interface_name,
                                    "ServiceInitialized", DdcutilDBusImpl._current_service_initialization_handler)
             DdcutilDBusImpl._current_service_initialization_handler = None
-        if disconnect:
-            return None, None
+        return session_bus, ddcutil_dbus_iface, ddcutil_dbus_props
+
+    def _connect_to_service(self, disconnect=False) -> Tuple[QDBusInterface, QDBusInterface]:
+        session_bus, ddcutil_dbus_iface, ddcutil_dbus_props = self._connection_reset()
         # Connect new handlers - bind receiving slots to our new handlers
         DdcutilDBusImpl._current_service_initialization_handler = self._service_initialization_handler
-        session_bus.connect(dbus_service_name, dbus_object_path, self.dbus_interface_name,
+        session_bus.connect(self.dbus_service_name, self.dbus_object_path, self.dbus_interface_name,
                             "ServiceInitialized", DdcutilDBusImpl._current_service_initialization_handler)
-        session_bus.connect(dbus_service_name, dbus_object_path, self.dbus_interface_name,
+        session_bus.connect(self.dbus_service_name, self.dbus_object_path, self.dbus_interface_name,
                             "ConnectedDisplaysChanged", self._connected_displays_changed_handler)
         DdcutilDBusImpl._current_connected_displays_changed_handler = self._connected_displays_changed_handler
         ddcutil_dbus_iface.setTimeout(self.dbus_timeout_millis)
@@ -152,7 +154,6 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
             for vdu in self._validate(result)[1]:
                 vdu_prop_values = [str(property) for property in vdu]
                 vdu_list.append(DdcDetectedAttributes(*vdu_prop_values))  # Note: depends on result ordering of properties
-            self.vdu_map_by_edid = {vdu.edid_txt: vdu for vdu in vdu_list}
             return vdu_list
 
     def get_capabilities(self, edid_txt: str) -> DdcCapabilities:
@@ -164,7 +165,7 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
                                    commands, capabilities, '')
             #return model, int.from_bytes(mccs_major, 'big'), int.from_bytes(mccs_minor, 'big'), commands, capabilities, ''
 
-    def get_type(self, edid_txt: str, vcp_code_int: int) -> Tuple[bool, bool]:
+    def get_type(self, edid_txt: str, vcp_code_int: int) -> VcpTypeInfo:
         key = (edid_txt, vcp_code_int)
         if key in DdcutilDBusImpl._metadata_cache:
             return DdcutilDBusImpl._metadata_cache[key]
@@ -172,8 +173,9 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
             _, _, _, _, _, is_complex, is_continuous = self._validate(self.ddcutil_proxy.call(
                 "GetVcpMetadata", -1, edid_txt, QDBusArgument(vcp_code_int, intV(QMetaType.Type.UChar)),
                 QDBusArgument(0, intV(QMetaType.Type.UInt))))
-            DdcutilDBusImpl._metadata_cache[key] = (is_complex, is_continuous)
-            return is_complex, is_continuous
+            info = VcpTypeInfo(is_complex, is_continuous)
+            DdcutilDBusImpl._metadata_cache[key] = info
+            return info
 
     def set_vcp(self, edid_txt: str, vcp_code_int: int, new_value_int: int) -> None:
         with self.service_access_lock:

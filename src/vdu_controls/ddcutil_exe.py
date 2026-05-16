@@ -11,7 +11,7 @@ from typing import Dict, List, Tuple
 
 import vdu_controls.logging as log
 from vdu_controls.ddcutil_abstract import DDCUTIL_RETRIES, VcpValue, CONTINUOUS_TYPE, SIMPLE_NON_CONTINUOUS_TYPE, \
-    COMPLEX_NON_CONTINUOUS_TYPE, DdcutilDisplayNotFound, DdcutilInterface, DdcDetectedAttributes, DdcCapabilities
+    COMPLEX_NON_CONTINUOUS_TYPE, DdcutilDisplayNotFound, DdcutilInterface, DdcDetectedAttributes, DdcCapabilities, VcpTypeInfo
 
 
 class DdcutilExeImpl(DdcutilInterface):
@@ -84,14 +84,14 @@ class DdcutilExeImpl(DdcutilInterface):
                           # f"{process_args=} "
                           f"rc={result.returncode} elapsed={elapsed:.2f} "
                           f"stdout={result.stdout.decode('utf-8', errors='surrogateescape')}") if log.debug_enabled else None
-        except subprocess.SubprocessError as spe:
-            error_text = spe.stderr.decode('utf-8', errors='surrogateescape')
+        except subprocess.CalledProcessError as cpe:
+            error_text = cpe.stderr.decode('utf-8', errors='surrogateescape')
             if error_text.lower().find("display not found") >= 0:  # raise DdcutilDisplayNotFound and stay quiet
                 log.debug("subprocess result: display-not-found ", log_id, self._format_args_diagnostic(process_args),
-                          f"stderr='{error_text}', exception={str(spe)}", trace=True) if log.debug_enabled else None
-                raise DdcutilDisplayNotFound(' '.join(args)) from spe
+                          f"stderr='{error_text}', exception={str(cpe)}", trace=True) if log.debug_enabled else None
+                raise DdcutilDisplayNotFound(' '.join(args)) from cpe
             log.debug("subprocess result: error ", log_id, self._format_args_diagnostic(process_args),
-                      f"stderr='{error_text}', exception={str(spe)}", trace=True) if log.debug_enabled else None
+                      f"stderr='{error_text}', exception={str(cpe)}", trace=True) if log.debug_enabled else None
             raise
         return result
 
@@ -142,7 +142,7 @@ class DdcutilExeImpl(DdcutilInterface):
                 if not edid_txt:
                     log.warning(f"DdcutilExeImpl: failed to parse edid from '{display_str}'")
                 vdu_attributes = DdcDetectedAttributes(vdu_number, '', '', manufacturer, model_name, serial_number, '',
-                                                                   edid_txt, bin_serial_number)
+                                                       edid_txt, bin_serial_number)
                 result_list.append(vdu_attributes)
                 self.vdu_map_by_edid[edid_txt] = vdu_attributes
         return result_list
@@ -153,13 +153,13 @@ class DdcutilExeImpl(DdcutilInterface):
         return DdcCapabilities('', 0, 0, {}, {}, capability_text)
         #return '', 0, 0, {}, {}, capability_text
 
-    def get_type(self, edid_txt: str, vcp_code_int: int) -> Tuple[bool, bool] | None:  # edid_txt isn't currently used/supported
+    def get_type(self, edid_txt: str, vcp_code_int: int) -> VcpTypeInfo:  # edid_txt isn't currently used/supported
         type_code = self.vcp_type_map.get(vcp_code_int)
         if type_code is None:
-            return False, False
+            return VcpTypeInfo(False, False)
         is_complex = type_code == COMPLEX_NON_CONTINUOUS_TYPE
         is_continuous = type_code == CONTINUOUS_TYPE
-        return is_complex, is_continuous
+        return VcpTypeInfo(is_complex, is_continuous)
 
     def set_vcp(self, edid_txt: str, vcp_code_int: int, new_value_int: int) -> None:
         vcp_code = f"{vcp_code_int:02X}"
@@ -184,12 +184,14 @@ class DdcutilExeImpl(DdcutilInterface):
                     if vcp_code_match := DdcutilExeImpl._VCP_CODE_REGEXP.match(line_utf8):
                         vcp_code = int(vcp_code_match.group(1), 16)
                         results_dict[vcp_code] = self.__parse_vcp_value(vcp_code, line_utf8)
+                results = []
                 for vcp_code, vcp_value in results_dict.items():
                     if vcp_value is None:
                         raise ValueError(f"getvcp: {self._get_vdu_human_name(edid_txt)}"
                                          f" - failed to obtain value for vcp_code {vcp_code:02X}")
+                    results.append(vcp_value)
                 # If we reach here, all values v will be non-null
-                return list(results_dict.values())
+                return results
             except (subprocess.SubprocessError, ValueError, DdcutilDisplayNotFound):
                 if attempt_count + 1 == DDCUTIL_RETRIES:  # Don't log here, it creates too much noise in the logs
                     raise  # Too many failures, pass the buck upstairs
@@ -213,6 +215,6 @@ class DdcutilExeImpl(DdcutilInterface):
                 if cnc_match := DdcutilExeImpl._CNC_PATTERN.match(value_match.group(2)):
                     return VcpValue(vcp_code, int(cnc_match.group(3), 16) << 8 | int(cnc_match.group(4), 16), 0, COMPLEX_NON_CONTINUOUS_TYPE)
             else:
-                raise TypeError(f'Unsupported VCP type {type_indicator} vcp_code {vcp_code}')
-        raise ValueError(f"VDU vcp_code {vcp_code} failed to parse vcp value '{result}'")
+                raise TypeError(f'Unsupported VCP type {type_indicator} {vcp_code=:#02x}')
+        raise ValueError(f"VDU {vcp_code=:#02x} failed to parse vcp value '{result}'")
 

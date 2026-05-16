@@ -19,8 +19,8 @@ SNC = SIMPLE_NON_CONTINUOUS_TYPE
 CNC = COMPLEX_NON_CONTINUOUS_TYPE
 
 
-BRIGHTNESS_VCP_CODE = BRIT = '10'  # Note ddcutil command line treats 10 as 0x10
-CONTRAST_VCP_CODE = CONT = '12'
+BRIGHTNESS_VCP_CODE = BRIT = 0x10  # Note ddcutil command line treats 10 as 0x10
+CONTRAST_VCP_CODE = CONT = 0x12
 
 
 @dataclass(frozen=True)
@@ -52,6 +52,12 @@ class VcpValue:
     current: int
     max: int
     vcp_type: str | None
+
+
+@dataclass(frozen=True)
+class VcpTypeInfo:
+    is_complex: bool
+    is_continuous: bool
 
 
 class DdcEventType(Enum):  # Has to correspond to what the service supports
@@ -116,7 +122,7 @@ class DdcutilInterface:
         raise NotImplementedError
 
     
-    def get_type(self, edid_txt: str, vcp_code_int: int) -> Tuple[bool, bool] | None:
+    def get_type(self, edid_txt: str, vcp_code_int: int) -> VcpTypeInfo:
         raise NotImplementedError
 
     

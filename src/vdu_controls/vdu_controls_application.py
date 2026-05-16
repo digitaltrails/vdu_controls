@@ -152,7 +152,7 @@ class VduMainToolBar(QToolBar):
 class VduControlsMainPanel(QWidget):
     """GUI for detected VDUs, it will construct and contain a control panel for each VDU."""
 
-    vdu_vcp_changed_qtsignal = pyqtSignal(str, str, int, VcpOrigin, bool)
+    vdu_vcp_changed_qtsignal = pyqtSignal(str, int, int, VcpOrigin, bool)
 
     def __init__(self) -> None:
         super().__init__()
@@ -917,7 +917,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
     def get_vdu_stable_id_list(self) -> List[VduStableId]:
         return [stable_id for stable_id, vdu_controller in self.vdu_controllers_map.items() if not vdu_controller.ignore_vdu]
 
-    def get_vdu_values(self, vdu_stable_id: VduStableId, vcp_codes: List[str] | None) -> List[Tuple[str, VcpValue]]:
+    def get_vdu_values(self, vdu_stable_id: VduStableId, vcp_codes: List[int] | None) -> List[Tuple[int, VcpValue]]:
         if controller := self.vdu_controllers_map.get(vdu_stable_id):
             if not vcp_codes:
                 vcp_codes = [capability.vcp_code for capability in controller.enabled_capabilities]
@@ -929,7 +929,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             return controller.enabled_capabilities
         return []
 
-    def get_range(self, vdu_stable_id: VduStableId, vcp_code: str,
+    def get_range(self, vdu_stable_id: VduStableId, vcp_code: int,
                   fallback: Tuple[int, int] | None = None) -> Tuple[int, int] | None:
         if controller := self.vdu_controllers_map.get(vdu_stable_id):
             return controller.get_range_restrictions(vcp_code, fallback)
@@ -944,14 +944,14 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         log.error(f"get_value: No controller for {vdu_stable_id}")
         return 0
 
-    def set_value(self, vdu_stable_id: VduStableId, vcp_code: str, value: int, origin: VcpOrigin = VcpOrigin.NORMAL):
+    def set_value(self, vdu_stable_id: VduStableId, vcp_code: int, value: int, origin: VcpOrigin = VcpOrigin.NORMAL):
         if panel := self.main_window.get_main_panel().vdu_control_panels.get(vdu_stable_id):
             if control := panel.get_control(vcp_code):
                 control.set_value(value, origin)  # Apply to physical VDU
                 return
-        log.error(f"set_value: No controller for {vdu_stable_id=} {vcp_code=}")
+        log.error(f"set_value: No controller for {vdu_stable_id=} {vcp_code=:#02x}")
 
-    def is_vcp_code_enabled(self, vdu_stable_id, vcp_code: str) -> bool:
+    def is_vcp_code_enabled(self, vdu_stable_id, vcp_code: int) -> bool:
         if controller := self.vdu_controllers_map.get(vdu_stable_id):
             for capability in controller.enabled_capabilities:
                 if capability.vcp_code == vcp_code:
@@ -1323,17 +1323,17 @@ class VduAppWindow(QMainWindow):
         if palette_change or preset is not None:
             self.refresh_preset_menu(palette_change=palette_change)
 
-    def respond_to_changes_handler(self, vdu_stable_id: VduStableId, vcp_code: str, value: int, origin: VcpOrigin,
+    def respond_to_changes_handler(self, vdu_stable_id: VduStableId, vcp_code: int, value: int, origin: VcpOrigin,
                                    causes_config_change: bool) -> None:
         # Update UI secondary displays
         AboutDialog.refresh()
         for panel in self.main_panel.vdu_control_panels.values():
             panel.update_stats()
         if causes_config_change and origin == VcpOrigin.NORMAL:  # only respond if this is an internally initiated change
-            log.info(f"Must reconfigure due to change to: {vdu_stable_id=} {vcp_code=} {value=} {origin}")
+            log.info(f"Must reconfigure due to change to: {vdu_stable_id=} {vcp_code=:#02x} {value=} {origin}")
             self.main_controller.configure_application()  # Special case, such as a power control causing the VDU to go offline.
             return
-        log.debug(f"respond_to_changes_handler {vdu_stable_id=} {vcp_code=} {value=} {origin}") if log.debug_enabled else None
+        log.debug(f"respond_to_changes_handler {vdu_stable_id=} {vcp_code=:#02x} {value=} {origin}") if log.debug_enabled else None
         if origin != VcpOrigin.TRANSIENT:  # Only want to indicate final status (not when just passing through a preset)
             self.update_status_indicators()
             if origin != VcpOrigin.EXTERNAL:
