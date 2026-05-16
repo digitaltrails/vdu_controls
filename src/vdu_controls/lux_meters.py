@@ -201,8 +201,8 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
     def stop_metering(self) -> None:
         pass
 
-    def get_status(self) -> Tuple[bool, str]:
-        return (False, tr('No location defined.')) if self.location is None else super().get_status()
+    def get_status(self) -> Tuple[bool, str]:  # OK to work with no location - daylight factor will be 1.0
+        return (True, tr('No location defined.')) if self.location is None else super().get_status()
 
     @staticmethod
     def get_stored_value() -> float:
