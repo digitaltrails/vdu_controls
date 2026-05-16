@@ -404,9 +404,11 @@ class LuxAutoController:
             log.error(f"Error setting up lux meter {lde}", trace=True)
             MBox(MIcon.Critical, msg=tr("Error setting up lux meter: {}").format(self.lux_config.get_device_name()),
                  info=str(lde)).exec()
-        if self.lux_tool_button:
+        if self.lux_slider is not None:
+            self.lux_slider.set_current_value(round(self.lux_meter.get_value()))
+        if self.lux_tool_button is not None:
             self.lux_tool_button.refresh_icon(self.current_auto_svg())  # Refresh indicators immediately
-        if self.lux_lighting_check_button:
+        if self.lux_lighting_check_button is not None:
             self.lux_lighting_check_button.refresh_icon(self.current_check_svg())
 
     def is_auto_enabled(self) -> bool:

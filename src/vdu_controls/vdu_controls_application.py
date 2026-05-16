@@ -1223,9 +1223,8 @@ class VduAppWindow(QMainWindow):
             if lux_check_button := self.main_controller.lux_auto_controller.create_lighting_check_button():
                 lux_check_button.pressed.connect(self.main_controller.lux_check_action)
                 tool_buttons.append(lux_check_button)
-            if lux_manual_input := self.main_controller.lux_auto_controller.create_manual_input_control():
-                extra_controls.append(lux_manual_input)
-            if lux_ambient_slider := self.main_controller.lux_auto_controller.lux_slider:
+            if lux_ambient_slider := self.main_controller.lux_auto_controller.create_manual_input_control():
+                extra_controls.append(lux_ambient_slider)
                 lux_ambient_slider.status_icon_changed_qtsignal.connect(self.update_status_indicators)
         self.refresh_preset_menu()
         self.main_panel.initialise_control_panels(self.main_controller, self.app_context_menu, self.main_config,
