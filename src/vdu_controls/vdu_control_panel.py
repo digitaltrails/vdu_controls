@@ -2,24 +2,24 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
-from typing import Callable, List
+from typing import Callable, List, cast
 
-from vdu_controls.qt_imports import Qt, pyqtSignal
-from vdu_controls.qt_imports import QWidget, QVBoxLayout, QFrame, QApplication, QHBoxLayout, QLabel, QSlider, QSpinBox, QComboBox
-
-from vdu_controls.vdu_controls_config import VcpCapability, SUPPORTED_VCP_BY_CODE
+import vdu_controls.gui_misc as gui_misc
+import vdu_controls.logging as log
+from vdu_controls.app_locale import tr
 from vdu_controls.constants import TOOLTIP_DURATION_MSEC
 from vdu_controls.ddcutil_abstract import CONTINUOUS_TYPE, SIMPLE_NON_CONTINUOUS_TYPE, COMPLEX_NON_CONTINUOUS_TYPE, VcpValue, \
     VcpOrigin
-from vdu_controls.app_locale import tr
-import vdu_controls.logging as log
 from vdu_controls.misc import proper_name, clamp
 from vdu_controls.preset import Preset
+from vdu_controls.qt_imports import QWidget, QVBoxLayout, QFrame, QApplication, QHBoxLayout, QLabel, QSlider, QSpinBox, QComboBox, \
+    QStandardItemModel
+from vdu_controls.qt_imports import Qt, pyqtSignal
 from vdu_controls.scaling import native_font_height, npx
 from vdu_controls.svg import PANEL_CONNECTED_ICON_SOURCE, VDU_CONNECTED_ICON_SOURCE
 from vdu_controls.vdu_controller import VduController
+from vdu_controls.vdu_controls_config import VcpCapability, SUPPORTED_VCP_BY_CODE
 from vdu_controls.vdu_exceptions import VduException
-import vdu_controls.gui_misc as gui_misc
 from vdu_controls.widgets import alter_margins, TitleButton, MBox, MIcon, ThemedSvgWidget, ClickableSlider, LineEditAll
 
 
@@ -189,9 +189,8 @@ class VduControlSlider(VduControlBase):
         self.setToolTip(tr(vcp_capability.name))
         self.setToolTipDuration(TOOLTIP_DURATION_MSEC)
         if (vcp_capability.vcp_code in SUPPORTED_VCP_BY_CODE
-                and SUPPORTED_VCP_BY_CODE[vcp_capability.vcp_code].icon_source is not None):
-            svg_icon = ThemedSvgWidget(SUPPORTED_VCP_BY_CODE[vcp_capability.vcp_code].icon_source,
-                                       native_font_height(scaled=1.8), native_font_height(scaled=1.8))
+                and (icon_source := SUPPORTED_VCP_BY_CODE[vcp_capability.vcp_code].icon_source) is not None):
+            svg_icon = ThemedSvgWidget(icon_source, native_font_height(scaled=1.8), native_font_height(scaled=1.8))
             self.svg_icon = svg_icon
             layout.addWidget(svg_icon)
         else:
@@ -259,6 +258,7 @@ class VduControlComboBox(VduControlBase):
         self.setToolTipDuration(TOOLTIP_DURATION_MSEC)
 
         self.keys = []
+        assert self.vcp_capability.values is not None   # if a combo box is applicable, values will be present
         for value, desc in self.vcp_capability.values:
             self.keys.append(value)
             combo_box.addItem(self.translate_label(desc), value)
@@ -292,7 +292,9 @@ class VduControlComboBox(VduControlBase):
         if value not in self.keys:
             self.keys.append(self.current_value)
             self.combo_box.addItem('UNKNOWN-' + value, self.current_value)
-            self.combo_box.model().item(self.combo_box.count() - 1).setEnabled(False)
+            item_added = cast(QStandardItemModel, self.combo_box.model()).item(self.combo_box.count() - 1)
+            assert item_added is not None   # will be there, we just added it
+            item_added.setEnabled(False)
             MBox(MIcon.Critical,
                  msg=tr("Display {vnum} {vdesc} feature {code} '({cdesc})' has an undefined value '{value}'. "
                         "Valid values are {valid}.").format(

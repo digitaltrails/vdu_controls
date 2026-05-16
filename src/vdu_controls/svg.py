@@ -9,7 +9,7 @@ import vdu_controls.logging as log
 from vdu_controls.qt_imports import QColor
 
 
-def load_svg_source(source_filename: str):
+def load_svg_source(source_filename: str) -> bytes:
     log.debug(f'Loading SVG source from {source_filename}')
     svg_file = resources_files('vdu_controls') / 'resources' / 'icons' / 'app' / source_filename
     return svg_file.read_bytes()
