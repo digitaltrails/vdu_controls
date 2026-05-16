@@ -238,7 +238,7 @@ class VduController(QObject):
     def get_write_count(self):
         return self.ddcutil.get_write_count(self.vdu_number) if self.ddcutil else 0
 
-    def _parse_capabilities(self, capabilities_text=None) -> Dict[str, VcpCapability]:
+    def _parse_capabilities(self, capabilities_text=None) -> Dict[int, VcpCapability]:
         """Return a map of vpc capabilities keyed by vcp code."""
 
         if capabilities_text == "Ignore VDU":

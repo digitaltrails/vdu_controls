@@ -88,6 +88,7 @@ class BulkChangeWorker(WorkerThread):
             for item in step_changes:
                 if self.stop_requested:
                     break
+                assert item.current_value is not None
                 diff = item.final_value - item.current_value
                 step_size = max(5, abs(diff) // 2)  # TODO find a good heuristic
                 step = int(math.copysign(step_size, diff)) if abs(diff) > step_size else diff
@@ -105,7 +106,7 @@ class BulkChangeWorker(WorkerThread):
 
     def _refresh_current_values_from_vdu(self):
         log.debug(f"BulkChangeWorker {self.name} having to get current_values from VDU") if log.debug_enabled else None
-        items_by_vdu: Dict[VduStableId, Dict[str, BulkChangeItem]] = {}
+        items_by_vdu: Dict[VduStableId, Dict[int, BulkChangeItem]] = {}
         for item in self.to_do_list:
             if item.vdu_sid not in items_by_vdu:
                 items_by_vdu[item.vdu_sid] = {}

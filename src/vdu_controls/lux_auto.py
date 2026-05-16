@@ -70,7 +70,7 @@ class LuxToDo:
     vdu_sid: VduStableId
     brightness: int
     preset_name: str | None
-    current_brightness: int | None = None
+    current_brightness: int
 
 
 class LuxAutoWorker(WorkerThread):  # Why is this so complicated?

@@ -85,7 +85,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.setMinimumWidth(npx(950))
         self.path = ConfIni.get_path('AutoLux')
         self.device_name = ''
-        self.lux_config = main_controller.get_lux_auto_controller().get_lux_config()
+        self.lux_config: LuxConfig = main_controller.get_lux_auto_controller().get_lux_config()
 
         self.setLayout(main_layout := QVBoxLayout())
         main_layout.addWidget(top_box := QWidget())
