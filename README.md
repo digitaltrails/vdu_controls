@@ -490,6 +490,7 @@ Michael Hamilton
 Version History
 ---------------
 * 2.6.5
+  * The ambient-light-level slider now works even if location is not set.
   * The Settings global-options are now grouped under subheadings.
   * The right-mouse action that could hide the toolbar irretrievably has been
     disabled.
