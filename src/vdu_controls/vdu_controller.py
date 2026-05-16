@@ -180,13 +180,13 @@ class VduController(QObject):
         """Return a tuple that defines this VDU: (vdu_number, manufacturer, model, serial-number)."""
         return self.vdu_number, self.manufacturer, self.model_name, self.serial_number
 
-    def get_vcp_values(self, vcp_codes: List[str]) -> List[VcpValue]:
+    def get_vcp_values(self, vcp_codes_hex: List[str]) -> List[VcpValue]:
         try:
-            if len(vcp_codes) == 0:
+            if len(vcp_codes_hex) == 0:
                 return []
             # raise subprocess.SubprocessError("get_attributes")  # for testing
-            values = self.ddcutil.get_vcp_values(self.vdu_number, vcp_codes)
-            for vcp_code, vcp_value in zip(vcp_codes, values):
+            values = self.ddcutil.get_vcp_values(self.vdu_number, [int(code_hex, 16) for code_hex in vcp_codes_hex])
+            for vcp_code, vcp_value in zip(vcp_codes_hex, values):
                 value = vcp_value.current
                 cached_value = self.values_cache.get(vcp_code, None)
                 if value != cached_value:
@@ -199,7 +199,7 @@ class VduController(QObject):
                                                              self.capabilities_supported_by_this_vdu[vcp_code].causes_config_change)
             return values
         except (subprocess.SubprocessError, ValueError, TimeoutError, DdcutilDisplayNotFound) as e:
-            raise VduException(vdu_description=self.get_vdu_preferred_name(), vcp_code=",".join(vcp_codes), exception=e,
+            raise VduException(vdu_description=self.get_vdu_preferred_name(), vcp_code=",".join(vcp_codes_hex), exception=e,
                                operation="get_vcp_values") from e
 
     def set_vcp_value(self, vcp_code: str, value: int, origin: VcpOrigin = VcpOrigin.NORMAL,
@@ -210,7 +210,7 @@ class VduController(QObject):
         try:
             # raise subprocess.SubprocessError("set_attribute")  # for testing
             retry_on_error = vcp_code in SUPPORTED_VCP_BY_CODE and SUPPORTED_VCP_BY_CODE[vcp_code].retry_setvcp
-            self.ddcutil.set_vcp(self.vdu_number, vcp_code, value, retry_on_error=retry_on_error)
+            self.ddcutil.set_vcp(self.vdu_number, int(vcp_code, 16), value, retry_on_error=retry_on_error)
             self.values_cache[vcp_code] = value
             if log.debug_enabled:
                 log.debug(f"set_vcp signals vcp_value_changed: {self.vdu_stable_id} {vcp_code=} {value} {origin}")

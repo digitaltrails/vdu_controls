@@ -10,7 +10,8 @@ from typing import Dict, Tuple, Callable, List, Any
 
 from vdu_controls.qt_imports import QObject
 
-from vdu_controls.ddcutil_abstract import DdcutilServiceNotFound, DdcutilDisplayNotFound, DdcutilInterface
+from vdu_controls.ddcutil_abstract import DdcutilServiceNotFound, DdcutilDisplayNotFound, DdcutilInterface, DdcDetectedAttributes, \
+    VcpValue, DdcCapabilities
 import vdu_controls.logging as log
 from vdu_controls.misc import intV
 from vdu_controls.qt_imports import (QDBusArgument, QDBusInterface, QMetaType, QDBusConnection,
@@ -27,7 +28,6 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
     _metadata_cache: Dict[Tuple[str, int], Tuple[bool, bool]] = {}
     _current_connected_displays_changed_handler: Callable | None = None  # Only one instance and listener should exist at a time
     _current_service_initialization_handler: Callable | None = None  # Only one instance and listener should exist at a time
-    DetectedAttributes = namedtuple("DetectedAttributes", "uninitialized")  # will be redefined during initialization
 
     def __init__(self, common_args: List[str] | None = None, callback: Callable | None = None):
         super().__init__()
@@ -145,20 +145,24 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
             self._status_values = self._validate(self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "StatusValues"))[0]
         return self._status_values
 
-    def detect(self, flags: int) -> List[Tuple[Any, ...]]:
+    def detect(self, flags: int) -> List[DdcDetectedAttributes]:
         with self.service_access_lock:
+            vdu_list: List[DdcDetectedAttributes] = []
             result = self.ddcutil_proxy.call("Detect", QDBusArgument(flags, intV(QMetaType.Type.UInt)))
-            vdu_list: List[Tuple[Any, ...]] = [DdcutilDBusImpl.DetectedAttributes(*vdu) for vdu in self._validate(result)[1]]
+            for vdu in self._validate(result)[1]:
+                vdu_prop_values = [str(property) for property in vdu]
+                vdu_list.append(DdcDetectedAttributes(*vdu_prop_values))  # Note: depends on result ordering of properties
             self.vdu_map_by_edid = {vdu.edid_txt: vdu for vdu in vdu_list}
             return vdu_list
 
-    def get_capabilities(self, edid_txt: str) -> Tuple[
-        str, int, int, Dict[bytes, str], Dict[bytes, Tuple[str, str, Dict[bytes, str]]], str]:
+    def get_capabilities(self, edid_txt: str) -> DdcCapabilities:
         with self.service_access_lock:
             model, mccs_major, mccs_minor, commands, capabilities = \
                 self._validate(self.ddcutil_proxy.call(
                     "GetCapabilitiesMetadata", -1, edid_txt, QDBusArgument(0, intV(QMetaType.Type.UInt))))
-            return model, int.from_bytes(mccs_major, 'big'), int.from_bytes(mccs_minor, 'big'), commands, capabilities, ''
+            return DdcCapabilities(model, int.from_bytes(mccs_major, 'big'), int.from_bytes(mccs_minor, 'big'),
+                                   commands, capabilities, '')
+            #return model, int.from_bytes(mccs_major, 'big'), int.from_bytes(mccs_minor, 'big'), commands, capabilities, ''
 
     def get_type(self, edid_txt: str, vcp_code_int: int) -> Tuple[bool, bool]:
         key = (edid_txt, vcp_code_int)
@@ -178,7 +182,7 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
                                                    QDBusArgument(new_value_int, intV(QMetaType.Type.UShort)),
                                                    QDBusArgument(0, intV(QMetaType.Type.UInt))))
 
-    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[Tuple[int, int, int, str]]:
+    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[VcpValue]:
         vcp_code_array = QDBusArgument()
         vcp_code_array.beginArray(intV(QMetaType.Type.UChar))
         for vcp_code_int in vcp_code_int_list:
@@ -188,7 +192,12 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
             raw = self._validate(self.ddcutil_proxy.call(
                 "GetMultipleVcp", -1, edid_txt, vcp_code_array, QDBusArgument(DdcutilDBusImpl.RETURN_RAW_VALUES,
                                                                               intV(QMetaType.Type.UInt))))[0]
-            return [(int.from_bytes(vcp, 'big'), value, maximum, text_val) for vcp, value, maximum, text_val in raw]
+            results = []
+            for vcp, value, maximum, text_val in raw:
+                vcp_code_int = int.from_bytes(vcp, 'big')
+                results.append(VcpValue(vcp_code_int, value, maximum, None))  # TODO is None for type really OK?
+            print(f"results {len(results)=} {results=}")
+            return results
 
     def vcp_info(self):
         pass

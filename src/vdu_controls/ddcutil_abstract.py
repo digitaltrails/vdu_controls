@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import os
-from collections import namedtuple
+from dataclasses import dataclass
 from enum import Enum
+from typing import List, Tuple, Dict
 
 # Number of times to retry getting/setting attributes - in case a monitor is slow after being powered up.
 DDCUTIL_RETRIES = int(os.getenv("VDU_CONTROLS_DDCUTIL_RETRIES", default='4'))
-
-VcpValue = namedtuple('VcpValue', ['current', 'max', 'vcp_type'])  # A getvcp command returns these three things
 
 #: Could be a str enumeration of VCP types
 CONTINUOUS_TYPE = 'C'
@@ -20,8 +19,39 @@ SNC = SIMPLE_NON_CONTINUOUS_TYPE
 CNC = COMPLEX_NON_CONTINUOUS_TYPE
 
 
-BRIGHTNESS_VCP_CODE = BRIT = '10'  # This is HEX
-CONTRAST_VCP_CODE = CONT = '12'  # Also HEX
+BRIGHTNESS_VCP_CODE = BRIT = '10'  # Note ddcutil command line treats 10 as 0x10
+CONTRAST_VCP_CODE = CONT = '12'
+
+
+@dataclass(frozen=True)
+class DdcCapabilities:
+    model: str
+    mccs_major: int
+    mccs_minor: int
+    commands: Dict[bytes, str]
+    features: Dict[bytes, Tuple[bytes, str, Dict[bytes, str]]]  # From ddcutil-service
+    capabilities_str: str  # From everything else
+
+
+@dataclass(frozen=True)
+class DdcDetectedAttributes:
+    display_number: str
+    usb_bus: str
+    usb_device: str
+    manufacturer_id: str
+    model_name: str
+    serial_number: str
+    product_code: str
+    edid_txt: str
+    binary_serial_number: str
+
+
+@dataclass(frozen=True)
+class VcpValue:
+    vcp_code: int
+    current: int
+    max: int
+    vcp_type: str | None
 
 
 class DdcEventType(Enum):  # Has to correspond to what the service supports
@@ -57,11 +87,11 @@ class DdcutilInterface:
         raise NotImplementedError
 
     
-    def set_sleep_multiplier(self, edid_txt, sleep_multiplier):
+    def set_sleep_multiplier(self, edid_txt: str, sleep_multiplier: float):
         raise NotImplementedError
 
     
-    def set_vdu_specific_args(self, edid_txt, extra_args):
+    def set_vdu_specific_args(self, edid_txt: str, extra_args):
         raise NotImplementedError
 
     
@@ -78,21 +108,21 @@ class DdcutilInterface:
         raise NotImplementedError
 
     
-    def detect(self, flags):
+    def detect(self, flags: int):
         raise NotImplementedError
 
     
-    def get_capabilities(self, edid_txt):
+    def get_capabilities(self, edid_txt: str):
         raise NotImplementedError
 
     
-    def get_type(self, edid_txt, vcp_code_int):
+    def get_type(self, edid_txt: str, vcp_code_int: int) -> Tuple[bool, bool] | None:
         raise NotImplementedError
 
     
-    def set_vcp(self, edid_txt, vcp_code_int, new_value_int):
+    def set_vcp(self,  edid_txt: str, vcp_code_int: int, new_value_int: int):
         raise NotImplementedError
 
     
-    def get_vcp_values(self, edid_txt, vcp_code_int_list):
+    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[VcpValue]:
         raise NotImplementedError

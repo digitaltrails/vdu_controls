@@ -11,7 +11,7 @@ from threading import Lock
 from typing import List, Callable, Dict, Any, Tuple
 
 from vdu_controls.constants import VDU_CONTROLS_DEVELOPER
-from vdu_controls.ddcutil_abstract import BRIGHTNESS_VCP_CODE, DdcutilInterface
+from vdu_controls.ddcutil_abstract import BRIGHTNESS_VCP_CODE, DdcutilInterface, DdcDetectedAttributes, VcpValue, DdcCapabilities
 from vdu_controls.ddcutil_abstract import DDCUTIL_RETRIES, CONTINUOUS_TYPE, DdcEventType, DdcutilDisplayNotFound
 from vdu_controls.ddcutil_exe import DdcutilExeImpl
 import vdu_controls.logging as log
@@ -105,7 +105,7 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
     def get_interface_version_string(self) -> str:
         return f"Command Line - {self.brightnessctl_exe}"
 
-    def detect(self, _: int) -> List[Tuple[Any, ...]]:
+    def detect(self, _: int) -> List[DdcDetectedAttributes]:
         results = []
         cmd_result = self.__run__('-m', 'i')
         for item_number, line in enumerate(cmd_result.stdout.splitlines(), start=1):
@@ -118,14 +118,13 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
                 binary_sn = f"BSN#{edid_txt}".encode('utf-8')
                 serial_number = re.sub(r'[^A-Za-z0-9]', '_', parts[0]).title()
                 log.info(f"Detected panel {model_name=} {edid_txt=} detected")
-                vdu_attributes = DdcutilExeImpl.DetectedAttributes(
+                vdu_attributes = DdcDetectedAttributes(
                     display_number, usb_bus, usb_device,
                     manufacturer_id, model_name, serial_number, product_code, edid_txt, binary_sn)
                 results.append(vdu_attributes)
         return results
 
-    def get_capabilities(self, _: str) -> Tuple[
-        str, int, int, Dict[bytes, str], Dict[bytes, Tuple[bytes, str, Dict[bytes, str]]], str]:
+    def get_capabilities(self, _: str) -> DdcCapabilities:
         capability_text = ('Model: AB_12345\n'
                            'MCCS version: 2.2\n'
                            'Commands:\n'
@@ -138,7 +137,8 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
                            'VCP Features:\n'
                            '   Feature: 10 (Brightness)\n'
                            '   Feature: FF (Dummy to finish)\n')
-        return '', 0, 0, {}, {}, capability_text
+        return DdcCapabilities('', 0, 0, {}, {}, capability_text)
+        #return '', 0, 0, {}, {}, capability_text
 
     def get_type(self, _: str, vcp_code_int: int) -> Tuple[bool, bool] | None:  # edid_txt isn't currently used/supported
         assert vcp_code_int == self.brightness_vcp_code_int  # nothing else supported
@@ -153,7 +153,7 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
         finally:
             self.set_vcp_time = datetime.now()
 
-    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[Tuple[int, int, int, str]]:
+    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[VcpValue]:
         assert vcp_code_int_list[0] == self.brightness_vcp_code_int and len(vcp_code_int_list) == 1
         for attempt_count in range(DDCUTIL_RETRIES):
             try:
@@ -161,7 +161,7 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
                 max_brightness = self._get_max_brightness(edid_txt)
                 percent = (100 * brightness) // max_brightness
                 log.info(f"Panel {brightness=} {max_brightness=} {percent=}")
-                return [(self.brightness_vcp_code_int, percent, 100, CONTINUOUS_TYPE)]
+                return [VcpValue(self.brightness_vcp_code_int, percent, 100, CONTINUOUS_TYPE)]
             except (subprocess.SubprocessError, ValueError, DdcutilDisplayNotFound):
                 if attempt_count + 1 == DDCUTIL_RETRIES:  # Don't log here, it creates too much noise in the logs
                     raise  # Too many failures, pass the buck upstairs

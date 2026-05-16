@@ -5,14 +5,13 @@ from __future__ import annotations
 import os
 import re
 import subprocess
-from collections import namedtuple
 import time as sys_time
 from threading import Lock
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Tuple
 
-from vdu_controls.ddcutil_abstract import DDCUTIL_RETRIES, VcpValue, CONTINUOUS_TYPE, SIMPLE_NON_CONTINUOUS_TYPE, \
-    COMPLEX_NON_CONTINUOUS_TYPE, DdcutilDisplayNotFound, DdcutilInterface
 import vdu_controls.logging as log
+from vdu_controls.ddcutil_abstract import DDCUTIL_RETRIES, VcpValue, CONTINUOUS_TYPE, SIMPLE_NON_CONTINUOUS_TYPE, \
+    COMPLEX_NON_CONTINUOUS_TYPE, DdcutilDisplayNotFound, DdcutilInterface, DdcDetectedAttributes, DdcCapabilities
 
 
 class DdcutilExeImpl(DdcutilInterface):
@@ -25,9 +24,9 @@ class DdcutilExeImpl(DdcutilInterface):
     _SNC_PATTERN = re.compile(r'x([0-9a-f]+)')  # Match Simple Non-Continuous-Type getvcp result
     _CNC_PATTERN = re.compile(r'x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+)')  # Match Complex Non-Continuous-Type result
     _SPECIFIC_VCP_VALUE_PATTERN_CACHE: Dict[int, re.Pattern] = {}
-    DetectedAttributes = namedtuple("DetectedAttributes", ('display_number', 'usb_bus', 'usb_device',
-                                                           'manufacturer_id', 'model_name', 'serial_number',
-                                                           'product_code', 'edid_txt', 'binary_serial_number'))
+    # DetectedAttributes = namedtuple("DetectedAttributes", ('display_number', 'usb_bus', 'usb_device',
+    #                                                        'manufacturer_id', 'model_name', 'serial_number',
+    #                                                        'product_code', 'edid_txt', 'binary_serial_number'))
 
     def __init__(self, common_args: List[str] | None):
         self.vdu_sleep_multiplier: Dict[str, float] = {}
@@ -41,7 +40,7 @@ class DdcutilExeImpl(DdcutilInterface):
         self.ddcutil_version_string = "0.0.0"
         self.version_suffix = ''
         self.ddcutil_exe = 'ddcutil'
-        self.vdu_map_by_edid: Dict[str, Tuple] = {}
+        self.vdu_map_by_edid: Dict[str, DdcDetectedAttributes] = {}
 
     def refresh_connection(self):
         pass
@@ -120,9 +119,9 @@ class DdcutilExeImpl(DdcutilInterface):
         log.error(f"Failed to parse edid in {display_str=}")
         return ''
 
-    def detect(self, flags: int) -> List[Tuple[Any, ...]]:
+    def detect(self, flags: int) -> List[DdcDetectedAttributes]:
         args = ['detect', '--verbose', ]
-        result_list: List[Tuple[Any, ...]] = []
+        result_list: List[DdcDetectedAttributes] = []
         result = self.__run__(*args)
         # Going to get rid of anything that is not a-z A-Z 0-9 as potential rubbish
         rubbish = re.compile('[^a-zA-Z0-9]+')
@@ -142,17 +141,17 @@ class DdcutilExeImpl(DdcutilInterface):
                 edid_txt = self._parse_edid(display_str)
                 if not edid_txt:
                     log.warning(f"DdcutilExeImpl: failed to parse edid from '{display_str}'")
-                vdu_attributes = DdcutilExeImpl.DetectedAttributes(vdu_number, '', '', manufacturer, model_name, serial_number, '',
+                vdu_attributes = DdcDetectedAttributes(vdu_number, '', '', manufacturer, model_name, serial_number, '',
                                                                    edid_txt, bin_serial_number)
                 result_list.append(vdu_attributes)
                 self.vdu_map_by_edid[edid_txt] = vdu_attributes
         return result_list
 
-    def get_capabilities(self, edid_txt: str) -> Tuple[
-        str, int, int, Dict[bytes, str], Dict[bytes, Tuple[bytes, str, Dict[bytes, str]]], str]:
+    def get_capabilities(self, edid_txt: str) -> DdcCapabilities:
         result = self.__run__('capabilities', edid_txt=edid_txt)
         capability_text = result.stdout.decode('utf-8', errors='surrogateescape')
-        return '', 0, 0, {}, {}, capability_text
+        return DdcCapabilities('', 0, 0, {}, {}, capability_text)
+        #return '', 0, 0, {}, {}, capability_text
 
     def get_type(self, edid_txt: str, vcp_code_int: int) -> Tuple[bool, bool] | None:  # edid_txt isn't currently used/supported
         type_code = self.vcp_type_map.get(vcp_code_int)
@@ -167,13 +166,13 @@ class DdcutilExeImpl(DdcutilInterface):
         new_value = f"x{new_value_int:X}"
         self.__run__('setvcp', vcp_code, new_value, edid_txt=edid_txt)
 
-    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[Tuple[int, int, int, str]]:
+    def get_vcp_values(self, edid_txt: str, vcp_code_int_list: List[int]) -> List[VcpValue]:
         if self.ddcutil_version > (1, 3, 0):
             return self._get_vcp_values_implementation(edid_txt, vcp_code_int_list)
         else:
             return [self._get_vcp_values_implementation(edid_txt, [cd])[0] for cd in vcp_code_int_list]
 
-    def _get_vcp_values_implementation(self, edid_txt: str, vcp_code_list: List[int]) -> List[Tuple[int, int, int, str]]:
+    def _get_vcp_values_implementation(self, edid_txt: str, vcp_code_list: List[int]) -> List[VcpValue]:
         # Try a few times in case there is a glitch due to a monitor being turned-off/on or slow to respond
         args = ['--brief', 'getvcp'] + [f"{c:02X}" for c in vcp_code_list]
         results_dict: Dict[int, VcpValue | None] = {vcp_code: None for vcp_code in vcp_code_list}  # Force vcp_code_list ordering
@@ -190,7 +189,7 @@ class DdcutilExeImpl(DdcutilInterface):
                         raise ValueError(f"getvcp: {self._get_vdu_human_name(edid_txt)}"
                                          f" - failed to obtain value for vcp_code {vcp_code:02X}")
                 # If we reach here, all values v will be non-null
-                return [(vcp_code, v.current, v.max, v.vcp_type) for vcp_code, v in results_dict.items()]
+                return list(results_dict.values())
             except (subprocess.SubprocessError, ValueError, DdcutilDisplayNotFound):
                 if attempt_count + 1 == DDCUTIL_RETRIES:  # Don't log here, it creates too much noise in the logs
                     raise  # Too many failures, pass the buck upstairs
@@ -206,13 +205,13 @@ class DdcutilExeImpl(DdcutilInterface):
             self.vcp_type_map[vcp_code] = type_indicator
             if type_indicator == CONTINUOUS_TYPE:
                 if c_match := DdcutilExeImpl._C_PATTERN.match(value_match.group(2)):
-                    return VcpValue(int(c_match.group(1)), int(c_match.group(2)), CONTINUOUS_TYPE)
+                    return VcpValue(vcp_code, int(c_match.group(1)), int(c_match.group(2)), CONTINUOUS_TYPE)
             elif type_indicator == SIMPLE_NON_CONTINUOUS_TYPE:
                 if snc_match := DdcutilExeImpl._SNC_PATTERN.match(value_match.group(2)):
-                    return VcpValue(int(snc_match.group(1), 16), 0, SIMPLE_NON_CONTINUOUS_TYPE)
+                    return VcpValue(vcp_code, int(snc_match.group(1), 16), 0, SIMPLE_NON_CONTINUOUS_TYPE)
             elif type_indicator == COMPLEX_NON_CONTINUOUS_TYPE:
                 if cnc_match := DdcutilExeImpl._CNC_PATTERN.match(value_match.group(2)):
-                    return VcpValue(int(cnc_match.group(3), 16) << 8 | int(cnc_match.group(4), 16), 0, COMPLEX_NON_CONTINUOUS_TYPE)
+                    return VcpValue(vcp_code, int(cnc_match.group(3), 16) << 8 | int(cnc_match.group(4), 16), 0, COMPLEX_NON_CONTINUOUS_TYPE)
             else:
                 raise TypeError(f'Unsupported VCP type {type_indicator} vcp_code {vcp_code}')
         raise ValueError(f"VDU vcp_code {vcp_code} failed to parse vcp value '{result}'")
