@@ -42,7 +42,7 @@ class TitledStrEnum(LocalStrEnum):
     using tr(). The context is the enum class name.
     Define members as: NAME = ("value", "raw title")
     """
-
+    _raw_title_: str   # type hint for Pyright
     # Note: __contains__ and _missing_ are inherited from BaseStrEnum.
     # They will work correctly because members are still strings.
 
