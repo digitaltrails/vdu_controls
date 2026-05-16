@@ -43,7 +43,7 @@ class DdcutilAggregator(DdcutilInterface):
         if not prefer_dbus_client:  # dbus not preferred or dbus failed to initialize
             self.ddcutil_impl = DdcutilExeImpl(self.common_args)
 
-        self.supported_codes: Dict[str, str] = {}
+        self.supported_codes: Dict[int, str] = {}
         self.vcp_type_map: Dict[Tuple[str, int], VcpTypeInfo] = {}
         self.edid_txt_map: Dict[str, str] = {}
         self.ddcutil_version: Tuple[int, ...] = (0, 0, 0)  # Initial version for bootstrapping
@@ -203,14 +203,15 @@ class DdcutilAggregator(DdcutilInterface):
         """Returns info about all codes known to ddcutil, whether supported or not."""
         return DdcutilExeImpl([]).vcp_info()
 
-    def get_supported_vcp_codes_map(self) -> Dict[str, str]:
+    def get_supported_vcp_codes_map(self) -> Dict[int, str]:
         """Returns a map of descriptions keyed by vcp_code, the codes that ddcutil appears to support."""
         if len(self.supported_codes) == 0:  # Initialize on demand
             info = self.vcp_info()
             code_definitions = info.split("\nVCP code ")
             for code_def in code_definitions[1:]:
                 lines = code_def.split('\n')
-                vcp_code, vcp_name = lines[0].split(': ', 1)
+                vcp_code_str, vcp_name = lines[0].split(': ', 1)
+                vcp_code = int(vcp_code_str, 16)
                 ddcutil_feature_subsets = None
                 for line in lines[2:]:
                     line = line.strip()

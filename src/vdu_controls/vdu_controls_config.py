@@ -12,7 +12,7 @@ import textwrap
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 
 import vdu_controls.logging as log
 from vdu_controls import app_locale
@@ -110,15 +110,16 @@ class ConfOptDef:
     off_warning: str = ''
 
     @property
-    def conf_id(self) -> str:
+    def conf_id(self) -> Tuple[str, str]:
         return self.conf_section, self.conf_name
 
     @property
-    def cmdline_var(self) -> str:
+    def cmdline_var(self) -> str | None:
         return None if self.cmdline_arg == "DISALLOWED" else self.conf_name.replace('-enabled', '').replace('-', '_')
 
     @property
     def localized_name(self) -> str:
+        assert self.ui_label is not None  # Only call this for GUI capable options which should all have labels
         return tr(self.ui_label, ConfOpt.__name__)
 
     @property
@@ -442,7 +443,7 @@ class VduControlsConfig:
             for option in ConfOpt:  # Add in options for all supported controls
                 if option.conf_section == ConfSec.VDU_CONTROLS_GLOBALS:
                     default_str = str(option.default_value) if option.default_value is not None else ''
-                    self.ini_content.set(*option.conf_id, default_str)
+                    self.ini_content.set(option.conf_section, option.conf_name, default_str)
 
         self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS] = {}
         self.ini_content[ConfSec.DDCUTIL_PARAMETERS] = {}
@@ -451,12 +452,12 @@ class VduControlsConfig:
         for item in SUPPORTED_VCP_BY_CODE.values():
             self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS][item.property_name()] = 'yes' if item.enabled else 'no'
 
-        self.ini_content.set(*ConfOpt.ENABLE_VCP_CODES.conf_id, '')
+        self.ini_content.set(ConfOpt.ENABLE_VCP_CODES.conf_section, ConfOpt.ENABLE_VCP_CODES.conf_name, '')
         if not main_config:
-            self.ini_content.set(*ConfOpt.VDU_NAME.conf_id, '')
-        self.ini_content.set(*ConfOpt.SLEEP_MULTIPLIER.conf_id, str('0.0'))
-        self.ini_content.set(*ConfOpt.DDCUTIL_EXTRA_ARGS.conf_id, '')
-        self.ini_content.set(*ConfOpt.CAPABILITIES_OVERRIDE.conf_id, '')
+            self.ini_content.set(ConfOpt.VDU_NAME.conf_section, ConfOpt.VDU_NAME.conf_name, '')
+        self.ini_content.set(ConfOpt.SLEEP_MULTIPLIER.conf_section, ConfOpt.SLEEP_MULTIPLIER.conf_name, str('0.0'))
+        self.ini_content.set(ConfOpt.DDCUTIL_EXTRA_ARGS.conf_section, ConfOpt.DDCUTIL_EXTRA_ARGS.conf_name, '')
+        self.ini_content.set(ConfOpt.CAPABILITIES_OVERRIDE.conf_section, ConfOpt.CAPABILITIES_OVERRIDE.conf_name, '')
 
         if default_enabled_vcp_codes is not None:
             for code in default_enabled_vcp_codes:
@@ -484,7 +485,7 @@ class VduControlsConfig:
                     log.debug(f"Removed {self.config_name} {option_name} - not supported by VDU") if log.debug_enabled else None
 
     def get_vdu_preferred_name(self):
-        custom_name = self.ini_content.get(*ConfOpt.VDU_NAME.conf_id, fallback=None)
+        custom_name = self.ini_content.get(ConfOpt.VDU_NAME.conf_section, ConfOpt.VDU_NAME.conf_name, fallback=None)
         return custom_name if custom_name is not None and custom_name.strip() != '' else self.config_name
 
     def is_set(self, option: ConfOpt, fallback=False) -> bool:
@@ -499,19 +500,19 @@ class VduControlsConfig:
                 self.ini_content[option.conf_section][option.conf_name] = str_value
 
     def get_sleep_multiplier(self, fallback: float | None = None) -> float | None:
-        value = self.ini_content.getfloat(*ConfOpt.SLEEP_MULTIPLIER.conf_id, fallback=0.0)
+        value = self.ini_content.getfloat(ConfOpt.SLEEP_MULTIPLIER.conf_section, ConfOpt.SLEEP_MULTIPLIER.conf_name, fallback=0.0)
         return fallback if math.isclose(value, 0.0) else value
 
     def get_ddcutil_extra_args(self, fallback: List[str] | None = None) -> List[str]:
         fallback = [] if fallback is None else fallback
-        value = self.ini_content.get(*ConfOpt.DDCUTIL_EXTRA_ARGS.conf_id, fallback=None)
+        value = self.ini_content.get(ConfOpt.DDCUTIL_EXTRA_ARGS.conf_section, ConfOpt.DDCUTIL_EXTRA_ARGS.conf_name, fallback=None)
         return fallback if value is None or value.strip() == '' else value.split()
 
     def get_capabilities_alt_text(self) -> str:
-        return self.ini_content.get(*ConfOpt.CAPABILITIES_OVERRIDE.conf_id)
+        return self.ini_content.get(ConfOpt.CAPABILITIES_OVERRIDE.conf_section, ConfOpt.CAPABILITIES_OVERRIDE.conf_name)
 
     def set_capabilities_alt_text(self, alt_text: str) -> None:
-        self.ini_content.set(*ConfOpt.CAPABILITIES_OVERRIDE.conf_id, alt_text)
+        self.ini_content.set(ConfOpt.CAPABILITIES_OVERRIDE.conf_section, ConfOpt.CAPABILITIES_OVERRIDE.conf_name, alt_text)
 
     def enable_supported_vcp_code(self, vcp_code: int) -> None:
         self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS][SUPPORTED_VCP_BY_CODE[vcp_code].property_name()] = 'yes'
@@ -527,7 +528,7 @@ class VduControlsConfig:
         for control_name, control_def in SUPPORTED_VCP_BY_PROPERTY_NAME.items():
             if self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS].getboolean(control_name, fallback=False):
                 enabled_vcp_codes.append(control_def.vcp_code)
-        enable_codes_str = self.ini_content.get(*ConfOpt.ENABLE_VCP_CODES.conf_id, fallback='')
+        enable_codes_str = self.ini_content.get(ConfOpt.ENABLE_VCP_CODES.conf_section, ConfOpt.ENABLE_VCP_CODES.conf_name, fallback='')
         for vcp_code in enable_codes_str.split(","):
             if code := vcp_code.strip().upper():
                 if code not in enabled_vcp_codes:
@@ -539,7 +540,7 @@ class VduControlsConfig:
 
     def get_location(self) -> GeoLocation | None:
         try:
-            spec = self.ini_content.get(*ConfOpt.LOCATION.conf_id, fallback=None)
+            spec = self.ini_content.get(ConfOpt.LOCATION.conf_section, ConfOpt.LOCATION.conf_name, fallback=None)
             if spec is None or spec.strip() == '':
                 return None
             parts = spec.split(',')
@@ -556,7 +557,7 @@ class VduControlsConfig:
         log.info("Using config file '" + config_path.as_posix() + "'")
         if re.search(r'(\[ddcutil-capabilities])|(\[ddcutil-parameters])|(\[vdu-controls-\w])', config_text) is None:
             log.info(f"Old style config file {basename} overrides ddcutils capabilities")
-            self.ini_content.set(*ConfOpt.CAPABILITIES_OVERRIDE.conf_id, config_text)
+            self.ini_content.set(ConfOpt.CAPABILITIES_OVERRIDE.conf_section, ConfOpt.CAPABILITIES_OVERRIDE.conf_name, config_text)
             return
         self.ini_content.read_string(config_text)
         # Manually extract the text preserving meaningful indentation
@@ -565,7 +566,7 @@ class VduControlsConfig:
         alt_text = preserve_indents_match.group(1) if preserve_indents_match is not None else ''
         # Remove excess indentation while preserving the minimum existing indentation.
         alt_text = inspect.cleandoc(alt_text)
-        self.ini_content.set(*ConfOpt.CAPABILITIES_OVERRIDE.conf_id, alt_text)
+        self.ini_content.set(ConfOpt.CAPABILITIES_OVERRIDE.conf_section, ConfOpt.CAPABILITIES_OVERRIDE.conf_name, alt_text)
 
     def reload(self) -> None:
         log.info(f"Reloading config: {self.file_path}")
