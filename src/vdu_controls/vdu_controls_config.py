@@ -472,7 +472,7 @@ class VduControlsConfig:
                 return option
         return ConfOpt.UNKNOWN
 
-    def restrict_to_actual_capabilities(self, supported_by_this_vdu: Dict[str, VcpCapability]) -> None:
+    def restrict_to_actual_capabilities(self, supported_by_this_vdu: Dict[int, VcpCapability]) -> None:
         for option_name in self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS]:
             if self.get_conf_option(ConfSec.VDU_CONTROLS_WIDGETS, option_name).conf_type == ConfType.BOOL:
                 if option_name in SUPPORTED_VCP_BY_PROPERTY_NAME and \
