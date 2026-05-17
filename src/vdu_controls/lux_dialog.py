@@ -6,31 +6,28 @@ import math
 import os
 import pathlib
 import random
-
-from collections import namedtuple
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from enum import Enum
 from functools import partial
 from pathlib import Path
 from typing import Dict, List, Tuple, TYPE_CHECKING
 
-from vdu_controls.qt_imports import QT_TR_NOOP, Qt, QTimer, pyqtSignal, QPointF, QPoint
-from vdu_controls.qt_imports import QColor, QPixmap, QPainter, QPen, QFont, QResizeEvent, QPolygon, QMouseEvent
-from vdu_controls.qt_imports import QVBoxLayout, QWidget, QGridLayout, QComboBox, QCheckBox, QLabel, QSpinBox, QListWidget, QStatusBar, \
-    QHBoxLayout, QListWidgetItem, QApplication, QInputDialog
-
+import vdu_controls.logging as log
+from vdu_controls.app_locale import tr, TitledStrEnum
 from vdu_controls.config_ini import ConfIni
 from vdu_controls.constants import MsgDestination
 from vdu_controls.ddcutil_abstract import BRIGHTNESS_VCP_CODE
 from vdu_controls.ddcutil_aggregator import VduStableId
 from vdu_controls.icon_utils import si, StdPixmap, create_icon_from_svg_bytes, create_image_from_svg_bytes, SVG_LIGHT_THEME_COLOR
-from vdu_controls.app_locale import tr
-import vdu_controls.logging as log
-from vdu_controls.lux_meters import LuxMeterSemiAutoDevice, LuxMeterDevice
 from vdu_controls.lux_config import LuxConfig, LuxPoint
+from vdu_controls.lux_meters import LuxMeterSemiAutoDevice, LuxMeterDevice
 from vdu_controls.misc import intV, zoned_now, clamp
+from vdu_controls.qt_imports import QColor, QPixmap, QPainter, QPen, QFont, QResizeEvent, QPolygon, QMouseEvent
 from vdu_controls.qt_imports import QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING
+from vdu_controls.qt_imports import QT_TR_NOOP, Qt, QTimer, pyqtSignal, QPointF, QPoint
+from vdu_controls.qt_imports import QVBoxLayout, QWidget, QGridLayout, QComboBox, QCheckBox, QLabel, QSpinBox, QListWidget, \
+    QStatusBar, \
+    QHBoxLayout, QListWidgetItem, QApplication, QInputDialog
 from vdu_controls.scaling import npx, native_font_height
 from vdu_controls.solar_calc import calc_solar_lux
 from vdu_controls.svg import SWATCH_ICON_SOURCE, SUN_SVG
@@ -42,11 +39,11 @@ if TYPE_CHECKING:
     from vdu_controls.vdu_controls_application import VduAppController
 
 
-class LuxDeviceType(namedtuple('LuxDevice', 'name description'), Enum):
-    SEMI_AUTO = "calculator", QT_TR_NOOP("Semi-automatic geolocated")
-    ARDUINO = "arduino", QT_TR_NOOP("Arduino tty device")
-    FIFO = "fifo", QT_TR_NOOP("Linux FIFO")
-    EXECUTABLE = "executable", QT_TR_NOOP("Script/program")
+class LuxDeviceType(TitledStrEnum):
+    SEMI_AUTO = ("calculator", QT_TR_NOOP("Semi-automatic geolocated"))
+    ARDUINO = ("arduino", QT_TR_NOOP("Arduino tty device"))
+    FIFO = ("fifo", QT_TR_NOOP("Linux FIFO"))
+    EXECUTABLE = ("executable", QT_TR_NOOP("Script/program"))
 
 
 class LuxDialog(SubWinDialog, DialogSingletonMixin):
@@ -100,10 +97,10 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.meter_device_selector = QComboBox()
         for i, dev_type in enumerate(LuxDeviceType):
             if dev_type.name == existing_device_type:  # List existing device and device type, set it as selected.
-                self.meter_device_selector.addItem(f"{tr(dev_type.description)}: {existing_device}", dev_type)
+                self.meter_device_selector.addItem(f"{tr(dev_type.localized_name)}: {existing_device}", dev_type)
                 self.meter_device_selector.setCurrentIndex(i)
             else:
-                self.meter_device_selector.addItem(tr(dev_type.description), dev_type)  # List device type only.
+                self.meter_device_selector.addItem(tr(dev_type.localized_name), dev_type)  # List device type only.
 
         top_box_layout.addWidget(self.meter_device_selector, 0, 2, 1, 3)
 
@@ -172,7 +169,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                 else:
                     default_file = "/dev/arduino" if new_dev_type == LuxDeviceType.ARDUINO else Path.home().as_posix()
                 new_dev_path = FasterFileDialog.getOpenFileName(
-                    self, tr("Select: {}").format(tr(new_dev_type.description)), default_file)[0]
+                    self, tr("Select: {}").format(tr(new_dev_type.localized_name)), default_file)[0]
             if not self.validate_device(new_dev_path, required_type=new_dev_type):
                 new_dev_path = ''
             if new_dev_path == '':  # Nothing selected, set back to what was in config
@@ -182,7 +179,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                         self.meter_device_selector.setCurrentIndex(dev_num)
             else:
                 if new_dev_path != current_dev:
-                    self.meter_device_selector.setItemText(index, tr(new_dev_type.description) + ': ' + new_dev_path)
+                    self.meter_device_selector.setItemText(index, tr(new_dev_type.localized_name) + ': ' + new_dev_path)
                     self.lux_config.set('lux-meter', "lux-device", new_dev_path)
                     self.lux_config.set('lux-meter', "lux-device-type", new_dev_type.name)
                     self.lux_config.save(self.path)
@@ -360,7 +357,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                 MBox(MIcon.Critical, msg=tr("No read access to {}").format(device), info=info).exec()
                 return False
         else:
-            MBox(MIcon.Critical, msg=tr("Expecting {0}, but {1} was selected.").format(tr(required_type.description), device)).exec()
+            MBox(MIcon.Critical, msg=tr("Expecting {0}, but {1} was selected.").format(tr(required_type.localized_name), device)).exec()
             return False
         return True
 

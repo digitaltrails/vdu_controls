@@ -12,11 +12,11 @@ import textwrap
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any
 
 import vdu_controls.logging as log
 from vdu_controls import app_locale
-from vdu_controls.app_locale import tr
+from vdu_controls.app_locale import tr, TitledStrEnum
 from vdu_controls.config_ini import ConfIni
 from vdu_controls.constants import APPNAME
 from vdu_controls.ddcutil_abstract import CON, BRIT, CONT, SNC
@@ -34,33 +34,6 @@ class ConfType(LocalStrEnum):
     TEXT = 'text'
     LOCATION = 'location'
     PATH = 'path'
-
-
-class TitledStrEnum(LocalStrEnum):
-    """
-    String enum where each member stores a human presentable title that gets translated
-    using tr(). The context is the enum class name.
-    Define members as: NAME = ("value", "raw title")
-    """
-    _raw_title_: str   # type hint for Pyright
-    # Note: __contains__ and _missing_ are inherited from BaseStrEnum.
-    # They will work correctly because members are still strings.
-
-    def __new__(cls, value: str, raw_title: str) -> TitledStrEnum:
-        # Because we subclass BaseStrEnum, we must properly create the string and enum parts.
-        # The easiest way: call str.__new__ then set _value_ and _raw_title_.
-        obj = str.__new__(cls, value)
-        obj._value_ = value
-        obj._raw_title_ = raw_title
-        return obj
-
-    @property
-    def localized_name(self) -> str:
-        """Translated name using the enum class name as context."""
-        return tr(self._raw_title_, self.__class__.__name__)
-
-    def __str__(self) -> str:
-        return self.value
 
 
 class ConfSec(TitledStrEnum):

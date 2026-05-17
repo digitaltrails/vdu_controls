@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 import time as sys_time
-from collections import namedtuple
 from threading import Lock
 from typing import Dict, Tuple, Callable, List
 
@@ -55,8 +54,6 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
             # Retrieve the attributes returned by detect and also use the retrieval as a self check
             self_check_op = self.ddcutil_props_proxy.call("Get", self.dbus_interface_name, "AttributesReturnedByDetect")
             if not self_check_op.errorName():
-                # TODO DdcutilDBusImpl.DetectedAttributes seems unused
-                DdcutilDBusImpl.DetectedAttributes = namedtuple("DetectedAttributes", self_check_op.arguments()[0])
                 break  # Stop looping
             log.error(f'Sanity check try {try_count}: {self.dbus_interface_name} failed: {self_check_op.errorMessage()}')
             if try_count >= 4:  # Give up

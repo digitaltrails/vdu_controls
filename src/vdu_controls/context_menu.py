@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
-from collections import namedtuple
 from dataclasses import dataclass
 from enum import IntEnum, auto
 from typing import List, Callable, TYPE_CHECKING, Tuple, Dict
@@ -22,7 +21,12 @@ PRESET_SHORTCUT_PROP = 'preset_shortcut'
 BUSY_DISABLE_PROP = 'busy_disable'
 ALT = 'Alt+{}'
 
-Shortcut = namedtuple('Shortcut', ['letter', 'annotated_word'])
+
+@dataclass(frozen=True)
+class Shortcut:
+    letter: str
+    annotated_word: str
+
 
 class FixedItemKey(IntEnum):
     CONTROL_PANEL = auto()

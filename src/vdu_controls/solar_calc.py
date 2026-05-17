@@ -3,18 +3,26 @@
 from __future__ import annotations
 
 import math
-from collections import namedtuple
+from dataclasses import dataclass
 from datetime import datetime, timezone, timedelta
 from typing import Tuple, Callable, Dict
 
-from vdu_controls.misc import GeoLocation
-from vdu_controls.constants import EASTERN_SKY, WESTERN_SKY
 from vdu_controls.app_locale import tr
+from vdu_controls.constants import EASTERN_SKY, WESTERN_SKY
+from vdu_controls.misc import GeoLocation
 from vdu_controls.unicode import EAST_ELEVATION_SYMBOL, WEST_ELEVATION_SYMBOL, SUN_SYMBOL, DEGREE_SYMBOL
 
-SolarElevationKey = namedtuple('SolarElevationKey', ['direction', 'elevation'])
-SolarElevationData = namedtuple('SolarElevationData', ['azimuth', 'zenith', 'when'])
 
+@dataclass(frozen=True)
+class SolarElevationKey:
+    direction: str
+    elevation: int
+
+@dataclass(frozen=True)
+class SolarElevationData:
+    azimuth: float
+    zenith: float
+    when: datetime
 
 # FUNCTION TO COMPUTE SOLAR AZIMUTH AND ZENITH ANGLE
 # Extracted from a larger gist by Antti Lipponen: https://gist.github.com/anttilipp/1c482c8cc529918b7b973339f8c28895

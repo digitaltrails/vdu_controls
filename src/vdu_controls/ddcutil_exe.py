@@ -24,9 +24,6 @@ class DdcutilExeImpl(DdcutilInterface):
     _SNC_PATTERN = re.compile(r'x([0-9a-f]+)')  # Match Simple Non-Continuous-Type getvcp result
     _CNC_PATTERN = re.compile(r'x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+) x([0-9a-f]+)')  # Match Complex Non-Continuous-Type result
     _SPECIFIC_VCP_VALUE_PATTERN_CACHE: Dict[int, re.Pattern] = {}
-    # DetectedAttributes = namedtuple("DetectedAttributes", ('display_number', 'usb_bus', 'usb_device',
-    #                                                        'manufacturer_id', 'model_name', 'serial_number',
-    #                                                        'product_code', 'edid_txt', 'binary_serial_number'))
 
     def __init__(self, common_args: List[str] | None):
         self.vdu_sleep_multiplier: Dict[str, float] = {}

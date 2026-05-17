@@ -52,6 +52,7 @@ from typing import Dict, List, Tuple
 from importlib.resources import files as resources_files
 
 from vdu_controls.constants import VDU_CONTROLS_DEVELOPER
+from vdu_controls.misc import LocalStrEnum
 from vdu_controls.qt_imports import QLocale, QTranslator, QApplication, QCoreApplication, Qt
 import vdu_controls.logging as log
 
@@ -222,4 +223,32 @@ def translate_option(option_text: str, context="ConfOpt") -> str:
         return translation
     canonical = option_text.lower().replace('-', ' ')
     return tr(canonical)
+
+
+class TitledStrEnum(LocalStrEnum):
+    """
+    String enum where each member stores a human presentable title that gets translated
+    using tr(). The context is the enum class name.
+    Define members as: NAME = ("value", "raw title")
+    """
+    _raw_title_: str   # type hint for Pyright
+    # Note: __contains__ and _missing_ are inherited from BaseStrEnum.
+    # They will work correctly because members are still strings.
+
+    def __new__(cls, value: str, raw_title: str) -> TitledStrEnum:
+        # Because we subclass BaseStrEnum, we must properly create the string and enum parts.
+        # The easiest way: call str.__new__ then set _value_ and _raw_title_.
+        obj = str.__new__(cls, value)
+        obj._value_ = value
+        obj._raw_title_ = raw_title
+        return obj
+
+    @property
+    def localized_name(self) -> str:
+        """Translated name using the enum class name as context."""
+        return tr(self._raw_title_, self.__class__.__name__)
+
+    def __str__(self) -> str:
+        return self.value
+
 
