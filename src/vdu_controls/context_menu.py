@@ -74,7 +74,7 @@ class ContextMenu(QMenu):
         self.hide_shortcuts = hide_shortcuts
 
         for key, item in self.fixed_item_map.items():
-            if fixed_item_callables[key] is not None:
+            if key in fixed_item_callables:
                 item.action = self._add_action(item.std_pixmap, item.title, fixed_item_callables[key],
                                                extra_shortcut=item.extra_shortcut)
                 if item.add_separator:
@@ -110,7 +110,9 @@ class ContextMenu(QMenu):
     def insert_preset_menu_action(self, preset: Preset, issue_update: bool = True) -> None:
 
         def _menu_restore_preset() -> None:
-            self.app_controller.restore_named_preset(self.sender().property(PRESET_NAME_PROP))
+            sender = self.sender()
+            assert sender is not None  # Should be there
+            self.app_controller.restore_named_preset(sender.property(PRESET_NAME_PROP))
 
         assert preset.name
         shortcut = self.allocate_preset_shortcut(preset.name)
@@ -175,8 +177,9 @@ class ContextMenu(QMenu):
 
     def update_lux_auto_icon(self, icon: QIcon) -> None:
         if self.auto_lux_icon != icon:
-            self.auto_lux_icon = icon
-            self.fixed_item_map[FixedItemKey.LUX_AUTO_MANUAL].action.setIcon(icon)
+            auto_manual_action = self.fixed_item_map[FixedItemKey.LUX_AUTO_MANUAL].action
+            assert auto_manual_action is not None  # Should always be set, boilerplate
+            auto_manual_action.setIcon(icon)
             self.update()
 
     def allocate_preset_shortcut(self, word: str) -> Shortcut | None:

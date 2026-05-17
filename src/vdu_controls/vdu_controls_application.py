@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import locale
-import re
 import signal
 import socket
 import subprocess
@@ -13,18 +12,22 @@ import traceback
 from contextlib import contextmanager
 from datetime import timedelta, datetime
 from functools import partial
-from typing import List, Tuple, Dict, Callable, cast
+from typing import List, Tuple, Dict, Callable, cast, Optional, Iterator
 
-from vdu_controls import weather_util as weather_utils, app_locale as app_locale, vdu_exceptions
+import vdu_controls.gui_misc as gui_misc
+import vdu_controls.logging as log
+import vdu_controls.svg as svg
+import vdu_controls.weather_util as weather_util
+from vdu_controls import weather_util as weather_utils, app_locale
 from vdu_controls.about_dialog import AboutDialog
-from vdu_controls.vdu_controls_config import ConfOpt, VduControlsConfig, VcpCapability
+from vdu_controls.app_locale import tr, initialise_locale_translations
 from vdu_controls.config_ini import ConfIni
 from vdu_controls.constants import *
 from vdu_controls.context_menu import ContextMenu, FixedItemKey
-from vdu_controls.ddcutil_aggregator import DdcutilAggregator, VduStableId
 from vdu_controls.ddcutil_abstract import VcpOrigin, VcpValue, DdcutilDisplayNotFound, CONTINUOUS_TYPE, \
     BRIGHTNESS_VCP_CODE, DdcEventType, \
     DdcutilServiceNotFound
+from vdu_controls.ddcutil_aggregator import DdcutilAggregator, VduStableId
 from vdu_controls.ddcutil_emulator import DdcutilEmulatorImpl
 from vdu_controls.ddcutil_laptop_panel import DdcutilPanelImpl
 from vdu_controls.greyscale import GreyScaleDialog
@@ -33,8 +36,6 @@ from vdu_controls.icon_utils import ThemeType, get_splash_pixmap
 from vdu_controls.icon_utils import create_icon_from_svg_bytes, create_icon_from_path, create_decorated_app_icon, StdPixmap, \
     is_dark_theme
 from vdu_controls.installer import install_as_desktop_application
-from vdu_controls.app_locale import tr, initialise_locale_translations
-import vdu_controls.logging as log
 from vdu_controls.lux_auto import LuxAutoController
 from vdu_controls.lux_dialog import LuxDialog
 from vdu_controls.lux_meters import LuxMeterSemiAutoDevice
@@ -47,14 +48,12 @@ from vdu_controls.release import release_notes
 from vdu_controls.scaling import native_font_height, npx
 from vdu_controls.settings_editor import SettingsDialog
 from vdu_controls.solar_calc import create_elevation_map
-import vdu_controls.svg as svg
 from vdu_controls.unicode import *
 from vdu_controls.vdu_bulk_change import BulkChangeWorker, BulkChangeItem
 from vdu_controls.vdu_control_panel import VduControlPanel
 from vdu_controls.vdu_controller import VduController
+from vdu_controls.vdu_controls_config import ConfOpt, VduControlsConfig, VcpCapability
 from vdu_controls.vdu_exceptions import VduException
-import vdu_controls.gui_misc as gui_misc
-import vdu_controls.weather_util as weather_util
 from vdu_controls.widgets import MIcon, MBox, MBtn, \
     alter_margins, DialogSingletonMixin, ToolButton
 from vdu_controls.work_scheduler import WorkerThread, ScheduleWorker, thread_pid, SchedulerJob, SchedulerJobType
@@ -112,10 +111,12 @@ class VduMainToolBar(QToolBar):
         assert self.preset_action
         self.preset_action.setVisible(False)
 
-        self.toggleViewAction().setEnabled(False)  # Stop users from accidentally hiding the toolbar
-        self.toggleViewAction().setVisible(False)
+        if (toggle_view_action := self.toggleViewAction()) is not None:
+            toggle_view_action.setEnabled(False)  # Stop users from accidentally hiding the toolbar
+            toggle_view_action.setVisible(False)
 
         def edit_current_preset():
+            assert parent.main_controller is not None   # will have a value by now
             parent.main_controller.show_presets_dialog(self.preset_edit_target)
 
         self.preset_action.triggered.connect(edit_current_preset)
@@ -146,7 +147,7 @@ class VduMainToolBar(QToolBar):
             self.preset_action.setIcon(QIcon())
             self.preset_action.setVisible(False)
             self.preset_edit_target = None
-        self.layout().update()
+        self.layout().update()  # pyright:ignore
 
 
 class VduControlsMainPanel(QWidget):
@@ -167,7 +168,7 @@ class VduControlsMainPanel(QWidget):
     def initialise_control_panels(self, main_controller: VduAppController,
                                   app_context_menu: ContextMenu, main_config: VduControlsConfig,
                                   tool_buttons: List[ToolButton], extra_controls: List[QWidget],
-                                  splash_message_qtsignal: pyqtSignal) -> None:
+                                  splash_message_qtsignal: pyqtBoundSignal) -> None:
         self.main_controller = main_controller
 
         if old_layout := cast(QVBoxLayout, self.layout()):  # Must be responding to a configuration change requiring re-layout.
@@ -178,7 +179,7 @@ class VduControlsMainPanel(QWidget):
                     item.deleteLater()
                 elif isinstance(item, QWidgetItem):
                     old_layout.removeItem(item)
-                    item.widget().deleteLater()
+                    item.widget().deleteLater() # pyright: ignore
         controllers_layout = QVBoxLayout()
         controllers_layout.setSpacing(npx(5))
         alter_margins(controllers_layout, top=npx(5), bottom=npx(5))
@@ -187,7 +188,7 @@ class VduControlsMainPanel(QWidget):
         warnings_enabled = main_config.is_set(ConfOpt.WARNINGS_ENABLED)
         self.vdu_control_panels.clear()
         for controller in self.main_controller.vdu_controllers_map.values():
-            splash_message_qtsignal.emit(f"DDC ID {controller.vdu_number}\n{controller.get_vdu_preferred_name()}")
+            splash_message_qtsignal.emit(f"DDC ID {controller.vdu_number}\n{controller.get_vdu_preferred_name()}")  # pyright: ignore
             vdu_control_panel = VduControlPanel(controller, self.show_vdu_exception)
             controller.vcp_value_changed_qtsignal.connect(self.vdu_vcp_changed_qtsignal)
             if vdu_control_panel.number_of_controls() != 0:
@@ -212,7 +213,7 @@ class VduControlsMainPanel(QWidget):
                                     'Check that ddcutil and i2c are installed and configured.'))
             no_vdu_text.setAlignment(Qt.AlignmentFlag.AlignLeft)
             no_vdu_image = QLabel()
-            no_vdu_image.setPixmap(QApplication.style().standardIcon(StdPixmap.SP_MessageBoxWarning).pixmap(QSize(64, 64)))
+            no_vdu_image.setPixmap(QApplication.style().standardIcon(StdPixmap.SP_MessageBoxWarning).pixmap(QSize(64, 64)))  # pyright: ignore
             no_vdu_image.setAlignment(Qt.AlignmentFlag.AlignVCenter)
             no_vdu_layout.addSpacing(32)
             no_vdu_layout.addWidget(no_vdu_image)
@@ -256,7 +257,7 @@ class VduControlsMainPanel(QWidget):
                 info = tr('Monitor appears to be switched off or disconnected.')
             else:
                 info = tr('Is the monitor switched off?') + '<br>' + tr('Is the sleep-multiplier setting too low?')
-            if isinstance(exception.cause, subprocess.SubprocessError):
+            if isinstance(exception.cause, subprocess.CalledProcessError):
                 details = exception.cause.stderr.decode('utf-8', errors='surrogateescape') + '\n' + str(exception.cause)
             else:
                 details = str(exception.cause)
@@ -278,13 +279,15 @@ class VduControlsMainPanel(QWidget):
         if message.strip():  # Only non-empty messages, ignore blank messages, they're just clearing the status bar.
             self.message_history.append(f"\n{datetime.now().strftime('%H:%M:%S')}{MESSAGE_SYMBOL} {message}")
             self.message_history = self.message_history[-9:]
+        assert self.main_controller is not None   # will exist by the time this is called.
         if self.main_controller.main_config.is_set(ConfOpt.SEPARATE_STATUS_BAR):
-            self.main_controller.main_window.statusBar().showMessage(message, timeout)
-            self.main_controller.main_window.statusBar().setToolTip("".join([tr('Message history:')] + self.message_history))
+            status_bar = self.main_controller.main_window.statusBar()  # pyright:ignore
+            assert status_bar is not None
+            status_bar.showMessage(message, timeout)
+            status_bar.setToolTip("".join([tr('Message history:')] + self.message_history))
         elif self.main_toolbar:
             self.main_toolbar.status_area.showMessage(message, timeout)
             self.main_toolbar.status_area.setToolTip("".join([tr('Message history:')] + self.message_history))
-
 
 
 def exception_handler(e_type, e_value, e_traceback) -> None:
@@ -295,7 +298,7 @@ def exception_handler(e_type, e_value, e_traceback) -> None:
 
 
 @contextmanager  # https://stackoverflow.com/questions/31501487/non-blocking-lock-with-with-statement
-def non_blocking_lock(lock: threading.RLock) -> threading.RLock:  # Provide a way to use a with-statement with non-blocking locks
+def non_blocking_lock(lock: threading.RLock) -> Iterator[Optional[threading.RLock]]:  # Provide a way to use a with-statement with non-blocking locks
     acquire_succeeded = lock.acquire(False)  # acquire_succeeded will be False if the lock is already locked.
     try:
         yield lock if acquire_succeeded else None  # return None to the with if the lock was not acquired
@@ -337,7 +340,12 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     log.warning(f"ignoring {signal_number=}, no preset associated with that signal number.")
 
         global unix_signal_handler
+        assert unix_signal_handler is not None   # should not be None at this point
         unix_signal_handler.received_unix_signal_qtsignal.connect(respond_to_unix_signal)
+
+    def get_main_window(self) -> VduAppWindow:
+        assert self.main_window is not None
+        return self.main_window
 
     def configure_application(self, main_window: VduAppWindow | None = None, check_schedule: bool = True):
         try:
@@ -345,10 +353,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             for controller in self.vdu_controllers_map.values():
                 controller.no_longer_in_use = True
             if main_window is not None:  # First time through
-                assert self.main_window is None
                 self.main_window = main_window
-            if self.main_window.main_panel is not None:
-                self.main_window.indicate_busy(True)
+            if self.get_main_window().main_panel is not None:
+                self.get_main_window().indicate_busy(True)
                 QApplication.processEvents()
             log.debug("configure: try to obtain application_lock", trace=False) if log.debug_enabled else None
             with self.application_lock:
@@ -361,8 +368,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 log.set_syslog(self.main_config.is_set(ConfOpt.SYSLOG_ENABLED))
                 self.create_ddcutil()
                 self.preset_controller.reinitialize()
-                self.main_window.initialise_app_icon()
-                self.main_window.create_main_control_panel()
+                self.get_main_window().initialise_app_icon()
+                self.get_main_window().create_main_control_panel()
                 SettingsDialog.reconfigure_instance(self.get_vdu_configs())
                 self.restore_vdu_initialization_presets()
                 self.schedule_presets()
@@ -372,10 +379,10 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 if self.lux_auto_controller is not None:
                     self.lux_auto_controller.initialize_from_config()
                     LuxDialog.reconfigure_instance()
-            self.main_window.update_status_indicators()
+            self.get_main_window().update_status_indicators()
         finally:
             if self.main_window is not None:
-                self.main_window.indicate_busy(False)
+                self.get_main_window().indicate_busy(False)
         log.info("Completed configuring application")
 
     def stop_any_transitioning_presets(self):
@@ -424,7 +431,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 log.info(f"add_ddcutil_emulator: {emulator} {common_args}")
                 self.ddcutil.add_ddcutil_emulator(DdcutilEmulatorImpl(emulator, common_args))
         except (subprocess.SubprocessError, ValueError, re.error, OSError, DdcutilServiceNotFound) as e:
-            self.main_window.show_no_controllers_error_dialog(e)
+            self.get_main_window().show_no_controllers_error_dialog(e)
 
     def detect_vdus(self) -> Tuple[List[Tuple[str, str, str, str]], Exception | None]:
         if self.ddcutil is None:
@@ -456,7 +463,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             return
         detected_vdu_list, ddcutil_problem = self.detect_vdus()
         self.vdu_controllers_map = {}
-        main_panel_error_handler = self.main_window.get_main_panel().show_vdu_exception
+        main_panel_error_handler = self.get_main_window().get_main_panel().show_vdu_exception
         for vdu_number, manufacturer, model_name, vdu_serial in detected_vdu_list:
             controller = None
             while True:
@@ -466,7 +473,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 except (subprocess.SubprocessError, ValueError, re.error, OSError, DdcutilDisplayNotFound) as e:
                     log.error(f"Problem creating controller for {vdu_number=} {model_name=} {vdu_serial=} exception={e}",
                               trace=True)
-                    remedy = self.main_window.ask_for_vdu_controller_remedy(vdu_number, model_name, vdu_serial)
+                    remedy = self.get_main_window().ask_for_vdu_controller_remedy(vdu_number, model_name, vdu_serial)
                     if remedy == VduController.NORMAL_VDU:
                         sys_time.sleep(1.0)  # Slow things down in case something is wrong with the GUI or VDU interactions.
                         continue  # Loop and retry as a normal VDU
@@ -478,7 +485,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 self.vdu_controllers_map[controller.vdu_stable_id] = controller
         if len(self.vdu_controllers_map) == 0:
             if self.main_config.is_set(ConfOpt.WARNINGS_ENABLED):
-                self.main_window.show_no_controllers_error_dialog(ddcutil_problem)
+                self.get_main_window().show_no_controllers_error_dialog(ddcutil_problem)
         if self.main_config.is_set(ConfOpt.ORDER_BY_NAME):
             self.vdu_controllers_map = {
                 c.vdu_stable_id: c for c in sorted(self.vdu_controllers_map.values(), key=VduController.get_vdu_preferred_name)}
@@ -504,7 +511,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
     def show_presets_dialog(self, preset: Preset | None = None) -> None:
         PresetsDialog.show_dialog(self, self.main_config)
-        PresetsDialog.get_instance().edit_preset(preset)
+        if preset is not None:
+            PresetsDialog.get_instance().edit_preset(preset)
 
     def get_vdu_configs(self) -> List[VduControlsConfig]:
         return [vdu.config for vdu in self.vdu_controllers_map.values() if vdu.config is not None]
@@ -516,11 +524,11 @@ class VduAppController(QObject):  # Main controller containing methods for high 
     def lux_auto_action(self) -> None:
         if self.lux_auto_controller:
             try:
-                self.main_window.setDisabled(True)
+                self.get_main_window().setDisabled(True)
                 self.lux_auto_controller.toggle_auto()
-                self.main_window.update_status_indicators()
+                self.get_main_window().update_status_indicators()
             finally:
-                self.main_window.setDisabled(False)
+                self.get_main_window().setDisabled(False)
 
     def lux_check_action(self) -> None:
         if self.lux_auto_controller and self.lux_auto_controller.is_auto_enabled():
@@ -529,6 +537,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
     def start_refresh(self, external_event: bool = False, values_only: bool = False) -> None:
 
         def _update_from_vdu(worker: WorkerThread) -> None:
+            assert self.refresh_data_task is not None
             if self.ddcutil is not None:
                 with non_blocking_lock(self.application_lock) as acquired_lock:
                     if acquired_lock:  # If acquired_lock is not None, then we have successfully acquired the lock.
@@ -541,7 +550,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                                 self.ddcutil.refresh_connection()
                                 self.detected_vdu_list = self.ddcutil.detect_vdus()
                                 self.restore_vdu_initialization_presets()
-                            for control_panel in self.main_window.get_main_panel().vdu_control_panels.values():
+                            for control_panel in self.get_main_window().get_main_panel().vdu_control_panels.values():
                                 if control_panel.controller.get_full_id() in self.detected_vdu_list:
                                     control_panel.refresh_from_vdu()
                         except (subprocess.SubprocessError, ValueError, re.error, OSError) as e:
@@ -555,13 +564,14 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 log.debug(f"_update_from_vdu: released application_lock") if log.debug_enabled else None
 
         def _update_ui_view(worker: WorkerThread) -> None:
+            assert self.refresh_data_task is not None
             # Invoke when the worker thread completes. Runs in the GUI thread and can refresh remaining UI views.
             if worker.stop_requested:
                 return  # in this case, this means the worker never started anything
             try:  # No need for locking in here - running in the GUI thread effectively single threads the operation.
                 assert self.refresh_data_task is not None and gui_misc.is_running_in_gui_thread()
                 log.debug(f"Refresh - update UI view {external_event=} {values_only=}") if log.debug_enabled else None
-                main_panel = self.main_window.get_main_panel()
+                main_panel = self.get_main_window().get_main_panel()
                 if self.refresh_data_task.work_exception is not None:
                     log.debug(f"Refresh - update UI view - exception {self.refresh_data_task.work_exception} {external_event=}")
                     if not external_event:
@@ -579,17 +589,17 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                         if self.lux_auto_controller.is_auto_enabled():
                             self.lux_auto_controller.adjust_brightness_now()
             finally:
-                self.main_window.indicate_busy(False)
+                self.get_main_window().indicate_busy(False)
 
         if not gui_misc.is_running_in_gui_thread():  # TODO this appears to never be true - remove???
             log.debug(f"Re-invoke start_refresh() in GUI thread {external_event=}") if log.debug_enabled else None
-            self.main_window.run_in_gui_thread(partial(self.start_refresh, external_event))
+            self.get_main_window().run_in_gui_thread(partial(self.start_refresh, external_event))
             return
         self.refresh_data_task = WorkerThread(task_body=_update_from_vdu, task_finished=_update_ui_view)
         self.refresh_data_task.start()
         sys_time.sleep(0.1)  # Sleep a bit to see if we acquire the application lock
         if not self.refresh_data_task.stop_requested:  # if the thread has already stopped, it never acquired the application_lock
-            self.main_window.indicate_busy(True)  # Refresh has probably commenced, give the user some feedback
+            self.get_main_window().indicate_busy(True)  # Refresh has probably commenced, give the user some feedback
 
     def restore_preset(self, preset: Preset, finished_func: Callable[[BulkChangeWorker], None] | None = None,
                        immediately: bool = False, background_activity: bool = False, initialization_preset: bool = False) -> None:
@@ -601,7 +611,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         # Starts the restore, but it will complete in the worker thread
         if not gui_misc.is_running_in_gui_thread():  # Transfer this request into the GUI thread
             log.debug(f"restore_preset: '{preset.name}' transferring task to GUI thread") if log.debug_enabled else None
-            self.main_window.run_in_gui_thread(partial(self.restore_preset, preset, finished_func,
+            self.get_main_window().run_in_gui_thread(partial(self.restore_preset, preset, finished_func,
                                                        immediately, background_activity, initialization_preset))
             return
 
@@ -610,51 +620,51 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
             def _update_progress(worker_thread: BulkChangeWorker) -> None:
                 preset.in_transition_step += 1
-                self.main_window.show_preset_status(
+                self.get_main_window().show_preset_status(
                     tr("Transitioning to preset {0} (elapsed time {1} seconds)...").format(
                         preset.name, f"{worker_thread.total_elapsed_seconds:.2f}"))
                 #self.transitioning_dummy_preset.update_progress() if self.transitioning_dummy_preset else None
-                self.main_window.update_status_indicators(preset)
+                self.get_main_window().update_status_indicators(preset)
 
             def _restore_finished_callback(worker_thread: BulkChangeWorker) -> None:
                 # self.transitioning_dummy_preset = None
                 if worker_thread.work_exception is not None and not background_activity:  # if it's a GUI request, ask about retry
-                    if self.main_window.get_main_panel().show_vdu_exception(worker_thread.work_exception, can_retry=True):
+                    if self.get_main_window().get_main_panel().show_vdu_exception(worker_thread.work_exception, can_retry=True):
                         self.restore_preset(preset, finished_func=finished_func, immediately=immediately)  # Try again, new thread
                         return  # Don't do anything more, the new thread will take over from here
                 preset.in_transition_step = 0
-                self.main_window.indicate_busy(False)
+                self.get_main_window().indicate_busy(False)
                 if not initialization_preset:
-                    if self.main_window.tray is not None:
-                        self.main_window.refresh_tray_menu()
+                    if self.get_main_window().tray is not None:
+                        self.get_main_window().refresh_tray_menu()
                     if worker_thread.completed:
                         with open(CURRENT_PRESET_NAME_FILE, 'w', encoding="utf-8") as cps_file:
                             cps_file.write(preset.name)
-                        self.main_window.update_status_indicators(preset)
+                        self.get_main_window().update_status_indicators(preset)
                         if worker_thread.change_count != 0:
-                            self.main_window.show_preset_status(tr("Restored {0} (elapsed time {1} seconds)").format(
+                            self.get_main_window().show_preset_status(tr("Restored {0} (elapsed time {1} seconds)").format(
                                 preset.name, f"{worker_thread.total_elapsed_seconds:.2f}"))
                             if (self.main_config.is_set(ConfOpt.PROTECT_NVRAM_ENABLED)
                                     and preset.get_transition_type() != PresetTransitionFlag.NONE):
                                 log.warning(
                                     f"restore-preset: protect-nvram prevents '{preset.name}' from stepping, changes are immediate.")
                         else:
-                            self.main_window.show_preset_status(tr("Already on Preset {} (no changes)").format(preset.name))
+                            self.get_main_window().show_preset_status(tr("Already on Preset {} (no changes)").format(preset.name))
                         if df := preset.get_daylight_factor():
                             log.info(f"Daylight-Factor {df:.4f} read from Preset {preset.name}")
                             LuxMeterSemiAutoDevice.set_daylight_factor(df, persist=True)
                             LuxDialog.reconfigure_instance()
                     else:  # Interrupted or exception:
-                        self.main_window.update_status_indicators()
-                        self.main_window.show_preset_status(tr("Interrupted restoration of {}").format(preset.name))
+                        self.get_main_window().update_status_indicators()
+                        self.get_main_window().show_preset_status(tr("Interrupted restoration of {}").format(preset.name))
                 if finished_func is not None:
                     finished_func(worker_thread)
 
             log.debug(f"restore_preset: '{preset.name}' holding application_lock", trace=False) if log.debug_enabled else None
             if not immediately:
-                self.main_window.show_preset_status(tr("Transitioning to preset {}").format(preset.name))
-                self.main_window.update_status_indicators(preset)  # TODO - create a transitioning indicator
-            self.main_window.indicate_busy(True, lock_controls=immediately)
+                self.get_main_window().show_preset_status(tr("Transitioning to preset {}").format(preset.name))
+                self.get_main_window().update_status_indicators(preset)  # TODO - create a transitioning indicator
+            self.get_main_window().indicate_busy(True, lock_controls=immediately)
             preset.load()
             bulk_changer = BulkChangeWorker('RestorePreset', self, _update_progress, _restore_finished_callback,
                                             step_interval=0.0 if immediately else 5.0,
@@ -693,9 +703,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                         log.info(f"Restored initialization-preset '{worker.context.name}'")
                         message = tr("Restored I-Preset {}").format(worker.context.name)
                         self.status_message(message, timeout=5)
-                        self.main_window.splash_message_qtsignal.emit(message)
+                        self.get_main_window().splash_message_qtsignal.emit(message)
                         sys_time.sleep(1.0)  # Pause to give the message time to display - TODO find non-delaying solution
-                        self.main_window.update_status_indicators()  # Refresh to restore other non-init preset icons
+                        self.get_main_window().update_status_indicators()  # Refresh to restore other non-init preset icons
 
                     self.restore_preset(preset, finished_func=_restored_initialization_preset, initialization_preset=True)
 
@@ -747,7 +757,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 tomorrow = zoned_now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
                 # tomorrow = zoned_now().replace(second=0, microsecond=0) + timedelta(minutes=2) # testing
                 daily_schedule_job = SchedulerJob(tomorrow, SchedulerJobType.SCHEDULE_PRESETS,
-                                                  partial(self.main_window.run_in_gui_thread, self.schedule_presets))
+                                                  partial(self.get_main_window().run_in_gui_thread, self.schedule_presets))
                 log.info(f"Will update schedule for Presets at {tomorrow} "
                          f"(in {round(daily_schedule_job.remaining_time() / 60)} minutes)")
             log.debug("schedule_presets: released application_lock") if log.debug_enabled else None
@@ -773,18 +783,20 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             log.info(f"schedule_alteration: Scheduling is disabled or no location ({location=})")
 
     def activate_scheduled_preset_in_gui(self, preset):
-        self.main_window.run_in_gui_thread(partial(self.activate_scheduled_preset, preset))
+        self.get_main_window().run_in_gui_thread(partial(self.activate_scheduled_preset, preset))
 
     def activate_scheduled_preset(self, preset: Preset, check_weather: bool = True, immediately: bool = False,
                                   activation_time: datetime | None = None) -> None:
         assert gui_misc.is_running_in_gui_thread()
 
         def _activation_feedback(msg: str):
-            self.main_window.show_preset_status(f"{TIME_CLOCK_SYMBOL} " + tr("Preset {0} activating at {1}").format(
+            self.get_main_window().show_preset_status(f"{TIME_CLOCK_SYMBOL} " + tr("Preset {0} activating at {1}").format(
                 preset.name, f"{activation_time:%H:%M}") + f" - {msg}")
 
         def _activation_finished(worker: BulkChangeWorker) -> None:
-            assert preset.elevation_time_today is not None or preset.get_at_time() is not None
+            preset_at_time = preset.get_at_time()
+            assert preset.elevation_time_today is not None or preset_at_time is not None  # must be one or the other
+            assert preset.scheduler_job is not None
             attempts = preset.scheduler_job.attempts
             if worker.work_exception is not None:
                 too_close = zoned_now() + timedelta(seconds=60)  # retry if more than a minute before any others
@@ -804,7 +816,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                 return
             if not off_schedule:
                 preset.schedule_status = PresetScheduleStatus.SUCCEEDED
-            self.main_window.update_status_indicators(preset)
+            self.get_main_window().update_status_indicators(preset)
             _activation_feedback(tr("Restored {}").format(preset.name))
             log.info(f"Restored preset '{preset.name}' on try {attempts}") if attempts > 1 else None
 
@@ -813,18 +825,21 @@ class VduAppController(QObject):  # Main controller containing methods for high 
             return
         if activation_time is None:
             activation_time = zoned_now()
-        if preset.elevation_time_today:
+        if preset.elevation_time_today is not None:
             off_schedule = activation_time < preset.elevation_time_today  # Too early, must be an off-schedule catchup from yesterday
         else:
-            off_schedule = activation_time < preset.get_at_time()
+            preset_at_time = preset.get_at_time()
+            assert preset_at_time is not None   # Has to be because of the assertion on entry
+            off_schedule = activation_time < preset_at_time
         if preset.is_weather_dependent() and check_weather and self.main_config.is_set(ConfOpt.WEATHER_ENABLED):
             if not self.is_weather_satisfactory(preset):
                 if not off_schedule:
                     preset.schedule_status = PresetScheduleStatus.WEATHER_CANCELLATION
                 message = tr("Preset {0} activation was cancelled due to weather at {1}").format(
                     preset.name, activation_time.isoformat(' ', 'seconds'))
-                self.main_window.show_preset_status(message)
+                self.get_main_window().show_preset_status(message)
                 return
+        assert preset.scheduler_job is not None  # Given this is job activation, it has to have one
         if preset.scheduler_job.attempts == 1:
             log.info(f"Activating scheduled preset '{preset.name}' transition={immediately} {off_schedule=}")
         # Happens asynchronously in a thread
@@ -835,7 +850,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
     def skip_scheduled_preset(self, preset: Preset):
         assert gui_misc.is_running_in_gui_thread()
         preset.schedule_status = PresetScheduleStatus.SKIPPED_SUPERSEDED
-        self.main_window.update_status_indicators(preset)
+        self.get_main_window().update_status_indicators(preset)
 
     def is_weather_satisfactory(self, preset, use_cache: bool = False) -> bool:
         try:
@@ -864,9 +879,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
     def save_preset(self, preset: Preset) -> None:
         self.preset_controller.save_preset(preset)
-        if self.main_window.app_context_menu.get_preset_menu_action(preset.name) is None:
-            self.main_window.app_context_menu.insert_preset_menu_action(preset)
-        self.main_window.update_status_indicators()
+        if self.get_main_window().app_context_menu.get_preset_menu_action(preset.name) is None:
+            self.get_main_window().app_context_menu.insert_preset_menu_action(preset)
+        self.get_main_window().update_status_indicators()
         preset.remove_elevation_trigger()
         self.schedule_alteration(preset)
 
@@ -875,26 +890,28 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         self.refresh_preset_menu(reorder=True)
 
     def populate_ini_from_vdus(self, preset_ini: ConfIni, update_only: bool = False) -> None:
-        for control_panel in self.main_window.get_main_panel().vdu_control_panels.values():
+        for control_panel in self.get_main_window().get_main_panel().vdu_control_panels.values():
             vdu_section_name = control_panel.controller.vdu_stable_id
             if not preset_ini.has_section(vdu_section_name):
                 preset_ini.add_section(vdu_section_name)
             for control in control_panel.vcp_controls:  # Fill out value for any options present in the preset_ini.
                 if not update_only or preset_ini.has_option(vdu_section_name, control.vcp_capability.property_name()):
                     if control.current_value is not None:
-                        preset_ini[vdu_section_name][control.vcp_capability.property_name()] = control.get_current_text_value()
+                        text_val = control.get_current_text_value()
+                        assert text_val is not None   # Given control.current_value has a value.
+                        preset_ini[vdu_section_name][control.vcp_capability.property_name()] = text_val
 
     def delete_preset(self, preset: Preset) -> None:
         self.preset_controller.delete_preset(preset)
-        self.main_window.app_context_menu.remove_preset_menu_action(preset.name)
-        self.main_window.update_status_indicators()
+        self.get_main_window().app_context_menu.remove_preset_menu_action(preset.name)
+        self.get_main_window().update_status_indicators()
 
     def refresh_preset_menu(self, reorder: bool = False):
-        self.main_window.refresh_preset_menu(reorder=reorder)
+        self.get_main_window().refresh_preset_menu(reorder=reorder)
 
     def which_preset_is_active(self) -> Preset | None:
         # See if we have a record of which was last active, and see if it still is active
-        main_panel = self.main_window.get_main_panel()
+        main_panel = self.get_main_window().get_main_panel()
         if CURRENT_PRESET_NAME_FILE.exists():
             with open(CURRENT_PRESET_NAME_FILE, encoding="utf-8") as cps_file:
                 if preset_name := cps_file.read().strip():
@@ -945,7 +962,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         return 0
 
     def set_value(self, vdu_stable_id: VduStableId, vcp_code: int, value: int, origin: VcpOrigin = VcpOrigin.NORMAL):
-        if panel := self.main_window.get_main_panel().vdu_control_panels.get(vdu_stable_id):
+        if panel := self.get_main_window().get_main_panel().vdu_control_panels.get(vdu_stable_id):
             if control := panel.get_control(vcp_code):
                 control.set_value(value, origin)  # Apply to physical VDU
                 return
@@ -960,7 +977,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
 
     def update_window_status_indicators(self, preset: Preset | None = None):
         if not gui_misc.is_running_in_gui_thread():
-            self.main_window.run_in_gui_thread(partial(self.main_window.update_status_indicators, preset))
+            self.get_main_window().run_in_gui_thread(partial(self.get_main_window().update_status_indicators, preset))
 
     def get_vdu_preferred_name(self, vdu_stable_id: VduStableId):
         if controller := self.vdu_controllers_map.get(vdu_stable_id):
@@ -982,16 +999,16 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         return found
 
     def status_message(self, message: str, timeout: int, destination: MsgDestination = MsgDestination.DEFAULT):
-        self.main_window.status_message(message, timeout, destination)
+        self.get_main_window().status_message(message, timeout, destination)
 
     def restart_application(self, reason: str):
         # Force a restart of the application.  Some settings changes need this (for example, run in the system tray).
         MBox(MIcon.Warning, msg=reason, info=tr('When this message is dismissed, vdu_controls will restart.')).exec()
-        self.main_window.app_save_window_state()
+        self.get_main_window().app_save_window_state()
         QCoreApplication.exit(EXIT_CODE_FOR_RESTART)
 
     def replace_toolbar(self, main_toolbar):
-        target_window = self.main_window
+        target_window = self.get_main_window()
         for old_toolbar in target_window.findChildren(QToolBar):  # Make sure there is only one toolbar
             target_window.removeToolBar(old_toolbar)
             old_toolbar.deleteLater()
@@ -1006,10 +1023,9 @@ class VduAppWindow(QMainWindow):
 
     def __init__(self, main_config: VduControlsConfig, main_controller: VduAppController) -> None:
         super().__init__()
-        app = QApplication.instance()
-        assert app
+        app_instance = get_app_instance()
         if os.getenv('VDU_CONTROLS_DEBUG_LAYOUT', default='no') == 'yes':
-            app.setStyleSheet("QWidget { border: 1px solid red; margin: 1px; padding: 1px; }")
+            app_instance.setStyleSheet("QWidget { border: 1px solid red; margin: 1px; padding: 1px; }")
         #set_gui_thread(app.thread())
         self.main_controller: VduAppController = main_controller
         self.setObjectName('main_window')
@@ -1031,7 +1047,7 @@ class VduAppWindow(QMainWindow):
         self._run_in_gui_thread_qtsignal.connect(_run_in_gui)
 
         if log.debug_enabled:
-            for screen in app.screens():
+            for screen in app_instance.screens():
                 log.info("Screen", screen.name())
 
         menu_callables = {
@@ -1039,15 +1055,17 @@ class VduAppWindow(QMainWindow):
             FixedItemKey.PRESETS: self.main_controller.show_presets_dialog,  # Gnome tray doesn't provide a way to bring up the main app.
             FixedItemKey.GREY_SCALE: GreyScaleDialog,
             FixedItemKey.SETTINGS_DIALOG: self.main_controller.edit_config,
-            FixedItemKey.LUX_AUTO_MANUAL: self.main_controller.lux_auto_action if main_config.is_set(ConfOpt.LUX_OPTIONS_ENABLED) else None,
-            FixedItemKey.LIGHTING_CHECK_NOW: self.main_controller.lux_check_action if main_config.is_set(ConfOpt.LUX_OPTIONS_ENABLED) else None,
-            FixedItemKey.LIGHT_METERING_DIALOG: partial(LuxDialog.show_dialog, self.main_controller) if main_config.is_set(
-                ConfOpt.LUX_OPTIONS_ENABLED) else None,
             FixedItemKey.REFRESH: self.main_controller.start_refresh,
             FixedItemKey.ABOUT_DIALOG: partial(AboutDialog.show_dialog, self.main_controller),
             FixedItemKey.HELP: HelpDialog.show_dialog,
-            FixedItemKey.QUIT: self.quit_app,
-        }
+            FixedItemKey.QUIT: self.quit_app,}
+
+        if main_config.is_set(ConfOpt.LUX_OPTIONS_ENABLED):
+            menu_callables.update({
+                FixedItemKey.LUX_AUTO_MANUAL: self.main_controller.lux_auto_action,
+                FixedItemKey.LIGHTING_CHECK_NOW: self.main_controller.lux_check_action,
+                FixedItemKey.LIGHT_METERING_DIALOG: partial(LuxDialog.show_dialog, self.main_controller),
+            })
 
         self.app_context_menu = ContextMenu(app_controller=main_controller, fixed_item_callables=menu_callables,
                                             hide_shortcuts=self.hide_shortcuts, parent=self)
@@ -1086,16 +1104,16 @@ class VduAppWindow(QMainWindow):
                     sys_time.sleep(0.25)  # TODO - at least use a constant
             if QSystemTrayIcon.isSystemTrayAvailable():
                 log.info("Using system tray.")
-                app.setQuitOnLastWindowClosed(False)  # This next call appears to be automatic on KDE, but not on gnome.
+                app_instance.setQuitOnLastWindowClosed(False)  # This next call appears to be automatic on KDE, but not on gnome.
                 self.tray = QSystemTrayIcon(parent=self)
                 self.tray.setContextMenu(self.app_context_menu)
             else:
                 log.error("no system tray - cannot run in system tray.")
 
         self.app_name = APPNAME
-        app.setApplicationDisplayName(self.app_name)
+        app_instance.setApplicationDisplayName(self.app_name)
         if QT5_USE_HIGH_DPI_PIXMAPS:
-            app.setAttribute(QT5_USE_HIGH_DPI_PIXMAPS)  # Make sure all icons use HiDPI - toolbars don't by default, so force it.
+            app_instance.setAttribute(QT5_USE_HIGH_DPI_PIXMAPS)  # Make sure all icons use HiDPI - toolbars don't by default, so force it.
 
         def _splash_message_action(message) -> None:
             if splash is not None:
@@ -1113,7 +1131,7 @@ class VduAppWindow(QMainWindow):
 
         self.inactive_pause_millis = int(os.environ.get('VDU_CONTROLS_INACTIVE_PAUSE_MILLIS', default='1200'))
         self.active_event_count = 0
-        app.applicationStateChanged.connect(self.on_application_state_changed)
+        app_instance.applicationStateChanged.connect(self.on_application_state_changed)
         self.installEventFilter(self)
 
         if self.tray is not None:
@@ -1134,7 +1152,7 @@ class VduAppWindow(QMainWindow):
 
 
     def is_inactive(self):
-        if QApplication.instance().applicationState() != Qt.ApplicationState.ApplicationInactive:
+        if get_app_instance().applicationState() != Qt.ApplicationState.ApplicationInactive:
             return False
         for top_level_widget in QApplication.topLevelWidgets():  # Check if any dialogs are active
             if isinstance(top_level_widget, DialogSingletonMixin) or isinstance(top_level_widget, GreyScaleDialog):
@@ -1185,7 +1203,7 @@ class VduAppWindow(QMainWindow):
 
     def quit_app(self) -> None:
         self.app_save_window_state()
-        QApplication.instance().quit()
+        get_app_instance().quit()
         sys.exit(0)  # Just in case self.app.quit() errors
 
     def initialise_app_icon(self, splash_pixmap: QPixmap | None = None):
@@ -1237,7 +1255,9 @@ class VduAppWindow(QMainWindow):
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setWidget(self.main_panel)
         self.setCentralWidget(self.scroll_area)
-        available_height = self.screen().availableGeometry().height() - npx(200)  # Minus allowance for panel/tray
+        my_screen = self.screen()
+        assert my_screen is not None
+        available_height = my_screen.availableGeometry().height() - npx(200)  # Minus allowance for panel/tray
         hint_height = self.main_panel.sizeHint().height()  # The hint is the actual required layout space
         hint_width = self.main_panel.sizeHint().width()
         log.debug(f"create_main_control_panel: {hint_height=} {available_height=} {self.minimumHeight()=}")
@@ -1314,10 +1334,12 @@ class VduAppWindow(QMainWindow):
 
         if self.windowTitle() != title:  # Don't change if not needed - prevent flickering.
             self.setWindowTitle(title)
-            QApplication.instance().setWindowIcon(
+            assert self.app_icon is not None  # Should be initialized by now
+            get_app_instance().setWindowIcon(
                 create_decorated_app_icon(self.app_icon, tray_embedded_icon, led1_color, led2_color))
         if self.tray:
             self.tray.setToolTip(title)
+            assert self.tray_icon is not None   # Should be initialized by now
             self.tray.setIcon(create_decorated_app_icon(self.tray_icon, tray_embedded_icon, led1_color, led2_color))
         if palette_change or preset is not None:
             self.refresh_preset_menu(palette_change=palette_change)
@@ -1326,7 +1348,7 @@ class VduAppWindow(QMainWindow):
                                    causes_config_change: bool) -> None:
         # Update UI secondary displays
         AboutDialog.refresh()
-        for panel in self.main_panel.vdu_control_panels.values():
+        for panel in self.get_main_panel().vdu_control_panels.values():
             panel.update_stats()
         if causes_config_change and origin == VcpOrigin.NORMAL:  # only respond if this is an internally initiated change
             log.info(f"Must reconfigure due to change to: {vdu_stable_id=} {vcp_code=:#02x} {value=} {origin}")
@@ -1361,7 +1383,8 @@ class VduAppWindow(QMainWindow):
             if len(self.qt_settings.allKeys()) == 0:  # No previous state
                 return False
             save_version_major = self.qt_settings.value(self.qt_version_key, '5').split('.', 1)[0]
-            qt_version_major = QtCore.qVersion().split('.', 1)[0]
+            qcore_version = QtCore.qVersion()
+            qt_version_major = qcore_version.split('.', 1)[0] if qcore_version is not None else '5'
             if save_version_major != qt_version_major:
                 log.warning(
                     f"app_restore_window_state: restore: {save_version_major=} != {qt_version_major=}, this may cause window geometry glitches")
@@ -1381,9 +1404,12 @@ class VduAppWindow(QMainWindow):
         # Guess a window position near the tray. Use the mouse/cursor-pos as a guess to where the
         # system tray is.  Under Linux Qt the position of the tray icon is reported as 0,0, so we can't use that.
         cursor_x, cursor_y = QCursor.pos().x(), QCursor.pos().y()
-        app_width, app_height = self.geometry().width(), self.geometry().height()
-        desktop_width, desktop_height = (self.screen().availableGeometry().width(),
-                                         self.screen().availableGeometry().height())
+        my_geometry = self.geometry()
+        my_screen = self.screen()
+        assert my_geometry is not None and my_screen is not None
+        app_width, app_height = my_geometry.width(), my_geometry.height()
+        desktop_width, desktop_height = (my_screen.availableGeometry().width(),
+                                         my_screen.availableGeometry().height())
         # The following calculations allow for the tray being on any edge of the desktop...
         margin = min(abs(desktop_height - cursor_y), abs(desktop_width - cursor_x), npx(100)) + npx(25) if self.tray else 0
         x = cursor_x - app_width - margin if cursor_x > app_width else cursor_x + margin
@@ -1406,7 +1432,7 @@ class VduAppWindow(QMainWindow):
             log.info("PaletteChange event: New style sheet in use, update icons")
             self.initialise_app_icon()
             self.update_status_indicators(palette_change=True)
-            if self.main_panel:
+            if self.main_panel is not None and self.main_panel.main_toolbar is not None:
                 self.main_panel.main_toolbar.refresh_buttons()
         return super().event(event)
 
@@ -1417,7 +1443,7 @@ class VduAppWindow(QMainWindow):
         log.error("No controllable monitors found.")
         if ddcutil_problem is None:
             problem_text = "No exceptions, but no monitors anyway."
-        elif isinstance(ddcutil_problem, subprocess.SubprocessError):
+        elif isinstance(ddcutil_problem, subprocess.CalledProcessError):
             problem_text = ddcutil_problem.stderr.decode('utf-8', errors='surrogateescape') + '\n' + str(ddcutil_problem)
         else:
             problem_text = str(ddcutil_problem)
@@ -1485,7 +1511,7 @@ class SignalWakeupHandler(QtNetwork.QAbstractSocket):
         super().__init__(QtNetwork.QAbstractSocket.SocketType.UdpSocket, parent)
         self.old_fd = None
         self.wsock, self.rsock = socket.socketpair(type=socket.SOCK_DGRAM)  # Create a socket pair
-        self.setSocketDescriptor(self.rsock.fileno())  # Let Qt listen on the one end
+        self.setSocketDescriptor(sip.voidptr(self.rsock.fileno()))  # Let Qt listen on the one end
         self.wsock.setblocking(False)  # And let Python write on the other end
         self.old_fd = signal.set_wakeup_fd(self.wsock.fileno())
         # First Python code executed gets any exception from the signal handler, so add a do-nothing handler first
@@ -1505,6 +1531,10 @@ class SignalWakeupHandler(QtNetwork.QAbstractSocket):
         self.received_unix_signal_qtsignal.emit(signal_number)  # Emit a Qt signal for convenience
 
 
+def get_app_instance() -> QApplication:
+    app_instance = cast(QApplication, QApplication.instance())
+    assert app_instance is not None
+    return app_instance
 
 
 def main() -> None:
@@ -1546,9 +1576,11 @@ def main() -> None:
     # Call QApplication before parsing arguments, it will parse and remove Qt session restoration arguments.
     app = QApplication(sys.argv)
     assert app is not None
-    gui_misc.set_gui_thread(app.thread())
+    app_thread = app.thread()
+    assert app_thread is not None
+    gui_misc.set_gui_thread(app_thread)
     assert gui_misc.is_running_in_gui_thread()
-    log.info(f"{app.applicationName()=} {QApplication.instance().applicationName()=}")
+    log.info(f"{app.applicationName()=} {get_app_instance().applicationName()=}")
     global unix_signal_handler
     unix_signal_handler = SignalWakeupHandler(app)
 
@@ -1557,8 +1589,11 @@ def main() -> None:
     log.info(f"desktop: {os.environ.get('XDG_CURRENT_DESKTOP', default='unknown')}; "
              f"session-type: {os.environ.get('XDG_SESSION_TYPE', default='unknown')}; "
              f"platform: {QApplication.platformName()}; Qt: {QtCore.qVersion()}")
-    log.info(f"app-style: {app.style().objectName()} (detected a {'dark' if is_dark_theme() else 'light'} theme)")
-
+    app_style = app.style()
+    if app_style is not None:
+        log.info(f"app-style: {app_style.objectName()} (detected a {'dark' if is_dark_theme() else 'light'} theme)")
+    else:
+        log.warning("app-style: unknown, may not be able to respond to theme changes")
     args = main_config.parse_global_args()
     log.info(f"Logging to {'syslog' if main_config.is_set(ConfOpt.SYSLOG_ENABLED) else 'stdout'}")
     log.set_syslog(main_config.is_set(ConfOpt.SYSLOG_ENABLED))

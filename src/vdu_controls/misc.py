@@ -53,6 +53,11 @@ def clamp(v: int, min_v: int, max_v: int) -> int:
     return max(min(max_v, v), min_v)
 
 
+# def not_none(obj: T | None) -> T:
+#     assert obj is not None
+#     return obj
+
+
 @dataclass
 class GeoLocation:
     latitude: float

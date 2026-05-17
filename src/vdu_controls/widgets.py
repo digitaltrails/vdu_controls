@@ -127,8 +127,12 @@ MBtn = QMessageBox.StandardButton
 
 class MBox(QMessageBox):
 
-    def __init__(self, icon: QMessageBox.Icon, msg: str | None = None, info: str | None = None, details: str | None = None,
-                 buttons: QMessageBox.StandardButton = MBtn.NoButton,
+    def __init__(self,
+                 icon: QMessageBox.Icon,
+                 msg: str | None = None,
+                 info: str | None = None,
+                 details: str | None = None,
+                 buttons: int = MBtn.NoButton,
                  default: QMessageBox.StandardButton | None = None) -> None:
         super().__init__(icon, APPNAME, '', buttons=buttons)
         if RESIZABLE_MESSAGEBOX_HACK:
