@@ -124,7 +124,7 @@ def load_docs_text(filename: str) -> str:
 
     # Check inside the application resources/docs/
     file_path = APP_INTERNAL_DOCS_FOLDER / filename
-    if True or file_path.exists():
+    if file_path.is_file():
         log.info(f"Loading original resource from {file_path}")
         return file_path.read_text()
     log.error(f"Could not find resource {filename} or a translation of it anywhere")
@@ -178,6 +178,7 @@ def initialise_locale_translations(app: QApplication) -> None:
         translating_locale = locale_name
     elif qm_path is not None:
         log.info(tr("Loading {0} translation from {1}").format(locale_name, qm_path.as_posix()))
+        assert translator is not None
         if translator.load(qm_path.name, qm_path.parent.as_posix()):
             app.installTranslator(translator)
             log.info(tr("Using {0} translations from {1}").format(locale_name, qm_path.as_posix()))

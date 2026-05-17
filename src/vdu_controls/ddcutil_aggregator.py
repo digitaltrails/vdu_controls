@@ -7,14 +7,13 @@ import subprocess
 import time as sys_time
 from typing import List, Dict, Callable, Tuple, NewType
 
-from vdu_controls.ddcutil_abstract import DDCUTIL_RETRIES, VcpValue, CONTINUOUS_TYPE, SIMPLE_NON_CONTINUOUS_TYPE, \
-    COMPLEX_NON_CONTINUOUS_TYPE, DdcutilServiceNotFound, DdcutilDisplayNotFound, DdcutilInterface, VcpTypeInfo
+import vdu_controls.logging as log
+from vdu_controls.ddcutil_abstract import DDCUTIL_RETRIES, VcpValue, DdcutilServiceNotFound, DdcutilDisplayNotFound, \
+    DdcutilInterface, VcpTypeInfo
 from vdu_controls.ddcutil_emulator import DdcutilEmulatorImpl
 from vdu_controls.ddcutil_exe import DdcutilExeImpl
 from vdu_controls.ddcutil_laptop_panel import DdcutilPanelImpl
 from vdu_controls.ddcutil_qdbus import DdcutilDBusImpl
-import vdu_controls.logging as log
-
 
 VduStableId = NewType('VduStableId', str)
 

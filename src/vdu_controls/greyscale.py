@@ -4,13 +4,11 @@ from __future__ import annotations
 
 from typing import List
 
-import vdu_controls.logging as log
-from vdu_controls.qt_imports import Qt
-from vdu_controls.qt_imports import QSvgWidget
-from vdu_controls.qt_imports import QDialog, QVBoxLayout
-
-from vdu_controls.icon_utils import si, StdPixmap
 from vdu_controls.app_locale import tr
+from vdu_controls.icon_utils import si, StdPixmap
+from vdu_controls.qt_imports import QDialog, QVBoxLayout
+from vdu_controls.qt_imports import QSvgWidget
+from vdu_controls.qt_imports import Qt
 from vdu_controls.scaling import npx
 from vdu_controls.widgets import SubWinDialog, StdButton
 

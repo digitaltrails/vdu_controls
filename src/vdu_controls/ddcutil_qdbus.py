@@ -6,16 +6,15 @@ import os
 import time as sys_time
 from collections import namedtuple
 from threading import Lock
-from typing import Dict, Tuple, Callable, List, Any
+from typing import Dict, Tuple, Callable, List
 
-from vdu_controls.qt_imports import QObject
-
+import vdu_controls.logging as log
 from vdu_controls.ddcutil_abstract import DdcutilServiceNotFound, DdcutilDisplayNotFound, DdcutilInterface, DdcDetectedAttributes, \
     VcpValue, DdcCapabilities, VcpTypeInfo
-import vdu_controls.logging as log
 from vdu_controls.misc import intV
 from vdu_controls.qt_imports import (QDBusArgument, QDBusInterface, QMetaType, QDBusConnection,
                                      QDBusVariant, QDBusMessage, pyqtSlot)
+from vdu_controls.qt_imports import QObject
 
 
 class DdcutilDBusImpl(QObject, DdcutilInterface):
