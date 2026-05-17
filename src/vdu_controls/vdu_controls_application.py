@@ -993,8 +993,9 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         for conf_file in [f for f in sorted(CONFIG_DIR_PATH.glob('*_*_*.conf')) if f.is_file()]:
             conf = ConfIni()
             conf.read(conf_file.as_posix())
-            if conf.has_section(ConfOpt.CAPABILITIES_OVERRIDE.conf_id[0]) and conf.get(*ConfOpt.CAPABILITIES_OVERRIDE.conf_id):
-                found.append(conf_file)
+            if (conf.has_section(ConfOpt.CAPABILITIES_OVERRIDE.conf_section) and
+                    conf.get(ConfOpt.CAPABILITIES_OVERRIDE.conf_section, ConfOpt.CAPABILITIES_OVERRIDE.conf_name)):
+                found.append(conf_file)   # Seems to be sane
         log.debug(f"find_vdu_config_files {found}")
         return found
 
