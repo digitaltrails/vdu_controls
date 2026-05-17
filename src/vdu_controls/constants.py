@@ -86,7 +86,7 @@ EXIT_CODE_FOR_RESTART = 1959
 
 IGNORE_VDU_MARKER_STR = 'Ignore VDU'
 
-ASSUMED_CONTROLS_CONFIG_VCP_CODES = ['10', '12']
+ASSUMED_CONTROLS_CONFIG_VCP_CODES = [0x10, 0x12]
 
 ASSUMED_CONTROLS_CONFIG_TEXT = ('\n'
                                 'capabilities-override = Model: unknown\n'

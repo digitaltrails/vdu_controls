@@ -523,19 +523,26 @@ class VduControlsConfig:
     def disable_supported_vcp_code(self, vcp_code: int) -> None:
         self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS][SUPPORTED_VCP_BY_CODE[vcp_code].property_name()] = 'no'
 
-    def get_all_enabled_vcp_codes(self) -> List[str]:  # Not very efficient
+    def get_all_enabled_vcp_codes(self) -> List[int]:  # Not very efficient
         enabled_vcp_codes = []
         for control_name, control_def in SUPPORTED_VCP_BY_PROPERTY_NAME.items():
             if self.ini_content[ConfSec.VDU_CONTROLS_WIDGETS].getboolean(control_name, fallback=False):
                 enabled_vcp_codes.append(control_def.vcp_code)
         enable_codes_str = self.ini_content.get(ConfOpt.ENABLE_VCP_CODES.conf_section, ConfOpt.ENABLE_VCP_CODES.conf_name, fallback='')
-        for vcp_code in enable_codes_str.split(","):
-            if code := vcp_code.strip().upper():
-                if code not in enabled_vcp_codes:
-                    enabled_vcp_codes.append(code)
-                else:
-                    log.warning(f"supported enabled vcp_code {code} is redundantly listed "
-                                f"in enabled_vcp_codes ({enable_codes_str})")
+        for vcp_code_str in enable_codes_str.split(","):
+            if vcp_code_str:
+                try:
+                    if code := int(vcp_code_str.strip().upper(), 16):
+                        if code not in enabled_vcp_codes:
+                            enabled_vcp_codes.append(code)
+                        else:
+                            log.warning(f"supported enabled vcp_code {code} is redundantly listed "
+                                        f"in enabled_vcp_codes ({enable_codes_str})")
+                except ValueError as ve:
+                    msg = (f"Invalid value '{vcp_code_str}' for vcp_code in {self.config_name} "
+                           f"{ConfOpt.ENABLE_VCP_CODES.conf_section}.{ConfOpt.ENABLE_VCP_CODES.conf_name}: {ve}")
+                    log.error(msg)
+                    # raise ValueError(msg) from ve
         return enabled_vcp_codes
 
     def get_location(self) -> GeoLocation | None:
