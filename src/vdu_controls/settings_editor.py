@@ -150,10 +150,10 @@ class SettingsDialog(SubWinDialog, DialogSingletonMixin):
     def cross_validate(self) -> int:
         labels_in_use = {'vdu_controls': 'vdu_controls globals'}
         for tab in self.editor_tab_list:
-            if vdu_label := tab.ini_editable.get(*ConfOpt.VDU_NAME.conf_id, fallback=None):
+            if vdu_label := tab.ini_editable.get(ConfOpt.VDU_NAME.conf_section, ConfOpt.VDU_NAME.conf_name, fallback=None):
                 if existing_use := labels_in_use.get(vdu_label, None):
                     return MBox(MIcon.Critical, msg=tr("Cannot save <tt>{}</tt>").format(tab.config_path.name),
-                                info=tr("Duplicate VDU label: <i>{}</i><hr/>Alter the label for {0} or {1} and try again.").format(
+                                info=tr("Duplicate VDU label: <i>{0}</i><hr/>Alter the label for {1} or {2} and try again.").format(
                                     vdu_label, tab.config_path.stem, existing_use),
                                 buttons=MBtn.Close | MBtn.Discard, default=MBtn.Close).exec()
                 else:
