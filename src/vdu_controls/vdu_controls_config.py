@@ -110,8 +110,8 @@ class ConfOptDef:
     off_warning: str = ''
 
     @property
-    def conf_id(self) -> Tuple[str, str]:
-        return self.conf_section, self.conf_name
+    def conf_id(self) -> str:
+        return f"{self.conf_section}.{self.conf_name}"
 
     @property
     def cmdline_var(self) -> str | None:
