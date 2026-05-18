@@ -84,7 +84,7 @@ class ContextMenu(QMenu):
                 if item.add_separator:
                     item.separator = self.addSeparator()
                 if item.property:
-                    item.action.setProperty(*item.property)
+                    item.action.setProperty(*item.property)   # type: ignore[union-attr] - we just set it!
 
         self.reserved_shortcuts_basic = self.reserved_shortcuts.copy()
         self.auto_lux_icon: QIcon | None = None

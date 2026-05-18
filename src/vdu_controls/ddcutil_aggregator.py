@@ -103,7 +103,7 @@ class DdcutilAggregator(DdcutilInterface):
         """Return a list of (vdu_number, desc) tuples."""
         result_list = []
         vdu_list = self.ddcutil_impl.detect(0)
-        log.info(f"dectecting using {len(self.ddcutil_emulators_by_edid)} emulators")
+        log.info(f"detecting using {len(self.ddcutil_emulators_by_edid)} emulators")
         for emulator_impl in set(self.ddcutil_emulators_by_edid.values()):  # Use set() to only use each emulator once.
             vdu_list += emulator_impl.detect(0)
         # Going to get rid of anything that is not a-z A-Z 0-9 as potential rubbish
@@ -128,7 +128,7 @@ class DdcutilAggregator(DdcutilInterface):
                     possibly_unique = (model_name, candidate)
                     if possibly_unique in key_prospects:  # Not unique - it has already been encountered.
                         log.info(f"Ignoring non-unique key {possibly_unique=}"
-                                 f" - it matches display {vdu_number=} allready in {possibly_unique}")
+                                 f" - it matches display {vdu_number=} already in {possibly_unique}")
                         del key_prospects[possibly_unique]
                     else:
                         key_prospects[possibly_unique] = vdu_number, manufacturer

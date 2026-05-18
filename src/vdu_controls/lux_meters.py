@@ -38,12 +38,13 @@ class LuxMeterDevice(QObject):
             log.info(f"LuxMeterDevice: starting worker for {self.__class__}")
             self.worker = WorkerThread(task_body=self.update_from_worker_thread, task_finished=self.cleanup, loop=True)
 
-    def get_value(self) -> float | None:  # an un-smoothed raw value - TODO should smoothing be moved here?
+    def get_value(self) -> float:  # an un-smoothed raw value - TODO should smoothing be moved here?
         if self.current_value is None and self.requires_worker:
-            self.worker.start() if not self.worker.isRunning() else None
+            if not self.worker.isRunning():
+                self.worker.start()
             while self.current_value is None and not self.worker.stop_requested:  # have to block on the first time through.
                 sys_time.sleep(0.1)
-        return self.current_value
+        return self.current_value if self.current_value is not None else 0.0
 
     def update_from_worker_thread(self, _: WorkerThread) -> None:  # Only for meters that have background workers.
         pass
@@ -93,6 +94,7 @@ class LuxMeterFifoDevice(LuxMeterDevice):
                 log.info(f"Initialising fifo {self.device_name} - waiting on fifo data.")
                 self.fifo = os.open(self.device_name, os.O_RDONLY | os.O_NONBLOCK)
             while not self.worker.stop_requested and len(select.select([self.fifo], [], [], 1.0)[0]) == 1:
+                assert self.fifo is not None
                 byte = os.read(self.fifo, 1)
                 if byte is None:
                     self.cleanup()  # Fifo has closed, maybe meter is resetting
@@ -235,6 +237,7 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
                 log.error(f"LuxSemiAuto: {persisted_path.as_posix()} does not exist")
             log.debug(f'LuxSemiAuto: {daylight_factor=} ({persisted_path.as_posix()})') if log.debug_enabled else None
             LuxMeterSemiAutoDevice.daylight_factor = daylight_factor
+        assert LuxMeterSemiAutoDevice.daylight_factor is not None
         return LuxMeterSemiAutoDevice.daylight_factor
 
     @staticmethod

@@ -90,7 +90,7 @@ class DdcutilDBusImpl(QObject, DdcutilInterface):
             DdcutilDBusImpl._current_service_initialization_handler = None
         return session_bus, ddcutil_dbus_iface, ddcutil_dbus_props
 
-    def _connect_to_service(self, disconnect=False) -> Tuple[QDBusInterface, QDBusInterface]:
+    def _connect_to_service(self) -> Tuple[QDBusInterface, QDBusInterface]:
         session_bus, ddcutil_dbus_iface, ddcutil_dbus_props = self._connection_reset()
         # Connect new handlers - bind receiving slots to our new handlers
         DdcutilDBusImpl._current_service_initialization_handler = self._service_initialization_handler

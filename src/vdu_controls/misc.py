@@ -12,8 +12,8 @@ from vdu_controls.constants import TESTING_TIME_ZONE, TESTING_TIME_DELTA
 
 # Conditional base StrEnum (works on 3.8+ and uses built-in when available) ---
 
-if sys.version_info >= (3, 11):
-    from enum import StrEnum as LocalStrEnum
+if False and sys.version_info >= (3, 11):
+    from enum import StrEnum as LocalStrEnum  # TODO re-enable when finished testing
 else:
     # Custom fallback for Python 3.8 - 3.10
     class LocalStrEnum(str, Enum):

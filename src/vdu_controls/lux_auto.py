@@ -155,7 +155,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
 
     def assess_presets_collectively(self, to_do_list: List[LuxToDo]) -> None:
         if to_do_list:  # See if all items are in agreement on whether a preset should be used
-            for preset_name in [x.preset_name for x in to_do_list]:
+            for preset_name in [x.preset_name for x in to_do_list if x.preset_name is not None]:
                 if preset := self.main_controller.find_preset_by_name(preset_name):
                     sids_present = set(self.main_controller.get_vdu_stable_id_list())
                     sids_present_and_in_preset = sids_present.intersection(set(preset.get_vdu_sids()))

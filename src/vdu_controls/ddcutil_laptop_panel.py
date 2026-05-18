@@ -6,16 +6,14 @@ import re
 import subprocess
 import time as sys_time
 from datetime import datetime, timedelta
-
 from threading import Lock
-from typing import List, Callable, Dict, Any, Tuple
+from typing import List, Callable, Dict
 
+import vdu_controls.logging as log
 from vdu_controls.constants import VDU_CONTROLS_DEVELOPER
 from vdu_controls.ddcutil_abstract import BRIGHTNESS_VCP_CODE, DdcutilInterface, DdcDetectedAttributes, VcpValue, DdcCapabilities, \
     VcpTypeInfo
 from vdu_controls.ddcutil_abstract import DDCUTIL_RETRIES, CONTINUOUS_TYPE, DdcEventType, DdcutilDisplayNotFound
-from vdu_controls.ddcutil_exe import DdcutilExeImpl
-import vdu_controls.logging as log
 from vdu_controls.qt_imports import QTimer, QSocketNotifier
 
 
