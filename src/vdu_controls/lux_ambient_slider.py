@@ -63,7 +63,7 @@ class LuxAmbientSlider(QWidget):
         alter_margins(top_layout, top=0, bottom=0, default=self.style())
 
         label = TitleButton(AMBIENT_PANEL_ICON_SOURCE, tr("Ambient Light Level"), tr("lux"),
-                            clicked=self.title_button_pressed_qtsignal)
+                            clicked=self.title_button_pressed_qtsignal)   # type: ignore
         label.setToolTip(tr("Ambient light level control for adjusting all monitors.\n(Click for Light-Meter Dialog)"))
         top_layout.addWidget(label, stretch=0, alignment=Qt.AlignmentFlag.AlignTop)
 
@@ -99,7 +99,7 @@ class LuxAmbientSlider(QWidget):
             app_font = QApplication.font()
             log10_label.setFont(QFont(app_font.family(), round(app_font.pointSize() * .66), QFont.Weight.Normal))
             slider_panel_layout.addWidget(log10_label, 2, col_num, 1, span,
-                                          alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+                                          alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)   # type: ignore
 
         input_panel_layout.addWidget(slider_panel, stretch=100)
 
@@ -146,7 +146,7 @@ class LuxAmbientSlider(QWidget):
                                           clicked=partial(self.lux_input_field.setValue, zone.icon_svg_lux), flat=True,
                                           tip=zone.name)
             slider_panel_layout.addWidget(zone_button, 0, col, 1, zone.column_span,
-                                          alignment=Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter)
+                                          alignment=Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter)  # type: ignore
             self.label_map[zone_button] = zone.icon_svg
             col += zone.column_span
 
@@ -174,7 +174,7 @@ class LuxAmbientSlider(QWidget):
                 if source != self.lux_input_field:
                     self.lux_input_field.setValue(self.current_value)
                 # We can use values from non-semi-auto meters to calibrate the semi-auto-meter.
-                semi_auto_source = self.controller.lux_meter and self.controller.lux_meter.has_semi_auto_capability
+                semi_auto_source = self.controller.lux_meter is not None and self.controller.lux_meter.has_semi_auto_capability
                 if source == self.slider or source == self.lux_input_field or not semi_auto_source:
                     if location := self.controller.main_controller.main_config.get_location():
                         LuxMeterSemiAutoDevice.set_location(location)  # in case it's changed

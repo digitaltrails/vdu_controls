@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from functools import partial
 from pathlib import Path
-from typing import Dict, List, Tuple, TYPE_CHECKING
+from typing import Dict, List, Tuple, TYPE_CHECKING, cast
 
 import vdu_controls.logging as log
 from vdu_controls.app_locale import tr, TitledStrEnum
@@ -91,12 +91,12 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.lux_gauge_widget = LuxGaugeWidget(self)
 
         top_box_layout.addWidget(self.lux_gauge_widget, 0, 0, 4, 2,
-                                 alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+                                 alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)  # type: ignore
         existing_device = self.lux_config.get_device_name()
         existing_device_type = self.lux_config.get('lux-meter', 'lux-device-type', fallback='')
         self.meter_device_selector = QComboBox()
         for i, dev_type in enumerate(LuxDeviceType):
-            if dev_type.name == existing_device_type:  # List existing device and device type, set it as selected.
+            if dev_type.value == existing_device_type:  # List existing device and device type, set it as selected.
                 self.meter_device_selector.addItem(f"{tr(dev_type.localized_name)}: {existing_device}", dev_type)
                 self.meter_device_selector.setCurrentIndex(i)
             else:
@@ -181,7 +181,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                 if new_dev_path != current_dev:
                     self.meter_device_selector.setItemText(index, tr(new_dev_type.localized_name) + ': ' + new_dev_path)
                     self.lux_config.set('lux-meter', "lux-device", new_dev_path)
-                    self.lux_config.set('lux-meter', "lux-device-type", new_dev_type.name)
+                    self.lux_config.set('lux-meter', "lux-device-type", new_dev_type.value)
                     self.lux_config.save(self.path)
                     self.apply_settings()
                     if (device := self.main_controller.get_lux_auto_controller().lux_meter) and device.has_auto_capability:
@@ -233,7 +233,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                 profile_name = list(self.lux_profiles_map.keys())[index]
                 self.profile_plot.set_current_profile(profile_name)
                 self.status_message(tr("Editing profile {}").format(profile_name))
-            data = self.profile_selector_widget.item(index).data(Qt.ItemDataRole.UserRole)
+            data = self.profile_selector_widget.item(index).data(Qt.ItemDataRole.UserRole)  # type: ignore
             if self.lux_config.get('lux-ui', 'selected-profile', fallback=None) != data:
                 self.lux_config.set('lux-ui', 'selected-profile', data)
                 self.apply_settings(requires_metering_restart=False)
@@ -264,12 +264,12 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.adjust_now_button.setText(f"{TIMER_RUNNING_SYMBOL} 00:00")
         self.adjust_now_button.setVisible(self.lux_config.is_auto_enabled())
 
-        connected_id_list = []  # List of all currently connected VDUs
+        connected_id_list: List[VduStableId] = []  # List of all currently connected VDUs
         for index, vdu_sid in enumerate(self.main_controller.get_vdu_stable_id_list()):
             value_range = (0, 100)
             if self.main_controller.is_vcp_code_enabled(vdu_sid, BRIGHTNESS_VCP_CODE):
                 value_range = self.main_controller.get_range(vdu_sid, BRIGHTNESS_VCP_CODE, fallback=value_range)
-                self.range_restrictions_map[vdu_sid] = value_range
+                self.range_restrictions_map[vdu_sid] = value_range   # type: ignore - will definitely have a value
                 try:
                     self.current_brightness_map[vdu_sid] = self.main_controller.get_value(vdu_sid, BRIGHTNESS_VCP_CODE)
                 except VduException as ve:
@@ -286,10 +286,11 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.interval_selector.setValue(self.lux_config.get_interval_minutes())
         existing_id_list = [item.data(Qt.ItemDataRole.UserRole) for item in
                             self.profile_selector_widget.findItems('*', Qt.MatchFlag.MatchWildcard)]
-        candidate_id = self.lux_config.get('lux-ui', 'selected-profile', fallback=None)
+        candidate_id = cast(VduStableId, self.lux_config.get('lux-ui', 'selected-profile', fallback=None))
         if connected_id_list and (candidate_id is None or candidate_id not in connected_id_list):
             candidate_id = connected_id_list[0]
         try:
+            assert candidate_id is not None
             self.profile_selector_widget.blockSignals(True)  # Stop initialization from causing signal until all data is aligned.
             if connected_id_list != existing_id_list:  # List of connected VDUs has changed
                 self.profile_selector_widget.clear()
@@ -518,8 +519,8 @@ class LuxGaugeWidget(QWidget):
                 most_recent_df_xy = (i, item_y_pos)
                 most_recent_item = item
         # Plot Eo and Ei
-        eo_points = []
-        ei_points = []
+        eo_points: List[QPointF] = []
+        ei_points: List[QPointF] = []
         painter.setPen(QPen(self.white_transparent_color, thin_line_width))
         t = df_plot_day + timedelta(minutes=0)
         df = LuxMeterSemiAutoDevice.get_daylight_factor()
@@ -533,9 +534,9 @@ class LuxGaugeWidget(QWidget):
                 painter.drawLine(i, plot_height, i, eo_y)  # Fill under eo line
             # Actually plot the two datasets
             painter.setPen(QPen(self.orange_line_color, thin_line_width * 3))
-            painter.drawPolyline(eo_points)
+            painter.drawPolyline(eo_points)  # type: ignore
             painter.setPen(QPen(self.white_line_color, thin_line_width * 3))
-            painter.drawPolyline(ei_points)
+            painter.drawPolyline(ei_points)  # type: ignore
         else:  # Give them a hint that they have not set location in settings.
             painter.setFont(QFont(QApplication.font().family(), 5, QFont.Weight.Bold))
             painter.setPen(QPen(self.white_line_color, thin_line_width))
@@ -801,7 +802,7 @@ class LuxProfileWidget(QLabel):
         self.create_plot()
 
     def mousePressEvent(self, event: QMouseEvent | None) -> None:
-        if event:
+        if event is not None:
             changed = False
             x = event.pos().x() - self.x_origin
             y = self.y_origin - event.pos().y()
@@ -809,7 +810,7 @@ class LuxProfileWidget(QLabel):
                 changed = self.lux_point_edit(x, y) if y >= 0 else self.lux_preset_edit(x)
             if changed:
                 self.show_changes()
-        event.accept()
+            event.accept()
 
     def lux_point_edit(self, x, y) -> bool:
         assert self.current_vdu_sid != ''

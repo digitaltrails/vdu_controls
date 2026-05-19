@@ -6,7 +6,7 @@ import math
 from ast import literal_eval
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, TYPE_CHECKING
+from typing import List, TYPE_CHECKING, TypeVar
 
 from vdu_controls.qt_imports import Qt, pyqtSignal
 
@@ -81,14 +81,20 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         super().__init__(task_body=self._adjust_for_lux, task_finished=self._adjust_for_lux_finished)
         self.single_shot = single_shot  # Called for an on-demand single time assessment with immediate effect.
         self.main_controller = auto_controller.main_controller
+        assert self.main_controller.main_window is not None
         self.adjust_now_requested = False
         lux_config = auto_controller.get_lux_config()
         log.info(f"LuxAuto: lux-meter.interval-minutes={lux_config.get_interval_minutes()} {single_shot=}")
         self.sleep_seconds = lux_config.get_interval_minutes() * 60
         self.consecutive_error_count = 0
 
-        def _get_prop(prop: str, fallback: bool | int | float | str) -> bool | int | float:
-            getters_by_type = {bool: lux_config.getboolean, int: lux_config.getint, float: lux_config.getfloat}
+        T = TypeVar('T', bool, int, float, str)
+
+        def _get_prop(prop: str, fallback: T) -> T:   # A fancy way to avoid if-elif-else and log the results
+            getters_by_type = {bool: lux_config.getboolean,
+                               int: lux_config.getint,
+                               float: lux_config.getfloat,
+                               str: lux_config.get,}
             value = getters_by_type[type(fallback)]('lux-meter', prop, fallback=fallback)
             log.info(f"LuxAuto: lux-meter.{prop}={value}")
             return value
@@ -335,6 +341,7 @@ class LuxAutoController:
         return self.lux_lighting_check_button
 
     def update_manual_meter(self, value: int):
+        assert self.lux_meter is not None
         if self.is_auto_enabled() and not self.lux_meter.has_semi_auto_capability:  # goto manual unless on semi-auto
             self.set_auto(False)
         self.lux_meter.set_current_value(value)
@@ -378,7 +385,7 @@ class LuxAutoController:
                 self.lux_auto_brightness_worker.start()
                 try:
                     self.lux_meter.new_lux_value_qtsignal.connect(self.update_manual_slider,
-                                                                  type=Qt.ConnectionType.UniqueConnection)
+                                                                  type=Qt.ConnectionType.UniqueConnection)  # type: ignore
                 except TypeError:
                     pass
 
@@ -405,6 +412,7 @@ class LuxAutoController:
             MBox(MIcon.Critical, msg=tr("Error setting up lux meter: {}").format(self.lux_config.get_device_name()),
                  info=str(lde)).exec()
         if self.lux_slider is not None:
+            assert self.lux_meter is not None
             self.lux_slider.set_current_value(round(self.lux_meter.get_value()))
         if self.lux_tool_button is not None:
             self.lux_tool_button.refresh_icon(self.current_auto_svg())  # Refresh indicators immediately
@@ -468,7 +476,8 @@ class LuxAutoController:
             merge_map = {point.lux: point for point in lux_points}
             for preset_point in self.lux_config.get_preset_points():
                 # Look up the Preset's brightness for this VDU - get value from the actual Preset.
-                if preset := self.main_controller.find_preset_by_name(preset_point.preset_name):  # Drop any that no longer exist
+                # Drop any that no longer exist
+                if preset := self.main_controller.find_preset_by_name(preset_point.preset_name):  # type: ignore
                     if point := merge_map.get(preset_point.lux):
                         point.preset_name = preset_point.preset_name  # Merge both points
                     else:
