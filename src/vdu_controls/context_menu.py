@@ -98,7 +98,7 @@ class ContextMenu(QMenu):
         if shortcut_letter is not None:
             log.debug(f"Reserve shortcut '{shortcut_letter}'") if log.debug_enabled else None
             if shortcut_letter in self.reserved_shortcuts:
-                log.error(f"{shortcut_letter=} already in in {self.reserved_shortcuts=}")
+                log.error(f"{shortcut_letter=} already in {self.reserved_shortcuts=}")
             else:
                 self.reserved_shortcuts.append(shortcut_letter)
                 action.setShortcuts(self.shortcut_list(ALT.format(shortcut_letter.upper()), extra_shortcut))

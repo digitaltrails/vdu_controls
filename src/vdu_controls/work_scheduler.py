@@ -75,11 +75,11 @@ class SchedulerJob:  # designed to resemble a QTimer, which it was written to re
     QTimer replacement - hibernation-tolerant scheduling at specific YYYYMMDD HHMM.
     After hibernation, overdue events will trigger immediately.
     """
-    def __init__(self, when: datetime, job_type: SchedulerJobType, run_callable: Callable, skip_callabled: Callable | None = None):
+    def __init__(self, when: datetime, job_type: SchedulerJobType, run_callable: Callable, skip_callable: Callable | None = None):
         assert when.tzinfo is not None
         self.when = when.replace(second=0, microsecond=0)
         self.run_callable = run_callable
-        self.skip_callable = skip_callabled
+        self.skip_callable = skip_callable
         self.job_type = job_type
         self.has_run = False
         self.attempts = 0

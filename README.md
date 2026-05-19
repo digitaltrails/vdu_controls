@@ -13,7 +13,7 @@ A control panel for external monitors (*Visual Display Units*).
 > 
 
 > [!WARNING]
-> **KDE 6** introduced energy saving brighness dimming after 5 minutes of idle
+> **KDE 6** introduced energy saving brightness dimming after 5 minutes of idle
 > time.  This may interfere with changes made via **vdu_controls**, including
 > *scheduled-presets* and *ambient-light-control*.  The relevant KDE 6 options can 
 > be found under ***System Settings -> System -> Energy Saving***.
@@ -35,22 +35,22 @@ A subset of controls is shown by default - these include brightness,
 contrast, and audio controls - with additional options available in the 
 **Settings dialog**.
 
-For convenience, a single **ambient-light-level slider** can simultaniously
+For convenience, a single **ambient-light-level slider** can simultaneously
 adjust _all_ displays, each following its own custom profile:
-_one slider to rule them all_.  Each profile defines a a curve that maps 
-ambient light-level to display-brightness. Realtively flat curves
+_one slider to rule them all_.  Each profile defines a curve that maps 
+ambient light-level to display-brightness. Relatively flat curves
 can be created for older displays and steeper ones for newer HDR 
 displays.
 
 Several methods are supported for integrating a hardware light-meter to
-achieve **fully automatic** brightness control. (An _arduino_
+achieve **fully automatic** brightness control. (An _Arduino_
 based meter [can be built for around $10](https://github.com/digitaltrails/vdu_controls/blob/master/Lux-metering.md).)
 
 In versions >= 2.4, the _ambient-light-level_ slider has been combined with an 
 estimate of local solar-illumination to achieve **semi-automatic brightness 
 control** throughout the day. Adjusting the slider sets the ratio between 
 indoor-illumination and outdoor solar-illumination. Once the ratio is set,
-it is used to automatically update brighness as the day proceeds. 
+it is used to automatically update brightness as the day proceeds. 
 Should the cloud-cover or weather change, adjusting the slider revises the ratio.  
 See the [2.4 release notes](https://github.com/digitaltrails/vdu_controls/releases/tag/v2.4.0) for a brief tutorial.
 (Solar-illumination is estimated for a  location by using the local date-time 
@@ -68,7 +68,7 @@ different tray implementations.
 
 The UI automatically adjusts to **light and dark Qt desktop-themes**.
 Where a desktop supports Qt theming events, the UI dynamically adjusts 
-to light/dark theme changes.  (For desktops that don't integrate with Qt/KDE themeing, 
+to light/dark theme changes.  (For desktops that don't integrate with Qt/KDE theming, 
 the `qt5ct` and `qt6ct` utilities may be used to alter the overall Qt theme.)
 
 The main-toolbar may be dragged to either the top or bottom of the main-window.
@@ -81,7 +81,7 @@ context-menu provides **ALT-_key_ shortcuts** for all menu items (subject to suf
 available to support all user defined Presets).
 
 > [!TIP]
-> A formatted versions of the [vdu_controls.1](https://htmlpreview.github.io/?https://raw.githubusercontent.com/digitaltrails/vdu_controls/master/docs/_build/man/vdu_controls.1.html) manual page is available for preview on github.
+> A formatted versions of the [vdu_controls.1](https://htmlpreview.github.io/?https://raw.githubusercontent.com/digitaltrails/vdu_controls/master/docs/_build/man/vdu_controls.1.html) manual page is available for preview on GitHub.
 > 
 > Within the UI, **tool-tips** are often available when hovering over UI components.
 
@@ -102,10 +102,10 @@ for _brightness_ events.
 #### Technical background
 
 Historically, there was little need to frequently adjust display brightness.
-This changed with the introduction of displays offerring HDR (High Dynamic Range)
+This changed with the introduction of displays offering HDR (High Dynamic Range)
 and increased contrast. These newer displays can cope better with very bright
 conditions, but they often need to be turned down when the ambient light level
-descreases. I created `vdu_controls` to allow me to more easily adjust my own 
+decreases. I created `vdu_controls` to allow me to more easily adjust my own 
 displays.
 
 `vdu_controls` communicates with displays by using either 
@@ -118,7 +118,7 @@ distributed.  The service is preferred, it's faster, more reliable,
 and supports DPMS and hotplug events.  If `ddcutil-service` isn't 
 available, `vdu_controls` falls back to the `ddcutil` command.
 (ddcutil-service is relatively easy to build, does not run as root, 
-a custom DIY install realtively simple.)
+a custom DIY install relatively simple.)
 
 Both `ddcutil` and `libddcutil` interface to the **VESA** standard
 *Display Data Channel* (**DDC**) *Virtual Control Panel*  (**VCP**) interface.
@@ -137,7 +137,7 @@ or increasing the LED panel burn-in.
 
 How many writes VDU NVRAM can accommodate is unknown, it is likely to vary by model
 and vintage. VDUs from past decades are likely to have NVRAM that can accommodate
-10,000 to 100,000+ writes depending on the technology used. For a ten year lifespan
+10,000 to 100,000+ writes depending on the technology used. For a ten-year lifespan
 this might indicate a sustainable limit of only 2.7 writes per day or 27 writes per 
 day respectively.
 
@@ -147,7 +147,7 @@ moving to NVRAM with increased durability. However, the uptake of such technolog
 by the manufacturers is unknown. 
 
 A vintage-2010 VDU, that has been used for four years of intensive testing of 
-vdu_controls, now shows signs of of the NVRAM having bad blocks.  After loss of 
+vdu_controls, now shows signs of the NVRAM having bad blocks.  After loss of 
 power the VDU will sometimes revert to its factory defaults, but not always, which 
 suggests the NVRAM is being cycled through and only some of it is bad.  This experience
 may indicate a write limit of at least 100,000 for a VDU of this vintage. I've 
@@ -163,14 +163,14 @@ the frequency of writes to VDU NVRAM:
    deprecated for version 2.1.0 onward.
  + Automatic ambient brightness adjustment only triggers a change when the proposed brightness differs from the current brightness by at least 10%.
 
-There are also some things you can do to futher minimise NVRAM writes:
+There are also some things you can do to further minimise NVRAM writes:
 
  + Drag sliders to target values with no in-between pauses greater than 0.5 seconds.
  + Choose to restore pre-prepared ‘presets’ instead of dragging sliders.
  + Leave `protect-nvram` enabled which disables transitions for presets.
  + If using the ambient-light brightness response curves, tune the settings and curves to avoid frequent small changes.
  + If using a light-meter, disengage automatic adjustment when ambient light levels
-   are  fluctuating (under condtions such as intermittent cloud cover).
+   are  fluctuating (under conditions such as intermittent cloud cover).
  + Consider adjusting the ambient lighting instead of the VDU.
 
 Some feedback is provided to help with making reducing NVRAM usage:
@@ -197,7 +197,7 @@ Packages are available for **OpenSUSE**, **Fedora**, and there is an  **archlinu
 package for arch-based systems:
 
  * OpenSUSE RPMs available at: [https://software.opensuse.org/package/vdu_controls](https://software.opensuse.org/package/vdu_controls),
- * Unoffical Fedora RPMs available at: [build.opensuse.org](https://build.opensuse.org/projects/home:mchnz/packages/vdu_controls/repositories/Fedora_37/binaries)
+ * Unofficial Fedora RPMs available at: [build.opensuse.org](https://build.opensuse.org/projects/home:mchnz/packages/vdu_controls/repositories/Fedora_37/binaries)
  * archlinux AUR package at: [https://aur.archlinux.org/packages/vdu_controls](https://aur.archlinux.org/packages/vdu_controls)
 
 > [!WARNING]
@@ -205,7 +205,7 @@ package for arch-based systems:
 > follow the instructions in the README.md included in the release tar or zip.
 
 If vdu_controls isn't already available for your distribution, you can
-download or git-clone the latest from github.  The source can be used 
+download or git-clone the latest from GitHub.  The source can be used 
 to install the application into `$HOME/.local/` as runnable python-zipapp:
 
    ``` 
@@ -221,7 +221,7 @@ to install the application into `$HOME/.local/` as runnable python-zipapp:
    09:19:56 INFO: Installation complete. Your desktop->applications->settings should now contain VDU Controls
    ```
 If you prefer to use a release version, you can download
-the vdu_controls.pyz (or tar or zip) from one of the github release pages.
+the vdu_controls.pyz (or tar or zip) from one of the GitHub release pages.
 The release page pyz file is directly runnable:
 
    ```
@@ -274,7 +274,7 @@ Optionally:
 
 * **pyserial** required to use a serial-port light-metering device (only loaded if needed).
 
-Also optionally, for supporting laptop-panels (only used/loaded if laptop-panels are enabled in Settings):
+Optionally, for supporting laptop-panels (only used/loaded if laptop-panels are enabled in Settings):
 
 * **brightnessctl** for retrieving and setting laptop-panel brightness.
 * **python3-pyudev** for monitoring for changes due to auto-dimming and brightness-up/down-keys.
@@ -367,8 +367,8 @@ Where a supported locale is right-to-left oriented, layouts will be
 reconfigured appropriately. 
 
 Locale is determined by the Linux and Qt environment variables,
-`LC_ALL` and `LANGUAGE`, which should prefereably be in agreement.
-These two enviroment variables can be manually set to force
+`LC_ALL` and `LANGUAGE`, which should preferably be in agreement.
+These two environment variables can be manually set to force
 a locale, for example:
 
 ```
@@ -385,7 +385,7 @@ The following locations are searched for localized translations:
   2. `/usr/share/vdu_controls/translations/`
   3. `zipapp-root/vdu_controls/resources/translations/`
 
-To date, there hasn't been any espression of interest in the localization
+To date, there hasn't been any expression of interest in the localization
 features. The provided translations are all testing samples which may not
 be supported over the long term. 
 
@@ -446,7 +446,7 @@ The following commands will extract documentation from ``vdu_controls.py``:
 % make html
 ```
 I prefer [Pandoc](https://pandoc.org/)'s HTML generation. There is a util script that generates the
-Sphinx outputs and then pandoc for the html:
+Sphinx outputs and then pandoc for the HTML:
 ```
 % ./util/make-man
 ```
@@ -565,9 +565,9 @@ Version History
 
 * 2.4.0
   * Added the ability to estimate the solar-illumination for a given geolocation and time. 
-  * Added semi-automatic brighness adjustment proportional to geolocated solar-illumination.
+  * Added semi-automatic brightness adjustment proportional to geolocated solar-illumination.
   * Ambient-light-level slider: when the slider is manually adjusted, it has the side-effect
-    of determining the ratio of indoor-illumination/solar-illumination (the the daylight-factor, DF).
+    of determining the ratio of indoor-illumination/solar-illumination (the daylight-factor, DF).
   * Light-Metering dialog: semi-automatic metering replaces manual metering.
   * Light-Metering dialog: added a display of estimated outdoor-lux (Eo) and the current daylight-factor (DF).
   * Light-Metering dialog: added a plot of the current day's estimated solar and indoor illumination.
@@ -595,7 +595,7 @@ Version History
     as a DIY starter (sample-scripts/laptop-ddcutil-emulator.bash).
   * Add smart-uses-xcb option to control the use of XWayland for the smart positioning of windows (defaults to yes).
   * Fix title-bars on sub-windows in COSMIC. 
-  * The About Dialog now includes some desktop and platform information.
+  * The About-Dialog now includes some desktop and platform information.
   
 * 2.2.0
   * Add a vdu-name option for assigning meaningful/user-friendly names to each VDU.
@@ -613,7 +613,7 @@ Version History
 
 * 2.1.3
   * Fix the error-dialog option "Ignore-VDU" when ddcutil cannot communicate with a VDU.  
-  * Avoid abrupt u-turns in automatic brightness, don't reassess the lux level while making an adjustment.
+  * Avoid abrupt U-turns in automatic brightness, don't reassess the lux level while making an adjustment.
   * Update the EDID-parser to accept the command line output from ddcutil 2.2 (for those not using ddcutil-service).
 
 * 2.1.2

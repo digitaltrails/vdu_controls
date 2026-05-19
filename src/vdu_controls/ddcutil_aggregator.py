@@ -20,7 +20,7 @@ VduStableId = NewType('VduStableId', str)
 
 class DdcutilAggregator(DdcutilInterface):
     """
-    Routes operations to relevant DccutilInterface instances and aggregates the results.
+    Routes operations to relevant DdcutilInterface instances and aggregates the results.
     For example, a "detect" might be routed to all instances, such as DdcutilDbusImpl and
     DdcutilPanelImpl, with the results aggregated together.
     """

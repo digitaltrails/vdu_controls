@@ -281,7 +281,7 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         conf_name='ddcutil-emulator', conf_type=ConfType.PATH,
         ui_label=QT_TR_NOOP('ddcutil emulator'),
         help=QT_TR_NOOP('User supplied command-line ddcutil-emulator for handling special cases.\n\n'
-                        'This emulatoe is consulted in addition to the normal DDC. It provides a\n'
+                        'This emulator is consulted in addition to the normal DDC. It provides a\n'
                         'way for non-DDC devices to be incorporated into vdu_controls.  For example,\n'
                         'you might add the ability to control keyboard-backlight brightness.'))
 

@@ -25,7 +25,7 @@ a GUI interface to DDC capable VDU's.
 
 Dependencies
 ============
-`vlux_meter` depends on the Python ["https://pypi.org/project/opencv-python/](cv2) library and
+`vlux_meter` depends on the Python [https://pypi.org/project/opencv-python/](cv2) library and
 [https://www.kernel.org/doc/html/v4.8/media/v4l-drivers/index.html](video4linux).
 
 `vlux_meter` is written in python3.8 and Qt5, it should run on any Linux desktop that provides those requirements.
@@ -101,7 +101,7 @@ VLUX_METER_VERSION = '1.0.0'
 
 ABOUT_TEXT = f"""
 
-<b>vlux_mter version {VLUX_METER_VERSION}</b>
+<b>vlux_meter version {VLUX_METER_VERSION}</b>
 <p>
 A webcam based approximate lux meter.
 <p>

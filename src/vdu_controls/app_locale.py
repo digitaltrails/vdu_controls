@@ -1,5 +1,6 @@
 # SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls>
 # SPDX-License-Identifier: GPL-3.0-or-later
+# noinspection GrazieInspectionRunner
 """
 This module defines our own tr() that matches what pylupdate5/6 is looking for.
 If this method is ever renamed to something other than tr(), then you must

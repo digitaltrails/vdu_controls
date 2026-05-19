@@ -39,7 +39,7 @@ An Arduino and a GY30/GY302/BH1750 is the very reliable way of obtaining
 true Lux values.  At the time of writing, the Arduino Nano and a 
 GY30/BH1750 can be purchased for about US$10.  
 
-The image below shows a [Arduino nano](https://en.wikipedia.org/wiki/Arduino_Nano), 
+The image below shows an [Arduino nano](https://en.wikipedia.org/wiki/Arduino_Nano), 
 the [GY-30](https://github.com/claws/BH1750#bh1750) and the
 required wiring connections: 
 
@@ -92,7 +92,7 @@ void loop() {
 This sketch produces a feed of Lux values to the Nano's USB tty
 output. 
 
-#### Accessing the running Arduino from it's Linux tty
+#### Accessing the running Arduino from its Linux tty
 
 On a Linux host, the corresponding input tty device 
 would typically be `/dev/ttyUSB0`, `/dev/ttyUSB1`, ...  
@@ -132,9 +132,9 @@ device path in the ``Light Metering Dialog``.
 
 You may find the `/dev/ttyUSB` device number may change as a result of 
 hot-plugging other USB devices.  If you encounter this problem, you can add udev 
-rules to create a fixed-name symlink to your arduino device. For example:
+rules to create a fixed-name symlink to your Arduino device. For example:
 
-1) Find out some unique attributes of your arduino such as `ID_MODEL_ID` and `ID_VENDOR_ID`::
+1) Find out some unique attributes of your Arduino such as `ID_MODEL_ID` and `ID_VENDOR_ID`::
 
        % udevadm info  /dev/ttyUSB1 | egrep  'ID_USB_VENDOR_ID|ID_USB_MODEL_ID'
        E: ID_USB_MODEL_ID=7523
@@ -251,9 +251,9 @@ sampling brightness in the local environment (on Linux,
 the exposure time is set in units of 1/exposure_time_absolute 
 seconds, so 64 would mean 1/64 of a second).
 
-### Customising the scripts
+### Customizing the scripts
 
-The scripts will require customisation for the local ambient lighting 
+The scripts will require customization for the local ambient lighting 
 conditions and  local camera options.  In order to use them you'll need 
 to be comfortable editing and configuring hardware and scripts using the 
 command line. The requirements for the two scripts are available on 
@@ -301,7 +301,7 @@ The data file can have any number of rows of descending values.  The above
 defaults shown are from a mapping for a study with access to a large amount 
 of natural daylight.  They're unlikely to be suitable for other situations.
   
-You can use either the bash script or the python script, or even switch from one 
+You can use either the bash script or the Python script, or even switch from one 
 to the other.  The bash script is slightly faster.
 
 
@@ -371,7 +371,7 @@ translations_enabled = no**
 #### Running vlux_meter.py
 
 Make sure v4l (Video for Linux) and python3-opencv (a computer vision library) 
-are installed.  Then just run `vlux_meter.py` as a normal python script,
+are installed.  Then just run `vlux_meter.py` as a normal Python script,
 It may optionally run from the system-tray (either by passing a command line
 argument or by editing the config file):
 
@@ -392,7 +392,7 @@ possible to sample from an appropriate crop within each capture.
 Cropping is supported by `vlux_meter.py` and you might also 
 add cropping to the other simpler scripts. Cropping might be coupled 
 with be a specifically tailored target within the crop, perhaps 
-a card or item in the scene that's 18% grey, or a patterned card 
+a card or item in the scene that's 18% gray, or a patterned card 
 of some sort.
 
 You may also write your own heuristics to guess at the available light.
@@ -424,7 +424,7 @@ three options for utilizing a light meter:
 A custom light meter need not supply accurate or realistic values. A 
 custom meter can produce any useful sequence or set or values in the 
 range 0 to 10000. Within this closed system, a "lux" value can mean 
-what ever you want it to mean.  The ``Light Metering Dialog`` can be 
+whatever you want it to mean.  The ``Light Metering Dialog`` can be 
 used to map the custom measured values to an appropriate brightness 
 levels. 
 

@@ -112,11 +112,11 @@ class VduControlPanel(QWidget):
         title_txt = sid if id == name else f"{name}\n({sid})"
         writes_txt = tr("Set-VCP writes: {}").format(self.controller.get_write_count())
         if (disp_number := int(self.controller.vdu_number)) >= 0:
-            disp_numumber_txt = tr("Monitor {}").format(disp_number)
+            disp_number_txt = tr("Monitor {}").format(disp_number)
         else:
-            disp_numumber_txt = tr("Panel {}").format(-disp_number)
+            disp_number_txt = tr("Panel {}").format(-disp_number)
         click_txt = tr("(Click for Settings)")
-        self.title_button.setToolTip(f"{title_txt}\n{writes_txt}\n{disp_numumber_txt}\n{click_txt}")
+        self.title_button.setToolTip(f"{title_txt}\n{writes_txt}\n{disp_number_txt}\n{click_txt}")
 
 
 class VduControlBase(QWidget):

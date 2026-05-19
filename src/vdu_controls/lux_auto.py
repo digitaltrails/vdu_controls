@@ -6,7 +6,7 @@ import math
 from ast import literal_eval
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, TYPE_CHECKING, TypeVar
+from typing import List, TYPE_CHECKING, TypeVar, Callable, Type
 
 from vdu_controls.qt_imports import Qt, pyqtSignal
 
@@ -91,10 +91,10 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         T = TypeVar('T', bool, int, float, str)
 
         def _get_prop(prop: str, fallback: T) -> T:   # A fancy way to avoid if-elif-else and log the results
-            getters_by_type = {bool: lux_config.getboolean,
-                               int: lux_config.getint,
-                               float: lux_config.getfloat,
-                               str: lux_config.get,}
+            getters_by_type: dict[Type, Callable] = {bool: lux_config.getboolean,
+                                                     int: lux_config.getint,
+                                                     float: lux_config.getfloat,
+                                                     str: lux_config.get,}
             value = getters_by_type[type(fallback)]('lux-meter', prop, fallback=fallback)
             log.info(f"LuxAuto: lux-meter.{prop}={value}")
             return value
