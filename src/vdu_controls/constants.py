@@ -29,7 +29,7 @@ APPNAME = "VDU Controls"
 # the version reported in the About Dialog).  In this way, wider packaging
 # doesn't require hacks to copy with rc/beta suffixes which we are
 # never going to appear in delivered distro releases.
-VDU_CONTROLS_VERSION = '2.6.5-rc.3'
+VDU_CONTROLS_VERSION = '2.6.5-preview.3'
 VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in re.split(r'[.-]', VDU_CONTROLS_VERSION)[:3])
 VDU_CONTROLS_BASE_VERSION = VDU_CONTROLS_VERSION.split('-')[0]
 VDU_CONTROLS_PRE_RELEASE = (VDU_CONTROLS_VERSION.split('-') + [ '' ])[1]
@@ -46,7 +46,7 @@ CONFIG_FILE_PREFER_QT5 = CONFIG_DIR_PATH / '_prefer_qt5_'
 
 TOOLTIP_DURATION_MSEC = 750
 
-WESTERN_SKY = 'western-sky'
+WESTERN_SKY = 'western-sky'  # TODO seems suspect - not an enum? no translations?
 EASTERN_SKY = 'eastern-sky'
 
 IP_ADDRESS_INFO_URL = os.getenv('VDU_CONTROLS_IPINFO_URL', default='https://ipinfo.io/json')
