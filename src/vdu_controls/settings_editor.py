@@ -73,21 +73,21 @@ class SettingsDialog(SubWinDialog, DialogSingletonMixin):
         self.change_callback = change_callback
 
         def _tab_restore_defaults() -> None:
-            self.tabs_widget.currentWidget().restore_application_defaults()
+            self.tabs_widget.currentWidget().restore_application_defaults()   # type: ignore - will have a value
 
         self.tab_restore_defaults_button = StdButton(icon=si(self, StdPixmap.SP_DialogDiscardButton), title=(tr('Defaults')),
                                                      clicked=_tab_restore_defaults)
         tab_ops_layout.addWidget(self.tab_restore_defaults_button)
 
         def _tab_revert_current_tab() -> None:
-            self.tabs_widget.currentWidget().revert_changes()
+            self.tabs_widget.currentWidget().revert_changes()     # type: ignore - will have a value
 
         self.tab_revert_button = StdButton(icon=si(self, StdPixmap.SP_DialogResetButton), title=(tr('Revert')),
                                            clicked=_tab_revert_current_tab)
         tab_ops_layout.addWidget(self.tab_revert_button)
 
         def _tab_save_current_tab() -> None:
-            self.tabs_widget.currentWidget().save()
+            self.tabs_widget.currentWidget().save()     # type: ignore - will have a value
 
         self.tab_save_button = StdButton(icon=si(self, StdPixmap.SP_DriveFDIcon), title=(tr('Save')), clicked=_tab_save_current_tab)
         tab_ops_layout.addWidget(self.tab_save_button)
@@ -223,53 +223,59 @@ class SettingsEditorTab(QWidget):
             self.field_list.append(widget)
             return widget
 
-        for section_def in [ConfSec(section_name) for section_name in self.ini_editable.data_sections()]:
-
-            ordered_by_sub_group: dict[tuple[str, int], tuple[str, ConfOpt]] = {}
-            for num, option_name in enumerate(self.ini_editable[section_def]):
-                try:
-                    option_def = vdu_config.get_conf_option(section_def, option_name)
-                    if option_def == ConfOpt.UNKNOWN:  # If it's unknown, it's a boolean switch for a VCP code
-                        # Make up a temporary ConfOptDef (which is not an enum value of ConfOpt(Enum))
-                        option_def = ConfOptDef(option_name, section_def, ConfType.BOOL, ui_label=option_name.replace('-',' '))
-                    ordered_by_sub_group[(option_def.sub_group.value, num)] = (option_name, option_def)
-                except ValueError:  # Probably an old no-longer-valid option, or a typo.
-                    log.warning(f"Ignoring invalid option name {option_name} in {section_def}")
-            ordered_by_sub_group = dict(sorted(ordered_by_sub_group.items()))
+        # Use the INI data section names as the value to pass to ConfSec(value) which is a StrEnum.
+        for section_def in [ConfSec(value) for value in self.ini_editable.data_sections()]:
             section_title = section_def.localized_name
             content_layout.addWidget(QLabel(f"<b>{section_title}</b>"))
             booleans_grid: QGridLayout | None = None  # Only create when bool_count > 0
             grid_columns = 5  # booleans are counted and laid out according to grid_columns.
             previous_sub_group = None
             row_index = col_index = 0
-            for option_name, option_def in ordered_by_sub_group.values():
+            for option_name, option_definition in self._opt_defs_ordered_by_sub_group(section_def, vdu_config):
                 try:
-                    if option_def.conf_type == ConfType.BOOL:
+                    if option_definition.conf_type == ConfType.BOOL:
                         if row_index == 0 and col_index == 0:  # Need to create a grid now
                             booleans_grid = QGridLayout()
                             booleans_grid.setVerticalSpacing(0)
                             booleans_panel = QWidget()
                             booleans_panel.setLayout(booleans_grid)
                             content_layout.addWidget(booleans_panel)
-                        if option_def.sub_group and option_def.sub_group != previous_sub_group:
+                        if option_definition.sub_group and option_definition.sub_group != previous_sub_group:
                             if row_index > 0:
                                 row_index += 1
-                                booleans_grid.setRowMinimumHeight(row_index, npx(20))
+                                booleans_grid.setRowMinimumHeight(row_index, npx(20))  # type: ignore - will have a value by now
                                 row_index += 1
-                            booleans_grid.addWidget(QLabel(option_def.sub_group.localized_name), row_index, 0)
+                            booleans_grid.addWidget(QLabel(option_definition.sub_group.localized_name), row_index, 0)   # type: ignore
                             row_index += 1
                             col_index = 0
-                            previous_sub_group = option_def.sub_group
-                        booleans_grid.addWidget(
-                            _field(SettingsEditorBooleanWidget(self, option_def)), row_index, col_index)
+                            previous_sub_group = option_definition.sub_group
+                        booleans_grid.addWidget(   # type: ignore - will have a value by now
+                            _field(SettingsEditorBooleanWidget(self, option_definition)), row_index, col_index)
                         col_index += 1
                         if col_index == grid_columns:
                             col_index = 0
                             row_index += 1
                     else:
-                        content_layout.addWidget(_field(widget_map[option_def.conf_type](self, option_def)))
+                        content_layout.addWidget(_field(widget_map[option_definition.conf_type](self, option_definition)))
                 except ValueError:  # Probably an old no-longer-valid option, or a typo.
                     log.warning(f"Ignoring invalid option name {option_name} in {section_def}")
+
+    def _opt_defs_ordered_by_sub_group(self, section_def: ConfSec, vdu_config: VduControlsConfig) -> List[Tuple[str, ConfOptDef]]:
+        ordered_by_sub_group: Dict[Tuple[int, int], Tuple[str, ConfOptDef]] = {}
+        for num, option_name in enumerate(self.ini_editable[section_def].keys()):
+
+            try:
+                conf_option = vdu_config.get_conf_option(section_def, option_name)  # Option from config file
+                if conf_option == ConfOpt.UNKNOWN:  # If it's unknown, it's a boolean switch for a VCP code
+                    # Make up a temporary ConfOptDef (which is not an enum value of ConfOpt(Enum))
+                    option_definition = ConfOptDef(option_name, section_def, ConfType.BOOL, ui_label=option_name.replace('-', ' '))
+                else:  # It's a known config option with an enum value other than UNKNOWN, it will have an attached definition
+                    option_definition = conf_option.value  # use the existing attached ConfOptDef
+                ordered_by_sub_group[(option_definition.sub_group.intval, num)] = (option_name, option_definition)
+            except ValueError:  # Probably an old no-longer-valid option, or a typo.
+                log.warning(f"Ignoring invalid option name {option_name} in {section_def}")
+        ordered_by_sub_group = dict(sorted(ordered_by_sub_group.items()))
+        return list(ordered_by_sub_group.values())
 
     def set_preferred_name(self, label_str):
         self.preferred_name = label_str
@@ -339,7 +345,7 @@ class SettingsEditorTab(QWidget):
 
 
 class SettingsEditorFieldBase(QWidget):
-    def __init__(self, section_editor: SettingsEditorTab, option_def: ConfOpt) -> None:
+    def __init__(self, section_editor: SettingsEditorTab, option_def: ConfOptDef) -> None:
         super().__init__()
         self.section_editor = section_editor
         self.conf_section = option_def.conf_section
@@ -351,7 +357,7 @@ class SettingsEditorFieldBase(QWidget):
 
 
 class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
-    def __init__(self, section_editor: SettingsEditorTab, option_def: ConfOpt) -> None:
+    def __init__(self, section_editor: SettingsEditorTab, option_def: ConfOptDef) -> None:
         super().__init__(section_editor, option_def)
         self.setLayout(widget_layout := QHBoxLayout())
         alter_margins(widget_layout, top=0, bottom=0)  # Squish up, save space, stay closer to parent label
@@ -378,7 +384,7 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
 
 
 class SettingsEditorLineBase(SettingsEditorFieldBase):
-    def __init__(self, section_editor: SettingsEditorTab, option_def: ConfOpt) -> None:
+    def __init__(self, section_editor: SettingsEditorTab, option_def: ConfOptDef) -> None:
         super().__init__(section_editor, option_def)
         self.editor_layout = QHBoxLayout()
         self.editor_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
@@ -442,7 +448,7 @@ class SettingsEditorFloatWidget(SettingsEditorFieldBase):
 
 
 class SettingsEditorCsvWidget(SettingsEditorLineBase):
-    def __init__(self, section_editor: SettingsEditorTab, option_def: ConfOpt) -> None:
+    def __init__(self, section_editor: SettingsEditorTab, option_def: ConfOptDef) -> None:
         super().__init__(section_editor, option_def)
         # TODO - should probably also allow spaces as well as commas, but the regexp is getting a bit tricky?
         # Validator matches CSV of two digit hex or the empty string.
@@ -472,7 +478,7 @@ class LatitudeLongitudeValidator(QRegularExpressionValidator):
 
 
 class SettingsEditorLocationWidget(SettingsEditorLineBase):
-    def __init__(self, section_editor: SettingsEditorTab, option_def: ConfOpt) -> None:
+    def __init__(self, section_editor: SettingsEditorTab, option_def: ConfOptDef) -> None:
         super().__init__(section_editor, option_def)
         self.text_input.setFixedWidth(npx(500))
         self.text_input.setMaximumWidth(npx(500))
@@ -519,7 +525,7 @@ class SettingsEditorLocationWidget(SettingsEditorLineBase):
 
 
 class SettingsEditorLongTextWidget(SettingsEditorFieldBase):
-    def __init__(self, section_editor: SettingsEditorTab, option_def: ConfOpt) -> None:
+    def __init__(self, section_editor: SettingsEditorTab, option_def: ConfOptDef) -> None:
         super().__init__(section_editor, option_def)
         layout = QVBoxLayout()
         self.setLayout(layout)
@@ -542,7 +548,7 @@ class SettingsEditorLongTextWidget(SettingsEditorFieldBase):
 
 class SettingsEditorTextWidget(SettingsEditorFieldBase):
 
-    def __init__(self, section_editor: SettingsEditorTab, option_def: ConfOpt) -> None:
+    def __init__(self, section_editor: SettingsEditorTab, option_def: ConfOptDef) -> None:
         super().__init__(section_editor, option_def)
         layout = QVBoxLayout()
         self.setLayout(layout)
@@ -576,7 +582,7 @@ class SettingsEditorPathValidator(QValidator):
 
 class SettingsEditorPathWidget(SettingsEditorLineBase):
 
-    def __init__(self, section_editor: SettingsEditorTab, option_def: ConfOpt) -> None:
+    def __init__(self, section_editor: SettingsEditorTab, option_def: ConfOptDef) -> None:
         super().__init__(section_editor, option_def)
         self.text_input.setText(section_editor.ini_editable[self.conf_section][self.conf_name])
 
