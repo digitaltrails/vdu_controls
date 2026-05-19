@@ -69,7 +69,7 @@ class SubGroup(Enum):
 class ConfOptDef:
     conf_name: str
     conf_section: str = ConfSec.VDU_CONTROLS_GLOBALS
-    conf_type: str = ConfType.BOOL
+    conf_type: ConfType = ConfType.BOOL
     default_value: str | None = None
     global_allowed: bool = True
     restart_required: bool = False

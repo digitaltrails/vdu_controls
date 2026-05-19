@@ -979,7 +979,7 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         if not gui_misc.is_running_in_gui_thread():
             self.get_main_window().run_in_gui_thread(partial(self.get_main_window().update_status_indicators, preset))
 
-    def get_vdu_preferred_name(self, vdu_stable_id: VduStableId):
+    def get_vdu_preferred_name(self, vdu_stable_id: VduStableId) -> str:
         if controller := self.vdu_controllers_map.get(vdu_stable_id):
             return controller.get_vdu_preferred_name()
         log.error(f"get_vdu_description: No controller for {vdu_stable_id}")
