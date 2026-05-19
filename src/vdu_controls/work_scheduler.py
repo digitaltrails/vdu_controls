@@ -151,7 +151,7 @@ class ScheduleWorker(WorkerThread):
     @staticmethod
     def is_running() -> bool:
         with ScheduleWorker._scheduler_lock:
-            return ScheduleWorker._instance and ScheduleWorker._instance.isRunning()
+            return ScheduleWorker._instance is not None and ScheduleWorker._instance.isRunning()
 
     def __init__(self) -> None:
         super().__init__(self.task_body, None, True)
@@ -171,12 +171,15 @@ class ScheduleWorker(WorkerThread):
                 if job.when <= local_now:  # Eligible to run now
                     self.pending_jobs_list.remove(job)
                     if not job.has_run:  # Only the most recent of each type should run
-                        if existing_job := run_now.get(job.job_type, None):
+                        existing_job = run_now.get(job.job_type, None)
+                        if existing_job is not None:
                             if job.when > existing_job.when:
-                                existing_job.skip_callable()
+                                if existing_job.skip_callable is not None:
+                                    existing_job.skip_callable()
                                 run_now[job.job_type] = job
                             else:
-                                job.skip_callable()
+                                if job.skip_callable is not None:
+                                    job.skip_callable()
                         else:
                             run_now[job.job_type] = job
             for job in run_now.values():

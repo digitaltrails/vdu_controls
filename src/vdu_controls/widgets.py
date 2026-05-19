@@ -5,16 +5,15 @@ from __future__ import annotations
 import os
 from typing import Callable, Any, Tuple, Dict, Type, TypeVar
 
+import vdu_controls.logging as log
+from vdu_controls.constants import RESIZABLE_MESSAGEBOX_HACK, APPNAME
+from vdu_controls.icon_utils import polychrome_light_or_dark, handle_theme, create_icon_from_svg_bytes
 from vdu_controls.qt_imports import (QTimer, Qt, QRect, QPixmap, QPainter, QPen, QIcon, QToolButton, QWidget, QEvent,
                                      QSize, QLayout, QLabel, QStyle, QDir, QMessageBox, QFileDialog, QVBoxLayout, QDialog,
                                      QSlider, QLineEdit, QMouseEvent, QMargins, QSvgWidget, QPushButton, QHBoxLayout,
                                      QtCore, QTextEdit, QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING)
-
-import vdu_controls.logging as log
-from vdu_controls.constants import RESIZABLE_MESSAGEBOX_HACK, APPNAME
-from vdu_controls.icon_utils import polychrome_light_or_dark, handle_theme, create_icon_from_svg_bytes
-
 from vdu_controls.scaling import native_font_height, npx
+
 
 def alter_margins(target: QWidget | QLayout,
                   left: int | None = None, top: int | None = None, right: int | None = None, bottom: int | None = None,
@@ -55,13 +54,13 @@ class StdButton(QPushButton):  # Reduce some repetitiveness in the code
                  tip: str | None = None, flat: bool = False, margins: bool = True, icon_size: QSize | None = None,
                  parent: QWidget | None = None) -> None:
         super().__init__(parent=parent)
-        self.setIcon(icon) if icon else None
-        self.setIconSize(icon_size) if icon_size else None
-        self.setText(title) if title else None
-        self.clicked.connect(clicked) if clicked else None
-        self.setToolTip(tip) if tip else None
+        self.setIcon(icon) if icon is not None else None
+        self.setIconSize(icon_size) if icon_size is not None else None
+        self.setText(title) if title is not None else None
+        self.clicked.connect(clicked) if clicked is not None else None
+        self.setToolTip(tip) if tip is not None else None
         self.setFlat(flat)
-        self.setContentsMargins(0, 0, 0, 0) if not margins else None
+        self.setContentsMargins(0, 0, 0, 0) if not margins is not None else None
         self.setAutoDefault(auto_default)
 
 
@@ -96,9 +95,11 @@ class TitleButton(StdButton):
         self.label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)  # Prevent label from swallowing clicks
         self.label.adjustSize()  # Adjust down to actual text height before accessing its height
         layout.addWidget(self.label)
+        my_style = self.style()
+        assert my_style is not None
         self.setMinimumHeight(max(self.svg_icon.height(), self.label.height()) +  # Avoids size issues if embedded in a layout
-                              self.style().pixelMetric(QStyle.PixelMetric.PM_LayoutTopMargin) +
-                              self.style().pixelMetric(QStyle.PixelMetric.PM_LayoutBottomMargin))
+                              my_style.pixelMetric(QStyle.PixelMetric.PM_LayoutTopMargin) +
+                              my_style.pixelMetric(QStyle.PixelMetric.PM_LayoutBottomMargin))
 
 
 class FasterFileDialog(QFileDialog):  # Takes 5 seconds versus 30+ seconds for QFileDilog.getOpenFileName() on KDE.
@@ -116,7 +117,7 @@ class FasterFileDialog(QFileDialog):  # Takes 5 seconds versus 30+ seconds for Q
             dialog.setOptions(options)
             dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
             dialog.setFilter(qdir_filter)
-            return (dialog.selectedFiles()[0], filter) if dialog.exec() else ('', '')  # match QFileDilog.getOpenFileName()
+            return (dialog.selectedFiles()[0], filter_str) if dialog.exec() else ('', '')  # match QFileDilog.getOpenFileName()
         finally:
             QtCore.qInstallMessageHandler(original_handler)
 
@@ -134,14 +135,14 @@ class MBox(QMessageBox):
                  details: str | None = None,
                  buttons: int = MBtn.NoButton,
                  default: QMessageBox.StandardButton | None = None) -> None:
-        super().__init__(icon, APPNAME, '', buttons=buttons)
+        super().__init__(icon, APPNAME, '', buttons=buttons)  # type: ignore
         if RESIZABLE_MESSAGEBOX_HACK:
             self.setMouseTracking(True)
             self.setSizeGripEnabled(True)
-        self.setDefaultButton(default) if default else None
-        self.setText(msg) if msg else None
-        self.setInformativeText(info) if info else None
-        self.setDetailedText(details) if details else None
+        self.setDefaultButton(default) if default is not None else None
+        self.setText(msg) if msg is not None else None
+        self.setInformativeText(info) if info is not None else None
+        self.setDetailedText(details) if details is not None else None
 
     def event(self, event: QEvent | None):
         # https://www.qtcentre.org/threads/24888-Resizing-a-MsgBox.p=251312#post251312
@@ -163,7 +164,7 @@ class PushButtonLeftJustified(QPushButton):
         self.setLayout(widget_layout := QVBoxLayout())
         widget_layout.addWidget(self.label)
         widget_layout.setContentsMargins(0, 0, 0, 0)  # Seems to fix top/bottom clipping on openbox and xfce
-        self.setText(text) if text is not None else None
+        self.setText(text) if text is not None is not None else None
         self.setFlat(flat)
 
     def setText(self, text: str | None) -> None:
@@ -207,7 +208,7 @@ class DialogSingletonMixin:
     A mixin that can augment a QDialog or QMessageBox with code to enforce a singleton UI.
     For example, it is used so that only one settings editor can be active at a time.
     """
-    _dialogs_map: Dict[Type, object] = {}
+    _dialogs_map: Dict[Type, QDialog] = {}
 
     def __init__(self) -> None:
         """Registers the concrete class as a singleton, so it can be reused later."""
@@ -217,6 +218,7 @@ class DialogSingletonMixin:
         if cls in DialogSingletonMixin._dialogs_map:
             raise TypeError(f"ERROR: More than one instance of {class_name} cannot exist.")
         log.debug(f'SingletonDialog created for {class_name}') if log.debug_enabled else None
+        assert isinstance(self, QDialog)
         DialogSingletonMixin._dialogs_map[cls] = self
 
     def closeEvent(self, event) -> None:
@@ -286,7 +288,7 @@ class ToolButton(QToolButton):
             self._busy_timer.start(30)  # ~33 fps
         else:  # Stop spinning and restore original icon
             self._busy_timer.stop()
-            self.setIcon(self._original_icon)
+            self.setIcon(self._original_icon)  # type: ignore - will have a value
 
     def _update_busy_icon(self):
         size = self.iconSize()  # Use the button's icon size (or a default size if none)
