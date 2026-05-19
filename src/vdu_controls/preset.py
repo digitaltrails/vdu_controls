@@ -35,10 +35,10 @@ class PresetTransitionFlag(IntFlag):
     SIGNAL = 4
     ALWAYS = 7
 
-    abbreviations = {NONE: '', SCHEDULED: TIME_CLOCK_SYMBOL, MENU: MENU_SYMBOL,
+    abbreviations = {NONE: '', SCHEDULED: TIME_CLOCK_SYMBOL, MENU: MENU_SYMBOL,  # type: ignore - not an enum value
                      SIGNAL: SIGNAL_SYMBOL, ALWAYS: TRANSITION_ALWAYS_SYMBOL}
 
-    descriptions = {
+    descriptions = {   # type: ignore  - not an enum value
         NONE: QT_TR_NOOP('Always immediately'), SCHEDULED: QT_TR_NOOP('Smoothly on solar/time'),
         MENU: QT_TR_NOOP('Smoothly on menu'),
         SIGNAL: QT_TR_NOOP('Smoothly on signal'), ALWAYS: QT_TR_NOOP('Always smoothly')}

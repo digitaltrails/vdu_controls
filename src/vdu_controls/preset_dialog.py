@@ -9,6 +9,7 @@ from functools import partial
 from pathlib import Path
 from typing import Callable, Dict, List, Tuple, TYPE_CHECKING, cast
 
+from vdu_controls.ddcutil_aggregator import VduStableId
 from vdu_controls.qt_imports import QSize, QEvent, Qt, pyqtSignal, QPoint, QRegularExpression
 from vdu_controls.qt_imports import QFontMetrics, QFont, QImage, QPixmap, QPainter, QColor, QPen, QPolygon, QMouseEvent, QDoubleValidator, \
     QResizeEvent, QValidator, QRegularExpressionValidator
@@ -496,7 +497,7 @@ class PresetElevationChartWidget(QLabel):
                             180 - ev_key.elevation)  # anticlockwise from 0
             else:
                 angle_above_horz = 180 + 19
-            _, pos_as_radius = self.calc_angle_radius(self.current_pos) if self.current_pos else (0, 21)
+            _, pos_as_radius = self.calc_angle_radius(self.current_pos) if self.current_pos is not None else (0, 21)
             pie_width = pie_height = range_iy * 2
             span_angle = -(angle_above_horz + 19)  # From start angle spanning counterclockwise back toward the right to -19.
             painter.setPen(
@@ -571,13 +572,14 @@ class PresetElevationChartWidget(QLabel):
 
     def refresh_day_cache(self, logical_width: int, origin_iy: int, range_iy: int) -> None:
         # Perform computations for today's curve and maxima.
+        assert self.location is not None
         _reverse_x = self._reverse_X
         new_cache_key = ((zoned_now().replace(hour=0, minute=0, second=0, microsecond=0)), logical_width, origin_iy, range_iy)
         if self.cache_key and new_cache_key == self.cache_key:
             return
         log.debug(f"PresetElevationChartWidget: change of key values {new_cache_key=}, recalculating")
         self.cache_key = new_cache_key
-        max_sun_height = npx(-90.0)
+        max_sun_height = npx(-90)
         solar_noon_x, solar_noon_y = 0, 0  # Solar noon
         curve_points = []
 
@@ -613,8 +615,9 @@ class PresetElevationChartWidget(QLabel):
         return self.current_pos
 
     def mousePressEvent(self, event: QMouseEvent | None) -> None:
-        if event:
-            if pos := self.update_current_pos(event.pos()):
+        if event is not None:
+            pos = self.update_current_pos(event.pos())
+            if pos is not None:
                 angle, radius = self.calc_angle_radius(pos)
                 if radius <= self.radius_of_deletion:
                     self.set_elevation_key(None)
@@ -678,7 +681,7 @@ class PresetDaylightFactorWidget(QWidget):
 
         self.df_checkbox.stateChanged.connect(df_init)
         for widget in (self.df_checkbox, self.df_label, self.df_input):
-            self.layout().addWidget(widget)
+            self.layout().addWidget(widget)   # type: ignore - will have a layout by now
 
     def setEnabled(self, enabled):
         self.df_checkbox.setChecked(enabled)
@@ -1130,7 +1133,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
     def find_preset_widget(self, preset_name: str) -> PresetItemWidget | None:
         for i in range(self.preset_widgets_layout.count()):
-            w = self.preset_widgets_layout.itemAt(i).widget()
+            w = self.preset_widgets_layout.itemAt(i).widget()   # type: ignore - will be a widget at i
             if isinstance(w, PresetItemWidget) and w.name == preset_name:
                 return w
         return None
@@ -1153,7 +1156,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.content_controls_map = {}
         self.vip_menu.clear()  # VIP - VDU Initialization Preset
         for count, vdu_section_name in enumerate(self.base_ini.data_sections()):
-            vdu_name = self.main_controller.get_vdu_preferred_name(vdu_section_name)
+            vdu_name = self.main_controller.get_vdu_preferred_name(cast(VduStableId, vdu_section_name))
             if count > 0:
                 line = QFrame()
                 line.setFrameShape(QFrame.Shape.HLine)
@@ -1184,7 +1187,8 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         if preset.preset_ini.has_section('preset'):
             self.editor_at_elevation_widget.clear()  # Clear both fields to stop any cross-field validation triggers.
             self.editor_at_time_widget.clear()
-            self.editor_at_time_widget.setText(preset.get_at_time().strftime("%H:%M") if preset.get_at_time() else '')
+            at_time = preset.get_at_time()
+            self.editor_at_time_widget.setText(at_time.strftime("%H:%M") if at_time is not None else '')
             self.editor_at_elevation_widget.set_elevation_from_text(
                 preset.preset_ini.get('preset', 'solar-elevation', fallback=None))
             self.editor_at_elevation_widget.set_required_weather_filename(
@@ -1227,9 +1231,9 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         preset_ini.set('preset', 'daylight-factor', str(self.editor_at_elevation_widget.df_widget.df_input.text()))
 
     def get_preset_widgets(self) -> List[PresetItemWidget]:
-        return [self.preset_widgets_layout.itemAt(i).widget()
+        return [self.preset_widgets_layout.itemAt(i).widget()   # type:ignore there will be a widget at i
                 for i in range(0, self.preset_widgets_layout.count() - 1)
-                if isinstance(self.preset_widgets_layout.itemAt(i).widget(), PresetItemWidget)]
+                if isinstance(self.preset_widgets_layout.itemAt(i).widget(), PresetItemWidget)]  # type:ignore there will be a widget at i
 
     def get_preset_names_in_order(self) -> List[str]:
         return [w.name for w in self.get_preset_widgets()]
