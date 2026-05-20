@@ -9,7 +9,7 @@ from vdu_controls.icon_utils import si, StdPixmap
 from vdu_controls.qt_imports import QDialog, QVBoxLayout
 from vdu_controls.qt_imports import QSvgWidget
 from vdu_controls.qt_imports import Qt
-from vdu_controls.scaling import npx
+from vdu_controls.scaling import dpx
 from vdu_controls.widgets import SubWinDialog, StdButton
 
 # Creates an SVG of grey rectangles typical of the sort used for VDU calibration.
@@ -49,7 +49,7 @@ class GreyScaleDialog(SubWinDialog):
         renderer = svg_widget.renderer()
         assert renderer is not None
         renderer.load(GREY_SCALE_SVG)
-        svg_widget.setMinimumSize(npx(600), npx(400))
+        svg_widget.setMinimumSize(dpx(300), dpx(200))
         svg_widget.setToolTip(tr(
             'Grey Scale Reference for VDU adjustment.\n\n'
             'Set contrast toward the maximum (for HDR monitors\n'

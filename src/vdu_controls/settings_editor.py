@@ -20,7 +20,7 @@ from vdu_controls.constants import IP_ADDRESS_INFO_URL, CONFIG_FILE_PREFER_QT5
 from vdu_controls.icon_utils import si, StdPixmap
 from vdu_controls.app_locale import tr
 import vdu_controls.logging as log
-from vdu_controls.scaling import npx, native_font_height
+from vdu_controls.scaling import dpx, desktop_font_height
 from vdu_controls.widgets import SubWinDialog, StdButton, MBox, MIcon, MBtn, FasterFileDialog, alter_margins, DialogSingletonMixin
 
 
@@ -109,8 +109,8 @@ class SettingsDialog(SubWinDialog, DialogSingletonMixin):
 
         self.tabs_widget.currentChanged.connect(_tab_changed)
 
-        self.resize(npx(1600), npx(1000))
-        self.setMinimumSize(npx(1024), npx(800))
+        self.resize(dpx(900), dpx(500))
+        self.setMinimumSize(dpx(512), dpx(400))
         self.reconfigure([default_config, *vdu_config_list])
         self.make_visible()
 
@@ -118,7 +118,7 @@ class SettingsDialog(SubWinDialog, DialogSingletonMixin):
         self.bottom_status_bar.showMessage(message, msecs)
 
     def sizeHint(self):
-        return QSize(npx(1700), npx(1000))
+        return QSize(dpx(900), dpx(500))
 
     def update_tab_ops(self, tab: SettingsEditorTab) -> None:
         self.tab_ops_label.setText(tr('{}: ').format(tab.preferred_name))
@@ -243,7 +243,7 @@ class SettingsEditorTab(QWidget):
                         if option_definition.sub_group and option_definition.sub_group != previous_sub_group:
                             if row_index > 0:
                                 row_index += 1
-                                booleans_grid.setRowMinimumHeight(row_index, npx(20))  # type: ignore - will have a value by now
+                                booleans_grid.setRowMinimumHeight(row_index, dpx(10))  # type: ignore - will have a value by now
                                 row_index += 1
                             booleans_grid.addWidget(QLabel(option_definition.sub_group.localized_name), row_index, 0)   # type: ignore
                             row_index += 1
@@ -480,8 +480,8 @@ class LatitudeLongitudeValidator(QRegularExpressionValidator):
 class SettingsEditorLocationWidget(SettingsEditorLineBase):
     def __init__(self, section_editor: SettingsEditorTab, option_def: ConfOptDef) -> None:
         super().__init__(section_editor, option_def)
-        self.text_input.setFixedWidth(npx(500))
-        self.text_input.setMaximumWidth(npx(500))
+        self.text_input.setFixedWidth(dpx(250))
+        self.text_input.setMaximumWidth(dpx(250))
         self.text_input.setMaxLength(250)
         self.validator = LatitudeLongitudeValidator()
         self.text_input.setText(section_editor.ini_editable[self.conf_section][self.conf_name])
@@ -532,7 +532,7 @@ class SettingsEditorLongTextWidget(SettingsEditorFieldBase):
         text_label = QLabel(self.ui_label_text)
         layout.addWidget(text_label)
         text_editor = QPlainTextEdit(section_editor.ini_editable[self.conf_section][self.conf_name])
-        text_editor.setMinimumHeight(native_font_height(100))
+        text_editor.setMinimumHeight(desktop_font_height(100))
         text_editor.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         def _text_changed() -> None:

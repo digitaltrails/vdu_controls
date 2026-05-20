@@ -67,8 +67,29 @@ STANDARD_ICON_PATHS = (Path("/usr/share/vdu_controls/icons"), Path("/usr/share/i
 # Use a slight hack to make MsgBox.resizable.
 RESIZABLE_MESSAGEBOX_HACK = True
 
-DEVELOPERS_NATIVE_FONT_HEIGHT = 32  # The font height in physical pixels being used on my development desktop.
-
+# Determining the size of graphical elements. The dimensions are based on the
+# pixel size of a typical character.
+#
+# The modern approach is to assume everyone is on a virtual 96 DPI scaled to
+# physical DPI by the windowing system (X11/Waylang).  But because some software
+# isn't scaling aware, scaling can cause issues when tyring to preview images at
+# 100%, one image pixel may no longer map to one display pixel.  Similarly, when
+# trying to measure with a ruler, 1 inch or 1 cm measured on screen may not
+# agree with the value measured on a printout.  This means a window width
+# set to X, might not measure X in physical pixels.
+#
+# In addition to any overall scaling going on, the users selection of font
+# size affects spacing.   We take that into account by looking at their
+# default QLabel font size versus what was used on the development PC.
+#
+# This number can be decreased to scale up the sizing, which will make plots
+# and window dimensions slightly larger, or reduced to make things
+# smaller.
+#
+# I'm running with hardware 193-DPI (not virtual 96-DPI), Qt thinks my
+# QLabel font size is 16 pixels (remembering it this might be virtual
+# scaled pixels, not actual pixels).
+DEVELOPERS_NATIVE_FONT_HEIGHT = 16
 
 class MsgDestination(Enum):
     DEFAULT = 0

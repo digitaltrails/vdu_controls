@@ -12,7 +12,7 @@ from vdu_controls.qt_imports import (QTimer, Qt, QRect, QPixmap, QPainter, QPen,
                                      QSize, QLayout, QLabel, QStyle, QDir, QMessageBox, QFileDialog, QVBoxLayout, QDialog,
                                      QSlider, QLineEdit, QMouseEvent, QMargins, QSvgWidget, QPushButton, QHBoxLayout,
                                      QtCore, QTextEdit, QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING)
-from vdu_controls.scaling import native_font_height, npx
+from vdu_controls.scaling import desktop_font_height, npx, dpx
 
 
 def alter_margins(target: QWidget | QLayout,
@@ -86,10 +86,10 @@ class TitleButton(StdButton):
         layout = QHBoxLayout()
         self.setLayout(layout)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self.svg_icon = ThemedSvgWidget(icon_source, native_font_height(scaled=1.8), native_font_height(scaled=1.8), parent=self)
+        self.svg_icon = ThemedSvgWidget(icon_source, desktop_font_height(scaled=1.8), desktop_font_height(scaled=1.8), parent=self)
         layout.addWidget(self.svg_icon)
         self.label = QLabel(f"<span style='font-weight:bold;'>{main_text}<br/>"
-                            f"<span style='font-size:{native_font_height(0.5)}px; font-weight:normal;'>{sub_text}</span>")
+                            f"<span style='font-size:{desktop_font_height(0.5)}px; font-weight:normal;'>{sub_text}</span>")
         self.label.setTextFormat(Qt.TextFormat.RichText)
         self.label.setWordWrap(True)
         self.label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)  # Prevent label from swallowing clicks
@@ -150,9 +150,9 @@ class MBox(QMessageBox):
         result = super().event(event)
         if RESIZABLE_MESSAGEBOX_HACK and event:
             if event.type() == QEvent.Type.MouseMove or event == QEvent.Type.MouseButtonPress:
-                self.setMaximumSize(npx(1200), npx(800))
+                self.setMaximumSize(dpx(600), dpx(400))
                 if text_edit_field := self.findChild(QTextEdit):
-                    text_edit_field.setMaximumHeight(npx(600))
+                    text_edit_field.setMaximumHeight(dpx(300))
         return result
 
 
@@ -160,7 +160,7 @@ class PushButtonLeftJustified(QPushButton):
     def __init__(self, text: str | None = None, parent: QWidget | None = None, flat: bool = False) -> None:
         super().__init__(parent=parent)
         self.label = QLabel()
-        self.setContentsMargins(npx(10), 0, npx(10), 0)  # Not sure if this helps
+        self.setContentsMargins(dpx(5), 0, dpx(5), 0)  # Not sure if this helps
         self.setLayout(widget_layout := QVBoxLayout())
         widget_layout.addWidget(self.label)
         widget_layout.setContentsMargins(0, 0, 0, 0)  # Seems to fix top/bottom clipping on openbox and xfce
@@ -300,7 +300,7 @@ class ToolButton(QToolButton):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         if QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING:
             painter.setRenderHint(QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING)
-        pen_width = max(npx(2), size.width() // 10)  # Determine a good pen width relative to size
+        pen_width = max(dpx(1), size.width() // 10)  # Determine a good pen width relative to size
         painter.setPen(QPen(self.palette().buttonText().color(), pen_width, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
         rect = QRect(0, 0, size.width(), size.height()).adjusted(margin := pen_width // npx(2) + npx(1), margin, -margin, -margin)
         painter.drawArc(rect, self._busy_angle * 16, 270 * 16)  # Draw the rotating arc (270 degrees)

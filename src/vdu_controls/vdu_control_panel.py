@@ -15,7 +15,7 @@ from vdu_controls.preset import Preset
 from vdu_controls.qt_imports import QWidget, QVBoxLayout, QFrame, QApplication, QHBoxLayout, QLabel, QSlider, QSpinBox, QComboBox, \
     QStandardItemModel
 from vdu_controls.qt_imports import Qt, pyqtSignal
-from vdu_controls.scaling import native_font_height, npx
+from vdu_controls.scaling import desktop_font_height, dpx
 from vdu_controls.svg import PANEL_CONNECTED_ICON_SOURCE, VDU_CONNECTED_ICON_SOURCE
 from vdu_controls.vdu_controller import VduController
 from vdu_controls.vdu_controls_config import VcpCapability, SUPPORTED_VCP_BY_CODE
@@ -190,14 +190,14 @@ class VduControlSlider(VduControlBase):
         self.setToolTipDuration(TOOLTIP_DURATION_MSEC)
         if (vcp_capability.vcp_code in SUPPORTED_VCP_BY_CODE
                 and (icon_source := SUPPORTED_VCP_BY_CODE[vcp_capability.vcp_code].icon_source) is not None):
-            svg_icon = ThemedSvgWidget(icon_source, native_font_height(scaled=1.8), native_font_height(scaled=1.8))
+            svg_icon = ThemedSvgWidget(icon_source, desktop_font_height(scaled=1.8), desktop_font_height(scaled=1.8))
             self.svg_icon = svg_icon
             layout.addWidget(svg_icon)
         else:
             layout.addWidget(QLabel(tr(vcp_capability.name)))
 
         self.slider = slider = ClickableSlider()
-        slider.setMinimumWidth(npx(200))
+        slider.setMinimumWidth(dpx(100))
         self.range_restriction = vcp_capability.values
         if self.range_restriction and len(self.range_restriction) >= 2:  # Would > 2 be an error - don't worry about it
             slider.setRange(int(self.range_restriction[1]), int(self.range_restriction[2]))

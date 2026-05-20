@@ -28,7 +28,7 @@ from vdu_controls.qt_imports import QT_TR_NOOP, Qt, QTimer, pyqtSignal, QPointF,
 from vdu_controls.qt_imports import QVBoxLayout, QWidget, QGridLayout, QComboBox, QCheckBox, QLabel, QSpinBox, QListWidget, \
     QStatusBar, \
     QHBoxLayout, QListWidgetItem, QApplication, QInputDialog
-from vdu_controls.scaling import npx, native_font_height
+from vdu_controls.scaling import npx, dpx, desktop_font_height
 from vdu_controls.solar_calc import calc_solar_lux
 from vdu_controls.svg import SWATCH_ICON_SOURCE, SUN_SVG
 from vdu_controls.unicode import TIMER_RUNNING_SYMBOL
@@ -79,7 +79,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.drawing_color_map: Dict[VduStableId, QColor] = {}
         self.current_brightness_map: Dict[VduStableId, int] = {}
         self.has_profile_changes = False
-        self.setMinimumWidth(npx(950))
+        self.setMinimumWidth(dpx(500))
         self.path = ConfIni.get_path('AutoLux')
         self.device_name = ''
         self.lux_config: LuxConfig = main_controller.get_lux_auto_controller().get_lux_config()
@@ -124,8 +124,8 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.profile_selector_widget.setSizeAdjustPolicy(QListWidget.SizeAdjustPolicy.AdjustToContents)
         self.profile_selector_widget.setFlow(QListWidget.Flow.LeftToRight)
         self.profile_selector_widget.setSpacing(0)
-        self.profile_selector_widget.setMinimumWidth(npx(940))
-        self.profile_selector_widget.setMinimumHeight(native_font_height(scaled=1.4))
+        self.profile_selector_widget.setMinimumWidth(dpx(495))
+        self.profile_selector_widget.setMinimumHeight(desktop_font_height(scaled=1.4))
 
         main_layout.addWidget(self.profile_selector_widget, stretch=0)
 
@@ -307,7 +307,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                         self.profile_selector_widget.setCurrentRow(index)
                         self.profile_plot.current_vdu_sid = candidate_id
                 self.profile_selector_widget.setFixedHeight(
-                    native_font_height(scaled=1.5) * (1 if len(connected_id_list) <= 3 else 5))
+                    desktop_font_height(scaled=1.5) * (1 if len(connected_id_list) <= 3 else 5))
         finally:
             self.profile_selector_widget.blockSignals(False)
         self.configure_ui(lux_auto_controller.lux_meter)
@@ -441,8 +441,8 @@ class LuxGaugeWidget(QWidget):
         self.current_lux_display.setFont(big_font)
         widget_layout.addWidget(self.current_lux_display)
         self.plot_widget = QLabel()
-        self.plot_widget.setFixedWidth(npx(340))
-        self.plot_widget.setFixedHeight(npx(100))
+        self.plot_widget.setFixedWidth(dpx(170))
+        self.plot_widget.setFixedHeight(dpx(50))
         widget_layout.addWidget(self.plot_widget)
         self.current_meter: LuxMeterDevice | None = None
         self.stats_label = QLabel()
@@ -481,8 +481,8 @@ class LuxGaugeWidget(QWidget):
         plot_height = self.plot_widget.height()
         # Create a plot of recent historical lux readings.
         lux_plot_width = self.plot_widget.height()  # Square with height
-        line_width = npx(4)
-        thin_line_width = npx(2)
+        line_width = dpx(2)
+        thin_line_width = dpx(1)
 
         painter.fillRect(0, 0, lux_plot_width, plot_height, self.common_background_color)
         painter.setPen(QPen(self.lux_bar_color, 1))
@@ -547,7 +547,7 @@ class LuxGaugeWidget(QWidget):
         middle = df_plot_left - margin // 2
         for i in (10, 100, 1_000, 10_000, 100_000):
             painter.drawLine(middle - line_width, y := self._y_from_lux(i, plot_height), middle + line_width, y)
-            painter.drawText(QPointF(middle + npx(6), y + 4), str(i))
+            painter.drawText(QPointF(middle + dpx(3), y + 4), str(i))
         # Draw hour ticks along the bottom
         tick_len = line_width * 2
         points_per_hour = df_plot_width / 24
@@ -558,7 +558,7 @@ class LuxGaugeWidget(QWidget):
         if most_recent_df_xy and most_recent_item and most_recent_df_xy[0]:
             if self.sun_image is None:
                 self.sun_image = create_image_from_svg_bytes(SUN_SVG.replace(SVG_LIGHT_THEME_COLOR, b"#feC053")).scaled(
-                    npx(36), npx(36))
+                    dpx(18), dpx(18))
             t = (most_recent_item.when - df_plot_day).total_seconds() // 60
             i = int(df_plot_left + t // minutes_per_point)
             if location:
@@ -626,8 +626,8 @@ class LuxProfileWidget(QLabel):
         self.x_origin, self.y_origin = 0, 0
         self.plot_width, self.plot_height = 0, 0
         self.setMouseTracking(True)  # Enable mouse move events so we can draw cross-hairs
-        self.setMinimumWidth(npx(600))
-        self.setMinimumHeight(npx(550))
+        self.setMinimumWidth(dpx(300))
+        self.setMinimumHeight(dpx(275))
 
     def resizeEvent(self, event: QResizeEvent | None) -> None:
         self.create_plot()
@@ -639,29 +639,29 @@ class LuxProfileWidget(QLabel):
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        self.plot_width, self.plot_height = self.width() - npx(200), self.height() - npx(170)
-        self.x_origin, self.y_origin = npx(120), self.plot_height + npx(80)
-        std_line_width = npx(4)
+        self.plot_width, self.plot_height = self.width() - dpx(100), self.height() - dpx(85)
+        self.x_origin, self.y_origin = dpx(60), self.plot_height + dpx(40)
+        std_line_width = dpx(2)
         interpolating = self.lux_dialog.is_interpolating()
         painter.fillRect(0, 0, self.width(), self.height(), QColor(0x5b93c5))
         painter.setPen(QPen(Qt.GlobalColor.white, std_line_width))
-        painter.drawText(self.width() // 3, npx(30), tr("Lux Brightness Response Profiles"))
+        painter.drawText(self.width() // 3, dpx(15), tr("Lux Brightness Response Profiles"))
 
-        tick_len = npx(5)
+        tick_len = dpx(2)
         painter.drawLine(self.x_origin, self.y_origin, self.x_origin + self.plot_width + 25, self.y_origin)  # Draw x-axis
         for lux in [0, 10, 100, 1_000, 10_000, 100_000]:  # Draw x-axis ticks
             x = self.x_from_lux(lux)
             painter.drawLine(self.x_origin + x, self.y_origin + tick_len, self.x_origin + x, self.y_origin - tick_len)
-            painter.drawText(self.x_origin + x - npx(8) * len(str(lux)), self.y_origin + npx(40), str(lux))
-        painter.drawText(self.x_origin + self.plot_width // 2 - len(str("Lux")), self.y_origin + npx(70), str("Lux"))
+            painter.drawText(self.x_origin + x - dpx(4) * len(str(lux)), self.y_origin + dpx(20), str(lux))
+        painter.drawText(self.x_origin + self.plot_width // 2 - len(str("Lux")), self.y_origin + dpx(35), str("Lux"))
 
         painter.drawLine(self.x_origin, self.y_origin, self.x_origin, self.y_origin - self.plot_height)  # Draw y-axis
         for brightness in range(0, 101, 10):  # Draw y-axis ticks
             y = self.y_from_percent(brightness)
             painter.drawLine(self.x_origin - tick_len, self.y_origin - y, self.x_origin + tick_len, self.y_origin - y)
-            painter.drawText(self.x_origin - npx(50), self.y_origin - y + npx(5), str(brightness))
+            painter.drawText(self.x_origin - dpx(25), self.y_origin - y + dpx(2), str(brightness))
         painter.save()
-        painter.translate(self.x_origin - npx(70), self.y_origin - self.plot_height // 2 + npx(6) * len(tr("Brightness %")))
+        painter.translate(self.x_origin - dpx(35), self.y_origin - self.plot_height // 2 + dpx(3) * len(tr("Brightness %")))
         painter.rotate(-90)
         painter.drawText(0, 0, tr("Brightness %"))
         painter.restore()
@@ -675,11 +675,11 @@ class LuxProfileWidget(QLabel):
         if min_v > 0:
             painter.setPen(QPen(Qt.GlobalColor.red, std_line_width // 2, Qt.PenStyle.DashLine))
             cutoff = self.y_origin - self.y_from_percent(min_v)
-            painter.drawLine(self.x_origin, cutoff, self.x_origin + self.plot_width + npx(25), cutoff)
+            painter.drawLine(self.x_origin, cutoff, self.x_origin + self.plot_width + dpx(12), cutoff)
         if max_v < 100:
             painter.setPen(QPen(Qt.GlobalColor.red, std_line_width // 2, Qt.PenStyle.DashLine))
             cutoff = self.y_origin - self.y_from_percent(max_v)
-            painter.drawLine(self.x_origin, cutoff, self.x_origin + self.plot_width + npx(25), cutoff)
+            painter.drawLine(self.x_origin, cutoff, self.x_origin + self.plot_width + dpx(12), cutoff)
 
         point_markers = []  # Draw profile lines/histogram per vdu, current_profile last/on-top, collect point marker locations
         for vdu_sid, vdu_data in [(vid, data) for vid, data in self.profiles_map.items() if vid != self.current_vdu_sid] + \
@@ -721,7 +721,7 @@ class LuxProfileWidget(QLabel):
                 painter.setPen(QPen(QColor(0xebfff9), std_line_width))
             painter.drawEllipse(x - marker_diameter // 2, y - marker_diameter // 2, marker_diameter, marker_diameter)
 
-        pyramid_base = npx(16)
+        pyramid_base = dpx(8)
         pyramid = [(-pyramid_base // 2, 0), (0, -pyramid_base), (pyramid_base // 2, 0)]
         for preset_point in self.preset_points:  # for each Preset: draw a vertical-line and white-triangle below axis
             painter.setPen(QPen(Qt.GlobalColor.white, std_line_width // 2, Qt.PenStyle.DashLine))
@@ -729,17 +729,17 @@ class LuxProfileWidget(QLabel):
             x = self.x_origin + self.x_from_lux(preset_point.lux)
             painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height)
             painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawPolygon(QPolygon([QPoint(x + tx, self.y_origin + npx(18) + ty) for tx, ty in pyramid]))
+            painter.drawPolygon(QPolygon([QPoint(x + tx, self.y_origin + dpx(9) + ty) for tx, ty in pyramid]))
 
         lux_color = QColor(0xfeC053)  # 0xfec053)
         if self.current_lux is not None:  # Draw a vertical-line at current lux
             painter.setPen(QPen(lux_color, npx(2)))  # fbc21b 0xffdd30 #fec053
             x_current_lux = self.x_origin + self.x_from_lux(self.current_lux)
-            painter.drawLine(x_current_lux, self.y_origin + npx(10), x_current_lux, self.y_origin - self.plot_height - npx(10))
+            painter.drawLine(x_current_lux, self.y_origin + dpx(5), x_current_lux, self.y_origin - self.plot_height - dpx(5))
             for brightness in range(10, 101, 10):  # Draw y-axis ticks on lux current lux
                 y = self.y_from_percent(brightness)
                 painter.drawLine(x_current_lux - 2, self.y_origin - y, x_current_lux + 2, self.y_origin - y)
-            trangle_h = npx(32)
+            trangle_h = dpx(16)
             current_brightness_pointer = [(0, 0), (-trangle_h, trangle_h // 2), (-trangle_h, -trangle_h // 2)]
             # Indicate current brightness at current lux
             for vdu_sid, brightness in self.lux_dialog.current_brightness_map.items():
@@ -768,29 +768,29 @@ class LuxProfileWidget(QLabel):
                     if match[0]:  # deletable: add a red circle
                         painter.setBrush(Qt.GlobalColor.white)
                         painter.drawEllipse(x - marker_diameter // 2, y - marker_diameter // 2, marker_diameter, marker_diameter)
-                    painter.drawLine(self.x_origin, y, self.x_origin + self.plot_width + npx(5), y)
-                    painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height - npx(5))
+                    painter.drawLine(self.x_origin, y, self.x_origin + self.plot_width + dpx(2), y)
+                    painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height - dpx(2))
                 else:  # Existing Preset point: vertical line; plus removal hint, a red triangle below axis
                     painter.setPen(QPen(Qt.GlobalColor.red if mouse_y > self.y_origin else Qt.GlobalColor.white, 2))
-                    painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height - npx(5))
+                    painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height - dpx(2))
                     painter.setPen(QPen(Qt.GlobalColor.red, npx(2)))
                     painter.setBrush(Qt.GlobalColor.white)
-                    painter.drawPolygon(QPolygon([QPoint(x + tx, self.y_origin + npx(18) + ty) for tx, ty in pyramid]))
+                    painter.drawPolygon(QPolygon([QPoint(x + tx, self.y_origin + dpx(9) + ty) for tx, ty in pyramid]))
                     if mouse_y > self.y_origin:  # Remove-Preset hint
                         painter.setPen(QPen(Qt.GlobalColor.black, npx(1)))
-                        painter.drawText(x + npx(10), self.y_origin - npx(35), tr("Click remove preset at {} lux").format(lux))
+                        painter.drawText(x + dpx(5), self.y_origin - dpx(17), tr("Click remove preset at {} lux").format(lux))
             else:  # Potential new Point - show precise position for adding a new point
                 lux, brightness = self.lux_from_x(x - self.x_origin), self.percent_from_y(y - self.y_origin)
                 point_preset_name = ''
                 painter.setPen(QPen(Qt.GlobalColor.white, npx(1)))
-                painter.drawLine(self.x_origin, y, self.x_origin + self.plot_width + npx(5), y)
-                painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height - npx(5))
+                painter.drawLine(self.x_origin, y, self.x_origin + self.plot_width + dpx(2), y)
+                painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height - dpx(2))
                 if mouse_y > self.y_origin:  # Below axis, show a hint for adding a Preset point: draw a red triangle below axis
                     painter.setPen(QPen(Qt.GlobalColor.red, npx(2)))
                     painter.setBrush(Qt.GlobalColor.white)
-                    painter.drawPolygon(QPolygon([QPoint(x + tx, self.y_origin + npx(18) + ty) for tx, ty in pyramid]))
+                    painter.drawPolygon(QPolygon([QPoint(x + tx, self.y_origin + dpx(9) + ty) for tx, ty in pyramid]))
                     painter.setPen(QPen(Qt.GlobalColor.black, npx(1)))
-                    painter.drawText(x + 10, self.y_origin - npx(35), tr("Click to add preset at {} lux").format(lux))
+                    painter.drawText(x + 10, self.y_origin - dpx(17), tr("Click to add preset at {} lux").format(lux))
             painter.setPen(QPen(Qt.GlobalColor.black, npx(1)))
             painter.drawText(x + 10, y - 10, f"{lux} lux, {brightness}% {point_preset_name}")  # Tooltip lux and percent
 

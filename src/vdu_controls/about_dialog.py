@@ -177,4 +177,4 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
         about_html_text = _ABOUT_TEMPLATE.format(data=template_data)
         self.setInformativeText(about_html_text)
 
-        self.setIconPixmap(icon_utils.get_splash_pixmap().scaledToHeight(scaling.npx(250)))
+        self.setIconPixmap(icon_utils.get_splash_pixmap().scaledToHeight(scaling.dpx(125)))

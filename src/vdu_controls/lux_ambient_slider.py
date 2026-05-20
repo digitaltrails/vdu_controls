@@ -15,7 +15,7 @@ from vdu_controls.constants import TOOLTIP_DURATION_MSEC
 from vdu_controls.app_locale import tr
 from vdu_controls.lux_meters import LuxMeterSemiAutoDevice
 
-from vdu_controls.scaling import native_font_height, npx
+from vdu_controls.scaling import desktop_font_height, dpx
 from vdu_controls.svg import LUX_SUNLIGHT_SVG, LUX_DAYLIGHT_SVG, LUX_OVERCAST_SVG, LUX_TWILIGHT_SVG, LUX_SUBDUED_SVG, LUX_DARK_SVG, \
     AMBIENT_PANEL_ICON_SOURCE
 from vdu_controls.widgets import ThemedSvgWidget, alter_margins, TitleButton, ClickableSlider, LineEditAll, StdButton, \
@@ -52,7 +52,7 @@ class LuxAmbientSlider(QWidget):
             LuxZone(tr("Subdued"), LUX_SUBDUED_SVG, 15, 100, 20, column_span=3),
             LuxZone(tr("Dark"), LUX_DARK_SVG, 0, 15, 2, column_span=4), ]
         self.current_value = 10_000
-        self.status_icon = ThemedSvgWidget(self.zones[0].icon_svg, native_font_height(scaled=2.0), native_font_height(scaled=2.0),
+        self.status_icon = ThemedSvgWidget(self.zones[0].icon_svg, desktop_font_height(scaled=2.0), desktop_font_height(scaled=2.0),
                                            self)
         self.current_name: str | None = None
         self.current_zone: LuxZone | None = None
@@ -83,7 +83,7 @@ class LuxAmbientSlider(QWidget):
         self.slider = ClickableSlider()
         self.slider.setToolTip(tr("Ambient light level input (lux value)"))
         self.slider.setToolTipDuration(TOOLTIP_DURATION_MSEC)
-        self.slider.setMinimumWidth(npx(200))
+        self.slider.setMinimumWidth(dpx(100))
         self.slider.setRange(0, int(math.log10(100000) * 1000))
         self.slider.setSingleStep(1)
         self.slider.setPageStep(100)
@@ -139,7 +139,7 @@ class LuxAmbientSlider(QWidget):
         self.lux_input_field.editingFinished.connect(_input_field_editing_finished)
 
         col = 0
-        log10_icon_size = QSize(native_font_height(scaled=1), native_font_height(scaled=1))
+        log10_icon_size = QSize(desktop_font_height(scaled=1), desktop_font_height(scaled=1))
         self.label_map: Dict[StdButton, bytes] = {}
         for zone in reversed(self.zones):
             zone_button = ThemedSvgButton(zone.icon_svg, icon_size=log10_icon_size,

@@ -45,7 +45,7 @@ from vdu_controls.preset_controller import PresetController
 from vdu_controls.preset_dialog import PresetsDialog
 from vdu_controls.qt_imports import *
 from vdu_controls.release import release_notes
-from vdu_controls.scaling import native_font_height, npx
+from vdu_controls.scaling import desktop_font_height, dpx
 from vdu_controls.settings_editor import SettingsDialog
 from vdu_controls.solar_calc import create_elevation_map
 from vdu_controls.unicode import *
@@ -101,7 +101,7 @@ class VduMainToolBar(QToolBar):
         self.tool_buttons = tool_buttons
         for button in self.tool_buttons:
             self.addWidget(button)
-        self.setIconSize(QSize(native_font_height(), native_font_height()))
+        self.setIconSize(QSize(desktop_font_height(), desktop_font_height()))
         self.status_area = QStatusBar()
         self.addWidget(self.status_area)
         self.menu_button = ToolButton(svg.MENU_ICON_SOURCE, tr("Context and Preset Menu"), self)
@@ -181,8 +181,8 @@ class VduControlsMainPanel(QWidget):
                     old_layout.removeItem(item)
                     item.widget().deleteLater() # pyright: ignore
         controllers_layout = QVBoxLayout()
-        controllers_layout.setSpacing(npx(5))
-        alter_margins(controllers_layout, top=npx(5), bottom=npx(5))
+        controllers_layout.setSpacing(dpx(2))
+        alter_margins(controllers_layout, top=dpx(2), bottom=dpx(2))
         self.setLayout(controllers_layout)
 
         warnings_enabled = main_config.is_set(ConfOpt.WARNINGS_ENABLED)
@@ -1077,7 +1077,7 @@ class VduAppWindow(QMainWindow):
 
         splash_pixmap = get_splash_pixmap()
         splash = QSplashScreen(
-            splash_pixmap.scaledToWidth(native_font_height(scaled=26)).scaledToHeight(native_font_height(scaled=13)),
+            splash_pixmap.scaledToWidth(desktop_font_height(scaled=26)).scaledToHeight(desktop_font_height(scaled=13)),
             Qt.WindowType.WindowStaysOnTopHint) if main_config.is_set(ConfOpt.SPLASH_SCREEN_ENABLED) else None
         if splash is not None:
             splash.show()
@@ -1258,21 +1258,21 @@ class VduAppWindow(QMainWindow):
         self.setCentralWidget(self.scroll_area)
         my_screen = self.screen()
         assert my_screen is not None
-        available_height = my_screen.availableGeometry().height() - npx(200)  # Minus allowance for panel/tray
+        available_height = my_screen.availableGeometry().height() - dpx(100)  # Minus allowance for panel/tray
         hint_height = self.main_panel.sizeHint().height()  # The hint is the actual required layout space
         hint_width = self.main_panel.sizeHint().width()
         log.debug(f"create_main_control_panel: {hint_height=} {available_height=} {self.minimumHeight()=}")
         if hint_height > available_height:
             log.debug(f"Main panel too high, adding scroll-area {hint_height=} {available_height=}") if log.debug_enabled else None
             self.setMaximumHeight(available_height)
-            self.setMinimumWidth(hint_width + npx(20))  # Allow extra space for disappearing scrollbars
+            self.setMinimumWidth(hint_width + dpx(10))  # Allow extra space for disappearing scrollbars
         else:  # Don't mess with the size unnecessarily - let the user determine it?
             number_of_vdus = len(self.main_controller.get_vdu_stable_id_list())
-            self.setMinimumHeight(hint_height + npx(30) * (number_of_vdus + 1))
+            self.setMinimumHeight(hint_height + dpx(15) * (number_of_vdus + 1))
             if hint_height != self.height():
                 self.setMinimumWidth(self.width())
                 self.adjustSize()
-            self.setMinimumWidth(hint_width + npx(20))
+            self.setMinimumWidth(hint_width + dpx(10))
 
         self.splash_message_qtsignal.emit(tr("Checking Presets"))
 
@@ -1412,7 +1412,7 @@ class VduAppWindow(QMainWindow):
         desktop_width, desktop_height = (my_screen.availableGeometry().width(),
                                          my_screen.availableGeometry().height())
         # The following calculations allow for the tray being on any edge of the desktop...
-        margin = min(abs(desktop_height - cursor_y), abs(desktop_width - cursor_x), npx(100)) + npx(25) if self.tray else 0
+        margin = min(abs(desktop_height - cursor_y), abs(desktop_width - cursor_x), dpx(50)) + dpx(12) if self.tray else 0
         x = cursor_x - app_width - margin if cursor_x > app_width else cursor_x + margin
         y = cursor_y - app_height - margin if cursor_y > app_height else cursor_y + margin
         log.debug(f"decide_window_position: {x=} {y=} {app_width=} {app_height=} {cursor_x=} {cursor_y=} {margin=}")

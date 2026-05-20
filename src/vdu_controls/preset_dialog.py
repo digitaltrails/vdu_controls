@@ -25,7 +25,7 @@ from vdu_controls.app_locale import tr, translate_option
 import vdu_controls.logging as log
 from vdu_controls.misc import zoned_now, proper_name, GeoLocation
 from vdu_controls.preset import Preset, PresetTransitionFlag, PresetScheduleStatus
-from vdu_controls.scaling import npx, native_font_height
+from vdu_controls.scaling import npx, dpx, desktop_font_height
 from vdu_controls.solar_calc import SolarElevationKey, SolarElevationData, create_elevation_map, calc_solar_lux, \
     format_solar_elevation_abbreviation, parse_solar_elevation_ini_text, format_solar_elevation_ini_text
 from vdu_controls.svg import SUN_SVG, VDU_POWER_ON_ICON_SOURCE
@@ -54,8 +54,8 @@ class PresetItemWidget(QWidget):
         self.preset_name_button.clicked.connect(partial(edit_action, preset=preset))
         self.preset_name_button.setToolTip(tr('Activate this Preset and edit its options.'))
         self.preset_name_button.setAutoDefault(False)
-        self.preset_name_button.setFixedSize(QSize(npx(300), native_font_height(scaled=1.5)))
-        line_layout.addSpacing(npx(20))
+        self.preset_name_button.setFixedSize(QSize(dpx(150), desktop_font_height(scaled=1.5)))
+        line_layout.addSpacing(dpx(10))
         for button in (
                 StdButton(icon=si(self, StdPixmap.SP_DriveFDIcon), tip=tr("Update this preset from the current VDU settings."),
                           clicked=partial(save_action, from_widget=self), flat=True),
@@ -128,7 +128,7 @@ class PresetItemWidget(QWidget):
 
 class PresetActivationButton(StdButton):
     def __init__(self, preset: Preset) -> None:
-        super().__init__(icon=preset.create_icon(), icon_size=QSize(native_font_height(), native_font_height()),
+        super().__init__(icon=preset.create_icon(), icon_size=QSize(desktop_font_height(), desktop_font_height()),
                          title=preset.get_title_name(), tip=tr("Restore {} (immediately)").format(preset.get_title_name()))
         self.preset = preset
 
@@ -142,7 +142,7 @@ class PresetActivationButton(StdButton):
 class PresetIconPickerButton(StdButton):
 
     def __init__(self) -> None:
-        super().__init__(icon_size=QSize(native_font_height(), native_font_height()),
+        super().__init__(icon_size=QSize(desktop_font_height(), desktop_font_height()),
                          clicked=self.choose_preset_icon_action, flat=True, auto_default=False,
                          tip=tr('Choose a preset icon.'))
         self.setIcon(si(self, PresetsDialog.NO_ICON_ICON_NUMBER))
@@ -395,7 +395,7 @@ class PresetElevationChartWidget(QLabel):
 
     def __init__(self) -> None:
         super().__init__()
-        self.setMinimumSize(npx(300), npx(350))
+        self.setMinimumSize(dpx(150), dpx(175))
         self.sun_image: QImage | None = None
         self.setMouseTracking(True)
         self.in_drag = False
@@ -408,10 +408,10 @@ class PresetElevationChartWidget(QLabel):
             self.elevation_steps.append(SolarElevationKey(EASTERN_SKY, i))
         for i in range(90, -20, -1):
             self.elevation_steps.append(SolarElevationKey(WESTERN_SKY, i))
-        self.noon_x: int = npx(100)
-        self.noon_y: int = npx(25)
-        self.horizon_y: int = npx(75)
-        self.radius_of_deletion = npx(50)
+        self.noon_x: int = dpx(50)
+        self.noon_y: int = dpx(12)
+        self.horizon_y: int = dpx(37)
+        self.radius_of_deletion = dpx(25)
         self.solar_max_t: datetime | None = None
         self.last_event_time = sys_time.time()
         self.cache_key: Tuple[datetime, int, int, int] | None = None
@@ -444,7 +444,7 @@ class PresetElevationChartWidget(QLabel):
         origin_iy, range_iy = round(logical_height / 2), round(logical_height / 2.5)
         self.radius_of_deletion = round(range_iy * 0.8)
         self.horizon_y = origin_iy
-        line_width = npx(4)
+        line_width = dpx(2)
         thin_line_width = npx(2)
         dp_ratio = self.devicePixelRatio()
         pixmap = QPixmap(round(logical_width * dp_ratio), round(logical_height * dp_ratio))
@@ -485,10 +485,10 @@ class PresetElevationChartWidget(QLabel):
             painter.drawLine(_reverse_x(solar_noon_x), origin_iy, _reverse_x(solar_noon_x), 0)
             painter.setPen(QPen(Qt.GlobalColor.white, line_width))
             painter.setFont(QFont(QApplication.font().family(), pt := 18, QFont.Weight.Bold))
-            painter.drawText(QPoint(_reverse_x((txt_margin := npx(25)) + pt), origin_iy - npx(32)), tr("E"))
-            painter.drawText(QPoint(_reverse_x(logical_width - txt_margin), origin_iy - npx(32)), tr("W"))
+            painter.drawText(QPoint(_reverse_x((txt_margin := dpx(12)) + pt), origin_iy - dpx(16)), tr("E"))
+            painter.drawText(QPoint(_reverse_x(logical_width - txt_margin), origin_iy - dpx(16)), tr("W"))
             time_text = sun_plot_time.strftime("%H:%M") if sun_plot_time else "____"
-            painter.drawText(_reverse_x(solar_noon_x + logical_width // 4), logical_height - npx(25),
+            painter.drawText(_reverse_x(solar_noon_x + logical_width // 4), logical_height - dpx(12),
                              f"{ev_key.elevation if ev_key else 0:3d}{DEGREE_SYMBOL} {time_text}")
 
             # Draw pie/compass angle
@@ -511,16 +511,16 @@ class PresetElevationChartWidget(QLabel):
             # Draw drag-dot
             painter.setFont(QFont(QApplication.font().family(), 8, QFont.Weight.Normal))
             if self.current_pos is not None or self.in_drag or pos_as_radius >= self.radius_of_deletion:
-                painter.setPen(QPen(Qt.GlobalColor.red, npx(6)))
+                painter.setPen(QPen(Qt.GlobalColor.red, dpx(3)))
                 painter.setBrush(Qt.GlobalColor.white)
                 ddot_radians = math.radians(angle_above_horz if ev_key else -19)
-                ddot_radius = npx(8)
+                ddot_radius = dpx(4)
                 ddot_x = round(range_iy * math.cos(ddot_radians)) - ddot_radius
                 ddot_y = round(range_iy * math.sin(ddot_radians)) + ddot_radius
                 painter.drawEllipse(_reverse_x(solar_noon_x - ddot_x), origin_iy - ddot_y, ddot_radius * 2, ddot_radius * 2)
                 if not self.in_drag:
                     painter.setPen(QPen(Qt.GlobalColor.black, 1))
-                    painter.drawText(QPoint(_reverse_x(solar_noon_x - ddot_x) + npx(10), origin_iy - ddot_y - npx(5)),
+                    painter.drawText(QPoint(_reverse_x(solar_noon_x - ddot_x) + dpx(5), origin_iy - ddot_y - dpx(2)),
                                      tr("Drag to change."))
 
             # Draw origin-dot
@@ -528,10 +528,10 @@ class PresetElevationChartWidget(QLabel):
             if self.current_pos is not None and not self.in_drag:
                 if pos_as_radius < self.radius_of_deletion:
                     painter.setPen(QPen(Qt.GlobalColor.black, npx(1)))
-                    painter.drawText(QPoint(_reverse_x(solar_noon_x + 8) + npx(10), origin_iy - npx(8) - npx(5)),
+                    painter.drawText(QPoint(_reverse_x(solar_noon_x + 8) + dpx(5), origin_iy - dpx(4) - dpx(2)),
                                      tr("Click to delete."))
                     painter.setPen(QPen(Qt.GlobalColor.red, thin_line_width))
-            odot_radius = npx(8)
+            odot_radius = dpx(4)
             painter.setBrush(painter.pen().color())
             painter.drawEllipse(_reverse_x(solar_noon_x + odot_radius), origin_iy - odot_radius, odot_radius * 2, odot_radius * 2)
 
@@ -546,25 +546,25 @@ class PresetElevationChartWidget(QLabel):
                 painter.setPen(sky_line_pen)
                 painter.setBrush(painter.pen().color())
 
-                pyramid_base = npx(16)
+                pyramid_base = dpx(8)
                 if ev_key.direction == EASTERN_SKY:  # Triangle pointing up
                     pyramid = [(-pyramid_base // 2, 0), (0, -pyramid_base), (pyramid_base // 2, 0)]
                     painter.drawLine(_reverse_x(0), sky_line_y, _reverse_x(solar_noon_x), sky_line_y)
                     painter.setPen(QPen(painter.pen().color(), 1))
                     painter.drawPolygon(
-                        QPolygon([QPoint(_reverse_x(0 + npx(20) + tx), sky_line_y - npx(10) + ty) for tx, ty in pyramid]))
+                        QPolygon([QPoint(_reverse_x(0 + dpx(10) + tx), sky_line_y - dpx(5) + ty) for tx, ty in pyramid]))
                 else:  # Triangle pointing down
                     inverted_pyramid = [(-pyramid_base // 2, 0), (0, pyramid_base), (pyramid_base // 2, 0)]
                     painter.drawLine(_reverse_x(solar_noon_x), sky_line_y, _reverse_x(logical_width), sky_line_y)
                     painter.setPen(QPen(painter.pen().color(), 1))
                     painter.drawPolygon(
-                        QPolygon([QPoint(_reverse_x(logical_width - npx(18)) + tx, sky_line_y + npx(10) + ty)
+                        QPolygon([QPoint(_reverse_x(logical_width - dpx(9)) + tx, sky_line_y + dpx(5) + ty)
                                   for tx, ty in inverted_pyramid]))
                 # Draw the sun
                 painter.setPen(QPen(QColor(0xff4a23), line_width))
                 if self.sun_image is None:
                     sun_image = create_image_from_svg_bytes(SUN_SVG.replace(SVG_LIGHT_THEME_COLOR, b"#fecf70"))
-                    self.sun_image = sun_image.scaled(npx(sun_image.width()), npx(sun_image.height()))
+                    self.sun_image = sun_image.scaled(npx(sun_image.width()//2), npx(sun_image.height()//2))
                 painter.drawImage(QPoint(_reverse_x(sun_plot_x) - self.sun_image.width() // 2,
                                          sun_plot_y - self.sun_image.height() // 2), self.sun_image)
         painter.end()
@@ -579,7 +579,7 @@ class PresetElevationChartWidget(QLabel):
             return
         log.debug(f"PresetElevationChartWidget: change of key values {new_cache_key=}, recalculating")
         self.cache_key = new_cache_key
-        max_sun_height = npx(-90)
+        max_sun_height = -90
         solar_noon_x, solar_noon_y = 0, 0  # Solar noon
         curve_points = []
 
@@ -727,7 +727,7 @@ class PresetScheduleAtElevationWidget(PresetScheduleAtWidgetBase):
         self.title_prefix = tr("Trigger at solar elevation:")
         self.title_label = QLabel(self.title_prefix)
         self.title_label.setFixedHeight(
-            native_font_height(scaled=1.5))  # Stop ascenders/descenders in Unicode from altering layout.
+            desktop_font_height(scaled=1.5))  # Stop ascenders/descenders in Unicode from altering layout.
         self.title_label.setToolTip(tr("Trigger at a set solar elevation (sun angle at your geolocation and time)."))
         main_layout.addWidget(self.title_label)
 
@@ -759,7 +759,7 @@ class PresetScheduleAtElevationWidget(PresetScheduleAtWidgetBase):
         self.configure_for_location(self.location)
         self.slider.valueChanged.connect(self.sliding)
 
-        self.setMinimumWidth(npx(400))
+        self.setMinimumWidth(dpx(200))
         self.sun_image: QImage | None = None
 
     def is_set(self) -> bool:
@@ -955,18 +955,18 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.main_controller = main_controller
         self.main_config = main_config
         self.content_controls_map: Dict[Tuple[str, str], QCheckBox] = {}
-        self.resize(npx(1800), npx(1200))
-        self.setMinimumSize(npx(1350), npx(600))
+        self.resize(dpx(900), dpx(650))
+        self.setMinimumSize(dpx(675), dpx(300))
         layout = QVBoxLayout()
         self.setLayout(layout)
 
         dialog_splitter = QSplitter()
         dialog_splitter.setOrientation(Qt.Orientation.Horizontal)
-        dialog_splitter.setHandleWidth(npx(10))
+        dialog_splitter.setHandleWidth(dpx(5))
         layout.addWidget(dialog_splitter, stretch=1)
 
         preset_list_panel = QGroupBox()
-        preset_list_panel.setMinimumWidth(npx(550))
+        preset_list_panel.setMinimumWidth(dpx(275))
         preset_list_panel.setFlat(True)
         preset_list_layout = QVBoxLayout()
         preset_list_panel.setLayout(preset_list_layout)
@@ -1013,9 +1013,9 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
         self.editor_groupbox = QGroupBox()
         self.editor_groupbox.setFlat(True)
-        self.editor_groupbox.setMinimumSize(npx(550), npx(768))
+        self.editor_groupbox.setMinimumSize(dpx(275), dpx(384))
         self.editor_layout = QVBoxLayout()
-        self.editor_layout.setSpacing(npx(20))
+        self.editor_layout.setSpacing(dpx(10))
         self.editor_layout.setSizeConstraint(QVBoxLayout.SizeConstraint.SetMinimumSize)
         self.editor_title = QLabel(tr("New Preset:"))
         self.editor_title.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed))
@@ -1087,7 +1087,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.make_visible()
 
     def sizeHint(self) -> QSize:
-        return QSize(npx(1200), npx(768))
+        return QSize(dpx(600), dpx(384))
 
     def populate_presets_display_list(self) -> None:
         for i in range(self.preset_widgets_layout.count() - 1, -1, -1):  # Remove existing entries
@@ -1149,7 +1149,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
     def populate_editor_controls_widget(self):
         container = self.editor_controls_widget
-        container.setMinimumHeight(native_font_height(scaled=6))  # making this too big throws the parent layout out of wack
+        container.setMinimumHeight(desktop_font_height(scaled=6))  # making this too big throws the parent layout out of wack
         widget = QWidget()
         layout = QVBoxLayout()
         widget.setLayout(layout)
