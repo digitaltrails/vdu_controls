@@ -49,7 +49,7 @@ from __future__ import annotations
 import inspect
 import os
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, cast
 from importlib.resources import files as resources_files
 
 from vdu_controls.constants import VDU_CONTROLS_DEVELOPER
@@ -242,7 +242,7 @@ class TitledStrEnum(LocalStrEnum):
         obj = str.__new__(cls, value)
         obj._value_ = value
         obj._raw_title_ = raw_title
-        return obj
+        return cast(TitledStrEnum, obj)
 
     @property
     def localized_name(self) -> str:
