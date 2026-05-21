@@ -955,7 +955,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.main_controller = main_controller
         self.main_config = main_config
         self.content_controls_map: Dict[Tuple[str, str], QCheckBox] = {}
-        self.resize(dpx(900), dpx(650))
+        self.resize(dpx(950), dpx(650))
         self.setMinimumSize(dpx(675), dpx(300))
         layout = QVBoxLayout()
         self.setLayout(layout)
