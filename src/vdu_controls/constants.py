@@ -34,7 +34,7 @@ VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in re.split(r'[.-]', VDU_CONTROL
 VDU_CONTROLS_BASE_VERSION = VDU_CONTROLS_VERSION.split('-')[0]
 VDU_CONTROLS_PRE_RELEASE = (VDU_CONTROLS_VERSION.split('-') + [ '' ])[1]
 
-assert sys.version_info >= (3, 10), f'{APPNAME} utilizes python version 3.10 or greater (your python is {sys.version}).'
+assert sys.version_info >= (3, 8), f'{APPNAME} utilizes python version 3.8 or greater (your python is {sys.version}).'
 
 VDU_CONTROLS_WEBSITE_URL = 'https://github.com/digitaltrails/vdu_controls'
 DDCUTIL_WEBSITE_URL = 'https://www.ddcutil.com/'
