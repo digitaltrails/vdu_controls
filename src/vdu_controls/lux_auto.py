@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import List, TYPE_CHECKING, TypeVar, Callable, Type
 
+from vdu_controls import lux_config
 from vdu_controls.qt_imports import Qt, pyqtSignal
 
 from vdu_controls.config_ini import ConfIni
@@ -83,28 +84,19 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
         self.main_controller = auto_controller.main_controller
         assert self.main_controller.main_window is not None
         self.adjust_now_requested = False
-        lux_config = auto_controller.get_lux_config()
-        log.info(f"LuxAuto: lux-meter.interval-minutes={lux_config.get_interval_minutes()} {single_shot=}")
-        self.sleep_seconds = lux_config.get_interval_minutes() * 60
         self.consecutive_error_count = 0
 
-        T = TypeVar('T', bool, int, float, str)
+        lux_config = auto_controller.get_lux_config()
+        self.sleep_seconds = lux_config.get_interval_minutes() * 60
+        self.sampling_interval_seconds = 60 // lux_config.getint('lux-meter', 'samples-per-minute', fallback=3)
+        self.smoother = LuxSmooth(lux_config.getint('lux-meter', 'smoother-n', fallback=5),
+                                  alpha=lux_config.getfloat('lux-meter', 'smoother-alpha', fallback=0.5))
+        self.interpolation_enabled = lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=True)
+        self.sensitivity_percent = lux_config.getint('lux-meter', 'interpolation-sensitivity-percent', fallback=10)
+        self.step_pause_millis = lux_config.getint('lux-meter', 'step-pause-millis', fallback=1000)
+        log.info(f"LuxAuto: {single_shot=} sampling_interval_seconds={self.sampling_interval_seconds} "
+                 f"lux_meter:{[f'{p}={v}' for p, v in lux_config['lux-meter'].items()]}")
 
-        def _get_prop(prop: str, fallback: T) -> T:   # A fancy way to avoid if-elif-else and log the results
-            getters_by_type: dict[Type, Callable] = {bool: lux_config.getboolean,
-                                                     int: lux_config.getint,
-                                                     float: lux_config.getfloat,
-                                                     str: lux_config.get,}
-            value = getters_by_type[type(fallback)]('lux-meter', prop, fallback=fallback)
-            log.info(f"LuxAuto: lux-meter.{prop}={value}")
-            return value
-
-        samples_per_minute = _get_prop('samples-per-minute', fallback=3)
-        self.sampling_interval_seconds = 60 // samples_per_minute
-        self.smoother = LuxSmooth(_get_prop('smoother-n', fallback=5), alpha=_get_prop('smoother-alpha', fallback=0.5))
-        self.interpolation_enabled = _get_prop('interpolate-brightness', fallback=True)
-        self.sensitivity_percent = _get_prop('interpolation-sensitivity-percent', fallback=10)
-        self.step_pause_millis = _get_prop('step-pause-millis', fallback=1000)
         self._lux_dialog_message_qtsignal.connect(LuxDialog.lux_dialog_message)
         self._lux_dialog_message_qtsignal.connect(self.main_controller.main_window.status_message)
         self.status_message(f"{TIMER_RUNNING_SYMBOL} 00:00", 0, MsgDestination.COUNTDOWN)
