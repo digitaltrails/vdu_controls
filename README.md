@@ -499,10 +499,8 @@ Version History
     and any attached 'Value:' metadata that implies otherwise will be ignored
     (with a warning logged). 
     This allows some monitors with incorrect metadata to work out-of-the-box.
-  * The executable is now a python zipapp containing the module hierarchy.
-  * The source code has been split into 40+ files/modules.
-  * Each icon is now held in a separate SVG source file.  This 
-    makes the icons more easily editable and reusable.
+  * The script's source code has been split into multiple modules (files).
+  * The executable is now a Python _zipapp_ containing the module hierarchy.
   * The included set of language-translations has been expanded. All of 
     the translations have been created for testing purposes and may not 
     be accurate.
