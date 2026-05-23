@@ -174,10 +174,10 @@ class LuxAmbientSlider(QWidget):
                 if initialize:
                     self.lux_input_field.setValue(self.current_value)
                     self.slider.setValue(round(math.log10(self.current_value) * 1000))
-                elif source != self.slider:
-                    self.slider.setValue(round(math.log10(self.current_value) * 1000))
-                elif source != self.lux_input_field:
+                elif source == self.slider:
                     self.lux_input_field.setValue(self.current_value)
+                elif source == self.lux_input_field:
+                    self.slider.setValue(round(math.log10(self.current_value) * 1000))
 
                 # We can use values from non-semi-auto meters to calibrate the semi-auto-meter.
                 semi_auto_source = self.controller.lux_meter is not None and self.controller.lux_meter.has_semi_auto_capability
