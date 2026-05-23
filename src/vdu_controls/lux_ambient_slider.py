@@ -151,10 +151,11 @@ class LuxAmbientSlider(QWidget):
             col += zone.column_span
 
         self.set_current_value(
-            round(controller.lux_meter.get_value()) if controller.lux_meter else 1000)  # don't trigger side-effects.
+            round(controller.lux_meter.get_value()) if controller.lux_meter else 1000, initialize=True)  # don't trigger side-effects.
 
-    def set_current_value(self, value: int, source: QWidget | None = None) -> None:
+    def set_current_value(self, value: int, source: QWidget | None = None, initialize: bool = False) -> None:
         # log.debug("set_current_value ", value, source, self.in_flux)
+        # TODO: This is a mess
         icon_changed = False
         if not self.in_flux and value != self.current_value:
             try:
@@ -169,10 +170,15 @@ class LuxAmbientSlider(QWidget):
                             self.status_icon.setToolTip(zone.name)
                             icon_changed = True
                 self.current_value = max(1, value)  # restrict to non-negative and something valid for log10
-                if source != self.slider:
-                    self.slider.setValue(round(math.log10(self.current_value) * 1000))
-                if source != self.lux_input_field:
+
+                if initialize:
                     self.lux_input_field.setValue(self.current_value)
+                    self.slider.setValue(round(math.log10(self.current_value) * 1000))
+                elif source != self.slider:
+                    self.slider.setValue(round(math.log10(self.current_value) * 1000))
+                elif source != self.lux_input_field:
+                    self.lux_input_field.setValue(self.current_value)
+
                 # We can use values from non-semi-auto meters to calibrate the semi-auto-meter.
                 semi_auto_source = self.controller.lux_meter is not None and self.controller.lux_meter.has_semi_auto_capability
                 if source == self.slider or source == self.lux_input_field or not semi_auto_source:

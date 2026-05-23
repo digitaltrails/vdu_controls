@@ -6,31 +6,27 @@ import math
 from ast import literal_eval
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, TYPE_CHECKING, TypeVar, Callable, Type
+from typing import List, TYPE_CHECKING
 
-from vdu_controls import lux_config
-from vdu_controls.qt_imports import Qt, pyqtSignal
-
+import vdu_controls.gui_misc as gui_misc
+import vdu_controls.logging as log
+from vdu_controls.app_locale import tr
 from vdu_controls.config_ini import ConfIni
 from vdu_controls.constants import MsgDestination
 from vdu_controls.ddcutil_abstract import BRIGHTNESS_VCP_CODE
-
 from vdu_controls.ddcutil_aggregator import VduStableId
-from vdu_controls.app_locale import tr
-import vdu_controls.logging as log
 from vdu_controls.lux_ambient_slider import LuxZone, LuxAmbientSlider
 from vdu_controls.lux_config import LuxConfig, LuxPoint
 from vdu_controls.lux_dialog import LuxDialog
 from vdu_controls.lux_meters import lux_create_device, LuxMeterDevice, LuxMeterSemiAutoDevice, LuxDeviceException
 from vdu_controls.preset import PresetTransitionFlag
+from vdu_controls.qt_imports import Qt, pyqtSignal
 from vdu_controls.svg import AUTO_LUX_ON_SVG, LIGHTING_CHECK_SVG, AUTO_LUX_OFF_SVG, \
     LIGHTING_CHECK_OFF_SVG
 from vdu_controls.unicode import TIMER_RUNNING_SYMBOL, SUN_SYMBOL, PROCESSING_LUX_SYMBOL, STEPPING_SYMBOL, ERROR_SYMBOL, \
     RAISED_HAND_SYMBOL, ALMOST_EQUAL_SYMBOL, SMOOTHING_SYMBOL
 from vdu_controls.vdu_bulk_change import BulkChangeWorker, BulkChangeItem
-
 from vdu_controls.vdu_exceptions import VduException
-import vdu_controls.gui_misc as gui_misc
 from vdu_controls.widgets import MBox, MIcon, ToolButton
 from vdu_controls.work_scheduler import WorkerThread, thread_pid
 
@@ -405,7 +401,7 @@ class LuxAutoController:
                  info=str(lde)).exec()
         if self.lux_slider is not None:
             assert self.lux_meter is not None
-            self.lux_slider.set_current_value(round(self.lux_meter.get_value()))
+            self.lux_slider.set_current_value(round(self.lux_meter.get_value()), initialize=True)
         if self.lux_tool_button is not None:
             self.lux_tool_button.refresh_icon(self.current_auto_svg())  # Refresh indicators immediately
         if self.lux_lighting_check_button is not None:
