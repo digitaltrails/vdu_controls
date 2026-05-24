@@ -149,9 +149,12 @@ class LuxAmbientSlider(QWidget):
                                           alignment=Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter)  # type: ignore
             self.label_map[zone_button] = zone.icon_svg
             col += zone.column_span
-
-        self.set_current_value(
-            round(controller.lux_meter.get_value()) if controller.lux_meter else 1000)  # don't trigger side-effects.
+        value = 1000
+        if controller.lux_meter is not None:
+            metered_value = controller.lux_meter.get_value()
+            if metered_value is not None:
+                value = round(metered_value)
+        self.set_current_value(value)  # don't trigger side-effects.
 
     def set_current_value(self, value: int, source: QWidget | None = None) -> None:
         # log.debug("set_current_value ", value, source, self.in_flux)
@@ -174,7 +177,7 @@ class LuxAmbientSlider(QWidget):
                 if source != self.lux_input_field:
                     self.lux_input_field.setValue(self.current_value)
                 # We can use values from non-semi-auto meters to calibrate the semi-auto-meter.
-                semi_auto_source = self.controller.lux_meter and self.controller.lux_meter.has_semi_auto_capability
+                semi_auto_source = self.controller.lux_meter is not None and self.controller.lux_meter.has_semi_auto_capability
                 if source == self.slider or source == self.lux_input_field or not semi_auto_source:
                     if location := self.controller.main_controller.main_config.get_location():
                         LuxMeterSemiAutoDevice.set_location(location)  # in case it's changed
