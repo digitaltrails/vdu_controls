@@ -8,7 +8,7 @@ import re
 import select
 import subprocess
 import termios
-import time as sys_time
+import time
 from importlib import import_module
 from typing import Tuple
 
@@ -38,13 +38,13 @@ class LuxMeterDevice(QObject):
             log.info(f"LuxMeterDevice: starting worker for {self.__class__}")
             self.worker = WorkerThread(task_body=self.update_from_worker_thread, task_finished=self.cleanup, loop=True)
 
-    def get_value(self) -> float:  # an un-smoothed raw value - TODO should smoothing be moved here?
+    def get_value(self) -> float | None:  # an un-smoothed raw value - TODO should smoothing be moved here?
         if self.current_value is None and self.requires_worker:
-            if not self.worker.isRunning():
-                self.worker.start()
+            self.worker.start() if not self.worker.isRunning() else None
             while self.current_value is None and not self.worker.stop_requested:  # have to block on the first time through.
-                sys_time.sleep(0.1)
-        return self.current_value if self.current_value is not None else 0.0
+                time.sleep(0.1)
+        # careful - None has a meaning elsewhere, so don't change it to 0.0 without figuring out the consequences.
+        return self.current_value
 
     def update_from_worker_thread(self, _: WorkerThread) -> None:  # Only for meters that have background workers.
         pass
@@ -256,7 +256,7 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
                 if CONFIG_DIR_PATH.exists():
                     persisted_path = CONFIG_DIR_PATH.joinpath("lux_daylight_factor.txt")
                     log.debug(f"LuxSemiAuto: save {daylight_factor=} to {persisted_path.as_posix()}") if log.debug_enabled else None
-                    persisted_path.write_text(f"{daylight_factor:.4f}")
+                persisted_path.write_text(f"{daylight_factor:.4f}")
             LuxMeterSemiAutoDevice.daylight_factor = daylight_factor
 
     @staticmethod
