@@ -161,7 +161,7 @@ class LuxAmbientSlider(QWidget):
         # TODO: This is a mess - needs a rewrite now the requirments are known.
         if (diff := time.time() - self.previous_change_time) < 1.0:
             # TODO: we seem to have a debounce or feedback issue - treat the symptom for now
-            log.debug(f"Lux >>>>>>>>> slider changed attempted at {diff} second interval - ignoring/debounce")
+            log.debug(f"Lux >>>>>>>>> slider changed attempted at {diff} second interval - ignoring/debounce") if log.debug_enabled else None
             return
         # log.debug(f"Lux slider changed at {diff} second interval set_current_value value: {value}")
         self.previous_change_time = time.time()
