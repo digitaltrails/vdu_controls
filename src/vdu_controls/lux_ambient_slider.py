@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import math
+import time
 from dataclasses import dataclass
 from functools import partial
 from typing import Dict, TYPE_CHECKING
 
+import vdu_controls.logging as log
 from vdu_controls.qt_imports import pyqtSignal, Qt, QSize
 from vdu_controls.qt_imports import QFont
 from vdu_controls.qt_imports import QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QSlider, QLabel, QApplication, QSpinBox
@@ -56,6 +58,7 @@ class LuxAmbientSlider(QWidget):
                                            self)
         self.current_name: str | None = None
         self.current_zone: LuxZone | None = None
+        self.previous_change_time = time.time() - 0.5  # A little old to avoid triggering debounce.
 
         top_layout = QVBoxLayout()
         self.setLayout(top_layout)
@@ -155,7 +158,13 @@ class LuxAmbientSlider(QWidget):
 
     def set_current_value(self, value: int, source: QWidget | None = None, initialize: bool = False) -> None:
         # log.debug("set_current_value ", value, source, self.in_flux)
-        # TODO: This is a mess
+        # TODO: This is a mess - needs a rewrite now the requirments are known.
+        if (diff := time.time() - self.previous_change_time) < 1.0:
+            # TODO: we seem to have a debounce or feedback issue - treat the symptom for now
+            log.debug(f"Lux >>>>>>>>> slider changed attempted at {diff} second interval - ignoring/debounce")
+            return
+        # log.debug(f"Lux slider changed at {diff} second interval set_current_value value: {value}")
+        self.previous_change_time = time.time()
         icon_changed = False
         if not self.in_flux and value != self.current_value:
             try:
@@ -174,10 +183,10 @@ class LuxAmbientSlider(QWidget):
                 if initialize:
                     self.lux_input_field.setValue(self.current_value)
                     self.slider.setValue(round(math.log10(self.current_value) * 1000))
-                elif source == self.slider:
-                    self.lux_input_field.setValue(self.current_value)
-                elif source == self.lux_input_field:
+                if source != self.slider:
                     self.slider.setValue(round(math.log10(self.current_value) * 1000))
+                if source != self.lux_input_field:
+                    self.lux_input_field.setValue(self.current_value)
 
                 # We can use values from non-semi-auto meters to calibrate the semi-auto-meter.
                 semi_auto_source = self.controller.lux_meter is not None and self.controller.lux_meter.has_semi_auto_capability
