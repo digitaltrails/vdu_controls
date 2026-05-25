@@ -45,7 +45,7 @@ class WorkerThread(QThread):
                 self.task_body(self)  # Pass self so body can access context
                 if not self.loop:
                     break
-        except WorkException as e:
+        except WorkException as e:   # TODO do we need to worry about other exceptions?
             self.work_exception = e
         log.debug(f"WorkerThread: {class_name=} finished {thread_pid()=}") if log.debug_enabled else None
         self.finished_work_qtsignal.emit(self)  # Pass self so body can access context
@@ -61,7 +61,7 @@ class WorkerThread(QThread):
             sys_time.sleep(sleep_unit)
             seconds -= sleep_unit
         if not self.stop_requested:
-            if seconds > 0.1:
+            if seconds >= 0.1:
                 sys_time.sleep(seconds)
 
 
@@ -159,7 +159,7 @@ class ScheduleWorker(WorkerThread):
 
     def task_body(self, _: WorkerThread):
         self._cycle()
-        now = datetime.now()  # want just over the next minute boundary e.g. 13:45:05
+        now = zoned_now()  # want just over the next minute boundary e.g. 13:45:05
         sleep_seconds = ((now + timedelta(seconds=60 + 30)).replace(second=5, microsecond=0) - now).seconds
         self.doze(sleep_seconds)  # Have to wake every minute in case PC-sleep or hibernate has occurred.
 
@@ -167,7 +167,7 @@ class ScheduleWorker(WorkerThread):
         with ScheduleWorker._scheduler_lock:
             local_now = zoned_now()
             run_now: Dict[SchedulerJobType, SchedulerJob] = {}
-            for job in self.pending_jobs_list:
+            for job in self.pending_jobs_list[:]:   # Iterate over copy so we can edit the original
                 if job.when <= local_now:  # Eligible to run now
                     self.pending_jobs_list.remove(job)
                     if not job.has_run:  # Only the most recent of each type should run
