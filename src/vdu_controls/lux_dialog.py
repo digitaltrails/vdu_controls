@@ -830,7 +830,7 @@ class LuxProfileWidget(QLabel):
         if point := self.find_preset_point_close_to(x):  # Delete
             self.preset_points.remove(point)
             for vdu_sid, profile in self.profiles_map.items():
-                for profile_point in profile:
+                for profile_point in profile[:]:   # Copy to prevent any issues due to deleting elements
                     if profile_point == point:  # Note: these will not be the same object
                         if profile_point.preset_name and profile_point.brightness > 0:
                             # Convert to normal point - as a convenience for the user
