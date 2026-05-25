@@ -374,7 +374,7 @@ class LuxAutoController:
                 try:
                     self.lux_meter.new_lux_value_qtsignal.connect(self.update_manual_slider,
                                                                   type=Qt.ConnectionType.UniqueConnection)  # type: ignore
-                except TypeError:
+                except TypeError:   # Why?
                     pass
 
     def initialize_from_config(self) -> None:
