@@ -83,9 +83,9 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
         process_args = [self.brightnessctl_exe] + list(args)
         try:
             with self.ddcutil_access_lock:
-                now = sys_time.time()
+                now = sys_time.perf_counter()
                 result = subprocess.run(process_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-                elapsed = sys_time.time() - now
+                elapsed = sys_time.perf_counter() - now
                 log.debug(f"subprocess result: success {log_id} [{result.args}] "
                           f"rc={result.returncode} elapsed={elapsed:.2f} "
                           f"stdout={result.stdout.decode('utf-8', errors='surrogateescape')}") if log.debug_enabled else None

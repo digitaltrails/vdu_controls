@@ -73,9 +73,9 @@ class DdcutilExeImpl(DdcutilInterface):
         process_args = [self.ddcutil_exe] + self.common_args + multiplier_args + syslog_args + extra_args + list(args) + edid_args
         try:
             with self.ddcutil_access_lock:
-                now = sys_time.time()
+                now = sys_time.perf_counter()
                 result = subprocess.run(process_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-                elapsed = sys_time.time() - now
+                elapsed = sys_time.perf_counter() - now
                 # Shorten EDID to 30 characters when logging it (it will be the only long argument)
                 log.debug(f"subprocess result: success {log_id} [{self._format_args_diagnostic(result.args)}] "
                           # f"{process_args=} "
