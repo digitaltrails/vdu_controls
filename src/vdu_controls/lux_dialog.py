@@ -40,14 +40,19 @@ if TYPE_CHECKING:
 @dataclass(frozen=True)
 class LuxProfileTemplate:
     name: str
+    interpolate: bool
     values: List[LuxPoint]
+
 
 class LuxProfileTemplates:  # Context for QT_TR_NOOP translations
     LIST = [
-        LuxProfileTemplate(QT_TR_NOOP("Older Monitor - dimmer backlight"),
-                           [LuxPoint(0, 90), LuxPoint(30, 90), LuxPoint(1016, 100), LuxPoint(100000, 100)]),
-        LuxProfileTemplate(QT_TR_NOOP('Newer Monitor - brighter backlight'),
-                           [LuxPoint(0, 13), LuxPoint(30, 13), LuxPoint(60, 13), LuxPoint(279, 70), LuxPoint(726, 90), LuxPoint(9690, 90), LuxPoint(98435, 100)]),
+        LuxProfileTemplate(name=QT_TR_NOOP("Older monitor, dimmer backlight, sunlit room."),
+                           interpolate=True,
+                           values=[LuxPoint(0, 90), LuxPoint(30, 90), LuxPoint(1016, 100), LuxPoint(100000, 100)]),
+        LuxProfileTemplate(QT_TR_NOOP("Newer Monitor, brighter backlight, sunlit room"),
+                           interpolate=True,
+                           values=[LuxPoint(0, 13), LuxPoint(30, 13), LuxPoint(60, 13), LuxPoint(279, 70),
+                                   LuxPoint(726, 90), LuxPoint(9690, 90), LuxPoint(98435, 100)]),
     ]
 
 
@@ -227,6 +232,10 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.interval_selector.valueChanged.connect(_interval_selector_changed)
 
         def _set_interpolation(checked: int) -> None:
+            if not self.interpolate_checkbox.hasFocus():  # being set programmatically
+                self.lux_config.set('lux-meter', 'interpolate-brightness',
+                                    'yes' if checked == intV(Qt.CheckState.Checked) else 'no')
+                return
             if checked == intV(Qt.CheckState.Checked):  # need to save setting if not already set
                 if not self.lux_config.getboolean('lux-meter', 'interpolate-brightness', fallback=False):  # altering value
                     self.lux_config.set('lux-meter', 'interpolate-brightness', 'yes')
@@ -402,10 +411,12 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         sid = self.profile_plot.current_vdu_sid
         #icon = create_icon_from_svg_bytes(AMBIENT_PANEL_ICON_SOURCE)
         template_chooser = ChoiceBox(title=tr("Choose profile for {}:").format(sid),
-                                     choices=[tr(template.name, LuxProfileTemplates.__name__) for template in LuxProfileTemplates.LIST])
+                                     choices=[tr(template.name) for template in LuxProfileTemplates.LIST])
         template_chooser.exec()
         if template_chooser.selected_item_number != -1:
-            self.lux_profiles_map[sid] = LuxProfileTemplates.LIST[template_chooser.selected_item_number].values[:]  # Copy
+            template = LuxProfileTemplates.LIST[template_chooser.selected_item_number]
+            self.lux_profiles_map[sid] = template.values[:]
+            self.interpolate_checkbox.setChecked(template.interpolate)
             self.profile_plot.show_changes(True)
 
 
