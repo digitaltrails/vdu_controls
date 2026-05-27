@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <!DOCTYPE TS>
 <TS version="2.1">
 <context>
@@ -600,109 +600,109 @@ This chart is resizable. </source>
 </context><context>
     <name>LuxDeviceType</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="55" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="60" />
         <source>Semi-automatic geolocated</source>
         <translation>半自动地理定位</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="56" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="61" />
         <source>Arduino tty device</source>
         <translation>Arduino tty 设备</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="57" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="62" />
         <source>Linux FIFO</source>
         <translation>Linux FIFO</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="58" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="63" />
         <source>Script/program</source>
         <translation>脚本/程序</translation>
     </message>
 </context><context>
     <name>LuxDialog</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="86" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="91" />
         <source>Light-Metering</source>
         <translation>测光</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="119" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="124" />
         <source>Enable automatic brightness adjustment</source>
         <translation>启用自动亮度调节</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="122" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="127" />
         <source>Adjustment interval minutes</source>
         <translation>调节间隔（分钟）</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="130" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="135" />
         <source>Interpolate brightness values</source>
         <translation>插值亮度值</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="156" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="161" />
         <source>Templates</source>
         <translation>模板</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="157" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="162" />
         <source>Select from typical profile templates.</source>
         <translation>从典型的配置文件模板中进行选择。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="158" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="163" />
         <source>Save Profiles</source>
         <translation>保存配置文件</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="159" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="164" />
         <source>Apply and save profile-chart changes.</source>
         <translation>应用并保存配置文件图表更改。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="160" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="165" />
         <source>Revert Profiles</source>
         <translation>还原配置文件</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="161" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="166" />
         <source>Abandon profile-chart changes, revert to last saved.</source>
         <translation>放弃配置文件图表更改，恢复到上次保存的状态。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="162" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="167" />
         <source>Close</source>
         <translation>关闭</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="169" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="174" />
         <source>Press to expire the timer and immediately evaluate brightness.</source>
         <translation>按下可使计时器到期并立即评估亮度。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="186" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="191" />
         <source>Select: {}</source>
         <translation>选择：{}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="204" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="209" />
         <source>Meter changed to {}.</source>
         <translation>测量仪已更改为 {}。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="221" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="226" />
         <source>Interval changed to {} minutes.</source>
         <translation>间隔已更改为 {} 分钟。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="233" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="242" />
         <source>Interpolation may increase the number of writes to VDU NVRAM.</source>
         <translation>插值可能会增加对 VDU NVRAM 的写入次数。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="234" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="243" />
         <source>Changes specified by each brightness-response curve will only be applied when they cross a minimum threshold (default {}%).
 
 When designing brightness-response curves, consider minimizing brightness changes to reduce wear on NVRAM.</source>
@@ -711,27 +711,27 @@ When designing brightness-response curves, consider minimizing brightness change
 设计亮度响应曲线时，请考虑尽量减少亮度变化以减少 NVRAM 的磨损。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="249" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="258" />
         <source>Editing profile {}</source>
         <translation>正在编辑配置文件 {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="261" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="270" />
         <source>Press Save-Profile to activate new profile.</source>
         <translation>按“保存配置文件”以激活新配置文件。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="342" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="351" />
         <source>Cannot configure a solar lux calculator, no location is defined.</source>
         <translation>无法配置太阳勒克斯计算器，未定义位置。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="343" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="352" />
         <source>Please set a location in the main Settings-Dialog.</source>
         <translation>请在主设置对话框中设置位置。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="347" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="356" />
         <source>Semi-automatic lux adjustment: quick start instructions.
 ________________________________________________________________________________________
 
@@ -761,7 +761,7 @@ ________________________________________________________________________________
 </translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="356" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="365" />
         <source>Estimation of indoor illumination (Ei) from solar illumination (Eo):
     Ei = DF * Eo
     DF = Ei / Eo
@@ -778,39 +778,39 @@ DF：日光因子，室内外照度的比值。每当环境光水平滑块
     被手动更改时更新。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="371" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="380" />
         <source>You might need to be a member of the {} group.</source>
         <translation>您可能需要成为 {} 组的成员。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="372" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="381" />
         <source>No read access to {}</source>
         <translation>没有对 {} 的读取权限</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="375" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="384" />
         <source>Expecting {0}, but {1} was selected.</source>
         <translation>应为 {0}，但已选择 {1}。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="395" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="404" />
         <source>No metering device set.</source>
         <translation>未设置测光设备。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="404" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="413" />
         <source>Choose profile for {}:</source>
         <translation>选择 {} 的配置文件：</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="425" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="436" />
         <source>There are unsaved profile changes?</source>
         <translation>是否有未保存的配置文件更改？</translation>
     </message>
 </context><context>
     <name>LuxGaugeWidget</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="477" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="488" />
         <source>Left:	 Rolling display of metered lux (ML).
 Right:	 1) Estimated outside solar illumination (Eo) for
 	     the set geolocation for the current day.
@@ -828,17 +828,17 @@ Eo = 单位常数 * sin(弧度(太阳高度)) * 10 ** (-0.1 * 空气质量)
 Ei 的估算值由半自动测光选项使用。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="571" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="582" />
         <source>Location Unknown</source>
         <translation>地点未知</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="613" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="624" />
         <source>Eo={:,} lux    DF={:,.4f}</source>
         <translation>Eo={:,} 勒克斯    DF={:,.4f}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="615" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="626" />
         <source>Eo=?   DF=?   (location not set)</source>
         <translation>Eo=?   DF=?   (位置未设置)</translation>
     </message>
@@ -859,45 +859,45 @@ Ei 的估算值由半自动测光选项使用。</translation>
 </context><context>
     <name>LuxProfileTemplates</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="47" />
-        <source>Older Monitor - dimmer backlight</source>
-        <translation>较旧的显示器 - 背光调光器</translation>
+        <location filename="../src/vdu_controls/lux_dialog.py" line="49" />
+        <source>Older monitor, dimmer backlight, sunlit room.</source>
+        <translation>较旧的显示器、较暗的背光、阳光照射的房间。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="49" />
-        <source>Newer Monitor - brighter backlight</source>
-        <translation>较新的显示器 - 背光更亮</translation>
+        <location filename="../src/vdu_controls/lux_dialog.py" line="52" />
+        <source>Newer Monitor, brighter backlight, sunlit room</source>
+        <translation>更新的显示器、更亮的背光、阳光充足的房间</translation>
     </message>
 </context><context>
     <name>LuxProfileWidget</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="676" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="687" />
         <source>Lux Brightness Response Profiles</source>
         <translation>勒克斯亮度响应配置文件</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="694" />
-        <location filename="../src/vdu_controls/lux_dialog.py" line="692" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="705" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="703" />
         <source>Brightness %</source>
         <translation>亮度百分比</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="809" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="820" />
         <source>Click remove preset at {} lux</source>
         <translation>单击删除 {} 勒克斯处的预置</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="821" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="832" />
         <source>Click to add preset at {} lux</source>
         <translation>单击以添加 {} 勒克斯处的预置</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="888" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="899" />
         <source>There are no Presets.</source>
         <translation>没有预置项。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="888" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="899" />
         <source>Use the Presets Dialog to create some.</source>
         <translation>使用预置对话框创建一些。</translation>
     </message>

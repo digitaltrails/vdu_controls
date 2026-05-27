@@ -600,109 +600,109 @@ Ka taea te rahi o tēnei tuātohi te whakarerekē.</translation>
 </context><context>
     <name>LuxDeviceType</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="55" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="60" />
         <source>Semi-automatic geolocated</source>
         <translation>Tapa-aunoa te waahi-a-whenua</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="56" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="61" />
         <source>Arduino tty device</source>
         <translation>Pūrere Arduino tty</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="57" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="62" />
         <source>Linux FIFO</source>
         <translation>FIFO Linux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="58" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="63" />
         <source>Script/program</source>
         <translation>Tuhinga/hōtaka</translation>
     </message>
 </context><context>
     <name>LuxDialog</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="86" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="91" />
         <source>Light-Metering</source>
         <translation>Inenga Rama</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="119" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="124" />
         <source>Enable automatic brightness adjustment</source>
         <translation>Whakahohe i te whakatikatika kanapa aunoa</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="122" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="127" />
         <source>Adjustment interval minutes</source>
         <translation>Wā whakatikatika meneti</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="130" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="135" />
         <source>Interpolate brightness values</source>
         <translation>Whakauru i ngā uara kanapa</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="156" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="161" />
         <source>Templates</source>
         <translation>Nga tauira</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="157" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="162" />
         <source>Select from typical profile templates.</source>
         <translation>Tīpakohia mai i ngā tātauira kōtaha angamaheni.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="158" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="163" />
         <source>Save Profiles</source>
         <translation>Tiaki Kōtaha</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="159" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="164" />
         <source>Apply and save profile-chart changes.</source>
         <translation>Whakamahia me te tiaki i ngā huringa tuātohi kōtaha.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="160" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="165" />
         <source>Revert Profiles</source>
         <translation>Whakahokia Kōtaha</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="161" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="166" />
         <source>Abandon profile-chart changes, revert to last saved.</source>
         <translation>Whakarere i ngā huringa tuātohi kōtaha, hoki ki te mea i tiakina whakamutunga.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="162" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="167" />
         <source>Close</source>
         <translation>Kati</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="169" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="174" />
         <source>Press to expire the timer and immediately evaluate brightness.</source>
         <translation>Pēhi kia pau te taima me te arotake tonu i te kanapa.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="186" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="191" />
         <source>Select: {}</source>
         <translation>Kōwhiri: {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="204" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="209" />
         <source>Meter changed to {}.</source>
         <translation>Kua huri te mita ki {}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="221" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="226" />
         <source>Interval changed to {} minutes.</source>
         <translation>Kua huri te wā ki {} meneti.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="233" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="242" />
         <source>Interpolation may increase the number of writes to VDU NVRAM.</source>
         <translation>Ka nui ake pea te maha o ngā tuhituhi ki te NVRAM o te VDU mā te whakaurunga.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="234" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="243" />
         <source>Changes specified by each brightness-response curve will only be applied when they cross a minimum threshold (default {}%).
 
 When designing brightness-response curves, consider minimizing brightness changes to reduce wear on NVRAM.</source>
@@ -711,27 +711,27 @@ When designing brightness-response curves, consider minimizing brightness change
 I te wā e hoahoa ana i ngā ānau urupare kanapa, whakaarohia kia iti ngā huringa kanapa hei whakaiti i te kāhakihaki o te NVRAM.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="249" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="258" />
         <source>Editing profile {}</source>
         <translation>Te whakatika kōtaha {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="261" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="270" />
         <source>Press Save-Profile to activate new profile.</source>
         <translation>Pēhi i Tiaki-Kōtaha hei whakahohe i te kōtaha hou.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="342" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="351" />
         <source>Cannot configure a solar lux calculator, no location is defined.</source>
         <translation>Kāore e taea te whirihora i te tātaitai lux rā, kāore he wāhi i tautuhia.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="343" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="352" />
         <source>Please set a location in the main Settings-Dialog.</source>
         <translation>Tena tautuhia he wāhi i te Pārongo Tautuhinga matua.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="347" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="356" />
         <source>Semi-automatic lux adjustment: quick start instructions.
 ________________________________________________________________________________________
 
@@ -761,7 +761,7 @@ o te lux o waho (Eo) me te Tauwehe-Rā (DF), te ōwehenga o te lux o roto ki te 
 </translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="356" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="365" />
         <source>Estimation of indoor illumination (Ei) from solar illumination (Eo):
     Ei = DF * Eo
     DF = Ei / Eo
@@ -778,39 +778,39 @@ DF: Tauwehe rā, te ōwehenga o te whakamāramatanga o roto ki te whakamāramata
     inā whakatika ā-ringa te kaiwhakareri Taumata Rama Huripoki.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="371" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="380" />
         <source>You might need to be a member of the {} group.</source>
         <translation>Me mema pea koe ki te rōpū {}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="372" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="381" />
         <source>No read access to {}</source>
         <translation>Kāore he uru pānui ki {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="375" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="384" />
         <source>Expecting {0}, but {1} was selected.</source>
         <translation>Ko te tumanako {0}, engari ko {1} i tohua.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="395" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="404" />
         <source>No metering device set.</source>
         <translation>Kāore he pūrere inenga i tautuhia.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="404" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="413" />
         <source>Choose profile for {}:</source>
         <translation>Kōwhiri kōtaha mō {}:</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="425" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="436" />
         <source>There are unsaved profile changes?</source>
         <translation>He huringa kōtaha kāore anō kia tiakina?</translation>
     </message>
 </context><context>
     <name>LuxGaugeWidget</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="477" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="488" />
         <source>Left:	 Rolling display of metered lux (ML).
 Right:	 1) Estimated outside solar illumination (Eo) for
 	     the set geolocation for the current day.
@@ -829,17 +829,17 @@ Eo = taumau_wae * sin(rauweroki(teitei_rā)) * 10 ** (-0.1 * papatipu_hau)
 Ka whakamahia ngā whakatau tata o Ei e te kōwhiringa inenga hāwhā-aunoa.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="571" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="582" />
         <source>Location Unknown</source>
         <translation>Tauwāhi Kaore e Mohiotia</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="613" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="624" />
         <source>Eo={:,} lux    DF={:,.4f}</source>
         <translation>Eo={:,} lux    DF={:,.4f}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="615" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="626" />
         <source>Eo=?   DF=?   (location not set)</source>
         <translation>Eo=?   DF=?   (wāhi kāore i tautuhia)</translation>
     </message>
@@ -860,45 +860,45 @@ Ka whakamahia ngā whakatau tata o Ei e te kōwhiringa inenga hāwhā-aunoa.</tr
 </context><context>
     <name>LuxProfileTemplates</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="47" />
-        <source>Older Monitor - dimmer backlight</source>
-        <translation>Aroturuki Tawhito - te rama whakamuri pouri</translation>
+        <location filename="../src/vdu_controls/lux_dialog.py" line="49" />
+        <source>Older monitor, dimmer backlight, sunlit room.</source>
+        <translation>Aroturuki tawhito, muramura te rama tuara, rūma maramara.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="49" />
-        <source>Newer Monitor - brighter backlight</source>
-        <translation>Aroturuki Hou ake - rama tuara marama ake</translation>
+        <location filename="../src/vdu_controls/lux_dialog.py" line="52" />
+        <source>Newer Monitor, brighter backlight, sunlit room</source>
+        <translation>Te Aroturuki Hou ake, te rama tuara kanapa, te ruuma marama</translation>
     </message>
 </context><context>
     <name>LuxProfileWidget</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="676" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="687" />
         <source>Lux Brightness Response Profiles</source>
         <translation>Kōtaha Urupare Kanapa Lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="694" />
-        <location filename="../src/vdu_controls/lux_dialog.py" line="692" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="705" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="703" />
         <source>Brightness %</source>
         <translation>Kanapa %</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="809" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="820" />
         <source>Click remove preset at {} lux</source>
         <translation>Pāwhiri ki te tango i te tautapa i {} lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="821" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="832" />
         <source>Click to add preset at {} lux</source>
         <translation>Pāwhiri ki te tāpiri i te tautapa i {} lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="888" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="899" />
         <source>There are no Presets.</source>
         <translation>Kāore he Tautapanga.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="888" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="899" />
         <source>Use the Presets Dialog to create some.</source>
         <translation>Whakamahia te Pārongo Tautapanga hei waihanga i ētahi.</translation>
     </message>

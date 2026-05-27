@@ -592,109 +592,109 @@ This chart is resizable. </source>
 </context><context>
     <name>LuxDeviceType</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="55" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="60" />
         <source>Semi-automatic geolocated</source>
         <translation>تحديد الموقع الجغرافي شبه التلقائي</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="56" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="61" />
         <source>Arduino tty device</source>
         <translation>جهاز Arduino tty</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="57" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="62" />
         <source>Linux FIFO</source>
         <translation>FIFO لينكس</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="58" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="63" />
         <source>Script/program</source>
         <translation>نص/برنامج</translation>
     </message>
 </context><context>
     <name>LuxDialog</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="86" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="91" />
         <source>Light-Metering</source>
         <translation>قياس الضوء</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="119" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="124" />
         <source>Enable automatic brightness adjustment</source>
         <translation>تمكين ضبط السطوع التلقائي</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="122" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="127" />
         <source>Adjustment interval minutes</source>
         <translation>فترة الضبط (دقائق)</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="130" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="135" />
         <source>Interpolate brightness values</source>
         <translation>استيفاء قيم السطوع</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="156" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="161" />
         <source>Templates</source>
         <translation>قوالب</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="157" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="162" />
         <source>Select from typical profile templates.</source>
         <translation>اختر من قوالب الملفات الشخصية النموذجية.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="158" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="163" />
         <source>Save Profiles</source>
         <translation>حفظ الملامح</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="159" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="164" />
         <source>Apply and save profile-chart changes.</source>
         <translation>تطبيق وحفظ تغييرات مخطط الملف الشخصي.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="160" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="165" />
         <source>Revert Profiles</source>
         <translation>التراجع عن الملامح</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="161" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="166" />
         <source>Abandon profile-chart changes, revert to last saved.</source>
         <translation>تجاهل تغييرات مخطط الملف الشخصي، والعودة إلى آخر حفظ.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="162" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="167" />
         <source>Close</source>
         <translation>إغلاق</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="169" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="174" />
         <source>Press to expire the timer and immediately evaluate brightness.</source>
         <translation>اضغط لإنهاء المؤقت وتقييم السطوع فوراً.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="186" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="191" />
         <source>Select: {}</source>
         <translation>اختر: {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="204" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="209" />
         <source>Meter changed to {}.</source>
         <translation>تم تغيير المقياس إلى {}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="221" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="226" />
         <source>Interval changed to {} minutes.</source>
         <translation>تم تغيير الفترة إلى {} دقائق.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="233" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="242" />
         <source>Interpolation may increase the number of writes to VDU NVRAM.</source>
         <translation>قد يزيد الاستيفاء من عدد الكتابات على NVRAM الخاصة بـ VDU.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="234" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="243" />
         <source>Changes specified by each brightness-response curve will only be applied when they cross a minimum threshold (default {}%).
 
 When designing brightness-response curves, consider minimizing brightness changes to reduce wear on NVRAM.</source>
@@ -703,27 +703,27 @@ When designing brightness-response curves, consider minimizing brightness change
 عند تصميم منحنيات استجابة السطوع، ضع في اعتبارك تقليل تغييرات السطوع لتقليل تآكل NVRAM.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="249" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="258" />
         <source>Editing profile {}</source>
         <translation>تحرير الملف الشخصي {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="261" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="270" />
         <source>Press Save-Profile to activate new profile.</source>
         <translation>اضغط حفظ الملف الشخصي لتفعيل الملف الجديد.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="342" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="351" />
         <source>Cannot configure a solar lux calculator, no location is defined.</source>
         <translation>لا يمكن تكوين حاسبة اللوكس الشمسية، لم يتم تعريف موقع.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="343" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="352" />
         <source>Please set a location in the main Settings-Dialog.</source>
         <translation>يرجى تعيين موقع في حوار الإعدادات الرئيسي.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="347" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="356" />
         <source>Semi-automatic lux adjustment: quick start instructions.
 ________________________________________________________________________________________
 
@@ -753,7 +753,7 @@ ________________________________________________________________________________
 </translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="356" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="365" />
         <source>Estimation of indoor illumination (Ei) from solar illumination (Eo):
     Ei = DF * Eo
     DF = Ei / Eo
@@ -770,39 +770,39 @@ DF: عامل ضوء النهار، نسبة الإضاءة الداخلية إل
     كلما تم تغيير شريط تمرير مستوى الإضاءة المحيطة يدوياً.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="371" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="380" />
         <source>You might need to be a member of the {} group.</source>
         <translation>قد تحتاج إلى أن تكون عضواً في مجموعة {}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="372" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="381" />
         <source>No read access to {}</source>
         <translation>لا توجد صلاحية قراءة لـ {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="375" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="384" />
         <source>Expecting {0}, but {1} was selected.</source>
         <translation>متوقع {0}، ولكن تم تحديد {1}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="395" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="404" />
         <source>No metering device set.</source>
         <translation>لم يتم تعيين جهاز قياس.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="404" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="413" />
         <source>Choose profile for {}:</source>
         <translation>اختر ملفًا شخصيًا لـ {}:</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="425" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="436" />
         <source>There are unsaved profile changes?</source>
         <translation>هل هناك تغييرات غير محفوظة في الملف الشخصي؟</translation>
     </message>
 </context><context>
     <name>LuxGaugeWidget</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="477" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="488" />
         <source>Left:	 Rolling display of metered lux (ML).
 Right:	 1) Estimated outside solar illumination (Eo) for
 	     the set geolocation for the current day.
@@ -821,17 +821,17 @@ Eo = ثوابت_الوحدة * sin(زاوية_الشمس_بالتقدير_الد
 تقديرات Ei تستخدمها خيار القياس شبه التلقائي.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="571" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="582" />
         <source>Location Unknown</source>
         <translation>الموقع غير معروف</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="613" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="624" />
         <source>Eo={:,} lux    DF={:,.4f}</source>
         <translation>Eo={:,} لوكس    DF={:,.4f}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="615" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="626" />
         <source>Eo=?   DF=?   (location not set)</source>
         <translation>Eo=?   DF=?   (الموقع غير محدد)</translation>
     </message>
@@ -852,45 +852,45 @@ Eo = ثوابت_الوحدة * sin(زاوية_الشمس_بالتقدير_الد
 </context><context>
     <name>LuxProfileTemplates</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="47" />
-        <source>Older Monitor - dimmer backlight</source>
-        <translation>الشاشة الأقدم - الإضاءة الخلفية الخافتة</translation>
+        <location filename="../src/vdu_controls/lux_dialog.py" line="49" />
+        <source>Older monitor, dimmer backlight, sunlit room.</source>
+        <translation>شاشة قديمة، إضاءة خلفية خافتة، غرفة مضاءة بنور الشمس.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="49" />
-        <source>Newer Monitor - brighter backlight</source>
-        <translation>شاشة أحدث - إضاءة خلفية أكثر سطوعًا</translation>
+        <location filename="../src/vdu_controls/lux_dialog.py" line="52" />
+        <source>Newer Monitor, brighter backlight, sunlit room</source>
+        <translation>شاشة أحدث، وإضاءة خلفية أكثر سطوعًا، وغرفة مضاءة بنور الشمس</translation>
     </message>
 </context><context>
     <name>LuxProfileWidget</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="676" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="687" />
         <source>Lux Brightness Response Profiles</source>
         <translation>ملامح استجابة السطوع للوكس</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="694" />
-        <location filename="../src/vdu_controls/lux_dialog.py" line="692" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="705" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="703" />
         <source>Brightness %</source>
         <translation>السطوع %</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="809" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="820" />
         <source>Click remove preset at {} lux</source>
         <translation>انقر لإزالة الإعداد المسبق عند {} لوكس</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="821" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="832" />
         <source>Click to add preset at {} lux</source>
         <translation>انقر لإضافة إعداد مسبق عند {} لوكس</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="888" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="899" />
         <source>There are no Presets.</source>
         <translation>لا توجد إعدادات مسبقة.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="888" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="899" />
         <source>Use the Presets Dialog to create some.</source>
         <translation>استخدم حوار الإعدادات المسبقة لإنشاء بعضها.</translation>
     </message>
