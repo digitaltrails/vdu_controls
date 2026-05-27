@@ -1532,6 +1532,49 @@ class SignalWakeupHandler(QtNetwork.QAbstractSocket):
         self.received_unix_signal_qtsignal.emit(signal_number)  # Emit a Qt signal for convenience
 
 
+class SingleInstanceServer(QObject):
+    # Listens on a per-user QLocalServer socket so a second vdu_controls launch can ask the
+    # running instance to surface its main window instead of starting a duplicate process.
+    # Two startup channels routinely coexist on KDE (XDG autostart + ksmserver session-restore),
+    # plus manual menu clicks; without this guard each becomes its own independent process.
+
+    activate_requested = pyqtSignal()
+
+    def __init__(self, server_name: str, parent: QObject | None = None) -> None:
+        super().__init__(parent)
+        self._server = QtNetwork.QLocalServer(self)
+        self._server.newConnection.connect(self._on_new_connection)
+        if not self._server.listen(server_name):
+            # listen() failed - typically a stale socket from a crashed prior run.  Remove and retry.
+            # (A true race with a concurrent launch is handled by the caller's pre-check via
+            # _activate_running_instance, which runs before constructing this server.)
+            QtNetwork.QLocalServer.removeServer(server_name)
+            if not self._server.listen(server_name):
+                log.warning(f"Single-instance guard could not bind {server_name}: {self._server.errorString()}")
+
+    def _on_new_connection(self) -> None:
+        while self._server.hasPendingConnections():
+            sock = self._server.nextPendingConnection()
+            if sock is not None:
+                sock.readAll()
+                sock.disconnectFromServer()
+        self.activate_requested.emit()
+
+
+def _activate_running_instance(server_name: str, timeout_ms: int = 500) -> bool:
+    # Try to contact a running vdu_controls and ask it to raise its main window.
+    # Returns True if a peer accepted the request (caller should exit), False if no peer was reachable.
+    sock = QtNetwork.QLocalSocket()
+    sock.connectToServer(server_name)
+    if not sock.waitForConnected(timeout_ms):
+        return False
+    sock.write(b"activate\n")
+    sock.flush()
+    sock.waitForBytesWritten(timeout_ms)
+    sock.disconnectFromServer()
+    return True
+
+
 def get_app_instance() -> QApplication:
     app_instance = cast(QApplication, QApplication.instance())
     assert app_instance is not None
@@ -1615,6 +1658,15 @@ def main() -> None:
         print(app_locale.load_docs_text(HELP_FILENAME))
         sys.exit()
 
+    # Single-instance guard: if another vdu_controls is already running, ask it to surface its
+    # main window and exit.  Placed after the one-shot CLI ops (--install, --uninstall,
+    # --detailed-help) so those still work regardless.
+    single_instance_name = f"vdu_controls-{os.geteuid()}"
+    if _activate_running_instance(single_instance_name):
+        log.info(f"Another {APPNAME} instance is already running; activated it and exiting.")
+        sys.exit(0)
+    single_instance_server = SingleInstanceServer(single_instance_name, parent=app)
+
     if main_config.is_set(ConfOpt.TRANSLATIONS_ENABLED):
         initialise_locale_translations(app)
     else:
@@ -1622,7 +1674,8 @@ def main() -> None:
 
     main_controller = VduAppController(main_config)
     assert gui_misc.is_running_in_gui_thread()
-    VduAppWindow(main_config, main_controller)  # may need to assign this to a variable to prevent garbage collection?
+    main_window = VduAppWindow(main_config, main_controller)  # may need to assign this to a variable to prevent garbage collection?
+    single_instance_server.activate_requested.connect(partial(main_window.show_main_window, False))
 
     if args.about:
         AboutDialog.show_dialog(main_controller)
