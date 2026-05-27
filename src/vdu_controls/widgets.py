@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 import os
-from typing import Callable, Any, Tuple, Dict, Type, TypeVar
+from typing import Callable, Any, Tuple, Dict, Type, TypeVar, List
 
 import vdu_controls.logging as log
 from vdu_controls.constants import RESIZABLE_MESSAGEBOX_HACK, APPNAME
-from vdu_controls.icon_utils import polychrome_light_or_dark, handle_theme, create_icon_from_svg_bytes
+from vdu_controls.icon_utils import polychrome_light_or_dark, handle_theme, create_icon_from_svg_bytes, StdPixmap, si
 from vdu_controls.qt_imports import (QTimer, Qt, QRect, QPixmap, QPainter, QPen, QIcon, QToolButton, QWidget, QEvent,
                                      QSize, QLayout, QLabel, QStyle, QDir, QMessageBox, QFileDialog, QVBoxLayout, QDialog,
                                      QSlider, QLineEdit, QMouseEvent, QMargins, QSvgWidget, QPushButton, QHBoxLayout,
-                                     QtCore, QTextEdit, QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING)
+                                     QtCore, QTextEdit, QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING,
+                                     QButtonGroup, QRadioButton, QDialogButtonBox)
 from vdu_controls.scaling import desktop_font_height, npx, dpx
 
 
@@ -154,6 +155,42 @@ class MBox(QMessageBox):
                 if text_edit_field := self.findChild(QTextEdit):
                     text_edit_field.setMaximumHeight(dpx(300))
         return result
+
+
+class ChoiceBox(QDialog):
+    def __init__(self, title: str, choices: List[str], pixmap: QPixmap | None = None,  parent = None):
+        super().__init__(parent)
+        self.setWindowTitle(title)
+        self.selected_item_number: int = -1
+        horizontal_layout = QHBoxLayout()
+        self.setLayout(horizontal_layout)
+        icon_label = QLabel()
+        if pixmap is not None:
+            icon_label.setPixmap(pixmap)
+        else:
+            icon_label.setPixmap(si(self, StdPixmap.SP_MessageBoxQuestion).pixmap(dpx(48), dpx(48)))
+        horizontal_layout.addWidget(icon_label, alignment=Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        vertical_layout = QVBoxLayout(self)
+        horizontal_layout.addLayout(vertical_layout)
+        heading = QLabel(title)
+        vertical_layout.addWidget(heading)
+        vertical_layout.addSpacing(dpx(10))
+        self.button_group = QButtonGroup(self)
+        self.button_group.setExclusive(True)   # only one can be selected
+        for choice_number, choice_label in enumerate(choices):
+            radio = QRadioButton(choice_label)
+            vertical_layout.addWidget(radio)
+            vertical_layout.addSpacing(dpx(5))
+            self.button_group.addButton(radio, choice_number)
+        vertical_layout.addSpacing(dpx(5))
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        vertical_layout.addWidget(button_box)
+
+    def accept(self):
+        self.selected_item_number = self.button_group.checkedId()
+        super().accept()
 
 
 class PushButtonLeftJustified(QPushButton):

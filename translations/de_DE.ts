@@ -551,148 +551,158 @@ Dieses Diagramm kann in der Größe verändert werden.</translation>
 </context><context>
     <name>LuxAutoController</name>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="335" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="323" />
         <source>Toggle automatic light metered brightness adjustment</source>
         <translation>Automatische lichtgemessene Helligkeitsanpassung umschalten</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="340" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="328" />
         <source>Perform ambient lighting check now</source>
         <translation>Umgebungsbeleuchtungsprüfung jetzt durchführen</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="412" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="400" />
         <source>Error setting up lux meter: {}</source>
         <translation>Fehler beim Einrichten des Luxmeters: {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="443" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="428" />
         <source>Auto disabled, no location defined.</source>
         <translation>Auto deaktiviert, kein Standort definiert.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="446" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="431" />
         <source>Restarting automatic light metering.</source>
         <translation>Automatische Lichtmessung wird neu gestartet.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="448" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="433" />
         <source>Switching to automatic light metering.</source>
         <translation>Wechsel zur automatischen Lichtmessung.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="451" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="436" />
         <source>Switching to manual input of ambient lux.</source>
         <translation>Wechsel zur manuellen Eingabe des Umgebungslux.</translation>
     </message>
 </context><context>
     <name>LuxAutoWorker</name>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="230" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="218" />
         <source>Task waiting for {} to finish.</source>
         <translation>Aufgabe wartet darauf, dass {} fertig wird.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="311" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="299" />
         <source>(smoothed)</source>
         <translation>(geglättet)</translation>
     </message>
 </context><context>
     <name>LuxDeviceType</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="43" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="55" />
         <source>Semi-automatic geolocated</source>
-        <translation>Halbautomatisch geolokalisiert</translation>
+        <translation>Halbautomatische Geolokalisierung</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="44" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="56" />
         <source>Arduino tty device</source>
         <translation>Arduino tty-Gerät</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="45" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="57" />
         <source>Linux FIFO</source>
         <translation>Linux FIFO</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="46" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="58" />
         <source>Script/program</source>
         <translation>Skript/Programm</translation>
     </message>
 </context><context>
     <name>LuxDialog</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="74" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="86" />
         <source>Light-Metering</source>
         <translation>Lichtmessung</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="107" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="119" />
         <source>Enable automatic brightness adjustment</source>
         <translation>Automatische Helligkeitsanpassung aktivieren</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="110" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="122" />
         <source>Adjustment interval minutes</source>
         <translation>Anpassungsintervall Minuten</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="118" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="130" />
         <source>Interpolate brightness values</source>
         <translation>Helligkeitswerte interpolieren</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="144" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="156" />
+        <source>Templates</source>
+        <translation>Vorlagen</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/lux_dialog.py" line="157" />
+        <source>Select from typical profile templates.</source>
+        <translation>Wählen Sie aus typischen Profilvorlagen.</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/lux_dialog.py" line="158" />
         <source>Save Profiles</source>
         <translation>Profile speichern</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="145" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="159" />
         <source>Apply and save profile-chart changes.</source>
         <translation>Profildiagrammänderungen übernehmen und speichern.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="146" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="160" />
         <source>Revert Profiles</source>
         <translation>Profile zurücksetzen</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="147" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="161" />
         <source>Abandon profile-chart changes, revert to last saved.</source>
         <translation>Profildiagrammänderungen verwerfen, zum letzten gespeicherten Stand zurückkehren.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="148" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="162" />
         <source>Close</source>
         <translation>Schließen</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="155" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="169" />
         <source>Press to expire the timer and immediately evaluate brightness.</source>
         <translation>Drücken, um den Timer ablaufen zu lassen und die Helligkeit sofort zu bewerten.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="172" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="186" />
         <source>Select: {}</source>
         <translation>Auswählen: {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="190" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="204" />
         <source>Meter changed to {}.</source>
         <translation>Messer geändert auf {}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="207" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="221" />
         <source>Interval changed to {} minutes.</source>
         <translation>Intervall geändert auf {} Minuten.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="219" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="233" />
         <source>Interpolation may increase the number of writes to VDU NVRAM.</source>
         <translation>Interpolation kann die Anzahl der Schreibvorgänge auf das VDU-NVRAM erhöhen.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="220" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="234" />
         <source>Changes specified by each brightness-response curve will only be applied when they cross a minimum threshold (default {}%).
 
 When designing brightness-response curves, consider minimizing brightness changes to reduce wear on NVRAM.</source>
@@ -701,27 +711,27 @@ When designing brightness-response curves, consider minimizing brightness change
 Berücksichtigen Sie beim Entwurf von Helligkeits-Response-Kurven, die Helligkeitsänderungen zu minimieren, um den Verschleiß des NVRAM zu reduzieren.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="235" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="249" />
         <source>Editing profile {}</source>
         <translation>Profil {} wird bearbeitet</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="247" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="261" />
         <source>Press Save-Profile to activate new profile.</source>
         <translation>Drücken Sie Profil speichern, um das neue Profil zu aktivieren.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="328" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="342" />
         <source>Cannot configure a solar lux calculator, no location is defined.</source>
         <translation>Solar-Lux-Rechner kann nicht konfiguriert werden, kein Standort definiert.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="329" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="343" />
         <source>Please set a location in the main Settings-Dialog.</source>
         <translation>Bitte legen Sie einen Standort im Haupt-Einstellungsdialog fest.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="333" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="347" />
         <source>Semi-automatic lux adjustment: quick start instructions.
 ________________________________________________________________________________________
 
@@ -751,7 +761,7 @@ des Außenlux (Eo) und des Tageslichtfaktors (DF), dem Verhältnis von Innen- zu
 </translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="342" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="356" />
         <source>Estimation of indoor illumination (Ei) from solar illumination (Eo):
     Ei = DF * Eo
     DF = Ei / Eo
@@ -768,34 +778,39 @@ DF: Tageslichtfaktor, das Verhältnis von Innen- zu Außenbeleuchtungsstärke. W
     wenn der Schieberegler für die Umgebungslichtstärke manuell geändert wird.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="357" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="371" />
         <source>You might need to be a member of the {} group.</source>
         <translation>Sie müssen möglicherweise Mitglied der Gruppe {} sein.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="358" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="372" />
         <source>No read access to {}</source>
         <translation>Kein Lesezugriff auf {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="361" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="375" />
         <source>Expecting {0}, but {1} was selected.</source>
         <translation>{0} wird erwartet, aber {1} wurde ausgewählt.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="381" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="395" />
         <source>No metering device set.</source>
         <translation>Kein Messgerät eingestellt.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="399" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="404" />
+        <source>Choose profile for {}:</source>
+        <translation>Wählen Sie ein Profil für {}:</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/lux_dialog.py" line="425" />
         <source>There are unsaved profile changes?</source>
         <translation>Es gibt nicht gespeicherte Profiländerungen?</translation>
     </message>
 </context><context>
     <name>LuxGaugeWidget</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="449" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="477" />
         <source>Left:	 Rolling display of metered lux (ML).
 Right:	 1) Estimated outside solar illumination (Eo) for
 	     the set geolocation for the current day.
@@ -814,17 +829,17 @@ Eo = Einheitskonstanten * sin(Bogenmaß(Sonnenhöhe)) * 10 ** (-0,1 * Luftmasse)
 Schätzungen von Ei werden von der halbautomatischen Messoption verwendet.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="543" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="571" />
         <source>Location Unknown</source>
         <translation>Standort unbekannt</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="585" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="613" />
         <source>Eo={:,} lux    DF={:,.4f}</source>
         <translation>Eo={:,} Lux    DF={:,.4f}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="587" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="615" />
         <source>Eo=?   DF=?   (location not set)</source>
         <translation>Eo=?   DF=?   (Standort nicht eingestellt)</translation>
     </message>
@@ -843,35 +858,47 @@ Schätzungen von Ei werden von der halbautomatischen Messoption verwendet.</tran
         <translation>Das erforderliche pyserial-Seriellports-Modul ist auf diesem System nicht installiert.</translation>
     </message>
 </context><context>
+    <name>LuxProfileTemplates</name>
+    <message>
+        <location filename="../src/vdu_controls/lux_dialog.py" line="47" />
+        <source>Older Monitor - dimmer backlight</source>
+        <translation>Älterer Monitor – gedämpfte Hintergrundbeleuchtung</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/lux_dialog.py" line="49" />
+        <source>Newer Monitor - brighter backlight</source>
+        <translation>Neuerer Monitor – hellere Hintergrundbeleuchtung</translation>
+    </message>
+</context><context>
     <name>LuxProfileWidget</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="648" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="676" />
         <source>Lux Brightness Response Profiles</source>
         <translation>Lux-Helligkeits-Response-Profile</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="666" />
-        <location filename="../src/vdu_controls/lux_dialog.py" line="664" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="694" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="692" />
         <source>Brightness %</source>
         <translation>Helligkeit %</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="781" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="809" />
         <source>Click remove preset at {} lux</source>
         <translation>Klicken, um Voreinstellung bei {} Lux zu entfernen</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="793" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="821" />
         <source>Click to add preset at {} lux</source>
         <translation>Klicken, um Voreinstellung bei {} Lux hinzuzufügen</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="860" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="888" />
         <source>There are no Presets.</source>
         <translation>Es sind keine Voreinstellungen vorhanden.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="860" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="888" />
         <source>Use the Presets Dialog to create some.</source>
         <translation>Verwenden Sie den Voreinstellungsdialog, um welche zu erstellen.</translation>
     </message>

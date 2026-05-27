@@ -26,17 +26,29 @@ from vdu_controls.qt_imports import QColor, QPixmap, QPainter, QPen, QFont, QRes
 from vdu_controls.qt_imports import QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING
 from vdu_controls.qt_imports import QT_TR_NOOP, Qt, QTimer, pyqtSignal, QPointF, QPoint
 from vdu_controls.qt_imports import QVBoxLayout, QWidget, QGridLayout, QComboBox, QCheckBox, QLabel, QSpinBox, QListWidget, \
-    QStatusBar, \
-    QHBoxLayout, QListWidgetItem, QApplication, QInputDialog
+    QStatusBar, QHBoxLayout, QListWidgetItem, QApplication, QInputDialog
 from vdu_controls.scaling import npx, dpx, desktop_font_height
 from vdu_controls.solar_calc import calc_solar_lux
 from vdu_controls.svg import SWATCH_ICON_SOURCE, SUN_SVG
 from vdu_controls.unicode import TIMER_RUNNING_SYMBOL
 from vdu_controls.vdu_exceptions import VduException
-from vdu_controls.widgets import SubWinDialog, DialogSingletonMixin, StdButton, FasterFileDialog, MBox, MIcon, MBtn
+from vdu_controls.widgets import SubWinDialog, DialogSingletonMixin, StdButton, FasterFileDialog, MBox, MIcon, MBtn, ChoiceBox
 
 if TYPE_CHECKING:
     from vdu_controls.vdu_controls_application import VduAppController
+
+@dataclass(frozen=True)
+class LuxProfileTemplate:
+    name: str
+    values: List[LuxPoint]
+
+class LuxProfileTemplates:  # Context for QT_TR_NOOP translations
+    LIST = [
+        LuxProfileTemplate(QT_TR_NOOP("Older Monitor - dimmer backlight"),
+                           [LuxPoint(0, 90), LuxPoint(30, 90), LuxPoint(1016, 100), LuxPoint(100000, 100)]),
+        LuxProfileTemplate(QT_TR_NOOP('Newer Monitor - brighter backlight'),
+                           [LuxPoint(0, 13), LuxPoint(30, 13), LuxPoint(60, 13), LuxPoint(279, 70), LuxPoint(726, 90), LuxPoint(9690, 90), LuxPoint(98435, 100)]),
+    ]
 
 
 class LuxDeviceType(TitledStrEnum):
@@ -141,12 +153,14 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         main_layout.addWidget(self.profile_plot, stretch=1)
 
         self.status_bar = QStatusBar()
+        self.templates_button = StdButton(icon=si(self, StdPixmap.SP_DirOpenIcon), title=tr("Templates"), clicked=self.choose_template,
+                                          tip=tr("Select from typical profile templates."))
         self.save_button = StdButton(icon=si(self, StdPixmap.SP_DriveFDIcon), title=tr("Save Profiles"), clicked=self.save_profiles,
                                      tip=tr("Apply and save profile-chart changes."))
         self.revert_button = StdButton(icon=si(self, StdPixmap.SP_DialogResetButton), title=tr("Revert Profiles"),
                                        clicked=self.reconfigure, tip=tr("Abandon profile-chart changes, revert to last saved."))
         quit_button = StdButton(icon=si(self, StdPixmap.SP_DialogCloseButton), title=tr("Close"), clicked=self.close)
-        for button in (self.save_button, self.revert_button, quit_button):
+        for button in (self.templates_button, self.save_button, self.revert_button, quit_button):
             self.status_bar.addPermanentWidget(button, 0)
 
         self.status_layout = QHBoxLayout()
@@ -383,6 +397,18 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
             self.enabled_checkbox.setEnabled(True)
             self.interval_label.setEnabled(True)
 
+
+    def choose_template(self) -> None:
+        sid = self.profile_plot.current_vdu_sid
+        #icon = create_icon_from_svg_bytes(AMBIENT_PANEL_ICON_SOURCE)
+        template_chooser = ChoiceBox(title=tr("Choose profile for {}:").format(sid),
+                                     choices=[tr(template.name, LuxProfileTemplates.__name__) for template in LuxProfileTemplates.LIST])
+        template_chooser.exec()
+        if template_chooser.selected_item_number != -1:
+            self.lux_profiles_map[sid] = LuxProfileTemplates.LIST[template_chooser.selected_item_number].values[:]  # Copy
+            self.profile_plot.show_changes(True)
+
+
     def save_profiles(self) -> None:
         for vdu_sid, profile in self.profile_plot.profiles_map.items():
             data = [(lux_point.lux, lux_point.brightness) for lux_point in profile if lux_point.preset_name is None]
@@ -400,6 +426,8 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                           buttons=MBtn.Save | MBtn.Discard | MBtn.Cancel, default=MBtn.Cancel).exec()
             if answer == MBtn.Save:
                 self.save_profiles()
+            if answer == MBtn.Discard:
+                self.reconfigure()
             elif answer == MBtn.Cancel:
                 event.ignore()
                 return
