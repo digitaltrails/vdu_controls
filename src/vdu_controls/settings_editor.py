@@ -271,7 +271,10 @@ class SettingsEditorTab(QWidget):
                     option_definition = ConfOptDef(option_name, section_def, ConfType.BOOL, ui_label=option_name.replace('-', ' '))
                 else:  # It's a known config option with an enum value other than UNKNOWN, it will have an attached definition
                     option_definition = conf_option.value  # use the existing attached ConfOptDef
-                ordered_by_sub_group[(option_definition.sub_group.intval, num)] = (option_name, option_definition)
+                if option_definition.ui_label is None:   # Cannot appear in GUI, no way to localize the lable.
+                    log.warning(f"SettingsEditor - ignoring {section_def}.{option_name}, it has no ui_label.")
+                else:
+                    ordered_by_sub_group[(option_definition.sub_group.intval, num)] = (option_name, option_definition)
             except ValueError:  # Probably an old no-longer-valid option, or a typo.
                 log.warning(f"Ignoring invalid option name {option_name} in {section_def}")
         ordered_by_sub_group = dict(sorted(ordered_by_sub_group.items()))
@@ -367,9 +370,14 @@ class SettingsEditorBooleanWidget(SettingsEditorFieldBase):
         def _toggled(is_checked: bool) -> None:
             section_editor.ini_editable[self.conf_section][self.conf_name] = 'yes' if is_checked else 'no'
             if option_def.related:
-                MBox(MIcon.Information, msg=tr("You may also wish to set\n{}").format(tr(option_def.related)), buttons=MBtn.Ok).exec()
+                MBox(MIcon.Information, msg=tr("You may optionally also set\n{}").format(
+                    "\n + ".join([other.localized_name for other in option_def.related])), buttons=MBtn.Ok).exec()
             if is_checked and option_def.requires:
-                MBox(MIcon.Information, msg=tr("You will also need to set\n{}").format(tr(option_def.requires)), buttons=MBtn.Ok).exec()
+                if any(section_editor.ini_editable.get(self.conf_section, other.conf_name, fallback='no') == 'no' for
+                       other in option_def.requires):
+                    # TODO - it would be nice to actually set them for the user.
+                    MBox(MIcon.Warning, msg=tr("You will also need to set\n{}").format(
+                        "\n + ".join([other.localized_name for other in option_def.requires])), buttons=MBtn.Ok).exec()
             if is_checked and option_def.warning:
                 MBox(MIcon.Warning, msg=option_def.localized_warning, buttons=MBtn.Ok).exec()
             if not is_checked and option_def.off_warning:

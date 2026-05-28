@@ -9,7 +9,7 @@ import os
 import re
 import sys
 import textwrap
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import List, Dict, Any
@@ -71,16 +71,15 @@ class ConfOptDef:
     conf_section: str = ConfSec.VDU_CONTROLS_GLOBALS
     conf_type: ConfType = ConfType.BOOL
     default_value: str | None = None
-    global_allowed: bool = True
     restart_required: bool = False
-    cmdline_arg: str = 'DEFAULT'
-    ui_label: str | None = None
+    cmdline_arg: str = 'DEFAULT'  # Can be DISALLOWED if not allowed to be a command line option.
+    ui_label: str | None = None   # If None, then it won't appear in the Settings Editor.
     help: str = ''
-    sub_group: SubGroup = SubGroup.NONE
-    related: str = ''
-    requires: str = ''
-    warning: str = ''
-    off_warning: str = ''
+    sub_group: SubGroup = SubGroup.NONE   # UI grouping of items.
+    related: List[ConfOpt] = field(default_factory=list)      # Related conf_names, the user will see a message box suggesting them.
+    requires: List[ConfOpt] = field(default_factory=list)    # A pre-requisite boolean conf_name, user will be warned to set them.
+    warning: str = ''      # If set, this message will pop up when the setting is set.
+    off_warning: str = ''  # If set, this message will pop up when the item is unset.
 
     @property
     def conf_id(self) -> str:
@@ -123,17 +122,17 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         sub_group=SubGroup.FEATURES,
         help=QT_TR_NOOP('Enable the startup splash screen.'))
 
-    SYSTEM_TRAY_ENABLED = ConfOptDef(
-        conf_name='system-tray-enabled', default_value="no", restart_required=True,
-        ui_label=QT_TR_NOOP('system tray'),
-        sub_group=SubGroup.SYSTEM_TRAY,
-        help=QT_TR_NOOP('Start up in the system tray.'), related='hide-on-focus-out')
-
     HIDE_ON_FOCUS_OUT = ConfOptDef(
         conf_name='hide-on-focus-out', default_value="no", restart_required=False,
         ui_label=QT_TR_NOOP('hide on focus out'),
         sub_group=SubGroup.WINDOWING,
         help=QT_TR_NOOP('Minimize the main window automatically on focus out.'))
+
+    SYSTEM_TRAY_ENABLED = ConfOptDef(
+        conf_name='system-tray-enabled', default_value="no", restart_required=True,
+        ui_label=QT_TR_NOOP('system tray'),
+        sub_group=SubGroup.SYSTEM_TRAY,
+        help=QT_TR_NOOP('Start up in the system tray.'), related=[HIDE_ON_FOCUS_OUT])
 
     SMART_WINDOW = ConfOptDef(
         conf_name='smart-window', default_value="yes",
@@ -145,6 +144,7 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         conf_name='smart-uses-xwayland', default_value="yes", restart_required=True,
         ui_label=QT_TR_NOOP('smart uses xwayland'),
         sub_group=SubGroup.WINDOWING,
+        requires=[SMART_WINDOW],
         help=QT_TR_NOOP('If smart-window is enabled, use xwayland in wayland.'))
 
     PREFER_QT6 = ConfOptDef(
@@ -157,18 +157,21 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         conf_name='monochrome-tray-enabled', default_value="no", restart_required=False,
         ui_label=QT_TR_NOOP('monochrome tray'),
         sub_group=SubGroup.SYSTEM_TRAY,
+        requires=[SYSTEM_TRAY_ENABLED],
         help=QT_TR_NOOP('Monochrome dark themed system tray.'))
 
     MONO_LIGHT_TRAY_ENABLED = ConfOptDef(
         conf_name='mono-light-tray-enabled', default_value="no", restart_required=False,
         ui_label=QT_TR_NOOP('mono light tray'),
         sub_group=SubGroup.SYSTEM_TRAY,
+        requires=[SYSTEM_TRAY_ENABLED],
         help=QT_TR_NOOP('Monochrome light themed system tray.'))
 
     TRAY_FOLLOWS_THEME = ConfOptDef(
         conf_name='tray-follows-theme', default_value="yes", restart_required=False,
         ui_label=QT_TR_NOOP('tray follows theme'),
         sub_group=SubGroup.SYSTEM_TRAY,
+        requires=[SYSTEM_TRAY_ENABLED],
         help=QT_TR_NOOP('Tray dark/light theming follows desktop-theme changes.'))
 
     TOOLBAR_AT_TOP = ConfOptDef(
@@ -234,7 +237,7 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         conf_name='dbus-events-enabled', default_value="yes",
         ui_label=QT_TR_NOOP('dbus events'),
         sub_group=SubGroup.DDC,
-        help=QT_TR_NOOP('Enable D-bus ddcutil-server events.'), requires='dbus-client-enabled')
+        help=QT_TR_NOOP('Enable D-bus ddcutil-server events.'), requires=[DBUS_CLIENT_ENABLED])
 
     LAPTOP_PANEL_ENABLED = ConfOptDef(
         conf_name='laptop-panel-enabled', default_value="no",
@@ -308,7 +311,7 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         conf_name='vdu-name', conf_section=ConfSec.VDU_CONTROLS_WIDGETS,
         ui_label=QT_TR_NOOP('vdu name'),
         conf_type=ConfType.TEXT,
-        global_allowed=False, cmdline_arg='DISALLOWED', help=QT_TR_NOOP('Name to display for this VDU'))
+        cmdline_arg='DISALLOWED', help=QT_TR_NOOP('Name to display for this VDU'))
 
     ENABLE_VCP_CODES = ConfOptDef(
         conf_name='enable-vcp-codes', conf_section=ConfSec.VDU_CONTROLS_WIDGETS,
