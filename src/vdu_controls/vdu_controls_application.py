@@ -1661,11 +1661,14 @@ def main() -> None:
     # Single-instance guard: if another vdu_controls is already running, ask it to surface its
     # main window and exit.  Placed after the one-shot CLI ops (--install, --uninstall,
     # --detailed-help) so those still work regardless.
-    single_instance_name = f"vdu_controls-{os.geteuid()}"
-    if _activate_running_instance(single_instance_name):
-        log.info(f"Another {APPNAME} instance is already running; activated it and exiting.")
-        sys.exit(0)
-    single_instance_server = SingleInstanceServer(single_instance_name, parent=app)
+    single_instance_only = main_config.is_set(ConfOpt.SINGLE_INSTANCE)
+    log.info(f"{single_instance_only=}")
+    if single_instance_only:
+        single_instance_name = f"vdu_controls-{os.geteuid()}"
+        if _activate_running_instance(single_instance_name):
+            log.info(f"Another {APPNAME} instance is already running; activated it and exiting.")
+            sys.exit(0)
+        single_instance_server = SingleInstanceServer(single_instance_name, parent=app)
 
     if main_config.is_set(ConfOpt.TRANSLATIONS_ENABLED):
         initialise_locale_translations(app)
@@ -1675,7 +1678,8 @@ def main() -> None:
     main_controller = VduAppController(main_config)
     assert gui_misc.is_running_in_gui_thread()
     main_window = VduAppWindow(main_config, main_controller)  # may need to assign this to a variable to prevent garbage collection?
-    single_instance_server.activate_requested.connect(partial(main_window.show_main_window, False))
+    if single_instance_only:
+        single_instance_server.activate_requested.connect(partial(main_window.show_main_window, False))
 
     if args.about:
         AboutDialog.show_dialog(main_controller)

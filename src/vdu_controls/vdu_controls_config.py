@@ -254,6 +254,13 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         sub_group=SubGroup.FEATURES,
         help=QT_TR_NOOP('Output extra debug information.'))
 
+    SINGLE_INSTANCE = ConfOptDef(
+        conf_name='single-instance', default_value="yes",
+        ui_label=QT_TR_NOOP('single instance'),
+        sub_group=SubGroup.FEATURES,
+        help=QT_TR_NOOP('Only allow one running vdu_controls, running another raises the existing instance.')
+    )
+
     WARNINGS_ENABLED = ConfOptDef(
         conf_name='warnings-enabled', default_value="no",
         ui_label=QT_TR_NOOP('warnings'),
