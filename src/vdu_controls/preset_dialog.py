@@ -38,6 +38,10 @@ from vdu_controls.widgets import alter_margins, StdButton, PushButtonLeftJustifi
 if TYPE_CHECKING:
     from vdu_controls.vdu_controls_application import VduAppController
 
+
+NO_ICON_ICON_NUMBER = StdPixmap.SP_ComputerIcon
+
+
 class PresetItemWidget(QWidget):
     def __init__(self, preset: Preset, restore_action: Callable, save_action: Callable, delete_action: Callable,
                  edit_action: Callable, up_action: Callable, down_action: Callable, protect_nvram: bool):
@@ -145,7 +149,7 @@ class PresetIconPickerButton(StdButton):
         super().__init__(icon_size=QSize(desktop_font_height(), desktop_font_height()),
                          clicked=self.choose_preset_icon_action, flat=True, auto_default=False,
                          tip=tr('Choose a preset icon.'))
-        self.setIcon(si(self, PresetsDialog.NO_ICON_ICON_NUMBER))
+        self.setIcon(si(self, NO_ICON_ICON_NUMBER))
         self.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum))
         self.last_selected_icon_path: Path | None = None
         self.last_icon_dir = Path.home()
@@ -186,7 +190,7 @@ class PresetIconPickerButton(StdButton):
         elif self.preset:
             self.setIcon(self.preset.create_icon(polychrome_light_or_dark()))
         else:
-            self.setIcon(si(self, PresetsDialog.NO_ICON_ICON_NUMBER))
+            self.setIcon(si(self, NO_ICON_ICON_NUMBER))
 
     def reset(self):
         self.last_selected_icon_path = None
@@ -462,7 +466,7 @@ class PresetElevationChartWidget(QLabel):
         if self.location is not None:
             self.refresh_day_cache(logical_width, origin_iy, range_iy)
             curve_points = self.cache_curve_points
-            solar_noon_x, solar_noon_y = self.noon_x, self.noon_y,
+            solar_noon_x, solar_noon_y = self.noon_x, self.noon_y
             if ev_key and (solar_data := self.cache_solar_by_elevation.get(ev_key)):
                 seconds_since_midnight = (
                             solar_data.when - solar_data.when.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
@@ -667,8 +671,7 @@ class PresetDaylightFactorWidget(QWidget):
         self.df_label = QLabel(tr("Daylight-Factor"))
         self.df_input = QLineEdit()
         self.df_input.setValidator(QDoubleValidator())
-        self.setEnabled(False)
-        self.df_checkbox.toggled.connect(self.setEnabled)
+        self.df_checkbox.toggled.connect(self.enable_controls)
         self.setToolTip(tr("Save the current semi-automatic Light-Metering Daylight-Factor (DF) as part of the Preset."))
 
         def df_init(state):
@@ -683,7 +686,7 @@ class PresetDaylightFactorWidget(QWidget):
         for widget in (self.df_checkbox, self.df_label, self.df_input):
             self.layout().addWidget(widget)   # type: ignore - will have a layout by now
 
-    def setEnabled(self, enabled):
+    def enable_controls(self, enabled):
         self.df_checkbox.setChecked(enabled)
         self.df_label.setEnabled(enabled)
         self.df_input.setEnabled(enabled)
@@ -818,10 +821,6 @@ class PresetScheduleAtElevationWidget(PresetScheduleAtWidgetBase):
         self.slider.setValue(-1)
         self.sliding()
         self.weather_widget.update_location(location)
-        if self.elevation_chart.solar_max_t is not None:
-            snt = self.elevation_chart.solar_max_t
-            if snt.hour > (15 if snt.tzname() == 'CST' else 14) or snt.hour < 10:  # Solar midday seems too far from 12:00 midday.
-                log.warning(f"Location {location.longitude},{location.latitude} and timezone {snt.tzname()} seem mismatched.")
 
     def resizeEvent(self, event: QResizeEvent | None) -> None:
         super().resizeEvent(event)
@@ -913,7 +912,6 @@ class PresetScheduleAtTimeWidget(PresetScheduleAtWidgetBase):
 
 class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rather complex - break into parts?
     """A dialog for creating/updating/removing presets."""
-    NO_ICON_ICON_NUMBER = StdPixmap.SP_ComputerIcon
 
     @staticmethod
     def show_dialog(main_controller: VduAppController, main_config: VduControlsConfig) -> None:

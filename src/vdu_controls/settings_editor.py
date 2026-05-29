@@ -9,10 +9,12 @@ from pathlib import Path
 from typing import List, Callable, Dict, Tuple, Mapping
 from urllib.error import URLError
 
+from vdu_controls.misc import zoned_now
 from vdu_controls.qt_imports import QSize, pyqtSignal, Qt, QRegularExpression, QDir
 from vdu_controls.qt_imports import QValidator, QPalette, QRegularExpressionValidator
 from vdu_controls.qt_imports import QVBoxLayout, QTabWidget, QStatusBar, QFrame, QHBoxLayout, QLabel, QWidget, QScrollArea, QGridLayout, \
     QApplication, QCheckBox, QLineEdit, QDoubleSpinBox, QPlainTextEdit, QSizePolicy
+from vdu_controls.solar_calc import degrees_from_zone_center
 
 from vdu_controls.vdu_controls_config import VduControlsConfig, ConfOpt, ConfType, ConfSec, ConfOptDef
 from vdu_controls.config_ini import ConfIni
@@ -478,6 +480,15 @@ class LatitudeLongitudeValidator(QRegularExpressionValidator):
                     lat, lon = [float(i) for i in text.split(',')[:2]]
                     if -90.0 <= lat <= 90.0:
                         if -180.0 <= lon <= 180.0:
+                            offset_degrees = degrees_from_zone_center(lat, lon)
+                            if abs(offset_degrees) > 20:   # 20 degrees is approx 1h20m - spans most zones
+                                MBox(MIcon.Warning,
+                                     msg=tr("The supplied longitude is {0} from the center of your {1} timezone.").format(
+                                         f"{offset_degrees:.4f}\u00b0",
+                                         zoned_now().strftime("%Z")),
+                                     info=tr("Charts showing solar elevation will render solar-noon off-center."),
+                                     details=tr("This isn't a serious issue, but you may wish to check you longitude or timezone."),
+                                     buttons=MBtn.Ok).exec()
                             return QValidator.State.Acceptable, text, pos
                     return QValidator.State.Invalid, text, pos
                 except ValueError:

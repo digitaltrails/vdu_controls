@@ -9,7 +9,7 @@ from typing import Tuple, Callable, Dict
 
 from vdu_controls.app_locale import tr
 from vdu_controls.constants import EASTERN_SKY, WESTERN_SKY
-from vdu_controls.misc import GeoLocation
+from vdu_controls.misc import GeoLocation, zoned_now
 from vdu_controls.unicode import EAST_ELEVATION_SYMBOL, WEST_ELEVATION_SYMBOL, SUN_SYMBOL, DEGREE_SYMBOL
 
 
@@ -168,3 +168,27 @@ def parse_solar_elevation_ini_text(ini_text: str) -> SolarElevationKey:
         raise ValueError(f"Invalid value for  SolarElevation direction: '{parts[0]}'")
     solar_elevation = SolarElevationKey(parts[0], int(parts[1]))
     return solar_elevation
+
+
+def find_solar_noon(local_now: datetime, latitude: float, longitude: float):
+    map = create_elevation_map(local_now, latitude, longitude, callback=None)
+    possible = next(iter(map.values()))
+    for elevation_data in map.values():
+        if elevation_data.zenith > possible.zenith:
+            possible = elevation_data
+    return possible.when
+
+
+def degrees_from_zone_center(latitude: float, longitude: float) -> float:
+    """
+    Difference user's time-zone longitudinal-center their specified longitude.
+    For example, the China's CST zone-center is at Beijing's longitude, a
+    user in Kashgar is still in CST, but 40 degrees west of the CST center.
+    Which may cause diagrams to look off.
+    """
+    solar_noon = find_solar_noon(zoned_now(), latitude, longitude)  # Noon time
+    utc_offset = solar_noon.utcoffset().total_seconds() / 3600  # Hours offset from UTC
+    zone_center = utc_offset * 15  # UTC offset * Earth 15 degrees/hour rotation -> approx zone center meridian.
+    longitude_deviation = longitude - zone_center  # diff location.longitude from zone-center
+    return longitude_deviation
+
