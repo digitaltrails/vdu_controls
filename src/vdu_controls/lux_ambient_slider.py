@@ -17,7 +17,7 @@ from vdu_controls.lux_meters import LuxMeterSemiAutoDevice
 
 from vdu_controls.scaling import desktop_font_height, dpx
 from vdu_controls.svg import LUX_SUNLIGHT_SVG, LUX_DAYLIGHT_SVG, LUX_OVERCAST_SVG, LUX_TWILIGHT_SVG, LUX_SUBDUED_SVG, LUX_DARK_SVG, \
-    AMBIENT_PANEL_ICON_SOURCE
+    AMBIENT_PANEL_ICON_SVG
 from vdu_controls.widgets import ThemedSvgWidget, alter_margins, TitleButton, ClickableSlider, LineEditAll, StdButton, \
     ThemedSvgButton
 
@@ -62,7 +62,7 @@ class LuxAmbientSlider(QWidget):
         top_layout.setSpacing(0)
         alter_margins(top_layout, top=0, bottom=0, default=self.style())
 
-        label = TitleButton(AMBIENT_PANEL_ICON_SOURCE, tr("Ambient Light Level"), tr("lux"),
+        label = TitleButton(AMBIENT_PANEL_ICON_SVG, tr("Ambient Light Level"), tr("lux"),
                             clicked=self.title_button_pressed_qtsignal)   # type: ignore
         label.setToolTip(tr("Ambient light level control for adjusting all monitors.\n(Click for Light-Meter Dialog)"))
         top_layout.addWidget(label, stretch=0, alignment=Qt.AlignmentFlag.AlignTop)

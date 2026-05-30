@@ -104,7 +104,7 @@ class VduMainToolBar(QToolBar):
         self.setIconSize(QSize(desktop_font_height(), desktop_font_height()))
         self.status_area = QStatusBar()
         self.addWidget(self.status_area)
-        self.menu_button = ToolButton(svg.MENU_ICON_SOURCE, tr("Context and Preset Menu"), self)
+        self.menu_button = ToolButton(svg.MENU_ICON_SVG, tr("Context and Preset Menu"), self)
         self.menu_button.setMenu(app_context_menu)
         self.menu_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         self.preset_action = self.addAction(QIcon(), "")
@@ -1216,7 +1216,7 @@ class VduAppWindow(QMainWindow):
             self.tray_icon = create_icon_from_path(CUSTOM_TRAY_ICON_FILE, tray_theme_type)
         elif tray_theme_type in (ThemeType.MONOCHROME_LIGHT, ThemeType.MONOCHROME_DARK):  # Special tray monochrome version
             log.info(f"Using monochrome app_icon: {tray_theme_type=}")
-            self.tray_icon = create_icon_from_svg_bytes(svg.MONOCHROME_APP_ICON_SOURCE, tray_theme_type)
+            self.tray_icon = create_icon_from_svg_bytes(svg.MONOCHROME_APP_ICON_SVG, tray_theme_type)
         else:  # non-themed color icon based on the splash screen image
             self.tray_icon = self.app_icon
 
@@ -1230,7 +1230,7 @@ class VduAppWindow(QMainWindow):
             self.scroll_area = None
         self.main_panel = VduControlsMainPanel()
         self.main_controller.initialize_vdu_controllers()
-        refresh_button = ToolButton(svg.REFRESH_ICON_SOURCE, tr("Refresh settings from monitors"))
+        refresh_button = ToolButton(svg.REFRESH_ICON_SVG, tr("Refresh settings from monitors"))
         refresh_button.pressed.connect(self.main_controller.start_refresh)
         tool_buttons = [refresh_button]
         extra_controls = []
@@ -1320,11 +1320,11 @@ class VduAppWindow(QMainWindow):
             PresetsDialog.instance_indicate_active_preset(preset)
             title = f"{preset.get_title_name()} {PRESET_APP_SEPARATOR_SYMBOL} {title}"
             tray_embedded_icon = preset.create_icon(self.get_tray_theme_type())
-            led1_color = svg.PRESET_TRANSITIONING_LED_COLOR if preset.in_transition_step > 0 else None  # TODO transitioning indicator
+            led1_color = svg.PRESET_TRANSITIONING_LED_QCOLOR if preset.in_transition_step > 0 else None  # TODO transitioning indicator
         if self.main_controller.lux_auto_controller is not None:
             if self.main_controller.lux_auto_controller.is_auto_enabled():
                 title = f"{tr('Auto')}/{title}"
-                led2_color = svg.AUTO_LUX_LED_COLOR
+                led2_color = svg.AUTO_LUX_LED_QCOLOR
             menu_lux_icon = create_icon_from_svg_bytes(
                 self.main_controller.lux_auto_controller.current_auto_svg())  # NB cache involved
             self.app_context_menu.update_lux_auto_icon(menu_lux_icon)  # Won't actually update if it hasn't changed

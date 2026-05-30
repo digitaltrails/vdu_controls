@@ -9,11 +9,8 @@ from typing import Dict
 
 from vdu_controls.qt_imports import (QStyle, QWidget, QImage, QIcon, QPixmap, Qt, QSvgRenderer, QFont, QColor, QPainter,
                                      QPen, QApplication, QSize, QPalette)
-
-SVG_LIGHT_THEME_COLOR = b"#232629"
-SVG_LIGHT_THEME_TEXT_COLOR = b"#000000"
-SVG_DARK_THEME_COLOR = b"#f3f3f3"
-SVG_DARK_THEME_TEXT_COLOR = SVG_DARK_THEME_COLOR
+from vdu_controls.svg import SVG_LIGHT_THEME_COLOR, SVG_DARK_THEME_COLOR, SVG_DARK_THEME_TEXT_COLOR, SVG_LIGHT_THEME_TEXT_COLOR, \
+    SVG_MONOCHROME_LIGHT_FG_COLOR, SVG_WHITE_COLOR, SVG_BLACK_COLOR, SVG_MONOCHROME_DARK_FG_COLOR
 
 
 class ThemeType(Enum):  # Indicates how colors should be altered to fit a color theme.
@@ -70,9 +67,9 @@ def create_icon_from_svg_bytes(svg_bytes: bytes, theme_type: ThemeType = ThemeTy
 def handle_theme(svg_bytes: bytes, theme_type: ThemeType):
     assert theme_type != ThemeType.UNDECIDED
     if theme_type == ThemeType.MONOCHROME_LIGHT:
-        return svg_bytes.replace(SVG_LIGHT_THEME_COLOR, b"#000000").replace(b"#ffffff", b"#000000")
+        return svg_bytes.replace(SVG_LIGHT_THEME_COLOR, SVG_MONOCHROME_LIGHT_FG_COLOR).replace(SVG_WHITE_COLOR, SVG_BLACK_COLOR)
     elif theme_type == ThemeType.MONOCHROME_DARK:
-        return svg_bytes.replace(SVG_LIGHT_THEME_COLOR, b"#ffffff").replace(b"#000000", b"#ffffff")
+        return svg_bytes.replace(SVG_LIGHT_THEME_COLOR, SVG_MONOCHROME_DARK_FG_COLOR).replace(SVG_BLACK_COLOR, SVG_WHITE_COLOR)
     elif theme_type == ThemeType.POLYCHROME_LIGHT:
         return svg_bytes
     elif theme_type == ThemeType.POLYCHROME_DARK:
@@ -105,9 +102,9 @@ def create_icon_from_text(text: str, theme_type: ThemeType) -> QIcon:
     painter.setFont(font)
     painter.setOpacity(1.0)
     if theme_type == ThemeType.MONOCHROME_LIGHT:
-        painter.setPen(QColor("#000000"))
+        painter.setPen(QColor(SVG_MONOCHROME_LIGHT_FG_COLOR.decode('utf-8')))
     elif theme_type == ThemeType.MONOCHROME_DARK:
-        painter.setPen(QColor("#ffffff"))
+        painter.setPen(QColor(SVG_MONOCHROME_DARK_FG_COLOR.decode('utf-8')))
     elif theme_type == ThemeType.POLYCHROME_DARK:
         painter.setPen(QColor(SVG_DARK_THEME_TEXT_COLOR.decode("utf-8")))
     else:  # default to a dark text color

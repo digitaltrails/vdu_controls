@@ -9,29 +9,29 @@ from functools import partial
 from pathlib import Path
 from typing import Callable, Dict, List, Tuple, TYPE_CHECKING, cast
 
-from vdu_controls.ddcutil_aggregator import VduStableId
-from vdu_controls.qt_imports import QSize, QEvent, Qt, pyqtSignal, QPoint, QRegularExpression
-from vdu_controls.qt_imports import QFontMetrics, QFont, QImage, QPixmap, QPainter, QColor, QPen, QPolygon, QMouseEvent, QDoubleValidator, \
-    QResizeEvent, QValidator, QRegularExpressionValidator
-from vdu_controls.qt_imports import QWidget, QHBoxLayout, QSizePolicy, QApplication, QVBoxLayout, QLabel, QComboBox, QScrollArea, QMenu, \
-    QAction, QSpinBox, QCheckBox, QLineEdit, QSlider, QSplitter, QGroupBox, QToolButton, QSpacerItem, QStatusBar, QFrame
-
-from vdu_controls.vdu_controls_config import VduControlsConfig, ConfOpt
+import vdu_controls.logging as log
+import vdu_controls.weather_util as weather_util
+from vdu_controls.app_locale import tr, translate_option
 from vdu_controls.config_ini import ConfIni
 from vdu_controls.constants import STANDARD_ICON_PATHS, CONFIG_DIR_PATH, WEATHER_FORECAST_URL, EASTERN_SKY, WESTERN_SKY
-from vdu_controls.icon_utils import si, StdPixmap, create_icon_from_path, polychrome_light_or_dark, create_image_from_svg_bytes, \
-    SVG_LIGHT_THEME_COLOR
-from vdu_controls.app_locale import tr, translate_option
-import vdu_controls.logging as log
+from vdu_controls.ddcutil_aggregator import VduStableId
+from vdu_controls.icon_utils import si, StdPixmap, create_icon_from_path, polychrome_light_or_dark, create_image_from_svg_bytes
 from vdu_controls.misc import zoned_now, proper_name, GeoLocation
 from vdu_controls.preset import Preset, PresetTransitionFlag, PresetScheduleStatus
+from vdu_controls.qt_imports import QFontMetrics, QFont, QImage, QPixmap, QPainter, QColor, QPen, QPolygon, QMouseEvent, \
+    QDoubleValidator, \
+    QResizeEvent, QValidator, QRegularExpressionValidator
+from vdu_controls.qt_imports import QSize, QEvent, Qt, pyqtSignal, QPoint, QRegularExpression
+from vdu_controls.qt_imports import QWidget, QHBoxLayout, QSizePolicy, QApplication, QVBoxLayout, QLabel, QComboBox, QScrollArea, \
+    QMenu, \
+    QAction, QSpinBox, QCheckBox, QLineEdit, QSlider, QSplitter, QGroupBox, QToolButton, QSpacerItem, QStatusBar, QFrame
 from vdu_controls.scaling import npx, dpx, desktop_font_height
 from vdu_controls.solar_calc import SolarElevationKey, SolarElevationData, create_elevation_map, calc_solar_lux, \
     format_solar_elevation_abbreviation, parse_solar_elevation_ini_text, format_solar_elevation_ini_text
-from vdu_controls.svg import SUN_SVG, VDU_POWER_ON_ICON_SOURCE
+from vdu_controls.svg import VDU_POWER_ON_ICON_SVG, PRESET_DIALOG_SUN_SVG
 from vdu_controls.unicode import TIME_CLOCK_SYMBOL, DEGREE_SYMBOL, WARNING_SYMBOL
 from vdu_controls.vdu_bulk_change import BulkChangeWorker
-import vdu_controls.weather_util as weather_util
+from vdu_controls.vdu_controls_config import VduControlsConfig, ConfOpt
 from vdu_controls.widgets import alter_margins, StdButton, PushButtonLeftJustified, FasterFileDialog, MBox, MIcon, MBtn, \
     SubWinDialog, DialogSingletonMixin, ToolButton
 
@@ -567,7 +567,7 @@ class PresetElevationChartWidget(QLabel):
                 # Draw the sun
                 painter.setPen(QPen(QColor(0xff4a23), line_width))
                 if self.sun_image is None:
-                    sun_image = create_image_from_svg_bytes(SUN_SVG.replace(SVG_LIGHT_THEME_COLOR, b"#fecf70"))
+                    sun_image = create_image_from_svg_bytes(PRESET_DIALOG_SUN_SVG)
                     self.sun_image = sun_image.scaled(npx(sun_image.width()//2), npx(sun_image.height()//2))
                 painter.drawImage(QPoint(_reverse_x(sun_plot_x) - self.sun_image.width() // 2,
                                          sun_plot_y - self.sun_image.height() // 2), self.sun_image)
@@ -1004,7 +1004,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.vip_menu = QMenu()
         self.vip_menu.triggered.connect(self.vip_menu_triggered)
         edit_panel_layout.addWidget(self.preset_name_edit)
-        self.vdu_init_button = ToolButton(VDU_POWER_ON_ICON_SOURCE, tr("Create VDU specific\nInitialization-Preset"), self)
+        self.vdu_init_button = ToolButton(VDU_POWER_ON_ICON_SVG, tr("Create VDU specific\nInitialization-Preset"), self)
         self.vdu_init_button.setMenu(self.vip_menu)
         self.vdu_init_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         edit_panel_layout.addWidget(self.vdu_init_button)

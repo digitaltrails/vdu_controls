@@ -18,7 +18,7 @@ from vdu_controls.config_ini import ConfIni
 from vdu_controls.constants import MsgDestination
 from vdu_controls.ddcutil_abstract import BRIGHTNESS_VCP_CODE
 from vdu_controls.ddcutil_aggregator import VduStableId
-from vdu_controls.icon_utils import si, StdPixmap, create_icon_from_svg_bytes, create_image_from_svg_bytes, SVG_LIGHT_THEME_COLOR
+from vdu_controls.icon_utils import si, StdPixmap, create_icon_from_svg_bytes, create_image_from_svg_bytes
 from vdu_controls.lux_config import LuxConfig, LuxPoint
 from vdu_controls.lux_meters import LuxMeterSemiAutoDevice, LuxMeterDevice
 from vdu_controls.misc import intV, zoned_now, clamp
@@ -29,7 +29,7 @@ from vdu_controls.qt_imports import QVBoxLayout, QWidget, QGridLayout, QComboBox
     QStatusBar, QHBoxLayout, QListWidgetItem, QApplication, QInputDialog
 from vdu_controls.scaling import npx, dpx, desktop_font_height
 from vdu_controls.solar_calc import calc_solar_lux
-from vdu_controls.svg import SWATCH_ICON_SOURCE, SUN_SVG
+from vdu_controls.svg import SWATCH_ICON_SVG, SUN_SVG, SVG_LIGHT_THEME_COLOR, SVG_SWATCH_ICON_BASE_COLOR
 from vdu_controls.unicode import TIMER_RUNNING_SYMBOL
 from vdu_controls.vdu_exceptions import VduException
 from vdu_controls.widgets import SubWinDialog, DialogSingletonMixin, StdButton, FasterFileDialog, MBox, MIcon, MBtn, ChoiceBox
@@ -322,7 +322,8 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                 for index, vdu_sid in enumerate(connected_id_list):
                     color = QColor.fromHsl(int(index * 137.508) % 255, random.randint(64, 128), random.randint(192, 200))
                     self.drawing_color_map[vdu_sid] = color
-                    color_icon = create_icon_from_svg_bytes(SWATCH_ICON_SOURCE.replace(b"#ffffff", bytes(color.name(), 'utf-8')))
+                    color_icon = create_icon_from_svg_bytes(
+                        SWATCH_ICON_SVG.replace(SVG_SWATCH_ICON_BASE_COLOR, bytes(color.name(), 'utf-8')))
                     key_item = QListWidgetItem(color_icon, self.main_controller.get_vdu_preferred_name(vdu_sid))
                     key_item.setData(Qt.ItemDataRole.UserRole, vdu_sid)
                     self.profile_selector_widget.addItem(key_item)

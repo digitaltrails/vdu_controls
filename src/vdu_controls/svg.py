@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
-import re
 from importlib.resources import files as resources_files
 
 import vdu_controls.logging as log
@@ -15,44 +14,67 @@ def load_svg_source(source_filename: str) -> bytes:
     return svg_file.read_bytes()
 
 
-MONOCHROME_APP_ICON_SOURCE = load_svg_source('monochrome-app-icon.svg')
+SVG_LIGHT_THEME_COLOR = b"#232629"
+SVG_LIGHT_THEME_TEXT_COLOR = b"#000000"
+SVG_DARK_THEME_COLOR = b"#f3f3f3"
+SVG_DARK_THEME_TEXT_COLOR = SVG_DARK_THEME_COLOR
 
-FALLBACK_SPLASH_SOURCE = load_svg_source('fallback-splash.svg')
+SVG_WHITE_COLOR = b"#ffffff"
+SVG_BLACK_COLOR = b"#000000"
+
+SVG_MONOCHROME_LIGHT_FG_COLOR = b"#000000"
+SVG_MONOCHROME_DARK_FG_COLOR = b"#ffffff"
+
+SVG_PRESET_DIALOG_SUN_COLOR = b"#fecf70"
+
+SVG_AUTO_LUX_LED_COLOR = b'#ff8500'
+SVG_AUTO_LUX_OFF_LED_COLOR = b'#84888c'
+
+AUTO_LUX_LED_QCOLOR = QColor(SVG_AUTO_LUX_LED_COLOR.decode('utf-8'))
+PRESET_TRANSITIONING_LED_QCOLOR = QColor(0x55ff00)
+
+SVG_SWATCH_ICON_BASE_COLOR = b"#ffffff"
+
+
+MONOCHROME_APP_ICON_SVG = load_svg_source('monochrome-app-icon.svg')
+
+FALLBACK_SPLASH_SVG = load_svg_source('fallback-splash.svg')
 
 BRIGHTNESS_SVG = load_svg_source('brightness.svg')
 
-SUN_SVG = re.sub(b'm0 1c1.662777 0 3 1.3372234[^"]+"', b'"', BRIGHTNESS_SVG)
+SUN_SVG = load_svg_source('sun.svg')
 
 CONTRAST_SVG = load_svg_source('contrast.svg')
 
-AUTO_LUX_ON_SVG = BRIGHTNESS_SVG.replace(b'viewBox="0 0 24 24"', b'viewBox="3 3 18 18"').replace(b'#232629', b'#ff8500')
-AUTO_LUX_OFF_SVG = BRIGHTNESS_SVG.replace(b'viewBox="0 0 24 24"', b'viewBox="3 3 18 18"').replace(b'#232629', b'#84888c')
-AUTO_LUX_LED_COLOR = QColor(0xff8500)
-PRESET_TRANSITIONING_LED_COLOR = QColor(0x55ff00)
+PRESET_DIALOG_SUN_SVG = SUN_SVG.replace(SVG_LIGHT_THEME_COLOR, SVG_PRESET_DIALOG_SUN_COLOR)
+
+AUTO_LUX_ON_SVG = load_svg_source('auto_lux_on.svg').replace(SVG_LIGHT_THEME_COLOR, SVG_AUTO_LUX_LED_COLOR)
+
+AUTO_LUX_OFF_SVG = AUTO_LUX_ON_SVG.replace(SVG_LIGHT_THEME_COLOR, SVG_AUTO_LUX_OFF_LED_COLOR)
 
 COLOR_TEMPERATURE_SVG = load_svg_source('color_temperature.svg')
 
 VOLUME_SVG = load_svg_source('volume.svg')
 
-MENU_ICON_SOURCE = load_svg_source('menu_icon.svg')
+MENU_ICON_SVG = load_svg_source('menu_icon.svg')
 
-VDU_CONNECTED_ICON_SOURCE = load_svg_source('vdu_connected_icon.svg')
+VDU_CONNECTED_ICON_SVG = load_svg_source('vdu_connected_icon.svg')
 
-PANEL_CONNECTED_ICON_SOURCE = load_svg_source('panel_connected_icon.svg')
+PANEL_CONNECTED_ICON_SVG = load_svg_source('panel_connected_icon.svg')
 
-VDU_POWER_ON_ICON_SOURCE = load_svg_source('vdu_power_on_icon.svg')
+VDU_POWER_ON_ICON_SVG = load_svg_source('vdu_power_on_icon.svg')
 
-AMBIENT_PANEL_ICON_SOURCE = load_svg_source('ambient_panel_icon.svg')
+AMBIENT_PANEL_ICON_SVG = load_svg_source('ambient_panel_icon.svg')
 
-REFRESH_ICON_SOURCE = load_svg_source('refresh_icon.svg')
+REFRESH_ICON_SVG = load_svg_source('refresh_icon.svg')
 
 LIGHTING_CHECK_SVG = load_svg_source('lighting_check.svg')
 
-LIGHTING_CHECK_OFF_SVG = LIGHTING_CHECK_SVG.replace(b'#ff8500', b'#84888c')
+LIGHTING_CHECK_OFF_SVG = LIGHTING_CHECK_SVG.replace(SVG_AUTO_LUX_LED_COLOR, SVG_AUTO_LUX_OFF_LED_COLOR)
 
-TRANSITION_ICON_SOURCE = load_svg_source('transition_icon.svg')
+TRANSITION_ICON_SVG = load_svg_source('transition_icon.svg')
 
-SWATCH_ICON_SOURCE = load_svg_source('swatch_icon.svg')
+SWATCH_ICON_SVG = load_svg_source('swatch_icon.svg')
 
 LUX_SUNLIGHT_SVG = load_svg_source('lux_sunlight.svg')
 

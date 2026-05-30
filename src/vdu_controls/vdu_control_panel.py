@@ -16,7 +16,7 @@ from vdu_controls.qt_imports import QWidget, QVBoxLayout, QFrame, QApplication, 
     QStandardItemModel
 from vdu_controls.qt_imports import Qt, pyqtSignal
 from vdu_controls.scaling import desktop_font_height, dpx
-from vdu_controls.svg import PANEL_CONNECTED_ICON_SOURCE, VDU_CONNECTED_ICON_SOURCE
+from vdu_controls.svg import PANEL_CONNECTED_ICON_SVG, VDU_CONNECTED_ICON_SVG
 from vdu_controls.vdu_controller import VduController
 from vdu_controls.vdu_controls_config import VcpCapability, SUPPORTED_VCP_BY_CODE
 from vdu_controls.vdu_exceptions import VduException
@@ -32,12 +32,12 @@ class VduControlPanel(QWidget):
         layout = QVBoxLayout()
         alter_margins(layout, top=0, bottom=0, default=self.style())
         if int(controller.vdu_number) < 1:
-            self.title_button = TitleButton(PANEL_CONNECTED_ICON_SOURCE,
+            self.title_button = TitleButton(PANEL_CONNECTED_ICON_SVG,
                                             controller.get_vdu_preferred_name(),
                                             tr("Panel {}".format(-int(controller.vdu_number))),
                                             clicked=controller.edit_config)
         else:
-            self.title_button = TitleButton(VDU_CONNECTED_ICON_SOURCE,
+            self.title_button = TitleButton(VDU_CONNECTED_ICON_SVG,
                                             controller.get_vdu_preferred_name(),
                                             tr("Monitor {}".format(controller.vdu_number)),
                                             clicked=controller.edit_config)
