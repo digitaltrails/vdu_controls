@@ -157,7 +157,7 @@ class SettingsDialog(SubWinDialog, DialogSingletonMixin):
                     return MBox(MIcon.Critical, msg=tr("Cannot save <tt>{}</tt>").format(tab.config_path.name),
                                 info=tr("Duplicate VDU label: <i>{0}</i><hr/>Alter the label for {1} or {2} and try again.").format(
                                     vdu_label, tab.config_path.stem, existing_use),
-                                buttons=MBtn.Close | MBtn.Discard, default=MBtn.Close).exec()
+                                buttons=MBtn.Cancel | MBtn.Discard, default=MBtn.Cancel).exec()
                 else:
                     labels_in_use[vdu_label] = tab.config_path.stem
         return MBtn.Ok
@@ -181,7 +181,7 @@ class SettingsDialog(SubWinDialog, DialogSingletonMixin):
                             return MBtn.Cancel
         finally:
             self.setEnabled(True)
-            if len(what_changed) > 0:
+            if len(what_changed) > 0:   # If there were any saves that completed...
                 self.change_callback(what_changed)
         return MBtn.Ok
 
