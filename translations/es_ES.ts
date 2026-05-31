@@ -748,17 +748,17 @@ Al diseñar curvas de brillo-respuesta, considere minimizar los cambios de brill
         <translation>Presione Guardar perfil para activar un nuevo perfil.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="351" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="352" />
         <source>Cannot configure a solar lux calculator, no location is defined.</source>
         <translation>No se puede configurar una calculadora de lux solar, no se define ninguna ubicación.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="352" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="353" />
         <source>Please set a location in the main Settings-Dialog.</source>
         <translation>Establezca una ubicación en el cuadro de diálogo de configuración principal.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="356" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="357" />
         <source>Semi-automatic lux adjustment: quick start instructions.
 ________________________________________________________________________________________
 
@@ -788,7 +788,7 @@ de lux exterior (Eo) y el factor de luz diurna (DF), la relación entre el inter
 lux exterior.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="365" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="366" />
         <source>Estimation of indoor illumination (Ei) from solar illumination (Eo):
     Ei = DF * Eo
     DF = Ei / Eo
@@ -805,39 +805,39 @@ DF: Factor de luz natural, la relación entre la iluminación interior y exterio
 	siempre que el control deslizante Nivel de luz ambiental se modifique manualmente.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="380" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="381" />
         <source>You might need to be a member of the {} group.</source>
         <translation>Es posible que tengas que ser miembro del grupo {}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="381" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="382" />
         <source>No read access to {}</source>
         <translation>Sin acceso de lectura a {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="384" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="385" />
         <source>Expecting {0}, but {1} was selected.</source>
         <translation>Esperando {0}, pero se seleccionó {1}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="404" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="405" />
         <source>No metering device set.</source>
         <translation>No hay ningún dispositivo dosificador configurado.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="413" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="414" />
         <source>Choose profile for {}:</source>
         <translation>Elija perfil para {}:</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="436" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="437" />
         <source>There are unsaved profile changes?</source>
         <translation>¿Hay cambios de perfil no guardados?</translation>
     </message>
 </context><context>
     <name>LuxGaugeWidget</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="488" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="489" />
         <source>Left:	 Rolling display of metered lux (ML).
 Right:	 1) Estimated outside solar illumination (Eo) for
 	     the set geolocation for the current day.
@@ -856,17 +856,17 @@ Eo = constantes_unidades * sin(radianes(altitud_solar)) * 10 ** (-0,1 * masa_air
 Las estimaciones de Ei se utilizan mediante la opción de medición semiautomática.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="582" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="583" />
         <source>Location Unknown</source>
         <translation>Ubicación desconocida</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="624" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="625" />
         <source>Eo={:,} lux    DF={:,.4f}</source>
         <translation>Eo={:,} lux DF={:,.4f}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="626" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="627" />
         <source>Eo=?   DF=?   (location not set)</source>
         <translation>Eo=?   DF=?   (ubicación no establecida)</translation>
     </message>
@@ -899,33 +899,38 @@ Las estimaciones de Ei se utilizan mediante la opción de medición semiautomát
 </context><context>
     <name>LuxProfileWidget</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="687" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="688" />
         <source>Lux Brightness Response Profiles</source>
         <translation>Perfiles de respuesta de brillo Lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="705" />
-        <location filename="../src/vdu_controls/lux_dialog.py" line="703" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="706" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="704" />
         <source>Brightness %</source>
         <translation>% de brillo</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="820" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="821" />
         <source>Click remove preset at {} lux</source>
         <translation>Haga clic en eliminar valor predeterminado en {} lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="832" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="833" />
         <source>Click to add preset at {} lux</source>
         <translation>Haga clic para agregar un ajuste preestablecido en {} lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="899" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="885" />
+        <source>Select a Preset to attach at {} lux</source>
+        <translation>Seleccione un ajuste preestablecido para adjuntarlo a {} lux</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/lux_dialog.py" line="901" />
         <source>There are no Presets.</source>
         <translation>No hay ajustes preestablecidos.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="899" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="901" />
         <source>Use the Presets Dialog to create some.</source>
         <translation>Utilice el cuadro de diálogo Presets para crear algunos.</translation>
     </message>

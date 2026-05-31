@@ -882,6 +882,7 @@ class LuxProfileWidget(QLabel):
         presets = self.main_controller.find_presets_map()
         if len(presets):
             ask_preset = QInputDialog()
+            ask_preset.setLabelText(tr("Select a Preset to attach at {} lux").format(self.lux_from_x(x)))
             ask_preset.setComboBoxItems(list(presets.keys()))
             ask_preset.setOption(QInputDialog.InputDialogOption.UseListViewForComboBoxItems)
             if ask_preset.exec() == QInputDialog.DialogCode.Accepted:
