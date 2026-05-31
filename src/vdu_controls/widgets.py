@@ -80,6 +80,35 @@ class ThemedSvgButton(StdButton):
         return super().event(event)
 
 
+class TitleLabel(QWidget):
+    def __init__(self, icon_source: bytes, main_text: str, sub_text: str = '', widgets: List[QWidget] | None = None,
+                 parent: QWidget | None = None) -> None:
+        super().__init__(parent=parent)
+        layout = QHBoxLayout(self)
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.svg_icon = ThemedSvgWidget(icon_source, desktop_font_height(scaled=1.8), desktop_font_height(scaled=1.8), parent=self)
+        layout.addWidget(self.svg_icon)
+        if sub_text:
+            self.label = QLabel(f"<span style='font-weight:bold;'>{main_text}<br/>"
+                                f"<span style='font-size:{desktop_font_height(0.5)}px; font-weight:normal;'>{sub_text}</span>")
+        else:
+            self.label = QLabel(f"<span style='font-weight:bold;'>{main_text}</span>")
+        self.label.setTextFormat(Qt.TextFormat.RichText)
+        self.label.setWordWrap(True)
+        self.label.adjustSize()  # Adjust down to actual text height before accessing its height
+        layout.addWidget(self.label)
+        if widgets:
+            layout.addStretch()
+            for widget in widgets:
+                layout.addWidget(widget)
+        my_style = self.style()
+        assert my_style is not None
+        self.setMinimumHeight(max(self.svg_icon.height(), self.label.height()) +  # Avoids size issues if embedded in a layout
+                              my_style.pixelMetric(QStyle.PixelMetric.PM_LayoutTopMargin) +
+                              my_style.pixelMetric(QStyle.PixelMetric.PM_LayoutBottomMargin))
+
+
+
 class TitleButton(StdButton):
     def __init__(self, icon_source: bytes, main_text: str, sub_text: str, clicked: Callable | None = None,
                  parent: QWidget | None = None) -> None:

@@ -22,17 +22,19 @@ from vdu_controls.icon_utils import si, StdPixmap, create_icon_from_svg_bytes, c
 from vdu_controls.lux_config import LuxConfig, LuxPoint
 from vdu_controls.lux_meters import LuxMeterSemiAutoDevice, LuxMeterDevice
 from vdu_controls.misc import intV, zoned_now, clamp
-from vdu_controls.qt_imports import QColor, QPixmap, QPainter, QPen, QFont, QResizeEvent, QPolygon, QMouseEvent
+from vdu_controls.qt_imports import QColor, QPixmap, QPainter, QPen, QFont, QResizeEvent, QPolygon, QMouseEvent, QFrame, QGroupBox
 from vdu_controls.qt_imports import QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING
 from vdu_controls.qt_imports import QT_TR_NOOP, Qt, QTimer, pyqtSignal, QPointF, QPoint
-from vdu_controls.qt_imports import QVBoxLayout, QWidget, QGridLayout, QComboBox, QCheckBox, QLabel, QSpinBox, QListWidget, \
+from vdu_controls.qt_imports import QVBoxLayout, QComboBox, QCheckBox, QLabel, QSpinBox, QListWidget, \
     QStatusBar, QHBoxLayout, QListWidgetItem, QApplication, QInputDialog
 from vdu_controls.scaling import npx, dpx, desktop_font_height
 from vdu_controls.solar_calc import calc_solar_lux
-from vdu_controls.svg import SWATCH_ICON_SVG, SUN_SVG, SVG_LIGHT_THEME_COLOR, SVG_SWATCH_ICON_BASE_COLOR
+from vdu_controls.svg import SWATCH_ICON_SVG, SUN_SVG, SVG_LIGHT_THEME_COLOR, SVG_SWATCH_ICON_BASE_COLOR, VDU_CONNECTED_ICON_SVG, \
+    AMBIENT_PANEL_ICON_SVG
 from vdu_controls.unicode import TIMER_RUNNING_SYMBOL
 from vdu_controls.vdu_exceptions import VduException
-from vdu_controls.widgets import SubWinDialog, DialogSingletonMixin, StdButton, FasterFileDialog, MBox, MIcon, MBtn, ChoiceBox
+from vdu_controls.widgets import SubWinDialog, DialogSingletonMixin, StdButton, FasterFileDialog, MBox, MIcon, MBtn, ChoiceBox, \
+    TitleLabel
 
 if TYPE_CHECKING:
     from vdu_controls.vdu_controls_application import VduAppController
@@ -101,14 +103,8 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.device_name = ''
         self.lux_config: LuxConfig = main_controller.get_lux_auto_controller().get_lux_config()
 
-        self.setLayout(main_layout := QVBoxLayout())
-        main_layout.addWidget(top_box := QWidget())
-        top_box.setLayout(top_box_layout := QGridLayout())
+        main_layout = QVBoxLayout(self)
 
-        self.lux_gauge_widget = LuxGaugeWidget(self)
-
-        top_box_layout.addWidget(self.lux_gauge_widget, 0, 0, 4, 2,
-                                 alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)  # type: ignore
         existing_device = self.lux_config.get_device_name()
         existing_device_type = self.lux_config.get('lux-meter', 'lux-device-type', fallback='')
         self.meter_device_selector = QComboBox()
@@ -119,22 +115,54 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
             else:
                 self.meter_device_selector.addItem(tr(dev_type.localized_name), dev_type)  # List device type only.
 
-        top_box_layout.addWidget(self.meter_device_selector, 0, 2, 1, 3)
+        main_layout.addWidget(TitleLabel(icon_source=AMBIENT_PANEL_ICON_SVG, main_text=tr("Light Meter"),
+                                         widgets=[self.meter_device_selector]))
+
+        top_outer_layout = QHBoxLayout()
+        main_layout.addLayout(top_outer_layout)
+
+        top_left_layout = QVBoxLayout()
+        top_right_layout = QVBoxLayout()
+        top_outer_layout.addLayout(top_left_layout)
+        top_outer_layout.addSpacing(dpx(10))
+        top_outer_layout.addLayout(top_right_layout, stretch=1)
+        top_right_layout.addSpacing(dpx(10))
+
+        self.lux_gauge_widget = LuxGaugeWidget(self)
+
+        top_left_layout.addWidget(self.lux_gauge_widget)
 
         self.enabled_checkbox = QCheckBox(tr("Enable automatic brightness adjustment"))
-        top_box_layout.addWidget(self.enabled_checkbox, 1, 2, 1, 3)
+        top_right_layout.addWidget(self.enabled_checkbox)
 
+        interval_layout = QHBoxLayout()
+        top_right_layout.addLayout(interval_layout)
         self.interval_label = QLabel(tr("Adjustment interval minutes"))
-        top_box_layout.addWidget(self.interval_label, 2, 2, 1, 2)
+        interval_layout.addWidget(self.interval_label)
 
         self.interval_selector = QSpinBox()
         self.interval_selector.setMinimum(1)
         self.interval_selector.setMaximum(120)
-        top_box_layout.addWidget(self.interval_selector, 2, 4, 1, 1)
+
+        interval_layout.addWidget(self.interval_selector, alignment=Qt.AlignmentFlag.AlignLeft)
+        interval_layout.addStretch(1)
 
         self.interpolate_checkbox = QCheckBox(tr("Interpolate brightness values"))
-        top_box_layout.addWidget(self.interpolate_checkbox, 3, 2, 1, 3)
-        self.setMinimumSize(top_box.minimumSize())
+        top_right_layout.addWidget(self.interpolate_checkbox)
+        self.setMinimumSize(top_outer_layout.minimumSize())
+
+        top_right_layout.addStretch(1)
+        line = QFrame()
+        line.setFrameShape(QFrame.Shape.HLine)
+        line.setFrameShadow(QFrame.Shadow.Sunken)
+        top_right_layout.addWidget(line, alignment=Qt.AlignmentFlag.AlignBottom)
+
+        self.templates_button = StdButton(icon=si(self, StdPixmap.SP_DirOpenIcon), title=tr("Templates"),
+                                          clicked=self.choose_template,
+                                          tip=tr("Select from typical profile templates."))
+        profiles_title = TitleLabel(icon_source=VDU_CONNECTED_ICON_SVG, main_text=tr("Profiles"), sub_text='',
+                                    widgets=[self.templates_button])
+        main_layout.addWidget(profiles_title)
 
         self.profile_selector_widget = QListWidget(parent=self)
         self.profile_selector_widget.setResizeMode(QListWidget.ResizeMode.Adjust)
@@ -158,14 +186,13 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         main_layout.addWidget(self.profile_plot, stretch=1)
 
         self.status_bar = QStatusBar()
-        self.templates_button = StdButton(icon=si(self, StdPixmap.SP_DirOpenIcon), title=tr("Templates"), clicked=self.choose_template,
-                                          tip=tr("Select from typical profile templates."))
+
         self.save_button = StdButton(icon=si(self, StdPixmap.SP_DriveFDIcon), title=tr("Save Profiles"), clicked=self.save_profiles,
                                      tip=tr("Apply and save profile-chart changes."))
         self.revert_button = StdButton(icon=si(self, StdPixmap.SP_DialogResetButton), title=tr("Revert Profiles"),
                                        clicked=self.reconfigure, tip=tr("Abandon profile-chart changes, revert to last saved."))
         quit_button = StdButton(icon=si(self, StdPixmap.SP_DialogCloseButton), title=tr("Close"), clicked=self.close)
-        for button in (self.templates_button, self.save_button, self.revert_button, quit_button):
+        for button in (self.save_button, self.revert_button, quit_button):
             self.status_bar.addPermanentWidget(button, 0)
 
         self.status_layout = QHBoxLayout()
@@ -461,7 +488,7 @@ class LuxGaugeHistory:
     when: datetime
 
 
-class LuxGaugeWidget(QWidget):
+class LuxGaugeWidget(QGroupBox):
     lux_changed_qtsignal = pyqtSignal(int)
 
     def __init__(self, parent: LuxDialog) -> None:
@@ -474,14 +501,14 @@ class LuxGaugeWidget(QWidget):
         self.white_transparent_color = QColor(w.red(), w.green(), w.blue(), 30)
         self.orange_line_color = QColor(0xff8500)
         self.common_background_color = QColor(0x5b93c5)
-        self.setLayout(widget_layout := QVBoxLayout())
+        widget_layout = QVBoxLayout(self)
         self.current_lux_display = QLabel()
         big_font = self.current_lux_display.font()
         big_font.setPointSize(big_font.pointSize() + 8)
         self.current_lux_display.setFont(big_font)
         widget_layout.addWidget(self.current_lux_display)
         self.plot_widget = QLabel()
-        self.plot_widget.setFixedWidth(dpx(170))
+        self.plot_widget.setFixedWidth(dpx(175))
         self.plot_widget.setFixedHeight(dpx(50))
         widget_layout.addWidget(self.plot_widget)
         self.current_meter: LuxMeterDevice | None = None
