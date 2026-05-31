@@ -256,7 +256,7 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
                 if CONFIG_DIR_PATH.exists():
                     persisted_path = CONFIG_DIR_PATH.joinpath("lux_daylight_factor.txt")
                     log.debug(f"LuxSemiAuto: save {daylight_factor=} to {persisted_path.as_posix()}") if log.debug_enabled else None
-                persisted_path.write_text(f"{daylight_factor:.4f}")
+                    persisted_path.write_text(f"{daylight_factor:.4f}")
             LuxMeterSemiAutoDevice.daylight_factor = daylight_factor
 
     @staticmethod
