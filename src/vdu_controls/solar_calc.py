@@ -170,7 +170,7 @@ def parse_solar_elevation_ini_text(ini_text: str) -> SolarElevationKey:
     return solar_elevation
 
 
-def find_solar_noon(local_now: datetime, latitude: float, longitude: float):
+def find_solar_noon(local_now: datetime, latitude: float, longitude: float) -> datetime:
     map = create_elevation_map(local_now, latitude, longitude, callback=None)
     possible = next(iter(map.values()))
     for elevation_data in map.values():
