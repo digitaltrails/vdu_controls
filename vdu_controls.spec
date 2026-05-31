@@ -16,7 +16,6 @@
 # Please submit bugfixes or comments via https://bugs.opensuse.org/
 #
 
-
 Name:           vdu_controls
 Version:        2.6.5
 Release:        0
@@ -27,7 +26,8 @@ URL:            https://github.com/digitaltrails/vdu_controls
 Source0:        https://github.com/digitaltrails/vdu_controls/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 BuildRequires:  coreutils
 BuildRequires:  hicolor-icon-theme
-BuildRequires:  python3
+BuildRequires:  python3-devel
+BuildRequires:  python-rpm-macros
 BuildArch:      noarch
 %if 0%{?suse_version}
 Requires:       ddcutil
@@ -49,7 +49,6 @@ Recommends:     brightnessctl
 Requires:       ddcutil
 Requires:       google-noto-sans-math-fonts
 Requires:       google-noto-sans-symbols2-fonts
-Requires:       python3
 Requires:       python3-qt5
 Suggests:       python3-pyserial
 Suggests:       python3-pyudev
@@ -67,7 +66,7 @@ Data Channel (DDC) Virtual Control Panel (VCP) standards.
 %autosetup
 
 %build
-python3 -m zipapp src -o %{name}.pyz -m %{name}_main:main -p "/usr/bin/env python3"
+python%{python3_version} -m zipapp src -o %{name}.pyz -m %{name}_main:main -p "%{_bindir}/python%{python3_version}"
 
 %install
 install -d -m 0755 %{buildroot}%{_bindir} \
