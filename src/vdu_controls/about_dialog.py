@@ -126,7 +126,7 @@ class _AboutTemplateData:
             locale: {app_locale.get_locale_name()} 
             ({"translating" if app_locale.get_translating_locale() == app_locale.get_locale_name() else "not translating"}); 
             installed translations: {', '.join(app_locale.available_translations())};
-            NVRAM writes: {self.counts_str}; 
+            NVRAM writes: {self.counts_str} 
             '''
 
 class AboutDialog(QMessageBox, DialogSingletonMixin):
