@@ -88,11 +88,8 @@ class TitleLabel(QWidget):
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.svg_icon = ThemedSvgWidget(icon_source, desktop_font_height(scaled=1.8), desktop_font_height(scaled=1.8), parent=self)
         layout.addWidget(self.svg_icon)
-        if sub_text:
-            self.label = QLabel(f"<span style='font-weight:bold;'>{main_text}<br/>"
-                                f"<span style='font-size:{desktop_font_height(0.5)}px; font-weight:normal;'>{sub_text}</span>")
-        else:
-            self.label = QLabel(f"<span style='font-weight:bold;'>{main_text}</span>")
+        self.label = QLabel()
+        self.set_text(main_text, sub_text)
         self.label.setTextFormat(Qt.TextFormat.RichText)
         self.label.setWordWrap(True)
         self.label.adjustSize()  # Adjust down to actual text height before accessing its height
@@ -107,6 +104,12 @@ class TitleLabel(QWidget):
                               my_style.pixelMetric(QStyle.PixelMetric.PM_LayoutTopMargin) +
                               my_style.pixelMetric(QStyle.PixelMetric.PM_LayoutBottomMargin))
 
+    def set_text(self, main_text: str, sub_text: str = '') -> None:
+        if sub_text:
+            self.label.setText(f"<span style='font-weight:bold;'>{main_text}<br/>"
+                                f"<span style='font-size:{desktop_font_height(0.5)}px; font-weight:normal;'>{sub_text}</span>")
+        else:
+            self.label.setText(f"<span style='font-weight:bold;'>{main_text}</span>")
 
 
 class TitleButton(StdButton):
