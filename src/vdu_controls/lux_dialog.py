@@ -339,28 +339,28 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         candidate_id = cast(VduStableId, self.lux_config.get('lux-ui', 'selected-profile', fallback=None))
         if connected_id_list and (candidate_id is None or candidate_id not in connected_id_list):
             candidate_id = connected_id_list[0]
-        try:
-            assert candidate_id is not None
-            self.profile_selector_widget.blockSignals(True)  # Stop initialization from causing signal until all data is aligned.
-            if connected_id_list != existing_id_list:  # List of connected VDUs has changed
-                self.profile_selector_widget.clear()
-                random.seed(int(self.lux_config.get("lux-ui", "vdu_color_seed", fallback='0x543fff'), 16))
-                self.drawing_color_map.clear()
-                for index, vdu_sid in enumerate(connected_id_list):
-                    color = QColor.fromHsl(int(index * 137.508) % 255, random.randint(64, 128), random.randint(192, 200))
-                    self.drawing_color_map[vdu_sid] = color
-                    color_icon = create_icon_from_svg_bytes(
-                        SWATCH_ICON_SVG.replace(SVG_SWATCH_ICON_BASE_COLOR, bytes(color.name(), 'utf-8')))
-                    key_item = QListWidgetItem(color_icon, self.main_controller.get_vdu_preferred_name(vdu_sid))
-                    key_item.setData(Qt.ItemDataRole.UserRole, vdu_sid)
-                    self.profile_selector_widget.addItem(key_item)
-                    if vdu_sid == candidate_id:
-                        self.profile_selector_widget.setCurrentRow(index)
-                        self.profile_plot.current_vdu_sid = candidate_id
-                self.profile_selector_widget.setFixedHeight(
-                    desktop_font_height(scaled=1.5) * (1 if len(connected_id_list) <= 3 else 5))
-        finally:
-            self.profile_selector_widget.blockSignals(False)
+        if candidate_id is not None:
+            try:
+                self.profile_selector_widget.blockSignals(True)  # Stop initialization from causing signal until all data is aligned.
+                if connected_id_list != existing_id_list:  # List of connected VDUs has changed
+                    self.profile_selector_widget.clear()
+                    random.seed(int(self.lux_config.get("lux-ui", "vdu_color_seed", fallback='0x543fff'), 16))
+                    self.drawing_color_map.clear()
+                    for index, vdu_sid in enumerate(connected_id_list):
+                        color = QColor.fromHsl(int(index * 137.508) % 255, random.randint(64, 128), random.randint(192, 200))
+                        self.drawing_color_map[vdu_sid] = color
+                        color_icon = create_icon_from_svg_bytes(
+                            SWATCH_ICON_SVG.replace(SVG_SWATCH_ICON_BASE_COLOR, bytes(color.name(), 'utf-8')))
+                        key_item = QListWidgetItem(color_icon, self.main_controller.get_vdu_preferred_name(vdu_sid))
+                        key_item.setData(Qt.ItemDataRole.UserRole, vdu_sid)
+                        self.profile_selector_widget.addItem(key_item)
+                        if vdu_sid == candidate_id:
+                            self.profile_selector_widget.setCurrentRow(index)
+                            self.profile_plot.current_vdu_sid = candidate_id
+                    self.profile_selector_widget.setFixedHeight(
+                        desktop_font_height(scaled=1.5) * (1 if len(connected_id_list) <= 3 else 5))
+            finally:
+                self.profile_selector_widget.blockSignals(False)
         self.configure_ui(lux_auto_controller.lux_meter)
         self.profile_plot.create_plot()
         lux_auto_controller.lux_meter.get_value() if lux_auto_controller.lux_meter else None  # prime the UI
