@@ -490,6 +490,7 @@ Version History
   * The Light-Metering-Dialog now offers two starter template lux/brightness 
     profiles for older and newer monitors.
   * The Settings global-options are now grouped under subheadings.
+  * Update the layout of the Preset and Light-Metering dialogs.
   * The right-mouse action that could hide the toolbar irretrievably has been
     disabled.
   * When parsing monitor metadata, if the same VCP-feature-code is 
