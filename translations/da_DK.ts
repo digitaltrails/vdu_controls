@@ -654,92 +654,119 @@ Dette diagram kan ændres i størrelsen.</translation>
         <translation>Lysmåling</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="118" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="137" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="111" />
+        <source>Select light-metering device.</source>
+        <translation>Vælg lysmålingsenhed.</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/lux_dialog.py" line="119" />
         <source>Light Meter</source>
         <translation>Lysmåler</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="135" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="136" />
+        <source>Meter</source>
+        <translation>Måler</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/lux_dialog.py" line="144" />
         <source>Enable automatic brightness adjustment</source>
         <translation>Aktivér automatisk lysstyrkejustering</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="140" />
-        <source>Adjustment interval minutes</source>
-        <translation>Justeringsinterval (minutter)</translation>
+        <location filename="../src/vdu_controls/lux_dialog.py" line="145" />
+        <source>Enable periodic automatic brightness adjustment based on metered light values.</source>
+        <translation>Aktiver periodisk automatisk lysstyrkejustering baseret på målte lysværdier.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="150" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="148" />
         <source>Interpolate brightness values</source>
         <translation>Interpoler lysstyrkeværdier</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="160" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="149" />
+        <source>When selecting brightness, interpolate between the profile points.</source>
+        <translation>Når du vælger lysstyrke, skal du interpolere mellem profilpunkterne.</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/lux_dialog.py" line="153" />
+        <source>Brightness adjustment interval (minutes)</source>
+        <translation>Lysstyrkejusteringsinterval (minutter)</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/lux_dialog.py" line="157" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="154" />
+        <source>Brightness adjustment interval in minutes.</source>
+        <translation>Lysstyrkejusteringsinterval i minutter.</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/lux_dialog.py" line="172" />
         <source>Templates</source>
         <translation>Skabeloner</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="162" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="174" />
         <source>Select from typical profile templates.</source>
         <translation>Vælg mellem typiske profilskabeloner.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="163" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="175" />
         <source>Profiles</source>
         <translation>Profiler</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="190" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="202" />
         <source>Save Profiles</source>
         <translation>Gem profiler</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="191" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="203" />
         <source>Apply and save profile-chart changes.</source>
         <translation>Anvend og gem profil-diagramændringer.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="192" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="204" />
         <source>Revert Profiles</source>
         <translation>Fortryd profiler</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="193" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="205" />
         <source>Abandon profile-chart changes, revert to last saved.</source>
         <translation>Opgiv profil-diagramændringer, vend tilbage til sidst gemte.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="194" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="206" />
         <source>Close</source>
         <translation>Luk</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="201" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="213" />
         <source>Press to expire the timer and immediately evaluate brightness.</source>
         <translation>Tryk for at udløse timeren og straks evaluere lysstyrken.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="218" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="230" />
         <source>Select: {}</source>
         <translation>Vælg: {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="236" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="248" />
         <source>Meter changed to {}.</source>
         <translation>Måler ændret til {}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="253" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="265" />
         <source>Interval changed to {} minutes.</source>
         <translation>Interval ændret til {} minutter.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="269" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="281" />
         <source>Interpolation may increase the number of writes to VDU NVRAM.</source>
         <translation>Interpolation kan øge antallet af skrivninger til VDU NVRAM.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="270" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="282" />
         <source>Changes specified by each brightness-response curve will only be applied when they cross a minimum threshold (default {}%).
 
 When designing brightness-response curves, consider minimizing brightness changes to reduce wear on NVRAM.</source>
@@ -748,27 +775,27 @@ When designing brightness-response curves, consider minimizing brightness change
 Når du designer lysstyrke-responskurver, så overvej at minimere lysstyrkeændringer for at reducere slid på NVRAM.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="285" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="297" />
         <source>Editing profile {}</source>
         <translation>Redigerer profil {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="297" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="309" />
         <source>Press Save-Profile to activate new profile.</source>
         <translation>Tryk på Gem-profil for at aktivere ny profil.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="379" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="391" />
         <source>Cannot configure a solar lux calculator, no location is defined.</source>
         <translation>Kan ikke konfigurere en sol-lux-beregner, ingen placering er defineret.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="380" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="392" />
         <source>Please set a location in the main Settings-Dialog.</source>
         <translation>Angiv venligst en placering i hovedindstillingsdialogen.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="384" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="396" />
         <source>Semi-automatic lux adjustment: quick start instructions.
 ________________________________________________________________________________________
 
@@ -799,7 +826,7 @@ udendørs lux.
 </translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="393" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="405" />
         <source>Estimation of indoor illumination (Ei) from solar illumination (Eo):
     Ei = DF * Eo
     DF = Ei / Eo
@@ -816,39 +843,39 @@ DF: Dagslysfaktor, forholdet mellem indendørs og udendørs belysning. Opdateres
     hver gang skyderen for omgivende lysstyrke ændres manuelt.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="408" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="420" />
         <source>You might need to be a member of the {} group.</source>
         <translation>Du skal muligvis være medlem af gruppen {}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="409" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="421" />
         <source>No read access to {}</source>
         <translation>Ingen læseadgang til {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="412" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="424" />
         <source>Expecting {0}, but {1} was selected.</source>
         <translation>Forventer {0}, men {1} blev valgt.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="432" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="444" />
         <source>No metering device set.</source>
         <translation>Ingen måleenhed indstillet.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="441" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="453" />
         <source>Choose profile for {}:</source>
         <translation>Vælg profil for {}:</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="464" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="476" />
         <source>There are unsaved profile changes?</source>
         <translation>Er der ikke-gemte profilændringer?</translation>
     </message>
 </context><context>
     <name>LuxGaugeWidget</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="516" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="528" />
         <source>Left:	 Rolling display of metered lux (ML).
 Right:	 1) Estimated outside solar illumination (Eo) for
 	     the set geolocation for the current day.
@@ -867,17 +894,17 @@ Eo = enhedskonstanter * sin(radianer(solhøjde)) * 10 ** (-0,1 * luftmasse)
 Estimater af Ei bruges af den semi-automatiske måleindstilling.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="610" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="622" />
         <source>Location Unknown</source>
         <translation>Beliggenhed ukendt</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="652" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="664" />
         <source>Eo={:,} lux    DF={:,.4f}</source>
         <translation>Eo={:,} lux    DF={:,.4f}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="654" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="666" />
         <source>Eo=?   DF=?   (location not set)</source>
         <translation>Eo=?   DF=?   (placering ikke angivet)</translation>
     </message>
@@ -910,38 +937,38 @@ Estimater af Ei bruges af den semi-automatiske måleindstilling.</translation>
 </context><context>
     <name>LuxProfileWidget</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="715" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="727" />
         <source>Lux Brightness Response Profiles</source>
         <translation>Lux lysstyrke-responsprofiler</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="733" />
-        <location filename="../src/vdu_controls/lux_dialog.py" line="731" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="745" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="743" />
         <source>Brightness %</source>
         <translation>Lysstyrke %</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="848" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="860" />
         <source>Click remove preset at {} lux</source>
         <translation>Klik for at fjerne forudindstilling ved {} lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="860" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="872" />
         <source>Click to add preset at {} lux</source>
         <translation>Klik for at tilføje forudindstilling ved {} lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="912" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="924" />
         <source>Select a Preset to attach at {} lux</source>
         <translation>Vælg en forudindstilling for at vedhæfte ved {} lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="928" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="940" />
         <source>There are no Presets.</source>
         <translation>Der er ingen forudindstillinger.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="928" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="940" />
         <source>Use the Presets Dialog to create some.</source>
         <translation>Brug dialogboksen Forudindstillinger til at oprette nogle.</translation>
     </message>
@@ -1100,64 +1127,64 @@ Estimater af Ei bruges af den semi-automatiske måleindstilling.</translation>
         <translation>Udløs ved en indstillet solhøjde (solvinkel ved din geolokalisering og tid).</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="795" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="797" />
         <source>today at {}</source>
         <translation>i dag kl. {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="797" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="799" />
         <source>the sun does not rise this high today</source>
         <translation>solen stiger ikke så højt i dag</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="801" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="803" />
         <source>dawn</source>
         <translation>daggry</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="801" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="803" />
         <source>dusk</source>
         <translation>skumring</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="803" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="805" />
         <source>twilight</source>
         <translation>tusmørke</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="805" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="807" />
         <source>nighttime</source>
         <translation>nattetid</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="808" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="810" />
         <source> {:,} lux</source>
         <translation> {:,} lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="809" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="811" />
         <source>{0} {1} ({2}, {3})</source>
         <translation>{0} {1} ({2}, {3})</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="818" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="820" />
         <source>location undefined (see settings)</source>
         <translation>placering ikke defineret (se indstillinger)</translation>
     </message>
 </context><context>
     <name>PresetScheduleAtTimeWidget</name>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="882" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="884" />
         <source>time-trigger</source>
         <translation>tidsudløser</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="883" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="885" />
         <source>Trigger at the same time (hh:mm) each day.</source>
         <translation>Udløs på samme tidspunkt (tt:mm) hver dag.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="885" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="887" />
         <source>Trigger at time:</source>
         <translation>Udløs på tidspunkt:</translation>
     </message>
@@ -1294,136 +1321,136 @@ Estimater af Ei bruges af den semi-automatiske måleindstilling.</translation>
 </context><context>
     <name>PresetsDialog</name>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="931" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="933" />
         <source>Preset scheduling is disabled in the Setting-Dialog.</source>
         <translation>Planlægning af forudindstillinger er deaktiveret i indstillingsdialogen.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="933" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="935" />
         <source>Weather lookup is disabled in the Setting-Dialog.</source>
         <translation>Vejropslag er deaktiveret i indstillingsdialogen.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="973" />
-        <location filename="../src/vdu_controls/preset_dialog.py" line="954" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="975" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="956" />
         <source>Presets</source>
         <translation>Forudindstillinger</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1002" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1004" />
         <source>Enter a new preset name.</source>
         <translation>Indtast et nyt forudindstillingsnavn.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1010" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1012" />
         <source>Create VDU specific
 Initialization-Preset</source>
         <translation>Opret VDU-specifik
 initialiserings-forudindstilling</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1021" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1023" />
         <source>New preset</source>
         <translation>Ny forudindstilling</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1284" />
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1030" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1286" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1032" />
         <source>Controls to include:</source>
         <translation>Kontroller der skal inkluderes:</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1065" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1067" />
         <source>Clear</source>
         <translation>Ryd</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1067" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1069" />
         <source>Clear edits and enter a new preset using the defaults.</source>
         <translation>Ryd redigeringer og indtast en ny forudindstilling med standardindstillingerne.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1068" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1070" />
         <source>Save</source>
         <translation>Gem</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1069" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1071" />
         <source>Save current VDU settings to Preset.</source>
         <translation>Gem aktuelle VDU-indstillinger i forudindstilling.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1070" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1072" />
         <source>Revert</source>
         <translation>Fortryd</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1072" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1074" />
         <source>Abandon edits, revert VDU and Preset settings.</source>
         <translation>Opgiv redigeringer, vend tilbage til VDU- og forudindstillingsindstillinger.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1073" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1075" />
         <source>Close</source>
         <translation>Luk</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1127" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1129" />
         <source>Create an initialization-preset for {}.</source>
         <translation>Opret en initialiserings-forudindstilling for {}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1128" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1130" />
         <source>Initialization-presets are restored at startup or when ever the VDU is subsequently detected.</source>
         <translation>Initialiserings-forudindstillinger gendannes ved opstart eller når VDU'en efterfølgende registreres.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1168" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1170" />
         <source>Choose which settings to save for {}</source>
         <translation>Vælg hvilke indstillinger der skal gemmes for {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1268" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1270" />
         <source>Delete {}?</source>
         <translation>Slet {}?</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1277" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1279" />
         <source>Deleted {}</source>
         <translation>Slettet {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1288" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1290" />
         <source>Edit {}</source>
         <translation>Rediger {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1292" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1294" />
         <source>Controls to include in {}:</source>
         <translation>Kontroller der skal inkluderes i {}:</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1334" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1336" />
         <source>Update existing {} preset with current monitor settings?</source>
         <translation>Opdater eksisterende {} forudindstilling med aktuelle skærmindstillinger?</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1336" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1338" />
         <source>Replace existing '{}' preset?</source>
         <translation>Erstat eksisterende '{}' forudindstilling?</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1338" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1340" />
         <source>Save current edit?</source>
         <translation>Gem aktuelle redigering?</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1352" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1354" />
         <source>Duplicates existing Preset {}, save anyway?</source>
         <translation>Duplikerer eksisterende forudindstilling {}, gem alligevel?</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1372" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1374" />
         <source>Saved {}</source>
         <translation>Gemt {}</translation>
     </message>

@@ -108,6 +108,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         existing_device = self.lux_config.get_device_name()
         existing_device_type = self.lux_config.get('lux-meter', 'lux-device-type', fallback='')
         self.meter_device_selector = QComboBox()
+        self.meter_device_selector.setToolTip(tr("Select light-metering device."))
         for i, dev_type in enumerate(LuxDeviceType):
             if dev_type.value == existing_device_type:  # List existing device and device type, set it as selected.
                 self.meter_device_selector.addItem(f"{tr(dev_type.localized_name)}: {existing_device}", dev_type)
@@ -115,14 +116,14 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
             else:
                 self.meter_device_selector.addItem(tr(dev_type.localized_name), dev_type)  # List device type only.
 
-        main_layout.addWidget(TitleLabel(icon_source=AMBIENT_PANEL_ICON_SVG, main_text=tr("Light Meter"),
-                                         widgets=[self.meter_device_selector]))
+        main_layout.addWidget(TitleLabel(icon_source=AMBIENT_PANEL_ICON_SVG, main_text=tr("Light Meter")))
 
         top_outer_layout = QHBoxLayout()
         main_layout.addLayout(top_outer_layout)
 
         top_left_layout = QVBoxLayout()
         top_right_layout = QVBoxLayout()
+        top_right_layout.setContentsMargins(0, 0, 0, 0)
         top_outer_layout.addLayout(top_left_layout)
         top_outer_layout.addSpacing(dpx(10))
         top_outer_layout.addLayout(top_right_layout, stretch=1)
@@ -132,23 +133,34 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
 
         top_left_layout.addWidget(self.lux_gauge_widget)
 
+        meter_source_prompt = QLabel(tr("Meter"))
+        meter_source_prompt.setToolTip(tr("Select light-metering device."))
+        meter_source_layout = QHBoxLayout()
+        meter_source_layout.addWidget(meter_source_prompt)
+        meter_source_layout.addWidget(self.meter_device_selector)
+        meter_source_layout.addStretch()
+        top_right_layout.addLayout(meter_source_layout)
+
         self.enabled_checkbox = QCheckBox(tr("Enable automatic brightness adjustment"))
+        self.enabled_checkbox.setToolTip(tr("Enable periodic automatic brightness adjustment based on metered light values."))
         top_right_layout.addWidget(self.enabled_checkbox)
 
-        interval_layout = QHBoxLayout()
-        top_right_layout.addLayout(interval_layout)
-        self.interval_label = QLabel(tr("Adjustment interval minutes"))
-        interval_layout.addWidget(self.interval_label)
+        self.interpolate_checkbox = QCheckBox(tr("Interpolate brightness values"))
+        self.interpolate_checkbox.setToolTip(tr("When selecting brightness, interpolate between the profile points."))
+        top_right_layout.addWidget(self.interpolate_checkbox)
 
+        interval_layout = QHBoxLayout()
+        self.interval_label = QLabel(tr("Brightness adjustment interval (minutes)"))
+        self.interval_label.setToolTip(tr("Brightness adjustment interval in minutes."))
+        interval_layout.addWidget(self.interval_label)
         self.interval_selector = QSpinBox()
+        self.interval_selector.setToolTip(tr("Brightness adjustment interval in minutes."))
         self.interval_selector.setMinimum(1)
         self.interval_selector.setMaximum(120)
-
         interval_layout.addWidget(self.interval_selector, alignment=Qt.AlignmentFlag.AlignLeft)
         interval_layout.addStretch(1)
+        top_right_layout.addLayout(interval_layout)
 
-        self.interpolate_checkbox = QCheckBox(tr("Interpolate brightness values"))
-        top_right_layout.addWidget(self.interpolate_checkbox)
         self.setMinimumSize(top_outer_layout.minimumSize())
 
         top_right_layout.addStretch(1)
