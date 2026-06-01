@@ -1018,7 +1018,8 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.editor_layout = QVBoxLayout()
         self.editor_layout.setSpacing(dpx(10))
         self.editor_layout.setSizeConstraint(QVBoxLayout.SizeConstraint.SetMinimumSize)
-        self.editor_title = TitleLabel(icon_source=VDU_CONNECTED_ICON_SVG, main_text=tr("New Preset:"))
+        self.editor_new_preset_text = tr("New preset")
+        self.editor_title = TitleLabel(icon_source=VDU_CONNECTED_ICON_SVG, main_text=self.editor_new_preset_text)
         self.editor_layout.addWidget(self.editor_title)
         self.editor_groupbox.setLayout(self.editor_layout)
 
@@ -1277,17 +1278,17 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
     def change_edit_group_title(self) -> None:
         changed_text = self.preset_name_edit.text()
+        self.text = self.editor_title.set_text(self.editor_new_preset_text)
         if disable_controls := changed_text.strip() == "":
             self.edit_revert_button.setDisabled(True)
-            self.editor_title.set_text(tr("Create new preset:"))
             self.editor_controls_prompt.setText(tr("Controls to include:"))
         else:
             if self.find_preset_widget(changed_text):  # Already exists
                 self.edit_revert_button.setDisabled(False)
-                self.editor_title.set_text(tr("Edit {}:").format(changed_text))
+                self.editor_title.set_text(tr("Edit {}").format(changed_text))
             else:
                 self.edit_revert_button.setDisabled(True)
-                self.editor_title.set_text(tr("Create new preset:"))
+                self.editor_title.set_text(self.editor_new_preset_text)
             self.editor_controls_prompt.setText(tr("Controls to include in {}:").format(changed_text))
         self.editor_controls_widget.setDisabled(disable_controls)
         self.editor_transitions_widget.setDisabled(disable_controls)
