@@ -627,49 +627,54 @@ This chart is resizable. </source>
 </context><context>
     <name>LuxDeviceType</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="60" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="62" />
         <source>Semi-automatic geolocated</source>
         <translation>半自动地理定位</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="61" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="63" />
         <source>Arduino tty device</source>
         <translation>Arduino tty 设备</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="62" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="64" />
         <source>Linux FIFO</source>
         <translation>Linux FIFO</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="63" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="65" />
         <source>Script/program</source>
         <translation>脚本/程序</translation>
     </message>
 </context><context>
     <name>LuxDialog</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="91" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="93" />
         <source>Light-Metering</source>
         <translation>测光</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="124" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="118" />
+        <source>Light Meter</source>
+        <translation>照度计</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/lux_dialog.py" line="135" />
         <source>Enable automatic brightness adjustment</source>
         <translation>启用自动亮度调节</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="127" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="140" />
         <source>Adjustment interval minutes</source>
         <translation>调节间隔（分钟）</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="135" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="150" />
         <source>Interpolate brightness values</source>
         <translation>插值亮度值</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="161" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="160" />
         <source>Templates</source>
         <translation>模板</translation>
     </message>
@@ -680,56 +685,61 @@ This chart is resizable. </source>
     </message>
     <message>
         <location filename="../src/vdu_controls/lux_dialog.py" line="163" />
+        <source>Profiles</source>
+        <translation>型材</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/lux_dialog.py" line="190" />
         <source>Save Profiles</source>
         <translation>保存配置文件</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="164" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="191" />
         <source>Apply and save profile-chart changes.</source>
         <translation>应用并保存配置文件图表更改。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="165" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="192" />
         <source>Revert Profiles</source>
         <translation>还原配置文件</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="166" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="193" />
         <source>Abandon profile-chart changes, revert to last saved.</source>
         <translation>放弃配置文件图表更改，恢复到上次保存的状态。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="167" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="194" />
         <source>Close</source>
         <translation>关闭</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="174" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="201" />
         <source>Press to expire the timer and immediately evaluate brightness.</source>
         <translation>按下可使计时器到期并立即评估亮度。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="191" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="218" />
         <source>Select: {}</source>
         <translation>选择：{}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="209" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="236" />
         <source>Meter changed to {}.</source>
         <translation>测量仪已更改为 {}。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="226" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="253" />
         <source>Interval changed to {} minutes.</source>
         <translation>间隔已更改为 {} 分钟。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="242" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="269" />
         <source>Interpolation may increase the number of writes to VDU NVRAM.</source>
         <translation>插值可能会增加对 VDU NVRAM 的写入次数。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="243" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="270" />
         <source>Changes specified by each brightness-response curve will only be applied when they cross a minimum threshold (default {}%).
 
 When designing brightness-response curves, consider minimizing brightness changes to reduce wear on NVRAM.</source>
@@ -738,27 +748,27 @@ When designing brightness-response curves, consider minimizing brightness change
 设计亮度响应曲线时，请考虑尽量减少亮度变化以减少 NVRAM 的磨损。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="258" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="285" />
         <source>Editing profile {}</source>
         <translation>正在编辑配置文件 {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="270" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="297" />
         <source>Press Save-Profile to activate new profile.</source>
         <translation>按“保存配置文件”以激活新配置文件。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="352" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="379" />
         <source>Cannot configure a solar lux calculator, no location is defined.</source>
         <translation>无法配置太阳勒克斯计算器，未定义位置。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="353" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="380" />
         <source>Please set a location in the main Settings-Dialog.</source>
         <translation>请在主设置对话框中设置位置。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="357" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="384" />
         <source>Semi-automatic lux adjustment: quick start instructions.
 ________________________________________________________________________________________
 
@@ -788,7 +798,7 @@ ________________________________________________________________________________
 </translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="366" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="393" />
         <source>Estimation of indoor illumination (Ei) from solar illumination (Eo):
     Ei = DF * Eo
     DF = Ei / Eo
@@ -805,39 +815,39 @@ DF：日光因子，室内外照度的比值。每当环境光水平滑块
     被手动更改时更新。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="381" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="408" />
         <source>You might need to be a member of the {} group.</source>
         <translation>您可能需要成为 {} 组的成员。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="382" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="409" />
         <source>No read access to {}</source>
         <translation>没有对 {} 的读取权限</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="385" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="412" />
         <source>Expecting {0}, but {1} was selected.</source>
         <translation>应为 {0}，但已选择 {1}。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="405" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="432" />
         <source>No metering device set.</source>
         <translation>未设置测光设备。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="414" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="441" />
         <source>Choose profile for {}:</source>
         <translation>选择 {} 的配置文件：</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="437" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="464" />
         <source>There are unsaved profile changes?</source>
         <translation>是否有未保存的配置文件更改？</translation>
     </message>
 </context><context>
     <name>LuxGaugeWidget</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="489" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="516" />
         <source>Left:	 Rolling display of metered lux (ML).
 Right:	 1) Estimated outside solar illumination (Eo) for
 	     the set geolocation for the current day.
@@ -855,17 +865,17 @@ Eo = 单位常数 * sin(弧度(太阳高度)) * 10 ** (-0.1 * 空气质量)
 Ei 的估算值由半自动测光选项使用。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="583" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="610" />
         <source>Location Unknown</source>
         <translation>地点未知</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="625" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="652" />
         <source>Eo={:,} lux    DF={:,.4f}</source>
         <translation>Eo={:,} 勒克斯    DF={:,.4f}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="627" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="654" />
         <source>Eo=?   DF=?   (location not set)</source>
         <translation>Eo=?   DF=?   (位置未设置)</translation>
     </message>
@@ -886,50 +896,50 @@ Ei 的估算值由半自动测光选项使用。</translation>
 </context><context>
     <name>LuxProfileTemplates</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="49" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="51" />
         <source>Older monitor, dimmer backlight, sunlit room.</source>
         <translation>较旧的显示器、较暗的背光、阳光照射的房间。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="52" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="54" />
         <source>Newer Monitor, brighter backlight, sunlit room</source>
         <translation>更新的显示器、更亮的背光、阳光充足的房间</translation>
     </message>
 </context><context>
     <name>LuxProfileWidget</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="688" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="715" />
         <source>Lux Brightness Response Profiles</source>
         <translation>勒克斯亮度响应配置文件</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="706" />
-        <location filename="../src/vdu_controls/lux_dialog.py" line="704" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="733" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="731" />
         <source>Brightness %</source>
         <translation>亮度百分比</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="821" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="848" />
         <source>Click remove preset at {} lux</source>
         <translation>单击删除 {} 勒克斯处的预置</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="833" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="860" />
         <source>Click to add preset at {} lux</source>
         <translation>单击以添加 {} 勒克斯处的预置</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="885" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="912" />
         <source>Select a Preset to attach at {} lux</source>
         <translation>选择要在 {} lux 下附加的预设</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="901" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="928" />
         <source>There are no Presets.</source>
         <translation>没有预置项。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="901" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="928" />
         <source>Use the Presets Dialog to create some.</source>
         <translation>使用预置对话框创建一些。</translation>
     </message>
@@ -1078,74 +1088,74 @@ Ei 的估算值由半自动测光选项使用。</translation>
         <translation>高度触发器</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="730" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="731" />
         <source>Trigger at solar elevation:</source>
         <translation>在太阳高度到达时触发：</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="734" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="735" />
         <source>Trigger at a set solar elevation (sun angle at your geolocation and time).</source>
         <translation>在设定的太阳高度（您所在位置和时间的太阳角度）触发。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="793" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="795" />
         <source>today at {}</source>
         <translation>今天在 {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="795" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="797" />
         <source>the sun does not rise this high today</source>
         <translation>今天太阳不会升到这么高</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="799" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="801" />
         <source>dawn</source>
         <translation>黎明</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="799" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="801" />
         <source>dusk</source>
         <translation>黄昏</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="801" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="803" />
         <source>twilight</source>
         <translation>暮光</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="803" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="805" />
         <source>nighttime</source>
         <translation>夜间</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="806" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="808" />
         <source> {:,} lux</source>
         <translation> {:,} 勒克斯</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="807" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="809" />
         <source>{0} {1} ({2}, {3})</source>
         <translation>{0} {1}（{2}、{3}）</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="816" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="818" />
         <source>location undefined (see settings)</source>
         <translation>位置未定义（参见设置）</translation>
     </message>
 </context><context>
     <name>PresetScheduleAtTimeWidget</name>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="880" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="882" />
         <source>time-trigger</source>
         <translation>时间触发器</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="881" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="883" />
         <source>Trigger at the same time (hh:mm) each day.</source>
         <translation>每天同一时间（hh:mm）触发。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="883" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="885" />
         <source>Trigger at time:</source>
         <translation>在时间点触发：</translation>
     </message>
@@ -1282,141 +1292,135 @@ Ei 的估算值由半自动测光选项使用。</translation>
 </context><context>
     <name>PresetsDialog</name>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="929" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="931" />
         <source>Preset scheduling is disabled in the Setting-Dialog.</source>
         <translation>预置计划在设置对话框中已禁用。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="931" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="933" />
         <source>Weather lookup is disabled in the Setting-Dialog.</source>
         <translation>天气查询在设置对话框中已禁用。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="971" />
-        <location filename="../src/vdu_controls/preset_dialog.py" line="952" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="973" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="954" />
         <source>Presets</source>
         <translation>预置</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="999" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1002" />
         <source>Enter a new preset name.</source>
         <translation>输入新的预置名称。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1007" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1010" />
         <source>Create VDU specific
 Initialization-Preset</source>
         <translation>创建 VDU 特定的初始化预置</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1018" />
-        <source>New Preset:</source>
-        <translation>新建预置：</translation>
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1021" />
+        <source>New preset</source>
+        <translation>新预设</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1281" />
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1027" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1284" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1030" />
         <source>Controls to include:</source>
         <translation>要包含的控制项：</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1062" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1065" />
         <source>Clear</source>
         <translation>清除</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1064" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1067" />
         <source>Clear edits and enter a new preset using the defaults.</source>
         <translation>清除编辑并使用默认值输入新预置。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1065" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1068" />
         <source>Save</source>
         <translation>保存</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1066" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1069" />
         <source>Save current VDU settings to Preset.</source>
         <translation>将当前 VDU 设置保存到预置。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1067" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1070" />
         <source>Revert</source>
         <translation>还原</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1069" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1072" />
         <source>Abandon edits, revert VDU and Preset settings.</source>
         <translation>放弃编辑，还原 VDU 和预置设置。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1070" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1073" />
         <source>Close</source>
         <translation>关闭</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1124" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1127" />
         <source>Create an initialization-preset for {}.</source>
         <translation>为 {} 创建初始化预置。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1125" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1128" />
         <source>Initialization-presets are restored at startup or when ever the VDU is subsequently detected.</source>
         <translation>初始化预置在启动时或随后检测到 VDU 时恢复。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1165" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1168" />
         <source>Choose which settings to save for {}</source>
         <translation>选择要为 {} 保存哪些设置</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1265" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1268" />
         <source>Delete {}?</source>
         <translation>删除 {}？</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1274" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1277" />
         <source>Deleted {}</source>
         <translation>已删除 {}</translation>
     </message>
     <message>
         <location filename="../src/vdu_controls/preset_dialog.py" line="1288" />
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1280" />
-        <source>Create new preset:</source>
-        <translation>创建新预置：</translation>
+        <source>Edit {}</source>
+        <translation>编辑 {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1285" />
-        <source>Edit {}:</source>
-        <translation>编辑 {}：</translation>
-    </message>
-    <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1289" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1292" />
         <source>Controls to include in {}:</source>
         <translation>要包含在 {} 中的控制项：</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1331" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1334" />
         <source>Update existing {} preset with current monitor settings?</source>
         <translation>用当前显示器设置更新现有的 {} 预置？</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1333" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1336" />
         <source>Replace existing '{}' preset?</source>
         <translation>替换现有的 '{}' 预置？</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1335" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1338" />
         <source>Save current edit?</source>
         <translation>保存当前编辑？</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1349" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1352" />
         <source>Duplicates existing Preset {}, save anyway?</source>
         <translation>与现有预置 {} 重复，仍然保存？</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1369" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1372" />
         <source>Saved {}</source>
         <translation>已保存 {}</translation>
     </message>
