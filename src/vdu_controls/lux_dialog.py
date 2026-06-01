@@ -98,7 +98,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.drawing_color_map: Dict[VduStableId, QColor] = {}
         self.current_brightness_map: Dict[VduStableId, int] = {}
         self.has_profile_changes = False
-        self.setMinimumWidth(dpx(500))
+        self.setMinimumWidth(dpx(600))
         self.path = ConfIni.get_path('AutoLux')
         self.device_name = ''
         self.lux_config: LuxConfig = main_controller.get_lux_auto_controller().get_lux_config()
@@ -169,7 +169,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
         self.profile_selector_widget.setSizeAdjustPolicy(QListWidget.SizeAdjustPolicy.AdjustToContents)
         self.profile_selector_widget.setFlow(QListWidget.Flow.LeftToRight)
         self.profile_selector_widget.setSpacing(0)
-        self.profile_selector_widget.setMinimumWidth(dpx(495))
+        self.profile_selector_widget.setMinimumWidth(dpx(550))
         self.profile_selector_widget.setMinimumHeight(desktop_font_height(scaled=1.4))
 
         main_layout.addWidget(self.profile_selector_widget, stretch=0)
