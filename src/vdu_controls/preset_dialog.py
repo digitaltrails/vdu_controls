@@ -744,9 +744,9 @@ class PresetScheduleAtElevationWidget(PresetScheduleAtWidgetBase):
         self.slider = QSlider(Qt.Orientation.Horizontal)
         self.slider.setMinimum(-1)
         self.slider.setValue(-1)
+        self.slider_last_value = self.slider.value()
         self.slider.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        self.slider.setTickInterval(5)
-        self.slider.setTickPosition(QSlider.TickPosition.TicksAbove)
+        self.slider.setTickPosition(QSlider.TickPosition.NoTicks)
         self._slider_select_elevation_qtsignal.connect(self.set_elevation_key)
 
         bottom_layout = QHBoxLayout()
@@ -774,10 +774,10 @@ class PresetScheduleAtElevationWidget(PresetScheduleAtWidgetBase):
         self.set_elevation_key(None)
 
     def sliding(self) -> None:
-        if (now := sys_time.perf_counter()) - self.slider_last_event_time < 0.1:  # Prevent event overload on Qt6 kwin-wayland
-            return
-        self.slider_last_event_time = now
         value = self.slider.value()
+        if self.slider_last_value == value:   # Prevent event overload on Qt6 kwin-wayland
+            return
+        self.slider_last_value = value
         if value == -1:
             self._slider_select_elevation_qtsignal.emit(None)
             return
