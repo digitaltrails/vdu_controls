@@ -728,7 +728,7 @@ class PresetScheduleAtElevationWidget(PresetScheduleAtWidgetBase):
         self.location = main_config.get_location()
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
-        self.title_prefix = tr("Trigger at solar elevation:")
+        self.title_prefix = tr("Trigger at solar elevation")
         self.title_label = QLabel(self.title_prefix)
         self.title_label.setFixedHeight(
             desktop_font_height(scaled=1.5))  # Stop ascenders/descenders in Unicode from altering layout.
@@ -882,7 +882,7 @@ class PresetScheduleAtTimeWidget(PresetScheduleAtWidgetBase):
         super().__init__(description=tr("time-trigger"))
         self.setToolTip(tr("Trigger at the same time (hh:mm) each day."))
         self.setLayout(at_time_layout := QHBoxLayout())
-        at_time_layout.addWidget(QLabel(tr("Trigger at time:")))
+        at_time_layout.addWidget(QLabel(tr("Trigger at time")))
         self.editor_at_time_field = QLineEdit()
         self.editor_at_time_field.setValidator(PresetScheduleAtTimeWidget.TimeFieldValidator())
         at_time_layout.addWidget(self.editor_at_time_field)
@@ -1027,7 +1027,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.populate_editor_controls_widget()
         self.editor_layout.addWidget(self.edit_panel)
 
-        self.controls_title_widget = self.editor_controls_prompt = QLabel(tr("Controls to include:"))
+        self.controls_title_widget = self.editor_controls_prompt = QLabel(tr("Controls to include"))
         self.controls_title_widget.setDisabled(True)
         self.editor_layout.addWidget(self.controls_title_widget)
         self.editor_layout.addWidget(self.editor_controls_widget)
@@ -1281,7 +1281,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.text = self.editor_title.set_text(self.editor_new_preset_text)
         if disable_controls := changed_text.strip() == "":
             self.edit_revert_button.setDisabled(True)
-            self.editor_controls_prompt.setText(tr("Controls to include:"))
+            self.editor_controls_prompt.setText(tr("Controls to include"))
         else:
             if self.find_preset_widget(changed_text):  # Already exists
                 self.edit_revert_button.setDisabled(False)
@@ -1289,7 +1289,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
             else:
                 self.edit_revert_button.setDisabled(True)
                 self.editor_title.set_text(self.editor_new_preset_text)
-            self.editor_controls_prompt.setText(tr("Controls to include in {}:").format(changed_text))
+            self.editor_controls_prompt.setText(tr("Controls to include in {}").format(changed_text))
         self.editor_controls_widget.setDisabled(disable_controls)
         self.editor_transitions_widget.setDisabled(disable_controls)
         self.editor_at_time_widget.setDisabled(disable_controls)
