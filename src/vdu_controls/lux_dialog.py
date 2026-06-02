@@ -450,7 +450,7 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
     def choose_template(self) -> None:
         sid = self.profile_plot.current_vdu_sid
         #icon = create_icon_from_svg_bytes(AMBIENT_PANEL_ICON_SOURCE)
-        template_chooser = ChoiceBox(title=tr("Choose profile for {}:").format(sid),
+        template_chooser = ChoiceBox(title=tr("Choose profile for {}").format(sid),
                                      choices=[tr(template.name) for template in LuxProfileTemplates.LIST])
         template_chooser.exec()
         if template_chooser.selected_item_number != -1:
