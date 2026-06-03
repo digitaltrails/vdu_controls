@@ -666,30 +666,13 @@ class PresetDaylightFactorWidget(QWidget):
 
     def __init__(self):
         super().__init__()
-        self.setLayout(QHBoxLayout())
-        self.df_checkbox = QCheckBox()
+        layout = QHBoxLayout(self)
         self.df_label = QLabel(tr("Daylight-Factor"))
         self.df_input = QLineEdit()
         self.df_input.setValidator(QDoubleValidator())
-        self.df_checkbox.toggled.connect(self.enable_controls)
-        self.setToolTip(tr("Save the current semi-automatic Light-Metering Daylight-Factor (DF) as part of the Preset."))
-
-        def df_init(state):
-            if state == Qt.CheckState.Checked:
-                if self.df_input.text() == '':
-                    from lux_meters import LuxMeterSemiAutoDevice
-                    self.df_input.setText(f"{LuxMeterSemiAutoDevice.get_daylight_factor():.4f}")
-            else:
-                self.df_input.setText('')
-
-        self.df_checkbox.stateChanged.connect(df_init)
-        for widget in (self.df_checkbox, self.df_label, self.df_input):
-            self.layout().addWidget(widget)   # type: ignore - will have a layout by now
-
-    def enable_controls(self, enabled):
-        self.df_checkbox.setChecked(enabled)
-        self.df_label.setEnabled(enabled)
-        self.df_input.setEnabled(enabled)
+        self.setToolTip(tr("Save a Light-Metering Daylight-Factor (DF) as part of the Preset."))
+        layout.addWidget(self.df_label)
+        layout.addWidget(self.df_input)
 
 
 class PresetScheduleAtWidgetBase(QWidget):  # Abstract
@@ -722,23 +705,28 @@ class PresetScheduleAtWidgetBase(QWidget):  # Abstract
 class PresetScheduleAtElevationWidget(PresetScheduleAtWidgetBase):
     _slider_select_elevation_qtsignal = pyqtSignal(object)
 
-    def __init__(self, main_config: VduControlsConfig) -> None:
+    def __init__(self, main_config: VduControlsConfig, weather_widget: PresetWeatherWidget) -> None:
         super().__init__(description=tr("elevation-trigger"))
+        self.weather_widget = weather_widget
         self.elevation_key: SolarElevationKey | None = None
         self.location = main_config.get_location()
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
+
         self.title_prefix = tr("Trigger at solar elevation")
         self.title_label = QLabel(self.title_prefix)
-        self.title_label.setFixedHeight(
-            desktop_font_height(scaled=1.5))  # Stop ascenders/descenders in Unicode from altering layout.
-        self.title_label.setToolTip(tr("Trigger at a set solar elevation (sun angle at your geolocation and time)."))
+        #self.title_label.setFixedHeight(desktop_font_height(scaled=3))  # Stop ascenders/descenders in Unicode from altering layout.
+        self.title_label.setToolTip(tr("Trigger at a set solar elevation\n(sun angle at your geolocation and time)."))
+
+        self.footer_label = QLabel()
+        self.footer_label.setWordWrap(True)
+        # lineHeight = self.title_label.fontMetrics().height()
+        self.footer_label.setMinimumHeight(desktop_font_height(1.3))   # Allow for descenders
         #main_layout.addWidget(self.title_label)
 
         self.elevation_chart = PresetElevationChartWidget()
         self.elevation_chart.selected_elevation_qtsignal.connect(self.set_elevation_key)
 
-        self.df_widget = PresetDaylightFactorWidget()
 
         self.slider_last_event_time = sys_time.perf_counter()
         self.slider = QSlider(Qt.Orientation.Horizontal)
@@ -750,21 +738,24 @@ class PresetScheduleAtElevationWidget(PresetScheduleAtWidgetBase):
         self._slider_select_elevation_qtsignal.connect(self.set_elevation_key)
 
         bottom_layout = QHBoxLayout()
+        bottom_left_layout = QVBoxLayout()
+        bottom_layout.setContentsMargins(0, 0, 0, 0)
+        bottom_right_layout = QVBoxLayout()
+        bottom_layout.addLayout(bottom_left_layout)
+        bottom_layout.addLayout(bottom_right_layout)
         main_layout.addLayout(bottom_layout)
 
         chart_and_slider_layout = QVBoxLayout()
         chart_and_slider_layout.addWidget(self.title_label)
         chart_and_slider_layout.addWidget(self.elevation_chart, 1)
         chart_and_slider_layout.addWidget(self.slider)
-        chart_and_slider_layout.addWidget(self.df_widget, 0)
-        bottom_layout.addLayout(chart_and_slider_layout, 1)
+        bottom_left_layout.addLayout(chart_and_slider_layout, 1)
+        bottom_left_layout.addWidget(self.footer_label)
 
-        self.weather_widget = PresetWeatherWidget(main_config)
-        bottom_layout.addWidget(self.weather_widget, 0)
         self.configure_for_location(self.location)
         self.slider.valueChanged.connect(self.sliding)
 
-        self.setMinimumWidth(dpx(200))
+        self.setMinimumWidth(dpx(250))
         self.sun_image: QImage | None = None
 
     def is_set(self) -> bool:
@@ -787,14 +778,14 @@ class PresetScheduleAtElevationWidget(PresetScheduleAtWidgetBase):
 
     def show_elevation_description(self) -> None:
         if self.elevation_key is None:
-            self.title_label.setText(self.title_prefix)
+            self.footer_label.setText('')
             return
         elevation_data = self.elevation_chart.get_elevation_data(self.elevation_key)
         occurs_at = elevation_data.when if elevation_data is not None else None  # No elev data => sun doesn't rise this high today
         if occurs_at:
             when_text = tr("today at {}").format(occurs_at.strftime('%H:%M'))
         else:
-            when_text = tr("the sun does not rise this high today")
+            when_text = tr("The Sun does not rise this high today.")
         # https://en.wikipedia.org/wiki/Twilight
         if self.elevation_key.elevation < 1:
             if self.elevation_key.elevation >= -6:
@@ -806,23 +797,29 @@ class PresetScheduleAtElevationWidget(PresetScheduleAtWidgetBase):
         if elevation_data is not None and self.location:
             if lux := calc_solar_lux(elevation_data.when, self.location, 1.0):
                 when_text += tr(" {:,} lux").format(lux)
-        desc_text = tr("{0} {1} ({2}, {3})").format(
-            self.title_prefix, format_solar_elevation_abbreviation(self.elevation_key), tr(self.elevation_key.direction), when_text)
-        if desc_text != self.title_label.text():
-            self.title_label.setText(desc_text)
+        if occurs_at:
+            desc_text = tr("{0}, {1}").format(
+                format_solar_elevation_abbreviation(self.elevation_key),
+                when_text)
+        else:
+            desc_text = tr("{0}").format(
+                #format_solar_elevation_abbreviation(self.elevation_key),
+                when_text)
+        if desc_text != self.footer_label.text():
+            self.footer_label.setText(desc_text)
 
     def configure_for_location(self, location: GeoLocation | None) -> None:
         self.elevation_chart.configure_for_location(location)
         self.location = location
         if location is None:
-            self.title_label.setText(self.title_prefix + tr("location undefined (see settings)"))
+            self.footer_label.setText(tr("location undefined (see settings)"))
             self.slider.setDisabled(True)
             return
         self.slider.setEnabled(True)
         self.slider.setMaximum(len(self.elevation_chart.elevation_steps) - 1)
         self.slider.setValue(-1)
         self.sliding()
-        self.weather_widget.update_location(location)
+
 
     def resizeEvent(self, event: QResizeEvent | None) -> None:
         super().resizeEvent(event)
@@ -1038,13 +1035,30 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         else:
             self.editor_layout.addWidget(self.editor_transitions_widget)
 
-        self.editor_at_time_widget = PresetScheduleAtTimeWidget()
-        self.editor_layout.addWidget(self.editor_at_time_widget)
+        bottom_left_layout = QVBoxLayout()
+        bottom_right_layout = QVBoxLayout()
+        bottom_layout = QHBoxLayout()
+        bottom_layout.setContentsMargins(0, 0, 0, 0)
+        bottom_layout.addLayout(bottom_left_layout, stretch=1)
+        bottom_layout.addLayout(bottom_right_layout)
+        self.editor_layout.addLayout(bottom_layout)
 
-        self.editor_at_elevation_widget = PresetScheduleAtElevationWidget(main_config)
-        self.editor_layout.addWidget(self.editor_at_elevation_widget)
+        self.at_time_widget = PresetScheduleAtTimeWidget()
+        bottom_right_layout.addWidget(self.at_time_widget)
 
-        possibles = [self.editor_at_time_widget, self.editor_at_elevation_widget]
+        self.weather_widget = PresetWeatherWidget(main_config)
+        self.at_elevation_widget = PresetScheduleAtElevationWidget(main_config, self.weather_widget)
+
+        bottom_left_layout.addWidget(self.at_elevation_widget)
+
+        self.df_widget = PresetDaylightFactorWidget()
+        bottom_right_layout.addWidget(self.df_widget)
+
+        self.weather_widget.update_location(self.at_elevation_widget.location)
+        bottom_right_layout.addWidget(self.weather_widget)
+
+
+        possibles = [self.at_time_widget, self.at_elevation_widget]
         for schedule_choice_widget in possibles:
             schedule_choice_widget.set_schedule_widgets(possibles)
 
@@ -1077,9 +1091,9 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
 
         self.edit_choose_icon_button.set_preset(None)
         self.editor_controls_widget.setDisabled(True)
-        self.editor_at_time_widget.setDisabled(True)
+        self.at_time_widget.setDisabled(True)
         self.editor_transitions_widget.setDisabled(True)
-        self.editor_at_elevation_widget.setDisabled(True)
+        self.at_elevation_widget.setDisabled(True)
         self.edit_save_button.setDisabled(True)
         self.edit_revert_button.setDisabled(True)
 
@@ -1111,7 +1125,8 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.main_controller.populate_ini_from_vdus(self.base_ini)
         self.populate_editor_controls_widget()
         self.reset_editor()
-        self.editor_at_elevation_widget.configure_for_location(self.main_config.get_location())
+        self.at_elevation_widget.configure_for_location(self.main_config.get_location())
+        self.weather_widget.update_location(self.at_elevation_widget.location)
 
     def reset_editor(self):
         self.preset_name_edit.setText('')
@@ -1186,19 +1201,19 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         for key, item in self.content_controls_map.items():
             item.setChecked(preset.preset_ini.has_option(key[0], key[1]))
         if preset.preset_ini.has_section('preset'):
-            self.editor_at_elevation_widget.clear()  # Clear both fields to stop any cross-field validation triggers.
-            self.editor_at_time_widget.clear()
+            self.at_elevation_widget.clear()  # Clear both fields to stop any cross-field validation triggers.
+            self.at_time_widget.clear()
             at_time = preset.get_at_time()
-            self.editor_at_time_widget.setText(at_time.strftime("%H:%M") if at_time is not None else '')
-            self.editor_at_elevation_widget.set_elevation_from_text(
+            self.at_time_widget.setText(at_time.strftime("%H:%M") if at_time is not None else '')
+            self.at_elevation_widget.set_elevation_from_text(
                 preset.preset_ini.get('preset', 'solar-elevation', fallback=None))
-            self.editor_at_elevation_widget.set_required_weather_filename(
+            self.at_elevation_widget.set_required_weather_filename(
                 preset.preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None))
             self.editor_transitions_widget.set_transition_type(preset.get_transition_type())
             self.editor_transitions_widget.set_step_seconds(preset.get_step_interval_seconds())
             df = preset.get_daylight_factor()
-            self.editor_at_elevation_widget.df_widget.setEnabled(df is not None)
-            self.editor_at_elevation_widget.df_widget.df_input.setText(f"{df:.4f}" if df is not None else '')
+            self.df_widget.setEnabled(df is not None)
+            self.df_widget.df_input.setText(f"{df:.4f}" if df is not None else '')
 
     def has_changes(self, preset: Preset) -> bool:
         preset_ini_copy = preset.preset_ini.duplicate()
@@ -1221,15 +1236,15 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
             preset_ini.add_section('preset')
         if self.edit_choose_icon_button.last_selected_icon_path:
             preset_ini.set("preset", "icon", self.edit_choose_icon_button.last_selected_icon_path.as_posix())
-        preset_ini.set('preset', 'at-time', self.editor_at_time_widget.text())
-        preset_ini.set('preset', 'solar-elevation', format_solar_elevation_ini_text(self.editor_at_elevation_widget.elevation_key))
-        if weather_filename := self.editor_at_elevation_widget.get_required_weather_filename():
+        preset_ini.set('preset', 'at-time', self.at_time_widget.text())
+        preset_ini.set('preset', 'solar-elevation', format_solar_elevation_ini_text(self.at_elevation_widget.elevation_key))
+        if weather_filename := self.at_elevation_widget.get_required_weather_filename():
             preset_ini.set('preset', 'solar-elevation-weather-restriction', weather_filename)
         elif preset_ini.get('preset', 'solar-elevation-weather-restriction', fallback=None):
             preset_ini.remove_option('preset', 'solar-elevation-weather-restriction')  # Remove existing restriction from ini
         preset_ini.set('preset', 'transition-type', str(self.editor_transitions_widget.get_transition_type()))
         preset_ini.set('preset', 'transition-step-interval-seconds', str(self.editor_transitions_widget.get_step_seconds()))
-        preset_ini.set('preset', 'daylight-factor', str(self.editor_at_elevation_widget.df_widget.df_input.text()))
+        preset_ini.set('preset', 'daylight-factor', str(self.df_widget.df_input.text()))
 
     def get_preset_widgets(self) -> List[PresetItemWidget]:
         return [self.preset_widgets_layout.itemAt(i).widget()   # type:ignore there will be a widget at i
@@ -1292,8 +1307,8 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
             self.editor_controls_prompt.setText(tr("Controls to include in {}").format(changed_text))
         self.editor_controls_widget.setDisabled(disable_controls)
         self.editor_transitions_widget.setDisabled(disable_controls)
-        self.editor_at_time_widget.setDisabled(disable_controls)
-        self.editor_at_elevation_widget.setDisabled(disable_controls)
+        self.at_time_widget.setDisabled(disable_controls)
+        self.at_elevation_widget.setDisabled(disable_controls)
         self.controls_title_widget.setDisabled(disable_controls)
         self.editor_transitions_widget.setDisabled(disable_controls)
         self.edit_save_button.setDisabled(disable_controls)
