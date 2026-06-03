@@ -1216,9 +1216,9 @@ class VduAppWindow(QMainWindow):
             self.tray_icon = create_icon_from_path(CUSTOM_TRAY_ICON_FILE, tray_theme_type)
         elif tray_theme_type in (ThemeType.MONOCHROME_LIGHT, ThemeType.MONOCHROME_DARK):  # Special tray monochrome version
             log.info(f"Using monochrome app_icon: {tray_theme_type=}")
-            self.tray_icon = create_icon_from_svg_bytes(svg.MONOCHROME_APP_ICON_SVG, tray_theme_type)
+            self.tray_icon = create_icon_from_svg_bytes(svg.TRAY_MONOCHROME_ICON_SVG, tray_theme_type)
         else:  # non-themed color icon based on the splash screen image
-            self.tray_icon = self.app_icon
+            self.tray_icon = create_icon_from_svg_bytes(svg.TRAY_COLOR_ICON_SVG, tray_theme_type)
 
     def create_main_control_panel(self) -> None:
         # Call on initialization and whenever the number of connected VDUs changes.
