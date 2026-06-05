@@ -490,15 +490,15 @@ Version History
   * The Light-Metering-Dialog now offers two profile starter-templates
     for older and newer monitors.
   * The Settings global-options are now grouped under subheadings.
-  * The layout of the Preset and Light-Metering dialogs better refect the
+  * The layout of the Preset and Light-Metering dialogs better reflect the
     the style of the main panel (slightly).
   * The system tray default icon is now primarily monochrome to reflect 
-    prevailing desktop aesthetics. It's designed to acommodate both dark 
-    and light tray backgounds (as far as is possible).
+    prevailing desktop aesthetics. It's designed to accommodate both dark 
+    and light tray backgrounds (as far as is possible).
   * The right-mouse action that could hide the toolbar irretrievably has been
     disabled.
   * When parsing monitor metadata, if the same VCP-feature-code is 
-    defined mutiple times, the first definition is kept and any following 
+    defined multiple times, the first definition is kept and any following 
     definitions are logged (rather than silently overwriting the first). 
     This allows some monitors with incorrect metadata to work out-of-the-box.
   * When parsing monitor metadata, well known "Continuous" VCP-feature 
