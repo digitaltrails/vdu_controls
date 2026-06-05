@@ -244,7 +244,7 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
     def update_df_from_lux_value(new_lux_value: float, semi_auto_source: bool):
         if location := LuxMeterSemiAutoDevice.location:
             solar_lux = calc_solar_lux(zoned_now(), location, 1.0)
-            if solar_lux > (0 if semi_auto_source else 1000):  # only for reasonable daylight lux levels or if the user is driving.
+            if solar_lux >= 1000:  # only for reasonable daylight lux levels.
                 daylight_factor = new_lux_value / solar_lux
                 LuxMeterSemiAutoDevice.set_daylight_factor(daylight_factor, internal=True, persist=semi_auto_source)
 
