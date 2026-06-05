@@ -487,10 +487,14 @@ Version History
 ---------------
 * 2.6.5
   * The ambient-light-level slider now works even if location is not set.
-  * The Light-Metering-Dialog now offers two starter template lux/brightness 
-    profiles for older and newer monitors.
+  * The Light-Metering-Dialog now offers two profile starter-templates
+    for older and newer monitors.
   * The Settings global-options are now grouped under subheadings.
-  * Update the layout of the Preset and Light-Metering dialogs.
+  * The layout of the Preset and Light-Metering dialogs better refect the
+    the style of the main panel (slightly).
+  * The system tray default icon is now primarily monochrome to reflect 
+    prevailing desktop aesthetics. It's designed to acommodate both dark 
+    and light tray backgounds (as far as is possible).
   * The right-mouse action that could hide the toolbar irretrievably has been
     disabled.
   * When parsing monitor metadata, if the same VCP-feature-code is 
@@ -502,8 +506,8 @@ Version History
     and any attached 'Value:' metadata that implies otherwise will be ignored
     (with a warning logged). 
     This allows some monitors with incorrect metadata to work out-of-the-box.
-  * The script's source code has been split into multiple modules (files).
-  * The executable is now a Python _zipapp_ containing the module hierarchy.
+  * The script's source code has been split into multiple source files.
+  * The executable is now a Python _zipapp_ containing the source hierarchy.
   * The included set of language-translations has been expanded. All of 
     the translations have been created for testing purposes and may not 
     be accurate.
