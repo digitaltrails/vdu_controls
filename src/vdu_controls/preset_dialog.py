@@ -776,16 +776,18 @@ class PresetScheduleAtElevationWidget(PresetScheduleAtWidgetBase):
         self._slider_select_elevation_qtsignal.emit(
             chart.elevation_steps[value] if 0 <= value < len(chart.elevation_steps) else None)
 
+
     def show_elevation_description(self) -> None:
         if self.elevation_key is None:
+            self.title_label.setText(self.title_prefix)
             self.footer_label.setText('')
             return
         elevation_data = self.elevation_chart.get_elevation_data(self.elevation_key)
         occurs_at = elevation_data.when if elevation_data is not None else None  # No elev data => sun doesn't rise this high today
         if occurs_at:
-            when_text = tr("today at {}").format(occurs_at.strftime('%H:%M'))
+            when_text = tr("Today at {}.").format(occurs_at.strftime('%H:%M'))
         else:
-            when_text = tr("The Sun does not rise this high today.")
+            when_text = tr("The sun does not rise this high today.")
         # https://en.wikipedia.org/wiki/Twilight
         if self.elevation_key.elevation < 1:
             if self.elevation_key.elevation >= -6:
@@ -797,17 +799,14 @@ class PresetScheduleAtElevationWidget(PresetScheduleAtWidgetBase):
         if elevation_data is not None and self.location:
             if lux := calc_solar_lux(elevation_data.when, self.location, 1.0):
                 when_text += tr(" {:,} lux").format(lux)
-        if occurs_at:
-            desc_text = tr("{0}, {1}").format(
-                format_solar_elevation_abbreviation(self.elevation_key),
-                when_text)
-        else:
-            desc_text = tr("{0}").format(
-                #format_solar_elevation_abbreviation(self.elevation_key),
-                when_text)
-        if desc_text != self.footer_label.text():
-            self.footer_label.setText(desc_text)
+        title_text = tr("{0} {1}").format(self.title_prefix, format_solar_elevation_abbreviation(self.elevation_key))
+        footer_text = when_text
+        if title_text != self.title_label.text():
+            self.title_label.setText(title_text)
+        if footer_text != self.footer_label.text():
+            self.footer_label.setText(footer_text)
 
+    
     def configure_for_location(self, location: GeoLocation | None) -> None:
         self.elevation_chart.configure_for_location(location)
         self.location = location
