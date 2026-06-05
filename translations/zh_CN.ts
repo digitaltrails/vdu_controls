@@ -1012,14 +1012,14 @@ Ei 的估算值由半自动测光选项使用。</translation>
 </context><context>
     <name>PresetDaylightFactorWidget</name>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="671" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="670" />
         <source>Daylight-Factor</source>
         <translation>日光因子</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="675" />
-        <source>Save the current semi-automatic Light-Metering Daylight-Factor (DF) as part of the Preset.</source>
-        <translation>将当前的半自动测光日光因子（DF）保存为预置的一部分。</translation>
+        <location filename="../src/vdu_controls/preset_dialog.py" line="673" />
+        <source>Save a Light-Metering Daylight-Factor (DF) as part of the Preset.</source>
+        <translation>将测光日光系数 (DF) 保存为预设的一部分。</translation>
     </message>
 </context><context>
     <name>PresetElevationChartWidget</name>
@@ -1110,91 +1110,93 @@ Ei 的估算值由半自动测光选项使用。</translation>
 </context><context>
     <name>PresetScheduleAtElevationWidget</name>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="726" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="709" />
         <source>elevation-trigger</source>
         <translation>高度触发器</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="731" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="716" />
         <source>Trigger at solar elevation</source>
         <translation>在太阳高度角处触发</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="735" />
-        <source>Trigger at a set solar elevation (sun angle at your geolocation and time).</source>
-        <translation>在设定的太阳高度（您所在位置和时间的太阳角度）触发。</translation>
+        <location filename="../src/vdu_controls/preset_dialog.py" line="719" />
+        <source>Trigger at a set solar elevation
+(sun angle at your geolocation and time).</source>
+        <translation>在设定的太阳高度角触发
+（您的地理位置和时间的太阳角度）。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="795" />
-        <source>today at {}</source>
-        <translation>今天在 {}</translation>
+        <location filename="../src/vdu_controls/preset_dialog.py" line="788" />
+        <source>Today at {}.</source>
+        <translation>今天在{}。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="797" />
-        <source>the sun does not rise this high today</source>
-        <translation>今天太阳不会升到这么高</translation>
+        <location filename="../src/vdu_controls/preset_dialog.py" line="790" />
+        <source>The sun does not rise this high today.</source>
+        <translation>今天太阳没有升得这么高。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="801" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="794" />
         <source>dawn</source>
         <translation>黎明</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="801" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="794" />
         <source>dusk</source>
         <translation>黄昏</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="803" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="796" />
         <source>twilight</source>
         <translation>暮光</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="805" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="798" />
         <source>nighttime</source>
         <translation>夜间</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="808" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="801" />
         <source> {:,} lux</source>
         <translation> {:,} 勒克斯</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="809" />
-        <source>{0} {1} ({2}, {3})</source>
-        <translation>{0} {1}（{2}、{3}）</translation>
+        <location filename="../src/vdu_controls/preset_dialog.py" line="802" />
+        <source>{0} {1}</source>
+        <translation>{0} {1}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="818" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="814" />
         <source>location undefined (see settings)</source>
         <translation>位置未定义（参见设置）</translation>
     </message>
 </context><context>
     <name>PresetScheduleAtTimeWidget</name>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="882" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="878" />
         <source>time-trigger</source>
         <translation>时间触发器</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="883" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="879" />
         <source>Trigger at the same time (hh:mm) each day.</source>
         <translation>每天同一时间（hh:mm）触发。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="885" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="881" />
         <source>Trigger at time</source>
         <translation>定时触发</translation>
     </message>
 </context><context>
     <name>PresetScheduleAtWidgetBase</name>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="707" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="690" />
         <source>Preset already scheduled. Clear existing {}?</source>
         <translation>预置已安排。清除现有的 {}？</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="708" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="691" />
         <source>Duplicate the preset if you need to schedule it more than once.</source>
         <translation>如果您需要多次安排，请复制该预置。</translation>
     </message>
@@ -1319,135 +1321,135 @@ Ei 的估算值由半自动测光选项使用。</translation>
 </context><context>
     <name>PresetsDialog</name>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="931" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="927" />
         <source>Preset scheduling is disabled in the Setting-Dialog.</source>
         <translation>预置计划在设置对话框中已禁用。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="933" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="929" />
         <source>Weather lookup is disabled in the Setting-Dialog.</source>
         <translation>天气查询在设置对话框中已禁用。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="973" />
-        <location filename="../src/vdu_controls/preset_dialog.py" line="954" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="969" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="950" />
         <source>Presets</source>
         <translation>预置</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1002" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="998" />
         <source>Enter a new preset name.</source>
         <translation>输入新的预置名称。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1010" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1006" />
         <source>Create VDU specific
 Initialization-Preset</source>
         <translation>创建 VDU 特定的初始化预置</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1021" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1017" />
         <source>New preset</source>
         <translation>新预设</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1284" />
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1030" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1298" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1026" />
         <source>Controls to include</source>
         <translation>要包括的控件</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1065" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1078" />
         <source>Clear</source>
         <translation>清除</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1067" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1080" />
         <source>Clear edits and enter a new preset using the defaults.</source>
         <translation>清除编辑并使用默认值输入新预置。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1068" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1081" />
         <source>Save</source>
         <translation>保存</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1069" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1082" />
         <source>Save current VDU settings to Preset.</source>
         <translation>将当前 VDU 设置保存到预置。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1070" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1083" />
         <source>Revert</source>
         <translation>还原</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1072" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1085" />
         <source>Abandon edits, revert VDU and Preset settings.</source>
         <translation>放弃编辑，还原 VDU 和预置设置。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1073" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1086" />
         <source>Close</source>
         <translation>关闭</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1127" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1141" />
         <source>Create an initialization-preset for {}.</source>
         <translation>为 {} 创建初始化预置。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1128" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1142" />
         <source>Initialization-presets are restored at startup or when ever the VDU is subsequently detected.</source>
         <translation>初始化预置在启动时或随后检测到 VDU 时恢复。</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1168" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1182" />
         <source>Choose which settings to save for {}</source>
         <translation>选择要为 {} 保存哪些设置</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1268" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1282" />
         <source>Delete {}?</source>
         <translation>删除 {}？</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1277" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1291" />
         <source>Deleted {}</source>
         <translation>已删除 {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1288" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1302" />
         <source>Edit {}</source>
         <translation>编辑 {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1292" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1306" />
         <source>Controls to include in {}</source>
         <translation>要包含在 {} 中的控件</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1334" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1348" />
         <source>Update existing {} preset with current monitor settings?</source>
         <translation>用当前显示器设置更新现有的 {} 预置？</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1336" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1350" />
         <source>Replace existing '{}' preset?</source>
         <translation>替换现有的 '{}' 预置？</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1338" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1352" />
         <source>Save current edit?</source>
         <translation>保存当前编辑？</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1352" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1366" />
         <source>Duplicates existing Preset {}, save anyway?</source>
         <translation>与现有预置 {} 重复，仍然保存？</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1372" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1386" />
         <source>Saved {}</source>
         <translation>已保存 {}</translation>
     </message>

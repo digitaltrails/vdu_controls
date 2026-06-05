@@ -715,11 +715,12 @@ class PresetScheduleAtElevationWidget(PresetScheduleAtWidgetBase):
 
         self.title_prefix = tr("Trigger at solar elevation")
         self.title_label = QLabel(self.title_prefix)
+        self.title_label.setWordWrap(False)
         #self.title_label.setFixedHeight(desktop_font_height(scaled=3))  # Stop ascenders/descenders in Unicode from altering layout.
         self.title_label.setToolTip(tr("Trigger at a set solar elevation\n(sun angle at your geolocation and time)."))
 
         self.footer_label = QLabel()
-        self.footer_label.setWordWrap(True)
+        self.footer_label.setWordWrap(False)
         # lineHeight = self.title_label.fontMetrics().height()
         self.footer_label.setMinimumHeight(desktop_font_height(1.3))   # Allow for descenders
         #main_layout.addWidget(self.title_label)
@@ -741,7 +742,7 @@ class PresetScheduleAtElevationWidget(PresetScheduleAtWidgetBase):
         bottom_left_layout = QVBoxLayout()
         bottom_layout.setContentsMargins(0, 0, 0, 0)
         bottom_right_layout = QVBoxLayout()
-        bottom_layout.addLayout(bottom_left_layout)
+        bottom_layout.addLayout(bottom_left_layout, stretch=1)
         bottom_layout.addLayout(bottom_right_layout)
         main_layout.addLayout(bottom_layout)
 
@@ -806,7 +807,7 @@ class PresetScheduleAtElevationWidget(PresetScheduleAtWidgetBase):
         if footer_text != self.footer_label.text():
             self.footer_label.setText(footer_text)
 
-    
+
     def configure_for_location(self, location: GeoLocation | None) -> None:
         self.elevation_chart.configure_for_location(location)
         self.location = location

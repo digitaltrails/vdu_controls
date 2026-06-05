@@ -1014,14 +1014,14 @@ Estimater af Ei bruges af den semi-automatiske måleindstilling.</translation>
 </context><context>
     <name>PresetDaylightFactorWidget</name>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="671" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="670" />
         <source>Daylight-Factor</source>
         <translation>Dagslysfaktor</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="675" />
-        <source>Save the current semi-automatic Light-Metering Daylight-Factor (DF) as part of the Preset.</source>
-        <translation>Gem den aktuelle semi-automatiske lysmålings dagslysfaktor (DF) som en del af forudindstillingen.</translation>
+        <location filename="../src/vdu_controls/preset_dialog.py" line="673" />
+        <source>Save a Light-Metering Daylight-Factor (DF) as part of the Preset.</source>
+        <translation>Gem en Light-Metering Daylight-Factor (DF) som en del af forudindstillingen.</translation>
     </message>
 </context><context>
     <name>PresetElevationChartWidget</name>
@@ -1112,91 +1112,93 @@ Estimater af Ei bruges af den semi-automatiske måleindstilling.</translation>
 </context><context>
     <name>PresetScheduleAtElevationWidget</name>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="726" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="709" />
         <source>elevation-trigger</source>
         <translation>højde-udløser</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="731" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="716" />
         <source>Trigger at solar elevation</source>
         <translation>Udløser ved solhøjde</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="735" />
-        <source>Trigger at a set solar elevation (sun angle at your geolocation and time).</source>
-        <translation>Udløs ved en indstillet solhøjde (solvinkel ved din geolokalisering og tid).</translation>
+        <location filename="../src/vdu_controls/preset_dialog.py" line="719" />
+        <source>Trigger at a set solar elevation
+(sun angle at your geolocation and time).</source>
+        <translation>Udløser ved en indstillet solhøjde
+(solvinkel på din geoplacering og tidspunkt).</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="795" />
-        <source>today at {}</source>
-        <translation>i dag kl. {}</translation>
+        <location filename="../src/vdu_controls/preset_dialog.py" line="788" />
+        <source>Today at {}.</source>
+        <translation>I dag kl. {}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="797" />
-        <source>the sun does not rise this high today</source>
-        <translation>solen stiger ikke så højt i dag</translation>
+        <location filename="../src/vdu_controls/preset_dialog.py" line="790" />
+        <source>The sun does not rise this high today.</source>
+        <translation>Solen står ikke så højt i dag.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="801" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="794" />
         <source>dawn</source>
         <translation>daggry</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="801" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="794" />
         <source>dusk</source>
         <translation>skumring</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="803" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="796" />
         <source>twilight</source>
         <translation>tusmørke</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="805" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="798" />
         <source>nighttime</source>
         <translation>nattetid</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="808" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="801" />
         <source> {:,} lux</source>
         <translation> {:,} lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="809" />
-        <source>{0} {1} ({2}, {3})</source>
-        <translation>{0} {1} ({2}, {3})</translation>
+        <location filename="../src/vdu_controls/preset_dialog.py" line="802" />
+        <source>{0} {1}</source>
+        <translation>{0} {1}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="818" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="814" />
         <source>location undefined (see settings)</source>
         <translation>placering ikke defineret (se indstillinger)</translation>
     </message>
 </context><context>
     <name>PresetScheduleAtTimeWidget</name>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="882" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="878" />
         <source>time-trigger</source>
         <translation>tidsudløser</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="883" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="879" />
         <source>Trigger at the same time (hh:mm) each day.</source>
         <translation>Udløs på samme tidspunkt (tt:mm) hver dag.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="885" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="881" />
         <source>Trigger at time</source>
         <translation>Trigger på et tidspunkt</translation>
     </message>
 </context><context>
     <name>PresetScheduleAtWidgetBase</name>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="707" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="690" />
         <source>Preset already scheduled. Clear existing {}?</source>
         <translation>Forudindstilling allerede planlagt. Slet eksisterende {}?</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="708" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="691" />
         <source>Duplicate the preset if you need to schedule it more than once.</source>
         <translation>Dupliker forudindstillingen, hvis du skal planlægge den mere end én gang.</translation>
     </message>
@@ -1321,136 +1323,136 @@ Estimater af Ei bruges af den semi-automatiske måleindstilling.</translation>
 </context><context>
     <name>PresetsDialog</name>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="931" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="927" />
         <source>Preset scheduling is disabled in the Setting-Dialog.</source>
         <translation>Planlægning af forudindstillinger er deaktiveret i indstillingsdialogen.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="933" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="929" />
         <source>Weather lookup is disabled in the Setting-Dialog.</source>
         <translation>Vejropslag er deaktiveret i indstillingsdialogen.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="973" />
-        <location filename="../src/vdu_controls/preset_dialog.py" line="954" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="969" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="950" />
         <source>Presets</source>
         <translation>Forudindstillinger</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1002" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="998" />
         <source>Enter a new preset name.</source>
         <translation>Indtast et nyt forudindstillingsnavn.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1010" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1006" />
         <source>Create VDU specific
 Initialization-Preset</source>
         <translation>Opret VDU-specifik
 initialiserings-forudindstilling</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1021" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1017" />
         <source>New preset</source>
         <translation>Ny forudindstilling</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1284" />
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1030" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1298" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1026" />
         <source>Controls to include</source>
         <translation>Kontroller, der skal inkluderes</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1065" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1078" />
         <source>Clear</source>
         <translation>Ryd</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1067" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1080" />
         <source>Clear edits and enter a new preset using the defaults.</source>
         <translation>Ryd redigeringer og indtast en ny forudindstilling med standardindstillingerne.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1068" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1081" />
         <source>Save</source>
         <translation>Gem</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1069" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1082" />
         <source>Save current VDU settings to Preset.</source>
         <translation>Gem aktuelle VDU-indstillinger i forudindstilling.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1070" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1083" />
         <source>Revert</source>
         <translation>Fortryd</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1072" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1085" />
         <source>Abandon edits, revert VDU and Preset settings.</source>
         <translation>Opgiv redigeringer, vend tilbage til VDU- og forudindstillingsindstillinger.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1073" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1086" />
         <source>Close</source>
         <translation>Luk</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1127" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1141" />
         <source>Create an initialization-preset for {}.</source>
         <translation>Opret en initialiserings-forudindstilling for {}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1128" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1142" />
         <source>Initialization-presets are restored at startup or when ever the VDU is subsequently detected.</source>
         <translation>Initialiserings-forudindstillinger gendannes ved opstart eller når VDU'en efterfølgende registreres.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1168" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1182" />
         <source>Choose which settings to save for {}</source>
         <translation>Vælg hvilke indstillinger der skal gemmes for {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1268" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1282" />
         <source>Delete {}?</source>
         <translation>Slet {}?</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1277" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1291" />
         <source>Deleted {}</source>
         <translation>Slettet {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1288" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1302" />
         <source>Edit {}</source>
         <translation>Rediger {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1292" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1306" />
         <source>Controls to include in {}</source>
         <translation>Kontrolelementer, der skal inkluderes i {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1334" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1348" />
         <source>Update existing {} preset with current monitor settings?</source>
         <translation>Opdater eksisterende {} forudindstilling med aktuelle skærmindstillinger?</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1336" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1350" />
         <source>Replace existing '{}' preset?</source>
         <translation>Erstat eksisterende '{}' forudindstilling?</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1338" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1352" />
         <source>Save current edit?</source>
         <translation>Gem aktuelle redigering?</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1352" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1366" />
         <source>Duplicates existing Preset {}, save anyway?</source>
         <translation>Duplikerer eksisterende forudindstilling {}, gem alligevel?</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1372" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1386" />
         <source>Saved {}</source>
         <translation>Gemt {}</translation>
     </message>
