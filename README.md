@@ -9,7 +9,7 @@ vdu_controls - a DDC control panel for monitors
 
 A control panel for external monitors (*Visual Display Units*).
 
-> __[Pre-release 2.6.5-rc.2 is available](https://github.com/digitaltrails/vdu_controls/releases/tag/2.6.5-rc.2).__
+> __[Preview 2.6.5-preview.3 is available](https://github.com/digitaltrails/vdu_controls/releases/tag/v2.6.5-pv.3).__
 > 
 
 > [!WARNING]
