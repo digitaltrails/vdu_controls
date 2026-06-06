@@ -117,7 +117,7 @@ class LuxAutoWorker(WorkerThread):  # Why is this so complicated?
                                 if to_do_list := self.assemble_required_work(lux_auto_controller, metered_lux,
                                                                              not lux_meter.has_manual_capability):
                                     self.do_work(to_do_list)
-                    elif status[1]:
+                    if status[1]:
                         self.status_message(status[1], timeout=5000)
                     if self.single_shot:
                         break

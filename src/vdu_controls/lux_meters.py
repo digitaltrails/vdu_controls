@@ -182,6 +182,7 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
     device_name = 'solar-lux-calculator'
     location: GeoLocation | None = None
     daylight_factor: float | None = None
+    status_message: str = ''
 
     def __init__(self) -> None:
         super().__init__(requires_worker=False, manual=True, semi_auto=True)
@@ -204,7 +205,12 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
         pass
 
     def get_status(self) -> Tuple[bool, str]:
-        return (True, tr('No location defined.')) if self.location is None else super().get_status()
+        if self.location is None:
+            return True, tr('No location defined.')
+        if msg := LuxMeterSemiAutoDevice.status_message:
+            LuxMeterSemiAutoDevice.status_message = ''
+            return True, msg
+        return super().get_status()
 
     @staticmethod
     def get_stored_value() -> float:
@@ -244,9 +250,16 @@ class LuxMeterSemiAutoDevice(LuxMeterDevice):  # is both manual and automatic - 
     def update_df_from_lux_value(new_lux_value: float, semi_auto_source: bool):
         if location := LuxMeterSemiAutoDevice.location:
             solar_lux = calc_solar_lux(zoned_now(), location, 1.0)
-            if solar_lux >= 1000:  # only for reasonable daylight lux levels.
+            if solar_lux < 100:  # only for reasonable daylight lux levels.
+                log.info(f"LuxSemiAuto: update daylight-factor: ignored {new_lux_value=}, associated {solar_lux=} too small.")
+                LuxMeterSemiAutoDevice.status_message = tr('Ignoring daylight-factor, Sun not bright enough.')
+            else:
                 daylight_factor = new_lux_value / solar_lux
-                LuxMeterSemiAutoDevice.set_daylight_factor(daylight_factor, internal=True, persist=semi_auto_source)
+                if 0.0 < daylight_factor <= 2.0:
+                    LuxMeterSemiAutoDevice.set_daylight_factor(daylight_factor, internal=True, persist=semi_auto_source)
+                else:
+                    log.info(f"LuxSemiAuto: update daylight-factor: ignored {daylight_factor:0.3f}={new_lux_value}/{solar_lux}, DF out of workable range.")
+                    LuxMeterSemiAutoDevice.status_message = tr('Ignoring daylight-factor, out of viable range.')
 
     @staticmethod
     def set_daylight_factor(daylight_factor: float, internal: bool = False, persist: bool = False):
