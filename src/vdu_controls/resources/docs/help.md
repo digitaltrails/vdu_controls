@@ -880,12 +880,16 @@ Environment
     VDU_CONTROLS_DDCUTIL_RETRIES
         Set the number of times to repeat a ddcutil getvcp or setvcp before returning an error.
 
-    VDU_CONTROLS_DEVELOPER
-        Changes some search paths to be more convenient in a development
-        scenario. (``no`` or yes)
-
     VDU_CONTROLS_DBUS_TIMEOUT_MILLIS
         Dbus call wait timeout. Default is 10000, 10 seconds.
+
+    VDU_CONTROLS_DEVELOPER
+        Changes some search paths to include the current working directory, which is
+        more convenient in a development scenario. Enables control of desktop LEDs 
+        via brightnessctl so a laptop isn't required for testing. (``no`` or yes).
+
+    VDU_CONTROLS_DEBUG_LAYOUT
+        Draws boxes around the UI elements.  (``no`` or yes).
 
 Files
 =====

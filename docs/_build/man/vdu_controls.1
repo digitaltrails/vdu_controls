@@ -1103,12 +1103,16 @@ Add to the list of arguments passed to each exec of ddcutil.
 .B VDU_CONTROLS_DDCUTIL_RETRIES
 Set the number of times to repeat a ddcutil getvcp or setvcp before returning an error.
 .TP
-.B VDU_CONTROLS_DEVELOPER
-Changes some search paths to be more convenient in a development
-scenario. (\fBno\fP or yes)
-.TP
 .B VDU_CONTROLS_DBUS_TIMEOUT_MILLIS
 Dbus call wait timeout. Default is 10000, 10 seconds.
+.TP
+.B VDU_CONTROLS_DEVELOPER
+Changes some search paths to include the current working directory, which is
+more convenient in a development scenario. Enables control of desktop LEDs 
+via brightnessctl so a laptop isn\(aqt required for testing. (\fBno\fP or yes).
+.TP
+.B VDU_CONTROLS_DEBUG_LAYOUT
+Draws boxes around the UI elements.  (\fBno\fP or yes).
 .UNINDENT
 .UNINDENT
 .UNINDENT
