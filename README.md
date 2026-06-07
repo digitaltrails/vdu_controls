@@ -487,6 +487,7 @@ Version History
 ---------------
 * 2.6.5
   * The ambient-light-level slider now works even if location is not set.
+  * The DDC-options laptop-panel option now defaults to enabled.
   * The Light-Metering-Dialog now offers two profile starter-templates
     for older and newer monitors.
   * The Settings global-options are now grouped under subheadings.

@@ -240,7 +240,7 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         help=QT_TR_NOOP('Enable D-bus ddcutil-server events.'), requires=[DBUS_CLIENT_ENABLED])
 
     LAPTOP_PANEL_ENABLED = ConfOptDef(
-        conf_name='laptop-panel-enabled', default_value="no",
+        conf_name='laptop-panel-enabled', default_value="yes",
         ui_label=QT_TR_NOOP('laptop panel'),
         sub_group=SubGroup.DDC,
         help=QT_TR_NOOP('Use brightnessctl utility for laptop panel control.'))

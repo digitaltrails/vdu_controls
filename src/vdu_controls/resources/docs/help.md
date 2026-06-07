@@ -18,7 +18,7 @@ Synopsis:
                      [--tray-follows-theme|--no-tray-follows-theme]
                      [--toolbar-at-top|-no-toolbar-at-top]
                      [--separate-status-bar|--separate-status-bar]
-                     [--laptop-panels|--no-laptop-panels]
+                     [--laptop-panel|--no-laptop-panel]
                      [--protect-nvram|--no-protect-nvram]
                      [--lux-options|--no-lux-options]
                      [--schedule|--no-schedule] [--weather|--no-weather]
@@ -73,9 +73,9 @@ Arguments supplied on the command line override config file equivalent settings.
       --separate-status-bar|--no-separate-status-bar
                             separate the status-bar from the toolbar
                             ``--no-separate-status-bar`` is the default
-      --laptop-panels|--no-laptop-panels
+      --laptop-panel|--no-laptop-panel
                             allow laptop panels to be controlled
-                            ``--no-laptop-panels`` is the default
+                            ``--laptop-panel`` is the default
       --protect-nvram|--no-protect-nvram
                             alter options and defaults to minimize VDU NVRAM writes.
       --order-by-name|--no-order-by-name
