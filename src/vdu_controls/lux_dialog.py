@@ -231,9 +231,9 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
             if not self.validate_device(new_dev_path, required_type=new_dev_type):
                 new_dev_path = ''
             if new_dev_path == '':  # Nothing selected, set back to what was in config
+                config_device_type = self.lux_config.get('lux-meter', 'lux-device-type', fallback='')
                 for dev_num in range(self.meter_device_selector.count()):
-                    config_device_type = self.lux_config.get('lux-meter', 'lux-device-type', fallback='')
-                    if self.meter_device_selector.itemData(dev_num).name == config_device_type:
+                    if self.meter_device_selector.itemData(dev_num).value == config_device_type:
                         self.meter_device_selector.setCurrentIndex(dev_num)
             else:
                 if new_dev_path != current_dev:
@@ -421,6 +421,8 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
                 MBox(MIcon.Critical, msg=tr("No read access to {}").format(device), info=info).exec()
                 return False
         else:
+            if device == '':
+                return False
             MBox(MIcon.Critical, msg=tr("Expecting {0}, but {1} was selected.").format(tr(required_type.localized_name), device)).exec()
             return False
         return True
