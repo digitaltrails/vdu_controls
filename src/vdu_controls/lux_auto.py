@@ -425,12 +425,11 @@ class LuxAutoController:
         log.debug(f"LuxAutoController: set_auto {enable}")
         if enable:
             if self.lux_meter and self.lux_meter.has_semi_auto_capability and not self.main_controller.main_config.get_location():
+                # The semi-auto meter uses location to figure out solor-lux, it cannot function if there is no location
                 message = tr("Auto disabled, no location defined.")
-                enable = False
-            elif self.lux_config.is_auto_enabled():
-                message = tr("Restarting automatic light metering.")
+                enable = False   # Override, cannot go to auto.
             else:
-                message = tr("Switching to automatic light metering.")
+                message = tr("Starting automatic light metering.")
             self.lux_config.set('lux-meter', 'automatic-brightness', 'yes' if enable else 'no')
         else:
             message = tr("Switching to manual input of ambient lux.")
