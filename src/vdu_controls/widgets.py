@@ -229,8 +229,8 @@ class PushButtonLeftJustified(QPushButton):
     def __init__(self, text: str | None = None, parent: QWidget | None = None, flat: bool = False) -> None:
         super().__init__(parent=parent)
         self.label = QLabel()
-        self.setContentsMargins(dpx(5), 0, dpx(5), 0)  # Not sure if this helps
-        self.setLayout(widget_layout := QVBoxLayout())
+        self.setContentsMargins(dpx(4), 0, 0, 0)  # Left edge looks better.
+        widget_layout = QHBoxLayout(self)
         widget_layout.addWidget(self.label)
         widget_layout.setContentsMargins(0, 0, 0, 0)  # Seems to fix top/bottom clipping on openbox and xfce
         self.setText(text) if text is not None is not None else None
