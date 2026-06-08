@@ -151,7 +151,7 @@ class Preset:
         if elevation := self.get_solar_elevation():
             result = format_solar_elevation_abbreviation(elevation)
             if self.elevation_time_today:
-                result += f" {TIME_CLOCK_SYMBOL} {self.elevation_time_today.strftime('%H:%M')}"
+                result += f" {TIME_CLOCK_SYMBOL}{self.elevation_time_today.strftime('%H:%M')}"
             else:
                 # Not possible today - sun doesn't get that high
                 result += ' ' + TOO_HIGH_SYMBOL
@@ -160,7 +160,7 @@ class Preset:
             result += ' ' + self.schedule_status.symbol()
             return result
         if at_time := self.get_at_time():
-            return f" {TIME_CLOCK_SYMBOL} {at_time.strftime('%H:%M')} " + self.schedule_status.symbol()
+            return f" {TIME_CLOCK_SYMBOL}{at_time.strftime('%H:%M')} " + self.schedule_status.symbol()
         return ''
 
     def get_schedule_description(self) -> str:
