@@ -13,6 +13,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
+import pytest
 from vdu_controls.qt_imports import QApplication, QtNetwork
 from vdu_controls.vdu_controls_application import SingleInstanceServer, _activate_running_instance
 
@@ -28,6 +29,15 @@ def _spin(app, predicate, timeout_s: float = 2.0, step_s: float = 0.02) -> bool:
             return True
         time.sleep(step_s)
     return False
+
+
+@pytest.fixture(scope="session")
+def app():
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+    yield app
 
 
 def test_no_existing_instance(app) -> None:
@@ -113,29 +123,5 @@ def test_stale_socket_recovery(app) -> None:
     server._server.close()
 
 
-def main() -> int:
-    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")  # no display needed
-    app = QApplication(sys.argv)
-    tests = [
-        ("no existing instance -> activate returns False", test_no_existing_instance),
-        ("server emits activate_requested on connection", test_server_emits_activate_on_request),
-        ("two activations from same server", test_two_clients_each_activate),
-        ("stale socket recovery via removeServer + retry", test_stale_socket_recovery),
-    ]
-    failures = 0
-    for name, fn in tests:
-        try:
-            fn(app)
-            print(f"  {PASS}  {name}")
-        except AssertionError as e:
-            print(f"  {FAIL}  {name}: {e}")
-            failures += 1
-        except Exception as e:
-            print(f"  {FAIL}  {name}: {type(e).__name__}: {e}")
-            failures += 1
-    print(f"\n{len(tests) - failures}/{len(tests)} passed")
-    return 1 if failures else 0
-
-
 if __name__ == "__main__":
-    sys.exit(main())
+    pytest.main([__file__])
