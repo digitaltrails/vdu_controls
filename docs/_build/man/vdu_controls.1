@@ -28,7 +28,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "VDU_CONTROLS" "1" "Jun 07, 2026" "" "vdu_controls"
+.TH "VDU_CONTROLS" "1" "Jun 08, 2026" "" "vdu_controls"
 .SH NAME
 vdu_controls \- vdu_controls 2.6.5beta4
 .SH VDU_CONTROLS - A DDC CONTROL PANEL FOR MONITORS
@@ -54,7 +54,8 @@ A control panel for DisplayPort, DVI, HDMI, or USB\-connected VDUs (\fIVisual Di
 [\-\-laptop\-panel|\-\-no\-laptop\-panel]
 [\-\-protect\-nvram|\-\-no\-protect\-nvram]
 [\-\-lux\-options|\-\-no\-lux\-options]
-[\-\-schedule|\-\-no\-schedule] [\-\-weather|\-\-no\-weather]
+[\-\-schedule|\-\-no\-schedule] [\-\-weather|\-\-no\-weather] 
+[\-\-tick\-marks|\-\-no\-tick\-marks]
 [\-\-dbus\-client|\-\-no\-dbus\-client] [\-\-dbus\-events|\-\-no\-dbus\-events]
 [\-\-syslog|\-\-no\-syslog] [\-\-debug|\-\-no\-debug] [\-\-warnings|\-\-no\-warnings]
 [\-\-translations|\-\-no\-translations]
@@ -150,6 +151,9 @@ enable/disable preset scheduling. \fB\-\-schedule\fP is the default.
 .TP
 .B \-\-weather|\-\-no\-weather
 enable/disable weather lookups. \fB\-\-weather\fP is the default.
+.TP
+.B \-\-tick\-marks|\-\-no\-tick\-marks
+Show tick marks on control sliders. \fB\-\-tick\-marks\fP is the default.
 .TP
 .B \-\-dbus\-client|\-\-no\-dbus\-client
 use the D\-Bus ddcutil\-service instead of the ddcutil command.

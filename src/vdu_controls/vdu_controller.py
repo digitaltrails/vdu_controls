@@ -104,6 +104,7 @@ class VduController(QObject):
         self.ddcutil = ddcutil
         self.edit_config_callable = edit_config
         self.vdu_exception_handler = vdu_exception_handler
+        self.use_tick_marks = default_config.is_set(ConfOpt.TICK_MARKS, True)
 
         def _handle_async_setvcp_exception(vcp_code: int, value: int, origin: VcpOrigin, e: VduException):
             if self.vdu_exception_handler(e, True):

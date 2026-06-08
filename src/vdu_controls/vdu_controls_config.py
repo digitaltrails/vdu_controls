@@ -227,6 +227,12 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         sub_group=SubGroup.FEATURES,
         help=QT_TR_NOOP('Enable weather lookups.'))
 
+    TICK_MARKS = ConfOptDef(
+        conf_name='tick-marks', default_value="yes",
+        ui_label=QT_TR_NOOP('tick marks'),
+        sub_group=SubGroup.FEATURES,
+        help=QT_TR_NOOP('Show tick marks on control-sliders.'))
+
     DBUS_CLIENT_ENABLED = ConfOptDef(
         conf_name='dbus-client-enabled', default_value="yes",
         ui_label=QT_TR_NOOP('dbus client'),

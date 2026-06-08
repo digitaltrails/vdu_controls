@@ -203,8 +203,11 @@ class VduControlSlider(VduControlBase):
             slider.setRange(int(self.range_restriction[1]), int(self.range_restriction[2]))
         slider.setSingleStep(1)
         slider.setPageStep(10)
-        slider.setTickInterval(10)
-        slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        if controller.use_tick_marks:
+            slider.setTickInterval(10)
+            slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        else:
+            slider.setTickPosition(QSlider.TickPosition.NoTicks)
         slider.setOrientation(Qt.Orientation.Horizontal)  # type: ignore
         slider.setTracking(False)  # Don't rewrite the ddc value too often - not sure of the implications
         layout.addWidget(slider)

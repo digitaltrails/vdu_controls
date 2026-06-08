@@ -21,7 +21,8 @@ Synopsis:
                      [--laptop-panel|--no-laptop-panel]
                      [--protect-nvram|--no-protect-nvram]
                      [--lux-options|--no-lux-options]
-                     [--schedule|--no-schedule] [--weather|--no-weather]
+                     [--schedule|--no-schedule] [--weather|--no-weather] 
+                     [--tick-marks|--no-tick-marks]
                      [--dbus-client|--no-dbus-client] [--dbus-events|--no-dbus-events]
                      [--syslog|--no-syslog] [--debug|--no-debug] [--warnings|--no-warnings]
                      [--translations|--no-translations]
@@ -87,6 +88,8 @@ Arguments supplied on the command line override config file equivalent settings.
                             enable/disable preset scheduling. ``--schedule`` is the default.
       --weather|--no-weather
                             enable/disable weather lookups. ``--weather`` is the default.
+      --tick-marks|--no-tick-marks
+                            Show tick marks on control sliders. ``--tick-marks`` is the default.
       --dbus-client|--no-dbus-client
                             use the D-Bus ddcutil-service instead of the ddcutil command.
                             ``--dbus-client`` is the default

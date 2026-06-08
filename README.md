@@ -496,6 +496,7 @@ Version History
   * The system tray default icon is now primarily monochrome to reflect 
     prevailing desktop aesthetics. It's designed to accommodate both dark 
     and light tray backgrounds (as far as is possible).
+  * Tick marks on control-sliders are now optional (see settings).
   * The right-mouse action that could hide the toolbar irretrievably has been
     disabled.
   * When parsing monitor metadata, if the same VCP-feature-code is 
