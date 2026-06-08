@@ -1016,7 +1016,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.editor_layout.setSpacing(dpx(10))
         self.editor_layout.setSizeConstraint(QVBoxLayout.SizeConstraint.SetMinimumSize)
         self.editor_new_preset_text = tr("New preset")
-        self.editor_title = TitleLabel(icon_source=VDU_CONNECTED_ICON_SVG, main_text=self.editor_new_preset_text)
+        self.editor_title = TitleLabel(icon_source=VDU_PRESET_ICON_SVG, main_text=self.editor_new_preset_text)
         self.editor_layout.addWidget(self.editor_title)
         self.editor_groupbox.setLayout(self.editor_layout)
 
