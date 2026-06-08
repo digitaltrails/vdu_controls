@@ -585,22 +585,17 @@ This chart is resizable. </source>
         <translation>خطأ في إعداد مقياس اللوكس: {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="428" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="429" />
         <source>Auto disabled, no location defined.</source>
         <translation>التلقائي معطل، لم يتم تحديد موقع.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="431" />
-        <source>Restarting automatic light metering.</source>
-        <translation>إعادة تشغيل قياس الضوء التلقائي.</translation>
+        <location filename="../src/vdu_controls/lux_auto.py" line="432" />
+        <source>Starting automatic light metering.</source>
+        <translation>بدء قياس الضوء التلقائي.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="433" />
-        <source>Switching to automatic light metering.</source>
-        <translation>التبديل إلى قياس الضوء التلقائي.</translation>
-    </message>
-    <message>
-        <location filename="../src/vdu_controls/lux_auto.py" line="436" />
+        <location filename="../src/vdu_controls/lux_auto.py" line="435" />
         <source>Switching to manual input of ambient lux.</source>
         <translation>التبديل إلى الإدخال اليدوي للوكس المحيط.</translation>
     </message>
@@ -844,29 +839,29 @@ DF: عامل ضوء النهار، نسبة الإضاءة الداخلية إل
         <translation>لا توجد صلاحية قراءة لـ {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="424" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="426" />
         <source>Expecting {0}, but {1} was selected.</source>
         <translation>متوقع {0}، ولكن تم تحديد {1}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="444" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="446" />
         <source>No metering device set.</source>
         <translation>لم يتم تعيين جهاز قياس.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="453" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="455" />
         <source>Choose profile for {}</source>
         <translation>اختر ملفًا شخصيًا لـ {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="476" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="478" />
         <source>There are unsaved profile changes?</source>
         <translation>هل هناك تغييرات غير محفوظة في الملف الشخصي؟</translation>
     </message>
 </context><context>
     <name>LuxGaugeWidget</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="528" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="530" />
         <source>Left:	 Rolling display of metered lux (ML).
 Right:	 1) Estimated outside solar illumination (Eo) for
 	     the set geolocation for the current day.
@@ -885,26 +880,36 @@ Eo = ثوابت_الوحدة * sin(زاوية_الشمس_بالتقدير_الد
 تقديرات Ei تستخدمها خيار القياس شبه التلقائي.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="622" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="624" />
         <source>Location Unknown</source>
         <translation>الموقع غير معروف</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="664" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="666" />
         <source>Eo={:,} lux    DF={:,.4f}</source>
         <translation>Eo={:,} لوكس    DF={:,.4f}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="666" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="668" />
         <source>Eo=?   DF=?   (location not set)</source>
         <translation>Eo=?   DF=?   (الموقع غير محدد)</translation>
     </message>
 </context><context>
     <name>LuxMeterSemiAutoDevice</name>
     <message>
-        <location filename="../src/vdu_controls/lux_meters.py" line="207" />
+        <location filename="../src/vdu_controls/lux_meters.py" line="209" />
         <source>No location defined.</source>
         <translation>لم يتم تعريف موقع.</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/lux_meters.py" line="255" />
+        <source>Ignoring daylight-factor, Sun not bright enough.</source>
+        <translation>بتجاهل عامل ضوء النهار، الشمس ليست مشرقة بما فيه الكفاية.</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/lux_meters.py" line="262" />
+        <source>Ignoring daylight-factor, out of viable range.</source>
+        <translation>تجاهل عامل ضوء النهار، خارج النطاق القابل للتطبيق.</translation>
     </message>
 </context><context>
     <name>LuxMeterSerialDevice</name>
@@ -928,38 +933,38 @@ Eo = ثوابت_الوحدة * sin(زاوية_الشمس_بالتقدير_الد
 </context><context>
     <name>LuxProfileWidget</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="727" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="729" />
         <source>Lux Brightness Response Profiles</source>
         <translation>ملامح استجابة السطوع للوكس</translation>
     </message>
     <message>
+        <location filename="../src/vdu_controls/lux_dialog.py" line="747" />
         <location filename="../src/vdu_controls/lux_dialog.py" line="745" />
-        <location filename="../src/vdu_controls/lux_dialog.py" line="743" />
         <source>Brightness %</source>
         <translation>السطوع %</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="860" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="862" />
         <source>Click remove preset at {} lux</source>
         <translation>انقر لإزالة الإعداد المسبق عند {} لوكس</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="872" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="874" />
         <source>Click to add preset at {} lux</source>
         <translation>انقر لإضافة إعداد مسبق عند {} لوكس</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="924" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="926" />
         <source>Select a Preset to attach at {} lux</source>
         <translation>حدد إعدادًا مسبقًا لإرفاقه عند {} lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="940" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="942" />
         <source>There are no Presets.</source>
         <translation>لا توجد إعدادات مسبقة.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="940" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="942" />
         <source>Use the Presets Dialog to create some.</source>
         <translation>استخدم حوار الإعدادات المسبقة لإنشاء بعضها.</translation>
     </message>
@@ -1113,70 +1118,70 @@ Eo = ثوابت_الوحدة * sin(زاوية_الشمس_بالتقدير_الد
         <translation>الزناد في الارتفاع الشمسي</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="719" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="720" />
         <source>Trigger at a set solar elevation
 (sun angle at your geolocation and time).</source>
         <translation>الزناد على ارتفاع محدد للطاقة الشمسية</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="788" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="789" />
         <source>Today at {}.</source>
         <translation>اليوم في {}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="790" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="791" />
         <source>The sun does not rise this high today.</source>
         <translation>الشمس لا ترتفع لهذا الارتفاع اليوم.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="794" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="795" />
         <source>dawn</source>
         <translation>الفجر</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="794" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="795" />
         <source>dusk</source>
         <translation>الغسق</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="796" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="797" />
         <source>twilight</source>
         <translation>الشفق</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="798" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="799" />
         <source>nighttime</source>
         <translation>الليل</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="801" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="802" />
         <source> {:,} lux</source>
         <translation> {:,} لوكس</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="802" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="803" />
         <source>{0} {1}</source>
         <translation>{0} {1}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="814" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="815" />
         <source>location undefined (see settings)</source>
         <translation>الموقع غير محدد (انظر الإعدادات)</translation>
     </message>
 </context><context>
     <name>PresetScheduleAtTimeWidget</name>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="878" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="879" />
         <source>time-trigger</source>
         <translation>مشغل زمني</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="879" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="880" />
         <source>Trigger at the same time (hh:mm) each day.</source>
         <translation>التشغيل في نفس الوقت (س س:د د) كل يوم.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="881" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="882" />
         <source>Trigger at time</source>
         <translation>الزناد في الوقت المناسب</translation>
     </message>
@@ -1313,135 +1318,135 @@ Eo = ثوابت_الوحدة * sin(زاوية_الشمس_بالتقدير_الد
 </context><context>
     <name>PresetsDialog</name>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="927" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="928" />
         <source>Preset scheduling is disabled in the Setting-Dialog.</source>
         <translation>جدولة الإعدادات المسبقة معطلة في حوار الإعدادات.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="929" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="930" />
         <source>Weather lookup is disabled in the Setting-Dialog.</source>
         <translation>البحث عن الطقس معطل في حوار الإعدادات.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="969" />
-        <location filename="../src/vdu_controls/preset_dialog.py" line="950" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="970" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="951" />
         <source>Presets</source>
         <translation>الإعدادات المسبقة</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="998" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="999" />
         <source>Enter a new preset name.</source>
         <translation>أدخل اسماً جديداً للإعداد المسبق.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1006" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1007" />
         <source>Create VDU specific
 Initialization-Preset</source>
         <translation>إنشاء إعداد مسبق للتهيئة خاص بـ VDU</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1017" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1018" />
         <source>New preset</source>
         <translation>إعداد مسبق جديد</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1298" />
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1026" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1299" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1027" />
         <source>Controls to include</source>
         <translation>الضوابط لتشمل</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1078" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1079" />
         <source>Clear</source>
         <translation>مسح</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1080" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1081" />
         <source>Clear edits and enter a new preset using the defaults.</source>
         <translation>مسح التعديلات وإدخال إعداد مسبق جديد باستخدام الإعدادات الافتراضية.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1081" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1082" />
         <source>Save</source>
         <translation>حفظ</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1082" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1083" />
         <source>Save current VDU settings to Preset.</source>
         <translation>حفظ إعدادات VDU الحالية في إعداد مسبق.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1083" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1084" />
         <source>Revert</source>
         <translation>رجوع</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1085" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1086" />
         <source>Abandon edits, revert VDU and Preset settings.</source>
         <translation>تجاهل التعديلات، والعودة إلى إعدادات VDU والإعداد المسبق.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1086" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1087" />
         <source>Close</source>
         <translation>إغلاق</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1141" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1142" />
         <source>Create an initialization-preset for {}.</source>
         <translation>إنشاء إعداد مسبق للتهيئة لـ {}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1142" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1143" />
         <source>Initialization-presets are restored at startup or when ever the VDU is subsequently detected.</source>
         <translation>يتم استعادة الإعدادات المسبقة للتهيئة عند بدء التشغيل أو عند اكتشاف VDU لاحقاً.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1182" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1183" />
         <source>Choose which settings to save for {}</source>
         <translation>اختر الإعدادات المراد حفظها لـ {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1282" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1283" />
         <source>Delete {}?</source>
         <translation>حذف {}؟</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1291" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1292" />
         <source>Deleted {}</source>
         <translation>تم حذف {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1302" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1303" />
         <source>Edit {}</source>
         <translation>يحرر {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1306" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1307" />
         <source>Controls to include in {}</source>
         <translation>عناصر التحكم المراد تضمينها في {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1348" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1349" />
         <source>Update existing {} preset with current monitor settings?</source>
         <translation>تحديث الإعداد المسبق {} الموجود بإعدادات الشاشة الحالية؟</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1350" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1351" />
         <source>Replace existing '{}' preset?</source>
         <translation>استبدال الإعداد المسبق الموجود '{}'؟</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1352" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1353" />
         <source>Save current edit?</source>
         <translation>حفظ التحرير الحالي؟</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1366" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1367" />
         <source>Duplicates existing Preset {}, save anyway?</source>
         <translation>يكرر الإعداد المسبق الموجود {}، هل تحفظ على أي حال؟</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1386" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1387" />
         <source>Saved {}</source>
         <translation>تم حفظ {}</translation>
     </message>
