@@ -1663,144 +1663,144 @@ and restore {1} to application defaults</source>
 </context><context>
     <name>VduAppController</name>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="426" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="424" />
         <source>Laptop Support: brightessctrl command failed</source>
         <translation>دعم الكمبيوتر المحمول: فشل أمر brightessctrl</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="495" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="493" />
         <source>A settings reset requires vdu_controls to restart.</source>
         <translation>إعادة ضبط الإعدادات تتطلب إعادة تشغيل vdu_controls.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="500" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="498" />
         <source>The change to the {} option requires vdu_controls to restart.</source>
         <translation>التغيير في خيار {} يتطلب إعادة تشغيل vdu_controls.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="624" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="622" />
         <source>Transitioning to preset {0} (elapsed time {1} seconds)...</source>
         <translation>جارٍ الانتقال إلى الإعداد المسبق {0} (الوقت المنقضي {1} ثانية)...</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="645" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="643" />
         <source>Restored {0} (elapsed time {1} seconds)</source>
         <translation>تمت استعادة {0} (الوقت المنقضي {1} ثانية)</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="652" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="650" />
         <source>Already on Preset {} (no changes)</source>
         <translation>بالفعل على الإعداد المسبق {} (لا تغييرات)</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="659" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="657" />
         <source>Interrupted restoration of {}</source>
         <translation>تمت مقاطعة استعادة {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="665" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="663" />
         <source>Transitioning to preset {}</source>
         <translation>الانتقال إلى الإعداد المسبق {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="701" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="699" />
         <source>Error during restoration preset {}</source>
         <translation>خطأ أثناء استعادة الإعداد المسبق {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="704" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="702" />
         <source>Restored I-Preset {}</source>
         <translation>تم استعادة الإعداد المسبق I- {} </translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="793" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="791" />
         <source>Preset {0} activating at {1}</source>
         <translation>تفعيل الإعداد المسبق {0} في {1}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="810" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="808" />
         <source>Skipped, superseded</source>
         <translation>تم التخطي، تم استبداله</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="812" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="810" />
         <source>Error, trying again in {} seconds</source>
         <translation>خطأ، ستتم المحاولة مرة أخرى خلال {} ثانية</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="820" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="818" />
         <source>Restored {}</source>
         <translation>تم استعادة {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="838" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="836" />
         <source>Preset {0} activation was cancelled due to weather at {1}</source>
         <translation>تم إلغاء تفعيل {0} المحدد مسبقًا بسبب الطقس في {1}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="868" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="866" />
         <source>Ignoring weather requirements, unable to query local weather: {}</source>
         <translation>تجاهل متطلبات الطقس، تعذر الاستعلام عن الطقس المحلي: {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="989" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="987" />
         <source>Preset editing</source>
         <translation>تحرير الإعداد المسبق</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1007" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1005" />
         <source>When this message is dismissed, vdu_controls will restart.</source>
         <translation>عند إغلاق هذه الرسالة، سيتم إعادة تشغيل vdu_controls.</translation>
     </message>
 </context><context>
     <name>VduAppWindow</name>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1127" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1125" />
         <source>Looking for DDC monitors...</source>
         <translation>جاري البحث عن شاشات DDC...</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1233" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1231" />
         <source>Refresh settings from monitors</source>
         <translation>تحديث الإعدادات من الشاشات</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1277" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1275" />
         <source>Checking Presets</source>
         <translation>جاري التحقق من الإعدادات المسبقة</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1326" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1324" />
         <source>Auto</source>
         <translation>تلقائي</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1334" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1332" />
         <source>Lighting: {}</source>
         <translation>الإضاءة: {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1453" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1451" />
         <source>No controllable monitors found.</source>
         <translation>لم يتم العثور على شاشات قابلة للتحكم.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1454" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1452" />
         <source>Is ddcutil or ddcutil-service installed and working?</source>
         <translation>هل ddcutil أو ddcutil-service مثبت ويعمل؟</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1455" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1453" />
         <source>Most recent error: {}</source>
         <translation>أحدث خطأ: {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1458" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1456" />
         <source>Failed to obtain capabilities for monitor {0} {1} {2}.</source>
         <translation>فشل الحصول على إمكانيات الشاشة {0} {1} {2}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1459" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1457" />
         <source>Cannot automatically configure this monitor.
  You can choose to:
  1: Retry obtaining the capabilities.
@@ -1824,37 +1824,37 @@ Possibly just a timing error, maybe a retry will work
 </translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1468" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1466" />
         <source>Discarding {} monitor.</source>
         <translation>جارٍ تجاهل شاشة {}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1469" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1467" />
         <source>Remove "{0}" from {1} capabilities override to reverse this decision.</source>
         <translation>قم بإزالة "{0}" من تجاوز إمكانيات {1} لإلغاء هذا القرار.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1473" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1471" />
         <source>Ignoring {} monitor for now.</source>
         <translation>جارٍ تجاهل شاشة {} حالياً.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1474" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1472" />
         <source>Will retry when vdu_controls is next started</source>
         <translation>سيتم إعادة المحاولة عند بدء تشغيل vdu_controls في المرة القادمة</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1477" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1475" />
         <source>Assuming {} has brightness and contrast controls.</source>
         <translation>بافتراض أن {} يحتوي على عناصر تحكم في السطوع والتباين.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1478" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1476" />
         <source>Wrote {0} config files to {1}.</source>
         <translation>كتب {0} ملفات التكوين إلى {1}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1479" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1477" />
         <source>
 Please check these files and edit or remove them if they cause further issues.</source>
         <translation>
@@ -1902,17 +1902,17 @@ Please check these files and edit or remove them if they cause further issues.</
 </context><context>
     <name>VduControlsMainPanel</name>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="199" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="197" />
         <source>Monitor {0} {1} lacks any accessible controls.</source>
         <translation>لا تحتوي الشاشة {0} {1} على أية عناصر تحكم يمكن الوصول إليها.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="201" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="199" />
         <source>The monitor will be omitted from the control panel.</source>
         <translation>سيتم حذف هذه الشاشة من لوحة التحكم.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="211" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="209" />
         <source>No controllable monitors found.
 Use the refresh button if any become available.
 Check that ddcutil and i2c are installed and configured.</source>
@@ -1921,28 +1921,28 @@ Check that ddcutil and i2c are installed and configured.</source>
 تحقق من تثبيت وتكوين ddcutil و i2c.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="255" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="253" />
         <source>Set value: Failed to communicate with display {}</source>
         <translation>تعيين القيمة: فشل الاتصال بالشاشة {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="257" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="255" />
         <source>Monitor appears to be switched off or disconnected.</source>
         <translation>يبدو أن الشاشة مطفأة أو غير متصلة.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="259" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="257" />
         <source>Is the monitor switched off?</source>
         <translation>هل الشاشة مطفأة؟</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="259" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="257" />
         <source>Is the sleep-multiplier setting too low?</source>
         <translation>هل إعداد مضاعف السكون منخفض جداً؟</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="290" />
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="287" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="288" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="285" />
         <source>Message history:</source>
         <translation>سجل الرسائل:</translation>
     </message>
@@ -1957,6 +1957,11 @@ Check that ddcutil and i2c are installed and configured.</source>
         <location filename="../src/vdu_controls/vdu_controls_application.py" line="141" />
         <source>{} preset</source>
         <translation>إعداد مسبق {}</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="145" />
+        <source>Open Preset Dialog</source>
+        <translation>افتح مربع حوار الإعداد المسبق</translation>
     </message>
 </context><context>
     <name>WeatherQuery</name>

@@ -140,12 +140,10 @@ class VduMainToolBar(QToolBar):
         if preset is not None:
             self.preset_action.setToolTip(tr("{} preset").format(preset.get_title_name()))
             self.preset_action.setIcon(preset.create_icon())
-            #self.preset_action.setVisible(True)
             self.preset_edit_target = preset
         else:
-            self.preset_action.setToolTip("")
+            self.preset_action.setToolTip(tr("Open Preset Dialog"))
             self.preset_action.setIcon(create_icon_from_svg_bytes(svg.VDU_PRESET_ICON_SVG))
-            #self.preset_action.setVisible(False)
             self.preset_edit_target = None
         self.layout().update()  # pyright:ignore
 
