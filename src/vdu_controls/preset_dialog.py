@@ -28,7 +28,7 @@ from vdu_controls.qt_imports import QWidget, QHBoxLayout, QSizePolicy, QApplicat
 from vdu_controls.scaling import npx, dpx, desktop_font_height
 from vdu_controls.solar_calc import SolarElevationKey, SolarElevationData, create_elevation_map, calc_solar_lux, \
     format_solar_elevation_abbreviation, parse_solar_elevation_ini_text, format_solar_elevation_ini_text
-from vdu_controls.svg import VDU_POWER_ON_ICON_SVG, PRESET_DIALOG_SUN_SVG, VDU_PRESET_ICON_SVG, VDU_CONNECTED_ICON_SVG
+from vdu_controls.svg import VDU_POWER_ON_ICON_SVG, PRESET_DIALOG_SUN_SVG, VDU_PRESET_ICON_SVG, VDU_PRESET_EDIT_ICON_SVG
 from vdu_controls.unicode import TIME_CLOCK_SYMBOL, DEGREE_SYMBOL, WARNING_SYMBOL
 from vdu_controls.vdu_bulk_change import BulkChangeWorker
 from vdu_controls.vdu_controls_config import VduControlsConfig, ConfOpt
@@ -1016,7 +1016,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.editor_layout.setSpacing(dpx(10))
         self.editor_layout.setSizeConstraint(QVBoxLayout.SizeConstraint.SetMinimumSize)
         self.editor_new_preset_text = tr("New preset")
-        self.editor_title = TitleLabel(icon_source=VDU_PRESET_ICON_SVG, main_text=self.editor_new_preset_text)
+        self.editor_title = TitleLabel(icon_source=VDU_PRESET_EDIT_ICON_SVG, main_text=self.editor_new_preset_text)
         self.editor_layout.addWidget(self.editor_title)
         self.editor_groupbox.setLayout(self.editor_layout)
 

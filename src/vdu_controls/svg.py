@@ -67,6 +67,8 @@ VDU_POWER_ON_ICON_SVG = load_svg_source('vdu_power_on_icon.svg')
 
 VDU_PRESET_ICON_SVG = load_svg_source('vdu_preset_icon.svg')
 
+VDU_PRESET_EDIT_ICON_SVG = load_svg_source('vdu_preset_edit_icon.svg')
+
 AMBIENT_PANEL_ICON_SVG = load_svg_source('ambient_panel_icon.svg')
 
 REFRESH_ICON_SVG = load_svg_source('refresh_icon.svg')
