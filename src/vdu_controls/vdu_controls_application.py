@@ -274,7 +274,7 @@ class VduControlsMainPanel(QWidget):
         self.alert = None
         return answer == MBtn.Retry
 
-    def status_message(self, message: str, timeout: int):
+    def status_message(self, message: str, timeout_ms: int):
         if message.strip():  # Only non-empty messages, ignore blank messages, they're just clearing the status bar.
             self.message_history.append(f"\n{datetime.now().strftime('%H:%M:%S')}{MESSAGE_SYMBOL} {message}")
             self.message_history = self.message_history[-9:]
@@ -282,10 +282,10 @@ class VduControlsMainPanel(QWidget):
         if self.main_controller.main_config.is_set(ConfOpt.SEPARATE_STATUS_BAR):
             status_bar = self.main_controller.main_window.statusBar()  # pyright:ignore
             assert status_bar is not None
-            status_bar.showMessage(message, timeout)
+            status_bar.showMessage(message, timeout_ms)
             status_bar.setToolTip("".join([tr('Message history:')] + self.message_history))
         elif self.main_toolbar:
-            self.main_toolbar.status_area.showMessage(message, timeout)
+            self.main_toolbar.status_area.showMessage(message, timeout_ms)
             self.main_toolbar.status_area.setToolTip("".join([tr('Message history:')] + self.message_history))
 
 
@@ -419,11 +419,11 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                                              prefer_dbus_client=self.main_config.is_set(ConfOpt.DBUS_CLIENT_ENABLED),
                                              connected_vdus_changed_callback=change_handler)
             if self.main_config.is_set(ConfOpt.LAPTOP_PANEL_ENABLED):
-                try:
+                if DdcutilPanelImpl.is_available():
                     self.ddcutil.add_ddcutil_emulator(DdcutilPanelImpl(callback=change_handler))
-                except Exception as e:
-                    MBox(MIcon.Critical, msg=tr('Laptop Support: brightessctrl command failed'),
-                         info='Check that brightessctrl is installed and is working.', details=str(e)).exec()
+                else:  # If no user saved conf file, set laptop support to off to prevent unnecessary warnings
+                    if self.main_config.file_path is None:  # No user saved conf file
+                        self.main_config.ini_content.set(ConfOpt.LAPTOP_PANEL_ENABLED.conf_section, ConfOpt.LAPTOP_PANEL_ENABLED.conf_name, 'no')
             if emulator := self.main_config.ini_content.get(ConfOpt.DDCUTIL_EMULATOR.conf_section,
                                                             ConfOpt.DDCUTIL_EMULATOR.conf_name, fallback=None):
                 common_args = self.main_config.get_ddcutil_extra_args()
@@ -499,6 +499,12 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     tr("The change to the {} option requires vdu_controls to restart.").format(tr(setting.conf_name)))
                 return
         self.main_config.reload()
+        if self.main_config.is_set(ConfOpt.LAPTOP_PANEL_ENABLED):
+            if not DdcutilPanelImpl.is_available():
+                MBox(MIcon.Warning,
+                     msg=tr('Laptop panel {} command unavailable').format(DdcutilPanelImpl.BRIGHTNESSCTL_EXE),
+                     info=tr('Check that {} is installed and is working or disable laptop support to silence this warning').format(
+                          DdcutilPanelImpl.BRIGHTNESSCTL_EXE)).exec()
         log.set_syslog(self.main_config.is_set(ConfOpt.SYSLOG_ENABLED))
         log.set_debug(self.main_config.is_set(ConfOpt.DEBUG_ENABLED))
         log.info("Reconfiguring due to settings change.")
@@ -697,11 +703,11 @@ class VduAppController(QObject):  # Main controller containing methods for high 
                     def _restored_initialization_preset(worker: BulkChangeWorker) -> None:
                         if worker.work_exception is not None:
                             log.error(f"Error during restoration of '{preset.name}'")
-                            self.status_message(tr("Error during restoration preset {}").format(preset.name), timeout=5)
+                            self.status_message(tr("Error during restoration preset {}").format(preset.name), timeout_ms=5000)
                             return
                         log.info(f"Restored initialization-preset '{worker.context.name}'")
                         message = tr("Restored I-Preset {}").format(worker.context.name)
-                        self.status_message(message, timeout=5)
+                        self.status_message(message, timeout_ms=5000)
                         self.get_main_window().splash_message_qtsignal.emit(message)
                         sys_time.sleep(1.0)  # Pause to give the message time to display - TODO find non-delaying solution
                         self.get_main_window().update_status_indicators()  # Refresh to restore other non-init preset icons
@@ -998,8 +1004,8 @@ class VduAppController(QObject):  # Main controller containing methods for high 
         log.debug(f"find_vdu_config_files {found}")
         return found
 
-    def status_message(self, message: str, timeout: int, destination: MsgDestination = MsgDestination.DEFAULT):
-        self.get_main_window().status_message(message, timeout, destination)
+    def status_message(self, message: str, timeout_ms: int, destination: MsgDestination = MsgDestination.DEFAULT):
+        self.get_main_window().status_message(message, timeout_ms, destination)
 
     def restart_application(self, reason: str):
         # Force a restart of the application.  Some settings changes need this (for example, run in the system tray).
@@ -1150,6 +1156,8 @@ class VduAppWindow(QMainWindow):
             release_notes()
             main_config.write_file(ConfIni.get_path('vdu_controls'), overwrite=True)  # Stops release notes from being repeated.
 
+        if not DdcutilPanelImpl.is_available():
+            self.main_panel.status_message(tr('Laptop {} missing.').format(DdcutilPanelImpl.BRIGHTNESSCTL_EXE), timeout_ms=5000)
 
     def is_inactive(self):
         if get_app_instance().applicationState() != Qt.ApplicationState.ApplicationInactive:
@@ -1286,7 +1294,7 @@ class VduAppWindow(QMainWindow):
 
     def show_preset_status(self, message: str, timeout: int = 3000):
         PresetsDialog.show_status_message(message=message, timeout=timeout)
-        self.status_message(message, timeout=timeout, destination=MsgDestination.DEFAULT)
+        self.status_message(message, timeout_ms=timeout, destination=MsgDestination.DEFAULT)
 
     def get_tray_theme_type(self):  # Ugly because Qt has no way to access the tray theme
         theme = ThemeType.UNTHEMED  # Don't alter colors for overlay onto app icon in tray if unthemed
@@ -1358,7 +1366,7 @@ class VduAppWindow(QMainWindow):
         if origin != VcpOrigin.TRANSIENT:  # Only want to indicate final status (not when just passing through a preset)
             self.update_status_indicators()
             if origin != VcpOrigin.EXTERNAL:
-                self.status_message(SET_VCP_SYMBOL, timeout=500, destination=MsgDestination.DEFAULT)
+                self.status_message(SET_VCP_SYMBOL, timeout_ms=500, destination=MsgDestination.DEFAULT)
         if self.main_config.is_set(ConfOpt.LUX_OPTIONS_ENABLED) and self.main_controller.lux_auto_controller is not None:
             if vcp_code == BRIGHTNESS_VCP_CODE:
                 LuxDialog.lux_dialog_show_brightness(vdu_stable_id, value)
@@ -1417,13 +1425,13 @@ class VduAppWindow(QMainWindow):
         log.debug(f"decide_window_position: {x=} {y=} {app_width=} {app_height=} {cursor_x=} {cursor_y=} {margin=}")
         self.setGeometry(x, y, app_width, app_height)
 
-    def status_message(self, message: str, timeout: int, destination: MsgDestination):
+    def status_message(self, message: str, timeout_ms: int, destination: MsgDestination):
         assert (self.main_panel is not None)
         if not gui_misc.is_running_in_gui_thread():
-            self.run_in_gui_thread(partial(self.status_message, message, timeout, destination))
+            self.run_in_gui_thread(partial(self.status_message, message, timeout_ms, destination))
         else:
             if destination == MsgDestination.DEFAULT:
-                self.main_panel.status_message(message, timeout)
+                self.main_panel.status_message(message, timeout_ms)
                 QApplication.processEvents()  # Force the message out straight way.
 
     def event(self, event: QEvent | None) -> bool:

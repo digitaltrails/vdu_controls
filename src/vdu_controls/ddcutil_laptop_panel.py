@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import shutil
 import subprocess
 import time as sys_time
 from datetime import datetime, timedelta
@@ -23,15 +24,21 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
     Also monitors udev for laptop "brightness" events caused by
     screen-saving dimming or brightness up/down keys.
     """
+
+    BRIGHTNESSCTL_EXE = 'brightnessctl'
+
+    @staticmethod
+    def is_available() -> bool:
+        return shutil.which(DdcutilPanelImpl.BRIGHTNESSCTL_EXE) is not None
+
     def __init__(self, _: List[str] | None = None, callback: Callable | None = None):
         self.include_leds = VDU_CONTROLS_DEVELOPER  # Test using desktop controllable LEDs
         self.brightness_vcp_code_int = BRIGHTNESS_VCP_CODE
         self.ddcutil_access_lock = Lock()
-        self.brightnessctl_exe = 'brightnessctl'
         self.max_brightness: Dict[str, int] = {}
         if log.debug_enabled:
             version_check = self.__run__('-V').stdout.decode('utf-8')
-            log.debug(f"{self.brightnessctl_exe} version {version_check}")
+            log.debug(f"{DdcutilPanelImpl.BRIGHTNESSCTL_EXE} version {version_check}")
         self.set_vcp_time: datetime = datetime.now() - timedelta(seconds=60)  # Last time set_vcp was called
         self.callback = callback
         if self.callback:  # --- udev setup ---
@@ -79,8 +86,8 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
         return self.max_brightness[edid_txt]
 
     def __run__(self, *args) -> subprocess.CompletedProcess:
-        log_id = self.brightnessctl_exe
-        process_args = [self.brightnessctl_exe] + list(args)
+        log_id = DdcutilPanelImpl.BRIGHTNESSCTL_EXE
+        process_args = [DdcutilPanelImpl.BRIGHTNESSCTL_EXE] + list(args)
         try:
             with self.ddcutil_access_lock:
                 now = sys_time.perf_counter()
@@ -103,7 +110,7 @@ class DdcutilPanelImpl(DdcutilInterface):  # Laptop/builtin panel
         return '2.2.5'
 
     def get_interface_version_string(self) -> str:
-        return f"Command Line - {self.brightnessctl_exe}"
+        return f"Command Line - {DdcutilPanelImpl.BRIGHTNESSCTL_EXE}"
 
     def detect(self, _: int) -> List[DdcDetectedAttributes]:
         results = []
