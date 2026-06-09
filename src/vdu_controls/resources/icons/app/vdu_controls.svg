@@ -1,0 +1,22 @@
+<!-- SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls> -->
+<!-- SPDX-License-Identifier: LGPL-3.0 -->
+<svg viewBox="0 0 24 24" width="256" height="256" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <style type="text/css" id="current-color-scheme"> .ColorScheme-Text { color:#232629; } </style>
+    <linearGradient id="screenOrigGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#76d0ff" /> <!-- Start color (offset 0%) -->
+      <stop offset="100%" stop-color="#3f7eed" />  <!-- End color (offset 100%) -->
+    </linearGradient>
+    <linearGradient id="screenBlueGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#66c0ef" /> <!-- Start color (offset 0%) -->
+      <stop offset="100%" stop-color="#2f6edd" />  <!-- End color (offset 100%) -->
+    </linearGradient>
+    <linearGradient id="screenBlueGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#58b3d8" /> <!-- Start color (offset 0%) -->
+      <stop offset="100%" stop-color="#3571c9" />  <!-- End color (offset 100%) -->
+    </linearGradient>
+    <g class="ColorScheme-Text" stroke="currentColor" stroke-linecap="round" stroke-width="1.2"
+       transform="translate(0, 0.5)">
+        <rect x="2.5" y="3" width="19.25" height="15" fill="url(#screenBlueGradient)" rx="1" ry="1"/>
+        <path fill="None" d="M 8.5 20.5 L 15.75 20.5"/>
+    </g>
+</svg>
