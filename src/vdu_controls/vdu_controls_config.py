@@ -222,7 +222,7 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         help=QT_TR_NOOP('Enable preset schedule.'))
 
     WEATHER_ENABLED = ConfOptDef(
-        conf_name='weather-enabled', default_value='yes',
+        conf_name='weather-enabled', default_value='no',
         ui_label=QT_TR_NOOP('weather'),
         sub_group=SubGroup.FEATURES,
         help=QT_TR_NOOP('Enable weather lookups.'))
