@@ -494,8 +494,10 @@ Version History
   * The layout of the Preset and Light-Metering dialogs better reflect the
     the style of the main panel (slightly).
   * The system tray default icon is now primarily monochrome to reflect 
-    prevailing desktop aesthetics. It's designed to accommodate both dark 
-    and light tray backgrounds (as far as is possible).
+    prevailing desktop aesthetics. It's also been designed to reasobably
+    visible for both dark and light tray backgrounds (as far as is possible).
+  * The program-icon and splash-screen icons have been replaced with
+    SVG versions. The new program-icon responds to light/dark theme changes.
   * Tick marks on control-sliders are now optional (see settings).
   * The right-mouse action that could hide the toolbar irretrievably has been
     disabled.
@@ -508,7 +510,7 @@ Version History
     and any attached 'Value:' metadata that implies otherwise will be ignored
     (with a warning logged). 
     This allows some monitors with incorrect metadata to work out-of-the-box.
-  * The script's source code has been split into multiple source files.
+  * The script's source code has been refactored into multiple source files.
   * The executable is now a Python _zipapp_ containing the source hierarchy.
   * The included set of language-translations has been expanded. All of 
     the translations have been created for testing purposes and may not 
