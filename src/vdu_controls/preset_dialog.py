@@ -235,6 +235,7 @@ class PresetWeatherWidget(QWidget):
         self.location = main_config.get_location()
         self.required_weather_filepath: Path | None = None
         widget_layout = QVBoxLayout(self)
+        widget_layout.setContentsMargins(0, 0, 0, 0)
         self.label = QLabel(tr("Additional weather requirements"))
         self.label.setToolTip(tr("Weather conditions will be retrieved from {}").format(WEATHER_FORECAST_URL))
         widget_layout.addWidget(self.label)
@@ -667,6 +668,7 @@ class PresetDaylightFactorWidget(QWidget):
     def __init__(self):
         super().__init__()
         layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
         self.df_label = QLabel(tr("Daylight-Factor"))
         self.df_input = QLineEdit()
         self.df_input.setValidator(QDoubleValidator())
@@ -1058,7 +1060,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.weather_widget.setVisible(self.main_config.is_set(ConfOpt.WEATHER_ENABLED))
         self.weather_widget.update_location(self.at_elevation_widget.location)
         bottom_right_layout.addWidget(self.weather_widget)
-        bottom_right_layout.addStretch()
+        bottom_right_layout.addStretch(1)
 
         possibles = [self.at_time_widget, self.at_elevation_widget]
         for schedule_choice_widget in possibles:
