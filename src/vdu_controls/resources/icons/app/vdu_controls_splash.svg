@@ -1,0 +1,95 @@
+<!-- SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls> -->
+<!-- SPDX-License-Identifier: LGPL-3.0 -->
+<!-- Modified Monitor SVG with High-Intensity Ambilight Back-Glow for Dark Themes -->
+<svg viewBox="0 0 800 500" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Tasteful soft blue gradient optimized for high black text contrast -->
+    <linearGradient id="screenAltBlueGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e3f2fd"/>
+      <stop offset="50%" stop-color="#bcdffc"/>
+      <stop offset="100%" stop-color="#90caf9"/>
+    </linearGradient>
+
+    <linearGradient id="screenBlueOrigGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#76d0ff" /> <!-- Start color (offset 0%) -->
+      <stop offset="100%" stop-color="#3f7eed" />  <!-- End color (offset 100%) -->
+    </linearGradient>
+
+    <linearGradient id="screenBlueGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#66c0ef" /> <!-- Start color (offset 0%) -->
+      <stop offset="100%" stop-color="#2f6edd" />  <!-- End color (offset 100%) -->
+    </linearGradient>
+
+    <!-- Metallic gradient for the outer premium bezel -->
+    <linearGradient id="bezelMetallic" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2a2e37"/>
+      <stop offset="50%" stop-color="#404654"/>
+      <stop offset="100%" stop-color="#2a2e37"/>
+    </linearGradient>
+
+    <!-- Cylindrical 3D gradient for the round straight column stem -->
+    <linearGradient id="columnStemGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1f232b"/>
+      <stop offset="30%" stop-color="#454c5c"/>
+      <stop offset="60%" stop-color="#2a2e37"/>
+      <stop offset="100%" stop-color="#16191f"/>
+    </linearGradient>
+
+    <!-- Premium gradient for the low-profile rectangular base plate -->
+    <linearGradient id="rectangularBaseGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#323845"/>
+      <stop offset="50%" stop-color="#1f232b"/>
+      <stop offset="100%" stop-color="#14161c"/>
+    </linearGradient>
+
+    <!-- HIGH-INTENSITY DOUBLE HALO FILTER: Amplified for intense dark theme isolation -->
+    <filter id="highIntensityGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <!-- 1. Deep foundational shadow for anchoring -->
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#000000" flood-opacity="0.7"/>
+
+      <!-- 2. Inner high-density core neon bloom -->
+      <feDropShadow dx="0" dy="0" stdDeviation="12" flood-color="#42a5f5" flood-opacity="0.55"/>
+
+      <!-- 3. Outer wide-dispersion ambient aura -->
+      <feDropShadow dx="0" dy="0" stdDeviation="32" flood-color="#90caf9" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Main Monitor Group with High-Intensity Filter Applied -->
+  <g filter="url(#highIntensityGlow)">
+
+    <!-- 1. PREMIUM METALLIC BEZEL (Outer Frame) -->
+    <rect x="50" y="40" width="700" height="390" rx="12" ry="12" fill="url(#bezelMetallic)"/>
+
+    <!-- Amplified Chamfer Line for crisp edge definition against deep dark backgrounds -->
+    <rect x="51" y="41" width="698" height="388" rx="11" ry="11" fill="none" stroke="#8ba2cc" stroke-width="1.5" opacity="0.75"/>
+
+    <!-- 2. INTERNAL DISPLAY SCREEN AREA (Tasteful Light Blue Gradient) -->
+    <rect x="66" y="56" width="668" height="358" rx="4" ry="4" fill="url(#screenBlueGradient)"/>
+
+    <!-- Inner Bezel Border Frame Shadow -->
+    <rect x="66" y="56" width="668" height="358" rx="4" ry="4" fill="none" stroke="#11141a" stroke-width="1.5" opacity="0.8"/>
+
+    <!-- 3. POWER LED INDICATOR -->
+    <circle cx="400" cy="422" r="3" fill="#00e5ff" opacity="0.9"/>
+    <circle cx="400" cy="422" r="6" fill="#00e5ff" opacity="0.3"/>
+
+    <!-- 4. MODERN STRAIGHT ROUND COLUMN STEM -->
+    <rect x="376" y="430" width="48" height="46" fill="url(#columnStemGradient)"/>
+
+    <!-- Top shadow intersection where stem meets the display -->
+    <path d="M 376 430 L 424 430" stroke="#11141a" stroke-width="2"/>
+
+    <!-- 5. RECTANGULAR PROFILE BASE PLATE -->
+    <rect x="290" y="474" width="220" height="12" rx="2" ry="2" fill="url(#rectangularBaseGradient)"/>
+
+    <!-- Beveled top edge highlight for the base plate -->
+    <rect x="291" y="475" width="218" height="1" fill="#565f73" opacity="0.4"/>
+
+    <!-- Dark baseline separation -->
+    <rect x="290" y="485" width="220" height="1" fill="#0d0f13"/>
+
+  </g>
+</svg>
+
+
