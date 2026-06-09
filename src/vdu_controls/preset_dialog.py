@@ -242,7 +242,7 @@ class PresetWeatherWidget(QWidget):
 
         def _select_action(index: int) -> None:
             self.required_weather_filepath = self.chooser.itemData(index)
-            if self.chooser.itemData(index) is None:
+            if self.chooser.itemData(index) is None or self.location is None:
                 self.info_label.setText('')
             else:
                 assert self.location is not None
@@ -277,7 +277,7 @@ class PresetWeatherWidget(QWidget):
                     weather_file.write(condition_content)
 
     def verify_weather_location(self, location: GeoLocation) -> None:
-        if not self.main_config.is_set(ConfOpt.WEATHER_ENABLED):
+        if not self.main_config.is_set(ConfOpt.WEATHER_ENABLED) or location is None:
             return
         place_name = location.place_name if location.place_name is not None else 'IP-address'
         # Only do this check if the location has changed.
@@ -998,7 +998,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.preset_name_edit = QLineEdit()
         self.preset_name_edit.setToolTip(tr('Enter a new preset name.'))
         self.preset_name_edit.setClearButtonEnabled(True)
-        self.preset_name_edit.textChanged.connect(self.change_edit_group_title)
+        self.preset_name_edit.textChanged.connect(self.configure_for_edit_group_title)
         self.preset_name_edit.setValidator(QRegularExpressionValidator(QRegularExpression("[A-Za-z0-9][A-Za-z0-9_ .-]{0,60}")))
 
         self.vip_menu = QMenu()
@@ -1054,9 +1054,11 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.df_widget = PresetDaylightFactorWidget()
         bottom_right_layout.addWidget(self.df_widget)
 
+        self.weather_widget.setDisabled(self.at_elevation_widget.location is None)
+        self.weather_widget.setVisible(self.main_config.is_set(ConfOpt.WEATHER_ENABLED))
         self.weather_widget.update_location(self.at_elevation_widget.location)
         bottom_right_layout.addWidget(self.weather_widget)
-
+        bottom_right_layout.addStretch()
 
         possibles = [self.at_time_widget, self.at_elevation_widget]
         for schedule_choice_widget in possibles:
@@ -1090,12 +1092,8 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         layout.addWidget(self.status_bar)
 
         self.edit_choose_icon_button.set_preset(None)
-        self.editor_controls_widget.setDisabled(True)
-        self.at_time_widget.setDisabled(True)
-        self.editor_transitions_widget.setDisabled(True)
-        self.at_elevation_widget.setDisabled(True)
-        self.edit_save_button.setDisabled(True)
-        self.edit_revert_button.setDisabled(True)
+
+        self.configure_for_edit_group_title()
 
         self.indicate_active_preset(self.main_controller.which_preset_is_active())
         self.editor_controls_widget.adjustSize()
@@ -1126,6 +1124,8 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.populate_editor_controls_widget()
         self.reset_editor()
         self.at_elevation_widget.configure_for_location(self.main_config.get_location())
+        self.weather_widget.setDisabled(self.at_elevation_widget.location is None)
+        self.weather_widget.setVisible(self.main_config.is_set(ConfOpt.WEATHER_ENABLED))
         self.weather_widget.update_location(self.at_elevation_widget.location)
 
     def reset_editor(self):
@@ -1291,7 +1291,7 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.preset_widgets_scroll_area.updateGeometry()
         self.status_message(tr("Deleted {}").format(preset.name), timeout=-1)
 
-    def change_edit_group_title(self) -> None:
+    def configure_for_edit_group_title(self) -> None:
         changed_text = self.preset_name_edit.text()
         self.text = self.editor_title.set_text(self.editor_new_preset_text)
         if disable_controls := changed_text.strip() == "":
@@ -1313,6 +1313,8 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.editor_transitions_widget.setDisabled(disable_controls)
         self.edit_save_button.setDisabled(disable_controls)
         self.edit_clear_button.setDisabled(disable_controls)
+        self.weather_widget.setDisabled(disable_controls)
+        self.df_widget.setDisabled(disable_controls)
 
     def edit_preset(self, preset: Preset) -> None:
 
