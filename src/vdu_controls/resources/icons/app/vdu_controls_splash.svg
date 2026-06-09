@@ -1,23 +1,18 @@
-<!-- SPDX-FileCopyrightText: 2021-2026 Contributors to vdu_controls <https://github.com/digitaltrails/vdu_controls> -->
-<!-- SPDX-License-Identifier: LGPL-3.0 -->
-<!-- Modified Monitor SVG with High-Intensity Ambilight Back-Glow for Dark Themes -->
+<!-- Final Polished Monitor SVG with Oxygen-Inspired Geometric Screen -->
 <svg viewBox="0 0 800 500" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <!-- Tasteful soft blue gradient optimized for high black text contrast -->
-    <linearGradient id="screenAltBlueGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#e3f2fd"/>
-      <stop offset="50%" stop-color="#bcdffc"/>
-      <stop offset="100%" stop-color="#90caf9"/>
+    <!-- 1. BASE BACKGROUND GRADIENT (Deep rich blue blending up to a mid-tone cyan) -->
+    <linearGradient id="oxygenBaseGradient" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2a72de"/>
+      <stop offset="60%" stop-color="#4ea7e9"/>
+      <stop offset="100%" stop-color="#79cbf5"/>
     </linearGradient>
 
-    <linearGradient id="screenBlueOrigGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#76d0ff" /> <!-- Start color (offset 0%) -->
-      <stop offset="100%" stop-color="#3f7eed" />  <!-- End color (offset 100%) -->
-    </linearGradient>
-
-    <linearGradient id="screenBlueGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#66c0ef" /> <!-- Start color (offset 0%) -->
-      <stop offset="100%" stop-color="#2f6edd" />  <!-- End color (offset 100%) -->
+    <!-- 2. GEOMETRIC OVERLAY GRADIENT (Bright soft cyan fading to transparent) -->
+    <linearGradient id="facetOverlayGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a3e3ff" stop-opacity="0.45"/>
+      <stop offset="50%" stop-color="#6ec8f7" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#4ea7e9" stop-opacity="0.0"/>
     </linearGradient>
 
     <!-- Metallic gradient for the outer premium bezel -->
@@ -44,15 +39,18 @@
 
     <!-- HIGH-INTENSITY DOUBLE HALO FILTER: Amplified for intense dark theme isolation -->
     <filter id="highIntensityGlow" x="-30%" y="-30%" width="160%" height="160%">
-      <!-- 1. Deep foundational shadow for anchoring -->
+      <!-- Deep foundational shadow for anchoring -->
       <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#000000" flood-opacity="0.7"/>
-
-      <!-- 2. Inner high-density core neon bloom -->
+      <!-- Inner high-density core neon bloom -->
       <feDropShadow dx="0" dy="0" stdDeviation="12" flood-color="#42a5f5" flood-opacity="0.55"/>
-
-      <!-- 3. Outer wide-dispersion ambient aura -->
+      <!-- Outer wide-dispersion ambient aura -->
       <feDropShadow dx="0" dy="0" stdDeviation="32" flood-color="#90caf9" flood-opacity="0.4"/>
     </filter>
+
+    <!-- Clip-path to perfectly lock the geometric shards inside the monitor's screen boundaries -->
+    <clipPath id="screenClip">
+      <rect x="66" y="56" width="668" height="358" rx="4" ry="4"/>
+    </clipPath>
   </defs>
 
   <!-- Main Monitor Group with High-Intensity Filter Applied -->
@@ -64,10 +62,23 @@
     <!-- Amplified Chamfer Line for crisp edge definition against deep dark backgrounds -->
     <rect x="51" y="41" width="698" height="388" rx="11" ry="11" fill="none" stroke="#8ba2cc" stroke-width="1.5" opacity="0.75"/>
 
-    <!-- 2. INTERNAL DISPLAY SCREEN AREA (Tasteful Light Blue Gradient) -->
-    <rect x="66" y="56" width="668" height="358" rx="4" ry="4" fill="url(#screenBlueGradient)"/>
+    <!-- 2. INTERNAL DISPLAY SCREEN AREA (With Nested Clip-Path for Geometric Shapes) -->
+    <g clip-path="url(#screenClip)">
+      <!-- Base Blue Canvas Color -->
+      <rect x="66" y="56" width="668" height="358" fill="url(#oxygenBaseGradient)"/>
 
-    <!-- Inner Bezel Border Frame Shadow -->
+      <!-- Geometric Facet 1: Large sweeping diagonal light wedge from top-left -->
+      <!-- Coordinates re-mapped to naturally align with the shifted screen context (x=66, y=56) -->
+      <polygon points="66,56 500,56 300,414 66,414" fill="url(#facetOverlayGradient)"/>
+
+      <!-- Geometric Facet 2: Subtle secondary cross-cutting shard from the bottom-left -->
+      <polygon points="66,240 400,150 66,414" fill="#ffffff" opacity="0.08"/>
+
+      <!-- Geometric Facet 3: Bright accent stripe on the upper left corner -->
+      <polygon points="66,56 266,56 66,216" fill="#ffffff" opacity="0.12"/>
+    </g>
+
+    <!-- Inner Bezel Border Frame Shadow (Renders over the clip group to tuck it down in the frame) -->
     <rect x="66" y="56" width="668" height="358" rx="4" ry="4" fill="none" stroke="#11141a" stroke-width="1.5" opacity="0.8"/>
 
     <!-- 3. POWER LED INDICATOR -->
@@ -91,5 +102,3 @@
 
   </g>
 </svg>
-
-

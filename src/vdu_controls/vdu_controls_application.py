@@ -32,7 +32,7 @@ from vdu_controls.ddcutil_emulator import DdcutilEmulatorImpl
 from vdu_controls.ddcutil_laptop_panel import DdcutilPanelImpl
 from vdu_controls.greyscale import GreyScaleDialog
 from vdu_controls.help_dialog import HelpDialog
-from vdu_controls.icon_utils import ThemeType, get_splash_pixmap
+from vdu_controls.icon_utils import ThemeType, create_pixmap_from_svg_bytes
 from vdu_controls.icon_utils import create_icon_from_svg_bytes, create_icon_from_path, create_decorated_app_icon, StdPixmap, \
     is_dark_theme
 from vdu_controls.installer import install_as_desktop_application
@@ -48,6 +48,7 @@ from vdu_controls.release import release_notes
 from vdu_controls.scaling import desktop_font_height, dpx
 from vdu_controls.settings_editor import SettingsDialog
 from vdu_controls.solar_calc import create_elevation_map
+from vdu_controls.svg import VDU_CONTROLS_SPLASH_SVG
 from vdu_controls.unicode import *
 from vdu_controls.vdu_bulk_change import BulkChangeWorker, BulkChangeItem
 from vdu_controls.vdu_control_panel import VduControlPanel
@@ -1073,9 +1074,9 @@ class VduAppWindow(QMainWindow):
         #self.app_context_menu.setTitle("VDU Controls ")  # Populate titlebar-menu (if it's enabled for Plasma Titlebars).
         #self.menuBar().addMenu(self.app_context_menu)    # TODO - make a proper menu - this will be a submenu.
 
-        splash_pixmap = get_splash_pixmap()
+        splash_pixmap = create_pixmap_from_svg_bytes(VDU_CONTROLS_SPLASH_SVG, dpx(256), dpx(180))
         splash = QSplashScreen(
-            splash_pixmap.scaledToWidth(desktop_font_height(scaled=26)).scaledToHeight(desktop_font_height(scaled=13)),
+            splash_pixmap,
             Qt.WindowType.WindowStaysOnTopHint) if main_config.is_set(ConfOpt.SPLASH_SCREEN_ENABLED) else None
         if splash is not None:
             splash.show()
@@ -1207,7 +1208,7 @@ class VduAppWindow(QMainWindow):
 
     def initialise_app_icon(self, splash_pixmap: QPixmap | None = None):
         self.app_icon = QIcon()
-        self.app_icon.addPixmap(get_splash_pixmap() if splash_pixmap is None else splash_pixmap)
+        self.app_icon.addPixmap(create_pixmap_from_svg_bytes(svg.VDU_CONTROLS_ICON_SVG))
         tray_theme_type = self.get_tray_theme_type()
         if CUSTOM_TRAY_ICON_FILE.exists() and os.access(CUSTOM_TRAY_ICON_FILE.as_posix(), os.R_OK):
             log.info(f"Loading custom app_icon: {CUSTOM_TRAY_ICON_FILE} {tray_theme_type=}")

@@ -78,8 +78,8 @@ install -d -m 0755 %{buildroot}%{_bindir} \
                    %{buildroot}%{_datadir}/icons/hicolor/256x256/apps
 install -m 0755 %{name}.pyz  %{buildroot}/%{_bindir}/%{name}
 install -m 0644 %{name}.desktop %{buildroot}%{_datadir}/applications/%{name}.desktop
-install -m 0644 src/%{name}/resources/icons/app/%{name}.png \
-                    %{buildroot}%{_datadir}/icons/hicolor/256x256/apps/%{name}.png
+install -m 0644 src/%{name}/resources/icons/app/%{name}.svg \
+                    %{buildroot}%{_datadir}/icons/hicolor/256x256/apps/%{name}.svg
 install -m 0644 icons/* %{buildroot}%{_datadir}/%{name}/icons/
 install -m 0644 translations/*.ts %{buildroot}%{_datadir}/%{name}/translations/
 install -m 0755 sample-scripts/* %{buildroot}%{_datadir}/%{name}/sample-scripts/
@@ -101,7 +101,7 @@ ln -s -f %{_datadir}/icons %{_datadir}/%{name}/icons/system-icons
 %dir %{_datadir}/%{name}/sample-scripts
 %{_bindir}/%{name}
 %{_datadir}/applications/%{name}.desktop
-%{_datadir}/icons/hicolor/256x256/apps/%{name}.png
+%{_datadir}/icons/hicolor/256x256/apps/%{name}.svg
 %{_mandir}/man1/%{name}.1*
 %{_datadir}/%{name}/icons/*
 %{_datadir}/%{name}/translations/ar_SA.ts

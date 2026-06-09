@@ -35,6 +35,10 @@ PRESET_TRANSITIONING_LED_QCOLOR = QColor(0x55ff00)
 
 SVG_SWATCH_ICON_BASE_COLOR = b"#ffffff"
 
+VDU_CONTROLS_ICON_SVG = load_svg_source('vdu_controls.svg')
+
+VDU_CONTROLS_SPLASH_SVG = load_svg_source('vdu_controls_splash.svg')
+
 TRAY_COLOR_ICON_SVG = load_svg_source('tray_color_icon.svg')   # Works on light or dark tray themes (kinda)
 
 TRAY_MONOCHROME_ICON_SVG = load_svg_source('tray_monochrome_icon.svg')   # Needs handling on theme changes.

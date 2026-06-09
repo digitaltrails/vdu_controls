@@ -34,6 +34,6 @@ package() {
   install -Dm755 sample-scripts/* -t "$pkgdir/usr/share/$pkgname/sample-scripts/"
   install -Dm644 icons/* -t "$pkgdir/usr/share/$pkgname/icons/"
   install -Dm644 "docs/_build/man/$pkgname.1" -t "$pkgdir/usr/share/man/man1/"
-  install -Dm644 "src/$pkgname/resources/icons/app/$pkgname.png" -t "$pkgdir/usr/share/icons/hicolor/256x256/apps/"
+  install -Dm644 "src/$pkgname/resources/icons/app/$pkgname.svg" -t "$pkgdir/usr/share/icons/hicolor/256x256/apps/"
   install -Dm644 "$pkgname.desktop" -t "$pkgdir/usr/share/applications/"
 }

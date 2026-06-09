@@ -11,7 +11,10 @@ from vdu_controls.app_locale import tr
 from vdu_controls.constants import VDU_CONTROLS_VERSION, IP_ADDRESS_INFO_URL, WEATHER_FORECAST_URL, APPNAME, DDCUTIL_WEBSITE_URL, \
     DDCUTIL_SERVICE_WEBSITE_URL, BRIGHTNESSCTL_WEBSITE_URL, VDU_CONTROLS_WEBSITE_URL
 from vdu_controls.ddcutil_aggregator import DdcutilAggregator
+from vdu_controls.icon_utils import create_icon_from_svg_bytes
 from vdu_controls.qt_imports import Qt, QMessageBox, QtCore, QGuiApplication
+from vdu_controls.scaling import dpx
+from vdu_controls.svg import VDU_CONTROLS_ICON_SVG
 from vdu_controls.widgets import DialogSingletonMixin
 
 if TYPE_CHECKING:
@@ -176,5 +179,5 @@ class AboutDialog(QMessageBox, DialogSingletonMixin):
         template_data = _AboutTemplateData(counts_str, ddcutil_version_info_0, ddcutil_version_info_1)
         about_html_text = _ABOUT_TEMPLATE.format(data=template_data)
         self.setInformativeText(about_html_text)
-
-        self.setIconPixmap(icon_utils.get_splash_pixmap().scaledToHeight(scaling.dpx(125)))
+        icon = create_icon_from_svg_bytes(VDU_CONTROLS_ICON_SVG)
+        self.setIconPixmap(icon.pixmap(dpx(125), dpx(125)))

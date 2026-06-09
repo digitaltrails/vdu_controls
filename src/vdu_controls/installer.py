@@ -11,7 +11,7 @@ from pathlib import Path
 
 from vdu_controls.constants import APPNAME
 import vdu_controls.logging as log
-from vdu_controls.icon_utils import get_splash_pixmap
+from vdu_controls.svg import VDU_CONTROLS_ICON_SVG
 
 
 def install_as_desktop_application(uninstall: bool = False) -> None:
@@ -38,7 +38,7 @@ def install_as_desktop_application(uninstall: bool = False) -> None:
 
     installed_script_path = bin_dir.joinpath("vdu_controls")
     desktop_definition_path = desktop_dir.joinpath("vdu_controls.desktop")
-    app_icon_path = icon_dir.joinpath("vdu_controls.png")
+    app_icon_path = icon_dir.joinpath("vdu_controls.svg")
 
     if uninstall:
         os.remove(installed_script_path)
@@ -84,6 +84,7 @@ def install_as_desktop_application(uninstall: bool = False) -> None:
         log.warning(f"skipping installation of {app_icon_path.as_posix()}, it is already present.")
     else:
         log.info(f"Creating {app_icon_path.as_posix()}")
-        get_splash_pixmap().save(app_icon_path.as_posix())
+        with open(app_icon_path, "wb") as file:
+            file.write(VDU_CONTROLS_ICON_SVG)
 
     log.info(f"Installation complete. Your desktop->applications->settings should now contain {APPNAME}")
