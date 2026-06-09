@@ -13,9 +13,8 @@ RELEASE_ANNOUNCEMENT = """<h3>{WELCOME}</h3>{NOTE}<br/>
 <a href="https://github.com/digitaltrails/vdu_controls/releases/tag/v{VERSION}">
 https://github.com/digitaltrails/vdu_controls/releases/tag/v{VERSION}</a>
 <br/>___________________________________________________________________________"""
-RELEASE_INFO = QT_TR_NOOP('<b>Road Warrior: Support for Laptop-Panels</b><br/>'
-                          '<br/>Laptop-panel support is optional - see Settings - '
-                          ' and requires the brightnessctl command and python3-udev library.')
+RELEASE_INFO = QT_TR_NOOP('<b>Road Warrior: Support for Laptop-Panels.</b><br/>'
+                          '<br/>UI improvements and code refactoring.<br/>')
 
 def release_notes():
     release_alert = MBox(
