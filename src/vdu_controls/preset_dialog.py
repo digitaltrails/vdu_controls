@@ -717,6 +717,19 @@ class PresetScheduleAtElevationWidget(PresetScheduleAtWidgetBase):
 
         self.title_prefix = tr("Trigger at solar elevation")
         self.title_label = QLabel(self.title_prefix)
+
+        # A bit hacky - ensure alignment with QLabel+QLineEdit in right panel of PresetsDialog
+        # Could possibly make it less hacky by creating classes AlignedLabel and AlignedLabeledQLineEdit.
+        entry_field_height = QLineEdit().sizeHint().height()
+        label_field_height = QLabel().sizeHint().height()
+        label_margins = self.title_label.contentsMargins()
+        # If bottom space is OK, we could set the label's minimum size to the QLineEdit's height(),
+        # but in this case it isn't OK, the label needs to be close to what's below it.
+        # Take the half difference in height and add it to the top margin only.
+        # This appears to work fine in PyQt5 and PyQt6.
+        label_margins.setTop(label_margins.top() + (entry_field_height - label_field_height) // 2)
+        self.title_label.setContentsMargins(label_margins)
+
         self.title_label.setWordWrap(False)
         #self.title_label.setFixedHeight(desktop_font_height(scaled=3))  # Stop ascenders/descenders in Unicode from altering layout.
         self.title_label.setToolTip(tr("Trigger at a set solar elevation\n(sun angle at your geolocation and time)."))
@@ -880,7 +893,8 @@ class PresetScheduleAtTimeWidget(PresetScheduleAtWidgetBase):
     def __init__(self):
         super().__init__(description=tr("time-trigger"))
         self.setToolTip(tr("Trigger at the same time (hh:mm) each day."))
-        self.setLayout(at_time_layout := QHBoxLayout())
+        at_time_layout = QHBoxLayout(self)
+        at_time_layout.setContentsMargins(0, 0, 0, 0)  # want the two to just take the space of QLineEdit
         at_time_layout.addWidget(QLabel(tr("Trigger at time")))
         self.editor_at_time_field = QLineEdit()
         self.editor_at_time_field.setValidator(PresetScheduleAtTimeWidget.TimeFieldValidator())
@@ -892,7 +906,6 @@ class PresetScheduleAtTimeWidget(PresetScheduleAtWidgetBase):
 
         self.editor_at_time_field.textChanged.connect(clear_others_ask)
         at_time_layout.addStretch(1)
-        at_time_layout.setContentsMargins(0, 0, 0, 0)
 
     def is_set(self) -> bool:
         return len(self.text()) != 0
