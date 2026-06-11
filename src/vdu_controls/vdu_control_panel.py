@@ -293,19 +293,30 @@ class VduControlComboBox(VduControlBase):
         if value is None:
             return -1
         if value not in self.keys:
-            self.keys.append(self.current_value)
-            self.combo_box.addItem('UNKNOWN-' + value, self.current_value)
+            unknown_name = 'UNKNOWN-' + value
+            error_message = tr("Display {vnum} {vdesc} feature {code:02X} '({cdesc})' has an undefined value '{value}'.").format(
+                vdesc=self.controller.get_vdu_preferred_name(), vnum=self.controller.vdu_number,
+                code=self.vcp_capability.vcp_code, cdesc=self.vcp_capability.name,
+                value=value)
+            valid_values_message = "_" * 80 + "\n\n"
+            if self.keys:
+                valid_values_message += tr("The metadata for {vdu_name} defines the valid values to be {valid}.").format(
+                    vdu_name=self.controller.get_vdu_preferred_name(), valid=self.keys)
+            else:
+                valid_values_message += tr("The metadata for {vdu_name} does not define any allowed values.").format(
+                    vdu_name=self.controller.get_vdu_preferred_name())
+            valid_values_message += tr("Added {temp} to silence the error for now.\n").format(temp=unknown_name)
+
+            valid_values_message += "\n" + tr(
+                "If you want to extend the set of permitted values, you can edit "
+                "the metadata for {vdu_name} in the settings panel.\n").format(
+                vdu_name=self.controller.get_vdu_preferred_name(), temp=unknown_name
+            )
+            MBox(MIcon.Critical, msg=error_message, info=valid_values_message).exec()
+            self.keys.append(value)  # Why is this being done?  Probably to shutup repeat errors.
+            self.combo_box.addItem(unknown_name, value)
             item_added = cast(QStandardItemModel, self.combo_box.model()).item(self.combo_box.count() - 1)
             assert item_added is not None   # will be there, we just added it
             item_added.setEnabled(False)
-            MBox(MIcon.Critical,
-                 msg=tr("Display {vnum} {vdesc} feature {code} '({cdesc})' has an undefined value '{value}'. "
-                        "Valid values are {valid}.").format(
-                     vdesc=self.controller.get_vdu_preferred_name(), vnum=self.controller.vdu_number,
-                     code=self.vcp_capability.vcp_code, cdesc=self.vcp_capability.name,
-                     value=value, valid=self.keys),
-                 info=tr('If you want to extend the set of permitted values, you can edit the metadata '
-                         'for {} in the settings panel.  For more details see the man page concerning '
-                         'VDU/VDU-model config files.').format(self.controller.get_vdu_preferred_name())).exec()
             return -1
         return self.keys.index(value)
