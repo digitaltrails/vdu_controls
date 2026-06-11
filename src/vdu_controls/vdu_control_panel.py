@@ -294,7 +294,7 @@ class VduControlComboBox(VduControlBase):
             return -1
         if value not in self.keys:
             unknown_name = 'UNKNOWN-' + value
-            error_message = tr("Display {vnum} {vdesc} feature {code:02X} '({cdesc})' has an undefined value '{value}'.").format(
+            error_message = '\n' + tr("Display {vnum} {vdesc} feature {code:02X} '({cdesc})' has an undefined value '{value}'.").format(
                 vdesc=self.controller.get_vdu_preferred_name(), vnum=self.controller.vdu_number,
                 code=self.vcp_capability.vcp_code, cdesc=self.vcp_capability.name,
                 value=value)
@@ -305,7 +305,7 @@ class VduControlComboBox(VduControlBase):
             else:
                 valid_values_message += tr("The metadata for {vdu_name} does not define any allowed values.").format(
                     vdu_name=self.controller.get_vdu_preferred_name())
-            valid_values_message += tr("Added {temp} to silence the error for now.\n").format(temp=unknown_name)
+            valid_values_message += '\n' + tr("Added {temp} to silence the error for now.\n").format(temp=unknown_name)
 
             valid_values_message += "\n" + tr(
                 "If you want to extend the set of permitted values, you can edit "
