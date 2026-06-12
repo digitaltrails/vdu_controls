@@ -465,7 +465,7 @@ Acknowledgements
   Mateo Bohorquez G. ([Milor123](https://github.com/Milor123)), Andrew Sun ([apsun](https://github.com/apsun)), 
   Extent ([Extent421](https://github.com/Extent421)), Niklas Hambüchen ([nh2](https://github.com/nh2)), Doron Behar ([doronbehar](https://github.com/doronbehar)),
   Mohammed Elsayed Ahmed([MohammedEl-sayedAhmed](https://github.com/MohammedEl-sayedAhmed))
-  for contributing fixes to code and documentation.
+  for contributing enhancements and fixes to code and documentation.
 * [Jakeler](https://github.com/Jakeler), [kupiqu](https://github.com/kupiqu), Mateo Bohorquez ([Milor123](https://github.com/Milor123)), Johan Grande ([nahoj](https://github.com/nahoj)), 
   [0xCUBE](https://github.com/0xCUB3), [RokeJulianLockhart](https://github.com/RokeJulianLockhart), [abil76](https://github.com/abil76), Andrew Sun ([apsun](https://github.com/apsun))
   for contributing suggestions for enhancements. 
@@ -486,6 +486,8 @@ Michael Hamilton
 Version History
 ---------------
 * 2.6.5
+  * Default to running one instance of vdu_controls, running another 
+    raises the existing instance (contributed by Mohammed Elsayed Ahmed).
   * The ambient-light-level slider now works even if location is not set.
   * The DDC-options laptop-panel option now defaults to enabled.
   * The Light-Metering-Dialog now offers two profile starter-templates

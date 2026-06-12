@@ -13,8 +13,17 @@ RELEASE_ANNOUNCEMENT = """<h3>{WELCOME}</h3>{NOTE}<br/>
 <a href="https://github.com/digitaltrails/vdu_controls/releases/tag/v{VERSION}">
 https://github.com/digitaltrails/vdu_controls/releases/tag/v{VERSION}</a>
 <br/>___________________________________________________________________________"""
-RELEASE_INFO = QT_TR_NOOP('<b>Road Warrior: Support for Laptop-Panels.</b><br/>'
-                          '<br/>UI improvements and code refactoring.<br/>')
+RELEASE_INFO = QT_TR_NOOP('<b>Road Warrior: Support for Laptop-Panels.</b>'
+                          '<br/><br/>'
+                          '<b>Important notice:</b>'
+                          ' the <i>weather feature</i> will be removed in the next version.</b>'
+                          ' If you rely on it, please comment on issue'
+                          ' <a href="https://github.com/digitaltrails/vdu_controls/issues/115">#155</a>.'
+                          '<br/><br/>'
+                          "<b>What's new:</b> usability improvements and code refactoring. "
+                          'See the online release notes for details.'
+                          '<br/><br/>'
+                          )
 
 def release_notes():
     release_alert = MBox(
