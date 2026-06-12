@@ -19,10 +19,10 @@ def desktop_font_height(scaled: int | float = 1) -> int:  # In real hardware pix
     return pixels
 
 
-def npx(developers_pixels: int):  # developers original value scaled to desktop pixels on this user's desktop
-    return round((desktop_font_height() * developers_pixels) / DEVELOPERS_NATIVE_FONT_HEIGHT)
-
-def dpx(developers_pixels: int):  # developers original value scaled to desktop pixels on this user's desktop
+def dpx(developers_pixels: int):
+    """
+    desktop-pixels: developers original value scaled to desktop pixels on this user's desktop.
+    """
     desktop_pixels = round((desktop_font_height() * developers_pixels) / DEVELOPERS_NATIVE_FONT_HEIGHT)
     # log.debug(f"{developers_pixels=} {desktop_pixels=}")
     return desktop_pixels

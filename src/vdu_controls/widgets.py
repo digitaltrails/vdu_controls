@@ -13,7 +13,7 @@ from vdu_controls.qt_imports import (QTimer, Qt, QRect, QPixmap, QPainter, QPen,
                                      QSlider, QLineEdit, QMouseEvent, QMargins, QSvgWidget, QPushButton, QHBoxLayout,
                                      QtCore, QTextEdit, QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING,
                                      QButtonGroup, QRadioButton, QDialogButtonBox)
-from vdu_controls.scaling import desktop_font_height, npx, dpx
+from vdu_controls.scaling import desktop_font_height, dpx
 
 
 def alter_margins(target: QWidget | QLayout,
@@ -371,7 +371,7 @@ class ToolButton(QToolButton):
             painter.setRenderHint(QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING)
         pen_width = max(dpx(1), size.width() // 10)  # Determine a good pen width relative to size
         painter.setPen(QPen(self.palette().buttonText().color(), pen_width, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
-        rect = QRect(0, 0, size.width(), size.height()).adjusted(margin := pen_width // npx(2) + npx(1), margin, -margin, -margin)
+        rect = QRect(0, 0, size.width(), size.height()).adjusted(margin := pen_width // dpx(2) + dpx(1), margin, -margin, -margin)
         painter.drawArc(rect, self._busy_angle * 16, 270 * 16)  # Draw the rotating arc (270 degrees)
         painter.end()
         self.setIcon(QIcon(pixmap))

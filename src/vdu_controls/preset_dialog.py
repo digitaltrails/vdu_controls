@@ -25,7 +25,7 @@ from vdu_controls.qt_imports import QSize, QEvent, Qt, pyqtSignal, QPoint, QRegu
 from vdu_controls.qt_imports import QWidget, QHBoxLayout, QSizePolicy, QApplication, QVBoxLayout, QLabel, QComboBox, QScrollArea, \
     QMenu, \
     QAction, QSpinBox, QCheckBox, QLineEdit, QSlider, QSplitter, QGroupBox, QToolButton, QSpacerItem, QStatusBar, QFrame
-from vdu_controls.scaling import npx, dpx, desktop_font_height
+from vdu_controls.scaling import dpx, desktop_font_height
 from vdu_controls.solar_calc import SolarElevationKey, SolarElevationData, create_elevation_map, calc_solar_lux, \
     format_solar_elevation_abbreviation, parse_solar_elevation_ini_text, format_solar_elevation_ini_text
 from vdu_controls.svg import VDU_POWER_ON_ICON_SVG, PRESET_DIALOG_SUN_SVG, VDU_PRESET_ICON_SVG, VDU_PRESET_EDIT_ICON_SVG
@@ -50,7 +50,7 @@ class PresetItemWidget(QWidget):
         self.preset = preset
         line_layout = QHBoxLayout()
         line_layout.setSpacing(0)
-        alter_margins(line_layout, top=0, bottom=npx(1))  # Why?
+        alter_margins(line_layout, top=0, bottom=dpx(1))  # Why?
         self.setLayout(line_layout)
 
         self.preset_name_button = PresetActivationButton(preset)
@@ -450,7 +450,7 @@ class PresetElevationChartWidget(QLabel):
         self.radius_of_deletion = round(range_iy * 0.8)
         self.horizon_y = origin_iy
         line_width = dpx(2)
-        thin_line_width = npx(2)
+        thin_line_width = dpx(2)
         dp_ratio = self.devicePixelRatio()
         pixmap = QPixmap(round(logical_width * dp_ratio), round(logical_height * dp_ratio))
         pixmap.setDevicePixelRatio(dp_ratio)
@@ -532,7 +532,7 @@ class PresetElevationChartWidget(QLabel):
             painter.setPen(QPen(QColor(0xff965b), thin_line_width))
             if self.current_pos is not None and not self.in_drag:
                 if pos_as_radius < self.radius_of_deletion:
-                    painter.setPen(QPen(Qt.GlobalColor.black, npx(1)))
+                    painter.setPen(QPen(Qt.GlobalColor.black, dpx(1)))
                     painter.drawText(QPoint(_reverse_x(solar_noon_x + 8) + dpx(5), origin_iy - dpx(4) - dpx(2)),
                                      tr("Click to delete."))
                     painter.setPen(QPen(Qt.GlobalColor.red, thin_line_width))
@@ -569,7 +569,7 @@ class PresetElevationChartWidget(QLabel):
                 painter.setPen(QPen(QColor(0xff4a23), line_width))
                 if self.sun_image is None:
                     sun_image = create_image_from_svg_bytes(PRESET_DIALOG_SUN_SVG)
-                    self.sun_image = sun_image.scaled(npx(sun_image.width()//2), npx(sun_image.height()//2))
+                    self.sun_image = sun_image.scaled(dpx(sun_image.width()//2), dpx(sun_image.height()//2))
                 painter.drawImage(QPoint(_reverse_x(sun_plot_x) - self.sun_image.width() // 2,
                                          sun_plot_y - self.sun_image.height() // 2), self.sun_image)
         painter.end()

@@ -27,7 +27,7 @@ from vdu_controls.qt_imports import QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING
 from vdu_controls.qt_imports import QT_TR_NOOP, Qt, QTimer, pyqtSignal, QPointF, QPoint
 from vdu_controls.qt_imports import QVBoxLayout, QComboBox, QCheckBox, QLabel, QSpinBox, QListWidget, \
     QStatusBar, QHBoxLayout, QListWidgetItem, QApplication, QInputDialog
-from vdu_controls.scaling import npx, dpx, desktop_font_height
+from vdu_controls.scaling import dpx, desktop_font_height
 from vdu_controls.solar_calc import calc_solar_lux
 from vdu_controls.svg import SWATCH_ICON_SVG, SUN_SVG, SVG_LIGHT_THEME_COLOR, SVG_SWATCH_ICON_BASE_COLOR, VDU_CONNECTED_ICON_SVG, \
     AMBIENT_PANEL_ICON_SVG
@@ -817,7 +817,7 @@ class LuxProfileWidget(QLabel):
 
         lux_color = QColor(0xfeC053)  # 0xfec053)
         if self.current_lux is not None:  # Draw a vertical-line at current lux
-            painter.setPen(QPen(lux_color, npx(2)))  # fbc21b 0xffdd30 #fec053
+            painter.setPen(QPen(lux_color, dpx(2)))  # fbc21b 0xffdd30 #fec053
             x_current_lux = self.x_origin + self.x_from_lux(self.current_lux)
             painter.drawLine(x_current_lux, self.y_origin + dpx(5), x_current_lux, self.y_origin - self.plot_height - dpx(5))
             for brightness in range(10, 101, 10):  # Draw y-axis ticks on lux current lux
@@ -832,7 +832,7 @@ class LuxProfileWidget(QLabel):
                 vdu_color_num = self.vdu_chart_colors[vdu_sid]
                 vdu_line_color = QColor(vdu_color_num)
                 y = self.y_origin - self.y_from_percent(brightness)
-                painter.setPen(QPen(Qt.GlobalColor.black, npx(1)))
+                painter.setPen(QPen(Qt.GlobalColor.black, dpx(1)))
                 painter.setBrush(vdu_line_color)
                 painter.drawPolygon(
                     QPolygon([QPoint(x_current_lux - 2 + tx // 2, y + 0 + ty // 2) for tx, ty in current_brightness_pointer]))
@@ -857,25 +857,25 @@ class LuxProfileWidget(QLabel):
                 else:  # Existing Preset point: vertical line; plus removal hint, a red triangle below axis
                     painter.setPen(QPen(Qt.GlobalColor.red if mouse_y > self.y_origin else Qt.GlobalColor.white, 2))
                     painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height - dpx(2))
-                    painter.setPen(QPen(Qt.GlobalColor.red, npx(2)))
+                    painter.setPen(QPen(Qt.GlobalColor.red, dpx(2)))
                     painter.setBrush(Qt.GlobalColor.white)
                     painter.drawPolygon(QPolygon([QPoint(x + tx, self.y_origin + dpx(9) + ty) for tx, ty in pyramid]))
                     if mouse_y > self.y_origin:  # Remove-Preset hint
-                        painter.setPen(QPen(Qt.GlobalColor.black, npx(1)))
+                        painter.setPen(QPen(Qt.GlobalColor.black, dpx(1)))
                         painter.drawText(x + dpx(5), self.y_origin - dpx(17), tr("Click remove preset at {} lux").format(lux))
             else:  # Potential new Point - show precise position for adding a new point
                 lux, brightness = self.lux_from_x(x - self.x_origin), self.percent_from_y(y - self.y_origin)
                 point_preset_name = ''
-                painter.setPen(QPen(Qt.GlobalColor.white, npx(1)))
+                painter.setPen(QPen(Qt.GlobalColor.white, dpx(1)))
                 painter.drawLine(self.x_origin, y, self.x_origin + self.plot_width + dpx(2), y)
                 painter.drawLine(x, self.y_origin, x, self.y_origin - self.plot_height - dpx(2))
                 if mouse_y > self.y_origin:  # Below axis, show a hint for adding a Preset point: draw a red triangle below axis
-                    painter.setPen(QPen(Qt.GlobalColor.red, npx(2)))
+                    painter.setPen(QPen(Qt.GlobalColor.red, dpx(2)))
                     painter.setBrush(Qt.GlobalColor.white)
                     painter.drawPolygon(QPolygon([QPoint(x + tx, self.y_origin + dpx(9) + ty) for tx, ty in pyramid]))
-                    painter.setPen(QPen(Qt.GlobalColor.black, npx(1)))
+                    painter.setPen(QPen(Qt.GlobalColor.black, dpx(1)))
                     painter.drawText(x + 10, self.y_origin - dpx(17), tr("Click to add preset at {} lux").format(lux))
-            painter.setPen(QPen(Qt.GlobalColor.black, npx(1)))
+            painter.setPen(QPen(Qt.GlobalColor.black, dpx(1)))
             painter.drawText(x + 10, y - 10, f"{lux} lux, {brightness}% {point_preset_name}")  # Tooltip lux and percent
 
         painter.end()
