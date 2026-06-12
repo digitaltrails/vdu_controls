@@ -181,7 +181,7 @@ def find_solar_noon(local_now: datetime, latitude: float, longitude: float) -> d
 
 def degrees_from_zone_center(latitude: float, longitude: float) -> float:
     """
-    Difference user's time-zone longitudinal-center their specified longitude.
+    Difference between the user's time-zone longitudinal-center their specified longitude.
     For example, the China's CST zone-center is at Beijing's longitude, a
     user in Kashgar is still in CST, but 40 degrees west of the CST center.
     Which may cause diagrams to look off.
