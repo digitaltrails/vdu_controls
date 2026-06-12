@@ -487,7 +487,7 @@ Version History
 ---------------
 * 2.6.5
   * Default to running one instance of vdu_controls, running another 
-    raises the existing instance (contributed by Mohammed Elsayed Ahmed).
+    raises the existing instance. Contributed by Mohammed Elsayed Ahmed.
   * The ambient-light-level slider now works even if location is not set.
   * The DDC-options laptop-panel option now defaults to enabled.
   * The Light-Metering-Dialog now offers two profile starter-templates
@@ -507,10 +507,11 @@ Version History
     defined multiple times, the first definition is kept and any following 
     definitions are logged (rather than silently overwriting the first). 
     This allows some monitors with incorrect metadata to work out-of-the-box.
+    Contributed by Mohammed Elsayed Ahmed.
   * When parsing monitor metadata, well known "Continuous" VCP-feature 
     definitions, such as brightness, will always be regarded as "Continuous"
     and any attached 'Value:' metadata that implies otherwise will be ignored
-    (with a warning logged). 
+    (with a warning logged).  Contributed by Mohammed Elsayed Ahmed.
     This allows some monitors with incorrect metadata to work out-of-the-box.
   * The script's source code has been refactored into multiple source files.
   * The executable is now a Python _zipapp_ containing the source hierarchy.
