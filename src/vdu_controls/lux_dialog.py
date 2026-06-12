@@ -451,6 +451,9 @@ class LuxDialog(SubWinDialog, DialogSingletonMixin):
 
     def choose_template(self) -> None:
         sid = self.profile_plot.current_vdu_sid
+        if sid == '':
+            MBox(MIcon.Critical, tr("No displays available.")).exec()
+            return
         #icon = create_icon_from_svg_bytes(AMBIENT_PANEL_ICON_SOURCE)
         template_chooser = ChoiceBox(title=tr("Choose profile for {}").format(sid),
                                      choices=[tr(template.name) for template in LuxProfileTemplates.LIST])
@@ -894,7 +897,9 @@ class LuxProfileWidget(QLabel):
             event.accept()
 
     def lux_point_edit(self, x, y) -> bool:
-        assert self.current_vdu_sid != ''
+        if self.current_vdu_sid == '':
+            MBox(MIcon.Critical, tr("No displays available.")).exec()
+            return False
         vdu_data = self.profiles_map[self.current_vdu_sid]
         _, _, existing_lux, existing_percent, existing_point = self.find_close_to(x, y, self.current_vdu_sid)
         if existing_lux is not None:  # Remove
@@ -908,6 +913,9 @@ class LuxProfileWidget(QLabel):
         return True
 
     def lux_preset_edit(self, x) -> bool:
+        if self.current_vdu_sid == '':
+            MBox(MIcon.Critical, tr("No displays available.")).exec()
+            return False
         if point := self.find_preset_point_close_to(x):  # Delete
             self.preset_points.remove(point)
             for vdu_sid, profile in self.profiles_map.items():

@@ -70,7 +70,7 @@ def lux_create_device(device_name: str) -> LuxMeterDevice:
     if not pathlib.Path(device_name).exists():
         raise LuxDeviceException(tr("Failed to set up {} - path does not exist.").format(device_name))
     if not os.access(device_name, os.R_OK):
-        raise LuxDeviceException(tr("Failed to set up {} - no read access to device.").format({device_name}))
+        raise LuxDeviceException(tr("Failed to set up {} - no read access to device.").format(device_name))
     if pathlib.Path(device_name).is_char_device():
         return LuxMeterSerialDevice(device_name)
     elif pathlib.Path(device_name).is_fifo():
