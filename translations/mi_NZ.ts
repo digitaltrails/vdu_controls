@@ -868,18 +868,23 @@ DF: Tauwehe rā, te ōwehenga o te whakamāramatanga o roto ki te whakamāramata
     </message>
     <message>
         <location filename="../src/vdu_controls/lux_dialog.py" line="455" />
+        <source>No displays available.</source>
+        <translation>Karekau he whakaaturanga e waatea ana.</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/lux_dialog.py" line="458" />
         <source>Choose profile for {}</source>
         <translation>Kōwhiri kōtaha mō {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="478" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="481" />
         <source>There are unsaved profile changes?</source>
         <translation>He huringa kōtaha kāore anō kia tiakina?</translation>
     </message>
 </context><context>
     <name>LuxGaugeWidget</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="530" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="533" />
         <source>Left:	 Rolling display of metered lux (ML).
 Right:	 1) Estimated outside solar illumination (Eo) for
 	     the set geolocation for the current day.
@@ -898,17 +903,17 @@ Eo = taumau_wae * sin(rauweroki(teitei_rā)) * 10 ** (-0.1 * papatipu_hau)
 Ka whakamahia ngā whakatau tata o Ei e te kōwhiringa inenga hāwhā-aunoa.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="624" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="627" />
         <source>Location Unknown</source>
         <translation>Tauwāhi Kaore e Mohiotia</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="666" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="669" />
         <source>Eo={:,} lux    DF={:,.4f}</source>
         <translation>Eo={:,} lux    DF={:,.4f}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="668" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="671" />
         <source>Eo=?   DF=?   (location not set)</source>
         <translation>Eo=?   DF=?   (wāhi kāore i tautuhia)</translation>
     </message>
@@ -951,38 +956,44 @@ Ka whakamahia ngā whakatau tata o Ei e te kōwhiringa inenga hāwhā-aunoa.</tr
 </context><context>
     <name>LuxProfileWidget</name>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="729" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="732" />
         <source>Lux Brightness Response Profiles</source>
         <translation>Kōtaha Urupare Kanapa Lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="747" />
-        <location filename="../src/vdu_controls/lux_dialog.py" line="745" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="750" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="748" />
         <source>Brightness %</source>
         <translation>Kanapa %</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="862" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="865" />
         <source>Click remove preset at {} lux</source>
         <translation>Pāwhiri ki te tango i te tautapa i {} lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="874" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="877" />
         <source>Click to add preset at {} lux</source>
         <translation>Pāwhiri ki te tāpiri i te tautapa i {} lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="926" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="917" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="901" />
+        <source>No displays available.</source>
+        <translation>Karekau he whakaaturanga e waatea ana.</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/lux_dialog.py" line="934" />
         <source>Select a Preset to attach at {} lux</source>
         <translation>Tīpakohia he Tatūkē hei āpiti ki {} lux</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="942" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="950" />
         <source>There are no Presets.</source>
         <translation>Kāore he Tautapanga.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/lux_dialog.py" line="942" />
+        <location filename="../src/vdu_controls/lux_dialog.py" line="950" />
         <source>Use the Presets Dialog to create some.</source>
         <translation>Whakamahia te Pārongo Tautapanga hei waihanga i ētahi.</translation>
     </message>
@@ -1370,103 +1381,103 @@ mō te VDU</translation>
         <translation>Tatūkē hōu</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1314" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1316" />
         <location filename="../src/vdu_controls/preset_dialog.py" line="1042" />
         <source>Controls to include</source>
         <translation>Nga mana hei whakauru</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1096" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1098" />
         <source>Clear</source>
         <translation>Whakawātea</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1098" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1100" />
         <source>Clear edits and enter a new preset using the defaults.</source>
         <translation>Whakawātea ngā whakatikatika ka whakauru i tētahi tautapa hou mā te whakamahi i ngā taunoa.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1099" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1101" />
         <source>Save</source>
         <translation>Tiaki</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1100" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1102" />
         <source>Save current VDU settings to Preset.</source>
         <translation>Tiaki i ngā tautuhinga VDU o nāianei ki te Tautapa.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1101" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1103" />
         <source>Revert</source>
         <translation>Whakahoki</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1103" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1105" />
         <source>Abandon edits, revert VDU and Preset settings.</source>
         <translation>Whakarere ngā whakatikatika, whakahoki i ngā tautuhinga VDU me Tautapa.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1104" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1106" />
         <source>Close</source>
         <translation>Kati</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1157" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1159" />
         <source>Create an initialization-preset for {}.</source>
         <translation>Waihangatia he tautapa tīmatanga mō {}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1158" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1160" />
         <source>Initialization-presets are restored at startup or when ever the VDU is subsequently detected.</source>
         <translation>Ka whakaorahia ngā tautapa tīmatanga i te whakaaratanga, i te wā e kitea ana te VDU i muri mai rānei.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1198" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1200" />
         <source>Choose which settings to save for {}</source>
         <translation>Kōwhiri ko ngā tautuhinga hei tiaki mō {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1298" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1300" />
         <source>Delete {}?</source>
         <translation>Mukua {}?</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1307" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1309" />
         <source>Deleted {}</source>
         <translation>Kua mukua {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1318" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1320" />
         <source>Edit {}</source>
         <translation>Whakatika {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1322" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1324" />
         <source>Controls to include in {}</source>
         <translation>Mana hei whakauru i roto i {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1366" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1368" />
         <source>Update existing {} preset with current monitor settings?</source>
         <translation>Whakahou i te tautapa {} o nāianei ki ngā tautuhinga mātiti o nāianei?</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1368" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1370" />
         <source>Replace existing '{}' preset?</source>
         <translation>Whakakapi i te tautapa '{}' o nāianei?</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1370" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1372" />
         <source>Save current edit?</source>
         <translation>Tiaki i te whakatikatika o nāianei?</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1384" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1386" />
         <source>Duplicates existing Preset {}, save anyway?</source>
         <translation>Ka tārua i te Tautapa {} o nāianei, tiakina ahakoa?</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/preset_dialog.py" line="1404" />
+        <location filename="../src/vdu_controls/preset_dialog.py" line="1406" />
         <source>Saved {}</source>
         <translation>Kua tiakina {}</translation>
     </message>
@@ -1789,52 +1800,52 @@ ka whakahokia {1} ki nga taunoa tono</translation>
         <translation>Kei te rapu mātiti DDC...</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1160" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1161" />
         <source>Laptop {} missing.</source>
         <translation>Pona {} ngaro.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1240" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1241" />
         <source>Refresh settings from monitors</source>
         <translation>Whakahou i ngā tautuhinga mai i ngā mātiti</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1284" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1285" />
         <source>Checking Presets</source>
         <translation>Kei te arowhai Tautapanga</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1333" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1334" />
         <source>Auto</source>
         <translation>Aunoa</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1341" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1342" />
         <source>Lighting: {}</source>
         <translation>Rama: {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1460" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1461" />
         <source>No controllable monitors found.</source>
         <translation>Kāore i kitea he mātiti e taea ana te whakahaere.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1461" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1462" />
         <source>Is ddcutil or ddcutil-service installed and working?</source>
         <translation>Kua tāutahia a ddcutil, ddcutil-service rānei, ā, kei te mahi?</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1462" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1463" />
         <source>Most recent error: {}</source>
         <translation>Hapa o nā tata nei: {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1465" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1466" />
         <source>Failed to obtain capabilities for monitor {0} {1} {2}.</source>
         <translation>I rahua te whiwhi kaha mo te aroturuki {0} {1} {2}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1466" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1467" />
         <source>Cannot automatically configure this monitor.
  You can choose to:
  1: Retry obtaining the capabilities.
@@ -1858,37 +1869,37 @@ Tērā pea he hapa wā noa, ka taea pea e te whakamātau anō
 </translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1475" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1476" />
         <source>Discarding {} monitor.</source>
         <translation>Te whakakore i te mātiti {}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1476" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1477" />
         <source>Remove "{0}" from {1} capabilities override to reverse this decision.</source>
         <translation>Tango "{0}" mai i te {1} kaha whakahuri ki te huri i tenei whakatau.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1480" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1481" />
         <source>Ignoring {} monitor for now.</source>
         <translation>Te waiho i te mātiti {} mō nāianei.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1481" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1482" />
         <source>Will retry when vdu_controls is next started</source>
         <translation>Ka whakamātau anō ka whakaara ake a vdu_controls</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1484" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1485" />
         <source>Assuming {} has brightness and contrast controls.</source>
         <translation>E whakaaro ana kei a {} ngā mana whakahaere kanapa me te rerekētanga.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1485" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1486" />
         <source>Wrote {0} config files to {1}.</source>
         <translation>I tuhia e {0} nga konae whirihora ki a {1}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1486" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1487" />
         <source>
 Please check these files and edit or remove them if they cause further issues.</source>
         <translation>
