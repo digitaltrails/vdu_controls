@@ -277,7 +277,7 @@ class PresetWeatherWidget(QWidget):
                     log.info(f"Creating {condition_path.as_posix()}")
                     weather_file.write(condition_content)
 
-    def verify_weather_location(self, location: GeoLocation) -> None:
+    def verify_weather_location(self, location: GeoLocation | None) -> None:
         if not self.main_config.is_set(ConfOpt.WEATHER_ENABLED) or location is None:
             return
         place_name = location.place_name if location.place_name is not None else 'IP-address'
@@ -326,7 +326,7 @@ class PresetWeatherWidget(QWidget):
                 self.chooser.setCurrentIndex(i)
                 return
 
-    def update_location(self, location: GeoLocation) -> None:
+    def update_location(self, location: GeoLocation | None) -> None:
         self.location = location
         self.verify_weather_location(self.location)
 
@@ -1069,9 +1069,11 @@ class PresetsDialog(SubWinDialog, DialogSingletonMixin):  # TODO has become rath
         self.df_widget = PresetDaylightFactorWidget()
         bottom_right_layout.addWidget(self.df_widget)
 
-        self.weather_widget.setDisabled(self.at_elevation_widget.location is None)
-        self.weather_widget.setVisible(self.main_config.is_set(ConfOpt.WEATHER_ENABLED))
         self.weather_widget.update_location(self.at_elevation_widget.location)
+        self.weather_widget.setDisabled(self.at_elevation_widget.location is None)
+
+        self.weather_widget.setVisible(self.main_config.is_set(ConfOpt.WEATHER_ENABLED))
+
         bottom_right_layout.addWidget(self.weather_widget)
         bottom_right_layout.addStretch(1)
 

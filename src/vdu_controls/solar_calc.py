@@ -187,8 +187,11 @@ def degrees_from_zone_center(latitude: float, longitude: float) -> float:
     Which may cause diagrams to look off.
     """
     solar_noon = find_solar_noon(zoned_now(), latitude, longitude)  # Noon time
-    utc_offset = solar_noon.utcoffset().total_seconds() / 3600  # Hours offset from UTC
-    zone_center = utc_offset * 15  # UTC offset * Earth 15 degrees/hour rotation -> approx zone center meridian.
+    utcoffset = solar_noon.utcoffset()
+    if utcoffset is None:
+        return 0.0
+    offset_hours = utcoffset.total_seconds() / 3600  # Hours offset from UTC
+    zone_center = offset_hours * 15  # UTC offset * Earth 15 degrees/hour rotation -> approx zone center meridian.
     longitude_deviation = longitude - zone_center  # diff location.longitude from zone-center
     return longitude_deviation
 

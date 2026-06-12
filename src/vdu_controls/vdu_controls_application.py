@@ -1157,7 +1157,8 @@ class VduAppWindow(QMainWindow):
             main_config.write_file(ConfIni.get_path('vdu_controls'), overwrite=True)  # Stops release notes from being repeated.
 
         if not DdcutilPanelImpl.is_available():
-            self.main_panel.status_message(tr('Laptop {} missing.').format(DdcutilPanelImpl.BRIGHTNESSCTL_EXE), timeout_ms=5000)
+            if self.main_panel:
+                self.main_panel.status_message(tr('Laptop {} missing.').format(DdcutilPanelImpl.BRIGHTNESSCTL_EXE), timeout_ms=5000)
 
     def is_inactive(self):
         if get_app_instance().applicationState() != Qt.ApplicationState.ApplicationInactive:

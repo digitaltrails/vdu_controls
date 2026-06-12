@@ -76,8 +76,8 @@ class ConfOptDef:
     ui_label: str | None = None   # If None, then it won't appear in the Settings Editor.
     help: str = ''
     sub_group: SubGroup = SubGroup.NONE   # UI grouping of items.
-    related: List[ConfOpt] = field(default_factory=list)      # Related conf_names, the user will see a message box suggesting them.
-    requires: List[ConfOpt] = field(default_factory=list)    # A pre-requisite boolean conf_name, user will be warned to set them.
+    related: List[ConfOptDef] = field(default_factory=list)      # Related conf_names, the user will see a message box suggesting them.
+    requires: List[ConfOptDef] = field(default_factory=list)    # A pre-requisite boolean conf_name, user will be warned to set them.
     warning: str = ''      # If set, this message will pop up when the setting is set.
     off_warning: str = ''  # If set, this message will pop up when the item is unset.
 

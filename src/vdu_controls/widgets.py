@@ -201,7 +201,7 @@ class ChoiceBox(QDialog):
             icon_label.setPixmap(pixmap)
         else:
             icon_label.setPixmap(si(self, StdPixmap.SP_MessageBoxQuestion).pixmap(dpx(48), dpx(48)))
-        horizontal_layout.addWidget(icon_label, alignment=Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        horizontal_layout.addWidget(icon_label, alignment=Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)  # type: ignore
         vertical_layout = QVBoxLayout(self)
         horizontal_layout.addLayout(vertical_layout)
         heading = QLabel(title)
@@ -215,7 +215,7 @@ class ChoiceBox(QDialog):
             vertical_layout.addSpacing(dpx(5))
             self.button_group.addButton(radio, choice_number)
         vertical_layout.addSpacing(dpx(5))
-        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)  # type: ignore
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
         vertical_layout.addWidget(button_box)
