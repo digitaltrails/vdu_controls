@@ -56,7 +56,7 @@ from vdu_controls.vdu_controller import VduController
 from vdu_controls.vdu_controls_config import ConfOpt, VduControlsConfig, VcpCapability
 from vdu_controls.vdu_exceptions import VduException
 from vdu_controls.widgets import MIcon, MBox, MBtn, \
-    alter_margins, DialogSingletonMixin, ToolButton
+    alter_margins, DialogSingletonMixin, ToolButton, MarkdownSplashScreen
 from vdu_controls.work_scheduler import WorkerThread, ScheduleWorker, thread_pid, SchedulerJob, SchedulerJobType
 
 # Use Linux/UNIX signals to trigger preset changes - 16 presets should be enough for anyone.
@@ -1080,18 +1080,20 @@ class VduAppWindow(QMainWindow):
         #self.app_context_menu.setTitle("VDU Controls ")  # Populate titlebar-menu (if it's enabled for Plasma Titlebars).
         #self.menuBar().addMenu(self.app_context_menu)    # TODO - make a proper menu - this will be a submenu.
 
-        splash_pixmap = create_pixmap_from_svg_bytes(VDU_CONTROLS_SPLASH_SVG, dpx(256), dpx(180))
-        splash = QSplashScreen(
-            splash_pixmap,
-            Qt.WindowType.WindowStaysOnTopHint) if main_config.is_set(ConfOpt.SPLASH_SCREEN_ENABLED) else None
-        if splash is not None:
-            splash.show()
-            splash.raise_()  # Attempt to force it to the top with raise and activate
-            splash.activateWindow()
+
+        if main_config.is_set(ConfOpt.SPLASH_SCREEN_ENABLED):
+            splash_pixmap = create_pixmap_from_svg_bytes(VDU_CONTROLS_SPLASH_SVG, dpx(256), dpx(180))
+            splash_screen = MarkdownSplashScreen(splash_pixmap, f"{APPNAME} {VDU_CONTROLS_VERSION}")
+            splash_screen.show()
+            splash_screen.raise_()  # Attempt to force it to the top with raise and activate
+            splash_screen.activateWindow()
             QApplication.processEvents()
+        else:
+            splash_screen = None
+
         self.app_icon: QIcon | None = None
         self.tray_icon: QIcon | None = None
-        self.initialise_app_icon(splash_pixmap)
+        self.initialise_app_icon()
 
         def f10_func():
             self.app_context_menu.exec(QCursor.pos())
@@ -1122,10 +1124,10 @@ class VduAppWindow(QMainWindow):
             app_instance.setAttribute(QT5_USE_HIGH_DPI_PIXMAPS)  # Make sure all icons use HiDPI - toolbars don't by default, so force it.
 
         def _splash_message_action(message) -> None:
-            if splash is not None:
+            if splash_screen is not None:
                 log.info(f"splash_message: {repr(message)}")
-                splash.showMessage(f"\n\n{APPNAME} {VDU_CONTROLS_VERSION}\n{message}",
-                                   Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
+                splash_screen.show_message(f"{message}")
+                                   #Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
                 QApplication.processEvents()
 
         self.splash_message_qtsignal.connect(_splash_message_action)
@@ -1147,10 +1149,10 @@ class VduAppWindow(QMainWindow):
         else:
             self.show_main_window()
 
-        if splash is not None:
-            splash.finish(self)
-            splash.deleteLater()
-            splash = None
+        if splash_screen is not None:
+            splash_screen.finish(self)
+            splash_screen.deleteLater()
+            splash_screen = None
 
         if main_config.file_path is None or main_config.ini_content.get_version() < VDU_CONTROLS_VERSION_TUPLE:  # New version...
             release_notes()
@@ -1215,7 +1217,7 @@ class VduAppWindow(QMainWindow):
         get_app_instance().quit()
         sys.exit(0)  # Just in case self.app.quit() errors
 
-    def initialise_app_icon(self, splash_pixmap: QPixmap | None = None):
+    def initialise_app_icon(self):
         self.app_icon = QIcon()
         self.app_icon.addPixmap(create_pixmap_from_svg_bytes(svg.VDU_CONTROLS_ICON_SVG))
         tray_theme_type = self.get_tray_theme_type()

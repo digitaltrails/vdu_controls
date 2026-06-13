@@ -1,44 +1,53 @@
-<!-- Final Polished Monitor SVG with Oxygen-Inspired Geometric Screen -->
-<svg viewBox="0 0 800 500" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+<!-- Final Polished Monitor SVG with Realistic Office Ambient Lighting -->
+<svg viewBox="0 0 800 500" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.w3.org/2000/svg ">
   <defs>
-    <!-- 1. BASE BACKGROUND GRADIENT (Deep rich blue blending up to a mid-tone cyan) -->
+    <!-- 1. BASE GRAPHIC GRADIENT: Rich, saturated blues with no white, ensuring black text contrasts perfectly -->
     <linearGradient id="oxygenBaseGradient" x1="0%" y1="100%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#2a72de"/>
-      <stop offset="60%" stop-color="#4ea7e9"/>
-      <stop offset="100%" stop-color="#79cbf5"/>
+      <stop offset="0%" stop-color="#1c56bd"/>
+      <stop offset="60%" stop-color="#3b9ce0"/>
+      <stop offset="100%" stop-color="#64beed"/>
     </linearGradient>
 
-    <!-- 2. GEOMETRIC OVERLAY GRADIENT (Bright soft cyan fading to transparent) -->
-    <linearGradient id="facetOverlayGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#a3e3ff" stop-opacity="0.45"/>
-      <stop offset="50%" stop-color="#6ec8f7" stop-opacity="0.15"/>
-      <stop offset="100%" stop-color="#4ea7e9" stop-opacity="0.0"/>
+    <!-- 2. PHOTO-REALISTIC OFFICE OVERHEAD LIGHT REFLECTION (Simulates soft fluorescent/LED ceiling panels) -->
+    <linearGradient id="officeCeilingGlow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.32"/>
+      <stop offset="15%" stop-color="#ffffff" stop-opacity="0.22"/>
+      <stop offset="45%" stop-color="#ffffff" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.0"/>
     </linearGradient>
 
-    <!-- Metallic gradient for the outer premium bezel -->
+    <!-- 3. PHOTO-REALISTIC SIDE WINDOW/AMBIENT BOUNCE (Soft vertical light gradient from a side office window) -->
+    <linearGradient id="officeWindowGlow" x1="100%" y1="0%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.12"/>
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="0.03"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.0"/>
+    </linearGradient>
+
+    <!-- Premium Gunmetal/Steel Outer Bezel Gradient -->
     <linearGradient id="bezelMetallic" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#2a2e37"/>
-      <stop offset="50%" stop-color="#404654"/>
-      <stop offset="100%" stop-color="#2a2e37"/>
+      <stop offset="0%" stop-color="#4a5263"/>
+      <stop offset="50%" stop-color="#737f96"/>
+      <stop offset="100%" stop-color="#4a5263"/>
     </linearGradient>
 
     <!-- Cylindrical 3D gradient for the round straight column stem -->
     <linearGradient id="columnStemGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#1f232b"/>
-      <stop offset="30%" stop-color="#454c5c"/>
-      <stop offset="60%" stop-color="#2a2e37"/>
-      <stop offset="100%" stop-color="#16191f"/>
+      <stop offset="0%" stop-color="#3b4252"/>
+      <stop offset="30%" stop-color="#7a88a1"/>
+      <stop offset="60%" stop-color="#4c566a"/>
+      <stop offset="100%" stop-color="#2e3440"/>
     </linearGradient>
 
     <!-- Premium gradient for the low-profile rectangular base plate -->
     <linearGradient id="rectangularBaseGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#323845"/>
-      <stop offset="50%" stop-color="#1f232b"/>
-      <stop offset="100%" stop-color="#14161c"/>
+      <stop offset="0%" stop-color="#616e85"/>
+      <stop offset="50%" stop-color="#434c5c"/>
+      <stop offset="100%" stop-color="#2e3440"/>
     </linearGradient>
 
-    <!-- HIGH-INTENSITY DOUBLE HALO FILTER: Amplified for intense dark theme isolation -->
-    <filter id="highIntensityGlow" x="-30%" y="-30%" width="160%" height="160%">
+    <!-- HIGH-INTENSITY DOUBLE HALO FILTER: Extended bounding box so the glow reaches the absolute bottom base plate -->
+    <filter id="highIntensityGlow" x="-30%" y="-30%" width="160%" height="170%">
       <!-- Deep foundational shadow for anchoring -->
       <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#000000" flood-opacity="0.7"/>
       <!-- Inner high-density core neon bloom -->
@@ -47,7 +56,7 @@
       <feDropShadow dx="0" dy="0" stdDeviation="32" flood-color="#90caf9" flood-opacity="0.4"/>
     </filter>
 
-    <!-- Clip-path to perfectly lock the geometric shards inside the monitor's screen boundaries -->
+    <!-- Clip-path to perfectly lock the display inside the monitor's screen boundaries -->
     <clipPath id="screenClip">
       <rect x="66" y="56" width="668" height="358" rx="4" ry="4"/>
     </clipPath>
@@ -60,26 +69,24 @@
     <rect x="50" y="40" width="700" height="390" rx="12" ry="12" fill="url(#bezelMetallic)"/>
 
     <!-- Amplified Chamfer Line for crisp edge definition against deep dark backgrounds -->
-    <rect x="51" y="41" width="698" height="388" rx="11" ry="11" fill="none" stroke="#8ba2cc" stroke-width="1.5" opacity="0.75"/>
+    <rect x="51" y="41" width="698" height="388" rx="11" ry="11" fill="none" stroke="#b4c6e7" stroke-width="1.5"
+          opacity="0.85"/>
 
-    <!-- 2. INTERNAL DISPLAY SCREEN AREA (With Nested Clip-Path for Geometric Shapes) -->
+    <!-- 2. INTERNAL DISPLAY SCREEN AREA -->
     <g clip-path="url(#screenClip)">
-      <!-- Base Blue Canvas Color -->
+      <!-- Base Rich Blue Screen Graphic -->
       <rect x="66" y="56" width="668" height="358" fill="url(#oxygenBaseGradient)"/>
 
-      <!-- Geometric Facet 1: Large sweeping diagonal light wedge from top-left -->
-      <!-- Coordinates re-mapped to naturally align with the shifted screen context (x=66, y=56) -->
-      <polygon points="66,56 500,56 300,414 66,414" fill="url(#facetOverlayGradient)"/>
+      <!-- PHOTO-REALISTIC LAYER 1: Soft Overhead Ceiling Light Glare Reflection -->
+      <rect x="66" y="56" width="668" height="358" fill="url(#officeCeilingGlow)"/>
 
-      <!-- Geometric Facet 2: Subtle secondary cross-cutting shard from the bottom-left -->
-      <polygon points="66,240 400,150 66,414" fill="#ffffff" opacity="0.08"/>
-
-      <!-- Geometric Facet 3: Bright accent stripe on the upper left corner -->
-      <polygon points="66,56 266,56 66,216" fill="#ffffff" opacity="0.12"/>
+      <!-- PHOTO-REALISTIC LAYER 2: Subtle Ambient Side-Window Light Bounce -->
+      <rect x="66" y="56" width="668" height="358" fill="url(#officeWindowGlow)"/>
     </g>
 
-    <!-- Inner Bezel Border Frame Shadow (Renders over the clip group to tuck it down in the frame) -->
-    <rect x="66" y="56" width="668" height="358" rx="4" ry="4" fill="none" stroke="#11141a" stroke-width="1.5" opacity="0.8"/>
+    <!-- Inner Bezel Border Frame Shadow (Renders a realistic physical recess shadow where the glass hits the frame) -->
+    <rect x="66" y="56" width="668" height="358" rx="4" ry="4" fill="none" stroke="#161a21" stroke-width="2"
+          opacity="0.85"/>
 
     <!-- 3. POWER LED INDICATOR -->
     <circle cx="400" cy="422" r="3" fill="#00e5ff" opacity="0.9"/>
@@ -89,16 +96,16 @@
     <rect x="376" y="430" width="48" height="46" fill="url(#columnStemGradient)"/>
 
     <!-- Top shadow intersection where stem meets the display -->
-    <path d="M 376 430 L 424 430" stroke="#11141a" stroke-width="2"/>
+    <path d="M 376 430 L 424 430" stroke="#252a33" stroke-width="2"/>
 
     <!-- 5. RECTANGULAR PROFILE BASE PLATE -->
     <rect x="290" y="474" width="220" height="12" rx="2" ry="2" fill="url(#rectangularBaseGradient)"/>
 
     <!-- Beveled top edge highlight for the base plate -->
-    <rect x="291" y="475" width="218" height="1" fill="#565f73" opacity="0.4"/>
+    <rect x="291" y="475" width="218" height="1.5" fill="#a3b2cc" opacity="0.6"/>
 
     <!-- Dark baseline separation -->
-    <rect x="290" y="485" width="220" height="1" fill="#0d0f13"/>
+    <rect x="290" y="485" width="220" height="1" fill="#1a1d24"/>
 
   </g>
 </svg>

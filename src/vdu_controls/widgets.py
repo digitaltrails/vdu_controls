@@ -12,7 +12,7 @@ from vdu_controls.qt_imports import (QTimer, Qt, QRect, QPixmap, QPainter, QPen,
                                      QSize, QLayout, QLabel, QStyle, QDir, QMessageBox, QFileDialog, QVBoxLayout, QDialog,
                                      QSlider, QLineEdit, QMouseEvent, QMargins, QSvgWidget, QPushButton, QHBoxLayout,
                                      QtCore, QTextEdit, QT5_QPAINTER_HIGH_QUALITY_ANTIALIASING,
-                                     QButtonGroup, QRadioButton, QDialogButtonBox)
+                                     QButtonGroup, QRadioButton, QDialogButtonBox, QApplication, QSplashScreen)
 from vdu_controls.scaling import desktop_font_height, dpx
 
 
@@ -376,3 +376,43 @@ class ToolButton(QToolButton):
         painter.end()
         self.setIcon(QIcon(pixmap))
         self._busy_angle = (self._busy_angle + 8) % 360  # Advance the angle for the next frame
+
+
+class MarkdownSplashScreen(QSplashScreen):
+    def __init__(self, pixmap: QPixmap, title_text:str):
+        super().__init__(pixmap, Qt.WindowType.WindowStaysOnTopHint)
+
+        h = 4
+        self.title_html = f"<span style='color: #f0f0f0'><h{h}>{title_text}</h{h}></span>"
+        self.message_list: List[str] = []
+
+        p_width = pixmap.width()
+        p_height = pixmap.height()
+        left_margin = right_margin = int(p_width * 0.15)
+        top_margin = int(p_height * 0.15)
+        bottom_margin = int(p_height * 0.18)
+
+        layout = QVBoxLayout(self)  # Overlay onto the splash widget
+        layout.setContentsMargins(left_margin, top_margin, right_margin, bottom_margin)
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+
+        self.text_overlay_label = QLabel(self)
+        self.text_overlay_label.setTextFormat(Qt.TextFormat.AutoText)
+        self.text_overlay_label.setWordWrap(True)
+        layout.addWidget(self.text_overlay_label)
+
+        self.show_message("")  # Display the title now
+
+    def show_message(self, message):
+        """Call this method to append text lines underneath the static title."""
+
+        if message:
+            self.message_list.append(message)
+
+        msg_html = '<br/>'.join([f"&bull; {msg}" for msg in self.message_list][-5:])  # Last 5 messages
+        combined_html = f"{self.title_html}<span style='color: #f0f0f0; xcolor: #cbd5e1;font-size: small;'>{msg_html}</span>"
+
+        self.text_overlay_label.setText(combined_html)
+
+        # Forces Qt to immediately redraw the screen during heavy background loading
+        QApplication.processEvents()
