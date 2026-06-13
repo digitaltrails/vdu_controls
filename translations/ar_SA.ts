@@ -1472,6 +1472,23 @@ Initialization-Preset</source>
         <translation>تم حفظ {}</translation>
     </message>
 </context><context>
+    <name>Release</name>
+    <message>
+        <location filename="../src/vdu_controls/release.py" line="14" />
+        <source>Welcome to vdu_controls {}</source>
+        <translation>مرحبًا بك في vdu_controls {}</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/release.py" line="15" />
+        <source>Please read the online release notes:</source>
+        <translation>يرجى قراءة ملاحظات الإصدار عبر الإنترنت:</translation>
+    </message>
+    <message>
+        <location filename="../src/vdu_controls/release.py" line="20" />
+        <source>&lt;b&gt;&lt;span style="color: #feae0f;"&gt;⚠&lt;/span&gt; Important notice:&lt;/b&gt; the &lt;i&gt;weather feature&lt;/i&gt; may be removed from the next version.&lt;/b&gt; If you rely on it, please comment on issue &lt;a href="https://github.com/digitaltrails/vdu_controls/issues/115"&gt;#155&lt;/a&gt;.&lt;br/&gt;&lt;br/&gt;&lt;b&gt;&lt;span style='color: #2196F3;'&gt;🛈&lt;/span&gt; What's new:&lt;/b&gt; usability improvements and code refactoring. See the online release notes for details.&lt;br/&gt;&lt;br/&gt;</source>
+        <translation>&lt;b&gt;&lt;span style="color: #feae0f;"&gt;⚠&lt;/span&gt; ملاحظة مهمة:&lt;/b&gt; قد تتم إزالة &lt;i&gt;ميزة الطقس&lt;/i&gt; من الإصدار التالي.&lt;/b&gt; إذا كنت تعتمد عليها، فيرجى التعليق على المشكلة &lt;a href="https://github.com/digitaltrails/vdu_controls/issues/115"&gt;#155&lt;/a&gt;.&lt;br/&gt;&lt;br/&gt;&lt;b&gt;&lt;span style=\'color: #2196F3;'&gt;🛈&lt;/span&gt; ما الجديد:&lt;/b&gt; تحسينات في قابلية الاستخدام وإعادة هيكلة التعليمات البرمجية. راجع ملاحظات الإصدار عبر الإنترنت للحصول على التفاصيل.&lt;br/&gt;&lt;br/&gt;</translation>
+    </message>
+</context><context>
     <name>SettingsDialog</name>
     <message>
         <location filename="../src/vdu_controls/settings_editor.py" line="65" />
@@ -1781,57 +1798,57 @@ and restore {1} to application defaults</source>
 </context><context>
     <name>VduAppWindow</name>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1132" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1134" />
         <source>Looking for DDC monitors...</source>
         <translation>جاري البحث عن شاشات DDC...</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1161" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1163" />
         <source>Laptop {} missing.</source>
         <translation>الكمبيوتر المحمول {} مفقود.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1241" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1243" />
         <source>Refresh settings from monitors</source>
         <translation>تحديث الإعدادات من الشاشات</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1285" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1287" />
         <source>Checking Presets</source>
         <translation>جاري التحقق من الإعدادات المسبقة</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1334" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1336" />
         <source>Auto</source>
         <translation>تلقائي</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1342" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1344" />
         <source>Lighting: {}</source>
         <translation>الإضاءة: {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1461" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1463" />
         <source>No controllable monitors found.</source>
         <translation>لم يتم العثور على شاشات قابلة للتحكم.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1462" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1464" />
         <source>Is ddcutil or ddcutil-service installed and working?</source>
         <translation>هل ddcutil أو ddcutil-service مثبت ويعمل؟</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1463" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1465" />
         <source>Most recent error: {}</source>
         <translation>أحدث خطأ: {}</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1466" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1468" />
         <source>Failed to obtain capabilities for monitor {0} {1} {2}.</source>
         <translation>فشل الحصول على إمكانيات الشاشة {0} {1} {2}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1467" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1469" />
         <source>Cannot automatically configure this monitor.
  You can choose to:
  1: Retry obtaining the capabilities.
@@ -1855,37 +1872,37 @@ Possibly just a timing error, maybe a retry will work
 </translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1476" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1478" />
         <source>Discarding {} monitor.</source>
         <translation>جارٍ تجاهل شاشة {}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1477" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1479" />
         <source>Remove "{0}" from {1} capabilities override to reverse this decision.</source>
         <translation>قم بإزالة "{0}" من تجاوز إمكانيات {1} لإلغاء هذا القرار.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1481" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1483" />
         <source>Ignoring {} monitor for now.</source>
         <translation>جارٍ تجاهل شاشة {} حالياً.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1482" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1484" />
         <source>Will retry when vdu_controls is next started</source>
         <translation>سيتم إعادة المحاولة عند بدء تشغيل vdu_controls في المرة القادمة</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1485" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1487" />
         <source>Assuming {} has brightness and contrast controls.</source>
         <translation>بافتراض أن {} يحتوي على عناصر تحكم في السطوع والتباين.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1486" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1488" />
         <source>Wrote {0} config files to {1}.</source>
         <translation>كتب {0} ملفات التكوين إلى {1}.</translation>
     </message>
     <message>
-        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1487" />
+        <location filename="../src/vdu_controls/vdu_controls_application.py" line="1489" />
         <source>
 Please check these files and edit or remove them if they cause further issues.</source>
         <translation>

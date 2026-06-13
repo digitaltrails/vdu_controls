@@ -44,7 +44,7 @@ from vdu_controls.preset import Preset, PresetScheduleStatus, PresetTransitionFl
 from vdu_controls.preset_controller import PresetController
 from vdu_controls.preset_dialog import PresetsDialog
 from vdu_controls.qt_imports import *
-from vdu_controls.release import release_notes
+from vdu_controls.release import Release
 from vdu_controls.scaling import desktop_font_height, dpx
 from vdu_controls.settings_editor import SettingsDialog
 from vdu_controls.solar_calc import create_elevation_map
@@ -1155,7 +1155,7 @@ class VduAppWindow(QMainWindow):
             splash_screen = None
 
         if main_config.file_path is None or main_config.ini_content.get_version() < VDU_CONTROLS_VERSION_TUPLE:  # New version...
-            release_notes()
+            Release.release_notes()
             main_config.write_file(ConfIni.get_path('vdu_controls'), overwrite=True)  # Stops release notes from being repeated.
 
         if not DdcutilPanelImpl.is_available():

@@ -4,31 +4,38 @@ from __future__ import annotations
 
 from vdu_controls.constants import VDU_CONTROLS_VERSION
 from vdu_controls.app_locale import tr
+from vdu_controls.icon_utils import create_icon_from_svg_bytes
 from vdu_controls.qt_imports import QT_TR_NOOP, Qt
+from vdu_controls.scaling import dpx
+from vdu_controls.svg import VDU_CONTROLS_ICON_SVG
 from vdu_controls.widgets import MBox, MIcon, MBtn
 
-RELEASE_WELCOME = QT_TR_NOOP("Welcome to vdu_controls {}").format(VDU_CONTROLS_VERSION)
-RELEASE_NOTE = QT_TR_NOOP("Please read the online release notes:")
-RELEASE_ANNOUNCEMENT = """<h3>{WELCOME}</h3>{NOTE}<br/>
-<a href="https://github.com/digitaltrails/vdu_controls/releases/tag/v{VERSION}">
-https://github.com/digitaltrails/vdu_controls/releases/tag/v{VERSION}</a>
-<br/>___________________________________________________________________________"""
-RELEASE_INFO = QT_TR_NOOP('<b>Road Warrior: Support for Laptop-Panels.</b>'
-                          '<br/><br/>'
-                          '<b>Important notice:</b>'
-                          ' the <i>weather feature</i> will be removed in the next version.</b>'
-                          ' If you rely on it, please comment on issue'
-                          ' <a href="https://github.com/digitaltrails/vdu_controls/issues/115">#155</a>.'
-                          '<br/><br/>'
-                          "<b>What's new:</b> usability improvements and code refactoring. "
-                          'See the online release notes for details.'
-                          '<br/><br/>'
-                          )
-
-def release_notes():
-    release_alert = MBox(
-        MIcon.Information,
-        msg=RELEASE_ANNOUNCEMENT.format(WELCOME=tr(RELEASE_WELCOME), NOTE=tr(RELEASE_NOTE), VERSION=VDU_CONTROLS_VERSION),
-        info=RELEASE_INFO, buttons=MBtn.Close)
-    release_alert.setTextFormat(Qt.TextFormat.RichText)
-    release_alert.exec()
+class Release:
+    RELEASE_WELCOME = QT_TR_NOOP("Welcome to vdu_controls {}").format(VDU_CONTROLS_VERSION)
+    RELEASE_NOTE = QT_TR_NOOP("Please read the online release notes:")
+    RELEASE_ANNOUNCEMENT = """<h3>{WELCOME}</h3>{NOTE}<br/>
+    <a href="https://github.com/digitaltrails/vdu_controls/releases/tag/v{VERSION}">
+    https://github.com/digitaltrails/vdu_controls/releases/tag/v{VERSION}</a>
+    <br/>___________________________________________________________________________"""
+    RELEASE_INFO = QT_TR_NOOP(
+                              '<b><span style="color: #feae0f;">\u26A0</span> Important notice:</b>'
+                              ' the <i>weather feature</i> may be removed from the next version.</b>'
+                              ' If you rely on it, please comment on issue'
+                              ' <a href="https://github.com/digitaltrails/vdu_controls/issues/115">#155</a>.'
+                              '<br/><br/>'
+                              "<b><span style='color: #2196F3;'>\U0001F6C8</span> What's new:</b> usability improvements and code refactoring. "
+                              'See the online release notes for details.'
+                              '<br/><br/>'
+                              )
+    @staticmethod
+    def release_notes():
+        release_alert = MBox(
+            MIcon.Information,
+            msg=Release.RELEASE_ANNOUNCEMENT.format(WELCOME=tr(Release.RELEASE_WELCOME, Release.__name__),
+                                                    NOTE=tr(Release.RELEASE_NOTE, Release.__name__),
+                                                    VERSION=VDU_CONTROLS_VERSION),
+            info=tr(Release.RELEASE_INFO, Release.__name__), buttons=MBtn.Close)
+        release_alert.setTextFormat(Qt.TextFormat.RichText)
+        icon = create_icon_from_svg_bytes(VDU_CONTROLS_ICON_SVG)
+        release_alert.setIconPixmap(icon.pixmap(dpx(125), dpx(125)))
+        release_alert.exec()
