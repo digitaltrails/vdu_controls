@@ -29,7 +29,7 @@ APPNAME = "VDU Controls"
 # the version reported in the About Dialog).  In this way, wider packaging
 # doesn't require hacks to copy with rc/beta suffixes which we are
 # never going to appear in delivered distro releases.
-VDU_CONTROLS_VERSION = '2.6.5-rc.2'
+VDU_CONTROLS_VERSION = '2.6.5-rc.3'
 VDU_CONTROLS_VERSION_TUPLE = tuple(int(i) for i in re.split(r'[.-]', VDU_CONTROLS_VERSION)[:3])
 VDU_CONTROLS_BASE_VERSION = VDU_CONTROLS_VERSION.split('-')[0]
 VDU_CONTROLS_PRE_RELEASE = (VDU_CONTROLS_VERSION.split('-') + [ '' ])[1]
