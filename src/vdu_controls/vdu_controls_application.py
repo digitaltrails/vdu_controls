@@ -56,7 +56,7 @@ from vdu_controls.vdu_controller import VduController
 from vdu_controls.vdu_controls_config import ConfOpt, VduControlsConfig, VcpCapability
 from vdu_controls.vdu_exceptions import VduException
 from vdu_controls.widgets import MIcon, MBox, MBtn, \
-    alter_margins, DialogSingletonMixin, ToolButton, MarkdownSplashScreen
+    alter_margins, DialogSingletonMixin, ToolButton, EnhancedSplashScreen
 from vdu_controls.work_scheduler import WorkerThread, ScheduleWorker, thread_pid, SchedulerJob, SchedulerJobType
 
 # Use Linux/UNIX signals to trigger preset changes - 16 presets should be enough for anyone.
@@ -1083,7 +1083,7 @@ class VduAppWindow(QMainWindow):
 
         if main_config.is_set(ConfOpt.SPLASH_SCREEN_ENABLED):
             splash_pixmap = create_pixmap_from_svg_bytes(VDU_CONTROLS_SPLASH_SVG, dpx(256), dpx(180))
-            splash_screen = MarkdownSplashScreen(splash_pixmap, f"{APPNAME} {VDU_CONTROLS_VERSION}")
+            splash_screen = EnhancedSplashScreen(splash_pixmap, f"{APPNAME} {VDU_CONTROLS_VERSION}")
             splash_screen.show()
             splash_screen.raise_()  # Attempt to force it to the top with raise and activate
             splash_screen.activateWindow()

@@ -378,7 +378,7 @@ class ToolButton(QToolButton):
         self._busy_angle = (self._busy_angle + 8) % 360  # Advance the angle for the next frame
 
 
-class MarkdownSplashScreen(QSplashScreen):
+class EnhancedSplashScreen(QSplashScreen):
     def __init__(self, pixmap: QPixmap, title_text:str):
         super().__init__(pixmap, Qt.WindowType.WindowStaysOnTopHint)
 
