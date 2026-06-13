@@ -13,7 +13,7 @@ A control panel for external monitors (*Visual Display Units*).
 > 
 
 > [!TIP]
-> Laptop-panels are supported in version 2.6 (see [options](#laptop-panel-brightness-controls options) below).
+> Laptop-panels are supported in version 2.6 (see [options](https://github.com/digitaltrails/vdu_controls#laptop-panel-brightness-controls) below).
 
 > [!WARNING]
 > **KDE 6** introduced energy saving brightness dimming after 5 minutes of idle
@@ -93,12 +93,16 @@ available to support all user defined Presets).
 #### Laptop-Panel brightness controls
 
 Starting with version 2.6, laptop panels are supported for brightness-only control.
-When the  _Settings->vdu_control globals->DDC options->laptop panel_ option is enabled, 
-the command line utility [brightnessctl](https://github.com/Hummer12007/brightnessctl) is used to emulate DDC control of brightness.
 
-Additionally, ``vdu_controls`` will react to laptop brightness-function-keys or 
-inactivity-dimming by using the ``python3-pyudev`` library to monitor udev 
-for _brightness_ events.
+Laptop support is optional and controlled by the  __Settings->vdu_control globals->DDC options->laptop panel__.
+
+
+The command line utility [brightnessctl](https://github.com/Hummer12007/brightnessctl) is used to emulate DDC control of brightness.
+Brightness control is widely available and packaged for many distros.
+
+``vdu_controls`` will  react to laptop brightness-function-keys or 
+inactivity-dimming.  (The ``python3-pyudev`` library is employed to listen for
+`brigthness` events.)
 
 #### Technical background
 
