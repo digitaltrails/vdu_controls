@@ -496,7 +496,7 @@ Version History
   * The layout of the Preset and Light-Metering dialogs better reflect the
     the style of the main panel (slightly).
   * The system tray default icon is now primarily monochrome to reflect 
-    prevailing desktop aesthetics. It's also been designed to reasobably
+    prevailing desktop aesthetics. It's also been designed to reasonably
     visible for both dark and light tray backgrounds (as far as is possible).
   * The program-icon and splash-screen icons have been replaced with
     SVG versions. The new program-icon responds to light/dark theme changes.

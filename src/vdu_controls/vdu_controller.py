@@ -40,7 +40,7 @@ class VduControllerAsyncSetter(WorkerThread):  # Used to decouple the set-vcp fr
                 controller, vcp_code, value, origin = self._async_setvcp_queue.get_nowait()
                 key = (controller, vcp_code)
                 if log.debug_enabled:
-                    log.debug(f"UI discard earlier op on {controller.vdu_number=} {vcp_code=:#02x}") if key in latest_pending else None
+                    log.debug(f"UI discard earlier op on {controller.vdu_number=} {vcp_code=:#02x} {value=} {origin=}") if key in latest_pending else None
                 latest_pending[key] = (value, origin)  # keep the latest for each controller+vcp_code.
                 self._async_setvcp_queue.task_done()
             except queue.Empty:
