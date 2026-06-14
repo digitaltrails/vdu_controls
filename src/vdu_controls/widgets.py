@@ -394,7 +394,7 @@ class EnhancedSplashScreen(QSplashScreen):
 
         layout = QVBoxLayout(self)  # Overlay onto the splash widget
         layout.setContentsMargins(left_margin, top_margin, right_margin, bottom_margin)
-        layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)  # type: ignore
 
         self.text_overlay_label = QLabel(self)
         self.text_overlay_label.setTextFormat(Qt.TextFormat.AutoText)
