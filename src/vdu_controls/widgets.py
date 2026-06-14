@@ -400,7 +400,8 @@ class EnhancedSplashScreen(QSplashScreen):
         self.text_overlay_label.setTextFormat(Qt.TextFormat.AutoText)
         self.text_overlay_label.setWordWrap(True)
         layout.addWidget(self.text_overlay_label)
-
+        # Flags needed at least for deepin
+        self.setWindowFlags(QtCore.Qt.WindowType.FramelessWindowHint)
         self.show_message("")  # Display the title now
 
     def show_message(self, message):
