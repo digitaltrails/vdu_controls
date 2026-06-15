@@ -145,7 +145,9 @@ class ConfOpt(Enum):  # An Enum with frozen data items for values is used for co
         ui_label=QT_TR_NOOP('smart uses xwayland'),
         sub_group=SubGroup.USER_INTERFACE,
         requires=[SMART_WINDOW],
-        help=QT_TR_NOOP('If smart-window is enabled, use xwayland in wayland.'))
+        help=QT_TR_NOOP('When smart-window is enabled, use xwayland because most\n'
+                        'wayland implementations cannot preserve window positions\n'
+                        'across sessions.'))
 
     PREFER_QT6 = ConfOptDef(
         conf_name='prefer-qt6', default_value="true", cmdline_arg='DISALLOWED',
