@@ -240,16 +240,13 @@ class PushButtonLeftJustified(QPushButton):
         self.label.setText(text)
 
 
-def is_subwin_desktop() -> bool:
-    return os.environ.get('XDG_CURRENT_DESKTOP', default='unknown').lower() in ['gnome', 'cosmic']
+class SubWinDialog(QDialog):
 
-
-class SubWinDialog(QDialog):  # Fix for gnome: QDialog must be a subwindow, otherwise it will always stay on top of other windows.
+    # Fix for gnome: QDialog must be a subwindow, otherwise it will always stay on top of other windows.
+    # No longer true or I was mistaken - hack removed.
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        # On gnome this allows the subwindow to surface properly, on others it may annoyingly keep
-        # the window on top - which is not always desirable.
-        super().__init__(parent, Qt.WindowType.SubWindow if is_subwin_desktop() else Qt.WindowType.Window)
+        super().__init__(parent, Qt.WindowType.Window)  # OK for all now?
 
 
 class ClickableSlider(QSlider):  # loosely based on https://stackoverflow.com/a/29639127/609575
